@@ -18,24 +18,11 @@ namespace sw
     struct PropertyEditorMetadata;
     struct TypeEditorMetadata;
 
-    /**
-     * @brief 컴포넌트 틱이 어느 레인에서 도는지의 **선언**입니다(`REFLECT( TickMode = … )`, 적지 않으면 Batch). NEXT 5-3 1c.
-     * @details 측정한 비용이 아니라 타입이 선언한 성격으로 가른다 — 언리얼 TickFunction 의 `bRunOnAnyThread` · Godot `process_thread_group` 과 같은 자리다.
-     */
-    enum class TickMode : uint8
-    {
-        Batch, ///< 자기 오브젝트만 읽고 쓰는 틱. 타입별 일괄 함수로 돈다(생성기가 `TickBatchOf` 등록을 낸다 — Mass 프로세서 · DOTS 청크 자리)
-        Task,  ///< 남의 오브젝트를 선행 조건으로 기다리거나 인스턴스마다 일의 양이 크게 다른 틱. 선행 간선만 기다리는 개별 태스크
-        Main,  ///< 입력 · UI · 렌더 큐처럼 메인 스레드 전용 API 를 만지는 틱
-    };
-
-    /// @brief `REFLECT()` 를 붙인 클래스와 구조체의 메타데이터입니다. 에디터 메타데이터를 가리키는 칸, 틱 레인 선언, 생성기가 모은 재정의 특성을 담습니다.
+    /// @brief `REFLECT()` 를 붙인 클래스와 구조체의 메타데이터입니다. 에디터 메타데이터를 가리키는 칸과 생성기가 모은 재정의 특성을 담습니다(틱 레인은 생성된 `SW_REGISTER_TICK_TYPE` 줄이 `TickBatchRegistry` 에 싣는다).
     struct SW_API TypeMetadata
     {
         /** @brief 에디터 메타데이터(`ReflectionEditorMetadata.h`)입니다. 타입을 등록할 때 `TypeRegistry` 가 붙이고, 없으면(배포 · 적은 것 없음) nullptr 입니다. 읽기는 `getEditor` 로. */
         const TypeEditorMetadata* _pEditor;
-        /** @brief 틱 레인 선언입니다(`REFLECT( TickMode = … )`). 적지 않으면 Batch 입니다. 이 타입 자신의 선언이다 — 파생은 물려받지 않는다(일괄 등록이 정확한 타입 단위라). */
-        TickMode _tickMode;
         /**
          * @brief 이 타입이 **직접 선언한** 재정의입니다(생성기가 선언에서 모은다 — 손 등록 매크로가 빠뜨리는 타입이 없게). 기반에서 물려받은 것은 세지 않는다.
          * @details `onTick` 은 일괄 등록(`TickBatchOf`)을, `onSubTick` 은 서브틱 일괄(5-3 1b)을, `serializeState` 는 상태 해시 · 롤백 대상(W-R4)을 정한다.

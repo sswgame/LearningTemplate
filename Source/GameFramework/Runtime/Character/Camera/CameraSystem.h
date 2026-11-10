@@ -8,7 +8,7 @@
  *
  *          - 자리: 늦은 틱(`PostPhysics` · `PostUpdate`)이 끝나고 `ApplyPostPhysics` 가 그 틱의 구조 변경 · 트랜스폼 쓰기를 적용한 뒤, 그 틱이 미룬 일보다 **앞**(틱 뒤 큐의 맨 앞).
  *            예전 계산이 보던 것(이번 프레임 물리 · 늦은 틱이 옮긴 타깃 · 시퀀서 값)을 그대로 본다. 늦은 틱이 미룬 일이 디렉터에 거는 것(흔들림 · 킥)은 다음 프레임 계산에 든다 — 늘 같다.
- *          - 거기 닿는 길: 프레임 시스템은 `FrameSystems` 단계(틱 앞)에서 돈다. `runBeforeTick` 이 틱 뒤 큐에 일을 넣고(`ApplyPrePhysics` 에서 돈다), 그 일이 다시 넣은 일은
+ *          - 거기 닿는 길: 프레임 시스템은 `FrameSystems` 단계(틱 앞)에서 돈다. `runMain` 이 틱 뒤 큐에 일을 넣고(`ApplyPrePhysics` 에서 돈다), 그 일이 다시 넣은 일은
  *            다음 비우기 — `ApplyPostPhysics` 의 맨 앞 — 로 간다(`DeferredDelegateQueue` 는 비우는 중에 넣은 일을 다음 비우기로 넘긴다는 약속). 그 사이 비우기는 없다.
  *          - 틱 밖에서 부른 `updateCamera`(시작 · 프리셋 바꾸기 · 상태 복원)는 예전처럼 바로 푼다 — 깃발은 틱 안에서만 선다.
  *          - 왜 씬 서비스가 아닌가: 씬 서비스 표(`SW_SCENE_SERVICE`)는 Engine 이미지 안에서만 채운다. 첫 카메라 컴포넌트의 `onRegister` 가 붙이고 마지막의 `onUnregister` 가 뗀다.
@@ -31,7 +31,7 @@ namespace sw
      * @class CameraSystem
      * @brief 매니저 하나에 하나씩 붙는 카메라 포즈 계산의 자리입니다. 파일 머리말 참고.
      */
-    class SW_GF_API CameraSystem final : public ISceneFrameSystem
+    class SW_GF_API CameraSystem final : public ISceneMainFrameSystem
     {
     public:
         /** @brief 매니저의 프레임 시스템 키입니다. */
@@ -47,7 +47,7 @@ namespace sw
         static void releaseIfUnused( GameObjectManager& manager );
 
         /** @brief 이번 프레임의 카메라 일(`runFramePass`)을 늦은 틱 뒤 큐의 맨 앞에 닿게 넣습니다(파일 머리말의 "거기 닿는 길"). */
-        void runBeforeTick( GameObjectManager& manager, float32 deltaTime ) override;
+        void runMain( GameObjectManager& manager, float32 deltaTime ) override;
         /** @brief 틱 뒤 큐에 일을 넣기만 한다 — 씬 데이터를 읽거나 쓰지 않는다. */
         SceneFrameAccess getFrameAccess() const override;
 

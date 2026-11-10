@@ -29,7 +29,6 @@ namespace sw
 {
     TypeMetadata::TypeMetadata() noexcept
         : _pEditor{ nullptr }
-        , _tickMode{ TickMode::Batch }
         , _bOverridesTick{ SW_FALSE }
         , _bOverridesSubTick{ SW_FALSE }
         , _bOverridesSerializeState{ SW_FALSE }

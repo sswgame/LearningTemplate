@@ -23,7 +23,7 @@ namespace sw
      * @class DecalRainWashSystem
      * @brief 매니저 하나에 하나씩 붙는 데칼 비 씻김입니다. 파일 머리말 참고.
      */
-    class SW_GF_API DecalRainWashSystem final : public ISceneFrameSystem
+    class SW_GF_API DecalRainWashSystem final : public ISceneMainFrameSystem
     {
     public:
         /** @brief 매니저의 프레임 시스템 키입니다. */
@@ -43,7 +43,7 @@ namespace sw
         static void release( GameObjectManager& manager );
 
         /** @brief 시간을 쌓고, 간격이 차면 씻김(`runWashPass`)을 틱 뒤 큐에 넣습니다. */
-        void runBeforeTick( GameObjectManager& manager, float32 deltaTime ) override;
+        void runMain( GameObjectManager& manager, float32 deltaTime ) override;
         /** @brief 틱 뒤 큐에 일을 넣기만 한다 — 씬 데이터를 읽거나 쓰지 않는다. */
         SceneFrameAccess getFrameAccess() const override;
         /** @brief 씻기는 데칼마다 지금 비 세기(지붕 아래면 0)로 @p seconds 동안 씻습니다. 게임 스레드, 틱 밖(테스트도 부른다). */

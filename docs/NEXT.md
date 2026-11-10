@@ -73,39 +73,20 @@
 
 GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프레임마다 도는 일은 읽기 · 쓰기 종류를 선언한 잡으로, 핫 데이터는 종류별 SoA(`SceneTransformStorage` 일반화)로 옮긴다. 완전 ECS 는 기각했다(컴포넌트 타입 229 · `getComponent<>` 593 · 리플렉션 · 프리팹 전부 재작성). 단계마다 빌드 · 테스트가 통과해야 하고, 이득이 흔들림 안이면 되돌린다.
 
-0. **측정 기반:** `-workers=N` 인자, Debug 카운터(`getComponentLookups` · `virtualTicks`), `load/*` 4 시나리오 × 워커 1 · 2 · 4 · 8 기준선을 S8 표에.
-1. **일괄 틱이 기본:** 리플렉션 생성기가 `onTick` 을 재정의한 타입(102 개)에 `TickBatchOf` 등록을 자동으로 낸다. 지금 수동 등록은 `StressTestMover` 하나뿐이다. 완료: `batchElements/objectEntries ≥ 0.9`.
-   - **서브틱 · 선행 조건은 그대로 돌아야 한다(사용자 요구).** 지금 규칙(`TickRegistry::findBatchFunction`, `TickRegistry.cpp:814`)을 유지한다.
-     - 일괄 경로는 그 그룹의 틱 항목이 주 틱 하나뿐이고 선행 조건이 없는 오브젝트만 탄다.
-     - 서브틱(`registerSubTick`)이 있거나, 항목이 둘 이상이거나, 선행 조건이 걸리면 오브젝트 칸 경로나 선행 조건 스테이지로 간다.
-     - 오브젝트 안 순서(그룹 · 단계 · 우선순위 · 붙은 순서), "한 오브젝트는 한 스레드", 선행 조건 스테이지가 앞 경로의 쓰기를 먼저 적용하는 것(`_bApplyBefore`)이 일괄 경로에도 그대로다.
-   - **틱 중 바뀌는 상태:**
-     - 서브틱 등록 · 해제 · 선행 조건 · 활성 변경은 지금처럼 틱 뒤로 미루고, 다음 `refresh` 가 일괄 소속을 다시 정한다.
-     - 실행 여부(원자 마스크 · `_bRunnable`)는 일괄 함수도 항목마다 본다.
-   - **1b. 서브틱도 일괄(사용자 요구 — 서브틱을 쓴다고 느린 길로 빠지지 않게).** 서브틱 · 다중 항목 오브젝트가 일괄에서 빠지는 까닭은 "오브젝트 안 순서를 한 스레드가 지킨다" 하나뿐이다. 이 순서를 스레드 대신 **파도**로 지킨다.
-     - 파도 키: (단계, 우선순위, 같은 키끼리의 오브젝트 안 순번). 대부분 순번 0 이라 파도는 몇 개다.
-     - 파도 안에서는 (정확한 타입, 서브틱 id) 별 일괄 함수를 병렬로 돌린다. 파도 사이에는 장벽을 둔다.
-     - 한 오브젝트의 두 항목은 다른 파도에만 들므로 오브젝트 안 순서와 형제 컴포넌트의 무락 접근이 그대로다.
-     - 선행 조건 스테이지는 레벨마다 같은 방식으로 일괄한다.
-     - 일괄 함수는 `onSubTick( id, dt )` 를 한정 이름으로 부른다(비가상).
-     - 유니티 DOTS(시스템 순서 = 장벽, 시스템 안 = 청크 병렬)와 같은 자리. 언리얼은 TickFunction 마다 태스크다.
-     - 동등성 테스트에 이 경로도 넣는다.
-   - **1c. 레인을 타입 선언으로 가른다(혼합 — 사용자 결정 2026-11-10).** 기준은 측정한 비용이 아니라 상용 엔진처럼 타입이 선언한 성격이다(규모가 작은 지금의 벽시계 비교로 정하지 않는다). 리플렉션 메타데이터 `TickMode`:
-     - **Batch(기본):** 자기 오브젝트만 읽고 쓰는 틱. 파도 · 타입별 일괄(Mass 프로세서 · DOTS 청크 자리).
-     - **Task:** 특정 오브젝트를 선행 조건으로 기다리는 틱, 인스턴스마다 일의 양이 크게 다른 틱(계획기 · 경로 · IK 풀이), 몇 개뿐인 관리자형(GameMode · 디렉터). 선행 조건 간선만 기다리는 개별 태스크로, 파도 장벽에 묶이지 않는다(언리얼 TickFunction `bRunOnAnyThread` · Godot `process_thread_group` 자리).
-     - **Main:** 입력 · UI · 렌더 큐 같은 메인 스레드 전용 API 를 만지는 틱(언리얼 기본 · 유니티 `Update` 자리).
-     - **엔진 시스템:** 애니메이션 · 물리 · 내비 · VFX 처럼 무겁고 공통인 일은 컴포넌트 틱에 두지 않고 프레임 시스템 · 씬 서비스로(언리얼 애님 평가 태스크 · Chaos, Godot 서버 자리).
-     - 선언과 실제 일의 어긋남(Batch 가 메인 전용 API 를 부르거나 남의 오브젝트에 직접 쓰기)은 2 단계의 잡 컨텍스트 형식이 컴파일에서 막는다. `addSubTickPrerequisite` 를 건 항목은 선언과 관계없이 Task 로 간다.
-     - 판정은 규모와 무관한 구조 지표로 한다: 프레임당 장벽 수, 파도당 항목 수, 레인별 항목 비율, 일괄 비율. 벽시계는 부하 시나리오(오브젝트 8000 이상)에서만 본다.
-   - **테스트:** 같은 씬을 일괄 경로 켬 · 끔으로 N 프레임 돌려 상태 해시(`TestSceneStateHash`)가 같다. 서브틱 · 선행 조건 · 틱 중 서브틱 등록 · 해제를 섞은 케이스(`TickedPathMover` 테스트, 래그돌 `TickPhase::Late` 순서)가 두 경로에서 같다. 2 단계(잡 컨텍스트)도 이 동등성 테스트를 그대로 통과해야 한다.
-2. **잡 컨텍스트 형식:** `_bLaneSafe` 를 서명 분리(`runLane(SceneJobContext&)` / `runMain`)로 바꾸고, `SW_SCENE_SERVICE` 의 접근 선언을 필수로, `SceneDataKind` 를 64 비트로. 컨텍스트는 명령 버퍼만 노출한다(틱 안 구조 변경을 형식으로 막는다).
+0. **측정 기반(통합 담당):** `-workers=N` 인자 · Debug 카운터(`GT.Object.getComponentLookups` · `GT.Scene.tick.virtualTicks`)는 들어갔다. `load/*` 4 시나리오 × 워커 1 · 2 · 4 · 8 기준선을 S8 표에 적는다.
+1. **일괄 틱 · 파도 · 레인 — 런타임은 들어갔다(`TickRegistry` · `SceneTickScheduler` · `TickBatchRegistry`, 테스트 `TickLanesTest`).** Batch 레인은 서브틱 · 여러 항목 오브젝트까지 파도(순서 키, 오브젝트 안 순번)로 일괄하고, Task 는 오브젝트마다 태스크, Main 은 게임 스레드다. 일괄 경로를 끈 레지스트리(`setBatchPathEnabled( false )`)가 동등성의 기준 길이다. 남은 것:
+   - **생성기(5-4 작업자):** `REFLECT( TickMode = Batch|Task|Main )` 을 받아, `onTick` · `onSubTick` 을 재정의했거나 `TickMode` 를 단 타입마다 생성 TU 의 `namespace sw` 에 `SW_REGISTER_TICK_TYPE( 타입, 레인 )` 을 낸다(`TickBatchRegistry.h` 머리말이 계약). `TickBatchOf<타입>` 이 `onTick` · `onSubTick` 을 한정 이름으로 부르므로 보호 재정의는 `REFLECT_BODY` 가 친구로 연다. 손 등록은 `StressTestMoverComponent` 하나 — 생성기가 내면 지운다. 완료: Debug `virtualTicks` 가 0 에 가깝다.
+   - **선행 조건 스테이지 일괄:** 스테이지 항목은 레인의 일괄 함수(비가상)로 돈다(`TickStage::_listItemFunction`). 남은 것은 같은 함수의 이웃 항목을 한 번에 넘기도록 레벨 안을 (타입, 서브틱 id) 로 묶는 것 — 스테이지 편집(`flushStageEdits`)이 항목 순서를 가정하므로 그 정렬 규칙과 함께 바꾼다.
+   - **Task 의 선행 조건 간선:** 선행 조건을 건 항목은 지금 그룹 끝 스테이지(Kahn 레벨 장벽)로 간다. 간선만 기다리는 개별 태스크로 바꾸면 파도 · 레벨 장벽에 묶이지 않는다(언리얼 TickFunction 선행 조건 자리).
+   - **판정 숫자(통합 담당):** 구조 지표 `GT.Scene.tick.waves`(장벽 수) · `batchElements` · `taskEntries` · `mainEntries` · `objectEntries` 를 부하 시나리오에서 읽어 S8 표에. 벽시계는 오브젝트 8000 이상에서만.
+2. **잡 컨텍스트 형식 — 프레임 시스템은 들어갔다:** `ISceneMainFrameSystem::runMain` / `ISceneLaneFrameSystem::runLane( SceneJobContext& )`(매니저 읽기 전용 + 틱 뒤 큐), `SceneDataKindSet` 64 비트. 남은 것: (a) **컴포넌트 틱의 컨텍스트** — Batch 레인의 `onTick` 도 같은 형식(읽기 전용 남의 오브젝트 + 명령 버퍼)으로 받아 남의 컴포넌트 직접 쓰기(결함 후보 2 · `setCanEverTick` 비트필드)를 컴파일에서 막는다. 102 개 타입의 서명이 바뀌므로 생성기(5-4)의 `TickBatchOf` 호출과 함께 옮긴다. (b) `SW_SCENE_SERVICE` 의 접근 선언 필수화 — 지금 접근 선언은 프레임 일(`SW_SCENE_SERVICE_WITH_FRAME_JOB`)만 읽으므로, 단계 본문의 접근을 쓰는 곳(서비스 병렬화)을 먼저 정해야 의미가 있다.
 3. **물리 Export · 지연 이벤트:** `PhysicsPoseStore` 이중 버퍼를 병렬로 읽고 `applyTransformBatch` 로 일괄 쓴다(지금은 바디마다 백엔드 3 호출 + 세터). 충돌 배달은 `Physics` 단계 안 동기 가상 호출 대신 `FlushPostPhysics` 서비스로.
-4. **Jolt 조임 · 물리 훅 배치:** `JoltJobSystem.cpp:103` 의 인라인 실행 폴백을 지우고, `WaitForJobs` 가 `yield` 대신 돕기로 기다린다. 물리 훅 4 종을 배치 함수 + 명령 저장소로.
+4. **물리 훅 배치:** Jolt 조임(인라인 실행 폴백 삭제 · `WaitForJobs` 돕기)은 들어갔다. 물리 훅 4 종을 배치 함수 + 명령 저장소로.
 5. **`ComponentDataStore<T>`:** 트랜스폼 SoA 페이지를 템플릿으로 일반화한다. 첫 사용자는 강체 자세 · 명령, 투사체.
 6. **엔진 공간 색인:** `SceneSpatialGrid` 서비스(월드 버전으로 증분, 이중 버퍼 읽기). GF `InteractionSpatialIndex` · `ZoneOccupantIndex` 는 읽기만. `TagIndex` 는 세대 스냅샷으로.
-7. W-S4 허브 해체(5-1) → 8. `StructuralChangeBuffer` 를 스레드별 버퍼 + (writerID, 순번) 병합으로(틱 뒤 큐가 뮤텍스 하나라 투사체 수천에서 줄 선다).
+7. W-S4 허브 해체(5-1).
 
-병렬 작업자: A(0 · 1, Task · 생성기 · TickBatch), B(3 · 4, `Engine/Physics/**`), C(2, A 뒤), D(6, C 뒤). 확인할 결함 후보: 틱 본문 안 중첩 `runParallel` 이 돕기 중 TLS 틱 상태를 비워 writerID 가 0 이 되는 것(`SceneTickScheduler.cpp:83`), 남의 오브젝트에 `setCanEverTick` 을 쓰는 비트필드 경쟁(`Component.h:620`).
+병렬 작업자: B(3 · 4, `Engine/Physics/**`), C(2), D(6, C 뒤), 5-4 작업자(1 의 생성기). 결함 후보 둘은 확인했다 — 중첩 `runParallel` 의 writerID 0 은 고쳤고(`TickThreadScope` 가 들어올 때의 상태로 되돌린다), `setCanEverTick` 비트필드는 틱 중 쓰기가 `deferIfStructureFrozen` 으로 미뤄져 지금은 경쟁이 없다(틱 밖에서 워커 레인이 남의 컴포넌트에 쓰면 다시 열린다 — 2 단계 형식이 막을 자리).
 
 ### 5-4. 리플렉션(2026-11-10 설계 — 규모: REFLECT 1,408 · PROPERTY 6,708 · ENUM 413, 생성 TU 가 전체 컴파일 CPU 의 20 %(Debug) · 17 %(Release))
 

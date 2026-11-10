@@ -40,7 +40,7 @@ namespace sw
             manager.removeFrameSystem( hashed_string( kFrameSystemKey ) );
     }
 
-    void SurfaceExposureSystem::runBeforeTick( GameObjectManager& manager, float32 /*deltaTime*/ )
+    void SurfaceExposureSystem::runMain( GameObjectManager& manager, float32 /*deltaTime*/ )
     {
         // 일은 시스템을 붙잡지 않고 매니저에서 다시 찾는다 — 큐가 돌기 전에 마지막 노출 컴포넌트가 떠나 시스템이 떨어졌을 수 있다.
         // 시간은 컴포넌트 틱이 쌓은 것을 쓴다 — 틱이 돌지 않은(편집 모드 · 꺼진) 컴포넌트는 바뀌지 않는다.

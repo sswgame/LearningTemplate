@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/Reflection.h"
 
 namespace sw
@@ -666,6 +667,13 @@ namespace sw
                 deferred( *pObj );
         } );
     }
+
+#if defined( SW_DEBUG )
+    void GameObject::countComponentLookup()
+    {
+        SW_PROFILE_COUNT( "GT.Object.getComponentLookups", 1 );
+    }
+#endif
 
     void GameObject::clearComponents()
     {

@@ -100,17 +100,10 @@ namespace sw
             return;
         }
         TaskHandle handle = _pTaskManager->emplaceTask( "JoltJob", SW_DELEGATE_METHOD( TaskDelegate, &JoltJobSystem::runQueuedJob, this ) );
+        // 폴백 없음 — 태스크를 못 내면(풀이 바닥났거나 종료 중) 그 자리에서 몰래 돌리지 않고 멈춘다. 스텝을 부른 스레드는 장벽 · `WaitForJobs` 에서 큐를 도우므로
+        // 태스크가 늦어도 끝나지만, 태스크가 아예 없으면 잡 참조가 새고 스텝 순서가 실행마다 달라진다(언리얼 Chaos 도 태스크 그래프가 없으면 스텝을 내지 않는다).
         if ( handle.isValid() == false )
-        {
-            // 태스크를 낼 수 없다(풀이 바닥났거나 종료 중이다). 여기서 실행한다.
-            Job* pQueued = popQueuedJob();
-            if ( pQueued != nullptr )
-            {
-                pQueued->Execute();
-                pQueued->Release();
-            }
-            return;
-        }
+            SW_FATAL( "JoltJobSystem: the task pool refused a physics job (pool exhausted or shutting down)" );
         // 스텝을 호출한 스레드가 장벽에서 곧바로 기다린다. 게임 스레드의 대량 잡 뒤에 줄을 서지 않게 High 레인으로 낸다.
         handle.setPriority( TaskPriority::High );
         _jobTaskStage.addTask( handle ); // 제출 전에 넣는다(스테이지 계약)
@@ -143,12 +136,19 @@ namespace sw
             const uint64        enteredCount = slot._enterCount.load( std::memory_order_acquire );
             while ( slot._exitCount.load( std::memory_order_acquire ) < enteredCount )
             {
-                ThreadUtil::yield();
+                // 양보 대신 돕는다 — 큐에 남은 잡(다른 장벽의 것이어도)을 이 스레드가 돌린다(Jolt `BarrierImpl::Wait` · 엔진 `waitStage` 의 돕기와 같은 규칙). 큐가 비었을 때만 양보한다.
+                if ( tryRunQueuedJob() == false )
+                    ThreadUtil::yield();
             }
         }
     }
 
     void JoltJobSystem::runQueuedJob()
+    {
+        (void)tryRunQueuedJob(); // 태스크 본문 — 장벽이 먼저 돌려 큐가 비었으면 할 일이 없다
+    }
+
+    bool JoltJobSystem::tryRunQueuedJob()
     {
         Job* pJob = popQueuedJob();
         if ( pJob != nullptr )
@@ -170,6 +170,7 @@ namespace sw
             }
             pJob->Release();
         }
+        return pJob != nullptr;
     }
 
     JPH::JobSystem::Job* JoltJobSystem::popQueuedJob()

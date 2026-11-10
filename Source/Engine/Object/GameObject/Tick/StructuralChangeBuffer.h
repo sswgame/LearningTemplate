@@ -2,13 +2,13 @@
  * @file StructuralChangeBuffer.h
  * @brief 틱 중 규칙 — 구조 동결 플래그, 틱이 미룬 구조 변경 · 틱 뒤 작업의 큐, 그것을 비우는 순서, 지금 틱하는 오브젝트(스레드별)입니다.
  * @details 유니티 DOTS `EntityCommandBuffer` 의 자리입니다 — 병렬 틱(잡)이 구조 변경을 기록하고, 정해진 동기화 지점(`drain`)에서 게임 스레드가
- *          부른 순서대로 재생합니다. `GameObjectManager` 가 소유하고, 게임이 부르는 API(`executeOrDeferPostTick` · `isStructuralMutationFrozen` …)는
+ *          (디스패치, 쓴 오브젝트, 부른 순서) 순으로 재생합니다(`DeferredDelegateQueue`). `GameObjectManager` 가 소유하고, 게임이 부르는 API(`executeOrDeferPostTick` · `isStructuralMutationFrozen` …)는
  *          매니저가 같은 이름으로 전달합니다.
  *
  *          **플래그는 하나입니다.** 구조 동결과 트랜스폼 읽기 전용은 같은 구간이라 `isFrozen` 하나가 둘 다 답합니다. 얼리고 푸는 것은 틱
  *          디스패치(`SceneTickScheduler`)만 합니다.
  *
- *          **비우는 순서는 `drain` 한 함수가 갖습니다** — 구조 변경(부른 순서) → 틱 중 트랜스폼 쓰기 → 틱 뒤 큐 → 병합 → 시작. 주의: 큐를 종류마다
+ *          **비우는 순서는 `drain` 한 함수가 갖습니다** — 구조 변경(같은 오브젝트는 부른 순서) → 틱 중 트랜스폼 쓰기 → 틱 뒤 큐 → 병합 → 시작. 주의: 큐를 종류마다
  *          나누거나 각 단위가 자기 큐를 자기 시점에 비우게 하면, 틱 안에서 씬 컴포넌트를 붙이고(미뤄짐) 이어 부모에 붙일 때 부착이 먼저 돌아
  *          붙일 씬 컴포넌트가 없고, 쓰기가 미룬 `KeepWorld` 부착보다 먼저 적용되어 부착이 로컬 값을 다시 구해 덮는다.
  *
@@ -22,22 +22,25 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
     /**
      * @class DeferredDelegateQueue
-     * @brief 병렬 틱이 미룬 일을 담았다가 틱 뒤 게임 스레드에서 넣은 순서대로 실행합니다.
-     * @details 넣기는 아무 스레드나 합니다(잠금 하나). 비우기는 한 스레드만 합니다. 비울 때 대기 목록을 처리 목록과 **맞바꾼 뒤**
-     *          잠금 밖에서 실행하므로, 실행 중에 새로 넣은 일은 **다음** 비우기로 갑니다 — 한 번의 비우기가 끝없이 늘어나지 않습니다.
-     *          두 목록은 용량을 들고 있어 프레임마다 할당하지 않습니다.
+     * @brief 병렬 틱이 미룬 일을 담았다가 틱 뒤 게임 스레드에서 (디스패치 순번, 쓴 오브젝트, 넣은 순번) 순으로 실행합니다.
+     * @details 넣기는 아무 스레드나 합니다 — **스레드 슬롯마다 자기 큐**에 넣어(`engine::getParallelScratchSlot`, 슬롯 잠금은 비우는 쪽과만 겨룬다) 투사체
+     *          수천이 한 뮤텍스에 줄 서지 않습니다(유니티 `EntityCommandBuffer.ParallelWriter` 의 스레드별 체인 + sortKey 병합). 비우기는 한 스레드만
+     *          하고, 슬롯마다 맞바꿔 모은 뒤 키로 정렬해 잠금 밖에서 실행합니다. 실행 중에 새로 넣은 일은 **다음** 비우기로 갑니다.
+     *          순서: 디스패치(파도 · 레인 · 스테이지 — 장벽으로 나뉜 시간 순)가 먼저, 한 디스패치 안은 쓴 오브젝트 순(예전에는 워커 순이라 실행마다 달랐다),
+     *          같은 오브젝트는 넣은 순서다. 틱 밖에서 넣은 일(디스패치 0)은 넣은 시간 순으로 맨 앞이다(넣은 순번이 전역 원자값이다).
      */
     class SW_API DeferredDelegateQueue
     {
     public:
         using Callback = Delegate<void()>;
 
-        /** @brief 두 목록의 용량을 조금 잡아 두고 만듭니다. */
+        /** @brief 스레드 슬롯 수(`engine::getParallelScratchSlotCount`)만큼 큐를 잡고, 슬롯을 받지 못한 스레드가 쓸 넘침 큐 하나를 더합니다. */
         DeferredDelegateQueue();
 
         DeferredDelegateQueue( const DeferredDelegateQueue& )            = delete;
@@ -56,9 +59,20 @@ namespace sw
         void clear();
 
     private:
-        LockedSwapQueue<Callback>        _pending;                      ///< 넣은 일(잠금 아래)
-        ThreadRole                       _flushThread;                  ///< 비우는 스레드 역할 — 꺼내 온 목록은 drain 을 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
-        vector<Callback> _listProcessing SW_GUARDED_BY( _flushThread ); ///< 비우는 중인 일(비우는 스레드만)
+        /** @brief 넣은 일 하나와 그 순서 키입니다. */
+        struct KeyedCallback
+        {
+            uint32   _dispatchOrdinal{ 0 }; ///< 넣은 틱의 디스패치 순번(`TickThreadState::_dispatchOrdinal`, 틱 밖이면 0)
+            uint64   _writerID{ 0 };        ///< 넣은 틱의 주인 오브젝트 id(틱 밖이면 0)
+            uint64   _sequence{ 0 };        ///< 넣은 순번(전역)
+            Callback _callback;
+        };
+
+        vector<unique_ptr<LockedSwapQueue<KeyedCallback>>> _listSlot;                     ///< 스레드 슬롯마다의 큐(잠금이 옮겨지지 않게 하나씩 잡는다). 끝 칸이 넘침 큐다
+        atomic<uint64>                                     _sequence;                     ///< 넣은 순번(전역 — 틱 밖 일의 시간 순)
+        ThreadRole                                         _flushThread;                  ///< 비우는 스레드 역할 — 꺼내 온 목록은 drain 을 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
+        vector<KeyedCallback> _listTaken                   SW_GUARDED_BY( _flushThread ); ///< 슬롯 하나에서 맞바꿔 온 일(비우는 스레드만)
+        vector<KeyedCallback> _listProcessing              SW_GUARDED_BY( _flushThread ); ///< 비우는 중인 일(비우는 스레드만)
     };
 } // namespace sw
 
@@ -75,6 +89,12 @@ namespace sw
     {
         const GameObject* _pTickingObject{ nullptr }; ///< 이 스레드가 지금 틱하는 오브젝트 — 그 오브젝트의 대기 칸에 잠금 없이 쓴다
         const GameObject* _pTickWriter{ nullptr };    ///< 지금 도는 틱의 주인 오브젝트 — 다른 오브젝트에 쓴 건의 순서 키
+        /**
+         * @brief 지금 도는 디스패치(파도 · 레인 · 스테이지 하나)의 단계 안 순번입니다 — 다른 오브젝트에 쓴 건의 둘째 순서 키(쓴 오브젝트 다음).
+         * @details 한 오브젝트의 항목이 파도 · 스테이지마다 다른 스레드에서 돌 수 있어, 스레드 순번만으로는 같은 오브젝트가 앞뒤로 쓴 건의 선후를 가리지 못한다.
+         *          디스패치는 장벽으로 나뉘므로 이 순번이 그 선후다(유니티 `EntityCommandBuffer` 의 sortKey 가 청크 순번인 자리).
+         */
+        uint32 _dispatchOrdinal{ 0 };
         /**
          * @brief 이 스레드의 대기 칸 목록입니다(`SceneTransformHierarchy::findPendingSlotList`). 틱 디스패치가 청크마다 한 번 채운다.
          * @details 세터가 칸 번호를 올릴 때마다 스레드 슬롯을 다시 묻지 않게 한다. nullptr 이면(슬롯을 못 받았거나 틱 청크 밖) 세터는 쓰기 큐로 간다.
@@ -104,7 +124,7 @@ namespace sw
         /** @brief 컴포넌트 틱을 끝냅니다(동결 해제). 틱 디스패치만 부릅니다. 쌓인 일은 `drain` 이 비웁니다. */
         void thaw();
 
-        /** @brief 틱 중의 구조 변경을 부른 순서대로 넣습니다. `drain` 이 가장 먼저 돌립니다. 아무 스레드에서나 부를 수 있습니다. */
+        /** @brief 틱 중의 구조 변경을 넣습니다(같은 오브젝트의 것은 부른 순서대로 돈다). `drain` 이 가장 먼저 돌립니다. 아무 스레드에서나 부를 수 있습니다. */
         void deferStructuralChange( Callback func );
         /**
          * @brief 틱 중의 계층 변경(attach · detach)을 구조 변경 큐에 넣고, 이번 단계에 계층 변경이 미뤄졌다고 적습니다.
@@ -139,13 +159,11 @@ namespace sw
         static TickThreadState& getThreadState();
         /** @brief 이 스레드가 지금 틱하는 오브젝트입니다. 틱 밖에서는 nullptr 입니다. */
         static const GameObject* getTickingObject();
-        /** @brief 이 스레드에서 지금 도는 틱의 주인 오브젝트입니다. 틱 밖에서는 nullptr 입니다. */
-        static const GameObject* getTickWriter();
 
     private:
         atomic<bool>          _bFrozen;                  ///< 컴포넌트 틱 중(`isFrozen`)
         atomic<uint8>         _bDeferredHierarchyChange; ///< 이번 단계에 계층 변경이 미뤄졌는지 — 그 뒤로는 스테이지 경계 적용을 하지 않는다
-        DeferredDelegateQueue _structuralQueue;          ///< 틱이 미룬 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성), 부른 순서
+        DeferredDelegateQueue _structuralQueue;          ///< 틱이 미룬 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성), 같은 오브젝트는 부른 순서
         DeferredDelegateQueue _postTickQueue;            ///< 틱이 미룬 스폰 · 데미지 · 태그(`deferPostTick`)
     };
 } // namespace sw

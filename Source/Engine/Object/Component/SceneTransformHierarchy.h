@@ -171,12 +171,13 @@ namespace sw
          * @details 힙 할당도 공유 뮤텍스도 없이 슬롯 목록에 값으로 넣는다(지연 델리게이트로 미루면 건마다 힙 람다, 뮤텍스 대기, 틱 뒤 직렬 재적용이 붙는다).
          *          같은 슬롯의 직전 건이 같은 컴포넌트면 합친다(위치와 스케일을 잇따라 부르는 흔한 경우).
          *          @p writerID 는 이 쓰기를 낸 틱의 주인 오브젝트이고(`GameObjectManager::queueTransformWrite` 가 그 스레드의 틱 주인에서 구한다) 순서 키가 된다.
-         *          같은 컴포넌트에 여러 오브젝트의 틱이 썼으면 (쓴 오브젝트 id, 그 스레드의 순번) 순으로 적용해 마지막이 이긴다(유니티 `EntityCommandBuffer.ParallelWriter`
+         *          @p dispatchOrdinal 은 그 틱이 돈 디스패치(파도 · 스테이지)의 순번이다(`TickThreadState::_dispatchOrdinal`) — 한 오브젝트의 항목이 디스패치마다 다른 스레드에서 돌아도 선후가 맞는다.
+         *          같은 컴포넌트에 여러 오브젝트의 틱이 썼으면 (쓴 오브젝트 id, 디스패치 순번, 그 스레드의 순번) 순으로 적용해 마지막이 이긴다(유니티 `EntityCommandBuffer.ParallelWriter`
          *          의 sortKey). 키는 건(`SceneTransformWrite`)이 아니라 슬롯의 키 목록에 둔다. 건은 바깥 배치도 쓰는 64 바이트라, 키를 넣어
          *          80 바이트가 되면 배치 8000 건이 읽는 양이 25% 늘어난다.
          * @return 큐에 올렸으면 true 입니다. 슬롯이 준비되지 않았으면 false 이고, 부르는 쪽이 지연 델리게이트로 돌립니다.
          */
-        bool queueWriteParallel( const SceneTransformWrite& write, uint64 writerID );
+        bool queueWriteParallel( const SceneTransformWrite& write, uint64 writerID, uint32 dispatchOrdinal );
         /**
          * @brief **이 스레드 슬롯**의 대기 목록입니다. 틱 중에 슬롯에 바로 쓴 컴포넌트의 슬롯 번호가 여기에 오릅니다. 워커에서 불립니다.
          * @details 틱 디스패치가 청크마다 한 번 받아 `TickThreadState::_pPendingSlotList` 에 둔다. 세터(`SceneComponent::writeTickTransform`)는
@@ -240,8 +241,9 @@ namespace sw
         /** @brief 틱 큐 건 하나의 순서 키입니다(슬롯의 건 목록과 같은 위치에 있습니다). */
         struct TickWriteKey
         {
-            uint64 _writerID{ 0 }; ///< 이 쓰기를 낸 틱의 주인 오브젝트 id(틱 밖이면 0)
-            uint32 _sequence{ 0 }; ///< 그 스레드가 올린 순번이다. 같은 오브젝트의 틱이 잇따라 쓴 건의 순서를 나타낸다
+            uint64 _writerID{ 0 };        ///< 이 쓰기를 낸 틱의 주인 오브젝트 id(틱 밖이면 0)
+            uint32 _dispatchOrdinal{ 0 }; ///< 그 틱이 돈 디스패치의 순번 — 한 오브젝트가 파도 · 스테이지마다 다른 스레드에서 쓴 건의 선후
+            uint32 _sequence{ 0 };        ///< 그 스레드가 올린 순번이다. 같은 디스패치 안에서 같은 오브젝트의 틱이 잇따라 쓴 건의 순서를 나타낸다
         };
         /** @brief 정렬할 틱 큐 건 하나입니다. 비교에 쓰는 값을 함께 보관해서 정렬이 건을 따라가지 않아도 됩니다. */
         struct OrderedTickWrite

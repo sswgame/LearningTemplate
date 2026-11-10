@@ -409,8 +409,10 @@ namespace sw
         uint8                        _bComponentFactory : 1;
         uint8                        _bHideInMenu       : 1;
         /** @brief 첫 기반 클래스에 `REFLECT()` 가 있습니다. 없으면 기반의 필드는 프로퍼티가 아니므로 고정 배치형 코덱도 기반을 건너뜁니다. */
-        uint8                  _bParentReflected : 1;
-        [[maybe_unused]] uint8 _reserved         : 2;
+        uint8 _bParentReflected : 1;
+        /** @brief `Component` 파생입니다(추상 포함). 틱 레인 등록(`requiresTickRegistration`)과 `TickMode` 검사가 본다. */
+        uint8                  _bComponent : 1;
+        [[maybe_unused]] uint8 _reserved   : 1;
         /** @brief 이 타입이 직접 선언한 재정의입니다(`MemberCollector::collectTraits`). 코드젠이 `TypeMetadata` 의 특성 비트와 일괄 틱 등록을 낸다. */
         uint8                  _bOverridesTick           : 1;
         uint8                  _bOverridesSubTick        : 1;
@@ -438,6 +440,7 @@ namespace sw
             , _bComponentFactory{ SW_FALSE }
             , _bHideInMenu{ SW_FALSE }
             , _bParentReflected{ SW_FALSE }
+            , _bComponent{ SW_FALSE }
             , _reserved{ 0 }
             , _bOverridesTick{ SW_FALSE }
             , _bOverridesSubTick{ SW_FALSE }
@@ -448,10 +451,17 @@ namespace sw
 
         bool requiresTypeAPI() const noexcept { return _bReflectBody == SW_TRUE; }
         bool requiresComponentFactory() const noexcept { return _bComponentFactory == SW_TRUE; }
-        /** @brief 이 타입에 일괄 틱 등록(`TickBatchOf`)을 낸다 — 만들 수 있는 컴포넌트가 `onTick` 을 직접 재정의했고 레인이 Batch(기본)일 때다. */
-        bool requiresTickBatch() const noexcept
+        /**
+         * @brief 이 타입에 틱 레인 등록(`SW_REGISTER_TICK_TYPE`)을 낸다 — 컴포넌트가 `onTick` · `onSubTick` 을 직접 재정의했거나 `REFLECT( TickMode = … )` 를 달았을 때다.
+         * @details 추상 타입은 `TickMode` 를 적었을 때만 낸다(파생이 물려받는 레인 — 재정의만으로는 그 타입의 인스턴스가 없다).
+         */
+        bool requiresTickRegistration() const noexcept
         {
-            return _bComponentFactory == SW_TRUE && _bOverridesTick == SW_TRUE && ( _tickMode.empty() || _tickMode == "Batch" );
+            if ( _bComponent == SW_FALSE )
+                return false;
+            if ( _tickMode.empty() == false )
+                return true;
+            return _bAbstract == SW_FALSE && ( _bOverridesTick == SW_TRUE || _bOverridesSubTick == SW_TRUE );
         }
     };
 } // namespace sw

@@ -254,6 +254,7 @@ namespace sw
             const bool bFactory         = bRequiresFactory && typeInfo._bAbstract == SW_FALSE;
             typeInfo._bReflectBody      = collector.isBodyFound() ? SW_TRUE : SW_FALSE;
             typeInfo._bComponentFactory = bFactory ? SW_TRUE : SW_FALSE;
+            typeInfo._bComponent        = bRequiresFactory ? SW_TRUE : SW_FALSE;
             // 틱 레인은 컴포넌트 틱의 선언이다. 다른 타입에 적으면 아무 데도 닿지 않는 선언이 조용히 남는다.
             if ( typeInfo._tickMode.empty() == false && bRequiresFactory == false )
             {

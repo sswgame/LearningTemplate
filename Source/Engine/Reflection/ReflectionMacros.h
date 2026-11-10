@@ -21,6 +21,9 @@
 namespace sw
 {
     struct TypeInfo;
+    /** @brief 타입별 일괄 틱 함수(`TickBatchRegistry.h`)입니다. `onTick` · `onSubTick` 을 한정 이름으로 부르므로 REFLECT_BODY 가 친구로 연다(protected 재정의도 일괄 경로를 탄다). */
+    template <typename TComponent, const utf8* TScopeName>
+    struct TickBatchOf;
 } // namespace sw
 
 namespace sw::generated
@@ -60,6 +63,8 @@ namespace sw::generated
     #define REFLECT_BODY()                                                               \
         template <typename>                                                              \
         friend struct ::sw::generated::Registrar;                                        \
+        template <typename, const utf8*>                                                 \
+        friend struct ::sw::TickBatchOf;                                                 \
         void        __sw_reflect_body() __attribute__( ( annotate( "REFLECT_BODY" ) ) ); \
         const void* swReflectSelf() const
 #else
@@ -80,6 +85,8 @@ namespace sw::generated
     #define REFLECT_BODY()                                                                           \
         template <typename>                                                                          \
         friend struct ::sw::generated::Registrar;                                                    \
+        template <typename, const utf8*>                                                             \
+        friend struct ::sw::TickBatchOf;                                                             \
         static const ::sw::TypeInfo* StaticType()                                                    \
         {                                                                                            \
             const ::sw::TypeInfo* pCachedType = nullptr;                                             \

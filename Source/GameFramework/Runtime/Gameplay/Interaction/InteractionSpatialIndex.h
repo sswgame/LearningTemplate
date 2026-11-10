@@ -30,7 +30,7 @@ namespace sw
      * @class InteractionSpatialIndex
      * @brief 공간(3D · 2D)마다 대상 격자 하나를 프레임 앞에 맞춥니다. 파일 머리말 참고.
      */
-    class SW_GF_API InteractionSpatialIndex final : public ISceneFrameSystem
+    class SW_GF_API InteractionSpatialIndex final : public ISceneLaneFrameSystem
     {
     public:
         /** @brief 매니저의 프레임 시스템 키입니다. */
@@ -47,7 +47,7 @@ namespace sw
         /** @brief 하는 쪽 하나를 뺍니다. 사용자가 모두 빠지면 매니저에서 뗍니다. */
         static void unregisterInteractor( GameObjectManager& manager, InteractionSpace space );
 
-        void runBeforeTick( GameObjectManager& manager, float32 deltaTime ) override;
+        void runLane( SceneJobContext& context ) override;
         /**
          * @brief 격자를 맞추는 일입니다. 대상의 월드 자리와 등록부를 읽고(한 프레임 늦어도 된다 — 파일 머리말의 "위치는 물리 앞의 값"), 격자(`InteractionIndex`)를 씁니다.
          */
@@ -79,7 +79,7 @@ namespace sw
         static size_t toSpaceIndex( InteractionSpace space );
         /** @brief 3D 는 (x, z), 2D 는 (x, y) 를 평면 좌표로 냅니다. */
         static void projectToPlane( InteractionSpace space, const float3& position, float32& outPlaneX, float32& outPlaneY );
-        void        rebuildSpace( GameObjectManager& manager, InteractionSpace space, SpaceGrid& inoutSpace );
+        void        rebuildSpace( const GameObjectManager& manager, InteractionSpace space, SpaceGrid& inoutSpace );
 
     private:
         SpaceGrid _arrSpace[2];

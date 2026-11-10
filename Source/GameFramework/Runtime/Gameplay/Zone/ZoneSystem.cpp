@@ -46,7 +46,7 @@ namespace sw
             manager.removeFrameSystem( hashed_string( kFrameSystemKey ) );
     }
 
-    void ZoneSystem::runBeforeTick( GameObjectManager& manager, float32 deltaTime )
+    void ZoneSystem::runMain( GameObjectManager& manager, float32 deltaTime )
     {
         // 일은 시스템을 붙잡지 않고 매니저에서 다시 찾는다 — 큐가 돌기 전에 마지막 지역 컴포넌트가 떠나 시스템이 떨어졌을 수 있다.
         GameObjectManager* pManager = &manager;

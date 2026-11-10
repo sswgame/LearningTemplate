@@ -25,6 +25,8 @@ namespace sw
         {
             /** @brief 물리 뒤 단계의 첫 그룹입니다. 같은 단계의 그룹끼리는 그 사이에 틱 결과 적용이 없습니다. */
             static constexpr uint8 kPostPhysicsGroup = static_cast<uint8>( TickGroup::PostPhysics );
+            /** @brief 파도 키의 오브젝트 안 순번(`TickItem::_waveOrdinal`, uint8)의 상한입니다. 넘는 오브젝트는 파도 대신 칸(Task 레인)으로 간다. */
+            static constexpr uint8 kMaxWaveOrdinal = std::numeric_limits<uint8>::max();
 
             /** @brief 선행 조건 스테이지를 지을 때의 후보 하나입니다(선행 조건을 가진 항목 + 그 선행 목록). */
             struct StageCandidate
@@ -473,7 +475,10 @@ namespace sw
 {
     TickRegistry::TickRegistry()
         : _arrListEntry{}
-        , _arrListBatch{}
+        , _arrListMainEntry{}
+        , _arrListWave{}
+        , _mapTypeDispatch{}
+        , _bBatchPathEnabled{ SW_TRUE }
         , _batchGeneration{ 0 } // 처음에는 어차피 모두 다시 훑는다(`_bAllDirty`)
         , _listDirtyObjectID{}
         , _listProcessingObjectID{}
@@ -513,6 +518,7 @@ namespace sw
         if ( batchGeneration != _batchGeneration )
         {
             _batchGeneration = batchGeneration;
+            _mapTypeDispatch.clear();
             _bAllDirty.store( SW_TRUE, std::memory_order_release );
         }
         const bool bAll = _bAllDirty.exchange( SW_FALSE, std::memory_order_acq_rel ) != SW_FALSE;
@@ -551,10 +557,13 @@ namespace sw
 
         // 선행 조건에 걸린 오브젝트(가진 쪽 · 가리켜진 쪽)가 바뀌었을 때만 스테이지를 다시 짓는다 — 스폰이 잦아도 사슬 밖이면 오르지 않는다.
         // 다시 지으면 쌓인 편집은 버려진다(`rebuildStages`). 아니면 이번 `refresh` 의 편집을 스테이지에 한 번에 적용한다.
+        const bool bStageChanged = bAll || _builtStageGeneration != _stageGeneration || _listStageRemoval.empty() == false || _listStageInsertion.empty() == false;
         if ( _builtStageGeneration != _stageGeneration )
             rebuildStages( manager );
         else
             flushStageEdits();
+        if ( bStageChanged )
+            refreshStageFunctions( manager.getSceneEngineServices()._pTickBatchRegistry );
         return bRefreshedAny;
     }
 
@@ -564,6 +573,8 @@ namespace sw
         const bool    bWasDependent = std::binary_search( _listDependentObjectID.begin(), _listDependentObjectID.end(), objectID );
         const bool    bReferenced   = std::binary_search( _listReferencedObjectID.begin(), _listReferencedObjectID.end(), objectID );
         TickItemList& listItem      = pObj->_listTickItem;
+        // 지금 버퍼의 위치(칸 · 파도 원소)로 먼저 뺀다 — 버퍼를 다시 지으면 위치를 잃는다.
+        removeMembership( pObj );
         listItem.clear();
 
         uint32 prerequisiteCount = 0;
@@ -607,8 +618,9 @@ namespace sw
 
         // 계층에서 꺼진 오브젝트는 목록에 두지 않는다(언리얼 · 유니티가 꺼진 것의 틱을 목록에서 빼는 것과 같다). 켜지고 꺼질 때
         // `GameObject::refreshActiveInHierarchy` 가 표시하므로 다음 틱 전에 여기로 다시 온다. 항목 버퍼가 다시 지어졌으므로 칸도 새로 쓴다.
-        const bool bActive = pObj->isActiveInHierarchy();
-        uint32     cursor  = 0;
+        const bool         bActive        = pObj->isActiveInHierarchy();
+        TickBatchRegistry* pBatchRegistry = manager.getSceneEngineServices()._pTickBatchRegistry;
+        uint32             cursor         = 0;
         for ( uint32 group = 0; group < kGroupCount; ++group )
         {
             const uint32 begin = cursor;
@@ -624,17 +636,8 @@ namespace sw
             {
                 ++cursor;
             }
-            TickObjectEntry   entry{};
-            TickBatchFunction pBatchFunction = nullptr;
-            if ( begin < end )
-            {
-                entry._pObject   = pObj;
-                entry._firstItem = listItem[begin];
-                entry._pItem     = listItem.data() + begin;
-                entry._itemCount = end - begin;
-                pBatchFunction   = bActive ? findBatchFunction( manager.getSceneEngineServices()._pTickBatchRegistry, entry._pItem, entry._itemCount ) : nullptr;
-            }
-            setMembership( pObj, group, bActive && begin < end, entry, pBatchFunction );
+            if ( bActive && begin < end )
+                addMembership( pBatchRegistry, pObj, group, begin, end );
         }
 
         _prerequisiteCount           = _prerequisiteCount - pObj->_tickPrerequisiteCount + prerequisiteCount;
@@ -807,108 +810,198 @@ namespace sw
         return true;
     }
 
-    TickBatchFunction TickRegistry::findBatchFunction( TickBatchRegistry* pBatchRegistry, const TickItem* pItem, uint32 itemCount )
+    void TickRegistry::setBatchPathEnabled( bool bEnabled )
     {
-        // 그 그룹의 항목이 주 틱 하나뿐일 때만 — 둘 이상이면 오브젝트 안의 순서를 지키려고 오브젝트 칸으로 간다. 표가 없는 매니저(엔진 없는 테스트)는 일괄 경로가 없다.
-        const bool bNotBatchable = pBatchRegistry == nullptr || itemCount != 1 || pItem->_subTickID != 0 || pItem->_pComponent == nullptr;
-        if ( bNotBatchable )
-            return nullptr;
-        return pBatchRegistry->findFunction( pItem->_pComponent->findCachedTypeInfo() );
+        const uint8 newValue = bEnabled ? SW_TRUE : SW_FALSE;
+        if ( _bBatchPathEnabled == newValue )
+            return;
+        _bBatchPathEnabled = newValue;
+        _bAllDirty.store( SW_TRUE, std::memory_order_release );
     }
 
-    TickBatchList* TickRegistry::findBatchMembership( const GameObject* pObj, uint32 group )
+    TickTypeDispatch TickRegistry::resolveTypeDispatch( TickBatchRegistry* pBatchRegistry, const Component* pComp )
     {
-        const uint32 index = pObj->_arrTickIndex[group];
-        if ( index == kNotInList )
-            return nullptr;
-        for ( TickBatchList& batchList : _arrListBatch[group] )
-        {
-            if ( index < batchList._listElement.size() && batchList._listElement[index]._pObject == pObj )
-                return &batchList;
-        }
-        return nullptr;
+        const TypeInfo* pType = pComp->findCachedTypeInfo();
+        auto            found = _mapTypeDispatch.find( pType );
+        if ( found != _mapTypeDispatch.end() )
+            return found->second;
+        // 표가 없는 매니저(엔진 없는 테스트)는 모든 타입이 Batch 레인의 가상 호출 함수다.
+        TickTypeDispatch lane = ( pBatchRegistry != nullptr && pType != nullptr ) ? pBatchRegistry->findDispatch( pType ) : TickTypeDispatch{};
+        if ( lane._pFunction == nullptr )
+            lane._pFunction = &tickBatchVirtual;
+        _mapTypeDispatch.insert_or_assign( pType, lane );
+        return lane;
     }
 
-    TickBatchList& TickRegistry::getOrCreateBatchList( uint32 group, TickBatchFunction pFunction )
+    void TickRegistry::addMembership( TickBatchRegistry* pBatchRegistry, GameObject* pObj, uint32 group, uint32 begin, uint32 end )
     {
-        for ( TickBatchList& batchList : _arrListBatch[group] )
+        TickItemList& listItem = pObj->_listTickItem;
+        // 레인은 그 오브젝트 그룹 항목의 가장 큰 선언이다 — 오브젝트 안 순서를 한 스레드(Task) · 게임 스레드(Main)가 지키게.
+        TickMode lane = _bBatchPathEnabled == SW_TRUE ? TickMode::Batch : TickMode::Task;
+        for ( uint32 index = begin; index < end && lane == TickMode::Batch; ++index )
         {
-            if ( batchList._pFunction == pFunction )
-                return batchList;
+            const TickMode mode = resolveTypeDispatch( pBatchRegistry, listItem[index]._pComponent )._mode;
+            if ( mode > lane )
+                lane = mode;
+            // 파도 키의 순번은 uint8 이다 — 같은 순서 키 항목이 256 개를 넘는 오브젝트는 파도 대신 칸으로 간다(순서는 그대로다).
+            const bool bOrdinalOverflow  = index > begin && listItem[index - 1]._orderKey == listItem[index]._orderKey && listItem[index - 1]._waveOrdinal == TickRegistryInternal::kMaxWaveOrdinal;
+            listItem[index]._waveOrdinal = ( index > begin && listItem[index - 1]._orderKey == listItem[index]._orderKey ) ? static_cast<uint8>( listItem[index - 1]._waveOrdinal + 1 ) : 0;
+            if ( bOrdinalOverflow )
+                lane = TickMode::Task;
         }
-        TickBatchList& created = _arrListBatch[group].emplace_back();
-        created._pFunction     = pFunction;
-        return created;
+
+        if ( lane != TickMode::Batch )
+        {
+            TickObjectEntry entry{};
+            entry._pObject                = pObj;
+            entry._firstItem              = listItem[begin];
+            entry._pItem                  = listItem.data() + begin;
+            entry._itemCount              = end - begin;
+            vector<TickObjectEntry>& list = lane == TickMode::Main ? _arrListMainEntry[group] : _arrListEntry[group];
+            pObj->_arrTickIndex[group]    = static_cast<uint32>( list.size() );
+            list.push_back( entry );
+            return;
+        }
+
+        for ( uint32 index = begin; index < end; ++index )
+        {
+            TickItem&               item       = listItem[index];
+            const TickBatchFunction pFunction  = resolveTypeDispatch( pBatchRegistry, item._pComponent )._pFunction;
+            TickWave&               wave       = getOrCreateWave( group, item._orderKey, item._waveOrdinal );
+            TickBatchList*          pBatchList = nullptr;
+            for ( TickBatchList& batchList : wave._listBatch )
+            {
+                if ( batchList._pFunction == pFunction && batchList._subTickID == item._subTickID )
+                {
+                    pBatchList = &batchList;
+                    break;
+                }
+            }
+            if ( pBatchList == nullptr )
+            {
+                pBatchList             = &wave._listBatch.emplace_back();
+                pBatchList->_pFunction = pFunction;
+                pBatchList->_subTickID = item._subTickID;
+            }
+            item._batchIndex = static_cast<uint32>( pBatchList->_listElement.size() );
+            pBatchList->_listElement.push_back( TickBatchElement{ item._pComponent, pObj } );
+        }
+    }
+
+    TickWave& TickRegistry::getOrCreateWave( uint32 group, uint8 orderKey, uint8 ordinal )
+    {
+        vector<TickWave>& listWave = _arrListWave[group];
+        size_t            position = 0;
+        while ( position < listWave.size() )
+        {
+            const TickWave& wave = listWave[position];
+            if ( wave._orderKey == orderKey && wave._ordinal == ordinal )
+                return listWave[position];
+            const bool bAfterKey = wave._orderKey > orderKey || ( wave._orderKey == orderKey && wave._ordinal > ordinal );
+            if ( bAfterKey )
+                break;
+            ++position;
+        }
+        TickWave created{};
+        created._orderKey = orderKey;
+        created._ordinal  = ordinal;
+        listWave.insert( listWave.begin() + static_cast<ptrdiff_t>( position ), std::move( created ) );
+        return listWave[position];
+    }
+
+    void TickRegistry::removeEntry( vector<TickObjectEntry>& listEntry, uint32 group, uint32 index )
+    {
+        const TickObjectEntry moved          = listEntry.back();
+        listEntry[index]                     = moved;
+        moved._pObject->_arrTickIndex[group] = index;
+        listEntry.pop_back();
+    }
+
+    void TickRegistry::removeWaveElement( GameObject* pObj, TickItem& item )
+    {
+        const uint32 index = item._batchIndex;
+        item._batchIndex   = kNotInList;
+        for ( TickWave& wave : _arrListWave[item._group] )
+        {
+            if ( wave._orderKey != item._orderKey || wave._ordinal != item._waveOrdinal )
+                continue;
+            // 한 오브젝트의 원소는 파도마다 하나라, 그 위치에 이 오브젝트가 있는 목록이 이 항목의 목록이다.
+            for ( TickBatchList& batchList : wave._listBatch )
+            {
+                vector<TickBatchElement>& listElement = batchList._listElement;
+                if ( index >= listElement.size() || listElement[index]._pObject != pObj )
+                    continue;
+                const uint32           lastIndex = static_cast<uint32>( listElement.size() - 1 );
+                const TickBatchElement moved     = listElement[lastIndex];
+                listElement[index]               = moved;
+                listElement.pop_back();
+                if ( lastIndex == index )
+                    return;
+                // 옮긴 오브젝트의 이 파도 항목은 같은 (그룹, 파도 키)에 끝 위치를 든 항목 하나다.
+                for ( TickItem& movedItem : moved._pObject->_listTickItem )
+                {
+                    const bool bMovedItem = movedItem._group == item._group && movedItem._orderKey == item._orderKey && movedItem._waveOrdinal == item._waveOrdinal &&
+                                            movedItem._batchIndex == lastIndex;
+                    if ( bMovedItem )
+                    {
+                        movedItem._batchIndex = index;
+                        return;
+                    }
+                }
+                return;
+            }
+            return;
+        }
+    }
+
+    void TickRegistry::removeMembership( GameObject* pObj )
+    {
+        for ( TickItem& item : pObj->_listTickItem )
+        {
+            if ( item._batchIndex != kNotInList )
+                removeWaveElement( pObj, item );
+        }
+        for ( uint32 group = 0; group < kGroupCount; ++group )
+        {
+            uint32& index = pObj->_arrTickIndex[group];
+            if ( index == kNotInList )
+                continue;
+            vector<TickObjectEntry>& listTask = _arrListEntry[group];
+            vector<TickObjectEntry>& listMain = _arrListMainEntry[group];
+            if ( index < listTask.size() && listTask[index]._pObject == pObj )
+                removeEntry( listTask, group, index );
+            else if ( index < listMain.size() && listMain[index]._pObject == pObj )
+                removeEntry( listMain, group, index );
+            index = kNotInList;
+        }
+    }
+
+    void TickRegistry::refreshStageFunctions( TickBatchRegistry* pBatchRegistry )
+    {
+        // 스테이지 항목도 레인의 일괄 함수로 돈다(가상 호출 대신) — 스테이지 안은 한 오브젝트에 항목 하나라 순서는 바꾸지 않고, 디스패치가 같은 함수의 이웃 항목을 한 번에 넘긴다.
+        for ( TickStage& stage : _listStage )
+        {
+            stage._listItemFunction.resize( stage._listItem.size() );
+            for ( size_t index = 0; index < stage._listItem.size(); ++index )
+            {
+                const Component* pComp         = stage._listItem[index]._pComponent;
+                stage._listItemFunction[index] = pComp != nullptr ? resolveTypeDispatch( pBatchRegistry, pComp )._pFunction : &tickBatchVirtual;
+            }
+        }
     }
 
     void TickRegistry::removeEmptyBatchLists()
     {
-        for ( vector<TickBatchList>& listBatch : _arrListBatch )
+        for ( vector<TickWave>& listWave : _arrListWave )
         {
-            // 목록의 자리는 아무도 들지 않는다(오브젝트는 목록 안의 위치만 든다) — 순서를 지켜 걷기만 한다.
-            size_t keptCount = 0;
-            for ( size_t listIndex = 0; listIndex < listBatch.size(); ++listIndex )
+            // 목록 · 파도의 자리는 아무도 들지 않는다(항목은 목록 안의 위치만 든다) — 순서를 지켜 걷기만 한다.
+            for ( TickWave& wave : listWave )
             {
-                if ( listBatch[listIndex]._listElement.empty() )
-                    continue;
-                if ( keptCount != listIndex )
-                    listBatch[keptCount] = std::move( listBatch[listIndex] );
-                ++keptCount;
+                (void)VectorUtil::removeIf( wave._listBatch, []( const TickBatchList& batchList )
+                { return batchList._listElement.empty(); } );
             }
-            listBatch.resize( keptCount );
-        }
-    }
-
-    void TickRegistry::setMembership( GameObject* pObj, uint32 group, bool bMember, const TickObjectEntry& entry, TickBatchFunction pBatchFunction )
-    {
-        vector<TickObjectEntry>& listEntry      = _arrListEntry[group];
-        uint32&                  index          = pObj->_arrTickIndex[group];
-        const bool               bInEntryList   = index != kNotInList && index < listEntry.size() && listEntry[index]._pObject == pObj;
-        TickBatchList*           pCurrentBatch  = bInEntryList ? nullptr : findBatchMembership( pObj, group );
-        const bool               bWantsBatch    = bMember && pBatchFunction != nullptr;
-        const bool               bWantsEntry    = bMember && pBatchFunction == nullptr;
-        const bool               bSameBatchList = bWantsBatch && pCurrentBatch != nullptr && pCurrentBatch->_pFunction == pBatchFunction;
-
-        // 이미 같은 목록에 있으면 그 자리만 새로 쓴다(항목 버퍼가 다시 지어졌다).
-        if ( bWantsEntry && bInEntryList )
-        {
-            listEntry[index] = entry;
-            return;
-        }
-        if ( bSameBatchList )
-        {
-            pCurrentBatch->_listElement[index] = TickBatchElement{ entry._firstItem._pComponent, pObj };
-            return;
-        }
-
-        // 지금 목록에서 뺀다(끝 원소를 그 자리로 옮기고 옮긴 오브젝트의 위치를 고친다).
-        if ( bInEntryList )
-        {
-            const TickObjectEntry moved          = listEntry.back();
-            listEntry[index]                     = moved;
-            moved._pObject->_arrTickIndex[group] = index;
-            listEntry.pop_back();
-        }
-        else if ( pCurrentBatch != nullptr )
-        {
-            vector<TickBatchElement>& listElement = pCurrentBatch->_listElement;
-            const TickBatchElement    moved       = listElement.back();
-            listElement[index]                    = moved;
-            moved._pObject->_arrTickIndex[group]  = index;
-            listElement.pop_back();
-        }
-        index = kNotInList;
-
-        if ( bWantsEntry )
-        {
-            index = static_cast<uint32>( listEntry.size() );
-            listEntry.push_back( entry );
-        }
-        else if ( bWantsBatch )
-        {
-            vector<TickBatchElement>& listElement = getOrCreateBatchList( group, pBatchFunction )._listElement;
-            index                                 = static_cast<uint32>( listElement.size() );
-            listElement.push_back( TickBatchElement{ entry._firstItem._pComponent, pObj } );
+            (void)VectorUtil::removeIf( listWave, []( const TickWave& wave )
+            { return wave._listBatch.empty(); } );
         }
     }
 
@@ -916,10 +1009,7 @@ namespace sw
     {
         if ( pObj == nullptr )
             return;
-        for ( uint32 group = 0; group < kGroupCount; ++group )
-        {
-            setMembership( pObj, group, false, TickObjectEntry{}, nullptr );
-        }
+        removeMembership( pObj );
         const uint64 objectID = pObj->getObjectID();
         // 스테이지가 이 오브젝트의 항목을 들고 있거나(선행 조건을 가진 쪽) 이 오브젝트를 기다린다(가리켜진 쪽) — 다음 틱 전에 다시 짓는다.
         const bool bWasDependent = TickRegistryInternal::eraseSorted( _listDependentObjectID, objectID );
@@ -934,14 +1024,14 @@ namespace sw
 
     void TickRegistry::clear()
     {
-        for ( vector<TickObjectEntry>& listEntry : _arrListEntry )
+        // 오브젝트가 든 위치(`_arrTickIndex` · 항목의 `_batchIndex`)는 낡지만, 빼는 쪽이 그 위치에 자기가 있는지 보고 빼므로 다음 `refresh` 가 안전하게 다시 넣는다.
+        for ( uint32 group = 0; group < kGroupCount; ++group )
         {
-            listEntry.clear();
+            _arrListEntry[group].clear();
+            _arrListMainEntry[group].clear();
+            _arrListWave[group].clear();
         }
-        for ( vector<TickBatchList>& listBatch : _arrListBatch )
-        {
-            listBatch.clear();
-        }
+        _mapTypeDispatch.clear();
         {
             ScopedLock<mutex> lock{ _dirtyMutex };
             _listDirtyObjectID.clear();

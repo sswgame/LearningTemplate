@@ -298,7 +298,7 @@ namespace sw
             buffer.append( "#include \"Engine/Object/GameObject/ComponentHandleArgument.h\"\n\n" );
         // 일괄 틱 등록도 같은 규칙이다 — 그런 타입이 있는 산출물만 레지스트리 헤더를 넣는다.
         const bool bTickBatch = VectorUtil::containsIf( _header._listType, []( const ParsedTypeInfo& typeInfo )
-        { return typeInfo.requiresTickBatch(); } );
+        { return typeInfo.requiresTickRegistration(); } );
         if ( bTickBatch )
             buffer.append( "#include \"Engine/Object/GameObject/Tick/TickBatchRegistry.h\"\n\n" );
         buffer.append( emitdirective::kGeneratedNsOpen );
@@ -728,8 +728,6 @@ namespace sw
         emit.push( 3 );
 
         AnnotationFields::emitRuntimeMetadata( emit, typeInfo, "info._metadata->" );
-        if ( typeInfo._tickMode.empty() == false )
-            emit.linef( "info._metadata->_tickMode = ::sw::TickMode::%#;", typeInfo._tickMode );
         emit.flagIf( typeInfo._bOverridesTick, "info._metadata->_bOverridesTick" );
         emit.flagIf( typeInfo._bOverridesSubTick, "info._metadata->_bOverridesSubTick" );
         emit.flagIf( typeInfo._bOverridesSerializeState, "info._metadata->_bOverridesSerializeState" );
@@ -767,15 +765,24 @@ namespace sw
 
     void CodeGenerator::emitTickBatchRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
     {
-        // 손 매크로 `SW_REGISTER_TICK_BATCH` 가 하던 일 그대로다(정적 등록자가 모듈을 올릴 때 붙고 내리기 전에 떨어진다). 5-3 의 레인 런타임이 등록 API 를 바꾸면 여기만 바꾼다.
-        if ( typeInfo.requiresTickBatch() == false )
+        // 등록 줄 모양은 틱 런타임(5-3)이 정한 `SW_REGISTER_TICK_TYPE( 타입, 레인 )` 하나다 — 손 등록과 같은 줄. 메타데이터가 없으면 Batch.
+        if ( typeInfo.requiresTickRegistration() == false )
             return;
-        const string id = sanitizeIdentifier( typeInfo._fullyQualifiedName );
+        const string mode = typeInfo._tickMode.empty() ? string( "Batch" ) : typeInfo._tickMode;
         CodeEmit     emit( outBuffer );
         emit.push( 1 );
-        emit.linef( "static constexpr utf8 kTickBatchScopeName_%#[] = \"GT.Scene.tickBatch.%#\";", id, typeInfo._name );
-        emit.linef( "static ::sw::TickBatchRegistrar s_%#_tickBatch{ ::sw::TickBatchRegistry::Entry{ &%#::StaticType, &::sw::TickBatchOf<%#, kTickBatchScopeName_%#>::tickRange } };",
-                    id, typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, id );
+        // 생성 이름공간(`sw::generated`)은 `sw` 안이라 `sw` 바로 아래 타입은 짧은 이름으로 닿는다. 다른 이름공간의 타입은 매크로가 이름을 붙여 쓰지 못해(토큰 붙이기) 같은 줄을 펼쳐 쓴다.
+        if ( typeInfo._fullyQualifiedName == "sw::" + typeInfo._name )
+        {
+            emit.linef( "SW_REGISTER_TICK_TYPE( %#, %# );", typeInfo._name, mode );
+        }
+        else
+        {
+            const string id = sanitizeIdentifier( typeInfo._fullyQualifiedName );
+            emit.linef( "static constexpr utf8 kTickBatchScopeName_%#[] = \"GT.Scene.tickBatch.%#\";", id, typeInfo._name );
+            emit.linef( "static ::sw::TickBatchRegistrar s_%#_tickBatch{ ::sw::TickBatchRegistry::Entry{ &%#::StaticType, &::sw::TickBatchOf<%#, kTickBatchScopeName_%#>::tickRange, ::sw::TickMode::%# } };",
+                        id, typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, id, mode );
+        }
         emit.line( "" );
     }
 
