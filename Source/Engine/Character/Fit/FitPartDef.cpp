@@ -133,7 +133,7 @@ namespace sw
         {
             for ( const FitRingDef& ring : _listRing )
             {
-                if ( ring._bone.empty() || pBones->findBone( ring._bone ) >= 0 )
+                if ( ring._bone.empty() || pBones->findBone( ring._bone ).has_value() )
                     continue;
                 bValid = false;
                 outIssues.add( "FitPart.RingBoneUnknown", string( "ring names unknown bone '" ) + ring._bone.c_str() + "'" );

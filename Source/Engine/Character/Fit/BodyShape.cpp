@@ -61,7 +61,7 @@ namespace sw
                     return bValid;
                 for ( const BoneProportionEntry& entry : side._listBone )
                 {
-                    if ( pBones->findBone( entry._bone ) >= 0 )
+                    if ( pBones->findBone( entry._bone ).has_value() )
                         continue;
                     bValid = false;
                     outIssues.add( "BodyShape.AxisBoneUnknown", string( "body shape axis '" ) + axis._name.c_str() + "' names unknown bone '" + entry._bone.c_str() + "'" );

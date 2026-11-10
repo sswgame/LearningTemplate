@@ -131,9 +131,9 @@ namespace sw
                 float4x4            boneMatrix = float4x4::Identity;
                 if ( ring._bone.empty() == false && state._pBindBones != nullptr )
                 {
-                    const int32 boneIndex = state._pBindBones->findBone( ring._bone );
-                    if ( boneIndex >= 0 )
-                        boneMatrix = state._pBindBones->_listModel[static_cast<size_t>( boneIndex )];
+                    const optional<uint32> boneIndex = state._pBindBones->findBone( ring._bone );
+                    if ( boneIndex.has_value() )
+                        boneMatrix = state._pBindBones->_listModel[*boneIndex];
                 }
                 const float3  center       = float3::transform( ring._offset, boneMatrix );
                 const float3  axis         = CharacterGeometryUtil::makeUnitOr( float3::transformVector( ring._axis, boneMatrix ), float3::UnitY );

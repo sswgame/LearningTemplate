@@ -143,7 +143,7 @@ namespace sw
             PhysicsRagdollInternal::decomposePose( skeleton._listModelSpaceBone[static_cast<size_t>( outRagdoll._listBoneIndex[bodyIndex] )] * worldFromModel, position,
                                                    rotation );
             PhysicsJointDesc3D desc;
-            desc._bodyA                      = outRagdoll._listBody[static_cast<size_t>( parentBody )];
+            desc._bodyA                      = outRagdoll._listBody[*outRagdoll._listParentBody[bodyIndex]];
             desc._bodyB                      = outRagdoll._listBody[bodyIndex];
             desc._anchor                     = position;
             desc._anchorB                    = position;

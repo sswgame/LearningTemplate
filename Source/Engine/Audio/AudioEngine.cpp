@@ -971,8 +971,8 @@ namespace sw
             float32 seconds = fadeSeconds;
             if ( seconds < 0.0f )
             {
-                const bool bEvent = slot._instanceIndex >= 0 && _listInstance[static_cast<size_t>( slot._instanceIndex )]._pDesc != nullptr;
-                seconds           = bEvent ? _listInstance[static_cast<size_t>( slot._instanceIndex )]._pDesc->_fadeOutSeconds : 0.0f;
+                const bool bEvent = slot._instanceIndex.has_value() && _listInstance[*slot._instanceIndex]._pDesc != nullptr;
+                seconds           = bEvent ? _listInstance[*slot._instanceIndex]._pDesc->_fadeOutSeconds : 0.0f;
             }
             const uint32 fadeFrames            = static_cast<uint32>( seconds * static_cast<float32>( audio::kSampleRate ) );
             const bool   bStopVoiceImmediately = slot._bWaitingForClip || fadeFrames == 0 || slot._bVirtual;
@@ -1099,9 +1099,9 @@ namespace sw
         }
 
         // 이벤트의 파라미터 곡선(RTPC)은 볼륨 dB 와 피치 반음은 더하고, 로우패스는 낮은 쪽을 쓴다.
-        if ( slot._instanceIndex >= 0 )
+        if ( slot._instanceIndex.has_value() )
         {
-            const AudioEventDef* pEvent = _listInstance[static_cast<size_t>( slot._instanceIndex )]._pDesc;
+            const AudioEventDef* pEvent = _listInstance[*slot._instanceIndex]._pDesc;
             if ( pEvent != nullptr )
             {
                 for ( const AudioParameterMapping& mapping : pEvent->_listParameterMap )
@@ -1658,9 +1658,9 @@ namespace sw
         }
         for ( const AudioVoiceSlot& slot : _voicePool )
         {
-            if ( slot._bInUse == false || slot._instanceIndex < 0 )
+            if ( slot._bInUse == false || slot._instanceIndex.has_value() == false )
                 continue;
-            EventInstance& instance = _listInstance[static_cast<size_t>( slot._instanceIndex )];
+            EventInstance& instance = _listInstance[*slot._instanceIndex];
             instance._audibility    = MathUtil::max( instance._audibility, slot._audibility );
             instance._distance      = MathUtil::min( instance._distance, slot._distance );
         }

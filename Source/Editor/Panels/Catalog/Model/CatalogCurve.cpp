@@ -280,7 +280,7 @@ namespace sw::editor
         listAttribute.push_back( CatalogXMLNewAttribute{ "_time", string{ timeText.view() } } );
         listAttribute.push_back( CatalogXMLNewAttribute{ "_value", string{ valueText.view() } } );
         listAttribute.push_back( CatalogXMLNewAttribute{ "_interpolation", "Linear" } );
-        if ( draft.addChild( listKeyIndex, kKeyElementName, listAttribute ) == false )
+        if ( draft.addChild( listKeyIndex.value(), kKeyElementName, listAttribute ) == false )
         {
             inoutDocument.setError( draft.getError() );
             return false;
@@ -364,7 +364,7 @@ namespace sw::editor
                     return false;
                 }
             }
-            if ( listKeyIndex < 0 )
+            if ( listKeyIndex.has_value() == false )
             {
                 inoutDocument.setError( draft.getError() );
                 return false;

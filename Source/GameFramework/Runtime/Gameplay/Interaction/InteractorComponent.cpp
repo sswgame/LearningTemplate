@@ -391,7 +391,7 @@ namespace sw
         {
             setFocus( manager, GameObjectHandle{}, TComponentHandle<InteractableComponent>{} );
         }
-        InteractableComponent* pTarget = best >= 0 ? manager.resolveComponent( _focusComponent ) : nullptr;
+        InteractableComponent* pTarget = best.has_value() ? manager.resolveComponent( _focusComponent ) : nullptr;
         if ( bPressed == false || pTarget == nullptr )
             return;
         const InteractionDef*  pDef       = pTarget->getDefinition();
