@@ -28,6 +28,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -337,9 +338,9 @@ namespace sw
      * @code
      *     NetSimHarness harness;
      *     harness.initialize( services, settings, &game );                // 서버 월드를 만든다
-     *     const int32 clientA = harness.addClient( NetSimLinkConditions::makeSymmetric( lossy ) );
+     *     const int32 clientA = harness.addClient( NetSimLinkConditions::makeSymmetric( lossy ) ).value();
      *     harness.stepTicks( 600 );
-     *     const int32 lateClient = harness.addClient( {} );               // 늦은 참가
+     *     const int32 lateClient = harness.addClient( {} ).value();       // 늦은 참가
      *     harness.stepUntil( &isConverged, 300 );
      *     harness.removeClient( clientA );
      * @endcode
@@ -368,8 +369,8 @@ namespace sw
          */
         int32 stepUntil( bool ( *pPredicate )( const NetSimHarness&, void* ), void* pContext, uint32 maxTicks );
 
-        /** @brief 클라이언트 월드를 만들고 서버에 연결을 시작합니다. 월드 번호(1부터)를 반환하고, 실패하면 -1 을 반환합니다. */
-        int32 addClient( const NetSimLinkConditions& conditions );
+        /** @brief 클라이언트 월드를 만들고 서버에 연결을 시작합니다. 월드 번호(1부터)를 반환하고, 실패하면 이유를 돌려줍니다. */
+        [[nodiscard]] expected<int32> addClient( const NetSimLinkConditions& conditions );
         /** @brief 클라이언트를 내보냅니다. 끊김 알림을 보내고 월드를 종료하며, 없는 번호면 아무것도 하지 않습니다. */
         void removeClient( int32 worldIndex );
         /** @brief 클라이언트 회선의 조건을 바꿉니다. 다음 송신부터 적용됩니다. */

@@ -63,7 +63,7 @@ namespace sw::editor
         }
         for ( int32 index = 0; index < settings._clientCount; ++index )
         {
-            if ( _pHarness->addClient( settings._conditions ) < 0 )
+            if ( _pHarness->addClient( settings._conditions ).has_value() == false )
             {
                 StringBuilder<constant::buffer::kMax128> detailBuilder;
                 detailBuilder.appendFormat( "client %#", index + 1 );

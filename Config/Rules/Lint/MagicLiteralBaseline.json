@@ -718,7 +718,7 @@
     "Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/EditorNetSimSession.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/Sample/NetSimSampleGame.cpp": {"float": 10},
-    "Source/GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.cpp": {"minus-one": 3, "hex": 1},
+    "Source/GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.cpp": {"minus-one": 1, "hex": 1},
     "Source/GameFramework/Kits/Feature/Network/NetTurnRelay/TurnRelay.h": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Online/Account/Runtime/API/LoopbackPkceLoginClient.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.cpp": {"integer": 2},
