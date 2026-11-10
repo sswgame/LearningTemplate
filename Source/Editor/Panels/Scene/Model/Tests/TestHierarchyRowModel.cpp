@@ -78,6 +78,7 @@ SW_TEST_CASE( HierarchyRowModelTest, RowOffsetAndRowAtOffsetAgree )
     SW_REQUIRE_NOT_NULL( pLast );
 
     sw::editor::HierarchyRowModel rows;
+    rows.refresh( manager, "", 0 );                                 // 처음 보는 매니저는 펼침을 비우므로 먼저 매니저를 잡는다
     rows.setExpanded( Kind::Object, pParent->getObjectID(), true ); // 컴포넌트 행이 오브젝트 행 사이에 든다
     rows.refresh( manager, "", 0 );
     const sw::optional<uint32> lastRow = rows.findRowOfObject( pLast->getObjectID() );
