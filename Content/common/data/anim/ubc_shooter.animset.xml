@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Shooter3D 플레이어(UBC)의 클립 — UAL1 위에 두 손 사격 자세를 더한다. UAL1 에는 소총 자세가 없어(pistol_* 뿐) 소총이 권총 조준 자세로 머리 옆에 들렸다.
-     두 손 자세는 KayKit 도적의 2h_ranged_* 를 kaykit_to_ubc.retarget.xml 로 구운 것이다(App --import-models 가 굽는다 — 구운 클립은 가져오기 산출물). -->
-<AnimationSet formatVersion="0" _base="common/models/quaternius/animations/ual1_standard/ual1_standard.animset.xml">
-	<clip name="ubc_2h_ranged_aiming" set="common/models/kaykit/rogue/rogue.animset.xml" source="2h_ranged_aiming" retarget="common/rigs/kaykit_to_ubc.retarget.xml" />
-	<clip name="ubc_2h_ranged_shoot" set="common/models/kaykit/rogue/rogue.animset.xml" source="2h_ranged_shoot" retarget="common/rigs/kaykit_to_ubc.retarget.xml" />
-</AnimationSet>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Sci-Fi gun_sniper 의 소켓 — 모델 공간(총열이 -Z). Muzzle 은 총구(탄도선 · 총구 섬광, +Z 가 총구 방향), SupportHand 는 보조 손이 쥐는 총열 아래. -->
+<!-- Sci-Fi gun_sniper 의 소켓 — 모델 공간(총열이 -Z). Muzzle 은 총구(탄도선 · 총구 섬광, +Z 가 총구 방향), SupportHand 는 보조 손이 쥐는 총열 아래(총 원점에서 0.42 m — 더 앞이면 UBC 왼팔 0.55 m 가 견착 자세에서 닿지 않는다). -->
 <SocketSet>
   <Socket name="Muzzle" translation="0 0.091 -1.277" rotation="0 180 0" kind="EffectSpawn"/>
-  <Socket name="SupportHand" translation="0 0.0 -0.55" kind="Attach"/>
+  <Socket name="SupportHand" translation="0 0.0 -0.42" kind="Attach"/>
   <Socket name="Grip" translation="0 0 0.05" kind="Attach"/>
 </SocketSet>

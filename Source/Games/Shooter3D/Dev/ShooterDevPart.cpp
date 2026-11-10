@@ -24,6 +24,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
@@ -31,6 +32,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGameDevPart.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
 #include "Games/Shooter3D/ShooterAutoAimControllerComponent.h"
 #include "Games/Shooter3D/ShooterGameModeComponent.h"
@@ -55,6 +57,7 @@ namespace sw
             ShooterDevPart()
                 : _motionTrace{}
                 , _traceFrame{ 0 }
+                , _bBoneErrorShown{ SW_FALSE }
             {
                 // 근접 스위치는 주소로 건다 — 이 부분의 갱신은 게임 플레이 중에만 돌지만 조종자는 에디터의 넷 시뮬 월드에서도 돈다(`ShooterAutoPlayOptions`).
                 if ( ShooterAutoPlayOptions* const pOptions = game::findSubsystem<ShooterAutoPlayOptions>() )
@@ -92,7 +95,11 @@ namespace sw
             }
 
         private:
-            /** @brief 지난 프레임에 그려진 플레이어 몸, 본, 카메라, 적 하나의 위치를 CSV 한 줄로 쌓습니다. 게임 갱신은 씬 틱 밖이라 읽는 월드 · 본은 지난 프레임에 그려진 그대로다. */
+            /**
+             * @brief 지난 프레임에 그려진 플레이어 몸, 카메라, 두 총(시점 총 · 몸 총), 두 손, 적 하나의 월드 위치를 CSV 한 줄로 쌓습니다.
+             * @details 게임 갱신은 씬 틱 밖이라 읽는 월드 · 본은 지난 프레임에 그려진 그대로다. 총 · 손 · 카메라를 같은 월드 공간에 두어 떨림을 프레임별로 대조한다.
+             *          뼈 이름은 몸 스켈레톤(UBC)의 이름이다 — 없으면 0 으로 적고 넘어가지 않고 오류를 한 번 남긴다(KayKit 이름이 남아 모든 뼈 칸이 0 이던 기록이었다).
+             */
             void appendMotionTrace( GameObjectManager& manager, const ShooterGameModeComponent& gameMode, float32 deltaTime )
             {
                 const GameObject* const             pPlayerObject = manager.resolveGameObject( gameMode.getPlayer() );
@@ -100,18 +107,19 @@ namespace sw
                 if ( pPlayer == nullptr )
                     return;
                 if ( _motionTrace.empty() )
-                    _motionTrace = "frame,dt,feetX,feetZ,lookYaw,bodyX,bodyY,bodyZ,bodyYaw,rootX,rootY,rootZ,hipsX,hipsY,hipsZ,headX,headY,headZ,handX,handY,handZ,"
-                                   "camX,camY,camZ,camYaw,enemyX,enemyZ,enemyHipsY,state\n";
-                static constexpr const utf8* kArrBone[4] = { "root", "hips", "head", "hand.r" };
+                    _motionTrace = "frame,dt,feetX,feetZ,lookYaw,bodyX,bodyY,bodyZ,bodyYaw,pelvisX,pelvisY,pelvisZ,spineX,spineY,spineZ,handRX,handRY,handRZ,handLX,handLY,handLZ,"
+                                   "camX,camY,camZ,camYaw,viewGunX,viewGunY,viewGunZ,bodyGunX,bodyGunY,bodyGunZ,enemyX,enemyZ,state\n";
+                static constexpr const utf8* kArrBone[4] = { "pelvis", "spine_03", "hand_r", "hand_l" };
                 float3                       arrBone[4]{};
                 float3                       body{};
+                float3                       bodyGun{};
                 float32                      bodyYaw = 0.0f;
                 hashed_string                state;
                 const GameObject*            pBody = pPlayer->findBodyObject();
                 if ( pBody != nullptr )
                 {
                     const SkeletalMeshComponent* pUnit = pBody->getComponent<SkeletalMeshComponent>();
-                    if ( pUnit != nullptr )
+                    if ( pUnit != nullptr && pUnit->getModelSpaceTransforms().empty() == false )
                     {
                         const float4x4 world = pUnit->getWorldMatrix();
                         body                 = world.getTranslation();
@@ -121,12 +129,24 @@ namespace sw
                         {
                             float4x4 bone;
                             if ( pUnit->findBoneModelTransform( hashed_string( kArrBone[boneIndex] ), bone ) )
-                                arrBone[boneIndex] = bone.getTranslation();
+                            {
+                                arrBone[boneIndex] = float3::transform( bone.getTranslation(), world );
+                            }
+                            else if ( _bBoneErrorShown == SW_FALSE )
+                            {
+                                _bBoneErrorShown = SW_TRUE;
+                                SW_LOG_ERROR_ID( "ShooterDevPart.MotionTraceBoneMissing", "[Shooter] motion trace: the body skeleton has no bone '%#' - its columns stay 0", kArrBone[boneIndex] );
+                            }
                         }
                     }
                     const SkeletalAnimatorComponent* pAnimator = pBody->getComponent<SkeletalAnimatorComponent>();
                     if ( pAnimator != nullptr )
                         state = pAnimator->getCurrentStateName();
+                    const CharacterAppearanceComponent* pAppearance = pBody->getComponent<CharacterAppearanceComponent>();
+                    const GameObject*                   pGun        = pAppearance != nullptr ? manager.resolveGameObject( pAppearance->findSlotPartObject( hashed_string( "MainHand" ) ) ) : nullptr;
+                    const SceneComponent*               pGunScene   = pGun != nullptr ? pGun->getPrimarySceneComponent() : nullptr;
+                    if ( pGunScene != nullptr )
+                        bodyGun = pGunScene->getWorldPosition();
                 }
                 float3                 camera{};
                 float32                cameraYaw = 0.0f;
@@ -142,8 +162,15 @@ namespace sw
                     const float3 forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world );
                     cameraYaw            = MathUtil::atan2( forward._x, forward._z );
                 }
-                float3  enemy{};
-                float32 enemyHipsY = 0.0f;
+                // 1인칭 시점 총(플레이어 오브젝트의 카메라 자식). 1인칭이 아니어도 자리는 카메라를 따라간다.
+                float3              viewGun{};
+                const hashed_string viewGunName( "ViewWeapon" );
+                pPlayerObject->forEachComponentOfType<MeshComponent>( [&viewGun, &viewGunName]( MeshComponent* pMesh )
+                {
+                    if ( pMesh->getComponentName() == viewGunName )
+                        viewGun = pMesh->getWorldPosition();
+                } );
+                float3 enemy{};
                 for ( uint32 enemyIndex = 0; enemyIndex < gameMode.getEnemyCount(); ++enemyIndex )
                 {
                     const GameObject*            pEnemy = manager.resolveGameObject( gameMode.getEnemyObject( enemyIndex ) );
@@ -151,9 +178,6 @@ namespace sw
                     if ( pUnit == nullptr )
                         continue;
                     enemy = pUnit->getWorldPosition();
-                    float4x4 hips;
-                    if ( pUnit->findBoneModelTransform( hashed_string( "hips" ), hips ) )
-                        enemyHipsY = hips.getTranslation()._y;
                     break;
                 }
                 const float3                              feet = pPlayer->getFeetPosition();
@@ -163,14 +187,17 @@ namespace sw
                 {
                     row.appendFormat( ",%.4f,%.4f,%.4f", bone._x, bone._y, bone._z );
                 }
-                row.appendFormat( ",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%#\n", camera._x, camera._y, camera._z, cameraYaw, enemy._x, enemy._z, enemyHipsY, state.c_str() );
+                row.appendFormat( ",%.4f,%.4f,%.4f,%.4f", camera._x, camera._y, camera._z, cameraYaw );
+                row.appendFormat( ",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f", viewGun._x, viewGun._y, viewGun._z, bodyGun._x, bodyGun._y, bodyGun._z );
+                row.appendFormat( ",%.4f,%.4f,%#\n", enemy._x, enemy._z, state.c_str() );
                 _motionTrace += row.c_str();
                 ++_traceFrame;
             }
 
         private:
-            string _motionTrace; ///< 움직임 기록 CSV(게임이 내려갈 때 파일로 쓴다)
-            uint32 _traceFrame;  ///< 움직임 기록의 프레임 번호
+            string _motionTrace;         ///< 움직임 기록 CSV(게임이 내려갈 때 파일로 쓴다)
+            uint32 _traceFrame;          ///< 움직임 기록의 프레임 번호
+            uint8  _bBoneErrorShown : 1; ///< 기록할 뼈가 없다는 오류를 남겼다(한 번만)
         };
     } // namespace
 

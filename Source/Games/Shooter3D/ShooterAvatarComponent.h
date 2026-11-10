@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -66,12 +67,19 @@ namespace sw
         float32 getLastStrideScale() const { return _lastStrideScale; }
         /** @brief 리그가 준비돼 보폭 워핑 값을 실제로 넣은 프레임 수입니다. 0 이면 리그가 메시에 아직 묶이지 않았다(`isRigReady` 전 프레임은 넣지 않는다). */
         uint32 getStrideAppliedCount() const { return _strideAppliedCount; }
+        /**
+         * @brief 이번 걸음 동안(서면 비운다) 몸 무기(외형 `MainHand` 부품)의 몸 공간 위치 2 차 차분 |p(t) - 2p(t-1) + p(t-2)| 의 최댓값입니다(미터). 시나리오 감시 `Shooter3D.GunJerkMax` 가 읽습니다.
+         * @details 걷기 클립 · 리그가 주는 매끄러운 흔들림은 프레임당 수 mm 아래이고, 프레임마다 오가는 떨림은 진폭의 4 배로 드러난다. 몸 공간이라 몸이 걷는 속도는 들지 않는다.
+         */
+        float32 getGunJerkMax() const { return _gunJerkMax; }
 
     private:
         /** @brief 지금 상태 클립의 발 속도(m/s)입니다. 서 있거나 공중이거나 이동 클립이 아니면 0 입니다(재생 속도 · 보폭을 바꾸지 않는다). */
         float32 computeLocomotionFootSpeed( const SkeletalAnimatorComponent& animator, LocomotionDirection direction );
         /** @brief 보폭 워핑 노드에 배율과 모델 공간 이동 방향(+Z 앞, +X 오른쪽)을 넣습니다. */
         void applyStrideWarping( float32 strideScale, const float2& localVelocity );
+        /** @brief 지난 프레임에 그려진 몸 무기 위치(몸 공간)로 2 차 차분을 쌓습니다. 몸 자리를 이번 프레임 값으로 옮기기 전에 불러야 둘이 같은 프레임이다. */
+        void sampleGunJerk( bool bMoving );
 
     private:
         PROPERTY( Category = "Avatar", DisplayName = "Player", Tooltip = "Object with the ShooterPlayerComponent this body follows" )
@@ -102,6 +110,8 @@ namespace sw
         hashed_string _firstPersonHandsSlot;
         PROPERTY( Category = "First Person", DisplayName = "Third Person Hands Slot", Tooltip = "Rig weight slot of the IK nodes that hold the body's weapon; on only in third person" )
         hashed_string _thirdPersonHandsSlot;
+        PROPERTY( Required, Category = "Avatar", DisplayName = "Two Hand Hold Slot", Tooltip = "Rig weight slot of the IK node that puts the right hand at the shouldered two-handed hold; on while aiming a two-handed weapon" )
+        hashed_string _twoHandHoldSlot;
         PROPERTY( Category = "First Person", DisplayName = "Hidden Appearance Slots", Tooltip = "Appearance slots whose parts are hidden in first person (head gear, the body's weapon)" )
         vector<hashed_string> _listFirstPersonHiddenSlot;
         PROPERTY( Required, Category = "Avatar", DisplayName = "Stride Node", Tooltip = "StrideWarping node of this body's pose modifier rig that takes the rest of the speed matching" )
@@ -119,6 +129,10 @@ namespace sw
         float32 _lastStrideScale;
         uint32  _strideAppliedCount;
         uint32  _lastHitReaction;
+        float3  _gunPrevious;       ///< 지난 표본의 몸 무기 위치(몸 공간)
+        float3  _gunBeforePrevious; ///< 그 앞 표본
+        uint32  _gunSampleCount;    ///< 이번 걸음의 표본 수(2 차 차분은 셋째부터)
+        float32 _gunJerkMax;        ///< 이번 걸음의 2 차 차분 최댓값(`getGunJerkMax`)
         uint8   _bYawReady         : 1;
         uint8   _bStrideErrorShown : 1; ///< 노드가 없다는 오류를 한 번만 남긴다
         uint8   _reserved          : 6;

@@ -136,17 +136,23 @@ namespace sw
             const bool bInvalidBoneChains = bOk == false || listChainSource.empty() || listChainTarget.empty();
             if ( bInvalidBoneChains )
                 return false;
-            // 본 수가 다르면 사슬 길이 비율로 가장 가까운 원본 본을 고른다.
-            const size_t sourceCount = listChainSource.size();
-            const size_t targetCount = listChainTarget.size();
-            for ( size_t targetIndex = 0; targetIndex < targetCount; ++targetIndex )
+            // 본마다 사슬을 따라 잰 길이 비율(첫 본 0 · 끝 본 1)이 가장 가까운 원본 본을 고른다 — 언리얼 IK Retargeter 의 FK 사슬 매개변수 짝짓기.
+            // 본 순번 비율은 길이를 모른다: KayKit 팔(위팔 · 아래팔 · 손목 · 손) → UBC 팔(위팔 · 아래팔 · 손)에서 UBC 아래팔이 손목 본을 받았다(길이 비율 0.50 ↔ 손목 0.87, 아래팔 0.42).
+            const vector<float32> listSourceParameter = makeChainParameters( _sourceBuffer, listChainSource );
+            const vector<float32> listTargetParameter = makeChainParameters( _targetBuffer, listChainTarget );
+            for ( size_t targetIndex = 0; targetIndex < listChainTarget.size(); ++targetIndex )
             {
-                const float32 ratio       = targetCount > 1 ? static_cast<float32>( targetIndex ) / static_cast<float32>( targetCount - 1 ) : 0.0f;
-                const size_t  sourceIndex = static_cast<size_t>( MathUtil::round( ratio * static_cast<float32>( sourceCount - 1 ) ) );
+                size_t sourceIndex = 0;
+                for ( size_t candidate = 1; candidate < listChainSource.size(); ++candidate )
+                {
+                    const float32 distance = MathUtil::abs( listSourceParameter[candidate] - listTargetParameter[targetIndex] );
+                    if ( distance < MathUtil::abs( listSourceParameter[sourceIndex] - listTargetParameter[targetIndex] ) )
+                        sourceIndex = candidate;
+                }
                 inoutListSourceBone.push_back( listChainSource[sourceIndex] );
                 inoutListTargetBone.push_back( listChainTarget[targetIndex] );
             }
-            if ( chain._bIKGoal == SW_TRUE && targetCount >= 2 )
+            if ( chain._bIKGoal == SW_TRUE && listChainTarget.size() >= 2 )
             {
                 IKChain ikChain{};
                 ikChain._listTargetBone     = listChainTarget;
@@ -157,6 +163,21 @@ namespace sw
             }
         }
         return true;
+    }
+
+    vector<float32> PoseRetargeter::makeChainParameters( RigPoseBuffer& buffer, const vector<uint32>& listChainBone )
+    {
+        vector<float32> listParameter( listChainBone.size(), 0.0f );
+        for ( size_t index = 1; index < listChainBone.size(); ++index )
+        {
+            listParameter[index] = listParameter[index - 1] + ( buffer.getModelPosition( listChainBone[index] ) - buffer.getModelPosition( listChainBone[index - 1] ) ).getLength();
+        }
+        const float32 length = listParameter.back();
+        for ( float32& parameter : listParameter )
+        {
+            parameter = length > MathUtil::kEpsilon ? parameter / length : 0.0f; // 본 하나인 사슬은 길이가 없다 — 모두 0 이라 대상 본마다 그 본을 받는다
+        }
+        return listParameter;
     }
 
     bool PoseRetargeter::collectNamedBones( const RetargetProfile& profile, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton, vector<uint32>& inoutListSourceBone,

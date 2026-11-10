@@ -5,6 +5,8 @@
   골든을 뜰 때 볼 것: ① 1인칭에서 아래를 보면 몸 · 다리가 보이고 머리 · 투구 · 몸의 총이 없다(근평면에 목 단면이 걸리면 HideHead 를 neck 까지 넓힌다). ② 3인칭에서 머리가 돌아온다.
   ③ 소총 · 산탄총 · 권총마다 왼손이 총열 아래 SupportHand 에 붙는다(기사 세트의 방패가 왼손에 함께 있어 가리면 총을 든 프리셋에서 방패 칸을 비울지 정한다). 팔꿈치가 어색하면 pole.
   ④ 1인칭에서 아래를 봐도 두 손이 시점 총을 잡고 있다(리그의 RightHandView · LeftHandView 가 시점 총의 Grip · SupportHand 를 잡는다. 몸은 요만 돌고 시점 총은 피치로 움직여 몸의 숨은 무기를 잡으면 손이 떠 있었다).
+  ⑤ 값으로도 본다: Shooter3D.HandReachError(켜진 손 IK 노드의 끝 ↔ 목표 거리 최댓값, m)는 1인칭 · 3인칭 · 걷는 동안 손이 총의 Grip · SupportHand 에 닿는지,
+     Shooter3D.GunJerkMax(걷는 동안 몸 공간 총 위치의 프레임 간 2 차 차분 최댓값, m)는 걸을 때 총이 떨리는지 가른다(매끄러운 걷기 흔들림은 수 mm 아래, 프레임마다 오가는 떨림은 진폭의 4 배).
   MouseDelta 의 부호(아래를 보는 쪽)는 입력 맵의 Look 배율에 달렸으니 두 방향을 다 찍는다. 사진 앞의 고정 대기는 카메라 · 애니메이션이 자리 잡을 시간이다.
   실행: App -scenario=game/shooter3d/automation/bodyviews.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
 -->
@@ -14,6 +16,7 @@
 	<Wait frames="40"/>
 	<Expect watch="Shooter3D.StrideAppliedCount" atLeast="10"/>
 	<Screenshot file="firstperson_level.ppm"/>
+	<Expect watch="Shooter3D.HandReachError" atMost="0.03"/>
 	<Wait frames="10"/>
 	<MouseDelta x="0" y="300"/>
 	<Wait frames="20"/>
@@ -53,6 +56,22 @@
 	<Wait frames="60"/>
 	<Screenshot file="walk.ppm"/>
 	<Wait frames="5"/>
+	<Release slot="Key.W"/>
+	<!-- 걷는 동안 떨림 · 손 닿음 — 소총(두 손 견착)을 3인칭에서, 다시 1인칭에서 -->
+	<Wait frames="5"/>
+	<Tap slot="Key.Digit1" hold="1"/>
+	<Wait frames="25"/>
+	<Press slot="Key.W"/>
+	<Wait frames="60"/>
+	<Expect watch="Shooter3D.GunJerkMax" atMost="0.01"/>
+	<Expect watch="Shooter3D.HandReachError" atMost="0.03"/>
+	<Release slot="Key.W"/>
+	<DevCommand line="camera.preset firstperson"/>
+	<Wait frames="20"/>
+	<Press slot="Key.W"/>
+	<Wait frames="60"/>
+	<Expect watch="Shooter3D.GunJerkMax" atMost="0.01"/>
+	<Expect watch="Shooter3D.HandReachError" atMost="0.03"/>
 	<Release slot="Key.W"/>
 	<Wait frames="5"/>
 	<ExpectImage file="firstperson_level.ppm" golden="firstperson_level"/>

@@ -185,6 +185,7 @@ namespace sw
                 const bool       bPole     = _pole != MathUtil::kMaxUInt32 && context._pInstance->resolveTarget( _pole, pose, polePosition, poleRotation );
                 const quaternion endBefore = pose.getModelRotation( _end );
                 (void)RigIKSolver::solveTwoBone( pose, _root, _mid, _end, targetPosition, bPole ? &polePosition : nullptr, *context._pSpace );
+                _reachError = ( pose.getModelPosition( _end ) - targetPosition ).getLength();
                 if ( _params._bMatchRotation )
                     pose.setModelRotation( _end, targetRotation );
                 else if ( _params._bKeepEndRotation )
@@ -198,6 +199,24 @@ namespace sw
                 inoutListBone.push_back( _end );
             }
 
+            void prepare( const RigPrepareContext& context ) override
+            {
+                (void)context;
+                _outputReachError = _reachError; // 게임 스레드 사본 — 지난 평가의 값(`getOutputValue`)
+            }
+
+            /**
+             * @brief 출력: `reach_error`(지난 평가에서 풀이 뒤 끝 본과 목표 사이 거리, 미터 · 팔이 닿지 않으면 0 보다 크다).
+             * @details 손이 총 손잡이 · 받침에 닿는지를 사진 대신 값으로 본다(시나리오 감시). 언리얼 Two Bone IK 의 닿음 디버그 자리다.
+             */
+            [[nodiscard]] bool getOutputValue( const hashed_string& output, float32& outValue ) const override
+            {
+                if ( string_view( output.c_str() ) != "reach_error" )
+                    return false;
+                outValue = _outputReachError;
+                return true;
+            }
+
         private:
             RigTwoBoneIKParams _params{}; ///< 파일 키 · 기본값 · 범위(RigNodeParams.h)
             uint32             _root{ 0 };
@@ -205,6 +224,8 @@ namespace sw
             uint32             _end{ 0 };
             uint32             _target{ 0 };
             uint32             _pole{ MathUtil::kMaxUInt32 };
+            float32            _reachError{ 0.0f };       ///< 지난 평가의 끝 본 ↔ 목표 거리(워커가 쓴다)
+            float32            _outputReachError{ 0.0f }; ///< 게임 스레드 사본(`prepare` 가 옮긴다)
         };
 
         /**
