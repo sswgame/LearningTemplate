@@ -8,10 +8,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Animation/Facial/IVoiceDecoder.h"
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Presentation/IVoiceDecoder.h"
 
 namespace sw
 {
