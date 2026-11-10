@@ -231,7 +231,7 @@ namespace sw
         const Skeleton*                _pBoneNameSkeleton;
         SkeletalMeshComponent*         _pUnit;
         AssetReloadWatch<PhysicsAsset> _assetReload;
-        int32                          _flinchLayer;
+        optional<uint32>               _flinchLayer; ///< 움찔 레이어 — 첫 맞음에 더한다
         float32                        _partialWeight;
         float32                        _settleElapsed;
         float32                        _blendBackElapsed;

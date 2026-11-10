@@ -252,8 +252,8 @@ namespace sw
         /** @brief 현재 상태 이름을 반환합니다. */
         const hashed_string& getCurrentStateName() const { return _graphPlayer.getCurrentStateName(); }
 
-        /** @brief 레이어를 더하고 그 인덱스를 반환합니다. 클립을 못 찾으면 -1 입니다. */
-        int32 addLayer( const AnimationLayerDef& desc );
+        /** @brief 레이어를 더하고 그 인덱스를 반환합니다. 클립을 못 찾으면 오류를 남기고 이유를 돌려줍니다. */
+        [[nodiscard]] expected<uint32> addLayer( const AnimationLayerDef& desc );
         /** @brief 레이어 가중치를 바꿉니다. */
         void setLayerWeight( uint32 layerIndex, float32 weight );
         /** @brief 레이어 클립을 처음부터 다시 재생합니다(맞음 움찔처럼 한 번 도는 가산 레이어). */

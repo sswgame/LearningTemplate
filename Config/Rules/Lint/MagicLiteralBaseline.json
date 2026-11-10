@@ -435,7 +435,7 @@
     "Source/Engine/Character/Fit/MergedMesh.h": {"minus-one": 2},
     "Source/Engine/Character/Fit/SurfaceState.cpp": {"float": 2},
     "Source/Engine/Character/Hit/CharacterHit.cpp": {"float": 7},
-    "Source/Engine/Character/Hit/RagdollComponent.cpp": {"minus-one": 2, "float": 2},
+    "Source/Engine/Character/Hit/RagdollComponent.cpp": {"minus-one": 1, "float": 2},
     "Source/Engine/Character/PairedAnimation/PairedAnimationDef.cpp": {"float": 2},
     "Source/Engine/Character/Socket/SocketBindingComponent.cpp": {"float": 1, "integer": 1},
     "Source/Engine/Compression/ZlibCompressionCodec.cpp": {"minus-one": 1},

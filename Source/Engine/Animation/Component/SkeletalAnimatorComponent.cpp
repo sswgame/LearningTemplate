@@ -856,19 +856,19 @@ namespace sw
             _pSkeletalMesh->markPoseDirty();
     }
 
-    int32 SkeletalAnimatorComponent::addLayer( const AnimationLayerDef& desc )
+    expected<uint32> SkeletalAnimatorComponent::addLayer( const AnimationLayerDef& desc )
     {
         if ( preloadClip( desc._clipName ) == false )
         {
             SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationLayerClipNot", "Animation layer clip '%#' was not found in '%#'", desc._clipName.c_str(), _animationSetPath.c_str() );
-            return constant::invalid_index::kInt32;
+            return unexpected( Error{ ErrorKind::NotFound, "the animation layer clip was not found", desc._clipName.c_str() } );
         }
         LayerState layer{};
         layer._desc = desc;
         layer._clip = _mapClip[desc._clipName];
         layer._player.play( layer._clip.get(), desc._bLoop == SW_TRUE );
         _listLayer.push_back( std::move( layer ) );
-        return static_cast<int32>( _listLayer.size() - 1 );
+        return static_cast<uint32>( _listLayer.size() - 1 );
     }
 
     void SkeletalAnimatorComponent::setLayerWeight( uint32 layerIndex, float32 weight )
