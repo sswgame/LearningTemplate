@@ -206,9 +206,8 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     return surface;
 }
 
-#if !defined( MATERIAL_VERTEX_DEFORM )
-    #error "terrain.hlsl moves vertices by the surface deform layer: terrain materials need MATERIAL_VERTEX_DEFORM (terrain.material)"
-#endif
+// 지형 머티리얼은 MATERIAL_VERTEX_DEFORM 을 켠다(terrain.material) — #error 로 막지 않는다: 머티리얼 상수 리플렉션이 정의 없이 컴파일한다.
+// 데이터 검사는 MaterialLibraryTest.TerrainMaterialsDeformVertices.
 
 #if defined( TERRAIN_GEOMORPH )
     #if defined( SW_PASS_SHADOW )

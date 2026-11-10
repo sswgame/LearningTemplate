@@ -106,3 +106,31 @@ SW_TEST_CASE( MaterialLibraryTest, FeatureCombinationsMatchTheirRenderState )
         SW_EXPECT_TRUE_MSG( patternCount <= 1, loaded._id.c_str() );
     }
 }
+
+/**
+ * @brief [MaterialLibraryTest] terrain.hlsl 을 쓰는 엔진 머티리얼은 모두 정점 변형(MATERIAL_VERTEX_DEFORM)을 켠다
+ * @details 셰이더 경로는 `_base` 로 물려받을 수 있어(terrain_geomorph) 글이 아니라 읽은 머티리얼로 가른다.
+ *          terrain.hlsl 은 표면 변형 층으로 정점을 내린다 — 정의가 빠진 지형 머티리얼은 깊이 프리패스에 남아 내린 정점과 프리패스 깊이가 어긋난다.
+ *          셰이더의 #error 로는 막지 않는다: 머티리얼 상수 레이아웃 리플렉션(`Material::reflectMaterialSchema`)이 정의 없이 컴파일해 그 컴파일이 실패하면
+ *          머티리얼 바이트가 비워진다. 그래서 데이터(.material)에서 본다.
+ */
+SW_TEST_CASE( MaterialLibraryTest, TerrainMaterialsDeformVertices )
+{
+    static constexpr const utf8* kTerrainShader = "engine/shaders/terrain.hlsl";
+    vector<string>               listPath;
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( ProcessRoots::get()._project.str() + "/Content/engine/materials", ".material", listPath, true ) );
+    uint32 terrainCount = 0;
+    for ( const string& path : listPath )
+    {
+        const size_t contentAt = path.find( "Content/" );
+        SW_REQUIRE_TRUE( contentAt != string::npos );
+        const string               id       = path.substr( contentAt + 8 );
+        const shared_ptr<Material> material = Material::create();
+        SW_REQUIRE_TRUE_MSG( material->loadFromAsset( AssetID{ id } ), id.c_str() );
+        if ( material->getShaderPath() != kTerrainShader )
+            continue;
+        ++terrainCount;
+        SW_EXPECT_TRUE_MSG( MaterialLibraryTestUtil::hasDefine( *material, "MATERIAL_VERTEX_DEFORM" ), id.c_str() );
+    }
+    SW_EXPECT_TRUE( terrainCount >= 2 ); // terrain · terrain_geomorph — 하나도 못 찾으면 이 테스트는 아무것도 보지 않는다
+}
