@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/World/Environment/DecalRainWashSystem.h"
+#include "GameFramework/Runtime/Gameplay/Weather/DecalRainWashSystem.h"
 
 #include "Core/Math/MathUtil.h"
 

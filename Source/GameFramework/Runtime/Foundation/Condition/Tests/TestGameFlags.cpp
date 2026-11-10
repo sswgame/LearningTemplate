@@ -6,7 +6,7 @@
 #include "Engine/Behavior/ConditionExpr.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 
 #include <limits>
 

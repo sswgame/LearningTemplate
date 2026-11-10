@@ -11,7 +11,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 
 namespace sw
 {

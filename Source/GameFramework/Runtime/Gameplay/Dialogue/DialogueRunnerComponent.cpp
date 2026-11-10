@@ -12,9 +12,9 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Presentation/ISubtitleSink.h"
 
+#include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 
 namespace sw
 {

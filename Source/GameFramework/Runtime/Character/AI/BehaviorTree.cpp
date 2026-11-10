@@ -8,7 +8,7 @@
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeNodeParams.h"
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 
 #include <limits>
 

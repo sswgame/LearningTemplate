@@ -918,7 +918,7 @@
     "Source/GameFramework/Runtime/Character/AI/SpawnDirector.cpp": {"minus-one": 7, "float": 1},
     "Source/GameFramework/Runtime/Character/Camera/CameraMode.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Character/Camera/CameraShake.cpp": {"float": 7, "hex": 4},
-    "Source/GameFramework/Runtime/Character/Combat/Dismemberment/Dismemberment.cpp": {"float": 1},
+    "Source/GameFramework/Runtime/Gameplay/Dismemberment/Dismemberment.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Character/Combat/Health/ResourceGauge.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Character/Combat/Killcam/KillcamComponent.cpp": {"float": 1},

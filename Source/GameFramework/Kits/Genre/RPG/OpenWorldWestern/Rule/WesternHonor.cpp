@@ -5,8 +5,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 
 namespace sw
 {

@@ -1,14 +1,14 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 
+#include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 
 namespace sw
 {

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/World/Environment/WeatherDirectorComponent.h"
+#include "GameFramework/Runtime/Gameplay/Weather/WeatherDirectorComponent.h"
 
 #include "Core/Math/DeterministicRandom.h"
 
@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
-#include "GameFramework/Runtime/World/Environment/DecalRainWashSystem.h"
+#include "GameFramework/Runtime/Gameplay/Weather/DecalRainWashSystem.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 
 namespace sw

@@ -8,7 +8,7 @@
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaAbilitySet.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaTrinketLoadout.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 
 // MetroidvaniaCatalogTest — 카탈로그: 규칙을 기반 설정으로 옮기기, 패리 창 필수, 원소별 거절.
 // MetroidvaniaAbilitySetTest — 능력 잠금: 잠긴 기본 설정, 값 더하기, 입력 거르기, 플래그 복원, 왕복. 결함: 음수 값을 더하는 중에 잘라 결과가 얻은 순서에 달렸고, 복원한 몸이 세이브 전과 달라졌다.

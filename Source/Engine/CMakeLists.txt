@@ -356,22 +356,6 @@ add_dependencies(Engine EngineJolt_objects)
 #     `#error` 껍데기를 자기 include 자리 맨 앞에 둔다 — 아래 층이 위 층 헤더를 include 하면(전이 include 도) 컴파일이 멈춘다. 에디터 층과 같은 방식이다.
 #     Engine 설정이 모두 끝난 뒤(Jolt 블록과 같은 자리)에 둔다 — 부분은 Engine 의 정의 · 옵션 · include · 링크 목록을 구성 때 복사한다.
 # ------------------------------------------------------------------------------
-function(sw_addEngineLayerStubs PART TIER)
-	set(stubRoot "${CMAKE_BINARY_DIR}/generated/sw/EngineLayerStubs/tier${TIER}")
-	set(listNewStub "")
-	foreach(upperTier IN LISTS SW_ENGINE_TIER_LIST)
-		if(NOT upperTier GREATER TIER)
-			continue()
-		endif()
-		set(stubContent "#error \"Engine layer ${upperTier} header cannot be included from layer ${TIER} code (Config/Rules/Layers/EngineLayers.toml). A lower layer must not see an upper layer: move what you need down, or invert the dependency.\"
-")
-		foreach(header IN LISTS SW_ENGINE_TIER_${upperTier}_HEADERS)
-			sw_writeLayerStub(listNewStub "${stubRoot}/${header}" "${stubContent}")
-		endforeach()
-	endforeach()
-	sw_applyLayerStubs(${PART} "${stubRoot}" ${listNewStub})
-endfunction()
-
 # 링크 목록은 부분을 만들기 전에 한 번 읽는다 — `sw_addModulePart` 가 부분을 Engine 에 링크하므로 뒤에 읽으면 앞 부분이 섞인다.
 get_target_property(swEngineLinkLibraries Engine LINK_LIBRARIES)
 get_target_property(swEngineDependency Engine MANUALLY_ADDED_DEPENDENCIES)
@@ -384,7 +368,7 @@ foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
 		SOURCES ${swEngineTierSource_${tier}}
 		LINK ${swEngineLinkLibraries}
 	)
-	sw_addEngineLayerStubs(EngineLayer${tier} ${tier})
+	sw_addLayerStubs(EngineLayer${tier} ${tier} SW_ENGINE_TIER Engine)
 	target_include_directories(EngineLayer${tier} PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
 	add_dependencies(EngineLayer${tier} SwCookCodeFingerprint)
 	if(swEngineDependency)

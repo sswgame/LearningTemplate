@@ -9,8 +9,8 @@
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
-#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
+#include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 
 // ProjectileTest — 무기 · 탄 · 수정자 조합이 결과를 바꾸는지(받음 조건 · 합치는 순서 · 맞음 표 · 맞음 동작)와 단일 발사체 시뮬레이션의 규칙(관통 · 튕김 · 유도 · 사거리 · 수명 · 평면 · 상태 왕복). nogpu.
 

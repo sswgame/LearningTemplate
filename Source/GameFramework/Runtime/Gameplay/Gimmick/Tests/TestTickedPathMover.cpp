@@ -11,7 +11,7 @@
 #include "GameFramework/Runtime/Gameplay/Gimmick/Tests/TickOrderTestComponents.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/TickedPathMoverComponent.h"
 
-// TickedPathMoverTest(순서) — 바닥이 서버 틱을 알리는 틱 뒤에 돌아 같은 프레임에 알린 틱의 자리에 서는지 본다(서브틱 선행 조건, 씬 순회 없음).
+// TickedPathMoverTest — 틱 함수 바닥의 자리 계산(왕복 · 고리)과, 바닥이 서버 틱을 알리는 틱 뒤에 돌아 같은 프레임에 알린 틱의 자리에 서는지 본다(서브틱 선행 조건, 씬 순회 없음).
 
 using namespace sw;
 
@@ -89,4 +89,30 @@ SW_TEST_CASE( TickedPathMoverTest, WithoutSourceFollowsControlTick )
     manager.update( 1.0f / 60.0f );
     SW_EXPECT_TRUE( control.getServerTick() == control.getTick() );
     SW_EXPECT_NEAR( TickedMoverOrderRig::computeExpectedX( control.getTick() ), pRoot->getWorldPosition()._x, 1.0e-4f );
+}
+
+/** @brief [TickedPathMoverTest] 왕복은 끝에서 되돌아오고 같은 시각이면 같은 자리다(틱의 순수 함수) */
+SW_TEST_CASE( TickedPathMoverTest, PingPongGoesBackFromTheEnd )
+{
+    const vector<float3> listWaypoint{
+        float3{ 6.0f, 0.0f, 0.0f }
+    };
+    SW_EXPECT_NEAR( 0.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 2.0f, true, 0.0 )._x, 1.0e-4f );
+    SW_EXPECT_NEAR( 3.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 2.0f, true, 1.0 )._x, 1.0e-4f );
+    SW_EXPECT_NEAR( 3.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 2.0f, true, 3.0 )._x, 1.0e-4f );
+    SW_EXPECT_NEAR( 3.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 2.0f, true, 5.0 )._x, 1.0e-4f ); // 한 바퀴(4 초) 뒤
+}
+
+/** @brief [TickedPathMoverTest] 고리는 끝에서 시작으로 한 구간 더 가고, 경유점이 없으면 움직이지 않는다 */
+SW_TEST_CASE( TickedPathMoverTest, LoopClosesAndEmptyPathStays )
+{
+    const vector<float3> listWaypoint{
+        float3{2.0f, 0.0f, 0.0f},
+        float3{2.0f, 0.0f, 2.0f}
+    };
+    SW_EXPECT_NEAR( 2.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 1.0f, false, 1.0 )._x, 1.0e-4f );
+    SW_EXPECT_NEAR( 2.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 1.0f, false, 2.0 )._z, 1.0e-4f );
+    SW_EXPECT_NEAR( 1.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 1.0f, false, 2.5 )._z, 1.0e-4f );
+    SW_EXPECT_NEAR( 0.0f, TickedPathMoverComponent::computeOffset( listWaypoint, 1.0f, false, 3.0 )._x, 1.0e-4f );
+    SW_EXPECT_NEAR( 0.0f, TickedPathMoverComponent::computeOffset( vector<float3>{}, 1.0f, false, 1.0 )._x, 1.0e-4f );
 }
