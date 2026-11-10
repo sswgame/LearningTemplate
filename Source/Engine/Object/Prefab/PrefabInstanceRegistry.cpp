@@ -8,6 +8,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabOverrides.h"
 
 namespace sw
 {
@@ -71,9 +72,7 @@ namespace sw
             {
                 for ( auto keyIt = listKey.rbegin(); keyIt != listKey.rend(); ++keyIt )
                 {
-                    if ( outPath.empty() == false )
-                        outPath += "/";
-                    outPath += **keyIt;
+                    outPath = PrefabPartOverride::joinPath( outPath, **keyIt );
                 }
                 return listKey.empty() == false;
             }
