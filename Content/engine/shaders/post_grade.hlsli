@@ -32,7 +32,7 @@ struct CameraGrade
  */
 static float3 CameraGrade::applyExposure( float3 hdrColor )
 {
-    const float autoExposureEv = Bindless::sampleIndexWith( g_AutoExposureIndex, SW_SAMPLER_POINT_CLAMP, float2( 0.5f, 0.5f ) ).r;
+    const float autoExposureEv = Bindless::sampleIndexWith( SW_ENGINE_ROLE( AutoExposure ), SW_SAMPLER_POINT_CLAMP, float2( 0.5f, 0.5f ) ).r;
     return hdrColor * ( g_CameraGrade.x * exp2( -autoExposureEv ) );
 }
 
@@ -94,8 +94,8 @@ static float3 CameraGrade::applyLUT( float3 color )
         const float  blue    = clamped.b * ( size - 1.0f );
         const float  slice0  = floor( blue );
         const float  slice1  = min( slice0 + 1.0f, size - 1.0f );
-        const float3 lower   = Bindless::sampleIndex( g_ColorGradingLUTIndex, CameraGrade::computeLUTUV( clamped, size, slice0 ) ).rgb;
-        const float3 upper   = Bindless::sampleIndex( g_ColorGradingLUTIndex, CameraGrade::computeLUTUV( clamped, size, slice1 ) ).rgb;
+        const float3 lower   = Bindless::sampleIndex( SW_ENGINE_ROLE( ColorGradingLUT ), CameraGrade::computeLUTUV( clamped, size, slice0 ) ).rgb;
+        const float3 upper   = Bindless::sampleIndex( SW_ENGINE_ROLE( ColorGradingLUT ), CameraGrade::computeLUTUV( clamped, size, slice1 ) ).rgb;
         result               = lerp( color, lerp( lower, upper, blue - slice0 ), g_GradeLUT.y );
     }
     return result;

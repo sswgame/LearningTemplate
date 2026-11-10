@@ -64,8 +64,13 @@ static uint Bindless::textureSlot( uint index )
     return index & ( SW_DX12_DESCRIPTOR_HEAP_SIZE - 1u );
     #endif
 }
-/** @brief 인덱스의 텍스처를 샘플러 세트의 samplerID(SW_SAMPLER_*, 비교 샘플러 제외)로 샘플링합니다. */
-static float4 Bindless::sampleIndexWith( uint index, uint samplerID, float2 uv )
+/** @brief 인덱스의 텍스처를 샘플러 세트의 samplerID(SW_SAMPLER_*, 비교 샘플러 제외)로 샘플링합니다. 칸(emulatedSlot)은 에뮬 백엔드만 쓴다. */
+static float4 Bindless::sampleIndexWith( uint index, [[maybe_unused]] uint emulatedSlot, uint samplerID, float2 uv )
+{
+    return Bindless::sampleArrayWith( index, samplerID, uv );
+}
+/** @brief bindless 배열의 원소 @p index 를 samplerID 로 샘플링합니다 — 엔진 텍스처(칸이 있다)와 머티리얼 텍스처(칸이 없다)가 함께 쓰는 네이티브 몸통이다. */
+static float4 Bindless::sampleArrayWith( uint index, uint samplerID, float2 uv )
 {
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
@@ -93,12 +98,12 @@ static float4 Bindless::sampleIndexWith( uint index, uint samplerID, float2 uv )
     #endif
 }
 /** @brief 엔진 텍스처(풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵)를 엔진 텍스처 샘플러(선형 · 클램프)로 읽습니다 — 에뮬 백엔드가 t0..t3 에 거는 것과 같다. */
-static float4 Bindless::sampleIndex( uint index, float2 uv )
+static float4 Bindless::sampleIndex( uint index, uint emulatedSlot, float2 uv )
 {
-    return Bindless::sampleIndexWith( index, SW_ENGINE_TEXTURE_SAMPLER, uv );
+    return Bindless::sampleIndexWith( index, emulatedSlot, SW_ENGINE_TEXTURE_SAMPLER, uv );
 }
 /** @brief `sampleIndex` 의 밉 0 판 — 화면 미분을 쓰지 않아 반복 수가 정해지지 않은 루프(빛 루프) · 정점 단계에서도 읽힌다(FXC 는 루프 안 미분 샘플을 펼치려다 멈췄다). */
-static float4 Bindless::sampleIndexLevelZero( uint index, float2 uv )
+static float4 Bindless::sampleIndexLevelZero( uint index, [[maybe_unused]] uint emulatedSlot, float2 uv )
 {
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
@@ -128,7 +133,7 @@ static float4 PassTexture::gatherDepthRed( float2 uv )
     #endif
 }
 /** @brief 깊이 텍스처를 비교 샘플러(LESS_EQUAL)로 읽습니다 — 1 이면 depth 가 저장값 이하(빛 받음). */
-static float Bindless::sampleShadowComparison( uint index, float2 uv, float depth )
+static float Bindless::sampleShadowComparison( uint index, [[maybe_unused]] uint emulatedSlot, float2 uv, float depth )
 {
     if ( index == kInvalidIndex )
         return 1.0f;
@@ -362,77 +367,31 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
             }
 
 /**
- * @brief 에뮬 백엔드(DX11 · GL)의 슬롯 표에 없는 엔진 텍스처 인덱스를 읽었을 때 내는 오류 색(자홍)입니다.
- * @details 표에 없는 인덱스를 슬롯 0 으로 읽지 않는다 — 그러면 그림자 · 원본 색이 엉뚱한 자리에 조용히 나온다. PassCB 의 g_*Index 는 C++ 표
- *          (`shaderslot::emulated::kEngineTextureNames`)에서 선언되므로 이 색은 PassCB 밖 값(루트 상수 · 머티리얼 인덱스)을 `Bindless::sampleIndex` 에
- *          넘긴 셰이더에서만 난다 — 그런 입력은 엔진 텍스처 역할(표)로 걸거나 `loadEngineTexel( index, SW_EMU_SLOT_<역할> )` 로 칸을 직접 고른다.
+ * @brief 에뮬 백엔드(DX11 · GL)가 칸 밖 번호(`emulatedSlot`)를 받았을 때 내는 오류 색(자홍)입니다.
+ * @details 칸 밖 번호를 슬롯 0 으로 읽지 않는다 — 그러면 그림자 · 원본 색이 엉뚱한 자리에 조용히 나온다. 칸은 PassCB 역할이면 `SW_ENGINE_ROLE( 역할 )` 이,
+ *          루트 상수로 받은 인덱스면 패스가 그 텍스처를 건 `SW_EMU_SLOT_<역할>` 이 정한다 — 둘 다 C++ 표(`shaderslot::emulated::kEngineTextureNames`)의 칸이다.
+ * @note 칸을 인덱스 값으로 되짚지 않는다. 런타임 값으로 고르는 분기는 18 칸을 모두 셰이더에 남겨, 머티리얼 16 칸과 함께 GL 프래그먼트 텍스처 유닛 한도(32)를 넘었다
+ *       (Mesa llvmpipe 의 forward_lit 링크 실패 — "Too many fragment shader texture samplers"). 리터럴 칸은 분기가 접혀 그 칸 하나만 남는다.
  */
 static const float4 kUnmappedEngineTextureColor = float4( 1, 0, 1, 1 );
-static const uint   kUnmappedEngineTextureSlot  = 0xFFFFFFFFu;
 
-// 칸 번호 · 인덱스 이름은 셰이더 컴파일러가 C++ 표에서 내는 매크로다(ShaderCompiler::appendEngineDefines) — 여기에 손으로 맞춘 표가 없다.
-// SW_EMU_SLOT_<이름> 은 역할을 이름으로 고르는 자리(PassTexture · 히스토리 읽기)가, SW_ENGINE_TEXTURE_INDEX_<칸> 은 아래 되짚기가 쓴다.
-// PassCB 의 엔진 텍스처 필드도 같은 매크로로 선언하므로(binding.hlsli 1 절) 셰이더가 가진 g_*Index 는 모두 이 표에 있다.
-
-/** @brief 엔진 텍스처 인덱스가 걸리는 칸 번호(역할 하나에 한 칸)입니다. PassCB 의 g_*Index 가 아닌 값이면 `kUnmappedEngineTextureSlot` 입니다. */
-static uint Bindless::emulatedSlot( uint index )
-{
-    if ( index == SW_ENGINE_TEXTURE_INDEX_0 )
-        return 0u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_1 )
-        return 1u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_2 )
-        return 2u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_3 )
-        return 3u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_4 )
-        return 4u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_5 )
-        return 5u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_6 )
-        return 6u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_7 )
-        return 7u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_8 )
-        return 8u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_9 )
-        return 9u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_10 )
-        return 10u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_11 )
-        return 11u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_12 )
-        return 12u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_13 )
-        return 13u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_14 )
-        return 14u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_15 )
-        return 15u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_16 )
-        return 16u;
-    if ( index == SW_ENGINE_TEXTURE_INDEX_17 )
-        return 17u;
-    return kUnmappedEngineTextureSlot;
-}
-
-static float4 Bindless::sampleIndex( uint index, float2 uv )
+static float4 Bindless::sampleIndex( uint index, uint emulatedSlot, float2 uv )
 {
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
             // FrameRenderer 가 같은 C++ 표(commitBindlessTextureBindings)로 역할마다 제 칸에 바인딩한다.
         #define SW_OP( tex, smp ) return tex.Sample( smp, uv );
-    SW_ENGINE_TEXTURE_SWITCH( Bindless::emulatedSlot( index ), SW_OP )
+    SW_ENGINE_TEXTURE_SWITCH( emulatedSlot, SW_OP )
         #undef SW_OP
     return kUnmappedEngineTextureColor;
 }
 /** @brief `sampleIndex` 의 밉 0 판(에뮬) — 화면 미분을 쓰지 않는다. */
-static float4 Bindless::sampleIndexLevelZero( uint index, float2 uv )
+static float4 Bindless::sampleIndexLevelZero( uint index, uint emulatedSlot, float2 uv )
 {
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
         #define SW_OP( tex, smp ) return tex.SampleLevel( smp, uv, 0.0f );
-    SW_ENGINE_TEXTURE_SWITCH( Bindless::emulatedSlot( index ), SW_OP )
+    SW_ENGINE_TEXTURE_SWITCH( emulatedSlot, SW_OP )
         #undef SW_OP
     return kUnmappedEngineTextureColor;
 }
@@ -448,12 +407,12 @@ static float4 PassTexture::gatherDepthRed( float2 uv )
 }
         #if defined( SW_SEPARATE_SAMPLER_EMULATION )
 /** @brief DX11: 텍스처는 역할의 칸(Bindless::sampleIndex 와 같은 표), 샘플러는 정적 세트에서 samplerID 로 고른다. */
-static float4 Bindless::sampleIndexWith( uint index, uint samplerID, float2 uv )
+static float4 Bindless::sampleIndexWith( uint index, uint emulatedSlot, uint samplerID, float2 uv )
 {
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
             #define SW_OP( tex, smp ) return Bindless::sampleSlotWith( tex, samplerID, uv );
-    SW_ENGINE_TEXTURE_SWITCH( Bindless::emulatedSlot( index ), SW_OP )
+    SW_ENGINE_TEXTURE_SWITCH( emulatedSlot, SW_OP )
             #undef SW_OP
     return kUnmappedEngineTextureColor;
 }
@@ -471,28 +430,28 @@ static float4 Bindless::sampleSlotPoint( Texture2D slotTexture, float2 uv )
  * @details 점 샘플(`SW_SAMPLER_POINT_CLAMP`)을 달라는 호출은 샘플러를 거치지 않고 텍셀을 직접 읽는다 — 안 그러면 정수 업스케일 뷰(`SW_PASS_FLAG_POINT_UPSCALE`)의
  *          Present 가 GL 에서만 선형으로 섞는다. 나머지 samplerID 는 슬롯의 샘플러를 그대로 쓴다.
  */
-static float4 Bindless::sampleIndexWith( uint index, uint samplerID, float2 uv )
+static float4 Bindless::sampleIndexWith( uint index, uint emulatedSlot, uint samplerID, float2 uv )
 {
     if ( samplerID != SW_SAMPLER_POINT_CLAMP )
-        return Bindless::sampleIndex( index, uv );
+        return Bindless::sampleIndex( index, emulatedSlot, uv );
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
             #define SW_OP( tex, smp ) return Bindless::sampleSlotPoint( tex, uv );
-    SW_ENGINE_TEXTURE_SWITCH( Bindless::emulatedSlot( index ), SW_OP )
+    SW_ENGINE_TEXTURE_SWITCH( emulatedSlot, SW_OP )
             #undef SW_OP
     return kUnmappedEngineTextureColor;
 }
         #endif
 /**
  * @brief 에뮬 백엔드: 비교 샘플러가 없어 2x2 이웃을 게더로 읽어 각각 비교하고 쌍선형으로 섞는다 — DX12 · Vulkan 의 비교 샘플러(LINEAR)와 같은 값이다.
- * @details 한 점만 비교하면 가장자리가 텍셀 계단이고, 하드웨어 비교 백엔드와 그림이 갈린다. 그림자 맵은 ShadowMap 칸이다(Bindless::sampleIndex 의 표).
+ * @details 한 점만 비교하면 가장자리가 텍셀 계단이고, 하드웨어 비교 백엔드와 그림이 갈린다. 그림자 맵은 ShadowMap 칸이다(`SW_ENGINE_ROLE( ShadowMap )`).
  */
-static float Bindless::sampleShadowComparison( uint index, float2 uv, float depth )
+static float Bindless::sampleShadowComparison( uint index, uint emulatedSlot, float2 uv, float depth )
 {
     if ( index == kInvalidIndex )
         return 1.0f;
-    if ( index != g_ShadowMapIndex )
-        return ( depth <= Bindless::sampleIndex( index, uv ).r ) ? 1.0f : 0.0f;
+    if ( emulatedSlot != SW_EMU_SLOT_ShadowMap )
+        return ( depth <= Bindless::sampleIndex( index, emulatedSlot, uv ).r ) ? 1.0f : 0.0f;
     float2 size;
     SW_ENGINE_TEXTURE( SW_EMU_SLOT_ShadowMap ).GetDimensions( size.x, size.y );
     const float2 texelPosition = uv * size - 0.5f;
@@ -725,7 +684,7 @@ static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
     // 네이티브 bindless: index 는 배열 전역 인덱스다. 샘플러는 머티리얼 텍스처 샘플러(선형 · 랩)다.
     if ( index == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
-    return Bindless::sampleIndexWith( index, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+    return Bindless::sampleArrayWith( index, SW_MATERIAL_TEXTURE_SAMPLER, uv );
 }
     #else
 static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
@@ -974,20 +933,20 @@ static float4 MaterialTexture::samplePoint( uint index, float2 uv )
 
 static float4 PassTexture::sampleShadow( float2 uv )
 {
-    return Bindless::sampleIndex( g_ShadowMapIndex, uv );
+    return Bindless::sampleIndex( SW_ENGINE_ROLE( ShadowMap ), uv );
 }
 static float4 PassTexture::sampleAlbedo( float2 uv )
 {
-    return Bindless::sampleIndex( g_GBufferAlbedoIndex, uv );
+    return Bindless::sampleIndex( SW_ENGINE_ROLE( GBufferAlbedo ), uv );
 }
 /** @brief G버퍼 노멀 칸(R16G16_SNORM 의 옥타헤드럴 좌표 `.xy`)을 단위 노멀로 푼다 — 쓰는 쪽은 12 절 SurfaceOutput::pack 하나다. */
 static float3 PassTexture::sampleNormal( float2 uv )
 {
-    return Octahedral::decode( Bindless::sampleIndex( g_GBufferNormalIndex, uv ).xy );
+    return Octahedral::decode( Bindless::sampleIndex( SW_ENGINE_ROLE( GBufferNormal ), uv ).xy );
 }
 static float4 PassTexture::sampleGbufferMaterial( float2 uv )
 {
-    return Bindless::sampleIndex( g_GBufferMaterialIndex, uv );
+    return Bindless::sampleIndex( SW_ENGINE_ROLE( GBufferMaterial ), uv );
 }
 /** @brief G버퍼 머티리얼 칸을 읽어 푼다 — 쓰는 쪽은 12 절 SurfaceOutput::encodeGbufferMaterial 하나다(r 금속도, g 거칠기, b 반사율, a 머티리얼 가림). */
 static void PassTexture::loadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic, out float outSpecular, out float outOcclusion )
@@ -1000,15 +959,15 @@ static void PassTexture::loadGbufferMaterial( float2 uv, out float outRoughness,
 }
 static float4 PassTexture::sampleGbufferCustomData( float2 uv )
 {
-    return Bindless::sampleIndex( g_GBufferCustomDataIndex, uv );
+    return Bindless::sampleIndex( SW_ENGINE_ROLE( GBufferCustomData ), uv );
 }
 static float4 PassTexture::sampleDepth( float2 uv )
 {
-    return Bindless::sampleIndex( g_SceneDepthIndex, uv );
+    return Bindless::sampleIndex( SW_ENGINE_ROLE( SceneDepth ), uv );
 }
 static float4 PassTexture::sampleSource( float2 uv )
 {
-    return Bindless::sampleIndex( g_SourceColorIndex, uv );
+    return Bindless::sampleIndex( SW_ENGINE_ROLE( SourceColor ), uv );
 }
 /**
  * @brief 화면과 1:1 인 전체화면 패스 전용 — 텍셀 중심에 정확히 떨어지므로 선형 필터가 **할 일이 없다**.
@@ -1019,11 +978,11 @@ static float4 PassTexture::sampleSource( float2 uv )
  */
 static float4 PassTexture::sampleDepthPoint( float2 uv )
 {
-    return Bindless::sampleIndexWith( g_SceneDepthIndex, SW_SAMPLER_POINT_CLAMP, uv );
+    return Bindless::sampleIndexWith( SW_ENGINE_ROLE( SceneDepth ), SW_SAMPLER_POINT_CLAMP, uv );
 }
 static float4 PassTexture::sampleSourcePoint( float2 uv )
 {
-    return Bindless::sampleIndexWith( g_SourceColorIndex, SW_SAMPLER_POINT_CLAMP, uv );
+    return Bindless::sampleIndexWith( SW_ENGINE_ROLE( SourceColor ), SW_SAMPLER_POINT_CLAMP, uv );
 }
 /**
  * @brief 깊이의 십자 다섯 칸(중심 + 상하좌우 한 텍셀)을 읽습니다 — 게더가 있으면 **두 번**에 끝낸다.
@@ -1047,14 +1006,14 @@ static float4 PassTexture::sampleContactShadow( float2 uv )
 {
     if ( g_ContactShadowIndex == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
-    return Bindless::sampleIndexLevelZero( g_ContactShadowIndex, uv ); // 빛 루프 안에서 읽는다 — 미분 없는 밉 0(마스크는 화면과 같은 크기라 밉이 없다)
+    return Bindless::sampleIndexLevelZero( SW_ENGINE_ROLE( ContactShadow ), uv ); // 빛 루프 안에서 읽는다 — 미분 없는 밉 0(마스크는 화면과 같은 크기라 밉이 없다)
 }
 /** @brief SSAO 결과. 파이프라인에 SSAO 가 없으면(인덱스 무효) 가림 없음(1)이다 — 0 으로 폴백하면 화면이 검게 된다. */
 static float PassTexture::sampleAmbientOcclusion( float2 uv )
 {
     if ( g_AmbientOcclusionIndex == kInvalidIndex )
         return 1.0f;
-    return Bindless::sampleIndex( g_AmbientOcclusionIndex, uv ).r;
+    return Bindless::sampleIndex( SW_ENGINE_ROLE( AmbientOcclusion ), uv ).r;
 }
 /**
  * @brief 화면 속도(이번 UV - 지난 UV, 역할 Velocity)를 가장 가까운 텍셀로 읽습니다. 속도는 섞으면 가장자리에서 두 물체의 평균이 되어 어느 쪽도 아니다(점 샘플).
@@ -1064,14 +1023,14 @@ static float2 PassTexture::sampleVelocityPoint( float2 uv )
 {
     if ( g_VelocityIndex == kInvalidIndex )
         return float2( 0.0f, 0.0f );
-    return Bindless::sampleIndexWith( g_VelocityIndex, SW_SAMPLER_POINT_CLAMP, uv ).rg;
+    return Bindless::sampleIndexWith( SW_ENGINE_ROLE( Velocity ), SW_SAMPLER_POINT_CLAMP, uv ).rg;
 }
 /** @brief 화면 왜곡 오프셋(화면 UV, 역할 Distortion)을 가장 가까운 텍셀로 읽습니다. 걸리지 않았으면 0(왜곡 없음)이다. */
 static float2 PassTexture::sampleDistortionPoint( float2 uv )
 {
     if ( g_DistortionIndex == kInvalidIndex )
         return float2( 0.0f, 0.0f );
-    return Bindless::sampleIndexWith( g_DistortionIndex, SW_SAMPLER_POINT_CLAMP, uv ).rg;
+    return Bindless::sampleIndexWith( SW_ENGINE_ROLE( Distortion ), SW_SAMPLER_POINT_CLAMP, uv ).rg;
 }
 
 #endif // SW_NATIVE_BINDLESS || !SW_STAGE_COMPUTE

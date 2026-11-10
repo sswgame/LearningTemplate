@@ -11,5 +11,5 @@
  */
 float PSMain( PSInput input ) : SV_Depth
 {
-    return Bindless::loadEngineTexel( g_ShadowMapIndex, SW_EMU_SLOT_ShadowMap, int2( input._position.xy ) ).r;
+    return Bindless::loadEngineTexel( SW_ENGINE_ROLE( ShadowMap ), int2( input._position.xy ) ).r;
 }

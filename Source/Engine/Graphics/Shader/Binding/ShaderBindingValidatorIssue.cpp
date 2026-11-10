@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidatorIssue.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Foundation/Constants.h"
@@ -13,6 +14,8 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Reflection/EnumName.h"
+
+#include "sw/config/CookContract.gen.h"
 
 namespace sw
 {
@@ -684,6 +687,40 @@ namespace sw
                 return 4;
             }
 
+            /**
+             * @brief 6) 단계 하나가 쓰는 텍스처 단위 수가 백엔드 한도(`Config/Engine/CookContract.json` 의 stage_texture_unit_limit) 안인가.
+             * @details 단위는 텍스처 바인딩 자리 하나다 — GL 은 결합 샘플러라 같은 binding 의 텍스처 · 샘플러가 한 단위이고, 배열은 원소마다 한 단위다.
+             *          넘어도 DXC 는 컴파일하고 드라이버마다 결과가 갈린다(Mesa 는 링크 실패, NVIDIA 는 통과) — 그래서 쿠킹이 모든 드라이버의 한도로 멈춘다.
+             */
+            void checkStageTextureUnitLimit( const vector<Internal::ReflectedBinding>& listReflected )
+            {
+                const optional<uint32> limit = ShaderBindingValidatorIssue::findStageTextureUnitLimit( _targetFormat );
+                if ( limit.has_value() == false )
+                    return;
+                const bool     bCombined = Internal::isSPIRV( _targetFormat );
+                vector<uint32> listUnit;
+                for ( const Internal::ReflectedBinding& reflected : listReflected )
+                {
+                    const bool bTextureUnit = reflected._kind == ShaderBindingKind::Texture || ( bCombined && reflected._kind == ShaderBindingKind::Sampler );
+                    if ( bTextureUnit == false )
+                        continue;
+                    const bool   bKnownArray = reflected._bindCount != Internal::ReflectedBinding::kUnknownCount && reflected._bindCount > 1;
+                    const uint32 count       = bKnownArray ? reflected._bindCount : 1u;
+                    for ( uint32 element = 0; element < count; ++element )
+                    {
+                        const uint32 unit = reflected._bindPoint + element;
+                        if ( VectorUtil::contains( listUnit, unit ) == false )
+                            listUnit.push_back( unit );
+                    }
+                }
+                if ( listUnit.size() <= *limit )
+                    return;
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "단계 하나가 텍스처 단위 %# 개를 씁니다 — 이 백엔드의 단계 한도 %# 를 넘습니다(Config/Engine/CookContract.json stage_texture_unit_limit). 런타임 인덱스로 칸을 고르는 읽기를 역할 칸(SW_ENGINE_ROLE)으로 바꿀 것",
+                                          static_cast<uint32>( listUnit.size() ), *limit );
+                report( "", string( textBuilder.view() ) );
+            }
+
             void checkVertexInputs( const ShaderReflectionData& reflection )
             {
                 for ( const ShaderVertexInputInfo& input : reflection._listVertexInput )
@@ -737,6 +774,17 @@ namespace sw
         checks.checkSlotRulesAndCollisions( listReflected );
         checks.checkVertexInputs( reflection );
         checks.checkStructuredElementLayouts( reflection );
+        checks.checkStageTextureUnitLimit( listReflected );
         return checks._issueCount;
+    }
+
+    optional<uint32> ShaderBindingValidatorIssue::findStageTextureUnitLimit( ShaderTargetFormat targetFormat )
+    {
+#define SW_STAGE_TEXTURE_UNIT_LIMIT_ROW( shaderTarget, limit ) \
+    if ( targetFormat == ShaderTargetFormat::shaderTarget )    \
+        return static_cast<uint32>( limit );
+        SW_STAGE_TEXTURE_UNIT_LIMIT_TABLE( SW_STAGE_TEXTURE_UNIT_LIMIT_ROW )
+#undef SW_STAGE_TEXTURE_UNIT_LIMIT_ROW
+        return nullopt;
     }
 } // namespace sw

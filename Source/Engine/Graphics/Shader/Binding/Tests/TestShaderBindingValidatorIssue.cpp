@@ -608,3 +608,38 @@ SW_TEST_CASE( ShaderBindingValidatorTest, StructuredElementInvalidLayouts )
     Util::addElementMember( both, "vector4", "Float4", 4 );
     Util::expectElementViolations( both, 2 );
 }
+
+/**
+ * @brief [ShaderBindingValidatorTest] 단계 텍스처 단위 한도: 고정 칸 백엔드(GL)는 표의 한도를 넘는 텍스처 단위를 위반으로 세고, 결합 샘플러(같은 binding 의 텍스처 · 샘플러)와
+ *        배열 원소를 단위로 센다. bindless 백엔드(DX12 · Vulkan)는 한도가 없다. 엔진 18 칸 + 머티리얼 16 칸을 다 쓰던 forward_lit 이 Mesa 에서 링크에 실패한 결함을 쿠킹에서 막는다.
+ */
+SW_TEST_CASE( ShaderBindingValidatorTest, StageTextureUnitLimit )
+{
+    using Util = ShaderBindingValidatorTestUtil;
+    SW_EXPECT_LOG( Util::kViolationLogID );
+    SW_EXPECT_FALSE( ShaderBindingValidatorIssue::findStageTextureUnitLimit( ShaderTargetFormat::DXIL_D3D12 ).has_value() );
+    SW_EXPECT_FALSE( ShaderBindingValidatorIssue::findStageTextureUnitLimit( ShaderTargetFormat::SPIRV_Vulkan ).has_value() );
+    const optional<uint32> glLimit = ShaderBindingValidatorIssue::findStageTextureUnitLimit( ShaderTargetFormat::SPIRV_OpenGL );
+    SW_REQUIRE_TRUE( glLimit.has_value() );
+    // 한 단계가 머티리얼 칸 전부와 엔진 칸 몇(그림자 · 접촉 그림자)을 함께 읽을 수 있어야 한다 — 장치 초기화는 이 한도보다 작은 드라이버를 거절한다.
+    SW_EXPECT_TRUE( *glLimit > shaderslot::kMaterialTextureCount );
+    SW_EXPECT_EQUAL( shaderslot::gl::kFragmentTextureUnitBudget, *glLimit ); // 장치 검사(checkTextureUnits)와 쿠킹 검사가 같은 Config 값이다
+
+    const ShaderTargetFormat format = ShaderTargetFormat::SPIRV_OpenGL;
+    ShaderReflectionData     atLimit;
+    for ( uint32 unit = 0; unit < *glLimit; ++unit )
+    {
+        const string name = "g_TestTex" + to_string( unit );
+        Util::addResource( atLimit, name.c_str(), "Texture", 0, 100 + unit );
+    }
+    Util::addResource( atLimit, "g_TestTex0Sampler", "Sampler", 0, 100 );                    // 결합 샘플러 — 텍스처와 같은 단위
+    SW_EXPECT_EQUAL( 1u, ShaderBindingValidatorIssue::validate( atLimit, format, "Test" ) ); // 같은 binding 충돌 하나뿐(한도 안)
+
+    ShaderReflectionData overLimit = atLimit;
+    Util::addResource( overLimit, "g_TestTexOver", "Texture", 0, 100 + *glLimit );
+    SW_EXPECT_EQUAL( 2u, ShaderBindingValidatorIssue::validate( overLimit, format, "Test" ) ); // 충돌 하나 + 한도 하나
+
+    ShaderReflectionData array;
+    Util::addResource( array, "g_TestArray", "Texture", 0, 100, *glLimit + 1 ); // 배열은 원소마다 한 단위
+    SW_EXPECT_EQUAL( 1u, ShaderBindingValidatorIssue::validate( array, format, "Test" ) );
+}

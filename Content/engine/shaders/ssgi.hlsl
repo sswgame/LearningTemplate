@@ -50,7 +50,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
                 const float  receive     = saturate( dot( normal, toSample ) );
                 const float  emit        = saturate( dot( PassTexture::sampleNormal( uv ), -toSample ) );
                 const float  attenuation = saturate( 1.0f - distance / SW_SSGI_RADIUS );
-                gathered += Bindless::sampleIndex( g_SceneColorCopyIndex, uv ).rgb * ( receive * emit * attenuation * onScreen );
+                gathered += Bindless::sampleIndex( SW_ENGINE_ROLE( SceneColorCopy ), uv ).rgb * ( receive * emit * attenuation * onScreen );
                 sampleCount += 1.0f;
             }
         }

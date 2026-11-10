@@ -38,6 +38,8 @@ class RhiBackendSpec:
     sourceFolder: str
     graphicsLibs: str
     shippingDefine: str
+    #: 셰이더 단계 하나가 쓸 수 있는 텍스처 단위 수. None 은 텍스처가 고정 칸이 아닌 백엔드(bindless 배열 · 기기마다 다른 한도)다 — 칸은 반드시 적는다.
+    stageTextureUnitLimit: int | None
 
 
 #: 빌드 타깃 이름(CMake `SW_TARGET_TYPE`).
@@ -116,7 +118,11 @@ def makeBackendInternal(row: dict) -> RhiBackendSpec:
         sourceFolder=str(row["source_folder"]),
         graphicsLibs=str(row["graphics_libs"]),
         shippingDefine=str(row["shipping_define"]),
+        stageTextureUnitLimit=row["stage_texture_unit_limit"],
     )
+    limit = backend.stageTextureUnitLimit
+    if limit is not None and (isinstance(limit, bool) or not isinstance(limit, int) or limit <= 0):
+        raise ValueError(f"rhi_backends '{backend.name}': stage_texture_unit_limit 는 양의 정수이거나 null 이어야 합니다 ({limit!r})")
     for identifier in (backend.name, backend.shaderTarget, backend.commandLineArgument, backend.moduleName,
                        backend.graphicsLibs, backend.shippingDefine):
         if not _kIdentifierPattern.match(identifier):

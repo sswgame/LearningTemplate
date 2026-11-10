@@ -80,7 +80,7 @@ static float3 Bloom::sampleBright( float2 uv, float2 texel, bool bDownsampled )
 {
     float3 bright;
     if ( bDownsampled )
-        bright = Bindless::sampleIndex( g_BloomBrightIndex, uv ).rgb;
+        bright = Bindless::sampleIndex( SW_ENGINE_ROLE( BloomBright ), uv ).rgb;
     else
         bright = Bloom::computeBright( uv, texel );
     return bright;
@@ -133,7 +133,7 @@ static float3 Bloom::applyDirt( float2 uv, float3 bloom )
     float3 result = bloom;
     SW_BRANCH if ( g_BloomLens.x > 0.0f )
     {
-        result = bloom * ( 1.0f + g_BloomLens.x * Bindless::sampleIndex( g_BloomDirtMaskIndex, uv ).rgb );
+        result = bloom * ( 1.0f + g_BloomLens.x * Bindless::sampleIndex( SW_ENGINE_ROLE( BloomDirtMask ), uv ).rgb );
     }
     return result;
 }
@@ -155,7 +155,7 @@ static float3 Bloom::apply( float2 uv, float2 texel, float3 color )
 static float3 Bloom::applyBright( float2 uv, float3 color )
 {
     float        ambientOcclusion = PassTexture::sampleAmbientOcclusion( uv );
-    const float3 bright           = Bindless::sampleIndex( g_BloomBrightIndex, uv ).rgb;
+    const float3 bright           = Bindless::sampleIndex( SW_ENGINE_ROLE( BloomBright ), uv ).rgb;
     return color * ambientOcclusion + Bloom::applyDirt( uv, bright + Bloom::computeLensFlare( uv, float2( 0.0f, 0.0f ), true ) );
 }
 

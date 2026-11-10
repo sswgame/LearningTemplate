@@ -15,6 +15,8 @@
 
 #include "binding_slots.hlsli"
 
+#include "sw/config/CookContract.gen.h"
+
 namespace sw
 {
     namespace shaderslot
@@ -331,8 +333,13 @@ namespace sw
              * @details 데스크톱 드라이버(NVIDIA · AMD)와 Mesa(d3d12 · llvmpipe) 모두 단계당 32 다. 계약 전체(kFragmentTextureUnitCount)는 이보다 커서
              *          셰이더 하나가 모든 칸을 함께 선언하면 Mesa 의 SPIR-V 링크가 "Too many fragment shader texture samplers" 로 진다 — 장치 검사를 계약 전체로
              *          올리면 32 인 모든 드라이버에서 GL 이 꺼지므로, 장치는 이 예산으로 검사하고 셰이더가 예산 안에 머문다.
+             *          값은 Config/Engine/CookContract.json 의 OpenGL stage_texture_unit_limit 하나다 — 쿠킹의 계약 검사(ShaderBindingValidatorIssue)가 같은 값으로
+             *          예산을 넘는 바이너리를 오류로 멈춰, Windows(NVIDIA 는 넘겨도 링크한다)에서 쿠킹할 때 드러난다.
              */
-            inline constexpr uint32 kFragmentTextureUnitBudget = 32;
+#if !defined( SW_STAGE_TEXTURE_UNIT_LIMIT_SPIRV_OpenGL )
+    #error "Config/Engine/CookContract.json: the OpenGL row needs stage_texture_unit_limit (the GL fragment texture unit budget)"
+#endif
+            inline constexpr uint32 kFragmentTextureUnitBudget = SW_STAGE_TEXTURE_UNIT_LIMIT_SPIRV_OpenGL;
             static_assert( kMaterialTextureCount <= kFragmentTextureUnitBudget && kCombinedTextureUnitCount <= kTextureUnitLimit, "GL 텍스처 유닛 예산이 칸 계약보다 작다" );
 
             /** @brief 드라이버 한도가 모자란 쪽입니다. */

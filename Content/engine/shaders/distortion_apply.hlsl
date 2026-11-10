@@ -14,5 +14,5 @@ float4 PSMain( PSInput input ) : SV_TARGET
     // 고르기는 early-return 이 아니라 값 선택이다(GL 드라이버 사연 — binding.hlsli MorphPool::computeElement).
     const bool   bForeground = shiftedDepth < centerDepth;
     const float2 sampleUv    = bForeground ? input._uv : shiftedUv;
-    return Bindless::sampleIndex( g_SceneColorCopyIndex, sampleUv );
+    return Bindless::sampleIndex( SW_ENGINE_ROLE( SceneColorCopy ), sampleUv );
 }

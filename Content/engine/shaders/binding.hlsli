@@ -20,7 +20,7 @@
  *   머티리얼 텍스처는 머티리얼 구조체의 `uint …Map` 필드다(9 절). 이 이름들은 C++ 가 읽으므로 바꾸면 C++ 도 함께 바꿔야 한다.
  *
  * 최소 예 — 텍스처 하나 샘플
- *   float4 color  = Bindless::sampleIndex( g_SourceColorIndex, uv );                                // 엔진 텍스처(패스 입력)
+ *   float4 color  = Bindless::sampleIndex( SW_ENGINE_ROLE( SourceColor ), uv );                     // 엔진 텍스처(패스 입력 — 역할 이름 하나가 인덱스와 칸을 낸다)
  *   float4 albedo = MaterialTexture::sampleIndex( SW_MATERIAL( materialIndex )._albedoMap, uv );  // 머티리얼 텍스처
  *
  * 셰이더 작성자는 이 함수만 쓴다 — 네 백엔드에서 뜻이 같고, 무효 인덱스를 스스로 거른다
@@ -43,7 +43,8 @@
  *   │ OpenGL │ 슬롯 에뮬        │ 텍스처 유닛 16..49(결합)        │ 머티리얼: 서수 0..15 (DX11 과 같다)      │
  *   └────────┴──────────────────┴─────────────────────────────────────────┴──────────────────────────────────────────┘
  *   네이티브인지는 common.hlsli 의 `SW_NATIVE_BINDLESS` 가 정한다(ShaderCompiler 가 DX12 · Vulkan 에만 SW_BINDLESS=1 을 준다).
- *   에뮬 백엔드는 엔진이 아는 텍스처(PassCB 의 g_*Index — C++ 표에서 나온다)만 찾을 수 있다 — 모르는 인덱스는 자홍(kUnmappedEngineTextureColor)이다.
+ *   에뮬 백엔드는 엔진 텍스처를 역할의 칸(SW_EMU_SLOT_<역할> — C++ 표에서 나온다)으로 읽는다. 칸은 컴파일 때 정해진 값이라 그 칸 하나만 셰이더에 남는다 —
+ *   인덱스 값으로 칸을 되짚으면 18 칸이 모두 남아 GL 프래그먼트 텍스처 유닛 한도(32)를 머티리얼 16 칸과 함께 넘었다(Mesa 링크 실패). 칸 밖 번호는 자홍(kUnmappedEngineTextureColor)이다.
  *
  * 자주 하는 실수
  *   - 무효 인덱스로 배열을 읽는다. `kInvalidIndex` 로 원소를 읽으면 DX12 는 페이지 폴트(DEVICE_HUNG), Vulkan 은 DEVICE_LOST 다.
@@ -52,7 +53,7 @@
  *     분기 안의 읽기도 무효 인덱스로 실행될 수 있다. 그래서 첨자를 배열 크기로 **마스크**한다(Bindless::textureSlot, 11 절).
  *     배열을 직접 인덱싱하는 함수를 새로 쓰면 반드시 이 마스크를 거친다.
  *   - 픽셀마다 다를 수 있는 인덱스(머티리얼 텍스처)에 `NonUniformResourceIndex` 를 빼먹는다 — 결과가 정의되지 않는다.
- *   - 에뮬 백엔드에 엔진 텍스처를 더하면서 슬롯 대응(11-2 절의 Bindless::sampleIndex · C++ commitBindlessTextureBindings)을 함께 고치지 않는다.
+ *   - 엔진 텍스처를 읽으며 인덱스와 칸을 따로 적는다. PassCB 역할은 `SW_ENGINE_ROLE( 역할 )` 하나로 넘긴다 — 둘이 어긋날 수 없다.
  *
  * ==============================================================================
  * 절 목차
@@ -137,19 +138,29 @@ struct MaterialBuffer
     static uint clampIndex( uint index );
 };
 
-/** @brief bindless 배열과 에뮬 슬롯을 번호로 읽고 쓴다(11-1 · 11-2 절). 슬롯 함수는 DX11 · GL 에만 정의가 있다. */
+/**
+ * @brief PassCB 역할 하나의 (인덱스, 칸) 인자 쌍입니다 — `Bindless::sampleIndex( SW_ENGINE_ROLE( SceneDepth ), uv )`. 두 값이 같은 이름에서 나와 어긋날 수 없다.
+ * @details 에뮬 백엔드(DX11 · GL)는 칸이 컴파일 때 정해진 리터럴이라 그 칸의 텍스처 하나만 셰이더에 남는다. 언리얼이 셰이더 매개변수마다 텍스처 · 샘플러 자리를
+ *          정적으로 두는 것과 같다 — 인덱스 값으로 칸을 되짚는 동적 분기는 모든 칸을 남겨 GL 텍스처 유닛 한도를 넘었다.
+ */
+#define SW_ENGINE_ROLE( role ) SW_CAT( SW_CAT( g_, role ), Index ), SW_CAT( SW_EMU_SLOT_, role )
+
+/**
+ * @brief bindless 배열과 에뮬 슬롯을 번호로 읽고 쓴다(11-1 · 11-2 절). 슬롯 함수는 DX11 · GL 에만 정의가 있다.
+ * @details 엔진 텍스처 읽기는 모두 (index, emulatedSlot) 를 받는다 — 네이티브는 index 로, 에뮬은 패스가 거는 역할의 칸(SW_EMU_SLOT_<역할>)으로 읽는다.
+ *          PassCB 역할이면 `SW_ENGINE_ROLE( 역할 )` 로 넘기고, 루트 상수로 받은 인덱스면 패스가 그 텍스처를 건 칸을 적는다. 분기는 11 절 안에서 끝난다.
+ */
 struct Bindless
 {
     static uint textureSlot( uint index );
     static uint rwTextureSlot( uint index );
-    static uint emulatedSlot( uint index ); // 에뮬 백엔드(DX11 · GL)만 정의가 있다 — 엔진 텍스처 인덱스가 걸리는 슬롯(없으면 kUnmappedEngineTextureSlot)
-    static float4 sampleIndex( uint index, float2 uv );
-    static float4 sampleIndexLevelZero( uint index, float2 uv ); // 밉 0 — 루프 · 정점 단계에서 읽는다(미분 없음)
-    static float4 sampleIndexWith( uint index, uint samplerID, float2 uv );
-    static float sampleShadowComparison( uint index, float2 uv, float depth );
+    static float4 sampleIndex( uint index, uint emulatedSlot, float2 uv );
+    static float4 sampleIndexLevelZero( uint index, uint emulatedSlot, float2 uv ); // 밉 0 — 루프 · 정점 단계에서 읽는다(미분 없음)
+    static float4 sampleIndexWith( uint index, uint emulatedSlot, uint samplerID, float2 uv );
+    static float4 sampleArrayWith( uint index, uint samplerID, float2 uv ); // 네이티브 bindless(DX12 · Vulkan)만 정의가 있다 — 배열 원소 하나(머티리얼 텍스처도 쓴다)
+    static float sampleShadowComparison( uint index, uint emulatedSlot, float2 uv, float depth );
     static void storeRwTexture2D( uint index, uint2 texelPosition, float4 value );
     static float4 loadRwTexture2D( uint index, uint2 texelPosition );
-    // 엔진 텍스처 한 장을 직접 읽는 패스(풀스크린 입력 · 히스토리)용 진입 함수다. 네이티브는 index 로, 에뮬은 패스가 거는 역할의 칸(emulatedSlot = SW_EMU_SLOT_<역할>)으로 읽는다 — 분기는 11 절 안에서 끝난다.
     static float4 loadEngineTexel( uint index, uint emulatedSlot, int2 texel );                  // 밉 0 의 텍셀 하나
     static uint2 getEngineTextureSize( uint index, uint emulatedSlot );                          // 밉 0 의 크기
     static float4 gatherEngineChannel( uint index, uint emulatedSlot, uint channel, float2 uv ); // 점 · 클램프 샘플러로 2x2 게더(channel 0 R · 1 G · 2 B)

@@ -179,7 +179,7 @@ float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
         SW_BRANCH if ( g_SceneDepthCopyIndex != kInvalidIndex )
         {
             // 장면까지의 실제 두께: 이 픽셀의 장면 깊이로 월드 위치를 복원해 물 표면과의 거리를 잰다. 물보다 앞에 있는 물체(장면 깊이가 더 작다)는 두께 0 이다.
-            const float  sceneDepth    = Bindless::sampleIndexWith( g_SceneDepthCopyIndex, SW_SAMPLER_POINT_CLAMP, screenUv ).r;
+            const float  sceneDepth    = Bindless::sampleIndexWith( SW_ENGINE_ROLE( SceneDepthCopy ), SW_SAMPLER_POINT_CLAMP, screenUv ).r;
             const float3 scenePosition = Transform::computeWorldPositionFromDepth( screenUv, sceneDepth );
             const bool   bSceneBehind  = sceneDepth + kDepthCompareBias >= context._position.z;
             thickness                  = bSceneBehind ? length( scenePosition - context._worldPosition ) : 0.0f;
