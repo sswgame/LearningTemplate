@@ -59,7 +59,6 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층, 프레임 일은
 
 - **컴포넌트 틱의 컨텍스트 남은 틈:** 주 틱은 `onTick( TickContext& )` 로 옮겼다. 틱 본문 45 곳이 아직 `getOwner()->getManager()`(쓰기 가능)를 꺼낸다 — 읽기는 `context.getManager()`(const), 쓰기는 `context.deferPostTick` 로 옮긴 뒤 틱에서 쓰기 가능한 매니저 길을 닫는다(빌드 고리가 필요). `onSubTick` 도 같은 컨텍스트로.
 - **서비스 갱신 병렬화:** 같은 단계 서비스 갱신을 접근이 겹치지 않는 것끼리 워커로 — 본문의 게임 스레드 전용 API 를 서명으로 먼저 가린다.
-- **SoA 다음 사용자:** 캐릭터 컨트롤러 3D · 2D 입력(`_commandLock` + 이동 · 점프 · 루트 모션 대기)을 `ComponentDataStore` 페이지로, 군중(`NavAgentCrowdSync`)의 에이전트별 `setWorldPosition` 을 `queuePoseWrite` · `applyTransformBatch` 일괄 쓰기로.
 - **공간 질의:** 근접 기믹 · 감지 · 넷 관심 격자를 `SceneSpatialGrid` 층으로 옮길지 측정 뒤.
 
 ### 5-4. 리플렉션 남은 것
