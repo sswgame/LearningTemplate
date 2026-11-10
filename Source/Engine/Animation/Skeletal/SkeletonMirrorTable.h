@@ -11,8 +11,12 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/IdentityToken.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -38,16 +42,26 @@ namespace sw
     REFLECT()
     class SW_API SkeletonMirrorTable
     {
+        friend struct AssetTypeLoader;
+
     public:
         REFLECT_BODY();
 
         /** @brief 미러 표 파일의 확장자입니다. */
         static constexpr string_view kExtension = ".mirrortable.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `AnimationAssetCache.cpp` 의 공유 캐시 줄 — 스켈레톤 · 본 LOD 와 같은 자리). */
+        static constexpr AssetTypeDef kAssetType{ "SkeletonMirrorTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief XML 본문을 읽습니다. 모르는 키 · 빠진 칸이면 오류를 남기고 false 이며 표는 빕니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief 짝 줄입니다. */
         const vector<SkeletonMirrorPair>& getPairs() const { return _listPair; }
+        /** @brief 내용 토큰입니다. 읽을 때마다 새 토큰이라(공유 캐시의 다시 읽기는 제자리) 짝 번호 표를 만든 쪽이 들고 비교해 다시 읽힌 것을 알아챕니다. */
+        const IdentityToken& getRevision() const { return _revision; }
 
         /**
          * @brief 본마다 짝 본 번호(`outListMirroredBone[i]`, 짝이 없으면 i)를 만듭니다. `MirrorPoseNode` 가 평가에 받는 표입니다.
@@ -59,7 +73,40 @@ namespace sw
         static string makePathForSkeleton( string_view skeletonPath );
 
     private:
+        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<SkeletonMirrorTable>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+
+    private:
         PROPERTY( Required, Tooltip = "Left-right bone pairs; bones not listed mirror onto themselves" )
         vector<SkeletonMirrorPair> _listPair;
+        IdentityToken              _revision; ///< 읽을 때마다 새로 받는다(`getRevision`)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class SkeletonMirrorBoneMap
+     * @brief 스켈레톤 하나와 그 미러 표로 만든 본마다 짝 본 번호(`SkeletonMirrorTable::buildBoneMap`)를 들고, 표가 다시 읽히거나 스켈레톤이 바뀌면 다시 만듭니다.
+     * @details 스켈레톤 곁 파일을 고르는 쪽(`SkeletalMeshComponent` — 본 LOD 와 같은 규칙)이 하나 들고, 포즈 노드 평가가 `find` 로 받는다(`AnimationPoseParams::_pMirroredBone`).
+     *          짝 표가 틀리면 같은 내용으로 다시 만들지 않는다 — 오류는 표가 바뀔 때마다 한 번이다.
+     */
+    class SW_API SkeletonMirrorBoneMap
+    {
+    public:
+        SkeletonMirrorBoneMap();
+
+        /** @brief 쓰는 표를 바꿉니다(nullptr 이면 표 없음). 다음 `find` 가 다시 만듭니다. */
+        void setTable( shared_ptr<const SkeletonMirrorTable> table );
+        /** @brief 쓰는 표입니다(없으면 nullptr). */
+        const SkeletonMirrorTable* findTable() const { return _table.get(); }
+        /** @brief @p skeleton 의 짝 번호 표입니다. 표가 없거나 스켈레톤과 맞지 않으면(오류는 만들 때 한 번) nullptr 입니다. */
+        const vector<uint32>* find( const Skeleton& skeleton, string_view sourceLabel );
+
+    private:
+        shared_ptr<const SkeletonMirrorTable> _table;
+        vector<uint32>                        _listMirroredBone;
+        IdentityToken                         _builtRevision;  ///< 짝 번호 표를 만든 표 내용 토큰이다
+        const Skeleton*                       _pBuiltSkeleton; ///< 짝 번호 표를 만든 스켈레톤이다(동일성만 확인한다)
     };
 } // namespace sw
