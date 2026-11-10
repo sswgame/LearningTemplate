@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 import shutil
 import sys
@@ -30,6 +29,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
+from common.HostPlatform import isWindowsHost  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from generate.GeneratorOutput import GeneratorError, runGenerator, writeGeneratedFile  # noqa: E402
 
@@ -147,7 +147,7 @@ def writeGateStubs(stubDir: Path, gateName: str, listHeader: list[str], message:
         stubRoot.mkdir(parents=True)
         setPrevious = set()
     setCurrent = set(listHeader)
-    if os.name == "nt":
+    if isWindowsHost():
         listLong = [header for header in setCurrent if len(str(stubRoot / header)) >= kWindowsMaxPath]
         if listLong:
             raise GeneratorError(f"게이트 껍데기 경로가 {kWindowsMaxPath} 자를 넘는다({len(listLong)} 개, 예: {stubRoot / max(listLong, key=len)}) — "
