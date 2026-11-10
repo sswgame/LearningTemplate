@@ -357,8 +357,8 @@ namespace sw
          */
         struct VulkanHeapMemory
         {
-            VkDevice       _device{ VK_NULL_HANDLE };
-            VkDeviceMemory _memory{ VK_NULL_HANDLE };
+            VkDevice       _device{ nullptr }; // 헤더는 vulkan.h 를 보지 않는다(VulkanRHIHandle.h) — VK_NULL_HANDLE 대신 nullptr
+            VkDeviceMemory _memory{ nullptr };
             uint64         _sizeBytes{ 0 };
             uint32         _memoryTypeIndex{ 0 };
 

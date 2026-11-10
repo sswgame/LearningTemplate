@@ -44,3 +44,6 @@ SW_VK_DEFINE_HANDLE( VkQueryPool )
 // 헤더가 멤버로 드는 플래그 형식 — `vulkan_core.h` 와 같은 typedef 라 둘 다 보이는 TU 에서도 겹치지 않는다.
 typedef uint32_t VkFlags;
 typedef VkFlags  VkPipelineStageFlags;
+
+// 헤더가 참조로만 받는 생성 서술 — 정의는 `vulkan_core.h` 의 같은 이름 struct 다.
+struct VkImageCreateInfo;
