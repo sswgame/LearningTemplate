@@ -24,6 +24,7 @@ target_link_options(sw_platform_web INTERFACE
 	# 콘텐츠: 쿠킹한 팩을 가상 파일 시스템에 얹는다(--preload-file 은 패키징 스크립트가 붙인다 — Scripts/package).
 	-sFORCE_FILESYSTEM=1
 	-lidbfs.js # 세이브 · 설정의 영속 폴더(App/AppEntry.cpp 의 IDBFS 마운트)
+	-lwebsocket.js # 스트림 전송(Core/Network/Transport/Web/WebSocketStreamTransport — emscripten/websocket.h)
 	-sEXIT_RUNTIME=1
 )
 # 브라우저 쪽 JS 는 C++ 소스(EM_JS · EM_ASM)가 아니라 기능 옆의 `Web/*.js` Emscripten 라이브러리(addToLibrary)에 둔다 — C++ 포맷터가 매크로 본문의
