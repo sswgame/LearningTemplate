@@ -28,7 +28,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 
 namespace sw
