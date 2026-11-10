@@ -59,6 +59,18 @@
 - **W-E1 패널 열림 훅:** `IEditorPanel::onPanelOpened` 에서만 비동기 준비를 시작하고, View 는 준비 전에 뼈대만 그린다(3절 "첫 패널 느린 프레임" 측정이 후보를 고른다).
 - **W-G1 분할(W-S2 뒤):** `InputMap`(데이터 · 평가기 · 상태 — Enhanced Input 자리), `PrefabAsset`(포맷 셋 + 스폰), `AbilityComponent`(어트리뷰트 · 이펙트 · 스펙 컨테이너).
 
+### 5-2. RHI 진단(2026-11-10 — 결함 먼저, 폴더가 겹치는 단위는 순서대로)
+
+- **D1 WebGPU 백프레셔 + 공통 `RHIFrameFenceRing`(High):** 네이티브 Dawn 은 프레임 인 플라이트 상한이 없다. `WebGPURHIDevice::beginFrameInternal` 이 끝나지 않은 링을 두고 새 링을 만들어, 상수 링 · 프레임 펜스가 GPU 가 뒤처진 만큼 자란다(`IRHIDevice.h:111` 계약 위반). 네이티브는 `wgpuInstanceWaitAny` 로 가장 오래된 프레임을 기다린다. 다섯 백엔드의 프레임 펜스 링(Vulkan 손 링 · DX11/GL `retireFrameOnGPU` · WebGPU deque)을 `Backend/RHIFrameFenceRing` 하나로 모아 상한을 강제한다.
+- **D2/D3 해제 키 한 길:** Vulkan `_frameFenceCounter`(원자 아님, 렌더 스레드가 올림)를 전송 완료 콜백(`VulkanRHIResourceFactory.cpp:1115`, 폴링 스레드)이 해제 키로 읽는다 — 데이터 경쟁이다. GL · DX11 의 CPU 프레임 지연 `enqueueRelease` 는 `kGPUReleaseFrameLatency == kMaxFrameCountInFlight` 의 우연한 일치에 기댄다 → `enqueueRelease` 와 그 상수를 지우고 GPU 펜스 길 하나로. GL · WebGPU `_frameSerial` 도 같은 점검.
+- **C1 `RHIBindlessRegistry`:** 백엔드 다섯이 같은 등록표(번호 발급 · 생존 · 해제 대기 · 락)를 다시 쓴다. 공통으로 올리고 백엔드는 디스크립터 쓰기 훅만. GL · WebGPU `isBindlessIndexLive` 의 무락 읽기와 Vulkan 해제의 전 텍스처 선형 탐색도 사라진다.
+- **DX12 기록 경로 락:** 바인딩마다 `shared_mutex`(`D3D12RHICommandContext.cpp:125,151`), 배리어마다 `_resourceStateMutex` + `_mapOffscreenTexture.find`. 병렬 기록 구간의 레지스트리 불변식(`setParallelRecording`)으로 락을 걷어 내고, 텍스처 상태를 `RHIHandleTable` 레코드로 옮긴다. `bench.json` p50 으로 전후를 잰다.
+- **C2 전송 조립 템플릿:** 업로드 · 되읽기 · 구간 갱신의 조립 순서를 `Transfer/RHITextureTransferDriver` 로, DX12/Vulkan 구조 버퍼 스테이징 성장 정책을 공유한다.
+- **C3/C4 타임스탬프 링 · 스왑체인 세트:** `RHITimestampRing` · `RHISwapChainSet`. Vulkan 보조 창 재생성의 프레임 중간 `vkDeviceWaitIdle`(`VulkanRHIDevice.cpp:1634`)은 다음 프레임으로 미룬다.
+- **측정 뒤 조건부:** Vulkan 드로마다 `vkUpdateDescriptorSets` 인지 `RT.Bind.descriptorUpdates` 로 먼저 센다. WebGPU 바인드 그룹 캐시를 프레임마다 비우지 말고 펜스로 은퇴시킨다.
+- **작은 정리:** `IRHIDevice::getShaderTargetFormat()` 으로 Renderer 의 `getBackendType()` 6곳을 없앤다. `IRHIResourceFactory::create*` 에 `[[nodiscard]]`, `transitionBuffer` 단건은 `[[deprecated]]`, Vulkan 프레임마다 세마포어 `vector` 할당을 없앤다.
+- **측정 뒤에만:** 중립 커맨드 스트림 · RHI 스레드, 복사 큐, SM6.6 바인드리스, RT · 메시 셰이더(`RHIHandleKind`/`RHIPipelineStateDesc._kind` + ABI 범프). Android 는 이미지마다 `VkDeviceMemory` 하나라 `maxMemoryAllocationCount`(4096)에 닿을 수 있다 → 서브할당(추정).
+
 ### 6. 리소스
 
 - **Sprite Fusion 타일셋**(상세 페이지마다 `License: CC0`): Castle · Tiny Swords(Pixel Frog), Dungeon(0x72), Four Seasons Platformer(Analog Studios), Retro Gameboy(Ben Leggett) — `https://www.spritefusion.com/downloads/tilesets/<이름>.zip`. 1Bit Platformer(Kenney)는 Kenney 원본에서.
