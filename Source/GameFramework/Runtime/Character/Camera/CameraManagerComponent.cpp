@@ -255,7 +255,7 @@ namespace sw
     {
         const GameObject*        pOwner   = getOwner();
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        GameObject*              pObject  = pManager != nullptr ? pManager->resolveGameObject( target ) : nullptr;
+        const GameObject*        pObject  = pManager != nullptr ? pManager->resolveGameObject( target ) : nullptr;
         if ( pObject == nullptr || pObject == pOwner )
             return nullptr;
         return pObject->getComponent<CameraComponent>();

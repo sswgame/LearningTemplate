@@ -810,7 +810,7 @@ namespace sw
                         // 쓰러진 적(래그돌)도 맞고 밀린다 — 맞음 수 · 맞음 표시는 산 적만 센다.
                         const bool    bAlive = pEnemy->isAlive();
                         const HitInfo hit    = CharacterRayHit::makeHitInfo( rayHit, pOwner, shot._ray._direction, shot._damage, _shotImpulse );
-                        CharacterRayHit::deliverHit( *rayHit._pObject, hit );
+                        CharacterRayHit::deliverHit( *rayHit.findMutableObject( manager ), hit );
                         bAnyHit             = bAnyHit || bAlive;
                         killcamHit._zone    = hit._zone;
                         killcamHit._bKilled = bAlive && pEnemy->isDead() ? SW_TRUE : SW_FALSE;
@@ -1093,7 +1093,7 @@ namespace sw
             _bWeaponModelDirty = SW_FALSE;
             _bViewWeaponSynced = SW_FALSE; // 몸이 새 무기를 조립한 뒤(다음 틱 뒤) 1인칭 총이 그 부품을 따른다
             // 몸의 무기는 외형의 MainHand 슬롯이다(같은 소켓 이름 MainHand.Muzzle 이 새 무기의 총구를 가리킨다).
-            GameObject*                   pBody       = findBodyObject();
+            GameObject*                   pBody       = findMutableBodyObject();
             CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
             if ( pAppearance != nullptr )
                 pAppearance->setSlotItem( hashed_string( "MainHand" ), getWeaponItem( _weaponIndex ) );
@@ -1143,7 +1143,7 @@ namespace sw
         // 1인칭 총(카메라 자식)은 몸의 MainHand 부품과 같은 메시 · 머티리얼이다 — 무기 외형(itemvisuals.xml)이 하나의 원본이다(씬에 총 메시 목록을 따로 두지 않는다).
         using Internal                               = ShooterPlayerComponentInternal;
         GameObject* const                   pOwner   = getOwner();
-        GameObject* const                   pBody    = findBodyObject();
+        GameObject* const                   pBody    = findMutableBodyObject();
         const CharacterAppearanceComponent* pLook    = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
         GameObjectManager* const            pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pOwner == nullptr || pLook == nullptr || pManager == nullptr )
@@ -1173,16 +1173,23 @@ namespace sw
         if ( pWeapon != nullptr )
             pWeapon->setVisible( _bFirstPerson == SW_TRUE );
         // 1인칭에서는 머리만 숨긴다(눈이 머리 안에 있다). 몸 · 다리는 보이고, 몸 무기 대신 시점 무기가 보인다(`ShooterAvatarComponent::setFirstPerson`).
-        GameObject*             pBody   = findBodyObject();
+        GameObject*             pBody   = findMutableBodyObject();
         ShooterAvatarComponent* pAvatar = pBody != nullptr ? pBody->getComponent<ShooterAvatarComponent>() : nullptr;
         if ( pAvatar != nullptr )
             pAvatar->setFirstPerson( _bFirstPerson == SW_TRUE );
     }
 
-    GameObject* ShooterPlayerComponent::findBodyObject() const
+    const GameObject* ShooterPlayerComponent::findBodyObject() const
     {
         const GameObject*        pOwner   = getOwner();
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        return pManager != nullptr ? pManager->resolveGameObject( _body ) : nullptr;
+    }
+
+    GameObject* ShooterPlayerComponent::findMutableBodyObject()
+    {
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         return pManager != nullptr ? pManager->resolveGameObject( _body ) : nullptr;
     }
 } // namespace sw

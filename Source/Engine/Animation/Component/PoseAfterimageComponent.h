@@ -63,7 +63,7 @@ namespace sw
         };
 
         /** @brief 쌓인 시간(`_pendingGhostStep`)만큼 사본을 늙히고 끄며, 간격이 차면 찍습니다. 사본은 다른 오브젝트라 틱 뒤에서만 부릅니다. */
-        void advanceGhosts( const GameObjectManager& manager );
+        void advanceGhosts( GameObjectManager& manager );
         /** @brief 지금 포즈를 다음 사본(빈 것, 없으면 가장 오래된 것)에 고정합니다. */
         void capture();
         /** @brief 사본 @p ghost 의 스켈레탈 메시입니다(풀은 시작할 때 만든다). 사본 오브젝트가 사라졌으면 nullptr 입니다. */

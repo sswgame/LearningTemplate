@@ -45,8 +45,8 @@ namespace sw
         float32 getAppliedDepth() const { return _appliedDepth; }
         /** @brief 내리는 메시 수입니다(감시 값 · 진단). */
         uint32 getLoweredMeshCount() const { return static_cast<uint32>( _listVisual.size() ); }
-        /** @brief 속성을 읽어 자기 메시를 내립니다(PostPhysics 틱 — 이번 프레임 지역 처리 뒤, 테스트도 부른다). */
-        void applySinkDepth( const GameObjectManager& manager );
+        /** @brief 속성을 읽어 자기 메시를 내립니다(PostPhysics 틱 — 이번 프레임 지역 처리 뒤). 자기 오브젝트만 쓴다 — 매니저를 받지 않는다. */
+        void applySinkDepth();
 
     private:
         /** @brief 내리는 메시 하나와 원래 로컬 자리입니다. */
@@ -59,7 +59,7 @@ namespace sw
         /** @brief @p component 위로 메시가 있는지 봅니다(있으면 그 메시를 따라 내려간다). */
         [[nodiscard]] static bool hasMeshAncestor( const SceneComponent& component );
         /** @brief 내린 메시를 원래 자리로 되돌리고 목록을 비웁니다. */
-        void restoreVisuals( const GameObjectManager& manager );
+        void restoreVisuals();
 
     private:
         PROPERTY( Required, Category = "Reaction", DisplayName = "Attribute", Tooltip = "Ability attribute read as the sink depth" )

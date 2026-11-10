@@ -32,11 +32,15 @@ namespace sw
                 return name.substr( 0, underscore );
             }
 
-            /** @brief 밑이 @p baseName 인 살아 있는 오브젝트를 만든 순서(id 오름차순)로 모읍니다. 이름은 오브젝트 저장소처럼 대소문자를 가리지 않는다. */
-            static void collectByBaseName( const GameObjectManager& manager, string_view baseName, vector<GameObject*>& outListObject )
+            /**
+             * @brief 밑이 @p baseName 인 살아 있는 오브젝트를 만든 순서(id 오름차순)로 모읍니다. 이름은 오브젝트 저장소처럼 대소문자를 가리지 않는다.
+             * @details @p TObject 는 매니저의 상수성을 따른다(`GameObject` · `const GameObject`).
+             */
+            template <typename TManager, typename TObject>
+            static void collectByBaseName( TManager& manager, string_view baseName, vector<TObject*>& outListObject )
             {
                 outListObject.clear();
-                manager.forEachGameObject( [baseName, &outListObject]( GameObject* pObject )
+                manager.forEachGameObject( [baseName, &outListObject]( TObject* pObject )
                 {
                     const bool bSameBase = pObject->isPendingDestroy() == false && StringUtil::equals( computeBaseName( pObject->getName().c_str() ), baseName, true );
                     if ( bSameBase )
@@ -75,7 +79,8 @@ namespace sw
             /** @brief 실패 까닭 한 줄의 버퍼 크기입니다. */
             static constexpr uint32 kProblemCapacity = constant::buffer::kMax512;
 
-            static string describeSiblings( const vector<GameObject*>& listObject )
+            template <typename TObject>
+            static string describeSiblings( const vector<TObject*>& listObject )
             {
                 string text;
                 for ( size_t index = 0; index < listObject.size() && index < kSiblingNameLimit; ++index )
@@ -126,14 +131,15 @@ namespace sw
         return true;
     }
 
-    expected<GameObject*> AutomationTarget::find( const GameObjectManager* pManager, string_view target )
+    template <typename TObject, typename TManager>
+    expected<TObject*> AutomationTarget::findIn( TManager* pManager, string_view target )
     {
         using Internal = AutomationWatchInternal;
         if ( target.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "no target is given" } );
         if ( pManager == nullptr )
             return unexpected( Error{ ErrorKind::NotFound, "there is no active scene" } );
-        vector<GameObject*>  listObject;
+        vector<TObject*>     listObject;
         string_view          baseName;
         int32                index = 0;
         const expected<bool> split = Internal::splitIndex( target, baseName, index );
@@ -146,7 +152,7 @@ namespace sw
                 return listObject[static_cast<size_t>( index )];
             return Internal::fail( ErrorKind::NotFound, "no object at that index", "%# (%# live object(s) named %#)", target, listObject.size(), baseName );
         }
-        GameObject* pObject = pManager->findGameObjectByName( hashed_string( target ) );
+        TObject* pObject = pManager->findGameObjectByName( hashed_string( target ) );
         if ( pObject == nullptr )
             return unexpected( Error{ ErrorKind::NotFound, "no object named", target } );
         // 번호를 적지 않은 이름인데 같은 밑의 오브젝트가 여럿이면 어느 것을 뜻했는지 모른다.
@@ -158,6 +164,16 @@ namespace sw
                                        listObject.size(), target, Internal::describeSiblings( listObject ), target, listObject.size() - 1 );
         }
         return pObject;
+    }
+
+    expected<GameObject*> AutomationTarget::find( GameObjectManager* pManager, string_view target )
+    {
+        return findIn<GameObject>( pManager, target );
+    }
+
+    expected<const GameObject*> AutomationTarget::find( const GameObjectManager* pManager, string_view target )
+    {
+        return findIn<const GameObject>( pManager, target );
     }
 
     AutomationTargetLookup AutomationTarget::classifyLookupError( const Error& error )
@@ -185,7 +201,7 @@ namespace sw
         query._key      = key;
         if ( target.empty() )
             return query; // 대상이 없는 질의다(`NotGiven`)
-        const expected<GameObject*> found = AutomationTarget::find( pManager, target );
+        const expected<const GameObject*> found = AutomationTarget::find( pManager, target );
         if ( found.has_value() )
         {
             query._pTargetObject = *found;

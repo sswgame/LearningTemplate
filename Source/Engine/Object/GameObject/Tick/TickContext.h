@@ -6,7 +6,7 @@
  *          자리다. 디스패치(`SceneTickScheduler` · `TickBatchOf`)가 원소마다 스택에 세운다.
  *          **쓰기 가능한 매니저 길:** `GameObject::getManager` 는 읽기 전용(const)을 돌려주고, 쓰기 가능한 매니저는 이름이 다른 `GameObject::getMutableManager`
  *          로만 얻는다 — 틱 본문의 습관 길(`getOwner()->getManager()`)로는 매니저를 바꾸는 호출이 컴파일되지 않는다. 틱 뒤 작업은 쓰기 가능한 매니저를 인자로 받는다.
- *          남은 틈(NEXT 5-3): const 매니저의 찾기(`resolveGameObject` · `resolveComponent` · `findGameObjectBy…`)가 아직 쓰기 가능한 포인터를 돌려준다.
+ *          const 매니저의 찾기 · 순회(`resolveGameObject` · `resolveComponent` · `findGameObjectBy…` · `forEach…`)는 const 포인터만 낸다(`GameObjectManager::findGameObjectByName`).
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

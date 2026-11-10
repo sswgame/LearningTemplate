@@ -176,7 +176,7 @@ namespace sw
         hit._impulse     = 180.0f;
         hit._bFatal      = true;
         CharacterRayHit::resolveHitZone( *rayHit._pObject, rayHit._body, hit );
-        CharacterRayHit::deliverHit( *rayHit._pObject, hit );
+        CharacterRayHit::deliverHit( *rayHit.findMutableObject( manager ), hit );
         SW_LOG_INFO_ID( "StressTestCombat.TFatalHitZone", "[StressTestCombat] t=%# fatal hit '%#' zone '%#' x%# -> ragdoll", _elapsed, pBone, hit._zone.c_str(), hit._damageMultiplier );
     }
 

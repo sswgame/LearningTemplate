@@ -93,7 +93,7 @@ namespace sw
         { afterimage.advanceGhosts( manager ); } );
     }
 
-    void PoseAfterimageComponent::advanceGhosts( const GameObjectManager& manager )
+    void PoseAfterimageComponent::advanceGhosts( GameObjectManager& manager )
     {
         const float32 step = _pendingGhostStep;
         _pendingGhostStep  = 0.0f;
@@ -202,9 +202,9 @@ namespace sw
 
     SkeletalMeshComponent* PoseAfterimageComponent::findGhostMesh( Ghost& ghost )
     {
-        const GameObject*        pOwner   = getOwner();
-        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        GameObject*              pGhost   = pManager != nullptr ? pManager->resolveGameObject( ghost._object ) : nullptr;
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr; // 틱 뒤(`advanceGhosts`)에서만 부른다
+        GameObject*        pGhost   = pManager != nullptr ? pManager->resolveGameObject( ghost._object ) : nullptr;
         return pGhost != nullptr ? pGhost->getComponent<SkeletalMeshComponent>() : nullptr;
     }
 } // namespace sw

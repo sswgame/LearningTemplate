@@ -35,7 +35,7 @@ namespace sw
         SmartObjectScheduleLocator();
 
         /** @brief 슬롯을 찾을 씬의 오브젝트 매니저입니다(소유하지 않음). nullptr 이면 늘 슬롯이 없습니다. */
-        void initialize( const GameObjectManager* pManager );
+        void initialize( GameObjectManager* pManager );
         /** @brief 예약을 모두 지웁니다(점유는 건드리지 않습니다). */
         void clear();
         /**
@@ -88,9 +88,9 @@ namespace sw
         void collectCandidates( const hashed_string& kind, vector<Candidate>& outListCandidate ) const;
 
     private:
-        const GameObjectManager* _pManager;
-        hashed_string            _defaultArea;
-        vector<Reservation>      _listReservation;
-        uint32                   _nextID;
+        GameObjectManager*  _pManager;
+        hashed_string       _defaultArea;
+        vector<Reservation> _listReservation;
+        uint32              _nextID;
     };
 } // namespace sw

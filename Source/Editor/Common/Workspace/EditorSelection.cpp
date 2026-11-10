@@ -268,7 +268,7 @@ namespace sw::editor
     {
         if ( _pPreviewScene == nullptr )
             return editor::findGameObject( handle );
-        const GameObjectManager* pManager = _pPreviewScene->getObjectManager();
+        GameObjectManager* pManager = _pPreviewScene->getObjectManager();
         return ( pManager != nullptr && handle.isValid() ) ? pManager->resolveGameObject( handle ) : nullptr;
     }
 

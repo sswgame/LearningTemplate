@@ -13,6 +13,18 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct VisualSinkReactionInternal
+        {
+            /** @brief 자기 오브젝트의 메시를 핸들로 찾습니다 — 내리는 메시는 늘 자기 것이라 매니저(남의 오브젝트 찾기 — 틱에서는 읽기 전용)를 거치지 않는다. */
+            static MeshComponent* findOwnMesh( const GameObject& self, TComponentHandle<MeshComponent> mesh )
+            {
+                return castTo<MeshComponent>( self.findComponentByID( mesh.componentID() ) );
+            }
+        };
+    } // namespace
+
     VisualSinkReactionComponent::VisualSinkReactionComponent()
         : _attribute{}
         , _scale{ 1.0f }
@@ -28,27 +40,24 @@ namespace sw
     {
         Component::onTick( context );
         // 자기 오브젝트의 속성을 읽고 자기 메시만 옮긴다 — 틱 안에서 해도 된다(예전에는 틱 뒤 큐로 미뤄 지역 처리 뒤에 오기를 바랐지만, 같은 큐 안 순서는 워커 순서였다).
-        applySinkDepth( context.getManager() );
+        applySinkDepth();
     }
 
     void VisualSinkReactionComponent::onEndPlay()
     {
-        GameObject* const        pOwner   = getOwner();
-        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        if ( pManager != nullptr )
-            restoreVisuals( *pManager );
+        restoreVisuals();
         Component::onEndPlay();
     }
 
-    void VisualSinkReactionComponent::applySinkDepth( const GameObjectManager& manager )
+    void VisualSinkReactionComponent::applySinkDepth()
     {
         GameObject* const             pOwner   = getOwner();
         const AbilityComponent* const pAbility = pOwner != nullptr ? pOwner->getComponent<AbilityComponent>() : nullptr;
         const optional<float32>       value    = pAbility != nullptr ? pAbility->getAttributeValue( _attribute ) : nullopt;
         const float32                 depth    = value.has_value() ? MathUtil::max( 0.0f, *value ) * _scale : 0.0f; // 속성이 없는 개체는 가라앉지 않는다
-        if ( depth <= 0.0f )
+        if ( depth <= 0.0f || pOwner == nullptr )
         {
-            restoreVisuals( manager );
+            restoreVisuals();
             return;
         }
         // 처음 내릴 때(또는 외형이 다시 조립돼 메시 수가 바뀌면) 다른 메시에 매달리지 않은 메시를 모두 고르고 원래 자리를 적는다.
@@ -57,7 +66,7 @@ namespace sw
         { rootMeshCount += hasMeshAncestor( *pMesh ) ? 0u : 1u; } );
         if ( rootMeshCount != _listVisual.size() )
         {
-            restoreVisuals( manager );
+            restoreVisuals();
             pOwner->forEachComponentOfType<MeshComponent>( [this]( MeshComponent* pMesh )
             {
                 if ( hasMeshAncestor( *pMesh ) == false )
@@ -66,17 +75,19 @@ namespace sw
         }
         for ( const SunkVisual& visual : _listVisual )
         {
-            if ( MeshComponent* pMesh = manager.resolveComponent( visual._mesh ) )
+            if ( MeshComponent* pMesh = VisualSinkReactionInternal::findOwnMesh( *pOwner, visual._mesh ) )
                 pMesh->setLocalPosition( visual._localPosition - float3{ 0.0f, depth, 0.0f } );
         }
         _appliedDepth = depth;
     }
 
-    void VisualSinkReactionComponent::restoreVisuals( const GameObjectManager& manager )
+    void VisualSinkReactionComponent::restoreVisuals()
     {
+        const GameObject* const pOwner = getOwner();
         for ( const SunkVisual& visual : _listVisual )
         {
-            if ( MeshComponent* pMesh = manager.resolveComponent( visual._mesh ) )
+            MeshComponent* const pMesh = pOwner != nullptr ? VisualSinkReactionInternal::findOwnMesh( *pOwner, visual._mesh ) : nullptr;
+            if ( pMesh != nullptr )
                 pMesh->setLocalPosition( visual._localPosition );
         }
         _listVisual.clear();

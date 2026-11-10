@@ -141,11 +141,18 @@ namespace sw
          */
         void notifyNameChanged( GameObject* pObj, hashed_string oldName, hashed_string newName );
 
-        /** @brief 이름으로 GameObject 를 찾습니다. */
-        GameObject* findGameObjectByName( hashed_string name ) const;
+        /**
+         * @brief 이름으로 GameObject 를 찾습니다.
+         * @details **찾기 · 순회는 매니저의 상수성을 따른다.** const 매니저(틱의 `TickContext::getManager` · `GameObject::getManager`)에서는 const 포인터만 나오고,
+         *          쓰기 가능한 포인터는 쓰기 가능한 매니저(`GameObject::getMutableManager` · 틱 뒤 작업의 인자)에서만 나온다 — 읽기 전용으로 받은 씬에서 남의 오브젝트를
+         *          바꾸는 길이 형식으로 없다(언리얼 Mass 의 읽기 전용 조각 접근 · 유니티 Jobs `[ReadOnly]` 자리).
+         */
+        GameObject*       findGameObjectByName( hashed_string name );
+        const GameObject* findGameObjectByName( hashed_string name ) const;
 
-        /** @brief 오브젝트 ID 로 GameObject 를 찾습니다. 락이 없습니다(칸이 그 id 를 들고 있으면). */
-        GameObject* findGameObjectByID( uint64 objectID ) const;
+        /** @brief 오브젝트 ID 로 GameObject 를 찾습니다. 락이 없습니다(칸이 그 id 를 들고 있으면). 상수성은 `findGameObjectByName` 과 같다. */
+        GameObject*       findGameObjectByID( uint64 objectID );
+        const GameObject* findGameObjectByID( uint64 objectID ) const;
 
         /**
          * @brief 락 없는 id 표의 칸(`GameObjectStore::kObjectSlotCount`)을 다른 오브젝트가 써서 맵에 든 오브젝트 수입니다. 진단 · 회귀 테스트용입니다(보통 0).
@@ -168,11 +175,16 @@ namespace sw
          * @brief 힙 할당 없이 등록된 모든 유효한 GameObject 를 순회합니다.
          * @note 공유 잠금을 쥔 채 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`GameObjectStore::WalkScope`) —
          *       그런 일을 하는 순회는 `getAllGameObjects( out )` 로 목록을 받아 잠금 없이 돕니다(`beginPlay` 처럼).
+         *       콜백은 쓰기 가능한 매니저에서 `GameObject*`, const 매니저에서 `const GameObject*` 를 받는다(`findGameObjectByName`).
          */
+        template <typename Func>
+        void forEachGameObject( Func&& func );
         template <typename Func>
         void forEachGameObject( Func&& func ) const;
 
-        /** @brief 힙 할당 없이 씬의 모든 유효한 Component 를 순회합니다. */
+        /** @brief 힙 할당 없이 씬의 모든 유효한 Component 를 순회합니다. 콜백은 매니저의 상수성대로 `Component*` · `const Component*` 를 받는다. */
+        template <typename Func>
+        void forEachComponent( Func&& func );
         template <typename Func>
         void forEachComponent( Func&& func ) const;
 
@@ -181,11 +193,19 @@ namespace sw
          * @details 비용은 씬의 정확한 타입 수와 맞는 컴포넌트 수의 합입니다. **방문 순서는 약속하지 않습니다** — 순서가 결과에 나오는 곳은 모은 뒤 정렬합니다.
          *          버킷에서 꺼낸 포인터를 `static_cast` 로 바꿉니다. REFLECT 타입은 가상이 아닌 단일 상속만 받으므로(파서 7-b) 보정이 맞습니다.
          * @note 공유 잠금 안에서 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`WalkScope`).
+         *       콜백은 매니저의 상수성대로 `TComponent*` · `const TComponent*` 를 받는다.
          */
+        template <typename TComponent, typename Func>
+        void forEachComponentOfType( Func&& func );
         template <typename TComponent, typename Func>
         void forEachComponentOfType( Func&& func ) const;
 
-        /** @brief 런타임 타입 @p pToType 이나 그 파생 컴포넌트를 순회합니다. 콜백은 `Component*` 를 받습니다. 타입을 템플릿으로 모르는 곳(인스펙터 선택기)이 씁니다. */
+        /**
+         * @brief 런타임 타입 @p pToType 이나 그 파생 컴포넌트를 순회합니다. 타입을 템플릿으로 모르는 곳(인스펙터 선택기)이 씁니다.
+         * @details 콜백은 매니저의 상수성대로 `Component*` · `const Component*` 를 받는다.
+         */
+        template <typename Func>
+        void forEachComponentOfType( const TypeInfo* pToType, Func&& func );
         template <typename Func>
         void forEachComponentOfType( const TypeInfo* pToType, Func&& func ) const;
 
@@ -414,8 +434,12 @@ namespace sw
         /** @brief 틱에 참여하는 오브젝트의 레지스트리입니다. */
         const TickRegistry& getTickRegistry() const;
 
-        /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. 타입을 아는 곳은 타입 핸들(`TComponentHandle<T>`)의 찾기를 씁니다. */
-        Component* resolveComponent( ComponentHandle handle ) const;
+        /**
+         * @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. 타입을 아는 곳은 타입 핸들(`TComponentHandle<T>`)의 찾기를 씁니다.
+         * @details 상수성은 `findGameObjectByName` 과 같다 — const 매니저에서는 const 포인터다.
+         */
+        Component*       resolveComponent( ComponentHandle handle );
+        const Component* resolveComponent( ComponentHandle handle ) const;
 
         /**
          * @brief 컴포넌트 레지스트리에 타입 T 로 오른 것 중 켜진 것(`Component::isActive`, 삭제 대기 아님)마다 @p func( T& ) 를 등록 순서로 부릅니다.
@@ -431,9 +455,12 @@ namespace sw
          * @details 타입 없는 찾기 뒤에 `static_cast` 합니다(REFLECT 타입은 가상이 아닌 단일 상속뿐이라 보정이 맞습니다).
          *          **Shipping 이 아닌 모든 구성에서 대상의 타입을 확인합니다.** 핸들은 id 만 담으므로, id 를 다른 타입이 받으면(핫 리로드, 되돌리기의 id 복원)
          *          캐스트가 다른 타입의 칸을 읽습니다. 어긋나면 오류 로그와 Debug 단언을 남기고 nullptr 을 반환합니다. 그런 길이 없는 Shipping 만 확인을 뺍니다.
+         *          상수성은 `findGameObjectByName` 과 같다 — const 매니저에서는 `const T*` 다.
          */
         template <typename T>
-        T* resolveComponent( TComponentHandle<T> handle ) const;
+        T* resolveComponent( TComponentHandle<T> handle );
+        template <typename T>
+        const T* resolveComponent( TComponentHandle<T> handle ) const;
 
         /**
          * @brief 타입 없는 핸들 @p handle 에서 타입 핸들을 만듭니다. 대상의 타입을 확인하는 유일한 길입니다(다운캐스트도 `untyped()` 로 여기를 지납니다).
@@ -448,8 +475,9 @@ namespace sw
         template <typename T>
         [[nodiscard]] TypedHandleResult makeTypedHandle( ComponentHandle handle, TComponentHandle<T>& outHandle ) const;
 
-        /** @brief 핸들이 가리키는 오브젝트를 찾습니다. 파괴됐거나 삭제 대기면 nullptr 입니다. 락을 잡지 않습니다(`findGameObjectByID`). */
-        GameObject* resolveGameObject( GameObjectHandle handle ) const;
+        /** @brief 핸들이 가리키는 오브젝트를 찾습니다. 파괴됐거나 삭제 대기면 nullptr 입니다. 락을 잡지 않습니다(`findGameObjectByID`). 상수성은 `findGameObjectByName` 과 같다. */
+        GameObject*       resolveGameObject( GameObjectHandle handle );
+        const GameObject* resolveGameObject( GameObjectHandle handle ) const;
 
         /** @brief 생성자로 받은 엔진 서비스 묶음입니다(빌린 포인터들). 씬 서비스가 만들어질 때 자기 칸을 읽습니다. */
         const SceneEngineServices& getSceneEngineServices() const { return _services; }
@@ -564,6 +592,9 @@ namespace sw
         [[nodiscard]] TypedHandleResult resolveTypedHandleResult( ComponentHandle handle, const TypeInfo* pToType ) const;
         /** @brief `resolveComponent<T>` 가 다른 타입의 칸을 찾았을 때 오류 로그와 Debug 단언을 남깁니다. */
         void reportTypedResolveMismatch( ComponentHandle handle, const Component& found, const TypeInfo* pToType ) const;
+        /** @brief `resolveComponent<T>` 두 상수성의 공통 확인입니다 — @p pComponent 가 없거나 `T` 이면 true, 다른 타입이면 로그를 남기고 false 입니다(Shipping 은 늘 true). */
+        template <typename T>
+        bool isResolvedAs( ComponentHandle handle, const Component* pComponent ) const;
 
         /** @brief 플레이 중에 붙어 줄을 선 컴포넌트의 onBeginPlay 를 부릅니다(게임 스레드, 틱 밖). 도는 중에 선 것은 다음 번에 돕니다. */
         void dispatchPendingBeginPlay();

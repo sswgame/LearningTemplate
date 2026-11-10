@@ -102,7 +102,7 @@ namespace sw::editor
     void HierarchyFilter::collectComponentTypeNames( const GameObjectManager& manager, vector<string>& outListName )
     {
         outListName.clear();
-        manager.forEachGameObject( [&outListName]( GameObject* pObj )
+        manager.forEachGameObject( [&outListName]( const GameObject* pObj )
         {
             for ( Component* pComp : pObj->getComponents() )
             {

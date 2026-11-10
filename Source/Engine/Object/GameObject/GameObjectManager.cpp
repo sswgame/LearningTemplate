@@ -376,12 +376,22 @@ namespace sw
         _pState->_store.notifyNameChanged( pObj, oldName, newName );
     }
 
-    GameObject* GameObjectManager::findGameObjectByName( hashed_string name ) const
+    GameObject* GameObjectManager::findGameObjectByName( hashed_string name )
     {
         return _pState->_store.findGameObjectByName( name );
     }
 
-    GameObject* GameObjectManager::findGameObjectByID( uint64 objectID ) const
+    const GameObject* GameObjectManager::findGameObjectByName( hashed_string name ) const
+    {
+        return _pState->_store.findGameObjectByName( name );
+    }
+
+    GameObject* GameObjectManager::findGameObjectByID( uint64 objectID )
+    {
+        return _pState->_store.findGameObjectByID( objectID );
+    }
+
+    const GameObject* GameObjectManager::findGameObjectByID( uint64 objectID ) const
     {
         return _pState->_store.findGameObjectByID( objectID );
     }
@@ -436,12 +446,22 @@ namespace sw
         return _pState->_componentRegistry;
     }
 
-    Component* GameObjectManager::resolveComponent( ComponentHandle handle ) const
+    Component* GameObjectManager::resolveComponent( ComponentHandle handle )
     {
         return _pState->_store.resolveComponent( handle );
     }
 
-    GameObject* GameObjectManager::resolveGameObject( GameObjectHandle handle ) const
+    const Component* GameObjectManager::resolveComponent( ComponentHandle handle ) const
+    {
+        return _pState->_store.resolveComponent( handle );
+    }
+
+    GameObject* GameObjectManager::resolveGameObject( GameObjectHandle handle )
+    {
+        return _pState->_store.resolveGameObject( handle );
+    }
+
+    const GameObject* GameObjectManager::resolveGameObject( GameObjectHandle handle ) const
     {
         return _pState->_store.resolveGameObject( handle );
     }

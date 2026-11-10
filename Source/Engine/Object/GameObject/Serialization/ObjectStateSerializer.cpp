@@ -903,7 +903,7 @@ namespace sw
 
         // 형태는 값이 말한다(`isComponentKeyHash`): 파일 형태는 `{오브젝트의 저장 id, 키 해시}` 이고, 오브젝트 자리가 0 이면 이 오브젝트 자신이다
         // (부착의 "소유자 필드가 비면 자기 자신" 과 같은 규칙). 런타임 형태는 이 실행의 id 라서 같은 실행의 상태(Live)에서만 뜻이 있다.
-        Component* pTarget = nullptr;
+        const Component* pTarget = nullptr;
         if ( ObjectStateSerializerInternal::isComponentKeyHash( savedHandle.componentID() ) )
         {
             GameObject* pTargetObject = savedHandle.objectID() == 0 ? entry._pObject : findBySavedID( savedHandle.objectID() ^ entry._savedIDScope );
