@@ -330,7 +330,7 @@ namespace sw
             _baseScenePath = basePath;
         }
 
-        if ( AssetXMLFormat::isCurrentXMLVersion( kAssetType, root ) == false )
+        if ( AssetXMLFormat::upgradeToCurrentXMLVersion( kAssetType, root ) == false )
         {
             SW_LOG_ERROR_ID( "SceneDocument.FormatVersionMismatch", "formatVersion mismatch: %#", absPath );
             return false;

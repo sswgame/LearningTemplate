@@ -105,7 +105,7 @@ SW_TEST_CASE( MaterialXMLTest, AssetFormatAcceptsCurrentMaterialXML )
     SW_REQUIRE_TRUE( doc.parse( current ) );
     const sw::XMLNode root = doc.getRoot( "MaterialDef" );
     SW_REQUIRE_TRUE( root.isValid() );
-    SW_EXPECT_TRUE( sw::AssetXMLFormat::isCurrentXMLVersion( sw::Material::kAssetType, root ) );
+    SW_EXPECT_TRUE( sw::AssetXMLFormat::upgradeToCurrentXMLVersion( sw::Material::kAssetType, root ) );
     SW_EXPECT_EQUAL( sw::Material::kAssetType._formatVersion, sw::AssetXMLFormat::readXMLVersion( root ) );
 
     const sw::test::ScopedScratchDomain domain;

@@ -137,7 +137,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AnimationSet.NotASet", "'%#' is not an animation set", sourceLabel );
             return false;
         }
-        if ( AssetXMLFormat::isCurrentXMLVersion( kAssetType, root ) == false )
+        if ( AssetXMLFormat::upgradeToCurrentXMLVersion( kAssetType, root ) == false )
             return false;
         if ( XMLReadUtil::hasOnlyKnownNames( root, { "formatVersion" }, { AnimationSetInternal::kClipName }, sourceLabel ) == false )
             return false;

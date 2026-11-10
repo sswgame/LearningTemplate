@@ -99,9 +99,10 @@ namespace sw
         /** @brief 즐겨찾기만 저장한 순서대로 모읍니다. */
         void collectFavorites( vector<const UserAppearancePreset*>& outListPreset ) const;
 
-        [[nodiscard]] bool writeBytes( vector<uint8>& outBytes ) const override;
-        [[nodiscard]] bool readBytes( const uint8* pData, size_t size ) override;
-        string             saveToText() const;
+        [[nodiscard]] const utf8* getFormatKind() const override { return "UserAppearancePresetStore"; }
+        [[nodiscard]] bool        writeBytes( vector<uint8>& outBytes ) const override;
+        [[nodiscard]] bool        readBytes( const uint8* pData, size_t size ) override;
+        string                    saveToText() const;
         /** @brief 텍스트에서 읽습니다. JSON 이 아니거나 판이 지금과 다르면 false 이고, 망가진 프리셋 줄은 경고를 남기고 건너뜁니다. */
         [[nodiscard]] bool loadFromXMLText( string_view text );
 

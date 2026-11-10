@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
 
 namespace sw
 {
@@ -127,17 +128,22 @@ namespace sw
         root.appendAttribute( kXMLAttrName, versionStr.c_str() );
     }
 
-    bool AssetXMLFormat::isCurrentXMLVersion( const AssetTypeDef& type, XMLNode root )
+    bool AssetXMLFormat::upgradeToCurrentXMLVersion( const AssetTypeDef& type, XMLNode root )
     {
         if ( root.isValid() == false )
             return false;
         const AssetFormatVersion version = readXMLVersion( root );
-        if ( version != type._formatVersion )
+        if ( version == type._formatVersion )
+            return true;
+        FormatUpgradePayload payload;
+        payload._root = root;
+        if ( FormatUpgradeStep::upgrade( FormatUpgradeDomain::AssetXML, type._name, version, type._formatVersion, payload ) == false )
         {
-            SW_LOG_ERROR_ID( "AssetFormat.AssetFormatVersionDoesNot", "%# asset formatVersion %# does not match the supported %# - rewrite the data (no migration before the first release)", type._name, version,
+            SW_LOG_ERROR_ID( "AssetFormat.AssetFormatVersionDoesNot", "%# asset formatVersion %# could not be raised to the supported %# - add the missing upgrade step or rewrite the data", type._name, version,
                              type._formatVersion );
             return false;
         }
+        writeXMLVersion( root, type._formatVersion ); // 올린 글은 현재 판이다 — 다시 저장하면 새 판으로 남는다
         return true;
     }
 } // namespace sw

@@ -145,18 +145,12 @@ GameObject/Component API 는 저작 · 수명 · 직렬화 층으로 두고, 프
   - 샤드를 시간 균형으로 나누고, 묶음 끝 셸 스크립트를 단계 · 산출물 · 재시도가 적힌 파이프라인 정의로 옮긴다.
   - `ScenarioCulprit.py` 는 로그 문구 대신 JSON 을 읽는다. 외부 CI 러너는 비용이 드는 연동이라 사용자 결정이다.
 - **D1 데이터 필수 칸 린트:** 발 뼈 결함의 모양이다. `PROPERTY` 의 문자열 · `hashed_string` · `AssetID` 칸이 비어 있지 않은 C++ 기본값을 갖고 `Required` 가 아니면 오류로 낸다. 빠진 칸은 로드 오류 id(`Reflection.RequiredMissing`)로 드러낸다.
-- **D2 포맷 · 세이브 이관 표:**
-  - 지금 에셋(`AssetFormat.h:5`) · 세이브(`SaveGame.h:85`)는 판이 다르면 거절한다. 출시 뒤 첫 판 올림에서 사용자 데이터를 모두 잃는다.
-  - `SW_FORMAT_UPGRADE( 종류, n, n+1, fn )` 순수 함수 사슬을 둔다. 빠진 단계는 오류이므로 폴백이 아니다. `Test/Fixtures/formats/<종류>/v<n>/` 샘플로 단위 테스트한다.
-  - 표가 비어 있는 동안 동작은 같다(언리얼 `FCustomVersion` 자리).
 - **N2 서버 배포 · 설정 검증:**
   - `Scripts/package/ServerImage.py` 를 둔다(Linux 서버 + 팩 + 설정 → tar + systemd unit, 컨테이너는 선택).
   - `ServerApp --check-config` 를 둔다(잘못된 설정은 종료 11).
   - `OpsHTTPEndpoint` 는 인증 없는 GET 이다. 바인드 주소를 루프백 · 사설로 형식에서 제한하고, 외부 바인드는 토큰 필수로 한다.
 - **U1 햅틱 · UI 포커스 내비:** 진동 · 트리거 출력 API 가 없다(grep 0). `IInputFeedbackDevice` 와 `*.haptic.xml` 을 둔다. 패드 전용 메뉴 탐색(방향 포커스)을 확인하고 없으면 더한다.
-- **A1 애니메이션 포즈 노드 등록식(평가 경로는 5-3 뒤):**
-  - 포즈 노드가 `None · BlendPoses` 둘뿐이라(`AnimationGraphAsset.h:106`) 새 블렌드마다 enum · 로더 · 플레이어를 고친다. 리그 노드처럼 등록표로 바꾼다.
-  - 그 위에 Mirror · Montage(섹션 · 분기)를 더한다.
+- **A1 애니메이션 포즈 노드(5-3 뒤):** 등록표(`AnimationPoseNodeRegistry`)는 들어왔다. 그 위에 Mirror · Montage(섹션 · 분기)를 등록 한 줄씩 더한다(평가 경로가 5-3 에서 정해진 뒤).
 - **R1 에셋 리다이렉터(5-4 뒤):** GUID 전환은 기각한다(경로 id 가 언리얼 SoftObjectPath 자리). `redirects.xml`(옛 → 새)를 `AssetPaths` 앞단에서 풀어, 세이브 · 서버에 적힌 옛 경로가 산다. 린트가 남은 참조를 보고한다.
 - **N1 복제 스키마를 리플렉션에서(5-4 뒤):**
   - 엔티티 상태 바이트를 게임이 손으로 양자화한다. 그래서 칸 하나를 더하면 서버 · 클라 두 곳을 고쳐야 한다.

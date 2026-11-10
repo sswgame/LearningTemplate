@@ -219,7 +219,7 @@ namespace sw
                 XMLNode wrapRoot = wrapDoc.getRoot( kRoot );
                 if ( wrapRoot.isValid() == false )
                     return false;
-                if ( AssetXMLFormat::isCurrentXMLVersion( PrefabAsset::kAssetType, wrapRoot ) == false )
+                if ( AssetXMLFormat::upgradeToCurrentXMLVersion( PrefabAsset::kAssetType, wrapRoot ) == false )
                     return false;
                 XMLNode bodyNode = wrapRoot.findChild( kGameObject );
                 if ( bodyNode.isValid() == false )
@@ -719,7 +719,7 @@ namespace sw
             SW_LOG_ERROR_ID( "PrefabAsset.MissingPrefabRoot", "Missing <Prefab> root: %#", absPath );
             return false;
         }
-        if ( AssetXMLFormat::isCurrentXMLVersion( PrefabAsset::kAssetType, root ) == false )
+        if ( AssetXMLFormat::upgradeToCurrentXMLVersion( PrefabAsset::kAssetType, root ) == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.FormatVersionMismatch", "formatVersion mismatch: %#", absPath );
             return false;

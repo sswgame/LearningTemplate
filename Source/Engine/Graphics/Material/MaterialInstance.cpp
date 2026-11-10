@@ -701,7 +701,7 @@ namespace sw
         if ( root.isValid() == false )
             return false;
 
-        if ( AssetXMLFormat::isCurrentXMLVersion( kAssetType, root ) == false )
+        if ( AssetXMLFormat::upgradeToCurrentXMLVersion( kAssetType, root ) == false )
             return false;
 
         // 칸은 스키마(MaterialXML.h)가 정한다. 품질은 적지 않음이 "덮어쓰지 않음"이라 따로 읽는다.

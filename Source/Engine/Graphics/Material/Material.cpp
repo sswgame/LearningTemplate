@@ -1241,7 +1241,7 @@ namespace sw
         if ( root.isValid() == false )
             return false;
 
-        if ( AssetXMLFormat::isCurrentXMLVersion( Material::kAssetType, root ) == false )
+        if ( AssetXMLFormat::upgradeToCurrentXMLVersion( Material::kAssetType, root ) == false )
             return false;
 
         // 루트 칸(이름 · 셰이더 · 알파 모드)은 스키마로 읽는다 — 적지 않은 알파 모드는 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다). 렌더 상태 칸은 뒤의 `parseRenderFields` 가 읽는다.

@@ -2,8 +2,8 @@
  * @file AssetFormat.h
  * @brief XML 에셋 스키마 판의 정확 일치 검사와 저작 소스 · 쿠킹본 경로 규칙입니다. 둘 다 에셋 종류 표(`AssetTypeRegistry`)에서 파생합니다.
  * @details 판은 루트 속성 `formatVersion` 에 적습니다(XML 선언이 아닙니다). 없으면 세대 0 입니다.
- *          스키마가 깨지면 그 종류의 정의(`AssetTypeDef::_formatVersion`)를 올리고 저장소의 데이터를 다시 씁니다. 첫 출시 전이라 이관 함수도 옛 판 리더도 없고,
- *          판이 다르면 읽지 않고 오류로 멈춥니다(`AssetXMLFormat::isCurrentXMLVersion`).
+ *          스키마가 깨지면 그 종류의 정의(`AssetTypeDef::_formatVersion`)를 올리고, 옛 판을 한 판 올리는 순수 함수를 `SW_ASSET_FORMAT_UPGRADE` 로 등록한다
+ *          (`Engine/Serialization/Format/FormatUpgrade.h`). 읽기가 옛 판을 현재 판까지 올리고(`AssetXMLFormat::upgradeToCurrentXMLVersion`), 빠진 단계 · 새 판은 오류로 멈춘다.
  *          저작 기본 포맷은 XML 입니다. JSON 은 도구 · 설정을 주고받는 데 쓰고, JSON 접미사는 쿠킹 입력으로만 에셋 종류가 된다(`AssetTypeRegistry::isSuffixFormatAllowed`).
  *          Shipping 런타임은 쿠킹된 바이너리(PFB2 등)를 로드합니다.
  */
@@ -62,7 +62,7 @@ namespace sw
 {
     /**
      * @brief XML 에셋의 판(`formatVersion`) 읽기 · 쓰기와 정확 일치 검사입니다. 상태가 없어 서비스 없이 부를 수 있습니다.
-     * @details 판이 다르면 이관하지 않고 거절한다. 형식이 바뀌면 저장소의 데이터를 다시 쓰고 그 종류의 `AssetTypeDef::_formatVersion` 을 올린다.
+     * @details 옛 판은 등록된 판 올림 사슬(`SW_ASSET_FORMAT_UPGRADE`)로 현재 판까지 올린다. 사슬이 끊기거나 새 판이면 거절한다.
      */
     class SW_API AssetXMLFormat
     {
@@ -77,9 +77,9 @@ namespace sw
         static void writeXMLVersion( XMLNode root, AssetFormatVersion version );
 
         /**
-         * @brief 루트의 판이 @p type 의 현재 판(`AssetTypeDef::_formatVersion`)과 **같을 때만** true 입니다.
-         * @details 다르면(옛 판 · 새 판 · 태그 없음 · 읽을 수 없는 값) 파일 종류와 두 판을 적어 오류를 알리고 false 입니다. 범위로 받지 않는다.
+         * @brief 루트를 @p type 의 현재 판(`AssetTypeDef::_formatVersion`)으로 맞춥니다. 같은 판이면 그대로 true, 옛 판이면 판 올림 사슬로 제자리에서 고치고 판을 적은 뒤 true 입니다.
+         * @details 새 판 · 읽을 수 없는 값 · 빠진 단계 · 실패한 단계는 파일 종류와 두 판을 적어 오류를 알리고 false 입니다(고치다 만 글은 쓰지 않는다).
          */
-        [[nodiscard]] static bool isCurrentXMLVersion( const AssetTypeDef& type, XMLNode root );
+        [[nodiscard]] static bool upgradeToCurrentXMLVersion( const AssetTypeDef& type, XMLNode root );
     };
 } // namespace sw
