@@ -207,10 +207,10 @@ SW_TEST_CASE( ThreadTest, DestructorRequestsStopAndJoins )
     {
         thread worker{ [&bStarted, &bFinished, &loopCount]( StopToken stopToken )
         {
-            bStarted.store( true );
             while ( stopToken.isStopRequested() == false )
             {
                 loopCount.fetch_add( 1 );
+                bStarted.store( true ); // 첫 반복 뒤에 알린다 — 앞에 알리면 소멸자의 정지 요청이 반복보다 먼저 와 loopCount 가 0 일 수 있다
                 ThreadUtil::yield();
             }
             bFinished.store( true );
