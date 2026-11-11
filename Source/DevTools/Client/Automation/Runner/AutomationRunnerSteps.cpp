@@ -548,7 +548,7 @@ namespace sw
         static bool runPass( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.judgeDeferred( runner ); // 스크린샷 · 끝 차단 조건의 뒤의 일은 `holdPass` 가 다 끝난 뒤에 놓는다
+            runner._judge.evaluateDeferred( runner ); // 스크린샷 · 끝 차단 조건의 뒤의 일은 `holdPass` 가 다 끝난 뒤에 놓는다
             (void)step;
             runner.finish( AutomationResult::Passed, "<Pass/>" );
             return true;

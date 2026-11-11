@@ -303,7 +303,7 @@ namespace sw
          */
         Scene* applyScene( unique_ptr<Scene> scene, SceneRole role );
         /** @brief 워커가 지은 씬의 쥔 등록을 이번 프레임 몫만큼 부릅니다(`gv_sceneRegisterComponentsPerFrame`). 이제 받아도 되면 true, 남았으면 false 입니다. */
-        [[nodiscard]] bool pumpPendingSceneRegistration();
+        [[nodiscard]] bool processPendingSceneRegistration();
         /** @brief 씬을 언로드하고 목록에서 제거합니다. */
         void unloadScene( Scene* pScene );
         /** @brief 활성 씬을 바꿉니다. `_pActiveScene` 대입은 모두 여기로 옵니다. */

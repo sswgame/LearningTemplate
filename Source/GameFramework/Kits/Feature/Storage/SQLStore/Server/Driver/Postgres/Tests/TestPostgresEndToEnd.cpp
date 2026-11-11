@@ -718,7 +718,7 @@ namespace
         {
             int32 completeCount = 0;
             rig._runtime.getContext()._pStore->submit( sw::make_unique<PostgresTestJob<TFunction>>( std::move( function ), completeCount ) );
-            return test::pumpUntil( [&rig]()
+            return test::pollUntil( [&rig]()
             { rig.updateAll( kNowMs, 1 ); }, [&completeCount]()
             { return completeCount == 1; } );
         }

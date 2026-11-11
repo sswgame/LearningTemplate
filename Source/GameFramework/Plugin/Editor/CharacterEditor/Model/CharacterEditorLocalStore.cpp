@@ -20,7 +20,7 @@ namespace sw::editor
             static constexpr const utf8* kThumbnailSlotPrefix = "charactereditor/thumb.";
 
             /** @brief 에셋 감시 다음 · 패널 앞 - 패널이 이번 프레임에 끝난 읽기 결과를 그린다. */
-            static void pumpCompletions( EditorContext& context )
+            static void pollCompletions( EditorContext& context )
             {
                 (void)context;
                 CharacterEditorLocalStore* const pStore = editor::findSubsystem<CharacterEditorLocalStore>();
@@ -66,5 +66,5 @@ namespace sw::editor
     }
 
     SW_EDITOR_SUBSYSTEM( CharacterEditorLocalStore, 300 );
-    SW_EDITOR_FRAME_STEP( CharacterEditorLocalStore, "charactereditor.localStore", EditorFrameStepOrder::kAssetReload + 50, &CharacterEditorLocalStoreInternal::pumpCompletions );
+    SW_EDITOR_FRAME_STEP( CharacterEditorLocalStore, "charactereditor.localStore", EditorFrameStepOrder::kAssetReload + 50, &CharacterEditorLocalStoreInternal::pollCompletions );
 } // namespace sw::editor

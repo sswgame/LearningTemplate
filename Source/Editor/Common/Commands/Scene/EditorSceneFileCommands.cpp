@@ -37,7 +37,7 @@ namespace sw::editor
     {
         struct EditorSceneFileCommandsInternal
         {
-            /// @brief 파일 대화상자의 결과를 받습니다. `FileDialog::pumpResults` 가 메인 스레드에서 호출합니다.
+            /// @brief 파일 대화상자의 결과를 받습니다. `FileDialog::pollResults` 가 메인 스레드에서 호출합니다.
             static void onSaveSceneDialogResult( const vector<string>& listPath )
             {
                 if ( listPath.empty() )

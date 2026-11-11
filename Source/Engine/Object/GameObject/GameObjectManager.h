@@ -241,7 +241,7 @@ namespace sw
          * @details 언리얼 `LevelStreamingComponentsRegistrationGranularity` 와 같은 자리다. 다 끝나면 true 이고 미루기가 풀린다(`endDeferredRegistration` 을 부르지 않는다). 남았으면 false 이고
          *          다음 프레임에 다시 부른다 — 그동안 이 매니저는 활성 씬이 아니어야 한다(`SceneManager` 가 씬을 받기 전에 부른다). 바깥 짝 하나만 쥔 동안만 부른다.
          */
-        [[nodiscard]] bool pumpDeferredRegistration( uint32 maxCount );
+        [[nodiscard]] bool processDeferredRegistration( uint32 maxCount );
         /** @brief 막 붙은 컴포넌트를 등록합니다(`GameObject::attachCreatedComponent`). 미루는 중이면 줄에 세웁니다. */
         void registerComponent( Component& comp );
         /** @brief 값을 다 읽은 컴포넌트의 `onPostLoad` 를 부릅니다(`ObjectStateBatch`). 미루는 중이면 줄에 세웁니다. */
@@ -615,7 +615,7 @@ namespace sw
             [[nodiscard]] bool pump( GameObjectManager& manager, uint32 maxCount );
         };
         /** @brief 줄에 선 것과 나누다 만 묶음을 합쳐 @p maxCount 개까지 부릅니다(0 은 한도 없음). 다 불렀으면 true 이고, 남았으면 `_pumpBatch` 에 둡니다. */
-        [[nodiscard]] bool pumpQueuedRegistration( uint32 maxCount );
+        [[nodiscard]] bool processQueuedRegistration( uint32 maxCount );
 
     private:
         // 단위들은 소유만 한다. 선언 순서가 생성 순서다 — 뒤 단위가 앞 단위를 참조로 받는다(틱 디스패치 → 계층 · 레지스트리 · 틱 중 규칙,
@@ -662,7 +662,7 @@ namespace sw
         /** @brief 미룬 등록 · 로드 뒤 처리입니다(붙은 순서). 핸들로 들어 그 사이 해체돼도 안전합니다. */
         vector<ComponentHandle> _listDeferredRegister;
         vector<ComponentHandle> _listDeferredPostLoad;
-        /** @brief `pumpDeferredRegistration` 이 나눠 부르는 중인 묶음입니다. 비어 있으면 나누는 중이 아닙니다. */
+        /** @brief `processDeferredRegistration` 이 나눠 부르는 중인 묶음입니다. 비어 있으면 나누는 중이 아닙니다. */
         DeferredRegistrationBatch _pumpBatch;
     };
 } // namespace sw

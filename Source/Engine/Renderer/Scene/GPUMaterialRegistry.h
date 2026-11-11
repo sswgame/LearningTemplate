@@ -68,8 +68,8 @@ namespace sw
          * @details 스탬프는 원소에 찍습니다. 인스턴스를 돌 필요 없이 배치가 기록해 둔 (배치, 원소) 쌍만 돕니다.
          *          listBatchElementRange 는 배치마다 listBatchElementIndex 의 구간입니다.
          */
-        void stampBatchElements( const vector<GPUMeshBatch>& listBatch, const vector<GPUInstanceDirtyRange>& listBatchElementRange,
-                                 const vector<uint32>& listBatchElementIndex );
+        void markBatchElements( const vector<GPUMeshBatch>& listBatch, const vector<GPUInstanceDirtyRange>& listBatchElementRange,
+                                const vector<uint32>& listBatchElementIndex );
         /** @brief 오래 쓰이지 않은 머티리얼 원소를 회수해 프리리스트로 돌립니다. 인덱스는 옮기지 않습니다. */
         void freeUnusedMaterialElements( GPUSceneSnapshot& inoutSnapshot );
         /**

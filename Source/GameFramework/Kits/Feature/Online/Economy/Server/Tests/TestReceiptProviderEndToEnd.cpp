@@ -253,7 +253,7 @@ namespace
             const uint64 ticket = _registry.submitValidation( storeName, payload, kBuyer, UnixMilliseconds{ ReceiptEndpointTestUtil::getNowMs() } );
             SW_EXPECT_TRUE( ticket != 0 );
             vector<ReceiptValidationResult> listResult;
-            const bool                      bDone = test::pumpUntil( [this]()
+            const bool                      bDone = test::pollUntil( [this]()
             { pump(); }, [this, &listResult]()
             {
                 _registry.pollCompletions( listResult );
@@ -300,7 +300,7 @@ SW_TEST_CASE_F( ReceiptEndToEndTest, GoogleReachesTheEndpoint )
     task._deliveryKey = result._deliveryKey;
     SW_REQUIRE_TRUE( _registry.confirmDelivery( task, UnixMilliseconds{ ReceiptEndpointTestUtil::getNowMs() } ) );
     vector<ReceiptDeliveryResult> listOutcome;
-    SW_REQUIRE_TRUE( test::pumpUntil( [this]()
+    SW_REQUIRE_TRUE( test::pollUntil( [this]()
     { pump(); }, [this, &listOutcome]()
     {
         _registry.pollDeliveryOutcomes( listOutcome );
@@ -386,7 +386,7 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
         const expected<void> started = rig.fromConfig( kServerJSON, makeOnlineJSON( trustOption ), ReceiptEndpointTestUtil::getNowMs() );
         SW_REQUIRE_TRUE_MSG( started.has_value(), started.has_value() ? string_view{} : started.error().message() );
     }
-    SW_REQUIRE_TRUE( test::pumpUntil( [&rig, &endpoint]()
+    SW_REQUIRE_TRUE( test::pollUntil( [&rig, &endpoint]()
     {
         rig.updateAll( ReceiptEndpointTestUtil::getNowMs(), 1 );
         endpoint._server.update();

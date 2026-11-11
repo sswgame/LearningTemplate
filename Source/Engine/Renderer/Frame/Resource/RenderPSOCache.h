@@ -151,7 +151,7 @@ namespace sw
         /**
          * @brief `Building` 키 하나의 생성을 빌더 줄에 넣습니다(`beginMaterialPSO` 가 true 를 준 쪽이 부릅니다). 렌더 스레드만 부릅니다.
          * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기면 false 입니다.
-         * @param bAsync true 이면 빌더 스레드가, false 이면 `pumpMaterialPSOBuilds` 를 부른 스레드가 만듭니다.
+         * @param bAsync true 이면 빌더 스레드가, false 이면 `pollMaterialPSOBuilds` 를 부른 스레드가 만듭니다.
          */
         void requestMaterialPSO( IRHIDevice* pDevice, uint64 key, RHIPipelineStateDesc&& desc, bool bUrgent, bool bAsync );
         /**
@@ -159,7 +159,7 @@ namespace sw
          * @param bAsync false 이면 먼저 줄의 작업을 @p budgetMicroseconds 안에서 이 스레드가 만듭니다(0 이면 전부).
          * @return 이번에 `Ready` 로 합친 항목 수입니다(0 보다 크면 호출자가 폴백 버퍼를 다시 점검합니다).
          */
-        uint32 pumpMaterialPSOBuilds( IRHIDevice* pDevice, bool bAsync, uint32 budgetMicroseconds );
+        uint32 pollMaterialPSOBuilds( IRHIDevice* pDevice, bool bAsync, uint32 budgetMicroseconds );
         /** @brief 빌더 줄에 있거나 만드는 중인 작업 수입니다(계측). */
         [[nodiscard]] uint32 getPendingMaterialPSOBuilds() const;
         /** @brief 그 상태인 항목 수입니다(테스트 · 계측). */

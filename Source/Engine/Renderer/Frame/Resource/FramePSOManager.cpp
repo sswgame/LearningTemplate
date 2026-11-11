@@ -1070,7 +1070,7 @@ namespace sw
                                                     uint64 permutationHash, bool bReverseCulling, RenderViewMode viewMode, RHIMeshVertexFormat vertexFormat, bool bUrgent )
     {
         // 키를 `Building` 으로 올린 쪽만 만든다(`beginMaterialPSO`). 셰이더 컴파일이 낄 수 있는 변형은 desc 만 정해 빌더 줄에 넣고(렌더 스레드의 임계 경로에서 뺀다),
-        // 결과는 `pumpMaterialPSOBuilds` 가 기록 전에 합친다. 드로우 경로는 `Building` 배치를 이번 프레임만 건너뛴다(`RT.PSO.pendingBatches`).
+        // 결과는 `pollMaterialPSOBuilds` 가 기록 전에 합친다. 드로우 경로는 `Building` 배치를 이번 프레임만 건너뛴다(`RT.PSO.pendingBatches`).
         const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling, vertexFormat );
         if ( _pCache->beginMaterialPSO( key ) == false )
             return false;
@@ -1092,7 +1092,7 @@ namespace sw
         return gv_psoAsync && engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetWorkEachFrame == SW_FALSE && _pDevice != nullptr && _pDevice->getCapabilities()._bThreadSafeResourceCreation != SW_FALSE;
     }
 
-    void FramePSOManager::pumpMaterialPSOBuilds()
+    void FramePSOManager::pollMaterialPSOBuilds()
     {
         if ( _pDevice == nullptr )
             return;
@@ -1101,7 +1101,7 @@ namespace sw
         constexpr uint32 kFrameBudgetMicroseconds = 2000;
         const bool       bBuildAll                = gv_psoAsync == false || engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetWorkEachFrame == SW_TRUE; // 결정적 실행은 시간 예산 없이 이 프레임에 모두 만든다
         const uint32     budgetMicroseconds       = bBuildAll ? 0u : kFrameBudgetMicroseconds;
-        const uint32     readyCount               = _pCache->pumpMaterialPSOBuilds( _pDevice, usesAsyncMaterialPSOBuilder(), budgetMicroseconds );
+        const uint32     readyCount               = _pCache->pollMaterialPSOBuilds( _pDevice, usesAsyncMaterialPSOBuilder(), budgetMicroseconds );
         SW_PROFILE_COUNT( "RT.PSO.pendingBuilds", _pCache->getPendingMaterialPSOBuilds() );
         // 방금 합친 변형의 레이아웃은 폴백 stride 를 모으던 시점에는 없었다(`ensureMaterialPSOs` 의 같은 이유).
         if ( readyCount > 0 )

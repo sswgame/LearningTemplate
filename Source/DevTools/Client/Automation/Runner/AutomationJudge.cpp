@@ -368,7 +368,7 @@ namespace sw
         _listDeferredImagesDiffer.push_back( &step );
     }
 
-    void AutomationJudge::judgeImagesDiffer( AutomationStepContext& context, const AutomationStep& step )
+    void AutomationJudge::evaluateImagesDiffer( AutomationStepContext& context, const AutomationStep& step )
     {
         const AutomationExpectImagesDifferParams params = step.readValidatedFields<AutomationExpectImagesDifferParams>();
         if ( _goldenPolicy.has_value() == false )
@@ -412,17 +412,17 @@ namespace sw
         _listDeferredAtMost.push_back( DeferredAtMostCheck{ &step, std::move( pValue ), std::move( description ), limit } );
     }
 
-    void AutomationJudge::judgeDeferred( AutomationStepContext& context )
+    void AutomationJudge::evaluateDeferred( AutomationStepContext& context )
     {
         for ( const DeferredImageCheck& check : _listDeferredImage )
         {
-            judgeImage( context, *check._pStep, check._backendTag );
+            evaluateImage( context, *check._pStep, check._backendTag );
         }
         _listDeferredImage.clear();
 
         for ( const AutomationStep* const pStep : _listDeferredImagesDiffer )
         {
-            judgeImagesDiffer( context, *pStep );
+            evaluateImagesDiffer( context, *pStep );
         }
         _listDeferredImagesDiffer.clear();
 
@@ -440,7 +440,7 @@ namespace sw
         _listDeferredAtMost.clear();
     }
 
-    void AutomationJudge::judgeImage( AutomationStepContext& context, const AutomationStep& step, string_view backendTag )
+    void AutomationJudge::evaluateImage( AutomationStepContext& context, const AutomationStep& step, string_view backendTag )
     {
         const expected<AutomationStepArgsUtil::ExpectImageArgs> parsedArgs = AutomationStepArgsUtil::parseExpectImage( step );
         if ( parsedArgs.has_value() == false )
@@ -571,7 +571,7 @@ namespace sw
 
     optional<string> AutomationJudge::applyLogGate( AutomationResult result )
     {
-        AutomationLogJudgement judgement = _logCapture.judgeLines( *_pLogPolicy );
+        AutomationLogJudgement judgement = _logCapture.evaluateLines( *_pLogPolicy );
         if ( engine::areEngineServicesBound() )
         {
             for ( const string& key : engine::getSubsystem<LocalizationManager>().getMissingKeys() )

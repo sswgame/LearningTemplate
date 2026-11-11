@@ -475,9 +475,9 @@ SW_TEST_CASE( AccountServerTest, RevokeNoticeFromAnotherServer )
     test::OnlineTestFixture& world = *rig._pRig;
     test::OnlineTestServer   other( world._network, &world._database, &world._cacheDatabase, &world._hub, 2 );
     other.start();
-    const auto pumpBoth = [&]()
+    const auto pollBoth = [&]()
     { test::updateAll( { &world._server, &other }, world._clients, kNowMs, 12 ); };
-    pumpBoth();
+    pollBoth();
 
     AccountRevoked notice;
     notice._reasonCode = "gm.kick";
@@ -486,16 +486,16 @@ SW_TEST_CASE( AccountServerTest, RevokeNoticeFromAnotherServer )
 
     notice._sessionID = sessionID + 1; // 이미 바뀐 세션의 알림
     SW_REQUIRE_TRUE( AccountBus::kRevokeTopic.publish( *other._host.getServerBus(), notice ) );
-    pumpBoth();
+    pollBoth();
     SW_EXPECT_EQUAL( sessionID, rig._accountServer.findSessionID( accountID ) );
 
     notice._sessionID = sessionID; // 이 서버가 낸 알림은 이미 처리했다
     SW_REQUIRE_TRUE( AccountBus::kRevokeTopic.publish( *world._server._host.getServerBus(), notice ) );
-    pumpBoth();
+    pollBoth();
     SW_EXPECT_EQUAL( sessionID, rig._accountServer.findSessionID( accountID ) );
 
     SW_REQUIRE_TRUE( AccountBus::kRevokeTopic.publish( *other._host.getServerBus(), notice ) );
-    pumpBoth();
+    pollBoth();
     SW_EXPECT_EQUAL( uint64( 0 ), rig._accountServer.findSessionID( accountID ) );
     vector<AccountClientEvent> listEvent;
     SW_REQUIRE_EQUAL( 1, rig.getAccount( client ).pollEvents( listEvent ) );

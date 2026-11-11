@@ -158,8 +158,8 @@ namespace sw
         return elementIndex;
     }
 
-    void GPUMaterialRegistry::stampBatchElements( const vector<GPUMeshBatch>& listBatch, const vector<GPUInstanceDirtyRange>& listBatchElementRange,
-                                                  const vector<uint32>& listBatchElementIndex )
+    void GPUMaterialRegistry::markBatchElements( const vector<GPUMeshBatch>& listBatch, const vector<GPUInstanceDirtyRange>& listBatchElementRange,
+                                                 const vector<uint32>& listBatchElementIndex )
     {
         ++_buildCounter;
         const size_t batchCount = MathUtil::min( listBatch.size(), listBatchElementRange.size() );

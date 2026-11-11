@@ -30,7 +30,7 @@ namespace
             return image;
         }
 
-        static GoldenResult judgeAgainst( const AutomationImage& actual, const AutomationImage& golden )
+        static GoldenResult compareAgainstGolden( const AutomationImage& actual, const AutomationImage& golden )
         {
             const expected<AutomationImageDifference> difference = AutomationImage::compare( actual, golden, kMeasure );
             SW_EXPECT_TRUE( difference.has_value() );
@@ -50,7 +50,7 @@ SW_TEST_CASE( AutomationGoldenTest, WideShallowPassesNarrowDeepFails )
     {
         shallow._listRGB[byteIndex] = static_cast<uint8>( byteIndex % 3u == 0u ? 101 : 100 ); // 모든 화소가 빨강 1 차이 — 전부 다르지만 "다른 화소" 문턱 아래
     }
-    SW_EXPECT_TRUE( Util::judgeAgainst( shallow, golden ) == GoldenResult::Pass );
+    SW_EXPECT_TRUE( Util::compareAgainstGolden( shallow, golden ) == GoldenResult::Pass );
 
     AutomationImage blob = golden;
     for ( uint32 y = 10; y < 15; ++y )

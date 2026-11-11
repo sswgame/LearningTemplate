@@ -213,7 +213,7 @@ namespace sw::editor
         [[nodiscard]] static ReloadResult reloadCaches( const AssetReloadRoute& route, const AssetID& assetID );
 
         /** @brief 끝난 잡의 결과를 가져오고 다음 잡을 시작하며, 더 할 일이 없으면 미룬 파일을 처리합니다. */
-        void pumpImportJob();
+        void pollImportJob();
         /** @brief 기다리는 원본 전부를 잡 하나로 시작합니다. */
         void startQueuedImport();
         /** @brief 끝난 잡의 결과를 정리합니다. 취소로 건너뛴 원본은 다시 기다리게 한다. */

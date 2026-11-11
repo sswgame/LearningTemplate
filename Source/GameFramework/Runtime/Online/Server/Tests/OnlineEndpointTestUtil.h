@@ -38,7 +38,7 @@ namespace sw::test
      * @return 시한 안에 끝났으면 true 입니다.
      */
     template <typename TPump, typename TDone>
-    [[nodiscard]] bool pumpUntil( TPump&& pump, TDone&& isDone )
+    [[nodiscard]] bool pollUntil( TPump&& pump, TDone&& isDone )
     {
         const Deadline deadline = Deadline::afterMilliseconds( kEndpointTimeoutMs );
         while ( isDone() == false )

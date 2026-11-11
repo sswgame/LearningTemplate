@@ -27,6 +27,6 @@ namespace sw
          * @brief 쌓인 연결 이벤트를 막지 않고 처리합니다: 쌓인 것 처리 → 읽을 준비 → 보낼 것 보냄 → 읽을 것이 있으면 읽음(없으면 취소) → 다시 처리.
          * @return 연결이 끊겼으면 false 입니다.
          */
-        [[nodiscard]] static bool pumpEvents( wl_display* pDisplay );
+        [[nodiscard]] static bool pollEvents( wl_display* pDisplay );
     };
 } // namespace sw

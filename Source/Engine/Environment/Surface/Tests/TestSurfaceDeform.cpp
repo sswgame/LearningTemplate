@@ -223,7 +223,7 @@ SW_TEST_CASE( SurfaceDeformSystemTest, SegmentAndFootstepsStampTheLayer )
     wheel._size      = float2{ 0.2f, 0.2f };
     wheel._depth     = 0.03f;
     wheel._fillSpeed = 0.01f;
-    deform.stampSegment( wheel, float3{ -1.0f, 0.0f, 0.0f }, float3{ 1.0f, 0.0f, 0.0f } );
+    deform.applySegmentStamp( wheel, float3{ -1.0f, 0.0f, 0.0f }, float3{ 1.0f, 0.0f, 0.0f } );
     SW_EXPECT_TRUE( deform.findHeightAt( -0.8f, 0.0f ) < -0.02f );
     SW_EXPECT_TRUE( deform.findHeightAt( 0.0f, 0.0f ) < -0.02f );
     SW_EXPECT_TRUE( deform.findHeightAt( 0.8f, 0.0f ) < -0.02f );

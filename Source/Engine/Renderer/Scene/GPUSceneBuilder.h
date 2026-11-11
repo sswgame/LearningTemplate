@@ -254,7 +254,7 @@ namespace sw
             uint32 _skinSlot{ constant::invalid_index::kUint32 };
             /**
              * @brief 등장 비율(0 ~ 1)입니다. MeshComponent 가 주고 `GPUInstance::_appearance` 로 전달됩니다(내용). 1 보다 작으면 디더 변형이라 퍼뮤테이션 해시가 달라진다.
-             * @details 배치 키에는 따로 넣지 않는다 — 디더인지는 퍼뮤테이션 해시에 들어 있다(`usesAppearanceDither`, `stampPermutationHash`).
+             * @details 배치 키에는 따로 넣지 않는다 — 디더인지는 퍼뮤테이션 해시에 들어 있다(`usesAppearanceDither`, `assignPermutationHash`).
              */
             float32 _appearance{ 1.0f };
             /**
@@ -626,7 +626,7 @@ namespace sw
         /** @brief 후보를 GPU 인스턴스 LOD 그룹으로 그릴 수 있으면 그 단계 구간을 LOD 0 으로 되돌리고 `_lodContentID` 를 기록합니다(아니면 빈 토큰). 블렌드가 정해진 뒤에 부른다. */
         void applyGPULODGroup( DrawCandidate& candidate ) const;
         /** @brief 후보의 퍼뮤테이션 해시를 기록합니다. 게임 스레드 전용입니다(머티리얼의 지연 캐시를 건드립니다). */
-        static void stampPermutationHash( DrawCandidate& candidate );
+        static void assignPermutationHash( DrawCandidate& candidate );
         /** @brief 후보에서 GPU 인스턴스 페이로드(월드, 바운드, 블렌드, 시드, 스프라이트 프레임과 색)를 채웁니다. 배치와 머티리얼 인덱스는 건드리지 않습니다. */
         static void fillPayload( const DrawCandidate& candidate, GPUInstance& outInstance );
         /**

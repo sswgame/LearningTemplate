@@ -656,12 +656,12 @@ namespace sw
         _objectManager->endDeferredRegistration();
     }
 
-    bool Scene::pumpHeldRegistration( uint32 maxCount )
+    bool Scene::processHeldRegistration( uint32 maxCount )
     {
         if ( _bRegistrationHeld == false )
             return true;
         ScopedTimer registerTimer{ "Scene.load.register" }; // 나눈 프레임마다 하나씩 찍힌다
-        if ( _objectManager->pumpDeferredRegistration( maxCount ) == false )
+        if ( _objectManager->processDeferredRegistration( maxCount ) == false )
             return false;
         _bRegistrationHeld = SW_FALSE;
         return true;

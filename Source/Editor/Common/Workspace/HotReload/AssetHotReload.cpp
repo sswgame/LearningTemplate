@@ -259,7 +259,7 @@ namespace sw::editor
     {
         if ( _pFileWatchDispatcher != nullptr )
             _pFileWatchDispatcher->update();
-        pumpImportJob();
+        pollImportJob();
         // 감시 사건이 올린 변경 번호를 같은 프레임에 색인에 반영한다(바뀐 파일만 다시 읽거나 전체 스캔).
         _pReferenceTracker->update( _contentChangeSerial, *this );
     }
@@ -545,7 +545,7 @@ namespace sw::editor
             _listQueuedImport.push_back( ImportRequest{ path, pfnImport } );
     }
 
-    void AssetHotReload::pumpImportJob()
+    void AssetHotReload::pollImportJob()
     {
         EditorAssetImportResult result{};
         const EditorTaskPoll    poll = _pImportJob->take( result );

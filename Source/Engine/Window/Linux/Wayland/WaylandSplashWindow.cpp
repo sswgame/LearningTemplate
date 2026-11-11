@@ -203,7 +203,7 @@ namespace sw
         if ( bNotDrawable )
             return;
 
-        (void)WaylandShell::pumpEvents( state._pDisplay ); // 앞서 보낸 버퍼의 반납과 핑 응답 — 끊긴 연결은 다음 그리기가 버퍼를 못 받아 멈춘다
+        (void)WaylandShell::pollEvents( state._pDisplay ); // 앞서 보낸 버퍼의 반납과 핑 응답 — 끊긴 연결은 다음 그리기가 버퍼를 못 받아 멈춘다
         WaylandShmBuffer* const pBuffer = state._pPool->acquire( state._pShm, _width, _height );
         if ( pBuffer == nullptr )
             return; // 전부 컴포지터가 쥐고 있다 — 다음 갱신이 그린다

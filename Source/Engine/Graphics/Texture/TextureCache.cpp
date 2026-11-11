@@ -474,7 +474,7 @@ namespace sw
     {
         // 업로드 전용 계측(렌더 스레드 업로드 판단 — DesignBacklog "렌더 스레드와 업로드"): 펌프 CPU 시간, 프레임당 제출 · 폴링 · 대기 수.
         SW_PROFILE_SCOPE( "RT.TextureUpload.pump" );
-        return pumpPendingLoads( pDevice, maxCount, false );
+        return processPendingLoads( pDevice, maxCount, false );
     }
 
     uint32 TextureCache::finishPendingLoads( IRHIDevice* pDevice )
@@ -484,14 +484,14 @@ namespace sw
         uint32 completedCount = 0;
         for ( ;; )
         {
-            completedCount += pumpPendingLoads( pDevice, UINT32_MAX, true );
+            completedCount += processPendingLoads( pDevice, UINT32_MAX, true );
             ScopedLock<mutex> lock{ _impl->_awaitingMutex };
             if ( _impl->_listAwaitingUpload.empty() && _impl->_listUploading.empty() )
                 return completedCount;
         }
     }
 
-    uint32 TextureCache::pumpPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking )
+    uint32 TextureCache::processPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking )
     {
         if ( pDevice == nullptr )
             return 0;

@@ -1237,7 +1237,7 @@ namespace sw
         if ( state._pDisplay == nullptr )
             return _bShouldClose == SW_FALSE;
 
-        if ( WaylandShell::pumpEvents( state._pDisplay ) == false )
+        if ( WaylandShell::pollEvents( state._pDisplay ) == false )
         {
             SW_LOG_ERROR_ID( "WaylandWindow.WaylandConnectionCompositorBroke", "Wayland: the connection to the compositor broke - closing the window" );
             return false;

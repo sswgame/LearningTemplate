@@ -1084,20 +1084,20 @@ namespace sw
         SW_ASSERT( _deferredRegistrationDepth != 0 );
         if ( --_deferredRegistrationDepth != 0 )
             return;
-        (void)pumpQueuedRegistration( 0 );
+        (void)processQueuedRegistration( 0 );
     }
 
-    bool GameObjectManager::pumpDeferredRegistration( uint32 maxCount )
+    bool GameObjectManager::processDeferredRegistration( uint32 maxCount )
     {
         SW_ASSERT( _deferredRegistrationDepth == 1 );
         --_deferredRegistrationDepth; // 훅이 만든 컴포넌트는 미루지 않고 바로 등록한다(한 번에 부를 때와 같다)
-        const bool bDone = pumpQueuedRegistration( maxCount );
+        const bool bDone = processQueuedRegistration( maxCount );
         if ( bDone == false )
             ++_deferredRegistrationDepth;
         return bDone;
     }
 
-    bool GameObjectManager::pumpQueuedRegistration( uint32 maxCount )
+    bool GameObjectManager::processQueuedRegistration( uint32 maxCount )
     {
         // 묶음을 꺼내 들고 부른다 — 훅이 프리팹을 지으면 이 함수가 다시 불리는데, 그 안쪽 미루기는 제 묶음만 끝내야 한다.
         DeferredRegistrationBatch batch = std::move( _pumpBatch );

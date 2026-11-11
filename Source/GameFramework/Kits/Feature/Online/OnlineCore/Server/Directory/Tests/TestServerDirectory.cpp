@@ -62,7 +62,7 @@ namespace
         }
 
         /** @brief 답이 답을 낳는(색인 → 기록) 사슬이 끝날 때까지 나눠 줍니다. */
-        void pumpAll()
+        void pollAll()
         {
             for ( int32 round = 0; round < 8; ++round )
             {
@@ -316,7 +316,7 @@ SW_TEST_CASE( ServerDirectoryTest, RegistrationWritesOnChangeAndHeartbeatOnly )
     SW_EXPECT_EQUAL( kNowMs + 400 + sw::ServerRegistration::kHeartbeatPeriodMs, registration.getStatus()._heartbeatMs );
 
     // 캐시에 쓴 기록은 마지막 상태다(쓰기 답을 라우터가 먼저 비운 뒤 앞에서 직접 읽는다)
-    rig.pumpAll();
+    rig.pollAll();
     (void)rig._store.submit( sw::EphemeralRequest::makeGet( sw::ServerRecord::makeRecordKey( 5 ) ) );
     sw::vector<sw::EphemeralReply> listReply;
     (void)rig._store.pollReplies( listReply );
@@ -343,13 +343,13 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderSnapshotsRegisteredServersAndCountsPick
     second.setLoad( 1 );
     first.update( now );
     second.update( now );
-    rig.pumpAll();
+    rig.pollAll();
 
     sw::ServerRegistryReader reader;
     reader.initialize( &rig._router, "game", 2000 );
     reader.update( now );
     SW_EXPECT_TRUE( reader.isRefreshing() );
-    rig.pumpAll();
+    rig.pollAll();
     SW_EXPECT_FALSE( reader.isRefreshing() );
     SW_EXPECT_EQUAL( uint64( 1 ), reader.getRefreshCount() );
     SW_REQUIRE_EQUAL( size_t( 2 ), reader.getSnapshot().size() );
@@ -370,7 +370,7 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderSnapshotsRegisteredServersAndCountsPick
     second.shutdown();
     reader.requestRefresh();
     reader.update( now + 2000 );
-    rig.pumpAll();
+    rig.pollAll();
     SW_EXPECT_EQUAL( uint64( 2 ), reader.getRefreshCount() );
     SW_REQUIRE_EQUAL( size_t( 1 ), reader.getSnapshot().size() );
     SW_EXPECT_EQUAL( uint64( 1 ), reader.getSnapshot()[0]._descriptor._serverID );
@@ -390,16 +390,16 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderDropsExpiredServerAndCleansIndex )
     SW_REQUIRE_TRUE( dead.initialize( &rig._router, makeStatus( 2, "kr", 0, 10 )._descriptor ) );
     alive.update( now );
     dead.update( now );
-    rig.pumpAll();
+    rig.pollAll();
 
     rig._clock.advanceMilliseconds( sw::ServerRegistration::kRecordTTLMs );
     alive.update( now + sw::ServerRegistration::kRecordTTLMs ); // 살아 있는 쪽만 하트비트를 썼다
-    rig.pumpAll();
+    rig.pollAll();
 
     sw::ServerRegistryReader reader;
     reader.initialize( &rig._router, "game", 2000 );
     reader.update( now + sw::ServerRegistration::kRecordTTLMs );
-    rig.pumpAll();
+    rig.pollAll();
     SW_REQUIRE_EQUAL( size_t( 1 ), reader.getSnapshot().size() );
     SW_EXPECT_EQUAL( uint64( 1 ), reader.getSnapshot()[0]._descriptor._serverID );
 
@@ -422,7 +422,7 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderShutdownCancelsPendingReads )
     sw::ServerRegistration     registration;
     SW_REQUIRE_TRUE( registration.initialize( &rig._router, makeStatus( 1, "kr", 0, 10 )._descriptor ) );
     registration.update( now );
-    rig.pumpAll();
+    rig.pollAll();
 
     {
         sw::ServerRegistryReader reader;
@@ -436,6 +436,6 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderShutdownCancelsPendingReads )
         reader.update( now + 10000 ); // 내린 뒤에는 읽지 않는다
         SW_EXPECT_EQUAL( 0, rig._router.getPendingCount() );
     }
-    rig.pumpAll(); // 지워진 읽는 쪽의 답이 와도 부르지 않는다
+    rig.pollAll(); // 지워진 읽는 쪽의 답이 와도 부르지 않는다
     SW_EXPECT_EQUAL( 0, rig._router.getPendingCount() );
 }

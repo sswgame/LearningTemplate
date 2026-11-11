@@ -138,7 +138,7 @@ namespace sw
          */
         [[nodiscard]] bool usesAsyncMaterialPSOBuilder() const;
         /** @brief 빌더가 끝낸 머티리얼 변형을 저장소에 합치고(스레드를 쓰지 않으면 이 자리에서 만들고), 새로 `Ready` 가 된 것이 있으면 폴백 버퍼를 점검합니다. 셋업 구간에서만 부릅니다. */
-        void pumpMaterialPSOBuilds();
+        void pollMaterialPSOBuilds();
         /** @brief 입자 그리기가 있는 프레임에 입자 PSO 를 **기록 시작 전에** 만들어 둡니다(투명 패스 PSO 의 렌더 상태를 물려받고 셰이더만 바꾼다). */
         void ensureParticlePSO();
         /** @brief 입자 PSO 입니다. 투명 패스 PSO 가 없거나 만들지 못했으면 0 입니다. */
@@ -229,7 +229,7 @@ namespace sw
         /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. @return 새 변형을 하나라도 만들었으면 true 입니다. */
         [[nodiscard]] bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
         /**
-         * @brief 변형 하나가 저장소에 없으면 만들어 넣습니다. 셰이더를 컴파일해야 하는 변형은 `Building` 으로 올리고 빌더 줄에 넣습니다(`pumpMaterialPSOBuilds` 가 합칩니다).
+         * @brief 변형 하나가 저장소에 없으면 만들어 넣습니다. 셰이더를 컴파일해야 하는 변형은 `Building` 으로 올리고 빌더 줄에 넣습니다(`pollMaterialPSOBuilds` 가 합칩니다).
          * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기(`warmPinnedMaterialPSOs`)는 false 입니다.
          * @return 이 호출에서 `Ready` · `Failed` 로 끝난 변형이 있으면 true 입니다(`Building` 으로 넘긴 것은 false).
          */

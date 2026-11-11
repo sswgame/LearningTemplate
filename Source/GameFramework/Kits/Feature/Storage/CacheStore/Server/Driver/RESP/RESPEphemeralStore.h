@@ -112,7 +112,7 @@ namespace sw
         void onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size );
         void onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason );
 
-        void       pumpTransport();
+        void       pollTransport();
         Operation* findOperation( uint64 requestID );
         /** @brief 아직 내보내지 않은 요청을 맡긴 순서대로 내보냅니다. 비교 후 쓰기의 GET 답을 기다리는 동안은 멈춥니다. */
         void sendDeferredOperations();

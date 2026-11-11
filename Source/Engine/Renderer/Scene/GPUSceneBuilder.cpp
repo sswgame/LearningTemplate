@@ -414,7 +414,7 @@ namespace sw
         if ( fillCandidateMaterial( candidate, pMeshComp->getMaterial(), pScene ) == false )
             return false;
         applyGPULODGroup( candidate );
-        // 퍼뮤테이션 해시는 **여기서 구하지 않는다**. 호출하는 쪽이 게임 스레드에서 기록한다(`stampPermutationHash`).
+        // 퍼뮤테이션 해시는 **여기서 구하지 않는다**. 호출하는 쪽이 게임 스레드에서 기록한다(`assignPermutationHash`).
         // 머티리얼의 해시 게터는 더티 플래그를 보고 캐시를 다시 만드는 지연 계산이라, 같은 머티리얼을
         // 나눠 쓰는 프리미티브들을 워커 여럿이 동시에 채우면 그 캐시를 동시에 고쳐 쓰게 된다.
         return true;
@@ -539,7 +539,7 @@ namespace sw
         return true;
     }
 
-    void GPUSceneBuilder::stampPermutationHash( DrawCandidate& candidate )
+    void GPUSceneBuilder::assignPermutationHash( DrawCandidate& candidate )
     {
         // 어느 PSO 로 그릴지를 정하는 값이다. 배치 키의 일부이고, 여기서 한 번 구해 두면
         // 나누기와 정렬이 다시 구하지 않는다(투명은 원소마다 물었다).
@@ -826,7 +826,7 @@ namespace sw
             const bool bIncluded = ( slot < input._meshCount ) ? fillCandidateFromPrimitive( listPrimitive[slot], input._pScene, _candidateProbe )
                                                                : fillCandidateFromInstanceEntry( listInstanceEntry[slot - input._meshCount], input._pScene, _candidateProbe );
             if ( bIncluded )
-                stampPermutationHash( _candidateProbe );
+                assignPermutationHash( _candidateProbe );
             // 실릴지 말지가 바뀌면 슬롯 배치가 달라진다. 그때는 통째로 다시 모은다.
             if ( bIncluded != bWasIncluded || ( bIncluded && candidateIndex >= _lastCandidateCount ) )
             {
@@ -988,7 +988,7 @@ namespace sw
                 _listScratchCandidate[candidateCount] = std::move( _listScratchCandidate[primitiveIndex] );
             // 지연 캐시를 건드리는 해시는 여기 직렬 구간에서, 달라진 슬롯만 기록한다.
             if ( ( flag & kCollectNeedsStamp ) != 0u )
-                stampPermutationHash( _listScratchCandidate[candidateCount] );
+                assignPermutationHash( _listScratchCandidate[candidateCount] );
             const bool bSamePlace                     = ( prevIndex == candidateCount );
             bAllKeySame                               = bAllKeySame && bSamePlace && ( flag & kCollectKeySame ) != 0u;
             bAllContentSame                           = bAllContentSame && bSamePlace && ( flag & kCollectContentSame ) != 0u;
@@ -1446,7 +1446,7 @@ namespace sw
         // 원소를 다음 구조 변경까지 붙든다.
         // 스탬프는 원소에 찍는다. 인스턴스 8000개를 돌 필요 없이 배치가 기록해 둔 (배치, 원소) 쌍만 돈다.
         SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.stamp" );
-        _materialRegistry.stampBatchElements( _snapshot.getAllBatches(), _batchElementTable.getBatchRanges(), _batchElementTable.getElementIndices() );
+        _materialRegistry.markBatchElements( _snapshot.getAllBatches(), _batchElementTable.getBatchRanges(), _batchElementTable.getElementIndices() );
         return true;
     }
 

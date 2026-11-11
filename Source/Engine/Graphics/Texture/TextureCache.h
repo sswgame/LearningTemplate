@@ -246,7 +246,7 @@ namespace sw
         struct Impl;
 
         /** @brief `completePendingLoads` · `finishPendingLoads` 의 본체입니다 — 제출한 로드의 끝남 확인(@p bBlocking 이면 끝날 때까지) 뒤 @p maxCount 개까지 새로 제출합니다. */
-        uint32 pumpPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking );
+        uint32 processPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking );
 
     private:
         shared_ptr<Impl> _impl; ///< 로드 작업이 약한 참조로 가리킨다 — 캐시가 먼저 사라지면 로드 작업은 놓을 것이 없다

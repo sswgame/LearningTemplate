@@ -90,7 +90,7 @@ namespace
             _router.shutdown();
         }
 
-        void pumpBus()
+        void pollBus()
         {
             if ( _transport == nullptr )
                 return;
@@ -104,7 +104,7 @@ namespace
 
         void pump()
         {
-            pumpBus();
+            pollBus();
             while ( _store.pollCompletions() + _router.pump() > 0 )
             {
             }
@@ -270,7 +270,7 @@ SW_TEST_CASE( SocialServiceTest, BusChangeReloadsEvenDuringALoad )
     // A 가 읽기를 맡겨(이미 이전 값을 읽었다) 완료를 기다리는 동안 B 에서 막음을 쓴다
     rigA._service.listLinks( kAlice, 7 );
     SW_EXPECT_TRUE( rigB.change( SocialLinkOperation::Block, kAlice, kBob ) == SocialResult::Ok );
-    rigA.pumpBus();
+    rigA.pollBus();
     (void)rigA.takeAll();
     SW_EXPECT_TRUE( rigA._service.isBlockedLocal( kAlice, kBob ) );
     SW_EXPECT_EQUAL( 0, rigA._service.getPendingCount() );

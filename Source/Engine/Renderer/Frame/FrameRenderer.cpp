@@ -548,14 +548,14 @@ namespace sw
 
         // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 정한다. 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
         // 만드는 일은 빌더 스레드가 한다(`MaterialPSOBuilder`) — 먼저 지난 프레임까지 끝난 결과를 캐시에 합치고, 이번 프레임에 필요한 키를 줄에 넣는다.
-        _psoManager.pumpMaterialPSOBuilds();
+        _psoManager.pollMaterialPSOBuilds();
         const uint32 viewModeMask = collectFrameViewModeMask();
         _psoManager.ensureMaterialPSOs( viewModeMask );
         // 아직 씬에 없는 고정 머티리얼(프리로드)의 PSO 도 같은 자리에서 미리 만든다(급하지 않은 줄). 줄은 하나라 주 렌더러만 꺼낸다 — 미리보기 렌더러가 꺼내 가면 주 렌더러가 만들지 못한다.
         if ( _host._pPinnedMaterials != nullptr )
             _psoManager.warmPinnedMaterialPSOs( *_host._pPinnedMaterials, viewModeMask );
         // 빌더 스레드를 쓰지 않는 경로(GL · `-gv_psoAsync=0`)는 방금 넣은 줄을 이 자리에서 만들어 같은 프레임에 그린다.
-        _psoManager.pumpMaterialPSOBuilds();
+        _psoManager.pollMaterialPSOBuilds();
 
         // 캔버스의 아틀라스 텍스처, 사각형 버퍼, 렌더 텍스처 대상도 기록 전에 갖춘다(Canvas 패스와 대상 그리기는 그리기만 한다).
         _state._canvasRenderer.prepareFrame( *pDevice, _state._canvasFrame, _psoManager.getCache() );
