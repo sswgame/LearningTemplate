@@ -83,7 +83,9 @@ namespace sw
         static const hashed_string& getPurchaseCountTable(); ///< "econ_purchase" — 키 `<계정 16 진>/<상품 id>`
         static const hashed_string& getRefundTable();        ///< "econ_refund" — 키는 지급 분개 키, 값은 1 바이트(1 환불 회수, 2 청약철회). 같은 거래를 두 번 회수하지 않는다
         static const hashed_string& getRefundCursorTable();  ///< "econ_refund_cursor" — 키는 스토어 이름, 값은 환불 조회의 기준 시각(가변 정수)
-        static const hashed_string& getDeliveryTable();      ///< "econ_delivery" — 스토어에 아직 알리지 못한 지급. 키는 지급 분개 키, 값은 `[판 번호][스토어][알림 키][기한]`
+        /** @brief 쓴 영수증 표입니다(키 = 분개 키 `iap.redeem/<스토어>/<거래 id>`). 보존 정리가 지우지 않는다 — 영수증 지급의 멱등 기록(분개는 감사 내역이라 지워진다). */
+        static const hashed_string& getReceiptTable();
+        static const hashed_string& getDeliveryTable(); ///< "econ_delivery" — 스토어에 아직 알리지 못한 지급. 키는 지급 분개 키, 값은 `[판 번호][스토어][알림 키][기한]`
         static EconomyServiceResult toEconomyResult( LedgerResult result );
 
         /** @brief 검증 결과의 지급 알림 하나를 만듭니다. 결과에 알림 키가 없거나 거래 id 로 레코드 키를 만들 수 없으면 false 입니다. */

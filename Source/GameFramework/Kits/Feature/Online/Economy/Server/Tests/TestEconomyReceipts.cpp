@@ -408,6 +408,30 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemGrantsOncePerTransaction )
     SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kOther ) );
 }
 
+/**
+ * @brief [EconomyReceiptsTest] 분개 보존 정리 뒤 같은 영수증을 다시 내도 다시 지급하지 않는다(감사 P0-7)
+ * @details 중복 방지가 분개 키 하나였을 때는 보존 정리(401 일)가 분개를 지우면 스토어는 Valid, 분개는 NotFound 라 다시 지급됐다. 쓴 영수증 표(`econ_receipt`)는 지우지 않는다.
+ *          변이: 쓴 영수증 확인을 빼면 다시 낸 지급이 Ok 이고 잔액이 두 배라 진다.
+ */
+SW_TEST_CASE( EconomyReceiptsTest, RedeemStaysSpentAfterTheJournalIsSwept )
+{
+    ReceiptFixture rig;
+    SW_REQUIRE_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
+    SW_REQUIRE_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
+
+    // 보존 쓸기 흉내 — 분개 표를 비운다(감사 내역은 지워진다).
+    vector<ServiceRecord> listJournal;
+    SW_REQUIRE_TRUE( rig._database.listRecords( Ledger::getJournalTable(), "", "", 1000, false, listJournal ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( listJournal.empty() == false );
+    ServiceTransaction sweep;
+    for ( const ServiceRecord& record : listJournal )
+        sweep.erase( Ledger::getJournalTable(), record._key );
+    SW_REQUIRE_TRUE( rig._database.commit( sweep ) == ServiceStoreResult::Ok );
+
+    SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::AlreadyRedeemed );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
+}
+
 /** @brief [EconomyReceiptsTest] 외부 로그인 묶기: 답의 스토어 신원이 그 계정에 연동된 주체여야 받는다 — 남의 주문 번호를 먼저 낸 계정이 받던 결함이다. 진 뒤에도 진짜 구매자는 받는다 */
 SW_TEST_CASE( EconomyReceiptsTest, LinkedLoginBuyerMustMatchTheAccount )
 {

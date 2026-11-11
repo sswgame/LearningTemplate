@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
 
+#include "Core/Memory/Memory.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
@@ -114,12 +115,25 @@ namespace sw
              * @brief 지급 분개를 커밋합니다. 스토어에 알려야 하는 영수증이면 알림 레코드를 같은 트랜잭션에 넣습니다.
              * @details 재생(이미 지급한 거래)도 쓴다 — 스토어가 아직 확인 전이라고 답했으니 지난번 알림이 끝나지 않았다. 그 쓰기가 실패하면 Unavailable 로 답해 클라이언트가 같은 영수증을 다시 내게 한다.
              */
-            [[nodiscard]] static LedgerResult commitRedeem( IServiceStoreConnection& connection, const LedgerTransferRequest& request, const ReceiptValidationResult& receipt, LedgerTransferResult& outServiceResult )
+            /**
+             * @brief 영수증 지급을 커밋합니다. 분개(감사 내역)와 함께 지우지 않는 "쓴 영수증" 레코드(`econ_receipt`)를 "없어야 함" 조건으로 넣는다.
+             * @details 예전에는 중복 방지가 분개 키 하나였다 — 분개 보존 정리(`_retentionLedgerDays` + 1 일) 뒤 같은 영수증을 다시 내면 스토어는 Valid, 분개는 NotFound 라
+             *          다시 지급됐다(감사 P0-7). 멱등 기록과 감사 내역을 형식으로 나눈다(PlayFab 이 거래 id 를 타이틀 수명 동안 유일 키로 두는 것과 같다).
+             *          분개가 남아 있는 다시 보내기는 지금처럼 같은 결과(`_bReplayed`)이고, 분개가 지워진 뒤의 다시 보내기는 `JournalKeyReused`(이미 받음)다.
+             */
+            [[nodiscard]] static LedgerResult commitRedeem( IServiceStoreConnection& connection, const LedgerTransferRequest& request, const ReceiptValidationResult& receipt,
+                                                            uint64 accountID, LedgerTransferResult& outServiceResult )
             {
+                ServiceRecord            receiptMark;
+                const ServiceStoreResult markRead = connection.readRecord( EconomyStoreLogic::getReceiptTable(), request._journalKey, receiptMark );
+                if ( markRead != ServiceStoreResult::Ok && markRead != ServiceStoreResult::NotFound )
+                    return LedgerResult::Unavailable;
+                const bool    bRedeemedBefore = markRead == ServiceStoreResult::Ok;
+                vector<uint8> markBytes( sizeof( accountID ) );
+                Memory::copy( markBytes.data(), &accountID, sizeof( accountID ) ); // 받은 계정 — 운영 조회용(키 존재가 곧 "썼다" 다)
                 ReceiptDeliveryTask task;
-                if ( EconomyStoreLogic::makeDeliveryTask( receipt, task ) == false )
-                    return Ledger::executeTransfer( connection, request, outServiceResult );
-                const vector<uint8> recordBytes = encodeDelivery( task );
+                const bool          bDelivery   = EconomyStoreLogic::makeDeliveryTask( receipt, task );
+                const vector<uint8> recordBytes = bDelivery ? encodeDelivery( task ) : vector<uint8>{};
                 for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
                 {
                     ServiceTransaction transaction;
@@ -127,7 +141,16 @@ namespace sw
                     if ( staged != LedgerResult::Ok )
                         return staged;
                     const bool bReplayed = outServiceResult._bReplayed == SW_TRUE;
-                    transaction.put( EconomyStoreLogic::getDeliveryTable(), task._recordKey, recordBytes );
+                    if ( bReplayed == false )
+                    {
+                        if ( bRedeemedBefore )
+                            return LedgerResult::JournalKeyReused; // 분개는 보존 정리로 지워졌지만 이 거래는 이미 지급했다
+                        transaction.put( EconomyStoreLogic::getReceiptTable(), request._journalKey, markBytes, ServiceRecord::kAbsentVersion );
+                    }
+                    if ( bDelivery )
+                        transaction.put( EconomyStoreLogic::getDeliveryTable(), task._recordKey, recordBytes );
+                    if ( transaction.isEmpty() )
+                        return LedgerResult::Ok; // 분개가 남은 다시 보내기 — 쓸 것이 없다
                     const ServiceStoreResult committed = connection.commit( transaction );
                     if ( committed == ServiceStoreResult::Ok )
                         return LedgerResult::Ok;
@@ -453,7 +476,7 @@ namespace sw
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetID, grant._amount } );
         }
         LedgerTransferResult serviceResult;
-        const LedgerResult   result = EconomyStoreLogicInternal::commitRedeem( connection, request, receipt, serviceResult );
+        const LedgerResult   result = EconomyStoreLogicInternal::commitRedeem( connection, request, receipt, input._accountID, serviceResult );
         if ( result == LedgerResult::JournalKeyReused )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::AlreadyRedeemed ); // 받는 계정이 달라서 분개 내용이 다르다
         if ( result != LedgerResult::Ok )
@@ -466,6 +489,12 @@ namespace sw
     const hashed_string& EconomyStoreLogic::getRefundTable()
     {
         static const hashed_string s_table{ "econ_refund" };
+        return s_table;
+    }
+
+    const hashed_string& EconomyStoreLogic::getReceiptTable()
+    {
+        static const hashed_string s_table{ "econ_receipt" };
         return s_table;
     }
 
