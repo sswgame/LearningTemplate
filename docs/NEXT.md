@@ -9,16 +9,19 @@
 절차는 스킬이 정본이다: 묶음 끝 검증 · push `bundle-verify`, Linux `linux-verify`, 시나리오 실패 `scenario-debug`. 시나리오 체계 · 시간 기록은 `Test/README.md`. 사람이 보는 실행: `py -3 Scripts/dev/WatchScenarios.py [--preset] [--backend] [--stages a,b] [체인…]`.
 병렬 작업자 워크트리는 main 에서 fast-forward 한 뒤 시작한다(옛 기준에서 시작한 갈래는 통합 때 수십 파일이 충돌했다).
 
-## 상태 (2026-11-10)
+## 상태 (2026-11-11 09시)
 
-- 작업자 브랜치 열하나(dzn · GL 샘플러 · 5-1 · 5-2 · 5-3 · 5-4 · 5-5 · 게임 GPU 게이트 · W-S4)를 통합 브랜치(04fbacb866)에 합쳤다 — 워크트리 Debug 경고 0, 단위 3681/3681, 에디터 자체 테스트 47/0. main 병합 뒤 묶음 검증이 남았다(1 절).
+- main = 091bd5b3e9. 이 커밋의 묶음 검증(VerifyBundle `--show`)이 돌던 중에 세션을 넘겼다 — Debug 빌드 · 단위 · ctest 51/51 통과, Release 빌드 경고 0, Release ctest 진행 중이었다. 출력은 그 세션 스크래치패드의 `verify26.out`, 로그는 `build/<프리셋>/Testing/Logs/verify.*`. 끝 줄이 없으면 `--from release` 로 다시 돈다.
+- origin/main 이 09:03:45 에 091bd5b3e9 로 push 돼 있다(`git reflog show origin/main`) — 검증 스크립트는 push 하지 않으니 누가 했는지 확인하지 못했다. 검증이 지면 고친 커밋을 다시 push 한다.
+- 통합 브랜치 `integ2`(워크트리 `.claude/worktrees/integ2`, ea4913f69c — main 보다 46 커밋 앞, 빌드 한 번도 안 함): 에셋 정체성 1단계(AssetGUID · .meta · asset-ids 도구 · 팩 GUID 색인), 5-3 틱 const 닫기, W-R3 (a) 코덱 키 검사, A1 포즈 노드 평가 · 미러 표 · 에디터 노드 더하기, R1 리다이렉트 표 팩 담기, 온라인 · 원장 · 신고 단위 테스트들. 1 절 첫 줄.
 - Android(Android-Shipping)는 대상 전체가 컴파일 · 링크되고 Vulkan 셰이더 쿠킹이 지난다. 웹(Web-Shipping)은 App.wasm 까지 지어진다.
 
 ## 남은 일
 
 ### 1. 묶음 검증
 
-- main(c4ebf56542)의 묶음 검증 뒤 통합 브랜치를 main 에 합쳐 다시 검증 · push 한다. `.inl` 누락은 이제 컴파일에서 멈춘다(clang `-Werror=undefined-func-template`, `sw_requireTemplateDefinitions` — Engine · GF · 키트 · 게임). 첫 빌드에서 걸린 곳은 `.inl` include 나 `extern template` 선언으로 고치고, 우리 것이 아닌 템플릿(Jolt 등)이 걸리면 플래그를 끄지 말고 그 자리의 정의 헤더를 include 한다. `GameObjectManager.inl` 머리말의 '링크에서 멈춘다' 문장을 맞춘다(Engine/Object 작업자 폴더라 두었다). `EditorTransaction` 을 연 채 같은 범위에서 CommandStack 을 읽는 자리.
+- **integ2 통합:** main(091bd5b3e9 검증 통과 뒤)을 integ2 에 합친다 → 워크트리에서 Debug 전체 프리셋 빌드(App 만 지으면 게임 모듈 헤더 불일치로 기동 실패) → 컴파일 오류는 `.inl` include · `extern template` 로(`-Werror=undefined-func-template` 를 끄지 않는다) → 단위 · 영향 시나리오 → main 에 합쳐 VerifyBundle 한 번 → push. 에셋 GUID 2 · 3 단계(GUID 로 참조 해석 · 경로 참조 이전)는 그 뒤 — 설계는 [DesignBacklog](DesignBacklog.md) 에셋 정체성 절. 작업자 커밋에 GameObjectManager.inl 머리말 문장 · `EditorTransaction` 을 연 채 CommandStack 을 읽는 자리가 남았다.
+- **이번 세션이 남긴 것:** 런타임 파생 오브젝트는 `GameObject::setTransient(true)` 로 상태(세이브 · 상태 해시)에서 뺀다 — 외형 부품만 걸었다. 다른 런타임 생성자(VFX · 투사체 풀 · 군중 프록시 등)도 상태에서 다시 세우는 파생이면 같은 표시를 건다(`slice` 게임에서 ExpectStateHash 가 이제 다른 오브젝트 이름을 말한다).
 - 흔들리는 단위 테스트 `AudioDataVariantTest.GraphVariantSavesOnlyItsDifference`: 전체 실행 한 번에 "base 'testproject/base.audiograph.xml' could not be read" 로 졌다. 같은 씨앗 · 단독 1800 회로는 재현되지 않았다 — 다시 지면 그 로그의 앞 케이스와 스크래치 도메인 마운트 상태를 본다.
 - 5-4 리플렉션 작업자 둘(서술자 표 · 물리 훅 · 판정 비트 · PropertyHandle · 묶음 TU · 메서드 · 이벤트 표)은 빌드하지 않았다 — 앞 작업자의 프로퍼티 표 · 물리 훅 생성 코드는 워크트리 부분 Debug 빌드(4384 중 약 3900 단계, 실패 0 — Engine · GameFramework 의 모든 `.gen.cpp` 포함)에서 컴파일됐고, 그 뒤 것은 짓지 않았다. 통합 빌드에서 볼 것: 묶음 TU(`ReflectionBundle.N.cpp` — 헤더끼리 한 TU 에서 부딪히는지, Windows 매크로 오염)와 `BuildTimeReport.py` 생성 비중(전 30.7 %, 목표 8 % 미만), 메서드 · 이벤트 표(`kMethods` · `kEvents` — 상태 없는 람다의 상수 초기화, `ReflectDefaultCtorOf`), 생성 `.gen.cpp` 합계(전 7.86 MB), 판정 비트를 구하지 않은 사본에 묻는 단언(`_bDerivedFlagsBuilt`), 단위 `PhysicsHookRegistryTest.*` · `ReflectionTypeRegistryTest.PropertyHandleGoesStaleWhenItsDeclaringTypeChanges` · `ReflectionTypeInfoTest.MethodTableBuildsMethodList` · `ReflectionPropertyRoleTest.DerivedFlagsAreBuiltByRegistrationNotByFirstQuery` · `ReflectionTypeInfoTest.PropertyDescTableSharesDefaultMetadata`, 모듈 목록 단계의 리프 이름 겹침 오류(`ReflectionPipeline.LeafNameCollision`).
 - 통합 때 확인하지 못한 동작: Vulkan AMD 브레드크럼 · 128 타임스탬프 슬롯(실장치), DX12 placed 텍스처(`D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` 가 RT+SRV 를 받는지), Vulkan placed 텍스처(이제 능력 참 — 검증 레이어 경고 없이 트랜지언트 첨부가 힙에 놓이는지 `RT.Frame.transientPlacements`, lavapipe · Android 포함).
