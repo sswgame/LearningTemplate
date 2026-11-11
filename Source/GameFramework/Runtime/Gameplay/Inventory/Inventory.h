@@ -70,6 +70,11 @@ namespace sw
         [[nodiscard]] bool addStack( const InventorySlot& stack );
         /** @brief @p count 개가 모두 있으면 뺍니다. 뒤쪽 슬롯부터 뺍니다. */
         [[nodiscard]] bool removeItem( const hashed_string& itemID, int32 count );
+        /**
+         * @brief `removeItem` 과 같이 빼되, 뺀 것을 슬롯 조각(내구도 · 꾸미기 · 뗀 부품째)으로 @p outListTaken 에 덧붙입니다. 모자라면 아무것도 빼지 않고 false 입니다.
+         * @details 되돌릴 수 있는 거래(제작 대기열의 취소)는 이 조각을 `addStack` 으로 그대로 돌려준다 — id 로 다시 넣으면 닳은 장비가 새것이 된다(Lyra 는 아이템 인스턴스를 옮긴다).
+         */
+        [[nodiscard]] bool takeItem( const hashed_string& itemID, int32 count, vector<InventorySlot>& outListTaken );
         /** @brief 슬롯에서 @p count 개까지 빼고 뺀 것을 반환합니다. */
         InventorySlot takeFromSlot( int32 slot, int32 count );
         /** @brief 슬롯을 옮깁니다. 같은 아이템이면 합치고(넘치면 남김), 다른 아이템이면 서로 바꿉니다. */
@@ -104,6 +109,10 @@ namespace sw
          *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 슬롯 수가 지금과 다르거나 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
          */
         SW_DECLARE_STATE_IO();
+        /** @brief 슬롯 하나의 상태(이름 · 개수 · 내구도 · 피해 · 꾸미기 · 뗀 부품)입니다. 인벤토리와 제작 대기열의 꺼낸 재료가 같은 형식을 쓴다. 읽다 깨지면 io 가 거절 상태다. */
+        static void serializeSlot( StateIO& io, InventorySlot& inoutSlot );
+        /** @brief `serializeSlot` 하나의 최소 바이트입니다 — 이름(4) + 개수 · 내구도 · 피해(12) + 꾸미기 수 · 부품 수(8). 담은 개수를 읽을 때 남은 바이트로 거르는 데 쓴다. */
+        static constexpr uint32 kSlotStateMinBytes = 24;
 
     private:
         bool    isValidSlot( int32 slot ) const { return slot >= 0 && slot < static_cast<int32>( _listSlot.size() ); }

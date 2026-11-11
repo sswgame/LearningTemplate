@@ -4,6 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
@@ -118,4 +119,46 @@ SW_TEST_CASE( InventoryTest, StateRoundTrips )
     SW_REQUIRE_TRUE( smaller.initialize( &catalog, 2 ) );
     sw::Archive again( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( smaller.readState( again ) );
+}
+
+/**
+ * @brief [CraftingTest] 닳은 장비가 재료인 작업을 대기열에 넣었다 취소하면 같은 내구도로 돌아온다(새것이 되지 않는다, 감사 G-3). 저장 · 복원한 대기열도 같다
+ */
+SW_TEST_CASE( CraftingTest, CancelReturnsWornInputWithSameDurability )
+{
+    sw::ItemCatalog catalog;
+    loadCatalog( catalog );
+    sw::RecipeCatalog recipes;
+    SW_REQUIRE_TRUE( recipes.loadFromXMLText( R"(<RecipeCatalog>
+        <Recipe id="Reforge" time="5"><In item="sword"/><In item="stone" count="2"/><Out item="arrow" count="5"/></Recipe>
+    </RecipeCatalog>)",
+                                              "CraftingTest" ) );
+    const sw::hashed_string kReforge{ "Reforge" };
+
+    sw::Inventory inventory;
+    SW_REQUIRE_TRUE( inventory.initialize( &catalog, 4 ) );
+    SW_REQUIRE_EQUAL( 1, inventory.addItem( kSword, 1 ) );
+    SW_REQUIRE_EQUAL( 2, inventory.addItem( kStone, 2 ) );
+    const int32 swordSlot = inventory.findFirstSlot( kSword ).value();
+    SW_EXPECT_FALSE( inventory.reduceSlotDurability( swordSlot, 60.0f ) ); // 40 남음
+
+    sw::Crafter crafter;
+    crafter.initialize( &recipes );
+    crafter.learnRecipe( kReforge );
+    SW_REQUIRE_TRUE( crafter.enqueue( kReforge, inventory, sw::hashed_string{}, 1 ) == sw::CraftResult::Ok );
+    SW_EXPECT_EQUAL( 0, inventory.getItemCount( kSword ) );
+
+    // 저장 · 복원한 대기열도 꺼낸 재료의 개체 상태를 들고 있다
+    sw::Archive written;
+    crafter.writeState( written );
+    sw::Crafter restored;
+    restored.initialize( &recipes );
+    sw::Archive reading( written.getData(), written.getSize() );
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+
+    SW_REQUIRE_TRUE( restored.cancel( 0, inventory ) );
+    const sw::optional<int32> returnedSlot = inventory.findFirstSlot( kSword );
+    SW_REQUIRE_TRUE( returnedSlot.has_value() );
+    SW_EXPECT_EQUAL( 40.0f, inventory.getSlot( returnedSlot.value() )._durability );
+    SW_EXPECT_EQUAL( 2, inventory.getItemCount( kStone ) );
 }

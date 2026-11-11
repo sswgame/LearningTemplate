@@ -160,6 +160,12 @@ namespace sw
 
     bool Inventory::removeItem( const hashed_string& itemID, int32 count )
     {
+        vector<InventorySlot> listTaken;
+        return takeItem( itemID, count, listTaken );
+    }
+
+    bool Inventory::takeItem( const hashed_string& itemID, int32 count, vector<InventorySlot>& outListTaken )
+    {
         if ( count <= 0 )
             return true;
         if ( getItemCount( itemID ) < count )
@@ -170,7 +176,10 @@ namespace sw
             InventorySlot& slot = _listSlot[index - 1];
             if ( slot.isEmpty() || slot._itemID != itemID )
                 continue;
-            const int32 moved = MathUtil::min( left, slot._count );
+            const int32   moved = MathUtil::min( left, slot._count );
+            InventorySlot piece = slot;
+            piece._count        = moved;
+            outListTaken.push_back( std::move( piece ) );
             slot._count -= moved;
             left -= moved;
             if ( slot.isEmpty() )
@@ -404,6 +413,20 @@ namespace sw
             return;
         for ( InventorySlot& slot : _listSlot )
         {
+            serializeSlot( io, slot );
+            if ( io.isOk() == false )
+                return;
+        }
+        if ( io.isReading() )
+        {
+            ++_revision;
+        }
+    }
+
+    void Inventory::serializeSlot( StateIO& io, InventorySlot& inoutSlot )
+    {
+        InventorySlot& slot = inoutSlot;
+        {
             if ( io.isReading() )
             {
                 slot = InventorySlot{};
@@ -427,12 +450,7 @@ namespace sw
                 }
             }
             io.list( slot._listDetachedPart );
-            if ( io.check( 0 <= slot._count && ( slot._count == 0 || slot._itemID.empty() == false ) ) == false )
-                return;
-        }
-        if ( io.isReading() )
-        {
-            ++_revision;
+            (void)io.check( 0 <= slot._count && ( slot._count == 0 || slot._itemID.empty() == false ) );
         }
     }
 

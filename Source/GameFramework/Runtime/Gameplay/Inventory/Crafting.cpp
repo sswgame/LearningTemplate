@@ -57,12 +57,33 @@ namespace sw
                 }
             }
 
-            static void takeItems( Inventory& inventory, const ItemStackList& items, int32 count )
+            /** @brief 한 번 치 재료를 꺼내 조각으로 돌려줍니다. 재료 수는 `evaluate` 가 미리 확인했다. */
+            static vector<InventorySlot> takeUnit( Inventory& inventory, const ItemStackList& items )
             {
+                vector<InventorySlot> listTaken;
                 for ( const auto& item : items.getItems() )
                 {
-                    (void)inventory.removeItem( item._itemID, item._count * count ); // 재료 수는 canCraft 가 미리 확인했다
+                    (void)inventory.takeItem( item._itemID, item._count, listTaken );
                 }
+                return listTaken;
+            }
+
+            /** @brief 꺼낸 조각을 개체 상태째 모두 돌려줍니다. 하나라도 자리가 없으면 인벤토리를 그대로 두고 false 입니다. */
+            static bool returnPieces( Inventory& inventory, const vector<vector<InventorySlot>>& listUnitInput )
+            {
+                const Inventory before = inventory;
+                for ( const vector<InventorySlot>& listPiece : listUnitInput )
+                {
+                    for ( const InventorySlot& piece : listPiece )
+                    {
+                        if ( inventory.addStack( piece ) == false )
+                        {
+                            inventory = before;
+                            return false;
+                        }
+                    }
+                }
+                return true;
             }
         };
     } // namespace
@@ -199,10 +220,14 @@ namespace sw
             CraftingInternal::giveItems( inventory, pRecipe->_outputs, count );
             return CraftResult::Ok;
         }
-        CraftingInternal::takeItems( inventory, pRecipe->_inputs, count );
+        const Inventory before = inventory; // 자리가 없으면 꺼낸 재료를 개체 상태째 되돌린다
+        for ( int32 unit = 0; unit < count; ++unit )
+        {
+            (void)CraftingInternal::takeUnit( inventory, pRecipe->_inputs );
+        }
         if ( CraftingInternal::hasRoomForOutputs( inventory, pRecipe->_outputs, count ) == false )
         {
-            CraftingInternal::giveItems( inventory, pRecipe->_inputs, count ); // 되돌린다
+            inventory = before;
             return CraftResult::NoRoom;
         }
         CraftingInternal::giveItems( inventory, pRecipe->_outputs, count );
@@ -215,6 +240,7 @@ namespace sw
         if ( result != CraftResult::Ok )
             return result;
         const RecipeDef* pRecipe = _pCatalog->find( recipeID );
+        CraftJob         job;
         if ( _consumeInputs.isBound() )
         {
             if ( _consumeInputs( pRecipe->_inputs, count ) == false )
@@ -222,9 +248,11 @@ namespace sw
         }
         else
         {
-            CraftingInternal::takeItems( inventory, pRecipe->_inputs, count );
+            for ( int32 unit = 0; unit < count; ++unit )
+            {
+                job._listUnitInput.push_back( CraftingInternal::takeUnit( inventory, pRecipe->_inputs ) );
+            }
         }
-        CraftJob job;
         job._recipeID  = recipeID;
         job._remaining = pRecipe->_time;
         job._count     = count;
@@ -238,8 +266,14 @@ namespace sw
             return false;
         const CraftJob&  job     = _listJob[index];
         const RecipeDef* pRecipe = _pCatalog->find( job._recipeID );
-        if ( pRecipe != nullptr )
+        if ( job._listUnitInput.empty() == false )
         {
+            if ( CraftingInternal::returnPieces( inventory, job._listUnitInput ) == false )
+                return false;
+        }
+        else if ( pRecipe != nullptr )
+        {
+            // 바깥에서 가져온 재료는 개체가 없다 — 정의대로 인벤토리에 돌려준다
             if ( CraftingInternal::hasRoomForOutputs( inventory, pRecipe->_inputs, job._count ) == false )
                 return false;
             CraftingInternal::giveItems( inventory, pRecipe->_inputs, job._count );
@@ -272,6 +306,8 @@ namespace sw
                 return; // 공간이 생길 때까지 기다린다
             CraftingInternal::giveItems( inventory, pRecipe->_outputs, 1 );
             outListFinished.push_back( job._recipeID );
+            if ( job._listUnitInput.empty() == false )
+                job._listUnitInput.erase( job._listUnitInput.begin() ); // 이 한 번의 재료는 다 썼다
             if ( --job._count > 0 )
                 job._remaining = pRecipe->_time; // 남은 횟수가 있으면 다음 것을 이어서 만든다
             else
@@ -281,6 +317,7 @@ namespace sw
 
     void Crafter::serializeState( StateIO& io )
     {
+        io.header( kStateTag, kStateVersion );
         vector<hashed_string> listLearned( _uniqueLearnedRecipe.begin(), _uniqueLearnedRecipe.end() );
         VectorUtil::sort( listLearned, []( const hashed_string& left, const hashed_string& right )
         {
@@ -312,6 +349,32 @@ namespace sw
             io.value( job._count );
             if ( io.check( job._recipeID.empty() == false && 0.0f <= job._remaining && 0 < job._count ) == false )
                 return;
+            // 꺼낸 재료는 남은 횟수만큼이거나(인벤토리) 없다(바깥 재료). 횟수마다 조각 수, 조각마다 슬롯 하나
+            uint32 unitCount = static_cast<uint32>( job._listUnitInput.size() );
+            io.count( sizeof( uint32 ), unitCount );
+            if ( io.check( unitCount == 0 || unitCount == static_cast<uint32>( job._count ) ) == false )
+                return;
+            if ( io.isReading() )
+            {
+                job._listUnitInput.assign( unitCount, vector<InventorySlot>{} );
+            }
+            for ( vector<InventorySlot>& listPiece : job._listUnitInput )
+            {
+                uint32 pieceCount = static_cast<uint32>( listPiece.size() );
+                io.count( Inventory::kSlotStateMinBytes, pieceCount );
+                if ( io.isOk() == false )
+                    return;
+                if ( io.isReading() )
+                {
+                    listPiece.assign( pieceCount, InventorySlot{} );
+                }
+                for ( InventorySlot& piece : listPiece )
+                {
+                    Inventory::serializeSlot( io, piece );
+                    if ( io.isOk() == false )
+                        return;
+                }
+            }
             if ( io.isReading() )
             {
                 _listJob.push_back( job );

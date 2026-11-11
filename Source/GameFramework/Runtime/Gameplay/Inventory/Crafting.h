@@ -7,6 +7,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -19,6 +20,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 
 namespace sw
@@ -117,6 +119,8 @@ namespace sw
         hashed_string _recipeID{};
         float32       _remaining{ 0.0f };
         int32         _count{ 1 }; ///< 남은 횟수(하나씩 끝남)
+        /** @brief 남은 횟수마다 인벤토리에서 꺼낸 재료 조각(개체 상태째, 앞이 먼저 끝난다). 취소는 이것을 그대로 돌려준다. 재료를 바깥(`ConsumeInputsDelegate`)에서 가져왔으면 비어 있다. */
+        vector<vector<InventorySlot>> _listUnitInput{};
     };
 } // namespace sw
 
@@ -131,6 +135,9 @@ namespace sw
     class SW_GF_API Crafter
     {
     public:
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "CRFT" );
+        static constexpr uint32 kStateVersion = 2; ///< 2: 작업마다 꺼낸 재료 조각을 쓴다(판 1 은 머리표가 없어 거절한다)
+
         /** @brief 재료를 인벤토리 대신 다른 곳(신선도별 재고, 원가 장부)에서 가져오는 함수입니다. 인자는 (재료 목록, 횟수)이고, 재료를 모두 가져왔으면 true 를 반환합니다. */
         using ConsumeInputsDelegate = Delegate<bool( const ItemStackList& inputs, int32 count )>;
 
