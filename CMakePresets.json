@@ -48,6 +48,27 @@
       }
     },
     {
+      "name": "Linux-Debug-ASan",
+      "displayName": "Linux Ninja Debug + AddressSanitizer/UBSan (Clang)",
+      "description": "수명 · 경계 · 미정의 동작 그물 — `py -3 Scripts/dev/LinuxScenarios.py sanitize address` 가 단위 테스트를 돌린다(감사 P-8, Godot CI 의 ASan 빌드 · 언리얼 -EnableASan 자리)",
+      "inherits": "Linux-Debug",
+      "cacheVariables": {
+        "SW_ENABLE_SANITIZER": "ON",
+        "SW_SANITIZER_KIND": "address"
+      }
+    },
+    {
+      "name": "Linux-Debug-TSan",
+      "displayName": "Linux Ninja Debug + ThreadSanitizer (Clang)",
+      "description": "데이터 경쟁 그물 — vcpkg 는 x64-linux-tsan 트리플릿(원자로 스스로 동기화하는 포트 계측). `py -3 Scripts/dev/LinuxScenarios.py sanitize thread`",
+      "inherits": "Linux-Debug",
+      "cacheVariables": {
+        "SW_ENABLE_SANITIZER": "ON",
+        "SW_SANITIZER_KIND": "thread",
+        "VCPKG_TARGET_TRIPLET": "x64-linux-tsan"
+      }
+    },
+    {
       "name": "Linux-Release",
       "displayName": "Linux Ninja Release (Clang)",
       "description": "Linux Release build — 모든 게임 · 키트의 전체 빌드. 텍스처 임포트가 Debug 보다 훨씬 빨라 게임 시나리오 체인은 이 구성으로 돈다",
@@ -198,6 +219,14 @@
     {
       "name": "Linux-Release",
       "configurePreset": "Linux-Release"
+    },
+    {
+      "name": "Linux-Debug-ASan",
+      "configurePreset": "Linux-Debug-ASan"
+    },
+    {
+      "name": "Linux-Debug-TSan",
+      "configurePreset": "Linux-Debug-TSan"
     }
   ],
   "testPresets": [
