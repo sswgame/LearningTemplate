@@ -50,6 +50,8 @@ namespace sw::editor
         }
         EditorChrome::endPanel();
 
+        if ( pDocument != nullptr )
+            pDocument->flushDocumentInteraction(); // 끌기가 끝난 프레임에 그 구간을 한 단계로 기록한다
         // 창 밖에서 그린다 — 접힌 창은 내용을 그리지 않지만 확인은 떠야 한다.
         if ( pDocument != nullptr && pDocument->isCloseConfirmPending() )
             pDocument->drawCloseConfirm();

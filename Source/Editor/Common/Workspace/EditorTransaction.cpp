@@ -310,10 +310,11 @@ namespace sw::editor
         recordObjectLifetime( pObj, label, ObjectLifetimeEdit::Destroyed );
     }
 
-    void EditorTransaction::push( UndoStep undo, UndoStep redo, string_view label, string_view coalesceKey )
+    void EditorTransaction::push( UndoStep undo, UndoStep redo, string_view label, string_view coalesceKey, CommandStack* pTargetStack )
     {
+        // 기록이 갈 스택은 부르는 쪽이 정할 수 있다(미리보기 패널의 문서 편집은 그 창의 스택 — Ctrl+Z 가 가는 곳). 없으면 작업 공간 스택이다.
         // 선택 조회(②): 스택이 없는 곳은 종료 뒤 · 테스트 · 도구뿐이다. 되돌리기 기록은 남기지 못하지만 편집 자체는 이미 끝났으므로 로그만 남기고 넘어간다.
-        CommandStack* pStack = editor::findSubsystem<CommandStack>();
+        CommandStack* pStack = pTargetStack != nullptr ? pTargetStack : editor::findSubsystem<CommandStack>();
         if ( pStack == nullptr )
         {
             SW_LOG_TRACE_ID( "EditorTransaction.NoCommandStackUndoRecord", "No CommandStack - the undo record '%#' is not kept", string{ label }.c_str() );
@@ -338,7 +339,7 @@ namespace sw::editor
 
     void EditorTransaction::recordDocumentText( string_view beforeText, string_view afterText, string_view label, const UndoStepOwner& owner,
                                                 const EditorDocumentRestoreDelegate& restore, const EditorDocumentCaptureDelegate& capture,
-                                                string_view coalesceKey )
+                                                string_view coalesceKey, CommandStack* pTargetStack )
     {
         if ( beforeText == afterText || restore.isBound() == false )
             return;
@@ -356,7 +357,7 @@ namespace sw::editor
                 restore( span.reconstructAfter( capture() ) );
             } ),
                                            owner ),
-                  label, coalesceKey );
+                  label, coalesceKey, pTargetStack );
             return;
         }
 
@@ -372,6 +373,6 @@ namespace sw::editor
             restore( afterStr );
         } ),
                                        owner ),
-              label, coalesceKey );
+              label, coalesceKey, pTargetStack );
     }
 } // namespace sw::editor

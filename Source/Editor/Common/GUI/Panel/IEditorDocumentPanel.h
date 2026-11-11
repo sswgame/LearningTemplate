@@ -98,6 +98,11 @@ namespace sw::editor
          * @details 미리보기 씬의 Undo 스택처럼 패널 바깥의 기록에서 편집을 읽는 패널은 여기서 `markDocumentDirty` 를 부른다. 기본은 아무 일도 하지 않는다.
          */
         virtual void syncDocumentDirty() {}
+        /**
+         * @brief 패널을 그린 뒤 부릅니다(`IEditorPanel::draw`). 끌기 · 슬라이더 같은 상호작용 구간이 끝났으면 그 동안의 편집을 되돌리기 한 단계로 기록한다.
+         * @details 기본은 아무 일도 하지 않는다(`EditorDocumentPanel` 이 구간을 쥔다).
+         */
+        virtual void flushDocumentInteraction() {}
         /** @brief 편집이 생겼음을 알립니다. 제목의 미저장 표시와 종료 확인이 이 값을 봅니다. */
         void markDocumentDirty() { _bDocumentDirty = SW_TRUE; }
         /** @brief 저장이나 되돌리기 직후 dirty 를 지웁니다. */

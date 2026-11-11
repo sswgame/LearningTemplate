@@ -78,13 +78,13 @@ namespace sw::editor
          * @brief 되돌리기 · 다시 하기 단계를 스택에 올립니다. 대상이 씬 · 파일이면 데이터 단계(`SW_UNDO_STEP` — 리로드를 넘는다), 패널 인스턴스에만 있으면
          *        코드 단계(`UndoStep::makeTransient` — 기록을 맡길 때 버린다)다.
          */
-        void push( UndoStep undo, UndoStep redo, string_view label, string_view coalesceKey = {} );
+        void push( UndoStep undo, UndoStep redo, string_view label, string_view coalesceKey = {}, CommandStack* pTargetStack = nullptr );
         /** @brief 문서 변경 구간만 Undo/Redo에 등록합니다. capture가 있으면 현재 본문에서 복원합니다. */
         void recordDocumentText( string_view beforeText, string_view afterText, string_view label, const UndoStepOwner& owner,
                                  const EditorDocumentRestoreDelegate& restore, string_view coalesceKey = {} );
         void recordDocumentText( string_view beforeText, string_view afterText, string_view label, const UndoStepOwner& owner,
                                  const EditorDocumentRestoreDelegate& restore, const EditorDocumentCaptureDelegate& capture,
-                                 string_view coalesceKey = {} );
+                                 string_view coalesceKey = {}, CommandStack* pTargetStack = nullptr );
     };
 } // namespace sw::editor
 

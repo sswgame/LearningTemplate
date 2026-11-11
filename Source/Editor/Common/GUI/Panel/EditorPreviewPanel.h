@@ -57,6 +57,8 @@ namespace sw::editor
         const EditorPreviewViewport& getPreviewViewport() const { return _viewport; }
         /** @brief 창 범위 Undo 스택입니다. */
         CommandStack& getPreviewCommandStack() { return *_pCommandStack; }
+        /** @brief 문서 편집도 이 창의 스택으로 간다 — 이 창에 포커스가 있을 때 Ctrl+Z 가 가는 스택(`setFocusedCommandStack`)과 같다. */
+        CommandStack* findDocumentCommandStack() override { return _pCommandStack.get(); }
         /** @brief 미리보기 씬과 창의 스택에 묶인 창 범위 선택입니다. 씬을 만들기 전에는 묶이지 않은 빈 선택입니다. */
         EditorSelection&       getPreviewSelection() { return *_pSelection; }
         const EditorSelection& getPreviewSelection() const { return *_pSelection; }
