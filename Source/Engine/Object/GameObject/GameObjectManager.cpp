@@ -256,7 +256,7 @@ namespace sw
         , _services{ services }
         , _bRunningFrameSystems{ SW_FALSE }
         , _bPhysicsStepEnabled{ SW_TRUE }
-        , _updateSerial{ 0 }
+        , _updateCount{ 0 }
         , _deferredRegistrationDepth{ 0 }
         , _listDeferredRegister{}
         , _listDeferredPostLoad{}
@@ -799,7 +799,7 @@ namespace sw
 
     void GameObjectManager::update( float32 deltaTime )
     {
-        ++_updateSerial;
+        ++_updateCount;
         // 순서는 표 하나가 갖는다(`SceneFrameStepList.xxx`).
         // 단계마다 본문 뒤에 그 단계에 등록한 씬 서비스를 부른다 — 본문이 부르게 두면 부르지 않는 단계에 등록한 서비스가 조용히 돌지 않는다.
         // 본문 앞에는 이 단계에서 마치기로 한 서비스의 프레임 일을 마친다(워커 일 결과를 쓴다) — 본문(트랜스폼 펼치기 등)이 그 결과를 본다.

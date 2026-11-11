@@ -18,7 +18,7 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/CharacterPawnMovementComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
-#include "GameFramework/Runtime/Gameplay/Vehicle/RiderDownWatcherComponent.h"
+#include "GameFramework/Runtime/Gameplay/Vehicle/DismountOnDeathComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 
 namespace sw
@@ -153,8 +153,8 @@ namespace sw
         }
         Internal::setRiderPose( *pRider, seat.getRiderPoseParameter(), true );
         // 탑승자가 쓰러지면 강제로 하차시킨다. 규칙이므로 타는 순간 붙인다.
-        if ( pRider->getComponent<RiderDownWatcherComponent>() == nullptr )
-            (void)pRider->addComponent<RiderDownWatcherComponent>();
+        if ( pRider->getComponent<DismountOnDeathComponent>() == nullptr )
+            (void)pRider->addComponent<DismountOnDeathComponent>();
 
         pRider->setKeptWhenParentDestroyed( true ); // 소켓으로 붙어도 탈것의 일부가 아니다 — 탈것이 사라지면 내린다
         seat._occupant        = pRider->getHandle();

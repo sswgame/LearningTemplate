@@ -226,7 +226,7 @@ namespace sw
          * @brief `update` 를 시작한 횟수입니다(게임 스레드의 씬 프레임 번호). 한 프레임의 틱 · 틱 뒤 큐 · 그 뒤 패킷 만들기가 같은 값을 봅니다.
          * @details "이번 프레임에 세워진 표시인가"를 비트 비우기 없이 번호 비교로 정하게 한다(`CameraComponent::markCut`).
          */
-        uint64 getUpdateSerial() const { return _updateSerial; }
+        uint64 getUpdateCount() const { return _updateCount; }
 
         /**
          * @brief 컴포넌트 등록(`onRegister`) · 로드 뒤 처리(`onPostLoad`)를 `endDeferredRegistration` 까지 미룹니다(중첩 가능). 씬을 짓는 배치(`Scene::instantiate`)가 씁니다.
@@ -655,8 +655,8 @@ namespace sw
         uint8 _bRunningFrameSystems : 1;
         /** @brief false 면 `Physics` 단계를 건너뜁니다(`setPhysicsStepEnabled`). */
         uint8 _bPhysicsStepEnabled : 1;
-        /** @brief `update` 를 시작한 횟수입니다(`getUpdateSerial`). */
-        uint64 _updateSerial;
+        /** @brief `update` 를 시작한 횟수입니다(`getUpdateCount`). */
+        uint64 _updateCount;
         /** @brief `beginDeferredRegistration` 의 중첩 깊이입니다. 0 이 아니면 등록 · 로드 뒤 처리를 줄에 세웁니다. */
         uint32 _deferredRegistrationDepth;
         /** @brief 미룬 등록 · 로드 뒤 처리입니다(붙은 순서). 핸들로 들어 그 사이 해체돼도 안전합니다. */

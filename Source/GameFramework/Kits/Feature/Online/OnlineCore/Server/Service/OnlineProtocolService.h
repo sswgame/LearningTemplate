@@ -135,7 +135,7 @@ namespace sw
         }
 
         /** @brief 기다리는 호출 수를 지표 `service_store_pending` 에 씁니다. 서비스가 틱마다 부릅니다. */
-        void publishPendingCount() { _metrics.setPendingStoreWorkCount( static_cast<int32>( _mapCall.size() ) ); }
+        void publishPendingCount() { _metrics.setPendingCallCount( static_cast<int32>( _mapCall.size() ) ); }
 
         int32 getCount() const { return static_cast<int32>( _mapCall.size() ); }
         bool  isEmpty() const { return _mapCall.empty(); }

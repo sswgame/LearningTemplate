@@ -292,7 +292,7 @@ namespace sw
         ++_revision;
     }
 
-    bool Inventory::wearSlot( int32 slot, float32 amount )
+    bool Inventory::reduceSlotDurability( int32 slot, float32 amount )
     {
         if ( isValidSlot( slot ) == false || amount <= 0.0f )
             return false;

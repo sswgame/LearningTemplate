@@ -136,7 +136,7 @@ namespace sw
          *        `kSlowFrameFramesAfter` 프레임 뒤 링 버퍼 전체(그 틱 앞뒤)를 `Saved/Traces/slowtick_<유닉스 밀리초>.trace.json` 에 저장합니다.
          * @param frameBeginNanos 틱 본문 시작(단조 시계) — 파일에 "Slow tick" 표식으로 찍힌다
          * @param frameEndNanos 틱 본문 끝
-         * @details 게임 스레드가 틱(프레임)을 마친 뒤 한 번 부릅니다(개발 도구 `ProfilerLaunchSwitches` 가 `-gv_traceSlowTickMs` 로). 꺼져 있으면 정수 하나 비교하고 돌아옵니다.
+         * @details 게임 스레드가 틱(프레임)을 마친 뒤 한 번 부릅니다(개발 도구 `ProfilerLaunchSubsystem` 가 `-gv_traceSlowTickMs` 로). 꺼져 있으면 정수 하나 비교하고 돌아옵니다.
          *          Shipping 에는 없습니다 — 운영에서 쓰려면 Dev 구성 서버(`Ninja-Release`)를 씁니다.
          */
         static void updateSlowFrameCapture( FrameProfiler& profiler, int32 budgetMilliseconds, uint64 frameBeginNanos, uint64 frameEndNanos, string_view processName );
@@ -178,7 +178,7 @@ namespace sw
 
         /**
          * @brief 종료 때 트레이스 저장을 준비합니다 — 타임라인 링 버퍼 기록을 켭니다. @p path 는 로그에 알릴 저장 경로입니다.
-         * @details 개발 도구가 `-gv_traceSaveOnExit=<경로>` 로 기동 단계에 부릅니다(`ProfilerLaunchSwitches`). 여러 프로세스를 띄운 부모(에디터의 멀티 프로세스 재생)가
+         * @details 개발 도구가 `-gv_traceSaveOnExit=<경로>` 로 기동 단계에 부릅니다(`ProfilerLaunchSubsystem`). 여러 프로세스를 띄운 부모(에디터의 멀티 프로세스 재생)가
          *          프로세스마다 경로를 주고, 모두 끝난 뒤 그 파일들을 `mergeTraceJSON` 으로 합칩니다.
          */
         static void startExitCapture( FrameProfiler& profiler, string_view path );

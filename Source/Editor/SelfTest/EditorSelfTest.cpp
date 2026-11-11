@@ -116,7 +116,7 @@ namespace sw::editor
                     SW_LOG_INFO_ID( "EditorSelfTest.RunningEditorSelfTests", "Running %# editor self tests matching '%#'", static_cast<uint32>( _listSelectedIndex.size() ), _pattern.c_str() );
                 }
 
-                // 정지를 기다리는 동안은 테스트를 부르지 않는다. 진행 중인 일에는 시한이 없고(`EditorSettleJudge`), 할 일 없이 화면이 계속 움직이면 그 테스트의 실패다. 정지 판정의 화면 표본은 레이블 기록이 켜져 있어야 쌓인다(위에서 켰다).
+                // 정지를 기다리는 동안은 테스트를 부르지 않는다. 진행 중인 일에는 시한이 없고(`EditorSettleState`), 할 일 없이 화면이 계속 움직이면 그 테스트의 실패다. 정지 판정의 화면 표본은 레이블 기록이 켜져 있어야 쌓인다(위에서 켰다).
                 if ( _settleWait.has_value() )
                 {
                     const EditorSettleResult verdict = _settleWait->advance( editor::getActiveObjectManager() );

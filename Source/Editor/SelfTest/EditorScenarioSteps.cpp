@@ -215,7 +215,7 @@ namespace sw::editor
                 const EditorSettleResult verdict = pState->_wait.advance( runner.findActiveObjectManager() );
                 if ( verdict == EditorSettleResult::Oscillating )
                     runner.recordFailure( step, pState->_wait.describeOscillation() );
-                // 진행 중인 일에는 시한이 없다(`EditorSettleJudge`) — 끝나지 않으면 시나리오 벽시계 상한이 까닭과 함께 잡는다.
+                // 진행 중인 일에는 시한이 없다(`EditorSettleState`) — 끝나지 않으면 시나리오 벽시계 상한이 까닭과 함께 잡는다.
                 // Run 이면 실행기가 상태를 지운다 — 까닭을 먼저 복사해 넘긴다.
                 const string waitingFor = pState->_wait.describeWait();
                 return runner.holdUntilReady( step, input, verdict == EditorSettleResult::Ready,

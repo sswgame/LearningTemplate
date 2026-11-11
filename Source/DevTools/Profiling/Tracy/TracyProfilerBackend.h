@@ -2,7 +2,7 @@
  * @file DevTools/Profiling/Tracy/TracyProfilerBackend.h
  * @brief Tracy 출력(`IProfilerBackend`)입니다. Tracy 헤더는 짝 .cpp 하나만 include 합니다.
  * @details 외부 프로파일러 연결은 개발 도구다 — 엔진(`ProfilerBackend`)은 출력 인터페이스와 활성 칸만 알고 Tracy 형식을 모른다. 켜는 쪽(`-gv_tracy` 의
- *          `ProfilerLaunchSwitches`, 에디터 "Tracy 열기")이 `start` 로 이 출력을 `ProfilerBackend::startBackend` 에 꽂는다. 언리얼 Insights 의 Trace 전송 · 뷰어가
+ *          `ProfilerLaunchSubsystem`, 에디터 "Tracy 열기")이 `start` 로 이 출력을 `ProfilerBackend::startBackend` 에 꽂는다. 언리얼 Insights 의 Trace 전송 · 뷰어가
  *          Developer 쪽인 것과 같은 자리다. Tracy 클라이언트는 DevTools.dll 하나만 링크한다(Windows 는 켤 때 TracyClient.dll 을 올린다).
  */
 #pragma once

@@ -681,7 +681,7 @@ namespace sw
         return isInitialized() && getInputRouter().isActionConsumed( inputMap, action );
     }
 
-    bool UISystem::isCursorCaptured() const
+    bool UISystem::shouldShowCursor() const
     {
         return isInitialized() && wantsCursor();
     }

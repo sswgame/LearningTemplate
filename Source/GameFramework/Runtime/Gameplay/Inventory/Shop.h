@@ -238,7 +238,7 @@ namespace sw
 namespace sw
 {
     /** @brief 가게 하나의 현재 상태입니다. */
-    struct ShopRuntime
+    struct ShopState
     {
         hashed_string         _shopID{};
         vector<int32>         _listStockCount{};    ///< `ShopDef::_listStock` 과 같은 순서의 재고(-1 이면 무한)
@@ -254,16 +254,16 @@ namespace sw
 namespace sw
 {
     /**
-     * @class ShopState
+     * @class ShopManager
      * @brief 모든 가게의 재고, 시세, 가격 배율을 관리합니다. 카탈로그 두 개는 소유하지 않고 참조만 하므로 이 객체보다 오래 살아 있어야 합니다.
      * @details 사기 단가는 round( 값 × 가게 `buyMultiplier` × 사기 배율 ) 이다. 팔기는 한 개씩 round( `ItemDef::_value` × `sellMultiplier` × 팔기 배율 × 시세 ) 를 더하고,
      *          한 개를 팔 때마다 시세가 `saturation` 만큼 떨어진다(하한은 `minSellFactor`). `advanceDay` 가 시세를 되돌리고 `restockDays` 마다 재입고한다.
      *          사기와 팔기는 전부 성공하거나 아무것도 바뀌지 않는다.
      */
-    class SW_GF_API ShopState
+    class SW_GF_API ShopManager
     {
     public:
-        ShopState();
+        ShopManager();
 
         void initialize( const ShopCatalog* pShopCatalog, const ItemCatalog* pItemCatalog );
         /** @brief 잠금 조건을 평가할 문맥입니다(플래그 · 태그 칸). 빌려 씁니다. 없으면 조건이 있는 항목은 항상 잠겨 있습니다. */
@@ -293,9 +293,9 @@ namespace sw
         /** @brief 그 아이템의 매입 시세입니다. 1 이면 보통입니다. */
         float32 getSellFactor( const hashed_string& shopID, const hashed_string& itemID ) const;
         /** @brief 진열 항목이 열려 있으면 true 입니다. 조건이 없거나 조건 평가가 참일 때 열립니다. */
-        bool               isUnlocked( const ShopStockDef& stock ) const;
-        hashed_string      getCurrency( const hashed_string& shopID ) const;
-        const ShopRuntime* findRuntime( const hashed_string& shopID ) const;
+        bool             isUnlocked( const ShopStockDef& stock ) const;
+        hashed_string    getCurrency( const hashed_string& shopID ) const;
+        const ShopState* findRuntime( const hashed_string& shopID ) const;
 
         /**
          * @brief 가게마다 런타임 상태(가게 id, 재고, 시세, 사들이지 않는 분류, 가격 배율, 재입고 후 지난 날)를 씁니다. 카탈로그는 `initialize` 가 받은 것이므로 저장하지 않습니다.
@@ -304,13 +304,13 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        ShopRuntime*                  findRuntime( const hashed_string& shopID );
+        ShopState*                    findRuntime( const hashed_string& shopID );
         [[nodiscard]] optional<int32> findStockIndex( const ShopDef& shop, const hashed_string& itemID ) const;
         int32                         computeBasePrice( const ShopStockDef& stock ) const;
-        bool                          isRefused( const ShopDef& shop, const ShopRuntime& runtime, const hashed_string& itemID ) const;
+        bool                          isRefused( const ShopDef& shop, const ShopState& runtime, const hashed_string& itemID ) const;
 
     private:
-        vector<ShopRuntime>    _listRuntime;
+        vector<ShopState>      _listRuntime;
         EventBuffer<ShopEvent> _eventBuffer;
         const ShopCatalog*     _pShopCatalog;
         const ItemCatalog*     _pItemCatalog;

@@ -1,7 +1,7 @@
 /**
  * @file AdventureWeaponWear.h
  * @brief 야생의 숨결의 무기 내구도 규칙입니다. 칠 때마다 인벤토리 슬롯의 내구도가 닳고, 부서지는 마지막 한 방은 피해가 커지며(치명), 내구도가 얼마 남지 않으면 경고합니다.
- * @details 내구도와 부서짐 처리 자체는 기반 `Inventory::wearSlot` 이 한다(0이 되면 슬롯이 빈다). 내구도가 없는 아이템(`_maxDurability` 가 0)은 닳지 않는다.
+ * @details 내구도와 부서짐 처리 자체는 기반 `Inventory::reduceSlotDurability` 이 한다(0이 되면 슬롯이 빈다). 내구도가 없는 아이템(`_maxDurability` 가 0)은 닳지 않는다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

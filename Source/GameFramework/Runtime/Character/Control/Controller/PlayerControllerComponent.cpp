@@ -67,7 +67,7 @@ namespace sw
         const InputMap&           inputMap = input.getInputMap();
         const IInputCaptureQuery* pCapture = context._pInputCapture;
         // UI 가 커서를 바라면(메뉴가 열렸다) 잠금을 쉰다 — 닫히면 요청해 둔 잠금으로 돌아간다.
-        const bool bUIWantsCursor = pCapture != nullptr && pCapture->isCursorCaptured();
+        const bool bUIWantsCursor = pCapture != nullptr && pCapture->shouldShowCursor();
         bool       bLook          = bUIWantsCursor == false;
         if ( pawn.wantsMouseLock() )
         {

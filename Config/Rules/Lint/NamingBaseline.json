@@ -282,7 +282,6 @@
     "savesTriggerFields",
     "sentTally",
     "setFields",
-    "setPendingStoreWorkCount",
     "splitFields",
     "stimulusFields",
     "storeWork",

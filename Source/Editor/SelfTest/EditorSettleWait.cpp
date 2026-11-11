@@ -27,7 +27,7 @@ namespace sw::editor
         if ( _waitSerial == 0 || _waitSerial > EditorSelfTestInput::getSettleWaitSerial() )
         {
             _waitSerial = EditorSelfTestInput::beginSettleWait();
-            _judge      = EditorSettleJudge{};
+            _judge      = EditorSettleState{};
         }
         const EditorDockLayout* pDockLayout    = editor::findSubsystem<EditorDockLayout>();
         const bool              bScreenSettled = AutomationEnvironmentSteps::isWindowResizeApplied() && pDockLayout != nullptr && pDockLayout->isApplyPending() == false &&

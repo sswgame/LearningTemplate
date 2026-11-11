@@ -62,7 +62,7 @@ namespace sw
      *          - 종류별 누적(수 · 바이트 · 단계별 시간 · 가장 긴 로드 · 비동기 수 · 실패 수)
      *          - 가장 느린 로드 `kSlowestCount` 개(경로 · 단계별 시간)
      *          - 엔진 프레임 프로파일러가 있으면 `Asset.<종류>.<단계>` 구간 · `Asset.Bytes` 카운터에도 더한다(`frame breakdown` 표에 로딩이 보인다).
-     *          `-gv_assetLoadProfile=0` 이면 아무것도 모으지 않는다. 보고는 `report`(개발 도구가 `-gv_assetLoadReport=1` 이면 엔진 종료 때 부른다 — `ProfilerLaunchSwitches`).
+     *          `-gv_assetLoadProfile=0` 이면 아무것도 모으지 않는다. 보고는 `report`(개발 도구가 `-gv_assetLoadReport=1` 이면 엔진 종료 때 부른다 — `ProfilerLaunchSubsystem`).
      *          언리얼 Insights 의 LoadTimeProfiler(패키지마다 IO · 직렬화 시간) · 유니티 프로파일러의 Loading 마커와 같은 자리입니다.
      */
     class SW_API AssetLoadProfiler final : public ISubsystem

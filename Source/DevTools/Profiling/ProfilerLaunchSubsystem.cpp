@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/Profiling/ProfilerLaunchSwitches.h"
+#include "DevTools/Profiling/ProfilerLaunchSubsystem.h"
 
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -38,12 +38,12 @@ namespace sw
     /** @brief `-gv_assetLoadReport=1` — 엔진을 끌 때 에셋 로드 표(종류별 · 가장 느린 로드, `AssetLoadProfiler::report`)를 로그에 남깁니다. */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_assetLoadReport, 0, "엔진 종료 때 에셋 로드 표를 로그로 (1=켜기)" );
 
-    ProfilerLaunchSwitches::ProfilerLaunchSwitches()
+    ProfilerLaunchSubsystem::ProfilerLaunchSubsystem()
         : _frameBeginNanos{ 0 }
     {
     }
 
-    SubsystemInitResult ProfilerLaunchSwitches::initializeSubsystem()
+    SubsystemInitResult ProfilerLaunchSubsystem::initializeSubsystem()
     {
         // 켜지 못해도(빌드에 없음 · 클라이언트 라이브러리 없음) 기동을 세우지 않는다 — 경고는 출력 쪽이 남긴다.
         if ( gv_tracy )
@@ -53,7 +53,7 @@ namespace sw
         return SubsystemInitResult::Succeeded;
     }
 
-    void ProfilerLaunchSwitches::shutdownSubsystem()
+    void ProfilerLaunchSubsystem::shutdownSubsystem()
     {
         // 서비스 · 프로파일러가 아직 있다(기동 단계가 서비스보다 먼저 내려간다). 외부 출력은 프로세스 끝까지 켜져 있다 — 여기서는 요약 줄만 남긴다.
         TracyProfilerBackend::logSummary();
@@ -64,12 +64,12 @@ namespace sw
             pAssetLoadProfiler->report( "session" );
     }
 
-    void ProfilerLaunchSwitches::onFrameBegin()
+    void ProfilerLaunchSubsystem::onFrameBegin()
     {
         _frameBeginNanos = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
     }
 
-    void ProfilerLaunchSwitches::onFrameEnd()
+    void ProfilerLaunchSubsystem::onFrameEnd()
     {
         if ( _frameBeginNanos == 0 )
             return;
@@ -77,7 +77,7 @@ namespace sw
                                                      getProcessName() );
     }
 
-    const utf8* ProfilerLaunchSwitches::getProcessName()
+    const utf8* ProfilerLaunchSubsystem::getProcessName()
     {
         return build::kWithClientCode ? "App" : "Server";
     }

@@ -4,7 +4,7 @@
  *
  * [켜는 법]
  * 개발 빌드에서도 기본은 꺼짐입니다. 출력 구현(Tracy — `DevTools/Profiling/Tracy/TracyProfilerBackend`)은 개발 도구에 있고, 켜는 쪽이 `startBackend` 로 꽂습니다
- * (`-gv_tracy=1` 은 `ProfilerLaunchSwitches` 가 기동 단계에, 에디터 프로파일러 패널의 "Tracy 열기" 는 실행 중에). 엔진은 어떤 외부 프로파일러인지 모릅니다.
+ * (`-gv_tracy=1` 은 `ProfilerLaunchSubsystem` 가 기동 단계에, 에디터 프로파일러 패널의 "Tracy 열기" 는 실행 중에). 엔진은 어떤 외부 프로파일러인지 모릅니다.
  *
  * [Shipping]
  * `SW_PROFILER_BACKEND_COMPILED` 가 0 이라 계측 매크로가 지점을 등록하지도, 출력에 묻지도 않습니다. 개발 도구가 없어 출력도 없습니다.

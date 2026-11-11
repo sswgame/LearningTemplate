@@ -79,7 +79,7 @@ namespace sw
         /** @brief 분류, 희귀도(높은 것 먼저), id 순으로 정렬하고, 겹칠 수 있는 것은 합칩니다. */
         void sortSlots();
         /** @brief 슬롯의 내구도를 깎습니다. 0 이 되어 부서졌으면 true 이고, 그 슬롯은 비워집니다. */
-        bool wearSlot( int32 slot, float32 amount );
+        bool reduceSlotDurability( int32 slot, float32 amount );
         void clear();
 
         int32 getItemCount( const hashed_string& itemID ) const;

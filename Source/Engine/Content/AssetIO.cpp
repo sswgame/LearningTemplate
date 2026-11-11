@@ -177,7 +177,7 @@ namespace sw
             CookJob::allowMissingRead( id );
             return false;
         }
-        return CookJob::allowRead( id, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
+        return CookJob::recordReadInput( id, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
     }
 
     bool AssetIO::readTextFile( string_view filePath, string& outText )
@@ -214,7 +214,7 @@ namespace sw
             CookJob::allowMissingRead( id );
             return false;
         }
-        return CookJob::allowRead( id, outBytes.data(), outBytes.size() );
+        return CookJob::recordReadInput( id, outBytes.data(), outBytes.size() );
     }
 
     AsyncReadHandle AssetIO::readBinaryAssetAsync( const AssetID& id, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete )
