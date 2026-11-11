@@ -296,6 +296,7 @@ namespace sw
             GameObject* pProp = pManager->createGameObject( propName );
             if ( pProp == nullptr )
                 continue;
+            pProp->setTransient( true ); // 시작할 때 규칙에서 다시 흩뿌린다 — 세이브 · 상태 해시에 넣지 않는다(`GameObject::setTransient`)
             MeshComponent* pMesh = pProp->addComponent<MeshComponent>();
             if ( pMesh == nullptr )
             {

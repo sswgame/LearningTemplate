@@ -563,6 +563,7 @@ namespace sw
         MeshComponent* pMesh = pQuad != nullptr ? pQuad->addComponent<MeshComponent>() : nullptr;
         if ( pMesh == nullptr )
             return;
+        pQuad->setTransient( true );           // 세운 쪽이 다시 세우는 파생 — 세이브 · 상태 해시에 넣지 않는다(`GameObject::setTransient`)
         (void)pQuad->attachToParent( pOwner ); // 방금 만든 같은 씬의 사각형이라 거부될 이유가 없다(틱 중이면 미뤄진다)
         // 렌더 텍스처 크기는 처음 만드는 쪽이 정한다. 머티리얼 인스턴스(렌더 스레드)가 캔버스보다 먼저 빌려도 위젯 크기로 만들어지도록 먼저 알린다.
         const float2  textureSize   = getWorldTextureSize();

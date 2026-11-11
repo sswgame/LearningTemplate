@@ -57,6 +57,7 @@ namespace sw
             GameObject* pGhost = pManager->createGameObject( hashed_string( ghostName.c_str() ) );
             if ( pGhost == nullptr )
                 continue;
+            pGhost->setTransient( true ); // 세운 쪽이 다시 세우는 파생 — 세이브 · 상태 해시에 넣지 않는다(`GameObject::setTransient`)
             SkeletalMeshComponent* pMesh = pGhost->addComponent<SkeletalMeshComponent>();
             if ( pMesh != nullptr )
                 pMesh->setMaterialPath( _materialPath );

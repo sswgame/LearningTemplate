@@ -116,6 +116,7 @@ namespace sw
             GameObject* pNumber = pManager->createGameObject( hashed_string( "DamageNumber" ) );
             if ( pNumber == nullptr )
                 return;
+            pNumber->setTransient( true ); // 잠깐 떠오르는 표시다 — 세이브 · 상태 해시에 넣지 않는다(`GameObject::setTransient`)
             SceneComponent* pNumberRoot = pNumber->addComponent<SceneComponent>();
             if ( pNumberRoot != nullptr )
                 pNumberRoot->setWorldPosition( position );
