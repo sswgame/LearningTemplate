@@ -11,10 +11,8 @@
 
 ## 상태 (2026-11-12)
 
-- main(로컬) = origin/main(e480b07498) + 이름 이전 · 뷰 패스 판정 통합(naming-root 합침) + 런타임 퍼뮤테이션 전환 + 상용 대비 감사 문서. **push 안 함 — VerifyBundle 전.** Debug 빌드 경고 0 · 단위 3706 통과.
-  - 이름 이전: `NamingBaseline.json` 네 칸 0(verb 31 · predicate 96 · lookup 83 · term 272), 옛 여러 단어 이름은 `_bannedNames`. 외부 API 이름(Win32 `rcWork`, Dawn `QueueWorkDone`, ImGui `WorkPos` …)과 칸 이름 도구(`XMLFields` …)는 `_keepTerms`.
-  - 런타임 스위치: 직전 변형으로 그리기(`GPUShaderPermutation::_fallbackHash`) · 조합 미리 만들기(`MaterialCache::appendRuntimeSwitchWarmEntries`) · `setStaticSwitch` 거절. 시나리오 `game.empty.materialswitch`.
-  - 패스 입력 계약 검사: 셰이더가 읽는(DX 리플렉션 `Used`) `g_<역할>Index` 가 계약 밖이면 `FramePSOManager.PassReadsRoleOutsideContract`. 쓰임을 모르는 SPIR-V · GLSL · 쿠킹 매니페스트는 건너뛴다.
+- origin/main = 8359890baa(이름 이전 NamingBaseline 0 · 런타임 퍼뮤테이션 전환 · 패스 입력 계약 검사 · 상용 대비 감사 문서) — Windows 묶음 검증 통과 뒤 push. 그 커밋의 Linux 단계는 그 세션 끝에 돌던 중이었다(결과는 `~/LT-linux` 로그).
+- main(로컬)은 그 위에 감사 P0 수정 묶음(아래 0 절 1)을 얹었다 — **push 안 함**.
 - 워크트리 `settings-json`(`.claude/worktrees/settings`, 80b190b2ba — 8f7b502252 에서 갈림, 빌드 안 함): 프로젝트 설정 창이 형식 없는 `Config/**/*.json`(린트 · 격리 · 환경 · Dev 표)을 "Tables" 구획의 범용 JSON 페이지로 고친다(사용자 지적 — 에디터에서 Config 부터 손으로 맞추는 표까지). 통합에서 Debug 빌드 · 단위 `ProjectSettingsJSONDocumentTest.*` · `ProjectSettingsEntryTest.TablesSkipTypedFiles` · 시나리오 `editor.projectconfigedit`(격리 표 원소 더하기 → 되돌리기, `quarantinetable.png` 를 눈으로 본다). 남은 것: 표 페이지 Ctrl+Z, 활성 게임이 아닌 `Config/Game/*.json` 이 형식 대신 범용 페이지로 열린다. 이름 이전 뒤라 합칠 때 옛 이름은 `py -3 Scripts/lint/NamingWords.py` 가 잡는다.
 - 통합 브랜치 `integ2`(워크트리 `.claude/worktrees/integ2`, 067f721a81 — 3eddd405ce 까지의 main 을 합쳤다, 빌드 한 번도 안 함): 에셋 정체성 1단계(AssetGUID · .meta · asset-ids 도구 · 팩 GUID 색인), 5-3 틱 const 닫기, W-R3 (a) 코덱 키 검사, A1 포즈 노드 평가 · 미러 표 · 에디터 노드 더하기, R1 리다이렉트 표 팩 담기, 온라인 · 원장 · 신고 단위 테스트들, 런타임 파생 오브젝트 `setTransient`(잔상 · 내비 디버그 뷰 · 월드 위젯 사각형 · 데미지 숫자 · 흩뿌린 소품).
 - Android(Android-Shipping)는 대상 전체가 컴파일 · 링크되고 Vulkan 셰이더 쿠킹이 지난다. 웹(Web-Shipping)은 App.wasm 까지 지어진다.
@@ -23,9 +21,10 @@
 
 ### 0. 다음 세션 순서
 
-1. **VerifyBundle → push:** 지금 main(로컬)을 `bundle-verify` 로 한 번. Release 는 이름 이전 뒤 처음 짓는다(키트는 Release 에서만 지어진다 — 옛 이름 · 외부 API 오개명이 나오면 `_keepTerms` 로).
-2. **상용 대비 감사의 다음 할 일:** [CommercialGapAudit](CommercialGapAudit.md) "다음 할 일" 절(P0 12 묶음 → P1 29 → P2 10)을 순서대로. 문서가 크다(약 220 KB) — `## 다음 할 일` · 항목 번호로 찾아 그 절만 읽는다. 각 묶음은 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고친다. 끝난 묶음은 그 문서에서 지운다. 사용자에게 받을 것: O-10(길드 창고로 유료 재화가 계정 사이로 옮겨지는 것의 약관 허용 여부).
-3. **settings-json · integ2 통합**(아래 줄).
+1. **감사 P0 수정 묶음 검증 → push:** 8359890baa 위의 커밋들 — 시퀀서 일시정지 구간 값(P0-12), POSIX exec 오류 파이프 · 공용 줄 분리(P0-16 · 17), Android 키 소비 · 종료 finish · AAudio 백엔드(P0-10 · 9 · 11), 네트워크 끊긴 슬롯 보류(P0-8), Win32 SC_KEYMENU(P0-15), 오디오 장치 유실 계약(P0-13), 타일맵 청크 충돌(P0-14), 세션 상태 전부 아니면 없음(P0-5), 복원 실패 뒤 세이브 막기(P0-6), 쓴 영수증 표(P0-7), 문서 상호작용 구간 · 문서 스택(P0-1 · 2), 자동 저장 프로세스별 잠금(P0-3), 에셋 옮김 방송(P0-4), Core 시간 float64(C-12), 넷 시계 float64(N-4). Debug 빌드 → 단위 전체 → `bundle-verify` → push. Linux 는 `build`(POSIX 프로세스 · ALSA), Android-Shipping 빌드(AAudio · 키 표 · finish — 실기기 볼륨 키 · 종료 뒤 `dumpsys activity`).
+2. **감사 P0 의 남은 몫:** 웹 오디오 백엔드(AudioWorklet + 링 버퍼 — 지금 웹 클라이언트는 기동에서 치명 오류, P0-11), 복원 두 단계(분리된 묶음에서 끝까지 읽고 교체 — P0-6 의 나머지), 옮김 계획 단계의 dirty 참조자 · 열린 문서 삭제 거절과 선택의 에셋 경로(P0-4), `CommandStack::pushCoalesce` · span 병합 걷기(UIPreviewModel) · 시나리오 `materialproperties` 끌기 → `Editor.UndoCount` +1 · 미리보기 창 포커스 undo(P0-1 · 2), 시나리오 `editormodulereload` 리로드 뒤 사본 존재(P0-3), 타일맵 바디 수 · 접촉 단위 테스트(P0-14), 분개 정리 뒤 감사 균형 이월 레코드와 계정 삭제 때 `econ_receipt` 값 익명화(P0-7 — 영구 표에 계정 번호가 남는다), 세션 상태의 설정이 바뀐 세이브 받기(판 올림 사슬 — A-6), 셰이더로 가는 애니메이션 시간 접기(C-12 의 남은 몫).
+3. **감사 다음 할 일 P1 · P2:** [CommercialGapAudit](CommercialGapAudit.md) "다음 할 일" 13 번부터(새니타이저 프리셋 먼저). 문서가 크다(약 220 KB) — `## 다음 할 일` · 항목 번호로 찾아 그 절만 읽는다. 각 묶음은 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고친다. 끝난 항목은 그 문서에서 지운다. 사용자에게 받을 것: O-10(길드 창고로 유료 재화가 계정 사이로 옮겨지는 것의 약관 허용 여부).
+4. **settings-json · integ2 통합**(아래 줄).
 
 - **integ2 통합:** 검증 통과한 main 을 integ2 에 다시 합친다(공유 캐시 선언 매크로 — integ2 의 새 `extern template class … SharedAssetCache<…>;` 줄은 정의 줄 단언에 걸리므로 매크로로 바꾼다) → 워크트리에서 Debug 전체 프리셋 빌드(App 만 지으면 게임 모듈 헤더 불일치로 기동 실패) → 컴파일 오류는 `.inl` include · `extern template` 로(`-Werror=undefined-func-template` 를 끄지 않는다) → 단위 · 영향 시나리오 → main 에 합쳐 VerifyBundle 한 번 → push. 에셋 GUID 2 · 3 단계(GUID 로 참조 해석 · 경로 참조 이전)는 그 뒤 — 설계는 [DesignBacklog](DesignBacklog.md) 에셋 정체성 절. 작업자 커밋에 GameObjectManager.inl 머리말 문장 · `EditorTransaction` 을 연 채 CommandStack 을 읽는 자리가 남았다.
 - 흔들리는 단위 테스트 `AudioDataVariantTest.GraphVariantSavesOnlyItsDifference`: 전체 실행 한 번에 "base 'testproject/base.audiograph.xml' could not be read" 로 졌다. 같은 씨앗 · 단독 1800 회로는 재현되지 않았다 — 다시 지면 그 로그의 앞 케이스와 스크래치 도메인 마운트 상태를 본다.
