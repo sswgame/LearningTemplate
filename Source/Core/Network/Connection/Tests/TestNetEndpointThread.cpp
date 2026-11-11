@@ -148,7 +148,7 @@ SW_TEST_CASE( NetEndpointThreadTest, GameThreadsSendAndReceiveConcurrently )
             {
                 const vector<uint8> message = NetEndpointThreadTestInternal::makeTaggedMessage( sender, sequence );
                 // 신뢰 창이 차면 거절된다 — 잠깐 쉬었다가 다시(보내는 속도를 줄이는 쪽은 게임이다).
-                while ( client.sendMessage( 0, NetChannelType::ReliableOrdered, message ) == false )
+                while ( client.trySendMessage( 0, NetChannelType::ReliableOrdered, message ) == false )
                 {
                     ThreadUtil::sleepForMicroseconds( 200 );
                 }
