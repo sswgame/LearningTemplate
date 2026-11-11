@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -30,10 +31,10 @@ namespace sw
         /** @brief @p cookedDir 의 @p format 셰이더 바이너리가 소스와 맞는지 보고 문제를 오류로 남깁니다. 맞으면 true 입니다. */
         [[nodiscard]] virtual bool verifyCookedShaders( string_view cookedDir, ShaderTargetFormat format ) = 0;
         /**
-         * @brief 쿠킹 요청이 @p format 으로 만드는 바이너리의 스테이징 기준 id(`engine/shaders/bin/dx12/<파일>`, 정규화)를 모읍니다. 요청을 모으지 못하면 false 입니다.
-         * @details 팩 쿠커가 요청했는데 원본이 닿지 않아 버리는 바이너리를 경고로 가른다 — 런타임이 찾을 셰이더가 팩에 없다(첫 배포 굽기의 layer_bake).
+         * @brief 쿠킹 요청이 @p format 으로 만드는 바이너리의 스테이징 기준 id(`engine/shaders/bin/dx12/<파일>`, 정규화)와 그 출처(`ShaderCookRequest::_listOrigin`)를 모읍니다. 요청을 모으지 못하면 false 입니다.
+         * @details 팩 쿠커가 닿은 출처가 요청했는데 원본이 닿지 않아 버리는 바이너리를 경고로 가른다 — 런타임이 찾을 셰이더가 팩에 없다(첫 배포 굽기의 layer_bake).
          */
-        [[nodiscard]] virtual bool collectRequestedBinaries( ShaderTargetFormat format, vector<string>& outListBinaryID ) = 0;
+        [[nodiscard]] virtual bool collectRequestedBinaries( ShaderTargetFormat format, unordered_map<string, vector<vector<string>>>& outMapBinaryOrigin ) = 0;
 
         /** @brief 등록된 창구입니다. 렌더러를 짓지 않는 구성(전용 서버)은 nullptr 입니다. */
         [[nodiscard]] static IShaderCookService* find();

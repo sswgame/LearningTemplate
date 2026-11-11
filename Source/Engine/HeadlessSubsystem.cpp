@@ -3,7 +3,7 @@
 #include "Engine/HeadlessSubsystem.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Container/unordered_set.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
@@ -130,9 +130,9 @@ namespace sw
              * @brief 팩에 담을 셰이더를 쿠킹 스테이징에 굽고(바뀐 것만 — 내용 해시) 소스와 맞는지 판정합니다. 맞지 않으면 false 입니다.
              * @details 쿠킹본은 소스 트리가 아니라 스테이징에만 있으므로 팩을 구울 때 늘 굽는다 — 굽지 않은 채 팩을 만들면 셰이더 없는 팩이 된다.
              *          `CookSession` 을 열기 **전에** 부른다 — 셰이더 쿠커는 엔진 기본 에셋 같은 리소스를 `CookJob` 밖에서 읽는데, 세션 안에서는 그 읽기가 실패한다.
-             *          쿠킹 요청이 만드는 바이너리 목록도 같은 까닭으로 여기서 모아 @p outSetRequestedBinary 로 돌려준다(팩 단계는 받기만 한다).
+             *          쿠킹 요청이 만드는 바이너리와 그 출처도 같은 까닭으로 여기서 모아 @p outMapRequestedBinary 로 돌려준다(팩 단계는 받기만 한다).
              */
-            [[nodiscard]] static bool cookShadersForPack( const CommandLineManager& commandLine, string_view cookedDir, unordered_set<string>& outSetRequestedBinary )
+            [[nodiscard]] static bool cookShadersForPack( const CommandLineManager& commandLine, string_view cookedDir, unordered_map<string, vector<vector<string>>>& outMapRequestedBinary )
             {
                 // 셰이더 쿠커는 렌더러에 있다 — 렌더러를 짓지 않는 구성(전용 서버)의 팩에는 셰이더 바이너리가 없어 할 일이 없다.
                 IShaderCookService* const pService = IShaderCookService::find();
@@ -145,14 +145,11 @@ namespace sw
                     return false;
                 }
                 // 쿠킹 요청이 만드는 바이너리 — 팩이 그 가운데 원본이 닿지 않아 버리는 것을 경고로 알린다(배포 굽기에서도 보이게).
-                vector<string> listRequestedBinary;
-                if ( pService->collectRequestedBinaries( shaderTarget, listRequestedBinary ) == false )
+                if ( pService->collectRequestedBinaries( shaderTarget, outMapRequestedBinary ) == false )
                 {
                     SW_LOG_ERROR_ID( "Headless.PackCookShaderRequests", "Pack cook: the shader cook requests could not be collected - cannot tell which dropped shader binaries the runtime needs" );
                     return false;
                 }
-                for ( string& binary : listRequestedBinary )
-                    outSetRequestedBinary.insert( std::move( binary ) );
                 return true;
             }
 
@@ -162,7 +159,7 @@ namespace sw
              *          `-game=` 을 주면 그 게임 팩만 베이크한다(배포 패키지).
              */
             [[nodiscard]] static bool cookPackStage( const CommandLineManager& commandLine, bool bDedicatedServer, const string& cookedDir, const CookStore& cookStore,
-                                                     unordered_set<string>&& setRequestedShaderBinary )
+                                                     unordered_map<string, vector<vector<string>>>&& mapRequestedShaderBinary )
             {
                 const string shaderFolder = string( ShaderCooker::getSubfolderForFormat( resolveShaderTarget( commandLine ) ) );
 
@@ -182,7 +179,7 @@ namespace sw
                 params._shaderFolder = shaderFolder;
                 params._buildTarget  = bDedicatedServer ? "Server" : "Client";
                 // 세션 앞의 `cookShadersForPack` 이 모은 요청 바이너리. 셰이더 쿠커가 없는 구성(전용 서버)은 빈 목록이다.
-                params._setRequestedShaderBinary = std::move( setRequestedShaderBinary );
+                params._mapRequestedShaderBinary = std::move( mapRequestedShaderBinary );
                 // 실행기가 없는 구성(Shipping · 전용 서버)은 실행기가 스스로 등록하지 않는다 — 그 구성이 굽는 팩에는 시나리오를 담지 않는다.
                 // 배포 대상의 팩(`-pack-for-shipping`)도 담지 않는다 — 교차 빌드(Android · 웹)는 호스트 개발 App(실행기가 있다)이 굽는다.
                 const bool bShippingPack  = commandLine.isArgumentProvided( CommandLineArgument::PACK_FOR_SHIPPING );
@@ -484,10 +481,10 @@ namespace sw
                     return true;
                 }
                 // 셰이더 굽기 · 판정은 세션 밖에서(`cookShadersForPack` 설명). 씬 단계보다 먼저 하므로 깨진 셰이더로 씬을 굽는 시간을 쓰지 않는다.
-                unordered_set<string> setRequestedShaderBinary;
+                unordered_map<string, vector<vector<string>>> mapRequestedShaderBinary;
                 if ( bCookPacks || bCookAll )
                 {
-                    if ( cookShadersForPack( commandLine, cookedDir, setRequestedShaderBinary ) == false )
+                    if ( cookShadersForPack( commandLine, cookedDir, mapRequestedShaderBinary ) == false )
                     {
                         inoutState._bFailed = SW_TRUE;
                         return true;
@@ -500,7 +497,7 @@ namespace sw
                     bSucceeded = cookSceneStage( cookedDir, cookStore, crowdSettings, bCrowdSettingsLoaded );
                 // 씬 단계가 실패하면 팩을 베이크하지 않는다 — 빠진 산출물로 베이크한 팩은 배포본에서야 실패가 드러난다.
                 if ( bSucceeded && ( bCookPacks || bCookAll ) )
-                    bSucceeded = cookPackStage( commandLine, bDedicatedServer, cookedDir, cookStore, std::move( setRequestedShaderBinary ) );
+                    bSucceeded = cookPackStage( commandLine, bDedicatedServer, cookedDir, cookStore, std::move( mapRequestedShaderBinary ) );
                 inoutState._bFailed = bSucceeded == false;
                 return true;
             }

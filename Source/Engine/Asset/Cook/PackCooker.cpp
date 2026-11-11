@@ -470,8 +470,8 @@ namespace sw
                 vector<string> listStagedFile;
                 if ( CookJob::collectFiles( stagedDir, "", listStagedFile ) == false )
                     return CookStep::Failed;
-                DroppedShaderList droppedRequested; // 쿠킹 요청에 있는데 원본이 닿지 않아 뺀 것 — 런타임이 찾을 셰이더가 팩에 없다(경고)
-                DroppedShaderList droppedOther;     // 요청 밖(낡은 잔재 등) — 정보 줄
+                DroppedShaderList droppedRequested; // 닿은 출처가 요청했는데 원본이 닿지 않아 뺀 것 — 런타임이 찾을 셰이더가 팩에 없다(경고)
+                DroppedShaderList droppedOther;     // 닿지 않은 출처만 요청했거나 요청 밖(낡은 잔재 등) — 정보 줄
                 for ( const string& absPath : listStagedFile )
                 {
                     string relativePath;
@@ -484,7 +484,7 @@ namespace sw
                     {
                         const string assetID = makeAssetID( domain, relativePath );
                         if ( StringUtil::contains( assetID, "/shaders/bin/" ) )
-                            ( params._setRequestedShaderBinary.contains( assetID ) ? droppedRequested : droppedOther ).add( relativePath );
+                            ( PackCooker::isRequestedByReachedOrigin( params._mapRequestedShaderBinary, selection._setIncluded, assetID ) ? droppedRequested : droppedOther ).add( relativePath );
                         continue;
                     }
                     if ( addFile( writer, relativePath, absPath, ioTiming ) == false )
@@ -517,6 +517,22 @@ namespace sw
         std::replace( name.begin(), name.end(), '/', '_' );
         name += ".pack";
         return name;
+    }
+
+    bool PackCooker::isRequestedByReachedOrigin( const unordered_map<string, vector<vector<string>>>& mapRequested, const unordered_set<string>& setIncluded, const string& assetID )
+    {
+        const auto requestIt = mapRequested.find( assetID );
+        if ( requestIt == mapRequested.end() )
+            return false;
+        for ( const vector<string>& listOriginAsset : requestIt->second )
+        {
+            bool bAllReached = true;
+            for ( const string& originAsset : listOriginAsset )
+                bAllReached = bAllReached && setIncluded.contains( originAsset );
+            if ( bAllReached )
+                return true;
+        }
+        return false;
     }
 
     string PackCooker::makeRecordID( string_view target, string_view cookedDir, string_view packName )

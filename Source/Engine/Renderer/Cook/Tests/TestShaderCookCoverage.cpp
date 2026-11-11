@@ -1,6 +1,7 @@
 // ShaderCookCoverageTest — 엔진 기본 에셋의 셰이더 칸은 모두 쿠킹 요청에 든다(nogpu).
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -17,6 +18,28 @@ using namespace sw;
  * @details 패스가 아닌 엔진 셰이더 목록은 손으로 적은 표라, 새 칸(`_shaderLayerBake`)을 더하고 표를 고치지 않으면 개발 빌드(런타임 컴파일)는 지나가고
  *          Shipping 만 "Precompiled shader binary not found" 로 진다. 칸을 리플렉션으로 훑어 빠짐을 여기서 잡는다.
  */
+/**
+ * @brief [ShaderCookCoverageTest] 파이프라인 XML 이 낸 요청은 그 파이프라인의 에셋 id(리소스 루트 기준)를 출처로, 패스 종류 표의 요청은 빈 출처(늘 필요)를 든다
+ * @details 팩 쿠커는 출처가 닿은 요청만 "버리면 안 되는" 바이너리로 본다(`PackCooker::isRequestedByReachedOrigin`) — 개발용 GI 파이프라인의 GTAO 는 출처가 닿지 않으면 버려도 된다.
+ */
+SW_TEST_CASE( ShaderCookCoverageTest, RequestsCarryTheirAssetOrigin )
+{
+    vector<ShaderCookRequest> listRequest;
+    const string              engineRoot = FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getRootFolderPath(), "engine" );
+    SW_REQUIRE_TRUE( ShaderCookRequestCollector::collectAllRequests( engineRoot, listRequest ) );
+    bool bGTAOFromPipeline = false;
+    bool bTableRequest     = false;
+    for ( const ShaderCookRequest& request : listRequest )
+    {
+        SW_EXPECT_FALSE( request._listOrigin.empty() );
+        if ( request._shaderPath == "engine/shaders/gtao.hlsl" )
+            bGTAOFromPipeline = bGTAOFromPipeline || VectorUtil::contains( request._listOrigin, vector<string>{ "engine/pipeline/deferredpipeline_gi.xml" } );
+        bTableRequest = bTableRequest || VectorUtil::contains( request._listOrigin, vector<string>{} );
+    }
+    SW_EXPECT_TRUE( bGTAOFromPipeline );
+    SW_EXPECT_TRUE( bTableRequest );
+}
+
 SW_TEST_CASE( ShaderCookCoverageTest, EveryEngineShaderFieldIsCooked )
 {
     const unique_ptr<EngineDefaultAssets> pAssets = EngineDefaultAssets::load();

@@ -34,9 +34,9 @@ namespace sw
                 return listProblem.empty();
             }
 
-            bool collectRequestedBinaries( ShaderTargetFormat format, vector<string>& outListBinaryID ) override
+            bool collectRequestedBinaries( ShaderTargetFormat format, unordered_map<string, vector<vector<string>>>& outMapBinaryOrigin ) override
             {
-                return ShaderCookDriver::collectRequestedBinaries( format, outListBinaryID );
+                return ShaderCookDriver::collectRequestedBinaries( format, outMapBinaryOrigin );
             }
         };
 

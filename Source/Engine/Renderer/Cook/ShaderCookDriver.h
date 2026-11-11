@@ -64,10 +64,10 @@ namespace sw
          */
         static void verifyCookedShaders( string_view cookedDir, ShaderTargetFormat targetFormat, vector<string>& outListProblem );
         /**
-         * @brief 이 리소스 트리의 요청이 @p targetFormat 으로 만드는 바이너리의 스테이징 기준 id(`engine/shaders/bin/dx12/<파일>`, `FileUtil::normalizePath`)를 모읍니다.
-         * @details 팩 쿠커가 "요청했는데 팩에서 버리는" 바이너리를 경고로 가른다(`PackCookParams::_setRequestedShaderBinary`). 요청을 모으지 못하면 false 입니다.
+         * @brief 이 리소스 트리의 요청이 @p targetFormat 으로 만드는 바이너리의 스테이징 기준 id(`engine/shaders/bin/dx12/<파일>`, `FileUtil::normalizePath`)와 그 출처 묶음을 모읍니다.
+         * @details 팩 쿠커가 "닿은 출처가 요청했는데 팩에서 버리는" 바이너리를 경고로 가른다(`PackCookParams::_mapRequestedShaderBinary`). 요청을 모으지 못하면 false 입니다.
          */
-        [[nodiscard]] static bool collectRequestedBinaries( ShaderTargetFormat targetFormat, vector<string>& outListBinaryID );
+        [[nodiscard]] static bool collectRequestedBinaries( ShaderTargetFormat targetFormat, unordered_map<string, vector<vector<string>>>& outMapBinaryOrigin );
 
         /**
          * @brief 요청 목록을 모두 쿠킹하고, 리플렉션 매니페스트를 쓰고, 매니페스트에 없는 옛 바이너리를 지우고, 쿠킹 스탬프를 씁니다(`cookAllShaders` 의 본체).
