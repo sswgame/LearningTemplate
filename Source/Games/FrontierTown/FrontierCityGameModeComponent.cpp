@@ -131,7 +131,7 @@ namespace sw
         const bool bFastForward = isAutoPlayOn() || isActionDown( hashed_string( FrontierTownData::kFastForwardAction ) );
         if ( pState->getClock().setTimeScale( bFastForward ? _fastTimeScale : 1.0f ) == false )
             return;
-        _city.update( deltaTime );
+        _city.update( deltaTime * pState->getClock().getTimeScale() ); // 시계와 같은 배율 — 시계만 밀면 빨리 감는 동안 결산만 잦고 생산 · 일꾼은 1 배속이다(감사 K-2, 유니티 Time.timeScale 자리)
         for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
         {
             if ( clockEvent._kind == WorldClockEvent::Kind::DayChanged )
