@@ -158,7 +158,7 @@ namespace sw
                 {
                     for ( int32 index = 0; index < messageCount; ++index )
                     {
-                        const bool bSent = pSession->getPeers().sendMessage( connectionID, NetChannelType::ReliableOrdered, payloadBytes.data(), static_cast<int32>( payloadBytes.size() ) );
+                        const bool bSent = pSession->getPeers().trySendMessage( connectionID, NetChannelType::ReliableOrdered, payloadBytes.data(), static_cast<int32>( payloadBytes.size() ) );
                         sentCount += bSent ? 1 : 0;
                     }
                 }
