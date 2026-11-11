@@ -128,9 +128,9 @@ namespace sw
         /** @brief 등록된 텍스트 reader 를 찾습니다. */
         const TextReadFn* findTextReader( hashed_string typeName ) const;
         /** @brief 타입에 없는 이름의 필드를 건너뛰고 계속하는지(`setSkipUnknownProperties`) 반환합니다. */
-        bool skipsUnknownProperties() const { return _bSkipUnknownProperties == SW_TRUE; }
+        bool shouldSkipUnknownProperties() const { return _bSkipUnknownProperties == SW_TRUE; }
         /** @brief 타입에 있는데 값을 읽지 못한 필드를 건너뛰고 계속하는지(`setSkipUnreadableProperties`) 반환합니다. */
-        bool skipsUnreadableProperties() const { return _bSkipUnreadableProperties == SW_TRUE; }
+        bool shouldSkipUnreadableProperties() const { return _bSkipUnreadableProperties == SW_TRUE; }
         /**
          * @brief 저장 목적입니다. 만들 때 정하고 바꾸지 않습니다.
          * @details 목적이 쓰지 않는 필드는 읽을 때도 지금 값 그대로다(기본값을 채우지 않는다). 세이브는 옵트인 타입의 나머지 필드를, 저작 읽기는 `RuntimeState` 를 덮지 않는다.

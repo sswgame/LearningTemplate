@@ -59,7 +59,7 @@ namespace sw
          */
         void shareCacheOf( FramePSOManager& owner ) { _pCache = owner._pCache; }
         /** @brief 이 관리자가 저장소를 소유하면 true 입니다(빌려 쓰면 false). */
-        bool ownsCache() const { return _pCache == &_cache; }
+        bool hasOwnCache() const { return _pCache == &_cache; }
         /** @brief 지금 쓰는 저장소입니다(소유하거나 빌린 것). 캔버스 렌더러가 출력 PSO 를 찾을 때 씁니다. */
         RenderPSOCache&       getCache() { return *_pCache; }
         const RenderPSOCache& getCache() const { return *_pCache; }

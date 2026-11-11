@@ -215,7 +215,7 @@ namespace sw
         [[nodiscard]] SW_API static bool copySameNamedProperties( const void* pSrc, const TypeInfo& srcType, void* pDst, const TypeInfo& dstType );
 
         /** @brief 키 문자열이 철자 그대로 같은지 비교합니다(대소문자가 다르면 다른 키 — 별칭 없음). */
-        static bool keysEqual( string_view left, string_view right );
+        static bool isKeyEqual( string_view left, string_view right );
 
         /**
          * @brief Alias 로 들어온 이름을 `SerializeContext` 핸들러가 아는 원본 이름(`_name`)으로 바꿉니다.

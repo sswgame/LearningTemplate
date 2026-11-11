@@ -202,7 +202,7 @@ namespace sw
         (void)PlatformFileUtilInternal::s_pWriteObserver.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
     }
 
-    bool PlatformFileUtil::acceptsPathInput( string_view path )
+    bool PlatformFileUtil::canAcceptPathInput( string_view path )
     {
         if ( path.empty() || AbsolutePath::isStrictAbsolute( path ) )
             return true;
@@ -243,7 +243,7 @@ namespace sw
         if ( pFilePath == nullptr || pMode == nullptr )
             return nullptr;
 
-        if ( acceptsPathInput( pFilePath ) == false )
+        if ( canAcceptPathInput( pFilePath ) == false )
             return nullptr;
         FILE* pFile{ nullptr };
 #if defined( SW_PLATFORM_WINDOWS )
@@ -271,7 +271,7 @@ namespace sw
     {
         if ( pSourcePath == nullptr || pTargetPath == nullptr )
             return false;
-        if ( acceptsPathInput( pSourcePath ) == false || acceptsPathInput( pTargetPath ) == false )
+        if ( canAcceptPathInput( pSourcePath ) == false || canAcceptPathInput( pTargetPath ) == false )
             return false;
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -418,7 +418,7 @@ namespace sw
     {
         if ( pFilePath == nullptr || pFilePath[0] == '\0' )
             return kInvalidNativeFileHandle;
-        if ( acceptsPathInput( pFilePath ) == false )
+        if ( canAcceptPathInput( pFilePath ) == false )
             return kInvalidNativeFileHandle;
 #if defined( SW_PLATFORM_WINDOWS )
         const wstring widePath = toWindowsFilePath( pFilePath );

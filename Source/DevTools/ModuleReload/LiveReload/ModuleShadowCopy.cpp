@@ -139,7 +139,7 @@ namespace sw
         return false;
     }
 
-    bool ModuleShadowCopy::rejectsDelayImports( string_view moduleName, string_view modulePath, const vector<uint8>& bytes )
+    bool ModuleShadowCopy::shouldRejectDelayImports( string_view moduleName, string_view modulePath, const vector<uint8>& bytes )
     {
 #if defined( SW_PLATFORM_WINDOWS )
         // 지연 import 디렉터리가 있으면 서술자를 읽든 못 읽든 올리지 않는다 — 지연 import 가 없다고 말할 수 없다.
@@ -188,7 +188,7 @@ namespace sw
                              params._moduleName, moduleStamp, engine::getEngineABIStamp(), pHint );
             return false;
         }
-        if ( rejectsDelayImports( params._moduleName, params._originalModulePath, bytes ) )
+        if ( shouldRejectDelayImports( params._moduleName, params._originalModulePath, bytes ) )
             return false;
         if ( ModuleShadowCopyInternal::rewriteLibraryNames( params, inoutSerials, inoutLibraryName, bytes ) == false )
         {

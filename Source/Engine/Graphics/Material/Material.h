@@ -308,7 +308,7 @@ namespace sw
          * @details 반투명 정렬의 첫 띠다 — 사본 뒤에 그린 반투명은 사본에 없어 굴절 면이 먼저 그려져야 그 위에 얹힌다(유니티 HDRP 의 굴절 앞 · 뒤 반투명 자리).
          *          반투명(`Blend`) 밖에서는 로드 오류다 — 언리얼이 불투명의 SceneColor · Refraction 을 컴파일 오류로 막는 자리.
          */
-        bool readsSceneColorCopy() const { return _desc._permutations.hasAlwaysDefine( kRefractionDefine ); }
+        bool usesSceneColorCopy() const { return _desc._permutations.hasAlwaysDefine( kRefractionDefine ); }
         /**
          * @brief 메시가 그려질 머티리얼입니다 — 자기 머티리얼, 없으면 인스턴스의 부모, 그래도 없으면 씬 기본. 렌더러와 복셀러가 이 한 벌로 고른다.
          * @details 인스턴스 부모가 씬 기본보다 먼저다 — 뒤집히면 인스턴스만 붙은 메시의 배치가 두 머티리얼이 섞인 상태(원소 바이트는 인스턴스, 레이아웃은 기본)가 된다.

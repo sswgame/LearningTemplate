@@ -229,7 +229,7 @@ SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyRefusesUnstampedFile )
     vector<uint8> bytes;
     SW_REQUIRE_TRUE( ModuleShadowCopy::readModuleFile( original, bytes ) );
     SW_EXPECT_EQUAL( size_t( 16 ), bytes.size() );
-    SW_EXPECT_FALSE( ModuleShadowCopy::rejectsDelayImports( "NotAModule", original, bytes ) ); // PE 가 아니면 지연 import 표도 없다
+    SW_EXPECT_FALSE( ModuleShadowCopy::shouldRejectDelayImports( "NotAModule", original, bytes ) ); // PE 가 아니면 지연 import 표도 없다
 
     ModuleShadowCopy::removeArtifacts( {} );
     SW_EXPECT_TRUE( FileUtil::exists( original ) );

@@ -24,7 +24,7 @@ namespace sw::editor
 
     bool IEditorDocumentPanel::beginCloseConfirmIfNeeded()
     {
-        if ( _bDocumentDirty == false || asksBeforeClose() == false )
+        if ( _bDocumentDirty == false || shouldAskBeforeClose() == false )
             return false;
         _bConfirmClose = SW_TRUE;
         return true;

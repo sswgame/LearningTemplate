@@ -141,7 +141,7 @@ namespace sw
             }
 
             /** @brief 창 관리자가 `_NET_SUPPORTED` 에 `_NET_REQUEST_FRAME_EXTENTS` 를 적었으면 true 입니다. 적지 않은 관리자(WSLg 의 Weston XWM 등)에게는 청해도 답이 없다. */
-            static bool advertisesFrameExtentsRequest( Display* pDisplay, Window root )
+            static bool supportsFrameExtentsRequest( Display* pDisplay, Window root )
             {
                 constexpr int64 kMaxAtomCount = 1024;
                 Atom            type          = 0;
@@ -421,7 +421,7 @@ namespace sw
         if ( Internal::readFrameExtents( pDisplay, win, frameExtents, outExtents ) )
             return true;
 
-        if ( Internal::advertisesFrameExtentsRequest( pDisplay, root ) == false )
+        if ( Internal::supportsFrameExtentsRequest( pDisplay, root ) == false )
         {
             // 틀 두께를 알 길이 없는 창 관리자다 - 칸 배치에만 쓰는 값이라 창을 못 띄울 일이 아니다. 칸 사이가 틀만큼 겹칠 수 있다.
             SW_LOG_INFO_ID( "X11Window.FrameExtentsNotAdvertised", "The window manager does not offer _NET_REQUEST_FRAME_EXTENTS - tiling ignores the window frame" );

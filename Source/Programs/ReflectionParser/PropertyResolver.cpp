@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    bool PropertyResolver::spellsComponentHandle( const string& spelling )
+    bool PropertyResolver::isComponentHandleSpelling( const string& spelling )
     {
         const auto isIdentifierChar = []( const utf8 c )
         {
@@ -54,10 +54,10 @@ namespace sw
 
     bool PropertyResolver::resolveComponentHandleProperty( ParsedPropertyInfo& prop, const string& owner )
     {
-        bool bHolds = spellsComponentHandle( prop._typeName ) || spellsComponentHandle( prop._elementTypeName ) || spellsComponentHandle( prop._keyTypeName );
+        bool bHolds = isComponentHandleSpelling( prop._typeName ) || isComponentHandleSpelling( prop._elementTypeName ) || isComponentHandleSpelling( prop._keyTypeName );
         for ( const ParsedContainerNode* pNode = prop._containerTree.get(); pNode != nullptr && bHolds == false; pNode = pNode->_elementNested.get() )
         {
-            bHolds = spellsComponentHandle( pNode->_elementTypeName ) || spellsComponentHandle( pNode->_keyTypeName );
+            bHolds = isComponentHandleSpelling( pNode->_elementTypeName ) || isComponentHandleSpelling( pNode->_keyTypeName );
         }
         if ( bHolds == false )
             return true;

@@ -206,7 +206,7 @@ namespace sw::editor
          */
         [[nodiscard]] bool isAlreadyApplied( const string& relativePath );
         /** @brief 표의 칸이 "로드할 때 참조를 펼쳐 넣는다" 인 종류면 true 입니다(`AssetInlinesReferencesFunc`). */
-        [[nodiscard]] static bool inlinesReferences( string_view assetID );
+        [[nodiscard]] static bool shouldInlineReferences( string_view assetID );
         /** @brief @p route 의 캐시(빈 이름이면 리로드 함수를 가진 아무 캐시)가 그 에셋을 지금 들고 있으면 true 입니다. */
         [[nodiscard]] static bool isHeldInCaches( const AssetReloadRoute& route, const AssetID& assetID );
         /** @brief @p route 가 가리키는 엔진 캐시를 다시 읽고 활성 씬의 사용자에게 알립니다. 임포터는 부르지 않는다. 에디터 스레드에서만 부릅니다. */

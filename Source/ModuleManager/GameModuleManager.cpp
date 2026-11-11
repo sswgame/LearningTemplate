@@ -122,7 +122,7 @@ namespace sw
         _frameState._bGameplayActive = queryGameplayActive() ? SW_TRUE : SW_FALSE;
         // 호스트 모듈(에디터)이 없으면 월드는 처음부터 플레이 중이다(에디터가 있으면 Play, Stop 이 정한다). 켜지 않으면 onBeginPlay 가 불리지 않는다.
         // 이미 켜져 있으면 아무 일도 없다.
-        const bool bStartWorldPlay = _pSceneManager != nullptr && controlsWorldPlay() == false && _pSceneManager->isWorldPlaying() == false;
+        const bool bStartWorldPlay = _pSceneManager != nullptr && canControlWorldPlay() == false && _pSceneManager->isWorldPlaying() == false;
         if ( bStartWorldPlay )
             _pSceneManager->setWorldPlaying( true );
         // 게임 update 가 돌지 않는 동안(에디터 일시정지, Simulate)은 게임이 연 화면(로딩, HUD, 메뉴)을 그리지 않는다. 그 화면을 닫을 게임 코드가
@@ -363,7 +363,7 @@ namespace sw
         sceneManager.closeActiveScene();
         // 기동처럼 월드를 플레이 전으로 두고 새 게임을 세운다 — 다음 `beginFrame` 이 켠다. 켜 둔 채면 게임이 세우는 오브젝트가 하나씩 플레이를 시작해
         // 기동(다 세운 뒤 한꺼번에 `beginPlay`)과 컴포넌트 틱 순서가 달라지고, 그림이 한 프레임 어긋난다(벤치 kaykit 의 애니메이션 알림).
-        if ( controlsWorldPlay() == false )
+        if ( canControlWorldPlay() == false )
             sceneManager.setWorldPlaying( false );
         if ( createGameInstance() == false )
         {

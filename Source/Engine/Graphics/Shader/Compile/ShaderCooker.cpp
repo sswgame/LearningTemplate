@@ -54,7 +54,7 @@ namespace sw
             }
 
             /** @brief 모든 형식이 표에 한 번씩 있는지 - 수만 맞고 한 형식이 두 번이면 다른 형식의 폴더를 찾지 못한다. */
-            static constexpr bool coversEveryFormat()
+            static constexpr bool isEveryFormatCovered()
             {
                 for ( size_t formatIndex = 0; formatIndex < std::size( kArrBackendFolder ); ++formatIndex )
                 {
@@ -161,7 +161,7 @@ namespace sw
 
     string_view ShaderCooker::getSubfolderForFormat( ShaderTargetFormat format )
     {
-        static_assert( ShaderCookerInternal::coversEveryFormat(), "Config/Engine/CookContract.json needs exactly one rhi_backends row per ShaderTargetFormat" );
+        static_assert( ShaderCookerInternal::isEveryFormatCovered(), "Config/Engine/CookContract.json needs exactly one rhi_backends row per ShaderTargetFormat" );
         // 표는 모든 형식을 한 번씩 담는다(위 검사) — 못 찾는 값은 `Count` 이거나 범위 밖이라 기본 백엔드 폴더로 물러나지 않고 멈춘다.
         for ( const ShaderCookerInternal::BackendFolder& row : ShaderCookerInternal::kArrBackendFolder )
         {

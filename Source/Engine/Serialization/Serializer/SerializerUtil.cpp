@@ -477,7 +477,7 @@ namespace sw
                     for ( uint32 elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                     {
                         total = ContainerVisitor::mergeResult( total, visit( elementIndex ) );
-                        if ( ContainerVisitor::stopsReading( total ) )
+                        if ( ContainerVisitor::shouldStopReading( total ) )
                             break;
                     }
                     return total;
@@ -1040,7 +1040,7 @@ namespace sw
         return ss.c_str();
     }
 
-    bool SerializerUtil::keysEqual( string_view left, string_view right )
+    bool SerializerUtil::isKeyEqual( string_view left, string_view right )
     {
         return left == right;
     }
@@ -1050,14 +1050,14 @@ namespace sw
         // 지금 이름을 모두 본 뒤에만 옛 이름(Alias)을 본다. 앞 프로퍼티의 옛 이름이 뒤 프로퍼티의 지금 이름을 가로채지 않는다.
         for ( const PropertyInfo& prop : listProp )
         {
-            if ( SerializerUtil::keysEqual( keyRaw, prop._name.view() ) )
+            if ( SerializerUtil::isKeyEqual( keyRaw, prop._name.view() ) )
                 return &prop;
         }
         for ( const PropertyInfo& prop : listProp )
         {
             for ( const hashed_string& alias : prop._listAlias )
             {
-                if ( alias.empty() == false && SerializerUtil::keysEqual( keyRaw, alias.view() ) )
+                if ( alias.empty() == false && SerializerUtil::isKeyEqual( keyRaw, alias.view() ) )
                     return &prop;
             }
         }

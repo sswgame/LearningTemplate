@@ -100,7 +100,7 @@ namespace sw
         return _fracture.getOwner();
     }
 
-    bool FractureNavGeometrySource::overridesOwnerGeometry() const
+    bool FractureNavGeometrySource::shouldOverrideOwnerGeometry() const
     {
         return _fracture.isFractured();
     }

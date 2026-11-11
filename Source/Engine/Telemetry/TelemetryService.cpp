@@ -39,7 +39,7 @@ namespace sw
             /** @brief 해시를 [0, 1] 로 — 표본 비교에 씁니다. */
             static float32 toUnit( uint64 hash ) { return static_cast<float32>( static_cast<uint32>( hash ^ ( hash >> 32 ) ) & kUnitMask ) / static_cast<float32>( kUnitMask ); }
 
-            static bool passes( float32 rate, float32 unit ) { return rate >= 1.0f || unit < rate; }
+            static bool isSampled( float32 rate, float32 unit ) { return rate >= 1.0f || unit < rate; }
 
             static bool isSpoolFile( string_view path )
             {
@@ -228,7 +228,7 @@ namespace sw
         _bConsent          = SW_FALSE;
         _bInitialized      = SW_TRUE;
         _listEventOccurrence.assign( _schema.getEvents().size(), 0u );
-        _bSessionSampled = Internal::passes( _schema.getSettings()._sessionSampleRate, Internal::toUnit( HashUtil::computeStringHash64( _context->_sessionID ) ) ) ? SW_TRUE : SW_FALSE;
+        _bSessionSampled = Internal::isSampled( _schema.getSettings()._sessionSampleRate, Internal::toUnit( HashUtil::computeStringHash64( _context->_sessionID ) ) ) ? SW_TRUE : SW_FALSE;
 
         // 지난 실행이 닫지 못하고 남긴 파일까지 이어 받는다 — 동의가 켜지면 올리고, 동의가 꺼지면 `setConsent( false )` 가 지운다.
         vector<string> listFile;
@@ -477,7 +477,7 @@ namespace sw
         uint64 hash = HashUtil::computeStringHash64( _context->_sessionID );
         hash        = HashUtil::computeStringHash64( def._id.c_str(), def._id.size(), true, hash );
         hash        = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &occurrence ), sizeof( occurrence ), false, hash );
-        return TelemetryServiceInternal::passes( def._sampleRate, TelemetryServiceInternal::toUnit( hash ) );
+        return TelemetryServiceInternal::isSampled( def._sampleRate, TelemetryServiceInternal::toUnit( hash ) );
     }
 
     string TelemetryService::makeEventLineLocked( const TelemetryEvent& event, const TelemetryEventDef& def ) const

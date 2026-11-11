@@ -78,7 +78,7 @@ namespace sw
         uint32              _optionalCount{ 0 };
 
         /** @brief 이 역할을 읽는지(필수 또는 선택) 확인합니다. */
-        bool reads( RenderPassInputRole role ) const;
+        bool hasRole( RenderPassInputRole role ) const;
     };
 
     /**

@@ -135,7 +135,7 @@ namespace sw::editor
         return outSlot < pinCount;
     }
 
-    bool MaterialGraphModel::readsNode( uint32 fromIndex, uint32 targetIndex, vector<uint8>& inoutListSeen ) const
+    bool MaterialGraphModel::usesNode( uint32 fromIndex, uint32 targetIndex, vector<uint8>& inoutListSeen ) const
     {
         if ( fromIndex == targetIndex )
             return true;
@@ -145,7 +145,7 @@ namespace sw::editor
         for ( const MaterialGraphLink& link : _graph._listNode[fromIndex]._listLink )
         {
             const optional<uint32> upstream = _graph.findNodeIndex( link._fromNode );
-            if ( upstream.has_value() && readsNode( *upstream, targetIndex, inoutListSeen ) )
+            if ( upstream.has_value() && usesNode( *upstream, targetIndex, inoutListSeen ) )
                 return true;
         }
         return false;
@@ -163,7 +163,7 @@ namespace sw::editor
             return false;
         vector<uint8> listSeen;
         listSeen.resize( _graph._listNode.size() );
-        if ( readsNode( fromNode, toNode, listSeen ) )
+        if ( usesNode( fromNode, toNode, listSeen ) )
             return false;
 
         MaterialGraphLink newLink;

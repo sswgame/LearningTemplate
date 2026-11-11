@@ -224,7 +224,7 @@ namespace sw
                              moduleName, moduleStamp, engine::getEngineABIStamp() );
             return false;
         }
-        if ( ModuleShadowCopy::rejectsDelayImports( moduleName, modulePath, bytes ) )
+        if ( ModuleShadowCopy::shouldRejectDelayImports( moduleName, modulePath, bytes ) )
             return false;
 
         // 불변 조건: 여기서 전역 헤드는 비어 있다(등록할 때마다 비운다). 로드하면 이 모듈의 정적 등록기만 매달린다.

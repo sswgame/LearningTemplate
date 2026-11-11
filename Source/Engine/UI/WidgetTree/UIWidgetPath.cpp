@@ -27,7 +27,7 @@ namespace sw
                 const bool         bInside = widget.getGeometry().containsLocal( local );
                 const PanelWidget* pPanel  = castTo<const PanelWidget>( &widget );
                 // 자르는 패널 밖의 점은 자식도 받지 않는다(스크롤 영역 밖으로 삐져나온 항목).
-                const bool bChildrenReachable = pPanel != nullptr && ( pPanel->clipsChildren() == false || bInside );
+                const bool bChildrenReachable = pPanel != nullptr && ( pPanel->shouldClipChildren() == false || bInside );
                 inoutListWidget.push_back( widget.getID() );
                 if ( bChildrenReachable && pPanel->hasCustomPaintOrder() )
                 {

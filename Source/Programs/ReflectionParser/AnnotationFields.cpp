@@ -275,7 +275,7 @@ namespace sw
             // D) 검증 — AnnotationMeta.txt ↔ 필드 표
             // ------------------------------------------------------------------------------
             /** @brief 필드가 받는 값의 종류가 AnnotationMeta.txt 의 kind 와 맞는지 봅니다. */
-            static bool acceptsKind( const AnnotationValue value, const AnnotationBinding::Kind kind ) noexcept
+            static bool canAcceptKind( const AnnotationValue value, const AnnotationBinding::Kind kind ) noexcept
             {
                 switch ( value )
                 {
@@ -322,7 +322,7 @@ namespace sw
                                      entry._scope, binding._field, getBoundFieldID( binding ) );
                     return false;
                 }
-                if ( acceptsKind( pField->_value, binding._kind ) == false )
+                if ( canAcceptKind( pField->_value, binding._kind ) == false )
                 {
                     SW_LOG_ERROR_ID( "AnnotationFields.AnnotationMetaTxtDeclaresBut", "AnnotationMeta.txt [%#] declares '%#' as %#, but its field member in ParsedReflection.h "
                                                                                       "holds another kind of value.",
@@ -531,7 +531,7 @@ namespace sw
     template void AnnotationFields::emitEditorMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
     template void AnnotationFields::emitEditorMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
 
-    bool AnnotationFields::acceptsOnEvent( const string_view propertyFieldID )
+    bool AnnotationFields::canAcceptOnEvent( const string_view propertyFieldID )
     {
         if ( propertyFieldID == "Name" )
             return true;

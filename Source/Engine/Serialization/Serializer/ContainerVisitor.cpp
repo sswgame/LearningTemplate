@@ -123,7 +123,7 @@ namespace sw
                     const ContainerReadResult keyResult = reader.readMapKey( MutableValueAddress{ keyBytes.data() }, nested._keyTypeName );
                     // 키를 못 읽어도 자리를 알면 값을 읽는다 — 바이너리는 값을 지나야 다음 항목 자리에 선다.
                     ContainerReadResult valueResult{ ContainerReadResult::StreamBroken };
-                    if ( ContainerVisitor::stopsReading( keyResult ) == false )
+                    if ( ContainerVisitor::shouldStopReading( keyResult ) == false )
                         valueResult = readElementValue( valueBytes.data(), nested, plan, ContainerSlot::MapValue, reader, context );
 
                     const bool bInsert = keyResult == ContainerReadResult::Read && valueResult == ContainerReadResult::Read;
@@ -215,7 +215,7 @@ namespace sw
         return ( static_cast<uint8>( rhs ) > static_cast<uint8>( lhs ) ) ? rhs : lhs;
     }
 
-    bool ContainerVisitor::stopsReading( const ContainerReadResult result ) noexcept
+    bool ContainerVisitor::shouldStopReading( const ContainerReadResult result ) noexcept
     {
         switch ( result )
         {

@@ -632,7 +632,7 @@ namespace sw
             const bool bParticleInside = bDrawsParticles && state._particleSlotCursor < state._listParticleSlot.size() &&
                                          state._listParticleSlot[state._particleSlotCursor]._drawPosition <= orderIndex + groupCount;
             const bool bGroupEnds = nextBatchIndex != batchIndex + groupCount || bParticleInside;
-            if ( bGroupEnds || drawsCasterBatch( state._casterFilter, state._batches[nextBatchIndex] ) == false ||
+            if ( bGroupEnds || shouldDrawCasterBatch( state._casterFilter, state._batches[nextBatchIndex] ) == false ||
                  isSameDrawGroup( state._pso, state._passType, drawMode, head, headBinding, state._batches[nextBatchIndex], state._bindings[nextBatchIndex] ) == false )
                 break;
             ++groupCount;
@@ -654,8 +654,8 @@ namespace sw
             const uint32               batchIndex       = ( inoutState._pOrder != nullptr ) ? ( *inoutState._pOrder )[orderIndex] : orderIndex;
             const GPUMeshBatch&        head             = inoutState._batches[batchIndex];
             const GPUMeshBatchBinding& headBinding      = inoutState._bindings[batchIndex];
-            const bool                 bHeadNotDrawable = headBinding.hasGeometry() == false || head.hasDrawSlots() == false || drawsBatchInPass( inoutState._passType, head, headBinding ) == false ||
-                                          drawsCasterBatch( inoutState._casterFilter, head ) == false;
+            const bool                 bHeadNotDrawable = headBinding.hasGeometry() == false || head.hasDrawSlots() == false || shouldDrawBatchInPass( inoutState._passType, head, headBinding ) == false ||
+                                          shouldDrawCasterBatch( inoutState._casterFilter, head ) == false;
             if ( bHeadNotDrawable )
             {
                 ++orderIndex;
@@ -729,7 +729,7 @@ namespace sw
         // 겹침 모드(ShadedWireframe)는 배치를 두 번 그린다 — Lit PSO 로 한 번, 그 모드의 PSO(선 · 깊이 바이어스)로 한 번. 입자는 첫 번째에만 끼운다.
         // 보기 모드는 지금 그리는 뷰의 설정이다(씬 뷰만 ShadedWireframe 이고 게임 뷰는 Lit 일 수 있다).
         const RenderViewMode viewMode       = _pActiveView->_settings._viewMode;
-        const bool           bOverlayDraw   = getRenderViewModeInfo( viewMode )._bOverlay && FrameRendererUtil::appliesViewMode( state._passType );
+        const bool           bOverlayDraw   = getRenderViewModeInfo( viewMode )._bOverlay && FrameRendererUtil::shouldApplyViewMode( state._passType );
         const RenderViewMode arrDrawMode[]  = { bOverlayDraw ? RenderViewMode::Lit : viewMode, viewMode };
         const uint32         drawRoundCount = bOverlayDraw ? 2u : 1u;
         for ( uint32 drawRound = 0; drawRound < drawRoundCount; ++drawRound )
@@ -760,7 +760,7 @@ namespace sw
     bool FramePassExecutor::isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, RenderViewMode drawMode, const GPUMeshBatch& head,
                                              const GPUMeshBatchBinding& headBinding, const GPUMeshBatch& other, const GPUMeshBatchBinding& otherBinding ) const
     {
-        const bool bOtherBatchNotDrawable = otherBinding.hasGeometry() == false || other.hasDrawSlots() == false || drawsBatchInPass( passType, other, otherBinding ) == false;
+        const bool bOtherBatchNotDrawable = otherBinding.hasGeometry() == false || other.hasDrawSlots() == false || shouldDrawBatchInPass( passType, other, otherBinding ) == false;
         if ( bOtherBatchNotDrawable )
             return false;
         // 정점 · 인덱스 버퍼는 짝이다(풀의 둘, 아니면 메시의 둘) — 정점 버퍼가 같으면 인덱스 버퍼도 같다.

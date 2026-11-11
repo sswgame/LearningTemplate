@@ -204,7 +204,7 @@ namespace sw::editor
         return true;
     }
 
-    bool RetargetPanel::acceptsDocumentPath( string_view assetPath ) const
+    bool RetargetPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return StringUtil::endsWith( assetPath, RetargetProfile::kExtension );
     }
@@ -292,7 +292,7 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( 48.0f );
         (void)EditorWidgets::drawHintField( "##NewRetargetPath", _newDocumentPath.data(), _newDocumentPath.max_size(), "<resource id>.retarget.xml", "retarget.newPath" );
         ImGui::SameLine();
-        const bool bPathValid = acceptsDocumentPath( string_view( _newDocumentPath.c_str() ) );
+        const bool bPathValid = canAcceptDocumentPath( string_view( _newDocumentPath.c_str() ) );
         ImGui::BeginDisabled( bPathValid == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "New" ) ) )
             requestOpenDocument( string_view( _newDocumentPath.c_str() ) ); // 없는 파일이면 `loadDocument` 가 빈 문서로 연다

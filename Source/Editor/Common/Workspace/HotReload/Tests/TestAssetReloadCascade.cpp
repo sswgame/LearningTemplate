@@ -27,7 +27,7 @@ namespace
     using sw::editor::EditorReferenceIndexData;
 
     /** @brief 머티리얼만 펼쳐 넣는 종류로 본다(표의 칸 `AssetReferenceUse::InlinedAtLoad` 와 같은 판정 — 표 자체는 `MaterialRouteInlinesReferences` 가 본다). */
-    bool inlinesMaterial( sw::string_view assetID )
+    bool shouldInlineMaterial( sw::string_view assetID )
     {
         return sw::StringUtil::endsWith( assetID, ".material" );
     }
@@ -102,7 +102,7 @@ SW_TEST_CASE( AssetReloadCascadeTest, ParentChangeReloadsLoadedChildWithNewValue
     SW_EXPECT_EQUAL( sw::string( "0.5" ), readRoughness( *child ) ); // 다시 읽기 전에는 옛 부모 값이다
 
     sw::vector<sw::string> listOrder;
-    SW_REQUIRE_TRUE( AssetReloadCascade::planDependents( index, parentID, &inlinesMaterial, listOrder ) );
+    SW_REQUIRE_TRUE( AssetReloadCascade::planDependents( index, parentID, &shouldInlineMaterial, listOrder ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listOrder.size() );
     SW_EXPECT_EQUAL( sw::FileUtil::normalizePath( childID ), listOrder[0] );
     SW_REQUIRE_TRUE( child->loadFromAsset( sw::AssetID{ listOrder[0] } ) );
@@ -123,13 +123,13 @@ SW_TEST_CASE( AssetReloadCascadeTest, ThreeLevelChainReloadsInDependencyOrder )
                            {  "game/t/statue.mesh.xml",    "game/t/grand.material"},
     } );
     sw::vector<sw::string> listOrder;
-    SW_REQUIRE_TRUE( AssetReloadCascade::planDependents( index, "game/t/grand.material", &inlinesMaterial, listOrder ) );
+    SW_REQUIRE_TRUE( AssetReloadCascade::planDependents( index, "game/t/grand.material", &shouldInlineMaterial, listOrder ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listOrder.size() );
     SW_EXPECT_EQUAL( sw::string( "game/t/z_parent.material" ), listOrder[0] );
     SW_EXPECT_EQUAL( sw::string( "game/t/a_child.material" ), listOrder[1] );
 
     // 중간 고리만 바뀌면 그 아래만 다시 읽는다.
-    SW_REQUIRE_TRUE( AssetReloadCascade::planDependents( index, "game/t/z_parent.material", &inlinesMaterial, listOrder ) );
+    SW_REQUIRE_TRUE( AssetReloadCascade::planDependents( index, "game/t/z_parent.material", &shouldInlineMaterial, listOrder ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listOrder.size() );
     SW_EXPECT_EQUAL( sw::string( "game/t/a_child.material" ), listOrder[0] );
 }
@@ -145,7 +145,7 @@ SW_TEST_CASE( AssetReloadCascadeTest, ReferenceCycleIsAnError )
     } );
     sw::vector<sw::string> listOrder{ "stale" };
     SW_EXPECT_LOG( "AssetReloadCascade.ReferenceCycle" );
-    SW_EXPECT_FALSE( AssetReloadCascade::planDependents( index, "game/t/base.material", &inlinesMaterial, listOrder ) );
+    SW_EXPECT_FALSE( AssetReloadCascade::planDependents( index, "game/t/base.material", &shouldInlineMaterial, listOrder ) );
     SW_EXPECT_TRUE( listOrder.empty() );
 }
 

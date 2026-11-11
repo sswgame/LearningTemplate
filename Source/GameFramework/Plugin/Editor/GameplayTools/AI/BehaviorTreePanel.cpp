@@ -108,7 +108,7 @@ namespace sw::editor
         _nodeGraph.shutdown();
     }
 
-    bool BehaviorTreePanel::acceptsDocumentPath( string_view assetPath ) const
+    bool BehaviorTreePanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return StringUtil::endsWith( assetPath, BehaviorTreeAsset::kExtension );
     }

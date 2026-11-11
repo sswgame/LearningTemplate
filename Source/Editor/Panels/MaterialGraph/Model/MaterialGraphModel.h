@@ -125,7 +125,7 @@ namespace sw::editor
         void recordEdit( const utf8* pLabel, const utf8* pCoalesceKey, bool bChangesShader );
         void rebuildPins();
         /** @brief 노드 @p fromIndex 의 입력을 거슬러 @p targetIndex 에 닿으면 true 입니다(고리 검사). */
-        [[nodiscard]] bool readsNode( uint32 fromIndex, uint32 targetIndex, vector<uint8>& inoutListSeen ) const;
+        [[nodiscard]] bool usesNode( uint32 fromIndex, uint32 targetIndex, vector<uint8>& inoutListSeen ) const;
 
     private:
         MaterialGraphDef           _graph;

@@ -109,17 +109,17 @@ namespace sw
         return VectorUtil::findBy<&CreatureTileRule::_from>( _listRule, object );
     }
 
-    bool CreatureSpeciesDef::likesHabitat( const hashed_string& habitatID ) const
+    bool CreatureSpeciesDef::isFavoriteHabitat( const hashed_string& habitatID ) const
     {
         return VectorUtil::contains( _listHabitat, habitatID );
     }
 
-    bool CreatureSpeciesDef::likesFood( const hashed_string& itemID ) const
+    bool CreatureSpeciesDef::isFavoriteFood( const hashed_string& itemID ) const
     {
         return VectorUtil::contains( _listFood, itemID );
     }
 
-    bool CreatureSpeciesDef::likesGift( const hashed_string& itemID ) const
+    bool CreatureSpeciesDef::isFavoriteGift( const hashed_string& itemID ) const
     {
         return VectorUtil::contains( _listGift, itemID );
     }
@@ -129,12 +129,12 @@ namespace sw
         return VectorUtil::contains( _listAbility, abilityID );
     }
 
-    bool CreatureSpeciesDef::offersRequest( const hashed_string& questID ) const
+    bool CreatureSpeciesDef::canOfferRequest( const hashed_string& questID ) const
     {
         return VectorUtil::contains( _listRequest, questID );
     }
 
-    bool CreatureSpeciesDef::comesIn( DayPhase phase, const hashed_string& weatherID ) const
+    bool CreatureSpeciesDef::canAppearIn( DayPhase phase, const hashed_string& weatherID ) const
     {
         ScheduleConditionContext context;
         context._phase   = phase;

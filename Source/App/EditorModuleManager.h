@@ -127,7 +127,7 @@ namespace sw
          *          씬을 게임 코드가 바꿔 버립니다.
          */
         bool queryGameplayActive() const override;
-        bool controlsWorldPlay() const override { return hasEditor(); }
+        bool canControlWorldPlay() const override { return hasEditor(); }
         /**
          * @brief 무엇을 언로드하든 에디터 시뮬레이션부터 멈춥니다.
          * @details 게임만 언로드하면 에디터가 사라진 게임을 계속 돌리려 합니다. 에디터를 언로드하면 월드 플레이 상태는 에디터보다 오래 사는 `SceneManager` 와

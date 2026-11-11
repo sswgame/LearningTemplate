@@ -111,7 +111,7 @@ namespace sw
          *          구별되지 않으므로 그것으로 알아내지 않습니다).
          * @note 이미 반납된 포인터는 여기서 가려내지 못합니다(범위 안에 있기 때문입니다). 그쪽은 슬롯마다 있는 "쓰는 중" 표시가 가려냅니다.
          */
-        SW_INLINE bool owns( const T* pPtr ) const
+        SW_INLINE bool isOwnerOf( const T* pPtr ) const
         {
             if ( pPtr == nullptr )
                 return false;
@@ -134,7 +134,7 @@ namespace sw
                 return;
 
             // 다른 풀의 포인터라면 기다릴 이유가 없다. 바로, 정확하게 걸러 낸다.
-            if ( owns( pPtr ) == false )
+            if ( isOwnerOf( pPtr ) == false )
             {
                 SW_LOG_ASSERT( false, "LockFreeObjectPool::release: the pointer is not from this pool's storage." );
                 pPtr = nullptr;

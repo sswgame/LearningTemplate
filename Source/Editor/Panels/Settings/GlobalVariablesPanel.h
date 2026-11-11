@@ -54,7 +54,7 @@ namespace sw::editor
         [[nodiscard]] bool saveDocument() override;
         void               revertDocument() override;
         /** @brief 값은 전역 변수 관리자에 바로 적용되어 있어 창을 닫아도 잃는 것이 없다 — 닫기에 확인을 두면 저장하거나 값을 초기화하지 않고는 창을 숨길 수 없다. */
-        bool asksBeforeClose() const override { return false; }
+        bool shouldAskBeforeClose() const override { return false; }
         /** @brief 보일 변수 목록을 다시 지은 횟수입니다. 프로브 `Editor.GlobalVariablesRebuildCount` 가 읽습니다(등록 · 검색 글이 그대로면 늘지 않는다). */
         uint32 getListRebuildCount() const { return _model.getListRebuildCount(); }
 

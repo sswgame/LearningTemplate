@@ -56,7 +56,7 @@ namespace sw::editor
                 uint32 problemCount{ 0 };
                 for ( const AssetReference& reference : listReference )
                 {
-                    if ( params.isChecked( reference._path ) == false || params.resolves( reference._path, assets ) )
+                    if ( params.isChecked( reference._path ) == false || params.canResolve( reference._path, assets ) )
                         continue;
                     SW_LOG_ERROR_ID( "AssetReferenceCheck.Missing", "%#:%#: %# = '%#' does not exist", label, reference._line, reference._field, reference._path );
                     ++problemCount;

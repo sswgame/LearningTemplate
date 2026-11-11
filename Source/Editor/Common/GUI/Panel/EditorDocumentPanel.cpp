@@ -59,7 +59,7 @@ namespace sw::editor
             vector<EditorAssetIndexEntry> listEntry;
             EditorAssetIndex::collectEntries( editor::getSubsystem<AssetPaths>(), listEntry );
             EditorDocumentOpenUtil::collectCandidates( listEntry, _kind, [this]( string_view path )
-            { return acceptsDocumentPath( path ); }, _listOpenCandidate );
+            { return canAcceptDocumentPath( path ); }, _listOpenCandidate );
             _openFilter.clear();
             EditorInputGUI::openPopup( "##DocumentOpen" );
         }
@@ -213,7 +213,7 @@ namespace sw::editor
     string_view EditorDocumentPanel::getMatchingFocusedPath() const
     {
         const string_view focused = EditorAssetTypeRegistry::matchingFocusedPath( _kind );
-        return focused.empty() == false && acceptsDocumentPath( focused ) ? focused : string_view{};
+        return focused.empty() == false && canAcceptDocumentPath( focused ) ? focused : string_view{};
     }
 
     const utf8* EditorDocumentPanel::getPanelTitle() const

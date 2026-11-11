@@ -375,7 +375,7 @@ namespace sw
         const hashed_string    defaultName = pDefault != nullptr ? pDefault->_name : hashed_string{};
         for ( const NavMeshSurfaceComponent* pSurface : _listSurface )
         {
-            if ( pSurface->isActive() && pSurface->coversAgentType( agentType, defaultName ) )
+            if ( pSurface->isActive() && pSurface->supportsAgentType( agentType, defaultName ) )
                 return pSurface;
         }
         return nullptr;

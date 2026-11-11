@@ -232,16 +232,16 @@ SW_TEST_CASE( InputMapModelTest, SlotCaptureOnlyFitsSingleBindings )
 // 결함: 2D 합성 · 마우스 축의 발화 규칙 · Negate 를 고칠 수 있었지만 파일 형식에 그 칸이 없어 저장 뒤 말없이 사라졌다.
 SW_TEST_CASE( InputMapModelTest, FieldsTheFileCannotKeepAreNotEditable )
 {
-    SW_EXPECT_TRUE( InputMapModel::savesTriggerFields( BindingKind::SingleSlot ) );
-    SW_EXPECT_TRUE( InputMapModel::savesTriggerFields( BindingKind::Shortcut ) );
-    SW_EXPECT_TRUE( InputMapModel::savesTriggerFields( BindingKind::Chord ) );
-    SW_EXPECT_TRUE( InputMapModel::savesTriggerFields( BindingKind::Axis1DComposite ) );
-    SW_EXPECT_FALSE( InputMapModel::savesTriggerFields( BindingKind::Vector2DComposite ) );
-    SW_EXPECT_FALSE( InputMapModel::savesTriggerFields( BindingKind::GamepadStick2D ) );
-    SW_EXPECT_FALSE( InputMapModel::savesTriggerFields( BindingKind::MouseDelta2D ) );
-    SW_EXPECT_FALSE( InputMapModel::savesTriggerFields( BindingKind::MouseWheel1D ) );
-    SW_EXPECT_FALSE( InputMapModel::savesTriggerFields( BindingKind::VirtualJoystick2D ) );
-    SW_EXPECT_FALSE( InputMapModel::savesTriggerFields( BindingKind::AnyKey ) );
+    SW_EXPECT_TRUE( InputMapModel::canSaveTriggerProperties( BindingKind::SingleSlot ) );
+    SW_EXPECT_TRUE( InputMapModel::canSaveTriggerProperties( BindingKind::Shortcut ) );
+    SW_EXPECT_TRUE( InputMapModel::canSaveTriggerProperties( BindingKind::Chord ) );
+    SW_EXPECT_TRUE( InputMapModel::canSaveTriggerProperties( BindingKind::Axis1DComposite ) );
+    SW_EXPECT_FALSE( InputMapModel::canSaveTriggerProperties( BindingKind::Vector2DComposite ) );
+    SW_EXPECT_FALSE( InputMapModel::canSaveTriggerProperties( BindingKind::GamepadStick2D ) );
+    SW_EXPECT_FALSE( InputMapModel::canSaveTriggerProperties( BindingKind::MouseDelta2D ) );
+    SW_EXPECT_FALSE( InputMapModel::canSaveTriggerProperties( BindingKind::MouseWheel1D ) );
+    SW_EXPECT_FALSE( InputMapModel::canSaveTriggerProperties( BindingKind::VirtualJoystick2D ) );
+    SW_EXPECT_FALSE( InputMapModel::canSaveTriggerProperties( BindingKind::AnyKey ) );
 }
 
 // 표기는 수식 키까지 보인다. 슬롯 하나만 보이면 Ctrl+S 가 S 로 읽힌다.
@@ -330,9 +330,9 @@ SW_TEST_CASE( InputMapConflictsTest, ViewIsSeenFromTheAction )
     map.bind( hashed_string( "B" ), Key::Space );
     map.bind( hashed_string( "C" ), Key::X );
     InputMapConflict::collect( map, listConflict );
-    SW_EXPECT_TRUE( InputMapConflict::involves( listConflict, hashed_string( "A" ), 1 ) );
-    SW_EXPECT_FALSE( InputMapConflict::involves( listConflict, hashed_string( "A" ), 0 ) );
-    SW_EXPECT_FALSE( InputMapConflict::involves( listConflict, hashed_string( "C" ) ) );
+    SW_EXPECT_TRUE( InputMapConflict::isInvolved( listConflict, hashed_string( "A" ), 1 ) );
+    SW_EXPECT_FALSE( InputMapConflict::isInvolved( listConflict, hashed_string( "A" ), 0 ) );
+    SW_EXPECT_FALSE( InputMapConflict::isInvolved( listConflict, hashed_string( "C" ) ) );
 
     vector<InputMapConflictView> listView;
     InputMapConflict::collectFor( listConflict, hashed_string( "B" ), listView );

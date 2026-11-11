@@ -277,23 +277,23 @@ SW_TEST_CASE( LockFreeObjectPoolTest, OwnsOnlyItsOwnBlocks )
     sw::LockFreeObjectPool<int64, kCapacity> pool;
     sw::LockFreeObjectPool<int64, kCapacity> other;
 
-    SW_EXPECT_FALSE( pool.owns( nullptr ) );
+    SW_EXPECT_FALSE( pool.isOwnerOf( nullptr ) );
 
     int64 stackValue{ 7 };
-    SW_EXPECT_FALSE_MSG( pool.owns( &stackValue ), "스택 변수를 자기 블록이라고 말했다" );
+    SW_EXPECT_FALSE_MSG( pool.isOwnerOf( &stackValue ), "스택 변수를 자기 블록이라고 말했다" );
 
     int64* pMine = pool.acquire( 1 );
     SW_REQUIRE_NOT_NULL( pMine );
-    SW_EXPECT_TRUE_MSG( pool.owns( pMine ), "자기가 내준 블록을 자기 것이 아니라고 말했다" );
+    SW_EXPECT_TRUE_MSG( pool.isOwnerOf( pMine ), "자기가 내준 블록을 자기 것이 아니라고 말했다" );
 
     int64* pTheirs = other.acquire( 2 );
     SW_REQUIRE_NOT_NULL( pTheirs );
-    SW_EXPECT_FALSE_MSG( pool.owns( pTheirs ), "다른 풀의 블록을 자기 것이라고 말했다" );
-    SW_EXPECT_FALSE_MSG( other.owns( pMine ), "다른 풀의 블록을 자기 것이라고 말했다" );
+    SW_EXPECT_FALSE_MSG( pool.isOwnerOf( pTheirs ), "다른 풀의 블록을 자기 것이라고 말했다" );
+    SW_EXPECT_FALSE_MSG( other.isOwnerOf( pMine ), "다른 풀의 블록을 자기 것이라고 말했다" );
 
     // 블록 **중간**을 가리키는 포인터는 이 풀의 것이 아니다 — 범위만 보고 간격을 안 보면 통과한다.
     const int64* pInterior = reinterpret_cast<const int64*>( reinterpret_cast<const uint8*>( pMine ) + 1 );
-    SW_EXPECT_FALSE_MSG( pool.owns( pInterior ), "블록 중간을 가리키는 포인터를 자기 블록이라고 말했다" );
+    SW_EXPECT_FALSE_MSG( pool.isOwnerOf( pInterior ), "블록 중간을 가리키는 포인터를 자기 블록이라고 말했다" );
 
     pool.release( pMine );
     other.release( pTheirs );

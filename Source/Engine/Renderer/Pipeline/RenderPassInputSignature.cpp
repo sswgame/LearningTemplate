@@ -82,7 +82,7 @@ namespace sw
         return bDepthFormat ? RenderPassInputRole::SceneDepth : RenderPassInputRole::SourceColor;
     }
 
-    bool RenderPassInputSignature::reads( RenderPassInputRole role ) const
+    bool RenderPassInputSignature::hasRole( RenderPassInputRole role ) const
     {
         for ( uint32 index = 0; index < _requiredCount; ++index )
         {

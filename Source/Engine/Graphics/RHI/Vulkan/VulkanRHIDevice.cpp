@@ -1044,7 +1044,7 @@ namespace sw
             if ( bSoftwareAdapter && candidateProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_CPU )
                 continue;
             // 셰이더는 네이티브 bindless(SW_BINDLESS)로만 쿠킹한다 — 기능 · 한도가 모자란 장치(모바일에 흔하다)는 텍스처 세트를 만들지 못하고 그리지 못한다.
-            if ( meetsBindlessRequirements( device, candidateProperties.deviceName ) == false )
+            if ( isBindlessCapable( device, candidateProperties.deviceName ) == false )
                 continue;
 
             uint32 queueFamilyCount{ 0 };
@@ -1100,7 +1100,7 @@ namespace sw
         return _physicalDevice != nullptr;
     }
 
-    bool VulkanRHIDevice::meetsBindlessRequirements( VkPhysicalDevice device, const utf8* pDeviceName )
+    bool VulkanRHIDevice::isBindlessCapable( VkPhysicalDevice device, const utf8* pDeviceName )
     {
         VkPhysicalDeviceVulkan12Features features12{};
         features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;

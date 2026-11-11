@@ -131,7 +131,7 @@ namespace sw::editor
         _edit.markEdited();
     }
 
-    bool AudioEventBrowserPanel::acceptsDocumentPath( string_view assetPath ) const
+    bool AudioEventBrowserPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return StringUtil::endsWith( assetPath, AudioEventLibrary::kExtension, true );
     }

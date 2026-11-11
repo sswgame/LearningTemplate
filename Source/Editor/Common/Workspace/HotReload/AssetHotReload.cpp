@@ -483,7 +483,7 @@ namespace sw::editor
         // 바뀐 파일의 나가는 참조는 순환 검사에만 쓰인다(따라가는 것은 들어오는 참조) — `_base` 를 적지 않은 파일(체크아웃 한 번에 수천 개)은 표를 다시 정렬하지 않는다.
         // 색인에 없는 새 파일도 여기서 넣지 않는다 — 있으면 추적기가 "생긴 파일" 을 몰라 다른 파일의 참조 판정을 다시 보지 않는다.
         string changedText;
-        if ( inlinesReferences( assetID ) && _pReferenceTracker->getIndex().containsFile( assetID ) &&
+        if ( shouldInlineReferences( assetID ) && _pReferenceTracker->getIndex().containsFile( assetID ) &&
              FileUtil::readOptionalTextFile( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), assetID ), changedText ) == OptionalFileRead::Read &&
              changedText.find( DataInheritance::kBaseAttribute ) != string::npos )
             _pReferenceTracker->refreshFile( assetID );
@@ -494,7 +494,7 @@ namespace sw::editor
             return;
         }
         vector<string> listDependent;
-        if ( AssetReloadCascade::planDependents( index, assetID, &AssetHotReload::inlinesReferences, listDependent ) == false )
+        if ( AssetReloadCascade::planDependents( index, assetID, &AssetHotReload::shouldInlineReferences, listDependent ) == false )
             return; // 순환 — 계획이 오류를 남겼다
         for ( const string& dependentID : listDependent )
         {
@@ -508,7 +508,7 @@ namespace sw::editor
         }
     }
 
-    bool AssetHotReload::inlinesReferences( string_view assetID )
+    bool AssetHotReload::shouldInlineReferences( string_view assetID )
     {
         return EditorAssetTypeRegistry::findReloadRoute( assetID )._referenceUse == AssetReferenceUse::InlinedAtLoad;
     }

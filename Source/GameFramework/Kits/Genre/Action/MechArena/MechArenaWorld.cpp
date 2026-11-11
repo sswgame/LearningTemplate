@@ -566,7 +566,7 @@ namespace sw
                     // 주무기는 무기와 그 기본 탄이 둘 다 있고, 무기가 그 탄을 받아야 쏠 수 있다.
                     const WeaponDef*     pWeapon     = _pWeaponCatalog != nullptr ? _pWeaponCatalog->find( slot._weaponID ) : nullptr;
                     const ProjectileDef* pProjectile = pWeapon != nullptr && _pProjectileCatalog != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID ) : nullptr;
-                    bComplete                        = pProjectile != nullptr && pWeapon->accepts( *pProjectile );
+                    bComplete                        = pProjectile != nullptr && pWeapon->canAccept( *pProjectile );
                 }
                 if ( slot._kind == MechWeaponKind::Special )
                 {

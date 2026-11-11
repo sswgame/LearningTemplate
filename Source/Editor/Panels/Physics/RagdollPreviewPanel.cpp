@@ -316,7 +316,7 @@ namespace sw::editor
         return true;
     }
 
-    bool RagdollPreviewPanel::acceptsDocumentPath( string_view assetPath ) const
+    bool RagdollPreviewPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return StringUtil::endsWith( assetPath, RagdollPreviewPanelInternal::kDocumentSuffix );
     }

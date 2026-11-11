@@ -65,7 +65,7 @@ namespace sw
              *          쓸 때가 아니라 렌더 사본을 만들 때(`rebuildRenderData`, 게임 스레드, 부모 초기화 뒤) 본다 — 부모의 속성 목록은 디바이스 초기화가 채우고
              *          맞추므로 쓸 때 읽으면 비어 있거나(검사가 조용히 빠진다) 비동기 씬 로드 워커에서 게임 스레드의 초기화와 겹친다(언리얼 MID 도 쓸 때는 이름 · 값만 둔다).
              */
-            [[nodiscard]] static bool acceptsShape( const Material* pParent, hashed_string name, bool bScalar )
+            [[nodiscard]] static bool canAcceptShape( const Material* pParent, hashed_string name, bool bScalar )
             {
                 const MaterialProperty* pProp = pParent != nullptr ? pParent->findProperty( name ) : nullptr;
                 if ( pProp == nullptr )
@@ -267,7 +267,7 @@ namespace sw
         // 어긋난 값은 한 번 알리고 버린다(쓸 때 거절하던 것과 같은 결과) — 남겨 두면 사본을 만들 때마다 다시 알린다.
         const Material* pParent = _pParentMaterial;
         VectorUtil::removeIf( _listValueOverride, [pParent]( const ValueOverride& valueOverride )
-        { return valueOverride._kind != ValueKind::Text && MaterialInstanceInternal::acceptsShape( pParent, valueOverride._name, valueOverride._kind == ValueKind::Scalar ) == false; } );
+        { return valueOverride._kind != ValueKind::Text && MaterialInstanceInternal::canAcceptShape( pParent, valueOverride._name, valueOverride._kind == ValueKind::Scalar ) == false; } );
     }
 
     string MaterialInstance::ValueOverride::makeText() const

@@ -179,7 +179,7 @@ namespace sw
             for ( int32 speciesIndex = 0; speciesIndex < static_cast<int32>( listSpecies.size() ) && hasRoom( instance ); ++speciesIndex )
             {
                 const CreatureSpeciesDef& species      = listSpecies[static_cast<size_t>( speciesIndex )];
-                const bool                bSkipSpecies = findCreatureIndex( species._id ).has_value() || species.likesHabitat( instance._habitatID ) == false || species.comesIn( phase, weatherID ) == false;
+                const bool                bSkipSpecies = findCreatureIndex( species._id ).has_value() || species.isFavoriteHabitat( instance._habitatID ) == false || species.canAppearIn( phase, weatherID ) == false;
                 if ( bSkipSpecies )
                     continue;
                 // 서식지 번호가 아니라 위치로 섞는다. 같은 배치면 지어 온 순서와 상관없이 같은 답이 나온다.
@@ -233,9 +233,9 @@ namespace sw
         creature._lastGiftDay              = getDay();
         const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( speciesID );
         int32                     points   = _settings._giftPoints;
-        if ( pSpecies != nullptr && pSpecies->likesGift( itemID ) )
+        if ( pSpecies != nullptr && pSpecies->isFavoriteGift( itemID ) )
             points = _settings._likedGiftPoints;
-        else if ( pSpecies != nullptr && pSpecies->likesFood( itemID ) )
+        else if ( pSpecies != nullptr && pSpecies->isFavoriteFood( itemID ) )
             points = _settings._foodPoints;
         changeFriendship( speciesID, points );
         return CreatureInteractResult::Ok;
@@ -246,7 +246,7 @@ namespace sw
         if ( findCreatureIndex( speciesID ).has_value() == false )
             return CreatureRequestResult::UnknownCreature;
         const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( speciesID );
-        if ( pSpecies == nullptr || pSpecies->offersRequest( questID ) == false )
+        if ( pSpecies == nullptr || pSpecies->canOfferRequest( questID ) == false )
             return CreatureRequestResult::NotOffered;
         if ( _pQuestLog == nullptr )
             return CreatureRequestResult::Unavailable;
@@ -572,7 +572,7 @@ namespace sw
             const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( creature._speciesID );
             for ( const HabitatInstance& instance : _listHabitat )
             {
-                const bool bHabitatHasRoom = pSpecies != nullptr && pSpecies->likesHabitat( instance._habitatID ) && hasRoom( instance );
+                const bool bHabitatHasRoom = pSpecies != nullptr && pSpecies->isFavoriteHabitat( instance._habitatID ) && hasRoom( instance );
                 if ( bHabitatHasRoom )
                 {
                     creature._habitat = instance._id;
@@ -674,7 +674,7 @@ namespace sw
         for ( const TownCreature& creature : _listCreature )
         {
             const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( creature._speciesID );
-            if ( pSpecies == nullptr || pSpecies->offersRequest( questID ) == false )
+            if ( pSpecies == nullptr || pSpecies->canOfferRequest( questID ) == false )
                 continue;
             _eventBuffer.push( CreatureTownEvent{ creature._speciesID, questID, 0, CreatureTownEvent::Kind::RequestCompleted } );
             changeFriendship( creature._speciesID, _settings._requestPoints );

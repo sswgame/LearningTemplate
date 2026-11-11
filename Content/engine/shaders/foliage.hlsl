@@ -10,7 +10,7 @@
  * 잎 · 꽃 카드(텍스처 알파로 모양을 내는 판)는 알파 컷오프 머티리얼(MATERIAL_ALPHA_CUTOFF — _alphaCutoff 보다 작은 알파를 버린다)이다 — 깊이 · 그림자 패스도
  * 같은 표면 훅으로 오린다(뼈대). 컷오프는 머티리얼 값이라 정점이 읽어 보간 칸으로 넘긴다.
  * 흔드는 머티리얼(MATERIAL_VERTEX_DEFORM — 두 머티리얼이 늘 가진다)의 그림자는 이 파일의 그림자 퍼뮤테이션(SW_PASS_SHADOW)이 같은 흔들림으로 빛 행렬에 투영한다 —
- * 정점 스테이지뿐이다(FrameRendererUtil::drawsDepthWithMaterialShader). 깊이 프리패스에서는 빠진다(뼈대가 머티리얼 없는 사용자의 깊이 프리패스에서 뺀다 —
+ * 정점 스테이지뿐이다(FrameRendererUtil::usesMaterialShaderForDepth). 깊이 프리패스에서는 빠진다(뼈대가 머티리얼 없는 사용자의 깊이 프리패스에서 뺀다 —
  * 흔들린 정점이 프리패스 깊이와 어긋나지 않게). 풀(grass.material)은 MATERIAL_SHADOW_CAST_OFF 로 그림자를 끈다(그림자 패스에서 shadow_depth.hlsl 이 뺀다).
  */
 #include "lighting.hlsli"

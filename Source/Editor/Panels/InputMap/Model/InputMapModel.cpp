@@ -215,7 +215,7 @@ namespace sw::editor
         return recordEdit( true );
     }
 
-    bool InputMapModel::savesTriggerFields( BindingKind kind )
+    bool InputMapModel::canSaveTriggerProperties( BindingKind kind )
     {
         return kind == BindingKind::SingleSlot || kind == BindingKind::Shortcut || kind == BindingKind::Axis1DComposite || kind == BindingKind::Chord;
     }
@@ -223,7 +223,7 @@ namespace sw::editor
     bool InputMapModel::canEditTriggerFields( const hashed_string& action, uint32 bindIndex ) const
     {
         const ActionBinding* pBinding = _inputMap.getBinding( action, bindIndex );
-        return pBinding != nullptr && savesTriggerFields( pBinding->_kind );
+        return pBinding != nullptr && canSaveTriggerProperties( pBinding->_kind );
     }
 
     bool InputMapModel::setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger )
@@ -411,7 +411,7 @@ namespace sw::editor
     {
         // 겹침 규칙은 충돌 칸과 한 벌이다. 그대로 두는 것은 덮어쓰기를 원할 수 있어서이고, 충돌 칸이 다시 잡기 · 지우기를 준다.
         refreshConflicts();
-        if ( InputMapConflict::involves( _listConflict, action, bindIndex ) )
+        if ( InputMapConflict::isInvolved( _listConflict, action, bindIndex ) )
             SW_LOG_WARNING_ID( "InputMapModel.BindingConflictsSameLayer", "Binding %# of '%#' now fires together with another action on the same layer - see Conflicts", bindIndex, action.c_str() );
         return recordEdit( true );
     }

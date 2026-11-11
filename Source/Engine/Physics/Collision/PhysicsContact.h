@@ -48,7 +48,7 @@ namespace sw
         uint8               _bOverlap{ SW_FALSE };  ///< 막지 않는 겹침인지 나타낸다(어느 쪽이 트리거이거나 겹침 전용 바디 — `PhysicsBodyDesc::_bOverlapOnly`).
 
         /** @brief 어느 쪽이든 트리거면 true 를 반환합니다. */
-        bool involvesTrigger() const { return _bTriggerA == SW_TRUE || _bTriggerB == SW_TRUE; }
+        bool usesTrigger() const { return _bTriggerA == SW_TRUE || _bTriggerB == SW_TRUE; }
         /** @brief 막는 접촉이 아니라 감지(겹침)면 true 를 반환합니다. 받는 쪽은 `onOverlap*` 을 받습니다. */
         bool isOverlap() const { return _bOverlap == SW_TRUE; }
     };

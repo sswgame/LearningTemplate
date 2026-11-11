@@ -154,7 +154,7 @@ namespace sw
             {
                 for ( const FitArgument& argument : interaction._listArgument )
                 {
-                    if ( pOperator->acceptsArgument( argument._name ) == false )
+                    if ( pOperator->canAcceptArgument( argument._name ) == false )
                         reader.addError( "Character.FitArgumentUnknown", node, string( "operator '" ) + interaction._operator.c_str() + "' has no argument '" + argument._name.c_str() + "'" );
                 }
             }

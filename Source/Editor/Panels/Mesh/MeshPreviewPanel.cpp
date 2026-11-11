@@ -179,7 +179,7 @@ namespace sw::editor
         return true;
     }
 
-    bool MeshPreviewPanel::acceptsDocumentPath( string_view assetPath ) const
+    bool MeshPreviewPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return StringUtil::endsWith( assetPath, MeshAssetFormat::kExtension );
     }

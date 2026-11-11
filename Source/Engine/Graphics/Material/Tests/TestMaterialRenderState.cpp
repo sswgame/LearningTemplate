@@ -312,5 +312,5 @@ SW_TEST_CASE( MaterialRenderStateTest, DrawListMustMatchTheShader )
     SW_EXPECT_FALSE( RenderStateTestUtil::load( *Material::create(), "alphaMode=\"Blend\"" ) ); // 블렌드인데 define 이 없다
     shared_ptr<Material> glass = Material::create();
     SW_REQUIRE_TRUE( RenderStateTestUtil::load( *glass, "alphaMode=\"Blend\"", kGlass ) );
-    SW_EXPECT_TRUE( glass->readsSceneColorCopy() );
+    SW_EXPECT_TRUE( glass->usesSceneColorCopy() );
 }

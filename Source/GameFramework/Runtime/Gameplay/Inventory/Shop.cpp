@@ -148,7 +148,7 @@ namespace sw
         return VectorUtil::findBy<&ShopStockDef::_itemID>( _listStock, itemID );
     }
 
-    bool ShopDef::refusesCategory( const hashed_string& category ) const
+    bool ShopDef::isRefusedCategory( const hashed_string& category ) const
     {
         return category.empty() == false && VectorUtil::contains( _listRefusedCategory, category );
     }
@@ -486,7 +486,7 @@ namespace sw
         const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->find( itemID ) : nullptr;
         if ( pItem == nullptr || pItem->_category.empty() )
             return false;
-        return shop.refusesCategory( pItem->_category ) || VectorUtil::contains( runtime._listExtraRefused, pItem->_category );
+        return shop.isRefusedCategory( pItem->_category ) || VectorUtil::contains( runtime._listExtraRefused, pItem->_category );
     }
 
     void ShopManager::serializeState( StateIO& io )

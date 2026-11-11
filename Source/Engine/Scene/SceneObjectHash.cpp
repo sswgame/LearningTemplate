@@ -426,7 +426,7 @@ namespace sw
                 }
             }
         }
-        if ( DebugReplyLine::fits( outLine.size() ) == false )
+        if ( DebugReplyLine::canFit( outLine.size() ) == false )
         {
             SW_LOG_ERROR_ID( "State.ReportLineTooLong", "SceneStateHash: the object report line is %# bytes for %# objects, over the %# byte line limit - not written", outLine.size(), listObject.size(), DebugReplyLine::kMaxBytes );
             outLine.clear();
@@ -448,7 +448,7 @@ namespace sw
             return false;
         body = StringUtil::trim( body.substr( tickEnd + 1 ) );
         body = body.substr( 0, body.find_first_of( " \t" ) ); // 로그 꼬리는 읽지 않는다
-        if ( DebugReplyLine::fits( static_cast<size_t>( body.data() + body.size() - ( line.data() + prefixAt ) ) ) == false )
+        if ( DebugReplyLine::canFit( static_cast<size_t>( body.data() + body.size() - ( line.data() + prefixAt ) ) ) == false )
             return false; // 쓰는 쪽이 만들 수 없는 길이 — 잘린 줄이거나 다른 글이다
         if ( body != "-" )
         {
@@ -737,7 +737,7 @@ namespace sw
         }
         block.pop_back(); // 마지막 ','
         outText += block;
-        if ( DebugReplyLine::fits( outText.size() ) == false )
+        if ( DebugReplyLine::canFit( outText.size() ) == false )
         {
             SW_LOG_ERROR_ID( "State.ReportLineTooLong", "StateHashHistory: the hash line is %# bytes for %# samples, over the %# byte line limit - not written", outText.size(), listSample.size(),
                              DebugReplyLine::kMaxBytes );
@@ -755,7 +755,7 @@ namespace sw
         outListSample.clear();
         string_view body = StringUtil::trim( line.substr( prefixAt + string_view( kReportLinePrefix ).size() ) );
         body             = body.substr( 0, body.find_first_of( " \t" ) ); // 로그 꼬리는 읽지 않는다
-        if ( DebugReplyLine::fits( static_cast<size_t>( body.data() + body.size() - ( line.data() + prefixAt ) ) ) == false )
+        if ( DebugReplyLine::canFit( static_cast<size_t>( body.data() + body.size() - ( line.data() + prefixAt ) ) ) == false )
             return false; // 쓰는 쪽이 만들 수 없는 길이 — 잘린 줄이거나 다른 글이다
         if ( body == "-" )
             return true;

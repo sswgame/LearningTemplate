@@ -521,7 +521,7 @@ namespace sw
         return bInside;
     }
 
-    bool WaterBodyComponent::coversPosition( float32 worldX, float32 worldZ ) const
+    bool WaterBodyComponent::containsPosition( float32 worldX, float32 worldZ ) const
     {
         float32 baseHeight{ 0.0f };
         return findBaseHeight( worldX, worldZ, baseHeight );
@@ -599,7 +599,7 @@ namespace sw
     {
         for ( WaterBodyComponent* pWater : manager.getComponentRegistry().getAll<WaterBodyComponent>() )
         {
-            if ( pWater->isPendingDestroy() == false && pWater->coversPosition( worldX, worldZ ) )
+            if ( pWater->isPendingDestroy() == false && pWater->containsPosition( worldX, worldZ ) )
                 return pWater;
         }
         return nullptr;

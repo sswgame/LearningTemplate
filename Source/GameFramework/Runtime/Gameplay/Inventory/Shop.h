@@ -162,7 +162,7 @@ namespace sw
         int32 _restockDays{ 1 }; ///< 재입고 주기(일). 0 이면 재입고하지 않는다
 
         const ShopStockDef* findStock( const hashed_string& itemID ) const;
-        bool                refusesCategory( const hashed_string& category ) const;
+        bool                isRefusedCategory( const hashed_string& category ) const;
     };
 } // namespace sw
 

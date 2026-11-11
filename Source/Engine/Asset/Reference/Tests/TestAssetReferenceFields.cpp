@@ -97,13 +97,13 @@ SW_TEST_CASE( AssetReferenceFieldsTest, ImportedOutputsResolveFromTheirSource )
     AssetIDSet assets;
     assets.addFile( "common/models_raw/kaykit/knight.glb" );
     assets.addFile( "game/x/textures_raw/wall.png" );
-    SW_EXPECT_TRUE( params.resolves( "common/models/kaykit/knight.mesh", assets ) );
-    SW_EXPECT_TRUE( params.resolves( "common/models/kaykit/knight/clips", assets ) ); // 옆 폴더
-    SW_EXPECT_TRUE( params.resolves( "common/models/kaykit/knight/knight.skeleton.xml", assets ) );
-    SW_EXPECT_TRUE( params.resolves( "game/x/textures/wall.dds", assets ) );
-    SW_EXPECT_TRUE( params.resolves( "common/models_raw", assets ) ); // 폴더
-    SW_EXPECT_FALSE( params.resolves( "common/models/kaykit/rogue.mesh", assets ) );
-    SW_EXPECT_FALSE( params.resolves( "game/x/textures/floor.dds", assets ) );
+    SW_EXPECT_TRUE( params.canResolve( "common/models/kaykit/knight.mesh", assets ) );
+    SW_EXPECT_TRUE( params.canResolve( "common/models/kaykit/knight/clips", assets ) ); // 옆 폴더
+    SW_EXPECT_TRUE( params.canResolve( "common/models/kaykit/knight/knight.skeleton.xml", assets ) );
+    SW_EXPECT_TRUE( params.canResolve( "game/x/textures/wall.dds", assets ) );
+    SW_EXPECT_TRUE( params.canResolve( "common/models_raw", assets ) ); // 폴더
+    SW_EXPECT_FALSE( params.canResolve( "common/models/kaykit/rogue.mesh", assets ) );
+    SW_EXPECT_FALSE( params.canResolve( "game/x/textures/floor.dds", assets ) );
     SW_EXPECT_FALSE( params.isChecked( "scratch/assetmanage/probe.material" ) );
     SW_EXPECT_FALSE( params.isReferrer( "common/models/kaykit/knight/materials/a.material" ) ); // 임포터가 쓴 산출물
     SW_EXPECT_TRUE( params.isReferrer( "game/x/maps/a.scene.xml" ) );

@@ -89,7 +89,7 @@ namespace sw
         }
 
         /** @brief 타입 @p type 이 어느 깊이에든 잎을 품을 수 있으면 true 입니다(타입 그래프로 판정하고 기억한다). false 면 내려갈 필요가 없습니다. */
-        bool holdsLeaf( const TypeInfo& type ) { return typeHoldsLeaf( type ); }
+        bool hasLeaf( const TypeInfo& type ) { return typeHoldsLeaf( type ); }
 
         /** @brief 컨테이너 @p container (컨테이너 값 자체의 주소, 모양 @p shape)의 원소 · 키 · 값을 내려가 잎을 바꿉니다. */
         [[nodiscard]] bool walkContainer( const MutableValueAddress container, const NestedContainerInfo& shape )

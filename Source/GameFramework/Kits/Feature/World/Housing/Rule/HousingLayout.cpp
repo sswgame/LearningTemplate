@@ -57,7 +57,7 @@ namespace sw
             }
 
             /** @brief @p layer 의 부품이 @p other 층의 칸과 겹칠 수 없으면 true 입니다(바닥끼리, 구조물 · 가구끼리). */
-            static bool conflicts( HousingPartLayer layer, HousingPartLayer other )
+            static bool isConflicting( HousingPartLayer layer, HousingPartLayer other )
             {
                 const bool bFloor      = layer == HousingPartLayer::Floor;
                 const bool bOtherFloor = other == HousingPartLayer::Floor;
@@ -311,7 +311,7 @@ namespace sw
         for ( int32 layerIndex = 0; layerIndex < Internal::kLayerCount; ++layerIndex )
         {
             const HousingPartLayer layer = static_cast<HousingPartLayer>( layerIndex );
-            if ( Internal::conflicts( part._layer, layer ) == false )
+            if ( Internal::isConflicting( part._layer, layer ) == false )
                 continue;
             for ( int32 z = outMin._y; z <= outMax._y; ++z )
             {

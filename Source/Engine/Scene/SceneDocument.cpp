@@ -769,7 +769,7 @@ namespace sw
         // 쿠킹본을 읽으면 소스와 어긋난 씬을 모르고 쓴다(`ContentSource`).
         if ( FileUtil::hasExtension( path, ".bin" ) )
             return loadBinary( assetID );
-        if ( AssetIO::readsSource() )
+        if ( AssetIO::usesSource() )
             return loadXML( AssetID{ path } );
         if ( binPath.empty() == false && loadBinary( AssetID{ binPath } ) )
             return true;

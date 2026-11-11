@@ -61,7 +61,7 @@ namespace sw
         vector<hashed_string> _listSeason{}; ///< 자라는 계절이다(`seasons`, 필수). 시계의 계절 이름이며 `WorldClockSettings::_listSeason` 과 같다
 
         /** @brief @p season 에 자라면 true 를 반환합니다. */
-        bool growsIn( const hashed_string& season ) const { return VectorUtil::contains( _listSeason, season ); }
+        bool canGrowIn( const hashed_string& season ) const { return VectorUtil::contains( _listSeason, season ); }
     };
 } // namespace sw
 

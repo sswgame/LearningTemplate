@@ -276,7 +276,7 @@ namespace sw
         /** @brief 그 물건을 @p amount 만큼 받을 수 있고 같은 도로망에 있는 가장 가까운 창고입니다. 없으면 비어 있습니다. */
         optional<int32> findStorageFor( const hashed_string& goodID, int32 roadComponent, const int2& from, int32 amount ) const;
         int32           computeStorageFree( const CityBuilding& storage ) const;
-        bool            meetsHouseLevel( const CityBuilding& house, int32 level ) const;
+        bool            hasReachedHouseLevel( const CityBuilding& house, int32 level ) const;
         bool            isRoad( int32 x, int32 y ) const;
         int32           getRoadComponent( const int2& tile ) const;
 

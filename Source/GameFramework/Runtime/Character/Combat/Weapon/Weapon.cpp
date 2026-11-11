@@ -58,7 +58,7 @@ namespace sw
         return ConditionExpr::compile( _accepts, sourceName, _acceptsExpr, WeaponInternal::kBareTag );
     }
 
-    bool WeaponDef::accepts( const ProjectileDef& projectile ) const
+    bool WeaponDef::canAccept( const ProjectileDef& projectile ) const
     {
         GameplayContext context;
         context.set<SubjectTagsSlot>( &projectile._tags );
@@ -121,7 +121,7 @@ namespace sw
                 bComplete = false;
                 continue;
             }
-            if ( weapon.accepts( *pProjectile ) == false )
+            if ( weapon.canAccept( *pProjectile ) == false )
             {
                 SW_LOG_ERROR_ID( "Weapon.ProjectileNotAccepted", "weapon '%#' loads projectile '%#', which its accepts='%#' refuses", weapon._id.c_str(), weapon._projectileID.c_str(),
                                  weapon._accepts.c_str() );
@@ -148,7 +148,7 @@ namespace sw
 
     bool WeaponState::equip( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, uint32 spreadSeed )
     {
-        if ( weapon.accepts( projectile ) == false )
+        if ( weapon.canAccept( projectile ) == false )
         {
             SW_LOG_ERROR_ID( "Weapon.EquipRefusedProjectile", "weapon '%#' does not accept projectile '%#' (accepts='%#')", weapon._id.c_str(), projectile._id.c_str(), weapon._accepts.c_str() );
             return false;
@@ -166,7 +166,7 @@ namespace sw
 
     bool WeaponState::loadProjectile( const ProjectileDef& projectile, const vector<ShotModifierDef>& listAttachment )
     {
-        if ( _def.accepts( projectile ) == false )
+        if ( _def.canAccept( projectile ) == false )
         {
             SW_LOG_ERROR_ID( "Weapon.LoadRefusedProjectile", "weapon '%#' does not accept projectile '%#' (accepts='%#')", _def._id.c_str(), projectile._id.c_str(), _def._accepts.c_str() );
             return false;

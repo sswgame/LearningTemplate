@@ -379,7 +379,7 @@ namespace sw::editor
         }
     }
 
-    bool CatalogPanel::acceptsDocumentPath( string_view assetPath ) const
+    bool CatalogPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         vector<const AssetTypeDef*> listKind;
         AssetTypeRegistry::collectPathMatches( assetPath, listKind );

@@ -1280,10 +1280,10 @@ namespace sw
         // 블렌드 define 과 알파 모드가 다르면 알파가 새거나 불투명 목록에서 섞인다.
         const bool bBlend       = _desc._alphaMode == MaterialAlphaMode::Blend;
         const bool bTranslucent = _desc._permutations.hasAlwaysDefine( kTranslucentDefine );
-        if ( bTranslucent != bBlend || ( readsSceneColorCopy() && bBlend == false ) )
+        if ( bTranslucent != bBlend || ( usesSceneColorCopy() && bBlend == false ) )
         {
             SW_LOG_ERROR_ID( "Material.DrawListMismatch", "Material '%#' (%#): alphaMode Blend %#, %# %#, %# %# - refraction needs Blend, and %# goes with Blend only", _desc._name, sourceLabel,
-                             bBlend ? "yes" : "no", kTranslucentDefine, bTranslucent ? "yes" : "no", kRefractionDefine, readsSceneColorCopy() ? "yes" : "no", kTranslucentDefine );
+                             bBlend ? "yes" : "no", kTranslucentDefine, bTranslucent ? "yes" : "no", kRefractionDefine, usesSceneColorCopy() ? "yes" : "no", kTranslucentDefine );
             return false;
         }
 

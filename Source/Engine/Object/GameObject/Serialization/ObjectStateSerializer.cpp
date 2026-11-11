@@ -318,7 +318,7 @@ namespace sw
                 for ( Component* pComp : pObject->getComponents() )
                 {
                     const TypeInfo* pTypeInfo = ( pComp != nullptr && pComp->isPendingDestroy() == false ) ? pComp->getTypeInfo() : nullptr;
-                    if ( pTypeInfo == nullptr || walk.holdsLeaf( *pTypeInfo ) == false )
+                    if ( pTypeInfo == nullptr || walk.hasLeaf( *pTypeInfo ) == false )
                         continue;
                     for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
                     {

@@ -83,7 +83,7 @@ namespace sw
                 int32             _planeCount{ 0 };
             };
 
-            static bool acceptsShape( const Box2DPhysicsScene& scene, b2ShapeId shapeID, const PhysicsQueryFilter& filter )
+            static bool canAcceptShape( const Box2DPhysicsScene& scene, b2ShapeId shapeID, const PhysicsQueryFilter& filter )
             {
                 // 센서 여부가 아니라 바디의 뜻(트리거)으로 거른다 — 겹침 전용 센서(막는 2D 콜라이더, `_bOverlapOnly`)는 막는 것으로 보인다.
                 const PhysicsBodyHandle body = Box2DUtil::fromUserData( b2Body_GetUserData( b2Shape_GetBody( shapeID ) ) );
@@ -97,7 +97,7 @@ namespace sw
             static float32 castResult( b2ShapeId shapeID, b2Vec2 point, b2Vec2 normal, float32 fraction, void* pContext )
             {
                 CastContext& context = *static_cast<CastContext*>( pContext );
-                if ( acceptsShape( *context._pScene, shapeID, *context._pFilter ) == false )
+                if ( canAcceptShape( *context._pScene, shapeID, *context._pFilter ) == false )
                     return -1.0f; // 이 셰이프는 없는 것으로 친다
                 context._shapeID  = shapeID;
                 context._point    = point;
@@ -110,7 +110,7 @@ namespace sw
             static float32 castAllResult( b2ShapeId shapeID, b2Vec2 point, b2Vec2 normal, float32 fraction, void* pContext )
             {
                 CastAllContext& context = *static_cast<CastAllContext*>( pContext );
-                if ( acceptsShape( *context._pScene, shapeID, *context._pFilter ) == false )
+                if ( canAcceptShape( *context._pScene, shapeID, *context._pFilter ) == false )
                     return -1.0f; // 이 셰이프는 없는 것으로 친다
                 PhysicsCastHit2D hit;
                 hit._body     = Box2DUtil::fromUserData( b2Body_GetUserData( b2Shape_GetBody( shapeID ) ) );
@@ -132,7 +132,7 @@ namespace sw
             static bool overlapResult( b2ShapeId shapeID, void* pContext )
             {
                 OverlapContext& context = *static_cast<OverlapContext*>( pContext );
-                if ( acceptsShape( *context._pScene, shapeID, *context._pFilter ) )
+                if ( canAcceptShape( *context._pScene, shapeID, *context._pFilter ) )
                     context._pListBody->push_back( Box2DUtil::fromUserData( b2Body_GetUserData( b2Shape_GetBody( shapeID ) ) ) );
                 return true;
             }

@@ -7,7 +7,7 @@ Scripts/lint/NamingWords.py
 
 **왜 린트인가.** 이름이 업계 용어인지는 형식이 말할 수 없다. 표 없이 눈에 띈 이름만 고치면 `drain` · `Since` 처럼 같은 일에 새 낱말이
 계속 들어온다(2026-11-07). 예전 검사는 함수 첫 단어와 형식 끝 단어만 봐서, 이름 가운데의 금지어(`hasPendingWork` · `XMLFields::readFields`)와
-3인칭 문장형 술어(`drawsBatchInPass`) · 동사 없는 게터(`materialGroupFor`)가 그대로 통과했다(2026-11-12 Source 전체 점검 약 470 건).
+3인칭 문장형 술어(`shouldDrawBatchInPass`) · 동사 없는 게터(`materialGroupFor`)가 그대로 통과했다(2026-11-12 Source 전체 점검 약 470 건).
 
 규칙:
 - function · suffix — 함수 첫 단어는 `_functionWords`, 형식 끝 단어는 `_typeSuffixes` 에 있어야 한다.

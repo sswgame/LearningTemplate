@@ -52,7 +52,7 @@ namespace sw
         /** @brief 그리는 순서(뒤가 위)의 자식 인덱스를 담습니다. 히트 테스트는 그 역순입니다. 기본은 자식 순서입니다. */
         virtual void collectPaintOrder( vector<uint32>& outListIndex ) const;
         /** @brief 자식을 자르는 패널(스크롤 패널)이면 true 입니다. 히트 테스트와 그리기가 함께 따릅니다. */
-        bool clipsChildren() const { return _bClipChildren; }
+        bool shouldClipChildren() const { return _bClipChildren; }
         /** @brief 자른 자손이 내용을 옮겨 보이게 할 수 있는 패널(스크롤 패널)이면 true 입니다. 포커스 탐색은 이 패널이 자른 자손도 후보로 봅니다. */
         virtual bool canScrollIntoView() const { return false; }
         /** @brief 자손 @p widget 이 보이도록 내용을 옮깁니다(포커스 탐색 뒤 `UIFocusManager::navigate` 가 부릅니다). 옮겼으면 true 입니다. 기본은 아무것도 하지 않습니다. */
@@ -80,7 +80,7 @@ namespace sw
          */
         void arrangeChild( const UILayoutContext& context, Widget& child, const float2& localPosition, const float2& size );
         /** @brief 오른쪽에서 왼쪽일 때 자식 사각형을 거울로 배치할지 반환합니다. 기본은 true 이며, 스크롤 패널은 내용 위치가 스크롤 오프셋이라 false 입니다. */
-        virtual bool mirrorsChildrenInRightToLeft() const { return true; }
+        virtual bool shouldMirrorChildrenInRightToLeft() const { return true; }
 
     private:
         friend class Widget;

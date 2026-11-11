@@ -1302,7 +1302,7 @@ namespace sw
 
     void GPUSceneBuilder::writeCandidateDrawOrder( const DrawCandidate& candidate, GPUTransparentSortKey& inoutKey )
     {
-        const bool bRefracts  = candidate._material != nullptr && candidate._material->readsSceneColorCopy();
+        const bool bRefracts  = candidate._material != nullptr && candidate._material->usesSceneColorCopy();
         inoutKey._renderQueue = getCandidateRenderQueue( candidate );
         inoutKey._drawBand    = bRefracts ? TransparentDrawBand::ReadsSceneCopy : TransparentDrawBand::Ordinary;
     }

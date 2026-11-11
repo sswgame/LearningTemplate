@@ -544,7 +544,7 @@ namespace sw
         return false;
     }
 
-    bool AssetReferenceFields::resolves( string_view assetID, const AssetIDSet& assets ) const
+    bool AssetReferenceFields::canResolve( string_view assetID, const AssetIDSet& assets ) const
     {
         return assets.contains( assetID ) || isImportedFromSource( assetID, assets );
     }

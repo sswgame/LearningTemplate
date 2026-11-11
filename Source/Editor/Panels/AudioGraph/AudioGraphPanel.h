@@ -46,7 +46,7 @@ namespace sw::editor
     protected:
         void drawDocumentContent() override;
         /** @brief 소리 종류 중 `*.audiograph.xml` 만 문서로 받습니다(클립은 이 창의 문서가 아니다). */
-        bool                acceptsDocumentPath( string_view assetPath ) const override;
+        bool                canAcceptDocumentPath( string_view assetPath ) const override;
         ToolAssetLoadResult loadDocument() override;
         string              captureDocumentText() const override { return _model.captureText(); }
         void                applyDocumentText( string_view text ) override;

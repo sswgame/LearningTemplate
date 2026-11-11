@@ -57,7 +57,7 @@ namespace sw
 
         bool  isAlive() const { return _hp > 0; }
         int32 getStat( JRPGStat stat ) const { return _arrStat[static_cast<size_t>( stat )]; }
-        bool  knowsSpell( const hashed_string& spellID ) const;
+        bool  hasLearnedSpell( const hashed_string& spellID ) const;
         /** @brief 비급 숙련을 반환합니다. 배우지 않았으면 비어 있습니다. */
         optional<int32> findProficiency( const hashed_string& manualID ) const;
         /** @brief 읽은 멤버가 카탈로그의 id 만 가리키고 값이 범위 안인지입니다(음수, 최대 초과, 겹친 주문 · 비급, 곡선을 넘는 레벨을 거절합니다). */

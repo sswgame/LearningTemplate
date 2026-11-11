@@ -912,7 +912,7 @@ namespace sw
         return service != CityService::Count && _time - house._arrServiceTime[static_cast<int32>( service )] <= _settings._serviceDuration;
     }
 
-    bool CitySimulation::meetsHouseLevel( const CityBuilding& house, int32 level ) const
+    bool CitySimulation::hasReachedHouseLevel( const CityBuilding& house, int32 level ) const
     {
         const CityHouseLevelDef* pLevel = _pCatalog->findHouseLevel( level );
         if ( pLevel == nullptr )
@@ -967,7 +967,7 @@ namespace sw
             if ( house._population <= 0 )
                 continue;
 
-            const bool bCanEvolve = meetsHouseLevel( house, house._level + 1 );
+            const bool bCanEvolve = hasReachedHouseLevel( house, house._level + 1 );
             house._evolveTimer    = bCanEvolve ? house._evolveTimer + deltaTime : 0.0f;
             if ( house._evolveTimer >= _settings._evolveDelay )
             {
@@ -976,7 +976,7 @@ namespace sw
                 _eventBuffer.push( CityEvent{ house._level, buildingIndex, CityEvent::Kind::HouseEvolved } );
                 continue;
             }
-            const bool bLosing  = house._level > 0 && meetsHouseLevel( house, house._level ) == false;
+            const bool bLosing  = house._level > 0 && hasReachedHouseLevel( house, house._level ) == false;
             house._devolveTimer = bLosing ? house._devolveTimer + deltaTime : 0.0f;
             if ( house._devolveTimer >= _settings._evolveDelay )
             {

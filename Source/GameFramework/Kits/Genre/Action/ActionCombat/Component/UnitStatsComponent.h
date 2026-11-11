@@ -69,7 +69,7 @@ namespace sw
         /** @brief 깎인 피해를 데미지 숫자로 띄울지 정합니다(기본은 끔). 숫자는 `getDamageNumberOffset()` 만큼 위에 새 오브젝트로 뜹니다. */
         void setShowDamageNumbers( bool bShow ) { _bShowDamageNumbers = bShow; }
         /** @brief 깎인 피해를 데미지 숫자로 띄우는지 반환합니다. */
-        bool showsDamageNumbers() const { return _bShowDamageNumbers; }
+        bool shouldShowDamageNumbers() const { return _bShowDamageNumbers; }
         /** @brief 데미지 숫자가 뜨는 위치입니다(유닛의 월드 위치 기준 오프셋). */
         const float3& getDamageNumberOffset() const { return _damageNumberOffset; }
 

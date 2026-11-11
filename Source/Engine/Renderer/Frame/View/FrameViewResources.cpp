@@ -176,7 +176,7 @@ namespace sw
                     case RenderPassType::ContactShadow:
                         return sceneState._bContactShadows == SW_TRUE; // 접촉 그림자를 켠 빛이 없는 프레임 — 마스크가 모두 1 이다
                     case RenderPassType::PostProcessMaterial:
-                        return settings.drawsPostProcessMaterial( pass._blendableLocation ); // 이 자리에 읽기를 마친 블렌더블이 없다 — 출력이 원본을 가리킨다
+                        return settings.shouldDrawPostProcessMaterial( pass._blendableLocation ); // 이 자리에 읽기를 마친 블렌더블이 없다 — 출력이 원본을 가리킨다
                     case RenderPassType::ScreenSpaceReflection:
                         return settings.usesPostProcess() && settings._postProcess._screenSpaceReflectionIntensity > 0.0f;
                     case RenderPassType::Distortion:

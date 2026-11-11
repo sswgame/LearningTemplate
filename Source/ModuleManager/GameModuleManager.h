@@ -255,7 +255,7 @@ namespace sw
         /** @brief 이번 프레임에 게임 로직을 돌려야 하는지 반환합니다. 호스트 모듈이 없으면 항상 true 입니다. */
         virtual bool queryGameplayActive() const { return true; }
         /** @brief 월드 플레이 상태를 호스트 모듈이 정하면 true 를 반환합니다(에디터의 Play, Stop). false 면 `beginFrame` 이 월드를 플레이 상태로 켭니다. */
-        virtual bool controlsWorldPlay() const { return false; }
+        virtual bool canControlWorldPlay() const { return false; }
         /** @brief 무엇을 언로드하든 그 전에 불립니다(에디터 시뮬레이션 멈춤). 게임 상태를 저장하기 전입니다. */
         virtual void onBeforeSuspendModules() {}
         /** @brief `ModuleScope::Editor` 와 `Both` 를 종료할 때 게임보다 먼저 불립니다(에디터 인스턴스 파괴). */

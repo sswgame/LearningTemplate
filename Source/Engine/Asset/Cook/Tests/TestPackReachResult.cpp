@@ -399,14 +399,14 @@ SW_TEST_CASE( PackReachabilityTest, StagedOutputsFollowTheirSource )
 
     PackStagedSelection staged;
     staged.build( listSources, reach );
-    SW_EXPECT_TRUE( staged.selects( "game/x", "maps/used.scene.bin" ) );
-    SW_EXPECT_TRUE( staged.selects( "game/x", "maps/used.preload.json" ) );
-    SW_EXPECT_FALSE( staged.selects( "game/x", "maps/unused.scene.bin" ) );
-    SW_EXPECT_TRUE( staged.selects( "game/x", "registry/generated.bin" ) ); // 원본이 없다
-    SW_EXPECT_TRUE( staged.selects( "engine", "shaders/bin/dx12/post_bloom_ps.dxil" ) );
-    SW_EXPECT_TRUE( staged.selects( "engine", "shaders/bin/dx12/post_bloom_ps_0076c9bf.dxil" ) );
-    SW_EXPECT_FALSE( staged.selects( "engine", "shaders/bin/dx12/post_vs.dxil" ) );
-    SW_EXPECT_FALSE( staged.selects( "engine", "shaders/bin/dx12/fog_ps.dxil" ) );
-    SW_EXPECT_TRUE( staged.selects( "engine", "shaders/bin/dx12/cook.stamp" ) );
-    SW_EXPECT_TRUE( staged.selects( "engine", "shaders/bin/dx12/reflection.manifest" ) );
+    SW_EXPECT_TRUE( staged.isSelected( "game/x", "maps/used.scene.bin" ) );
+    SW_EXPECT_TRUE( staged.isSelected( "game/x", "maps/used.preload.json" ) );
+    SW_EXPECT_FALSE( staged.isSelected( "game/x", "maps/unused.scene.bin" ) );
+    SW_EXPECT_TRUE( staged.isSelected( "game/x", "registry/generated.bin" ) ); // 원본이 없다
+    SW_EXPECT_TRUE( staged.isSelected( "engine", "shaders/bin/dx12/post_bloom_ps.dxil" ) );
+    SW_EXPECT_TRUE( staged.isSelected( "engine", "shaders/bin/dx12/post_bloom_ps_0076c9bf.dxil" ) );
+    SW_EXPECT_FALSE( staged.isSelected( "engine", "shaders/bin/dx12/post_vs.dxil" ) );
+    SW_EXPECT_FALSE( staged.isSelected( "engine", "shaders/bin/dx12/fog_ps.dxil" ) );
+    SW_EXPECT_TRUE( staged.isSelected( "engine", "shaders/bin/dx12/cook.stamp" ) );
+    SW_EXPECT_TRUE( staged.isSelected( "engine", "shaders/bin/dx12/reflection.manifest" ) );
 }

@@ -65,7 +65,7 @@ namespace sw::editor
             float32                                    _clipSeconds{ 0.0f }; ///< 역할 클립 길이(못 읽었으면 0)
         };
 
-        bool                acceptsDocumentPath( string_view assetPath ) const override;
+        bool                canAcceptDocumentPath( string_view assetPath ) const override;
         ToolAssetLoadResult loadDocument() override;
         void                populatePreviewScene( Scene& scene ) override;
         /** @brief 맞춤(F)과 창을 처음 열 때의 카메라가 담을 구입니다. */

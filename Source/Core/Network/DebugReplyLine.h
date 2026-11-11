@@ -34,7 +34,7 @@ namespace sw
         static constexpr const utf8* kTruncatedMarker = " truncated=";
 
         /** @brief @p byteCount 바이트의 줄이 상한 안인가입니다(상한을 넘으면 거절하는 줄 — 목록이 줄여 담을 수 없는 형식 — 이 쓴다). */
-        [[nodiscard]] static constexpr bool fits( size_t byteCount )
+        [[nodiscard]] static constexpr bool canFit( size_t byteCount )
         {
             return byteCount <= kMaxBytes;
         }
@@ -50,7 +50,7 @@ namespace sw
         {
             string fullText = head;
             appendTail( fullText, std::numeric_limits<size_t>::max() );
-            if ( fits( fullText.size() ) )
+            if ( canFit( fullText.size() ) )
                 return fullText;
             constexpr size_t kBodyBytes = kMaxBytes - kTruncatedMarkerBytes;
             if ( head.size() > kBodyBytes )

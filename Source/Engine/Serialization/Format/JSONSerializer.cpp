@@ -262,7 +262,7 @@ namespace sw
                     ContainerReadResult total{ ContainerReadResult::Read };
                     if ( container.isArray() )
                     {
-                        for ( size_t elementIndex = 0; elementIndex < container.size() && ContainerVisitor::stopsReading( total ) == false; ++elementIndex )
+                        for ( size_t elementIndex = 0; elementIndex < container.size() && ContainerVisitor::shouldStopReading( total ) == false; ++elementIndex )
                         {
                             _listCursor.push_back( container.at( elementIndex ) );
                             total = ContainerVisitor::mergeResult( total, visit( elementIndex ) );
@@ -271,7 +271,7 @@ namespace sw
                         return total;
                     }
                     const vector<string> listKey = container.getMemberNames();
-                    for ( size_t entryIndex = 0; entryIndex < listKey.size() && ContainerVisitor::stopsReading( total ) == false; ++entryIndex )
+                    for ( size_t entryIndex = 0; entryIndex < listKey.size() && ContainerVisitor::shouldStopReading( total ) == false; ++entryIndex )
                     {
                         _pCurrentKey = &listKey[entryIndex];
                         _listCursor.push_back( container.get( listKey[entryIndex] ) );
@@ -604,7 +604,7 @@ namespace sw
         for ( const string& keyRaw : src.getMemberNames() )
         {
             const JSONValue field = src.get( keyRaw );
-            if ( SerializerUtil::keysEqual( keyRaw, kSchemaVersionKey ) )
+            if ( SerializerUtil::isKeyEqual( keyRaw, kSchemaVersionKey ) )
             {
                 if ( pOutVersion == nullptr )
                     continue;

@@ -262,7 +262,7 @@ namespace sw
              * @details 찍는 프레임이 정해져야 하는 시나리오(디더 등장의 중간 단계, 프레임마다 움직이는 카메라)가 쓴다. 자리 잡기를 기다리면 등장이 끝나거나 카메라가 멈춘 뒤를 찍는다.
              *          그런 시나리오는 앞에서 `<WaitUntil watch="Assets.Pending" equals="0">` 로 로드를 끝내 둔다.
              */
-            [[nodiscard]] static bool capturesWithoutSettling( const AutomationStep& step )
+            [[nodiscard]] static bool shouldCaptureWithoutSettling( const AutomationStep& step )
             {
                 return step.readValidatedFields<AutomationScreenshotParams>()._bWaitForSettle == false;
             }
@@ -628,7 +628,7 @@ namespace sw
         static AutomationStepHold holdScreenshot( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
             AutomationRunner& runner = asRunner( context );
-            if ( AutomationRunnerStepsInternal::capturesWithoutSettling( step ) )
+            if ( AutomationRunnerStepsInternal::shouldCaptureWithoutSettling( step ) )
                 return AutomationStepHold::Run;
             const bool bSettled                 = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
             runner._run._assetSettledFrameCount = bSettled ? runner._run._assetSettledFrameCount + 1 : 0;

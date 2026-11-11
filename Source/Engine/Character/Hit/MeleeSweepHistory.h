@@ -118,7 +118,7 @@ namespace sw
         /** @brief 점 @p point 에서 선분 @p from → @p to 까지의 거리 제곱입니다. */
         static float32 computeDistanceSquaredToSegment( const float3& point, const float3& from, const float3& to );
         /** @brief 기록 하나의 칼날 토막들이 구 @p center / @p radius 를 덮는지 봅니다(표본점 토막, 칼날 자체). */
-        static bool coversSphere( const SweepRecord& record, const float3& center, float32 radius );
+        static bool containsSphere( const SweepRecord& record, const float3& center, float32 radius );
 
         vector<SweepRecord> _listRecord;
         uint32              _frame;

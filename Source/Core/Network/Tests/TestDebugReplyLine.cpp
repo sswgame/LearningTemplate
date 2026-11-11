@@ -50,7 +50,7 @@ SW_TEST_CASE( DebugReplyLineTest, AnOverlongTailIsCutAndMarkedWithItsFullLength 
     {
         appendItems( inoutText, maxBytes, 2000 );
     } );
-    SW_EXPECT_TRUE( DebugReplyLine::fits( line.size() ) );
+    SW_EXPECT_TRUE( DebugReplyLine::canFit( line.size() ) );
     const string marker = string( DebugReplyLine::kTruncatedMarker ) + to_string( static_cast<uint64>( fullLine.size() ) );
     SW_REQUIRE_TRUE( line.size() > marker.size() );
     SW_EXPECT_EQUAL( line.substr( line.size() - marker.size() ), marker );
@@ -63,8 +63,8 @@ SW_TEST_CASE( DebugReplyLineTest, AnOverlongTailIsCutAndMarkedWithItsFullLength 
  */
 SW_TEST_CASE( DebugReplyLineTest, FitsIsInclusiveAtTheLimit )
 {
-    SW_EXPECT_TRUE( DebugReplyLine::fits( DebugReplyLine::kMaxBytes ) );
-    SW_EXPECT_FALSE( DebugReplyLine::fits( DebugReplyLine::kMaxBytes + 1 ) );
+    SW_EXPECT_TRUE( DebugReplyLine::canFit( DebugReplyLine::kMaxBytes ) );
+    SW_EXPECT_FALSE( DebugReplyLine::canFit( DebugReplyLine::kMaxBytes + 1 ) );
     const string atLimit( DebugReplyLine::kMaxBytes, 'a' );
     SW_EXPECT_EQUAL( DebugReplyLine::makeFixed( atLimit ), atLimit );
 }
@@ -76,7 +76,7 @@ SW_TEST_CASE( DebugReplyLineTest, AnOverlongFixedLineIsCutAndMarked )
 {
     const string tooLong( DebugReplyLine::kMaxBytes + 100, 'a' );
     const string line = DebugReplyLine::makeFixed( tooLong );
-    SW_EXPECT_TRUE( DebugReplyLine::fits( line.size() ) );
+    SW_EXPECT_TRUE( DebugReplyLine::canFit( line.size() ) );
     SW_EXPECT_TRUE( line.find( string( DebugReplyLine::kTruncatedMarker ) + to_string( static_cast<uint64>( tooLong.size() ) ) ) != string::npos );
 }
 
@@ -93,7 +93,7 @@ SW_TEST_CASE( DebugReplyLineTest, TheEmulationReportLineStaysWithinTheLimit )
     report._rttMilliseconds     = 1.0e9f;
     report._connectionCount     = 1000;
     const string line           = report.makeLine();
-    SW_EXPECT_TRUE( DebugReplyLine::fits( line.size() ) );
+    SW_EXPECT_TRUE( DebugReplyLine::canFit( line.size() ) );
     SW_EXPECT_TRUE( line.find( DebugReplyLine::kTruncatedMarker ) == string::npos );
     NetEmulationReport parsed;
     SW_EXPECT_TRUE( NetEmulationReport::tryParseLine( line, parsed ) );
@@ -118,7 +118,7 @@ SW_TEST_CASE( DebugReplyLineTest, MultiByteCharactersAreNeverSplitAtTheLimit )
             const string line = DebugReplyLine::makeFixed( text );
             const size_t mark = line.find( DebugReplyLine::kTruncatedMarker );
             SW_REQUIRE_TRUE( mark != string::npos );
-            SW_EXPECT_TRUE( DebugReplyLine::fits( line.size() ) );
+            SW_EXPECT_TRUE( DebugReplyLine::canFit( line.size() ) );
             SW_EXPECT_TRUE( StringUtil::isValidUTF8( line.substr( 0, mark ).c_str() ) );
             SW_EXPECT_EQUAL( line.substr( mark + string( DebugReplyLine::kTruncatedMarker ).size() ), to_string( static_cast<uint64>( text.size() ) ) );
 

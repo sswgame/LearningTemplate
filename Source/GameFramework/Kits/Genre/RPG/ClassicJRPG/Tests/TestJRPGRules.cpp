@@ -676,7 +676,7 @@ SW_TEST_CASE_F( JRPGRulesTest, AddMember )
     SW_EXPECT_EQUAL( 44, hero.getStat( sw::JRPGStat::Strength ) );
     SW_EXPECT_EQUAL( 120, hero._hp );
     SW_EXPECT_EQUAL( 14, hero._mp );
-    SW_EXPECT_TRUE( hero.knowsSpell( "raise" ) );
+    SW_EXPECT_TRUE( hero.hasLearnedSpell( "raise" ) );
     SW_EXPECT_EQUAL( 0, countPartyEvents( sw::JRPGPartyEvent::Kind::LevelUp ) ); // 처음 만든 멤버의 성장은 알리지 않는다
 
     SW_EXPECT_FALSE( _party.addMember( "hero", "Again", "mage" ).has_value() );
@@ -746,7 +746,7 @@ SW_TEST_CASE_F( JRPGRulesTest, ClassChange )
     SW_EXPECT_EQUAL( 145, hero._hp );
     SW_EXPECT_EQUAL( 24, hero._mp ); // 10 + 19 × 2 = 48 의 절반
     SW_EXPECT_EQUAL( 39, hero.getStat( sw::JRPGStat::Strength ) );
-    SW_EXPECT_TRUE( hero.knowsSpell( "raise" ) );
+    SW_EXPECT_TRUE( hero.hasLearnedSpell( "raise" ) );
 
     _party.getMember( 1 )._arrStat[static_cast<size_t>( sw::JRPGStat::MaxHP )] = 1;
     _party.getMember( 1 )._hp                                                  = 1;

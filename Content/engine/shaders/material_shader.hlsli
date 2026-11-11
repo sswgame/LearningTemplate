@@ -85,7 +85,7 @@
 
 // 변위 머티리얼(material_displacement.hlsli)이 받지 않는 조합 — 정점 출력이 보간 칸이 아니라 제어점이라 아래 셋은 그 자리에 칸이 없다.
 #if defined( MATERIAL_DISPLACEMENT ) && defined( SW_MATERIAL_NONE )
-    #error "MATERIAL_DISPLACEMENT is drawn by the material shader in every pass (FrameRendererUtil::drawsDepthWithMaterialShader) - a material-less shader cannot displace"
+    #error "MATERIAL_DISPLACEMENT is drawn by the material shader in every pass (FrameRendererUtil::usesMaterialShaderForDepth) - a material-less shader cannot displace"
 #endif
 #if defined( MATERIAL_DISPLACEMENT ) && defined( SW_MATERIAL_CUSTOM_VARYINGS )
     #error "MATERIAL_DISPLACEMENT does not carry custom varyings through the hull and domain stages - use SW_MATERIAL_DEFAULT_VARYINGS"
@@ -99,7 +99,7 @@
         #error "SW_MATERIAL_NONE has no material to read: SW_MATERIAL_READ_IN_VERTEX is invalid"
     #endif
     #if defined( MATERIAL_ALPHA_CUTOFF )
-        #error "SW_MATERIAL_NONE has no material alpha: MATERIAL_ALPHA_CUTOFF must be drawn by the material shader (FrameRendererUtil::drawsDepthWithMaterialShader)"
+        #error "SW_MATERIAL_NONE has no material alpha: MATERIAL_ALPHA_CUTOFF must be drawn by the material shader (FrameRendererUtil::usesMaterialShaderForDepth)"
     #endif
     #if !defined( SW_PASS_GBUFFER ) && !defined( SW_MATERIAL_DEPTH_PASS )
         #error "a material-less shader draws only the G-buffer or a depth pass (SW_PASS_GBUFFER, SW_PASS_SHADOW, SW_PASS_DEPTH_PREPASS)"

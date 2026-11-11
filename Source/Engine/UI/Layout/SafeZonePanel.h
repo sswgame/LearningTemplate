@@ -32,6 +32,6 @@ namespace sw
         float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
         void   arrangeChildren( const UILayoutContext& context, const float2& size ) override;
         /** @brief 안전 영역은 화면의 것이라 거울 처리하지 않습니다. 왼쪽 노치는 오른쪽에서 왼쪽 문화권에서도 왼쪽에 있습니다. */
-        bool mirrorsChildrenInRightToLeft() const override { return false; }
+        bool shouldMirrorChildrenInRightToLeft() const override { return false; }
     };
 } // namespace sw

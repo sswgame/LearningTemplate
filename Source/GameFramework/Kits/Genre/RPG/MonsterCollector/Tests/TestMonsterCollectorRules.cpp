@@ -217,7 +217,7 @@ namespace
         }
 
         /** @brief 개체 바이트를 왕복합니다. */
-        static bool readsBack( const sw::MonsterInstance& monster )
+        static bool isBackRead( const sw::MonsterInstance& monster )
         {
             sw::Archive written;
             monster.writeState( written );
@@ -475,7 +475,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, InstanceStateRange )
     {
         sw::MonsterInstance monster = make( "normie", 50, "strike" );
         mutate( monster );
-        return readsBack( monster ) == false;
+        return isBackRead( monster ) == false;
     };
     SW_EXPECT_FALSE( bad( []( sw::MonsterInstance& ) {} ) );
     SW_EXPECT_TRUE( bad( []( sw::MonsterInstance& monster )

@@ -587,7 +587,7 @@ namespace sw
         }
     }
 
-    bool PackStagedSelection::selects( string_view domain, string_view relativePath ) const
+    bool PackStagedSelection::isSelected( string_view domain, string_view relativePath ) const
     {
         const string assetID = FileUtil::normalizePath( FileUtil::joinPath( domain, relativePath ) );
         if ( StringUtil::contains( assetID, "/shaders/bin/" ) )

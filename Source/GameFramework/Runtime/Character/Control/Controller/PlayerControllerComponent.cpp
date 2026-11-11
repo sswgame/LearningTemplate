@@ -69,7 +69,7 @@ namespace sw
         // UI 가 커서를 바라면(메뉴가 열렸다) 잠금을 쉰다 — 닫히면 요청해 둔 잠금으로 돌아간다.
         const bool bUIWantsCursor = pCapture != nullptr && pCapture->shouldShowCursor();
         bool       bLook          = bUIWantsCursor == false;
-        if ( pawn.wantsMouseLock() )
+        if ( pawn.needsMouseLock() )
         {
             if ( _mouseLockAction.empty() == false && wasActionTriggeredForGame( inputMap, pCapture, _mouseLockAction ) )
             {
@@ -164,7 +164,7 @@ namespace sw
                 _warnedPawn = TComponentHandle<PawnComponent>{ &pawn };
                 warnMissingActions( pawn, *pInput );
             }
-            _bMouseLockRequested = pawn.wantsMouseLock() ? SW_TRUE : SW_FALSE;
+            _bMouseLockRequested = pawn.needsMouseLock() ? SW_TRUE : SW_FALSE;
             applyMouseLock( *pInput, _bMouseLockRequested == SW_TRUE );
         }
         if ( _bManageViewTarget )
@@ -214,7 +214,7 @@ namespace sw
             if ( pAction->empty() == false && inputMap.getActionHandle( *pAction ).isValid() == false )
                 SW_LOG_WARNING_ID( "Control.AxisActionNotInInputMap", "Pawn '%#' axis action '%#' has no InputMap action - a player cannot drive it", pPawnName, pAction->c_str() );
         }
-        const bool bMissingMouseLockAction = pawn.wantsMouseLock() && _mouseLockAction.empty() == false && inputMap.getActionHandle( _mouseLockAction ).isValid() == false;
+        const bool bMissingMouseLockAction = pawn.needsMouseLock() && _mouseLockAction.empty() == false && inputMap.getActionHandle( _mouseLockAction ).isValid() == false;
         if ( bMissingMouseLockAction )
             SW_LOG_WARNING_ID( "PlayerControllerComponent.PawnLocksMouseBut", "Pawn '%#' locks the mouse but the InputMap has no '%#' action - the player cannot release the cursor", pPawnName, _mouseLockAction.c_str() );
     }

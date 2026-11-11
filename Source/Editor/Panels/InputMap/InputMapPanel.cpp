@@ -275,7 +275,7 @@ namespace sw::editor
         }
         for ( const hashed_string& actionName : _listVisibleAction )
         {
-            const bool bConflict = InputMapConflict::involves( _document.getConflicts(), actionName );
+            const bool bConflict = InputMapConflict::isInvolved( _document.getConflicts(), actionName );
             const bool bDown     = inputMap.isActionDown( actionName );
             ImGui::PushID( actionName.c_str() );
             if ( bConflict )
@@ -365,7 +365,7 @@ namespace sw::editor
         ImGui::Text( "%u  %s", bindIndex, _document.describeBinding( action, bindIndex ).c_str() );
         ImGui::SameLine( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "InputMapLayerColumnEm" ) );
         drawBindingLayerCombo( action, bindIndex );
-        const bool bTriggerFields = InputMapModel::savesTriggerFields( binding._kind ); // 파일에 남지 않는 칸은 보이지 않는다
+        const bool bTriggerFields = InputMapModel::canSaveTriggerProperties( binding._kind ); // 파일에 남지 않는 칸은 보이지 않는다
         if ( bTriggerFields )
         {
             ImGui::SameLine( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "InputMapActionColumnEm" ) );
@@ -1095,7 +1095,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "OverlayHistoryTip" ) );
     }
 
-    bool InputMapPanel::acceptsDocumentPath( string_view assetPath ) const
+    bool InputMapPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return InputMapModel::isDocumentPath( assetPath );
     }

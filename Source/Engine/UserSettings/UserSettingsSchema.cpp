@@ -343,14 +343,14 @@ namespace sw
                     return false;
                 }
                 bool bOk = true;
-                if ( registry.acceptsValue( def._targetName, def._defaultValue ) == false )
+                if ( registry.canAcceptValue( def._targetName, def._defaultValue ) == false )
                 {
                     SW_LOG_ERROR_ID( "UserSettingsSchema.SettingHandlerDoesNot", "setting '%#': handler '%#' does not accept the default '%#'", pID, def._targetName.c_str(), def._defaultValue );
                     bOk = false;
                 }
                 for ( const UserSettingOption& option : def._listOption )
                 {
-                    if ( registry.acceptsValue( def._targetName, option._value ) == false )
+                    if ( registry.canAcceptValue( def._targetName, option._value ) == false )
                     {
                         SW_LOG_ERROR_ID( "UserSettingsSchema.SettingHandlerDoesNot2", "setting '%#': handler '%#' does not accept option '%#'", pID, def._targetName.c_str(), option._value );
                         bOk = false;

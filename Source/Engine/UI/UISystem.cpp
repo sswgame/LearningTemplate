@@ -683,14 +683,14 @@ namespace sw
 
     bool UISystem::shouldShowCursor() const
     {
-        return isInitialized() && wantsCursor();
+        return isInitialized() && needsCursor();
     }
 
     bool UISystem::isGameInputBlocked() const
     {
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
-            if ( screen->isClosing() == false && screen->blocksLowerInput() )
+            if ( screen->isClosing() == false && screen->shouldBlockLowerInput() )
                 return true;
         }
         return false;
@@ -706,7 +706,7 @@ namespace sw
         return false;
     }
 
-    bool UISystem::wantsCursor() const
+    bool UISystem::needsCursor() const
     {
         const UIScreen* pActive = getActiveScreen();
         return pActive != nullptr && pActive->getDesc()._bShowCursor;
@@ -882,12 +882,12 @@ namespace sw
             UIScreen* pScreen = _listScreen[index - 1].get();
             if ( pScreen->isClosing() )
                 continue;
-            if ( pScreen->takesFocus() )
+            if ( pScreen->canTakeFocus() )
             {
                 pNewActive = pScreen;
                 break;
             }
-            if ( pScreen->blocksLowerInput() )
+            if ( pScreen->shouldBlockLowerInput() )
                 break;
         }
 

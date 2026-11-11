@@ -279,7 +279,7 @@ namespace sw
     {
         for ( const MaintenanceWindow& window : _listMaintenance )
         {
-            const bool bBlocks = window.isActive( nowMs.count() ) && window.appliesTo( kind ) && window.allowsAccount( accountID ) == false;
+            const bool bBlocks = window.isActive( nowMs.count() ) && window.isApplicableTo( kind ) && window.allowsAccount( accountID ) == false;
             if ( bBlocks == false )
                 continue;
             if ( pOutWindow != nullptr )
@@ -314,7 +314,7 @@ namespace sw
         bool bAllowedDuringMaintenance = false;
         for ( const MaintenanceWindow& active : _listMaintenance )
         {
-            bAllowedDuringMaintenance = bAllowedDuringMaintenance || ( active.isActive( nowMs.count() ) && active.appliesTo( request._kind ) );
+            bAllowedDuringMaintenance = bAllowedDuringMaintenance || ( active.isActive( nowMs.count() ) && active.isApplicableTo( request._kind ) );
         }
 
         ServerSelectionQuery query;

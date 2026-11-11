@@ -14,7 +14,7 @@
  *          **머티리얼은 한 스테이지에서만 읽는다**(GL 은 구조버퍼를 두 단계가 읽으면 링크를 거절한다). 기본 퍼뮤테이션은 픽셀이,
  *          외곽선 퍼뮤테이션은 정점이 읽어(두께가 정점에 필요하다) 픽셀이 쓸 값을 보간 칸으로 넘긴다.
  *
- *          **알파 컷오프 머티리얼은 깊이 패스도 이 파일로 그린다**(`SW_PASS_SHADOW` · `SW_PASS_DEPTH_PREPASS` — `FrameRendererUtil::drawsDepthWithMaterialShader`).
+ *          **알파 컷오프 머티리얼은 깊이 패스도 이 파일로 그린다**(`SW_PASS_SHADOW` · `SW_PASS_DEPTH_PREPASS` — `FrameRendererUtil::usesMaterialShaderForDepth`).
  *          shadow_depth.hlsl 은 머티리얼을 몰라 머리카락 카드가 사각형 그림자를 드리우므로, 같은 정점 경로(MorphPool::loadVertex)로 투영하고 픽셀에서 같은 알파로 버린다.
  *          컬러 출력이 없어 픽셀 셰이더는 `clip` 만 한다.
  *

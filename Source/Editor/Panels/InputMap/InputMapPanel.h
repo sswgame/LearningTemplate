@@ -57,7 +57,7 @@ namespace sw::editor
 
     protected:
         /** @brief 입력 맵 파일(`*.input.xml`)과 입력 맵 묶음(게임 설정 파일)만 받습니다(`InputMapModel::isDocumentPath`). */
-        bool acceptsDocumentPath( string_view assetPath ) const override;
+        bool canAcceptDocumentPath( string_view assetPath ) const override;
         /** @brief 받아들인 문서 경로(없으면 데이터의 처음 경로)를 다시 읽습니다. 읽지 못하면 `Malformed` 라 저장이 막힌다. */
         ToolAssetLoadResult loadDocument() override;
         /** @brief 탭이 가려져도 녹화 · 재생은 이어진다 — 게임 뷰를 앞에 두고 녹화한다. 그래서 문서는 가려진 프레임에도 돈다. */

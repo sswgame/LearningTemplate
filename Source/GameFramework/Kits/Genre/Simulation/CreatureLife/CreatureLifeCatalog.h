@@ -124,12 +124,12 @@ namespace sw
         vector<hashed_string> _listRequest{};    ///< 이 생물이 하는 부탁이다(퀘스트 id)
         ScheduleCondition     _visitCondition{}; ///< 찾아오는 때(`phases`)와 날씨(`weathers`)이며 비어 있으면 언제나 온다. NPC 일정과 같은 조건 판정을 쓴다
 
-        bool likesHabitat( const hashed_string& habitatID ) const;
-        bool likesFood( const hashed_string& itemID ) const;
-        bool likesGift( const hashed_string& itemID ) const;
+        bool isFavoriteHabitat( const hashed_string& habitatID ) const;
+        bool isFavoriteFood( const hashed_string& itemID ) const;
+        bool isFavoriteGift( const hashed_string& itemID ) const;
         bool hasAbility( const hashed_string& abilityID ) const;
-        bool offersRequest( const hashed_string& questID ) const;
-        bool comesIn( DayPhase phase, const hashed_string& weatherID ) const;
+        bool canOfferRequest( const hashed_string& questID ) const;
+        bool canAppearIn( DayPhase phase, const hashed_string& weatherID ) const;
     };
 } // namespace sw
 

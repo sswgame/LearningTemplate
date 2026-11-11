@@ -88,7 +88,7 @@ namespace sw
     {
         MetroidvaniaDefenseOutcome outcome;
         // 죽었거나 무적(시간 · 면역)이면 맞은 것이 아니다 — 가드 스태미나를 쓰거나 패리 창을 열거나 맞음 연출을 낼 결과를 주지 않는다.
-        const bool bNothingHappens = _pCatalog == nullptr || _healthMachine.isAlive() == false || _healthMachine.ignoresDamage();
+        const bool bNothingHappens = _pCatalog == nullptr || _healthMachine.isAlive() == false || _healthMachine.shouldIgnoreDamage();
         if ( bNothingHappens )
         {
             outcome._result = MetroidvaniaDefenseResult::Ignored;

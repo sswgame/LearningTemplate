@@ -276,7 +276,7 @@ namespace sw
         IUILayerVisibility& getUILayerVisibility() { return _layerVisibility; }
         IEngineUIDriver&    getEngineUIDriver() { return _engineUIDriver; }
         /** @brief 활성 화면이 OS 커서를 필요로 하면 true 입니다(플레이어 컨트롤러가 마우스 잠금을 쉽니다). */
-        bool wantsCursor() const;
+        bool needsCursor() const;
         /**
          * @brief UI 입력 라우터입니다 — 포커스, 포인터, 소비된 입력(`isActionConsumed` · `consumeAction` · `getConsumption`), UI 액션 맵, 입력 방식.
          * @details 플레이어 컨트롤러가 의도를 만들 때 `getInputRouter().isActionConsumed( map, action )` 만 확인하면 된다. 입력 방식을 바꾸는 일은 화면 포커스를 함께

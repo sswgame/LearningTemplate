@@ -128,7 +128,7 @@ namespace sw
             vector<uint32>              _listEntryIndex{};
             uint8                       _bRebuildBack{ SW_FALSE }; ///< 넘긴 일이 뒤 버퍼를 새 셀로 다시 짓는다
 
-            bool wantsGrid() const { return _userCount >= _pDesc->_minUserCount && _cellSize > 0.0f; }
+            bool needsGrid() const { return _userCount >= _pDesc->_minUserCount && _cellSize > 0.0f; }
         };
         /** @brief 뒤 버퍼에 고쳐 넣을 것 하나입니다. */
         struct Change

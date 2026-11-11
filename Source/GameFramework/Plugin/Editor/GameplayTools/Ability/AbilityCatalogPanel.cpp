@@ -202,7 +202,7 @@ namespace sw::editor
             AbilityCatalogPanelInternal::drawErrorText( SW_LOCKEY( "EdAbilityCatalog", "ValidationFailed" ) );
     }
 
-    bool AbilityCatalogPanel::acceptsDocumentPath( string_view assetPath ) const
+    bool AbilityCatalogPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         string_view fileName;
         FileUtil::getFileNamePart( assetPath, fileName );

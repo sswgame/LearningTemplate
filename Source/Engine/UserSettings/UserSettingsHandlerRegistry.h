@@ -62,7 +62,7 @@ namespace sw
         /** @brief 핸들러를 부릅니다. 없으면 false 입니다. */
         bool invokeHandler( const hashed_string& name, const UserSettingApplyParams& context ) const;
         /** @brief 핸들러가 @p value 를 받는지 확인합니다. 필터가 없는 핸들러나 없는 핸들러는 true 입니다. */
-        bool acceptsValue( const hashed_string& name, string_view value ) const;
+        bool canAcceptValue( const hashed_string& name, string_view value ) const;
 
         /** @brief 선택지 공급자를 올리고 그 구독을 돌려줍니다. 같은 이름이 있으면 바꿉니다(앞 구독은 더 아무것도 떼지 않는다). */
         [[nodiscard]] Subscription registerOptionProvider( const hashed_string& name, const UserSettingOptionProviderDelegate& provider );

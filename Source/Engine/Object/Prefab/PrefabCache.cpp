@@ -316,7 +316,7 @@ namespace sw
         if ( binPath.empty() )
             binPath = resolvedPath;
 
-        if ( AssetIO::readsSource() == false )
+        if ( AssetIO::usesSource() == false )
         {
             if ( asset->loadFromBinaryFile( AssetID{ binPath } ) == false )
             {

@@ -195,7 +195,7 @@ namespace sw
                     // 자식이 없으면 false 다 — 빈 컨테이너라 볼 것이 없다.
                     (void)_backend.iterateChildren( SW_DELEGATE_LAMBDA( XMLChildVisitDelegate, [&]( string_view tagName )
                     {
-                        if ( ContainerVisitor::stopsReading( total ) )
+                        if ( ContainerVisitor::shouldStopReading( total ) )
                             return;
                         _currentTagName = tagName;
                         total           = ContainerVisitor::mergeResult( total, visit( elementIndex++ ) );

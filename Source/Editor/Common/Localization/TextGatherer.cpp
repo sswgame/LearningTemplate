@@ -382,7 +382,7 @@ namespace sw
         struct TextGathererInternal
         {
             /** @brief 사람이 읽는 텍스트로 보이는지 판정합니다. 글자 둘 이상인 단어가 둘 이상이고, 경로, 식별자, 숫자 목록이 아니어야 합니다. 싼 추정이라 경고만 합니다. */
-            static bool looksLikeUserFacingText( string_view value )
+            static bool isLikelyUserFacingText( string_view value )
             {
                 const bool bPathLike = value.find( '/' ) != string_view::npos || value.find( '\\' ) != string_view::npos || value.find( '_' ) != string_view::npos;
                 if ( bPathLike || value.find( ' ' ) == string_view::npos )
@@ -450,7 +450,7 @@ namespace sw
                         }
                         const bool bExempt = property._metadata->getEditor().findCustomMeta( hashed_string( TextGatherer::kMetaNotLocalizable ) ) != nullptr ||
                                              property._metadata->_bAssetPath != SW_FALSE || property._metadata->_assetType.empty() == false;
-                        if ( bExempt == false && looksLikeUserFacingText( value ) )
+                        if ( bExempt == false && isLikelyUserFacingText( value ) )
                             gatherer.addIssue( originName, "possible hardcoded user-facing text in " + context + ": '" + string( value ) + "' - mark the property Meta = \"Localizable\" (or \"NotLocalizable\")",
                                                false );
                     }, true );

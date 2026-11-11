@@ -1005,8 +1005,8 @@ namespace sw
 
     optional<AbsolutePath> FileUtil::requireAbsolutePath( string_view path )
     {
-        // 빈 글도 절대가 아니다 - `acceptsPathInput` 은 빈 글을 통과시키므로(열기 실패로 드러난다) 여기서 따로 거절한다.
-        if ( path.empty() || PlatformFileUtil::acceptsPathInput( path ) == false )
+        // 빈 글도 절대가 아니다 - `canAcceptPathInput` 은 빈 글을 통과시키므로(열기 실패로 드러난다) 여기서 따로 거절한다.
+        if ( path.empty() || PlatformFileUtil::canAcceptPathInput( path ) == false )
         {
             if ( path.empty() )
                 SW_LOG_ERROR_ID( "File.RelativePath", "An empty path was given where an absolute disk path is required" );

@@ -152,7 +152,7 @@ namespace sw::editor
         return true;
     }
 
-    bool PairedAnimationPanel::acceptsDocumentPath( string_view assetPath ) const
+    bool PairedAnimationPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return StringUtil::endsWith( assetPath, PairedAnimationDef::kExtension );
     }

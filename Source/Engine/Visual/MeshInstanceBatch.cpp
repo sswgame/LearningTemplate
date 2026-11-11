@@ -39,7 +39,7 @@ namespace sw
         unregisterBatch();
     }
 
-    bool MeshInstanceBatch::acceptsCPUWrite() const
+    bool MeshInstanceBatch::canAcceptCPUWrite() const
     {
         SW_LOG_ASSERT( _writer == MeshInstanceWriter::CPU, "MeshInstanceBatch: entry values of a GPU-written batch live in the GPU instance buffer" );
         return _writer == MeshInstanceWriter::CPU;
@@ -47,7 +47,7 @@ namespace sw
 
     void MeshInstanceBatch::setWorld( uint32 index, const float4x4& world )
     {
-        if ( index >= _listEntry.size() || acceptsCPUWrite() == false )
+        if ( index >= _listEntry.size() || canAcceptCPUWrite() == false )
             return;
         _listEntry[index]._world = world;
         markEntryDirty( index );
@@ -55,7 +55,7 @@ namespace sw
 
     void MeshInstanceBatch::setBoundsRadius( uint32 index, float32 radius )
     {
-        if ( index >= _listEntry.size() || acceptsCPUWrite() == false )
+        if ( index >= _listEntry.size() || canAcceptCPUWrite() == false )
             return;
         _listEntry[index]._boundsRadius = radius;
         markEntryDirty( index );
@@ -71,7 +71,7 @@ namespace sw
 
     void MeshInstanceBatch::setSpinSeed( uint32 index, uint32 seed )
     {
-        if ( index >= _listEntry.size() || acceptsCPUWrite() == false )
+        if ( index >= _listEntry.size() || canAcceptCPUWrite() == false )
             return;
         _listEntry[index]._spinSeed = seed;
         markEntryDirty( index );
@@ -80,7 +80,7 @@ namespace sw
     void MeshInstanceBatch::setSprite( uint32 index, const InstanceSpriteFrame& sprite )
     {
         const bool bUnchanged = index >= _listEntry.size() || _listEntry[index]._sprite == sprite;
-        if ( bUnchanged || acceptsCPUWrite() == false )
+        if ( bUnchanged || canAcceptCPUWrite() == false )
             return;
         _listEntry[index]._sprite = sprite;
         markEntryDirty( index );
@@ -89,7 +89,7 @@ namespace sw
     void MeshInstanceBatch::setCustomData( uint32 index, const InstanceCustomData& customData )
     {
         const bool bUnchanged = index >= _listEntry.size() || _listEntry[index]._customData == customData;
-        if ( bUnchanged || acceptsCPUWrite() == false )
+        if ( bUnchanged || canAcceptCPUWrite() == false )
             return;
         _listEntry[index]._customData = customData;
         markEntryDirty( index );

@@ -200,7 +200,7 @@ namespace sw
 
         // --- World 입력(광선으로 사건 보내기) ------------------------------------------
         /** @brief 광선으로 이 위젯에 포인터를 보낼 수 있는지 나타냅니다(World 이고 입력을 켰고 트리가 있을 때). */
-        bool acceptsWorldInput() const { return _space == WidgetSpace::World && _bAcceptsInput && _worldTree != nullptr; }
+        bool canAcceptWorldInput() const { return _space == WidgetSpace::World && _bAcceptsInput && _worldTree != nullptr; }
         void setAcceptsInput( bool bAccepts ) { _bAcceptsInput = bAccepts; }
         /** @brief 물리 바디가 광선(World 입력) · 카메라와 마커 점 사이(Screen 마커)를 막으면 입력을 받지 않거나 마커를 숨깁니다. */
         void setOccludedByPhysics( bool bOccluded ) { _bOccludedByPhysics = bOccluded; }

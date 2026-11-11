@@ -84,7 +84,7 @@ namespace sw
         return cell;
     }
 
-    bool RunMap::crossesExisting( int32 floor, int32 fromColumn, int32 toColumn ) const
+    bool RunMap::intersectsExisting( int32 floor, int32 fromColumn, int32 toColumn ) const
     {
         if ( fromColumn == toColumn )
             return false;
@@ -160,7 +160,7 @@ namespace sw
             for ( int32 floor = 0; floor + 1 < lastFloor; ++floor )
             {
                 int32 nextColumn = MathUtil::clamp( column + random.nextInt( -1, 1 ), 0, _columnCount - 1 );
-                if ( crossesExisting( floor, column, nextColumn ) )
+                if ( intersectsExisting( floor, column, nextColumn ) )
                     nextColumn = column; // 엇갈리면 곧게 편다
                 const int32    nextIndex = getOrCreateNode( floor + 1, nextColumn );
                 vector<int32>& listNext  = _listNode[static_cast<size_t>( nodeIndex )]._listNext;

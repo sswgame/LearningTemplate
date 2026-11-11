@@ -131,7 +131,7 @@ namespace sw
         static AssetReferenceSyntax syntaxOf( string_view path );
 
         /** @brief @p assetID 가 있거나(파일 · 폴더) 임포트 산출물이고 같은 자리의 원본이 있으면 true 입니다. */
-        bool resolves( string_view assetID, const AssetIDSet& assets ) const;
+        bool canResolve( string_view assetID, const AssetIDSet& assets ) const;
 
         /**
          * @brief @p oldID 를 @p newID 로 옮길 때의 규칙입니다 — 그것 자신(폴더면 그 아래 전부)과, 원본(`models_raw/x.glb`)이면 그 산출물 자리(`models/x…`).

@@ -29,7 +29,7 @@ namespace sw
             static wstring toWide( string_view path )
             {
                 // 파일 시스템 연산이 모두 지나는 길목이다 - 상대 경로는 빈 글로 돌려 그 연산을 실패시킨다(R2).
-                if ( PlatformFileUtil::acceptsPathInput( path ) == false )
+                if ( PlatformFileUtil::canAcceptPathInput( path ) == false )
                     return {};
                 return PlatformFileUtil::toWindowsFilePath( path );
             }
@@ -37,7 +37,7 @@ namespace sw
             /** @brief `toWide` 와 같되 확장 경로 접두를 붙이지 않습니다 — 접두를 받지 않는 API(`SetCurrentDirectoryW`)용입니다. */
             static wstring toWidePlain( string_view path )
             {
-                if ( PlatformFileUtil::acceptsPathInput( path ) == false )
+                if ( PlatformFileUtil::canAcceptPathInput( path ) == false )
                     return {};
                 string separated{ path };
                 StringUtil::replaceChar( separated, '/', '\\' );
@@ -78,7 +78,7 @@ namespace sw
             static bool isLinkTag( const DWORD reparseTag ) { return reparseTag == IO_REPARSE_TAG_SYMLINK || reparseTag == IO_REPARSE_TAG_MOUNT_POINT; }
 
             /** @brief Win32 가 쓴 글자 수 @p written 이 버퍼에 들어갔는지입니다(0 은 실패, 용량 이상은 모자람 - 성공이면 끝 0 을 뺀 글자 수가 온다). */
-            static bool fits( const DWORD written, const uint32 capacity ) { return written != 0 && written < capacity; }
+            static bool canFit( const DWORD written, const uint32 capacity ) { return written != 0 && written < capacity; }
         };
     } // namespace
 } // namespace sw
@@ -193,7 +193,7 @@ namespace sw
             return false;
         wchar_t     arrAbsolute[constant::buffer::kMax4096];
         const DWORD written = GetFullPathNameW( wide.c_str(), constant::buffer::kMax4096, arrAbsolute, nullptr );
-        if ( WindowsFileSystemInternal::fits( written, constant::buffer::kMax4096 ) == false )
+        if ( WindowsFileSystemInternal::canFit( written, constant::buffer::kMax4096 ) == false )
             return false;
         outResult = WindowsFileSystemInternal::toUTF8( arrAbsolute );
         return true;
@@ -210,7 +210,7 @@ namespace sw
         wchar_t     arrFinal[constant::buffer::kMax4096];
         const DWORD written = GetFinalPathNameByHandleW( handle, arrFinal, constant::buffer::kMax4096, VOLUME_NAME_DOS );
         CloseHandle( handle );
-        if ( WindowsFileSystemInternal::fits( written, constant::buffer::kMax4096 ) == false )
+        if ( WindowsFileSystemInternal::canFit( written, constant::buffer::kMax4096 ) == false )
             return false;
 
         outResult = WindowsFileSystemInternal::toUTF8( arrFinal ); // 확장 경로 접두는 toUTF8 이 뗀다
@@ -221,7 +221,7 @@ namespace sw
     {
         wchar_t     arrCurrent[constant::buffer::kMax4096];
         const DWORD written = GetCurrentDirectoryW( constant::buffer::kMax4096, arrCurrent );
-        if ( WindowsFileSystemInternal::fits( written, constant::buffer::kMax4096 ) == false )
+        if ( WindowsFileSystemInternal::canFit( written, constant::buffer::kMax4096 ) == false )
             return false;
         outResult = WindowsFileSystemInternal::toUTF8( arrCurrent );
         return true;
@@ -258,7 +258,7 @@ namespace sw
     {
         wchar_t     arrTemp[constant::buffer::kMax4096];
         const DWORD written = GetTempPathW( constant::buffer::kMax4096, arrTemp );
-        if ( WindowsFileSystemInternal::fits( written, constant::buffer::kMax4096 ) == false )
+        if ( WindowsFileSystemInternal::canFit( written, constant::buffer::kMax4096 ) == false )
             return false;
         outResult = WindowsFileSystemInternal::toUTF8( arrTemp );
         while ( outResult.size() > 1 && outResult.back() == '/' )

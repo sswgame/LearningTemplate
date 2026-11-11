@@ -65,7 +65,7 @@ namespace sw
                 {            "Record",                   {}}
             };
 
-            static bool judgesPerBackend( const AutomationStep& step )
+            static bool isEvaluatedPerBackend( const AutomationStep& step )
             {
                 return std::any_of( std::begin( kArrBackendJudgingStep ), std::end( kArrBackendJudgingStep ), [&step]( const BackendJudgingStep& judging )
                 { return step._kind == judging._kind && ( judging._attribute.empty() || step.findAttribute( judging._attribute ) != nullptr ); } );
@@ -291,7 +291,7 @@ namespace sw
         {
             AutomationScenario scenario;
             const bool         bLoaded     = scenario.loadFromPath( AssetID{ path } ).has_value();
-            const bool         bPerBackend = std::any_of( scenario.getSteps().begin(), scenario.getSteps().end(), &Internal::judgesPerBackend );
+            const bool         bPerBackend = std::any_of( scenario.getSteps().begin(), scenario.getSteps().end(), &Internal::isEvaluatedPerBackend );
             for ( size_t i = 0; i < listScenarioList.size(); ++i )
             {
                 const bool bThisBackend = options._bSplitScenarios == false || bLoaded == false || bPerBackend || i == nextBackend % listScenarioList.size();

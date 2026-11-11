@@ -151,9 +151,9 @@ SW_TEST_CASE( ProjectileTest, AcceptsIsATagCondition )
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kProjectileXML, "test" ) );
     WeaponDef rifle = Util::makeRifle( "Ammo.Rifle" );
     SW_REQUIRE_TRUE( rifle.compileAccepts( "test" ) );
-    SW_EXPECT_TRUE( rifle.accepts( *catalog.find( hashed_string( "rifle_round" ) ) ) );
-    SW_EXPECT_TRUE( rifle.accepts( *catalog.find( hashed_string( "incendiary" ) ) ) );
-    SW_EXPECT_FALSE( rifle.accepts( *catalog.find( hashed_string( "shell" ) ) ) );
+    SW_EXPECT_TRUE( rifle.canAccept( *catalog.find( hashed_string( "rifle_round" ) ) ) );
+    SW_EXPECT_TRUE( rifle.canAccept( *catalog.find( hashed_string( "incendiary" ) ) ) );
+    SW_EXPECT_FALSE( rifle.canAccept( *catalog.find( hashed_string( "shell" ) ) ) );
 
     WeaponState state;
     SW_REQUIRE_TRUE( state.equip( rifle, *catalog.find( hashed_string( "rifle_round" ) ), 0 ) );

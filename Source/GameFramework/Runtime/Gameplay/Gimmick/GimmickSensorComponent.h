@@ -62,7 +62,7 @@ namespace sw
         void onOverlapEnd( const OverlapInfo& overlap ) override;
 
         /** @brief 겹친 것으로 인정할 오브젝트인지 판정합니다. 필요한 태그를 모두 가지고 있으면 true 이고, 필요한 태그가 없으면 모든 오브젝트를 인정합니다. */
-        bool acceptsOccupant( const GameObject& object ) const;
+        bool canAcceptOccupant( const GameObject& object ) const;
         /** @brief 바깥(테스트나 게임 규칙)이 겹친 것을 직접 추가하거나 뺍니다. 겹침 훅과 같은 목록을 씁니다. */
         void addOccupant( const GameObject& object );
         void removeOccupant( GameObjectHandle handle );

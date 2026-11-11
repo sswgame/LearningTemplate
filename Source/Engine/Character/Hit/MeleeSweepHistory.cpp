@@ -104,7 +104,7 @@ namespace sw
         return ( point - ( from + segment * along ) ).getLengthSquared();
     }
 
-    bool MeleeSweepHistory::coversSphere( const SweepRecord& record, const float3& center, float32 radius )
+    bool MeleeSweepHistory::containsSphere( const SweepRecord& record, const float3& center, float32 radius )
     {
         const float32 reach        = record._params._radius + radius + kClaimToleranceMeters;
         const float32 reachSquared = reach * reach;
@@ -130,7 +130,7 @@ namespace sw
             if ( record._attackerID != attackerID || distance > kClaimSlackFrames )
                 continue;
             bAnySweep = true;
-            if ( coversSphere( record, targetCenter, targetRadius ) == false )
+            if ( containsSphere( record, targetCenter, targetRadius ) == false )
                 continue;
             if ( pOutParams != nullptr )
                 *pOutParams = record._params;
