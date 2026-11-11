@@ -319,6 +319,9 @@ namespace sw
         /** @brief float32 파라미터를 읽습니다. */
         bool getScalarParameter( hashed_string name, float32& outValue ) const;
 
+        /// 장면 색 사본을 굴절해 읽는 머티리얼의 define 입니다 — 렌더러가 굴절 배치를 가른다(`GPUScene::hasRefractionBatches`)(scene_refraction.hlsli 를 쓰는 셰이더 — 물 · 외형 유리).
+        static constexpr const utf8* kRefractionDefine = "MATERIAL_REFRACTION";
+
     private:
         /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다. */
         [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceLabel, const ResourceContext& context );
@@ -326,8 +329,6 @@ namespace sw
         /** @brief `alphaCutoff` 칸이 값을 넣는 프로퍼티 이름입니다(셰이더의 `MaterialSurface._alphaCutoff` 를 채운다). */
         static constexpr const utf8* kAlphaCutoffProperty = "_alphaCutoff";
 
-        /// 장면 색 사본을 굴절해 읽는 머티리얼의 define 입니다(scene_refraction.hlsli 를 쓰는 셰이더 — 물 · 외형 유리).
-        static constexpr const utf8* kRefractionDefine = "MATERIAL_REFRACTION";
         /// 반투명 블렌드 define 입니다 — `alphaMode="Blend"` 와 함께 움직인다(하나만 있으면 알파가 새거나 불투명 목록에서 섞인다).
         static constexpr const utf8* kTranslucentDefine = "MATERIAL_BLEND_TRANSLUCENT";
 

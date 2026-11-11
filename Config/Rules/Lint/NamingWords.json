@@ -35,7 +35,8 @@
     "WorkSize",
     "WorkRect",
     "WorkMax",
-    "WorkWidth"
+    "WorkWidth",
+    "rcWork"
   ],
   "_predicateWords": [
     "is",
@@ -635,7 +636,6 @@
     "pPendingWork": "pPendingJob — 금지 명사 이전(Fields → Properties · Work → Job · Outcome/Verdict/Judgement → Result · Tally → Stats · Dirtied → Dirty)(2026-11-12)",
     "parseRenderFields": "parseRenderProperties — 금지 명사 이전(Fields → Properties · Work → Job · Outcome/Verdict/Judgement → Result · Tally → Stats · Dirtied → Dirty)(2026-11-12)",
     "preloadOutcome": "preloadResult — 금지 명사 이전(Fields → Properties · Work → Job · Outcome/Verdict/Judgement → Result · Tally → Stats · Dirtied → Dirty)(2026-11-12)",
-    "rcWork": "rcJob — 금지 명사 이전(Fields → Properties · Work → Job · Outcome/Verdict/Judgement → Result · Tally → Stats · Dirtied → Dirty)(2026-11-12)",
     "readActionFields": "readActionProperties — 금지 명사 이전(Fields → Properties · Work → Job · Outcome/Verdict/Judgement → Result · Tally → Stats · Dirtied → Dirty)(2026-11-12)",
     "readEntryFields": "readEntryProperties — 금지 명사 이전(Fields → Properties · Work → Job · Outcome/Verdict/Judgement → Result · Tally → Stats · Dirtied → Dirty)(2026-11-12)",
     "readFields": "readProperties — 금지 명사 이전(Fields → Properties · Work → Job · Outcome/Verdict/Judgement → Result · Tally → Stats · Dirtied → Dirty)(2026-11-12)",

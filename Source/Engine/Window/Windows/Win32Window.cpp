@@ -47,7 +47,7 @@ namespace sw
                 WindowMonitor monitor;
                 monitor._name                    = StringUtil::utf16ToUTF8( info.szDevice );
                 monitor._area                    = toRect( info.rcMonitor );
-                monitor._workArea                = toRect( info.rcJob );
+                monitor._workArea                = toRect( info.rcWork );
                 monitor._bPrimary                = ( info.dwFlags & MONITORINFOF_PRIMARY ) != 0;
                 UINT            dpiX             = 0;
                 UINT            dpiY             = 0;
@@ -274,7 +274,7 @@ namespace sw
         AdjustWindowRect( &frameRect, WS_OVERLAPPEDWINDOW, FALSE );
         const LONG  frameWidth  = frameRect.right - frameRect.left;
         const LONG  frameHeight = frameRect.bottom - frameRect.top;
-        const RECT& workRect    = monitorInfo.rcJob;
+        const RECT& workRect    = monitorInfo.rcWork;
         RECT        currentRect{};
         const bool  bKeepPosition = bWasWindowed && GetWindowRect( _hWnd, &currentRect ) != FALSE;
         const LONG  frameX        = bKeepPosition ? currentRect.left : workRect.left + ( ( workRect.right - workRect.left ) - frameWidth ) / 2;
