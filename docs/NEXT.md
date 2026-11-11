@@ -11,9 +11,9 @@
 
 ## 상태 (2026-11-12)
 
-- origin/main = 8359890baa(이름 이전 NamingBaseline 0 · 런타임 퍼뮤테이션 전환 · 패스 입력 계약 검사 · 상용 대비 감사 문서) — Windows 묶음 검증 통과 뒤 push. 그 커밋의 Linux 단계는 그 세션 끝에 돌던 중이었다(결과는 `~/LT-linux` 로그).
-- main(로컬)은 그 위에 감사 P0 수정 묶음(아래 0 절 1)을 얹었다 — **push 안 함**.
-- **8359890baa 의 Linux 단계는 LINUX_FAILED** — shooter3d(`.linux` 골든 없음 다수 · `stridewarping` 2.1 % 다름), themepark `shadow`(1.125 %), wildwest `mount`(1.11 %). 한계(1 %)를 조금 넘는 그림 차이라 뷰 패스 판정 통합(굴절 배치일 때만 장면 사본) 뒤 dzn 골든을 다시 뜰지, 결함인지 `linux-verify` 로 가른다(Windows 네 백엔드는 같은 커밋에서 통과).
+- origin/main = 23a42f80ef(감사 P0 묶음) — Windows 묶음 검증 통과 뒤 push. 그 커밋의 Linux 단계는 `ThreadTest.DestructorRequestsStopAndJoins` 1 건으로 LINUX_FAILED(테스트 경쟁 — 87fe748573 에서 고쳤다).
+- main(로컬)은 그 위에 감사 P1 묶음(새니타이저 프리셋 · 팩 한도 · appendFormat · 태스크 큐 넘침 · 파괴 요청 집합 · 접속 증명 PRF · 핸드셰이크 시한 · TLS 이름 · 거래 스냅숏 · 상호작용 재확인 · 퀘스트 단계 보상 · 오일러 특이점 · 세계 시계 정수 시 · LanternVale 이동 예산 · 사망 전이 한 곳 · 세계 시계 float64)을 얹었고 묶음 검증이 돌던 중이다(`verify3.out`). 그 뒤 워크트리 `naming-root` 에 G-3 · C-11 · C-13 · N-2 · N-3 · C-2 가 커밋돼 있다 — **빌드 안 함**(다음 묶음).
+- 8359890baa 의 Linux 그림 차이(shooter3d `.linux` 골든 없음 · `stridewarping` 2.1 %, themepark `shadow` 1.125 %, wildwest `mount` 1.11 %)는 아직 가르지 않았다 — `linux-verify` 로 dzn 골든을 다시 뜰지 결함인지 가른다.
 - 에디터 `editor.tilemapdatalayers` 는 **단독으로 돌리면 진다**(검증한 8359890baa Release 바이너리도 — 이름 칸을 누른 뒤 `<EditorText>` 가 "글 칸이 키보드 초점을 잡지 않았다", 화면에는 칸이 활성). 체인 안에서는 앞 단계가 가린다 — `scenario-debug` 1 절 "단독으로만 지면" 의 진짜 결함 후보(`EditorSelfTestInput::isKeyboardTargetSettled` 가 두 프레임 같은 대상을 못 보는 까닭).
 - 워크트리 `settings-json`(`.claude/worktrees/settings`, 80b190b2ba — 8f7b502252 에서 갈림, 빌드 안 함): 프로젝트 설정 창이 형식 없는 `Config/**/*.json`(린트 · 격리 · 환경 · Dev 표)을 "Tables" 구획의 범용 JSON 페이지로 고친다(사용자 지적 — 에디터에서 Config 부터 손으로 맞추는 표까지). 통합에서 Debug 빌드 · 단위 `ProjectSettingsJSONDocumentTest.*` · `ProjectSettingsEntryTest.TablesSkipTypedFiles` · 시나리오 `editor.projectconfigedit`(격리 표 원소 더하기 → 되돌리기, `quarantinetable.png` 를 눈으로 본다). 남은 것: 표 페이지 Ctrl+Z, 활성 게임이 아닌 `Config/Game/*.json` 이 형식 대신 범용 페이지로 열린다. 이름 이전 뒤라 합칠 때 옛 이름은 `py -3 Scripts/lint/NamingWords.py` 가 잡는다.
 - 통합 브랜치 `integ2`(워크트리 `.claude/worktrees/integ2`, 067f721a81 — 3eddd405ce 까지의 main 을 합쳤다, 빌드 한 번도 안 함): 에셋 정체성 1단계(AssetGUID · .meta · asset-ids 도구 · 팩 GUID 색인), 5-3 틱 const 닫기, W-R3 (a) 코덱 키 검사, A1 포즈 노드 평가 · 미러 표 · 에디터 노드 더하기, R1 리다이렉트 표 팩 담기, 온라인 · 원장 · 신고 단위 테스트들, 런타임 파생 오브젝트 `setTransient`(잔상 · 내비 디버그 뷰 · 월드 위젯 사각형 · 데미지 숫자 · 흩뿌린 소품).
@@ -23,7 +23,7 @@
 
 ### 0. 다음 세션 순서
 
-1. **감사 P0 수정 묶음 검증 → push:** 8359890baa 위의 커밋들 — 시퀀서 일시정지 구간 값(P0-12), POSIX exec 오류 파이프 · 공용 줄 분리(P0-16 · 17), Android 키 소비 · 종료 finish · AAudio 백엔드(P0-10 · 9 · 11), 네트워크 끊긴 슬롯 보류(P0-8), Win32 SC_KEYMENU(P0-15), 오디오 장치 유실 계약(P0-13), 타일맵 청크 충돌(P0-14), 세션 상태 전부 아니면 없음(P0-5), 복원 실패 뒤 세이브 막기(P0-6), 쓴 영수증 표(P0-7), 문서 상호작용 구간 · 문서 스택(P0-1 · 2), 자동 저장 프로세스별 잠금(P0-3), 에셋 옮김 방송(P0-4), Core 시간 float64(C-12), 넷 시계 float64(N-4). Debug 빌드 → 단위 전체 → `bundle-verify` → push. Linux 는 `build`(POSIX 프로세스 · ALSA), Android-Shipping 빌드(AAudio · 키 표 · finish — 실기기 볼륨 키 · 종료 뒤 `dumpsys activity`).
+1. **naming-root 묶음 빌드 → 검증 → push:** G-3(제작 재료 개체 보존 · Crafter 상태 판 2), C-11(백오프 지터), C-13(POSIX 앞 시그널 처리기 — Linux 만 컴파일), N-2(순서만 채널 종류별 번호), N-3(신뢰 창이 차면 `ReliableOverflow` 로 닫기 · 역압은 `trySendMessage`), C-2(삼각 분할 실패 되돌리기). 본 트리에 합쳐 Debug 빌드 → 단위 전체(특히 `NetEndpointTest.*` — 64 KB 신뢰 메시지를 몰아 넣는 테스트가 닫힘에 걸리는지, `NetLockstep*` · `TurnRelay*` · `MMO*`) → `bundle-verify` → push. 상태 형식 판이 바뀐 것(WorldClock `CLOK` 2 · Crafter `CRFT` 2)은 옛 세이브를 거절한다.
 2. **감사 P0 의 남은 몫:** 웹 오디오 백엔드(AudioWorklet + 링 버퍼 — 지금 웹 클라이언트는 기동에서 치명 오류, P0-11), 복원 두 단계(분리된 묶음에서 끝까지 읽고 교체 — P0-6 의 나머지), 옮김 계획 단계의 dirty 참조자 · 열린 문서 삭제 거절과 선택의 에셋 경로(P0-4), `CommandStack::pushCoalesce` · span 병합 걷기(UIPreviewModel) · 시나리오 `materialproperties` 끌기 → `Editor.UndoCount` +1 · 미리보기 창 포커스 undo(P0-1 · 2), 시나리오 `editormodulereload` 리로드 뒤 사본 존재(P0-3), 타일맵 바디 수 · 접촉 단위 테스트(P0-14), 분개 정리 뒤 감사 균형 이월 레코드와 계정 삭제 때 `econ_receipt` 값 익명화(P0-7 — 영구 표에 계정 번호가 남는다), 세션 상태의 설정이 바뀐 세이브 받기(판 올림 사슬 — A-6), 셰이더로 가는 애니메이션 시간 접기(C-12 의 남은 몫).
 3. **감사 다음 할 일 P1 · P2:** [CommercialGapAudit](CommercialGapAudit.md) "다음 할 일" 13 번부터(새니타이저 프리셋 먼저). 문서가 크다(약 220 KB) — `## 다음 할 일` · 항목 번호로 찾아 그 절만 읽는다. 각 묶음은 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고친다. 끝난 항목은 그 문서에서 지운다. 사용자에게 받을 것: O-10(길드 창고로 유료 재화가 계정 사이로 옮겨지는 것의 약관 허용 여부).
 4. **settings-json · integ2 통합**(아래 줄).

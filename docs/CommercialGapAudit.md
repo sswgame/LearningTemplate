@@ -60,13 +60,6 @@
 - 제안: 참조 쪽은 에셋 GUID 2 · 3 단계(NEXT integ2)가 닫는다. 문서 쪽은 `applyAssetMoves` 성공 때 (옛 id → 새 id) 목록을 한 번 방송하고 문서 패널 · 씬 소스 · 선택 · 포커스 경로가 받는다. dirty 문서가 참조자이면 계획 단계(`planAssetMoves`)에서 "먼저 저장" 으로 거절한다. 삭제는 열린 문서가 있으면 거절한다.
 - 확인: 시나리오 `assetmove` 에 "머티리얼 열기 → 편집 → 이름 바꾸기 → 저장 → 옛 경로 파일 없음 · 새 경로에 편집 반영" 과 "열린 씬 파일 이름 바꾸기 → Ctrl+S → 옛 파일 없음".
 
-### P0-5 세이브: 세션 상태 구간이 맞지 않으면 그 구간만 조용히 새 판 — 인벤토리 · 땅 · 달력이 통째로 사라진다
-- 분류: 결함(세이브 손실) · 확신: 확인
-- 근거: `Source/GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.cpp:46-65` — 구간 읽기가 거절되면 경고("it starts fresh")만 남기고 `:302-310` 이 반환값을 `(void)` 로 버린다. 거절 조건이 설정값에 묶여 있다: `Source/GameFramework/Runtime/Gameplay/Inventory/Inventory.cpp:402` 의 `io.expect( _listSlot.size() )`, `Source/GameFramework/Runtime/World/Land/LandRegistry.cpp:158-159`(격자 크기), `Source/GameFramework/Runtime/World/Environment/WorldClock.cpp:208`. 가방 슬롯 수를 패치에서 바꾸면 다음 로드에서 인벤토리 전체가 빈 판이 되고 이어지는 저장이 그것을 굳힌다.
-- 상용 엔진: 언리얼 SaveGame 은 태그 직렬화 + 커스텀 버전으로 늘어난 칸을 받는다. Lyra 인벤토리는 고정 슬롯 수가 아니라 항목 목록이다.
-- 제안: 구간 실패를 로드 실패로 올린다(폴백 금지). 세이브 목적에서는 "설정이 정한 개수" 를 `expect` 로 쓰지 못하게 형식을 가른다 — 저장된 개수를 읽어 맞추고 넘친 것은 overflow 로 돌려준다. 구간마다 판 올림 사슬을 건다(A-6).
-- 확인: 단위 `SessionStateSaveTest.InventorySurvivesSlotCountChange` · `LandSurvivesGridGrowth` · `ClockSurvivesShorterDay`.
-
 ### P0-6 세이브: 복원이 실패하면 씬은 이미 비워졌고, 간격 자동 저장이 그 위를 덮는다
 - 분류: 결함(부분 실패) · 확신: 확인(경로 — 실패를 일으키는 입력은 추정)
 - 근거: `Source/GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.cpp:306` 이 본문을 읽기 전에 `pObjectManager->clear()` 를 부른다. 그 뒤 오브젝트 하나를 못 읽거나 `batch.finish()`(`:367`)가 거짓이면 false 다. 부르는 쪽(`Source/GameFramework/Runtime/Foundation/Framework/Save/Autosave.cpp:277-281`, `Source/GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.cpp:571-593`)은 경고만 낸다. `AutosaveManager::setBlocked`(`Autosave.cpp:226`)는 프로덕션 호출처가 0 이라 간격 저장(Velmora `interval=300` · `slots=3`)이 깨진 씬을 15 분 안에 세 칸 모두에 쓴다. NEXT 의 G1 `slice` "복원이 되살리지 못한 `state.objects`" 와 같은 뿌리다.
@@ -81,40 +74,12 @@
 - 제안: 멱등 기록과 감사 내역을 형식으로 나눈다. 지급 트랜잭션에 지우지 않는 `econ_receipt/<스토어>/<거래 id>` 를 "없어야 함" 조건으로 함께 넣는다. 분개 정리는 지우는 분개의 발행 · 소각 합을 자산별 이월 레코드에 같은 트랜잭션으로 더한다.
 - 확인: `TestEconomyReceipts` 에 "지급 → 시각 +401 일 → 보존 쓸기 → 같은 영수증 재제출"(지금은 Ok + 잔액 2 배). `TestLedger` 에 "발행 → 쓸기 → `computeReport().isBalanced()`".
 
-### P0-8 네트워크: 연결 ID 에 세대가 없어 슬롯이 재사용되면 앞 사용자의 메시지가 새 사용자에게 간다
-- 분류: 결함 · 확신: 확인(코드 경로 — 재현 테스트 없음)
-- 근거: `Source/Core/Network/Connection/NetSlotTable.cpp:57-65` 의 `findFreeSlot` 은 가장 낮은 빈 슬롯을 돌려주고 슬롯 번호가 곧 연결 ID 다. 네트워크 스레드가 같은 `update` 안에서 A 의 끊김과 B 의 챌린지 응답을 처리하면(`Source/Core/Network/Connection/NetEndpoint.cpp:963-984`) B 가 A 의 번호를 받는다. `sendMessageLocked`(`:1094`)는 번호만 본다. 게임 스레드가 다음 `pump` 로 사건을 받기 전에 보낸 것 — `ReplicationServer::sendSnapshots`(`Source/GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.cpp:140-148`)의 A 의 `_ownerState` · 기준 스냅샷, `RemoteCallServer::callSession` — 이 B 에게 간다. 가득 찬 서버에 접속 대기자가 있으면 창이 한 틱 가까이 열린다.
-- 상용 엔진: 언리얼은 `UNetConnection` 객체가 신원, 유니티 NGO 의 `clientId` 는 단조 증가, Godot ENet 은 무작위 피어 ID 다.
-- 제안: 연결 ID 를 슬롯 + 세대 핸들로 바꾼다(스트림 쪽은 이미 `StreamConnectionHandle = SlotHandle`). `INetPeers::sendMessage` 가 세대 불일치를 거절한다. 닫힌 슬롯은 게임 스레드가 Disconnected 사건을 꺼낸 뒤에만 다시 준다.
-- 확인: `NetEndpointTest.MessageQueuedForClosedSlotIsNotDeliveredToReusedSlot` — 서버 1 슬롯에서 A 끊김과 B 접속을 한 `update` 에 넣고 `pollInbound` 전의 `sendMessage( 0 )` 이 B 에 도착하지 않는지.
-
-### P0-9 Android: 게임이 스스로 끝내면 `ANativeActivity_finish` 없이 `android_main` 이 돌아온다
-- 분류: 결함 · 확신: 확인(호출 0 건 — 증상은 기억 기준, 실기기 확인 필요)
-- 근거: 저장소에 `ANativeActivity_finish` 호출이 없다. `App::runFrame`(`Source/App/App.cpp:556-560`)이 `isQuitRequested` 로 루프를 끝내면 `Source/App/Android/AndroidMain.cpp:49-52` 부근에서 `android_main` 이 반환한다. Java 액티비티는 살아 있어 이후 표면 · 수명 콜백이 처리할 스레드 없는 파이프에 쓰고 기다린다(검은 화면 또는 ANR).
-- 상용 엔진: 언리얼은 `AndroidThunkCpp_ForceQuit`, 유니티는 `Application.Quit` 이 액티비티 finish 로 간다.
-- 제안: `AndroidWindow::requestClose` 가 `ANativeActivity_finish` 를 부르고 `processMessages` 는 `destroyRequested` 가 올 때까지 펌프한다. "닫기 요청" 과 "닫힘 확정" 을 `IWindow` 에서 두 상태로 가른다.
-- 확인: 단위 `AndroidWindowTest`(가짜 `android_app`)로 닫기 요청 뒤 finish 호출. 실기기에서 시나리오 종료 뒤 `dumpsys activity` 에 액티비티가 남지 않는지.
-
-### P0-10 Android: 패드가 아닌 모든 키를 "처리함" 으로 돌려줘 볼륨 키가 먹통이다
-- 분류: 결함 · 확신: 확인(코드 — OS 동작은 기억 기준)
-- 근거: `Source/Engine/Window/Android/AndroidWindow.cpp:408-419` — 키 이벤트면 무조건 `return 1` 이다. `mapKey` 표(`Source/Engine/Input/PlatformInputManager.cpp` 168 행 부근)에 볼륨 · 음소거 · 카메라 키가 없어 엔진은 버리는데, 글루가 `AInputQueue_finishEvent( handled = 1 )` 로 끝내 시스템 볼륨 조절이 막힌다.
-- 상용 엔진: SDL 은 `AKEYCODE_VOLUME_*` 에 0 을 돌려준다. 언리얼도 볼륨 키를 시스템에 넘긴다.
-- 제안: "엔진 키로 옮겨지는가" 를 `mapKey` 한 곳이 답하고, `queueInput` 이 소비 여부를 돌려줘 옮기지 못한 키는 0 을 돌려준다.
-- 확인: 단위 `PlatformInputTest.UnmappedAndroidKeyIsNotConsumed`. 실기기 볼륨 버튼.
-
 ### P0-11 오디오: Android · 웹 클라이언트는 오디오 백엔드가 없어 기동에서 `SW_FATAL`
 - 분류: 결함 · 확신: 확인(코드 경로 — 실행은 안 함)
 - 근거: `Source/Engine/Audio/IAudioService.cpp:74-83` — 등록된 백엔드가 없으면 `SW_FATAL( "No audio device backend is registered…" )` 이다. 등록은 `Source/Engine/Audio/Windows/XAudio2AudioBackend.cpp:459` 와 `Source/Engine/Audio/Linux/AlsaAudioBackend.cpp:257` 둘뿐이고, `cmake/Engine/UnbuiltSources.cmake:149-159` 가 `Windows/` · `Linux/` 폴더를 Android · Emscripten 에서 뺀다. 클라이언트는 `IAudioService.cpp:576` 에서 `create()` 를 부른다. [PlatformTargets](PlatformTargets.md) "남은 일" 에 오디오가 없다.
 - 상용 엔진: 언리얼 AudioMixer 는 플랫폼마다 백엔드(AAudio/OpenSL, 웹 AudioWorklet)가 있고 없으면 Null 장치다. 유니티 · Godot 도 Dummy 드라이버가 있다.
 - 제안: `Audio/Android`(AAudio 콜백) · `Audio/Web`(AudioWorklet + 링 버퍼)을 더한다. 그 전에는 CMake 구성 단계에서 "이 플랫폼은 오디오 백엔드 없음" 으로 실패시켜 기동 뒤 치명 오류를 빌드 오류로 옮긴다.
 - 확인: `py -3 -m Scripts web-check --game Empty` 와 `android-apk` 기동 로그. 단위 `AudioBackendRegistryTest.EveryClientPlatformRegistersExactlyOne`.
-
-### P0-12 시퀀서: 일시정지한 시퀀스가 직전에 지난 이벤트를 매 틱 다시 낸다
-- 분류: 결함 · 확신: 확인
-- 근거: `Source/Engine/Sequencer/SequencePlayer.cpp:75-79` — 일시정지면 `update` 가 `_previousFrame` 을 갱신하지 않고 돌아온다. `Source/Engine/Sequencer/SequencePlayerComponent.cpp:152-158` — `isPlaying()` 은 일시정지 중에도 참이라 `applyTimeline()` 이 매 틱 돈다. `Source/Engine/Sequencer/SequenceTimelineUtil.cpp:416-425` 의 판정이 `previousFrame < start <= frame` 이라 같은 쌍으로 같은 이벤트 · 카메라 신호 · 기록 줄이 반복된다. `TestSequencePlayback.cpp` 에 pause 사례가 없다.
-- 상용 엔진: 언리얼 Sequencer 는 평가 범위가 빈 구간이면 이벤트 트랙을 발화하지 않는다. 유니티 Timeline 의 Signal 은 시간이 나아간 구간에만 난다.
-- 제안: 플레이어가 "이번 갱신이 지난 구간"(빈 구간 포함, `AnimationTimeStep` 과 같은 값 형식)을 돌려주고 `applyPlayback` 이 그 값만 받는다. 멈춘 갱신은 빈 구간이라 구조상 발화할 수 없다.
-- 확인: 단위 `SequencePlaybackTest.PausedPlayerFiresNoEvents`(이벤트를 지난 직후 pause → tick 3 회 → 발화 1 회).
 
 ### P0-13 오디오: ALSA 장치를 잃으면 오디오 스레드가 쉬지 않고 돌고, XAudio2 는 유실을 모른다
 - 분류: 결함 · 확신: 확인(ALSA · XAudio2 동작은 기억 기준)
@@ -130,37 +95,9 @@
 - 제안: 충돌도 `TileChunkGrid` 청크 단위(청크마다 바디 하나에 셰이프 여럿)로 두고 바뀐 청크만 더티로 표시해 물리 `BeginFrame` 에서 한 번 반영한다. 오너 변환은 바디의 부모 변환으로 다룬다.
 - 확인: 단위 `TileMapCollisionTest.BodiesFollowOwnerTransform` · `SetTileRebuildsOnlyItsChunk` · `SetTileKeepsUnrelatedContacts`. 측정 — 256×256 맵에서 프레임당 `setTile` 32 회의 Tracy 구간.
 
-### P0-15 Win32: Alt · F10 이 OS 메뉴 모드로 들어가 다음 키를 삼킨다
-- 분류: 결함 · 확신: 확인(코드에 처리 없음 — OS 동작은 기억 기준, 재현 먼저)
-- 근거: `Source/Engine/Window/Windows/Win32Window.cpp:451-513` — `wndProc` 의 switch 에 `WM_SYSKEYDOWN` · `WM_SYSCHAR` · `WM_SYSCOMMAND( SC_KEYMENU )` 가 없어 `DefWindowProcW` 로 간다(`Source/Engine/Input/Windows/InputManagerWin32.cpp:206` 은 키 이벤트만 올린다). `WS_OVERLAPPEDWINDOW` 는 시스템 메뉴가 있어 Alt 나 F10 을 눌렀다 떼면 메뉴 선택 모드가 되고 다음 키가 게임에 오지 않는다. Alt+Space 는 모달 메뉴 루프로 프레임을 멈춘다. Alt 는 커서 잠금 풀기 키(`Source/Engine/Input/InputManager.cpp:963`, 배포 빌드 포함)라 평소에 누르게 된다.
-- 상용 엔진: 언리얼 `FWindowsApplication::ProcessMessage` 는 `WM_SYSKEYDOWN` 을 F4 · Space 만 기본 처리로 넘기고 `WM_SYSCHAR` 는 0 을 돌려준다. GLFW · SDL 은 메뉴 없는 창의 `SC_KEYMENU` 를 삼킨다.
-- 제안: `wndProc` 에서 `SC_KEYMENU`, `WM_SYSCHAR`, F4 가 아닌 `WM_SYSKEYDOWN/UP` 을 0 으로 끝낸다. "Alt 로 잠금 풀기" 는 개발 정책이니 Config/Dev 값으로 옮기고 배포는 끈다.
-- 확인: 시나리오 `engine/automation/altkey` — `<WindowMessage>` 로 `WM_SYSKEYDOWN/UP( VK_MENU )` 를 보낸 뒤 W 키가 `Input.KeyDown` 감시 값에 잡히는지.
-
-### P0-16 Core: POSIX `launch` · `launchDetached` 가 exec 실패를 성공으로 돌려준다
-- 분류: 결함(Linux) · 확신: 확인
-- 근거: `Source/Core/Process/Posix/PosixProcess.cpp:146-149` — 경로 명령(`ProcessCommand::at`)은 있는지 보지 않고 그대로 쓴다. 자식은 `chdir` · exec 실패 때 `_exit( 127 )` 만 하고 부모는 true 를 돌려준다. `launchDetached` 는 가운데 프로세스가 손자 fork 만 되면 `_exit( 0 )` 이라(`:393-395`) 손자의 exec 실패를 영영 모른다. 계약(`Source/Core/Process/Process.h:126` "찾지 못하면 false")과 Windows 동작과 갈린다.
-- 상용 엔진: 언리얼 Unix `CreateProc` 는 `posix_spawn` 이라 실패가 반환값으로 온다. Chromium 은 CLOEXEC 오류 파이프로 errno 를 부모에 돌려준다.
-- 제안: fork 전에 CLOEXEC 파이프를 하나 더 열고 자식이 `chdir` · exec 실패의 errno 를 쓴다. 부모는 EOF 면 성공, 값이 있으면 거두고 false 다. `launchDetached` 도 같은 파이프를 쓴다.
-- 확인: POSIX 단위 테스트 — `at( "/nonexistent/x" )` 의 `launch` · `launchDetached` · `execute` 가 false 인지(지금 `MissingExecutableFailsToLaunch` 는 `fromSearchPath` 만 덮는다).
-
-### P0-17 Core: POSIX `readOutputLine` 이 4095 바이트에서 줄을 쪼개 Linux 파일 대화상자 다중 선택이 깨진다
-- 분류: 결함(Linux 에디터) · 확신: 확인
-- 근거: `Source/Core/Process/Posix/PosixProcess.cpp:445-446` — `fgets( arrLineBuffer, 4096, … )` 한 번의 결과를 한 줄로 돌려준다(Windows 판은 개행까지 모은다). `Source/Editor/Common/Backend/Platform/LinuxFileDialog.cpp:209` 가 zenity 를 `--multiple --separator='|'` 로 띄워 모든 경로가 한 줄로 오고, `:162-166` 이 조각마다 `'\n'` 을 붙이며 `splitPaths` 가 `'\n'` 도 구분자로 쓴다. 합계가 4095 바이트를 넘으면 경계의 경로가 틀린 경로 둘로 갈린다.
-- 상용 엔진: 언리얼 `FMonitoredProcess` 는 `ReadPipe` 조각을 쌓아 개행으로 자르는 코드 하나를 모든 플랫폼이 쓴다.
-- 제안: 줄 분리를 공용 `Process.cpp` 의 버퍼 하나로 옮기고 플랫폼 파일은 바이트 조각 읽기만 구현한다. `\r` 로 끝난 조각은 다음 바이트까지 보류한다(Windows `takeBufferedLine` 의 CRLF 경계 빈 줄도 함께 닫힌다 — 그 줄은 다시 열어 확인하지 않았다).
-- 확인: 자식이 5000 자 한 줄을 내면 한 줄로 오는지. 분리기를 순수 함수로 만든 뒤 `"abc\r"` + `"\ndef"` 가 두 줄인지.
-
 ## P1 — 조건부 결함과 확장 · 성능 병목
 
 ### Core
-
-#### C-1 `quaternion::getEulerAngles` 가 피치 ±90° 에서 요 · 롤을 잃는다
-- 분류: 결함 · 확신: 확인(식) — 수치 결과는 손 계산
-- 근거: `Source/Core/Math/MatrixMath.cpp:288-306` — 특이점에서 피치만 ±π/2 로 고정하고 요 · 롤은 평소 식 그대로라 두 `atan2` 가 (0, 0) 근처 잡음을 받는다. 이 값이 변환 정본이다: `Source/Engine/Object/Component/SceneComponent.cpp:249`(`setWorldTransform`), `Source/Engine/Physics/Component/PhysicsComponent.cpp:133`(물리 포즈 되쓰기). 수직으로 내려다보는 카메라에 요가 있으면 걸린다. 테스트는 요 45° 하나뿐이다.
-- 상용 엔진: 언리얼 `FQuat::Rotator()` 는 특이점 문턱에서 롤을 요에 맞춰 낸다. 유니티 · Godot 은 정본이 쿼터니언/기저이고 오일러는 표시용이다.
-- 제안: 최소 수정은 특이점에서 `roll = 0, yaw = 2·atan2( y, w )`. 근본 수정은 `SceneComponent` 의 회전 정본을 쿼터니언으로 두고 오일러는 인스펙터 힌트로만 두는 것이다(물리 · 카메라의 매 프레임 왕복이 없어진다).
-- 확인: 피치 {±90°, ±89.999°} × 요 · 롤 격자에서 `makeFromYawPitchRoll( q.getEulerAngles() )` 가 ±q 인지.
 
 #### C-2 삼각 분할 실패가 "빈 목록" 이 아니라 구멍을 덮는 부채꼴을 남긴다
 - 분류: 결함 · 확신: 실패 계약은 확인, 구멍 2 개 반례는 손 시뮬레이션
@@ -175,13 +112,6 @@
 - 상용 엔진: UE Tasks 의 기다리는 워커는 유휴 워커와 같은 대기 큐에 등록돼 새 일에 깨어난다. 유니티 `JobHandle.Complete` 는 의존 사슬을 당겨 실행한다.
 - 제안: 합류 대기 워커도 마스크에 올린다(깬 워커는 합류를 다시 확인한 뒤 돕는다). `TaskFuture::wait` · `AsyncReadHandle::wait` 는 풀 워커에서 부르면 돕는 대기로 가거나 Debug 단언으로 막는다.
 - 확인: 단위 테스트 — 워커 1 개. 워커 태스크가 스테이지를 기다려 잠든 뒤 다른 스레드가 그 스테이지의 태스크를 제출해 시한 안에 끝나는지.
-
-#### C-4 전역 태스크 큐가 고정 용량이고 가득 차면 기한 없이 yield 한다
-- 분류: 결함(잠재) / 구조 · 확신: 확인(지금 호출자는 한도 아래)
-- 근거: `Source/Core/Task/TaskManager.h:497-501` — High 1024 · Normal 4096 · Low 1024 · 메인 1024 칸. `Source/Core/Task/TaskManager.cpp:1266-1269` · `:1355-1365` 는 `while ( enqueue == false ) yield` 다. `submitWithoutWake`(`:634-637`)는 워커를 깨우지 않으므로 잠든 풀에 한 묶음이 용량을 넘으면 영원히 돈다(호출자 `Source/Engine/Renderer/Graph/RenderGraph.cpp:728-747`). Low 1024 칸에 수천 개의 로드 태스크를 넣으면 메인이 막힌다.
-- 상용 엔진: UE Tasks · 유니티 JobSystem 의 큐는 늘어난다.
-- 제안: 전역 큐를 블록 연결 방식으로 늘어나게 한다. 최소 수정은 가득 찼을 때 제출 스레드가 `wakeSleepingWorkers` 를 부르고 스스로 한 항목을 실행하는 것이다.
-- 확인: 단위 테스트 — 유휴 풀에 High 태스크 2000 개를 `submitWithoutWake` 로 넣고 `waitAll` 이 시한 안에 끝나는지.
 
 #### C-5 `SpinLock` 이 백오프 없는 순수 스핀인데 그 안에서 힙 할당 · 맵 삽입 · 사용자 생성자가 돈다
 - 분류: 성능 · 확신: 코드 확인, 영향은 측정 필요
@@ -218,34 +148,6 @@
 - 제안: 범위 `insert` · `assign` 을 "개수 계산 → 한 번 예약 → 한 번 밀기 → `Memory::copy`" 로, `sw::deque` 는 2 의 거듭제곱 링 버퍼로, `reserve` 는 밀집 배열도 잡게, `map` 범위 구축은 붙이고 `stable_sort` 로 바꾼다.
 - 확인: 벤치 — `vector<uint8>` 1 MB 범위 삽입, `deque<Datagram>` 1 만 번 push 의 할당 횟수, 무작위 키 10 만 개 `map` 구축.
 
-#### C-10 `StringBuilder::appendFormat` 이 UTF-8 글자 경계에서 잘린 것을 "다 들어갔다" 로 본다
-- 분류: 결함 · 확신: 확인
-- 근거: `Source/Core/String/StringBuilder.h:263-272` 는 잘림을 `written < available - 1` 로 추론한다. `Source/Core/String/formatString.h:685-686` 의 `write` 는 잘릴 때 글자 시작까지 1 ~ 3 바이트 물러나 버퍼를 끝까지 채우지 않는다. 둘이 만나면 잘린 출력이 성공으로 판정되어 힙으로 늘리지 않는다(`StringBuilder<16>` 에 19 바이트 한글 글 → 13 바이트만 남는다). `appendFormat` 호출은 테스트 밖 658 곳이고 테스트는 ASCII 뿐이다.
-- 상용 엔진: `TStringBuilder::Appendf` 는 포맷 함수가 돌려준 필요 길이로 늘리고 다시 쓴다.
-- 제안: `formatstring` 이 `{ 쓴 길이, 잘렸는가 }` 를 `[[nodiscard]]` 로 돌려주고 `StringBuilder` 는 그 값만 본다.
-- 확인: 단위 테스트 — `StringBuilder<16>` 에 `"a가나다라마바"` 를 접두 `""` · `"a"` · `"ab"` 로 넣어 결과가 원문과 같은지.
-
-#### C-11 `ExponentialBackoff` 에 지터가 없고 첫 재시도가 0 ms 다
-- 분류: 구조 · 확신: 확인
-- 근거: `Source/Core/Time/ExponentialBackoff.h:25-31` — 두 배씩 늘릴 뿐 난수가 없다. `OnlineServiceClient.cpp:354`(250 ms → 5000 ms)와 RESP 스토어가 그대로 쓴다. 서비스가 죽으면 모든 클라이언트가 같은 위상으로 재시도해 복구 직후의 서버에 한꺼번에 몰린다.
-- 상용 엔진: gRPC 연결 백오프는 지터 ±20 % 가 기본이고 AWS SDK 는 full jitter 다.
-- 제안: `takeDelayMs( maxDelayMs, randomUnit )` 처럼 난수를 필수 인자로 받아 `[delay/2, delay]` 에서 고른다.
-- 확인: 단위 테스트 — 난수 0 · 1 에서 범위 양 끝, 다른 난수열 둘의 재시도 시각이 갈리는지.
-
-#### C-12 `GameTimer::getTotalTime()` 이 float32 초라 장시간 실행에서 셰이더 시간이 끊긴다
-- 분류: 결함(정밀도) · 확신: 코드 확인, 정도는 계산
-- 근거: `Source/Core/Time/GameTimer.cpp:47-52` — 안에서는 int64 나노초인데 반환에서 `float32` 로 좁힌다. `FrameRenderState.h:200` 의 `getAnimationTime()` 이 이 값을 `g_Time` 으로 셰이더에 보낸다. 한 눈금이 9.1 시간에서 3.9 ms, 36 시간에서 15.6 ms 다(종일 켠 에디터 · 서버).
-- 상용 엔진: 언리얼 `FApp::CurrentTime` 은 double, 유니티는 `Time.timeAsDouble` 을 더했다.
-- 제안: 반환을 `float64` 로 바꾸고 셰이더로는 CPU 가 double 로 주기 안에 접은 값을 보낸다. 같은 모양이 N-4(서버 틱) · K-5(키트 누적 시각)에 있다.
-- 확인: 단위 테스트 — `ManualClock` 을 10 시간 뒤로 민 다음 1 ms 간격 두 번의 차이가 1 ms ± 1 µs 인지.
-
-#### C-13 POSIX · Android 크래시 처리기가 이전 시그널 처리기를 저장하지도 잇지도 않는다
-- 분류: 결함 · 확신: 코드 확인, Android 영향은 추정
-- 근거: `Source/Core/Diagnostics/Posix/PosixCrashHandler.cpp:177` — `sigaction( signalNumber, &action, nullptr )` 로 이전 처리기를 받지 않고 보고 뒤 `SIG_DFL` 로 덮는다. Android 는 debuggerd 처리기(tombstone · Play Console 기록)가 사라지고, Linux 에서는 ASan · TSan 의 SEGV 처리기를 지운다.
-- 상용 엔진: Breakpad · Crashpad 는 옛 `sigaction` 을 저장했다가 보고 뒤 복원하고 시그널을 다시 보낸다.
-- 제안: install 이 이전 값을 배열에 채우고 보고 뒤와 uninstall 은 그것을 복원한다.
-- 확인: 단위 테스트 — 가짜 SIGSEGV 처리기를 걸고 install → uninstall 뒤 `sigaction` 이 그 처리기인지.
-
 #### C-14 결정성 표시가 손으로 적은 파일 목록이라 빠진 TU 가 있다
 - 분류: 구조 · 확신: 목록의 빈틈은 확인, 실제 비트 차이는 추정
 - 근거: `Source/Core/CMakeLists.txt:190` 의 표시 대상은 `VectorMath` · `DeterministicMathUtil` · `Ray` · `OrientationUtil` · `PolygonTriangulation` 다섯뿐이다. `MatrixMath.cpp`(`quaternion::slerp` · `operator*` — 결정성 표시된 물리 TU 가 부른다)와 `ValueNoise.cpp`(헤더가 "어느 기계에서나 같은 값" 이라 적고 `VoxelTerrain` 이 쓴다)가 없다. 표시된 TU 안의 libm `asin/atan2` 를 막는 린트도 없다.
@@ -261,41 +163,6 @@
 - 확인: 작은 파일 5000 개를 한꺼번에 읽는 시나리오에서 Tracy 로 `_mutex` 대기와 `resize` 시간, `-gv_assetLoadReport=1`.
 
 ### 네트워크 · 텔레메트리
-
-#### N-1 접속 증명 태그가 같은 키 · 고정 nonce(0)의 AEAD 라 두 번 엿보면 위조할 수 있다
-- 분류: 결함(암호) · 확신: nonce 재사용은 확인, 영향 범위는 추정
-- 근거: `Source/Core/Network/Connection/NetPacketSealer.cpp:49-57,179-180` — 증명 키는 세션 비밀에서만 유도되고 nonce 는 `arrZeroNonce` 다(AAD 만 달라진다). 같은 비밀로 태그가 두 번 나가는 길이 둘이다: 시간 초과 재시도(`Source/Engine/Net/GameNetSession.cpp:1025-1030`)와 창 경계에서 챌린지를 두 번 받는 경우(`Source/Core/Network/Connection/NetEndpoint.cpp:839`). GCM · ChaCha20-Poly1305 는 같은 (키, nonce)의 태그 둘에서 인증 키가 복원된다. 위조 응답은 피해자 주체로 슬롯을 받는다(세션 키는 못 만들어 5 초 뒤 타임아웃).
-- 상용 엔진: netcode.io connect token · Steam 티켓은 서명이나 HMAC 으로 묶고 AEAD nonce 는 시퀀스에서 만든다.
-- 제안: 증명을 `computeHKDFSHA256( secret, info = 라벨 ‖ 전사 )` 같은 PRF 출력으로 바꾸고 상수 시간 비교한다. 고정 nonce 로 봉인하는 API 형태를 없앤다.
-- 확인: `NetPacketSealerTest.ProofTagsOfTwoAttemptsDoNotShareKeyAndNonce`, 위조 태그로 서버가 슬롯을 주지 않는 `NetEndpointTest`.
-
-#### N-2 UnreliableSequenced 가 종류별 흐름을 약속하지만 번호는 연결 공용 16 비트다
-- 분류: 결함(잠재) · 확신: 확인
-- 근거: `Source/Core/Network/Connection/NetConnection.cpp:480-484` — 보내는 쪽은 모든 종류에 `_nextSequencedSendID` 하나를 쓰고, 받는 쪽(`:625-639`)은 종류별 `_lastID` 와 `NetSequence::isGreater` 로 비교한다. 한 종류가 쉬는 동안 다른 종류가 32768 번 넘게 나가면 다시 나온 그 종류는 "늦게 온 옛 메시지" 로 버려지고, 카운터가 한 바퀴 돌 때까지(60 Hz 약 9 분) 계속 버려진다. 지금 출하 경로는 순서만 종류가 사실상 하나라 숨어 있다.
-- 상용 엔진: 언리얼은 채널마다 시퀀스를 따로 둔다. ENet(Godot)도 채널별 순서 번호다.
-- 제안: 번호를 종류별 흐름의 것으로 만든다(보내는 쪽 항목이 자기 카운터를 든다).
-- 확인: `NetConnectionTest.SequencedKindIdleForHalfTheSequenceSpaceStillDelivers`.
-
-#### N-3 신뢰 창이 차면 `sendMessage` 가 조용히 false 를 주고 락스텝이 `(void)` 로 버려 3 인 이상 판이 영구 정지한다
-- 분류: 결함 · 확신: 확인(코드 경로, 수치는 상수로 계산)
-- 근거: `Source/Core/Network/Connection/NetConnection.cpp:244` — 창(255)이 차면 로그 없이 false 다. `Source/GameFramework/Kits/Feature/Network/NetLockstep/LockstepSession.cpp:120,203,233,265` 가 입력 · 체크섬 · 이탈 · 중계를 `(void)` 로 보낸다. `kMaxInputLead = 127` 이라 한 클라이언트 회선이 2 ~ 5 초 멈추면 그 연결로 가는 것이 255 를 넘고, 입력은 빈틈없이 와야 해서(`:86`) 재동기 경로 없이 멈춘다. 같은 저장소의 `TurnRelay.cpp:152-166`(대기열 + 상한 넘으면 끊기)은 옳게 다룬다.
-- 상용 엔진: 언리얼은 신뢰 버퍼가 넘치면 연결을 닫는다.
-- 제안: 신뢰 큐 실패를 무시할 수 없는 구조로 바꾼다 — 엔드포인트가 연결을 `ReliableOverflow` 로 끊거나 `INetPeers` 가 연결별 넘침 대기열(바이트 상한)을 갖는다. `broadcast` 는 거절된 연결 목록을 돌려준다.
-- 확인: `NetLockstepTest.ThreePlayersSurviveOnePeerStallShorterThanTimeout`(`LoopbackCluster` 로 한 피어를 3 초 막는다).
-
-#### N-4 서버 틱을 float32 로 다뤄 장기 가동 서버에서 보간이 멈추고 랙 보정 스탬프가 넘친다
-- 분류: 결함(가동 시간 의존) · 확신: 확인(산술)
-- 근거: `Source/Core/Network/Replication/NetClock.h:75-76`, `NetClock.cpp:44,66` — `_serverTick += deltaTime / tickInterval` 이 float32 다. 틱 2^22(30 Hz 약 39 시간)부터 144 fps 의 증가분이 사라지고 2^24(30 Hz 6.5 일)부터 스스로 전진하지 못한다. `Source/GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.cpp:205` 의 `uint32( renderTick × 256 )` 은 틱 2^24 에서 범위를 넘는다. `ShooterNetPawnComponent.cpp:622-634` 의 뷰 틱 되감기도 같은 형식이다.
-- 상용 엔진: 언리얼 5 는 월드 시간이 double 이고 Network Prediction 은 정수 프레임 + 소수를 따로 둔다.
-- 제안: 틱 시각을 "정수 틱 + [0,1) 소수" 값 형식으로 묶어 `NetClock` · 보간 · 랙 보정 API 가 그것만 받게 한다.
-- 확인: `NetClockTest.RenderTickAdvancesAtTick20Million`, `ReplicationIntentTest` 에 시작 틱 2^24 + α 사례.
-
-#### N-5 파괴 스냅숏 요청에 중복 제거 · 상한이 없다
-- 분류: 결함(DoS) · 확신: 경로 확인, 스냅숏 한 번의 비용은 측정 필요
-- 근거: `Source/GameFramework/Kits/Feature/Network/NetDestruction/DestructionReplication.cpp:199-207` — 받은 `SnapshotRequest` 마다 `_listRequest.push_back` 한다. `:230-238,282-305` — `update` 가 요청마다 `makeNetworkSnapshot` 을 먼저 만들고, 신뢰 창이 차서 실패하면 다시 줄에 넣는다. 요청 1 만 개(약 40 KB)면 창이 빌 때까지 매 틱 1 만 번 직렬화한다.
-- 상용 엔진: 언리얼은 초기 복제를 서버가 연결 상태로 주도하고 클라이언트 요청형 RPC 에는 RPC DoS 감지가 있다.
-- 제안: 요청을 (연결, netID) 집합으로 바꾸고 스냅숏은 netID 당 틱에 한 번만 만들어 공유한다. 창 여유가 있을 때만 만든다.
-- 확인: 단위 테스트 — 같은 요청 1000 개 뒤 `update` 한 번의 `makeNetworkSnapshot` 호출 수가 1 인지.
 
 #### N-6 텔레메트리 업로드가 게임 스레드에서, 서비스 잠금을 쥔 채 블로킹 HTTP 로 나간다
 - 분류: 성능 · 확신: 확인
@@ -325,13 +192,6 @@
 - 제안: 정책 API 를 "판정 함수" 에서 "목록 제공"(`collectAlwaysRelevant( connectionID, out )` + 전역 목록 캐시와 변경 판)으로 바꾼다.
 - 확인: `TestMMOReplicatorParallel` 에 always 정책 + 엔티티 5 만 사례의 `update` 시간.
 
-#### N-10 스트림 수락 연결에 핸드셰이크 시한이 없어 1 바이트씩 흘리는 연결이 슬롯을 계속 쥔다
-- 분류: 결함(DoS) · 확신: 전송 · 엔드포인트 층은 확인, 키트의 IP 당 제한 유무는 미확인
-- 근거: `Source/Core/Network/Transport/Windows/IocpStreamTransport.cpp:336-340`, `Source/Core/Network/Transport/LinuxKernel/EpollStreamTransport.cpp:319-323` — Open 상태의 시한은 "마지막 수신 뒤 60 초" 뿐이다. `Source/Core/Network/Message/StreamMessageEndpoint.cpp:218-229` — TLS 핸드셰이크가 끝나기 전에는 Opened 사건이 나가지 않아 위 층이 그 연결을 볼 수도 끊을 수도 없다. 기본 `_maxConnections = 1024` 를 59 초마다 1 바이트로 채우면 새 수락이 모두 거절된다.
-- 상용 엔진: 언리얼 Stateless 핸드셰이크와 일반 웹 서버(nginx `client_header_timeout`)는 핸드셰이크 기한을 둔다.
-- 제안: 연결 상태에 "핸드셰이크 중" 을 넣고 `_handshakeTimeoutSeconds`(Config) 기한을 전송 층 주기 점검에 둔다. 주소당 동시 연결 상한을 둔다.
-- 확인: `TestStreamTransport` 에 "TLS 미완 연결이 기한 뒤 닫힌다".
-
 ### 온라인 서비스 · 저장소
 
 #### O-1 환불 표시와 지급이 서로를 조건으로 걸지 않아 "환불된 구매의 지급" 이 통과한다
@@ -341,26 +201,12 @@
 - 제안: 연결 포장이 일 안에서 읽은 (테이블, 키, 버전)을 모아 커밋 때 `requireVersion` 으로 자동으로 붙인다. NotFound 읽기는 "없어야 함" 이 된다. 지금은 조건을 손으로 다는 규칙이라 Admin · Mailbox · Guild 로직에도 같은 틈이 있을 수 있다.
 - 확인: 메모리 저장소에 "읽기와 커밋 사이에 다른 일을 끼워 넣는" 테스트 훅을 두고 지급 ↔ 환불을 엇갈린다. `TestPostgresEndToEnd` 에 두 워커 동시 실행.
 
-#### O-2 게임 클라이언트 · GM 도구의 TLS 가 서버 이름을 검증하지 않는다
-- 분류: 결함(인증 — 공인 CA 번들을 신뢰 파일로 쓰면 P0) · 확신: 확인
-- 근거: `Source/GameFramework/Runtime/Online/Service/OnlineSession.cpp:215`, `Source/GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountTicketConnect.cpp:157`, `Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolConnection.cpp:55` 가 `createClientTLSContext( …, trustFile, "" )` 로 서버 이름을 비워 넘긴다. `Source/GameFramework/Runtime/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.cpp:383-387` 은 이름이 빌 때 `SSL_set1_host` 를 건너뛴다(반환값도 `(void)`). 신뢰 파일에 공인 CA 번들을 넣으면 그 CA 가 낸 아무 도메인의 인증서로 로그인 · 세션 토큰 · GM 연결을 가로챌 수 있다. 외부 제공자용 HTTP · 캐시는 호스트를 넘긴다.
-- 상용 엔진: 언리얼 SSL 모듈은 도메인별 공개 키 고정과 호스트 이름 검증을 함께 한다.
-- 제안: API 를 "고정 인증서용"(지문 고정 필수)과 "CA 번들용"(호스트 이름 필수 인자)으로 나눈다. Client 역할에 이름도 지문도 없으면 컨텍스트 생성이 오류다.
-- 확인: `TestNetSecurity` 에 "CA 번들 + 다른 이름의 유효 인증서 → 핸드셰이크 실패", "이름 · 지문 없는 클라이언트 컨텍스트 → 생성 오류".
-
 #### O-3 비밀번호 해시(Argon2id)가 저장소 워커(DB 연결) 스레드에서 돌고 저장소 대기열에 상한이 없다
 - 분류: 성능(DoS) · 확신: 구조 확인, 수치는 측정 필요
 - 근거: `Source/GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.cpp:83-108` 의 로그인 일은 저장소 스레드에서 돌고 그 안의 `Source/GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.cpp:554` 가 해시를 계산한다(19 MiB × 2 회, 워커 기본 4). 로그인이 몰리면 원장 · 우편 · 거래의 저장소 일이 전부 뒤에 선다. `Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool.cpp:138-149` 의 대기열은 상한이 없다.
 - 상용 서비스: KDF 를 DB 연결과 분리된 연산 풀에서 돌리고 동시 해시 수를 세마포어로 묶는다(OWASP Password Storage).
 - 제안: 로그인을 "읽기(저장소) → 해시(상한 있는 연산 풀, 넘치면 `kBusy`) → 커밋(저장소)" 세 단계로 나눈다. 저장소 풀에 대기 상한을 둔다.
 - 확인: 부하 봇 `login_storm` 을 `_bLightPasswordHash` 없이 돌리며 `service_store_pending_peak` 와 다른 키트의 저장소 지연을 본다(O-12).
-
-#### O-4 거래: 당사자가 아닌 계정에게 남의 거래 스냅숏이 응답으로 나간다
-- 분류: 결함(인가 · 정보 노출) · 확신: 확인(악용 난이도는 추정)
-- 근거: `Source/GameFramework/Kits/Feature/Online/Trade/Server/TradeStoreLogic.cpp:210-212` 가 당사자 검사 앞에서 `outSnapshot = session._snapshot;` 을 채우고 `NotParty` 를 돌려준다. `TradeServer.cpp:141-144` 가 그 스냅숏을 응답에 싣는다. 거래 id 는 `++_nextSeed ^ nowMs`(`TradeService.cpp:129`)를 전단사 믹스한 값이라 이웃 id 를 좁힐 수 있다. `TestTradeServer.cpp:446-447` 은 결과 코드만 본다.
-- 상용 서비스: Steam 교환 · Nakama 는 세션 id 를 CSPRNG 로 내고 권한 실패 응답에 자원 내용을 싣지 않는다.
-- 제안: 당사자 검사를 통과한 뒤에만 스냅숏을 채운다. "상태를 바꿨는가" 는 로직이 돌려주는 값으로 정한다. 거래 id 는 `ILoginCrypto::fillRandom` 류로 만든다.
-- 확인: 위 테스트에 `_snapshot._tradeID == 0` 과 "닫힌 거래에 제3자 Lock → 당사자 알림 0 건".
 
 #### O-5 리더보드 합산(Sum) 쓰기에 영속 멱등 기록이 없다
 - 분류: 결함(이중 반영) · 확신: 확인
@@ -542,20 +388,6 @@
 - 상용 엔진: 유니티는 파일 안 고정 fileID, 언리얼은 유일 컴포넌트 이름과 SCS `VariableGuid`, Godot 은 유일성이 강제되는 노드 이름 경로다.
 - 제안: 컴포넌트 · 중첩 노드에 저작 시점 고정 지역 id(64 비트)를 주고 키 · 부품 경로 · 세이브 핸들이 그것을 쓴다. 옛 형식은 `SchemaMigrate` 로 한 번 옮긴다(에셋 GUID 작업과 같은 줄기).
 - 확인: 단위 `PrefabOverridesTest.OverrideFollowsComponentWhenAnEarlierSiblingIsRemoved`, `ObjectStateSerializerTest.SavedHandleSurvivesSiblingInsertion`.
-
-#### A-3 1 GiB 넘는 항목은 쿠커가 쓰지만 리더가 팩 전체를 거절한다
-- 분류: 결함(한도 불일치) · 확신: 확인
-- 근거: `Source/Engine/Content/Pack/PackWriter.cpp:314,323` — 쓰기는 4 GiB 까지 받는다. `PackReader.cpp:580` 은 `_uncompressedSize > CompressionStream::kMaxUncompressedSize`(1 GiB)면 false 이고 `loadIndexTable`(`:483-484`)이 그대로 실패해 팩이 열리지 않는다. `PackCooker.cpp` 는 쓴 팩을 `PackReader` 로 되읽지 않는다.
-- 상용 엔진: 언리얼 IoStore · pak 은 쓰는 쪽과 읽는 쪽이 같은 압축 블록 한도를 쓰고 쿠킹 뒤 컨테이너를 검증한다(UnrealPak `-Test`).
-- 제안: 항목 한도를 `PackTypes.h` 의 상수 하나로 두고 쓰기 · 읽기가 같이 본다. 쿠킹 끝에 `PackReader::open` 으로 되읽어 실패를 쿠킹 오류로 낸다.
-- 확인: 단위 `PackWriterTest.EntryOverReaderLimitIsRejectedAtWrite`, `PackCookerTest.CookedPackOpensWithReader`.
-
-#### A-4 배포 구성에서 팩 마운트 실패가 기동 실패가 아니다
-- 분류: 결함(폴백 금지 원칙 위반) · 확신: 확인(그 뒤 어디서 멈추는지는 보지 않음)
-- 근거: `Source/Engine/Asset/AssetManager.cpp:356` — `(void)mountContent( … ); // 느슨한 트리만 있어도 기동한다` 뒤 `Succeeded` 를 돌려준다. 패치 서명 불일치 · 사슬 분기 · 신뢰 키 오류가 모두 false 를 주는 길인데 팩 0 개로 계속 간다(`:149` 주석은 "기동을 멈춘다" 다). Cooked 구성은 낱개 파일을 읽지 않으므로(`AssetIO.cpp:36-39`) 그 뒤 읽기는 모두 "없음" 이 된다.
-- 상용 엔진: 언리얼은 필수 pak 마운트 · 서명 실패를 치명 오류로 끝낸다.
-- 제안: `mountContent` 가 `{ Source, Mounted, Failed }` 를 돌려주고 Cooked 에서 Failed 면 `SubsystemInitResult::Failed` 로 한다.
-- 확인: 단위 `AssetManagerTest.CookedMountFailureFailsInit`. `-cooked-content` 로 패치 SHA 를 깨뜨린 기동의 종료 코드.
 
 #### A-5 사용자 설정 판 번호가 스키마 여럿의 최댓값 하나다
 - 분류: 결함(잠재 — 첫 `<Upgrade>` 단계를 더하는 날 드러난다) · 확신: 확인
@@ -757,13 +589,6 @@
 - 제안: `WidgetTree` 에 "전달 중" 깊이를 두고 그동안 떼어진 위젯은 트리의 보류 목록으로 옮겨 전달이 끝난 뒤 파괴한다(반환형을 `DetachedWidget` 로 바꿔 즉시 파괴 길을 없앤다).
 - 확인: 단위 `UIFocusAndEventsTest.ButtonMayClearItsParentOnClick`(ASan 구성 — P-8).
 
-#### P-8 새니타이저 옵션은 있는데 프리셋 · 검증 절차 어디에도 걸려 있지 않다
-- 분류: 구조 · 확신: 확인
-- 근거: `cmake/Config/BuildOptions.cmake:93-98` 에 `SW_ENABLE_SANITIZER` · `SW_SANITIZER_KIND`(address · thread)가 있고 TSan 용 vcpkg 트리플릿도 있는데 `CMakePresets.json` 의 프리셋과 `Scripts/` · 검증 스킬에서 참조가 0 건이다. 이 문서의 수명 · 경쟁 항목(C-3 · C-7 · A-7 · P-7 · N-4 의 UB 등)을 잡을 자동 그물이 없다.
-- 상용 엔진: 언리얼 UBT 는 `-EnableASan/TSan` 구성으로 자동화 테스트를 돌린다. Godot CI 는 ASan · UBSan · TSan 빌드가 매 PR 에 돈다.
-- 제안: `Linux-Debug-ASan` · `Linux-Debug-TSan` 구성 · 테스트 프리셋을 더하고 linux-verify 가 `ctest -L nogpu` 를 ASan 으로 한 번(TSan 은 주기) 돌린다. 외부 CI 없이 WSL 묶음 검증 안에서 된다.
-- 확인: ASan 구성에서 `App --test` 기준선을 한 번 만든다(`detect_leaks=0` 으로 시작).
-
 #### P-9 (보강) 웹 · Android 프리셋이 Shipping 뿐이라 플랫폼 결함을 자동으로 볼 길이 없다
 - 분류: 구조 · 확신: 확인(프리셋), 개발 구성이 두 플랫폼에서 지어지는지는 추정
 - 근거: `CMakePresets.json` 에 `Web-Shipping` · `Android-Shipping` 만 있다. [PlatformTargets](PlatformTargets.md) 의 "배포 빌드에 시나리오 실행기가 없어 앱 반응을 읽을 길이 없다" 가 이 결과이고, P0-9 ~ P0-11 과 P-3 ~ P-6 이 모두 그 틈에서 나왔다.
@@ -780,40 +605,12 @@
 - 제안: AbilityComponent 를 프레임워크가 스냅샷 대상으로 정적 등록하고 `serializeState` 로 base 값 · 걸린 이펙트(정의 id · 남은 시간 · 스택) · 태그를 싣는다. 복원은 훅을 끈 채 base 를 모두 쓴 뒤 한 번에 클램프한다.
 - 확인: 단위 `AbilitySystemTest.SaveRoundTripKeepsHealthAboveDefaultMax` · `SaveRoundTripKeepsCooldownAndDot`.
 
-#### G-2 WorldClock: 하루 길이에 따라 시 경계에서 시계가 영구히 멈추고 프레임마다 헛돈다
-- 분류: 결함(부동소수 — 지금 콘텐츠 값 1440 은 안전) · 확신: 확인(함수 본문을 float32 로 옮긴 계산으로 재현, 엔진 실행은 안 함)
-- 근거: `Source/GameFramework/Runtime/World/Environment/WorldClock.cpp:159-194` — 경계에 올려놓은 뒤 `getHour()` 가 N 바로 아래로 반올림되면 `toNextHour` 가 0 이 되어 걸음이 `1.0e-4f` 로 고정된다(`:170`). `_secondOfDay` 가 2048 을 넘으면 그 걸음은 float32 에서 더해지지 않는다. `_secondsPerDay` 3500 · 5000 · 7000 · 10000 · 20000 에서 각각 16 시 · 13 시 · 8 시 · 8 시 · 8 시에 멈추고 프레임마다 167 번 헛돈다. `PROPERTY( Min = 1 )` 만 있어 설정으로 막지 못한다.
-- 상용 엔진: 언리얼 `FDateTime`/`FTimespan` 은 int64 틱이다.
-- 제안: 시각을 정수(하루 안 마이크로초 int64)로 들고 경계 사건은 정수 비교로 낸다.
-- 확인: 단위 `WorldClockTest.AdvancesAcrossEveryHourForAnyDayLength`(1..100000 훑기, 걸음 수 상한 단언).
-
 #### G-3 제작의 환불 · 취소와 상점 판매가 아이템 개체 상태를 버린다 — 내구도 공짜 수리
 - 분류: 결함(악용 경로) · 확신: 확인
 - 근거: `Source/GameFramework/Runtime/Gameplay/Inventory/Crafting.cpp:202-207`, `:235-246`(`cancel`) — 재료를 `Inventory::removeItem`(`Inventory.cpp:161-181`, id 로만)으로 빼고 `addItem`(`:116-127`, `slot._durability = pDef->_maxDurability`)으로 돌려준다. 닳은 장비가 재료인 레시피를 `enqueue` 했다가 `cancel` 하면 새것이 되고 꾸미기 · 뗀 부품은 사라진다. `ShopState::sell`(`Shop.cpp:330-331`)도 어느 개체를 파는지 고르지 못한다.
 - 상용 엔진: Lyra 는 `ULyraInventoryItemInstance` 를 개체로 옮긴다.
 - 제안: 꺼낸 것을 `InventorySlot` 묶음으로 받아 그대로 돌려주는 거래 형식(`InventoryTransaction`: take → commit/rollback). `Equipment::equipFromInventory` 가 이미 사본 복원을 쓴다.
 - 확인: 단위 `CraftingTest.CancelReturnsWornInputWithSameDurability`.
-
-#### G-4 퀘스트를 포기 · 실패한 뒤 다시 받으면 단계 진입 보상이 다시 나간다
-- 분류: 결함(보상 복제 경로) · 확신: 메커니즘 확인 — 지금 데이터는 끝 단계에만 보상이라 발생하지 않는다
-- 근거: `Source/GameFramework/Runtime/Gameplay/Quest/QuestLog.cpp:192-213` — 보상을 단계에 들어갈 때 준다. `abandon`(`:362-370`)은 `NotStarted` 로 되돌릴 뿐이고 `evaluateStart`(`:76-96`)는 다시 받게 한다. 받은 보상의 기록이 없다. 덧붙여(추정) `applyNotify`(`:292-318`)가 `_listProgress` 원소 참조를 쥔 채 보상 동작을 불러, 동작이 다른 퀘스트를 시작하면 재할당 뒤 댕글링이다.
-- 상용 엔진: 상용 RPG 는 보상을 완료 때 한 번 주거나 받은 단계를 저장되는 깃발로 남긴다.
-- 제안: `QuestProgress` 에 받은 단계 집합을 저장한다(또는 완료 전 보상을 로더가 오류로 거절한다). 동작 실행을 걷기 뒤로 미룬다.
-- 확인: 단위 `QuestLogTest.AbandonAndRestartDoesNotRepeatStageReward`.
-
-#### G-5 체력이 IncomingDamage 밖의 길로 0 이 되면 "죽은 척" 만 한다
-- 분류: 결함 · 확신: 확인
-- 근거: `Source/GameFramework/Runtime/Gameplay/Ability/AbilityComponentAttributes.cpp:263-279` — current 가 0 에 닿으면 치명 신호(래그돌)와 HP 바 `Died` 를 낸다. 사망 처리(`State.Dead` 태그 · 어빌리티 취소 · `AbilityOwnerDiedEvent`)는 `handleOutOfHealth`(`CombatAttributeSet.cpp:239-263`)에만 있고 부르는 곳이 `applyIncomingDamage` 와 `postFatalDamage` 둘뿐이다. 이펙트가 `Health` 를 직접 깎거나 최대 체력 디버프가 0 으로 끌어내리면 래그돌은 됐는데 죽지 않았다.
-- 상용 엔진: Lyra `ULyraHealthSet` 은 어느 길이든 "Health ≤ 0 이고 아직 OutOfHealth 가 아니면" 사망을 낸다.
-- 제안: 사망 판정을 체력 current 의 전이(> 0 → ≤ 0) 한 곳에 묶는다.
-- 확인: 단위 `CombatAttributeSetTest.DirectHealthModifierToZeroRaisesDeath`.
-
-#### G-6 상호작용 완료가 가용성을 다시 보지 않는다 — 하는 쪽이 둘이면 완료 이벤트가 두 번
-- 분류: 결함(보상 복제 경로 — 협동 · NPC 일 때) · 확신: 확인(경로)
-- 근거: `Source/GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.cpp:265-281` `completeInteraction` 이 쿨다운 · 꺼짐을 확인하지 않고 `InteractionCompletedEvent` 를 낸다. 대상 쪽에 "쓰는 중" 점유가 없어 둘이 같은 상자에 길게 누르기를 시작하면 둘 다 완료한다. 강조 표시도 개수가 아닌 bool 이다(`InteractorComponent.cpp:257-269`).
-- 상용 엔진: 언리얼 SmartObject 는 슬롯을 Claim → Use → Release 하는 핸들로 점유한다.
-- 제안: 대상이 세션을 소유한다(점유 핸들 — 시작 때 claim, 완료 · 취소 때 release). 강조는 요청 개수로 센다.
-- 확인: 단위 `InteractionTest.SecondInteractorCannotCompleteClaimedTarget`.
 
 #### G-7 세이브 봉투에 씬(레벨) 정체가 없다
 - 분류: 구조 · 확신: 봉투 칸은 확인, 영향은 추정
@@ -823,13 +620,6 @@
 - 확인: 시나리오 — 맵 A 에서 저장 → 타이틀에서 `game.load` → 활성 씬 경로와 오브젝트 수.
 
 ### 장르 키트 · 게임 샘플
-
-#### K-1 LanternVale 서버가 이동 속도를 막지 않는다(걸음 길이만 본다)
-- 분류: 결함(공개 서버라면 P0) · 확신: 확인
-- 근거: `Source/Games/LanternVale/ValeWorld.cpp:177-189` — `moveAvatar` 는 한 번의 요청이 `_maxMoveStep`(12 m) 이하인지만 보고 시간 예산이 없다. `moveTo` 는 `FUNCTION( Server, Validate )`(`ValeNetLink.cpp:36-45`)이고 검증은 "골짜기 안" 뿐이다. 공격에는 서버 쿨다운이 있는데(`:147-151`) 이동에는 없다. 단위 테스트가 틱 없이 12 → 24 → 36 m 연속 이동을 `Ok` 로 기대한다(`Tests/TestValeWorld.cpp:150-152`). RemoteCall 에 호출률 제한도 없다(N-13).
-- 상용 엔진: 언리얼 `UCharacterMovementComponent` 는 서버가 시간 불일치를 잡는다(`bMovementTimeDiscrepancyDetection`). 유니티 Boss Room 은 서버가 경로와 속도로 직접 움직인다.
-- 제안: 요청이 자리가 아니라 목적지가 되게 하고 서버 `tick` 이 `speed × dt` 만큼 옮긴다. `ValeRules` 에 `_moveSpeed` 를 필수 칸으로 둔다.
-- 확인: `ValeWorldTest.MoveIsBoundedBySpeedOverTime`.
 
 #### K-2 FrontierTown 빨리 감기가 시계만 밀고 도시 · RTS 는 1 배속이다
 - 분류: 결함 · 확신: 확인
