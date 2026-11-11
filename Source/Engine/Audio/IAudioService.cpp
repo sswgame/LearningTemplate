@@ -76,7 +76,7 @@ namespace sw
         // 플랫폼 클라이언트 빌드는 백엔드 하나를 담는다 — 없거나 둘이면 빌드 구성의 결함이다(장치 없는 오디오로 몰래 바꾸지 않는다).
         const AudioBackendRegistrar* pRegistrar = AudioBackendRegistrar::getHead();
         if ( pRegistrar == nullptr )
-            SW_FATAL( "No audio device backend is registered in this build (%#) - a client build links Audio/Windows or Audio/Linux", build::kTargetName );
+            SW_FATAL( "No audio device backend is registered in this build (%#) - a client build links Audio/Windows, Audio/Linux or Audio/Android", build::kTargetName );
         if ( pRegistrar->_pNext != nullptr )
             SW_FATAL( "Two audio device backends are registered (%#, %#) - one platform build links one", pRegistrar->_pName, pRegistrar->_pNext->_pName );
         return pRegistrar->_pCreate();

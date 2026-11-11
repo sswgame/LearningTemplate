@@ -282,7 +282,7 @@ namespace sw
     /**
      * @struct AudioBackendRegistrar
      * @brief 플랫폼 장치 백엔드가 스스로 오르는 정적 등록자입니다(`SW_REGISTER_AUDIO_BACKEND` — RHI 백엔드의 `RHIStaticBackendRegistrar` 와 같은 모양).
-     * @details 플랫폼 백엔드 파일(`Audio/Windows/` · `Audio/Linux/`)이 그 플랫폼 클라이언트 빌드에서만 등록자를 둔다 — 고르는 쪽(`IAudioService::create`)에는 `#if` 가 없다.
+     * @details 플랫폼 백엔드 파일(`Audio/Windows/` · `Audio/Linux/` · `Audio/Android/`)이 그 플랫폼 클라이언트 빌드에서만 등록자를 둔다 — 고르는 쪽(`IAudioService::create`)에는 `#if` 가 없다.
      *          정적 초기화 때 머리에 이어 붙는다(배포의 정적 링크는 Engine 을 통째로 넣는다 — `cmake/Engine/ExecutableTargets.cmake`).
      */
     struct SW_API AudioBackendRegistrar

@@ -2,8 +2,7 @@
 
 #include "Engine/Input/Map/InputKeyTable.h"
 
-#if defined( SW_PLATFORM_ANDROID )
-    #include <android/keycodes.h>
+#include <android/keycodes.h>
 
 namespace sw
 {
@@ -55,4 +54,3 @@ namespace sw
         return Key::Unknown;
     }
 } // namespace sw
-#endif
