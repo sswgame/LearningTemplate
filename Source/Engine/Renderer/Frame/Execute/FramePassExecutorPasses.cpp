@@ -171,6 +171,9 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ExecutePassNoActiveIRHICommandList", "executePass: no active IRHICommandList" );
             return;
         }
+        // 뷰 패스 고르기가 이번 뷰에 할 일이 없다고 정한 패스(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스)는 기록하지 않는다 — 패스마다 다시 판정하지 않는다.
+        if ( isPassDisabledInView( passDesc ) )
+            return;
 
         // 이벤트 표지(캡처의 구간 이름) + GPU 브레드크럼 시작 · 끝 표지 — 디바이스 소실 때 끝난 패스와 돌던 패스를 이름으로 싣는다. 어느 길로 돌아가도 짝이 맞는다.
         const GPUPassScope passScope{ *context._pCmd, passName };
@@ -659,7 +662,7 @@ namespace sw
     {
         // 원본 색(SourceColor 역할 입력)을 선언한 컬러 출력으로 그대로 복사한다 — 셰이더도 PSO 도 없다. 반투명 패스는 장면 색에 섞으며 쓰므로 그 색을 읽을 수 없다(물의 굴절).
         // 둘은 같은 크기 · 형식이어야 한다(파이프라인이 같은 형식으로 선언한다). 계약(`RenderPassTypeInfo`)이 SourceColor 를 필수로 검사했다.
-        // 읽는 패스가 이번 뷰에 모두 쉬면 뷰 패스 고르기가 출력을 뺐다(`kAllowPassCulling`) — 기록하지 않는다(풀 해상도 HDR 복사 한 번이 매 프레임 0.27 ms 였다).
+        // 읽는 패스가 이번 뷰에 모두 비활성이면 뷰 패스 고르기가 출력을 빼고 이 패스를 비활성으로 적는다(`kCullWhenUnconsumed`) — 실행 입구가 거르지만 출력이 없는 경우도 지킨다(풀 해상도 HDR 복사 한 번이 매 프레임 0.27 ms 였다).
         const hashed_string& copyTarget = input._declaredColor[0]._attachment;
         if ( activePool().isForwarded( copyTarget ) )
             return;
@@ -744,13 +747,15 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
-    bool FramePassExecutor::isPassCulledInView( const RenderGraphPassDesc& pass ) const
+    bool FramePassExecutor::isPassDisabledInView( const RenderGraphPassDesc& pass ) const
     {
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
-        const size_t                       index    = static_cast<size_t>( &pass - listPass.data() );
-        SW_ASSERT( index < listPass.size() ); // 실행은 파이프라인 패스 목록의 원소를 넘긴다
-        const vector<uint8>& listPassCulled = _pActiveView->_listPassCulled;
-        return index < listPassCulled.size() && listPassCulled[index] == SW_TRUE;
+        // 파이프라인 패스 목록 밖(모듈 확장 패스)은 고르기가 보지 않는다 — 늘 활성이다.
+        if ( listPass.empty() || &pass < listPass.data() || &pass >= listPass.data() + listPass.size() )
+            return false;
+        const size_t         index            = static_cast<size_t>( &pass - listPass.data() );
+        const vector<uint8>& listPassDisabled = _pActiveView->_listPassDisabled;
+        return index < listPassDisabled.size() && listPassDisabled[index] == SW_TRUE;
     }
 
     void FramePassExecutor::executeDistortionPass( const PassExecuteInput& input )
@@ -758,7 +763,7 @@ namespace sw
         // 화면 왜곡 누적 — 왜곡 머티리얼(MATERIAL_DISTORTION)의 반투명 배치가 화면 UV 오프셋을 선언한 출력에 더한다(가산 블렌드, 깊이는 테스트만).
         // 왜곡 배치가 없으면 기록하지 않는다 — 출력은 지워지지도 않지만 읽는 적용 패스도 같은 판정으로 돌지 않는다(쓰지 않을 때 비용이 없다).
         const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::Distortion );
-        if ( isPassCulledInView( input._passDesc ) || pso == 0 )
+        if ( pso == 0 )
             return;
         FramePassContext&    context = input._context;
         const hashed_string& target  = input._declaredColor[0]._attachment;
@@ -773,7 +778,7 @@ namespace sw
         // 화면 왜곡 적용 — 장면 색 사본을 왜곡 오프셋만큼 비껴 읽어 장면 색에 쓴다(distortion_apply.hlsl). 왜곡이 없으면 출력(장면 색)이 이미 맞아 아무것도 하지 않는다
         // — 일반 풀스크린 패스의 복사 길을 타면 왜곡 없는 프레임에도 전 화면을 한 번 읽고 쓴다.
         const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::DistortionApply );
-        if ( isPassCulledInView( input._passDesc ) || pso == 0 )
+        if ( pso == 0 )
             return;
         FramePassContext&    context = input._context;
         const hashed_string& target  = input._declaredColor[0]._attachment;
@@ -827,7 +832,7 @@ namespace sw
         // 화면 공간 반사다. 맞은 자리의 장면 색 사본을 선언한 컬러 출력(장면 색) 위에 프리멀티플라이 블렌드한다(screen_space_reflection.hlsl).
         // 세기 0 · 후처리를 끈 뷰(CCTV) · 표면 값 보기(usesPostProcess 가 거른다)에서는 그리지 않는다 — 출력이 입력의 위(블렌드)라 "그리지 않음" 은 아무것도 하지 않는 것이다(안개와 같다).
         const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::ScreenSpaceReflection );
-        if ( isPassCulledInView( input._passDesc ) || pso == 0 )
+        if ( pso == 0 )
             return;
 
         FramePassContext&    context = input._context;

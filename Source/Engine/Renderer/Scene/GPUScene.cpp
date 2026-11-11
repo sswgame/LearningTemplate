@@ -69,6 +69,7 @@ namespace sw
         _motionHistory.reset();
         _bObjectMotion      = SW_FALSE;
         _bDistortionBatches = SW_FALSE;
+        _bRefractionBatches = SW_FALSE;
     }
 
     void GPUScene::setVertexPoolEnabled( bool bEnabled )
@@ -156,7 +157,6 @@ namespace sw
         if ( bCPUDirty )
         {
             uploadInstanceAndVisibleBuffers( pDevice, instanceCount );
-            refreshDistortionBatches();
         }
 
         SW_PROFILE_SCOPE( "RT.GPUScene.batchTables" );
@@ -329,18 +329,21 @@ namespace sw
         return true;
     }
 
-    void GPUScene::refreshDistortionBatches()
+    void GPUScene::refreshScreenEffectBatches()
     {
         const string distortionDefine{ kMaterialDistortionDefine };
+        const string refractionDefine{ Material::kRefractionDefine };
         _bDistortionBatches = SW_FALSE;
+        _bRefractionBatches = SW_FALSE;
         for ( const GPUMeshBatch& batch : _snapshot.getAllBatches() )
         {
             const GPUShaderPermutation* pPermutation = batch._shaderPermutation == kInvalidShaderPermutation ? nullptr : findShaderPermutation( batch._shaderPermutation );
-            if ( pPermutation != nullptr && VectorUtil::contains( pPermutation->_listDefine, distortionDefine ) )
-            {
-                _bDistortionBatches = SW_TRUE;
+            if ( pPermutation == nullptr )
+                continue;
+            _bDistortionBatches = ( _bDistortionBatches != SW_FALSE || VectorUtil::contains( pPermutation->_listDefine, distortionDefine ) ) ? SW_TRUE : SW_FALSE;
+            _bRefractionBatches = ( _bRefractionBatches != SW_FALSE || VectorUtil::contains( pPermutation->_listDefine, refractionDefine ) ) ? SW_TRUE : SW_FALSE;
+            if ( _bDistortionBatches != SW_FALSE && _bRefractionBatches != SW_FALSE )
                 return;
-            }
         }
     }
 
@@ -611,6 +614,9 @@ namespace sw
         // 바꿔치기다. 지난 스냅샷의 저장소가 패킷 자리로 돌아가 다음 프레임에 재사용된다(GPUScene.h 참고).
         std::swap( _snapshot, snapshot );
         resetBatchBindings();
+        // 뷰 패스 고르기가 이번 프레임 값을 보도록 업로드 전에 정한다(업로드는 고르기 뒤에 돈다). CPU 내용이 그대로면 지난 값이 맞다.
+        if ( _snapshot._bCPUDirty != SW_FALSE )
+            refreshScreenEffectBatches();
     }
 
     void GPUScene::resetBatchBindings()

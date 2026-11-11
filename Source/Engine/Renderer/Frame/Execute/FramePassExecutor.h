@@ -102,10 +102,10 @@ namespace sw
          */
         bool drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
         /**
-         * @brief 파이프라인 패스 @p pass 가 이번 뷰에서 컬링됐으면 true 입니다(그릴 것이 없다) — 뷰 패스 고르기의 결과(`FrameViewTarget::_listPassCulled`)를 그대로 읽는다.
+         * @brief 파이프라인 패스 @p pass 가 이번 뷰에서 비활성이면 true 입니다(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스) — 뷰 패스 고르기의 결과(`FrameViewTarget::_listPassDisabled`)를 그대로 읽는다.
          * @details 덧그리는 패스(SSR · 왜곡 누적 · 왜곡 적용)의 실행이 따로 판정하지 않는다 — 판정이 둘이면 고르기가 뺀 사본을 실행이 읽거나, 실행이 쉬는데 사본을 만든다.
          */
-        bool isPassCulledInView( const RenderGraphPassDesc& pass ) const;
+        bool isPassDisabledInView( const RenderGraphPassDesc& pass ) const;
         /** @brief 그림자 캐시의 거르기(@p filter)가 이 배치를 그리게 하면 true 입니다(`GPUMeshBatch::_bStaticShadowCaster`). */
         static bool drawsCasterBatch( ShadowCasterFilter filter, const GPUMeshBatch& batch );
 

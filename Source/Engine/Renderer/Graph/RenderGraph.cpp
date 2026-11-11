@@ -295,7 +295,6 @@ namespace sw
         node._listInput  = std::move( listInput );
         node._listOutput = std::move( listOutput );
         node._execute    = std::move( execute );
-        node._bCulled    = false;
         node._queue      = queue;
         _listNode.push_back( std::move( node ) );
         return true;
@@ -321,8 +320,7 @@ namespace sw
         listActiveIndex.reserve( _listNode.size() );
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
-            if ( _listNode[nodeIndex]._bCulled == false )
-                listActiveIndex.push_back( nodeIndex );
+            listActiveIndex.push_back( nodeIndex );
         }
         if ( listActiveIndex.empty() )
             return false;
@@ -508,9 +506,6 @@ namespace sw
             }
 
             RenderGraphNode& node = _listNode[indexIt->second];
-            if ( node._bCulled )
-                continue;
-
             // 직렬 경로도 **같은 추론**을 쓴다. 상태만 기록하고 배리어를 내지 않으면 전이가 패스 콜백 안 여기저기에서
             // 즉흥적으로 일어난다. 경로가 둘이면 한쪽에만 수정이 들어간다.
             // 배리어는 이 패스가 기록하는 것과 **같은 리스트**에 들어가야 한다(레벨처럼 앞으로 몰 수 없다).
@@ -648,7 +643,7 @@ namespace sw
                     return false;
                 }
                 const RenderGraphNode& node = _listNode[indexIt->second];
-                if ( node._bCulled || node._execute.isBound() == false )
+                if ( node._execute.isBound() == false )
                     continue;
 
                 unique_ptr<IRHICommandList>& passCmd = scratch._listNodeCmdList[indexIt->second];
@@ -688,9 +683,6 @@ namespace sw
             }
 
             RenderGraphNode& node = _listNode[indexIt->second];
-            if ( node._bCulled )
-                continue;
-
             appendPassBarriers( context, node );
 
             if ( node._execute.isBound() == false )
@@ -757,68 +749,6 @@ namespace sw
     }
 
     /**
-     * @brief 역방향 의존성 추적으로 최종 대상 리소스 생산에 관여하지 않는 패스를 자동 컬링합니다.
-     */
-    void RenderGraph::cullUnusedPasses( hashed_string targetResourceName )
-    {
-        cullUnreferencedPasses( { targetResourceName } );
-    }
-
-    void RenderGraph::cullUnreferencedPasses( const vector<hashed_string>& listRootOutput, vector<hashed_string>* pOutListCulledPass )
-    {
-        unordered_set<hashed_string> uniqueRequiredResources;
-        uniqueRequiredResources.reserve( _listNode.size() * 2 );
-        for ( const hashed_string& rootOut : listRootOutput )
-        {
-            uniqueRequiredResources.insert( rootOut );
-        }
-
-        for ( auto iter = _listNode.rbegin(); iter != _listNode.rend(); ++iter )
-        {
-            RenderGraphNode& node = *iter;
-            bool             producesRequired{ false };
-            for ( const hashed_string& output : node._listOutput )
-            {
-                if ( uniqueRequiredResources.find( output ) != uniqueRequiredResources.end() )
-                {
-                    producesRequired = true;
-                    break;
-                }
-            }
-
-            if ( producesRequired )
-            {
-                node._bCulled = false;
-                for ( const hashed_string& input : node._listInput )
-                {
-                    uniqueRequiredResources.insert( input );
-                }
-            }
-            else
-            {
-                node._bCulled = true;
-                if ( pOutListCulledPass != nullptr )
-                    pOutListCulledPass->push_back( node._name );
-            }
-        }
-
-        (void)compile(); // 실패(순환)는 compile 이 패스 이름으로 알리고 실행 목록이 빈다.
-    }
-
-    /**
-     * @brief 지정한 패스가 컬링되었는지 반환합니다.
-     */
-    bool RenderGraph::isPassCulled( hashed_string passName ) const
-    {
-        for ( const RenderGraphNode& node : _listNode )
-        {
-            if ( node._name == passName )
-                return node._bCulled;
-        }
-        return false;
-    }
-
-    /**
      * @brief 그래프 구성을 Mermaid 다이어그램 텍스트로 내보냅니다.
      */
     string RenderGraph::describeCompiledOrder() const
@@ -857,11 +787,6 @@ namespace sw
             }
         }
         // 컬링된 패스도 적는다. "왜 이 패스가 안 도나" 의 답이다.
-        for ( const RenderGraphNode& node : _listNode )
-        {
-            if ( node._bCulled )
-                out.appendFormat( "  culled: %# (nothing reads what it writes)\n", node._name.c_str() );
-        }
         return string( out.c_str() );
     }
 
@@ -872,8 +797,6 @@ namespace sw
         for ( const RenderGraphNode& node : _listNode )
         {
             string passLabel = node._name.c_str();
-            if ( node._bCulled )
-                passLabel += " (Culled)";
 
             for ( const hashed_string& input : node._listInput )
             {
@@ -897,8 +820,6 @@ namespace sw
         for ( const RenderGraphNode& node : _listNode )
         {
             string passName = node._name.c_str();
-            if ( node._bCulled )
-                result += "    \"" + passName + "\" [style=dashed, color=gray];\n";
 
             for ( const hashed_string& input : node._listInput )
             {

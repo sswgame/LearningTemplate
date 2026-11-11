@@ -237,7 +237,7 @@ namespace sw
          * @brief 읽는 쪽을 위해서만 도는 생산 패스다(장면 색 사본) — 출력을 혼자 쓰고, 출력을 읽는 패스가 이번 뷰에 모두 쉬면 뷰 패스 고르기가 출력을 빼고 실행은 기록하지 않는다.
          * @details 일반 풀스크린 패스(장면 깊이 사본)는 이 표시 없이도 같은 규칙을 탄다. 읽는 쪽이 누구인지는 파이프라인 선언과 그 패스의 이번 뷰 판정이 정한다 — 생산 패스가 읽는 쪽을 알지 않는다(언리얼 RDG 의 소비자 없는 패스 컬링).
          */
-        static constexpr uint32 kAllowPassCulling = SW_BIT( 30 );
+        static constexpr uint32 kCullWhenUnconsumed = SW_BIT( 30 );
     };
 } // namespace sw
 

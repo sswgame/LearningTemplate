@@ -361,7 +361,7 @@ namespace sw
          */
         void updatePassConstants( FramePassContext& context, const float4x4& mainViewProj );
         /** @brief 뷰 패스 고르기가 보는 이번 프레임의 씬 사실입니다 — 주 시점과 추가 뷰가 같은 값을 쓴다(스냅샷을 적용한 뒤 부른다). */
-        [[nodiscard]] FrameViewResources::PassCullingContext makePassCullingContext() const;
+        [[nodiscard]] FrameViewResources::ViewPassSceneState captureViewPassSceneState() const;
 
         /** @brief 이번 프레임의 하늘(`_state._frameSky` · `_state._bHasFrameSky`)을 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
         void applyFrameSky( bool bHasSky, const SkyGradient& sky );
