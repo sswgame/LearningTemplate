@@ -221,7 +221,7 @@ namespace sw
         ++_snapshot._instanceLayoutGeneration;
         _batchElementTable.clear(); // 배치 목록과 나란한 표다. 함께 비운다.
         // 머티리얼 레지스트리는 "그룹 목록(스냅샷)" 과 "셰이더 경로에서 인덱스를 찾는 맵" 이 한 몸이다. 목록만 지우면 맵이 옛 인덱스를
-        // 반환하고 GPUMaterialRegistry::materialGroupFor 가 범위 밖이라 조용히 건너뛴다. 그러면 배치에 머티리얼 버퍼가 실리지 않아 폴백(0)으로
+        // 반환하고 GPUMaterialRegistry::findOrAddMaterialGroup 가 범위 밖이라 조용히 건너뛴다. 그러면 배치에 머티리얼 버퍼가 실리지 않아 폴백(0)으로
         // 그려지고, 투명 머티리얼은 알파 0이라 화면에서 사라진다(백엔드 교체 뒤 유리 큐브가 없어지던 원인이다).
         _materialRegistry.reset( _snapshot );
         _listScratchCandidate.clear();
@@ -543,7 +543,7 @@ namespace sw
     {
         // 어느 PSO 로 그릴지를 정하는 값이다. 배치 키의 일부이고, 여기서 한 번 구해 두면
         // 나누기와 정렬이 다시 구하지 않는다(투명은 원소마다 물었다).
-        candidate._permutationHash = GPUMaterialRegistry::permutationHashFor( candidate._material.get(), candidate._instance.get(), candidate.usesAppearanceDither() );
+        candidate._permutationHash = GPUMaterialRegistry::computePermutationHashFor( candidate._material.get(), candidate._instance.get(), candidate.usesAppearanceDither() );
     }
 
     void GPUSceneBuilder::fillPayload( const DrawCandidate& candidate, GPUInstance& outInstance )
@@ -1791,11 +1791,11 @@ namespace sw
         batch._bReverseCulling     = headCandidate._bReverseCulling;
         batch._bStaticShadowCaster = headCandidate._bStaticShadowCaster;
         // 상수 버퍼(`_materialCb`)와 텍스처 슬롯은 렌더 스레드가 머리 원소(`_materialIndex`)의 프록시 · 사본으로 채운다(`GPUScene::upload`).
-        batch._materialGroup = _materialRegistry.materialGroupFor( pGroupMaterial, _snapshot );
+        batch._materialGroup = _materialRegistry.findOrAddMaterialGroup( pGroupMaterial, _snapshot );
         // 퍼뮤테이션은 **배치에 실제로 들어 있는 후보**에서 뽑는다. 합치기가 켜지면 키의 인스턴스는 nullptr 이라,
         // 키로 물으면 대표 머티리얼의 define 만 나오고 인스턴스가 켠 키워드가 통째로 빠진다. 그 배치는
         // 잘못된 셰이더로 그려진다. 한 배치의 구성원은 모두 같은 퍼뮤테이션 해시를 가지므로 아무 구성원이나 맞다.
-        batch._shaderPermutation = _materialRegistry.shaderPermutationFor( headCandidate._material.get(), headCandidate._instance.get(), headCandidate.usesAppearanceDither(), _snapshot );
+        batch._shaderPermutation = _materialRegistry.getShaderPermutationFor( headCandidate._material.get(), headCandidate._instance.get(), headCandidate.usesAppearanceDither(), _snapshot );
         batch._materialIndex     = 0;
 
         // 인스턴스마다 자기 (머티리얼, 인스턴스) 원소를 받는다. 합치기가 켜져 있으면 한 배치에 여러 머티리얼이 들어간다.

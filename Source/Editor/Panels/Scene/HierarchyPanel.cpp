@@ -104,12 +104,12 @@ namespace sw::editor
                 subject._hoveredID = componentID;
                 if ( selectedComponentID != 0 )
                     subject._listSelectedID.push_back( selectedComponentID );
-                (void)EditorInputGUI::drawContextMenuFor( subject ); // 열렸는지는 쓰지 않는다
+                (void)EditorInputGUI::drawContextMenu( subject ); // 열렸는지는 쓰지 않는다
             }
 
             /**
              * @brief 오브젝트 행의 맥락 메뉴입니다. 항목은 명령 등록부의 오브젝트 메뉴(`EditorSceneObjectCommands.cpp` 와 아래 계층 창 항목)이고, 대상은 선택 전체다(R3).
-             * @details 선택 밖 행에서 열면 그 행만 고른다(R2). 열기 · 대상 · 빈 팝업 규칙은 `EditorInputGUI::drawContextMenuFor` 한 곳이 정한다.
+             * @details 선택 밖 행에서 열면 그 행만 고른다(R2). 열기 · 대상 · 빈 팝업 규칙은 `EditorInputGUI::drawContextMenu` 한 곳이 정한다.
              */
             static void drawGameObjectContextMenu( uint64 objectID, const vector<uint64>& listSelectedObjectID )
             {
@@ -119,7 +119,7 @@ namespace sw::editor
                 subject._hoveredID      = objectID;
                 subject._listSelectedID = listSelectedObjectID;
                 subject._selectOnly     = &HierarchyCommands::selectOnlyObject;
-                (void)EditorInputGUI::drawContextMenuFor( subject ); // 열렸는지는 쓰지 않는다
+                (void)EditorInputGUI::drawContextMenu( subject ); // 열렸는지는 쓰지 않는다
             }
 
             /** @brief "Add Component" 하위 메뉴의 안입니다(맥락 메뉴 명령 `scene.object.addComponent` 가 부른다). */
@@ -508,7 +508,7 @@ namespace sw::editor
         subject._pPopupID       = "HierarchyEmptyCtx";
         subject._kind           = EditorCommandTargetKind::GameObject;
         subject._listSelectedID = _state._listSelectedObjectID;
-        (void)EditorInputGUI::drawContextMenuFor( subject ); // 열렸는지는 쓰지 않는다
+        (void)EditorInputGUI::drawContextMenu( subject ); // 열렸는지는 쓰지 않는다
     }
 
     void HierarchyPanel::handleHierarchyShortcuts()

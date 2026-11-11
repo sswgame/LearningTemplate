@@ -413,7 +413,7 @@ namespace sw
                     MaterialVariantInfo variant;
                     variant._shaderPath = material->getShaderPath();
                     variant._listOrigin = { makeOriginID( matPath ) };
-                    // 불투명 머티리얼은 등장 디더 변형도 쿠킹한다 — 로드가 끝나 서서히 나타나는 메시가 그 변형으로 그려진다(`GPUMaterialRegistry::permutationHashFor`).
+                    // 불투명 머티리얼은 등장 디더 변형도 쿠킹한다 — 로드가 끝나 서서히 나타나는 메시가 그 변형으로 그려진다(`GPUMaterialRegistry::computePermutationHashFor`).
                     const bool bCooksAppearanceDither = material->getBlendMode() != BlendMode::Transparent;
                     for ( vector<string>& listDefine : listRuntimeDefine )
                     {

@@ -192,7 +192,7 @@ namespace sw::editor
         if ( bRevealPrimaryObject )
         {
             _revealObjectID = primaryID;
-            _rowModel.expandAncestorsOf( *pPrimary );
+            _rowModel.expandAncestors( *pPrimary );
         }
         _lastPrimaryID     = primaryID;
         _bClickedThisFrame = SW_FALSE;

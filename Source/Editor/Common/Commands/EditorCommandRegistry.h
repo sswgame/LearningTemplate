@@ -127,9 +127,9 @@ namespace sw::editor
         /** @brief @p edit 명령이 편집 허용 답(플레이 중 · 베이크 중이면 꺼짐)을 물으면 true 입니다. */
         static constexpr bool isGatedByEditLock( EditorCommandEdit edit ) { return edit == EditorCommandEdit::Scene || edit == EditorCommandEdit::SceneUnrecorded; }
 
-        /** @brief 등록 줄의 동작 칸입니다. 거래를 받는 명령(`isTransacted`)은 씬 동작 칸(`sceneActionFor`)에 들고 이 칸은 비운다. */
+        /** @brief 등록 줄의 동작 칸입니다. 거래를 받는 명령(`isTransacted`)은 씬 동작 칸(`getSceneActionFor`)에 들고 이 칸은 비운다. */
         template <auto TFunction, EditorCommandEdit TEdit>
-        static constexpr EditorCommandActionFn actionFor()
+        static constexpr EditorCommandActionFn getActionFor()
         {
             if constexpr ( isTransacted( TEdit ) )
                 return nullptr;
@@ -138,7 +138,7 @@ namespace sw::editor
         }
         /** @brief 등록 줄의 씬 동작 칸입니다. 거래를 받지 않는 명령이면 비운다. 거래를 받는데 동작이 없으면(하위 메뉴만 그리는 명령) 컴파일되지 않는다 — `SceneUnrecorded` 로 적는다. */
         template <auto TFunction, EditorCommandEdit TEdit>
-        static constexpr EditorSceneCommandActionFn sceneActionFor()
+        static constexpr EditorSceneCommandActionFn getSceneActionFor()
         {
             if constexpr ( isTransacted( TEdit ) == false )
                 return nullptr;
@@ -312,7 +312,7 @@ namespace sw::editor
         SW_EDITOR_EXTENSION_KIND( "command" );
 
         EditorCommandActionFn      _pfnAction;      ///< 대상을 받는 동작(`Scene` 이 아닌 명령 — 등록 줄이 인자 없는 함수를 `EditorCommandTargetUtil::toAction` 으로 맞춘다)
-        EditorSceneCommandActionFn _pfnSceneAction; ///< `Scene` 명령의 동작(거래를 받는다 — `EditorCommandTargetUtil::sceneActionFor`)
+        EditorSceneCommandActionFn _pfnSceneAction; ///< `Scene` 명령의 동작(거래를 받는다 — `EditorCommandTargetUtil::getSceneActionFor`)
         EditorCommandEnabledFn     _pfnEnabled;     ///< nullptr 이면 늘 켜져 있다
         EditorCommandEdit          _edit;           ///< 씬을 바꾸는지(필수 — `EditorCommandEdit`)
         EditorCommandActionFn      _pfnSubmenu;     ///< nullptr 이 아니면 맥락 메뉴의 하위 메뉴를 그린다(`EditorCommandDesc::_submenu`)
@@ -339,19 +339,19 @@ namespace sw::editor
  * @brief 커맨드 하나의 동작을 그 커맨드의 .cpp 에서 등록합니다. 표시 · 배치(라벨 · 아이콘 · 메뉴 · 단축키 액션 · 맥락 메뉴)는 그 모듈의 `*.commands.xml` 줄이 정한다.
  * @code SW_EDITOR_COMMAND( ParkReload, "themepark.reloadLayout", &reloadLayout, nullptr, NoScene ); @endcode
  */
-#define SW_EDITOR_COMMAND( name, pID, pfnAction, pfnEnabled, edit )                                                                \
-    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, 0 },                                       \
-                        ::sw::editor::EditorCommandTargetUtil::actionFor<pfnAction, ::sw::editor::EditorCommandEdit::edit>(),      \
-                        ::sw::editor::EditorCommandTargetUtil::sceneActionFor<pfnAction, ::sw::editor::EditorCommandEdit::edit>(), \
+#define SW_EDITOR_COMMAND( name, pID, pfnAction, pfnEnabled, edit )                                                                   \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, 0 },                                          \
+                        ::sw::editor::EditorCommandTargetUtil::getActionFor<pfnAction, ::sw::editor::EditorCommandEdit::edit>(),      \
+                        ::sw::editor::EditorCommandTargetUtil::getSceneActionFor<pfnAction, ::sw::editor::EditorCommandEdit::edit>(), \
                         ::sw::editor::EditorCommandTargetUtil::toEnabled<pfnEnabled>(), ::sw::editor::EditorCommandEdit::edit, nullptr )
 
 /**
  * @brief 맥락 메뉴에서 쓰는 커맨드(대상을 받는다)의 동작을 등록합니다. @p pfnSubmenu 가 nullptr 이 아니면 그 항목은 하위 메뉴이고 그 함수가 안을 그립니다(그때 @p pfnAction 은 nullptr).
  * @code SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.renameObject", &renameTarget, &isSingleTarget, NoScene, nullptr ); @endcode
  */
-#define SW_EDITOR_CONTEXT_COMMAND( name, pID, pfnAction, pfnEnabled, edit, pfnSubmenu )                                            \
-    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, 0 },                                       \
-                        ::sw::editor::EditorCommandTargetUtil::actionFor<pfnAction, ::sw::editor::EditorCommandEdit::edit>(),      \
-                        ::sw::editor::EditorCommandTargetUtil::sceneActionFor<pfnAction, ::sw::editor::EditorCommandEdit::edit>(), \
-                        ::sw::editor::EditorCommandTargetUtil::toEnabled<pfnEnabled>(), ::sw::editor::EditorCommandEdit::edit,     \
+#define SW_EDITOR_CONTEXT_COMMAND( name, pID, pfnAction, pfnEnabled, edit, pfnSubmenu )                                               \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, 0 },                                          \
+                        ::sw::editor::EditorCommandTargetUtil::getActionFor<pfnAction, ::sw::editor::EditorCommandEdit::edit>(),      \
+                        ::sw::editor::EditorCommandTargetUtil::getSceneActionFor<pfnAction, ::sw::editor::EditorCommandEdit::edit>(), \
+                        ::sw::editor::EditorCommandTargetUtil::toEnabled<pfnEnabled>(), ::sw::editor::EditorCommandEdit::edit,        \
                         ::sw::editor::EditorCommandTargetUtil::toAction<pfnSubmenu>() )

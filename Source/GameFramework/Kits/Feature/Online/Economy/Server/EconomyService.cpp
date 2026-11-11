@@ -374,7 +374,7 @@ namespace sw
             refused = EconomyOutcome::fail( OnlineError::kInvalidRequest ); // 상태를 바꾸는 요청에는 멱등 키가 필수이다
         if ( refused != EconomyResult::Ok )
         {
-            failCallOf( callID, refused._errorCode );
+            failCallByID( callID, refused._errorCode );
             return;
         }
         if ( call._method == EconomyMethod::RedeemReceipt::kID )
@@ -436,7 +436,7 @@ namespace sw
             }
             default:
             {
-                failCallOf( callID, OnlineError::kInvalidRequest ); // 지급은 위에서 검증으로 갔다
+                failCallByID( callID, OnlineError::kInvalidRequest ); // 지급은 위에서 검증으로 갔다
                 return;
             }
         }
@@ -626,7 +626,7 @@ namespace sw
             pCounter->add();
     }
 
-    void EconomyService::failCallOf( uint64 callID, uint16 errorCode )
+    void EconomyService::failCallByID( uint64 callID, uint16 errorCode )
     {
         if ( LocalCallTable::isLocal( callID ) )
         {

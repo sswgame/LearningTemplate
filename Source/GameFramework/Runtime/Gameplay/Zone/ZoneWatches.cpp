@@ -35,7 +35,7 @@ namespace sw
         {
             /** @brief 대상 @p target 이 든 지역마다 @p visit( 출처, 위치 값 ) 을 부릅니다 — 볼륨과 대상의 표면 지역. */
             template <typename TVisit>
-            static void forEachZoneOf( const GameObjectManager& manager, const GameObject& target, TVisit&& visit )
+            static void forEachZone( const GameObjectManager& manager, const GameObject& target, TVisit&& visit )
             {
                 const GameObjectHandle handle = target.getHandle();
                 manager.forEachComponentOfType<ZoneVolumeComponent>( [&]( const ZoneVolumeComponent* pVolume )
@@ -89,7 +89,7 @@ namespace sw
                     return false;
                 }
                 float32 best = 0.0f;
-                forEachZoneOf( *query._pManager, *pTarget, [&]( const hashed_string& /*source*/, const ZoneSample& sample )
+                forEachZone( *query._pManager, *pTarget, [&]( const hashed_string& /*source*/, const ZoneSample& sample )
                 {
                     float32 value = 0.0f;
                     (void)readSampleValue( sample, query._key, value ); // 이름은 위에서 봤다
@@ -109,7 +109,7 @@ namespace sw
                     return false;
                 }
                 vector<string> listName;
-                forEachZoneOf( *query._pManager, *pTarget, [&listName]( const hashed_string& source, const ZoneSample& /*sample*/ )
+                forEachZone( *query._pManager, *pTarget, [&listName]( const hashed_string& source, const ZoneSample& /*sample*/ )
                 { listName.push_back( source.c_str() ); } );
                 std::sort( listName.begin(), listName.end() );
                 string joined;
@@ -280,7 +280,7 @@ namespace sw
                     return;
                 }
                 uint32 zoneCount = 0;
-                forEachZoneOf( *pManager, *pTarget, [&]( const hashed_string& source, const ZoneSample& sample )
+                forEachZone( *pManager, *pTarget, [&]( const hashed_string& source, const ZoneSample& sample )
                 {
                     writer.addLineFormat( source.c_str(), "depth %# dist %# immersion %# time %# impact %#", sample._zoneDepth01, sample._distanceToCenter, sample._immersion,
                                           sample._timeInside, sample._impactSpeed );

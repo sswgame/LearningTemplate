@@ -164,7 +164,7 @@ namespace sw
         /** @brief 인덱스가 투명 큐브인지 반환합니다(결정적 해시이므로 실행마다 같은 이미지가 나와 비교할 수 있습니다). */
         static bool isBenchTransparent( uint32 index, uint32 percent );
         /** @brief 격자 한 변의 절반 크기입니다. */
-        static float32 halfExtentOf( uint32 side, float32 spacing );
+        static float32 computeHalfExtentOf( uint32 side, float32 spacing );
 
         /** @brief 씬에 주 광원을 만들고 그림자 볼륨을 격자 크기에 맞춥니다. */
         void spawnLight( Scene* pScene, float32 halfExtent );

@@ -58,7 +58,7 @@ namespace sw
         }
 
         /** @brief @p pDevice 의 것을 모두 `releaseHandle` 로 해제합니다(게임 스레드 — 이미 만든 패킷이 끝날 때까지 미룬다). */
-        void releaseFor( IRHIDevice* pDevice )
+        void releaseForDevice( IRHIDevice* pDevice )
         {
             vector<Item> listRelease;
             {
@@ -83,7 +83,7 @@ namespace sw
             }
         }
 
-        void releaseRHI( IRHIDevice* pDevice ) override { releaseFor( pDevice ); }
+        void releaseRHI( IRHIDevice* pDevice ) override { releaseForDevice( pDevice ); }
 
         void clearRHI( IRHIDevice* pDevice ) override
         {
@@ -629,13 +629,13 @@ namespace sw
             if ( _impl->_mapScreenSize.empty() == false )
             {
                 const unordered_map<string, float32>& mapScreenSize = _impl->_mapScreenSize;
-                const auto                            sizeOf        = [&mapScreenSize]( const Impl::StreamingUpgrade& upgrade )
+                const auto                            getSizeOf     = [&mapScreenSize]( const Impl::StreamingUpgrade& upgrade )
                 {
                     const auto it = mapScreenSize.find( upgrade._key );
                     return it != mapScreenSize.end() ? it->second : 0.0f;
                 };
-                VectorUtil::stableSort( _impl->_listStreamingUpgrade, [&sizeOf]( const Impl::StreamingUpgrade& lhs, const Impl::StreamingUpgrade& rhs )
-                { return sizeOf( lhs ) > sizeOf( rhs ); } );
+                VectorUtil::stableSort( _impl->_listStreamingUpgrade, [&getSizeOf]( const Impl::StreamingUpgrade& lhs, const Impl::StreamingUpgrade& rhs )
+                { return getSizeOf( lhs ) > getSizeOf( rhs ); } );
                 _impl->_mapScreenSize.clear();
             }
             listUpgrade.assign( std::make_move_iterator( _impl->_listStreamingUpgrade.begin() ),
@@ -700,7 +700,7 @@ namespace sw
     void TextureCache::releaseRetiredTextures( IRHIDevice* pDevice )
     {
         if ( pDevice != nullptr )
-            _impl->_retired.releaseFor( pDevice );
+            _impl->_retired.releaseForDevice( pDevice );
     }
 
     uint32 TextureCache::countLoadsInFlight() const

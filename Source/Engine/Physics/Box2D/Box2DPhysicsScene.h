@@ -183,7 +183,7 @@ namespace sw
         void              drawBodyRecord( const BodyRecord& record, IPhysicsDebugRenderer& renderer ) const;
         PhysicsBodyHandle findHandleOfShape( b2ShapeId shapeID ) const;
         /** @brief 쌍 예외 필터 관절 테이블에서 @p body 가 포함된 것을 지웁니다(바디를 지우면 Box2D 가 관절도 지웁니다). */
-        void removePairJointsOf( PhysicsBodyHandle body );
+        void removePairJoints( PhysicsBodyHandle body );
         /** @brief 스텝이 낸 Box2D 이벤트를 추적기에 넣고 충격량을 채웁니다. */
         void flushEvents();
         /** @brief 두 바디 사이 접촉이 이번 스텝에 받은 법선 충격량입니다(마지막 서브 스텝 × 서브 스텝 수). */

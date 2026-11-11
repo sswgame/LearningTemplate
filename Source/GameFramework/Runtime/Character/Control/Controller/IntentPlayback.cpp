@@ -109,7 +109,7 @@ namespace sw
                     outReply = "intent: no active scene";
                     return true;
                 }
-                ControlSystem::ensureFor( *pManager ).setRecording( true, capacityTicks );
+                ControlSystem::findOrCreate( *pManager ).setRecording( true, capacityTicks );
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
                 replyBuilder.appendFormat( "intent: recording every pawn (%# ticks per pawn)", capacityTicks );
                 outReply = string( replyBuilder.view() );

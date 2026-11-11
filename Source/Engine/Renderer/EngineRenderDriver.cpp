@@ -147,7 +147,7 @@ namespace sw
         const Stopwatch rebindWatch;
         // 머티리얼을 다시 올리면 텍스처를 요청한다 — 캐시가 새 디바이스를 먼저 알아야 한다(SceneRHI 단계는 아래 `restartStopped` 에서야 다시 선다).
         SceneRHISubsystem::bindAssetCaches( &_pRHI->getDevice() );
-        RHIRenderResource::initAllFor( &_pRHI->getDevice() );
+        RHIRenderResource::initAllForDevice( &_pRHI->getDevice() );
         const uint64 initMicroseconds = rebindWatch.getElapsedMicroseconds();
 
         // 내렸던 단계를 기동과 같은 본문으로 다시 세운다: 렌더러(업로드 큐 · 배치 합치기 설정을 새 디바이스로) → 렌더 스레드 → 라이브 셰이더 →
@@ -260,7 +260,7 @@ namespace sw
         {
             // RHI 에 (간접으로라도) 의존하는 단계(씬의 디바이스 · 라이브 셰이더 · 렌더 스레드 · 렌더러)를 기동 표의 역순으로, 기동과 같은
             // 본문으로 내린다. 씬 스냅샷 빌더가 든 머티리얼 · 인스턴스도 FrameRenderer 단계의 종료가 옛 디바이스가 살아 있을 때 놓는다.
-            _startupScope.getCollection().shutdownDependentsOf( _rhiSubsystem );
+            _startupScope.getCollection().shutdownDependents( _rhiSubsystem );
 
             // 옛 디바이스의 GPU 자원은 recreateDevice 안의 shutdown 이 레지스트리에 통보하며 거둔다.
             _pRHI->getDevice().waitIdle( RHIWaitIdleReason::BackendSwap );

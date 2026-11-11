@@ -806,7 +806,7 @@ namespace sw
         destroyBodies( span<const PhysicsBodyHandle>{ &body, 1 } );
     }
 
-    void JoltPhysicsScene::destroyJointsOf( span<const PhysicsBodyHandle> listBody )
+    void JoltPhysicsScene::destroyJoints( span<const PhysicsBodyHandle> listBody )
     {
         vector<PhysicsJointHandle> listDoomed;
         _joints.forEachHandle( [&]( SlotHandle slot, const JointRecord& joint )
@@ -832,7 +832,7 @@ namespace sw
     {
         if ( listBody.empty() )
             return;
-        destroyJointsOf( listBody );
+        destroyJoints( listBody );
         vector<JPH::BodyID>       listRemoveID;
         vector<JPH::BodyID>       listDestroyID;
         vector<PhysicsBodyHandle> listDestroyed;

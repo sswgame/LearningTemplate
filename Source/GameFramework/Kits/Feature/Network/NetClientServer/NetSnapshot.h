@@ -26,9 +26,9 @@ namespace sw
         using Input       = NetMessageDef<2, NetMessageDirection::ToServer, NetChannelType::UnreliableSequenced, 6>; ///< 판 6: 의도 끝에 발동 순간 시선 필드(선택)가 붙는다(5: 입력 항목마다의 보던 틱 스탬프, 4: 소유자 상태 필드)
         using Table       = NetMessageTable<NetKitMessageRange::kClientServer, Snapshot, SnapshotAck, Input>;
 
-        static constexpr uint8 kSnapshot    = Table::kindOf<Snapshot>();
-        static constexpr uint8 kSnapshotAck = Table::kindOf<SnapshotAck>();
-        static constexpr uint8 kInput       = Table::kindOf<Input>();
+        static constexpr uint8 kSnapshot    = Table::getKindOf<Snapshot>();
+        static constexpr uint8 kSnapshotAck = Table::getKindOf<SnapshotAck>();
+        static constexpr uint8 kInput       = Table::getKindOf<Input>();
 
         static constexpr int32 kMaxInputBytes      = 255; ///< 틱 하나의 입력 상한. 클라이언트는 넘는 입력을 보내지 않고, 서버는 넘는 길이를 손상된 메시지로 본다
         static constexpr int32 kMaxInputCount      = 32;  ///< 입력 메시지 하나에 싣는 입력 수의 상한이자, 클라이언트가 확인을 기다리며 보관하는 입력 수의 상한이다. 두 쪽이 같은 값을 쓴다

@@ -191,13 +191,13 @@ namespace sw
                                  const vector<float32>* pListMorphWeight = nullptr );
 
         /** @brief 모프 메시의 풀 시작 오프셋(정점 단위)을 반환합니다. 풀에 없으면 `kInvalidBase` 입니다. 스킨 결과는 칸마다라 칸 표(`getSkinResultOffsetBuffer`)로 찾는다. */
-        uint32 baseOf( const Mesh* pMesh ) const;
+        uint32 getBaseOf( const Mesh* pMesh ) const;
         /** @brief 스킨 칸 → 결과 시작 표입니다(칸 하나가 `GPUSkinResultOffset`, 못 든 칸은 시작이 `kInvalidBase`). 정점 셰이더가 t14(g_SwSkinResultOffsets)로 읽는다. 스킨 인스턴스가 없으면 비어 있습니다. */
         const RHIStructuredBuffer& getSkinResultOffsetBuffer() const { return _skinResultOffsets; }
         /** @brief 칸 표의 칸 수(가장 큰 칸 + 1)입니다. */
         uint32 getSkinResultOffsetCount() const { return static_cast<uint32>( _listSkinResultOffset.size() ); }
         /** @brief 칸의 결과 시작입니다(진단 · 테스트 — 이번 프레임에 쓰는 벌). 없는 칸이거나 디스패치할 수 없으면 `kInvalidBase` 입니다. */
-        uint32 skinResultStartOf( uint32 skinSlot ) const;
+        uint32 getSkinResultStartOf( uint32 skinSlot ) const;
         /**
          * @brief 스킨 결과의 쓰는 벌을 바꿉니다. 프레임마다 **한 번**, `update` · `uploadSkinPalettes` 뒤 · 스키닝 디스패치 앞에 부릅니다.
          * @details 바꾸기 전 벌에 지난 프레임의 결과가 있는지(배치가 그대로이고 지난 프레임에 디스패치했는지)를 정한다(`getSkinPreviousShift`).

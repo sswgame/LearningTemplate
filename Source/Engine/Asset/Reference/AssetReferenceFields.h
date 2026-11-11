@@ -128,7 +128,7 @@ namespace sw
         /** @brief @p text 에서 참조를 뽑아 @p outListReference 끝에 더합니다. 글 순서다. */
         void extract( string_view text, AssetReferenceSyntax syntax, vector<AssetReference>& outListReference ) const;
         /** @brief 파일 이름으로 문법을 고릅니다(`.json` → JSON, `CMakeLists.txt` · `.cmake` → CMake, 나머지 → XML). */
-        static AssetReferenceSyntax syntaxOf( string_view path );
+        static AssetReferenceSyntax getSyntaxOf( string_view path );
 
         /** @brief @p assetID 가 있거나(파일 · 폴더) 임포트 산출물이고 같은 자리의 원본이 있으면 true 입니다. */
         bool canResolve( string_view assetID, const AssetIDSet& assets ) const;

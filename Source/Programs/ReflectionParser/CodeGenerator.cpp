@@ -487,7 +487,7 @@ namespace sw
         {
             emit.line( "{" );
             emit.push();
-            emit.linef( "constexpr ::sw::ReflectUnitKind kUnit = ::sw::ReflectUnit::kindOf( %# );", CodeEmit::quoted( prop._units ) );
+            emit.linef( "constexpr ::sw::ReflectUnitKind kUnit = ::sw::ReflectUnit::getKindOf( %# );", CodeEmit::quoted( prop._units ) );
             emit.line( "static_assert( kUnit != ::sw::ReflectUnitKind::None, \"unknown PROPERTY( Units )\" );" );
             emit.line( "m._unit = kUnit;" );
             emit.pop();

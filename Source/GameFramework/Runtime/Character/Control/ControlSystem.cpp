@@ -71,7 +71,7 @@ namespace sw
     {
     }
 
-    ControlSystem& ControlSystem::ensureFor( GameObjectManager& manager )
+    ControlSystem& ControlSystem::findOrCreate( GameObjectManager& manager )
     {
         ControlSystem* pSystem = find( manager );
         if ( pSystem != nullptr )

@@ -41,7 +41,7 @@ A panel is split so that the ImGui frame can later leave the game (main) thread 
   - empty state: `drawEmptyState` (one sentence + optional next-step button), `drawEmptyHint`, and for a filter with no match `drawNoSearchResultHint`;
   - verbosity: short labels with the long text in a tooltip (`drawPropertyRowLabel( label, tooltip )` · `drawInlineLabel( label, tooltip )` · `drawTooltip` · `drawHelpMarker`), rarely used settings under `beginAdvancedSection` (collapsed, like Unreal Details' Advanced);
   - status line at the panel foot: `drawPanelStatus`; counts `drawCountLabel`;
-  - context menus: commands for a target through `EditorInputGUI::drawContextMenuFor` (R1 – R9 below); clamped names `drawClampedLabel`; widths in text columns `EditorChrome::setNextItemWidthColumns`.
+  - context menus: commands for a target through `EditorInputGUI::drawContextMenu` (R1 – R9 below); clamped names `drawClampedLabel`; widths in text columns `EditorChrome::setNextItemWidthColumns`.
   - labels go left: `drawTextField` · `drawTextFieldMultiline` (with `pHint` placeholder) and `beginCombo` move a visible `"Name###id"` label in front of the field; never `ImGui::BeginCombo` with a visible label.
   Lint `EditorWidgetLabels` bans ImGui's right-hand labels on inputs and combos (string literal or `makeStableLabel`). A row label longer than the label column is cut with an ellipsis and shown whole on hover.
 

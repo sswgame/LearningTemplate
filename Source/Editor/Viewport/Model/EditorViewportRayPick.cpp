@@ -39,7 +39,7 @@ namespace sw::editor
             }
 
             /** @brief float3 의 축 성분입니다(0 · 1 · 2 = X · Y · Z). */
-            static float32& axisOf( float3& v, uint32 axisIndex )
+            static float32& getAxisOf( float3& v, uint32 axisIndex )
             {
                 return axisIndex == 0 ? v._x : ( axisIndex == 1 ? v._y : v._z );
             }
@@ -233,13 +233,13 @@ namespace sw::editor
 
         float3        direction = ray._direction;
         float3        origin    = ray._origin;
-        const float32 dirAxis   = EditorViewportRayPickInternal::axisOf( direction, axisIndex );
+        const float32 dirAxis   = EditorViewportRayPickInternal::getAxisOf( direction, axisIndex );
         if ( MathUtil::abs( dirAxis ) <= 1e-4f )
             return false;
 
-        const float32 t                                              = -EditorViewportRayPickInternal::axisOf( origin, axisIndex ) / dirAxis;
-        outPoint                                                     = origin + direction * t;
-        EditorViewportRayPickInternal::axisOf( outPoint, axisIndex ) = 0.0f;
+        const float32 t                                                 = -EditorViewportRayPickInternal::getAxisOf( origin, axisIndex ) / dirAxis;
+        outPoint                                                        = origin + direction * t;
+        EditorViewportRayPickInternal::getAxisOf( outPoint, axisIndex ) = 0.0f;
         return true;
     }
 

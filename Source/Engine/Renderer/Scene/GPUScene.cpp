@@ -89,7 +89,7 @@ namespace sw
             const GPUMeshBatch&  batch = listBatch[batchIndex];
             GPUMeshBatchBinding& gpu   = _listBatchBinding[batchIndex];
             // 구간 · LOD 배치도 메시 시작 그대로다 — 인덱스가 메시 안 번호라 셰이더의 로컬 번호가 곧 메시 안 번호다(binding.hlsli MorphPool::computeElement).
-            const uint32 meshBase = pool.baseOf( batch._mesh.get() );
+            const uint32 meshBase = pool.getBaseOf( batch._mesh.get() );
             if ( gpu._morphVertexBase != meshBase )
                 _bBatchTablesDirty = SW_TRUE; // 표가 이 값을 든다. 바뀌면 다시 올린다
             gpu._morphVertexBase = meshBase;
@@ -109,7 +109,7 @@ namespace sw
         {
             const GPUMeshBatch&  batch = listBatch[batchIndex];
             GPUMeshBatchBinding& gpu   = _listBatchBinding[batchIndex];
-            const uint32         base  = pool.baseOf( batch._mesh.get() );
+            const uint32         base  = pool.getBaseOf( batch._mesh.get() );
             if ( gpu._vertexAnimationBase != base )
                 _bBatchTablesDirty = SW_TRUE; // 표가 이 값을 든다. 바뀌면 다시 올린다
             gpu._vertexAnimationBase = base;
@@ -218,7 +218,7 @@ namespace sw
             GPUMeshBatchBinding&               gpu       = _listBatchBinding[batchIndex];
             const RHIMeshVertexFormat          format    = batch._mesh != nullptr ? batch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
             const GPUMeshVertexPool&           pool      = _arrVertexPool[static_cast<size_t>( format )];
-            const GPUMeshVertexPool::Placement placement = pool.placementOf( batch._mesh.get() );
+            const GPUMeshVertexPool::Placement placement = pool.getPlacementOf( batch._mesh.get() );
             if ( placement._baseVertex != GPUMeshVertexPool::kInvalidBase && pool.getVertexBuffer() != 0 )
             {
                 gpu._vertexBuffer    = pool.getVertexBuffer();

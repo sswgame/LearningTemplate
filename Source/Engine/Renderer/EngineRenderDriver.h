@@ -1,7 +1,7 @@
 /**
  * @file Engine/Renderer/EngineRenderDriver.h
  * @brief 엔진 루프의 렌더러 몫(프레임 패킷 제출 · 창 크기 · 백엔드 교체 · 캡처 종료)을 맡는 서브시스템입니다. `IEngineRenderDriver` 로 찾습니다.
- * @details 선언한 의존이 없습니다 — RHI 에 기대면 백엔드 교체(`shutdownDependentsOf`)가 교체를 돌리는 자기를 내린다. 세 단계는 공장에서 빌리고 기동이 끝난 뒤에 읽습니다.
+ * @details 선언한 의존이 없습니다 — RHI 에 기대면 백엔드 교체(`shutdownDependents`)가 교체를 돌리는 자기를 내린다. 세 단계는 공장에서 빌리고 기동이 끝난 뒤에 읽습니다.
  *          전용 서버는 이 폴더를 짓지 않아 등록이 없고, 엔진 루프는 인터페이스가 없으면 건너뜁니다(docs/agents/BuildConfigSwitch.md 셋째 줄).
  */
 #pragma once

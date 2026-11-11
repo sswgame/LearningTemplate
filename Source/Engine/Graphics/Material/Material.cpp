@@ -672,14 +672,14 @@ namespace sw
                 continue;
             }
             const ShaderVariableInfo& var = *pVar;
-            // 칸 형식은 셰이더가 정한다 — `.material` 에는 적지 않는다(언리얼 머티리얼 파라미터 · 유니티 ShaderLab Properties 도 칸 형식을 셰이더에서 얻는다). 리플렉션 전의 기본 형식(`defaultShaderTypeFor`)은 여기서 바뀐다.
+            // 칸 형식은 셰이더가 정한다 — `.material` 에는 적지 않는다(언리얼 머티리얼 파라미터 · 유니티 ShaderLab Properties 도 칸 형식을 셰이더에서 얻는다). 리플렉션 전의 기본 형식(`getDefaultShaderTypeFor`)은 여기서 바뀐다.
             const MaterialPropertyType reflected = MaterialPacking::shaderTypeFromReflectionName( var._type, var._size );
             if ( reflected != MaterialPropertyType::Unknown )
                 prop._shaderType = reflected;
-            else if ( MaterialPacking::packedSizeOf( prop._shaderType ) != 0 && MaterialPacking::packedSizeOf( prop._shaderType ) != var._size )
+            else if ( MaterialPacking::computePackedSizeOf( prop._shaderType ) != 0 && MaterialPacking::computePackedSizeOf( prop._shaderType ) != var._size )
             {
                 SW_LOG_ERROR_ID( "Material.MaterialPropertySizeMismatch", "Material '%#' property '%#' size mismatch (shaderType %# bytes vs shader %#, %#)",
-                                 _desc._name.c_str(), prop._name.c_str(), MaterialPacking::packedSizeOf( prop._shaderType ), var._size, _desc._shaderPath.c_str() );
+                                 _desc._name.c_str(), prop._name.c_str(), MaterialPacking::computePackedSizeOf( prop._shaderType ), var._size, _desc._shaderPath.c_str() );
                 bAllPacked = false;
             }
             prop._offset = var._offset;
@@ -739,7 +739,7 @@ namespace sw
             }
 
             if ( prop._shaderType == MaterialPropertyType::Unknown )
-                prop._shaderType = MaterialPacking::defaultShaderTypeFor( prop._type );
+                prop._shaderType = MaterialPacking::getDefaultShaderTypeFor( prop._type );
 
             // 이 순회는 비버퍼 타입을 0 으로 되돌리고 셰이더 타입을 채우는 것까지다. 오프셋 패킹은 아래 두 번째 순회가 한다.
         }
@@ -765,9 +765,9 @@ namespace sw
                 continue;
 
             if ( prop._shaderType == MaterialPropertyType::Unknown )
-                prop._shaderType = MaterialPacking::defaultShaderTypeFor( prop._type );
+                prop._shaderType = MaterialPacking::getDefaultShaderTypeFor( prop._type );
 
-            uint32 packSize = MaterialPacking::packedSizeOf( prop._shaderType );
+            uint32 packSize = MaterialPacking::computePackedSizeOf( prop._shaderType );
             if ( prop._size != 0 )
                 packSize = prop._size;
             if ( packSize == 0 )

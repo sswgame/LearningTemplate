@@ -194,7 +194,7 @@ namespace sw
         void applyAchievementUnlock( AccountID accountID, const AchievementState& achievement, bool bUnlocked );
         void applyAchievements( uint64 requestTag, LeaderboardOutcome result, vector<AchievementState>&& listAchievement );
         void applyAchievementProgress( uint64 requestTag, LeaderboardOutcome result, vector<AchievementProgress>&& listProgress );
-        void applyScoresOf( uint64 requestTag, uint64 periodID, LeaderboardOutcome result, vector<LeaderboardEntry>&& listEntry );
+        void applyScores( uint64 requestTag, uint64 periodID, LeaderboardOutcome result, vector<LeaderboardEntry>&& listEntry );
         void applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardOutcome result, const LeaderboardEntry& entry );
         /** @brief 정산의 순위 읽기가 끝났습니다. 순위대로 정렬한 점수를 받아 첫 페이지를 맡깁니다. */
         void applySettlementRanking( uint64 settlementID, bool bReadOk, vector<LeaderboardScoreRow>&& listRanked );

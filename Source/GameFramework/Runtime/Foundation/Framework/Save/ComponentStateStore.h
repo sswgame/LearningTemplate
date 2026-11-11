@@ -225,26 +225,26 @@ namespace sw
         static CaptureFn selectCapture()
         {
             if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )
-                return &StatefulComponentRegistrar::captureOf;
+                return &StatefulComponentRegistrar::captureAllComponentStates;
             else
                 return nullptr;
         }
         static RestoreFn selectRestore()
         {
             if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )
-                return &StatefulComponentRegistrar::restoreOf;
+                return &StatefulComponentRegistrar::restoreAllComponentStates;
             else
                 return nullptr;
         }
         static DespawnFn selectDespawn()
         {
             if constexpr ( ComponentStateStoreTraits::HasDespawnViews<TComponent>::value )
-                return &StatefulComponentRegistrar::despawnOf;
+                return &StatefulComponentRegistrar::despawnAllViews;
             else
                 return nullptr;
         }
         /** @brief 컴포넌트를 먼저 모으고 순회 밖에서 걷는다 — 순회 콜백 안(매니저 잠금)에서는 오브젝트를 지울 수 없다. */
-        static void despawnOf( GameObjectManager& manager )
+        static void despawnAllViews( GameObjectManager& manager )
         {
             if constexpr ( ComponentStateStoreTraits::HasDespawnViews<TComponent>::value )
             {
@@ -259,14 +259,14 @@ namespace sw
                 (void)manager;
             }
         }
-        static void captureOf( ComponentStateStore& store, GameObjectManager& manager )
+        static void captureAllComponentStates( ComponentStateStore& store, GameObjectManager& manager )
         {
             if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )
                 (void)store.capture<TComponent>( manager );
             else
                 (void)store, (void)manager;
         }
-        static void restoreOf( const ComponentStateStore& store, GameObjectManager& manager )
+        static void restoreAllComponentStates( const ComponentStateStore& store, GameObjectManager& manager )
         {
             if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )
                 (void)store.restore<TComponent>( manager ); // 짝이 없는 컴포넌트는 그대로 둔다

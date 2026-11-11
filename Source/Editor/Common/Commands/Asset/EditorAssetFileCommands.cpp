@@ -205,7 +205,7 @@ namespace sw::editor
                     {
                         appendUnique( inoutPlan._listOutsideDomain, getDomainOf( referrerID ) );
                     }
-                    if ( params.rewrite( rewrite._rewrittenText, AssetReferenceFields::syntaxOf( referrerID ), listRule ) == 0 )
+                    if ( params.rewrite( rewrite._rewrittenText, AssetReferenceFields::getSyntaxOf( referrerID ), listRule ) == 0 )
                     {
                         // 역색인은 글에서 경로 모양을 찾고, 고치기는 경로 칸만 본다 — 칸 밖(주석)이거나 목록에 없는 칸이다. 고치지 못한 참조를 남기고 옮기지 않는다.
                         inoutPlan._listUnfixedReferrer.push_back( referrerID );

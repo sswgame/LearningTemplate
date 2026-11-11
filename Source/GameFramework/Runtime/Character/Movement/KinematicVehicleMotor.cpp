@@ -19,7 +19,7 @@ namespace sw
         {
             static constexpr float32 kStopEpsilon = 0.05f; ///< 이보다 느리면 멈춘 것으로 본다(브레이크 → 후진 전환)
 
-            static int32 signOf( float32 value ) { return value > 0.0f ? 1 : ( value < 0.0f ? -1 : 0 ); }
+            static int32 getSignOf( float32 value ) { return value > 0.0f ? 1 : ( value < 0.0f ? -1 : 0 ); }
         };
     } // namespace
 } // namespace sw
@@ -353,7 +353,7 @@ namespace sw
         const VehicleDriftModule& drift = _settings._drift;
         if ( isDrifting() == false )
         {
-            const int32 steerSign   = KinematicVehicleMotorInternal::signOf( input._steer );
+            const int32 steerSign   = KinematicVehicleMotorInternal::getSignOf( input._steer );
             const bool  bStartDrift = input._bDriftHeld != SW_FALSE && isAirborne() == false && steerSign != 0 && forwardSpeed >= drift._minSpeed;
             if ( bStartDrift )
             {

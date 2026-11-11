@@ -16,11 +16,11 @@ namespace sw
 
     SurfaceExposureSystem* SurfaceExposureSystem::find( const GameObjectManager& manager )
     {
-        // 이 키로는 이 타입만 붙인다(`ensureFor`).
+        // 이 키로는 이 타입만 붙인다(`findOrCreate`).
         return static_cast<SurfaceExposureSystem*>( manager.findFrameSystem( hashed_string( kFrameSystemKey ) ) );
     }
 
-    SurfaceExposureSystem& SurfaceExposureSystem::ensureFor( GameObjectManager& manager )
+    SurfaceExposureSystem& SurfaceExposureSystem::findOrCreate( GameObjectManager& manager )
     {
         SurfaceExposureSystem* pSystem = find( manager );
         if ( pSystem != nullptr )

@@ -32,7 +32,7 @@ namespace sw
         constexpr uint32 kAllSlotMask = ( 1u << constant::render::kMaxFrameCountInFlight ) - 1u;
         static_assert( constant::render::kMaxFrameCountInFlight < 32, "칸 비트가 uint32 에 담겨야 한다" );
 
-        const uint32 staleSlotMask = kAllSlotMask & ~slotBitOf( slot );
+        const uint32 staleSlotMask = kAllSlotMask & ~getSlotBitOf( slot );
         if ( staleSlotMask == 0 )
         {
             _mapPendingWrite.erase( buffer ); // 슬롯이 하나뿐이다. 채울 것이 없다.

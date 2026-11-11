@@ -151,13 +151,13 @@ namespace sw
             {
                 // 이전 잎에서 지금 노드 번호로 가는 매핑이다(current 안의 인덱스 대신 빌드 노드 번호를 쓴다).
                 vector<uint32> listOwner( leafCount, 0xFFFFFFFFu );
-                vector<uint32> listGroupOf( listBuild.size(), 0xFFFFFFFFu );
+                vector<uint32> getListGroupOf( listBuild.size(), 0xFFFFFFFFu );
                 vector<uint32> listLeaf;
                 for ( uint32 group = 0; group < static_cast<uint32>( inoutListGroup.size() ); ++group )
                 {
                     for ( const uint32 node : inoutListGroup[group] )
                     {
-                        listGroupOf[node] = group;
+                        getListGroupOf[node] = group;
                         listLeaf.clear();
                         collectLeaves( listBuild, node, listLeaf );
                         for ( const uint32 leaf : listLeaf )
@@ -178,7 +178,7 @@ namespace sw
                     const bool   bSkipLinkOwners = ownerA == 0xFFFFFFFFu || ownerB == 0xFFFFFFFFu || ownerA == ownerB;
                     if ( bSkipLinkOwners )
                         continue;
-                    if ( listGroupOf[ownerA] == listGroupOf[ownerB] )
+                    if ( getListGroupOf[ownerA] == getListGroupOf[ownerB] )
                         UnionFindUtil::unite( listParent, ownerA, ownerB );
                 }
                 vector<vector<uint32>> listSplit;

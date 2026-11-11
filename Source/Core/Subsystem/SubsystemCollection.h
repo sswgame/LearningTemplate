@@ -89,9 +89,9 @@ namespace sw
          * @brief @p subsystem 에 (간접으로라도) 의존하는 **초기화된** 서브시스템을 `shutdownAll` 과 같이 역순으로 멈춘 뒤 역순으로 종료합니다. @p subsystem 자신은 그대로 둡니다.
          * @details 기동 중에 하나를 갈아 끼울 때 씁니다(백엔드 교체: RHI 의 디바이스를 다시 만든다). 내린 것은 `restartStopped` 가 다시 세웁니다.
          */
-        void shutdownDependentsOf( const ISubsystem& subsystem );
+        void shutdownDependents( const ISubsystem& subsystem );
         /**
-         * @brief `shutdownDependentsOf` 가 내린 서브시스템을 위상 순서로 다시 초기화합니다.
+         * @brief `shutdownDependents` 가 내린 서브시스템을 위상 순서로 다시 초기화합니다.
          * @return 모두 다시 섰으면 true 입니다. 실패한 것에서 멈추고(`getError` 에 적는다), 그것과 나머지는 내린 채로 남습니다(종료 대상에서도 빠진다).
          */
         [[nodiscard]] bool restartStopped();
@@ -120,7 +120,7 @@ namespace sw
          *          종료도 잰다 — 로그 없이 오래 걸린 종료(Debug 의 자식 클라이언트가 15 초 시한에 걸렸다)가 어느 서브시스템인지 줄 하나로 보인다.
          */
         void setTimingClock( int64 ( *pClockNanos )() noexcept ) { _pClockNanos = pClockNanos; }
-        /** @brief `shutdownDependentsOf` 가 내리고 아직 다시 세우지 않은 서브시스템(자리, 초기화 순서)입니다. */
+        /** @brief `shutdownDependents` 가 내리고 아직 다시 세우지 않은 서브시스템(자리, 초기화 순서)입니다. */
         const vector<uint32>& getStoppedIndices() const { return _listStopped; }
         /** @brief 정렬 오류 · 초기화 실패입니다. 없으면 빈 글입니다. */
         const string& getError() const { return _error; }
@@ -154,7 +154,7 @@ namespace sw
         vector<uint32>          _listOrder;          ///< 초기화 순서(자리)
         vector<vector<uint32>>  _listDependency;     ///< 자리마다 먼저 서야 하는 자리
         vector<uint32>          _listInitialized;    ///< 초기화한 자리(종료가 역순으로 돈다)
-        vector<uint32>          _listStopped;        ///< `shutdownDependentsOf` 가 내린 자리(초기화 순서)
+        vector<uint32>          _listStopped;        ///< `shutdownDependents` 가 내린 자리(초기화 순서)
         vector<SubsystemTiming> _listInitTiming;     ///< `initializeAll` 이 잰 초기화 시간(`getInitTimings`)
         vector<SubsystemTiming> _listShutdownTiming; ///< `shutdownAll` 이 잰 종료 시간(`getShutdownTimings`)
         string                  _error;              ///< 정렬 오류 · 초기화 실패

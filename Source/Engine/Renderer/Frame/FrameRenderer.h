@@ -424,7 +424,7 @@ namespace sw
         FrameRenderState    _state;
         RenderPipelineAsset _pipelineResource;
         /**
-         * @brief 이 렌더러의 PSO(엔진 패스 · 출력 · 머티리얼 변형 · 입자 · 폴백 버퍼)를 만들고 찾는 관리자입니다. 미리보기 씬 렌더러는 주 렌더러의 저장소를 빌린다(`shareCacheOf`).
+         * @brief 이 렌더러의 PSO(엔진 패스 · 출력 · 머티리얼 변형 · 입자 · 폴백 버퍼)를 만들고 찾는 관리자입니다. 미리보기 씬 렌더러는 주 렌더러의 저장소를 빌린다(`shareCache`).
          * @details `_pipelineResource` · `_gpuScene` 을 참조로 읽으므로 그 둘보다 뒤에 선언한다. 언리얼이 PSO 조립을 메시 패스 프로세서 · PSO 캐시로 렌더러 밖에 두는 것과 같다.
          */
         FramePSOManager _psoManager;

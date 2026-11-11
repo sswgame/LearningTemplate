@@ -7,7 +7,7 @@
 
 namespace
 {
-    int32 sumOf( sw::vector_reference<const int32> listValue )
+    int32 computeSum( sw::vector_reference<const int32> listValue )
     {
         int32 total = 0;
         for ( const int32 value : listValue )
@@ -64,15 +64,15 @@ SW_TEST_CASE( SpanTest, AcceptsEveryContiguousContainer )
     std::array<int32, 2>      arrStd{ 7, 8 };
     const int32               arrRaw[3] = { 1000, 2000, 3000 };
 
-    SW_EXPECT_EQUAL( 6, sumOf( listValue ) );
-    SW_EXPECT_EQUAL( 30, sumOf( listSmall ) );
-    SW_EXPECT_EQUAL( 600, sumOf( arrValue ) );
-    SW_EXPECT_EQUAL( 11, sumOf( listStd ) );
-    SW_EXPECT_EQUAL( 15, sumOf( arrStd ) );
-    SW_EXPECT_EQUAL( 6000, sumOf( arrRaw ) );
-    SW_EXPECT_EQUAL( 5, sumOf( { listValue.data() + 1, 2 } ) ); // 포인터 + 개수
-    SW_EXPECT_EQUAL( 9, sumOf( sw::vector<int32>{ 4, 5 } ) );   // 임시 컨테이너(인자 전달)
-    SW_EXPECT_EQUAL( 0, sumOf( {} ) );                          // 빈 뷰
+    SW_EXPECT_EQUAL( 6, computeSum( listValue ) );
+    SW_EXPECT_EQUAL( 30, computeSum( listSmall ) );
+    SW_EXPECT_EQUAL( 600, computeSum( arrValue ) );
+    SW_EXPECT_EQUAL( 11, computeSum( listStd ) );
+    SW_EXPECT_EQUAL( 15, computeSum( arrStd ) );
+    SW_EXPECT_EQUAL( 6000, computeSum( arrRaw ) );
+    SW_EXPECT_EQUAL( 5, computeSum( { listValue.data() + 1, 2 } ) ); // 포인터 + 개수
+    SW_EXPECT_EQUAL( 9, computeSum( sw::vector<int32>{ 4, 5 } ) );   // 임시 컨테이너(인자 전달)
+    SW_EXPECT_EQUAL( 0, computeSum( {} ) );                          // 빈 뷰
 
     // 원소 타입을 적지 않아도 컨테이너에서 가져온다.
     sw::span deduced = listSmall;
@@ -117,10 +117,10 @@ SW_TEST_CASE( SpanTest, SubViewsAndAccessors )
     SW_EXPECT_EQUAL( 1, whole.front() );
     SW_EXPECT_EQUAL( 5, whole.back() );
 
-    SW_EXPECT_EQUAL( 3, sumOf( whole.first( 2 ) ) );
-    SW_EXPECT_EQUAL( 9, sumOf( whole.last( 2 ) ) );
-    SW_EXPECT_EQUAL( 9, sumOf( whole.subspan( 1, 3 ) ) );
-    SW_EXPECT_EQUAL( 12, sumOf( whole.subspan( 2 ) ) ); // 끝까지
+    SW_EXPECT_EQUAL( 3, computeSum( whole.first( 2 ) ) );
+    SW_EXPECT_EQUAL( 9, computeSum( whole.last( 2 ) ) );
+    SW_EXPECT_EQUAL( 9, computeSum( whole.subspan( 1, 3 ) ) );
+    SW_EXPECT_EQUAL( 12, computeSum( whole.subspan( 2 ) ) ); // 끝까지
     SW_EXPECT_TRUE( whole.subspan( 5 ).empty() );
 
     SW_EXPECT_EQUAL( 5, *whole.rbegin() );

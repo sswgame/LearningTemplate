@@ -43,7 +43,7 @@ namespace sw
         if ( pState != nullptr )
         {
             if ( GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr; pManager != nullptr )
-                (void)DecalRainWashSystem::ensureFor( *pManager ); // 강수를 가진 쪽이 비 씻김도 붙인다 — 데칼(엔진)은 날씨를 모른다
+                (void)DecalRainWashSystem::findOrCreate( *pManager ); // 강수를 가진 쪽이 비 씻김도 붙인다 — 데칼(엔진)은 날씨를 모른다
         }
         if ( pState == nullptr || pState->isFreshGame() == false || _startWeather.empty() )
             return; // 열지 못한 까닭은 판 상태가 남겼다. 복원한 판은 날씨도 복원했다

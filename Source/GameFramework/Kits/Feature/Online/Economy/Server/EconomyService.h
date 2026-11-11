@@ -218,7 +218,7 @@ namespace sw
         {
             if ( outcome.isFailed() )
             {
-                failCallOf( callID, outcome._errorCode );
+                failCallByID( callID, outcome._errorCode );
                 return;
             }
             if ( LocalCallTable::isLocal( callID ) )
@@ -231,7 +231,7 @@ namespace sw
                 _calls.warnUnknownCall( callID );
         }
         /** @brief 호출을 공통 범주 @p errorCode 로 끝냅니다. 원격이면 공통 오류, 같은 프로세스면 `OnlineResult::_errorCode` 입니다. 공통 범주는 기억하지 않는다. */
-        void  failCallOf( uint64 callID, uint16 errorCode );
+        void  failCallByID( uint64 callID, uint16 errorCode );
         int32 getPendingCallCount() const { return _calls.getCount() + _localCalls.getCount(); }
         /** @brief 종료 드레인이 기다리는 일 수입니다 — 원격 · 같은 프로세스 호출과 저장소에 맡긴 일. */
         int32 getOpenWorkCount() const { return getPendingCallCount() + _store.getOpenCount(); }

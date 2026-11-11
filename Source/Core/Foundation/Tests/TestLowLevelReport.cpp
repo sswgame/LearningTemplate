@@ -85,7 +85,7 @@ namespace
 #endif
         }
 
-        static int32 descriptorOf( std::FILE* pFile )
+        static int32 getDescriptorOf( std::FILE* pFile )
         {
 #if defined( SW_PLATFORM_WINDOWS )
             return _fileno( pFile );
@@ -132,9 +132,9 @@ namespace
             if ( LowLevelReportTestInternal::_s_pCapture == nullptr )
                 return;
             std::fflush( stderr );
-            _savedStderr = LowLevelReportTestInternal::duplicateDescriptor( LowLevelReportTestInternal::descriptorOf( stderr ) );
-            LowLevelReportTestInternal::redirectDescriptor( LowLevelReportTestInternal::descriptorOf( LowLevelReportTestInternal::_s_pCapture ),
-                                                            LowLevelReportTestInternal::descriptorOf( stderr ) );
+            _savedStderr = LowLevelReportTestInternal::duplicateDescriptor( LowLevelReportTestInternal::getDescriptorOf( stderr ) );
+            LowLevelReportTestInternal::redirectDescriptor( LowLevelReportTestInternal::getDescriptorOf( LowLevelReportTestInternal::_s_pCapture ),
+                                                            LowLevelReportTestInternal::getDescriptorOf( stderr ) );
             _pPreviousReporter = internal::setLowLevelReporter( pfnReporter );
         }
 
@@ -144,7 +144,7 @@ namespace
             {
                 (void)internal::setLowLevelReporter( _pPreviousReporter );
                 std::fflush( stderr );
-                LowLevelReportTestInternal::redirectDescriptor( _savedStderr, LowLevelReportTestInternal::descriptorOf( stderr ) );
+                LowLevelReportTestInternal::redirectDescriptor( _savedStderr, LowLevelReportTestInternal::getDescriptorOf( stderr ) );
                 LowLevelReportTestInternal::closeDescriptor( _savedStderr );
                 std::fclose( LowLevelReportTestInternal::_s_pCapture );
                 LowLevelReportTestInternal::_s_pCapture = nullptr;

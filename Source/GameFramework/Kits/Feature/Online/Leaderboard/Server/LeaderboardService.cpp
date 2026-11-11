@@ -1231,10 +1231,10 @@ namespace sw
         _store.submit( [prefix = LeaderboardServiceInternal::makeScorePrefix( boardID, periodID ), listUnique = std::move( listUnique ), order = pBoard->_order]( IServiceStoreConnection& connection )
         { return LeaderboardStoreRun::readScoresOf( connection, prefix, listUnique, order ); },
                        [this, requestTag, periodID]( LeaderboardRead<vector<LeaderboardEntry>>& read )
-        { applyScoresOf( requestTag, periodID, read._result, std::move( read._value ) ); } );
+        { applyScores( requestTag, periodID, read._result, std::move( read._value ) ); } );
     }
 
-    void LeaderboardService::applyScoresOf( uint64 requestTag, uint64 periodID, LeaderboardOutcome result, vector<LeaderboardEntry>&& listEntry )
+    void LeaderboardService::applyScores( uint64 requestTag, uint64 periodID, LeaderboardOutcome result, vector<LeaderboardEntry>&& listEntry )
     {
         LeaderboardCompletion completion;
         completion._requestTag = requestTag;

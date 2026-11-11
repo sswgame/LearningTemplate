@@ -100,7 +100,7 @@ namespace sw::editor
                     string text;
                     if ( FileUtil::readTextFile( filePath, text ) == false )
                         return -1; // 이유는 FileUtil 이 남겼다
-                    problemCount += checkFile( params, assets, "Content/" + assetID, text, AssetReferenceFields::syntaxOf( assetID ) );
+                    problemCount += checkFile( params, assets, "Content/" + assetID, text, AssetReferenceFields::getSyntaxOf( assetID ) );
                     ++scannedCount;
                 }
                 for ( const string& cmakeFile : params.getCMakeFiles() )

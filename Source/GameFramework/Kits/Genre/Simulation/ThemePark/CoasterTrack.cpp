@@ -30,10 +30,10 @@ namespace sw
             }
 
             /** @brief 요 @p heading(라디안)의 수평 앞쪽과 오른쪽을 반환합니다. */
-            static float3 forwardOf( float32 heading ) { return float3{ MathUtil::sin( heading ), 0.0f, MathUtil::cos( heading ) }; }
-            static float3 rightOf( float32 heading ) { return float3{ MathUtil::cos( heading ), 0.0f, -MathUtil::sin( heading ) }; }
+            static float3 getForwardOf( float32 heading ) { return float3{ MathUtil::sin( heading ), 0.0f, MathUtil::cos( heading ) }; }
+            static float3 getRightOf( float32 heading ) { return float3{ MathUtil::cos( heading ), 0.0f, -MathUtil::sin( heading ) }; }
 
-            static uint8 flagsOf( CoasterPieceType type )
+            static uint8 getFlagsOf( CoasterPieceType type )
             {
                 switch ( type )
                 {
@@ -195,7 +195,7 @@ namespace sw
     {
         // 시작점은 첫 조각의 구간이다. 스테이션에서 멈춰 출발하는 열차가 그 위치의 표시(스테이션 구동)를 받아야 움직인다.
         if ( _listPoint.size() == 1 )
-            _listPoint[0]._flags = CoasterTrackInternal::flagsOf( piece._type );
+            _listPoint[0]._flags = CoasterTrackInternal::getFlagsOf( piece._type );
         switch ( piece._type )
         {
             case CoasterPieceType::TurnLeft:
@@ -221,7 +221,7 @@ namespace sw
             case CoasterPieceType::Brakes:
             case CoasterPieceType::Booster:
             {
-                appendProfile( piece._length, piece._height, piece._type, CoasterTrackInternal::flagsOf( piece._type ) );
+                appendProfile( piece._length, piece._height, piece._type, CoasterTrackInternal::getFlagsOf( piece._type ) );
                 break;
             }
         }
@@ -279,7 +279,7 @@ namespace sw
 
     float3 CoasterTrackBuilder::computeForward() const
     {
-        return CoasterTrackInternal::forwardOf( _heading );
+        return CoasterTrackInternal::getForwardOf( _heading );
     }
 
     void CoasterTrackBuilder::appendProfile( float32 length, float32 height, CoasterPieceType type, uint8 flags )
@@ -327,17 +327,17 @@ namespace sw
         const float32 rise         = piece._height;
         const float3  start        = _position;
         const float32 startHeading = _heading;
-        const float3  center       = start + CoasterTrackInternal::rightOf( startHeading ) * ( radius * directionSign );
+        const float3  center       = start + CoasterTrackInternal::getRightOf( startHeading ) * ( radius * directionSign );
         const uint32  stepCount    = static_cast<uint32>( MathUtil::ceil( ( radius * totalAngle + MathUtil::abs( rise ) ) / kSampleSpacing ) );
 
         for ( uint32 stepIndex = 1; stepIndex <= stepCount; ++stepIndex )
         {
             const float32 u       = static_cast<float32>( stepIndex ) / static_cast<float32>( stepCount );
             const float32 heading = startHeading + directionSign * totalAngle * u;
-            const float3  flat    = center - CoasterTrackInternal::rightOf( heading ) * ( radius * directionSign );
+            const float3  flat    = center - CoasterTrackInternal::getRightOf( heading ) * ( radius * directionSign );
             const float32 y       = rise * MathUtil::smoothstep( 0.0f, 1.0f, u );
             // 접선(각도에 대한 미분)은 수평은 반지름 x 앞쪽이고, 수직은 높이 곡선의 기울기이다.
-            const float3 tangent = CoasterTrackInternal::forwardOf( heading ) * radius +
+            const float3 tangent = CoasterTrackInternal::getForwardOf( heading ) * radius +
                                    float3{ 0.0f, rise * CoasterTrackInternal::smoothStepSlope( u ) / totalAngle, 0.0f };
             // 뱅크는 들어가며 기울고 나오며 바로 선다(앞뒤 20% 구간에서 부드럽게 변한다). 조각 경계에서 위쪽 벡터가 튀지 않게 하려는 것이다.
             const float32 edge       = MathUtil::min( u, 1.0f - u ) / 0.2f;
@@ -345,7 +345,7 @@ namespace sw
             pushPoint( flat + float3{ 0.0f, y, 0.0f }, tangent, bank * bankFactor, CoasterSegmentFlag::kNone );
         }
         _heading  = startHeading + directionSign * totalAngle;
-        _position = center - CoasterTrackInternal::rightOf( _heading ) * ( radius * directionSign ) + float3{ 0.0f, rise, 0.0f };
+        _position = center - CoasterTrackInternal::getRightOf( _heading ) * ( radius * directionSign ) + float3{ 0.0f, rise, 0.0f };
     }
 
     void CoasterTrackBuilder::appendLoop( const CoasterTrackPiece& piece )
@@ -358,7 +358,7 @@ namespace sw
         const float32 width        = piece._width;
         const float3  start        = _position;
         const float3  forward      = computeForward();
-        const float3  right        = CoasterTrackInternal::rightOf( _heading );
+        const float3  right        = CoasterTrackInternal::getRightOf( _heading );
         const float3  worldUp{ 0.0f, 1.0f, 0.0f };
         const float32 fullTurn  = 2.0f * MathUtil::kPi;
         const uint32  stepCount = static_cast<uint32>( MathUtil::ceil( fullTurn * radius * 1.1f / kSampleSpacing ) ) * 2u; // 적분 간격이다. 점은 이보다 성기게 둔다

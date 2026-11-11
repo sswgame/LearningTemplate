@@ -73,7 +73,7 @@ namespace sw
                 return listLineStart;
             }
 
-            static uint32 lineOf( const vector<size_t>& listLineStart, size_t offset )
+            static uint32 getLineOf( const vector<size_t>& listLineStart, size_t offset )
             {
                 const auto itNext = std::upper_bound( listLineStart.begin(), listLineStart.end(), offset );
                 return static_cast<uint32>( itNext - listLineStart.begin() );
@@ -263,7 +263,7 @@ namespace sw
         return AssetReferenceFieldsInternal::startsWithDomain( path, _listUncheckedDomain ) == false;
     }
 
-    AssetReferenceSyntax AssetReferenceFields::syntaxOf( string_view path )
+    AssetReferenceSyntax AssetReferenceFields::getSyntaxOf( string_view path )
     {
         if ( FileUtil::hasExtension( path, ".json" ) )
             return AssetReferenceSyntax::JSON;
@@ -296,7 +296,7 @@ namespace sw
             if ( AssetReferenceFieldsInternal::startsWithDomain( normalized, _listDomain ) == false )
                 continue;
             AssetReference reference;
-            reference._line   = AssetReferenceFieldsInternal::lineOf( listLineStart, tokenStart );
+            reference._line   = AssetReferenceFieldsInternal::getLineOf( listLineStart, tokenStart );
             reference._field  = string( field );
             reference._offset = tokenStart;
             reference._length = token.size();

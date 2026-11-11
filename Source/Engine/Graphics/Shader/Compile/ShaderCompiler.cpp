@@ -130,7 +130,7 @@ namespace sw
             using DxcComPtr = Microsoft::WRL::ComPtr<T>;
 
             template <typename T>
-            static T** dxcAddressOf( DxcComPtr<T>& ptr )
+            static T** getDxcAddressOf( DxcComPtr<T>& ptr )
             {
                 return ptr.GetAddressOf();
             }
@@ -145,7 +145,7 @@ namespace sw
             using DxcComPtr = CComPtr<T>;
 
             template <typename T>
-            static T** dxcAddressOf( DxcComPtr<T>& ptr )
+            static T** getDxcAddressOf( DxcComPtr<T>& ptr )
             {
                 return &ptr;
             }
@@ -344,7 +344,7 @@ namespace sw
                         return E_FAIL;
                     }
                     DxcComPtr<IDxcBlobEncoding> blob;
-                    const HRESULT               hr = _pUtils->CreateBlob( bytes.data(), static_cast<UINT32>( bytes.size() ), DXC_CP_UTF8, dxcAddressOf( blob ) );
+                    const HRESULT               hr = _pUtils->CreateBlob( bytes.data(), static_cast<UINT32>( bytes.size() ), DXC_CP_UTF8, getDxcAddressOf( blob ) );
                     if ( FAILED( hr ) )
                         return hr;
                     *ppIncludeSource = blob.Detach();
@@ -613,9 +613,9 @@ namespace sw
 
                 DxcComPtr<IDxcUtils>     utils;
                 DxcComPtr<IDxcCompiler3> compiler;
-                HRESULT                  hrInit = fnDXCCreateInstance( CLSID_DxcUtils, IID_PPV_ARGS( dxcAddressOf( utils ) ) );
+                HRESULT                  hrInit = fnDXCCreateInstance( CLSID_DxcUtils, IID_PPV_ARGS( getDxcAddressOf( utils ) ) );
                 if ( SUCCEEDED( hrInit ) )
-                    fnDXCCreateInstance( CLSID_DxcCompiler, IID_PPV_ARGS( dxcAddressOf( compiler ) ) );
+                    fnDXCCreateInstance( CLSID_DxcCompiler, IID_PPV_ARGS( getDxcAddressOf( compiler ) ) );
                 else
                     SW_LOG_ERROR_ID( "ShaderCompiler.DxcCreateInstanceCLSIDDxcUtilsFailed", "DxcCreateInstance(CLSID_DxcUtils) failed: 0x%#", hrInit );
                 if ( utils == nullptr || compiler == nullptr )
@@ -688,7 +688,7 @@ namespace sw
                     listArgument.data(),
                     static_cast<uint32>( listArgument.size() ),
                     dxcGet( includeHandler ),
-                    IID_PPV_ARGS( dxcAddressOf( compileResult ) ) );
+                    IID_PPV_ARGS( getDxcAddressOf( compileResult ) ) );
                 if ( FAILED( hrCompile ) )
                 {
                     SW_LOG_ERROR_ID( "ShaderCompiler.DXCCompilerCompileFailed", "DXC compiler->Compile failed with HRESULT: 0x%#", hrCompile );
@@ -699,7 +699,7 @@ namespace sw
                 compileResult->GetStatus( &status );
 
                 DxcComPtr<IDxcBlobUtf8> errors;
-                compileResult->GetOutput( DXC_OUT_ERRORS, IID_PPV_ARGS( dxcAddressOf( errors ) ), nullptr );
+                compileResult->GetOutput( DXC_OUT_ERRORS, IID_PPV_ARGS( getDxcAddressOf( errors ) ), nullptr );
                 if ( errors != nullptr && errors->GetStringLength() > 0 )
                     outResult._errorMessage = errors->GetStringPointer();
                 if ( FAILED( status ) )
@@ -709,7 +709,7 @@ namespace sw
                 }
 
                 DxcComPtr<IDxcBlob> shaderBlob;
-                compileResult->GetOutput( DXC_OUT_OBJECT, IID_PPV_ARGS( dxcAddressOf( shaderBlob ) ), nullptr );
+                compileResult->GetOutput( DXC_OUT_OBJECT, IID_PPV_ARGS( getDxcAddressOf( shaderBlob ) ), nullptr );
                 if ( shaderBlob == nullptr || shaderBlob->GetBufferSize() == 0 )
                     return DxcResult::NoOutput;
 

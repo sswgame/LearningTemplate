@@ -87,7 +87,7 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<VehicleSeatComponent>( this ); // 빈 좌석 찾기와 탑승자의 좌석 찾기가 씬을 순회하지 않게 된다
-        (void)VehicleSeatSystem::ensureFor( manager );
+        (void)VehicleSeatSystem::findOrCreate( manager );
     }
 
     void VehicleSeatComponent::onUnregister( GameObjectManager& manager )

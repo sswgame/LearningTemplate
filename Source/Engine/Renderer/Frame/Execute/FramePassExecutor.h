@@ -232,7 +232,7 @@ namespace sw
          */
         void executePass( FramePassContext& context, const RenderGraphPassDesc& passDesc );
         /** @brief 첨부의 이번 프레임 첫 사용이면 Clear, 아니면 Load 입니다(`markAttachmentCleared`). */
-        RHIRenderPassLoadOp colorLoadFor( const hashed_string& name );
+        RHIRenderPassLoadOp getColorLoadFor( const hashed_string& name );
         /** @brief @p targetName 하나에 풀스크린 삼각형을 그립니다. 열지 못하면 아무것도 하지 않습니다. */
         void executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor );
         /** @brief 일반 풀스크린 패스(테이블의 kGenericFullscreen)입니다. 선언한 입력을 모두 바인딩하고 선언한 첫 컬러 출력에 그립니다. 이 뷰에서 빠진 패스(`FrameViewResources::applyViewPassSelection`)는 기록하지 않습니다. */

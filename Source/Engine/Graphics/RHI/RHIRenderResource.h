@@ -14,7 +14,7 @@
  *       - `releaseRHI( pDevice )`: 디바이스가 **아직 살아 있습니다.** 자기 GPU 리소스를 제대로 돌려주고 핸들을 비웁니다.
  *       - `clearRHI( pDevice )`: 디바이스가 **이미 없습니다.** 돌려줄 곳이 없으니 핸들만 비웁니다(destroy 하면 해제 후 사용입니다).
  *       정상 경로는 언제나 전자입니다. 후자는 `shutdown()` 없이 사라진 디바이스에 대한 안전망입니다.
- *       다시 만드는 쪽은 `initRHI( pDevice )` 이고, 새 디바이스가 만들어진 직후 `initAllFor` 가 같은 목록에 통보를 보냅니다.
+ *       다시 만드는 쪽은 `initRHI( pDevice )` 이고, 새 디바이스가 만들어진 직후 `initAllForDevice` 가 같은 목록에 통보를 보냅니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -63,7 +63,7 @@ namespace sw
          */
         [[nodiscard]] virtual bool initRHI( IRHIDevice* pDevice );
         /**
-         * @brief `initAllFor` 가 GPU 생성(`initRHI`) 앞에 워커에서 부릅니다. 디바이스 없이 할 수 있는 준비(파일 읽기 · 해석)만 합니다. 기본은 아무것도 하지 않습니다.
+         * @brief `initAllForDevice` 가 GPU 생성(`initRHI`) 앞에 워커에서 부릅니다. 디바이스 없이 할 수 있는 준비(파일 읽기 · 해석)만 합니다. 기본은 아무것도 하지 않습니다.
          * @details 서로 다른 객체로 여러 스레드에서 동시에 불린다 - 자기 상태만 쓰고 다른 리소스 · 디바이스를 만지지 않는다. 그 사이 레지스트리 잠금이 잡혀 있어 리소스를
          *          만들거나 지울 수 없다. 언리얼 텍스처 스트리밍이 IO 와 GPU 생성을 나누는 것과 같다 - GPU 생성은 디바이스를 쓰는 스레드에 남는다(DX11 즉시 컨텍스트 · GL 컨텍스트).
          *          백엔드 교체 · 디바이스 복구 시간이 콘텐츠(텍스처 수)에 비례해 늘지 않게 하는 구조다.
@@ -71,13 +71,13 @@ namespace sw
         virtual void prepareRHI() {}
 
         /** @brief 이 디바이스의 리소스를 보관하는 객체 전부에게 `releaseRHI` 를 보냅니다. 디바이스가 살아 있을 때 부릅니다. */
-        static void releaseAllFor( IRHIDevice* pDevice );
+        static void releaseAllForDevice( IRHIDevice* pDevice );
 
         /** @brief 이 디바이스의 리소스를 보관하는 객체 전부에게 `clearRHI` 를 보냅니다. 디바이스가 이미 사라진 뒤의 안전망입니다. */
-        static void clearAllFor( IRHIDevice* pDevice );
+        static void clearAllForDevice( IRHIDevice* pDevice );
 
         /** @brief 등록된 객체 전부에게 `initRHI` 를 보냅니다. 디바이스가 새로 생긴 직후에 부릅니다. */
-        static void initAllFor( IRHIDevice* pDevice );
+        static void initAllForDevice( IRHIDevice* pDevice );
 
         /**
          * @brief 지금 등록된 객체 수입니다. 엔진 종료 끝에서 0 이 아니면 그 객체가 누수된 것입니다(진단).

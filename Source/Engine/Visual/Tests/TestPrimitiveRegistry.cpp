@@ -15,7 +15,7 @@ namespace
     struct TestPrimitiveRegistryInternal
     {
         /** @brief 배치 하나의 항목 수입니다(1 ~ 19 개 — 평균 10 개라 배치 천 개가 항목 약 1 만 개다). */
-        static uint32 entryCountOf( uint32 batchIndex ) { return 1u + batchIndex % 19u; }
+        static uint32 getEntryCountOf( uint32 batchIndex ) { return 1u + batchIndex % 19u; }
 
         /** @brief 이 번호의 배치를 지우는지 정합니다(셋 중 하나와 100 ~ 199 번 연속 구간). */
         static bool isRemoved( uint32 batchIndex ) { return batchIndex % 3u == 0u || ( 100u <= batchIndex && batchIndex < 200u ); }
@@ -59,8 +59,8 @@ SW_TEST_CASE( PrimitiveRegistryTest, BulkBatchRemovalMatchesOneByOneRemoval )
     vector<unique_ptr<MeshInstanceBatch>> listSingleBatch;
     for ( uint32 batchIndex = 0; batchIndex < kBatchCount; ++batchIndex )
     {
-        listBulkBatch.push_back( make_unique<MeshInstanceBatch>( nullptr, nullptr, nullptr, TestPrimitiveRegistryInternal::entryCountOf( batchIndex ), MeshInstanceWriter::CPU ) );
-        listSingleBatch.push_back( make_unique<MeshInstanceBatch>( nullptr, nullptr, nullptr, TestPrimitiveRegistryInternal::entryCountOf( batchIndex ), MeshInstanceWriter::CPU ) );
+        listBulkBatch.push_back( make_unique<MeshInstanceBatch>( nullptr, nullptr, nullptr, TestPrimitiveRegistryInternal::getEntryCountOf( batchIndex ), MeshInstanceWriter::CPU ) );
+        listSingleBatch.push_back( make_unique<MeshInstanceBatch>( nullptr, nullptr, nullptr, TestPrimitiveRegistryInternal::getEntryCountOf( batchIndex ), MeshInstanceWriter::CPU ) );
         bulkRegistry.addInstanceBatch( listBulkBatch.back().get() );
         singleRegistry.addInstanceBatch( listSingleBatch.back().get() );
     }
@@ -105,5 +105,5 @@ SW_TEST_CASE( PrimitiveRegistryTest, BulkBatchRemovalMatchesOneByOneRemoval )
     SW_EXPECT_EQUAL( slotCount, bulkRegistry.getSlotCount() );
     bulkRegistry.addInstanceBatch( listBulkBatch[0].get() );
     SW_EXPECT_TRUE( TestPrimitiveRegistryInternal::isConsistent( bulkRegistry, listBulkBatch ) );
-    SW_EXPECT_EQUAL( slotCount + TestPrimitiveRegistryInternal::entryCountOf( 0 ), bulkRegistry.getSlotCount() );
+    SW_EXPECT_EQUAL( slotCount + TestPrimitiveRegistryInternal::getEntryCountOf( 0 ), bulkRegistry.getSlotCount() );
 }

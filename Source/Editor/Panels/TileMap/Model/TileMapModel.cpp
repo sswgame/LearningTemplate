@@ -253,7 +253,7 @@ namespace sw::editor
                 for ( const TileMapXMLData::Warp& warp : _map._listWarp )
                 {
                     if ( isInBounds( warp._tileX, warp._tileY ) )
-                        outListValue[indexOf( warp._tileX, warp._tileY )] = 1;
+                        outListValue[getIndexOf( warp._tileX, warp._tileY )] = 1;
                 }
                 break;
             }
@@ -291,7 +291,7 @@ namespace sw::editor
 
     void TileMapModel::pickCell( int32 x, int32 y )
     {
-        const size_t tileIndex = indexOf( x, y );
+        const size_t tileIndex = getIndexOf( x, y );
         switch ( _layer )
         {
             case PaintLayer::Visual:
@@ -441,7 +441,7 @@ namespace sw::editor
             for ( int32 cellX = 0; cellX < keptWidth; ++cellX )
             {
                 const size_t oldIndex = static_cast<size_t>( cellY ) * static_cast<size_t>( oldMap._width ) + static_cast<size_t>( cellX );
-                const size_t newIndex = indexOf( cellX, cellY );
+                const size_t newIndex = getIndexOf( cellX, cellY );
                 for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
                 {
                     _map.getFlagLayer( info._layer )[newIndex] = oldMap.getFlagLayer( info._layer )[oldIndex];
@@ -530,7 +530,7 @@ namespace sw::editor
         if ( isInBounds( x, y ) == false )
             return false;
 
-        const size_t tileIndex = indexOf( x, y );
+        const size_t tileIndex = getIndexOf( x, y );
         switch ( _layer )
         {
             case PaintLayer::Visual:
@@ -620,7 +620,7 @@ namespace sw::editor
 
     bool TileMapModel::paintWarp( int32 x, int32 y, const utf8* pTargetMap, int32 targetX, int32 targetY )
     {
-        uint8&     walkable = _map.getFlagLayer( TileFlagLayer::Walkable )[indexOf( x, y )];
+        uint8&     walkable = _map.getFlagLayer( TileFlagLayer::Walkable )[getIndexOf( x, y )];
         const bool bOpened  = walkable == 0;
         walkable            = 1;
         for ( TileMapXMLData::Warp& warp : _map._listWarp )
@@ -706,7 +706,7 @@ namespace sw::editor
     {
         if ( isInBounds( x, y ) == false )
             return {};
-        const size_t tileIndex = indexOf( x, y );
+        const size_t tileIndex = getIndexOf( x, y );
         switch ( _layer )
         {
             case PaintLayer::Visual:
@@ -768,9 +768,9 @@ namespace sw::editor
         return 0 <= x && x < _map._width && 0 <= y && y < _map._height;
     }
 
-    size_t TileMapModel::indexOf( int32 x, int32 y ) const
+    size_t TileMapModel::getIndexOf( int32 x, int32 y ) const
     {
-        // 곱셈을 size_t 로 한다(Engine 의 TileMap::indexOf 와 같은 이유).
+        // 곱셈을 size_t 로 한다(Engine 의 TileMap::getIndexOf 와 같은 이유).
         return static_cast<size_t>( y ) * static_cast<size_t>( _map._width ) + static_cast<size_t>( x );
     }
 

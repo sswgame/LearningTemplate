@@ -362,7 +362,7 @@ namespace sw
             };
 
             /** @brief 값 하나를 읽었는지(`bool`)를 필드 결과로 바꿉니다. 값 하나의 실패는 그 필드의 실패입니다 — 객체째 실패는 구조체 읽기만 압니다. */
-            static FieldReadResult fieldResultOf( const bool bRead )
+            static FieldReadResult makeFieldResult( const bool bRead )
             {
                 return bRead ? FieldReadResult::Read : FieldReadResult::FieldFailed;
             }
@@ -379,8 +379,8 @@ namespace sw
                 if ( pTextReader != nullptr )
                 {
                     if ( src.isString() )
-                        return fieldResultOf( ( *pTextReader )( pValPtr, src.asString() ) );
-                    return fieldResultOf( ( *pTextReader )( pValPtr, src.dump() ) );
+                        return makeFieldResult( ( *pTextReader )( pValPtr, src.asString() ) );
+                    return makeFieldResult( ( *pTextReader )( pValPtr, src.dump() ) );
                 }
 
                 const EnumInfo* pEnumInfo = engine::getSubsystem<TypeRegistry>().findEnum( typeName );
@@ -408,13 +408,13 @@ namespace sw
                     {
                         if ( src.isObject() )
                             return JSONSerializer::readObject( src, pValPtr, *pStructInfo, nullptr, nullptr, context );
-                        return fieldResultOf( JSONSerializer::deserialize( pValPtr, *pStructInfo, src.dump(), context ) );
+                        return makeFieldResult( JSONSerializer::deserialize( pValPtr, *pStructInfo, src.dump(), context ) );
                     }
                 }
 
                 if ( src.isString() )
-                    return fieldResultOf( parseTextValueCoerced( value, typeName, src.asString(), context ) );
-                return fieldResultOf( parseTextValueCoerced( value, typeName, src.dump(), context ) );
+                    return makeFieldResult( parseTextValueCoerced( value, typeName, src.asString(), context ) );
+                return makeFieldResult( parseTextValueCoerced( value, typeName, src.dump(), context ) );
             }
             static void writeProperty( JSONValue parent, const PropertyInfo& prop, const ObjectAddress instance, const SerializeContext& context )
             {

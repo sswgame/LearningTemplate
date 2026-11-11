@@ -38,11 +38,11 @@ namespace sw
 
     MeleeSweepHistory* MeleeSweepHistory::find( const GameObjectManager& manager )
     {
-        // 이 키로는 이 타입만 붙인다(`ensureFor`).
+        // 이 키로는 이 타입만 붙인다(`findOrCreate`).
         return static_cast<MeleeSweepHistory*>( manager.findFrameSystem( hashed_string( kFrameSystemKey ) ) );
     }
 
-    MeleeSweepHistory& MeleeSweepHistory::ensureFor( GameObjectManager& manager )
+    MeleeSweepHistory& MeleeSweepHistory::findOrCreate( GameObjectManager& manager )
     {
         MeleeSweepHistory* pLedger = find( manager );
         if ( pLedger != nullptr )

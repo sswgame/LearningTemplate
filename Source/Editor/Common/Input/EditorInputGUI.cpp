@@ -101,7 +101,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool EditorInputGUI::drawContextMenuFor( const EditorContextMenuSubject& subject )
+    bool EditorInputGUI::drawContextMenu( const EditorContextMenuSubject& subject )
     {
         EditorContext&                            editorContext = editor::getSubsystem<EditorContext>();
         EditorCommandRegistry&                    registry      = editorContext.getSubsystem<EditorCommandRegistry>();

@@ -158,7 +158,7 @@ namespace sw
                     framesBuilder.appendFormat( "interval %# frames, hold %# frames", intervalFrames, holdFrames );
                     return unexpected( Error{ ErrorKind::InvalidArgument, "interval must be longer than hold to press again", framesBuilder.view() } );
                 }
-                connectGamepadOf( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
+                connectGamepad( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
                 for ( uint32 pressIndex = 0; pressIndex < params._count; ++pressIndex )
                 {
                     if ( runner.getInputScript().addTap( step._frameIndex + pressIndex * intervalFrames, pBinding->_arrSlot[0], holdFrames ) == false )
@@ -174,14 +174,14 @@ namespace sw
                 if ( binding.has_value() == false )
                     return unexpected( binding.error() );
                 const ActionBinding* pBinding = *binding;
-                connectGamepadOf( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
+                connectGamepad( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
                 if ( runner.getInputScript().addSlot( step._frameIndex, pBinding->_arrSlot[0], string_view{ step._kind } == "ActionPress" ) )
                     return {};
                 return unexpected( Error{ ErrorKind::Unsupported, "the slot cannot be pressed", InputSlot::toText( pBinding->_arrSlot[0] ) } );
             }
 
             /** @brief 슬롯이 패드 단추면 그 패드를 먼저 연결합니다(`VirtualInputScript::addGamepadConnection`). */
-            static void connectGamepadOf( VirtualInputScript& script, uint32 frameIndex, const InputSlot& slot )
+            static void connectGamepad( VirtualInputScript& script, uint32 frameIndex, const InputSlot& slot )
             {
                 if ( slot._deviceKind == InputDeviceKind::Gamepad )
                     script.addGamepadConnection( frameIndex, slot._deviceIndex );

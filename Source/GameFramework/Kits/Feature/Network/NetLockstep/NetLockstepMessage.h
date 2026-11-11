@@ -20,10 +20,10 @@ namespace sw
         using Leave         = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>; ///< 서버 → 모두. 플레이어와, 그 플레이어가 빈 입력이 되는 틱을 알린다
         using Table         = NetMessageTable<NetKitMessageRange::kLockstep, Input, Checksum, RollbackInput, Leave>;
 
-        static constexpr uint8 kInput         = Table::kindOf<Input>();
-        static constexpr uint8 kChecksum      = Table::kindOf<Checksum>();
-        static constexpr uint8 kRollbackInput = Table::kindOf<RollbackInput>();
-        static constexpr uint8 kLeave         = Table::kindOf<Leave>();
+        static constexpr uint8 kInput         = Table::getKindOf<Input>();
+        static constexpr uint8 kChecksum      = Table::getKindOf<Checksum>();
+        static constexpr uint8 kRollbackInput = Table::getKindOf<RollbackInput>();
+        static constexpr uint8 kLeave         = Table::getKindOf<Leave>();
         static constexpr int32 kMaxInputBytes = 1000; ///< 틱 하나의 입력 상한. 종류, 플레이어, 틱, 길이와 함께 메시지 하나(1024 B)에 들어간다. 넘는 입력은 예약하지 않는다
     };
 } // namespace sw

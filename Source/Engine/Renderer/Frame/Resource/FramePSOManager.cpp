@@ -274,7 +274,7 @@ namespace sw
         vector<ComputePSOJob> listComputeJob;
         // 엔진 PSO 는 패스 종류의 표(RenderPassTypeInfo)를 enum 순서로 훑어 만든다. 셰이더 경로는 파이프라인 XML 패스 설정이 먼저이고
         // 표의 EngineDefaultAssets 경로는 마지막 폴백일 뿐이다. 셰이더 쿠커가 같은 표를 훑는다.
-        // 저장소에 이미 있는 패스는 만들지 않는다 — 미리보기 씬 렌더러는 주 렌더러의 저장소를 함께 쓰고(`shareCacheOf`), 주 렌더러가 같은 파이프라인으로 먼저 만들었다.
+        // 저장소에 이미 있는 패스는 만들지 않는다 — 미리보기 씬 렌더러는 주 렌더러의 저장소를 함께 쓰고(`shareCache`), 주 렌더러가 같은 파이프라인으로 먼저 만들었다.
         const EngineDefaultAssets& engineDefaultAssets = engine::getSubsystem<EngineDefaultAssets>();
         const RHICapabilities      caps                = _pDevice->getCapabilities();
         for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )

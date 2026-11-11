@@ -138,7 +138,7 @@ namespace
 
 /**
  * @brief [ServiceClientCallTableTest] 모은 요청을 실패로 알리는 중 응답 콜백이 키트를 파괴하면 남은 그 키트의 요청은 부르지 않는다
- * @details 예전에는 지역 목록으로 꺼낸 뒤라 cancelRequestsOf 가 빈 멤버 목록만 훑어, 파괴된 키트의 델리게이트를 불렀다.
+ * @details 예전에는 지역 목록으로 꺼낸 뒤라 cancelRequests 가 빈 멤버 목록만 훑어, 파괴된 키트의 델리게이트를 불렀다.
  */
 SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedWhileFailingQueuedCallsGetsNoMoreCalls )
 {
@@ -263,7 +263,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, CancelledRequestsDropTheirAnswersWitho
     BitWriter    body;
     body.writeVarUint( 42 );
     (void)tableClient->send( test::TestLoginService::kLoginMethod, body, DoneDelegate::create<&DoneRecorder::onDone>( &recorder ) );
-    rig._clients.getClient( clientIndex ).cancelRequestsOf( OnlineMethodRange::kGame );
+    rig._clients.getClient( clientIndex ).cancelRequests( OnlineMethodRange::kGame );
     tableClient.reset();
     test::updateAll( { &rig._server }, rig._clients, 0 );
 

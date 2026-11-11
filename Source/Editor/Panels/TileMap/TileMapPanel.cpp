@@ -260,7 +260,7 @@ namespace sw::editor
         {
             for ( int32 tileX = range._min._x; tileX < range._max._x; ++tileX )
             {
-                const size_t tileIndex = _document.indexOf( tileX, tileY );
+                const size_t tileIndex = _document.getIndexOf( tileX, tileY );
                 ImU32        color     = emptyColor;
                 switch ( layer )
                 {
@@ -601,7 +601,7 @@ namespace sw::editor
             return;
         }
         // 브러시마다 다른 색(이름 해시) + 규칙이 고른 아틀라스 셀 번호 — 이웃을 칠하면 번호가 바뀌는 것이 규칙 타일이 일하는 모습이다.
-        const uint16 brushValue = listBrushIndex[_document.indexOf( x, y )];
+        const uint16 brushValue = listBrushIndex[_document.getIndexOf( x, y )];
         const uint32 hash       = static_cast<uint32>( tileSet.getBrushes()[brushValue - 1u]._name.getHash() );
         const ImU32  color      = EditorColorUtil::toImU32( Color::fromBytes( static_cast<uint8>( 80 + ( hash & 0x7Fu ) ), static_cast<uint8>( 80 + ( ( hash >> 8 ) & 0x7Fu ) ), static_cast<uint8>( 80 + ( ( hash >> 16 ) & 0x7Fu ) ) ) );
         pDrawList->AddRectFilled( cellMin, cellMax, color );

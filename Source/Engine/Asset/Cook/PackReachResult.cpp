@@ -211,7 +211,7 @@ namespace sw
                 void followReferences( string_view text, const string& referrer )
                 {
                     vector<AssetReference> listReference;
-                    _params.extract( text, AssetReferenceFields::syntaxOf( referrer ), listReference );
+                    _params.extract( text, AssetReferenceFields::getSyntaxOf( referrer ), listReference );
                     for ( const AssetReference& reference : listReference )
                     {
                         if ( _setUnfollowedField.contains( reference._field ) || _params.isChecked( reference._path ) == false )
@@ -522,7 +522,7 @@ namespace sw
                         return;
                     }
                     followReferences( text, assetID );
-                    if ( _mapIDFieldKind.empty() || AssetReferenceFields::syntaxOf( assetID ) != AssetReferenceSyntax::XML )
+                    if ( _mapIDFieldKind.empty() || AssetReferenceFields::getSyntaxOf( assetID ) != AssetReferenceSyntax::XML )
                         return;
                     XMLDocument document;
                     // 깨진 글은 런타임도 읽지 못한다 - 경로 칸은 위에서 이미 따라갔고, 이 글이 부르는 항목은 없다.

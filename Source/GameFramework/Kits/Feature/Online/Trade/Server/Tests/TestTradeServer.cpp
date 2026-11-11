@@ -256,7 +256,7 @@ namespace
             SW_EXPECT_TRUE( Ledger::executeTransfer( _pRig->_database, request, outcome ) == LedgerResult::Ok );
         }
 
-        int64 balanceOf( AccountID accountID, string_view assetID )
+        int64 getBalanceOf( AccountID accountID, string_view assetID )
         {
             LedgerBalance balance;
             SW_EXPECT_TRUE( Ledger::readBalance( _pRig->_database, LedgerHolder::makeAccount( accountID ), assetID, balance ) == ServiceStoreResult::Ok );
@@ -466,7 +466,7 @@ SW_TEST_CASE( TradeServerTest, ForgedValuesAreRefused )
     const TradeReply same = rig.lock( kAliceSlot, tradeID );
     SW_EXPECT_TRUE( same._result == TradeResult::Ok ); // 거절된 제시는 없던 일이라 빈 제시를 잠근다
     SW_EXPECT_TRUE( same._snapshot._arrSide[0]._listLeg.empty() );
-    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kAlice, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kAlice, "cur.gold" ) );
 }
 
 /** @brief [TradeServerTest] 낡은 확정: 본 버전이 지금 버전과 다르면 StaleOffer 이고 아무것도 옮기지 않는다(바꿔치기 사기) */
@@ -485,7 +485,7 @@ SW_TEST_CASE( TradeServerTest, StaleConfirmMovesNothing )
     request._seenOwnRevision  = locked._arrSide[1]._offerRevision;
     request._seenPeerRevision = locked._arrSide[0]._offerRevision + 1;
     SW_EXPECT_TRUE( rig.call( kBobSlot, TradeMethod::Confirm::kID, request )._result == TradeResult::StaleOffer );
-    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kAlice, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kAlice, "cur.gold" ) );
 }
 
 /** @brief [TradeServerTest] 정산: 양쪽을 옮기고, 응답에는 요청한 쪽, 닫힘 알림에는 각자의 이동 뒤 잔액만 실린다. 남의 잔액이 섞이지 않는다 */
@@ -521,8 +521,8 @@ SW_TEST_CASE( TradeServerTest, SettlementCarriesOwnBalances )
     SW_EXPECT_TRUE( TradeServerTestUtil::findBalance( rig._arrSink[kBobSlot]._listReply[0]._listBalance, "cur.gold" ) == int64( 40 ) );
     SW_EXPECT_TRUE( rig._arrSink[kCarolSlot]._listKind.empty() );
 
-    SW_EXPECT_EQUAL( int64( 60 ), rig.balanceOf( kAlice, "cur.gold" ) );
-    SW_EXPECT_EQUAL( int64( 40 ), rig.balanceOf( kBob, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 60 ), rig.getBalanceOf( kAlice, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 40 ), rig.getBalanceOf( kBob, "cur.gold" ) );
 }
 
 /** @brief [TradeServerTest] 제시가 바뀌면 두 당사자에게 갱신 알림이 가고, 거절하면 닫힘 알림과 이유가 간다 */

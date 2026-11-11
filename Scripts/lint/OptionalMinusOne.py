@@ -73,7 +73,7 @@ def splitTopLevel(text: str) -> list[str]:
     return [part.strip() for part in listPart if part.strip()]
 
 
-def lineOf(code: str, index: int) -> int:
+def getLineOf(code: str, index: int) -> int:
     return code.count("\n", 0, index) + 1
 
 
@@ -126,7 +126,7 @@ def findInFile(path: str, code: str, joined: str, setOptional: set[str], mapPara
             bodyEnd = findClose(code, bodyStart - 1, "{", "}")
             body = blankLambdaBodies(code[bodyStart:bodyEnd])
             for found in kReturnMinusOne.finditer(body):
-                listProblem.append(f"{path}:{lineOf(code, bodyStart + found.start())}: optional · expected 를 돌려주는 {match.group(1)} 이 -1 을 값으로 돌려준다 — 없음은 nullopt · unexpected")
+                listProblem.append(f"{path}:{getLineOf(code, bodyStart + found.start())}: optional · expected 를 돌려주는 {match.group(1)} 이 -1 을 값으로 돌려준다 — 없음은 nullopt · unexpected")
     if mapParam:
         callPattern = re.compile(r"\b(" + "|".join(map(re.escape, mapParam)) + r")\s*\(")
         for match in callPattern.finditer(code):
@@ -134,7 +134,7 @@ def findInFile(path: str, code: str, joined: str, setOptional: set[str], mapPara
             listArgument = splitTopLevel(code[openIndex + 1:findClose(code, openIndex, "(", ")")])
             for index in mapParam[match.group(1)]:
                 if index < len(listArgument) and re.fullmatch(kMinusOne, listArgument[index]):
-                    listProblem.append(f"{path}:{lineOf(code, match.start())}: {match.group(1)} 의 optional · expected 인자({index + 1} 번째)에 -1 을 넘긴다 — 없음은 nullopt")
+                    listProblem.append(f"{path}:{getLineOf(code, match.start())}: {match.group(1)} 의 optional · expected 인자({index + 1} 번째)에 -1 을 넘긴다 — 없음은 nullopt")
     return listProblem
 
 

@@ -244,7 +244,7 @@ namespace sw
         {
             for ( int32 x = 0; x < _map._width; ++x )
             {
-                if ( _listBrushIndex[indexOf( x, y )] != 0 && ensureChunkBatch( _chunkGrid.computeChunkIndex( x, y ) ) == false )
+                if ( _listBrushIndex[getIndexOf( x, y )] != 0 && ensureChunkBatch( _chunkGrid.computeChunkIndex( x, y ) ) == false )
                     return false;
             }
         }
@@ -341,7 +341,7 @@ namespace sw
             value = static_cast<uint16>( *brush + 1u );
         }
         (void)_map.setTileBrush( x, y, brushName ); // 칸 범위는 위에서 봤다
-        _listBrushIndex[indexOf( x, y )] = value;
+        _listBrushIndex[getIndexOf( x, y )] = value;
         if ( _listChunkBatch.empty() == false )
         {
             // 규칙 타일은 이웃을 보므로 칠한 칸과 이웃 여덟 칸을 다시 고른다.
@@ -444,7 +444,7 @@ namespace sw
                     {
                         for ( int32 cellX = rect._x; cellX < rect._x + rect._width; ++cellX )
                         {
-                            if ( tiles._listBrushIndex[tiles.indexOf( cellX, cellY )] != 0 )
+                            if ( tiles._listBrushIndex[tiles.getIndexOf( cellX, cellY )] != 0 )
                             {
                                 bPainted = true;
                                 break;
@@ -457,7 +457,7 @@ namespace sw
             } );
             return;
         }
-        const size_t cellIndex = indexOf( x, y );
+        const size_t cellIndex = getIndexOf( x, y );
         if ( pVisual->isAnimated() && _listAnimatedFlag[cellIndex] == 0 )
         {
             _listAnimatedFlag[cellIndex] = 1;

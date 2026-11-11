@@ -697,11 +697,11 @@ namespace sw
         const hashed_string                   resolved  = SerializerUtil::resolveHandlerTypeName( typeName, context );
         const SerializeContext::BinaryReadFn* pReader   = context.findBinaryReader( resolved );
         if ( pReader != nullptr )
-            return ContainerVisitor::fieldResultOf( ( *pReader )( pValuePtr, pData, dataSize, offset ) );
+            return ContainerVisitor::makeFieldResult( ( *pReader )( pValuePtr, pData, dataSize, offset ) );
 
         const EnumInfo* pEnumInfo = context.getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
-            return ContainerVisitor::fieldResultOf( SerializerUtilInternal::readEnumBinary( *pEnumInfo, value, pData, dataSize, offset, wireVersion ) );
+            return ContainerVisitor::makeFieldResult( SerializerUtilInternal::readEnumBinary( *pEnumInfo, value, pData, dataSize, offset, wireVersion ) );
 
         const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
         if ( pStructInfo != nullptr )
@@ -725,7 +725,7 @@ namespace sw
             if ( SerializerUtilInternal::readSizedBlock( pData, dataSize, offset, blockStart, blockSize ) == false )
                 return FieldReadResult::FieldFailed;
             const string text( reinterpret_cast<const utf8*>( pData + blockStart ), blockSize );
-            return ContainerVisitor::fieldResultOf( ( *pTextReader )( pValuePtr, text ) );
+            return ContainerVisitor::makeFieldResult( ( *pTextReader )( pValuePtr, text ) );
         }
 
         // 실을 수 없는 타입이다. 바이트를 건너뛰지 않고 실패를 돌려준다. 알림은 부른 쪽의 규칙을 따른다(엄격 읽기는 실패, 소프트 읽기는 orphan).

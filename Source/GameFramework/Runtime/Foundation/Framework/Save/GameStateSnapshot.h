@@ -48,8 +48,8 @@ namespace sw
         void registerStatefulComponent()
         {
             StatefulComponentType type;
-            type._pCapture = &GameStateSnapshot::captureStateOf<TComponent>;
-            type._pRestore = &GameStateSnapshot::restoreStateOf<TComponent>;
+            type._pCapture = &GameStateSnapshot::captureComponentStates<TComponent>;
+            type._pRestore = &GameStateSnapshot::restoreComponentStates<TComponent>;
             _listStatefulType.push_back( type );
         }
         /**
@@ -62,7 +62,7 @@ namespace sw
         void registerViewOwner()
         {
             StatefulComponentType type;
-            type._pDespawn = &GameStateSnapshot::despawnViewsOf<TComponent>;
+            type._pDespawn = &GameStateSnapshot::despawnComponentViews<TComponent>;
             _listStatefulType.push_back( type );
         }
         /** @brief 디렉터(`GameModeComponent` 파생) 하나를 올립니다. 상태를 싣고 돌려주며, 저장하기 전에 세운 것을 걷습니다. */
@@ -70,9 +70,9 @@ namespace sw
         void registerGameMode()
         {
             StatefulComponentType type;
-            type._pCapture = &GameStateSnapshot::captureStateOf<TDirector>;
-            type._pRestore = &GameStateSnapshot::restoreStateOf<TDirector>;
-            type._pDespawn = &GameStateSnapshot::despawnViewsOf<TDirector>;
+            type._pCapture = &GameStateSnapshot::captureComponentStates<TDirector>;
+            type._pRestore = &GameStateSnapshot::restoreComponentStates<TDirector>;
+            type._pDespawn = &GameStateSnapshot::despawnComponentViews<TDirector>;
             _listStatefulType.push_back( type );
         }
 
@@ -116,17 +116,17 @@ namespace sw
 
         // 매니저 타입은 템플릿 매개변수로 둔다 — 이 헤더는 오브젝트 매니저를 include 하지 않고, 등록하는 .cpp 에서 만들어진다.
         template <typename TComponent, typename TManager = GameObjectManager>
-        static void captureStateOf( ComponentStateStore& store, TManager& manager )
+        static void captureComponentStates( ComponentStateStore& store, TManager& manager )
         {
             (void)store.capture<TComponent>( manager );
         }
         template <typename TComponent, typename TManager = GameObjectManager>
-        static void restoreStateOf( const ComponentStateStore& store, TManager& manager )
+        static void restoreComponentStates( const ComponentStateStore& store, TManager& manager )
         {
             (void)store.restore<TComponent>( manager ); // 넘긴 수는 쓰지 않는다 — 짝이 없는 컴포넌트는 그대로 둔다
         }
         template <typename TComponent, typename TManager = GameObjectManager>
-        static void despawnViewsOf( TManager& manager )
+        static void despawnComponentViews( TManager& manager )
         {
             // 순회 콜백 안에서는 오브젝트를 지울 수 없다(매니저 잠금 안) — 핸들을 모은 뒤 걷는다.
             vector<TComponentHandle<TComponent>> listComponent;

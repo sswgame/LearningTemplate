@@ -102,7 +102,7 @@ def loadConfig(projectRoot: Path) -> FieldConfig:
 # ----------------------------------------------------------------------------------------------------------------------------------
 # 뽑기 — C++ `AssetReferenceFields::extract` 와 같은 규칙이다(둘을 고치면 함께 고친다)
 # ----------------------------------------------------------------------------------------------------------------------------------
-def _appendTokens(text: str, valueStart: int, valueEnd: int, field: str, config: FieldConfig, lineOf: Callable[[int], int], out: list[Reference]) -> None:
+def _appendTokens(text: str, valueStart: int, valueEnd: int, field: str, config: FieldConfig, getLineOf: Callable[[int], int], out: list[Reference]) -> None:
     """값 [valueStart, valueEnd) 을 낱말로 갈라 도메인으로 시작하는 것만 참조로 더합니다."""
     cursor = valueStart
     while cursor < valueEnd:
@@ -116,13 +116,13 @@ def _appendTokens(text: str, valueStart: int, valueEnd: int, field: str, config:
             continue
         normalized = token.replace("\\", "/").lower()
         if any(normalized.startswith(domain + "/") for domain in config.listDomain):
-            out.append(Reference(lineOf(tokenStart), field, tokenStart, cursor, normalized))
+            out.append(Reference(getLineOf(tokenStart), field, tokenStart, cursor, normalized))
 
 
 def _makeLineOf(text: str) -> Callable[[int], int]:
     listLineStart = [0] + [match.end() for match in re.finditer("\n", text)]
 
-    def lineOf(offset: int) -> int:
+    def getLineOf(offset: int) -> int:
         low, high = 0, len(listLineStart)
         while low + 1 < high:
             middle = (low + high) // 2
@@ -131,7 +131,7 @@ def _makeLineOf(text: str) -> Callable[[int], int]:
             else:
                 high = middle
         return low + 1
-    return lineOf
+    return getLineOf
 
 
 _kXMLAttribute = re.compile(r"([A-Za-z_][\w.:-]*)\s*=\s*(\"([^\"]*)\"|'([^']*)')")
@@ -141,7 +141,7 @@ _kXMLTagName = re.compile(r"</?\s*([A-Za-z_][\w.:-]*)")
 def _extractXML(text: str, config: FieldConfig) -> list[Reference]:
     """XML: 목록에 든 이름의 속성 값과, 목록에 든 이름의 요소 안 글(`<_listX><item>경로</item></_listX>` 포함). 주석은 건너뛴다."""
     out: list[Reference] = []
-    lineOf = _makeLineOf(text)
+    getLineOf = _makeLineOf(text)
     listOpenField: list[str] = []
     cursor = 0
     length = len(text)
@@ -149,7 +149,7 @@ def _extractXML(text: str, config: FieldConfig) -> list[Reference]:
         tagStart = text.find("<", cursor)
         textEnd = length if tagStart < 0 else tagStart
         if listOpenField and textEnd > cursor:
-            _appendTokens(text, cursor, textEnd, listOpenField[-1], config, lineOf, out)
+            _appendTokens(text, cursor, textEnd, listOpenField[-1], config, getLineOf, out)
         if tagStart < 0:
             break
         if text.startswith("<!--", tagStart):
@@ -174,7 +174,7 @@ def _extractXML(text: str, config: FieldConfig) -> list[Reference]:
             for attribute in _kXMLAttribute.finditer(tag, nameMatch.end()):
                 if attribute.group(1) in config.setField:
                     group = 3 if attribute.group(3) is not None else 4
-                    _appendTokens(text, tagStart + attribute.start(group), tagStart + attribute.end(group), attribute.group(1), config, lineOf, out)
+                    _appendTokens(text, tagStart + attribute.start(group), tagStart + attribute.end(group), attribute.group(1), config, getLineOf, out)
             bSelfClosing = tag.rstrip(">").rstrip().endswith("/")
             if not bSelfClosing and (name in config.setField or (listOpenField and name == "item")):
                 listOpenField.append(name if name in config.setField else listOpenField[-1])
@@ -204,7 +204,7 @@ _kJSONString = re.compile(r"\"((?:[^\"\\]|\\.)*)\"")
 def _extractJSON(text: str, config: FieldConfig) -> list[Reference]:
     """JSON: 목록에 든 키의 글 값, 또는 글 배열의 원소."""
     out: list[Reference] = []
-    lineOf = _makeLineOf(text)
+    getLineOf = _makeLineOf(text)
     for keyMatch in _kJSONKey.finditer(text):
         field = keyMatch.group(1)
         if field not in config.setField:
@@ -213,18 +213,18 @@ def _extractJSON(text: str, config: FieldConfig) -> list[Reference]:
         if cursor < len(text) and text[cursor] == "\"":
             valueMatch = _kJSONString.match(text, cursor)
             if valueMatch:
-                _appendTokens(text, valueMatch.start(1), valueMatch.end(1), field, config, lineOf, out)
+                _appendTokens(text, valueMatch.start(1), valueMatch.end(1), field, config, getLineOf, out)
         elif cursor < len(text) and text[cursor] == "[":
             arrayEnd = text.find("]", cursor)
             for valueMatch in _kJSONString.finditer(text, cursor, len(text) if arrayEnd < 0 else arrayEnd):
-                _appendTokens(text, valueMatch.start(1), valueMatch.end(1), field, config, lineOf, out)
+                _appendTokens(text, valueMatch.start(1), valueMatch.end(1), field, config, getLineOf, out)
     return out
 
 
 def _extractCMake(text: str, config: FieldConfig) -> list[Reference]:
     """CMake: `listCMakeArgument` 의 인자(`--render-portraits=<경로>`) 값. 앞은 공백 · 따옴표 · 줄 처음이어야 한다."""
     out: list[Reference] = []
-    lineOf = _makeLineOf(text)
+    getLineOf = _makeLineOf(text)
     for argument in config.listCMakeArgument:
         prefix = argument + "="
         start = text.find(prefix)
@@ -235,7 +235,7 @@ def _extractCMake(text: str, config: FieldConfig) -> list[Reference]:
             while valueEnd < len(text) and text[valueEnd] not in " \t\r\n\")":
                 valueEnd += 1
             if bBoundary:
-                _appendTokens(text, valueStart, valueEnd, argument, config, lineOf, out)
+                _appendTokens(text, valueStart, valueEnd, argument, config, getLineOf, out)
             start = text.find(prefix, valueEnd)
     return out
 

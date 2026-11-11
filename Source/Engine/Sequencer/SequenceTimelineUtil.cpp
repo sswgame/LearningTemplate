@@ -55,7 +55,7 @@ namespace sw
             }
 
             /** @brief 축 하나(0 은 x, 1 은 y, 2 는 z)입니다. */
-            static float32& axisOf( float3& value, uint32 axis )
+            static float32& getAxisOf( float3& value, uint32 axis )
             {
                 if ( axis == 0 )
                     return value._x;
@@ -78,9 +78,9 @@ namespace sw
                     const optional<float32> value = track._listChannel[channelIndex].evaluate( frame );
                     if ( value.has_value() == false )
                         continue;
-                    const uint32 groupIndex                          = channelIndex / 3;
-                    axisOf( arrValue[groupIndex], channelIndex % 3 ) = *value;
-                    arrKeyed[groupIndex]                             = true;
+                    const uint32 groupIndex                             = channelIndex / 3;
+                    getAxisOf( arrValue[groupIndex], channelIndex % 3 ) = *value;
+                    arrKeyed[groupIndex]                                = true;
                 }
                 // 키가 있는 그룹만 쓴다. 키 없는 회전과 크기까지 쓰면 트랜스폼이 프레임마다 더티가 된다.
                 if ( arrKeyed[0] )

@@ -461,7 +461,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, ControlInterfaceMapsResults )
     vector<ServerDirectoryControlCompletion> listCompletion;
     control.takeControlCompletions( listCompletion );
     SW_REQUIRE_EQUAL( size_t( 5 ), listCompletion.size() );
-    const auto resultOf = [&listCompletion]( uint64 requestTag )
+    const auto getResultOf = [&listCompletion]( uint64 requestTag )
     {
         for ( const ServerDirectoryControlCompletion& completion : listCompletion )
         {
@@ -470,11 +470,11 @@ SW_TEST_CASE( ServerDirectoryServiceTest, ControlInterfaceMapsResults )
         }
         return ServerDirectoryControlResult::Unavailable;
     };
-    SW_EXPECT_TRUE( resultOf( 11 ) == ServerDirectoryControlResult::Ok );
-    SW_EXPECT_TRUE( resultOf( 12 ) == ServerDirectoryControlResult::Invalid );
-    SW_EXPECT_TRUE( resultOf( 13 ) == ServerDirectoryControlResult::NotFound );
-    SW_EXPECT_TRUE( resultOf( 14 ) == ServerDirectoryControlResult::Ok );
-    SW_EXPECT_TRUE( resultOf( 15 ) == ServerDirectoryControlResult::Unavailable );
+    SW_EXPECT_TRUE( getResultOf( 11 ) == ServerDirectoryControlResult::Ok );
+    SW_EXPECT_TRUE( getResultOf( 12 ) == ServerDirectoryControlResult::Invalid );
+    SW_EXPECT_TRUE( getResultOf( 13 ) == ServerDirectoryControlResult::NotFound );
+    SW_EXPECT_TRUE( getResultOf( 14 ) == ServerDirectoryControlResult::Ok );
+    SW_EXPECT_TRUE( getResultOf( 15 ) == ServerDirectoryControlResult::Unavailable );
 
     rig.tick( kNowMs );
     const ServerDirectoryStatus status = rig._service.makeStatus( nowMs );

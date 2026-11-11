@@ -258,7 +258,7 @@ namespace sw
         return ContainerReadResult::ObjectRejected;
     }
 
-    FieldReadResult ContainerVisitor::fieldResultOf( const bool bRead ) noexcept
+    FieldReadResult ContainerVisitor::makeFieldResult( const bool bRead ) noexcept
     {
         return bRead ? FieldReadResult::Read : FieldReadResult::FieldFailed;
     }

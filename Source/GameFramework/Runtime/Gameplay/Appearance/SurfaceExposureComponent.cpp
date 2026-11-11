@@ -120,7 +120,7 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<SurfaceExposureComponent>( this );
-        (void)SurfaceExposureSystem::ensureFor( manager );
+        (void)SurfaceExposureSystem::findOrCreate( manager );
     }
 
     void SurfaceExposureComponent::onUnregister( GameObjectManager& manager )

@@ -59,7 +59,7 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<ZoneContactComponent>( this );
-        (void)ZoneSystem::ensureFor( manager );
+        (void)ZoneSystem::findOrCreate( manager );
     }
 
     void ZoneContactComponent::onUnregister( GameObjectManager& manager )

@@ -482,7 +482,7 @@ namespace sw::editor
         if ( _model.getSelectedAssetPath().empty() == false )
             subject._listSelectedID.push_back( EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, _model.getSelectedAssetPath() ) );
         subject._selectOnly = &ContentBrowserPanelInternal::selectOnlyAsset;
-        (void)EditorInputGUI::drawContextMenuFor( subject ); // 열렸는지는 쓰지 않는다
+        (void)EditorInputGUI::drawContextMenu( subject ); // 열렸는지는 쓰지 않는다
     }
 
     ContentBrowserPanel::ContentBrowserPanel() noexcept

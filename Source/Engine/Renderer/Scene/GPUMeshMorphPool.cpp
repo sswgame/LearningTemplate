@@ -45,7 +45,7 @@ namespace sw
                     slot.release( pDevice );
                     return;
                 }
-                // 못 만들면 오류다 — 그 버퍼를 읽는 구간은 디스패치되지 않고(isDispatchable · isSkinDispatchable) 그 메시들은 그리지 않는다(baseOf).
+                // 못 만들면 오류다 — 그 버퍼를 읽는 구간은 디스패치되지 않고(isDispatchable · isSkinDispatchable) 그 메시들은 그리지 않는다(getBaseOf).
                 if ( slot.ensureCapacity( pDevice, kElementStride, elementCount, kReadUsage, true, false, pData ) == false )
                 {
                     SW_LOG_ERROR_ID( "GPUMeshMorphPool.CouldNotCreateMesh", "Could not create a mesh deform buffer (%# float4) - the meshes that need it are not drawn", elementCount );
@@ -64,7 +64,7 @@ namespace sw
         return getMorphVertexCount() > 0 && _rest._srv != kInvalidDescriptorIndex && _morph._uav != kInvalidDescriptorIndex;
     }
 
-    uint32 GPUMeshMorphPool::baseOf( const Mesh* pMesh ) const
+    uint32 GPUMeshMorphPool::getBaseOf( const Mesh* pMesh ) const
     {
         // 결과 구간은 디스패치가 채울 때만 내준다. 버퍼를 못 만들어 디스패치되지 않는 구간을 내주면 정점 셰이더가 비어 있는 결과를 읽는다 —
         // kInvalidBase 를 받은 배치는 그리지 않는다(GPUMeshBatchBinding::_bDeformRefused). 레스트 포즈로 대신 그리지 않는다.
@@ -74,7 +74,7 @@ namespace sw
         return kInvalidBase;
     }
 
-    uint32 GPUMeshMorphPool::skinResultStartOf( uint32 skinSlot ) const
+    uint32 GPUMeshMorphPool::getSkinResultStartOf( uint32 skinSlot ) const
     {
         const bool bResult = skinSlot < _listSkinResultOffset.size() && isSkinDispatchable() && _listSkinResultOffset[skinSlot]._resultStart != kInvalidBase;
         return bResult ? _listSkinResultOffset[skinSlot]._resultStart + getSkinCurrentShift() : kInvalidBase;
@@ -374,7 +374,7 @@ namespace sw
                                                           GPUMeshMorphPoolInternal::kReadUsage, true, false, nullptr );
         if ( bCreated == false )
         {
-            // 못 만들면 오류다 — 그 버퍼를 읽는 구간은 디스패치되지 않고(isSkinDispatchable) 스킨 메시들은 그리지 않는다(baseOf).
+            // 못 만들면 오류다 — 그 버퍼를 읽는 구간은 디스패치되지 않고(isSkinDispatchable) 스킨 메시들은 그리지 않는다(getBaseOf).
             SW_LOG_ERROR_ID( "GPUMeshMorphPool.CouldNotCreateSkin", "Could not create the skin source buffers (%# / %# elements) - skinned meshes are not drawn", restCapacity, weightCapacity );
             _skinRest.release( pDevice );
             _skinWeight.release( pDevice );
@@ -394,7 +394,7 @@ namespace sw
         {
             if ( allocateSkinSource( source ) == false )
             {
-                // 상한 초과는 오류다 — 이 원본은 풀에 없고(그 인스턴스는 baseOf = kInvalidBase) 그 배치는 그리지 않는다(바인드 포즈로 대신 그리지 않는다).
+                // 상한 초과는 오류다 — 이 원본은 풀에 없고(그 인스턴스는 getBaseOf = kInvalidBase) 그 배치는 그리지 않는다(바인드 포즈로 대신 그리지 않는다).
                 if ( bWarnedFull == false )
                     SW_LOG_ERROR_ID( "GPUMeshMorphPool.SkinSourceBufferLimit", "Skin source buffer limit exceeded (%# elements) - the remaining skinned meshes are not drawn", kMaxSkinSourceElements );
                 bWarnedFull = true;
@@ -485,7 +485,7 @@ namespace sw
             const uint32           count      = pLower != nullptr ? pLower->_vertexCount : ( bAllLevels ? pMesh->getDrawVertexCount() : pMesh->getVertexCount() );
             if ( _skinVertexBase + resultOffset + count > kMaxPoolVertices )
             {
-                // 상한 초과는 오류다 — 이 메시는 풀에 없고(baseOf = kInvalidBase) 그 배치는 그리지 않는다(바인드 포즈로 대신 그리지 않는다).
+                // 상한 초과는 오류다 — 이 메시는 풀에 없고(getBaseOf = kInvalidBase) 그 배치는 그리지 않는다(바인드 포즈로 대신 그리지 않는다).
                 SW_LOG_ERROR_ID( "GPUMeshMorphPool.MeshDeformPoolLimit", "Mesh deform pool limit exceeded (%# vertices, skinned mesh needs %#) - that mesh is not drawn", kMaxPoolVertices, count );
                 continue;
             }
@@ -553,7 +553,7 @@ namespace sw
             _skinPalette.release( pDevice );
         }
 
-        // 버퍼나 UAV 를 못 받으면(장치 메모리 부족 · 드라이버 거절) 디스패치가 돌지 않고 baseOf 가 kInvalidBase 를 내 변형 메시는 그리지 않는다.
+        // 버퍼나 UAV 를 못 받으면(장치 메모리 부족 · 드라이버 거절) 디스패치가 돌지 않고 getBaseOf 가 kInvalidBase 를 내 변형 메시는 그리지 않는다.
         // 레스트 포즈로 대신 그리지 않는다. 백엔드가 GPU 변형을 아예 못 하면 능력 질의(_bGPUMeshMorph)가 풀을 만들지 않는다 — 그쪽은 실패가 아니다.
         if ( bMorphBuffer == false )
             SW_LOG_ERROR_ID( "GPUMeshMorphPool.FailedCreateMorphResult", "Failed to create the morph result buffer (%# vertices) - deformed meshes are not drawn", _vertexCount );
@@ -704,7 +704,7 @@ namespace sw
             entry._base = _morphAllocator.allocate( entry._count );
             if ( entry._base == SpanAllocator::kInvalidOffset )
             {
-                // 상한 초과는 오류다. 이 메시는 풀에 넣지 않는다 — `baseOf` 가 kInvalidBase 를 반환하고 그 배치는 그리지 않는다(레스트 포즈로 대신 그리지 않는다).
+                // 상한 초과는 오류다. 이 메시는 풀에 넣지 않는다 — `getBaseOf` 가 kInvalidBase 를 반환하고 그 배치는 그리지 않는다(레스트 포즈로 대신 그리지 않는다).
                 entry._base = kInvalidBase;
                 if ( entry._slot != kInvalidBase )
                 {

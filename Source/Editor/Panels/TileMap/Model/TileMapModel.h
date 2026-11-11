@@ -171,7 +171,7 @@ namespace sw::editor
         /** @brief 좌표가 맵 범위 안이면 true 입니다. */
         bool isInBounds( int32 x, int32 y ) const;
         /** @brief (x, y)의 1차원 인덱스를 반환합니다. */
-        size_t indexOf( int32 x, int32 y ) const;
+        size_t getIndexOf( int32 x, int32 y ) const;
 
         /** @brief 현재 선택한 플래그 레이어에서 켜진 셀 수를 반환합니다. 플래그 레이어가 아니면 0 입니다. */
         uint32 countSelectedFlagCells() const;

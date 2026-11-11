@@ -1389,7 +1389,7 @@ namespace sw
     {
         // 호스트는 걸지 않는다(주 렌더러의 일). PSO 저장소는 initialize 앞에 둔다 — 같은 파이프라인일 때만 함께 쓴다.
         if ( pipelinePath.empty() )
-            _psoManager.shareCacheOf( mainRenderer._psoManager );
+            _psoManager.shareCache( mainRenderer._psoManager );
         return initialize( pDevice, mainRenderer._state._pTaskManager, pipelinePath.empty() ? string_view{ mainRenderer._pipelinePath } : pipelinePath );
     }
 } // namespace sw

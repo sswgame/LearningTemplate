@@ -422,7 +422,7 @@ namespace sw::editor
         subject._pPopupID  = "CompCardCtx";
         subject._kind      = EditorCommandTargetKind::Component;
         subject._hoveredID = componentID;
-        (void)EditorInputGUI::drawContextMenuFor( subject ); // 열렸는지는 쓰지 않는다
+        (void)EditorInputGUI::drawContextMenu( subject ); // 열렸는지는 쓰지 않는다
     }
 
     void InspectorPanel::drawComponentPresetItems( const EditorCommandTarget& target )
