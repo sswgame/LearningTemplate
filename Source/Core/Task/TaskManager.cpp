@@ -1032,7 +1032,7 @@ namespace sw
         while ( join.getPending() > 0 )
         {
             if ( helpOrSpin( spinState, bHelpLowQueue ) == false )
-                parkOnJoin( join );
+                parkOnJoin( join, bHelpLowQueue );
         }
     }
 
@@ -1066,7 +1066,7 @@ namespace sw
         return _nodePool->describeFirstUnfinished( nullptr );
     }
 
-    void TaskManager::parkOnJoin( JoinCounter& join )
+    void TaskManager::parkOnJoin( JoinCounter& join, const bool bHelpLowQueue )
     {
         const uint32    slotIndex = getCurrentThreadScratchSlot();
         atomic<uint32>& word      = getWaiterWord( slotIndex );
@@ -1108,8 +1108,28 @@ namespace sw
             }
         }
 
+        // 합류로 잠드는 워커도 유휴 마스크에 올린다 — 올리지 않으면 모든 워커가 합류로 잠든 뒤 워커 밖에서 넣은 일(그 합류가 기다리는 일일 수 있다)이
+        // 큐에 남아 교착한다(감사 C-3, 워커 1 개 구성에서 닿기 쉽다). 깨운 쪽은 비트를 내리고 워드를 바꾼다 → 돌아가 `waitForJoin` 이 돕는다. 순서는
+        // `workerLoop` 의 잠들기와 같다(워드 읽기 → 비트 올리기 → 큐 다시 보기). UE Tasks 의 기다리는 워커가 유휴 워커와 같은 대기 큐에 서는 자리.
+        const int32  workerIndex = t_currentWorkerIndex;
+        const uint64 idleBit     = workerIndex >= 0 ? static_cast<uint64>( 1 ) << static_cast<uint32>( workerIndex ) : 0;
+        if ( idleBit != 0 )
+        {
+            _idleWorkerMask.fetch_or( idleBit, std::memory_order_seq_cst );
+            std::atomic_thread_fence( std::memory_order_seq_cst );
+            uintptr_t item{ 0 };
+            if ( tryTakeItem( workerIndex, bHelpLowQueue, item ) )
+            {
+                _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );
+                executeItem( item );
+                return;
+            }
+        }
+
         Futex::wait( word, observed );
 
+        if ( idleBit != 0 )
+            _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst ); // 합류가 끝나 깨었으면 비트가 아직 켜져 있다
         if ( bMainThread )
             _mainThreadParkedSlot.store( -1, std::memory_order_seq_cst );
     }

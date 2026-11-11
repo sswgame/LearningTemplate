@@ -403,7 +403,7 @@ namespace sw
         /** @brief @p join 이 0 이 될 때까지 기다립니다. 메인 작업을 실행하고, 다른 일을 돕고(@p bHelpLowQueue 가 false 면 Low 줄은 빼고), 잠깐 스핀하다가 자기 슬롯에서 잠듭니다. */
         void waitForJoin( JoinCounter& join, bool bHelpLowQueue );
         /** @brief 이 스레드를 @p join 의 대기자로 등록하고 잠듭니다. 깨어나면 부르는 쪽이 조건을 다시 확인합니다. */
-        void parkOnJoin( JoinCounter& join );
+        void parkOnJoin( JoinCounter& join, bool bHelpLowQueue );
         /** @brief 메인 스레드가(어느 대기에서든) 잠들어 있으면 깨웁니다. 메인 전용 작업이 들어왔을 때 부릅니다. */
         void wakeParkedMainThread();
         /** @brief 대기자 슬롯 @p slotIndex 의 스레드를 깨웁니다. 할 일 없는 워커(슬롯 = 워커 번호)와 기다리는 스레드 모두 이 함수 하나로 깨웁니다. */
