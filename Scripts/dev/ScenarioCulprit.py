@@ -55,6 +55,23 @@ def findCulprit(before: Sequence[str], fails: Callable[[list[str]], bool]) -> in
     return low
 
 
+def minimizeStages(stages: Sequence[str], fails: Callable[[list[str]], bool]) -> list[str]:
+    """지는 앞 단계 묶음 @p stages 에서 빼도 여전히 지는 단계를 하나씩 버려 남은 묶음을 돌려준다(첫 단계 — 시작 단계 — 는 남긴다).
+
+    시작 단계 하나만으로는 지지 않을 때(뒤 단계와 함께 상태를 만든다) 쓴다. 단계마다 한 번 돈다.
+    결함이 확률로 나오면(같은 묶음이 실행마다 갈린다) 결과가 수렴하지 않는다 — 그때는 묶음이 아니라 쌓인 상태 · 타이밍을 본다.
+    """
+    kept = list(stages)
+    index = 1
+    while index < len(kept):
+        candidate = kept[:index] + kept[index + 1:]
+        if fails(candidate):
+            kept = candidate
+        else:
+            index += 1
+    return kept
+
+
 kScenarioName = re.compile(r'<Scenario\b[^>]*\bname="([^"]+)"')
 kPassedResults = frozenset({'Passed', 'Skipped'})
 
@@ -221,6 +238,7 @@ def selfCheck() -> int:
         assert findCulprit(stages, fails) == culprit, culprit
         assert len(calls) <= 1 + 4, len(calls)   # log2(10) 올림 + 처음 한 번
     assert findCulprit(stages, lambda prefix: False) is None
+    assert minimizeStages(stages, lambda prefix: 's0' in prefix and 's4' in prefix and 's7' in prefix) == ['s0', 's4', 's7']
     assert stageFailedInReports([{'name': 'a', 'result': 'Passed'}], 'a') is False
     assert stageFailedInReports([{'name': 'a', 'result': 'Failed'}], 'a') is True
     assert stageFailedInReports([{'name': 'b', 'result': 'Passed'}], 'a') is True, '보고 없는 단계는 짐'
@@ -236,6 +254,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('--backend', default='dx12')
     parser.add_argument('--show', action='store_true', help='창을 띄워 돈다(-unattended 를 뺀다 — 판정은 같다)')
     parser.add_argument('--self-check', action='store_true')
+    parser.add_argument('--start', help='이분 탐색을 건너뛰고 이 단계(시나리오 이름 또는 경로)부터 줄이기만 한다 — 앞 실행이 시작 단계를 찾았을 때')
     parser.add_argument('--golden-margins', nargs='*', metavar='보고 폴더 · 파일',
                         help='체인 대신: 시나리오 보고(goldenSamples[])를 모아 골든마다 실행 사이 최대 차이와 여유를 낸다(기본 build/<preset>/Bin/Saved/Automation)')
     parser.add_argument('--golden-coverage', action='store_true', help='체인 대신: 플랫폼 · 백엔드마다 저장소 골든 수(체인 백엔드 표와 대조, 체인 밖 백엔드의 골든 0 이 드러난다)')
@@ -273,13 +292,22 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     before = paths[:targetIndex]
     print(f'{options.chain}: {targetName} (단계 {targetIndex + 1}/{len(paths)}) · {options.preset} {options.backend}', flush=True)
-    culprit = findCulprit(before, fails)
+    if options.start:
+        culprit = next((index for index, path in enumerate(before) if path == options.start or readScenarioName(path) == options.start), None)
+        if culprit is None:
+            parser.error(f'{options.start} 는 {targetName} 앞 단계가 아니다')
+    else:
+        culprit = findCulprit(before, fails)
     if culprit is None:
         print('재현 안 됨 — 단독으로 지는지(단계만 -scenario= 로) · 다른 백엔드 · 체인 밖 상태를 본다')
         return 1
     print('시작 단계:', before[culprit])
     print('단독 쌍으로도 지는가(아니면 뒤 단계들과 함께 만드는 상태다):')
-    fails([before[culprit]])
+    if fails([before[culprit]]):
+        return 0
+    print('뒤 단계와 함께 만드는 상태다 — 빼도 지는 단계를 하나씩 버린다:')
+    kept = minimizeStages(before[culprit:], fails)
+    print('지는 최소 묶음:', ', '.join(kept))
     return 0
 
 
