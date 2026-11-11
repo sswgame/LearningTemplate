@@ -54,10 +54,11 @@ namespace sw
         return false; // 브라우저 파일 시스템(MEMFS · IDBFS)은 OS 파일 관리자에 보이지 않는다
     }
 
-    bool Process::readOutputLine( string& outLine )
+    size_t Process::readOutputBytes( utf8* pBuffer, size_t capacity )
     {
-        outLine.clear();
-        return false;
+        (void)pBuffer;
+        (void)capacity;
+        return 0; // 브라우저에는 자식 프로세스가 없다 — 읽을 출력도 없다
     }
 
     expected<int32> Process::waitForExit()

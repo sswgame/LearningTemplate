@@ -131,8 +131,15 @@ namespace sw
          * @brief 파이프에서 다음 출력 한 줄을 읽습니다.
          * @param outLine 읽은 줄을 담을 버퍼
          * @return 읽었으면 true, EOF 이거나 파이프가 닫혔으면 false
+         * @details 줄 분리는 모든 플랫폼이 이 함수 하나다(`takeBufferedLine`) — 플랫폼은 바이트 조각 읽기(`readOutputBytes`)만 한다. 예전에는 POSIX 가 `fgets` 한 번의
+         *          결과(4095 바이트)를 한 줄로 돌려 긴 줄(zenity 다중 선택)이 둘로 쪼개졌다(언리얼 `FMonitoredProcess` 도 조각을 쌓아 개행으로 자르는 코드 하나다).
          */
         [[nodiscard]] bool readOutputLine( string& outLine );
+        /**
+         * @brief @p inoutBuffer 에 끝난 줄이 있으면 떼어 @p outLine 에 담고(개행 문자는 뺀다) true 입니다. CRLF 는 개행 하나다.
+         * @details 버퍼 끝의 `\r` 은 다음 조각이 `\n` 일 수 있어 @p bEndOfStream 이 아니면 보류한다(조각 경계의 CRLF 가 빈 줄을 만들지 않는다).
+         */
+        [[nodiscard]] static bool takeBufferedLine( string& inoutBuffer, bool bEndOfStream, string& outLine );
 
         /**
          * @brief 프로세스가 끝나기를 기다리고 종료 코드를 반환합니다.
@@ -254,6 +261,8 @@ namespace sw
 
     private:
         void shutdown();
+        /** @brief (플랫폼) 출력 파이프에서 바이트를 @p capacity 까지 읽습니다. 끝(EOF · 닫힘)이면 0 입니다. 읽을 것이 올 때까지 막힌다. */
+        [[nodiscard]] size_t readOutputBytes( utf8* pBuffer, size_t capacity );
 
     private:
         void*  _pNativeHandle;

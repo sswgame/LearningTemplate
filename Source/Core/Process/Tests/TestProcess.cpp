@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
@@ -407,6 +408,45 @@ SW_TEST_CASE( ProcessTest, MissingExecutableFailsToLaunch )
     const sw::expected<int32> missing = sw::Process::execute( sw::ProcessCommand::fromSearchPath( "sw_no_such_program_7f3a", { "x" } ) );
     SW_REQUIRE_FALSE( missing.has_value() );
     SW_EXPECT_TRUE( missing.error().detail().find( "sw_no_such_program_7f3a" ) != sw::string_view::npos );
+}
+
+/**
+ * @brief 경로 명령(`ProcessCommand::at`)의 실행 파일이 없으면 띄우기 · 분리 실행 · 동기 실행 모두 진다(감사 P0-16)
+ * @details POSIX 는 예전에 자식이 exec 에 지고 `_exit( 127 )` 만 해 부모가 true 를 돌려줬다 — 지금은 CLOEXEC 오류 파이프로 errno 가 돌아온다(Windows 는 CreateProcess 가 진다).
+ */
+SW_TEST_CASE( ProcessTest, MissingPathExecutableFailsToLaunch )
+{
+    SW_EXPECT_LOG( "Process.LaunchFailed" );
+    SW_EXPECT_LOG( "Process.LaunchDetachedFailed" );
+    const sw::optional<sw::AbsolutePath> missing = sw::AbsolutePath::tryMake( sw::ProcessRoots::get()._project.str() + "/sw_no_such_dir_7f3a/sw_no_such_program" );
+    SW_REQUIRE_TRUE( missing.has_value() );
+    sw::Process process;
+    SW_EXPECT_FALSE( process.launch( sw::ProcessCommand::at( *missing, { "x" } ) ) );
+    SW_EXPECT_FALSE( sw::Process::launchDetached( sw::ProcessCommand::at( *missing, { "x" } ) ) );
+    SW_EXPECT_FALSE( sw::Process::execute( sw::ProcessCommand::at( *missing, { "x" } ) ).has_value() );
+}
+
+/**
+ * @brief 줄 분리는 조각 경계를 넘는다 — 끝의  은 다음 조각을 기다리고(CRLF 가 빈 줄을 만들지 않는다), 끝난 스트림에서는 줄을 닫는다(감사 P0-17)
+ */
+SW_TEST_CASE( ProcessTest, BufferedLineSplitsAcrossChunks )
+{
+    sw::string     buffer = "abc
+                            ";
+        sw::string line;
+    SW_EXPECT_FALSE( sw::Process::takeBufferedLine( buffer, false, line ) ); //
+    이 다음 조각일 수 있다
+        buffer += "
+        def ";
+        SW_REQUIRE_TRUE( sw::Process::takeBufferedLine( buffer, false, line ) );
+    SW_EXPECT_TRUE( line == "abc" );
+    SW_EXPECT_FALSE( sw::Process::takeBufferedLine( buffer, false, line ) ); // "def" 는 아직 끝나지 않았다
+    buffer += "
+              ";
+        SW_REQUIRE_TRUE( sw::Process::takeBufferedLine( buffer, true, line ) ); // 끝난 스트림의
+    은 줄 끝이다
+        SW_EXPECT_TRUE( line == "def" );
+    SW_EXPECT_TRUE( buffer.empty() );
 }
 
 /**

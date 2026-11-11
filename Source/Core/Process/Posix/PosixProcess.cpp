@@ -11,6 +11,7 @@
 
     #include <cerrno>
     #include <csignal>
+    #include <cstring>
     #include <fcntl.h>
     #include <sys/syscall.h>
     #include <unistd.h>
@@ -41,15 +42,75 @@ namespace sw
          * @details CLOEXEC 없이 열린 것(로그 파일 · 남의 파이프 · 소켓)이 exec 를 넘어 자식과 그 손자에게 그대로 간다 — 파이썬
          *          subprocess 의 기본값(close_fds)과 같은 이유다.
          */
-        void closeDescriptorsAboveStandardInChild( int32 descriptorMax )
+        void closeDescriptorsAboveStandardInChild( int32 descriptorMax, int32 keepDescriptor )
         {
+            // 남길 하나(exec 오류 파이프 — CLOEXEC 라 exec 가 되면 저절로 닫힌다)를 빼고 닫는다.
             int32 closedFrom = 3;
     #if defined( SYS_close_range )
-            if ( syscall( SYS_close_range, 3U, ~0U, 0U ) == 0 )
+            const bool bRangeClosed = keepDescriptor < 3 ? syscall( SYS_close_range, 3U, ~0U, 0U ) == 0
+                                                         : ( keepDescriptor == 3 || syscall( SYS_close_range, 3U, static_cast<uint32>( keepDescriptor - 1 ), 0U ) == 0 ) &&
+                                                               syscall( SYS_close_range, static_cast<uint32>( keepDescriptor + 1 ), ~0U, 0U ) == 0;
+            if ( bRangeClosed )
                 closedFrom = descriptorMax;
     #endif
             for ( int32 descriptor = closedFrom; descriptor < descriptorMax; ++descriptor )
-                close( descriptor );
+            {
+                if ( descriptor != keepDescriptor )
+                    close( descriptor );
+            }
+        }
+
+        /**
+         * @brief exec 오류 파이프를 엽니다(CLOEXEC). 자식은 `chdir` · exec 가 지면 errno 를 써 넣고, exec 가 되면 쓰는 끝이 저절로 닫혀 부모는 EOF 를 읽는다.
+         * @details 예전에는 자식이 `_exit( 127 )` 만 하고 부모는 true 를 돌려 없는 실행 파일도 "띄웠다" 였다(Process.h 계약 · Windows 와 갈렸다).
+         *          언리얼 Unix `CreateProc`(posix_spawn) · Chromium 의 CLOEXEC 오류 파이프와 같은 자리다.
+         */
+        [[nodiscard]] bool openExecErrorPipe( int32 ( &outArrFd )[2] )
+        {
+    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+            if ( pipe2( outArrFd, O_CLOEXEC ) == 0 )
+                return true;
+    #else
+            if ( pipe( outArrFd ) == 0 )
+            {
+                fcntl( outArrFd[0], F_SETFD, FD_CLOEXEC );
+                fcntl( outArrFd[1], F_SETFD, FD_CLOEXEC );
+                return true;
+            }
+    #endif
+            outArrFd[0] = -1;
+            outArrFd[1] = -1;
+            return false;
+        }
+
+        /** @brief (자식에서) errno 를 오류 파이프에 쓰고 끝냅니다. async-signal-safe 함수만 쓴다. */
+        [[noreturn]] void exitWithExecError( int32 errorFd )
+        {
+            const int32 errorCode = errno;
+            if ( errorFd >= 0 )
+            {
+                ssize_t written = 0;
+                do
+                {
+                    written = write( errorFd, &errorCode, sizeof( errorCode ) );
+                } while ( written < 0 && errno == EINTR );
+            }
+            _exit( 127 );
+        }
+
+        /**
+         * @brief (부모에서) 오류 파이프의 읽는 끝을 다 읽고 닫습니다. 자식이 exec 했으면(EOF) 0, 실패했으면 그 errno 입니다.
+         */
+        [[nodiscard]] int32 readExecError( int32 readFd )
+        {
+            int32   errorCode = 0;
+            ssize_t bytesRead = 0;
+            do
+            {
+                bytesRead = read( readFd, &errorCode, sizeof( errorCode ) );
+            } while ( bytesRead < 0 && errno == EINTR );
+            close( readFd );
+            return bytesRead == static_cast<ssize_t>( sizeof( errorCode ) ) ? errorCode : 0;
         }
 
         /** @brief `waitpid` 가 준 상태를 종료 코드로 바꿉니다. 시그널로 죽었으면 셸 규약대로 128 + 시그널 번호입니다. 끝나지 않은 상태(멈춤 · 재개)면 없음입니다. */
@@ -241,7 +302,7 @@ namespace sw
          *          뮤텍스는 통째로 복사되므로, 다른 스레드가 잡고 있던 락(로거의 락이 대표적이다)은 영원히 잠긴 채로 남는다.
          *          여기서 로그를 찍거나 할당을 하면 그대로 멈춘다.
          */
-        [[noreturn]] void runLaunchedChild( const int32 ( &arrPipeFd )[2], const int32 ( &arrInputFd )[2], int32 descriptorMax, const utf8* pWorkingDirectory,
+        [[noreturn]] void runLaunchedChild( const int32 ( &arrPipeFd )[2], const int32 ( &arrInputFd )[2], int32 errorFd, int32 descriptorMax, const utf8* pWorkingDirectory,
                                             const PosixExecImage& image )
         {
             close( arrPipeFd[0] );
@@ -263,17 +324,17 @@ namespace sw
                     dup2( nullFd, STDIN_FILENO );
             }
 
-            closeDescriptorsAboveStandardInChild( descriptorMax );
+            closeDescriptorsAboveStandardInChild( descriptorMax, errorFd );
 
             // 자기만의 프로세스 그룹을 갖게 한다. `terminate` 가 그룹째 죽여야 자식이 띄운 손자 프로세스(cmake 가 띄운 컴파일러)까지
             // 멈춘다. 자식만 죽이면 손자는 계속 돌면서 파이프를 붙들고 있다.
             setpgid( 0, 0 );
 
             if ( pWorkingDirectory != nullptr && chdir( pWorkingDirectory ) != 0 )
-                _exit( 127 );
+                exitWithExecError( errorFd );
 
             execImage( image );
-            _exit( 127 ); // exec 가 실패했을 때만 여기에 온다
+            exitWithExecError( errorFd ); // exec 가 실패했을 때만 여기에 온다
         }
     } // namespace
 
@@ -318,6 +379,15 @@ namespace sw
         if ( openLaunchPipes( options._bPipeStandardInput, pCommand, arrPipeFd, arrInputFd ) == false )
             return false;
 
+        int32 arrErrorFd[2];
+        if ( openExecErrorPipe( arrErrorFd ) == false )
+        {
+            closeLaunchPipePair( arrPipeFd );
+            closeLaunchPipePair( arrInputFd );
+            SW_LOG_ERROR_ID( "PosixProcess.PipeFailedCommand", "pipe() failed for command: %#", pCommand );
+            return false;
+        }
+
         const int32 descriptorMax = getDescriptorLimit();
 
         const pid_t childPid = fork();
@@ -325,14 +395,29 @@ namespace sw
         {
             closeLaunchPipePair( arrPipeFd );
             closeLaunchPipePair( arrInputFd );
+            closeLaunchPipePair( arrErrorFd );
             SW_LOG_ERROR_ID( "PosixProcess.ForkFailedCommand", "fork() failed for command: %#", pCommand );
             return false;
         }
 
         if ( childPid == 0 )
-            runLaunchedChild( arrPipeFd, arrInputFd, descriptorMax, pWorkingDirectory, image );
+        {
+            close( arrErrorFd[0] );
+            runLaunchedChild( arrPipeFd, arrInputFd, arrErrorFd[1], descriptorMax, pWorkingDirectory, image );
+        }
 
         // ---- 부모 ----
+        close( arrErrorFd[1] );
+        const int32 execError = readExecError( arrErrorFd[0] ); // exec 가 되거나 질 때까지만 막힌다
+        if ( execError != 0 )
+        {
+            closeLaunchPipePair( arrPipeFd );
+            closeLaunchPipePair( arrInputFd );
+            int32 status = 0;
+            waitpid( childPid, &status, 0 );
+            SW_LOG_ERROR_ID( "Process.LaunchFailed", "Could not start '%#' (%#): %#", image._path, strerror( execError ), pCommand );
+            return false;
+        }
         close( arrPipeFd[1] );
         if ( arrInputFd[0] >= 0 )
         {
@@ -377,11 +462,19 @@ namespace sw
         const utf8*  pWorkingDirectory = options._workingDirectory.empty() ? nullptr : options._workingDirectory.c_str();
         const int32  descriptorMax     = getDescriptorLimit();
 
+        int32 arrErrorFd[2];
+        if ( openExecErrorPipe( arrErrorFd ) == false )
+        {
+            SW_LOG_ERROR_ID( "PosixProcess.PipeFailedCommand", "pipe() failed for command: %#", pCommand );
+            return false;
+        }
+
         // 두 번 fork 한다 — 가운데 프로세스는 손자를 띄우자마자 끝나고 여기서 바로 거둔다. 손자의 부모는 init 이 되어 끝나도
-        // 좀비로 남지 않고, 이 프로세스는 손자가 언제 끝나든 기다리지 않는다.
+        // 좀비로 남지 않고, 이 프로세스는 손자가 언제 끝나든 기다리지 않는다. 손자의 exec 실패는 오류 파이프로 돌아온다.
         const pid_t middlePid = fork();
         if ( middlePid < 0 )
         {
+            closeLaunchPipePair( arrErrorFd );
             SW_LOG_ERROR_ID( "PosixProcess.ForkFailedDetachedCommand", "fork() failed for detached command: %#", pCommand );
             return false;
         }
@@ -390,6 +483,7 @@ namespace sw
         {
             // ---- 가운데 · 손자: exec 까지 async-signal-safe 한 함수만 ----
             setsid();
+            close( arrErrorFd[0] );
             const pid_t grandchildPid = fork();
             if ( grandchildPid != 0 )
                 _exit( grandchildPid < 0 ? 127 : 0 );
@@ -401,13 +495,14 @@ namespace sw
                 dup2( nullFd, STDOUT_FILENO );
                 dup2( nullFd, STDERR_FILENO );
             }
-            closeDescriptorsAboveStandardInChild( descriptorMax );
+            closeDescriptorsAboveStandardInChild( descriptorMax, arrErrorFd[1] );
 
             if ( pWorkingDirectory != nullptr && chdir( pWorkingDirectory ) != 0 )
-                _exit( 127 );
+                exitWithExecError( arrErrorFd[1] );
             execv( image._path.c_str(), const_cast<utf8* const*>( image._listArgumentPointer.data() ) );
-            _exit( 127 );
+            exitWithExecError( arrErrorFd[1] );
         }
+        close( arrErrorFd[1] );
 
         int32 status = 0;
         pid_t reaped = 0;
@@ -416,10 +511,14 @@ namespace sw
             reaped = waitpid( middlePid, &status, 0 );
         } while ( reaped < 0 && errno == EINTR );
 
-        const bool bLaunched = reaped == middlePid && WIFEXITED( status ) && WEXITSTATUS( status ) == 0;
-        if ( bLaunched == false )
-            SW_LOG_ERROR_ID( "PosixProcess.FailedLaunchDetachedCommand", "Failed to launch detached command: %#", pCommand );
-        return bLaunched;
+        const bool  bForked   = reaped == middlePid && WIFEXITED( status ) && WEXITSTATUS( status ) == 0;
+        const int32 execError = readExecError( arrErrorFd[0] ); // 손자가 exec 하거나 질 때까지 — 가운데는 이미 끝나 쓰는 끝을 놓았다
+        if ( bForked == false || execError != 0 )
+        {
+            SW_LOG_ERROR_ID( "Process.LaunchDetachedFailed", "Failed to launch detached command (%#): %#", execError != 0 ? strerror( execError ) : "fork failed", pCommand );
+            return false;
+        }
+        return true;
     }
 
     bool Process::launchURL( string_view url )
@@ -435,25 +534,19 @@ namespace sw
         return launchDetached( ProcessCommand::fromSearchPath( "xdg-open", { directory } ) );
     }
 
-    bool Process::readOutputLine( string& outLine )
+    size_t Process::readOutputBytes( utf8* pBuffer, size_t capacity )
     {
-        outLine.clear();
-
-        if ( _pStdOutRead == nullptr )
-            return false;
-
-        utf8 arrLineBuffer[constant::buffer::kMax4096];
-        if ( fgets( arrLineBuffer, sizeof( arrLineBuffer ), asOutputStream( _pStdOutRead ) ) != nullptr )
+        // stdio 버퍼를 거치지 않는다 — 줄 분리는 공용 `readOutputLine` 이 한다(`FILE*` 은 닫기에만 쓴다).
+        const int32 descriptor = fileno( asOutputStream( _pStdOutRead ) );
+        for ( ;; )
         {
-            outLine = arrLineBuffer;
-            while ( outLine.empty() == false && ( outLine.back() == '\n' || outLine.back() == '\r' ) )
-            {
-                outLine.pop_back();
-            }
-            return true;
+            const ssize_t bytesRead = read( descriptor, pBuffer, capacity );
+            if ( bytesRead > 0 )
+                return static_cast<size_t>( bytesRead );
+            if ( bytesRead < 0 && errno == EINTR )
+                continue;
+            return 0;
         }
-
-        return false;
     }
 
     expected<int32> Process::waitForExit()
