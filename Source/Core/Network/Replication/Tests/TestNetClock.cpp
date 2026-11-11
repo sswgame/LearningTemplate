@@ -103,3 +103,17 @@ SW_TEST_CASE( NetClockTest, DelayCoversTwoSampleIntervalsAndResetStartsOver )
     SW_EXPECT_NEAR( 3.0f, clock.getRenderTick(), 1.0e-3f );
     SW_EXPECT_NEAR( 5.0f, clock.getServerTick(), 1.0e-6f );
 }
+
+// 39 시간 넘게 돈 서버(30 Hz 로 2^22 틱 뒤)에서도 렌더 틱이 프레임마다 나아간다 — float32 틱은 한 프레임(0.5 틱)을 잃어 보간이 멈췄다(감사 N-4).
+SW_TEST_CASE( NetClockTest, RenderTickAdvancesAfterDaysOfTicks )
+{
+    NetClock clock;
+    clock.initialize( makeClockSettings( 1.0f / 30.0f, 0.1f ) );
+    constexpr uint32 kDaysOfTicks = 30u * 3600u * 24u * 3u; // 사흘
+    clock.observeServerTick( kDaysOfTicks );
+    clock.advance( 1.0f / 60.0f );
+    const float64 before = clock.getRenderTick();
+    clock.observeServerTick( kDaysOfTicks + 1u );
+    clock.advance( 1.0f / 60.0f );
+    SW_EXPECT_NEAR( 0.5, clock.getRenderTick() - before, 1.0e-3 );
+}

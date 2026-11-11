@@ -127,7 +127,7 @@ namespace sw
         outAlpha = 0.0f;
         if ( _listSnapshot.hasNewest() == false )
             return;
-        const float32 renderTick = getRenderTick();
+        const float64 renderTick = getRenderTick();
         // 렌더 틱 이하의 가장 새 스냅샷과, 렌더 틱보다 큰 가장 오래된 스냅샷을 찾는다. 링 버퍼가 보관하는 틱 범위 안에서만 찾는다.
         const uint32 oldestTick = _listSnapshot.computeOldestTick();
         for ( uint32 tick = _listSnapshot.getNewestTick() + 1u; tick-- > oldestTick; )
@@ -135,7 +135,7 @@ namespace sw
             const NetSnapshot* pSnapshot = _listSnapshot.find( tick );
             if ( pSnapshot == nullptr )
                 continue;
-            if ( static_cast<float32>( tick ) <= renderTick )
+            if ( static_cast<float64>( tick ) <= renderTick )
             {
                 pOutFrom = pSnapshot;
                 break;
@@ -202,7 +202,7 @@ namespace sw
         }
         // 틱이 건너뛰면 그 틱부터 다시 쌓고, 틱이 줄면(새 게임 판) 확인까지 비우고 다시 쌓는다. 같은 틱이면 처음 값이 남고 지금 창만 다시 보낸다.
         // 스탬프는 이 입력을 만든 순간 보던 틱이다 — 다시 보낼 때도 이 값이 같이 가서 서버가 옛 입력을 그 입력의 시점으로 랙 보정한다.
-        const uint32 viewTickStamp = static_cast<uint32>( MathUtil::max( 0.0f, getRenderTick() ) * static_cast<float32>( NetClientServerMessage::kViewTickStampScale ) );
+        const uint32 viewTickStamp = static_cast<uint32>( MathUtil::max( 0.0, getRenderTick() ) * static_cast<float64>( NetClientServerMessage::kViewTickStampScale ) );
         (void)_inputWindow.push( tick, listInput.data(), static_cast<int32>( listInput.size() ), viewTickStamp );
         if ( _pHost == nullptr )
             return true;

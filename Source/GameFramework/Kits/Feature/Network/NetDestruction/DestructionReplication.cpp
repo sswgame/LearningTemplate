@@ -779,8 +779,8 @@ namespace sw
 
     void DestructionReplicationClient::driveChunks( Entry& entry, FractureComponentBase& component )
     {
-        const float32 renderTick = _clock.getRenderTick();
-        if ( renderTick < 0.0f )
+        const float64 renderTick = _clock.getRenderTick();
+        if ( renderTick < 0.0 )
             return;
         // 그룹 번호는 늘어나기만 한다. 지금 가장 큰 번호보다 작은데 없는 그룹은 갈라져 사라진 것이고, 큰 번호는 그 이벤트가 아직 오지 않은 것이다. 자세를 먼저 받은 경우이다.
         uint32 maxGroupID = 0;

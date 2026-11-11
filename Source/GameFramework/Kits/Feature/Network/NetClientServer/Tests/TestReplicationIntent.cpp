@@ -183,7 +183,7 @@ SW_TEST_CASE( ReplicationIntentTest, ViewTickIsClampedOnTheServerClock )
     rig.sendSnapshot( 500 );
     rig._client.update( 0.0f );
     SW_REQUIRE_TRUE( rig._client.hasSnapshot() );
-    const float32 renderTick = rig._client.getRenderTick();
+    const float64 renderTick = rig._client.getRenderTick();
     SW_REQUIRE_TRUE( renderTick > 400.0f ); // 보간 지연만큼 500 의 과거다
 
     const vector<MeleeHitClaim> listNoClaim;

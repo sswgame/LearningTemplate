@@ -14,7 +14,7 @@
  *     clock.initialize( settings );
  *     clock.observeServerTick( tick );                     // 서버 틱이 든 메시지를 받을 때마다
  *     clock.advance( deltaTime );                          // 프레임마다
- *     const float32 renderTick = clock.getRenderTick();    // 음수면 아직 그릴 때가 아니다
+ *     const float64 renderTick = clock.getRenderTick();    // 음수면 아직 그릴 때가 아니다
  * @endcode
  */
 #pragma once
@@ -41,8 +41,8 @@ namespace sw
     class SW_API NetClock
     {
     public:
-        static constexpr float32 kSampleIntervalsBehind = 2.0f;  ///< 렌더 지연은 표본 간격의 이 배수 이상이다.
-        static constexpr float32 kNoRenderTick          = -1.0f; ///< 렌더 틱이 아직 없다는 값이다(서버 틱을 받기 전).
+        static constexpr float32 kSampleIntervalsBehind = 2.0f; ///< 렌더 지연은 표본 간격의 이 배수 이상이다.
+        static constexpr float64 kNoRenderTick          = -1.0; ///< 렌더 틱이 아직 없다는 값이다(서버 틱을 받기 전).
 
         NetClock();
 
@@ -58,9 +58,9 @@ namespace sw
         float32 computeInterpolationDelay() const;
 
         /** @brief 그릴 서버 틱(소수)을 반환합니다. 서버 틱을 받기 전에는 `kNoRenderTick` 이고, 처음 몇 틱은 지연 때문에 음수일 수 있습니다(음수면 그리지 않습니다). */
-        float32 getRenderTick() const { return _renderTick; }
+        float64 getRenderTick() const { return _renderTick; }
         /** @brief 서버 틱 추정값을 반환합니다. 받은 틱을 하한으로 하고 그 뒤 흐른 틱을 더하며, 받은 가장 새 틱 + 지연까지만 올라갑니다. */
-        float32 getServerTick() const { return _serverTick; }
+        float64 getServerTick() const { return _serverTick; }
         /** @brief 받은 가장 새 서버 틱을 반환합니다. */
         uint32 getNewestServerTick() const { return _newestTick; }
         bool   hasServerTick() const { return _bHasServerTick != SW_FALSE; }
@@ -72,8 +72,8 @@ namespace sw
 
     private:
         NetClockConfig _settings;
-        float32        _serverTick;
-        float32        _renderTick;
+        float64        _serverTick; ///< float64 — float32 틱은 30 Hz 로 약 39 시간(2^22 틱)에서 한 프레임 걸음을 잃어 보간이 멈춘다(감사 N-4)
+        float64        _renderTick;
         uint32         _newestTick;
         uint8          _bHasServerTick;
     };

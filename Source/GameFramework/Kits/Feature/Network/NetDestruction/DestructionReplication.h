@@ -215,7 +215,7 @@ namespace sw
         NetHandleResult receive( NetDestructionMessage::Hash, const NetMessageContext& context, BitReader& body );
 
         /** @brief 덩어리를 그리는 서버 틱입니다. 보간 지연만큼 과거이며 소수입니다. 자세를 하나도 받지 않았으면 음수입니다. */
-        float32                            getRenderTick() const { return _clock.getRenderTick(); }
+        float64                            getRenderTick() const { return _clock.getRenderTick(); }
         const DestructionReplicationStats& getStats() const { return _stats; }
 
     private:
