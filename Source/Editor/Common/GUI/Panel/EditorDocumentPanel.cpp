@@ -333,6 +333,13 @@ namespace sw::editor
         // 상호작용 구간(감사 P0-1): 합치기 키가 있는 편집(슬라이더 · 노드 끌기 · 칠하기)은 위젯이 활성인 동안 쥐고, 끝난 프레임에 (구간 전 글, 끝 글)을 한 번 기록한다
         // (`flushDocumentInteraction`). 예전에는 키로 합쳤는데 기록이 거래 구간 안이라 병합에 닿지 않아 끌기 한 번이 프레임마다 한 단계였고, 한도(128)를 넘겨
         // 씬 편집 기록까지 밀어냈다. 언리얼이 누를 때 FScopedTransaction 을 열고 뗄 때 닫는 것과 같은 모양이다.
+        // 바뀐 것이 없으면 아무것도 하지 않는다 — 먼저 본다. 매 프레임 알리는 패널이 활성 위젯(글 칸) 동안 dirty 로 표시하면 제목이 바뀌어 그 칸이 포커스를 잃는다.
+        const string after = captureDocumentText();
+        if ( after == _documentUndoBaseline )
+        {
+            _bEditPending = SW_FALSE; // 쥔 구간이 처음 글로 돌아왔다 — 기록할 것이 없다
+            return;
+        }
         if ( coalesceKey.empty() == false && ImGui::GetCurrentContext() != nullptr && ImGui::IsAnyItemActive() )
         {
             _pendingEditLabel = string{ label };
@@ -342,9 +349,6 @@ namespace sw::editor
         }
         _bEditPending = SW_FALSE;
         EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-        const string      after = captureDocumentText();
-        if ( after == _documentUndoBaseline )
-            return;
         // 이 편집이 속한 문서를 적어 둔다 — 되돌리기는 **그 문서가 아직 열려 있을 때만** 적용한다. 주의: `this` 와 바뀐 구간만 잡으면
         // 다른 문서로 바꾼 뒤 Ctrl+Z 할 때 앞 문서의 구간을 지금 문서의 텍스트에 붙여, 지금 문서가 깨진 채 dirty 가 되고 저장하면
         // 그대로 쓰인다. (구간 다시 짜기는 길이가 맞지 않아도 메모리를 넘지 않으므로, 막는 곳은 적용하는 쪽 하나면 된다.)
