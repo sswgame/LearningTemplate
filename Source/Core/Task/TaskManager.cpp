@@ -1259,13 +1259,13 @@ namespace sw
             {
                 if ( _globalWorkerQueue.enqueue( item ) )
                     return;
-                ThreadUtil::yield();
+                waitForQueueSpace(); // 가득 찬 큐 — 잠든 워커가 비우게 깨운다(감사 C-4)
             }
             return;
         }
         while ( _globalWorkerQueue.enqueue( item ) == false )
         {
-            ThreadUtil::yield();
+            waitForQueueSpace(); // 가득 찬 큐 — 잠든 워커가 비우게 깨운다(감사 C-4)
         }
     }
 
@@ -1354,14 +1354,14 @@ namespace sw
         {
             while ( _globalHighQueue.enqueue( item ) == false )
             {
-                ThreadUtil::yield();
+                waitForQueueSpace(); // 가득 찬 큐 — 잠든 워커가 비우게 깨운다(감사 C-4)
             }
         }
         else if ( pNode->_priority == TaskPriority::Low )
         {
             while ( _globalLowQueue.enqueue( item ) == false )
             {
-                ThreadUtil::yield();
+                waitForQueueSpace(); // 가득 찬 큐 — 잠든 워커가 비우게 깨운다(감사 C-4)
             }
         }
         else
@@ -1371,6 +1371,14 @@ namespace sw
 
         if ( bWakeWorker )
             wakeSleepingWorkers( 1 );
+    }
+
+    void TaskManager::waitForQueueSpace()
+    {
+        // 큐가 가득 찼다. `submitWithoutWake` 로 넣던 중이면 워커가 모두 잠들어 아무도 비우지 않는다 — 기한 없이 yield 만 하면 영원히 돈다.
+        // 잠든 워커를 깨워 비우게 한 뒤 양보한다(UE Tasks · 유니티 JobSystem 의 큐는 늘어난다 — 블록 연결 큐로 바꾸는 것은 남은 몫).
+        wakeSleepingWorkers();
+        ThreadUtil::yield();
     }
 
     void TaskManager::wakeSleepingWorkers()

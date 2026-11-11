@@ -328,6 +328,8 @@ namespace sw
         static constexpr uint32 kMaxHelperThreadCount = 8;
 
     private:
+        /** @brief 전역 · 지역 큐가 가득 찼을 때 한 번 기다립니다 — 잠든 워커를 깨워 비우게 한 뒤 양보한다(`submitWithoutWake` 묶음이 용량을 넘어도 돈다). */
+        void waitForQueueSpace();
         // --- 수명 · 정리 ---
         /** @brief 워커 스레드의 메인 루프입니다. 큐 소비 · 훔치기 · 세대 스핀 · 자기 워드에서 잠들기를 합니다. */
         void workerLoop( uint32 workerID );
