@@ -6,6 +6,8 @@
 #include "Core/Name/TagID.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
 
