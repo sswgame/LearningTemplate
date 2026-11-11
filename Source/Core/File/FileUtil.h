@@ -103,6 +103,11 @@ namespace sw
          */
         [[nodiscard]] static bool tryMakePathUnderRoot( string_view root, string_view path, string& outRelative );
         /**
+         * @brief @p path 에 `..` 구간이 있으면 true 입니다. 포함 판정(`tryMakePathUnderRoot` · `isPathUnderRoot` · `isPathAtOrUnderRoot`)은 이런 경로를 밖으로 본다 —
+         *        글 접두 비교라 `root/../x` 를 안으로 봤다(감사 C-18, 언리얼은 `FPaths::CollapseRelativeDirectories` 뒤 비교). 풀지 않고 거절한다(심볼릭 링크를 지나면 글로 푼 결과가 틀린다).
+         */
+        [[nodiscard]] static bool hasParentComponent( string_view path );
+        /**
          * @brief @p path 가 @p root 아래(구간 경계 기준, 루트 자신은 아님)인지를 이 OS 의 대소문자 규칙(Windows 무시 · POSIX 구별)으로 봅니다. 글 연산입니다(`..` 를 풀지 않는다).
          * @details 비교 · 맵 키용 `normalizePath` 는 POSIX 에서도 소문자로 접어 대소문자만 다른 바깥 폴더를 안으로 본다 — 포함 판정은 이것을 쓴다.
          */

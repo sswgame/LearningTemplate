@@ -623,8 +623,25 @@ namespace sw
         return string{ path.substr( component.size() + 1 ) };
     }
 
+    bool FileUtil::hasParentComponent( string_view path )
+    {
+        size_t start = 0;
+        while ( start <= path.size() )
+        {
+            size_t end = path.find_first_of( "/\\", start );
+            if ( end == string_view::npos )
+                end = path.size();
+            if ( path.substr( start, end - start ) == ".." )
+                return true;
+            start = end + 1;
+        }
+        return false;
+    }
+
     bool FileUtil::tryMakePathUnderRoot( string_view root, string_view path, string& outRelative )
     {
+        if ( hasParentComponent( root ) || hasParentComponent( path ) )
+            return false; // 글 비교라 `root/../x` 를 안으로 본다 — 풀지 않고 거절한다(감사 C-18)
         const string rootText   = trimTrailingSlashes( normalizeSeparators( root ) );
         const string pathText   = normalizeSeparators( path );
         const bool   bUnderRoot = rootText.empty() == false && pathText.size() > rootText.size() + 1 && pathText[rootText.size()] == '/' &&
@@ -643,6 +660,8 @@ namespace sw
 
     bool FileUtil::isPathAtOrUnderRoot( string_view root, string_view path )
     {
+        if ( hasParentComponent( root ) || hasParentComponent( path ) )
+            return false; // `tryMakePathUnderRoot` 와 같다
         const string rootText = makeComparableDiskPath( root );
         return rootText.empty() == false && startsWithPathComponent( makeComparableDiskPath( path ), rootText );
     }

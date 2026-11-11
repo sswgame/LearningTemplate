@@ -85,6 +85,12 @@ SW_TEST_CASE( FileTest, PathContainmentFollowsTheOSCaseRule )
     sw::string relative;
     SW_EXPECT_TRUE( sw::FileUtil::tryMakePathUnderRoot( root, root + "/Sub/A.txt", relative ) );
     SW_EXPECT_EQUAL( sw::string( "Sub/A.txt" ), relative ); // 원래 철자
+
+    // `..` 구간은 글로 안에 있어 보여도 밖이다(감사 C-18). 이름에 점이 든 구간은 그대로 안이다
+    SW_EXPECT_FALSE( sw::FileUtil::isPathUnderRoot( root, root + "/../outside.txt" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isPathAtOrUnderRoot( root, root + "\\sub\\..\\..\\x" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::tryMakePathUnderRoot( root, root + "/a/../../b", relative ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isPathUnderRoot( root, root + "/..hidden/a..b.txt" ) );
 }
 
 /**
