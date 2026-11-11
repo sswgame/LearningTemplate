@@ -443,7 +443,9 @@ SW_TEST_CASE( TradeServerTest, ForgedValuesAreRefused )
 
     SW_EXPECT_TRUE( rig.lock( kBobSlot, tradeID + 1000 )._result == TradeResult::NotFound );
     SW_EXPECT_TRUE( rig.lock( kBobSlot, 0 )._result != TradeResult::Ok );
-    SW_EXPECT_TRUE( rig.lock( kCarolSlot, tradeID )._result == TradeResult::NotParty );
+    const auto carolLock = rig.lock( kCarolSlot, tradeID );
+    SW_EXPECT_TRUE( carolLock._result == TradeResult::NotParty );
+    SW_EXPECT_EQUAL( uint64( 0 ), carolLock._snapshot._tradeID ); // 권한 실패 응답에 남의 거래 내용이 없다(감사 O-4)
     SW_EXPECT_TRUE( rig.offer( kCarolSlot, tradeID, "cur.gold", 1 )._result == TradeResult::NotParty );
 
     (void)rig.offer( kAliceSlot, tradeID, "cur.gold", -5 );

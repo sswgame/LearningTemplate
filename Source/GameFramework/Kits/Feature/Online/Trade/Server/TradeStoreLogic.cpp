@@ -208,9 +208,13 @@ namespace sw
             const TradeServiceResult read = readSession( tradeID, session );
             if ( read != TradeResult::Ok )
                 return read;
-            outSnapshot = session._snapshot;
+            // 당사자가 아니면 스냅숏을 싣지 않는다 — 권한 실패 응답에 남의 거래 내용(물건 · 상대 · 상태)이 나갔다(감사 O-4, Steam 교환 · Nakama 자리).
             if ( session._snapshot.findSideIndex( command._actorID ).has_value() == false )
+            {
+                outSnapshot = TradeSnapshot{};
                 return TradeResult::NotParty;
+            }
+            outSnapshot = session._snapshot;
             if ( session._snapshot.isClosed() )
                 return command._kind == TradeCommandKind::Confirm ? Internal::toClosedResult( session._snapshot ) : TradeResult::WrongState; // 재시도이거나 다른 서버가 먼저 처리한 경우이다
 
