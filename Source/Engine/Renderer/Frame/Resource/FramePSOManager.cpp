@@ -26,6 +26,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
@@ -265,8 +266,9 @@ namespace sw
                     const bool        bRoleIndex = member._usage == ShaderVariableUsage::Used && name.size() > 7 && name.substr( 0, 2 ) == "g_" && name.substr( name.size() - 5 ) == "Index";
                     if ( bRoleIndex == false )
                         continue;
-                    RenderPassInputRole role = RenderPassInputRole::Invalid;
-                    if ( tryParseRenderPassInputRole( name.substr( 2, name.size() - 7 ), role ) == false || pContract->hasRole( role ) )
+                    RenderPassInputRole role  = RenderPassInputRole::Invalid;
+                    const bool          bRole = tryParseRenderPassInputRole( name.substr( 2, name.size() - 7 ), role );
+                    if ( bRole == false || pContract->hasRole( role ) || getRenderPassTypeInfo( passType )._executionBoundRole == role )
                         continue;
                     SW_LOG_ERROR_ID( "FramePSOManager.PassReadsRoleOutsideContract",
                                      "Pass %# reads engine role '%#' (%#) but its input contract does not have it - the graph binds no texture there and the shader reads an invalid index; add the role to the contract (RenderPassTypeInfo) and the pipeline inputs",

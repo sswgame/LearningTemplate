@@ -264,6 +264,12 @@ namespace sw
         const RHIFormat* _pColorFormat{ nullptr };
         /** @brief 이 패스 타입이 읽는 입력의 역할입니다. `kHasInputContract` 일 때만 의미가 있습니다. */
         RenderPassInputSignature _inputContract{};
+        /**
+         * @brief 그래프가 아니라 이 패스의 전용 실행이 스스로 거는 엔진 칸의 역할입니다(Invalid 면 없음). 셰이더가 읽어도 계약 밖이 아니다(`FramePSOManager` 의 계약 검사).
+         * @details TAA 는 지난 출력(기록)을 `GBufferAlbedo` 칸에 건다(`FramePassExecutor::executeTAAPass` — 기록 전용 칸을 두면 에뮬 백엔드의 엔진 칸이 하나 는다). 숨은 재사용을
+         *          데이터로 적어 검사가 그것만 받게 한다.
+         */
+        RenderPassInputRole _executionBoundRole{ RenderPassInputRole::Invalid };
         /** @brief 테이블의 항목 순서를 검사하는 용도입니다. 항목 번호가 이 값입니다. */
         RenderPassType _type{ RenderPassType::Invalid };
         /**
