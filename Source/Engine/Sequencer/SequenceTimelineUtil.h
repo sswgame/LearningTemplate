@@ -194,7 +194,7 @@ namespace sw
          * @brief 플레이어의 이번 갱신을 적용합니다(`applyFrame`). 루프를 되감았으면 되감기 전 끝 구간(직전 프레임, `_frameMax`]의
          *        이벤트를 먼저 모읍니다. 그 구간과 되감은 뒤 구간을 합친 것이 이번 갱신에 지나간 이벤트입니다.
          */
-        static void applyPlayback( GameObjectManager* pManager, const SequencePlayer& player, const SequenceBindingView& bindings,
+        static void applyPlayback( GameObjectManager* pManager, const SequenceAsset& asset, const SequencePlaybackStep& step, const SequenceBindingView& bindings,
                                    vector<const SequenceTrackItem*>* pOutListCrossedEvent = nullptr );
         /** @brief 바인딩 @p bindingID 가 묶인 살아 있는 오브젝트입니다. 관리자가 없거나 묶이지 않았거나 지워졌으면 nullptr 입니다. 재생 · 미리보기 · 에디터의 키 찍기가 같은 규칙을 쓴다. */
         static GameObject* findTarget( GameObjectManager* pManager, const SequenceBindingView& bindings, uint32 bindingID );
@@ -253,7 +253,7 @@ namespace sw
          */
         static void collectCameraSignals( const SequenceAsset& asset, int32 previousFrame, int32 frame, vector<SequenceCameraSignal>& outListSignal );
         /** @brief 플레이어의 이번 갱신 동안의 카메라 신호입니다. 루프를 되감았으면 되감기 전 끝 구간을 먼저 보고, 끝과 처음을 덮는 컷은 이어진 것으로 봅니다. */
-        static void collectPlaybackCameraSignals( const SequencePlayer& player, vector<SequenceCameraSignal>& outListSignal );
+        static void collectPlaybackCameraSignals( const SequenceAsset& asset, const SequencePlaybackStep& step, vector<SequenceCameraSignal>& outListSignal );
 
     private:
         /** @brief (@p previousFrame, @p frame] 에서 시작하는 이벤트를 @p pOutListCrossedEvent 에 **덧붙입니다**(비우지 않는다). */

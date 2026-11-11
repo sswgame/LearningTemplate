@@ -429,18 +429,17 @@ namespace sw
         }
     }
 
-    void SequenceTimelineUtil::applyPlayback( GameObjectManager* pManager, const SequencePlayer& player, const SequenceBindingView& bindings,
+    void SequenceTimelineUtil::applyPlayback( GameObjectManager* pManager, const SequenceAsset& asset, const SequencePlaybackStep& step, const SequenceBindingView& bindings,
                                               vector<const SequenceTrackItem*>* pOutListCrossedEvent )
     {
-        const SequenceAsset& asset           = player.getAsset();
-        const int32          frameBeforeWrap = player.getFrameBeforeWrap();
+        const int32 frameBeforeWrap = step._frameBeforeWrap;
 
         // 되감기 전 끝 구간을 먼저 모은다. `applyFrame` 이 출력을 비우므로 따로 모아 앞에 붙인다.
         vector<const SequenceTrackItem*> listTailEvent;
         if ( frameBeforeWrap != SequencePlayer::kNoLoopWrap )
             appendCrossedEvents( asset, frameBeforeWrap, asset._frameMax, &listTailEvent );
 
-        applyFrame( pManager, asset, bindings, player.getCurrentFrame(), player.getPreviousFrame(), pOutListCrossedEvent );
+        applyFrame( pManager, asset, bindings, step._frame, step._previousFrame, pOutListCrossedEvent );
         if ( pOutListCrossedEvent != nullptr && listTailEvent.empty() == false )
             pOutListCrossedEvent->insert( pOutListCrossedEvent->begin(), listTailEvent.begin(), listTailEvent.end() );
     }
@@ -746,18 +745,17 @@ namespace sw
         appendCameraSignals( asset, previousFrame, frame, pPreviousCut, outListSignal );
     }
 
-    void SequenceTimelineUtil::collectPlaybackCameraSignals( const SequencePlayer& player, vector<SequenceCameraSignal>& outListSignal )
+    void SequenceTimelineUtil::collectPlaybackCameraSignals( const SequenceAsset& asset, const SequencePlaybackStep& step, vector<SequenceCameraSignal>& outListSignal )
     {
-        const SequenceAsset& asset           = player.getAsset();
-        const int32          frameBeforeWrap = player.getFrameBeforeWrap();
-        if ( frameBeforeWrap == SequencePlayer::kNoLoopWrap )
+        const int32 frameBeforeWrap = step._frameBeforeWrap;
+        if ( frameBeforeWrap == SequencePlaybackStep::kNoLoopWrap )
         {
-            collectCameraSignals( asset, player.getPreviousFrame(), player.getCurrentFrame(), outListSignal );
+            collectCameraSignals( asset, step._previousFrame, step._frame, outListSignal );
             return;
         }
         // 되감았다 — 끝 구간을 먼저 보고, 처음 구간은 끝을 덮던 컷에서 이어진 것으로 본다(같은 컷이 끝과 처음을 덮으면 시네마틱이 끊기지 않는다).
         appendCameraSignals( asset, frameBeforeWrap, asset._frameMax, asset.findCameraCut( frameBeforeWrap ), outListSignal );
-        appendCameraSignals( asset, player.getPreviousFrame(), player.getCurrentFrame(), asset.findCameraCut( asset._frameMax ), outListSignal );
+        appendCameraSignals( asset, step._previousFrame, step._frame, asset.findCameraCut( asset._frameMax ), outListSignal );
     }
 
     void SequenceTimelineUtil::appendCameraSignals( const SequenceAsset& asset, int32 previousFrame, int32 frame, const SequenceTrackItem* pPreviousCut,

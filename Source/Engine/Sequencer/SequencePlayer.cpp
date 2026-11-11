@@ -11,7 +11,6 @@ namespace sw
         , _framesPerSecond{ 30.0f }
         , _playbackTime{ 0.0f }
         , _previousFrame{ 0 }
-        , _frameBeforeWrap{ kNoLoopWrap }
         , _bPlaying{ SW_FALSE }
         , _bPaused{ SW_FALSE }
         , _bLoop{ SW_FALSE }
@@ -72,11 +71,15 @@ namespace sw
             _bPaused = SW_FALSE;
     }
 
-    void SequencePlayer::update( float32 deltaSeconds )
+    SequencePlaybackStep SequencePlayer::getStartStep() const
     {
-        _frameBeforeWrap = kNoLoopWrap;
+        return SequencePlaybackStep{ _previousFrame, getCurrentFrame(), kNoLoopWrap };
+    }
+
+    SequencePlaybackStep SequencePlayer::update( float32 deltaSeconds )
+    {
         if ( _bPlaying == SW_FALSE || _bPaused == SW_TRUE )
-            return;
+            return SequencePlaybackStep::makeEmpty( getCurrentFrame() );
         if ( deltaSeconds < 0.0f )
             deltaSeconds = 0.0f;
 
@@ -85,12 +88,13 @@ namespace sw
 
         const int32 span = _asset._frameMax - _asset._frameMin;
         if ( span <= 0 )
-            return;
+            return SequencePlaybackStep{ _previousFrame, getCurrentFrame(), kNoLoopWrap };
 
         const float32 fps         = ( _framesPerSecond > 0.0f ) ? _framesPerSecond : 30.0f;
         const float32 durationSec = static_cast<float32>( span ) / fps;
         if ( _playbackTime < durationSec )
-            return;
+            return SequencePlaybackStep{ _previousFrame, getCurrentFrame(), kNoLoopWrap };
+        int32 frameBeforeWrap = kNoLoopWrap;
 
         if ( _bLoop == SW_TRUE )
         {
@@ -100,14 +104,15 @@ namespace sw
             // 한 바퀴를 돌았으면 `play()` 와 같은 위치에서 다시 시작해야 한다. 그러지 않으면
             // 이전 프레임이 끝쪽(`_frameMax` 근처)인 채로 남아, 되감긴 첫 프레임의 이벤트가
             // "이미 지난 것"이 되어 **루프마다 빠진다.**
-            _frameBeforeWrap = _previousFrame;
-            _previousFrame   = _asset._frameMin - 1;
+            frameBeforeWrap = _previousFrame;
+            _previousFrame  = _asset._frameMin - 1;
         }
         else
         {
             _playbackTime = durationSec;
             _bPlaying     = SW_FALSE;
         }
+        return SequencePlaybackStep{ _previousFrame, getCurrentFrame(), frameBeforeWrap };
     }
 
     void SequencePlayer::setFramesPerSecond( float32 fps )
