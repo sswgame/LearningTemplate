@@ -172,7 +172,7 @@ namespace sw::editor
         , _documentUndoBaseline{}
         , _lastSavedDocumentText{}
         , _pendingEditLabel{}
-        , _pendingEditCoalesceKey{}
+        , _assetsMovedSubscription{}
         , _pUndoTarget{ make_shared<EditorDocumentPanel*>( this ) }
         , _pUndoOwner{ make_unique<UndoStepOwner>() }
         , _listRecentPath{}
@@ -187,6 +187,25 @@ namespace sw::editor
     {
         if ( bLoadOnOpen == false )
             _bLoaded = SW_TRUE;
+        // 열린 문서의 에셋을 옮기면 경로가 따라간다 — 옛 id 로 남으면 다음 저장이 옛 자리에 파일을 다시 만든다(감사 P0-4).
+        EditorWorkspace* const pWorkspace = editor::findSubsystem<EditorWorkspace>(); // 작업 공간 없는 패널 테스트는 옮김도 없다
+        if ( pWorkspace != nullptr )
+        {
+            _assetsMovedSubscription = pWorkspace->onAssetsMoved().add(
+                SW_DELEGATE_LAMBDA( EditorAssetsMovedDelegate, [this]( const vector<string>& listOldID, const vector<string>& listNewID )
+            {
+                for ( size_t index = 0; index < listOldID.size() && index < listNewID.size(); ++index )
+                {
+                    if ( _loadedAssetPath == listOldID[index] )
+                        _loadedAssetPath = listNewID[index];
+                    for ( string& recentPath : _listRecentPath )
+                    {
+                        if ( recentPath == listOldID[index] )
+                            recentPath = listNewID[index];
+                    }
+                }
+            } ) );
+        }
     }
 
     void EditorDocumentPanel::onDocumentSaved()

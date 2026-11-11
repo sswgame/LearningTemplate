@@ -17,6 +17,7 @@
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -593,7 +594,10 @@ namespace sw::editor
         }
         for ( const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite : listRewrite )
             inoutIndex.refreshFile( resourceRoot, rewrite._referrerID );
-        outPlan._fixedFileCount = static_cast<uint32>( referrerRewriteCount );
+        outPlan._fixedFileCount           = static_cast<uint32>( referrerRewriteCount );
+        EditorWorkspace* const pWorkspace = editor::findSubsystem<EditorWorkspace>();
+        if ( pWorkspace != nullptr )
+            pWorkspace->notifyAssetsMoved( outPlan._listOldID, outPlan._listNewID ); // 열린 문서 · 씬 · 포커스가 새 id 를 따른다
         if ( outPlan._listMove.size() == 1 )
             SW_LOG_INFO_ID( "Asset.Moved", "Moved '%#' to '%#' and fixed %# referencing file(s)", outPlan._listOldID.front(), outPlan._listNewID.front(), outPlan._fixedFileCount );
         else

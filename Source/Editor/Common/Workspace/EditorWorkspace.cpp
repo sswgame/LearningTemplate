@@ -37,6 +37,7 @@ namespace sw::editor
         , _scrollToComponentID{ 0 }
         , _selectedComponentKey{}
         , _focusedAssetPath{}
+        , _assetsMoved{}
         , _pendingOpenPanel{}
         , _pendingScenePath{}
         , _pendingSceneActionPath{}
@@ -149,6 +150,19 @@ namespace sw::editor
             _selectedComponentID = pResolved->getComponentID();
         else
             _selectedComponentID = 0;
+    }
+
+    void EditorWorkspace::notifyAssetsMoved( const vector<string>& listOldID, const vector<string>& listNewID )
+    {
+        Scene* const pScene = editor::getActiveScene();
+        for ( size_t index = 0; index < listOldID.size() && index < listNewID.size(); ++index )
+        {
+            if ( _focusedAssetPath == listOldID[index] )
+                _focusedAssetPath = listNewID[index];
+            if ( pScene != nullptr && pScene->getSourcePath() == listOldID[index] )
+                pScene->setSourcePath( listNewID[index] ); // 다음 저장(Ctrl+S)이 새 자리에 쓴다 — 옛 자리에 파일을 다시 만들지 않는다
+        }
+        _assetsMoved.broadcast( listOldID, listNewID );
     }
 
     void EditorWorkspace::setFocusedAssetPath( const utf8* pPath )

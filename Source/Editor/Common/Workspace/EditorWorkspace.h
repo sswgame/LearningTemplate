@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -55,6 +56,9 @@ namespace sw::editor
      * @class EditorWorkspace
      * @brief 에디터의 작업 공간 상태(선택, 포커스 애셋, 기즈모, 창 요청)를 관리합니다. `EditorContext` 가 소유합니다.
      */
+    /** @brief 에셋 옮김 알림입니다(옛 id 목록, 새 id 목록 — 같은 길이, `EditorWorkspace::notifyAssetsMoved`). */
+    using EditorAssetsMovedDelegate = Delegate<void( const vector<string>&, const vector<string>& )>;
+
     class SW_EDITOR_API EditorWorkspace : public EditorSubsystem
     {
     public:
@@ -88,6 +92,14 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         const string& getFocusedAssetPath() const { return _focusedAssetPath; }
         void          setFocusedAssetPath( const utf8* pPath );
+        /**
+         * @brief 에셋을 옮겼다고 알립니다(`EditorAssetFileCommands::applyAssetMoves` 가 성공 때 한 번). @p listOldID[i] 가 @p listNewID[i] 로 갔다.
+         * @details 포커스 경로와 활성 씬의 소스 경로를 고치고, 구독한 쪽(열린 문서 패널)에 알린다(감사 P0-4). 예전에는 디스크 파일과 참조 글만 고쳐 열린 문서 · 씬이 옛 id 로
+         *          남았다 — 다음 저장이 옛 자리에 파일을 다시 만들고 옮긴 파일은 편집을 받지 못했다(언리얼은 이름을 바꿀 때 로드된 참조자를 메모리에서 고친다).
+         */
+        void notifyAssetsMoved( const vector<string>& listOldID, const vector<string>& listNewID );
+        /** @brief 에셋 옮김 알림입니다(옛 id 목록, 새 id 목록 — 같은 길이). */
+        MulticastDelegate<void( const vector<string>&, const vector<string>& )>& onAssetsMoved() { return _assetsMoved; }
 
         // ------------------------------------------------------------------------------
         // 3) 기즈모: 조작 모드와 로컬 스페이스
@@ -197,25 +209,26 @@ namespace sw::editor
         // 커맨드 레지스트리(transform.*)를 거친다.
 
     private:
-        EditorSelection*         _pEditorSelection;
-        uint64                   _selectedComponentID;
-        uint64                   _observedSceneGeneration;
-        uint64                   _scrollToComponentID;
-        string                   _selectedComponentKey;
-        string                   _focusedAssetPath;
-        EditorPanelOpenRequest   _pendingOpenPanel;
-        string _pendingScenePath SW_GUARDED_BY( _pendingSceneMutex );
-        string                   _pendingSceneActionPath;
-        string                   _copiedComponentXML;
-        string                   _copiedComponentTypeName;
-        mutex                    _pendingSceneMutex;
-        array<CameraBookmark, 9> _arrCameraBookmark;
-        vector<uint64>           _listLockedObjectID; ///< 뷰포트 선택을 잠근 오브젝트 id
-        int32                    _gizmoOperation;
-        EditorPendingSceneAction _pendingSceneAction;
-        uint32                   _sceneEditSerial; ///< `markSceneDirty` 횟수(`getSceneEditSerial`)
-        uint8                    _bGizmoLocalSpace  : 1;
-        uint8                    _bSceneDirty       : 1;
-        [[maybe_unused]] uint8   _reservedWorkspace : 5;
+        EditorSelection*                                                        _pEditorSelection;
+        uint64                                                                  _selectedComponentID;
+        uint64                                                                  _observedSceneGeneration;
+        uint64                                                                  _scrollToComponentID;
+        string                                                                  _selectedComponentKey;
+        string                                                                  _focusedAssetPath;
+        MulticastDelegate<void( const vector<string>&, const vector<string>& )> _assetsMoved; ///< `notifyAssetsMoved`
+        EditorPanelOpenRequest                                                  _pendingOpenPanel;
+        string _pendingScenePath                                                SW_GUARDED_BY( _pendingSceneMutex );
+        string                                                                  _pendingSceneActionPath;
+        string                                                                  _copiedComponentXML;
+        string                                                                  _copiedComponentTypeName;
+        mutex                                                                   _pendingSceneMutex;
+        array<CameraBookmark, 9>                                                _arrCameraBookmark;
+        vector<uint64>                                                          _listLockedObjectID; ///< 뷰포트 선택을 잠근 오브젝트 id
+        int32                                                                   _gizmoOperation;
+        EditorPendingSceneAction                                                _pendingSceneAction;
+        uint32                                                                  _sceneEditSerial; ///< `markSceneDirty` 횟수(`getSceneEditSerial`)
+        uint8                                                                   _bGizmoLocalSpace  : 1;
+        uint8                                                                   _bSceneDirty       : 1;
+        [[maybe_unused]] uint8                                                  _reservedWorkspace : 5;
     };
 } // namespace sw::editor
