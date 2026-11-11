@@ -89,9 +89,21 @@ namespace sw
                         slot._listCbMember = cb._listVariable;
                         slot._cbTotalSize  = cb._totalSize;
                     }
-                    else if ( slot._cbTotalSize == 0 )
+                    else
                     {
-                        slot._cbTotalSize = cb._totalSize;
+                        if ( slot._cbTotalSize == 0 )
+                            slot._cbTotalSize = cb._totalSize;
+                        // 같은 CB 를 다른 스테이지도 본다 — 한 스테이지라도 읽은 멤버는 읽은 것이다(VS 가 안 읽어도 PS 가 읽는다).
+                        for ( const ShaderVariableInfo& stageMember : cb._listVariable )
+                        {
+                            if ( stageMember._usage != ShaderVariableUsage::Used )
+                                continue;
+                            for ( ShaderVariableInfo& member : slot._listCbMember )
+                            {
+                                if ( member._name == stageMember._name )
+                                    member._usage = ShaderVariableUsage::Used;
+                            }
+                        }
                     }
                 }
             }

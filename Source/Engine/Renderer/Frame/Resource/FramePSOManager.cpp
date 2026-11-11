@@ -28,6 +28,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Renderer/Scene/GPUMaterialRegistry.h"
@@ -243,6 +244,38 @@ namespace sw
             SW_PROFILE_SCOPE( "RT.PSO.create" );
             return device.getResourceFactory()->createPipelineState( desc );
         }
+
+        /**
+         * @brief 패스 셰이더가 실제로 읽는 엔진 역할(`g_<역할>Index`, 리플렉션의 `Used`)이 그 패스 형식의 입력 계약 안인지 봅니다. 밖이면 오류이고 false 입니다.
+         * @details 계약에 없는 역할은 그래프가 걸지 않아 무효 인덱스다 — 셰이더의 판정이 조용히 상수가 된다(SSR 이 계약 밖 GBufferAlbedo 를 읽던 545d9cf099).
+         *          엔진 PassCB 는 모든 역할의 인덱스 칸을 가지므로 칸이 있는 것이 아니라 읽는 것을 본다. 쓰임을 모르는 리플렉션(SPIR-V · GLSL · 쿠킹 매니페스트)은 건너뛴다 —
+         *          DX 백엔드의 개발 실행 · 시나리오가 잡는다(언리얼 RDG 가 패스 파라미터 밖 자원 접근을 검증 단계에서 잡는 자리).
+         */
+        bool checkPassInputContract( RenderPassType passType, const ShaderBindingLayout& layout )
+        {
+            const RenderPassInputSignature* const pContract = findRenderPassInputSignature( passType );
+            if ( pContract == nullptr )
+                return true;
+            bool bInside = true;
+            for ( const ShaderBindingSlot& slot : layout.getSlots() )
+            {
+                for ( const ShaderVariableInfo& member : slot._listCbMember )
+                {
+                    const string_view name       = member._name;
+                    const bool        bRoleIndex = member._usage == ShaderVariableUsage::Used && name.size() > 7 && name.substr( 0, 2 ) == "g_" && name.substr( name.size() - 5 ) == "Index";
+                    if ( bRoleIndex == false )
+                        continue;
+                    RenderPassInputRole role = RenderPassInputRole::Invalid;
+                    if ( tryParseRenderPassInputRole( name.substr( 2, name.size() - 7 ), role ) == false || pContract->hasRole( role ) )
+                        continue;
+                    SW_LOG_ERROR_ID( "FramePSOManager.PassReadsRoleOutsideContract",
+                                     "Pass %# reads engine role '%#' (%#) but its input contract does not have it - the graph binds no texture there and the shader reads an invalid index; add the role to the contract (RenderPassTypeInfo) and the pipeline inputs",
+                                     getEnumName( passType ), getRenderPassInputRoleName( role ), member._name.c_str() );
+                    bInside = false;
+                }
+            }
+            return bInside;
+        }
     } // namespace
 
     void FramePSOManager::applyPassRenderState( RHIPipelineStateDesc& desc, RenderPassType passType, const RenderGraphPassDesc* pPassDesc )
@@ -396,6 +429,9 @@ namespace sw
         {
             const RHIPipelineStateHandle pso = createPipelineStateTimed( *_pDevice, job._desc );
             registerLayout( pso, job._desc );
+            const ShaderBindingLayout* const pLayout = pso != 0 ? findLayout( pso ) : nullptr;
+            if ( pLayout != nullptr )
+                (void)checkPassInputContract( job._passType, *pLayout ); // 오류는 남겼다 — 그래도 그린다(다른 패스로 대신하지 않는다)
             if ( job._outputFormat != RHIFormat::Unknown )
             {
                 // 주 출력에 그리는 PSO 다 — 없으면 화면에 아무것도 낼 수 없고, 다른 PSO · 복사로 대신하지 않으므로 여기서 멈춘다.
