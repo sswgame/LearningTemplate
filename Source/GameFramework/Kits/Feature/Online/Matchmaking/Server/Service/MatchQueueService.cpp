@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/SecureRandom.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
@@ -94,6 +95,7 @@ namespace sw
         }
         _dependencies = dependencies;
         _replyOwner   = dependencies._pRouter != nullptr ? dependencies._pRouter->openReplyOwner() : Subscription{};
+        _sequence     = static_cast<uint32>( SecureRandom::nextUint64() ); // 순번은 난수에서 시작한다 — 0 에서 시작하면 재시작 뒤 캐시에 살아 있는 옛 기록(파티 30 분 · 로비 2 시간 · 티켓)과 id 가 겹친다(감사 O-7). 32 비트 순번이 한 바퀴 돌 때까지 겹치지 않는다
         for ( const MatchModeDef& mode : listMode )
         {
             if ( isValidMatchModeID( mode._modeID ) == false )

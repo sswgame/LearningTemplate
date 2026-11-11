@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
 
+#include "Core/Math/SecureRandom.h"
+
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -354,6 +356,7 @@ namespace sw
         _replyOwner   = pRouter != nullptr ? pRouter->openReplyOwner() : Subscription{};
         _serverID     = serverID;
         _maxPartySize = maxPartySize;
+        _sequence     = static_cast<uint32>( SecureRandom::nextUint64() ); // 순번은 난수에서 시작한다 — 0 에서 시작하면 재시작 뒤 캐시에 살아 있는 옛 기록(파티 30 분 · 로비 2 시간 · 티켓)과 id 가 겹친다(감사 O-7). 32 비트 순번이 한 바퀴 돌 때까지 겹치지 않는다
         _updater.initialize( pRouter );
         return true;
     }
