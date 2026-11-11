@@ -485,6 +485,22 @@ namespace sw
                     break;
                 }
 
+                case WM_SYSCOMMAND:
+                {
+                    // Alt · F10 만 누르면 OS 가 창 메뉴 모드(SC_KEYMENU)로 들어가 다음 키를 삼킨다(감사 P0-15) — 게임 입력의 Alt(달리기 · 조준)가 다음 키를 잃는다.
+                    // 창 메뉴를 쓰지 않으므로 막는다. Alt+Space(창 시스템 메뉴 — 키보드로 창을 옮기는 길)는 남긴다(언리얼 FWindowsApplication 과 같은 자리).
+                    constexpr WPARAM kSystemCommandMask = 0xFFF0; // 아래 4 비트는 OS 가 쓴다(SC_* 비교 규칙)
+                    if ( ( wParam & kSystemCommandMask ) == SC_KEYMENU && lParam != VK_SPACE )
+                        return 0;
+                    break;
+                }
+
+                case WM_MENUCHAR:
+                {
+                    // 메뉴 없는 창에서 Alt+글자를 누르면 기본 처리가 경고음을 낸다 — 메뉴를 닫는다고 답한다.
+                    return MAKELRESULT( 0, MNC_CLOSE );
+                }
+
                 case WM_CLOSE:
                 {
                     if ( pThis->_bRecreating == SW_FALSE )
