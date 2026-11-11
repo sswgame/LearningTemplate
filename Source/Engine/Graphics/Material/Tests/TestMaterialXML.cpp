@@ -221,7 +221,8 @@ SW_TEST_CASE( MaterialXMLTest, AssetFormatRejectsLegacyMaterialXML )
  */
 SW_TEST_CASE( MaterialXMLTest, RuntimeSwitchVariantsMatchSetStaticSwitch )
 {
-    sw::Material material;
+    const sw::shared_ptr<sw::Material> pMaterial = sw::Material::create();
+    sw::Material&                      material  = *pMaterial;
     SW_REQUIRE_TRUE( material.loadFromDiskFile( sw::ProcessRoots::get()._project.str() + "/Content/engine/materials/toon.material" ) );
     sw::vector<sw::vector<sw::string>> listDefine;
     sw::vector<uint64>                 listHash;
@@ -243,7 +244,8 @@ SW_TEST_CASE( MaterialXMLTest, RuntimeSwitchVariantsMatchSetStaticSwitch )
  */
 SW_TEST_CASE( MaterialXMLTest, SetStaticSwitchRejectsUndeclaredSwitch )
 {
-    sw::Material material;
+    const sw::shared_ptr<sw::Material> pMaterial = sw::Material::create();
+    sw::Material&                      material  = *pMaterial;
     SW_REQUIRE_TRUE( material.loadFromDiskFile( sw::ProcessRoots::get()._project.str() + "/Content/engine/materials/toon.material" ) );
     const uint64 assetHash = material.getPermutationHash();
     SW_EXPECT_LOG( "Material.StaticSwitchUnknown" );
