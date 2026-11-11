@@ -50,9 +50,12 @@ SW_TEST_CASE( AudioOutputLossTest, LostOutputRendersOfflineAndReopens )
     const int32 openCountBeforeLoss = service._openCount;
     SW_EXPECT_LOG( "AudioService.OutputLost" );
     service.notifyOutputLost(); // 장치 스레드가 알린다
-    service.update( 0.1f );     // 닫고 오프라인으로 — 첫 다시 열기는 바로 해 본다(장치가 아직 없다)
+    service.update( 0.1f );     // 닫고 오프라인으로
     SW_EXPECT_FALSE( service.isOutputOpen() );
+    for ( int32 tick = 0; tick < 12 && service._openCount == openCountBeforeLoss; ++tick )
+        service.update( 0.1f ); // 첫 다시 열기는 [0, 첫 지연(1 초)] 안에 해 본다(지터 — 장치가 아직 없다)
     SW_EXPECT_TRUE( service._openCount > openCountBeforeLoss );
+    SW_EXPECT_FALSE( service.isOutputOpen() );
 
     service._bDeviceAvailable = true; // 헤드폰을 다시 꽂았다
     for ( int32 tick = 0; tick < 40 && service.isOutputOpen() == false; ++tick )
