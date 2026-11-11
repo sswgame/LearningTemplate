@@ -9,16 +9,33 @@
 절차는 스킬이 정본이다: 묶음 끝 검증 · push `bundle-verify`, Linux `linux-verify`, 시나리오 실패 `scenario-debug`. 시나리오 체계 · 시간 기록은 `Test/README.md`. 사람이 보는 실행: `py -3 Scripts/dev/WatchScenarios.py [--preset] [--backend] [--stages a,b] [체인…]`.
 병렬 작업자 워크트리는 main 에서 fast-forward 한 뒤 시작한다(옛 기준에서 시작한 갈래는 통합 때 수십 파일이 충돌했다).
 
-## 상태 (2026-11-11 12시)
+## 상태 (2026-11-12)
 
-- origin/main = bb2faee674(Windows 전 단계 통과). main 의 그 뒤 커밋 6248f0c92f(공유 캐시 extern 선언을 `SW_DECLARE_SHARED_ASSET_CACHE` + 정의 줄 단언으로 — Linux 게임 빌드 실패의 근본 수정) · 8f7b502252(쿠킹 요청 출처 — gtao 거짓 경고)는 **push 하지 않았다**: 전 VerifyBundle 이 Release ctest DX11 `postprocess_ssr` 로 졌다 — 장면 색 사본을 반투명이 없으면 건너뛴 결함을 고쳤다(545d9cf099). 그 커밋까지 전체 VerifyBundle 을 다시 돌린다.
+- main = origin/main = e480b07498(SSR 사본 결함의 구조 수정 b282a98f82 · 쿠킹 요청 수집 해시 색인 포함).
+- 워크트리 `naming-root`(`.claude/worktrees/naming`, 7bcce0280c — b282a98f82 에서 갈림, **빌드 안 함**): 커밋 셋.
+  - 86c3497b8d: NamingWords 린트 확장(금지 동사 · 금지 명사 · 술어 · 조회 규칙 + 이름 단위 기준선 `Config/Rules/Lint/NamingBaseline.json`).
+  - 24bd289329: 뷰 패스 판정 통합(`isPassEnabledInView` · `_listPassDisabled` · `executePass` 입구 하나, 왜곡 한 프레임 늦음 수정, 죽은 `RenderGraph::cullUnusedPasses` 삭제).
+  - 7bcce0280c: 이름 이전 도구 `Scripts/dev/RenameIdentifier.py` 와 뜻이 틀린 이름 13 개.
+  - **린트는 새 위반만 막는다 — 있던 위반 483 건(verb 31 · term 273 · predicate 96 · lookup 83)은 기준선에 적혀 아직 그대로다**(`pumpMaterialPSOBuilds` 등 `pump…` 21 개, `judge…` · `stamp…` 26 개). 사용자는 "현업 · 상용 엔진에서 쓰는 단어로 고쳤다" 고 받았다가 남은 것을 보고 지적했다 — 이번에는 0 까지 옮긴다.
 - 워크트리 `settings-json`(`.claude/worktrees/settings`, 80b190b2ba — 8f7b502252 에서 갈림, 빌드 안 함): 프로젝트 설정 창이 형식 없는 `Config/**/*.json`(린트 · 격리 · 환경 · Dev 표)을 "Tables" 구획의 범용 JSON 페이지로 고친다(사용자 지적 — 에디터에서 Config 부터 손으로 맞추는 표까지). 통합에서 Debug 빌드 · 단위 `ProjectSettingsJSONDocumentTest.*` · `ProjectSettingsEntryTest.TablesSkipTypedFiles` · 시나리오 `editor.projectconfigedit`(격리 표 원소 더하기 → 되돌리기, `quarantinetable.png` 를 눈으로 본다). 남은 것: 표 페이지 Ctrl+Z, 활성 게임이 아닌 `Config/Game/*.json` 이 형식 대신 범용 페이지로 열린다.
 - 통합 브랜치 `integ2`(워크트리 `.claude/worktrees/integ2`, 067f721a81 — 3eddd405ce 까지의 main 을 합쳤다, 빌드 한 번도 안 함): 에셋 정체성 1단계(AssetGUID · .meta · asset-ids 도구 · 팩 GUID 색인), 5-3 틱 const 닫기, W-R3 (a) 코덱 키 검사, A1 포즈 노드 평가 · 미러 표 · 에디터 노드 더하기, R1 리다이렉트 표 팩 담기, 온라인 · 원장 · 신고 단위 테스트들, 런타임 파생 오브젝트 `setTransient`(잔상 · 내비 디버그 뷰 · 월드 위젯 사각형 · 데미지 숫자 · 흩뿌린 소품). 1 절 첫 줄.
 - Android(Android-Shipping)는 대상 전체가 컴파일 · 링크되고 Vulkan 셰이더 쿠킹이 지난다. 웹(Web-Shipping)은 App.wasm 까지 지어진다.
 
 ## 남은 일
 
-### 1. 묶음 검증
+### 0. 다음 세션 순서 (2026-11-12 세션이 남긴 것)
+
+1. **이름 이전을 0 까지(`naming-root` 워크트리, `deprecation-and-migration` 스킬):** `py -3 Scripts/dev/RenameIdentifier.py <쌍.json> --dry-run` 으로 보고 적용 — 도구가 코드 · 데이터 · 설정 · 문서를 옮기고 옛 이름을 `_bannedNames` 에 넣고 기준선을 줄인다. 묶음마다 린트 → 커밋.
+   - 금지 동사 먼저: `pump` → `poll`(언리얼 `Poll…` · `Tick…` — 예 `pumpMaterialPSOBuilds` → `pollMaterialPSOBuilds`), `judge` → `evaluate`, `stamp` · `drain` · `note` · `forget` · `adopt` · `admit` 는 하는 일을 읽고 표준 동사(`record` · `flush` · `consume` · `clear` · `accept` …)로.
+   - 이어 term(`Verdict` · `Outcome` · `Work` · `Fields` · `Judgement` · `Tally` · `Dirtied` → `Result` · `Completed` · `Properties` …) → predicate(bool 함수 첫 단어 `is` · `has` · `can` · `should` …) → lookup(`…For` · `…Of` 함수는 `get` · `find` · `compute` 로 시작).
+   - 동의어 묶음(약 80 개 — 같은 개념의 여러 이름)은 표준 단어 표 하나로 모은다: `Generation`(세대 번호), `poll`, `take`(소유 옮김), `Deferred`, `Wait`, `Result`, `getMutableX`, `Enabled` · `Disabled`(긍정형 판정), `Settings`(자산) · `Instance`(실행 값), `…Bytes`(크기). 2026-11-12 점검 보고는 그 세션 스크래치에만 있었으니 `py -3 -m Scripts lint` 의 NamingWords 출력과 기준선 파일을 목록으로 쓴다.
+   - 끝 조건: `NamingBaseline.json` 네 칸이 모두 비고 `_bannedNames` 가 옛 이름을 막는다.
+2. **런타임 퍼뮤테이션 전환(구운 바이너리가 있을 때):** 지금은 `Material::setStaticSwitch` → 새 PSO 키가 캐시에 없으면 `Building` → 빌더가 구운 바이너리로 PSO 를 만드는 동안 `FramePassExecutorDraw.cpp` `drawBatchGroup` 이 그 배치를 건너뛴다 — **물체가 몇 프레임 사라진다**. 미리 데우기(`warmPinnedMaterialPSOs`)는 고정 머티리얼만.
+   - 씬에 들어온 머티리얼의 런타임 스위치 조합(최대 4 개 → 16)을 낮은 우선순위로 빌더에 넣는다(언리얼 PSO 프리캐시).
+   - 새 변형이 `Building` 이면 그 배치는 마지막 `Ready` 변형으로 계속 그린다(사라짐 대신 한두 프레임 늦은 전환 — 언리얼의 기본 머티리얼 대체보다 덜 튄다).
+   - `setStaticSwitch` 가 쿠킹 안 되는 스위치 · 모르는 이름을 모든 빌드에서 거절하고 오류(지금은 그대로 더해 세대를 올린다, `Material.cpp` setStaticSwitch).
+   - 시나리오 하나: 스위치를 바꾼 프레임에 `RT.PSO.pendingBatches` 가 0 이고 물체가 보인다.
+3. **`naming-root` 통합:** main(e480b07498)에 합친다 → Debug · Release 빌드 → 단위 전체 → 시나리오 postprocess_ssr · distortion · screenspacegi · deferredtransparent · waterplay 네 백엔드 → 1 절 settings-json · integ2 와 함께 VerifyBundle 한 번 → push.
 
 - **셰이더가 읽는 엔진 역할 ⊆ 패스 입력 계약 검사:** SSR 이 계약 밖 GBufferAlbedo 를 읽어도 아무것도 잡지 않았다(걸지 않은 역할은 무효 인덱스 — 판정이 조용히 상수가 된다, 545d9cf099). 셰이더 리플렉션의 `g_<역할>Index` 사용과 `RenderPassTypeInfo` 계약을 대조하는 단위 테스트나 로드 검증을 둔다.
 - **integ2 통합:** 검증 통과한 main 을 integ2 에 다시 합친다(공유 캐시 선언 매크로 — integ2 의 새 `extern template class … SharedAssetCache<…>;` 줄은 정의 줄 단언에 걸리므로 매크로로 바꾼다) → 워크트리에서 Debug 전체 프리셋 빌드(App 만 지으면 게임 모듈 헤더 불일치로 기동 실패) → 컴파일 오류는 `.inl` include · `extern template` 로(`-Werror=undefined-func-template` 를 끄지 않는다) → 단위 · 영향 시나리오 → main 에 합쳐 VerifyBundle 한 번 → push. 에셋 GUID 2 · 3 단계(GUID 로 참조 해석 · 경로 참조 이전)는 그 뒤 — 설계는 [DesignBacklog](DesignBacklog.md) 에셋 정체성 절. 작업자 커밋에 GameObjectManager.inl 머리말 문장 · `EditorTransaction` 을 연 채 CommandStack 을 읽는 자리가 남았다.
@@ -46,8 +63,7 @@
 
 ### 5. 작업자 · 설계 문서가 남긴 일
 
-- **렌더링:** TransientLeasePool 을 뷰 풀에 잇기, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, 박막 · 털 · 스타킹 · 비단 외형의 디퍼드(G버퍼 칸 부족 — 포워드 전용으로 남김), 몸 머티리얼이 피부 층 표면 덮어쓰기(`_skinLayerSurfaceMap`)를 읽기, VFX · 프로브 디스패치의 버퍼별 전이를 묶음 API 로. DX11 postprocess_ssr 이 체인 안에서만 골든과 16.1% 다르다(단독은 0% — 앞 단계 상태, 원래 있던 결함; `ScenarioCulprit.py empty postprocess_ssr --backend dx11` 로 범인 단계를 찾고 두 사진의 차이 자리를 본다 — 가설은 에뮬 엔진 칸이 이번 패스에 걸지 않은 역할의 옛 텍스처를 그대로 들고 있는 것, 아직 확인 안 됨).
-- **폴더 자리(남은 둘, `Config/Rules/Layers/DevFolders.json` — App/Dev 는 사용자 결정으로 남는다):** 핫 리로드 · 호스트 개발 계층은 DevTools 로 옮겼다(ModuleManager 공유 라이브러리 · `ILiveReloadManager`, 662582fd9c — 빌드 확인은 통합에서). 남은 길은 정했다.
+- **렌더링:** TransientLeasePool 을 뷰 풀에 잇기, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, 박막 · 털 · 스타킹 · 비단 외형의 디퍼드(G버퍼 칸 부족 — 포워드 전용으로 남김), 몸 머티리얼이 피부 층 표면 덮어쓰기(`_skinLayerSurfaceMap`)를 읽기, VFX · 프로브 디스패치의 버퍼별 전이를 묶음 API 로.- **폴더 자리(남은 둘, `Config/Rules/Layers/DevFolders.json` — App/Dev 는 사용자 결정으로 남는다):** 핫 리로드 · 호스트 개발 계층은 DevTools 로 옮겼다(ModuleManager 공유 라이브러리 · `ILiveReloadManager`, 662582fd9c — 빌드 확인은 통합에서). 남은 길은 정했다.
   - Graphics/Material/Dev → `DevTools/Material/`: DevTools 에 `sw_addReflectionStep(DevTools MODULE …)`, 셰이더 쿠커(`ShaderCookDriver` 의 `MaterialGraphGeneratedPaths::refreshAll` 한 줄)는 엔진 창구(쿠킹 전 셰이더 소스 생성기 — 정적 등록, 개발 쿠킹인데 없으면 멈춘다)로 뒤집고, `SW_API` → `SW_DEVTOOLS_API`. 막힘: 데이터 상속(`_base`) 매크로가 등록 모듈 "Engine" 을 단언한다(`DataInheritance.h` — 팩 쿠킹이 모듈 등록을 못 본다) — DevTools 는 호스트 라이브러리라 "Engine" 으로 걷히므로(`registerHostLibraryTypes`) 그 단언을 "호스트 라이브러리" 로 넓힌다. 빌드하며 옮긴다.
   - GF GameData/Dev → GameFramework 층의 개발 전용 공유 모듈 `GameFrameworkDev`(언리얼 플러그인 모듈 Type `DeveloperTool` 자리): 매니페스트에 개발 전용 표시를 두고 배포 CMake 는 그 매니페스트를 짓지 않으며, 개발 호스트는 GameFramework 다음에 `loadSharedModule` 로 올린다. DevTools 는 GameSettings 를 볼 수 없어(게이트) 옮기지 않는다.
 - **RHI(5-2):** DX12 기록 경로 락 — 바인딩마다 `shared_mutex`(`resolveBufferAddress` · `resolveOfflineView`), 배리어마다 `_resourceStateMutex` + `_mapOffscreenTexture.find` 를 병렬 기록 구간의 레지스트리 불변식(`setParallelRecording`)으로 걷어 내고 텍스처 상태를 `RHIHandleTable` 레코드로(`bench.json` p50 전후). 측정 뒤에만: Vulkan 동적 오프셋 · 푸시 디스크립터, WebGPU 바인드 그룹 캐시 은퇴, 중립 커맨드 스트림 · RHI 스레드, 복사 큐, SM6.6 바인드리스, RT · 메시 셰이더, Android `VkDeviceMemory` 서브할당.
