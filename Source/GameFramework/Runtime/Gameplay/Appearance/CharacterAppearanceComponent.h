@@ -185,6 +185,12 @@ namespace sw
         /** @brief 스폰한 부품 오브젝트를 모두 지웁니다. 상태를 저장하기 전에 부릅니다(풀에도 남기지 않는다). 다음 조립에서 다시 스폰합니다. */
         void despawnParts();
         /**
+         * @brief 상태 스냅샷이 저장 전에 부릅니다(`StatefulComponentRegistrar` — 모든 게임): 스폰한 부품과 합친 구간 컴포넌트를 걷고, 계속 도는 실행은 틱 뒤에 다시 조립합니다.
+         * @details 조립 결과는 프리셋 · 장비의 파생이라 세이브에 실으면 불러온 뒤 다시 조립한 것과 겹친다 — 합친 구간 컴포넌트는 합친 메시가 아직 없는 몸에서
+         *          되살아나 없는 구간을 찾았다(game.harvestvalley.slice 의 저장 · 불러오기, `MeshComponent.MeshNoSectionComponent`).
+         */
+        void despawnViews();
+        /**
          * @brief 캐릭터 오브젝트(이 컴포넌트의 주인)를 지웁니다. 지우기 전에 소켓 부품을 씬의 부품 풀(`SocketPartPool`)에 쉬게 하고(다음 캐릭터의 조립이 같은
          *        에셋을 꺼내 쓴다), 나머지(스킨드 부품, 물리로 떨어진 부품)는 지웁니다. 틱 안이면 둘 다 틱 뒤에 합니다.
          * @details 한 함수인 까닭: 붙은 부품은 캐릭터의 자식이라, 캐릭터를 먼저 지우면 함께 지울 예정이 되어 풀에 넣을 수 없다. 그냥 `destroyGameObject` 로 지우면

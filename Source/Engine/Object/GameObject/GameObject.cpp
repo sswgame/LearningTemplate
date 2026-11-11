@@ -91,6 +91,7 @@ namespace sw
         , _bTickDirty{ SW_FALSE }
         , _bKeptWhenParentDestroyed{ false }
         , _bBeingDestroyed{ false }
+        , _bTransient{ false }
         , _siblingIndex{ 0 }
         , _bAlwaysLoaded{ false }
     {

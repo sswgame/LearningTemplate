@@ -331,30 +331,27 @@ namespace sw
         return true;
     }
 
-    void AutomationRunner::rememberValue( string_view name, uint64 value )
+    void AutomationRunner::rememberText( string_view name, string text )
     {
-        for ( RememberedValue& remembered : _listRememberedValue )
+        for ( RememberedText& remembered : _listRememberedText )
         {
             if ( string_view{ remembered._name } == name )
             {
-                remembered._value = value;
+                remembered._text = std::move( text );
                 return;
             }
         }
-        _listRememberedValue.push_back( RememberedValue{ string( name ), value } );
+        _listRememberedText.push_back( RememberedText{ string( name ), std::move( text ) } );
     }
 
-    bool AutomationRunner::findRememberedValue( string_view name, uint64& outValue ) const
+    const string* AutomationRunner::findRememberedText( string_view name ) const
     {
-        for ( const RememberedValue& remembered : _listRememberedValue )
+        for ( const RememberedText& remembered : _listRememberedText )
         {
             if ( string_view{ remembered._name } == name )
-            {
-                outValue = remembered._value;
-                return true;
-            }
+                return &remembered._text;
         }
-        return false;
+        return nullptr;
     }
 
     GameObjectManager* AutomationRunner::findActiveObjectManager() const

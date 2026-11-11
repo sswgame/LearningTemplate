@@ -260,10 +260,13 @@ namespace sw
         if ( pObjectManager == nullptr )
             return false;
 
-        // 살아 있는 것만 담는다. `forEachGameObject` 가 파괴 대기 오브젝트를 이미 건너뛰므로 목록을 받아 다시 거를 일이 없다.
+        // 살아 있는 것만 담는다. `forEachGameObject` 가 파괴 대기 오브젝트를 이미 건너뛴다. 실행 중에 세운 파생 오브젝트(`isTransient`)는 세운 쪽이 다시 세운다.
         vector<GameObject*> listValidObject;
         pObjectManager->forEachGameObject( [&listValidObject]( GameObject* pObj )
-        { listValidObject.push_back( pObj ); } );
+        {
+            if ( pObj->isTransient() == false )
+                listValidObject.push_back( pObj );
+        } );
 
         outBytes.clear();
 

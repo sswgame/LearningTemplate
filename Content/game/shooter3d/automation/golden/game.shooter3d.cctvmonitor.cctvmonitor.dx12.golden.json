@@ -1,0 +1,19 @@
+{
+    "backend": "dx12",
+    "platform": "windows",
+    "commit": "d712e367a778414401147551419cd69314e0740a-dirty",
+    "recordedUnixMs": 1794352587304,
+    "reason": "near-limit",
+    "width": 160,
+    "height": 90,
+    "previousDifference": {
+        "differingFraction": 0.007222222222222222,
+        "meanDistance": 0.000395878721859114,
+        "largestDeepRegionPixels": 6
+    },
+    "limits": {
+        "maxDifferingFraction": 0.01,
+        "maxMeanDistance": 0.005,
+        "maxDeepRegionPixels": 16
+    }
+}
