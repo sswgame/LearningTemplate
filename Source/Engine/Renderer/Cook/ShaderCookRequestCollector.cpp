@@ -220,42 +220,16 @@ namespace sw
                 return listMerged;
             }
 
-            /** @brief 쿠킹하는 런타임 스위치 수의 상한입니다. 조합이 2^n 이라 넘으면 에셋 상태만 쿠킹하고 오류로 알린다. */
-            static constexpr uint32 kMaxRuntimeSwitchCount = 4;
-
             /**
              * @brief 머티리얼이 런타임에 낼 수 있는 define 목록 전부입니다 — 에셋 상태 하나 + 런타임에 바꿀 수 있는 정적 스위치(`bShaderFeature="0"`)의 켬/끔 조합.
-             * @details 유니티의 shader_feature(쓰는 변형만) · multi_compile(모든 변형) 구분과 같다. 런타임 스위치를 쿠킹하지 않으면 코드가
-             *          `Material::setStaticSwitch` 로 켠 변형이 Dev 에서는 실시간 컴파일로 그려지고 Shipping 에서만 바이너리가 없다.
-             *          조합은 런타임과 **같은 함수**(`setStaticSwitch` → `getCachedShaderDefines`)로 만든다 — 손으로 define 을 끼우면 정렬 · 꺼짐 키워드가 어긋난다.
+             * @details 유니티의 shader_feature(쓰는 변형만) · multi_compile(모든 변형) 구분과 같다. 조합은 런타임 PSO 미리 만들기와 **같은 함수**
+             *          (`Material::collectRuntimeSwitchVariants` — `setStaticSwitch` 뒤의 `getCachedShaderDefines` 와 같은 정의)로 만든다. 상한(`Material::kMaxRuntimeStaticSwitchCount`)을
+             *          넘으면 그 함수가 오류를 남기고 에셋 상태만 낸다.
              */
-            static void collectMaterialRuntimeDefines( Material& material, string_view materialPath, vector<vector<string>>& outListDefine )
+            static void collectMaterialRuntimeDefines( const Material& material, vector<vector<string>>& outListDefine )
             {
-                outListDefine.clear();
-                outListDefine.push_back( material.getCachedShaderDefines() );
-                vector<string> listRuntimeSwitch;
-                for ( const MaterialStaticSwitch& entry : material.getPermutations()._listStaticSwitch )
-                {
-                    if ( entry._bShaderFeature == SW_FALSE )
-                        listRuntimeSwitch.push_back( entry._name );
-                }
-                if ( listRuntimeSwitch.size() > kMaxRuntimeSwitchCount )
-                {
-                    SW_LOG_ERROR_ID( "ShaderCooker.MaterialRuntimeStaticSwitches", "Material '%#' has %# runtime static switches (bShaderFeature=\"0\") - only %# are cooked in every combination; the asset state is cooked alone",
-                                     materialPath, listRuntimeSwitch.size(), kMaxRuntimeSwitchCount );
-                    return;
-                }
-                const uint32 comboCount = 1u << static_cast<uint32>( listRuntimeSwitch.size() );
-                for ( uint32 combo = 0; combo < comboCount; ++combo )
-                {
-                    for ( size_t switchIndex = 0; switchIndex < listRuntimeSwitch.size(); ++switchIndex )
-                    {
-                        material.setStaticSwitch( hashed_string( listRuntimeSwitch[switchIndex] ), ( combo & ( 1u << switchIndex ) ) != 0 );
-                    }
-                    const vector<string>& listDefine = material.getCachedShaderDefines();
-                    if ( VectorUtil::contains( outListDefine, listDefine ) == false )
-                        outListDefine.push_back( listDefine );
-                }
+                vector<uint64> listPermutationHash;
+                material.collectRuntimeSwitchVariants( outListDefine, listPermutationHash );
             }
 
             /** @brief 파이프라인 패스 하나의 스테이지 요청(컴퓨트, 또는 VS · PS · GS · HS · DS)을 더합니다. 진입점은 런타임 `makePassPSODesc` 와 같게 XML 값(비면 스테이지 기본값)이다. */
@@ -476,7 +450,7 @@ namespace sw
 
                     // 에셋 상태 + 런타임에 바꿀 수 있는 정적 스위치의 조합(collectMaterialRuntimeDefines).
                     vector<vector<string>> listRuntimeDefine;
-                    collectMaterialRuntimeDefines( *material, matPath, listRuntimeDefine );
+                    collectMaterialRuntimeDefines( *material, listRuntimeDefine );
                     MaterialVariantInfo variant;
                     variant._shaderPath = material->getShaderPath();
                     variant._listOrigin = { makeOriginID( matPath ) };

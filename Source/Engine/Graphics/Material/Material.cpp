@@ -105,6 +105,7 @@ namespace sw
         , _listPropertyName{}
         , _listCachedDefine{}
         , _cachedPermutationHash{ 0 }
+        , _previousPermutationHash{ 0 }
         , _cachedShaderPathHash{ 0 }
         , _bDefinesDirty{ SW_TRUE }
         , _bShaderPathHashDirty{ SW_TRUE }
@@ -905,27 +906,29 @@ namespace sw
         }
     }
 
-    void Material::setStaticSwitch( hashed_string name, bool bEnabled )
+    bool Material::setStaticSwitch( hashed_string name, bool bEnabled )
     {
         for ( MaterialStaticSwitch& ss : _desc._permutations._listStaticSwitch )
         {
-            if ( hashed_string( ss._name.c_str() ) == name || hashed_string( ss._keyword.c_str() ) == name )
+            if ( hashed_string( ss._name.c_str() ) != name && hashed_string( ss._keyword.c_str() ) != name )
+                continue;
+            if ( ss._bShaderFeature != SW_FALSE )
             {
-                if ( ss._bEnabled != bEnabled )
-                {
-                    ss._bEnabled   = bEnabled;
-                    _bDefinesDirty = SW_TRUE;
-                    MaterialPermutation::bumpPermutationGeneration();
-                }
-                return;
+                SW_LOG_ERROR_ID( "Material.StaticSwitchNotRuntime", "Material '%#': static switch '%#' is a shader feature (bShaderFeature=\"1\") - only its asset state is cooked, so it cannot change at runtime (declare it bShaderFeature=\"0\")",
+                                 _desc._name.c_str(), name.c_str() );
+                return false;
             }
+            if ( ss._bEnabled != ( bEnabled ? 1 : 0 ) )
+            {
+                ss._bEnabled   = bEnabled ? 1 : 0;
+                _bDefinesDirty = SW_TRUE;
+                MaterialPermutation::bumpPermutationGeneration();
+            }
+            return true;
         }
-        MaterialStaticSwitch entry{};
-        entry._name     = name.c_str() ? name.c_str() : "";
-        entry._keyword  = entry._name;
-        entry._bEnabled = bEnabled;
-        _desc._permutations._listStaticSwitch.push_back( std::move( entry ) );
-        _bDefinesDirty = SW_TRUE;
+        SW_LOG_ERROR_ID( "Material.StaticSwitchUnknown", "Material '%#' has no static switch '%#' - only declared runtime switches (bShaderFeature=\"0\") can change", _desc._name.c_str(),
+                         name.c_str() );
+        return false;
     }
 
     void Material::setMultiCompile( hashed_string name, string_view selectedOption )
@@ -998,60 +1001,104 @@ namespace sw
     {
         if ( _bDefinesDirty != SW_FALSE )
         {
-            _listCachedDefine.clear();
-            const MaterialPermutationDef& permutationDesc = _desc._permutations;
-
-            for ( const string& defineStr : permutationDesc._listAlwaysDefine )
-            {
-                MaterialPermutation::appendUniqueDefine( _listCachedDefine, defineStr );
-            }
-
-            MaterialPermutation::appendQualityDefines( permutationDesc._quality, _listCachedDefine );
-            MaterialPermutation::appendUniqueDefine( _listCachedDefine, string( "SHADER_LOD=" ) + to_string( permutationDesc._shaderLOD ) );
-            MaterialPermutation::appendUsageDefines( permutationDesc._usage, _listCachedDefine );
-
-            // 칸이 내는 define — 쿠커도 이 목록을 읽는다.
-            if ( _desc._alphaMode == MaterialAlphaMode::Mask )
-                MaterialPermutation::appendUniqueDefine( _listCachedDefine, kMaterialAlphaCutoffDefine );
-            if ( _desc._bTwoSidedLighting != SW_FALSE )
-                MaterialPermutation::appendUniqueDefine( _listCachedDefine, kMaterialTwoSidedDefine );
-
-            for ( const MaterialStaticSwitch& entry : permutationDesc._listStaticSwitch )
-            {
-                if ( entry._bEnabled != 0 )
-                {
-                    if ( entry._keyword.empty() == false )
-                        MaterialPermutation::appendUniqueDefine( _listCachedDefine, entry._keyword );
-                }
-                else if ( entry._keywordOff.empty() == false )
-                    MaterialPermutation::appendUniqueDefine( _listCachedDefine, entry._keywordOff );
-            }
-
-            for ( const MaterialMultiCompile& mc : permutationDesc._listMultiCompile )
-            {
-                if ( mc._selected.empty() == false )
-                    MaterialPermutation::appendUniqueDefine( _listCachedDefine, mc._selected );
-            }
-
-            for ( const MaterialProperty& prop : _data._listProperty )
-            {
-                if ( prop._type != MaterialPropertyType::Keyword && prop._type != MaterialPropertyType::Bool )
-                    continue;
-                if ( prop._shaderKeyword.empty() )
-                    continue;
-                bool bKeywordOn{ false };
-                if ( MaterialPacking::parseBoolToken( prop._value, prop._name, "Material.BooleanKeywordUnreadable", bKeywordOn ) && bKeywordOn ) // 읽지 못한 값은 parseBoolToken 이 오류로 남긴다(로드가 이미 거부한다)
-                    MaterialPermutation::appendUniqueDefine( _listCachedDefine, prop._shaderKeyword );
-            }
-
-            VectorUtil::sort( _listCachedDefine );
-            _cachedPermutationHash            = MaterialPermutation::hashDefines( _listCachedDefine );
-            const uint64 renderPropertiesHash = getRenderPropertiesHash();
-            if ( renderPropertiesHash != 0 )
-                _cachedPermutationHash = HashUtil::combine( _cachedPermutationHash, renderPropertiesHash );
-            _bDefinesDirty = SW_FALSE;
+            buildShaderDefines( _desc._permutations, _listCachedDefine );
+            _previousPermutationHash = _cachedPermutationHash; // 처음 만들 때는 0 이다(직전 변형이 없다)
+            _cachedPermutationHash   = computePermutationHash( _listCachedDefine );
+            _bDefinesDirty           = SW_FALSE;
         }
         return _listCachedDefine;
+    }
+
+    uint64 Material::computePermutationHash( const vector<string>& listDefine ) const
+    {
+        const uint64 defineHash           = MaterialPermutation::hashDefines( listDefine );
+        const uint64 renderPropertiesHash = getRenderPropertiesHash();
+        return renderPropertiesHash != 0 ? HashUtil::combine( defineHash, renderPropertiesHash ) : defineHash;
+    }
+
+    void Material::buildShaderDefines( const MaterialPermutationDef& permutationDesc, vector<string>& outListDefine ) const
+    {
+        outListDefine.clear();
+        for ( const string& defineStr : permutationDesc._listAlwaysDefine )
+        {
+            MaterialPermutation::appendUniqueDefine( outListDefine, defineStr );
+        }
+
+        MaterialPermutation::appendQualityDefines( permutationDesc._quality, outListDefine );
+        MaterialPermutation::appendUniqueDefine( outListDefine, string( "SHADER_LOD=" ) + to_string( permutationDesc._shaderLOD ) );
+        MaterialPermutation::appendUsageDefines( permutationDesc._usage, outListDefine );
+
+        // 칸이 내는 define — 쿠커도 이 목록을 읽는다.
+        if ( _desc._alphaMode == MaterialAlphaMode::Mask )
+            MaterialPermutation::appendUniqueDefine( outListDefine, kMaterialAlphaCutoffDefine );
+        if ( _desc._bTwoSidedLighting != SW_FALSE )
+            MaterialPermutation::appendUniqueDefine( outListDefine, kMaterialTwoSidedDefine );
+
+        for ( const MaterialStaticSwitch& entry : permutationDesc._listStaticSwitch )
+        {
+            if ( entry._bEnabled != 0 )
+            {
+                if ( entry._keyword.empty() == false )
+                    MaterialPermutation::appendUniqueDefine( outListDefine, entry._keyword );
+            }
+            else if ( entry._keywordOff.empty() == false )
+                MaterialPermutation::appendUniqueDefine( outListDefine, entry._keywordOff );
+        }
+
+        for ( const MaterialMultiCompile& mc : permutationDesc._listMultiCompile )
+        {
+            if ( mc._selected.empty() == false )
+                MaterialPermutation::appendUniqueDefine( outListDefine, mc._selected );
+        }
+
+        for ( const MaterialProperty& prop : _data._listProperty )
+        {
+            if ( prop._type != MaterialPropertyType::Keyword && prop._type != MaterialPropertyType::Bool )
+                continue;
+            if ( prop._shaderKeyword.empty() )
+                continue;
+            bool bKeywordOn{ false };
+            if ( MaterialPacking::parseBoolToken( prop._value, prop._name, "Material.BooleanKeywordUnreadable", bKeywordOn ) && bKeywordOn ) // 읽지 못한 값은 parseBoolToken 이 오류로 남긴다(로드가 이미 거부한다)
+                MaterialPermutation::appendUniqueDefine( outListDefine, prop._shaderKeyword );
+        }
+
+        VectorUtil::sort( outListDefine );
+    }
+
+    void Material::collectRuntimeSwitchVariants( vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const
+    {
+        outListDefine.clear();
+        outListPermutationHash.clear();
+        outListDefine.push_back( getCachedShaderDefines() );
+        outListPermutationHash.push_back( getPermutationHash() );
+        vector<size_t>                      listRuntimeSwitch;
+        const vector<MaterialStaticSwitch>& listSwitch = _desc._permutations._listStaticSwitch;
+        for ( size_t switchIndex = 0; switchIndex < listSwitch.size(); ++switchIndex )
+        {
+            if ( listSwitch[switchIndex]._bShaderFeature == SW_FALSE )
+                listRuntimeSwitch.push_back( switchIndex );
+        }
+        if ( listRuntimeSwitch.empty() )
+            return;
+        if ( listRuntimeSwitch.size() > kMaxRuntimeStaticSwitchCount )
+        {
+            SW_LOG_ERROR_ID( "Material.RuntimeStaticSwitchLimit", "Material '%#' has %# runtime static switches (bShaderFeature=\"0\") - only %# get every combination cooked and pre-built; the asset state alone is used",
+                             _desc._name.c_str(), listRuntimeSwitch.size(), kMaxRuntimeStaticSwitchCount );
+            return;
+        }
+        MaterialPermutationDef variantDesc = _desc._permutations;
+        vector<string>         listDefine;
+        const uint32           comboCount = 1u << static_cast<uint32>( listRuntimeSwitch.size() );
+        for ( uint32 combo = 0; combo < comboCount; ++combo )
+        {
+            for ( size_t bit = 0; bit < listRuntimeSwitch.size(); ++bit )
+                variantDesc._listStaticSwitch[listRuntimeSwitch[bit]]._bEnabled = ( combo & ( 1u << bit ) ) != 0 ? 1 : 0;
+            buildShaderDefines( variantDesc, listDefine );
+            if ( VectorUtil::contains( outListDefine, listDefine ) )
+                continue;
+            outListPermutationHash.push_back( computePermutationHash( listDefine ) );
+            outListDefine.push_back( listDefine );
+        }
     }
 
     uint64 Material::getRenderPropertiesHash() const
@@ -1066,6 +1113,13 @@ namespace sw
             return;
         _desc._shaderPath     = shaderPath;
         _bShaderPathHashDirty = SW_TRUE;
+    }
+
+    uint64 Material::getPreviousPermutationHash() const
+    {
+        if ( _bDefinesDirty != SW_FALSE )
+            getCachedShaderDefines();
+        return _previousPermutationHash;
     }
 
     uint64 Material::getShaderPathHash() const

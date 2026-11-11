@@ -137,6 +137,7 @@ namespace sw
         , _textureReloadGeneration{ 0 }
         , _listCachedDefine{}
         , _cachedPermutationHash{ 0 }
+        , _previousPermutationHash{ 0 }
         , _parentPermutationHash{ 0 }
         , _bDefinesDirty{ SW_TRUE }
         , _instReserved{ 0 }
@@ -605,7 +606,8 @@ namespace sw
             }
 
             VectorUtil::sort( _listCachedDefine );
-            _cachedPermutationHash = MaterialPermutation::hashDefines( _listCachedDefine );
+            _previousPermutationHash = _cachedPermutationHash; // 처음 만들 때는 0 이다
+            _cachedPermutationHash   = MaterialPermutation::hashDefines( _listCachedDefine );
             // 렌더 상태 · 그리기 순서는 부모의 것이다 — 부모와 같은 해시 규칙으로 섞어야 다른 렌더 상태의 부모가 한 배치로 합쳐지지 않는다.
             const uint64 renderPropertiesHash = _pParentMaterial != nullptr ? _pParentMaterial->getRenderPropertiesHash() : 0u;
             if ( renderPropertiesHash != 0 )
@@ -618,6 +620,12 @@ namespace sw
     {
         refreshCachedDefines();
         return _cachedPermutationHash;
+    }
+
+    uint64 MaterialInstance::getPreviousPermutationHash() const
+    {
+        refreshCachedDefines();
+        return _previousPermutationHash;
     }
 
     bool MaterialInstance::isParameterOverridden( hashed_string name ) const

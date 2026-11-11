@@ -19,7 +19,7 @@
 			<item>MATERIAL_FORWARD_ONLY</item>
 		</_alwaysDefines>
 		<_staticSwitches>
-			<item name="Outline" keyword="MATERIAL_OUTLINE" bEnabled="1" bShaderFeature="1" />
+			<item name="Outline" keyword="MATERIAL_OUTLINE" bEnabled="1" bShaderFeature="0" />
 		</_staticSwitches>
 	</_permutations>
 </MaterialDef>

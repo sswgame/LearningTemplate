@@ -214,3 +214,39 @@ SW_TEST_CASE( MaterialXMLTest, AssetFormatRejectsLegacyMaterialXML )
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_FALSE( material->loadFromAsset( sw::test::ScopedScratchDomain::makeID( "legacy.material" ) ) );
 }
+
+/**
+ * @brief [MaterialXMLTest] 런타임 스위치 조합은 `setStaticSwitch` 가 낼 define · 해시와 같고(쿠커 · 미리 만들기가 같은 함수를 쓴다), 바꾼 뒤 직전 해시가 남는다
+ * @details 직전 해시는 새 변형 PSO 를 만드는 동안 배치를 직전 변형으로 그리는 열쇠다(`GPUShaderPermutation::_fallbackHash`) — 0 이면 물체가 몇 프레임 사라진다.
+ */
+SW_TEST_CASE( MaterialXMLTest, RuntimeSwitchVariantsMatchSetStaticSwitch )
+{
+    sw::Material material;
+    SW_REQUIRE_TRUE( material.loadFromDiskFile( sw::ProcessRoots::get()._project.str() + "/Content/engine/materials/toon.material" ) );
+    sw::vector<sw::vector<sw::string>> listDefine;
+    sw::vector<uint64>                 listHash;
+    material.collectRuntimeSwitchVariants( listDefine, listHash );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listDefine.size() ); // 에셋 상태(끔) + 켬
+    SW_REQUIRE_EQUAL( listDefine.size(), listHash.size() );
+    SW_EXPECT_TRUE( listDefine[0] == material.getCachedShaderDefines() );
+    const uint64 assetHash = material.getPermutationHash();
+    SW_EXPECT_EQUAL( assetHash, listHash[0] );
+
+    SW_REQUIRE_TRUE( material.setStaticSwitch( sw::hashed_string( "Outline" ), true ) );
+    SW_EXPECT_TRUE( listDefine[1] == material.getCachedShaderDefines() );
+    SW_EXPECT_EQUAL( listHash[1], material.getPermutationHash() );
+    SW_EXPECT_EQUAL( assetHash, material.getPreviousPermutationHash() );
+}
+
+/**
+ * @brief [MaterialXMLTest] 선언하지 않은 스위치는 모든 빌드에서 거절한다 — 받으면 Shipping 에서만 바이너리가 없어 물체가 사라진다
+ */
+SW_TEST_CASE( MaterialXMLTest, SetStaticSwitchRejectsUndeclaredSwitch )
+{
+    sw::Material material;
+    SW_REQUIRE_TRUE( material.loadFromDiskFile( sw::ProcessRoots::get()._project.str() + "/Content/engine/materials/toon.material" ) );
+    const uint64 assetHash = material.getPermutationHash();
+    SW_EXPECT_LOG( "Material.StaticSwitchUnknown" );
+    SW_EXPECT_FALSE( material.setStaticSwitch( sw::hashed_string( "NoSuchSwitch" ), true ) );
+    SW_EXPECT_EQUAL( assetHash, material.getPermutationHash() );
+}
