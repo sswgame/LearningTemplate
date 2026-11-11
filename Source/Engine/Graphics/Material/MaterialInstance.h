@@ -122,6 +122,8 @@ namespace sw
         const vector<string>& getCachedShaderDefines() const;
         /** @brief 퍼뮤테이션 해시를 반환합니다. */
         uint64 getPermutationHash() const;
+        /** @brief 정의를 다시 만들기 직전의 퍼뮤테이션 해시입니다(`Material::getPreviousPermutationHash` 와 같은 뜻). */
+        uint64 getPreviousPermutationHash() const;
         /** @brief 파라미터가 오버라이드됐으면 true 입니다. */
         bool isParameterOverridden( hashed_string name ) const;
         /** @brief 리플렉션과 파라미터를 대조합니다. */
@@ -231,6 +233,7 @@ namespace sw
 
         mutable vector<string> _listCachedDefine;
         mutable uint64         _cachedPermutationHash;
+        mutable uint64         _previousPermutationHash; ///< 정의를 다시 만들기 직전의 `_cachedPermutationHash`
         mutable uint64         _parentPermutationHash;
         mutable uint8          _bDefinesDirty : 1;
         [[maybe_unused]] uint8 _instReserved  : 7;

@@ -230,12 +230,21 @@ namespace sw
         optional<uint32> findTextureSlot( hashed_string name ) const;
         /** @brief 품질 레벨을 설정합니다. */
         void setQualityLevel( MaterialQualityLevel level );
+        /** @brief 쿠킹 · 미리 만들기가 모든 조합을 다루는 런타임 스위치(`bShaderFeature="0"`) 수의 상한입니다. 조합이 2^n 이라 넘으면 에셋 상태만 쿠킹하고 오류로 알린다. */
+        static constexpr uint32 kMaxRuntimeStaticSwitchCount = 4;
         /**
-         * @brief 정적 스위치를 켜거나 끕니다.
-         * @note Shipping 에서 런타임에 바꿔도 되는 것은 `bShaderFeature="0"` 인 스위치뿐이다(켬과 끔 둘 다 쿠킹된다). 나머지는 에셋 상태만 쿠킹되어
-         *       바꾼 변형의 바이너리가 없다. Dev 는 실시간 컴파일이 가린다(`ShaderCookRequestTest.EveryRuntimeStaticSwitchCombinationIsRequested`).
+         * @brief 런타임 스위치(`bShaderFeature="0"`)를 켜거나 끕니다. 바꿨거나 이미 그 상태면 true 입니다.
+         * @details 선언하지 않은 이름과 에셋 상태만 쿠킹되는 스위치(`bShaderFeature="1"`)는 **모든 빌드에서** 오류로 거절한다 — 받으면 Dev 는 실시간 컴파일이 가리고
+         *          Shipping 에서만 바이너리가 없어 물체가 사라진다(유니티 shader_feature 를 런타임에 켠 것과 같은 결함). 쿠커 · 미리 만들기는 런타임 스위치의 모든 조합을
+         *          같은 함수(`collectRuntimeSwitchVariants`)로 만든다.
          */
-        void setStaticSwitch( hashed_string name, bool bEnabled );
+        [[nodiscard]] bool setStaticSwitch( hashed_string name, bool bEnabled );
+        /**
+         * @brief 런타임 스위치 조합마다의 define 목록과 그 퍼뮤테이션 해시를 냅니다(지금 상태 포함, 같은 목록은 한 번). 런타임 스위치가 상한을 넘으면 오류를 남기고 지금 상태만 냅니다.
+         * @details 머티리얼을 바꾸지 않는다 — `setStaticSwitch` 뒤 `getCachedShaderDefines` · `getPermutationHash` 가 낼 값과 같다(같은 정의 함수 `buildShaderDefines`).
+         *          쿠커(`ShaderCookRequestCollector`)와 런타임 PSO 미리 만들기(`MaterialCache` → `FramePSOManager::warmPinnedMaterialPSOs`)가 같은 조합을 쓴다.
+         */
+        void collectRuntimeSwitchVariants( vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const;
         /** @brief 멀티컴파일 옵션을 선택합니다. */
         void setMultiCompile( hashed_string name, string_view selectedOption );
         /** @brief float32 파라미터를 설정합니다. */
@@ -266,8 +275,17 @@ namespace sw
         const void* getParameterData( string_view name ) const;
         /** @brief 캐시된 셰이더 define 을 반환합니다. */
         const vector<string>& getCachedShaderDefines() const;
+        /** @brief 퍼뮤테이션 정의 @p permutationDesc 로 이 머티리얼의 define 목록(정렬)을 만듭니다. 캐시를 건드리지 않는다(`getCachedShaderDefines` 의 본문). */
+        void buildShaderDefines( const MaterialPermutationDef& permutationDesc, vector<string>& outListDefine ) const;
+        /** @brief 정렬한 define 목록의 퍼뮤테이션 해시입니다(렌더 칸 해시를 섞는다 — `getPermutationHash` 와 같은 규칙). */
+        uint64 computePermutationHash( const vector<string>& listDefine ) const;
         /** @brief 퍼뮤테이션 해시를 반환합니다. define 에 렌더 상태 · 그리기 순서를 섞은 값이라 PSO 변형과 배치가 그것으로 갈린다. */
         uint64 getPermutationHash() const;
+        /**
+         * @brief 스위치 · 멀티컴파일을 바꾸기 직전의 퍼뮤테이션 해시입니다. define 을 처음 만들기 전이면 0 입니다.
+         * @details 새 변형 PSO 를 빌더가 만드는 동안 그 배치를 직전 변형으로 그리게 한다(`GPUShaderPermutation::_fallbackHash`) — 사라짐 대신 한두 프레임 늦은 전환.
+         */
+        uint64 getPreviousPermutationHash() const;
         /**
          * @brief 퍼뮤테이션 해시에 섞을 렌더 칸의 해시입니다(`MaterialInstance` 도 부모의 것을 섞는다). 덮는 칸이 없고 순서가 기본이면 0 입니다 — 0 은 섞지 않아 기본 머티리얼의 해시 · 배치 순서가 그대로다.
          */
@@ -389,6 +407,7 @@ namespace sw
 
         mutable vector<string> _listCachedDefine;
         mutable uint64         _cachedPermutationHash;
+        mutable uint64         _previousPermutationHash; ///< define 을 다시 만들기 직전의 `_cachedPermutationHash`(`getPreviousPermutationHash`)
         mutable uint64         _cachedShaderPathHash;
         mutable uint8          _bDefinesDirty        : 1;
         mutable uint8          _bShaderPathHashDirty : 1;

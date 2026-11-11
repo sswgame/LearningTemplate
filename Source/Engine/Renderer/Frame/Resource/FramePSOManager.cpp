@@ -1153,11 +1153,15 @@ namespace sw
             return passPSO;
 
         uint64 permutationHash{ 0 };
+        uint64 fallbackHash{ 0 };
         if ( batch._shaderPermutation != kInvalidShaderPermutation )
         {
             const GPUShaderPermutation* pPermutation = _gpuScene.findShaderPermutation( batch._shaderPermutation );
             if ( pPermutation != nullptr )
+            {
                 permutationHash = pPermutation->_hash;
+                fallbackHash    = pPermutation->_fallbackHash;
+            }
         }
 
         // 적용할 것이 하나도 없는 조합이다. ensureMaterialPSOs 도 이 키를 만들지 않는다.
@@ -1172,9 +1176,20 @@ namespace sw
 
         // `Ready` 가 아닌 변형(만드는 중 · 실패 · 없음)은 그리지 않는다 — 패스 PSO 로 바꿔 그리면 머티리얼 · 보기 모드가 다른 그림이 된다. ensureMaterialPSOs 가 기록 전에
         // 채우므로 동기 생성에서는 항상 `Ready` 나 `Failed` 이고(`Failed` 는 그때 오류를 남겼다), `Building` 은 빌더 스레드(U12)가 아직 못 끝낸 배치다.
-        const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling, vertexFormat );
+        const uint64                           key   = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling, vertexFormat );
+        const RenderPSOCache::MaterialPSOState state = _pCache->findMaterialPSOState( key );
+        // 런타임 스위치로 새 변형이 막 생긴 배치는 빌더가 끝낼 때까지 직전 변형으로 그린다(사라짐 대신 늦은 전환). 직전 변형도 `Ready` 가 아니면 그리지 않는다.
+        if ( state == RenderPSOCache::MaterialPSOState::Building && fallbackHash != 0 )
+        {
+            const RHIPipelineStateHandle fallbackPSO = _pCache->findMaterialPSO( RenderPSOCache::materialPSOKey( passPSO, fallbackHash, viewMode, bReverseCulling, vertexFormat ) );
+            if ( fallbackPSO != 0 )
+            {
+                SW_PROFILE_COUNT( "RT.PSO.fallbackBatches", 1 );
+                return fallbackPSO;
+            }
+        }
         if ( pOutState != nullptr )
-            *pOutState = _pCache->findMaterialPSOState( key );
+            *pOutState = state;
         return _pCache->findMaterialPSO( key );
     }
 

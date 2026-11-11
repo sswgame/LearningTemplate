@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  런타임 퍼뮤테이션 전환 — 머티리얼 스위치를 실행 중에 바꾼 프레임들에 물체가 사라지지 않는지 본다(네 백엔드).
+  무대: 툰 쇼케이스(toonshowcase.scene.xml)의 툰 구. 외곽선 스위치(Outline, bShaderFeature="0" — 켬 · 끔 둘 다 쿠킹된다)를 `matswitch` 로 끈다.
+  예전 결함: 새 PSO 키가 캐시에 없으면 `Building` 동안 그 배치를 건너뛰어 물체가 몇 프레임 사라졌다(`RT.PSO.pendingBatches`).
+  지금: 머티리얼이 들어올 때 런타임 스위치 조합을 낮은 우선순위로 미리 만들고(`MaterialCache::appendRuntimeSwitchWarmEntries`), 아직 `Building` 이면 직전 변형으로 그린다
+  (`GPUShaderPermutation::_fallbackHash`). 그래서 바꾼 뒤 매 프레임 빠진 배치가 0 이다(`Assets.Pending` 은 렌더러가 빠뜨린 배치를 센다).
+  판정: 바꾼 직후 여러 프레임 `Assets.Pending` 0, 그리고 외곽선을 끈 그림이 켠 그림과 다르다(골든 없이 두 장 비교).
+  실행: ctest -R Scenario.game.empty
+-->
+<Scenario name="game.empty.materialswitch" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/toonshowcase.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="materialswitch_on.ppm"/>
+	<DevCommand line="matswitch game/empty/materials/toonshowcase_toon.material Outline 0"/>
+	<Wait frames="1"/>
+	<Expect watch="Assets.Pending" equals="0"/>
+	<Wait frames="1"/>
+	<Expect watch="Assets.Pending" equals="0"/>
+	<Wait frames="1"/>
+	<Expect watch="Assets.Pending" equals="0"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="20"/>
+	<Screenshot file="materialswitch_off.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="materialswitch_on.ppm" second="materialswitch_off.ppm" minDiffering="0.0005" maxDiffering="0.2"/>
+	<Pass/>
+</Scenario>

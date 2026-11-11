@@ -141,6 +141,8 @@ namespace sw
         struct Impl;
         /** @brief 초기화를 마친 고정 머티리얼의 PSO 미리 만들기 값을 만들어 렌더 스레드가 꺼낼 줄로 옮깁니다(게임 스레드, `initializePending`). */
         void promoteReadyPSOWarmKeys();
+        /** @brief 막 초기화한 @p material 의 런타임 스위치 조합(지금 상태 밖)을 PSO 미리 만들기 값으로 올립니다(`takePSOWarmEntries` 가 꺼낸다). 게임 스레드. */
+        void appendRuntimeSwitchWarmEntries( const Material& material );
 
     private:
         unique_ptr<Impl> _impl;

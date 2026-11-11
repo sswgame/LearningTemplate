@@ -95,7 +95,14 @@ namespace sw
         if ( it != _mapPermutationToIndex.end() )
             return it->second;
 
-        GPUShaderPermutation permutation = makeShaderPermutation( *pMaterial, pInstance, bAppearanceDither );
+        GPUShaderPermutation permutation        = makeShaderPermutation( *pMaterial, pInstance, bAppearanceDither );
+        const uint64         previousDefineHash = ( pInstance != nullptr ) ? pInstance->getPreviousPermutationHash() : pMaterial->getPreviousPermutationHash();
+        if ( previousDefineHash != 0 )
+        {
+            const uint64 fallbackHash = combinePermutationHash( pMaterial->getShaderPathHash(), previousDefineHash, bAppearanceDither );
+            if ( fallbackHash != hash )
+                permutation._fallbackHash = fallbackHash;
+        }
 
         // copy-on-write: 목록은 RT 와 공유하므로 제자리에 추가하지 않는다. 새 퍼뮤테이션은 드물어(머티리얼 종류만큼) 복사가 싸다.
         shared_ptr<vector<GPUShaderPermutation>> pList = ( inoutSnapshot._pListShaderPermutation != nullptr )
