@@ -637,6 +637,16 @@ namespace sw
         _state._shadowCache.update( _state._frameShadow._listLocalTile, atlasResolution, _state._gpuScene.getStaticShadowGeneration(), static_cast<bool>( gv_shadowCache ) );
     }
 
+    FrameViewResources::PassCullingContext FrameRenderer::makePassCullingContext() const
+    {
+        FrameViewResources::PassCullingContext facts{};
+        facts._bObjectMotion       = _state._gpuScene.hasObjectMotion() ? SW_TRUE : SW_FALSE;
+        facts._bContactShadows     = _state._frameShadow.hasContactShadows() ? SW_TRUE : SW_FALSE;
+        facts._bTransparentBatches = _state._gpuScene.getTransparentBatches().empty() ? SW_FALSE : SW_TRUE;
+        facts._bDistortionBatches  = _state._gpuScene.hasDistortionBatches() ? SW_TRUE : SW_FALSE;
+        return facts;
+    }
+
     void FrameRenderer::updatePassConstants( FramePassContext& context, const float4x4& mainViewProj )
     {
         // **프레임당 한 번** 프레임 시드(_state._frameContext)에만 채운다. 패스 컨텍스트는 이 시드를 복사해
@@ -650,7 +660,7 @@ namespace sw
         beginViewHistory( _state._mainView );
         // 지난 뷰-투영과 견주므로 applyViewProjection(지난 것을 이번 것으로 바꾼다) 앞이다.
         // 주 시점의 첨부만 렌더 타깃 목록(에디터 패널)에 싣는다 — 가리키는 곳이 바뀌거나 타깃을 만들고 놓았을 때만 다시 싣는다.
-        const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _state._mainView, mainViewProj, _state._gpuScene.hasObjectMotion(), _state._frameShadow.hasContactShadows() );
+        const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _state._mainView, mainViewProj, makePassCullingContext() );
         if ( selection._bTargetsRepointed == SW_TRUE || selection._bTargetsChanged == SW_TRUE )
             publishRenderTargets();
         if ( selection._bTargetsChanged == SW_TRUE )
@@ -1202,7 +1212,7 @@ namespace sw
         // 기록을 버릴지는 컬링(가림 판정)이 기록 전에 보므로 그리기(renderExtraView)가 아니라 여기서 정한다.
         beginViewHistory( view );
         // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.
-        (void)_viewResources.applyViewPassSelection( view, request._viewProj, _state._gpuScene.hasObjectMotion(), _state._frameShadow.hasContactShadows() ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
+        (void)_viewResources.applyViewPassSelection( view, request._viewProj, makePassCullingContext() ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
         _upscale.prepareUpscale( view, view._outputWidth, view._outputHeight );
         _postProcessMaterials.prepareView( view );
     }

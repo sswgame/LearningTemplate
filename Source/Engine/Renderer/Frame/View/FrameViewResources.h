@@ -32,6 +32,15 @@ namespace sw
     class SW_API FrameViewResources
     {
     public:
+        /** @brief 패스 고르기가 보는 이번 프레임의 씬 사실입니다(뷰마다 같다 — 스냅샷을 적용한 뒤 정한다). */
+        struct PassCullingContext
+        {
+            uint8 _bObjectMotion{ SW_FALSE };       ///< 기록이 있는 물체가 움직였다(`GPUScene::hasObjectMotion` — 업로드 앞이라 지난 프레임 값이다. 막 움직이기 시작한 한 프레임은 모션 블러가 늦게 켜진다)
+            uint8 _bContactShadows{ SW_FALSE };     ///< 접촉 그림자를 받는 빛이 있다(`FrameShadowData::hasContactShadows`) — 없으면 접촉 그림자 패스가 빠진다
+            uint8 _bTransparentBatches{ SW_FALSE }; ///< 메시 반투명 배치가 있다(이번 스냅샷) — 없으면 반투명 패스가 굴절 머티리얼이 읽는 입력(장면 색 · 깊이 사본)을 필요로 하지 않는다
+            uint8 _bDistortionBatches{ SW_FALSE };  ///< 왜곡 배치가 있다(`GPUScene::hasDistortionBatches`) — 없으면 왜곡 누적 · 적용이 쉰다
+        };
+
         /** @brief `applyViewPassSelection` 이 이번 프레임에 바꾼 것입니다. 렌더 타깃 목록을 다시 싣고 메모리를 다시 보고할지 정할 때 씁니다. */
         struct PassSelectionResult
         {
@@ -60,10 +69,11 @@ namespace sw
          *        읽는 패스가 모두 빠진 풀스크린 패스(블룸이 꺼진 뷰의 BloomDownsample)도 빠집니다. 도는 패스의 출력 타깃은 처음이면 만듭니다.
          * @details 셋업 단계에서(기록 전) 뷰마다 한 번 부른다. 빠질 수 있는 것은 출력을 혼자 쓰는 일반 풀스크린 패스뿐이고, 파이프라인에 읽는 패스가 하나도 없는 출력의 패스는 그대로 돈다.
          * @param viewProj 이번 프레임 이 뷰의 뷰-투영입니다(지난번 것 `_prevViewProj` 와 같고 물체도 서 있으면 모션 블러는 꺼진 것이다). `_bHistoryReset` 을 정한 뒤 부른다.
-         * @param bObjectMotion 기록이 있는 물체가 움직였는지(`GPUScene::hasObjectMotion`)입니다. 씬 업로드 앞에 부르므로 지난 프레임의 값이다 — 물체가 막 움직이기 시작한 한 프레임은 모션 블러가 늦게 켜진다.
-         * @param bContactShadows 이번 프레임에 접촉 그림자를 받는 빛이 있는지입니다(`FrameShadowData::hasContactShadows`). 없으면 접촉 그림자 패스가 빠진다.
+         *          덧그리는 패스(SSR · 왜곡 누적 · 왜곡 적용 — 출력 위에 그려 쉬면 출력이 그대로다)가 이번 뷰에 그릴 것이 없으면(`shouldRenderPass`) 컬링해 뷰에 적고(`FrameViewTarget::_listPassCulled` — 실행이 그대로 따른다)
+         *          그 입력을 필요로 하지 않는다. 그래서 읽는 쪽이 모두 쉰 사본(장면 색 · 깊이)이 빠진다 — 판정은 여기 하나다.
+         * @param facts 이번 프레임의 씬 사실입니다(`PassCullingContext`).
          */
-        [[nodiscard]] PassSelectionResult applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj, bool bObjectMotion, bool bContactShadows );
+        [[nodiscard]] PassSelectionResult applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj, const PassCullingContext& facts );
 
     private:
         /**

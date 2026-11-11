@@ -64,7 +64,8 @@ namespace sw
             static bool isSelectable( const vector<RenderGraphPassDesc>& listPass, const RenderGraphPassDesc& pass )
             {
                 const RenderPassTypeInfo& info            = getRenderPassTypeInfo( pass._type );
-                const bool                bSelectableType = info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) || info.hasFlag( RenderPassTraitFlag::kBypassesToSource );
+                const bool                bSelectableType = info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) || info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) ||
+                                             info.hasFlag( RenderPassTraitFlag::kAllowPassCulling );
                 if ( bSelectableType == false || pass._listResolvedColorOutput.empty() )
                     return false;
                 return VectorUtil::allOf( pass._listResolvedColorOutput, [&listPass]( const RenderGraphPassDesc::ResolvedAttachment& output )
@@ -114,10 +115,13 @@ namespace sw
             }
 
             /** @brief 도는 패스가 읽는 첨부를 "읽힌다" 로 적습니다. @p bIncludeOutputs 면 쓰는 첨부도 적는다(늘 도는 패스는 앞 판을 불러 이어 그릴 수 있다). */
-            static void markReads( const vector<RenderPassAttachment>& listAttachment, const RenderGraphPassDesc& pass, bool bIncludeOutputs, vector<uint8>& outListNeeded )
+            static void markReads( const vector<RenderPassAttachment>& listAttachment, const RenderGraphPassDesc& pass, bool bIncludeOutputs, vector<uint8>& outListNeeded,
+                                   bool bSkipMaterialSceneTextures = false )
             {
                 for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
                 {
+                    if ( bSkipMaterialSceneTextures && isMaterialSceneTexture( input ) )
+                        continue;
                     markNeeded( listAttachment, input._attachment, outListNeeded );
                 }
                 if ( pass._resolvedDepthAttachment.empty() == false )
@@ -146,6 +150,34 @@ namespace sw
              * @param bMotionStill 기록을 버리는 프레임(컷 — 언리얼도 컷에서 모션 블러를 끈다)이거나, 이번 뷰-투영이 지난번 것과 같고 물체도 움직이지 않았다 — 화면 속도가 모두 0 이다.
              * @param bContactShadows 이번 프레임에 접촉 그림자를 받는 빛이 있다(`FrameShadowData::hasContactShadows`) — 없으면 접촉 그림자 패스는 꺼진 효과다.
              */
+            /** @brief 반투명 배치의 머티리얼(물 · 유리 굴절 — scene_refraction.hlsli)만 읽는 입력이면 true 입니다. 메시 반투명 배치가 없으면 필요 없다(입자는 읽지 않는다). */
+            static bool isMaterialSceneTexture( const RenderGraphPassDesc::ResolvedAttachment& input )
+            {
+                const RenderPassInputRole role = static_cast<RenderPassInputRole>( input._role );
+                return role == RenderPassInputRole::SceneColorCopy || role == RenderPassInputRole::SceneDepthCopy;
+            }
+
+            /**
+             * @brief 고를 수 없는 덧그리는 패스(SSR · 왜곡 누적 · 왜곡 적용)가 이번 뷰에 그릴 것이 있으면 true 입니다(언리얼 `ShouldRender<기능>`). 출력 위에 그리므로 그리지 않으면 출력이 그대로이고 입력이 필요 없다.
+             * @details 그리지 않는 패스는 컬링한다 — 실행은 이 결과(`FrameViewTarget::_listPassCulled`)를 그대로 따른다. 패스마다 실행 함수가 따로 판정하면 사본 같은 생산 패스가 읽는 쪽을 알아야 했다.
+             */
+            static bool shouldRenderPass( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, const FrameViewResources::PassCullingContext& facts )
+            {
+                const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( settings._viewMode );
+                // 값 보기(노멀 · 깊이 · 오버드로)와 와이어프레임은 장면 색을 덮지 않는다(안개와 같은 판정).
+                const bool bShowsScene = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
+                switch ( pass._type )
+                {
+                    case RenderPassType::ScreenSpaceReflection:
+                        return settings.usesPostProcess() && settings._postProcess._screenSpaceReflectionIntensity > 0.0f;
+                    case RenderPassType::Distortion:
+                    case RenderPassType::DistortionApply:
+                        return bShowsScene && facts._bDistortionBatches == SW_TRUE;
+                    default:
+                        return true;
+                }
+            }
+
             static bool isEffectOff( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, bool bMotionStill, bool bContactShadows )
             {
                 if ( settings.usesPostProcess() == false || pass._minPostQuality > static_cast<int32>( gv_postQuality ) )
@@ -399,9 +431,11 @@ namespace sw
         view._transientPool.release( _pDevice );
     }
 
-    FrameViewResources::PassSelectionResult FrameViewResources::applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj, bool bObjectMotion, bool bContactShadows )
+    FrameViewResources::PassSelectionResult FrameViewResources::applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj, const PassCullingContext& facts )
     {
-        using Internal = FrameViewResourcesInternal;
+        using Internal             = FrameViewResourcesInternal;
+        const bool bObjectMotion   = facts._bObjectMotion == SW_TRUE;
+        const bool bContactShadows = facts._bContactShadows == SW_TRUE;
         // 모션 블러의 속도는 카메라(지난 뷰-투영과의 차이)와 물체(화면 속도)다. 컷이거나 둘 다 서 있으면 모든 픽셀이 원본이다(motion_blur.hlsl).
         const bool                          bCameraStill   = Memory::compare( &view._prevViewProj, &viewProj, sizeof( float4x4 ) ) == 0;
         const bool                          bMotionStill   = view._bHistoryReset == SW_TRUE || ( bCameraStill && bObjectMotion == false );
@@ -411,6 +445,7 @@ namespace sw
         // 선언한 첨부 자리마다 "이번 프레임에 읽힌다" 하나 — 크기가 같으면 할당하지 않는다(프레임마다 · 뷰마다 부른다).
         vector<uint8>& listNeeded = _listScratchNeededAttachment;
         listNeeded.assign( listAttachment.size(), SW_FALSE );
+        view._listPassCulled.assign( listPass.size(), SW_FALSE );
         bool bForwardSet = false;
         bool bAllocated  = false;
         bool bReleased   = false;
@@ -442,13 +477,20 @@ namespace sw
             const RenderGraphPassDesc& pass = listPass[passIndex];
             if ( Internal::isSelectable( listPass, pass ) == false )
             {
-                if ( pass._type == RenderPassType::TAA )
-                    view._bTAAHistoryWritten = SW_TRUE;
-                Internal::markReads( listAttachment, pass, true, listNeeded );
                 for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
                 {
                     ensureMade( output._attachment );
                 }
+                // 쉬는 덧그리는 패스는 출력이 그대로라 입력을 필요로 하지 않는다 — 그것만 읽는 사본이 아래에서 빠진다.
+                if ( Internal::shouldRenderPass( pass, view._settings, facts ) == false )
+                {
+                    view._listPassCulled[passIndex] = SW_TRUE;
+                    continue;
+                }
+                if ( pass._type == RenderPassType::TAA )
+                    view._bTAAHistoryWritten = SW_TRUE;
+                const bool bSkipMaterialSceneTextures = getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) && facts._bTransparentBatches == SW_FALSE;
+                Internal::markReads( listAttachment, pass, true, listNeeded, bSkipMaterialSceneTextures );
                 continue;
             }
             const RenderPassTypeInfo& info          = getRenderPassTypeInfo( pass._type );
@@ -468,7 +510,7 @@ namespace sw
             }
             if ( bOff || ( bOutputNeeded == false && Internal::isConsumed( listPass, pass ) ) )
             {
-                // 꺼진 원본 없는 효과(SSAO)와 읽는 패스가 모두 빠진 패스는 출력이 없다 — 읽는 쪽은 그 역할을 바인딩하지 않는다.
+                // 꺼진 원본 없는 효과(SSAO)와 읽는 패스가 모두 빠진 패스(읽는 쪽이 모두 쉰 사본 포함)는 출력이 없다 — 읽는 쪽은 그 역할을 바인딩하지 않는다.
                 for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
                 {
                     bForwardSet = pool.markAbsent( output._attachment ) || bForwardSet;

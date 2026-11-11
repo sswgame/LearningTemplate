@@ -101,17 +101,11 @@ namespace sw
          * @details 판정은 `FrameRendererUtil::drawsMaterialInPass` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다.
          */
         bool drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
-        /** @brief 지금 뷰가 화면 왜곡을 그리는지 — 씬에 왜곡 배치가 있고(`GPUScene::hasDistortionBatches`) 장면 색을 보이는 뷰 모드입니다. 왜곡 누적 · 적용 패스가 같은 판정을 본다. */
-        bool drawsDistortionThisView() const;
-        /** @brief 지금 뷰가 화면 공간 반사를 그리는지 — 후처리를 쓰는 뷰이고 세기가 0 보다 큽니다. 반사 패스와 장면 색 사본 패스가 같은 판정을 본다. */
-        bool drawsScreenSpaceReflectionThisView() const;
         /**
-         * @brief 파이프라인 패스 @p pass 가 이번 뷰에서 장면 색 사본(SceneColorCopy 역할)을 읽는지 — 사본 패스가 이것으로 복사를 건너뛸지 정한다.
-         * @details 읽는 패스마다 자기 그리기 판정을 그대로 쓴다(반투명 배치 · 왜곡 · 반사). 판정을 모르는 읽는 패스(ScreenSpaceGI · 새 패스)는 읽는다고 본다 —
-         *          빠뜨려도 복사가 한 번 더 들 뿐 그림이 틀리지 않는다. 예전에는 사본 패스가 "읽는 것은 물의 굴절뿐" 이라고 알고 반투명 배치가 없으면 복사하지 않아,
-         *          뒤에 들어온 SSR · 왜곡 적용 · 화면 공간 GI 가 풀에서 받은 옛 텍스처(앞 장면)를 읽었다.
+         * @brief 파이프라인 패스 @p pass 가 이번 뷰에서 컬링됐으면 true 입니다(그릴 것이 없다) — 뷰 패스 고르기의 결과(`FrameViewTarget::_listPassCulled`)를 그대로 읽는다.
+         * @details 덧그리는 패스(SSR · 왜곡 누적 · 왜곡 적용)의 실행이 따로 판정하지 않는다 — 판정이 둘이면 고르기가 뺀 사본을 실행이 읽거나, 실행이 쉬는데 사본을 만든다.
          */
-        bool readsSceneColorCopyThisView( const RenderGraphPassDesc& pass ) const;
+        bool isPassCulledInView( const RenderGraphPassDesc& pass ) const;
         /** @brief 그림자 캐시의 거르기(@p filter)가 이 배치를 그리게 하면 true 입니다(`GPUMeshBatch::_bStaticShadowCaster`). */
         static bool drawsCasterBatch( ShadowCasterFilter filter, const GPUMeshBatch& batch );
 

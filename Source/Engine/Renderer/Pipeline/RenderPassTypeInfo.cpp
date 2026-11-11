@@ -254,7 +254,7 @@ namespace sw
                     {
                         // 셰이더 · PSO 없이 원본을 선언한 출력으로 복사한다(전용 실행 executeSceneColorCopyPass). 입력은 원본 색 하나, 출력은 같은 형식의 첨부다.
                         info._inputContract = makeContract( { Role::SourceColor }, {} );
-                        info._flags         = Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
+                        info._flags         = Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kAllowPassCulling;
                         break;
                     }
                     case RenderPassType::SceneDepthCopy:
