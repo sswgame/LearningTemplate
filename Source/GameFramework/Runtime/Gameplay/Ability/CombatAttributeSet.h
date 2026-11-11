@@ -47,6 +47,7 @@ namespace sw
      *          - 체력은 [0, 최대 체력], 마나는 [0, 최대 마나] 범위에 머물고, 이동 속도와 최대치는 0 이상이다. 최대치가 줄면 현재치도 따라서 줄인다.
      *          - `IncomingDamage` 를 받으면 체력에서 뺀다. 체력이 0 에 닿은 **처음 한 번만** 주인에게 `State.Dead` 태그를 붙이고 모든 어빌리티를
      *            취소한 뒤, `Event.Death` 게임플레이 이벤트와 `AbilityOwnerDiedEvent`("game" 채널)를 낸다. 쓰러진 뒤의 피해와 회복은 무시한다.
+     *          - 쓰러짐은 체력 current 의 전이(> 0 → ≤ 0) 한 곳에서 판정한다 — 메타 피해 · 체력 직접 수정자 · 최대 체력 디버프 · 코드가 쓴 base · 즉사 어느 길이든 같다(Lyra `ULyraHealthSet` 의 OutOfHealth 자리).
      *          - 맞을 때마다 주인에게 `Event.Hit` 게임플레이 이벤트를 보낸다. 이벤트의 크기는 깎인 체력이고, 피격 반응 어빌리티가 이 이벤트로 발동한다.
      *          기본값은 체력과 최대 체력 100, 마나와 최대 마나 100, 공격력 10, 방어 0, 이동 속도 5 이다. 카탈로그 XML 이 이 값을 덮어쓴다.
      */
@@ -81,6 +82,8 @@ namespace sw
         /** @brief 메타 회복을 체력으로 옮깁니다. */
         void applyIncomingHealing( const AttributeModCallbackData& data );
         /** @brief 체력이 0 에 닿은 처음 한 번을 처리합니다. 태그를 붙이고, 어빌리티를 취소하고, 이벤트를 냅니다. */
-        void handleOutOfHealth( const AttributeModCallbackData& data );
+        void handleOutOfHealth( GameObjectHandle instigator );
+
+        uint8 _bApplyingDamage : 1; ///< 메타 피해를 체력으로 옮기는 중이다 — 쓰러짐은 피격 이벤트 뒤에 `applyIncomingDamage` 가 낸다(피격 → 죽음 순서)
     };
 } // namespace sw

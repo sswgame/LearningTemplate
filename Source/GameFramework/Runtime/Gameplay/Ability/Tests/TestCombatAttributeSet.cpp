@@ -293,3 +293,32 @@ SW_TEST_CASE( CombatAttributeSetTest, InvulnerableOwnerTakesNoHitAndDoesNotDie )
     SW_EXPECT_TRUE( rig._listEventTag.empty() );
     SW_EXPECT_FALSE( rig.isDead() );
 }
+
+/**
+ * @brief [CombatAttributeSetTest] 메타 피해를 지나지 않고 체력이 0 이 돼도 한 번 쓰러진다 — 체력 직접 수정자, 최대 체력 디버프, 코드가 쓴 base(감사 G-5)
+ */
+SW_TEST_CASE( CombatAttributeSetTest, DirectHealthModifierToZeroRaisesDeath )
+{
+    {
+        CombatFixture rig;
+        rig.applyInstant( CombatAttributes::health(), -500.0f );
+        SW_EXPECT_EQUAL( 0.0f, rig.current( CombatAttributes::health() ) );
+        SW_EXPECT_TRUE( rig.isDead() );
+        SW_REQUIRE_EQUAL( size_t( 1 ), rig._listEventTag.size() );
+        SW_EXPECT_TRUE( rig._listEventTag[0] == CombatAttributeSet::getDeathEventTag() );
+        rig.applyInstant( CombatAttributes::health(), -10.0f ); // 이미 쓰러졌다 — 다시 죽지 않는다
+        SW_EXPECT_EQUAL( size_t( 1 ), rig._listEventTag.size() );
+    }
+    {
+        CombatFixture rig;
+        (void)rig.apply( EffectDurationPolicy::Infinite, CombatAttributes::maxHealth(), -100.0f );
+        SW_EXPECT_EQUAL( 0.0f, rig.current( CombatAttributes::health() ) );
+        SW_EXPECT_TRUE( rig.isDead() );
+    }
+    {
+        CombatFixture rig;
+        SW_EXPECT_TRUE( rig._pAbilities->setAttributeBaseValue( CombatAttributes::health(), 0.0f ) );
+        SW_EXPECT_TRUE( rig.isDead() );
+        SW_EXPECT_EQUAL( size_t( 1 ), rig._listEventTag.size() );
+    }
+}

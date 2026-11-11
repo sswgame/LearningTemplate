@@ -175,6 +175,8 @@ namespace sw
          */
         TagCountTable&       getOwnedTagCounts() { return _ownedTagCounts; }
         const TagCountTable& getOwnedTagCounts() const { return _ownedTagCounts; }
+        /** @brief 지금 적용 중인 즉시 이펙트를 건 쪽입니다. 이펙트 밖(코드가 쓴 값 · 지속 이펙트 해제)이면 빈 핸들입니다. */
+        GameObjectHandle getExecutingInstigator() const { return _pExecutingContext != nullptr ? _pExecutingContext->_instigator : GameObjectHandle{}; }
         /**
          * @brief 무적 태그("State.Invulnerable")입니다. 주인이 이 태그를 가진 동안 체력 어트리뷰트의 base 는 내려가지 않습니다.
          * @details 막는 곳은 base 를 쓰는 두 경로(이펙트 모디파이어 `applyModifierToBase`, 직접 쓰기 `setAttributeBaseValue`)가 함께 지나는
