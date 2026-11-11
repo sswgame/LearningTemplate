@@ -26,7 +26,8 @@ namespace
         int32         _sendBudget{ -1 }; ///< 남은 보내기 수. 음수면 무한이다
         uint8         _bWindowFull{ SW_FALSE };
 
-        bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override
+        bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override { return trySendMessage( connectionID, channel, pData, size ); }
+        bool trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override
         {
             (void)channel;
             if ( _bWindowFull != SW_FALSE || _sendBudget == 0 )

@@ -178,7 +178,7 @@ namespace sw
             {
                 bBlocked = bBlocked || blocked == pending._connectionID;
             }
-            if ( bBlocked == false && _pHost->sendMessage( pending._connectionID, NetChannelType::ReliableOrdered, pending._buffer ) )
+            if ( bBlocked == false && _pHost->trySendMessage( pending._connectionID, NetChannelType::ReliableOrdered, pending._buffer ) )
                 continue;
             if ( bBlocked == false )
                 _listBlockedScratch.push_back( pending._connectionID );

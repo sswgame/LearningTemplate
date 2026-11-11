@@ -146,7 +146,8 @@ namespace sw
         VersionMismatch,      ///< 같은 게임의 다른 와이어 버전(`NetWireVersion`).
         SecurityMismatch,     ///< 한쪽만 암호화나 토큰 결속을 켰다(협상하지 않으므로 다운그레이드는 없다).
         AuthenticationFailed, ///< 토큰을 모르거나 세션 비밀 증명이나 키 확인이 틀렸다.
-        ReceiveOverflow       ///< 받은 큐가 `NetConnection::kMaxPendingReceiveBytes` 를 넘었다(게임이 꺼내는 속도보다 상대가 빨리 넣는다).
+        ReceiveOverflow,      ///< 받은 큐가 `NetConnection::kMaxPendingReceiveBytes` 를 넘었다(게임이 꺼내는 속도보다 상대가 빨리 넣는다).
+        ReliableOverflow      ///< 신뢰 창이 차 신뢰 메시지를 넣지 못했다(상대가 확인하지 않는다) — 버리면 받는 쪽의 순서가 영영 끊기므로 닫는다(언리얼은 신뢰 버퍼가 넘치면 연결을 닫는다).
     };
 
     SW_API const utf8* toString( NetDisconnectReason reason );

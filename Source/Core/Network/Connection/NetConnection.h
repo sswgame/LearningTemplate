@@ -107,6 +107,8 @@ namespace sw
          *        신뢰 창이 메시지 전체(조각 모두)를 받을 수 없으면 로그 없이 false 를 반환합니다. 둘 다 아무것도 넣지 않으므로 반쪽 메시지가 생기지 않습니다.
          */
         [[nodiscard]] bool sendMessage( NetChannelType channel, const uint8* pData, int32 size );
+        /** @brief @p size 바이트 신뢰 메시지(조각 모두)를 지금 신뢰 창이 받을 수 없으면 true 입니다. */
+        bool isReliableWindowFull( int32 size ) const;
         /**
          * @brief 비신뢰 메시지를 전달 통지 @p tag 를 달아 넣습니다. 판정은 `pollDeliveryNotices` 가 메시지마다 한 번 돌려줍니다.
          * @details 메시지는 1 바이트 이상(첫 바이트가 종류)이고 `kMaxSingleMessageSize` 이하여야 합니다. 어기면 오류 로그와 함께 false 이고 통지도 나지 않습니다.

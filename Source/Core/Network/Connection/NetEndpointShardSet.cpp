@@ -70,6 +70,13 @@ namespace sw
         return pShard != nullptr && pShard->sendMessage( localConnectionID, channel, pData, size );
     }
 
+    bool NetEndpointShardSet::trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
+    {
+        int32        localConnectionID = constant::invalid_index::kInt32;
+        NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
+        return pShard != nullptr && pShard->trySendMessage( localConnectionID, channel, pData, size );
+    }
+
     bool NetEndpointShardSet::sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag )
     {
         int32        localConnectionID = constant::invalid_index::kInt32;

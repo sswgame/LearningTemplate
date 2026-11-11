@@ -69,6 +69,8 @@ namespace sw
                 return "AuthenticationFailed";
             case NetDisconnectReason::ReceiveOverflow:
                 return "ReceiveOverflow";
+            case NetDisconnectReason::ReliableOverflow:
+                return "ReliableOverflow";
         }
         return "Unknown";
     }
@@ -143,6 +145,12 @@ namespace sw
     int32 NetConnection::getPendingReliableCount() const
     {
         return NetSequence::computeDifference( _nextReliableSendID, _oldestUnackedReliableID );
+    }
+
+    bool NetConnection::isReliableWindowFull( int32 size ) const
+    {
+        const int32 fragmentCount = MathUtil::max( 1, ( size + kMaxSingleMessageSize - 1 ) / kMaxSingleMessageSize );
+        return getPendingReliableCount() + fragmentCount > kReliableWindow - 1;
     }
 
     bool NetConnection::sendMessage( NetChannelType channel, const uint8* pData, int32 size )
@@ -240,8 +248,8 @@ namespace sw
         // 조각 하나가 신뢰 ID 하나다. 재전송과 확인도 조각마다 한다. 창이 메시지 전체를 받을 수 없으면 조각을 하나도 넣지 않는다.
         // 신뢰 순서 없음은 조각나지 않는다(`getMaxMessageSize` 가 이미 1KB 로 막았다). 조각은 연속으로 ID를 받으므로 사이에 다른 메시지가 끼지 않는다.
         const int32 fragmentCount = MathUtil::max( 1, ( size + kMaxSingleMessageSize - 1 ) / kMaxSingleMessageSize );
-        if ( getPendingReliableCount() + fragmentCount > kReliableWindow - 1 )
-            return false; // 상대가 확인하지 않아 막힌 상태다(게임이 보내는 속도를 줄인다).
+        if ( isReliableWindowFull( size ) )
+            return false; // 상대가 확인하지 않아 막힌 상태다(엔드포인트가 닫거나, `trySendMessage` 를 쓴 쪽이 보내는 속도를 줄인다).
         for ( int32 fragment = 0; fragment < fragmentCount; ++fragment )
         {
             const int32       offset   = fragment * kMaxSingleMessageSize;

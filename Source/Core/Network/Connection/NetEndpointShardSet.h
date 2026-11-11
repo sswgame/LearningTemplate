@@ -49,6 +49,7 @@ namespace sw
         int32 makeConnectionID( int32 shardIndex, int32 localConnectionID ) const { return shardIndex * _connectionStride + localConnectionID; }
 
         [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override;
+        [[nodiscard]] bool trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override;
         [[nodiscard]] bool sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) override;
         int32              broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = constant::invalid_index::kInt32 ) override;
         void               disconnect( int32 connectionID ) override;

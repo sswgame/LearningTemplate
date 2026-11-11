@@ -75,6 +75,7 @@ namespace sw
                     case NetDisconnectReason::Timeout:
                     case NetDisconnectReason::Rejected:
                     case NetDisconnectReason::ReceiveOverflow:
+                    case NetDisconnectReason::ReliableOverflow:
                         break;
                 }
                 return NetDisconnectReason::Rejected;
@@ -1091,16 +1092,35 @@ namespace sw
         if ( NetEndpointInternal::reportOversizeMessage( channel, pData, size ) )
             return false;
         ScopedLock<mutex> lock{ _mutex };
-        return sendMessageLocked( connectionID, channel, pData, size );
+        return sendMessageLocked( connectionID, channel, pData, size, WindowFullPolicy::Close );
     }
 
-    bool NetEndpoint::sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
+    bool NetEndpoint::trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
+    {
+        if ( NetEndpointInternal::reportOversizeMessage( channel, pData, size ) )
+            return false;
+        ScopedLock<mutex> lock{ _mutex };
+        return sendMessageLocked( connectionID, channel, pData, size, WindowFullPolicy::Report );
+    }
+
+    bool NetEndpoint::sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size, WindowFullPolicy policy )
     {
         NetEndpointSlot* pSlot   = _slotTable.findConnected( connectionID );
         const bool       bQueued = pSlot != nullptr && pSlot->_connection.sendMessage( channel, pData, size );
         if ( bQueued )
+        {
             _sentKindStats.add( pData, size );
-        return bQueued;
+            return true;
+        }
+        const bool bReliable    = channel == NetChannelType::ReliableOrdered || channel == NetChannelType::ReliableUnordered;
+        const bool bCloseOnFull = pSlot != nullptr && bReliable && policy == WindowFullPolicy::Close && pSlot->_connection.isReliableWindowFull( size );
+        if ( bCloseOnFull )
+        {
+            SW_LOG_WARNING_ID( "Net.ReliableOverflow", "NetEndpoint: the reliable window of connection %# is full (the peer does not acknowledge) - closing it instead of dropping a reliable message",
+                               connectionID );
+            closeSlot( connectionID, NetDisconnectReason::ReliableOverflow, true );
+        }
+        return false;
     }
 
     bool NetEndpoint::sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag )
@@ -1128,7 +1148,7 @@ namespace sw
         const int32       slotCount = _slotTable.getCount();
         for ( int32 index = 0; index < slotCount; ++index )
         {
-            if ( index != exceptID && sendMessageLocked( index, channel, pData, size ) )
+            if ( index != exceptID && sendMessageLocked( index, channel, pData, size, WindowFullPolicy::Close ) )
                 ++sentCount;
         }
         return sentCount;

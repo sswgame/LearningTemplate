@@ -186,10 +186,21 @@ namespace sw
         INetPeers( const INetPeers& )            = delete;
         INetPeers& operator=( const INetPeers& ) = delete;
 
+        /**
+         * @brief 메시지를 보냅니다. 신뢰 창이 차 신뢰 메시지를 넣지 못하면 그 연결을 `NetDisconnectReason::ReliableOverflow` 로 닫고 false 입니다.
+         * @details 신뢰 메시지를 조용히 버리면 받는 쪽의 순서가 영영 끊긴다(락스텝 입력 · 체크섬이 멈춘다, 감사 N-3) — 결과를 버려도 안전하게 닫는다. 창이 찬 것을
+         *          역압으로 직접 다루는 쪽(대기열을 든 중계 · 관심 영역 복제)은 `trySendMessage` 를 쓴다.
+         */
         [[nodiscard]] virtual bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) = 0;
         [[nodiscard]] bool         sendMessage( int32 connectionID, NetChannelType channel, const vector<uint8>& buffer )
         {
             return sendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
+        }
+        /** @brief `sendMessage` 와 같되 신뢰 창이 차면 닫지 않고 false 만 돌려줍니다. 부른 쪽이 남은 것을 들고 다음 틱에 다시 보낸다. */
+        [[nodiscard]] virtual bool trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) = 0;
+        [[nodiscard]] bool         trySendMessage( int32 connectionID, NetChannelType channel, const vector<uint8>& buffer )
+        {
+            return trySendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
         /**
          * @brief 비신뢰 메시지를 전달 통지 @p tag 를 달아 보냅니다(`NetConnection::sendNotifiedMessage`). 판정은 `pollInbound` 의 `_listDeliveryNotice` 로 옵니다.
@@ -288,6 +299,11 @@ namespace sw
         void releaseUpdateThread() { _updateThread.unbind(); }
 
         [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) SW_EXCLUDES_LOCK( _mutex ) override;
+        [[nodiscard]] bool trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) SW_EXCLUDES_LOCK( _mutex ) override;
+        [[nodiscard]] bool trySendMessage( int32 connectionID, NetChannelType channel, const vector<uint8>& buffer )
+        {
+            return trySendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
+        }
         [[nodiscard]] bool sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) SW_EXCLUDES_LOCK( _mutex ) override;
         [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const vector<uint8>& buffer )
         {
@@ -453,7 +469,13 @@ namespace sw
         /** @brief 게임 스레드가 꺼낸 Disconnected 사건의 슬롯을 다시 줄 수 있게 합니다(`NetEndpointSlot::_bReleasePending`). */
         void releaseDisconnectedSlots( const vector<NetEndpointEvent>& listEvent ) SW_REQUIRES_LOCK( _mutex );
         void finishConnect( NetDisconnectReason reason ) SW_REQUIRES_LOCK( _mutex );
-        bool sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 신뢰 창이 찼을 때 할 일입니다(`sendMessage` 는 닫고 `trySendMessage` 는 알리기만 한다). */
+        enum class WindowFullPolicy : uint8
+        {
+            Close,
+            Report
+        };
+        bool sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size, WindowFullPolicy policy ) SW_REQUIRES_LOCK( _mutex );
         void takePending( OutgoingBatch& outBatch, vector<FinishedConnect>& outListFinished ) SW_REQUIRES_LOCK( _mutex );
 
         // 잠금 밖에서 부른다.

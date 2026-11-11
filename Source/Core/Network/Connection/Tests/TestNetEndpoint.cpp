@@ -804,3 +804,47 @@ SW_TEST_CASE( NetEndpointTest, SaturatedConnectionIsReportedUntilTheQueueDrains 
     SW_EXPECT_TRUE( stats._expiredUnreliableCount > 0 ); // 다 싣지 못한 것은 기다리다 버렸다
     SW_EXPECT_TRUE( cluster.areClientsConnected() );
 }
+
+/**
+ * @brief [NetEndpointTest] 상대가 확인하지 않아 신뢰 창이 차면 `trySendMessage` 는 false 만 돌려주고, `sendMessage` 는 신뢰 메시지를 버리지 않고 연결을 `ReliableOverflow` 로 닫는다(감사 N-3)
+ */
+SW_TEST_CASE( NetEndpointTest, FullReliableWindowClosesInsteadOfDroppingMessages )
+{
+    NetEndpointConfig settings;
+    settings._debugHold = NetDebugHold::Off;
+    LoopbackNetwork network;
+    NetEndpoint     server;
+    NetEndpoint     client;
+    server.initialize( network.createEndpoint( 4200 ), settings );
+    client.initialize( network.createEndpoint( 5201 ), settings );
+    SW_REQUIRE_TRUE( server.listen() );
+    SW_REQUIRE_TRUE( client.connect( NetAddress::makeLoopback( 4200 ) ) );
+    float64 time = 0.0;
+    for ( int32 step = 0; step < 20; ++step )
+    {
+        time += 1.0 / 60.0;
+        server.update( time );
+        client.update( time );
+    }
+    vector<NetEndpointEvent> listEvent;
+    server.pollEvents( listEvent );
+    SW_REQUIRE_EQUAL( 1, server.getConnectedCount() );
+
+    // 클라이언트가 멈췄다(확인이 오지 않는다) — 창이 찰 때까지 넣는다
+    const uint8 payload[]   = { 7, 1, 2 };
+    int32       queuedCount = 0;
+    while ( server.trySendMessage( 0, NetChannelType::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) )
+    {
+        ++queuedCount;
+    }
+    SW_EXPECT_EQUAL( NetConnection::kReliableWindow - 1, queuedCount );
+    SW_EXPECT_EQUAL( 1, server.getConnectedCount() ); // 역압만 알렸다
+
+    SW_EXPECT_LOG( "Net.ReliableOverflow" );
+    SW_EXPECT_FALSE( server.sendMessage( 0, NetChannelType::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) );
+    listEvent.clear();
+    server.pollEvents( listEvent );
+    SW_REQUIRE_TRUE( listEvent.empty() == false );
+    SW_EXPECT_TRUE( listEvent.back()._kind == NetEndpointEvent::Kind::Disconnected );
+    SW_EXPECT_TRUE( listEvent.back()._reason == NetDisconnectReason::ReliableOverflow );
+}

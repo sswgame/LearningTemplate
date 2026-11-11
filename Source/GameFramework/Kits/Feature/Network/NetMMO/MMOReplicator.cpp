@@ -349,7 +349,7 @@ namespace sw
                 listEnter.push_back( ranked.second );
             }
             writer.writeBool( false );
-            if ( listEnter.empty() == false && _pHost->sendMessage( connectionID, NetChannelType::ReliableOrdered, writer.getBytes() ) )
+            if ( listEnter.empty() == false && _pHost->trySendMessage( connectionID, NetChannelType::ReliableOrdered, writer.getBytes() ) )
             {
                 for ( const uint32 entityID : listEnter )
                 {
@@ -460,7 +460,7 @@ namespace sw
             {
                 writer.writeVarUint( listLeave[sentCount + index] );
             }
-            if ( _pHost->sendMessage( connectionID, NetChannelType::ReliableOrdered, writer.getBytes() ) == false )
+            if ( _pHost->trySendMessage( connectionID, NetChannelType::ReliableOrdered, writer.getBytes() ) == false )
                 break; // 신뢰 창이 찼다. 남은 엔티티는 보이는 채로 두고 다음 틱에 보낸다
             for ( size_t index = 0; index < count; ++index )
             {
