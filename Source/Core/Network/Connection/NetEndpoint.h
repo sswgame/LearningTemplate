@@ -450,9 +450,11 @@ namespace sw
         bool                         connectLocked( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials ) SW_EXCLUDES_LOCK( _mutex );
         TaskFuture<NetConnectResult> connectAsyncWith( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials ) SW_EXCLUDES_LOCK( _mutex );
         void                         pushEvent( const NetEndpointEvent& event ) SW_REQUIRES_LOCK( _mutex );
-        void                         finishConnect( NetDisconnectReason reason ) SW_REQUIRES_LOCK( _mutex );
-        bool                         sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) SW_REQUIRES_LOCK( _mutex );
-        void                         takePending( OutgoingBatch& outBatch, vector<FinishedConnect>& outListFinished ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 게임 스레드가 꺼낸 Disconnected 사건의 슬롯을 다시 줄 수 있게 합니다(`NetEndpointSlot::_bReleasePending`). */
+        void releaseDisconnectedSlots( const vector<NetEndpointEvent>& listEvent ) SW_REQUIRES_LOCK( _mutex );
+        void finishConnect( NetDisconnectReason reason ) SW_REQUIRES_LOCK( _mutex );
+        bool sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) SW_REQUIRES_LOCK( _mutex );
+        void takePending( OutgoingBatch& outBatch, vector<FinishedConnect>& outListFinished ) SW_REQUIRES_LOCK( _mutex );
 
         // 잠금 밖에서 부른다.
         static void sendBatch( INetTransport* pTransport, const OutgoingBatch& batch );

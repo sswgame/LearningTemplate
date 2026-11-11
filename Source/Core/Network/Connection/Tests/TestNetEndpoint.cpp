@@ -301,6 +301,59 @@ SW_TEST_CASE( NetEndpointTest, HostsRejectFullServersForeignProtocolsAndDetectDi
 }
 
 /**
+ * @brief [NetEndpointTest] 끊긴 연결의 번호는 게임 스레드가 끊김을 꺼내기 전에는 새 연결에 주지 않는다(감사 P0-8)
+ * @details 슬롯 번호가 곧 연결 ID 라, 같은 갱신에서 A 의 끊김과 B 의 접속을 처리하면 게임 스레드가 A 에게 보낸 상태가 B 에게 갔다. 1 슬롯 서버에서
+ *          A 가 끊긴 뒤 서버가 사건을 꺼내지 않은 동안 B 는 자리를 받지 못하고(가득 참), A 의 번호로 보낸 것은 거절된다. 꺼낸 뒤에는 B 가 들어온다.
+ *          변이: 보류를 빼면 B 가 바로 번호 0 을 받아 첫 단언이 진다.
+ */
+SW_TEST_CASE( NetEndpointTest, ClosedSlotIsNotReusedBeforeTheGameThreadSeesTheDisconnect )
+{
+    NetEndpointConfig settings;
+    settings._maxConnections = 1;
+    settings._debugHold      = NetDebugHold::Off;
+    LoopbackNetwork network;
+    NetEndpoint     server;
+    NetEndpoint     first;
+    NetEndpoint     second;
+    server.initialize( network.createEndpoint( 4100 ), settings );
+    first.initialize( network.createEndpoint( 5101 ), settings );
+    second.initialize( network.createEndpoint( 5102 ), settings );
+    SW_REQUIRE_TRUE( server.listen() );
+    SW_REQUIRE_TRUE( first.connect( NetAddress::makeLoopback( 4100 ) ) );
+    float64    time   = 0.0;
+    const auto runAll = [&]( float64 seconds )
+    {
+        for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += 1.0 / 60.0 )
+        {
+            time += 1.0 / 60.0;
+            server.update( time );
+            first.update( time );
+            second.update( time );
+        }
+    };
+    runAll( 0.3 );
+    vector<NetEndpointEvent> listEvent;
+    server.pollEvents( listEvent );
+    SW_REQUIRE_EQUAL( 1, server.getConnectedCount() );
+
+    first.disconnect( 0 );
+    runAll( 0.2 ); // 서버가 끊김을 처리했지만 게임 스레드는 아직 꺼내지 않았다
+    SW_EXPECT_LOG( "Net.ServerRefused" );
+    SW_REQUIRE_TRUE( second.connect( NetAddress::makeLoopback( 4100 ) ) );
+    runAll( 0.5 );
+    SW_EXPECT_TRUE( second.getConnectionState( 0 ) != NetConnectionState::Connected );
+    const uint8 payload[] = { 1, 2, 3 };
+    SW_EXPECT_FALSE( server.sendMessage( 0, NetChannelType::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) ); // A 의 번호는 비었다 — B 에게 가지 않는다
+
+    listEvent.clear();
+    server.pollEvents( listEvent ); // 게임 스레드가 A 의 끊김을 본다 — 이제 번호를 다시 준다
+    SW_REQUIRE_TRUE( listEvent.empty() == false && listEvent.back()._kind == NetEndpointEvent::Kind::Disconnected );
+    SW_REQUIRE_TRUE( second.connect( NetAddress::makeLoopback( 4100 ) ) );
+    runAll( 0.5 );
+    SW_EXPECT_TRUE( second.getConnectionState( 0 ) == NetConnectionState::Connected );
+}
+
+/**
  * @brief [NetEndpointTest] 디버거 대기를 알린 서버가 멈춰도(중단점) 클라이언트는 끊지 않고, 재개한 서버도 멈춘 동안을 시간 초과로 치지 않는다
  * @details 서버만 멈춤(클라이언트는 알림 비트를 보고 시한을 늘린다) → 둘 다 멈춤(한 프로세스가 통째로 멈춤 — 클라이언트는 알리지 않으므로 서버는
  *          가상 시계로만 버틴다) → 대기 시한(10 초)을 넘긴 멈춤은 끊긴다.

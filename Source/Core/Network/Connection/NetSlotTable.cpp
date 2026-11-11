@@ -58,7 +58,7 @@ namespace sw
     {
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
-            if ( _listSlot[index]._state == NetConnectionState::Disconnected )
+            if ( _listSlot[index]._state == NetConnectionState::Disconnected && _listSlot[index]._bReleasePending == SW_FALSE )
                 return static_cast<int32>( index );
         }
         return nullopt;

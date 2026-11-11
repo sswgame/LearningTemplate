@@ -1078,7 +1078,10 @@ namespace sw
             slot._security.reset();
         }
         if ( bWasVisible )
+        {
+            slot._bReleasePending = SW_TRUE; // 게임 스레드가 이 사건을 꺼낼 때까지 번호를 다시 주지 않는다(`releaseDisconnectedSlots`)
             pushEvent( NetEndpointEvent{ slotIndex, reason, NetEndpointEvent::Kind::Disconnected } );
+        }
         if ( _bServer == SW_FALSE )
             _clientIndex = constant::invalid_index::kInt32;
     }
@@ -1192,9 +1195,19 @@ namespace sw
         deliverFinished( listFinished );
     }
 
+    void NetEndpoint::releaseDisconnectedSlots( const vector<NetEndpointEvent>& listEvent )
+    {
+        for ( const NetEndpointEvent& event : listEvent )
+        {
+            if ( event._kind == NetEndpointEvent::Kind::Disconnected && _slotTable.isValid( event._connectionID ) )
+                _slotTable.get( event._connectionID )._bReleasePending = SW_FALSE;
+        }
+    }
+
     void NetEndpoint::pollEvents( vector<NetEndpointEvent>& outListEvent )
     {
         ScopedLock<mutex> lock{ _mutex };
+        releaseDisconnectedSlots( _listEvent );
         outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
     }
@@ -1204,6 +1217,7 @@ namespace sw
         outInbound.clear();
         ScopedLock<mutex> lock{ _mutex };
         outInbound._listEvent.swap( _listEvent );
+        releaseDisconnectedSlots( outInbound._listEvent );
         const int32 slotCount = _slotTable.getCount();
         for ( int32 index = 0; index < slotCount; ++index )
         {

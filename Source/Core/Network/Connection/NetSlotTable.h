@@ -34,6 +34,12 @@ namespace sw
         float64                     _lastCreditTime{ -1.0 };                    ///< 토큰을 마지막으로 채운 시각. 음수면 아직 채운 적이 없다는 뜻이며, 연결되면 가득 채운다.
         NetConnectionState          _state{ NetConnectionState::Disconnected }; ///< 서버 슬롯은 Connecting 을 거치지 않는다. 응답이 맞아야 슬롯을 할당하기 때문이다.
         uint8                       _bRemoteDebugHold{ SW_FALSE };              ///< 상대가 마지막 데이터 패킷에서 디버거 대기를 알렸다(개발 빌드만 읽는다).
+        /**
+         * @brief 이 슬롯의 Disconnected 사건을 게임 스레드가 아직 꺼내지 않았다 — 그때까지 다른 연결에 주지 않는다(`NetSlotTable::findFreeSlot`).
+         * @details 슬롯 번호가 곧 연결 ID 라, 끊긴 A 의 번호를 같은 갱신에서 B 가 받으면 게임 스레드가 A 에게 보내려던 상태 · 스냅샷이 B 에게 갔다(감사 P0-8).
+         *          게임 스레드가 끊김을 알기 전에는 그 번호가 A 다(언리얼은 UNetConnection 객체가 신원, 유니티 NGO 는 단조 증가 clientId).
+         */
+        uint8 _bReleasePending{ SW_FALSE };
 
         /** @brief 연결 값입니다. 두 솔트를 섞은 값으로, 같은 주소의 옛 연결이나 위조 패킷을 걸러 냅니다. */
         uint64 getConnectionToken() const { return _clientSalt ^ _serverSalt; }
@@ -76,7 +82,7 @@ namespace sw
         void bindAddress( int32 slotIndex, const NetAddress& address );
         /** @brief 슬롯의 주소를 주소 맵에서 풉니다. 같은 주소가 다른 슬롯에 묶여 있으면 그대로 둡니다. */
         void unbindAddress( int32 slotIndex );
-        /** @brief 첫 빈(Disconnected) 슬롯 번호입니다. 없으면(가득 참) 비어 있습니다. */
+        /** @brief 첫 빈(Disconnected, 끊김 사건을 게임 스레드가 꺼낸) 슬롯 번호입니다. 없으면(가득 참) 비어 있습니다. */
         [[nodiscard]] optional<int32> findFreeSlot() const;
         int32                         countConnected() const;
         /** @brief 연결된 슬롯 번호를 @p outListConnection 에 비운 뒤 담습니다. */
