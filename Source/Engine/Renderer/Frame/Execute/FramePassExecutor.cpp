@@ -375,19 +375,19 @@ namespace sw
         _pActiveView = &_state._mainView;
     }
 
-    bool FramePassExecutor::drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
+    bool FramePassExecutor::shouldDrawBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
     {
         // 변형 풀이 받지 못한 메시(상한 초과 · 버퍼 실패)는 어느 패스에서도 그리지 않는다 — 바인드 · 레스트 포즈로 대신 그리지 않는다(풀이 오류를 남겼다).
         if ( binding._bDeformRefused != SW_FALSE )
             return false;
-        if ( FrameRendererUtil::filtersBatchesByMaterial( passType ) == false )
+        if ( FrameRendererUtil::shouldFilterBatchesByMaterial( passType ) == false )
             return true;
         const GPUShaderPermutation* pPermutation =
             ( batch._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _state._gpuScene.findShaderPermutation( batch._shaderPermutation );
-        return FrameRendererUtil::drawsMaterialInPass( passType, pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
+        return FrameRendererUtil::shouldDrawMaterialInPass( passType, pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
     }
 
-    bool FramePassExecutor::drawsCasterBatch( ShadowCasterFilter filter, const GPUMeshBatch& batch )
+    bool FramePassExecutor::shouldDrawCasterBatch( ShadowCasterFilter filter, const GPUMeshBatch& batch )
     {
         const bool bStatic = batch._bStaticShadowCaster != SW_FALSE;
         return filter == ShadowCasterFilter::All || ( filter == ShadowCasterFilter::StaticOnly ) == bStatic;
@@ -502,7 +502,7 @@ namespace sw
         // 뷰와 따로 채우면 언젠가 한쪽만 갱신되고, 그 증상은 "빛이 한 프레임 늦게 따라온다"이다.
         context._passValues.setMatrix( passConstantNames()._invViewProj, viewProj.invert() );
         // 컬링은 기록 시작 전에 도는데 그때는 상수 버퍼에서 도로 꺼낼 수 없다. 지금 그리는 뷰에 같은 값을 남긴다.
-        _state.cullInputOf( view ).setViewProjection( viewProj );
+        _state.getCullInputOf( view ).setViewProjection( viewProj );
 
         // 시간 누적 기록을 버릴지는 셋업이 뷰마다 프레임에 한 번 정했다(`beginViewHistory` — 처음 그리는 프레임과 컷). TAA · 모션 블러 · 자동 노출 · 가림 판정이
         // 모두 `_bHistoryReset` 하나를 본다 — 모션 블러는 지난 뷰-투영을 이번 것으로 둬 속도가 0 이다.

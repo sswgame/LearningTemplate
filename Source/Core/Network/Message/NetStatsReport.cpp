@@ -68,12 +68,12 @@ namespace sw
             }
 
             /** @brief 셈 표에서 바이트가 큰 종류 `kMaxKindEntry` 개로 목록을 채웁니다. 한 번도 세지 않은 종류는 뺍니다. */
-            static void populateEntries( const NetMessageKindStatsTable& tally, vector<NetStatsKindEntry>& outListEntry )
+            static void populateEntries( const NetMessageKindStatsTable& stats, vector<NetStatsKindEntry>& outListEntry )
             {
                 outListEntry.clear();
                 for ( int32 kind = 0; kind < NetMessageKindStatsTable::kKindCount; ++kind )
                 {
-                    const NetMessageKindStats& entry = tally.get( static_cast<uint8>( kind ) );
+                    const NetMessageKindStats& entry = stats.get( static_cast<uint8>( kind ) );
                     if ( entry._messageCount == 0 )
                         continue;
                     outListEntry.push_back( NetStatsKindEntry{ entry._messageCount, entry._byteCount, static_cast<uint8>( kind ) } );
@@ -168,10 +168,10 @@ namespace sw
         return true;
     }
 
-    void NetStatsReport::populateKinds( const NetMessageKindStatsTable& receivedTally, const NetMessageKindStatsTable& sentTally )
+    void NetStatsReport::populateKinds( const NetMessageKindStatsTable& receivedStats, const NetMessageKindStatsTable& sentStats )
     {
-        NetStatsReportInternal::populateEntries( receivedTally, _listKindEntry );
-        NetStatsReportInternal::populateEntries( sentTally, _listSentKindEntry );
+        NetStatsReportInternal::populateEntries( receivedStats, _listKindEntry );
+        NetStatsReportInternal::populateEntries( sentStats, _listSentKindEntry );
     }
 
     string NetStatsReport::makeLine() const

@@ -104,7 +104,7 @@ namespace sw::editor
             }
 
             /** @brief 고른 키의 시각 · 값 · 보간 칸입니다. 입력을 마쳤으면 true 입니다. */
-            static bool drawSelectedKeyFields( EditorCurveEditorState& state )
+            static bool drawSelectedKeyProperties( EditorCurveEditorState& state )
             {
                 FloatCurve& curve = state._working;
                 if ( state._selectedKey >= curve._listKey.size() )
@@ -312,7 +312,7 @@ namespace sw::editor
 
     bool EditorCurveEditorState::drawEditor( EditorCurveEditorState& state, const utf8* pMarkScope )
     {
-        bool bFinished = EditorCurveEditorInternal::drawSelectedKeyFields( state );
+        bool bFinished = EditorCurveEditorInternal::drawSelectedKeyProperties( state );
 
         const ImVec2 available = ImGui::GetContentRegionAvail();
         const ImVec2 size{ MathUtil::max( available.x, 64.0f ), MathUtil::max( available.y, 64.0f ) };

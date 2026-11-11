@@ -48,7 +48,7 @@ namespace sw
 
         // 적지 않은 칸은 FactionDef 의 초기값이다. 깨진 값 · 범위 밖 값(최대 >= 최소, 시작은 그 사이)은 그 세력을 넣지 않는 오류다(자르지 않는다).
         FactionDef faction;
-        bool       bValid = XMLFields::readFields( node, faction, sourceName );
+        bool       bValid = XMLFields::readProperties( node, faction, sourceName );
         if ( faction._id.empty() )
             return false;
         const utf8* const pID = faction._id.c_str();
@@ -58,7 +58,7 @@ namespace sw
         {
             // 단계의 하한을 적지 않으면 세력의 하한이다(이 데이터의 값).
             ReputationTier tier{ hashed_string{}, faction._minValue };
-            const bool     bTierRead = XMLFields::readFields( child, tier, sourceName ); // 이름 필수
+            const bool     bTierRead = XMLFields::readProperties( child, tier, sourceName ); // 이름 필수
             const bool     bInside   = faction._minValue <= tier._minValue && tier._minValue <= faction._maxValue;
             if ( bTierRead && bInside )
             {
@@ -75,7 +75,7 @@ namespace sw
         {
             // 연결은 상대 세력과 비율을 반드시 적는다 — 빠진 비율을 0 으로 두지 않는다.
             ReputationLink link;
-            if ( XMLFields::readFields( child, link, sourceName ) )
+            if ( XMLFields::readProperties( child, link, sourceName ) )
                 faction._listLink.push_back( link );
             else
                 bValid = false;

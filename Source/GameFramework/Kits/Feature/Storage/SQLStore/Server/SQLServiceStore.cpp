@@ -219,29 +219,29 @@ namespace sw
             class SQLServiceStoreJob final : public ISQLJob
             {
             public:
-                explicit SQLServiceStoreJob( unique_ptr<IServiceStoreJob> work )
-                    : _work{ std::move( work ) }
+                explicit SQLServiceStoreJob( unique_ptr<IServiceStoreJob> job )
+                    : _job{ std::move( job ) }
                 {
-                    _work->bindLogContext( LogContext::getCurrent() );
+                    _job->bindLogContext( LogContext::getCurrent() );
                 }
 
                 void run( ISQLConnection& connection ) override
                 {
-                    ScopedLogContext          scope( _work->getLogContext() );
+                    ScopedLogContext          scope( _job->getLogContext() );
                     SQLServiceStoreConnection adapter{ connection };
-                    _work->run( adapter );
+                    _job->run( adapter );
                 }
 
-                void cancel() override { _work->markCancelled(); }
+                void cancel() override { _job->markCancelled(); }
 
                 void complete() override
                 {
-                    ScopedLogContext scope( _work->getLogContext() );
-                    _work->complete();
+                    ScopedLogContext scope( _job->getLogContext() );
+                    _job->complete();
                 }
 
             private:
-                unique_ptr<IServiceStoreJob> _work;
+                unique_ptr<IServiceStoreJob> _job;
             };
         };
     } // namespace
@@ -277,8 +277,8 @@ namespace sw
         return _pool.initialize( pDriver, settings );
     }
 
-    void SQLServiceStore::submit( unique_ptr<IServiceStoreJob> work )
+    void SQLServiceStore::submit( unique_ptr<IServiceStoreJob> job )
     {
-        _pool.submit( sw::make_unique<SQLServiceStoreInternal::SQLServiceStoreJob>( std::move( work ) ) );
+        _pool.submit( sw::make_unique<SQLServiceStoreInternal::SQLServiceStoreJob>( std::move( job ) ) );
     }
 } // namespace sw

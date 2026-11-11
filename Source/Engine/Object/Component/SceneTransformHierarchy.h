@@ -217,7 +217,7 @@ namespace sw
         static void notifyWorldUpdated( SceneTransformPage& page, uint32 pageIndex, PrimitiveRegistry* pRegistry );
 
         /** @brief 어떤 트랜스폼이 바뀌었음을 알려 세대를 올립니다. 워커에서 불러도 됩니다. */
-        void notifyDirtied() { _dirtyGeneration.fetch_add( 1, std::memory_order_relaxed ); }
+        void notifyDirty() { _dirtyGeneration.fetch_add( 1, std::memory_order_relaxed ); }
         /** @brief 현재 더티 세대입니다. 플러시가 이 값을 따라잡으면 할 일이 없습니다. */
         uint64 getGeneration() const { return _dirtyGeneration.load( std::memory_order_relaxed ); }
         /** @brief 플러시할 루트가 하나라도 있으면 true 입니다. 목록만 보고 판단하며 루트를 순회하지 않습니다. */

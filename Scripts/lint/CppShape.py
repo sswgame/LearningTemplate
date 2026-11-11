@@ -252,7 +252,7 @@ def parseBases(afterName: str) -> list[str]:
     return listBase
 
 
-def lineOf(text: str, index: int) -> int:
+def getLineOf(text: str, index: int) -> int:
     return text.count("\n", 0, index) + 1
 
 
@@ -269,7 +269,7 @@ def parseClass(code: str, start: int, end: int, info: ClassInfo, outClasses: lis
             match = kTypeHead.search(typeHead)
             if match and "(" not in typeHead[:match.start()] and match.group(1).startswith(("class", "struct", "union")) and "=" not in typeHead[match.end():]:
                 close = matchBrace(code, index)
-                nested = ClassInfo(match.group(2), match.group(1) == "struct", lineOf(code, index), parseBases(typeHead[match.end():]))
+                nested = ClassInfo(match.group(2), match.group(1) == "struct", getLineOf(code, index), parseBases(typeHead[match.end():]))
                 parseClass(code, index + 1, close, nested, outClasses)
                 outClasses.append(nested)
                 index = close + 1
@@ -280,7 +280,7 @@ def parseClass(code: str, start: int, end: int, info: ClassInfo, outClasses: lis
                 else:
                     # `struct { … } _member;` — 칸이다
                     semi = code.find(";", index)
-                    info.items.append(("var", access, lineOf(code, index), code[index:semi]))
+                    info.items.append(("var", access, getLineOf(code, index), code[index:semi]))
                     index = semi + 1
                 statementStart = index
                 continue
@@ -295,7 +295,7 @@ def parseClass(code: str, start: int, end: int, info: ClassInfo, outClasses: lis
             close = matchBrace(code, index)  # 함수 본문
             kind = classifyStatement(head, info.name)
             if kind:
-                info.items.append((kind, access, lineOf(code, index), head))
+                info.items.append((kind, access, getLineOf(code, index), head))
             index = close + 1
             probe = index
             while probe < end and code[probe].isspace():
@@ -307,13 +307,13 @@ def parseClass(code: str, start: int, end: int, info: ClassInfo, outClasses: lis
         if char == ";":
             kind = classifyStatement(code[statementStart:index], info.name)
             if kind:
-                info.items.append((kind, access, lineOf(code, index), code[statementStart:index]))
+                info.items.append((kind, access, getLineOf(code, index), code[statementStart:index]))
             statementStart = index + 1
         elif char == ":" and code[index + 1:index + 2] != ":" and code[index - 1:index] != ":":
             match = re.search(r"\b(public|private|protected)\s*$", code[statementStart:index])
             if match:
                 access = match.group(1)
-                info.items.append(("access", access, lineOf(code, index), ""))
+                info.items.append(("access", access, getLineOf(code, index), ""))
                 statementStart = index + 1
         index += 1
 
@@ -329,7 +329,7 @@ def parseScope(code: str, start: int, end: int, outClasses: list[ClassInfo]) -> 
             match = kTypeHead.search(typeHead)
             close = matchBrace(code, index)
             if match and match.group(1).startswith(("class", "struct", "union")) and "(" not in typeHead[:match.start()] and "=" not in typeHead[match.end():] and match.group(2):
-                info = ClassInfo(match.group(2), match.group(1) == "struct", lineOf(code, index), parseBases(typeHead[match.end():]))
+                info = ClassInfo(match.group(2), match.group(1) == "struct", getLineOf(code, index), parseBases(typeHead[match.end():]))
                 parseClass(code, index + 1, close, info, outClasses)
                 outClasses.append(info)
             elif re.search(r"\bnamespace\b[^()]*$|\bextern\s*$", head.strip() and head or ""):
@@ -431,7 +431,7 @@ def checkAnonymousNamespaces(code: str) -> list[tuple[int, str]]:
         openIndex = code.index("{", match.start())
         close = matchBrace(code, openIndex)
         if code[openIndex + 1:close].strip() == "":
-            problems.append((lineOf(code, match.start()), "빈 익명 네임스페이스 — 지운다"))
+            problems.append((getLineOf(code, match.start()), "빈 익명 네임스페이스 — 지운다"))
     return problems
 
 
@@ -488,7 +488,7 @@ def collectStaticOnlyTypes(code: str) -> tuple[dict[str, tuple[int, list[str]]],
             isStaticOnly = False
             break
         if isStaticOnly and statics:
-            staticOnly[name] = (lineOf(code, match.start()), statics)
+            staticOnly[name] = (getLineOf(code, match.start()), statics)
     return staticOnly, owners
 
 
@@ -536,7 +536,7 @@ def checkIncludesInsideBraces(raw: str, code: str) -> list[tuple[int, str]]:
         depth += code.count("{", position, match.start()) - code.count("}", position, match.start())
         position = match.start()
         if depth > 0 and not match.group(1).endswith((".xxx", ".inl")):
-            problems.append((lineOf(raw, match.start()), f"`{match.group(1)}` include 가 중괄호(이름공간 · 클래스 · 함수) 안에 있다 — 파일 맨 위 include 영역으로 옮긴다"))
+            problems.append((getLineOf(raw, match.start()), f"`{match.group(1)}` include 가 중괄호(이름공간 · 클래스 · 함수) 안에 있다 — 파일 맨 위 include 영역으로 옮긴다"))
     return problems
 
 
@@ -547,7 +547,7 @@ def checkSharedTempInTests(code: str, relative: str) -> list[tuple[int, str]]:
     index = code.find("getTempDirectory")
     if index < 0:
         return []
-    return [(lineOf(code, index), "테스트는 공용 임시 폴더 대신 test::makeScratchPath 를 쓴다")]
+    return [(getLineOf(code, index), "테스트는 공용 임시 폴더 대신 test::makeScratchPath 를 쓴다")]
 
 
 kHandDepletion = re.compile(r"\b(_\w*(?:hp|health|durability|sanity)\w*)\s*(?:-=|=\s*MathUtil::max\(\s*0(?:\.0f)?\s*,\s*[\w.\->]*\1\s*-)", re.IGNORECASE)
@@ -558,7 +558,7 @@ kInlineBrowserJS = re.compile(r"\b(EM_JS|EM_ASYNC_JS|EM_ASM\w*|MAIN_THREAD_(?:AS
 
 def checkInlineBrowserJS(code: str) -> list[tuple[int, str]]:
     """브라우저 JS 를 C++ 매크로 본문에 쓰지 않는다 — 포맷터가 JS 연산자를 띄운다. `Web/*.js` 라이브러리로 옮긴다(규칙 11)."""
-    return [(lineOf(code, match.start()), f"`{match.group(1)}` — 브라우저 JS 는 기능 옆 Web/*.js(addToLibrary)에 두고 C++ 는 extern \"C\" 로 선언한다") for match in kInlineBrowserJS.finditer(code)]
+    return [(getLineOf(code, match.start()), f"`{match.group(1)}` — 브라우저 JS 는 기능 옆 Web/*.js(addToLibrary)에 두고 C++ 는 extern \"C\" 로 선언한다") for match in kInlineBrowserJS.finditer(code)]
 
 
 def checkHandDepletion(code: str, relative: str) -> list[tuple[int, str]]:
@@ -566,7 +566,7 @@ def checkHandDepletion(code: str, relative: str) -> list[tuple[int, str]]:
     isGameCode = relative.startswith(("Source/GameFramework/", "Source/Games/")) and "/Tests/" not in relative
     if not isGameCode:
         return []
-    return [(lineOf(code, match.start()), f"`{match.group(1)}` 를 손으로 깎는다 — DepletingValue::take 를 쓴다") for match in kHandDepletion.finditer(code)]
+    return [(getLineOf(code, match.start()), f"`{match.group(1)}` 를 손으로 깎는다 — DepletingValue::take 를 쓴다") for match in kHandDepletion.finditer(code)]
 
 
 def checkOnlineProtocolTable(raw: str, code: str, relative: str) -> list[tuple[int, str]]:
@@ -577,13 +577,13 @@ def checkOnlineProtocolTable(raw: str, code: str, relative: str) -> list[tuple[i
     del raw
     listProblem: list[tuple[int, str]] = []
     for match in kOnlineInterfacePattern.finditer(code):
-        listProblem.append((lineOf(code, match.start()), f"온라인 키트는 {match.group(1)} 를 직접 잇지 않고 OnlineProtocolService · OnlineProtocolClient 로 선다(예외 없음)"))
+        listProblem.append((getLineOf(code, match.start()), f"온라인 키트는 {match.group(1)} 를 직접 잇지 않고 OnlineProtocolService · OnlineProtocolClient 로 선다(예외 없음)"))
     return listProblem
 
 
 kNetMessageFolders = ("Source/GameFramework/Kits/Feature/Network/", "Source/Engine/Net/", "Source/Games/")
 kHandNetMessagePatterns = (
-    (re.compile(r"NetKitMessageRange::k\w+\s*\+\s*\d"), "손으로 적은 메시지 종류 — 표의 서술자(`NetMessageDef`)와 `Table::kindOf` 를 쓴다"),
+    (re.compile(r"NetKitMessageRange::k\w+\s*\+\s*\d"), "손으로 적은 메시지 종류 — 표의 서술자(`NetMessageDef`)와 `Table::getKindOf` 를 쓴다"),
     (re.compile(r"1u\s*<<\s*\(\s*\w*Message::k"), "손으로 쓴 종류 마스크 — `NetTableHandler` 나 `Table::makeMask` 를 쓴다"),
     (re.compile(r"context\._kind\s*=="), "종류 손 디스패치 — `NetTableHandler` 의 `receive` 오버로드(표가 나눈다)를 쓴다"),
 )
@@ -597,7 +597,7 @@ def checkNetMessageTable(code: str, relative: str) -> list[tuple[int, str]]:
     listProblem: list[tuple[int, str]] = []
     for pattern, message in kHandNetMessagePatterns:
         for match in pattern.finditer(code):
-            listProblem.append((lineOf(code, match.start()), message))
+            listProblem.append((getLineOf(code, match.start()), message))
     return listProblem
 
 

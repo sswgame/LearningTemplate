@@ -520,8 +520,8 @@ namespace sw
         SerializeContext derived{ purpose };
         derived._pHandlerFallback = &defaultContext;
         // 표만 빌리고 **설정은 물려받는다**(`= getDefault()` 와 같은 동작).
-        derived.setSkipUnknownProperties( defaultContext.skipsUnknownProperties() );
-        derived.setSkipUnreadableProperties( defaultContext.skipsUnreadableProperties() );
+        derived.setSkipUnknownProperties( defaultContext.shouldSkipUnknownProperties() );
+        derived.setSkipUnreadableProperties( defaultContext.shouldSkipUnreadableProperties() );
         return derived;
     }
 

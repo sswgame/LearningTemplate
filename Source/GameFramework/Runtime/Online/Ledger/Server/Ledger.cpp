@@ -35,9 +35,9 @@ namespace sw
                 optional<int32> _firstCreditIndex; ///< 이 보유자가 받은 첫 다리(상한 보고)
             };
 
-            static LedgerResult finish( LedgerTransferResult& outOutcome, LedgerResult result )
+            static LedgerResult finish( LedgerTransferResult& outResult, LedgerResult result )
             {
-                outOutcome._result = result;
+                outResult._result = result;
                 return result;
             }
 
@@ -240,27 +240,27 @@ namespace sw
             }
 
             /** @brief 저장된 분개로 결과를 채웁니다(같은 내용이면 Ok + 다시 돌려줌, 다르면 JournalKeyReused). */
-            static LedgerResult replayJournal( const vector<uint8>& bytes, const LedgerTransferRequest& request, LedgerTransferResult& outOutcome )
+            static LedgerResult replayJournal( const vector<uint8>& bytes, const LedgerTransferRequest& request, LedgerTransferResult& outResult )
             {
                 LedgerJournalEntry entry;
-                if ( decodeJournal( bytes, entry, &outOutcome._listHolderBalance ) == false )
+                if ( decodeJournal( bytes, entry, &outResult._listHolderBalance ) == false )
                 {
                     SW_LOG_ERROR_ID( "Ledger.LedgerJournalUnreadable", "Ledger journal '%#' is unreadable", request._journalKey.c_str() );
-                    return finish( outOutcome, LedgerResult::Unavailable );
+                    return finish( outResult, LedgerResult::Unavailable );
                 }
                 if ( entry._contentHash != computeContentHash( request ) )
                 {
-                    outOutcome._listHolderBalance.clear();
-                    return finish( outOutcome, LedgerResult::JournalKeyReused );
+                    outResult._listHolderBalance.clear();
+                    return finish( outResult, LedgerResult::JournalKeyReused );
                 }
-                outOutcome._timeMs    = entry._timeMs;
-                outOutcome._bReplayed = SW_TRUE;
-                return finish( outOutcome, LedgerResult::Ok );
+                outResult._timeMs    = entry._timeMs;
+                outResult._bReplayed = SW_TRUE;
+                return finish( outResult, LedgerResult::Ok );
             }
 
-            static void applyCommitVersion( LedgerTransferResult& inoutOutcome, uint64 commitVersion )
+            static void applyCommitVersion( LedgerTransferResult& inoutResult, uint64 commitVersion )
             {
-                for ( LedgerTransferResult::HolderBalance& holderBalance : inoutOutcome._listHolderBalance )
+                for ( LedgerTransferResult::HolderBalance& holderBalance : inoutResult._listHolderBalance )
                 {
                     holderBalance._balance._version = holderBalance._balance._amount == 0 ? 0 : commitVersion;
                 }
@@ -336,21 +336,21 @@ namespace sw
     }
 
     LedgerResult Ledger::stageTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, ServiceTransaction& inoutTransaction,
-                                        LedgerTransferResult& outOutcome )
+                                        LedgerTransferResult& outResult )
     {
-        outOutcome                   = LedgerTransferResult{};
-        outOutcome._journalKey       = request._journalKey;
-        outOutcome._timeMs           = request._timeMs;
-        const LedgerResult validated = LedgerInternal::validate( request, outOutcome._failedPostingIndex );
+        outResult                    = LedgerTransferResult{};
+        outResult._journalKey        = request._journalKey;
+        outResult._timeMs            = request._timeMs;
+        const LedgerResult validated = LedgerInternal::validate( request, outResult._failedPostingIndex );
         if ( validated != LedgerResult::Ok )
-            return LedgerInternal::finish( outOutcome, validated );
+            return LedgerInternal::finish( outResult, validated );
 
         ServiceRecord            journalRecord;
         const ServiceStoreResult journalRead = connection.readRecord( getJournalTable(), request._journalKey, journalRecord );
         if ( journalRead == ServiceStoreResult::Ok )
-            return LedgerInternal::replayJournal( journalRecord._bytes, request, outOutcome );
+            return LedgerInternal::replayJournal( journalRecord._bytes, request, outResult );
         if ( journalRead != ServiceStoreResult::NotFound )
-            return LedgerInternal::finish( outOutcome, LedgerResult::Unavailable );
+            return LedgerInternal::finish( outResult, LedgerResult::Unavailable );
 
         vector<LedgerInternal::Delta> listDelta;
         LedgerInternal::collectDeltas( request, listDelta );
@@ -362,24 +362,24 @@ namespace sw
             ServiceRecord            balanceRecord;
             const ServiceStoreResult balanceRead = connection.readRecord( getBalanceTable(), balanceKey, balanceRecord );
             if ( balanceRead != ServiceStoreResult::Ok && balanceRead != ServiceStoreResult::NotFound )
-                return LedgerInternal::finish( outOutcome, LedgerResult::Unavailable );
+                return LedgerInternal::finish( outResult, LedgerResult::Unavailable );
             int64 currentAmount = 0;
             if ( balanceRead == ServiceStoreResult::Ok && decodeBalanceRecord( balanceRecord._bytes, currentAmount ) == false )
             {
                 SW_LOG_ERROR_ID( "Ledger.LedgerBalanceUnreadable", "Ledger balance '%#' is unreadable", balanceKey.c_str() );
-                return LedgerInternal::finish( outOutcome, LedgerResult::Unavailable );
+                return LedgerInternal::finish( outResult, LedgerResult::Unavailable );
             }
             const int64 nextAmount = currentAmount + delta._delta;
             if ( LedgerInternal::isAmountAllowed( request, delta, nextAmount ) == false )
             {
-                outOutcome._failedPostingIndex = delta._firstDebitIndex;
-                return LedgerInternal::finish( outOutcome, LedgerResult::InsufficientFunds );
+                outResult._failedPostingIndex = delta._firstDebitIndex;
+                return LedgerInternal::finish( outResult, LedgerResult::InsufficientFunds );
             }
             const bool bIncrease = delta._delta > 0;
             if ( bIncrease && nextAmount > LedgerInternal::computeCap( request, delta._holder, delta._assetID ) )
             {
-                outOutcome._failedPostingIndex = delta._firstCreditIndex;
-                return LedgerInternal::finish( outOutcome, LedgerResult::CapExceeded );
+                outResult._failedPostingIndex = delta._firstCreditIndex;
+                return LedgerInternal::finish( outResult, LedgerResult::CapExceeded );
             }
             if ( delta._delta != 0 )
             {
@@ -388,7 +388,7 @@ namespace sw
                 else
                     pending.put( getBalanceTable(), balanceKey, LedgerInternal::encodeBalance( nextAmount ), balanceRecord._version );
             }
-            LedgerTransferResult::HolderBalance& holderBalance = outOutcome._listHolderBalance.emplace_back();
+            LedgerTransferResult::HolderBalance& holderBalance = outResult._listHolderBalance.emplace_back();
             holderBalance._holder                              = delta._holder;
             holderBalance._balance._assetID                    = delta._assetID;
             holderBalance._balance._amount                     = nextAmount;
@@ -396,7 +396,7 @@ namespace sw
         }
 
         const uint64 contentHash = LedgerInternal::computeContentHash( request );
-        pending.put( getJournalTable(), request._journalKey, LedgerInternal::encodeJournal( request, contentHash, outOutcome._listHolderBalance ),
+        pending.put( getJournalTable(), request._journalKey, LedgerInternal::encodeJournal( request, contentHash, outResult._listHolderBalance ),
                      ServiceRecord::kAbsentVersion );
         const string* pLastHolderKey = nullptr;
         for ( const LedgerInternal::Delta& delta : listDelta )
@@ -412,51 +412,51 @@ namespace sw
         const size_t totalWriteCount = inoutTransaction.getWrites().size() + pending.getWrites().size();
         if ( totalWriteCount > static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
         {
-            outOutcome._listHolderBalance.clear();
-            return LedgerInternal::finish( outOutcome, LedgerResult::Invalid );
+            outResult._listHolderBalance.clear();
+            return LedgerInternal::finish( outResult, LedgerResult::Invalid );
         }
         appendWrites( pending, inoutTransaction );
-        return LedgerInternal::finish( outOutcome, LedgerResult::Ok );
+        return LedgerInternal::finish( outResult, LedgerResult::Ok );
     }
 
-    LedgerResult Ledger::resolveConflict( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferResult& outOutcome )
+    LedgerResult Ledger::resolveConflict( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferResult& outResult )
     {
         ServiceRecord            journalRecord;
         const ServiceStoreResult journalRead = connection.readRecord( getJournalTable(), request._journalKey, journalRecord );
         if ( journalRead == ServiceStoreResult::Ok )
         {
-            outOutcome._listHolderBalance.clear();
-            return LedgerInternal::replayJournal( journalRecord._bytes, request, outOutcome );
+            outResult._listHolderBalance.clear();
+            return LedgerInternal::replayJournal( journalRecord._bytes, request, outResult );
         }
         if ( journalRead == ServiceStoreResult::NotFound )
-            return LedgerInternal::finish( outOutcome, LedgerResult::Conflict );
-        return LedgerInternal::finish( outOutcome, LedgerResult::Unavailable );
+            return LedgerInternal::finish( outResult, LedgerResult::Conflict );
+        return LedgerInternal::finish( outResult, LedgerResult::Unavailable );
     }
 
-    LedgerResult Ledger::executeTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferResult& outOutcome )
+    LedgerResult Ledger::executeTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferResult& outResult )
     {
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
             ServiceTransaction transaction;
-            const LedgerResult staged = stageTransfer( connection, request, transaction, outOutcome );
-            if ( staged != LedgerResult::Ok || outOutcome._bReplayed == SW_TRUE )
+            const LedgerResult staged = stageTransfer( connection, request, transaction, outResult );
+            if ( staged != LedgerResult::Ok || outResult._bReplayed == SW_TRUE )
                 return staged;
             ServiceCommitInfo        info;
             const ServiceStoreResult committed = connection.commit( transaction, &info );
             if ( committed == ServiceStoreResult::Ok )
             {
-                LedgerInternal::applyCommitVersion( outOutcome, info._commitVersion );
+                LedgerInternal::applyCommitVersion( outResult, info._commitVersion );
                 return LedgerResult::Ok;
             }
             if ( committed == ServiceStoreResult::Invalid )
-                return LedgerInternal::finish( outOutcome, LedgerResult::Invalid );
-            const LedgerResult resolved = resolveConflict( connection, request, outOutcome );
+                return LedgerInternal::finish( outResult, LedgerResult::Invalid );
+            const LedgerResult resolved = resolveConflict( connection, request, outResult );
             if ( resolved != LedgerResult::Conflict )
                 return resolved;
             if ( committed == ServiceStoreResult::Unavailable )
-                return LedgerInternal::finish( outOutcome, LedgerResult::Unavailable ); // 분개가 없어도 커밋이 늦게 닿을 수 있다 — 같은 키로 나중에
+                return LedgerInternal::finish( outResult, LedgerResult::Unavailable ); // 분개가 없어도 커밋이 늦게 닿을 수 있다 — 같은 키로 나중에
         }
-        return LedgerInternal::finish( outOutcome, LedgerResult::Conflict );
+        return LedgerInternal::finish( outResult, LedgerResult::Conflict );
     }
 
     ServiceStoreResult Ledger::listBalances( IServiceStoreConnection& connection, const LedgerHolder& holder, vector<LedgerBalance>& outListBalance )

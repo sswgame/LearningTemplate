@@ -74,7 +74,7 @@ namespace
             return std::move( listCompletion[0] );
         }
 
-        SocialOutcome setRole( AccountID accountID, AccountID targetID, GuildRole role )
+        SocialServiceResult setRole( AccountID accountID, AccountID targetID, GuildRole role )
         {
             GuildRequest request;
             request._operation = GuildOperation::SetRole;
@@ -97,7 +97,7 @@ namespace
             return runRequest( request );
         }
 
-        SocialOutcome setOpen( AccountID accountID, bool bOpen )
+        SocialServiceResult setOpen( AccountID accountID, bool bOpen )
         {
             GuildRequest request;
             request._operation = GuildOperation::SetJoinPolicy;
@@ -135,11 +135,11 @@ namespace
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), "cur.gold", amount } );
             request._journalKey = "test/grant/" + to_string( accountID ) + "/" + to_string( amount );
             request._reason     = "test.grant";
-            LedgerTransferResult outcome;
-            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, outcome ) == LedgerResult::Ok );
+            LedgerTransferResult result;
+            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, result ) == LedgerResult::Ok );
         }
 
-        int64 balanceOf( AccountID accountID )
+        int64 getBalanceOf( AccountID accountID )
         {
             LedgerBalance balance;
             SW_EXPECT_TRUE( Ledger::readBalance( _database, LedgerHolder::makeAccount( accountID ), "cur.gold", balance ) == ServiceStoreResult::Ok );
@@ -347,13 +347,13 @@ SW_TEST_CASE( GuildServiceTest, StorageMovesFundsOnce )
     SW_EXPECT_TRUE( deposited._result == SocialResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), deposited._listStorage.size() );
     SW_EXPECT_EQUAL( int64( 60 ), deposited._listStorage[0]._amount );
-    SW_EXPECT_EQUAL( int64( 40 ), rig.balanceOf( kMember ) );
+    SW_EXPECT_EQUAL( int64( 40 ), rig.getBalanceOf( kMember ) );
 
     const GuildCompletion replayed = rig.transfer( GuildOperation::Deposit, kMember, 60, "test/dep.1" );
     SW_EXPECT_TRUE( replayed._result == SocialResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), replayed._listStorage.size() );
     SW_EXPECT_EQUAL( int64( 60 ), replayed._listStorage[0]._amount );
-    SW_EXPECT_EQUAL( int64( 40 ), rig.balanceOf( kMember ) );
+    SW_EXPECT_EQUAL( int64( 40 ), rig.getBalanceOf( kMember ) );
 
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 61, "test/dep.1" )._result.hasError( OnlineError::kInvalidRequest ) ); // 같은 키에 다른 내용
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 41, "test/dep.2" )._result == SocialResult::InsufficientFunds );
@@ -366,7 +366,7 @@ SW_TEST_CASE( GuildServiceTest, StorageMovesFundsOnce )
     const GuildCompletion withdrawn = rig.transfer( GuildOperation::Withdraw, kOfficer, 10, "test/wd.3" );
     SW_REQUIRE_EQUAL( size_t( 1 ), withdrawn._listStorage.size() );
     SW_EXPECT_EQUAL( int64( 50 ), withdrawn._listStorage[0]._amount );
-    SW_EXPECT_EQUAL( int64( 10 ), rig.balanceOf( kOfficer ) );
+    SW_EXPECT_EQUAL( int64( 10 ), rig.getBalanceOf( kOfficer ) );
 
     const GuildCompletion listed = rig.run( GuildOperation::ListStorage, kMember );
     SW_REQUIRE_EQUAL( size_t( 1 ), listed._listStorage.size() );
@@ -384,7 +384,7 @@ SW_TEST_CASE( GuildServiceTest, StorageBlocksDissolution )
     SW_EXPECT_TRUE( rig.run( GuildOperation::Leave, kMaster )._result == SocialResult::StorageNotEmpty );
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kMaster, 10, "test/wd.1" )._result == SocialResult::Ok );
     SW_EXPECT_TRUE( rig.run( GuildOperation::Leave, kMaster )._result == SocialResult::Ok );
-    SW_EXPECT_EQUAL( int64( 10 ), rig.balanceOf( kMaster ) );
+    SW_EXPECT_EQUAL( int64( 10 ), rig.getBalanceOf( kMaster ) );
 }
 
 /** @brief [GuildServiceTest] 신청: 닫힌 길드는 GuildClosed, 길드가 있으면 AlreadyInGuild. 임원 이상이 목록을 보고 받아들이거나 지운다. 받으면 멤버가 되고 신청은 사라진다 */

@@ -79,7 +79,7 @@ namespace sw::editor
         _bSelectedOther = _listFilter[index]._bOther;
     }
 
-    bool ContentBrowserTypeFilter::passes( string_view path ) const
+    bool ContentBrowserTypeFilter::matches( string_view path ) const
     {
         if ( _bSelectedOther )
             return EditorAssetTypeRegistry::matchesOther( path );
@@ -366,7 +366,7 @@ namespace sw::editor
         outListVisible.reserve( _listEntry.size() );
         for ( const AssetEntry& entry : _listEntry )
         {
-            const bool bPassesType = entry._bIsDirectory || _typeFilter.passes( entry._name );
+            const bool bPassesType = entry._bIsDirectory || _typeFilter.matches( entry._name );
             if ( bPassesType && filter.matches( entry._name ) )
                 outListVisible.push_back( &entry );
         }

@@ -110,7 +110,7 @@ namespace sw
         string              _nextCursor{};  ///< History
         int64               _retryAfterMs{ 0 };
         uint64              _requestTag{ 0 };
-        ChatOutcome         _result{ ChatResult::Ok };
+        ChatServiceResult   _result{ ChatResult::Ok };
         uint16              _method{ 0 };
     };
 } // namespace sw
@@ -168,8 +168,8 @@ namespace sw
         void reportMessage( AccountID accountID, const ChatReportRequest& request, UnixMilliseconds nowMs, uint64 requestTag );
 
         // 서버 시스템(길드, 파티, GM)이 부르는 함수이며 완료는 없다
-        [[nodiscard]] ChatOutcome addMember( AccountID accountID, string_view channelID, UnixMilliseconds nowMs );
-        void                      removeMember( AccountID accountID, string_view channelID );
+        [[nodiscard]] ChatServiceResult addMember( AccountID accountID, string_view channelID, UnixMilliseconds nowMs );
+        void                            removeMember( AccountID accountID, string_view channelID );
         /** @brief GM 이 제재를 바꿨을 때 부릅니다. 다음 말하기 전에 다시 읽습니다. */
         void refreshSanction( AccountID accountID );
         /** @brief 계정이 이 서버를 떠났을 때 부릅니다. 모든 채널에서 뺍니다. */
@@ -190,9 +190,9 @@ namespace sw
     private:
         /** @brief 저장 일의 완료입니다. */
         void applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, UnixMilliseconds nowMs );
-        void applyHistoryRead( uint64 requestTag, ChatOutcome result, vector<ChatMessage>&& listMessage, string&& nextCursor );
+        void applyHistoryRead( uint64 requestTag, ChatServiceResult result, vector<ChatMessage>&& listMessage, string&& nextCursor );
         void applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, ServiceStoreCompletion completion );
-        void applyReport( uint64 requestTag, ChatOutcome result );
+        void applyReport( uint64 requestTag, ChatServiceResult result );
 
         struct PendingSend
         {
@@ -215,22 +215,22 @@ namespace sw
         };
 
         /** @brief 다른 서버에 있을 수 있는 상대를 찾은 답입니다. 받는 서버로 보내거나 상대가 없다고 끝낸다. */
-        void        handleWhisperPresenceResult( const AccountPresenceResult& result, ChatMessage&& message, uint64 requestTag );
-        Member*     ensureMember( AccountID accountID, UnixMilliseconds nowMs );
-        bool        isSanctionFresh( const Member& member, UnixMilliseconds nowMs ) const;
-        void        startSanctionRead( AccountID accountID, Member& member, UnixMilliseconds nowMs );
-        void        submitSend( AccountID accountID, PendingSend&& send );
-        ChatOutcome prepareText( AccountID accountID, Member& member, string_view text, UnixMilliseconds nowMs, string& outText, int64& outRetryAfterMs );
-        void        processSend( AccountID accountID, Member& member, const PendingSend& send );
-        void        publishMessage( const ServerBusTopicFamily<ChatMessage>& family, string_view suffix, const ChatMessage& message );
-        void        deliverToChannel( const ChatMessage& message );
-        void        deliverWhisperLocally( const ChatMessage& message );
-        void        queueHistory( const ChatMessage& message );
-        void        completeMessage( uint16 method, uint64 requestTag, ChatMessage&& message );
-        void        completeSimple( uint16 method, uint64 requestTag, ChatOutcome result, int64 retryAfterMs = 0 );
-        void        addLocalMember( AccountID accountID, Member& member, const string& channelID );
-        void        removeLocalMember( AccountID accountID, Member& member, const string& channelID );
-        bool        isWhisperParticipant( AccountID accountID, string_view channelID ) const;
+        void              handleWhisperPresenceResult( const AccountPresenceResult& result, ChatMessage&& message, uint64 requestTag );
+        Member*           ensureMember( AccountID accountID, UnixMilliseconds nowMs );
+        bool              isSanctionFresh( const Member& member, UnixMilliseconds nowMs ) const;
+        void              startSanctionRead( AccountID accountID, Member& member, UnixMilliseconds nowMs );
+        void              submitSend( AccountID accountID, PendingSend&& send );
+        ChatServiceResult prepareText( AccountID accountID, Member& member, string_view text, UnixMilliseconds nowMs, string& outText, int64& outRetryAfterMs );
+        void              processSend( AccountID accountID, Member& member, const PendingSend& send );
+        void              publishMessage( const ServerBusTopicFamily<ChatMessage>& family, string_view suffix, const ChatMessage& message );
+        void              deliverToChannel( const ChatMessage& message );
+        void              deliverWhisperLocally( const ChatMessage& message );
+        void              queueHistory( const ChatMessage& message );
+        void              completeMessage( uint16 method, uint64 requestTag, ChatMessage&& message );
+        void              completeSimple( uint16 method, uint64 requestTag, ChatServiceResult result, int64 retryAfterMs = 0 );
+        void              addLocalMember( AccountID accountID, Member& member, const string& channelID );
+        void              removeLocalMember( AccountID accountID, Member& member, const string& channelID );
+        bool              isWhisperParticipant( AccountID accountID, string_view channelID ) const;
         /** @brief 기록을 읽고 신고할 수 있는 채널이면 true 입니다. 귓속말은 당사자, 나머지는 이 서버의 멤버입니다. */
         bool canReadChannel( AccountID accountID, string_view channelID, ChatChannelKind kind ) const;
 

@@ -60,10 +60,10 @@ namespace sw
                 const CityBuildingDef& def         = *building._pDef;
                 const bool             bPlaceValid = topology.isRectInside( building._origin, int2{ def._size, def._size } ) && ( building.hasRoadAccess() ? topology.isInside( building._accessTile ) : building._accessTile == int2{ -1, -1 } );
                 const bool             bTimeValid  = 0.0f <= building._walkerTimer && 0.0f <= building._productionProgress && 0.0f <= building._evolveTimer && 0.0f <= building._devolveTimer && 0.0f <= building._immigrationTimer;
-                const bool             bWorkValid  = 0.0f <= building._efficiency && building._efficiency <= 1.0f && 0 <= building._assignedWorkers && building._assignedWorkers <= def._workers && 0 <= building._activeWalkerCount;
+                const bool             bJobValid   = 0.0f <= building._efficiency && building._efficiency <= 1.0f && 0 <= building._assignedWorkers && building._assignedWorkers <= def._workers && 0 <= building._activeWalkerCount;
                 const int32            levelCount  = static_cast<int32>( catalog.getHouseLevels().size() );
                 const bool             bHouseValid = building.isHouse() ? 0 <= building._level && ( building._level == 0 || building._level < levelCount ) && 0 <= building._population : building._level == 0 && building._population == 0;
-                return bPlaceValid && bTimeValid && bWorkValid && bHouseValid;
+                return bPlaceValid && bTimeValid && bJobValid && bHouseValid;
             }
 
             /** @brief 읽은 타일과 건물이 서로 맞는지 봅니다. 타일의 번호는 건물 목록을 바로 찌르고, 살아 있는 건물의 발밑은 모두 그 건물을 가리킵니다. */
@@ -912,7 +912,7 @@ namespace sw
         return service != CityService::Count && _time - house._arrServiceTime[static_cast<int32>( service )] <= _settings._serviceDuration;
     }
 
-    bool CitySimulation::meetsHouseLevel( const CityBuilding& house, int32 level ) const
+    bool CitySimulation::hasReachedHouseLevel( const CityBuilding& house, int32 level ) const
     {
         const CityHouseLevelDef* pLevel = _pCatalog->findHouseLevel( level );
         if ( pLevel == nullptr )
@@ -967,7 +967,7 @@ namespace sw
             if ( house._population <= 0 )
                 continue;
 
-            const bool bCanEvolve = meetsHouseLevel( house, house._level + 1 );
+            const bool bCanEvolve = hasReachedHouseLevel( house, house._level + 1 );
             house._evolveTimer    = bCanEvolve ? house._evolveTimer + deltaTime : 0.0f;
             if ( house._evolveTimer >= _settings._evolveDelay )
             {
@@ -976,7 +976,7 @@ namespace sw
                 _eventBuffer.push( CityEvent{ house._level, buildingIndex, CityEvent::Kind::HouseEvolved } );
                 continue;
             }
-            const bool bLosing  = house._level > 0 && meetsHouseLevel( house, house._level ) == false;
+            const bool bLosing  = house._level > 0 && hasReachedHouseLevel( house, house._level ) == false;
             house._devolveTimer = bLosing ? house._devolveTimer + deltaTime : 0.0f;
             if ( house._devolveTimer >= _settings._evolveDelay )
             {

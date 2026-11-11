@@ -73,7 +73,7 @@ namespace sw
                 return listLineStart;
             }
 
-            static uint32 lineOf( const vector<size_t>& listLineStart, size_t offset )
+            static uint32 getLineOf( const vector<size_t>& listLineStart, size_t offset )
             {
                 const auto itNext = std::upper_bound( listLineStart.begin(), listLineStart.end(), offset );
                 return static_cast<uint32>( itNext - listLineStart.begin() );
@@ -162,7 +162,7 @@ namespace sw
         using Internal       = AssetReferenceFieldsInternal;
         const JSONValue root = document.getRoot();
         // 구조체 목록 칸은 `JSONFields` 가 직렬화기로 넘겨 C++ 칸 이름을 키로 기대한다 — 이 파일은 칸 이름 규칙이라 원소마다 읽는다.
-        bool                        bValid   = JSONFields::readFields( root, config, path, { "listImportedFolder" } );
+        bool                        bValid   = JSONFields::readProperties( root, config, path, { "listImportedFolder" } );
         const JSONValue             imported = root.get( "listImportedFolder" );
         vector<AssetImportedFolder> listImported;
         if ( imported.isArray() == false )
@@ -173,7 +173,7 @@ namespace sw
         for ( size_t index = 0; imported.isArray() && index < imported.size(); ++index )
         {
             AssetImportedFolder folder;
-            bValid = JSONFields::readFields( imported.at( index ), folder, path ) && bValid;
+            bValid = JSONFields::readProperties( imported.at( index ), folder, path ) && bValid;
             listImported.push_back( std::move( folder ) );
         }
         bValid = Internal::hasNoEmptyText( config._listDomain, "listDomain", path ) && bValid;
@@ -194,10 +194,10 @@ namespace sw
         _listCMakeArgument   = std::move( config._listCMakeArgument );
         _listImported        = std::move( listImported );
         _setField.clear();
-        return loadGeneratedFields( projectRoot );
+        return loadGeneratedProperties( projectRoot );
     }
 
-    bool AssetReferenceFields::loadGeneratedFields( string_view projectRoot )
+    bool AssetReferenceFields::loadGeneratedProperties( string_view projectRoot )
     {
         const string path = FileUtil::joinPath( projectRoot, kGeneratedFile );
         JSONDocument document;
@@ -263,7 +263,7 @@ namespace sw
         return AssetReferenceFieldsInternal::startsWithDomain( path, _listUncheckedDomain ) == false;
     }
 
-    AssetReferenceSyntax AssetReferenceFields::syntaxOf( string_view path )
+    AssetReferenceSyntax AssetReferenceFields::getSyntaxOf( string_view path )
     {
         if ( FileUtil::hasExtension( path, ".json" ) )
             return AssetReferenceSyntax::JSON;
@@ -296,7 +296,7 @@ namespace sw
             if ( AssetReferenceFieldsInternal::startsWithDomain( normalized, _listDomain ) == false )
                 continue;
             AssetReference reference;
-            reference._line   = AssetReferenceFieldsInternal::lineOf( listLineStart, tokenStart );
+            reference._line   = AssetReferenceFieldsInternal::getLineOf( listLineStart, tokenStart );
             reference._field  = string( field );
             reference._offset = tokenStart;
             reference._length = token.size();
@@ -544,7 +544,7 @@ namespace sw
         return false;
     }
 
-    bool AssetReferenceFields::resolves( string_view assetID, const AssetIDSet& assets ) const
+    bool AssetReferenceFields::canResolve( string_view assetID, const AssetIDSet& assets ) const
     {
         return assets.contains( assetID ) || isImportedFromSource( assetID, assets );
     }

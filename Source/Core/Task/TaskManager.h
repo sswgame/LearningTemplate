@@ -381,13 +381,13 @@ namespace sw
         // --- 기다리기 ---
         /**
          * @brief 기다리는 스레드 하나의 스핀 상태입니다(`helpOrSpin` 이 고친다). 대기 함수의 스택에 둡니다.
-         * @details 큐는 `_workEpoch` 가 바뀌었을 때만 다시 봅니다 — 워커의 유휴 스핀과 같은 규칙입니다. 스핀마다 큐를 뒤지면 High · Normal 전역 큐의
+         * @details 큐는 `_jobEpoch` 가 바뀌었을 때만 다시 봅니다 — 워커의 유휴 스핀과 같은 규칙입니다. 스핀마다 큐를 뒤지면 High · Normal 전역 큐의
          *          읽기와 데크마다의 steal 을 대기자(게임 · 렌더 · 로더 스레드)가 64 번씩 반복해 워커와 같은 캐시 라인을 두드립니다.
          */
         struct WaitSpinState
         {
             uint32 _spinCount{ 0 };         ///< 이번 스핀 예산에서 쓴 `cpuPause` 수
-            uint32 _observedWorkEpoch{ 0 }; ///< 마지막으로 큐를 볼 때 읽은 `_workEpoch`
+            uint32 _observedJobEpoch{ 0 };  ///< 마지막으로 큐를 볼 때 읽은 `_jobEpoch`
             bool   _bQueueCheckDue{ true }; ///< 세대와 상관없이 다음 걸음에 큐를 봐야 하면 true(처음 · 일을 하나 한 뒤 · 잠들었다 깬 뒤) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /**
@@ -471,7 +471,7 @@ namespace sw
          *          세대가 바뀌었을 때만 큐를 건드립니다. `submitWithoutWake` 는 세대를 올리지 않고, 배치 끝의
          *          `wakeSleepingWorkers` 가 한 번 올립니다.
          */
-        alignas( 64 ) atomic<uint32> _workEpoch;
+        alignas( 64 ) atomic<uint32> _jobEpoch;
         /**
          * @brief 완료 브로드캐스트입니다(스테이지 완료 · 활성 수 0 · 메인 작업 · clear). `waitAll` 과 "두 번째 대기자" 가 잠듭니다.
          * @details 스테이지 · 병렬 그룹은 대기자 **하나**를 자기 조인 카운터에 적어 두고, 마지막 태스크가 그 스레드만 깨웁니다. 같은

@@ -67,7 +67,7 @@ namespace sw
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 기록 쓰기. */
-            int32 getOpenWorkCount() const override { return _service.getPendingCount(); }
+            int32 getOpenJobCount() const override { return _service.getPendingCount(); }
 
             void stop() override
             {

@@ -97,7 +97,7 @@ namespace sw
         _innerAngle = MathUtil::clamp( innerAngle, 0.0f, _outerAngle );
     }
 
-    void PointLight2DComponent::writeGPULightKindFields( GPULight& outLight ) const
+    void PointLight2DComponent::writeGPULightKindProperties( GPULight& outLight ) const
     {
         using Internal           = Light2DComponentInternal;
         const float3 position    = getLightPosition();
@@ -188,7 +188,7 @@ namespace sw
         }
     }
 
-    void FreeformLight2DComponent::writeGPULightKindFields( GPULight& outLight ) const
+    void FreeformLight2DComponent::writeGPULightKindProperties( GPULight& outLight ) const
     {
         using Internal = Light2DComponentInternal;
         vector<float2> listWorld;
@@ -216,7 +216,7 @@ namespace sw
         computeWorldPolygon( listWorld );
         const bool bValidPolygon = listWorld.size() >= 3 && listWorld.size() <= shaderslot::kLight2DMaxFreeformEdges;
         if ( bValidPolygon == false )
-            return; // writeGPULightKindFields 가 변 수 0 으로 적고 오류를 남겼다
+            return; // writeGPULightKindProperties 가 변 수 0 으로 적고 오류를 남겼다
         for ( size_t index = 0; index < listWorld.size(); ++index )
         {
             const float2& start = listWorld[index];
@@ -233,7 +233,7 @@ namespace sw
     {
     }
 
-    void GlobalLight2DComponent::writeGPULightKindFields( GPULight& /*outLight*/ ) const
+    void GlobalLight2DComponent::writeGPULightKindProperties( GPULight& /*outLight*/ ) const
     {
         // 색 · 세기(공통 칸)만 읽는다.
     }

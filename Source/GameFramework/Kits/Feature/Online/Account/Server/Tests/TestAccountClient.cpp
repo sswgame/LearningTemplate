@@ -277,7 +277,7 @@ SW_TEST_CASE( AccountClientTest, BodyOfAnotherTypeIsRefused )
 }
 
 /** @brief [AccountClientTest] 티켓 · 연동 목록 응답은 자기 칸에 담는다 */
-SW_TEST_CASE( AccountClientTest, TicketAndLinkRepliesFillTheirFields )
+SW_TEST_CASE( AccountClientTest, TicketAndLinkRepliesFillTheirProperties )
 {
     AccountClientFixture rig;
     rig._service.setBody( AccountMethod::IssueGameTicket::kID, AccountClientTestUtil::makeTicketBody() );

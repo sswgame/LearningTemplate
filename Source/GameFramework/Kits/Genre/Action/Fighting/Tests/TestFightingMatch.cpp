@@ -877,7 +877,7 @@ SW_TEST_CASE_F( FightingRulesTest, ThrowInProgressSurvivesBothSaves )
 /**
  * @brief [FightingTest] 카탈로그는 칸 · 커맨드 · 자세 · 다른 id 의 프레임 데이터를 읽고 고유 자세 목록을 모은다
  */
-SW_TEST_CASE( FightingTest, CatalogReadsFieldsAndCollectsStances )
+SW_TEST_CASE( FightingTest, CatalogReadsPropertiesAndCollectsStances )
 {
     MoveCatalog moves;
     SW_REQUIRE_TRUE( moves.loadFromXMLText( kFightingMoveXML, "FightingTest" ) );

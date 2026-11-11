@@ -96,7 +96,7 @@ namespace sw
         DestructionRootParams rootParams;
         rootParams._density         = _density;
         rootParams._physicsMaterial = _physicsMaterial;
-        (void)reader.readFields( root, rootParams ); // 오류는 읽개의 목록에 쌓인다 — 칸 · 범위는 PROPERTY 가 정본이다
+        (void)reader.readProperties( root, rootParams ); // 오류는 읽개의 목록에 쌓인다 — 칸 · 범위는 PROPERTY 가 정본이다
         _density           = rootParams._density;
         _physicsMaterial   = rootParams._physicsMaterial;
         uint8 bStrainSeen  = SW_FALSE;
@@ -134,7 +134,7 @@ namespace sw
                 DestructionLinkParams params;
                 params._strength        = _linkStrength;
                 params._supportStrength = _supportStrength;
-                (void)reader.readFields( child, params );
+                (void)reader.readProperties( child, params );
                 _linkStrength    = params._strength;
                 _supportStrength = params._supportStrength;
             }
@@ -146,7 +146,7 @@ namespace sw
                 params._impulseToStrain = _impulseToStrain;
                 params._minImpulse      = _minImpulse;
                 params._radius          = _impactRadius;
-                (void)reader.readFields( child, params );
+                (void)reader.readProperties( child, params );
                 _impulseToStrain = params._impulseToStrain;
                 _minImpulse      = params._minImpulse;
                 _impactRadius    = params._radius;
@@ -163,7 +163,7 @@ namespace sw
                 params._sleepRemoveTime     = _sleepRemoveTime;
                 params._keepCollisionVolume = _keepCollisionVolume;
                 params._hullShrink          = _hullShrink;
-                (void)reader.readFields( child, params );
+                (void)reader.readProperties( child, params );
                 _debrisLifetime      = params._lifetime;
                 _maxDebrisBody       = params._maxBodies;
                 _smallDebrisVolume   = params._smallVolume;
@@ -178,7 +178,7 @@ namespace sw
                     continue;
                 DestructionNetworkParams params;
                 params._poseRate = _networkPoseRate;
-                (void)reader.readFields( child, params );
+                (void)reader.readProperties( child, params );
                 _networkPoseRate = params._poseRate;
             }
             else

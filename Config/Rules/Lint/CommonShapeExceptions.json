@@ -15,7 +15,7 @@
         "Source/Engine/Automation/Watch/AutomationComponentWatch.h": "기반 자신이다"
     },
     "oneLineValidator": {
-        "Source/Engine/Automation/Scenario/AutomationScenario.h": "기반 자신이다(AutomationStep::validateFields)"
+        "Source/Engine/Automation/Scenario/AutomationScenario.h": "기반 자신이다(AutomationStep::validateProperties)"
     },
     "canvasDelete": {
         "Source/Editor/Common/Widgets/EditorNodeGraph.cpp": "기반 자신이다"

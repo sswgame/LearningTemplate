@@ -56,7 +56,7 @@ namespace sw
         virtual void setScenarioCaptureEnabled( bool bEnabled ) = 0;
         /** @brief 그린 프레임 @p interval 개마다 하나만 내보냅니다(0 = 내보내지 않음 — 무인 실행, `RenderThread::setPresentInterval`). */
         virtual void setPresentInterval( uint32 interval ) = 0;
-        /** @brief 씬 @p pManager 의 주 화면 캡처까지 남은 일 수입니다(`CaptureReadiness::countPendingWork`). */
-        [[nodiscard]] virtual uint32 countPendingCaptureWork( const GameObjectManager* pManager ) const = 0;
+        /** @brief 씬 @p pManager 의 주 화면 캡처까지 남은 일 수입니다(`CaptureReadiness::countPendingJobs`). */
+        [[nodiscard]] virtual uint32 countPendingCaptureJobs( const GameObjectManager* pManager ) const = 0;
     };
 } // namespace sw

@@ -256,7 +256,7 @@ namespace sw
         , _services{ services }
         , _bRunningFrameSystems{ SW_FALSE }
         , _bPhysicsStepEnabled{ SW_TRUE }
-        , _updateSerial{ 0 }
+        , _updateCount{ 0 }
         , _deferredRegistrationDepth{ 0 }
         , _listDeferredRegister{}
         , _listDeferredPostLoad{}
@@ -565,9 +565,9 @@ namespace sw
         return _pState->_tickScheduler.getStageTransformApplyCount();
     }
 
-    void GameObjectManager::notifyTransformDirtied()
+    void GameObjectManager::notifyTransformDirty()
     {
-        _pState->_transformHierarchy.notifyDirtied();
+        _pState->_transformHierarchy.notifyDirty();
     }
 
     uint64 GameObjectManager::getTransformGeneration() const
@@ -799,7 +799,7 @@ namespace sw
 
     void GameObjectManager::update( float32 deltaTime )
     {
-        ++_updateSerial;
+        ++_updateCount;
         // 순서는 표 하나가 갖는다(`SceneFrameStepList.xxx`).
         // 단계마다 본문 뒤에 그 단계에 등록한 씬 서비스를 부른다 — 본문이 부르게 두면 부르지 않는 단계에 등록한 서비스가 조용히 돌지 않는다.
         // 본문 앞에는 이 단계에서 마치기로 한 서비스의 프레임 일을 마친다(워커 일 결과를 쓴다) — 본문(트랜스폼 펼치기 등)이 그 결과를 본다.
@@ -1084,20 +1084,20 @@ namespace sw
         SW_ASSERT( _deferredRegistrationDepth != 0 );
         if ( --_deferredRegistrationDepth != 0 )
             return;
-        (void)pumpQueuedRegistration( 0 );
+        (void)processQueuedRegistration( 0 );
     }
 
-    bool GameObjectManager::pumpDeferredRegistration( uint32 maxCount )
+    bool GameObjectManager::processDeferredRegistration( uint32 maxCount )
     {
         SW_ASSERT( _deferredRegistrationDepth == 1 );
         --_deferredRegistrationDepth; // 훅이 만든 컴포넌트는 미루지 않고 바로 등록한다(한 번에 부를 때와 같다)
-        const bool bDone = pumpQueuedRegistration( maxCount );
+        const bool bDone = processQueuedRegistration( maxCount );
         if ( bDone == false )
             ++_deferredRegistrationDepth;
         return bDone;
     }
 
-    bool GameObjectManager::pumpQueuedRegistration( uint32 maxCount )
+    bool GameObjectManager::processQueuedRegistration( uint32 maxCount )
     {
         // 묶음을 꺼내 들고 부른다 — 훅이 프리팹을 지으면 이 함수가 다시 불리는데, 그 안쪽 미루기는 제 묶음만 끝내야 한다.
         DeferredRegistrationBatch batch = std::move( _pumpBatch );

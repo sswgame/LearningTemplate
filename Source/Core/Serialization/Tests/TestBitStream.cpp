@@ -175,7 +175,7 @@ SW_TEST_CASE( BitStreamTest, BitStreamRangedValuesFailInsteadOfClamping )
  * @details 서버는 여러 패킷에 겹쳐 실려 오는 입력(최대 32 개) 가운데 이미 가진 틱을 버린다. 버릴 것까지 버퍼를 잡아 읽으면 입력 패킷마다
  *          할당이 수십 번이다(`ReplicationServer::handleInput`).
  */
-SW_TEST_CASE( BitStreamTest, SkippedBytesLeaveTheFollowingFieldsInPlace )
+SW_TEST_CASE( BitStreamTest, SkippedBytesLeaveTheFollowingPropertiesInPlace )
 {
     BitWriter writer;
     writer.writeVarUint( 3 );
@@ -277,7 +277,7 @@ SW_TEST_CASE( BitStreamTest, WriterReusesTheGivenBufferAndReleasesItWithoutCopyi
     SW_EXPECT_FALSE( reader.hasOverflowed() );
 }
 
-SW_TEST_CASE( BitStreamTest, BitStreamKeepsWireLayoutAndRoundTripsRandomFields )
+SW_TEST_CASE( BitStreamTest, BitStreamKeepsWireLayoutAndRoundTripsRandomProperties )
 {
     // 선 위의 비트 배치는 바꾸지 않는다 — 바이트 단위로 빨라진 쓰기가 옛 비트 단위 쓰기와 같은 바이트를 낸다.
     BitWriter   writer;

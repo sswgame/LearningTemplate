@@ -83,7 +83,7 @@ namespace sw
             /** @brief 상대 경로면 시나리오 산출물 폴더(`Saved/Automation/<이름>/`) 아래에 둡니다. 스크린샷과 같은 위치입니다. */
             static bool runLayoutDump( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const string file = step.readValidatedFields<AutomationFileStepParams>()._file;
+                const string file = step.readValidatedProperties<AutomationFileStepParams>()._file;
                 const string path = FileUtil::isAbsolutePath( file ) ? file : FileUtil::joinPath( runner.getOutputDirectory(), file );
                 if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
                     runner.recordFailure( step, "could not write " + path );
@@ -103,7 +103,7 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_START_BLOCKER( uiLoadingScreen, "UILoadingScreen", &UIScenarioStepsInternal::isLoadingScreenBlocking );
-    SW_AUTOMATION_STEP( uiLayoutDump, UIScenarioSteps::kLayoutDumpKind, &UIScenarioStepsInternal::runLayoutDump, &AutomationStep::validateFields<AutomationFileStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( uiLayoutDump, UIScenarioSteps::kLayoutDumpKind, &UIScenarioStepsInternal::runLayoutDump, &AutomationStep::validateProperties<AutomationFileStepParams>, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( uiExpect, UIScenarioSteps::kExpectUIKind, &UIScenarioStepsInternal::runExpectUI, &UIScenarioSteps::validateExpectUI, AutomationStepOptions{} );
 } // namespace sw
 
@@ -115,7 +115,7 @@ namespace sw
             return unexpected( Error{ ErrorKind::InvalidArgument, "needs focus, screen or screens" } );
         // 칸(모르는 이름 · 개수 · 범위)은 리플렉션 구조체가 정한다 — 화면은 경로 칸이라 참조 검사 · 옮기기가 따라간다.
         AutomationExpectUIParams params;
-        return step.readFields( params );
+        return step.readProperties( params );
     }
 
     bool UIScenarioSteps::isExpectUIMet( const UISystem& ui, const AutomationStep& step, string& outFailure )

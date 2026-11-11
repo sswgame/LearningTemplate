@@ -5,7 +5,7 @@
  *          클라이언트가 지연된 월드를 보고 휘둘렀다면 서버의 칼날이 닿는 순간 표적은 이미 비켜서 있을 수 있다. 그래서 클라이언트가 "내가 휘두른 입력 틱에 이 표적이
  *          칼날에 있었다" 를 주장(`MeleeHitClaim`)하면, 서버는 그 주장을 **자기 스윕 기록**과 맞춰 본다.
  *          - 기록: 권위 있는 `MeleeHit::sweep` 이 칼날 표본점 줄(지난 칼날 → 지금 칼날)과 두께 · 피해를 이 장부에 프레임 번호로 적는다. 장부는 서버가
- *            `ensureFor` 로 켠 씬에만 있다 — 혼자 하는 게임과 클라이언트는 켜지 않으므로 기록하지 않는다.
+ *            `findOrCreate` 로 켠 씬에만 있다 — 혼자 하는 게임과 클라이언트는 켜지 않으므로 기록하지 않는다.
  *          - 확인: 서버의 폰 루프가 주장의 입력 틱을 그 입력을 처리한 서버 프레임으로 옮겨(`MeleeHitClaim::_frame`), 지연 보상으로 되감은 표적 자리를 함께 넘긴다.
  *            표적 구(중심 · 반지름)가 그 프레임 안팎(`kClaimSlackFrames`)의 칼날 토막에서 칼날 두께 안에 들면 인정한다. 서버가 그 휘두름을 한 적이 없으면(기록 없음)
  *            거절한다 — 클라이언트가 휘두르지 않은 맞음을 지어낼 수 없다.
@@ -53,7 +53,7 @@ namespace sw
 
     /**
      * @class MeleeSweepHistory
-     * @brief 씬 하나의 서버 근접 스윕 기록입니다. 서버가 `ensureFor` 로 켜고 `release` 로 끕니다. 파일 머리말 참고.
+     * @brief 씬 하나의 서버 근접 스윕 기록입니다. 서버가 `findOrCreate` 로 켜고 `release` 로 끕니다. 파일 머리말 참고.
      */
     class SW_API MeleeSweepHistory final : public ISceneLaneFrameSystem
     {
@@ -72,7 +72,7 @@ namespace sw
         /** @brief 매니저에 붙은 장부입니다. 없으면 nullptr 입니다. */
         static MeleeSweepHistory* find( const GameObjectManager& manager );
         /** @brief 장부를 켭니다(이미 있으면 그것). 서버가 씬을 시작할 때 부릅니다. */
-        static MeleeSweepHistory& ensureFor( GameObjectManager& manager );
+        static MeleeSweepHistory& findOrCreate( GameObjectManager& manager );
         /** @brief 장부를 끕니다. 없으면 아무 일도 없습니다. */
         static void release( GameObjectManager& manager );
 
@@ -118,7 +118,7 @@ namespace sw
         /** @brief 점 @p point 에서 선분 @p from → @p to 까지의 거리 제곱입니다. */
         static float32 computeDistanceSquaredToSegment( const float3& point, const float3& from, const float3& to );
         /** @brief 기록 하나의 칼날 토막들이 구 @p center / @p radius 를 덮는지 봅니다(표본점 토막, 칼날 자체). */
-        static bool coversSphere( const SweepRecord& record, const float3& center, float32 radius );
+        static bool containsSphere( const SweepRecord& record, const float3& center, float32 radius );
 
         vector<SweepRecord> _listRecord;
         uint32              _frame;

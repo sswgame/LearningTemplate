@@ -189,7 +189,7 @@ namespace sw
         /** @brief 키트를 등록합니다. 빌려 쓰며 초기화 전에 불러야 합니다. 영역이 겹치면 false 입니다. */
         [[nodiscard]] bool registerClientService( IOnlineClientService* pService );
         /**
-         * @brief 키트를 해제하고 그 영역의 요청을 `cancelRequestsOf` 로 버립니다. 등록하지 않은 키트면 아무것도 하지 않습니다.
+         * @brief 키트를 해제하고 그 영역의 요청을 `cancelRequests` 로 버립니다. 등록하지 않은 키트면 아무것도 하지 않습니다.
          * @details 키트 기반 소멸자가 부른다. 스키마 해시는 빌드의 항목 전부에서 나오므로 언로드해도 바뀌지 않는다.
          */
         void unregisterClientService( IOnlineClientService* pService );
@@ -197,7 +197,7 @@ namespace sw
          * @brief 영역 @p methodRange 의 대기 요청과 보낸 요청에서 응답 델리게이트를 부르지 않고 버립니다.
          * @details 델리게이트 주인(키트 클라이언트)이 먼저 사라질 때 쓴다. 보낸 요청의 응답이 나중에 와도 버려진다.
          */
-        void cancelRequestsOf( uint16 methodRange );
+        void cancelRequests( uint16 methodRange );
 
         /** @brief 자기 엔드포인트 모드로 시작합니다. 전송(빌려 쓴다)을 띄우고 서버에 연결을 겁니다. */
         [[nodiscard]] expected<void> initialize( IStreamTransport* pTransport, const OnlineServiceClientConfig& settings );
@@ -266,14 +266,14 @@ namespace sw
             MonotonicMilliseconds  _deadlineMs{ 0 };
             uint16                 _method{ 0 };
             OnlineRequestKind      _kind{ OnlineRequestKind::Session };
-            uint8                  _bCancelled{ SW_FALSE }; ///< 꺼내 처리하던 중 `cancelRequestsOf` 가 취소 표시했다. 부르지도 보내지도 않는다
+            uint8                  _bCancelled{ SW_FALSE }; ///< 꺼내 처리하던 중 `cancelRequests` 가 취소 표시했다. 부르지도 보내지도 않는다
         };
 
         struct PendingCall
         {
             OnlineResponseDelegate _onResponse{};
             uint64                 _requestID{ 0 };
-            uint16                 _method{ 0 }; ///< `cancelRequestsOf` 가 영역으로 가린다
+            uint16                 _method{ 0 }; ///< `cancelRequests` 가 영역으로 가린다
         };
 
         void sendHello();

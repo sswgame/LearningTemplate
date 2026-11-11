@@ -82,7 +82,7 @@ namespace sw
          *          `__delayLoadHelper2` 호출의 홈 공간에 저장해, 첫 호출이 묶으면 그 호출의 float 인자가 망가진다.
          *          빌드는 `/DELAYLOAD` 를 쓰지 않고(`ArchitectureTest.NoBuiltLibraryHasDelayLoadedImports` 가 산출물을 본다), 이것은 그 규칙을 어긴 라이브러리를 올리기 **전에** 거절하는 마지막 그물이다.
          */
-        static bool rejectsDelayImports( string_view moduleName, string_view modulePath, const vector<uint8>& bytes );
+        static bool shouldRejectDelayImports( string_view moduleName, string_view modulePath, const vector<uint8>& bytes );
 
         /**
          * @brief 원본을 읽어 대조하고, 세대 이름을 붙인 섀도 복사본(과 디버그 심볼)을 씁니다. 아직 로드하지 않습니다.

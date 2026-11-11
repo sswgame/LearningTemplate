@@ -221,10 +221,10 @@ namespace sw::editor
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Frame" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameDurationTip" ) );
-        drawFrameBorderFields( *pFrame );
+        drawFrameBorderProperties( *pFrame );
     }
 
-    void SpriteClipPanel::drawFrameBorderFields( SpriteClipFrame& frame )
+    void SpriteClipPanel::drawFrameBorderProperties( SpriteClipFrame& frame )
     {
         if ( EditorWidgets::beginAdvancedSection( "##advanced.spriteBorder" ) == false )
             return;

@@ -168,7 +168,7 @@ SW_TEST_CASE( UIPreviewLogicTest, DetachAndAttachMoveAWidget )
 
 // ---------------------------------------------------------------------- 슬롯
 
-SW_TEST_CASE( UIPreviewLogicTest, SlotFieldsFollowTheParentPanel )
+SW_TEST_CASE( UIPreviewLogicTest, SlotPropertiesFollowTheParentPanel )
 {
     WidgetTree    tree;
     CanvasPanel&  root    = UITestUtil::setRoot<CanvasPanel>( tree );
@@ -179,21 +179,21 @@ SW_TEST_CASE( UIPreviewLogicTest, SlotFieldsFollowTheParentPanel )
     UITestLeaf&   inGrid  = UITestUtil::addLeaf( grid, float2{} );
     UITestLeaf&   inPlain = UITestUtil::addLeaf( overlay, float2{} );
 
-    SW_EXPECT_FALSE( UIPreviewLogic::findSlotFields( root )._bSizeOverride ); // 루트에는 슬롯이 없다
+    SW_EXPECT_FALSE( UIPreviewLogic::findSlotProperties( root )._bSizeOverride ); // 루트에는 슬롯이 없다
 
-    const UIPreviewSlotParams canvasFields = UIPreviewLogic::findSlotFields( box );
-    SW_EXPECT_TRUE( canvasFields._bCanvas );
-    SW_EXPECT_FALSE( canvasFields._bPaddingAlignment );
+    const UIPreviewSlotParams canvasProperties = UIPreviewLogic::findSlotProperties( box );
+    SW_EXPECT_TRUE( canvasProperties._bCanvas );
+    SW_EXPECT_FALSE( canvasProperties._bPaddingAlignment );
     SW_EXPECT_TRUE( UIPreviewLogic::canEditSlotByHandle( box ) );
 
-    const UIPreviewSlotParams boxFields = UIPreviewLogic::findSlotFields( inBox );
-    SW_EXPECT_TRUE( boxFields._bBoxSize );
-    SW_EXPECT_TRUE( boxFields._bPaddingAlignment );
+    const UIPreviewSlotParams boxProperties = UIPreviewLogic::findSlotProperties( inBox );
+    SW_EXPECT_TRUE( boxProperties._bBoxSize );
+    SW_EXPECT_TRUE( boxProperties._bPaddingAlignment );
     SW_EXPECT_FALSE( UIPreviewLogic::canEditSlotByHandle( inBox ) );
 
-    SW_EXPECT_TRUE( UIPreviewLogic::findSlotFields( inGrid )._bGrid );
-    SW_EXPECT_FALSE( UIPreviewLogic::findSlotFields( inPlain )._bGrid );
-    SW_EXPECT_TRUE( UIPreviewLogic::findSlotFields( inPlain )._bSizeOverride );
+    SW_EXPECT_TRUE( UIPreviewLogic::findSlotProperties( inGrid )._bGrid );
+    SW_EXPECT_FALSE( UIPreviewLogic::findSlotProperties( inPlain )._bGrid );
+    SW_EXPECT_TRUE( UIPreviewLogic::findSlotProperties( inPlain )._bSizeOverride );
 }
 
 SW_TEST_CASE( UIPreviewLogicTest, SlotDragMovesOnlyWhatTheHandleOwns )

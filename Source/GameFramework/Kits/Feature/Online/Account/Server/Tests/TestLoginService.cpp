@@ -113,7 +113,7 @@ namespace
             return std::move( listCompletion[0] );
         }
 
-        LoginOutcome registerAccount( string_view name, uint64 clientKey = kClientKey )
+        LoginServiceResult registerAccount( string_view name, uint64 clientKey = kClientKey )
         {
             const uint64 tag = _nextTag++;
             _service.registerAccount( LoginCredential{ string( name ), "password123" }, clientKey, UnixMilliseconds{ kNowMs }, tag );

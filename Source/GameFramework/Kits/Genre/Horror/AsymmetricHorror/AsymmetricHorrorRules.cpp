@@ -30,9 +30,9 @@ namespace sw
 
     uint32 AsymmetricHorrorRulesCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         AsymmetricHorrorRules rules;
-        if ( XMLFields::readFields( root, rules, sourceName ) )
+        if ( XMLFields::readProperties( root, rules, sourceName ) )
             _rules = rules;
         // 살인마가 없으면 판을 열 수 없다 — 세는 줄은 살인마뿐이고 없으면 읽기 실패다.
         using Catalog                          = AsymmetricHorrorRulesCatalog;
@@ -57,7 +57,7 @@ namespace sw
     bool AsymmetricHorrorRulesCatalog::loadCategory( const XMLNode& node, string_view sourceName )
     {
         AsymmetricHorrorScoreCategoryDef category;
-        if ( XMLFields::readFields( node, category, sourceName ) == false )
+        if ( XMLFields::readProperties( node, category, sourceName ) == false )
             return false;
         if ( _categoryCap.findValue( category._id ).has_value() )
         {
@@ -71,7 +71,7 @@ namespace sw
     bool AsymmetricHorrorRulesCatalog::loadScore( const XMLNode& node, string_view sourceName )
     {
         AsymmetricHorrorScoreRule rule;
-        if ( XMLFields::readFields( node, rule, sourceName ) == false )
+        if ( XMLFields::readProperties( node, rule, sourceName ) == false )
             return false;
         // 찾기는 앞의 규칙을 돌려주므로, 겹친 뒤 규칙은 말없이 쓰이지 않는다.
         if ( findScoreRule( rule._action ) != nullptr )
@@ -86,7 +86,7 @@ namespace sw
     bool AsymmetricHorrorRulesCatalog::loadSkillCheck( const XMLNode& node, string_view sourceName )
     {
         AsymmetricHorrorSkillCheckDef skillCheck;
-        bool                          bValid = XMLFields::readFields( node, skillCheck, sourceName );
+        bool                          bValid = XMLFields::readProperties( node, skillCheck, sourceName );
         // 창의 판정 폭(early · late · score)은 기반 TimingJudge 가 읽고, 등급마다 더하는 진행량(bonus)은 여기서 읽는다.
         for ( XMLNode window = node.findChild( "Window" ); window; window = window.findNextSibling( "Window" ) )
         {

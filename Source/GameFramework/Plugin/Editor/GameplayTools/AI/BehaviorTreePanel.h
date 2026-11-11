@@ -55,7 +55,7 @@ namespace sw::editor
         };
 
     protected:
-        bool                acceptsDocumentPath( string_view assetPath ) const override;
+        bool                canAcceptDocumentPath( string_view assetPath ) const override;
         ToolAssetLoadResult loadDocument() override;
         string              captureDocumentText() const override;
         void                applyDocumentText( string_view text ) override;

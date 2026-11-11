@@ -92,9 +92,9 @@ namespace sw
         return bNear ? GoldenResult::PassNearLimit : GoldenResult::Pass;
     }
 
-    GoldenAction AutomationGoldenUtil::decide( bool bHasGolden, bool bCompared, GoldenResult verdict, bool bUpdateGolden )
+    GoldenAction AutomationGoldenUtil::decide( bool bHasGolden, bool bCompared, GoldenResult result, bool bUpdateGolden )
     {
-        const bool bPass = bCompared && verdict == GoldenResult::Pass;
+        const bool bPass = bCompared && result == GoldenResult::Pass;
         if ( bPass )
             return GoldenAction::Keep;
         if ( bUpdateGolden )
@@ -103,16 +103,16 @@ namespace sw
             return GoldenAction::FailMissing;
         if ( bCompared == false )
             return GoldenAction::FailUnreadable;
-        return verdict == GoldenResult::PassNearLimit ? GoldenAction::KeepNearLimit : GoldenAction::Fail;
+        return result == GoldenResult::PassNearLimit ? GoldenAction::KeepNearLimit : GoldenAction::Fail;
     }
 
-    const utf8* AutomationGoldenUtil::describeWriteReason( bool bHasGolden, bool bCompared, GoldenResult verdict )
+    const utf8* AutomationGoldenUtil::describeWriteReason( bool bHasGolden, bool bCompared, GoldenResult result )
     {
         if ( bHasGolden == false )
             return "missing";
         if ( bCompared == false )
             return "size-changed";
-        return verdict == GoldenResult::PassNearLimit ? "near-limit" : "failed";
+        return result == GoldenResult::PassNearLimit ? "near-limit" : "failed";
     }
 
     optional<string_view> AutomationGoldenUtil::findBackendTag( uint32 backendIndex )

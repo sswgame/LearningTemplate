@@ -33,7 +33,7 @@ namespace sw
             TimingWindow window;
             bValid            = XMLReadUtil::readOptionalNumber( child, "width", sourceName, 0.0f, MathUtil::kMaxFloat, window._earlyWidth ) && bValid;
             window._lateWidth = window._earlyWidth;
-            bValid            = XMLFields::readFields( child, window, sourceName, { "width" }, pfnHandRead ) && bValid;
+            bValid            = XMLFields::readProperties( child, window, sourceName, { "width" }, pfnHandRead ) && bValid;
             listWindow.push_back( window );
         }
         if ( bValid )

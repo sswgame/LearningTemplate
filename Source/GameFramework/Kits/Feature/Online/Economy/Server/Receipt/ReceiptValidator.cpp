@@ -140,11 +140,11 @@ namespace sw
         return true;
     }
 
-    void ReceiptValidatorRegistry::pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListOutcome )
+    void ReceiptValidatorRegistry::pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListServiceResult )
     {
         for ( IReceiptValidator* pValidator : _listValidator )
         {
-            pValidator->pollDeliveryOutcomes( outListOutcome );
+            pValidator->pollDeliveryOutcomes( outListServiceResult );
         }
     }
 

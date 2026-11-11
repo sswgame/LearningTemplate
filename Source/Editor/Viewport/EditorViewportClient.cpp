@@ -331,6 +331,6 @@ namespace sw::editor
             subject._listSelectedID.push_back( pSelected->getObjectID() );
         }
         subject._selectOnly = &EditorViewportClientInternal::selectOnlyObject;
-        (void)EditorInputGUI::drawContextMenuFor( subject ); // 열렸는지는 쓰지 않는다
+        (void)EditorInputGUI::drawContextMenu( subject ); // 열렸는지는 쓰지 않는다
     }
 } // namespace sw::editor

@@ -73,7 +73,7 @@ namespace sw
         };
 
         void        pushSnapshot( OnlineServiceHost& host, const TradeSnapshot& snapshot );
-        void        respondImmediately( uint64 callID, TradeOutcome result );
+        void        respondImmediately( uint64 callID, TradeServiceResult result );
         static void collectBalances( const LedgerTransferResult& ledger, AccountID accountID, vector<TradeBalance>& outListBalance );
         /** @brief 정산으로 바뀐 잔액을 계정마다 알립니다(경제 키트의 `BalanceChanged`). */
         void notifySettledBalances( const LedgerTransferResult& ledger );

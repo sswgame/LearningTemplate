@@ -921,11 +921,11 @@ namespace sw
             report._lossPercent     = MathUtil::max( report._lossPercent, stats._packetLoss * GameNetSessionInternal::kPercent );
             report._rttMilliseconds = MathUtil::max( report._rttMilliseconds, stats._rtt * constant::time::kMillisecondsPerSecond );
         }
-        NetMessageKindStatsTable sentTally;
-        _peers.addSentKindTally( sentTally );
-        report.populateKinds( _router.getKindTally(), sentTally );
+        NetMessageKindStatsTable sentStats;
+        _peers.addSentKindStats( sentStats );
+        report.populateKinds( _router.getKindStats(), sentStats );
         // 상한 안에서 앞 절반은 지난 보고 뒤 늘어난 바이트가 큰 것(표의 초당 바이트와 같은 기준), 나머지는 누적 바이트가 큰 것.
-        const auto increaseOf = []( const ReplicaStat& stat )
+        const auto getIncreaseOf = []( const ReplicaStat& stat )
         {
             return stat._entry._byteCount > stat._reportedByteCount ? stat._entry._byteCount - stat._reportedByteCount : uint64{ 0 };
         };
@@ -935,10 +935,10 @@ namespace sw
             listOrder.push_back( &stat );
         }
         const size_t cap = static_cast<size_t>( NetStatsReport::kMaxReplicaEntry );
-        VectorUtil::sort( listOrder, [&increaseOf]( const ReplicaStat* pLeft, const ReplicaStat* pRight )
+        VectorUtil::sort( listOrder, [&getIncreaseOf]( const ReplicaStat* pLeft, const ReplicaStat* pRight )
         {
-            const uint64 leftIncrease  = increaseOf( *pLeft );
-            const uint64 rightIncrease = increaseOf( *pRight );
+            const uint64 leftIncrease  = getIncreaseOf( *pLeft );
+            const uint64 rightIncrease = getIncreaseOf( *pRight );
             return leftIncrease != rightIncrease ? leftIncrease > rightIncrease : pLeft->_entry._name < pRight->_entry._name;
         } );
         const size_t                      recentCount = ( cap + 1 ) / 2;
@@ -946,7 +946,7 @@ namespace sw
         unordered_set<const ReplicaStat*> uniqueSetPicked;
         for ( size_t index = 0; index < listOrder.size() && listPicked.size() < recentCount; ++index )
         {
-            if ( increaseOf( *listOrder[index] ) > 0 && uniqueSetPicked.insert( listOrder[index] ).second )
+            if ( getIncreaseOf( *listOrder[index] ) > 0 && uniqueSetPicked.insert( listOrder[index] ).second )
                 listPicked.push_back( listOrder[index] );
         }
         VectorUtil::sort( listOrder, []( const ReplicaStat* pLeft, const ReplicaStat* pRight )

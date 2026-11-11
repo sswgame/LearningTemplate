@@ -206,14 +206,14 @@ namespace sw::editor
          */
         [[nodiscard]] bool isAlreadyApplied( const string& relativePath );
         /** @brief 표의 칸이 "로드할 때 참조를 펼쳐 넣는다" 인 종류면 true 입니다(`AssetInlinesReferencesFunc`). */
-        [[nodiscard]] static bool inlinesReferences( string_view assetID );
+        [[nodiscard]] static bool shouldInlineReferences( string_view assetID );
         /** @brief @p route 의 캐시(빈 이름이면 리로드 함수를 가진 아무 캐시)가 그 에셋을 지금 들고 있으면 true 입니다. */
         [[nodiscard]] static bool isHeldInCaches( const AssetReloadRoute& route, const AssetID& assetID );
         /** @brief @p route 가 가리키는 엔진 캐시를 다시 읽고 활성 씬의 사용자에게 알립니다. 임포터는 부르지 않는다. 에디터 스레드에서만 부릅니다. */
         [[nodiscard]] static ReloadResult reloadCaches( const AssetReloadRoute& route, const AssetID& assetID );
 
         /** @brief 끝난 잡의 결과를 가져오고 다음 잡을 시작하며, 더 할 일이 없으면 미룬 파일을 처리합니다. */
-        void pumpImportJob();
+        void pollImportJob();
         /** @brief 기다리는 원본 전부를 잡 하나로 시작합니다. */
         void startQueuedImport();
         /** @brief 끝난 잡의 결과를 정리합니다. 취소로 건너뛴 원본은 다시 기다리게 한다. */

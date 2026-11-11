@@ -292,7 +292,7 @@ namespace sw
         {
             outCanonical += "inline{T=" + fqn + "|";
             state._listInlineFqn.push_back( fqn );
-            emitFields( state, *pNested, site._expr, site._exprA, site._exprB, site._depth + 1, outCanonical );
+            emitProperties( state, *pNested, site._expr, site._exprA, site._exprB, site._depth + 1, outCanonical );
             state._listInlineFqn.pop_back();
             outCanonical += "}";
             // 펼친 타입이 혼자서는 풀지 못하던 바깥 범위 이름을 여기서 풀었습니다. 그 타입의 "바깥 이름" 오류는 사라집니다.
@@ -508,7 +508,7 @@ namespace sw
         outCanonical += "|";
     }
 
-    void FixedCodecValueEmitter::emitFields( FixedCodecEmitState& state, const ParsedTypeInfo& type, const string& objectExpr, const string& exprA, const string& exprB, const int32 depth, string& outCanonical )
+    void FixedCodecValueEmitter::emitProperties( FixedCodecEmitState& state, const ParsedTypeInfo& type, const string& objectExpr, const string& exprA, const string& exprB, const int32 depth, string& outCanonical )
     {
         state._listScope.push_back( FixedCodecScopeFrame{ &type, objectExpr, 0 } );
         for ( size_t index = 0; index < type._listProperty.size(); ++index )

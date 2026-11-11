@@ -40,7 +40,7 @@ namespace sw::editor
         uint32 getPresetCount() const { return static_cast<uint32>( _model.getCatalog().getCount() ); }
 
     private:
-        bool                acceptsDocumentPath( string_view assetPath ) const override;
+        bool                canAcceptDocumentPath( string_view assetPath ) const override;
         ToolAssetLoadResult loadDocument() override;
         /** @brief 미리보기 씬에 대상(캡슐) 하나를 스폰합니다. */
         void populatePreviewScene( Scene& scene ) override;

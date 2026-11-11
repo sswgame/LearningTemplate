@@ -188,9 +188,9 @@ namespace sw::editor
         const size_t totalCount = inoutMesh._listVertex.size();
         for ( cgltf_size targetIndex = 0; targetIndex < primitive.targets_count; ++targetIndex )
         {
-            const hashed_string    name    = ModelImportUtil::makeMorphTargetName( pSourceMesh, targetIndex );
-            const optional<size_t> found   = VectorUtil::findIndex( inoutMesh._listMorphName, name );
-            const size_t           indexOf = found.has_value() ? *found : inoutMesh._listMorphName.size();
+            const hashed_string    name       = ModelImportUtil::makeMorphTargetName( pSourceMesh, targetIndex );
+            const optional<size_t> found      = VectorUtil::findIndex( inoutMesh._listMorphName, name );
+            const size_t           getIndexOf = found.has_value() ? *found : inoutMesh._listMorphName.size();
             if ( found.has_value() == false )
             {
                 inoutMesh._listMorphName.push_back( name );
@@ -212,8 +212,8 @@ namespace sw::editor
             vector<float32> listNormalValue;
             if ( unpackOptionalFloats( pPosition, 3, vertexCount, listPositionValue ) == false || unpackOptionalFloats( pNormal, 3, vertexCount, listNormalValue ) == false )
                 return false;
-            vector<float3>& listPosition = inoutMesh._listMorphPosition[indexOf];
-            vector<float3>& listNormal   = inoutMesh._listMorphNormal[indexOf];
+            vector<float3>& listPosition = inoutMesh._listMorphPosition[getIndexOf];
+            vector<float3>& listNormal   = inoutMesh._listMorphNormal[getIndexOf];
             listPosition.resize( totalCount );
             listNormal.resize( totalCount );
             for ( cgltf_size vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )

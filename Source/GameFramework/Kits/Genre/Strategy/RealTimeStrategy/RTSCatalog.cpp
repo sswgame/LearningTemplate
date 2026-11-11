@@ -30,9 +30,9 @@ namespace sw
 
     uint32 RTSCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         RTSCatalogRootDef rootDef;
-        if ( XMLFields::readFields( root, rootDef, sourceName ) )
+        if ( XMLFields::readProperties( root, rootDef, sourceName ) )
             _supplyMax = rootDef._supplyMax;
         using Element                          = XMLCatalogElement<RTSCatalog>;
         static constexpr Element kArrElement[] = {
@@ -46,7 +46,7 @@ namespace sw
     bool RTSCatalog::loadUnit( const XMLNode& node, string_view sourceName )
     {
         RTSUnitDef def;
-        bool       bValid = XMLFields::readFields( node, def, sourceName, { "targets" } );
+        bool       bValid = XMLFields::readProperties( node, def, sourceName, { "targets" } );
         // 공격 대상은 적었으면 그것만이다(적지 않으면 지상). 모르는 이름은 오류다.
         const string_view targets = node.getAttributeText( "targets" );
         if ( targets.empty() == false )

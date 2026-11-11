@@ -277,9 +277,9 @@ namespace sw
          *          - 앉아 가드: 상단과 잡기는 머리 위로 헛친다(피함). 하단은 막고, 중단은 맞는다.
          *          - 가드 불가(@p bUnblockable)는 막힐 상황에서 맞지만, 높이로 피하는 것은 그대로이다.
          */
-        static GuardResult computeGuardOutcome( AttackHeight height, GuardStance stance, bool bUnblockable = false );
-        /** @brief `computeGuardOutcome( height, stance )` 가 `Blocked` 이면 true 입니다. */
-        static bool isBlocked( AttackHeight height, GuardStance stance ) { return computeGuardOutcome( height, stance ) == GuardResult::Blocked; }
+        static GuardResult computeGuardResult( AttackHeight height, GuardStance stance, bool bUnblockable = false );
+        /** @brief `computeGuardResult( height, stance )` 가 `Blocked` 이면 true 입니다. */
+        static bool isBlocked( AttackHeight height, GuardStance stance ) { return computeGuardResult( height, stance ) == GuardResult::Blocked; }
 
         /** @brief 재생 중이면 기술 id, 프레임, 히트스톱, 접촉, 막힘을 씁니다. 기술 정의는 카탈로그의 것이므로 id 만 싣습니다. */
         void writeState( Archive& outArchive ) const

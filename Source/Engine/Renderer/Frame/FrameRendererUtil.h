@@ -321,7 +321,7 @@ namespace sw
          * @brief 이 패스가 씬 메시(GPUScene 배치)를 그리는지 반환합니다.
          * @details 머티리얼 퍼뮤테이션 PSO 를 미리 만들어 둘 대상이 이 패스들이다. 풀스크린 패스는 배치를 쓰지 않는다.
          */
-        static bool drawsSceneMeshes( RenderPassType passType )
+        static bool shouldDrawSceneMeshes( RenderPassType passType )
         {
             return getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes );
         }
@@ -353,7 +353,7 @@ namespace sw
          *          외곽선을 모르는 셰이더가 외곽선 패스의 앞면 컬링으로 그려져 뒷면이 화면을 덮는다.
          * @param pListMaterialDefine 배치 머티리얼의 define 목록입니다. nullptr 이면 머티리얼이 없는 배치입니다.
          */
-        static bool drawsMaterialInPass( RenderPassType passType, const vector<string>* pListMaterialDefine )
+        static bool shouldDrawMaterialInPass( RenderPassType passType, const vector<string>* pListMaterialDefine )
         {
             const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
             if ( info._pExcludedMaterialDefine != nullptr && hasMaterialDefine( pListMaterialDefine, info._pExcludedMaterialDefine ) )
@@ -364,7 +364,7 @@ namespace sw
         }
 
         /** @brief 이 패스가 머티리얼 define 으로 배치를 거르는지(있어야 하거나 없어야 하는 define 이 있는지) 반환합니다. 거르지 않으면 판정을 건너뛴다. */
-        static bool filtersBatchesByMaterial( RenderPassType passType )
+        static bool shouldFilterBatchesByMaterial( RenderPassType passType )
         {
             const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
             return info._pRequiredMaterialDefine != nullptr || info._pExcludedMaterialDefine != nullptr;
@@ -393,7 +393,7 @@ namespace sw
          *          갈아타는 머티리얼 셰이더는 `SW_PASS_SHADOW`(알파 컷오프면 `SW_PASS_DEPTH_PREPASS` 도) 퍼뮤테이션을 가져야 한다.
          *          런타임 PSO 변형(`FrameRenderer::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
          */
-        static bool drawsDepthWithMaterialShader( RenderPassType passType, const vector<string>* pListMaterialDefine )
+        static bool usesMaterialShaderForDepth( RenderPassType passType, const vector<string>* pListMaterialDefine )
         {
             if ( isDepthOnlyPassType( passType ) == false )
                 return false;
@@ -411,11 +411,11 @@ namespace sw
          * @details 머티리얼 셰이더로 그리는 패스(본 · G버퍼 · 외곽선)와 머티리얼 셰이더로 갈아탄 깊이 패스가 변위 머티리얼(`MATERIAL_DISPLACEMENT`)을 그릴 때다.
          *          패스 셰이더로 그리는 배치는 머티리얼의 헐 · 도메인을 모른다. 런타임 PSO 변형(`FramePSOManager::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
          */
-        static bool tessellatesMaterial( RenderPassType passType, const vector<string>* pListMaterialDefine )
+        static bool isMaterialTessellated( RenderPassType passType, const vector<string>* pListMaterialDefine )
         {
             if ( hasMaterialDefine( pListMaterialDefine, kMaterialDisplacementDefine ) == false )
                 return false;
-            return usesMaterialShader( passType ) || drawsDepthWithMaterialShader( passType, pListMaterialDefine );
+            return usesMaterialShader( passType ) || usesMaterialShaderForDepth( passType, pListMaterialDefine );
         }
 
         /**
@@ -424,7 +424,7 @@ namespace sw
          */
         static bool hasMaterialDepthPixelStage( RenderPassType passType, const vector<string>* pListMaterialDefine )
         {
-            return drawsDepthWithMaterialShader( passType, pListMaterialDefine ) && hasMaterialDefine( pListMaterialDefine, kMaterialAlphaCutoffDefine );
+            return usesMaterialShaderForDepth( passType, pListMaterialDefine ) && hasMaterialDefine( pListMaterialDefine, kMaterialAlphaCutoffDefine );
         }
 
         /**
@@ -434,9 +434,9 @@ namespace sw
          *          머티리얼 셰이더로 그리는 깊이 배치(알파 컷오프)는 그 셰이더의 픽셀 스테이지가 이미 있고, 정점 변형만인 배치는 디더 없이 깊이를 쓴다.
          *          런타임 PSO 변형(`FrameRenderer::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
          */
-        static bool addsAppearanceDitherPixelStage( RenderPassType passType, const vector<string>* pListMaterialDefine )
+        static bool needsAppearanceDitherPixelStage( RenderPassType passType, const vector<string>* pListMaterialDefine )
         {
-            return isDepthOnlyPassType( passType ) && drawsDepthWithMaterialShader( passType, pListMaterialDefine ) == false &&
+            return isDepthOnlyPassType( passType ) && usesMaterialShaderForDepth( passType, pListMaterialDefine ) == false &&
                    hasMaterialDefine( pListMaterialDefine, kAppearanceDitherDefine );
         }
 
@@ -462,7 +462,7 @@ namespace sw
          *          둘 다 "보기 방식" 이 아니라 다음 패스의 입력이므로 항상 Solid, Lit 로 둔다.
          * @note 메시 외곽선 패스는 머티리얼 셰이더를 쓰지만 뷰 모드를 받지 않습니다. 외곽선은 보기 방식이 아니라 화면의 일부이기 때문입니다.
          */
-        static bool appliesViewMode( RenderPassType passType )
+        static bool shouldApplyViewMode( RenderPassType passType )
         {
             return getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kAppliesViewMode );
         }

@@ -391,7 +391,7 @@ namespace sw
      *         <BlendIn curve="EaseInOut" duration="0.6"/>
      *     </Preset>
      * @endcode
-     * @details 섹션의 속성 이름은 섹션 구조체의 칸 이름이다(`XMLFields::readFields`). 각은 라디안, 벡터는 쉼표로 잇는다.
+     * @details 섹션의 속성 이름은 섹션 구조체의 칸 이름이다(`XMLFields::readProperties`). 각은 라디안, 벡터는 쉼표로 잇는다.
      *          `<BlendIn>` 이 없으면 카탈로그의 `<DefaultBlend>` 를 쓰며, 읽을 때 채운다.
      */
     REFLECT()

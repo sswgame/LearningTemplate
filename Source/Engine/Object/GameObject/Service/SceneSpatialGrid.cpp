@@ -217,7 +217,7 @@ namespace sw
         Layer&      layer = _listLayer[layerIndex];
         const uint8 front = _frontIndex;
         const uint8 back  = static_cast<uint8>( 1u - front );
-        if ( layer.wantsGrid() == false )
+        if ( layer.needsGrid() == false )
         {
             // 맞추지 않는 층은 두 버퍼를 놓는다 — 다시 맞출 때 처음부터 짓는다.
             for ( uint8 bufferIndex = 0; bufferIndex < 2; ++bufferIndex )
@@ -287,7 +287,7 @@ namespace sw
         {
             Layer& layer        = _listLayer[layerIndex];
             layer._bRebuildBack = SW_FALSE;
-            if ( layer.wantsGrid() == false )
+            if ( layer.needsGrid() == false )
                 continue;
             // 셀이 바뀐 뒤 버퍼는 처음부터 다시 짓는다 — 모든 항목을 넣는다.
             const bool bRebuild = layer._arrBuiltCell[back] != layer._cellSize;

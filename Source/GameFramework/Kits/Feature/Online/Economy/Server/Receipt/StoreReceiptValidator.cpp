@@ -421,11 +421,11 @@ namespace sw
         _listDeliveryDone.push_back( ReceiptDeliveryResult{ getStoreName(), call._recordKey, status } );
     }
 
-    void StoreReceiptValidator::pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListOutcome )
+    void StoreReceiptValidator::pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListServiceResult )
     {
-        for ( ReceiptDeliveryResult& outcome : _listDeliveryDone )
+        for ( ReceiptDeliveryResult& serviceResult : _listDeliveryDone )
         {
-            outListOutcome.push_back( std::move( outcome ) );
+            outListServiceResult.push_back( std::move( serviceResult ) );
         }
         _listDeliveryDone.clear();
     }

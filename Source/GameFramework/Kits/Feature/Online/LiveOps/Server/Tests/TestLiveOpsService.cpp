@@ -53,19 +53,19 @@ namespace
             pump();
         }
 
-        LiveOpsOutcome put( const LiveEventDef& definition, int64 nowMs = kStartMs )
+        LiveOpsServiceResult put( const LiveEventDef& definition, int64 nowMs = kStartMs )
         {
             _service.putEvent( definition, kGM, "memo", UnixMilliseconds{ nowMs }, 5 );
             pump();
             return takeResult();
         }
 
-        LiveOpsOutcome takeResult()
+        LiveOpsServiceResult takeResult()
         {
             vector<LiveOpsCompletion> listCompletion;
             _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
-            return listCompletion.empty() ? LiveOpsOutcome::fail( OnlineError::kUnavailable ) : listCompletion[0]._result;
+            return listCompletion.empty() ? LiveOpsServiceResult::fail( OnlineError::kUnavailable ) : listCompletion[0]._result;
         }
 
         vector<LiveEventState> active( string_view region, int64 nowMs, bool bClientOnly = true )

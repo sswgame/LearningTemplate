@@ -440,13 +440,13 @@ namespace sw
             _pFontService->getGlyphCache().beginFrame();
         // 결정적 실행: 에셋 도착을 프레임에 묶는다. 렌더 스레드가 받은 프레임을 다 끝낸 뒤(그 프레임의 업로드가 이 대기 중 도착한 로드를 집지 않게)
         // 걸린 에셋 일을 모두 끝낸다 — 그러면 지난 프레임에 요청한 에셋은 늘 이번 프레임의 렌더가 올린다.
-        const bool bFinishAssetWork = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetWorkEachFrame == SW_TRUE;
-        if ( bFinishAssetWork )
+        const bool bFinishAssetJobs = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
+        if ( bFinishAssetJobs )
         {
             SW_PROFILE_SCOPE( "GT.Asset.finishPending" );
             if ( _pRenderDriver != nullptr )
                 _pRenderDriver->flushSubmittedPackets();
-            engine::getSubsystem<AssetManager>().finishPendingAssetWork();
+            engine::getSubsystem<AssetManager>().finishPendingAssetJobs();
         }
         // 품질 · 언어 · 데이터 레이어 태그나 덮어쓰기 층이 바뀌었으면 그 값에 기댄 리소스를 쥔 캐시가 다시 읽는다(틱 밖 — 쥔 쪽은 다음 틱에 새 값을 본다).
         {
@@ -458,7 +458,7 @@ namespace sw
             // 결정적 실행이면 끝난 스트리밍 완료를 상한 없이 이번 프레임에 모두 부른다(상한이면 몇 개가 넘어갈지가 도착 순서에 달린다).
             {
                 SW_PROFILE_SCOPE( "GT.Asset.streamingQueue" );
-                engine::getSubsystem<AssetStreamingQueue>().update( bFinishAssetWork ? SIZE_MAX : 32 );
+                engine::getSubsystem<AssetStreamingQueue>().update( bFinishAssetJobs ? SIZE_MAX : 32 );
             }
             if ( _pSceneManager != nullptr )
             {

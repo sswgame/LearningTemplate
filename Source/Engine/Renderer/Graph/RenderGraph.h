@@ -168,7 +168,6 @@ namespace sw
         vector<hashed_string>    _listInput;                       ///< 입력으로 읽는 자원 해시 목록
         vector<hashed_string>    _listOutput;                      ///< 출력으로 만드는 자원 해시 목록
         RenderGraphPassExecuteFn _execute;                         ///< 컴파일된 순서대로 부르는 패스 콜백(선택)
-        bool                     _bCulled{ false };                ///< 쓰이지 않아 컬링되었는지 여부 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         RHIQueueType             _queue{ RHIQueueType::Graphics }; ///< 선언한 큐입니다. 비동기 컴퓨트를 지원하지 않는 그래프에서는 그래픽스로 계획한다(`setAsyncComputeSupported`)
     };
 
@@ -310,19 +309,6 @@ namespace sw
          */
         [[nodiscard]] bool executeParallel( RenderGraphExecutionContext& context, TaskManager* pTaskManager, IRHIDevice* pDevice );
 
-        /**
-         * @brief 최종 대상 출력에 닿지 않아 쓰이지 않는 패스를 컬링합니다.
-         * @param targetResourceName 최종 대상 리소스의 해시 이름입니다.
-         */
-        void cullUnusedPasses( hashed_string targetResourceName );
-
-        /**
-         * @brief 여러 최종 대상 출력 어디에도 닿지 않아 쓰이지 않는 패스를 한꺼번에 컬링합니다.
-         * @param listRootOutput 최종 루트 대상 리소스의 해시 목록입니다.
-         * @param pOutListCulledPass (선택) 컬링된 패스 이름을 받을 출력 파라미터입니다.
-         */
-        void cullUnreferencedPasses( const vector<hashed_string>& listRootOutput, vector<hashed_string>* pOutListCulledPass = nullptr );
-
         /** @brief 컴파일된 위상 정렬 패스의 실행 순서를 반환합니다. */
         const vector<hashed_string>& getExecutionOrder() const { return _listCompiledExecutionOrder; }
 
@@ -337,9 +323,6 @@ namespace sw
 
         /** @brief 그래프의 전체 패스 노드 수를 반환합니다. */
         uint32 getNodeCount() const { return static_cast<uint32>( _listNode.size() ); }
-
-        /** @brief 특정 렌더 패스가 컬링되었는지 반환합니다. */
-        bool isPassCulled( hashed_string passName ) const;
 
         /**
          * @brief 각 리소스의 수명(처음부터 마지막으로 사용한 패스 인덱스까지)입니다. compile() 이 계산해 둔 값을 반환합니다.

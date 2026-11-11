@@ -109,8 +109,8 @@ namespace sw
         const Texture2D* _pBloomDirtMask{ nullptr };
         /// @brief 이번 프레임 이 뷰가 그릴 후처리 머티리얼입니다(설정 `_listPostProcessMaterial` 차례 — 그 자리의 패스가 없는 것은 빠진다). PostProcessMaterial 패스가 자기 자리의 것을 그린다.
         vector<PostProcessMaterialPass> _listPostProcessMaterialPass;
-        /// @brief 파이프라인 패스(`RenderPipelineAsset::getGraphPass` 순서)마다 이번 프레임 이 뷰에서 컬링됐으면(그릴 것이 없다) 1 — 뷰 패스 고르기(`applyViewPassSelection`)의 결과 하나다. 덧그리는 패스의 실행이 그대로 따른다.
-        vector<uint8> _listPassCulled;
+        /// @brief 파이프라인 패스(`RenderPipelineAsset::getGraphPass` 순서)마다 이번 프레임 이 뷰에서 비활성이면 1(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스) — 뷰 패스 고르기(`applyViewPassSelection`)의 결과 하나다. 실행 입구(`FramePassExecutor::executePass`)가 그대로 따른다.
+        vector<uint8> _listPassDisabled;
         /**
          * @brief FSR 1 의 중간 RT(EASU 출력 = Present 뷰포트 크기, RGBA8)와 그 SRV 입니다. 이 뷰가 FSR 로 키울 때만 있다(`prepareUpscale`).
          * @details 크기는 Present 뷰포트(화면 사각형 · 자기 출력)다 — 풀(배율 크기)과 다르고 출력이 바뀌면 다시 만든다.

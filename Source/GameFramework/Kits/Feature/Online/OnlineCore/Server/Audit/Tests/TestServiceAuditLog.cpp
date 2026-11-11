@@ -103,7 +103,7 @@ SW_TEST_CASE( ServiceAuditLogTest, OversizedEntryMakesTheWholeCommitInvalid )
 }
 
 /** @brief [ServiceAuditLogTest] 경계 값: 상한 그대로인 줄은 받고, 동작 코드의 대문자 · 음수 시각 · 빈 주체는 거절한다 */
-SW_TEST_CASE( ServiceAuditLogTest, EntryLimitsAreInclusiveAndBadFieldsAreRejected )
+SW_TEST_CASE( ServiceAuditLogTest, EntryLimitsAreInclusiveAndBadPropertiesAreRejected )
 {
     ServiceAuditEntry atLimit = makeEntry( "acct.01", 1 );
     atLimit._memo.assign( static_cast<size_t>( ServiceAuditEntry::kMaxMemoSize ), 'x' );

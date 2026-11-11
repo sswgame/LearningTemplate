@@ -15,7 +15,7 @@ namespace sw::editor
      * @class VFXPreviewPanel
      * @brief 연 효과를 미리보기 씬의 오브젝트 하나(`VFXComponent`)로 재생하고, 방출기 목록과 살아 있는 입자 수를 보입니다.
      * @details **보기 전용**이다. 효과 파일은 데이터 종류(`vfx`)라 카탈로그 편집기가 고친다 — 같은 파일을 두 편집기가 쥐지 않게 이 창은 저장하지 않는다.
-     *          카탈로그 편집기(또는 바깥)에서 저장하면 파일 도장이 바뀌고 이 창이 스스로 다시 읽어 다시 건다(`VFXPreviewModel::pollFileChanged`). Reload 는 손으로 다시 읽기다. Data 종류 중 `*.vfx.xml` 만 문서로 받는다(`acceptsDocumentPath`).
+     *          카탈로그 편집기(또는 바깥)에서 저장하면 파일 도장이 바뀌고 이 창이 스스로 다시 읽어 다시 건다(`VFXPreviewModel::pollFileChanged`). Reload 는 손으로 다시 읽기다. Data 종류 중 `*.vfx.xml` 만 문서로 받는다(`canAcceptDocumentPath`).
      */
     class VFXPreviewPanel : public EditorPreviewPanel
     {
@@ -46,7 +46,7 @@ namespace sw::editor
         [[nodiscard]] bool hasPreviewTarget() const { return _model.hasTarget( getPreviewScene() ); }
 
     private:
-        bool                acceptsDocumentPath( string_view assetPath ) const override;
+        bool                canAcceptDocumentPath( string_view assetPath ) const override;
         ToolAssetLoadResult loadDocument() override;
         /** @brief 미리보기 씬에 효과 오브젝트 하나(`PreviewSubject`)를 스폰합니다. */
         void populatePreviewScene( Scene& scene ) override;

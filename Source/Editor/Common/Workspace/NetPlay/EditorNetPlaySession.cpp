@@ -150,7 +150,7 @@ namespace sw::editor
         }
 
         /** @brief 합류와 합치기입니다. 워커 잡과 이 스레드에서 끝까지 기다리는 길(`stopAndWait`)이 같이 쓴다. */
-        static EditorNetPlayStopResult runWork( const EditorNetPlayStopInput& input )
+        static EditorNetPlayStopResult runSessionJob( const EditorNetPlayStopInput& input )
         {
             for ( sw::thread* const pReader : input._listReader )
             {
@@ -173,7 +173,7 @@ namespace sw::editor
             // 종료 신호가 올라도 합류는 끝까지 한다 - 세션이 읽기 스레드를 남긴 채 사라지면 안 된다(합치기만 건너뛴다).
             if ( isStopRaised( readStopSignal( pState ) ) )
                 input._traceDirectory.clear();
-            publish( pState, generation, runWork( input ) );
+            publish( pState, generation, runSessionJob( input ) );
         }
 
         /** @brief 트레이스를 남긴 프로세스의 파일을 모아 합칩니다. 둘 미만이면 빈 문자열입니다. */
@@ -747,7 +747,7 @@ namespace sw::editor
                 input._traceDirectory = _traceDirectory;
                 if ( bInline )
                 {
-                    finishStop( EditorNetPlayStopJob::runWork( input )._mergedTracePath );
+                    finishStop( EditorNetPlayStopJob::runSessionJob( input )._mergedTracePath );
                     return;
                 }
                 _pStopJob->request( std::move( input ) );

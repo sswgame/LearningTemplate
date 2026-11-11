@@ -112,7 +112,7 @@ namespace
             return take( tag );
         }
 
-        LeaderboardCompletion scoresOf( string_view boardID, const vector<AccountID>& listAccountID )
+        LeaderboardCompletion queryScores( string_view boardID, const vector<AccountID>& listAccountID )
         {
             const uint64 tag = _nextTag++;
             _service.readScoresOf( boardID, listAccountID, UnixMilliseconds{ kNowMs }, tag );
@@ -665,7 +665,7 @@ SW_TEST_CASE( LeaderboardServiceTest, ScoresOfRanksWithinTheList )
     (void)rig.submit( "best", 2, 30, kNowMs, "two" );
     (void)rig.submit( "best", 3, 20, kNowMs, "three" );
 
-    const LeaderboardCompletion friends = rig.scoresOf( "best", vector<AccountID>{ 1, 3, 3, 99 } );
+    const LeaderboardCompletion friends = rig.queryScores( "best", vector<AccountID>{ 1, 3, 3, 99 } );
     SW_REQUIRE_EQUAL( size_t( 2 ), friends._listEntry.size() );
     SW_EXPECT_EQUAL( uint64( 3 ), friends._listEntry[0]._accountID );
     SW_EXPECT_EQUAL( 1, friends._listEntry[0]._rank ); // 전체 2 등이어도 목록 안 1 등
@@ -674,12 +674,12 @@ SW_TEST_CASE( LeaderboardServiceTest, ScoresOfRanksWithinTheList )
 
     LeaderboardFixture restarted{ world._clock, world._database };
     restarted.addBoard( "best" );
-    SW_EXPECT_EQUAL( size_t( 2 ), restarted.scoresOf( "best", vector<AccountID>{ 1, 3 } )._listEntry.size() );
+    SW_EXPECT_EQUAL( size_t( 2 ), restarted.queryScores( "best", vector<AccountID>{ 1, 3 } )._listEntry.size() );
 
-    SW_EXPECT_TRUE( rig.scoresOf( "nope", vector<AccountID>{ 1 } )._result == LeaderboardResult::UnknownBoard );
-    SW_EXPECT_TRUE( rig.scoresOf( "best", vector<AccountID>{} )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.queryScores( "nope", vector<AccountID>{ 1 } )._result == LeaderboardResult::UnknownBoard );
+    SW_EXPECT_TRUE( rig.queryScores( "best", vector<AccountID>{} )._result.hasError( OnlineError::kInvalidRequest ) );
     const vector<AccountID> listTooMany( static_cast<size_t>( LeaderboardLimit::kMaxScoresOfCount ) + 1, 1 );
-    SW_EXPECT_TRUE( rig.scoresOf( "best", listTooMany )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.queryScores( "best", listTooMany )._result.hasError( OnlineError::kInvalidRequest ) );
 }
 
 /** @brief [LeaderboardServiceTest] 정산: 순위와 점수를 남기고 구간대로 보상하며, 구간 밖은 결과만 남는다. 시즌 결과 조회의 오류 길도 본다 */

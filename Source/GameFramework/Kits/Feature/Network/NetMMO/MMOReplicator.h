@@ -58,9 +58,9 @@ namespace sw
         using Update = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelType::Unreliable, 4>; ///< 서버 → 클라이언트(비신뢰, 전달 통지). 통지 값은 서버 틱이다. 판 4: 갱신 확인 메시지 없이 전달 통지로 판정한다
         using Table  = NetMessageTable<NetKitMessageRange::kMMO, Enter, Leave, Update>;
 
-        static constexpr uint8 kEnter  = Table::kindOf<Enter>();
-        static constexpr uint8 kLeave  = Table::kindOf<Leave>();
-        static constexpr uint8 kUpdate = Table::kindOf<Update>();
+        static constexpr uint8 kEnter  = Table::getKindOf<Enter>();
+        static constexpr uint8 kLeave  = Table::getKindOf<Leave>();
+        static constexpr uint8 kUpdate = Table::getKindOf<Update>();
 
         static constexpr int32  kMaxStateBytes       = 512; ///< 엔티티 상태 상한. 서버는 넘는 엔티티를 받지 않고, 클라이언트는 넘는 길이를 손상된 메시지로 본다
         static constexpr uint32 kMaxUnconfirmedTicks = 64;  ///< 이만큼 지나도 판정이 없으면 잃은 것으로 본다. 서버 판정 테이블의 크기이기도 하다
@@ -225,8 +225,8 @@ namespace sw
         struct Observer
         {
             unordered_map<uint32, VisibleEntry> _mapVisible{};
-            NetPrioritizer                      _prioritizer{};   ///< 보이는 엔티티마다 쌓인 우선도
-            TickRingBuffer<uint8>               _updateOutcome{}; ///< 판정이 난 갱신 틱. 값이 `SW_TRUE` 면 전달, `SW_FALSE` 면 잃음이다. 항목이 없으면 아직 판정이 없다
+            NetPrioritizer                      _prioritizer{};  ///< 보이는 엔티티마다 쌓인 우선도
+            TickRingBuffer<uint8>               _updateResult{}; ///< 판정이 난 갱신 틱. 값이 `SW_TRUE` 면 전달, `SW_FALSE` 면 잃음이다. 항목이 없으면 아직 판정이 없다
             uint32                              _entityID{ 0 };
             uint8                               _bActive{ SW_FALSE };
         };

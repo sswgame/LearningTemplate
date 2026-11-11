@@ -97,7 +97,7 @@ SW_TEST_CASE( InventoryTest, StateRoundTrips )
     SW_REQUIRE_TRUE( original.initialize( &catalog, 3, 50.0f ) );
     SW_REQUIRE_EQUAL( 12, original.addItem( kArrow, 12 ) );
     SW_REQUIRE_EQUAL( 1, original.addItem( kSword, 1 ) );
-    SW_EXPECT_FALSE( original.wearSlot( original.findFirstSlot( kSword ).value(), 30.0f ) ); // 깎였지만 부서지지 않았다(70 남음)
+    SW_EXPECT_FALSE( original.reduceSlotDurability( original.findFirstSlot( kSword ).value(), 30.0f ) ); // 깎였지만 부서지지 않았다(70 남음)
 
     sw::Archive written;
     original.writeState( written );

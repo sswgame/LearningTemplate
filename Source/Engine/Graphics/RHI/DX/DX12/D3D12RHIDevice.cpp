@@ -1199,13 +1199,13 @@ namespace sw
         _listPendingSubmit.clear();
     }
 
-    void D3D12RHIDevice::submitFrameWorkNow()
+    void D3D12RHIDevice::submitFrameJobNow()
     {
         if ( _commandQueue == nullptr || _pActiveFrameList == nullptr )
             return;
         // 조각에 기록한 것이 있으면 닫아 대기열 끝에 넣고 새 조각을 연다(빈 조각은 그대로 둔다 — `executeCommandList` 와 같은 규칙).
-        const bool bSegmentHasWork = _frameStreamState._bRecordedAny != SW_FALSE;
-        if ( bSegmentHasWork )
+        const bool bSegmentHasJobs = _frameStreamState._bRecordedAny != SW_FALSE;
+        if ( bSegmentHasJobs )
         {
             _frameStreamContext->endRenderPass();
             requireHr( _pActiveFrameList->Close(), "ID3D12GraphicsCommandList::Close (frame segment, queue sync)" );
@@ -1220,7 +1220,7 @@ namespace sw
                 _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
             _listPendingSubmit.clear();
         }
-        if ( bSegmentHasWork )
+        if ( bSegmentHasJobs )
             openNextFrameSegment();
     }
 
@@ -1246,7 +1246,7 @@ namespace sw
             return RHIQueueSyncPoint{};
         // 포크: 지금까지 넘긴 그래픽스 일(프레임 스트림 · 리스트 · 구조 버퍼 복사)을 큐에 내고 그 끝을 신호한다. 컴퓨트 큐는 그 신호를 기다린 뒤 이 리스트를 실행한다.
         // 버퍼는 ExecuteCommandLists 경계에서 COMMON 으로 돌아가므로(상태 감쇠) 큐 사이 소유권 이전이 따로 없다 — 텍스처는 생산자가 컴퓨트에서 쓸 상태로 넘겨 둔다.
-        submitFrameWorkNow();
+        submitFrameJobNow();
         ++_queueSyncValue;
         requireHr( _commandQueue->Signal( _queueSyncFence.Get(), _queueSyncValue ), "ID3D12CommandQueue::Signal (fork)" );
         requireHr( _computeQueue->Wait( _queueSyncFence.Get(), _queueSyncValue ), "ID3D12CommandQueue::Wait (fork)" );
@@ -1267,7 +1267,7 @@ namespace sw
         if ( point.isValid() == false || point._value <= _computeWaitedValue )
             return;
         // 조인: 그 전 그래픽스 일은 기다리지 않게 먼저 큐에 낸다 — 포크와 조인 사이의 그래픽스 일이 컴퓨트와 겹친다.
-        submitFrameWorkNow();
+        submitFrameJobNow();
         requireHr( _commandQueue->Wait( _computeFence.Get(), point._value ), "ID3D12CommandQueue::Wait (join)" );
         _computeWaitedValue = point._value;
     }

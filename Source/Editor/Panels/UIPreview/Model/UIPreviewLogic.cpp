@@ -430,7 +430,7 @@ namespace sw::editor
         return castTo<const CanvasPanel>( widget.getParent() ) != nullptr;
     }
 
-    UIPreviewSlotParams UIPreviewLogic::findSlotFields( const Widget& widget )
+    UIPreviewSlotParams UIPreviewLogic::findSlotProperties( const Widget& widget )
     {
         UIPreviewSlotParams params{};
         const auto*         pParent = widget.getParent();
@@ -686,7 +686,7 @@ namespace sw::editor
         float2 local{};
         if ( grid.getGeometry().inverseTransformPoint( screenPoint, local ) == false )
             return false;
-        // 격자는 RTL 이면 늘 거울로 놓는다(`mirrorsChildrenInRightToLeft` 를 바꾸지 않는다) — 배치는 거울 전 좌표로 줄을 정한다(`PanelWidget::arrangeChild`).
+        // 격자는 RTL 이면 늘 거울로 놓는다(`shouldMirrorChildrenInRightToLeft` 를 바꾸지 않는다) — 배치는 거울 전 좌표로 줄을 정한다(`PanelWidget::arrangeChild`).
         if ( grid.isRightToLeft() )
             local._x = grid.getGeometry()._size._x - local._x;
         vector<float32> listStart;

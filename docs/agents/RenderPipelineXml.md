@@ -82,7 +82,7 @@
 - 패스의 컬이 `Back` 이 아니면 컬은 패스의 것이다. 뒤집은 껍질 외곽선은 양면 머티리얼도 앞면을 잘라야 외곽선이다.
 - 깊이 첨부가 없는 패스는 깊이 쓰기 · 바이어스 · 스텐실을 받지 않는다. 깊이 테스트는 언제나 패스의 값이다.
 - `MaterialInstance` 는 값 · 텍스처 · 키워드만 덮는다(문턱은 프로퍼티라 덮을 수 있다). 렌더 상태 · `alphaMode` · `renderQueue` 가 다르면 `parent=` 로 자식 머티리얼을 만든다. 드로우마다 PSO 를 가르면 인스턴스를 머티리얼 원소로 합치는 이득을 잃는다(언리얼 Dynamic Instance · 유니티 MaterialPropertyBlock 과 같다, 기억에 의존한 비교).
-- 렌더 칸은 퍼뮤테이션 해시에 섞여 배치 키와 PSO 변형을 가른다(`Material::getRenderFieldsHash`). 칸을 적지 않은 머티리얼의 해시는 define 만의 값이다.
+- 렌더 칸은 퍼뮤테이션 해시에 섞여 배치 키와 PSO 변형을 가른다(`Material::getRenderPropertiesHash`). 칸을 적지 않은 머티리얼의 해시는 define 만의 값이다.
 
 ## 화면 속도
 
@@ -224,11 +224,11 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 
 ## 머티리얼 변위(테셀레이션)
 
-패스 XML 의 헐 · 도메인과 별개로, 머티리얼이 `_alwaysDefines` 에 `MATERIAL_DISPLACEMENT` 를 적으면 렌더러가 그 머티리얼의 변형 PSO 에 머티리얼 셰이더의 `HSMain` · `DSMain` 과 패치 토폴로지를 붙인다(`FrameRendererUtil::tessellatesMaterial` — 쿠커와 런타임이 같은 판정). 셰이더는 `material_displacement.hlsli`(뼈대가 보간 칸 VSMain 대신 include)다.
+패스 XML 의 헐 · 도메인과 별개로, 머티리얼이 `_alwaysDefines` 에 `MATERIAL_DISPLACEMENT` 를 적으면 렌더러가 그 머티리얼의 변형 PSO 에 머티리얼 셰이더의 `HSMain` · `DSMain` 과 패치 토폴로지를 붙인다(`FrameRendererUtil::isMaterialTessellated` — 쿠커와 런타임이 같은 판정). 셰이더는 `material_displacement.hlsli`(뼈대가 보간 칸 VSMain 대신 include)다.
 
 - 값은 머티리얼 칸이다: `_displacementMap`(R 높이) · `_displacementScale`(m) · `_displacementMidLevel` · `_tessellationDensity`(각 1 rad 당 분할 수) · `_tessellationMaxFactor`(64 이하). `pbrmaterial.material` 이 칸을 가진다.
 - 변 계수는 변의 두 끝점(월드 위치 · 카메라 뷰 깊이)만으로 정해 틈이 없다. 식의 C++ 짝 `MaterialDisplacement` 를 단위 테스트가 지킨다.
-- 그림자 · 깊이 프리패스도 머티리얼 셰이더로 같은 변위를 그린다(`drawsDepthWithMaterialShader`). 뷰 깊이는 그림자 패스에서도 카메라의 값이라 계수까지 같다.
+- 그림자 · 깊이 프리패스도 머티리얼 셰이더로 같은 변위를 그린다(`usesMaterialShaderForDepth`). 뷰 깊이는 그림자 패스에서도 카메라의 값이라 계수까지 같다.
 - 테셀레이션이 없는 백엔드는 변형을 만들지 않고 `FramePSOManager.DisplacementUnsupported` 오류를 남긴다 — 평면으로 대신 그리지 않는다. 능력은 `RHICapabilities::_bMaterialTessellation`: DX11 · DX12 참, Vulkan 은 장치 기능 `tessellationShader`, OpenGL 거짓(헐 · 도메인이 머티리얼 구조 버퍼를 읽으면 링크 거절 — binding.hlsli 9 절), WebGPU 거짓. 시나리오는 `<SkipUnless watch="RHI.MaterialTessellation">` 로 그 백엔드를 건너뛴다.
 - 받지 않는 조합(셰이더 `#error`): 머티리얼 없는 셰이더, 사용자 보간 칸(`SW_MATERIAL_CUSTOM_VARYINGS`), 외곽선 패스.
 - 언리얼 Nanite 변위 · 옛 테셀레이션과 같은 자리다 — 머티리얼이 높이 · 기준 높이를 주고 렌더러가 분할을 정한다(기억에 의존한 비교). 언리얼은 화면 크기 기준 분할이고 여기는 각 크기 × 밀도다.

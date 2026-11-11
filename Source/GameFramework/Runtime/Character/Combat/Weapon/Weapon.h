@@ -86,7 +86,7 @@ namespace sw
         /** @brief 받는 탄 조건(`_accepts`)을 컴파일합니다. 틀린 식이면 오류를 남기고 false 입니다. 코드로 짓는 정의(테스트)도 `_accepts` 를 고친 뒤 부릅니다. */
         [[nodiscard]] bool compileAccepts( string_view sourceName );
         /** @brief 이 무기가 탄 @p projectile 을 받는지 나타냅니다(탄 태그에 대한 `_accepts`). */
-        bool accepts( const ProjectileDef& projectile ) const;
+        bool canAccept( const ProjectileDef& projectile ) const;
     };
 } // namespace sw
 
@@ -191,7 +191,7 @@ namespace sw
 
         /**
          * @brief 총을 들고 탄 @p projectile 을 장전해 탄창을 채웁니다. 예비탄은 @p reserveAmmo 입니다.
-         * @return 무기가 그 탄을 받지 않으면(`WeaponDef::accepts`) 오류를 남기고 false 이며 상태는 그대로입니다.
+         * @return 무기가 그 탄을 받지 않으면(`WeaponDef::canAccept`) 오류를 남기고 false 이며 상태는 그대로입니다.
          */
         [[nodiscard]] bool equip( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, uint32 spreadSeed = 1u );
         /**

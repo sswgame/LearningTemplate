@@ -162,13 +162,13 @@ SW_TEST_CASE( UIScreenServicesTest, ScreenFocusRuleAndClose )
     UIScreenDef desc;
     desc._layer       = UILayer::HUD;
     desc._bTakesFocus = true;
-    SW_EXPECT_FALSE( UIScreenFixture( desc )._screen.takesFocus() );
+    SW_EXPECT_FALSE( UIScreenFixture( desc )._screen.canTakeFocus() );
     desc._layer = UILayer::Overlay;
-    SW_EXPECT_FALSE( UIScreenFixture( desc )._screen.takesFocus() );
+    SW_EXPECT_FALSE( UIScreenFixture( desc )._screen.canTakeFocus() );
     desc._layer = UILayer::Menu;
-    SW_EXPECT_TRUE( UIScreenFixture( desc )._screen.takesFocus() );
+    SW_EXPECT_TRUE( UIScreenFixture( desc )._screen.canTakeFocus() );
     desc._bTakesFocus = false;
-    SW_EXPECT_FALSE( UIScreenFixture( desc )._screen.takesFocus() );
+    SW_EXPECT_FALSE( UIScreenFixture( desc )._screen.canTakeFocus() );
 
     UIScreenFixture rig;
     SW_EXPECT_FALSE( rig._screen.isClosing() );

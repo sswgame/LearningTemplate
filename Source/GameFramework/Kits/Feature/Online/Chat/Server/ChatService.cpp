@@ -70,7 +70,7 @@ namespace sw
         {
             vector<ChatMessage> _listMessage{};
             string              _nextCursor{};
-            ChatOutcome         _result{ ChatOutcome::fail( OnlineError::kUnavailable ) };
+            ChatServiceResult   _result{ ChatServiceResult::fail( OnlineError::kUnavailable ) };
         };
 
         /** @brief 저장소 스레드에서 도는 채팅 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다. */
@@ -141,14 +141,14 @@ namespace sw
              * @details 기록 키는 고정 폭 16진이라 순번을 하나 올린 키가 신고한 메시지 바로 다음 키입니다. 그 키를 커서로 내림차순으로 읽으면 첫 레코드가 신고한 메시지입니다.
              *          첫 레코드가 그 메시지가 아니면 기록에 아직 없거나 지워진 것이므로 NotFound 입니다. 문맥 줄은 오래된 것부터 담아 마지막 줄이 신고 대상입니다.
              */
-            static ChatOutcome writeReport( IServiceStoreConnection& connection, const ChatReportRequest& request, AccountID reporterID, uint64 uniqueID, UnixMilliseconds nowMs )
+            static ChatServiceResult writeReport( IServiceStoreConnection& connection, const ChatReportRequest& request, AccountID reporterID, uint64 uniqueID, UnixMilliseconds nowMs )
             {
                 using Internal                   = ChatServiceInternal;
                 const string          messageKey = Internal::makeHistoryKey( request._channelID, request._sentMs, request._serverID, request._sequence );
                 const string          cursorKey  = Internal::makeHistoryKey( request._channelID, request._sentMs, request._serverID, static_cast<uint64>( request._sequence ) + 1 );
                 vector<ServiceRecord> listRecord;
                 if ( connection.listRecords( Internal::getHistoryTable(), request._channelID + "/", cursorKey, ChatLimit::kReportContextCount, true, listRecord ) != ServiceStoreResult::Ok )
-                    return ChatOutcome::fail( OnlineError::kUnavailable );
+                    return ChatServiceResult::fail( OnlineError::kUnavailable );
                 if ( listRecord.empty() || listRecord.front()._key != messageKey )
                     return ChatResult::NotFound;
                 ServiceReport report;
@@ -156,7 +156,7 @@ namespace sw
                 {
                     ChatMessage message;
                     if ( ChatProtocol::decodeRecord( recordIt->_key, recordIt->_bytes, message ) == false )
-                        return ChatOutcome::fail( OnlineError::kUnavailable ); // 손상된 영속 기록은 건너뛰지 않고 이 신고를 실패로 돌려준다
+                        return ChatServiceResult::fail( OnlineError::kUnavailable ); // 손상된 영속 기록은 건너뛰지 않고 이 신고를 실패로 돌려준다
                     ServiceReportLine& line = report._listLine.emplace_back();
                     line._senderName        = std::move( message._senderName );
                     line._text              = std::move( message._text );
@@ -165,7 +165,7 @@ namespace sw
                 }
                 report._targetID = report._listLine.back()._senderID;
                 if ( report._targetID == reporterID )
-                    return ChatOutcome::fail( OnlineError::kInvalidRequest ); // 자기 메시지는 신고하지 않는다
+                    return ChatServiceResult::fail( OnlineError::kInvalidRequest ); // 자기 메시지는 신고하지 않는다
                 report._category   = "chat";
                 report._context    = request._channelID;
                 report._reason     = request._reason;
@@ -173,10 +173,10 @@ namespace sw
                 report._createdMs  = nowMs.count();
                 ServiceTransaction transaction;
                 if ( ServiceReportStore::stageOpen( transaction, report, uniqueID ) == false )
-                    return ChatOutcome::fail( OnlineError::kInvalidRequest );
+                    return ChatServiceResult::fail( OnlineError::kInvalidRequest );
                 if ( connection.commit( transaction ) == ServiceStoreResult::Ok )
                     return ChatResult::Ok;
-                return ChatOutcome::fail( OnlineError::kUnavailable );
+                return ChatServiceResult::fail( OnlineError::kUnavailable );
             }
 
         private:
@@ -337,7 +337,7 @@ namespace sw
         {
             if ( member._sanctionReadMs < 0 )
             {
-                completeSimple( ChatServiceInternal::toMethod( send._recipientID != kInvalidAccountID ), send._requestTag, ChatOutcome::fail( OnlineError::kUnavailable ) );
+                completeSimple( ChatServiceInternal::toMethod( send._recipientID != kInvalidAccountID ), send._requestTag, ChatServiceResult::fail( OnlineError::kUnavailable ) );
                 continue;
             }
             processSend( accountID, member, send );
@@ -353,7 +353,7 @@ namespace sw
         memberIt->second._bSanctionChanged = memberIt->second._bSanctionReading;
     }
 
-    void ChatService::completeSimple( uint16 method, uint64 requestTag, ChatOutcome result, int64 retryAfterMs )
+    void ChatService::completeSimple( uint16 method, uint64 requestTag, ChatServiceResult result, int64 retryAfterMs )
     {
         ChatCompletion completion;
         completion._method       = method;
@@ -396,11 +396,11 @@ namespace sw
             _busTopicBuffer.push( ChatBusTopicChange{ ChatProtocol::makeChannelTopic( channelID ), SW_FALSE } );
     }
 
-    ChatOutcome ChatService::addMember( AccountID accountID, string_view channelID, UnixMilliseconds nowMs )
+    ChatServiceResult ChatService::addMember( AccountID accountID, string_view channelID, UnixMilliseconds nowMs )
     {
         ChatChannelKind kind = ChatChannelKind::World;
         if ( ChatChannelID::parseKind( channelID, kind ) == false || kind == ChatChannelKind::Whisper )
-            return ChatOutcome::fail( OnlineError::kInvalidRequest );
+            return ChatServiceResult::fail( OnlineError::kInvalidRequest );
         Member* pMember = ensureMember( accountID, nowMs );
         if ( pMember == nullptr )
             return ChatResult::TargetOffline;
@@ -432,7 +432,7 @@ namespace sw
         }
         for ( const PendingSend& send : memberIt->second._listPendingSend )
         {
-            completeSimple( ChatServiceInternal::toMethod( send._recipientID != kInvalidAccountID ), send._requestTag, ChatOutcome::fail( OnlineError::kUnavailable ) );
+            completeSimple( ChatServiceInternal::toMethod( send._recipientID != kInvalidAccountID ), send._requestTag, ChatServiceResult::fail( OnlineError::kUnavailable ) );
         }
         _mapAccountToMember.erase( memberIt );
         _spamGuard.remove( accountID );
@@ -443,7 +443,7 @@ namespace sw
         ChatChannelKind kind = ChatChannelKind::World;
         if ( ChatChannelID::parseKind( channelID, kind ) == false )
         {
-            completeSimple( ChatMethod::Join::kID, requestTag, ChatOutcome::fail( OnlineError::kInvalidRequest ) );
+            completeSimple( ChatMethod::Join::kID, requestTag, ChatServiceResult::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         if ( ChatServiceInternal::isClientJoinable( kind ) == false )
@@ -475,7 +475,7 @@ namespace sw
     {
         if ( recipientID == kInvalidAccountID || recipientID == accountID )
         {
-            completeSimple( ChatMethod::Whisper::kID, requestTag, ChatOutcome::fail( OnlineError::kInvalidRequest ) );
+            completeSimple( ChatMethod::Whisper::kID, requestTag, ChatServiceResult::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         submitSend( accountID, PendingSend{ ChatChannelID::makeWhisper( accountID, recipientID ), string( text ), requestTag, nowMs, recipientID } );
@@ -507,11 +507,11 @@ namespace sw
         processSend( accountID, *pMember, send );
     }
 
-    ChatOutcome ChatService::prepareText( AccountID accountID, Member& member, string_view text, UnixMilliseconds nowMs, string& outText, int64& outRetryAfterMs )
+    ChatServiceResult ChatService::prepareText( AccountID accountID, Member& member, string_view text, UnixMilliseconds nowMs, string& outText, int64& outRetryAfterMs )
     {
         outRetryAfterMs = 0;
         if ( text.empty() || text.size() > static_cast<size_t>( ChatLimit::kMaxTextSize ) )
-            return ChatOutcome::fail( OnlineError::kInvalidRequest );
+            return ChatServiceResult::fail( OnlineError::kInvalidRequest );
         if ( member._muteUntilMs != 0 && nowMs.count() < member._muteUntilMs )
         {
             outRetryAfterMs = member._muteUntilMs - nowMs.count();
@@ -527,7 +527,7 @@ namespace sw
             case ChatFilterResult::Rejected:
                 return ChatResult::Rejected;
             case ChatFilterResult::InvalidText:
-                return ChatOutcome::fail( OnlineError::kInvalidRequest );
+                return ChatServiceResult::fail( OnlineError::kInvalidRequest );
             default:
                 return ChatResult::Ok;
         }
@@ -547,9 +547,9 @@ namespace sw
                 return;
             }
         }
-        string            filtered;
-        int64             retryAfterMs = 0;
-        const ChatOutcome prepared     = prepareText( accountID, member, send._text, send._nowMs, filtered, retryAfterMs );
+        string                  filtered;
+        int64                   retryAfterMs = 0;
+        const ChatServiceResult prepared     = prepareText( accountID, member, send._text, send._nowMs, filtered, retryAfterMs );
         if ( prepared != ChatResult::Ok )
         {
             completeSimple( method, send._requestTag, prepared, retryAfterMs );
@@ -720,7 +720,7 @@ namespace sw
                                             cursor.size() > static_cast<size_t>( ChatProtocol::kMaxCursorSize );
         if ( bInvalidHistoryRequest )
         {
-            completeSimple( ChatMethod::History::kID, requestTag, ChatOutcome::fail( OnlineError::kInvalidRequest ) );
+            completeSimple( ChatMethod::History::kID, requestTag, ChatServiceResult::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         if ( canReadChannel( accountID, channelID, kind ) == false )
@@ -734,7 +734,7 @@ namespace sw
         { applyHistoryRead( requestTag, read._result, std::move( read._listMessage ), std::move( read._nextCursor ) ); } );
     }
 
-    void ChatService::applyHistoryRead( uint64 requestTag, ChatOutcome result, vector<ChatMessage>&& listMessage, string&& nextCursor )
+    void ChatService::applyHistoryRead( uint64 requestTag, ChatServiceResult result, vector<ChatMessage>&& listMessage, string&& nextCursor )
     {
         ChatCompletion completion;
         completion._method      = ChatMethod::History::kID;
@@ -763,7 +763,7 @@ namespace sw
                                     ServiceReportStore::isValidCode( request._reason, ChatLimit::kMaxReasonSize ) == false;
         if ( bInvalidReport )
         {
-            completeSimple( ChatMethod::Report::kID, requestTag, ChatOutcome::fail( OnlineError::kInvalidRequest ) );
+            completeSimple( ChatMethod::Report::kID, requestTag, ChatServiceResult::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         if ( canReadChannel( accountID, request._channelID, kind ) == false )
@@ -781,11 +781,11 @@ namespace sw
         const uint64 uniqueID = ( _dependencies._serverID << 32 ) | _reportSequence;
         _store.submit( [request, accountID, uniqueID, nowMs]( IServiceStoreConnection& connection )
         { return ChatStoreRun::writeReport( connection, request, accountID, uniqueID, nowMs ); },
-                       [this, requestTag]( ChatOutcome result )
+                       [this, requestTag]( ChatServiceResult result )
         { applyReport( requestTag, result ); } );
     }
 
-    void ChatService::applyReport( uint64 requestTag, ChatOutcome result )
+    void ChatService::applyReport( uint64 requestTag, ChatServiceResult result )
     {
         completeSimple( ChatMethod::Report::kID, requestTag, result );
     }

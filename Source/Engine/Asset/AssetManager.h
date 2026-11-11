@@ -173,7 +173,7 @@ namespace sw
          * @details 게임 모듈은 태스크 매니저를 보지 않는다(`HostOnly`) — 모듈의 백그라운드 일은 이 창구로 내서 결정적 실행의 프레임 경계 대기가 함께 센다(언리얼 DDC 빌드 태스크 자리).
          *          모듈을 내리기 전에는 엔진이 모든 태스크를 기다린다(`LiveReloadManager::pollBeforeUnload`).
          */
-        void launchLoadWork( string_view name, const TaskDelegate& work );
+        void launchLoadJob( string_view name, const TaskDelegate& job );
         /** @brief 로드 단계의 태스크만 끝날 때까지 기다립니다(@p pOwner 는 오래 걸릴 때의 로그 이름). 로드 태스크를 낸 캐시가 지워지기 전에 부른다. */
         void waitLoadTasks( const utf8* pOwner );
         /**
@@ -181,7 +181,7 @@ namespace sw
          * @details 셋은 서로를 낳는다(로드가 다른 로드를, IO 완료가 해제 태스크를) — 그래서 셋이 함께 빌 때까지 되풀이한다. 기한은 없다(오래 걸리면
          *          `TaskManager::waitStage` 가 남은 태스크를 주기적으로 오류로 남긴다). 엔진 전체 대기(`waitAll`)는 무관한 백그라운드 일까지 기다려 쓰지 않는다.
          */
-        void finishPendingAssetWork();
+        void finishPendingAssetJobs();
 
     private:
         /** @struct ReloadEntry @brief 캐시 하나의 리로드 함수입니다(`registerAssetCache` · 내장 등록 줄). */

@@ -51,9 +51,9 @@ namespace sw
 
     uint32 ScavengerCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         ScavengerRootDef rootDef;
-        if ( XMLFields::readFields( root, rootDef, sourceName ) )
+        if ( XMLFields::readProperties( root, rootDef, sourceName ) )
         {
             _terminalShopID = rootDef._terminalShopID;
             _currency       = rootDef._currency;
@@ -94,7 +94,7 @@ namespace sw
     bool ScavengerCatalog::loadMoon( const XMLNode& node, string_view sourceName )
     {
         ScavengerMoonDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
             return false;
         (void)_moonCatalog.add( def );
         return true;

@@ -160,41 +160,41 @@ namespace sw
     };
 
     /**
-     * @brief 제출한 프레임 하나의 완료입니다. 큐 완료 콜백이 `_bWorkDone` 을 켜고, 그 프레임에 복사 도착지가 된 읽기 버퍼의 매핑이 모두 끝나야(`_pendingMapCount` 0) 끝난 것으로 본다.
+     * @brief 제출한 프레임 하나의 완료입니다. 큐 완료 콜백이 `_bJobDone` 을 켜고, 그 프레임에 복사 도착지가 된 읽기 버퍼의 매핑이 모두 끝나야(`_pendingMapCount` 0) 끝난 것으로 본다.
      * @details 매핑까지 기다리는 까닭: `readReadbackBuffer` 는 그 프레임의 지연 해제 콜백 안에서 기다리지 않고 읽는다(장치 계약) — WebGPU 는 매핑 없이 읽을 수 없다.
      */
     struct WebGPUFrameFence
     {
         uint64                  _serial{ 0 };
-        atomic<uint8>           _bWorkDone{ SW_TRUE }; ///< 빈 칸은 끝난 것이다(`RHIFrameFenceRing` 은 낸 적 없는 칸을 기다리지 않는다)
+        atomic<uint8>           _bJobDone{ SW_TRUE }; ///< 빈 칸은 끝난 것이다(`RHIFrameFenceRing` 은 낸 적 없는 칸을 기다리지 않는다)
         atomic<uint32>          _pendingMapCount{ 0 };
         WebGPURHIDevice*        _pDevice{ nullptr };
         vector<RHIBufferHandle> _listMappedBuffer{}; ///< 이 프레임에 매핑하는 읽기 버퍼(콜백이 다 끝나면 "읽을 수 있음" 으로 적는다)
-        WGPUFuture              _workDoneFuture{};   ///< 큐 완료 콜백의 퓨처 — 링이 차면 `wgpuInstanceWaitAny` 로 기다린다
+        WGPUFuture              _jobDoneFuture{};    ///< 큐 완료 콜백의 퓨처 — 링이 차면 `wgpuInstanceWaitAny` 로 기다린다
         vector<WGPUFuture>      _listMapFuture{};    ///< 매핑 콜백의 퓨처(같은 대기)
 
         /** @brief 이 칸에 새 프레임을 겁니다. 칸의 앞 프레임은 끝났어야 합니다(링이 기다린다). */
         void arm( uint64 serial, WebGPURHIDevice* pDevice )
         {
             _serial = serial;
-            _bWorkDone.store( SW_FALSE, std::memory_order_release );
+            _bJobDone.store( SW_FALSE, std::memory_order_release );
             _pendingMapCount.store( 0, std::memory_order_release );
             _pDevice = pDevice;
             _listMappedBuffer.clear();
-            _workDoneFuture = WGPUFuture{};
+            _jobDoneFuture = WGPUFuture{};
             _listMapFuture.clear();
         }
         /** @brief 칸을 빈 상태(끝남)로 되돌립니다(장치를 놓을 때). */
         void clear()
         {
-            _bWorkDone.store( SW_TRUE, std::memory_order_release );
+            _bJobDone.store( SW_TRUE, std::memory_order_release );
             _pendingMapCount.store( 0, std::memory_order_release );
             _listMappedBuffer.clear();
-            _workDoneFuture = WGPUFuture{};
+            _jobDoneFuture = WGPUFuture{};
             _listMapFuture.clear();
         }
         /** @brief 큐 완료와 매핑이 모두 끝났는지 봅니다. */
-        bool isDone() const { return _bWorkDone.load( std::memory_order_acquire ) != SW_FALSE && _pendingMapCount.load( std::memory_order_acquire ) == 0; }
+        bool isDone() const { return _bJobDone.load( std::memory_order_acquire ) != SW_FALSE && _pendingMapCount.load( std::memory_order_acquire ) == 0; }
     };
 
     /** @brief 읽기 하나의 결과입니다(`submitTextureReadback`). 매핑 콜백이 패딩을 벗긴 바이트를 채운다. */
@@ -365,7 +365,7 @@ namespace sw
         /** @brief 칸 @p fence 의 큐 완료 · 매핑을 `wgpuInstanceWaitAny` 로 기다립니다(앞서가기 상한 — `beginFrameInternal`). 잃은 장치도 콜백은 온다(명세). */
         [[nodiscard]] bool waitFrameFence( const WebGPUFrameFence& fence ) const;
         /** @brief 큐 완료 콜백입니다(userdata1 = 프레임 완료). */
-        static void onFrameWorkDone( WGPUQueueWorkDoneStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 );
+        static void onFrameJobsDone( WGPUQueueWorkDoneStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 );
         /** @brief 읽기 버퍼 매핑 콜백입니다(userdata1 = 프레임 완료). */
         static void onFrameBufferMapped( WGPUMapAsyncStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 );
         /** @brief 잡히지 않은 검증 오류를 남깁니다(장치 생성 때 건다). 브라우저는 파이프라인 오류도 여기로 늦게 온다. */

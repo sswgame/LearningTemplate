@@ -94,9 +94,9 @@ namespace sw
                 reader.reportUnknownElement( child );
                 continue;
             }
-            SocketKindParams kindFields;
-            (void)reader.readFields( child, kindFields ); // 오류는 읽개의 목록에 쌓인다
-            const hashed_string name = kindFields._name;
+            SocketKindParams kindProperties;
+            (void)reader.readProperties( child, kindProperties ); // 오류는 읽개의 목록에 쌓인다
+            const hashed_string name = kindProperties._name;
             if ( name.empty() )
                 continue;
             if ( hasKind( name ) )
@@ -195,14 +195,14 @@ namespace sw
                 SW_LOG_ERROR_ID( "SocketSet.DeltaNotMade", "Socket set '%#': the difference from base '%#' could not be made (rule <SocketSet> in %#)", absPath.str(), _baseID, DataCatalogInheritance::kTableAssetID );
                 return false;
             }
-            const expected<void> readsBack = ResourceComposer::checkDeltaReadsBack( text, fullText, _baseID, [&absPath, &kinds]( const string& deltaText )
+            const expected<void> isBackRead = ResourceComposer::checkDeltaReadsBack( text, fullText, _baseID, [&absPath, &kinds]( const string& deltaText )
             {
                 SocketSet reread;
                 return reread.loadFromXMLText( deltaText, absPath.str(), kinds ) ? reread.saveToXMLText() : string{};
             } );
-            if ( readsBack.has_value() == false )
+            if ( isBackRead.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "ResourceSave.DeltaNotSaved", "'%#': %# '%#' - not saved", absPath.str(), readsBack.error().message(), readsBack.error().detail() );
+                SW_LOG_ERROR_ID( "ResourceSave.DeltaNotSaved", "'%#': %# '%#' - not saved", absPath.str(), isBackRead.error().message(), isBackRead.error().detail() );
                 return false;
             }
         }
@@ -232,7 +232,7 @@ namespace sw
     {
         // 칸은 스키마로 읽고, 적은 칸만 덮어쓰기 표시를 단다(층이 쌓일 때 적지 않은 칸은 아래 층의 값을 둔다).
         SocketParams params;
-        (void)reader.readFields( node, params, { "fallback" } );
+        (void)reader.readProperties( node, params, { "fallback" } );
         SocketDef socket;
         socket._fieldMask = 0;
         socket._name      = params._name;
@@ -276,7 +276,7 @@ namespace sw
     void SocketSet::readVirtualBone( const XMLNode& node, CharacterDataReader& reader )
     {
         VirtualBoneParams params;
-        (void)reader.readFields( node, params );
+        (void)reader.readProperties( node, params );
         VirtualBoneDef virtualBone;
         virtualBone._name                 = params._name;
         virtualBone._from                 = params._from;

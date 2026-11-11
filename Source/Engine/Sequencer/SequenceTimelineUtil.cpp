@@ -29,14 +29,14 @@ namespace sw
         struct SequenceTimelineUtilInternal
         {
             /** @brief 구간 동안 대상의 활성 상태를 정하는 종류인지 반환합니다. 표에 없는 종류는 아무것도 하지 않습니다. */
-            static bool drivesTarget( const SequenceTrackItem& item )
+            static bool affectsTarget( const SequenceTrackItem& item )
             {
                 const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
                 return pInfo != nullptr && pInfo->_bDrivesTarget;
             }
 
             /** @brief 시작 프레임을 지날 때 알리는 종류인지 반환합니다. */
-            static bool firesOnCross( const SequenceTrackItem& item )
+            static bool shouldFireOnCross( const SequenceTrackItem& item )
             {
                 const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
                 return pInfo != nullptr && pInfo->_bFiresOnCross;
@@ -47,7 +47,7 @@ namespace sw
             {
                 for ( const SequenceTrackItem* pActive : listActive )
                 {
-                    const bool bActiveDrivesTarget = pActive != nullptr && drivesTarget( *pActive ) && pActive->_binding == bindingID;
+                    const bool bActiveDrivesTarget = pActive != nullptr && affectsTarget( *pActive ) && pActive->_binding == bindingID;
                     if ( bActiveDrivesTarget )
                         return true;
                 }
@@ -55,7 +55,7 @@ namespace sw
             }
 
             /** @brief 축 하나(0 은 x, 1 은 y, 2 는 z)입니다. */
-            static float32& axisOf( float3& value, uint32 axis )
+            static float32& getAxisOf( float3& value, uint32 axis )
             {
                 if ( axis == 0 )
                     return value._x;
@@ -78,9 +78,9 @@ namespace sw
                     const optional<float32> value = track._listChannel[channelIndex].evaluate( frame );
                     if ( value.has_value() == false )
                         continue;
-                    const uint32 groupIndex                          = channelIndex / 3;
-                    axisOf( arrValue[groupIndex], channelIndex % 3 ) = *value;
-                    arrKeyed[groupIndex]                             = true;
+                    const uint32 groupIndex                             = channelIndex / 3;
+                    getAxisOf( arrValue[groupIndex], channelIndex % 3 ) = *value;
+                    arrKeyed[groupIndex]                                = true;
                 }
                 // 키가 있는 그룹만 쓴다. 키 없는 회전과 크기까지 쓰면 트랜스폼이 프레임마다 더티가 된다.
                 if ( arrKeyed[0] )
@@ -360,7 +360,7 @@ namespace sw
         // 클립이 둘인 대상이 매 프레임 꺼졌다 켜져 렌더 집합이 두 번 흔들린다).
         for ( const SequenceTrackItem& item : asset._listItem )
         {
-            if ( SequenceTimelineUtilInternal::drivesTarget( item ) == false )
+            if ( SequenceTimelineUtilInternal::affectsTarget( item ) == false )
                 continue;
             GameObject* pTarget = findTarget( pManager, bindings, item._binding );
             if ( pTarget == nullptr )
@@ -418,7 +418,7 @@ namespace sw
     {
         for ( const SequenceTrackItem& item : asset._listItem )
         {
-            if ( SequenceTimelineUtilInternal::firesOnCross( item ) == false )
+            if ( SequenceTimelineUtilInternal::shouldFireOnCross( item ) == false )
                 continue;
             // 지나갔는가: 이전 프레임에는 아직 닿지 않았고 이번 프레임에는 닿았다.
             if ( previousFrame >= item._start || item._start > frame )
@@ -695,7 +695,7 @@ namespace sw
         for ( uint32 itemIndex = 0; itemIndex < static_cast<uint32>( asset._listItem.size() ); ++itemIndex )
         {
             const SequenceTrackItem& item = asset._listItem[itemIndex];
-            if ( SequenceTimelineUtilInternal::drivesTarget( item ) == false )
+            if ( SequenceTimelineUtilInternal::affectsTarget( item ) == false )
                 continue;
             const GameObject* pTarget = findTarget( pManager, bindings, item._binding );
             if ( pTarget == nullptr )

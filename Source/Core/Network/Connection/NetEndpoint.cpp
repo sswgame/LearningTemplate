@@ -102,7 +102,7 @@ namespace sw
         , _plainWriter{}
         , _credentials{}
         , _settings{}
-        , _sentKindTally{}
+        , _sentKindStats{}
         , _pTransport{ nullptr }
         , _rejectedPacketCount{ 0 }
         , _authenticationFailureCount{ 0 }
@@ -1096,7 +1096,7 @@ namespace sw
         NetEndpointSlot* pSlot   = _slotTable.findConnected( connectionID );
         const bool       bQueued = pSlot != nullptr && pSlot->_connection.sendMessage( channel, pData, size );
         if ( bQueued )
-            _sentKindTally.add( pData, size );
+            _sentKindStats.add( pData, size );
         return bQueued;
     }
 
@@ -1106,14 +1106,14 @@ namespace sw
         NetEndpointSlot*  pSlot   = _slotTable.findConnected( connectionID );
         const bool        bQueued = pSlot != nullptr && pSlot->_connection.sendNotifiedMessage( pData, size, tag );
         if ( bQueued )
-            _sentKindTally.add( pData, size );
+            _sentKindStats.add( pData, size );
         return bQueued;
     }
 
-    void NetEndpoint::addSentKindTally( NetMessageKindStatsTable& outTable ) const
+    void NetEndpoint::addSentKindStats( NetMessageKindStatsTable& outTable ) const
     {
         ScopedLock<mutex> lock{ _mutex };
-        outTable.addTable( _sentKindTally );
+        outTable.addTable( _sentKindStats );
     }
 
     int32 NetEndpoint::broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID )

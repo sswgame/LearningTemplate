@@ -98,7 +98,7 @@ namespace sw::editor
         /** @brief "Don't Save" — 두 모델을 마지막으로 읽거나 저장한 상태로 돌립니다. 외형 선택은 파일 문서가 아니라(프리셋 저장은 따로 누른다) 건드리지 않습니다. */
         void revertDocument() override;
         /** @brief 소켓 파일(`*.sockets.xml`)만 문서로 받습니다. */
-        bool acceptsDocumentPath( string_view assetPath ) const override;
+        bool canAcceptDocumentPath( string_view assetPath ) const override;
         /** @brief 문서(소켓 파일)를 읽습니다. 포커스한 소켓 파일이 있으면 그것, 아니면 경로 칸(팩 데이터의 소켓 파일)입니다. */
         ToolAssetLoadResult loadDocument() override;
         /** @brief 미리보기 씬을 만든 직후 — 카메라를 몸 높이에 맞추고 몸 핸들을 비웁니다(다음 그리기의 `syncPreviewBody` 가 세운다). */

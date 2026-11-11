@@ -46,7 +46,7 @@ namespace sw
     {
         // 적지 않은 칸은 AreaDef 의 초기값이다. 깨진 값 · 음수 크기는 그 지역을 넣지 않는 오류다(자르지 않는다).
         AreaDef    area;
-        const bool bValid = XMLFields::readFields( node, area, sourceName );
+        const bool bValid = XMLFields::readProperties( node, area, sourceName );
         if ( area._id.empty() )
             return false;
         const utf8* const pID = area._id.c_str();
@@ -66,7 +66,7 @@ namespace sw
     bool AreaGraph::loadLink( const XMLNode& node, string_view sourceName )
     {
         AreaLinkParams link;
-        if ( XMLFields::readFields( node, link, sourceName ) == false )
+        if ( XMLFields::readProperties( node, link, sourceName ) == false )
             return false; // 끝점이 없거나 깨진 연결은 오류로 알리고 넣지 않는다(위 읽기가 알렸다)
         const hashed_string& from     = link._from;
         const hashed_string& to       = link._to;

@@ -58,9 +58,9 @@ namespace sw
 
     uint32 RestaurantCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         RestaurantCatalogRootDef rootDef;
-        if ( XMLFields::readFields( root, rootDef, sourceName ) == false )
+        if ( XMLFields::readProperties( root, rootDef, sourceName ) == false )
             return 0;
         if ( rootDef._closeHour <= rootDef._openHour )
         {
@@ -85,7 +85,7 @@ namespace sw
     bool RestaurantCatalog::loadArrival( const XMLNode& node, string_view sourceName )
     {
         RestaurantArrivalDef arrival;
-        if ( XMLFields::readFields( node, arrival, sourceName ) == false )
+        if ( XMLFields::readProperties( node, arrival, sourceName ) == false )
             return false;
         _arrArrivalRate[arrival._hour] = arrival._rate;
         return true;
@@ -94,7 +94,7 @@ namespace sw
     bool RestaurantCatalog::loadDish( const XMLNode& node, string_view sourceName )
     {
         DishDef    dish;
-        const bool bValid = XMLFields::readFields( node, dish, sourceName );
+        const bool bValid = XMLFields::readProperties( node, dish, sourceName );
         VectorUtil::sort( dish._listQualityLevel );
         if ( bValid )
             addDish( dish );
@@ -104,7 +104,7 @@ namespace sw
     bool RestaurantCatalog::loadCustomer( const XMLNode& node, string_view sourceName )
     {
         CustomerTypeDef customerType;
-        const bool      bValid = XMLFields::readFields( node, customerType, sourceName );
+        const bool      bValid = XMLFields::readProperties( node, customerType, sourceName );
         if ( bValid )
             addCustomerType( customerType );
         return bValid;

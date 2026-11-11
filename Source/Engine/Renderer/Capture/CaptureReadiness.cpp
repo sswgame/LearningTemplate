@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    uint32 CaptureReadiness::countPendingSceneWork( const GameObjectManager* pManager )
+    uint32 CaptureReadiness::countPendingSceneJobs( const GameObjectManager* pManager )
     {
         uint32 count = 0;
         if ( pManager != nullptr )
@@ -27,7 +27,7 @@ namespace sw
         return count;
     }
 
-    uint32 CaptureReadiness::countPendingRenderWork( uint32 sceneKey )
+    uint32 CaptureReadiness::countPendingRenderJobs( uint32 sceneKey )
     {
         const RenderThreadSubsystem* const pRenderThreads = engine::findSubsystem<RenderThreadSubsystem>();
         const RenderThread* const          pRenderThread  = pRenderThreads != nullptr ? pRenderThreads->findRenderThread() : nullptr;

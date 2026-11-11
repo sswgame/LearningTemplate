@@ -111,19 +111,19 @@ namespace sw
         }
         // 파일 하나는 통째로 받거나 통째로 버린다 — 반쯤 읽힌 스키마는 어느 사건이 빠졌는지 보이지 않는다.
         TelemetrySchemaRootParams rootParams;
-        bool                      bValid    = XMLFields::readFields( root, rootParams, sourceName );
+        bool                      bValid    = XMLFields::readProperties( root, rootParams, sourceName );
         vector<TelemetryEventDef> listEvent = _listEvent;
         TelemetryPipelineConfig   settings  = _settings;
         bValid                              = XMLNameCheck::reportUnknownChildren( root, Internal::kArrRootChild, sourceName ) && bValid;
         // 적지 않은 칸은 정의 구조체의 초기값이다. 깨진 값 · 범위 밖 값은 자르지 않고 오류이며, 파일 전체를 받지 않는다(칸 · 범위는 PROPERTY 가 정본이다).
         for ( XMLNode node = root.findChild( "Pipeline" ); node; node = node.findNextSibling( "Pipeline" ) )
         {
-            bValid = XMLFields::readFields( node, settings, sourceName ) && XMLNameCheck::reportUnknownChildren( node, nullptr, 0, sourceName ) && bValid;
+            bValid = XMLFields::readProperties( node, settings, sourceName ) && XMLNameCheck::reportUnknownChildren( node, nullptr, 0, sourceName ) && bValid;
         }
         for ( XMLNode node = root.findChild( "Event" ); node; node = node.findNextSibling( "Event" ) )
         {
             TelemetryEventDef event;
-            bValid = XMLFields::readFields( node, event, sourceName ) && bValid;
+            bValid = XMLFields::readProperties( node, event, sourceName ) && bValid;
             bValid = XMLNameCheck::reportUnknownChildren( node, Internal::kArrEventChild, sourceName ) && bValid;
             if ( event._id.empty() )
             {
@@ -133,7 +133,7 @@ namespace sw
             for ( XMLNode fieldNode = node.findChild( "Field" ); fieldNode; fieldNode = fieldNode.findNextSibling( "Field" ) )
             {
                 TelemetryFieldDef field;
-                bValid              = XMLFields::readFields( fieldNode, field, sourceName ) && bValid;
+                bValid              = XMLFields::readProperties( fieldNode, field, sourceName ) && bValid;
                 const bool bBadName = field._name.empty() || Internal::isReservedFieldName( field._name.view() ) || event.findField( field._name ) != nullptr;
                 if ( bBadName )
                 {

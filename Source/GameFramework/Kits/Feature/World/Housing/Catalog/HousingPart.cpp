@@ -96,7 +96,7 @@ namespace sw
 
     uint32 HousingPartCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        if ( XMLFields::readFields( root, _root, sourceName ) == false )
+        if ( XMLFields::readProperties( root, _root, sourceName ) == false )
             return 0;
         using Element                          = XMLCatalogElement<HousingPartCatalog>;
         static constexpr Element kArrElement[] = {
@@ -115,11 +115,11 @@ namespace sw
     bool HousingPartCatalog::loadPart( const XMLNode& node, string_view sourceName )
     {
         HousingPartDef part;
-        bool           bValid = XMLFields::readFields( node, part, sourceName );
+        bool           bValid = XMLFields::readProperties( node, part, sourceName );
         for ( XMLNode socketNode = node.findChild( "Socket" ); socketNode; socketNode = socketNode.findNextSibling( "Socket" ) )
         {
             HousingSocketDef socket;
-            if ( XMLFields::readFields( socketNode, socket, sourceName ) == false )
+            if ( XMLFields::readProperties( socketNode, socket, sourceName ) == false )
             {
                 bValid = false;
                 continue;

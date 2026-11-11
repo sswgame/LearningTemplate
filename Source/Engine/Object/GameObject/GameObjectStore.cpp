@@ -384,7 +384,7 @@ namespace sw
         UniqueLock<shared_mutex> lock{ _mutex };
         _listPendingDestroyComponent.push_back( pComp->getHandle() );
         // 틱에 참여하던 컴포넌트면 소유 오브젝트의 항목을 다시 만들게 한다. 나머지는 레지스트리와 무관하다.
-        if ( pComp->hasTickWork() )
+        if ( pComp->hasTickJobs() )
             _pTickRegistry->markObjectDirty( pComp->getOwner() );
     }
 

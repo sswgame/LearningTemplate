@@ -364,7 +364,7 @@ namespace sw
                                               : SchemaMigrateInternal::formatWirePODToString( pPayload, payloadSize, wireTypeName, wireText );
             if ( bFormatted == false )
                 return FieldReadResult::FieldFailed;
-            return ContainerVisitor::fieldResultOf( parseTextValueCoerced( value, targetTypeName, wireText, context ) );
+            return ContainerVisitor::makeFieldResult( parseTextValueCoerced( value, targetTypeName, wireText, context ) );
         }
 
         // 값 하나로 읽을 수 없는 대상(컨테이너 프로퍼티의 `map` · `vector` 같은 이름, 처리기 없는 타입)은 강제 변환 대상이 아니다. 값 읽기를 시도하지 않는다.
@@ -396,7 +396,7 @@ namespace sw
         {
             string asText;
             if ( SchemaMigrateInternal::formatPODToString( pPayload, payloadSize, asText ) )
-                return ContainerVisitor::fieldResultOf( parseTextValueCoerced( value, targetTypeName, asText, context ) );
+                return ContainerVisitor::makeFieldResult( parseTextValueCoerced( value, targetTypeName, asText, context ) );
 
             // 길이 접두 문자열 blob 은 맨 앞의 제 타입 읽기가 이미 다뤘다. 여기서는 길이가 맞으면 접두 뒤 바이트를 텍스트로 읽어 본다
             if ( payloadSize >= sizeof( uint32 ) )
@@ -406,7 +406,7 @@ namespace sw
                 if ( sizeof( uint32 ) + len == payloadSize )
                 {
                     const string_view textValue{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
-                    return ContainerVisitor::fieldResultOf( parseTextValueCoerced( value, targetTypeName, textValue, context ) );
+                    return ContainerVisitor::makeFieldResult( parseTextValueCoerced( value, targetTypeName, textValue, context ) );
                 }
             }
         }
@@ -419,7 +419,7 @@ namespace sw
             if ( sizeof( uint32 ) + len == payloadSize )
             {
                 const string_view textValue{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
-                return ContainerVisitor::fieldResultOf( parseTextValueCoerced( value, targetTypeName, textValue, context ) );
+                return ContainerVisitor::makeFieldResult( parseTextValueCoerced( value, targetTypeName, textValue, context ) );
             }
         }
 

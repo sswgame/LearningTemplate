@@ -33,7 +33,7 @@ namespace
 /**
  * @brief [ObjectDiffSerializerTest] 바꾼 필드만 델타에 실리고, 새 기본 객체에 적용하면 바꾼 객체와 같다. 바꾼 것이 없으면 델타가 더 작다
  */
-SW_TEST_CASE( ObjectDiffSerializerTest, AppliesOnlyChangedFields )
+SW_TEST_CASE( ObjectDiffSerializerTest, AppliesOnlyChangedProperties )
 {
     const sw::ServerConfig defaults;
     sw::ServerConfig       modified;

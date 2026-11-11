@@ -50,7 +50,7 @@ namespace
         void               collectConnected( vector<int32>& ) const override {}
         int32              getMaxBytesPerSecond() const override { return 0; }
         bool               isConnectionSaturated( int32 ) const override { return false; }
-        void               addSentKindTally( NetMessageKindStatsTable& ) const override {}
+        void               addSentKindStats( NetMessageKindStatsTable& ) const override {}
     };
 
     /** @brief 서버 하나와 클라이언트 여럿을 가짜 상대로 잇습니다. 연결 번호는 클라이언트 순번입니다. */

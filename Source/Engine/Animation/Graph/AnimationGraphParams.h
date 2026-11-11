@@ -1,7 +1,7 @@
 /**
  * @file AnimationGraphParams.h
  * @brief 애니메이션 그래프 파일(`*.animgraph.xml`)의 원소마다 적을 수 있는 칸의 스키마입니다(`node` · `blend_space` · `sample` · `pose_node` · `link` · `condition` · `layer` · `comment` · `bone_mask` · 본 마스크의 `entry`).
- * @details 속성 이름 · 필수 · 범위 · 기본값은 여기 `PROPERTY` 가 정본이고, 읽기 · 쓰기는 카탈로그 · 행동 트리와 같은 `XMLFields::readFields` · `writeFields` 다
+ * @details 속성 이름 · 필수 · 범위 · 기본값은 여기 `PROPERTY` 가 정본이고, 읽기 · 쓰기는 카탈로그 · 행동 트리와 같은 `XMLFields::readProperties` · `writeProperties` 다
  *          (속성 이름은 칸 이름에서 앞의 `_` 와 불리언 `b` 를 뗀 것, 다르면 `Name =`). 열거 값은 열거자 이름 그대로다(`op="GreaterEqual"`).
  *          칸 사이의 의미(블렌드 스페이스와 포즈 노드를 함께 적음, 레이어가 없는 마스크를 가리킴, inertialization 의 반감기)는 `AnimationGraphAsset` 이 본다.
  */

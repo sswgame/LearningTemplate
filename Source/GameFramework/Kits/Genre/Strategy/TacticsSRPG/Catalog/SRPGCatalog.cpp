@@ -133,7 +133,7 @@ namespace sw
 
     uint32 SRPGCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<SRPGCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&SRPGCatalog::_pilotCurve>( "PilotCurve" ).uncounted(),
@@ -152,7 +152,7 @@ namespace sw
     bool SRPGCatalog::loadTerrain( const XMLNode& node, string_view sourceName )
     {
         SRPGTerrainDef def;
-        bool           bValid = XMLFields::readFields( node, def, sourceName, { "cost" } );
+        bool           bValid = XMLFields::readProperties( node, def, sourceName, { "cost" } );
         bValid                = SRPGCatalogInternal::readFour( node, "cost", sourceName, &SRPGCatalogInternal::parseMoveCost, def._arrMoveCost ) && bValid;
         if ( bValid )
             (void)_terrainCatalog.add( def );
@@ -162,7 +162,7 @@ namespace sw
     bool SRPGCatalog::loadWeapon( const XMLNode& node, string_view sourceName )
     {
         SRPGWeaponDef def;
-        bool          bValid = XMLFields::readFields( node, def, sourceName, { "pattern" } );
+        bool          bValid = XMLFields::readProperties( node, def, sourceName, { "pattern" } );
         if ( def.isMap() )
         {
             // MAP 병기의 범위는 "x,y x,y ..." 이고 반드시 적는다(기준 셀 하나로 물러나지 않는다).
@@ -198,7 +198,7 @@ namespace sw
     {
         using Internal = SRPGCatalogInternal;
         SRPGUnitDef def;
-        bool        bValid = XMLFields::readFields( node, def, sourceName, { "aptitude", "developsTo" } );
+        bool        bValid = XMLFields::readProperties( node, def, sourceName, { "aptitude", "developsTo" } );
         bValid             = Internal::readFour( node, "aptitude", sourceName, &SRPGCatalog::parseAptitude, def._arrAptitude ) && bValid;
         XMLReadUtil::forEachNamedNumber( node.getAttributeText( "developsTo" ), ",; \t", SRPGDevelopTarget{}._requiredLevel, XMLReadUtil::MissingValue::UseDefault,
                                          [&]( string_view token, string_view unitName, int32 requiredLevel, bool bLevel )
@@ -223,9 +223,9 @@ namespace sw
     {
         using Internal = SRPGCatalogInternal;
         SRPGPilotDef def;
-        bool         bValid = XMLFields::readFields( node, def, sourceName,
-                                                     { "shooting", "melee", "reaction", "awaken", "defense", "growShooting", "growMelee", "growReaction",
-                                                       "growAwaken", "growDefense" } );
+        bool         bValid = XMLFields::readProperties( node, def, sourceName,
+                                                         { "shooting", "melee", "reaction", "awaken", "defense", "growShooting", "growMelee", "growReaction",
+                                                           "growAwaken", "growDefense" } );
         bValid              = Internal::readPilotStats( node, Internal::kArrPilotStatName, def._arrStat ) && bValid;
         bValid              = Internal::readPilotStats( node, Internal::kArrPilotGrowthName, def._arrGrowth ) && bValid;
         if ( bValid )

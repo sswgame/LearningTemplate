@@ -164,10 +164,10 @@ namespace sw
         using Traffic = NetMessageDef<0x0F, NetMessageDirection::Both, NetChannelType::ReliableOrdered>;
         using Table   = NetMessageTable<NetMessageRange::kEngine, ServerTick, ShutdownNotice, ResourceDigest, Traffic>;
 
-        static constexpr uint8 kServerTick     = Table::kindOf<ServerTick>();
-        static constexpr uint8 kShutdownNotice = Table::kindOf<ShutdownNotice>();
-        static constexpr uint8 kResourceDigest = Table::kindOf<ResourceDigest>();
-        static constexpr uint8 kTraffic        = Table::kindOf<Traffic>();
+        static constexpr uint8 kServerTick     = Table::getKindOf<ServerTick>();
+        static constexpr uint8 kShutdownNotice = Table::getKindOf<ShutdownNotice>();
+        static constexpr uint8 kResourceDigest = Table::getKindOf<ResourceDigest>();
+        static constexpr uint8 kTraffic        = Table::getKindOf<Traffic>();
     };
 } // namespace sw
 

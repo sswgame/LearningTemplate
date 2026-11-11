@@ -20,7 +20,7 @@ namespace sw
             /** @brief `<Weapon>` 하나를 읽습니다. Melee 는 `range` 를, Special 은 `projectile` 을 적어야 합니다(종류에 따라 다른 기본값을 두지 않는다). */
             [[nodiscard]] static bool readWeapon( const XMLNode& node, string_view sourceName, MechWeaponSlotDef& outSlot )
             {
-                bool bValid = XMLFields::readFields( node, outSlot, sourceName );
+                bool bValid = XMLFields::readProperties( node, outSlot, sourceName );
                 if ( outSlot._kind == MechWeaponKind::Melee && node.findAttribute( "range" ) == nullptr )
                 {
                     SW_LOG_ERROR_ID( "MechCatalog.WeaponIdKindMelee", "%#: <Weapon id=\"%#\"> of kind Melee needs range=\"...\"", sourceName, outSlot._id.c_str() );
@@ -120,10 +120,10 @@ namespace sw
 
     uint32 MechCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         // 루트가 틀리면 파일을 읽지 않는다 — 코스트 상한이 "제한 없음" 으로 남은 채 판이 열리지 않게 한다.
         MechCatalogRootDef rootDef;
-        if ( XMLFields::readFields( root, rootDef, sourceName ) == false )
+        if ( XMLFields::readProperties( root, rootDef, sourceName ) == false )
             return 0;
         _deckCostLimit = rootDef._deckCostLimit;
 
@@ -157,7 +157,7 @@ namespace sw
     {
         using Internal = MechCatalogInternal;
         MechDef def;
-        bool    bValid   = XMLFields::readFields( node, def, sourceName, { "speed" } );
+        bool    bValid   = XMLFields::readProperties( node, def, sourceName, { "speed" } );
         XMLNode modeNode = node.findChild( "Mode" );
         if ( modeNode )
         {
@@ -174,8 +174,8 @@ namespace sw
             for ( ; modeNode; modeNode = modeNode.findNextSibling( "Mode" ) )
             {
                 MechModeDef mode;
-                const bool  bModeFields = XMLFields::readFields( modeNode, mode, sourceName );
-                if ( Internal::readWeapons( modeNode, sourceName, mode ) && bModeFields )
+                const bool  bModeProperties = XMLFields::readProperties( modeNode, mode, sourceName );
+                if ( Internal::readWeapons( modeNode, sourceName, mode ) && bModeProperties )
                     def._listMode.push_back( mode );
                 else
                     bValid = false;
@@ -198,7 +198,7 @@ namespace sw
     bool MechCatalog::loadSkill( const XMLNode& node, string_view sourceName )
     {
         MechSkillDef skill;
-        if ( XMLFields::readFields( node, skill, sourceName ) == false )
+        if ( XMLFields::readProperties( node, skill, sourceName ) == false )
             return false;
         const XMLNode statNode = node.findChild( "Stats" );
         if ( statNode )

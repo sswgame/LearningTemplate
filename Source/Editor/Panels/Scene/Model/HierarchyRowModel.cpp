@@ -186,7 +186,7 @@ namespace sw::editor
             _bRowsDirty = SW_TRUE;
     }
 
-    void HierarchyRowModel::expandAncestorsOf( const GameObject& object )
+    void HierarchyRowModel::expandAncestors( const GameObject& object )
     {
         for ( const GameObject* pParent = object.getParent(); pParent != nullptr; pParent = pParent->getParent() )
         {

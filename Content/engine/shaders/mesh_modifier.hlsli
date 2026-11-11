@@ -1083,7 +1083,7 @@ static float3 MeshDeform::deformPoint( uint kind, float3 location, float3 surfac
             result = MeshDeform::vertexAnim( location, context );
             break;
         case SW_MODIFIER_PAINT:
-            // 위치 · 법선을 안 바꾼다 - 색은 세션이 GPU 메시의 정점 스트림에 CPU 결과로 덮는다(MeshModifier::writesGPUVertexColor)
+            // 위치 · 법선을 안 바꾼다 - 색은 세션이 GPU 메시의 정점 스트림에 CPU 결과로 덮는다(MeshModifier::isVertexColorModifier)
             break;
         default:
             break;

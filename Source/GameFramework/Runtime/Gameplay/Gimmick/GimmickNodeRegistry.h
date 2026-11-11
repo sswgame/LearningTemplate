@@ -132,7 +132,7 @@ namespace sw
         optional<uint32> findOutput( const hashed_string& name ) const;
         /** @brief 이름의 매개변수 번호입니다. 없으면 비어 있습니다. */
         optional<uint32> findParam( const hashed_string& name ) const;
-        bool             breaksCycle() const { return _pCommit != nullptr; }
+        bool             canBreakCycle() const { return _pCommit != nullptr; }
     };
 } // namespace sw
 

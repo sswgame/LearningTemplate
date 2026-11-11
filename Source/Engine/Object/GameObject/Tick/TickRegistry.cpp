@@ -325,7 +325,7 @@ namespace sw
             }
 
             /** @brief 보통 길의 쓰기를 보는 선행 조건이 이 단계(같은 단계의 이 그룹 또는 앞 그룹)에서 돌았으면 그 쓰기를 먼저 적용해야 한다. 순서만 간선은 적용을 기다리지 않는다. */
-            static bool waitsOnObjectPath( const vector<StageCandidate>& listCandidate, const vector<uint32>& listLevel )
+            static bool isWaitingOnObjectPath( const vector<StageCandidate>& listCandidate, const vector<uint32>& listLevel )
             {
                 for ( const uint32 index : listLevel )
                 {
@@ -420,7 +420,7 @@ namespace sw
                         }
                         if ( listLevel.empty() )
                             continue;
-                        appendLevelStages( listCandidate, listLevel, graph, group, level, level > 0 || waitsOnObjectPath( listCandidate, listLevel ), outListStage );
+                        appendLevelStages( listCandidate, listLevel, graph, group, level, level > 0 || isWaitingOnObjectPath( listCandidate, listLevel ), outListStage );
                     }
 
                     // 순환 방어: 닿지 못한 것은 순서 키 순으로 마지막에 붙인다. 틱이 조용히 빠지는 것보다 낫다. 순환은 선행 조건을 잘못 건 데이터 결함이므로

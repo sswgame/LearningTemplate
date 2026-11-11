@@ -293,29 +293,29 @@ namespace sw
         _listCompleted.clear();
     }
 
-    void MemoryServiceStore::submit( unique_ptr<IServiceStoreJob> work )
+    void MemoryServiceStore::submit( unique_ptr<IServiceStoreJob> job )
     {
         bool bShutdown = false;
         {
             ScopedLock<mutex> lock{ _mutex };
             bShutdown = _bShutdown == SW_TRUE;
         }
-        work->bindLogContext( LogContext::getCurrent() );
+        job->bindLogContext( LogContext::getCurrent() );
         {
-            ScopedLogContext scope( work->getLogContext() );
+            ScopedLogContext scope( job->getLogContext() );
             if ( bShutdown )
             {
                 MemoryServiceStoreInternal::ClosedConnection closed;
-                work->markCancelled(); // 종료 때문에 실행하지 못한 일이다 — 저장소 고장과 가른다
-                work->run( closed );
+                job->markCancelled(); // 종료 때문에 실행하지 못한 일이다 — 저장소 고장과 가른다
+                job->run( closed );
             }
             else
             {
-                work->run( *_pDatabase );
+                job->run( *_pDatabase );
             }
         }
         ScopedLock<mutex> lock{ _mutex };
-        _listCompleted.push_back( std::move( work ) );
+        _listCompleted.push_back( std::move( job ) );
     }
 
     int32 MemoryServiceStore::pollCompletions()
@@ -326,10 +326,10 @@ namespace sw
             ScopedLock<mutex> lock{ _mutex };
             listReady.swap( _listCompleted );
         }
-        for ( unique_ptr<IServiceStoreJob>& work : listReady )
+        for ( unique_ptr<IServiceStoreJob>& job : listReady )
         {
-            ScopedLogContext scope( work->getLogContext() ); // 문맥 없는 스레드에서 거둬도 맡긴 요청의 꼬리표로
-            work->complete();
+            ScopedLogContext scope( job->getLogContext() ); // 문맥 없는 스레드에서 거둬도 맡긴 요청의 꼬리표로
+            job->complete();
         }
         return static_cast<int32>( listReady.size() );
     }

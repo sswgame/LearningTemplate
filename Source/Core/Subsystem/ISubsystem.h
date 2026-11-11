@@ -61,7 +61,7 @@ namespace sw
      * @details - 이름은 다른 서브시스템의 의존 칸이 부르는 식별자입니다. 문자열 리터럴(프로세스 수명)을 돌려줍니다. 엔진 서브시스템은 클래스의
      *            `kSubsystemName` 상수로 두고 의존 칸은 그 상수를 가리킨다 — 철자가 틀리면 컴파일 오류다.
      *          - 의존은 먼저 서야 하는 서브시스템 이름들입니다. 모르는 이름 · 순환 · 호스트 어긋남은 정렬 오류입니다.
-     *          - `initializeSubsystem` 은 백엔드 교체(`shutdownDependentsOf` → `restartStopped`)로 다시 불릴 수 있습니다 — 이미 있는 것은 다시 씁니다.
+     *          - `initializeSubsystem` 은 백엔드 교체(`shutdownDependents` → `restartStopped`)로 다시 불릴 수 있습니다 — 이미 있는 것은 다시 씁니다.
      *          - 종료는 두 번 역순으로 돕니다. 먼저 `stopSubsystem`(종료 전 단계 — 새 일 받기를 멈추고 남은 일을 비운다)이 모두에 불리고,
      *            그다음 `shutdownSubsystem` 이 모두에 불립니다(언리얼의 PreExit 뒤 `Deinitialize`). 둘 다 **초기화에 성공한** 서브시스템에만,
      *            성공한 초기화 한 번마다 한 번씩 불립니다. 이때 다른 서브시스템은 아직 모두 살아 있습니다.

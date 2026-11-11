@@ -23,7 +23,7 @@ namespace sw::editor
     {
         /**
          * @brief 색인 항목에서 종류가 @p kind 이고 @p accept 가 받는 경로만 골라, 이름순 · 중복 없이 @p outListPath 에 씁니다(이전 내용은 지운다).
-         * @details 후보의 경로가 ImGui ID 이기도 해서 같은 경로가 둘이면 한 줄만 눌린다. @p accept 는 패널의 `acceptsDocumentPath` 이고 포커스 매칭과 같은 판정이다.
+         * @details 후보의 경로가 ImGui ID 이기도 해서 같은 경로가 둘이면 한 줄만 눌린다. @p accept 는 패널의 `canAcceptDocumentPath` 이고 포커스 매칭과 같은 판정이다.
          */
         template <typename TAccept>
         static void collectCandidates( const vector<EditorAssetIndexEntry>& listEntry, const EditorAssetType& kind, TAccept&& accept, vector<string>& outListPath )

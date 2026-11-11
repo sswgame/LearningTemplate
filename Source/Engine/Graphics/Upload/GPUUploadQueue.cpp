@@ -38,7 +38,7 @@ namespace sw
                         pDevice->getBackendName() );
     }
 
-    bool GPUUploadQueue::createsMeshes() const
+    bool GPUUploadQueue::shouldCreateMeshes() const
     {
         return _bParallel == SW_TRUE && _pDevice != nullptr && gv_gpuUploadQueue;
     }

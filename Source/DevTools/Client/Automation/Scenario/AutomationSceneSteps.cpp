@@ -48,7 +48,7 @@ namespace sw
 
             static AutomationStepHold holdLoadScene( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
             {
-                const AutomationLoadSceneParams params = step.readValidatedFields<AutomationLoadSceneParams>();
+                const AutomationLoadSceneParams params = step.readValidatedProperties<AutomationLoadSceneParams>();
                 // 상태는 맡긴 이 단계만 만든다 — 같은 타입으로 되돌려 읽는다.
                 PendingLoad* pPending = static_cast<PendingLoad*>( context.findHeldStepState( step ) );
                 if ( pPending == nullptr )
@@ -74,7 +74,7 @@ namespace sw
             static SequencePlayerComponent* findSequence( AutomationStepContext& context, const AutomationStep& step )
             {
                 GameObjectManager* pManager = context.findActiveObjectManager();
-                GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string{ step.readValidatedFields<AutomationSequenceStepParams>()._object } ) : nullptr;
+                GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string{ step.readValidatedProperties<AutomationSequenceStepParams>()._object } ) : nullptr;
                 return pObject != nullptr ? pObject->getComponent<SequencePlayerComponent>() : nullptr;
             }
 
@@ -92,7 +92,7 @@ namespace sw
 
             static AutomationStepHold holdWaitSequence( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
             {
-                const AutomationSequenceStepParams params    = step.readValidatedFields<AutomationSequenceStepParams>();
+                const AutomationSequenceStepParams params    = step.readValidatedProperties<AutomationSequenceStepParams>();
                 SequencePlayerComponent*           pSequence = findSequence( context, step );
                 const bool                         bDone     = pSequence == nullptr || pSequence->isPlaying() == false;
                 const AutomationStepHold           hold      = context.holdUntilReady( step, input, bDone, params._timeoutFrames,
@@ -105,7 +105,7 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_STEP( sceneLoadScene, "LoadScene", &AutomationSceneStepsInternal::runNothing, &AutomationStep::validateFields<AutomationLoadSceneParams>, AutomationStepOptions{}.withHold( &AutomationSceneStepsInternal::holdLoadScene ) );
-    SW_AUTOMATION_STEP( scenePlaySequence, "PlaySequence", &AutomationSceneStepsInternal::runPlaySequence, &AutomationStep::validateFields<AutomationSequenceStepParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( sceneWaitSequence, "WaitSequence", &AutomationSceneStepsInternal::runNothing, &AutomationStep::validateFields<AutomationSequenceStepParams>, AutomationStepOptions{}.withHold( &AutomationSceneStepsInternal::holdWaitSequence ) );
+    SW_AUTOMATION_STEP( sceneLoadScene, "LoadScene", &AutomationSceneStepsInternal::runNothing, &AutomationStep::validateProperties<AutomationLoadSceneParams>, AutomationStepOptions{}.withHold( &AutomationSceneStepsInternal::holdLoadScene ) );
+    SW_AUTOMATION_STEP( scenePlaySequence, "PlaySequence", &AutomationSceneStepsInternal::runPlaySequence, &AutomationStep::validateProperties<AutomationSequenceStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( sceneWaitSequence, "WaitSequence", &AutomationSceneStepsInternal::runNothing, &AutomationStep::validateProperties<AutomationSequenceStepParams>, AutomationStepOptions{}.withHold( &AutomationSceneStepsInternal::holdWaitSequence ) );
 } // namespace sw

@@ -59,7 +59,7 @@ namespace sw
             }
             // 칸 · 범위(감쇠 >= 0, 상한 > 0, 마스크 해상도 0..4096)는 SurfaceChannelDef 의 PROPERTY 가 정본이다.
             SurfaceChannelDef channel;
-            (void)reader.readFields( child, channel );
+            (void)reader.readProperties( child, channel );
             if ( channel._name.empty() )
                 continue;
             if ( findChannelIndex( channel._name ).has_value() )
@@ -109,7 +109,7 @@ namespace sw
         _listTexel.assign( static_cast<size_t>( resolution ) * resolution, 0.0f );
     }
 
-    uint32 SurfaceMask::stampCircle( const float2& uvCenter, float32 uvRadius, float32 value )
+    uint32 SurfaceMask::paintCircle( const float2& uvCenter, float32 uvRadius, float32 value )
     {
         if ( _resolution == 0 || uvRadius <= 0.0f )
             return 0;
@@ -233,7 +233,7 @@ namespace sw
         }
     }
 
-    bool CharacterSurfaceState::stampHit( uint32 part, uint16 region, const hashed_string& channel, const float2& uvCenter, float32 uvRadius, float32 value )
+    bool CharacterSurfaceState::paintHit( uint32 part, uint16 region, const hashed_string& channel, const float2& uvCenter, float32 uvRadius, float32 value )
     {
         if ( part >= _partCount )
             return false;
@@ -242,7 +242,7 @@ namespace sw
             if ( _listChannel[channelIndex]._name != channel )
                 continue;
             const float32 clamped = MathUtil::clamp( value, 0.0f, _listChannel[channelIndex]._maxValue );
-            if ( _listMask[part * _listChannel.size() + channelIndex].stampCircle( uvCenter, uvRadius, clamped ) > 0 )
+            if ( _listMask[part * _listChannel.size() + channelIndex].paintCircle( uvCenter, uvRadius, clamped ) > 0 )
                 ++_revision;
             if ( region != CharacterGeometryConstant::kNoGroup )
                 (void)addRegionValue( region, channel, clamped );

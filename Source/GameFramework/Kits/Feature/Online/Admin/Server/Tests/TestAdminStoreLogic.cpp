@@ -32,7 +32,7 @@ namespace
         return command;
     }
 
-    int64 goldOf( MemoryServiceDatabase& database )
+    int64 getGoldOf( MemoryServiceDatabase& database )
     {
         LedgerBalance balance;
         SW_EXPECT_TRUE( Ledger::readBalance( database, LedgerHolder::makeAccount( kPlayer ), "cur.gold", balance ) == ServiceStoreResult::Ok );
@@ -71,7 +71,7 @@ SW_TEST_CASE( AdminStoreLogicTest, AdjustIsIdempotent )
     const uint64 hashAfterFirst = fixture.database.computeContentHash();
     SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, makeAdjust( kOperator, 100, 3 ), reply ) == AdminResult::Ok );
     SW_EXPECT_EQUAL( fixture.database.computeContentHash(), hashAfterFirst );
-    SW_EXPECT_EQUAL( goldOf( fixture.database ), int64( 100 ) );
+    SW_EXPECT_EQUAL( getGoldOf( fixture.database ), int64( 100 ) );
 }
 
 /** @brief [AdminStoreLogicTest] 회수는 잔액 아래로 내려가지 않는다 — 넘치는 회수는 InsufficientFunds 이고 잔액은 그대로다 */
@@ -81,9 +81,9 @@ SW_TEST_CASE( AdminStoreLogicTest, RevokeCannotGoNegative )
     AdminReply reply;
     SW_REQUIRE_TRUE( AdminStoreLogic::execute( fixture.database, makeAdjust( kOperator, 50, 4 ), reply ) == AdminResult::Ok );
     SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, makeAdjust( kOperator, -80, 5 ), reply ) == AdminResult::InsufficientFunds );
-    SW_EXPECT_EQUAL( goldOf( fixture.database ), int64( 50 ) );
+    SW_EXPECT_EQUAL( getGoldOf( fixture.database ), int64( 50 ) );
     SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, makeAdjust( kOperator, -50, 6 ), reply ) == AdminResult::Ok );
-    SW_EXPECT_EQUAL( goldOf( fixture.database ), int64( 0 ) );
+    SW_EXPECT_EQUAL( getGoldOf( fixture.database ), int64( 0 ) );
 }
 
 /** @brief [AdminStoreLogicTest] 상태를 바꾸는 명령은 메모(티켓)와 멱등 키가 필수다 — 없으면 InvalidRequest 이고 아무것도 바꾸지 않는다 */

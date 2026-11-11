@@ -229,7 +229,7 @@ namespace sw
     {
         // 적지 않은 칸은 ProjectileDef 의 초기값이다. 깨진 값 · 범위 밖 값 · 틀린 식은 그 탄을 넣지 않는 오류다(자르지 않는다).
         ProjectileDef projectile;
-        bool          bValid = XMLFields::readFields( node, projectile, sourceName );
+        bool          bValid = XMLFields::readProperties( node, projectile, sourceName );
         for ( const TagID& tag : projectile._listTag )
         {
             projectile._tags.addTag( tag );
@@ -238,8 +238,8 @@ namespace sw
         {
             ProjectileHitActionDef text;
             ProjectileHitAction    action;
-            const bool             bFields   = XMLFields::readFields( actionNode, text, sourceName );
-            const bool             bCompiled = bFields && ConditionExpr::compile( text._when, sourceName, action._when, ProjectileDefInternal::kBareTag ) &&
+            const bool             bProperties = XMLFields::readProperties( actionNode, text, sourceName );
+            const bool             bCompiled   = bProperties && ConditionExpr::compile( text._when, sourceName, action._when, ProjectileDefInternal::kBareTag ) &&
                                    GameActionCall::compileText( text._call, sourceName, action._call );
             bValid = bValid && bCompiled;
             if ( bCompiled )
@@ -256,7 +256,7 @@ namespace sw
     bool ProjectileCatalog::loadImpact( const XMLNode& node, string_view sourceName )
     {
         ProjectileImpactDef impact;
-        if ( XMLFields::readFields( node, impact, sourceName ) == false )
+        if ( XMLFields::readProperties( node, impact, sourceName ) == false )
             return false;
         if ( ConditionExpr::compile( impact._when, sourceName, impact._whenExpr, ProjectileDefInternal::kBareTag ) == false )
             return false;

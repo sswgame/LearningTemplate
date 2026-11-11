@@ -46,7 +46,7 @@ namespace sw
 
     uint32 ActionPlatformerCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<ActionPlatformerCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&ActionPlatformerCatalog::loadStage>( "Stage" ),
@@ -69,11 +69,11 @@ namespace sw
     bool ActionPlatformerCatalog::loadGrading( const XMLNode& node, string_view sourceName )
     {
         ActionGradingRules grading;
-        bool               bValid = XMLFields::readFields( node, grading, sourceName );
+        bool               bValid = XMLFields::readProperties( node, grading, sourceName );
         for ( XMLNode child = node.findChild( "Grade" ); child; child = child.findNextSibling( "Grade" ) )
         {
             ActionGradeDef grade;
-            if ( XMLFields::readFields( child, grade, sourceName ) )
+            if ( XMLFields::readProperties( child, grade, sourceName ) )
                 grading._listGrade.push_back( grade );
             else
                 bValid = false;
@@ -98,7 +98,7 @@ namespace sw
     bool ActionPlatformerCatalog::loadStage( const XMLNode& node, string_view sourceName )
     {
         ActionStageDef stage;
-        if ( XMLFields::readFields( node, stage, sourceName ) == false )
+        if ( XMLFields::readProperties( node, stage, sourceName ) == false )
             return false;
         // 비밀이 겹치면 다 모아도 수집 점수가 만점이 못 되고, 체크포인트가 겹치면 뒤의 것을 영영 지나지 못한다.
         for ( const vector<hashed_string>* pList : { &stage._listCheckpoint, &stage._listSecret } )
@@ -117,7 +117,7 @@ namespace sw
     bool ActionPlatformerCatalog::loadCombo( const XMLNode& node, string_view sourceName )
     {
         ActionComboDef combo;
-        if ( XMLFields::readFields( node, combo, sourceName ) == false )
+        if ( XMLFields::readProperties( node, combo, sourceName ) == false )
             return false;
         if ( combo._listMove.empty() )
         {
@@ -131,11 +131,11 @@ namespace sw
     bool ActionPlatformerCatalog::loadPattern( const XMLNode& node, string_view sourceName )
     {
         ActionPatternDef pattern;
-        bool             bValid = XMLFields::readFields( node, pattern, sourceName );
+        bool             bValid = XMLFields::readProperties( node, pattern, sourceName );
         for ( XMLNode child = node.findChild( "State" ); child; child = child.findNextSibling( "State" ) )
         {
             ActionPatternStateDef state;
-            if ( XMLFields::readFields( child, state, sourceName ) )
+            if ( XMLFields::readProperties( child, state, sourceName ) )
                 pattern._listState.push_back( state );
             else
                 bValid = false;

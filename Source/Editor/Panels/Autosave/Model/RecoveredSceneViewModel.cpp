@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/Autosave/Model/RecoveredWorkViewModel.h"
+#include "Editor/Panels/Autosave/Model/RecoveredSceneViewModel.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
@@ -10,13 +10,13 @@
 
 namespace sw::editor
 {
-    void RecoveredWorkViewModel::gather( RecoveredWorkViewState& outState )
+    void RecoveredSceneViewModel::gather( RecoveredSceneViewState& outState )
     {
         outState._listRow.clear();
         const int64 nowTicks = FileUtil::getCurrentFileWriteTime();
         for ( const EditorAutosaveEntry& entry : EditorAutosaveCommands::getRecoverable() )
         {
-            RecoveredWorkRow row{};
+            RecoveredSceneRow row{};
             row._sceneID   = entry._sourceID;
             row._savedAge  = formatSavedAge( entry._savedTicks, nowTicks );
             row._copyCount = entry._generationCount;
@@ -25,17 +25,17 @@ namespace sw::editor
         }
     }
 
-    void RecoveredWorkViewModel::restore( const uint32 rowIndex )
+    void RecoveredSceneViewModel::restore( const uint32 rowIndex )
     {
         (void)EditorAutosaveCommands::restore( rowIndex ); // 거절 이유는 restore 가 알린다
     }
 
-    void RecoveredWorkViewModel::discard( const uint32 rowIndex )
+    void RecoveredSceneViewModel::discard( const uint32 rowIndex )
     {
         EditorAutosaveCommands::discard( rowIndex );
     }
 
-    string RecoveredWorkViewModel::formatSavedAge( const int64 savedTicks, const int64 nowTicks )
+    string RecoveredSceneViewModel::formatSavedAge( const int64 savedTicks, const int64 nowTicks )
     {
         if ( savedTicks <= 0 )
             return string( "-" );

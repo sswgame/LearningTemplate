@@ -57,7 +57,7 @@ A class that owns RHI resources derives from `RHIRenderResource` and names its d
 | `clearRHI( pDevice )` | `pDevice` is **already gone**: clear the handles only; calling destroy here is use-after-free |
 | `isRHIValid()` | Are this object's GPU resources live right now? |
 
-Never call `releaseRHI` / `clearRHI` / `initRHI` in a loop from outside: `IRHIDevice` broadcasts them to the whole registry (`releaseAllFor` / `clearAllFor` / `initAllFor`). Per-frame buffer managers that are not assets (`GPUScene`) keep their own vocabulary.
+Never call `releaseRHI` / `clearRHI` / `initRHI` in a loop from outside: `IRHIDevice` broadcasts them to the whole registry (`releaseAllForDevice` / `clearAllForDevice` / `initAllForDevice`). Per-frame buffer managers that are not assets (`GPUScene`) keep their own vocabulary.
 
 ### Class suffixes
 

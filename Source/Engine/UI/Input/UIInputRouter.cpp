@@ -390,7 +390,7 @@ namespace sw
             return false;
         }
         const UIPointerResult result = _pointer.process( pTarget->getTree(), event );
-        if ( result._focusRequest != kInvalidWidgetID && pTarget->takesFocus() )
+        if ( result._focusRequest != kInvalidWidgetID && pTarget->canTakeFocus() )
             (void)_focus.setFocus( pTarget->getTree(), result._focusRequest );
         return result._bHandled == SW_TRUE;
     }
@@ -405,7 +405,7 @@ namespace sw
                 continue;
             if ( UIWidgetPath::hitTest( pScreen->getTree(), point, path ) )
                 return pScreen;
-            if ( pScreen->blocksLowerInput() )
+            if ( pScreen->shouldBlockLowerInput() )
                 return nullptr; // 모달 아래 화면은 클릭을 받지 않는다
         }
         return nullptr;
@@ -426,7 +426,7 @@ namespace sw
 
     void UIInputRouter::processActions( UIScreen* pActive, float32 deltaSeconds )
     {
-        const bool bNoUIActions = pActive == nullptr || _uiInputMap == nullptr || pActive->wantsUIActions() == false;
+        const bool bNoUIActions = pActive == nullptr || _uiInputMap == nullptr || pActive->needsUIActions() == false;
         if ( bNoUIActions )
         {
             _bStickHeld = SW_FALSE;

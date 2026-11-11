@@ -62,15 +62,15 @@ namespace sw
         return matchCount;
     }
 
-    AutomationLogJudgement AutomationLogCapture::judgeLines( const AutomationLogPolicy& policy ) const
+    AutomationLogCheckResult AutomationLogCapture::evaluateLines( const AutomationLogPolicy& policy ) const
     {
-        AutomationLogJudgement judgement;
-        ScopedLock<mutex>      lock{ _mutex };
+        AutomationLogCheckResult result;
+        ScopedLock<mutex>        lock{ _mutex };
         for ( const AutomationLogLine& line : _listLogLine )
         {
-            policy.judge( line._level, line._id, line._message, judgement );
+            policy.judge( line._level, line._id, line._message, result );
         }
-        return judgement;
+        return result;
     }
 
     bool AutomationLogCapture::containsLine( string_view needle ) const
@@ -89,7 +89,7 @@ namespace sw
         if ( test::isExpectedLog( entry._pID ) )
             return;
         if ( entry._level == LogLevel::Warning || entry._level == LogLevel::Error )
-            (void)_warningErrorCount.fetch_add( 1, std::memory_order_relaxed ); // 진행 표시용 수 — 판정은 끝의 로그 게이트(`judgeLines`)가 한다
+            (void)_warningErrorCount.fetch_add( 1, std::memory_order_relaxed ); // 진행 표시용 수 — 판정은 끝의 로그 게이트(`evaluateLines`)가 한다
         ScopedLock<mutex> lock{ _mutex };
         if ( _listLogLine.size() >= AutomationLogCaptureInternal::kMaxLogLine )
             return;

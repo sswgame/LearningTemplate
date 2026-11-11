@@ -67,7 +67,7 @@ struct RenderGraphPassDesc
 
 칸 덮어쓰기로 풀리지 않는 Engine 형식은 `SW_DATA_INHERITANCE_MERGE` 로 합치기 함수를 올린다. 결과는 다른 형식과 같은 부모 없는 글이고 읽기와 쿠커가 같은 함수를 지난다. 층의 차이가 쌓임이고 부모(`<Skeleton>`)와 루트가 다른 `SkeletonVariant` 가 그렇다(사슬 규칙은 공통 `DataInheritance::collectChain`).
 
-**Engine 의 손 XML 형식(`XMLFields::readFields` 로 칸을 읽는 것).** 규칙을 값으로 적고 `ResourceComposer` 로 읽는다. 본보기는 `MaterialXML::makeInheritanceSchema` 와 `Material::loadFromXML` 이다. `SW_DATA_INHERITANCE_SCHEMA` 는 Engine 에서만 컴파일된다.
+**Engine 의 손 XML 형식(`XMLFields::readProperties` 로 칸을 읽는 것).** 규칙을 값으로 적고 `ResourceComposer` 로 읽는다. 본보기는 `MaterialXML::makeInheritanceSchema` 와 `Material::loadFromXML` 이다. `SW_DATA_INHERITANCE_SCHEMA` 는 Engine 에서만 컴파일된다.
 
 ```cpp
 DataInheritanceSchema MaterialXML::makeInheritanceSchema()

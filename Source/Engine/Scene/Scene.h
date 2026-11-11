@@ -119,8 +119,8 @@ namespace sw
         void holdRegistration();
         /** @brief 쥔 등록이 있으면 부릅니다(게임 스레드). 없으면 아무것도 하지 않습니다. */
         void finishHeldRegistration();
-        /** @brief 쥔 등록을 @p maxCount 개까지 부릅니다(`GameObjectManager::pumpDeferredRegistration`, 0 은 한도 없음). 쥔 것이 없거나 다 끝나면 true 입니다(게임 스레드). */
-        [[nodiscard]] bool pumpHeldRegistration( uint32 maxCount );
+        /** @brief 쥔 등록을 @p maxCount 개까지 부릅니다(`GameObjectManager::processDeferredRegistration`, 0 은 한도 없음). 쥔 것이 없거나 다 끝나면 true 입니다(게임 스레드). */
+        [[nodiscard]] bool processHeldRegistration( uint32 maxCount );
         /** @brief 활성 게임 카메라를 직접 고릅니다. 그 카메라가 살아 있고 켜져 있는 동안 레지스트리의 선택보다 먼저입니다(nullptr 이면 해제). */
         void setActiveGameCamera( CameraComponent* pCamera );
         /** @brief 엔티티가 스폰된 프리팹 에셋 경로를 설정합니다. 비우면 연결을 끊습니다. */

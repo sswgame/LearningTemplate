@@ -41,7 +41,7 @@ namespace
                 _connectionID = listConnection.front();
         }
 
-        void pumpUntilDelivered()
+        void pollUntilDelivered()
         {
             for ( int32 step = 0; step < 8; ++step )
             {
@@ -87,7 +87,7 @@ SW_TEST_CASE( RemoteCallTest, OwnerCallRunsTheServerFunction )
 
     const uint32 sequence = rig._client.callServer( kAvatarID, *RemoteCallTestAvatar::StaticType(), "attackTarget", { ReflectedValue::make( int32{ 7 } ), ReflectedValue::make( int32{ 20 } ) } );
     SW_EXPECT_NOT_EQUAL( 0u, sequence );
-    rig.pumpUntilDelivered();
+    rig.pollUntilDelivered();
 
     SW_EXPECT_EQUAL( 7, rig._serverAvatar._lastTargetID );
     SW_EXPECT_EQUAL( 20, rig._serverAvatar._totalPower );
@@ -101,7 +101,7 @@ SW_TEST_CASE( RemoteCallTest, UnreliableFunctionTravelsUnreliable )
     RemoteCallTestRig rig;
     SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
     SW_EXPECT_NOT_EQUAL( 0u, rig._client.callServer( kAvatarID, *RemoteCallTestAvatar::StaticType(), "moveStep", { ReflectedValue::make( 2.5f ) } ) );
-    rig.pumpUntilDelivered();
+    rig.pollUntilDelivered();
     SW_EXPECT_NEAR( 2.5, rig._serverAvatar._movedDistance, 1e-4 );
 }
 
@@ -160,10 +160,10 @@ SW_TEST_CASE( RemoteCallTest, UnknownTargetAndBadArgumentsAreRejected )
     SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
     const uint32 sequence = rig._client.callServer( 999, *RemoteCallTestAvatar::StaticType(), "moveStep", { ReflectedValue::make( 1.0f ) } );
     SW_REQUIRE_TRUE( sequence != 0u );
-    rig.pumpUntilDelivered();
+    rig.pollUntilDelivered();
     SW_EXPECT_TRUE( rig.forgeCall( kAvatarID, "attackTarget", { "seven", "20" }, NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
     SW_EXPECT_TRUE( rig.forgeCall( kAvatarID, "noSuchFunction", {}, NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
-    rig.pumpUntilDelivered();
+    rig.pollUntilDelivered();
 
     vector<RemoteCallRejectNotice> listNotice;
     rig._client.pollRejections( listNotice );
@@ -194,7 +194,7 @@ SW_TEST_CASE( RemoteCallTest, ServerCallsTheOwnerClientFunction )
     SW_EXPECT_TRUE( rig._server.callClient( kAvatarID, "receiveHealth", { ReflectedValue::make( int32{ 42 } ) } ) );
     SW_EXPECT_LOG( "RemoteCall.ClientCallRefused" );
     SW_EXPECT_FALSE( rig._server.callClient( kAvatarID, "attackTarget", { ReflectedValue::make( int32{ 1 } ), ReflectedValue::make( int32{ 1 } ) } ) );
-    rig.pumpUntilDelivered();
+    rig.pollUntilDelivered();
     SW_EXPECT_EQUAL( 42, rig._clientAvatar._shownHealth );
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._client.getInvokedCount() );
 }
@@ -227,7 +227,7 @@ SW_TEST_CASE( RemoteCallTest, SessionTargetIsPerConnection )
     SW_EXPECT_NOT_EQUAL( 0u, rig._client.callServer( RemoteCallTargets::kSessionTargetID, *RemoteCallTestAvatar::StaticType(), "attackTarget",
                                                      { ReflectedValue::make( int32{ 3 } ), ReflectedValue::make( int32{ 5 } ) } ) );
     SW_EXPECT_TRUE( rig._server.callSession( rig._connectionID, "receiveHealth", { ReflectedValue::make( int32{ 77 } ) } ) );
-    rig.pumpUntilDelivered();
+    rig.pollUntilDelivered();
     SW_EXPECT_EQUAL( 3, rig._serverAvatar._lastTargetID );
     SW_EXPECT_EQUAL( 77, rig._clientAvatar._shownHealth );
 

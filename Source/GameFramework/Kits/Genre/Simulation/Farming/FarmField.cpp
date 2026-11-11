@@ -120,7 +120,7 @@ namespace sw
         const CropDef* pCrop = _pCatalog != nullptr ? _pCatalog->findCropBySeed( seedItem ) : nullptr;
         if ( pCrop == nullptr )
             return FarmActionResult::UnknownSeed;
-        if ( pCrop->growsIn( season ) == false )
+        if ( pCrop->canGrowIn( season ) == false )
             return FarmActionResult::OutOfSeason;
 
         pTile->_cropID    = pCrop->_id;
@@ -188,7 +188,7 @@ namespace sw
                         tile._bReady = SW_TRUE;
                 }
                 // 2) 시듦: 새 계절에 자라지 않으면 시든다(다 자란 것도 마찬가지이다).
-                if ( pCrop->growsIn( newSeason ) == false )
+                if ( pCrop->canGrowIn( newSeason ) == false )
                 {
                     tile._bWithered = SW_TRUE;
                     tile._bReady    = SW_FALSE;

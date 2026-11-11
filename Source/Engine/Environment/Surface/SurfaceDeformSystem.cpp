@@ -187,7 +187,7 @@ namespace sw
         ++_stampCount;
     }
 
-    void SurfaceDeformSystem::stampSegment( const SurfaceStampDef& def, const float3& from, const float3& to )
+    void SurfaceDeformSystem::applySegmentStamp( const SurfaceStampDef& def, const float3& from, const float3& to )
     {
         const float32 deltaX = to._x - from._x;
         const float32 deltaZ = to._z - from._z;

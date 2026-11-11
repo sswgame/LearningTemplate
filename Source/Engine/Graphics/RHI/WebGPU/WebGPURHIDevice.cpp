@@ -1222,10 +1222,10 @@ namespace sw
         WebGPUFrameFence* const pFence = &_arrFrameFence[_frameFenceRing.getRecordingSlot()];
         pFence->arm( _frameFenceRing.getRecordingSerial(), this );
         WGPUQueueWorkDoneCallbackInfo doneInfo{};
-        doneInfo.mode           = WGPUCallbackMode_AllowSpontaneous;
-        doneInfo.callback       = &WebGPURHIDevice::onFrameWorkDone;
-        doneInfo.userdata1      = pFence;
-        pFence->_workDoneFuture = wgpuQueueOnSubmittedWorkDone( _queue, doneInfo );
+        doneInfo.mode          = WGPUCallbackMode_AllowSpontaneous;
+        doneInfo.callback      = &WebGPURHIDevice::onFrameJobsDone;
+        doneInfo.userdata1     = pFence;
+        pFence->_jobDoneFuture = wgpuQueueOnSubmittedWorkDone( _queue, doneInfo );
         mapQueuedReadbacks( _frameFenceRing.getRecordingSerial() );
         mapTimestampReadback( pFence ); // 위 매핑 수 기록 뒤에 더한다(`mapQueuedReadbacks` 는 수를 덮어 적는다)
 
@@ -1272,13 +1272,13 @@ namespace sw
         }
     }
 
-    void WebGPURHIDevice::onFrameWorkDone( WGPUQueueWorkDoneStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 )
+    void WebGPURHIDevice::onFrameJobsDone( WGPUQueueWorkDoneStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 )
     {
         (void)pUserdata2;
         WebGPUFrameFence* const pFence = static_cast<WebGPUFrameFence*>( pUserdata1 );
         if ( status != WGPUQueueWorkDoneStatus_Success )
             SW_LOG_ERROR_ONCE_ID( "WebGPU.FrameWorkFailed", "WebGPU: a submitted frame did not complete (status %#): %#", static_cast<uint32>( status ), WebGPURHIUtil::fromStringView( message ) );
-        pFence->_bWorkDone.store( SW_TRUE, std::memory_order_release );
+        pFence->_bJobDone.store( SW_TRUE, std::memory_order_release );
     }
 
     void WebGPURHIDevice::onFrameBufferMapped( WGPUMapAsyncStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 )
@@ -1314,7 +1314,7 @@ namespace sw
     {
         // 큐 완료와 매핑을 하나씩 기다린다(이미 끝난 퓨처는 바로 돌아온다). 상한은 두지 않는다 — Vulkan 칸 펜스 대기(`vkWaitForFences` UINT64_MAX)와 같다.
         // AllowSpontaneous 콜백도 WaitAny 로 기다릴 수 있다(AllowProcessEvents 와 같은 까닭으로 불린다 — https://webgpu-native.github.io/webgpu-headers/Asynchronous-Operations.html).
-        if ( fence._workDoneFuture.id != 0 && waitForFuture( fence._workDoneFuture, "the frame's submitted work" ) == false )
+        if ( fence._jobDoneFuture.id != 0 && waitForFuture( fence._jobDoneFuture, "the frame's submitted work" ) == false )
             return false;
         for ( const WGPUFuture future : fence._listMapFuture )
         {

@@ -88,7 +88,7 @@ namespace sw
      * @details 등급 부족 · 모르는 명령은 `kForbidden`, 본문 · 메모 · 멱등 키 · 상한 위반은 `kInvalidRequest`, 버전 충돌이 상한을 넘으면 `kBusy`, 저장소 장애는 `kUnavailable`,
      *          로그인 없음은 `kUnauthenticated` 이다. 서버 로직, 같은 프로세스 호출, 에디터 도구가 같은 형식을 쓴다.
      */
-    using AdminOutcome = OnlineOutcome<AdminResult>;
+    using AdminServiceResult = OnlineServiceResult<AdminResult>;
 } // namespace sw
 
 namespace sw

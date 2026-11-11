@@ -150,7 +150,7 @@ namespace sw
         bool isRunningOnSoftwareAdapter() const { return _bSoftwareAdapter; }
         /**
          * @brief 디바이스를 종료합니다. 단계 순서는 이 함수 하나가 정하고, 백엔드는 단계별 훅만 채웁니다.
-         * @details 1) 자원을 가진 쪽에 알린다(`RHIRenderResource::releaseAllFor`). 디바이스가 살아 있으므로 자원을 돌려줄 수 있다.
+         * @details 1) 자원을 가진 쪽에 알린다(`RHIRenderResource::releaseAllForDevice`). 디바이스가 살아 있으므로 자원을 돌려줄 수 있다.
          *          2) GPU 를 기다리고 해제 큐를 비운다(`waitIdleInternal`). 1단계에서 넘긴 자원이 여기서 실제로 사라진다.
          *          3) 프레임 스트림 컨텍스트를 해제하고 살아 있는 커맨드 리스트를 디바이스에서 분리한다(`detachCommandRecordingInternal`).
          *          4) 백엔드 자원, 스왑체인, 네이티브 디바이스를 해제한다(`shutdownInternal`).

@@ -817,7 +817,7 @@ namespace sw
                         const RenderPassInputRole role = static_cast<RenderPassInputRole>( input._role );
                         if ( role == RenderPassInputRole::SourceColor )
                             ++sourceColorCount;
-                        if ( pContract->reads( role ) )
+                        if ( pContract->hasRole( role ) )
                             continue;
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassInputRoleNot", "[%#] pass '%#' (%#): input '%#' (role %#) is not read by this pass type - it is declared but never bound",
                                          sourcePath, pass._name, getEnumName( pass._type ), input._attachment.c_str(), getRenderPassInputRoleName( role ) );
@@ -1090,7 +1090,7 @@ namespace sw
                             {
                                 bRequired = bRequired || pContract->_arrRequired[requiredIndex] == role;
                             }
-                            const bool bOptionalRead = pContract != nullptr && pContract->reads( role ) && bRequired == false;
+                            const bool bOptionalRead = pContract != nullptr && pContract->hasRole( role ) && bRequired == false;
                             if ( bOptionalRead )
                                 continue;
                             SW_LOG_ERROR_ID( "RenderPipelineAsset.PassReadsRoleNot", "[%#] pass '%#' reads '%#' (role %#) not as an optional input - when '%#' (%#) is off that input is absent", sourcePath, other._name,

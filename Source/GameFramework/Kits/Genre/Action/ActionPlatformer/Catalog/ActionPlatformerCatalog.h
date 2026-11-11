@@ -3,7 +3,7 @@
  * @brief 스테이지형 액션 플랫포머의 데이터입니다. 스테이지(체크포인트, 비밀 수집품, 목숨, 기준 시간), 등급 규칙(시간, 피격, 수집), 이동 모드 수치(활공, 갈고리, 드릴),
  *        근접 콤보(기반 `MoveCatalog` 기술 id 의 연결), 패리 반사, 적 패턴(간단한 상태 기계)을 담습니다.
  * @details 검브렐라, 부시덴, 리플레이스드, 페퍼 그라인더 같은 게임이 같은 테이블을 쓴다. 기술의 프레임 데이터는 기반 `MoveCatalog` XML 이 따로 가진다.
- *          정의 구조체는 리플렉션 스키마다 — 기본값은 초기값, 범위는 `PROPERTY( Min · Max )`, 필수는 `Required` 이고 `XMLFields::readFields` 가 읽는다.
+ *          정의 구조체는 리플렉션 스키마다 — 기본값은 초기값, 범위는 `PROPERTY( Min · Max )`, 필수는 `Required` 이고 `XMLFields::readProperties` 가 읽는다.
  */
 #pragma once
 #include "Core/Container/string.h"

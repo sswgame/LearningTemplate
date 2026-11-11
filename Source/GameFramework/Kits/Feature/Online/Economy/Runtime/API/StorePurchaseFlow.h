@@ -84,8 +84,8 @@ namespace sw
         string               _failureText{}; ///< 스토어가 실패했을 때의 까닭(영어)
         NetIdempotencyKey    _key{};         ///< 다시 낼 때 그대로 쓴다
         StoreBillingStatus   _billing{ StoreBillingStatus::Failed };
-        EconomyOutcome       _result{ EconomyOutcome::fail( OnlineError::kUnavailable ) }; ///< 서버의 지급 결과(`_billing` 이 Purchased 일 때). 공통 범주(장애 · 충돌 · 로그인)는 `_errorCode`
-        uint8                _bRetryable{ SW_FALSE };                                      ///< 같은 영수증으로 다시 내면 된다(`retryRedeem`)
+        EconomyServiceResult _result{ EconomyServiceResult::fail( OnlineError::kUnavailable ) }; ///< 서버의 지급 결과(`_billing` 이 Purchased 일 때). 공통 범주(장애 · 충돌 · 로그인)는 `_errorCode`
+        uint8                _bRetryable{ SW_FALSE };                                            ///< 같은 영수증으로 다시 내면 된다(`retryRedeem`)
     };
 } // namespace sw
 

@@ -134,10 +134,10 @@ namespace sw
             SW_LOG_ERROR_ID( "PortraitStudio.PortraitPrefabCouldNot", "Portrait: prefab '%#' could not be spawned", request._prefabPath.c_str() );
             return false;
         }
-        // 스튜디오는 틱하지 않으므로 게임 루프가 프레임마다 하는 일을 여기서 차례로 한다 — 스폰이 건 에셋(메시 · 텍스처) 일을 끝내고(`finishPendingAssetWork`),
+        // 스튜디오는 틱하지 않으므로 게임 루프가 프레임마다 하는 일을 여기서 차례로 한다 — 스폰이 건 에셋(메시 · 텍스처) 일을 끝내고(`finishPendingAssetJobs`),
         // 도착한 메시를 컴포넌트에 넣고(씬 프레임의 `AssetArrival` 단계), 경로로 얻은 머티리얼을 초기화한다(게임 스레드 — 상수 버퍼는 렌더 스레드의 프록시가 만든다).
         // 예전에는 앞의 둘이 빠져 비동기 메시(`.mesh` 경로)를 쓰는 프리팹은 "그릴 메시 없음" 으로 실패했다(그 길을 도는 테스트가 없었다 — `Bake.Portraits`).
-        assetManager.finishPendingAssetWork();
+        assetManager.finishPendingAssetJobs();
         pManager->getPrimitiveRegistry().updateAssetWaiters( PortraitStudioInternal::kSettleSeconds );
         assetManager.getAssetCache<MaterialCache>().initializePending( _capture.getDevice() );
         float3  center{};

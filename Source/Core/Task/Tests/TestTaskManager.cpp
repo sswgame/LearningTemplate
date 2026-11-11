@@ -1623,7 +1623,7 @@ SW_TEST_CASE( TaskManagerTest, RunParallelByCostSplitsHeavyItemsAtTheFirstItem )
  * @details 가짜 시계가 부를 때마다 1 ns 만 가므로 경과는 비용 임계값(3 us)에 닿지 않는다. 직렬 길은 구간을 1, 2, 4, … 개씩 차례로 부르므로 호출 기록이 정확히 그 열이면 나뉘지 않은 것이다.
  *          실제 시계를 쓰지 않아 호출 스레드 선점 잡음에 흔들리지 않는다.
  */
-SW_TEST_CASE( TaskManagerTest, RunParallelByCostKeepsVeryLightWorkSerial )
+SW_TEST_CASE( TaskManagerTest, RunParallelByCostKeepsVeryLightJobsSerial )
 {
     sw::TaskManager manager;
     SW_REQUIRE_TRUE( manager.initialize( kWorkerCount ) );

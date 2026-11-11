@@ -73,7 +73,7 @@ namespace sw
             static expected<void> validateAction( const AutomationStep& step )
             {
                 AutomationActionParams params;
-                return step.readFields( params )
+                return step.readProperties( params )
                     .and_then( [&]()
                 { return checkDurationChoice( params._hold, params._seconds, "hold", "seconds" ); } )
                     .and_then( [&]()
@@ -83,7 +83,7 @@ namespace sw
             static expected<void> validateAxis( const AutomationStep& step )
             {
                 AutomationActionAxisParams params;
-                return step.readFields( params ).and_then( [&]()
+                return step.readProperties( params ).and_then( [&]()
                 { return checkDurationChoice( params._frames, params._seconds, "frames", "seconds" ); } );
             }
 
@@ -145,7 +145,7 @@ namespace sw
 
             [[nodiscard]] static expected<void> prepareAction( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const AutomationActionParams         params  = step.readValidatedFields<AutomationActionParams>();
+                const AutomationActionParams         params  = step.readValidatedProperties<AutomationActionParams>();
                 const expected<const ActionBinding*> binding = findBinding( runner, params._name, params._device, &isButtonBinding, "single button" );
                 if ( binding.has_value() == false )
                     return unexpected( binding.error() );
@@ -158,7 +158,7 @@ namespace sw
                     framesBuilder.appendFormat( "interval %# frames, hold %# frames", intervalFrames, holdFrames );
                     return unexpected( Error{ ErrorKind::InvalidArgument, "interval must be longer than hold to press again", framesBuilder.view() } );
                 }
-                connectGamepadOf( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
+                connectGamepad( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
                 for ( uint32 pressIndex = 0; pressIndex < params._count; ++pressIndex )
                 {
                     if ( runner.getInputScript().addTap( step._frameIndex + pressIndex * intervalFrames, pBinding->_arrSlot[0], holdFrames ) == false )
@@ -169,19 +169,19 @@ namespace sw
 
             [[nodiscard]] static expected<void> preparePressOrRelease( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const AutomationActionButtonParams   params  = step.readValidatedFields<AutomationActionButtonParams>();
+                const AutomationActionButtonParams   params  = step.readValidatedProperties<AutomationActionButtonParams>();
                 const expected<const ActionBinding*> binding = findBinding( runner, params._name, params._device, &isButtonBinding, "single button" );
                 if ( binding.has_value() == false )
                     return unexpected( binding.error() );
                 const ActionBinding* pBinding = *binding;
-                connectGamepadOf( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
+                connectGamepad( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
                 if ( runner.getInputScript().addSlot( step._frameIndex, pBinding->_arrSlot[0], string_view{ step._kind } == "ActionPress" ) )
                     return {};
                 return unexpected( Error{ ErrorKind::Unsupported, "the slot cannot be pressed", InputSlot::toText( pBinding->_arrSlot[0] ) } );
             }
 
             /** @brief 슬롯이 패드 단추면 그 패드를 먼저 연결합니다(`VirtualInputScript::addGamepadConnection`). */
-            static void connectGamepadOf( VirtualInputScript& script, uint32 frameIndex, const InputSlot& slot )
+            static void connectGamepad( VirtualInputScript& script, uint32 frameIndex, const InputSlot& slot )
             {
                 if ( slot._deviceKind == InputDeviceKind::Gamepad )
                     script.addGamepadConnection( frameIndex, slot._deviceIndex );
@@ -199,7 +199,7 @@ namespace sw
              */
             [[nodiscard]] static expected<void> prepareAxis( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const AutomationActionAxisParams     params  = step.readValidatedFields<AutomationActionAxisParams>();
+                const AutomationActionAxisParams     params  = step.readValidatedProperties<AutomationActionAxisParams>();
                 const expected<const ActionBinding*> binding = findBinding( runner, params._name, params._device, &isAxisBinding, "axis" );
                 if ( binding.has_value() == false )
                     return unexpected( binding.error() );
@@ -265,7 +265,7 @@ namespace sw
 
     // 액션 단계는 입력 단계처럼 시작할 때 가상 입력으로 옮겨진다(프레임에 할 일이 없다).
     SW_AUTOMATION_STEP( actionTap, "Action", nullptr, &AutomationActionStepsInternal::validateAction, AutomationStepOptions{}.withPrepare( &AutomationActionStepsInternal::prepareAction ) );
-    SW_AUTOMATION_STEP( actionPress, "ActionPress", nullptr, &AutomationStep::validateFields<AutomationActionButtonParams>, AutomationStepOptions{}.withPrepare( &AutomationActionStepsInternal::preparePressOrRelease ) );
-    SW_AUTOMATION_STEP( actionRelease, "ActionRelease", nullptr, &AutomationStep::validateFields<AutomationActionButtonParams>, AutomationStepOptions{}.withPrepare( &AutomationActionStepsInternal::preparePressOrRelease ) );
+    SW_AUTOMATION_STEP( actionPress, "ActionPress", nullptr, &AutomationStep::validateProperties<AutomationActionButtonParams>, AutomationStepOptions{}.withPrepare( &AutomationActionStepsInternal::preparePressOrRelease ) );
+    SW_AUTOMATION_STEP( actionRelease, "ActionRelease", nullptr, &AutomationStep::validateProperties<AutomationActionButtonParams>, AutomationStepOptions{}.withPrepare( &AutomationActionStepsInternal::preparePressOrRelease ) );
     SW_AUTOMATION_STEP( actionAxis, "ActionAxis", nullptr, &AutomationActionStepsInternal::validateAxis, AutomationStepOptions{}.withPrepare( &AutomationActionStepsInternal::prepareAxis ) );
 } // namespace sw

@@ -67,7 +67,7 @@ namespace sw
             };
 
             /** @brief 바이너리 · 셰이더를 XML 파서에 넣지 않습니다(팩 쿠커가 모든 파일을 지나 보낸다 — `DataInheritance::findBasePath` 와 같은 까닭). */
-            static bool looksLikeXML( string_view text )
+            static bool isLikelyXML( string_view text )
             {
                 string_view body = StringUtil::trim( text );
                 if ( StringUtil::startsWith( body, "\xEF\xBB\xBF" ) )
@@ -360,7 +360,7 @@ namespace sw
             }
 
             /** @brief 짝이 없는 조건 든 원본 원소를 남기는가입니다. 목록 원소(같은 이름이 또 있거나 `item` · `_list…` 아래)는 지운 것이고, 차이 저장은 부모와 같아 빠진 것일 수 있다. */
-            [[nodiscard]] static bool keepsUnpaired( const XMLNode& source, const XMLNode& sourceParent, const vector<XMLNode>& listTarget, bool bDelta )
+            [[nodiscard]] static bool shouldKeepUnpaired( const XMLNode& source, const XMLNode& sourceParent, const vector<XMLNode>& listTarget, bool bDelta )
             {
                 if ( hasConditions( source ) == false )
                     return false;
@@ -442,7 +442,7 @@ namespace sw
                         if ( entry._bWritten == SW_TRUE || entry._targetIndex >= 0 )
                             continue;
                         entry._bWritten = SW_TRUE;
-                        if ( entry._bRemoved == SW_TRUE || keepsUnpaired( entry._node, source, listTarget, bDelta ) )
+                        if ( entry._bRemoved == SW_TRUE || shouldKeepUnpaired( entry._node, source, listTarget, bDelta ) )
                             (void)out.appendClone( entry._node );
                     }
                 };
@@ -474,7 +474,7 @@ namespace sw
             /** @brief 쿠킹본만 읽는 구성에서 `_base` 가 남아 있으면 오류를 남기고 false 입니다 — 런타임은 펼친 결과만 읽는다(`PackCooker`). */
             [[nodiscard]] static bool canFlattenAtRuntime( string_view id )
             {
-                if ( AssetIO::readsSource() )
+                if ( AssetIO::usesSource() )
                     return true;
                 SW_LOG_ERROR_ID( "DataInheritance.NotFlattened", "'%#' still has %# in cooked content - the pack cook flattens it (PackCooker)", id, DataInheritance::kBaseAttribute );
                 return false;
@@ -529,7 +529,7 @@ namespace sw
                     case ResourceContext::ParentRule::CatalogTable:
                     {
                         // 쿠킹본만 읽는 구성은 펼친 결과만 있으므로 보지 않는다(남은 `_base` 는 읽기의 모르는 칸 오류다).
-                        if ( text.find( DataInheritance::kBaseAttribute ) == string_view::npos || AssetIO::readsSource() == false )
+                        if ( text.find( DataInheritance::kBaseAttribute ) == string_view::npos || AssetIO::usesSource() == false )
                             return true;
                         DataInheritanceResourceSource source;
                         return DataCatalogInheritance::flattenIfListed( text, id, source, outbComposed, outText );
@@ -771,7 +771,7 @@ namespace sw
         using Internal = ResourceConditionStageInternal;
         outbChanged    = false;
         // 조건을 적지 않은 파일(거의 전부)은 글 검색 한 번으로 끝난다 — 런타임 읽기마다 지나는 자리다.
-        if ( text.find( DataInheritance::kWhenElement ) == string_view::npos || Internal::looksLikeXML( text ) == false )
+        if ( text.find( DataInheritance::kWhenElement ) == string_view::npos || Internal::isLikelyXML( text ) == false )
             return true;
         XMLDocument doc;
         if ( doc.parse( text, id ) == false )
@@ -805,7 +805,7 @@ namespace sw
     {
         using Internal = ResourceConditionRestoreInternal;
         outText        = string{ savedText };
-        if ( sourceText.find( DataInheritance::kWhenElement ) == string_view::npos || ResourceConditionStageInternal::looksLikeXML( sourceText ) == false )
+        if ( sourceText.find( DataInheritance::kWhenElement ) == string_view::npos || ResourceConditionStageInternal::isLikelyXML( sourceText ) == false )
             return true;
         XMLDocument sourceDoc;
         if ( sourceDoc.parse( sourceText, id ) == false || Internal::hasConditions( sourceDoc.getRoot() ) == false )

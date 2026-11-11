@@ -99,15 +99,15 @@ namespace sw
         return static_cast<int32>( MathUtil::min<int64>( window, _definition._maxRatingWindow ) );
     }
 
-    MatchmakingOutcome MatchMaker::addBackfill( const MatchBackfillRequest& request )
+    MatchmakingServiceResult MatchMaker::addBackfill( const MatchBackfillRequest& request )
     {
         const bool bShapeOk = request._modeID == _definition._modeID && static_cast<int32>( request._listOpenSlot.size() ) == _definition._teamCount && request._matchID != 0;
         if ( bShapeOk == false )
-            return MatchmakingOutcome::fail( OnlineError::kInvalidRequest );
+            return MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
         for ( const int32 openSlot : request._listOpenSlot )
         {
             if ( openSlot < 0 || openSlot > _definition._teamSize )
-                return MatchmakingOutcome::fail( OnlineError::kInvalidRequest );
+                return MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
         }
         for ( MatchBackfillRequest& existing : _listBackfill )
         {
@@ -163,7 +163,7 @@ namespace sw
         }
     }
 
-    MatchmakingOutcome MatchMaker::addTicket( const MatchTicket& ticket )
+    MatchmakingServiceResult MatchMaker::addTicket( const MatchTicket& ticket )
     {
         if ( ticket._listMember.empty() || static_cast<int32>( ticket._listMember.size() ) > _definition._teamSize )
             return MatchmakingResult::PartyTooLarge;

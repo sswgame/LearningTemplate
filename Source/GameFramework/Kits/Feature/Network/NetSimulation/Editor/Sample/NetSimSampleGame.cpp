@@ -39,8 +39,8 @@ namespace sw
             using StateMessage = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::Unreliable>;
             using MessageTable = NetMessageTable<NetMessageRange::kGame, InputMessage, StateMessage>;
 
-            static constexpr uint8 kInputKind = MessageTable::kindOf<InputMessage>();
-            static constexpr uint8 kStateKind = MessageTable::kindOf<StateMessage>();
+            static constexpr uint8 kInputKind = MessageTable::getKindOf<InputMessage>();
+            static constexpr uint8 kStateKind = MessageTable::getKindOf<StateMessage>();
 
             /** @brief 아바타 외곽선 색입니다. 엔티티 id 로 고른다. */
             static float3 pickColor( uint32 entityID )

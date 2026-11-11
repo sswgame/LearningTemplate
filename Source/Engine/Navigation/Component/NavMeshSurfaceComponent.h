@@ -58,7 +58,7 @@ namespace sw
         const float3& getBoundsHalfExtents() const { return _boundsHalfExtents; }
         void          setBoundsHalfExtents( const float3& halfExtents ) { _boundsHalfExtents = halfExtents; }
         /** @brief 이 표면이 @p agentType(빈 이름 = 기본 종류)을 맡으면 true 입니다. */
-        bool coversAgentType( const hashed_string& agentType, const hashed_string& defaultAgentType ) const;
+        bool supportsAgentType( const hashed_string& agentType, const hashed_string& defaultAgentType ) const;
 
     private:
         PROPERTY( Category = "Surface", DisplayName = "Agent Types", Tooltip = "Agent kinds baked by this surface (empty = the default kind)" )

@@ -262,22 +262,22 @@ namespace sw
         {
             if ( size <= 0 )
                 return;
-            NetMessageKindStats& tally = _arrTally[pData[0]];
-            ++tally._messageCount;
-            tally._byteCount += static_cast<uint64>( size );
+            NetMessageKindStats& stats = _arrStats[pData[0]];
+            ++stats._messageCount;
+            stats._byteCount += static_cast<uint64>( size );
         }
         /** @brief 다른 표의 셈을 종류마다 더합니다(포트 샤드마다의 보낸 쪽 셈을 하나로 모을 때). */
         void addTable( const NetMessageKindStatsTable& other )
         {
             for ( int32 kind = 0; kind < kKindCount; ++kind )
             {
-                _arrTally[kind]._messageCount += other._arrTally[kind]._messageCount;
-                _arrTally[kind]._byteCount += other._arrTally[kind]._byteCount;
+                _arrStats[kind]._messageCount += other._arrStats[kind]._messageCount;
+                _arrStats[kind]._byteCount += other._arrStats[kind]._byteCount;
             }
         }
-        const NetMessageKindStats& get( uint8 kind ) const { return _arrTally[kind]; }
+        const NetMessageKindStats& get( uint8 kind ) const { return _arrStats[kind]; }
 
     private:
-        NetMessageKindStats _arrTally[kKindCount]{};
+        NetMessageKindStats _arrStats[kKindCount]{};
     };
 } // namespace sw

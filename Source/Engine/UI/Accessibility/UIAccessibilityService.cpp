@@ -77,7 +77,7 @@ namespace sw
             if ( screen.isClosing() || screen.receivesPointer() == false )
                 continue;
             appendScreen( ui, screen, outSnapshot );
-            if ( screen.blocksLowerInput() )
+            if ( screen.shouldBlockLowerInput() )
                 break;
         }
         // 오버레이(알림, 자막): 입력을 받지 않지만 읽을 글이다. 맨 뒤에 둔다.

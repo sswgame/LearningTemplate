@@ -60,7 +60,7 @@ namespace sw
          * @details 빈 슬롯 · 범위 밖 · 같은 슬롯 두 번은 공통 범주 `kInvalidRequest` 이고, 인스턴스 상태가 있는 슬롯(꾸미기, 떨어진 부품, 외형 피해, 내구도)이나 바꿀 수 없는 아이템은 NotTradable 입니다.
          *          인벤토리 슬롯에는 서버의 인스턴스 아이템 id 가 없기 때문이다. 인스턴스 아이템(`LedgerItemInstance`)은 게임이 그 자산 id 와 양 1 로 다리를 직접 만든다.
          */
-        static TradeOutcome makeLegs( const Inventory& inventory, const vector<int32>& listSlot, AssetIDFromItem pAssetIDFromItem, vector<TradeLeg>& outListLeg );
+        static TradeServiceResult makeLegs( const Inventory& inventory, const vector<int32>& listSlot, AssetIDFromItem pAssetIDFromItem, vector<TradeLeg>& outListLeg );
 
         TradeClient();
 

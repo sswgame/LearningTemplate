@@ -27,7 +27,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief `<ParkLayout>` 루트 속성의 스키마입니다(`XMLFields::readFields` — 속성 이름은 칸 이름에서 `_` 를 뗀 것).
+     * @brief `<ParkLayout>` 루트 속성의 스키마입니다(`XMLFields::readProperties` — 속성 이름은 칸 이름에서 `_` 를 뗀 것).
      * @details 필수 칸(`Required`)이 빠지면 로드 오류이고, 표시가 없는 칸의 초기값이 기본값입니다. 읽는 코드에 리터럴 기본값이 없습니다.
      */
     REFLECT()

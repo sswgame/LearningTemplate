@@ -376,11 +376,11 @@ namespace sw
                 const float2 from = def.samplePath( distance );
                 distance += def._speed * seconds;
                 const float2 to = def.samplePath( distance );
-                if ( surface.stampHit( partIndex, CharacterGeometryConstant::kNoGroup, def._channel, to, def._radius, def._wetValue ) == false )
+                if ( surface.paintHit( partIndex, CharacterGeometryConstant::kNoGroup, def._channel, to, def._radius, def._wetValue ) == false )
                     SW_LOG_ERROR_ONCE_ID( "BodyDynamics.FluidChannelUnknown", "'%#': fluid '%#' channel '%#' is not in the surface channels - no tears are drawn", getOwner()->getName().c_str(), def._name.c_str(),
                                           def._channel.c_str() );
                 if ( def._residueChannel.empty() == false )
-                    (void)surface.stampHit( partIndex, CharacterGeometryConstant::kNoGroup, def._residueChannel, to, def._radius, def._residueValue );
+                    (void)surface.paintHit( partIndex, CharacterGeometryConstant::kNoGroup, def._residueChannel, to, def._radius, def._residueValue );
                 // 화장 번짐 — 눈물 길 아래의 층이 흐름 방향으로 끌리고 묽어진다(층의 번짐 저항만큼 덜).
                 const float2  flow    = to - from;
                 const float32 length2 = flow.getLength();

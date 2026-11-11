@@ -477,7 +477,7 @@ namespace sw
                     for ( uint32 elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                     {
                         total = ContainerVisitor::mergeResult( total, visit( elementIndex ) );
-                        if ( ContainerVisitor::stopsReading( total ) )
+                        if ( ContainerVisitor::shouldStopReading( total ) )
                             break;
                     }
                     return total;
@@ -697,11 +697,11 @@ namespace sw
         const hashed_string                   resolved  = SerializerUtil::resolveHandlerTypeName( typeName, context );
         const SerializeContext::BinaryReadFn* pReader   = context.findBinaryReader( resolved );
         if ( pReader != nullptr )
-            return ContainerVisitor::fieldResultOf( ( *pReader )( pValuePtr, pData, dataSize, offset ) );
+            return ContainerVisitor::makeFieldResult( ( *pReader )( pValuePtr, pData, dataSize, offset ) );
 
         const EnumInfo* pEnumInfo = context.getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
-            return ContainerVisitor::fieldResultOf( SerializerUtilInternal::readEnumBinary( *pEnumInfo, value, pData, dataSize, offset, wireVersion ) );
+            return ContainerVisitor::makeFieldResult( SerializerUtilInternal::readEnumBinary( *pEnumInfo, value, pData, dataSize, offset, wireVersion ) );
 
         const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
         if ( pStructInfo != nullptr )
@@ -725,7 +725,7 @@ namespace sw
             if ( SerializerUtilInternal::readSizedBlock( pData, dataSize, offset, blockStart, blockSize ) == false )
                 return FieldReadResult::FieldFailed;
             const string text( reinterpret_cast<const utf8*>( pData + blockStart ), blockSize );
-            return ContainerVisitor::fieldResultOf( ( *pTextReader )( pValuePtr, text ) );
+            return ContainerVisitor::makeFieldResult( ( *pTextReader )( pValuePtr, text ) );
         }
 
         // 실을 수 없는 타입이다. 바이트를 건너뛰지 않고 실패를 돌려준다. 알림은 부른 쪽의 규칙을 따른다(엄격 읽기는 실패, 소프트 읽기는 orphan).
@@ -1040,7 +1040,7 @@ namespace sw
         return ss.c_str();
     }
 
-    bool SerializerUtil::keysEqual( string_view left, string_view right )
+    bool SerializerUtil::isKeyEqual( string_view left, string_view right )
     {
         return left == right;
     }
@@ -1050,14 +1050,14 @@ namespace sw
         // 지금 이름을 모두 본 뒤에만 옛 이름(Alias)을 본다. 앞 프로퍼티의 옛 이름이 뒤 프로퍼티의 지금 이름을 가로채지 않는다.
         for ( const PropertyInfo& prop : listProp )
         {
-            if ( SerializerUtil::keysEqual( keyRaw, prop._name.view() ) )
+            if ( SerializerUtil::isKeyEqual( keyRaw, prop._name.view() ) )
                 return &prop;
         }
         for ( const PropertyInfo& prop : listProp )
         {
             for ( const hashed_string& alias : prop._listAlias )
             {
-                if ( alias.empty() == false && SerializerUtil::keysEqual( keyRaw, alias.view() ) )
+                if ( alias.empty() == false && SerializerUtil::isKeyEqual( keyRaw, alias.view() ) )
                     return &prop;
             }
         }

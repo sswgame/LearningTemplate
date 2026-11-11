@@ -380,7 +380,7 @@ namespace sw::editor
          */
         virtual const MeshModifierStack* getGPUChildStack() const { return nullptr; }
         /** @brief 정점 색을 칠하는 모디파이어면 true 입니다(Paint 의 색 대상). 위치 · 법선은 안 바꾸므로 GPU 는 항등 기록만 두고, 색은 세션이 GPU 메시의 정점 스트림에 CPU 결과로 덮는다. */
-        virtual bool writesGPUVertexColor() const { return false; }
+        virtual bool isVertexColorModifier() const { return false; }
         /** @brief 텍스처 입력의 GPU 격자 한 변 텍셀 수입니다(셰이더 `SW_MODIFIER_TEXTURE_RESOLUTION` 과 같다. 4 의 배수). 높이/마스크 한 채널을 이 격자로 눌러 싣는다. */
         static constexpr uint32 kGPUTextureResolution = 64;
         /** @brief 스플라인 입력의 GPU 표본 구간 수입니다(셰이더 `SW_MODIFIER_PATH_SEGMENTS` 와 같다. 표본은 하나 더 - 위치 · 접선 · 단면 축을 싣는다). */

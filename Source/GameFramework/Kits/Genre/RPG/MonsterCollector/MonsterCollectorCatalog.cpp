@@ -219,7 +219,7 @@ namespace sw
 
     uint32 MonsterCollectorCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<MonsterCollectorCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&MonsterCollectorCatalog::loadStatusImmunity>( "StatusImmunity" ),
@@ -238,7 +238,7 @@ namespace sw
     bool MonsterCollectorCatalog::loadStatusImmunity( const XMLNode& node, string_view sourceName )
     {
         MonsterStatusImmunityDef immunity;
-        if ( XMLFields::readFields( node, immunity, sourceName ) == false )
+        if ( XMLFields::readProperties( node, immunity, sourceName ) == false )
             return false;
         if ( immunity._status == MonsterStatus::None )
         {
@@ -252,7 +252,7 @@ namespace sw
     bool MonsterCollectorCatalog::loadMove( const XMLNode& node, string_view sourceName )
     {
         MonsterMoveDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
             return false;
         // 상태이상을 거는 기술은 확률을 적는다(변화 기술도 100 을 적는다) — 분류로 기본값을 고르지 않는다.
         const bool bStatusWithoutChance = def._status != MonsterStatus::None && def._statusChance == 0;
@@ -273,7 +273,7 @@ namespace sw
     {
         using Internal = MonsterCollectorCatalogInternal;
         MonsterSpeciesDef def;
-        bool              bValid = XMLFields::readFields( node, def, sourceName, { "stats", "evYield" } );
+        bool              bValid = XMLFields::readProperties( node, def, sourceName, { "stats", "evYield" } );
         if ( def._listType.empty() || def._listType.size() > 2 )
         {
             SW_LOG_ERROR_ID( "MonsterCollectorCatalog.SpeciesTypesNeeds", "%#: species '%#' has %# types - needs 1 or 2", sourceName, def._id.c_str(), static_cast<uint32>( def._listType.size() ) );
@@ -304,7 +304,7 @@ namespace sw
     bool MonsterCollectorCatalog::loadEncounter( const XMLNode& node, string_view sourceName )
     {
         MonsterEncounterDef def;
-        bool                bValid = XMLFields::readFields( node, def, sourceName );
+        bool                bValid = XMLFields::readProperties( node, def, sourceName );
         for ( XMLNode child = node.findChild( "Slot" ); child; child = child.findNextSibling( "Slot" ) )
         {
             bValid = GameDataXML::readInto( child, sourceName, def._listSlot ) && bValid;

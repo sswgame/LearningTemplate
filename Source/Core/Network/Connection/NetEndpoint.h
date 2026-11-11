@@ -218,7 +218,7 @@ namespace sw
         virtual int32 getMaxBytesPerSecond() const                      = 0;
         virtual bool  isConnectionSaturated( int32 connectionID ) const = 0;
         /** @brief 큐에 넣은 메시지의 종류별 셈입니다. @p outTable 에 **더합니다**(샤드 묶음은 샤드마다 더한다) — 새로 셀 때는 빈 표를 넘긴다. */
-        virtual void addSentKindTally( NetMessageKindStatsTable& outTable ) const = 0;
+        virtual void addSentKindStats( NetMessageKindStatsTable& outTable ) const = 0;
     };
 } // namespace sw
 
@@ -296,10 +296,10 @@ namespace sw
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다. 반환값은 보낸 수입니다. */
         int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = constant::invalid_index::kInt32 ) SW_EXCLUDES_LOCK( _mutex ) override;
         /**
-         * @brief 지금까지 보내기 큐에 넣은 메시지의 종류별 셈을 @p outTable 에 더합니다(`sendMessage` · `broadcast` 가 연결마다 센다 — 받은 쪽 셈은 `NetMessageRouter::getKindTally`).
+         * @brief 지금까지 보내기 큐에 넣은 메시지의 종류별 셈을 @p outTable 에 더합니다(`sendMessage` · `broadcast` 가 연결마다 센다 — 받은 쪽 셈은 `NetMessageRouter::getKindStats`).
          * @details 큐에 넣은 것을 센다. 대역폭에 막혀 늦게 나가거나 다시 보낸 바이트는 연결 통계(`NetConnectionStats`)의 몫이다. 잠금을 잡고 표 하나(4 KiB)를 더한다 — `net.stats` 처럼 느리게 묻는 쪽이 쓴다.
          */
-        void addSentKindTally( NetMessageKindStatsTable& outTable ) const SW_EXCLUDES_LOCK( _mutex ) override;
+        void addSentKindStats( NetMessageKindStatsTable& outTable ) const SW_EXCLUDES_LOCK( _mutex ) override;
         /** @brief 받은 메시지 하나를 꺼냅니다. 연결 순서대로, 채널은 신뢰 순서, 신뢰 순서 없음, 순서만, 비신뢰 순(채널 값 순)으로 확인합니다. */
         [[nodiscard]] bool receiveMessage( int32& outConnectionID, NetChannelType& outChannel, vector<uint8>& outBuffer ) SW_EXCLUDES_LOCK( _mutex );
         void               disconnect( int32 connectionID ) SW_EXCLUDES_LOCK( _mutex ) override;
@@ -476,7 +476,7 @@ namespace sw
         NetConnectCredentials _credentials            SW_GUARDED_BY( _mutex );        ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
         vector<DeferredWarning> _listDeferredWarning  SW_GUARDED_BY( _mutex );        ///< 잠금 안(`handlePacket`)에서 모은 경고. `update` 가 잠금을 놓은 뒤 쓴다.
         NetEndpointConfig _settings                   SW_GUARDED_BY( _mutex );
-        NetMessageKindStatsTable _sentKindTally       SW_GUARDED_BY( _mutex ); ///< `sendMessageLocked` 가 큐에 넣은 메시지마다 더한다.
+        NetMessageKindStatsTable _sentKindStats       SW_GUARDED_BY( _mutex ); ///< `sendMessageLocked` 가 큐에 넣은 메시지마다 더한다.
         INetTransport* _pTransport                    SW_GUARDED_BY( _mutex );
         uint64 _rejectedPacketCount                   SW_GUARDED_BY( _mutex );
         uint64 _authenticationFailureCount            SW_GUARDED_BY( _mutex );

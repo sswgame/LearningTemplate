@@ -56,7 +56,7 @@ namespace sw::editor
             }
 
             /** @brief 대사 미리보기 메서드의 시그니처( string graphPath, uint32 speakerID, string text ) -> GameObjectHandle 인지입니다. */
-            static bool takesDialogueLineArgs( const FunctionInfo& method )
+            static bool hasDialogueLineArgs( const FunctionInfo& method )
             {
                 // 인자 타입은 넘길 C++ 타입의 내장 자리(`ReflectBuiltinOf<T>`)로 묻는다 — 이름 리터럴을 두지 않는다.
                 const auto isParameterOf = []( const FunctionParameterInfo& parameter, ReflectBuiltinIndex builtinIndex )
@@ -140,7 +140,7 @@ namespace sw::editor
                     const FunctionInfo* pMethod = findPreviewMethod( *pType, kDialogueLinePreview );
                     if ( pMethod == nullptr )
                         continue;
-                    if ( EditorViewportPreviewInternal::takesDialogueLineArgs( *pMethod ) == false )
+                    if ( EditorViewportPreviewInternal::hasDialogueLineArgs( *pMethod ) == false )
                     {
                         SW_LOG_WARNING_ID( "EditorViewportPreview.EditorPreviewButDoesNot", "%#::%# is EditorPreview=%# but does not take ( string graphPath, uint32 speakerID, string text )",
                                            pType->_name.c_str(), pMethod->_name.c_str(), kDialogueLinePreview );

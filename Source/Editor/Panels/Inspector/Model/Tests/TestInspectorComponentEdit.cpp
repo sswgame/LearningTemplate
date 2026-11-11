@@ -15,7 +15,7 @@
 /**
  * @brief [InspectorComponentEditTest] 카메라 구역은 도로 모으고 바뀐 칸만 넣는다 — 고치지 않은 시야각은 도 ↔ 라디안 왕복으로 바뀌지 않는다
  */
-SW_TEST_CASE( InspectorComponentEditTest, CameraAppliesOnlyChangedFields )
+SW_TEST_CASE( InspectorComponentEditTest, CameraAppliesOnlyChangedProperties )
 {
     using Edit = sw::editor::InspectorComponentEdit;
 

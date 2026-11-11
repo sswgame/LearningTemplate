@@ -131,7 +131,7 @@ namespace sw::editor
          * @brief 이 종류의 바인딩이 발화 규칙 · 시간 · 횟수 · Negate 를 파일에 쓰면 true 입니다.
          * @details 2D 합성 · 스틱 · 마우스 축 · 가상 조이스틱 · AnyKey 는 매 프레임 읽는 값이라 형식에 이 칸이 없다(`InputMapXML`). 고치게 두면 저장 뒤 말없이 사라진다.
          */
-        static bool savesTriggerFields( BindingKind kind );
+        static bool canSaveTriggerProperties( BindingKind kind );
         /** @brief 호스트의 입력 매니저입니다. 에디터가 서 있을 때(그리기)만 부른다 — 없으면 멈춘다. 패널이 작업 공간 헤더를 보지 않게 여기서 찾는다(MVVM 계약). */
         static InputManager& getInputManager();
         /** @brief 게임 뷰 입력 오버레이 설정입니다(에디터 서브시스템 `ViewportInputOverlaySettings`). 에디터가 서 있을 때만 부른다 — 없으면 멈춘다. 보기 설정이라 되돌리기에 남지 않는다. */
@@ -208,8 +208,8 @@ namespace sw::editor
         [[nodiscard]] bool saveBundle() const;
         /** @brief 저장하지 않은 표시를 @p bChanged 면 켜고 그대로 돌려줍니다. */
         bool recordEdit( bool bChanged );
-        /** @brief 이 바인딩의 발화 칸을 고쳐도 저장에 남으면 true 입니다(`savesTriggerFields`). */
-        bool canEditTriggerFields( const hashed_string& action, uint32 bindIndex ) const;
+        /** @brief 이 바인딩의 발화 칸을 고쳐도 저장에 남으면 true 입니다(`canSaveTriggerProperties`). */
+        bool canEditTriggerProperties( const hashed_string& action, uint32 bindIndex ) const;
         /** @brief 지금 키 잡기가 패드 버튼을 받을 수 있으면 true 입니다. */
         bool canCaptureSlot() const;
         /** @brief 새 바인딩이 들어갈 레이어입니다. 마지막 바인딩의 레이어, 없으면 맵의 기본 레이어입니다. */

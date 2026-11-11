@@ -385,7 +385,7 @@ namespace sw
         return childNode.getText();
     }
 
-    bool XMLNode::takeChildText( const utf8* pName, string& dst ) const
+    bool XMLNode::tryCopyChildText( const utf8* pName, string& dst ) const
     {
         const utf8* pValue = findChildText( pName );
         if ( StringUtil::isNullOrEmpty( pValue ) )

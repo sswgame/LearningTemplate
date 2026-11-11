@@ -20,7 +20,7 @@ SW_TEST_CASE( XMLFieldsNumberListTest, ReadsEveryToken )
     XMLDocument document;
     SW_REQUIRE_TRUE( document.parse( string( kDishHead ) + "quality=\"3, 1;2\"/>" ) );
     DishDef dish;
-    SW_REQUIRE_TRUE( XMLFields::readFields( document.getRoot(), dish, "test" ) );
+    SW_REQUIRE_TRUE( XMLFields::readProperties( document.getRoot(), dish, "test" ) );
     SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( dish._listQualityLevel.size() ) );
     SW_EXPECT_EQUAL( 3, dish._listQualityLevel[0] );
     SW_EXPECT_EQUAL( 2, dish._listQualityLevel[2] );
@@ -34,7 +34,7 @@ SW_TEST_CASE( XMLFieldsNumberListTest, RejectsAnElementOutOfRange )
     XMLDocument document;
     SW_REQUIRE_TRUE( document.parse( string( kDishHead ) + "quality=\"1, 0\"/>" ) );
     DishDef dish;
-    SW_EXPECT_FALSE( XMLFields::readFields( document.getRoot(), dish, "test" ) );
+    SW_EXPECT_FALSE( XMLFields::readProperties( document.getRoot(), dish, "test" ) );
 }
 
 // 읽지 못한 낱말은 건너뛰지 않고 오류다.
@@ -44,5 +44,5 @@ SW_TEST_CASE( XMLFieldsNumberListTest, RejectsAnUnreadableToken )
     XMLDocument document;
     SW_REQUIRE_TRUE( document.parse( string( kDishHead ) + "quality=\"1, x\"/>" ) );
     DishDef dish;
-    SW_EXPECT_FALSE( XMLFields::readFields( document.getRoot(), dish, "test" ) );
+    SW_EXPECT_FALSE( XMLFields::readProperties( document.getRoot(), dish, "test" ) );
 }

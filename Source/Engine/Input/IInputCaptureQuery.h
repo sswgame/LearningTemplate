@@ -27,7 +27,7 @@ namespace sw
         /** @brief @p action 의 물리 입력을 이미 먹었으면(메뉴에서 누른 패드 A, 위젯이 받은 클릭) 뗄 때까지 true 입니다. */
         [[nodiscard]] virtual bool isActionCaptured( const InputMap& inputMap, const hashed_string& action ) const = 0;
         /** @brief 커서를 바라면(메뉴가 열렸다) true 입니다 — 마우스 잠금 · 시선을 쉽니다. */
-        [[nodiscard]] virtual bool isCursorCaptured() const = 0;
+        [[nodiscard]] virtual bool shouldShowCursor() const = 0;
     };
 
     SW_SERVICE_SLOT( IInputCaptureQuery, Optional );

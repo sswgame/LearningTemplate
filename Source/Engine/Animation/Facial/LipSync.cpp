@@ -349,11 +349,11 @@ namespace sw
         }
         if ( XMLReadUtil::hasOnlyKnownNames( root, { "_frameRate" }, { "_listViseme", "_listFrame" }, sourceLabel ) == false )
             return false;
-        const XMLNode           visemes              = root.findChild( "_listViseme" );
-        const XMLNode           frames               = root.findChild( "_listFrame" );
-        const optional<float32> frameRate            = root.readRequiredAttribute<float32>( "_frameRate" );
-        const bool              bMissingVisemeFields = frameRate.has_value() == false || visemes.isValid() == false || visemes.findChild().isValid() == false || frames.isValid() == false;
-        if ( bMissingVisemeFields )
+        const XMLNode           visemes                  = root.findChild( "_listViseme" );
+        const XMLNode           frames                   = root.findChild( "_listFrame" );
+        const optional<float32> frameRate                = root.readRequiredAttribute<float32>( "_frameRate" );
+        const bool              bMissingVisemeProperties = frameRate.has_value() == false || visemes.isValid() == false || visemes.findChild().isValid() == false || frames.isValid() == false;
+        if ( bMissingVisemeProperties )
         {
             SW_LOG_ERROR_ID( "LipSync.VisemeTrackNeedsFrameRate", "Viseme track '%#' needs _frameRate, _listViseme and _listFrame", sourceLabel );
             return false;

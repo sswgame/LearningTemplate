@@ -66,8 +66,8 @@ namespace sw
                 return pBlackboard != nullptr && pBlackboard->copyValue( params._from, params._to ) ? ActionResult::Succeeded : ActionResult::Failed;
             }
 
-            static bool abortsSelf( BehaviorAbortMode mode ) { return mode == BehaviorAbortMode::Self || mode == BehaviorAbortMode::Both; }
-            static bool abortsLowerPriority( BehaviorAbortMode mode ) { return mode == BehaviorAbortMode::LowerPriority || mode == BehaviorAbortMode::Both; }
+            static bool shouldAbortSelf( BehaviorAbortMode mode ) { return mode == BehaviorAbortMode::Self || mode == BehaviorAbortMode::Both; }
+            static bool shouldAbortLowerPriority( BehaviorAbortMode mode ) { return mode == BehaviorAbortMode::LowerPriority || mode == BehaviorAbortMode::Both; }
         };
     } // namespace
 
@@ -417,7 +417,7 @@ namespace sw
         for ( int32 index = 0; index < _pTree->getNodeCount(); ++index )
         {
             const BehaviorNode& node = _pTree->getNode( index );
-            if ( node._type != BehaviorNodeKind::BlackboardCondition || BehaviorTreeInternal::abortsLowerPriority( node._abortMode ) == false )
+            if ( node._type != BehaviorNodeKind::BlackboardCondition || BehaviorTreeInternal::shouldAbortLowerPriority( node._abortMode ) == false )
                 continue;
             const uint8 bNow                                 = BehaviorTree::evaluateCondition( node, _actionContext._world ) ? SW_TRUE : SW_FALSE;
             const bool  bRisen                               = bNow != SW_FALSE && _listLastCondition[static_cast<size_t>( index )] == SW_FALSE;
@@ -587,7 +587,7 @@ namespace sw
             }
             case BehaviorNodeKind::BlackboardCondition:
             {
-                const bool bCheck = bFirst || BehaviorTreeInternal::abortsSelf( node._abortMode );
+                const bool bCheck = bFirst || BehaviorTreeInternal::shouldAbortSelf( node._abortMode );
                 if ( bCheck && BehaviorTree::evaluateCondition( node, _actionContext._world ) == false )
                 {
                     if ( bFirst == false )

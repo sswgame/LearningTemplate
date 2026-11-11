@@ -65,7 +65,7 @@ namespace sw
         void  collectConnected( vector<int32>& outListConnection ) const override;
         int32 getMaxBytesPerSecond() const override;
         bool  isConnectionSaturated( int32 connectionID ) const override;
-        void  addSentKindTally( NetMessageKindStatsTable& outTable ) const override;
+        void  addSentKindStats( NetMessageKindStatsTable& outTable ) const override;
 
     private:
         /** @brief 묶음의 연결 ID 를 샤드와 샤드 안의 ID 로 풉니다. 범위 밖이면 nullptr 입니다. */

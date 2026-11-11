@@ -68,7 +68,7 @@ namespace sw
         hashed_string getCookieTexturePath() const override { return _cookieTexturePath.key(); } // 열쇠는 넣을 때 만든다 — 빛마다 프레임마다 intern 하지 않는다
 
     protected:
-        void writeGPULightKindFields( GPULight& outLight ) const override;
+        void writeGPULightKindProperties( GPULight& outLight ) const override;
 
     private:
         PROPERTY( Category = "Light", DisplayName = "Inner Radius", Min = 0.0, Tooltip = "Full intensity inside this distance", Units = m )
@@ -139,7 +139,7 @@ namespace sw
         void appendGPUTrailingElements( vector<GPULight>& inoutListLight ) const override;
 
     protected:
-        void writeGPULightKindFields( GPULight& outLight ) const override;
+        void writeGPULightKindProperties( GPULight& outLight ) const override;
 
     private:
         PROPERTY( Category = "Light", DisplayName = "Points", Tooltip = "Polygon corners in local XY (3 to 64)", Units = m )
@@ -176,6 +176,6 @@ namespace sw
         virtual ~GlobalLight2DComponent() override = default;
 
     protected:
-        void writeGPULightKindFields( GPULight& outLight ) const override;
+        void writeGPULightKindProperties( GPULight& outLight ) const override;
     };
 } // namespace sw

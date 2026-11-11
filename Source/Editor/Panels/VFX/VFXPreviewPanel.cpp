@@ -245,7 +245,7 @@ namespace sw::editor
         return true;
     }
 
-    bool VFXPreviewPanel::acceptsDocumentPath( string_view assetPath ) const
+    bool VFXPreviewPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return StringUtil::endsWith( assetPath, VFXEffectDef::kExtension );
     }

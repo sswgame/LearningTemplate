@@ -80,12 +80,12 @@ namespace sw
         return count;
     }
 
-    int32 ServerServiceManager::getOpenWorkCount() const
+    int32 ServerServiceManager::getOpenJobCount() const
     {
         int32 count = 0;
         for ( const RunningService& running : _listRunning )
         {
-            count += running._service->getOpenWorkCount();
+            count += running._service->getOpenJobCount();
         }
         return count;
     }

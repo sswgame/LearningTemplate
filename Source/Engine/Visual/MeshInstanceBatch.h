@@ -140,7 +140,7 @@ namespace sw
 
     private:
         /** @brief CPU 가 항목 값을 바꿀 수 있으면 true 입니다. GPU 배치에 쓰려 하면 어설션으로 멈춘다(부른 쪽의 결함이다). */
-        [[nodiscard]] bool acceptsCPUWrite() const;
+        [[nodiscard]] bool canAcceptCPUWrite() const;
 
     private:
         vector<Entry>                _listEntry;

@@ -177,12 +177,12 @@ namespace sw
                     if ( commitResult != ServiceStoreResult::Conflict )
                     {
                         _decision         = SocialLinkDecision{};
-                        _decision._result = SocialOutcome::fail( OnlineError::kUnavailable );
+                        _decision._result = SocialServiceResult::fail( OnlineError::kUnavailable );
                         return;
                     }
                 }
                 _decision         = SocialLinkDecision{};
-                _decision._result = SocialOutcome::fail( OnlineError::kBusy );
+                _decision._result = SocialServiceResult::fail( OnlineError::kBusy );
             }
 
             /** @brief 이름으로 계정 id 를 찾습니다. 못 찾으면 결과를 적고 false 를 반환합니다. */
@@ -193,13 +193,13 @@ namespace sw
                                                                         : ServiceStoreResult::NotFound;
                 if ( found != ServiceStoreResult::Ok )
                 {
-                    _decision._result = found == ServiceStoreResult::NotFound ? SocialResult::NotFound : SocialOutcome::fail( OnlineError::kUnavailable );
+                    _decision._result = found == ServiceStoreResult::NotFound ? SocialResult::NotFound : SocialServiceResult::fail( OnlineError::kUnavailable );
                     return false;
                 }
                 _otherID = identity._accountID;
                 if ( _otherID == _accountID || _otherID == kInvalidAccountID )
                 {
-                    _decision._result = SocialOutcome::fail( OnlineError::kInvalidRequest );
+                    _decision._result = SocialServiceResult::fail( OnlineError::kInvalidRequest );
                     return false;
                 }
                 return true;
@@ -338,23 +338,23 @@ namespace sw
     {
         if ( otherID == kInvalidAccountID || otherID == accountID )
         {
-            pushCompletion( requestTag, SocialOutcome::fail( OnlineError::kInvalidRequest ) );
+            pushCompletion( requestTag, SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
             return;
         }
-        submitLinkWork( operation, accountID, otherID, string_view{}, nowMs, requestTag );
+        submitLinkJob( operation, accountID, otherID, string_view{}, nowMs, requestTag );
     }
 
     void SocialService::requestFriendByName( AccountID accountID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag )
     {
         if ( displayName.empty() )
         {
-            pushCompletion( requestTag, SocialOutcome::fail( OnlineError::kInvalidRequest ) );
+            pushCompletion( requestTag, SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
             return;
         }
-        submitLinkWork( SocialLinkOperation::Request, accountID, kInvalidAccountID, displayName, nowMs, requestTag );
+        submitLinkJob( SocialLinkOperation::Request, accountID, kInvalidAccountID, displayName, nowMs, requestTag );
     }
 
-    void SocialService::submitLinkWork( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag )
+    void SocialService::submitLinkJob( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag )
     {
         (void)ensureLocal( accountID ); // 항목을 있게만 한다 — 쓰는 쪽은 저마다 다시 찾는다
         _store.submit( [pNameIndex = _dependencies._pNameIndex, operation, accountID, otherID, name = string( displayName ), nowMs]( IServiceStoreConnection& connection )
@@ -421,7 +421,7 @@ namespace sw
             return; // 내부에서 건 읽기이다. 첫 요청이나 버스 알림에서 시작한 것이다
         SocialCompletion completion;
         completion._requestTag = requestTag;
-        completion._result     = bReadOk ? SocialResult::Ok : SocialOutcome::fail( OnlineError::kUnavailable );
+        completion._result     = bReadOk ? SocialResult::Ok : SocialServiceResult::fail( OnlineError::kUnavailable );
         completion._listLink   = std::move( listLink );
         _completionBuffer.push( std::move( completion ) );
     }
@@ -445,12 +445,12 @@ namespace sw
                             activity.size() <= static_cast<size_t>( SocialLimit::kMaxActivitySize );
         if ( bValid == false )
         {
-            pushCompletion( requestTag, SocialOutcome::fail( OnlineError::kInvalidRequest ) );
+            pushCompletion( requestTag, SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         if ( writePresenceRecord( SocialPresence{ string( activity ), accountID, status } ) == false )
         {
-            pushCompletion( requestTag, SocialOutcome::fail( OnlineError::kInvalidRequest ) ); // 캐시 값을 못 쓰면 이 서버의 상태도 바꾸지 않는다
+            pushCompletion( requestTag, SocialServiceResult::fail( OnlineError::kInvalidRequest ) ); // 캐시 값을 못 쓰면 이 서버의 상태도 바꾸지 않는다
             return;
         }
         LocalAccount& local      = ensureLocal( accountID );
@@ -621,7 +621,7 @@ namespace sw
         _mapQuery.erase( queryIt );
     }
 
-    void SocialService::pushCompletion( uint64 requestTag, SocialOutcome result )
+    void SocialService::pushCompletion( uint64 requestTag, SocialServiceResult result )
     {
         SocialCompletion completion;
         completion._requestTag = requestTag;

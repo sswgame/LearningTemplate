@@ -78,7 +78,7 @@ namespace sw
         for ( XMLNode level = root.findChild( "Level" ); level.isValid(); level = level.findNextSibling( "Level" ) )
         {
             CharacterLODLevelRule rule;
-            if ( XMLFields::readFields( level, rule, sourceLabel ) == false )
+            if ( XMLFields::readProperties( level, rule, sourceLabel ) == false )
                 return false;
             // 단계가 낮아질수록 비율 · 임계값이 작아져야 한다(`Mesh::setLODs` 와 같은 규칙) — 칸 · 범위는 PROPERTY 가 보고 여기서는 앞 단계와의 관계만 본다.
             const bool bValid = 0.0f < rule._triangleRatio && rule._triangleRatio < previousRatio && 0.0f < rule._screenSize && rule._screenSize < previousScreen;

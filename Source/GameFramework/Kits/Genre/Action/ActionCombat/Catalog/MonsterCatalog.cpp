@@ -36,7 +36,7 @@ namespace sw
 
     uint32 MonsterCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 각 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 몬스터를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 각 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 몬스터를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<MonsterCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&MonsterCatalog::loadMonster>( "Monster" ),
@@ -52,21 +52,21 @@ namespace sw
     bool MonsterCatalog::loadMonster( const XMLNode& node, string_view sourceName )
     {
         MonsterDef monsterDef;
-        bool       bValid = XMLFields::readFields( node, monsterDef, sourceName );
+        bool       bValid = XMLFields::readProperties( node, monsterDef, sourceName );
         // 하위 원소의 오류 줄에 어느 몬스터인지 적는다(하위 원소에는 id 가 없다).
         const string where = string( sourceName ) + " <Monster id=\"" + monsterDef._id + "\">";
         for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
             const string_view name = child.getName() != nullptr ? string_view( child.getName() ) : string_view{};
             if ( name == "Stats" )
-                bValid = XMLFields::readFields( child, monsterDef._stats, where ) && bValid;
+                bValid = XMLFields::readProperties( child, monsterDef._stats, where ) && bValid;
             else if ( name == "AI" )
-                bValid = XMLFields::readFields( child, monsterDef._ai, where ) && bValid;
+                bValid = XMLFields::readProperties( child, monsterDef._ai, where ) && bValid;
             else if ( name == "Shot" )
             {
                 // 사격은 줄마다 한 발이다. 한 번에 쏘는 패턴(겨냥, 옆, 부채)을 코드 없이 적을 수 있다.
                 MonsterShotDef shot;
-                bValid = XMLFields::readFields( child, shot, where ) && bValid;
+                bValid = XMLFields::readProperties( child, shot, where ) && bValid;
                 monsterDef._listShot.push_back( shot );
             }
             else if ( name == "Prefab" )

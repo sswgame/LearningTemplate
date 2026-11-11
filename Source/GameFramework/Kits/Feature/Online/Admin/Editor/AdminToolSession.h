@@ -116,7 +116,7 @@ namespace sw::editor
         const vector<ServiceAuditEntry>&  getAuditRows() const { return _lookupAudit._listAudit; }
         const vector<ServiceReport>&      getReports() const { return _reports._listReport; }
         const vector<AdminLiveEventView>& getLiveEvents() const { return _liveEvents._listLiveEvent; }
-        const AdminOutcome&               getLastResult() const { return _lastResult; }
+        const AdminServiceResult&         getLastResult() const { return _lastResult; }
         uint16                            getLastMethod() const { return _lastMethod; }
         bool                              wasLastReplayed() const { return _bLastReplayed; }
         const string&                     getStatusLine() const { return _statusLine; }
@@ -156,7 +156,7 @@ namespace sw::editor
         int32                            _pendingCount;
         AccountID                        _lookupAccountID;
         AccountID                        _actedAccountID; ///< 마지막 지급 · 회수 · 제재의 대상. shortcut: 답에 계정이 없어 마지막 것만 안다, 답이 계정을 담으면 그 값으로
-        AdminOutcome                     _lastResult;
+        AdminServiceResult               _lastResult;
         uint16                           _lastMethod;
         uint8                            _bHasLookup    : 1;
         uint8                            _bLastReplayed : 1;

@@ -223,7 +223,7 @@ namespace sw
 
     void AutomationJudge::runExpectVisited( AutomationStepContext& context, const AutomationStep& step )
     {
-        const AutomationExpectVisitedParams params = step.readValidatedFields<AutomationExpectVisitedParams>();
+        const AutomationExpectVisitedParams params = step.readValidatedProperties<AutomationExpectVisitedParams>();
         const string_view                   watch  = params._watch;
         const string_view                   target = params._target;
         const string_view                   key    = params._key;
@@ -299,7 +299,7 @@ namespace sw
             context.recordFailure( step, "Remember " + message );
             return;
         }
-        const string name = step.readValidatedFields<AutomationRememberParams>()._as;
+        const string name = step.readValidatedProperties<AutomationRememberParams>()._as;
         string       text = AutomationStepArgsUtil::makeValueText( value );
         SW_LOG_INFO_ID( "Automation.FrameRemember", "[Scenario] frame %# remember %# = %# (%#)", context.getFrameIndex(), name.c_str(), text.c_str(), message.c_str() );
         for ( RememberedValue& remembered : _listRemembered )
@@ -315,7 +315,7 @@ namespace sw
 
     void AutomationJudge::runExpectLog( AutomationStepContext& context, const AutomationStep& step )
     {
-        const AutomationExpectLogParams params     = step.readValidatedFields<AutomationExpectLogParams>();
+        const AutomationExpectLogParams params     = step.readValidatedProperties<AutomationExpectLogParams>();
         const string                    target     = params._contains.empty() ? params._id : string( params._id + "' containing '" + params._contains );
         const uint32                    matchCount = _logCapture.countLinesWithID( params._id, params._contains, params._since );
         if ( params._count != kAutomationNoCount )
@@ -368,9 +368,9 @@ namespace sw
         _listDeferredImagesDiffer.push_back( &step );
     }
 
-    void AutomationJudge::judgeImagesDiffer( AutomationStepContext& context, const AutomationStep& step )
+    void AutomationJudge::evaluateImagesDiffer( AutomationStepContext& context, const AutomationStep& step )
     {
-        const AutomationExpectImagesDifferParams params = step.readValidatedFields<AutomationExpectImagesDifferParams>();
+        const AutomationExpectImagesDifferParams params = step.readValidatedProperties<AutomationExpectImagesDifferParams>();
         if ( _goldenPolicy.has_value() == false )
         {
             context.recordFailure( step, "could not compare the images: " + AutomationStep::describeReason( _goldenPolicy.error() ) );
@@ -412,17 +412,17 @@ namespace sw
         _listDeferredAtMost.push_back( DeferredAtMostCheck{ &step, std::move( pValue ), std::move( description ), limit } );
     }
 
-    void AutomationJudge::judgeDeferred( AutomationStepContext& context )
+    void AutomationJudge::evaluateDeferred( AutomationStepContext& context )
     {
         for ( const DeferredImageCheck& check : _listDeferredImage )
         {
-            judgeImage( context, *check._pStep, check._backendTag );
+            evaluateImage( context, *check._pStep, check._backendTag );
         }
         _listDeferredImage.clear();
 
         for ( const AutomationStep* const pStep : _listDeferredImagesDiffer )
         {
-            judgeImagesDiffer( context, *pStep );
+            evaluateImagesDiffer( context, *pStep );
         }
         _listDeferredImagesDiffer.clear();
 
@@ -440,7 +440,7 @@ namespace sw
         _listDeferredAtMost.clear();
     }
 
-    void AutomationJudge::judgeImage( AutomationStepContext& context, const AutomationStep& step, string_view backendTag )
+    void AutomationJudge::evaluateImage( AutomationStepContext& context, const AutomationStep& step, string_view backendTag )
     {
         const expected<AutomationStepArgsUtil::ExpectImageArgs> parsedArgs = AutomationStepArgsUtil::parseExpectImage( step );
         if ( parsedArgs.has_value() == false )
@@ -456,7 +456,7 @@ namespace sw
         const AutomationGoldenPolicy&                  policy = *_goldenPolicy;
         const AutomationStepArgsUtil::ExpectImageArgs& args   = *parsedArgs;
         const AutomationGoldenLimits                   limits = args.resolveLimits( policy._limits );
-        const string                                   file   = step.readValidatedFields<AutomationExpectImageParams>()._file;
+        const string                                   file   = step.readValidatedProperties<AutomationExpectImageParams>()._file;
         const expected<AutomationImage>                loaded =
             AutomationImage::loadPpm( context.resolveOutputPath( file ) ).and_then( [&]( const AutomationImage& image )
         { return AutomationImage::reduce( image, args._region ); } );
@@ -477,22 +477,22 @@ namespace sw
         { return AutomationImage::compare( reduced, goldenImage, policy._measure ); } );
         const bool                      bCompared  = compared.has_value();
         const AutomationImageDifference difference = bCompared ? *compared : AutomationImageDifference{};
-        const GoldenResult              verdict    = bCompared ? AutomationGoldenUtil::judge( difference, limits, policy._nearLimitRatio ) : GoldenResult::Fail;
+        const GoldenResult              evaluation = bCompared ? AutomationGoldenUtil::judge( difference, limits, policy._nearLimitRatio ) : GoldenResult::Fail;
         string                          line;
         if ( bCompared )
         {
-            static constexpr const utf8* kArrVerdictName[] = { "pass", "pass near limit", "fail" };
-            line                                           = file + " vs " + goldenID + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) + "% differing (at most " +
+            static constexpr const utf8* kArrResultName[] = { "pass", "pass near limit", "fail" };
+            line                                          = file + " vs " + goldenID + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) + "% differing (at most " +
                    AutomationStepArgsUtil::formatNumber( limits._maxDifferingFraction * 100.0 ) + "%), mean distance " + AutomationStepArgsUtil::formatNumber( difference._meanDistance ) + " (at most " +
                    AutomationStepArgsUtil::formatNumber( limits._maxMeanDistance ) + "), largest deep region " + to_string( difference._largestDeepRegionPixels ) + " px (at most " +
-                   to_string( limits._maxDeepRegionPixels ) + ") - " + kArrVerdictName[static_cast<uint32>( verdict )];
+                   to_string( limits._maxDeepRegionPixels ) + ") - " + kArrResultName[static_cast<uint32>( evaluation )];
             SW_LOG_INFO_ID( "Automation.Image", "[Scenario] image %#", line.c_str() );
             _listMetricLine.push_back( line );
             // 기록 모드는 앞 골든과의 차이라 같은 골든의 실행 사이 흔들림이 아니다 — 일반 실행만 모은다.
             if ( _bUpdateGolden == false )
                 _listGoldenSample.push_back( AutomationGoldenSample{ goldenID, difference, limits } );
         }
-        switch ( AutomationGoldenUtil::decide( bHasGolden, bCompared, verdict, _bUpdateGolden ) )
+        switch ( AutomationGoldenUtil::decide( bHasGolden, bCompared, evaluation, _bUpdateGolden ) )
         {
             case GoldenAction::Keep:
             {
@@ -508,7 +508,7 @@ namespace sw
             }
             case GoldenAction::Write:
             {
-                writeGolden( context, step, reduced, goldenID, backendTag, AutomationGoldenUtil::describeWriteReason( bHasGolden, bCompared, verdict ), bCompared ? &difference : nullptr, limits );
+                writeGolden( context, step, reduced, goldenID, backendTag, AutomationGoldenUtil::describeWriteReason( bHasGolden, bCompared, evaluation ), bCompared ? &difference : nullptr, limits );
                 return;
             }
             case GoldenAction::FailMissing:
@@ -571,7 +571,7 @@ namespace sw
 
     optional<string> AutomationJudge::applyLogGate( AutomationResult result )
     {
-        AutomationLogJudgement judgement = _logCapture.judgeLines( *_pLogPolicy );
+        AutomationLogCheckResult evaluation = _logCapture.evaluateLines( *_pLogPolicy );
         if ( engine::areEngineServicesBound() )
         {
             for ( const string& key : engine::getSubsystem<LocalizationManager>().getMissingKeys() )
@@ -582,14 +582,14 @@ namespace sw
                 const AutomationLogResult result = _pLogPolicy->classify( LogLevel::Warning, "Localization.MissingKey", line );
                 if ( bAlreadySeen || result == AutomationLogResult::Declared || result == AutomationLogResult::Allowed )
                     continue;
-                ++judgement._notAllowedCount;
-                judgement._listUnhandled.push_back( "[Warning] [LocalizationManager] (id=Localization.MissingKey) " + line + " (before the scenario started)" );
+                ++evaluation._notAllowedCount;
+                evaluation._listUnhandled.push_back( "[Warning] [LocalizationManager] (id=Localization.MissingKey) " + line + " (before the scenario started)" );
             }
         }
-        _listAllowedLogID = std::move( judgement._listAllowedID );
-        if ( judgement.hasUnhandled() == false )
+        _listAllowedLogID = std::move( evaluation._listAllowedID );
+        if ( evaluation.hasUnhandled() == false )
             return nullopt;
-        _listUnhandledLog = std::move( judgement._listUnhandled );
+        _listUnhandledLog = std::move( evaluation._listUnhandled );
         // 이미 진 실행은 결과를 바꾸지 않는다(원인은 단언 · 시한이다). 줄은 보고의 `unhandledLogs` 에만 남겨, 진 보고도 경고 · 오류 줄을 숨기지 않게 한다.
         if ( result != AutomationResult::Passed )
             return nullopt;
@@ -597,7 +597,7 @@ namespace sw
         {
             _listFailure.push_back( "unhandled log: " + line );
         }
-        return to_string( _listUnhandledLog.size() ) + " unhandled Warning/Error log line(s), " + to_string( judgement._missingIDCount ) +
+        return to_string( _listUnhandledLog.size() ) + " unhandled Warning/Error log line(s), " + to_string( evaluation._missingIDCount ) +
                " without a log id - fix the cause, declare the line with <ExpectLog>, or allow its log id in this scenario with <AllowLog id=\"...\" reason=\"...\"/>"
                " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)";
     }

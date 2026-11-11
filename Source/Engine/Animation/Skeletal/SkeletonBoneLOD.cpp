@@ -128,7 +128,7 @@ namespace sw
         for ( XMLNode level = levels.isValid() ? levels.findChild() : XMLNode{}; level.isValid(); level = level.findNextSibling(), ++levelIndex )
         {
             SkeletonBoneLODLevel entry{};
-            if ( string_view{ level.getName() } != "level" || XMLFields::readFields( level, entry, sourceLabel ) == false ||
+            if ( string_view{ level.getName() } != "level" || XMLFields::readProperties( level, entry, sourceLabel ) == false ||
                  XMLReadUtil::hasOnlyKnownNames( level, { "max_screen_size" }, { "remove" }, sourceLabel ) == false )
             {
                 SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODLevelsHolds", "Bone LOD '%#': <levels> holds only <level> elements", sourceLabel );

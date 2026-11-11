@@ -1044,7 +1044,7 @@ namespace sw
             if ( bSoftwareAdapter && candidateProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_CPU )
                 continue;
             // 셰이더는 네이티브 bindless(SW_BINDLESS)로만 쿠킹한다 — 기능 · 한도가 모자란 장치(모바일에 흔하다)는 텍스처 세트를 만들지 못하고 그리지 못한다.
-            if ( meetsBindlessRequirements( device, candidateProperties.deviceName ) == false )
+            if ( isBindlessCapable( device, candidateProperties.deviceName ) == false )
                 continue;
 
             uint32 queueFamilyCount{ 0 };
@@ -1100,7 +1100,7 @@ namespace sw
         return _physicalDevice != nullptr;
     }
 
-    bool VulkanRHIDevice::meetsBindlessRequirements( VkPhysicalDevice device, const utf8* pDeviceName )
+    bool VulkanRHIDevice::isBindlessCapable( VkPhysicalDevice device, const utf8* pDeviceName )
     {
         VkPhysicalDeviceVulkan12Features features12{};
         features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
@@ -2650,13 +2650,13 @@ namespace sw
         _listPendingSubmit.clear();
     }
 
-    void VulkanRHIDevice::submitFrameWorkNow( VkSemaphore signal )
+    void VulkanRHIDevice::submitFrameJobNow( VkSemaphore signal )
     {
         if ( _bFrameStarted == SW_FALSE || _activeFrameBuffer == VK_NULL_HANDLE )
             return;
         // 세그먼트가 비어 있어도 닫아 넣는다(빈 버퍼 하나의 비용) — 신호는 그 앞의 모든 그래픽스 일을 덮어야 한다.
         _frameStreamContext->endRenderPass();
-        requireVk( vkEndCommandBuffer( _activeFrameBuffer ), "submitFrameWorkNow: vkEndCommandBuffer" );
+        requireVk( vkEndCommandBuffer( _activeFrameBuffer ), "submitFrameJobNow: vkEndCommandBuffer" );
         _listPendingSubmit.push_back( _activeFrameBuffer );
         submitPendingGraphics( signal );
         openNextFrameSegment();
@@ -2698,7 +2698,7 @@ namespace sw
         // (VUID-vkCmdWriteTimestamp-None-00830). 제출 순서는 큐마다라 큐 사이 순서는 이 세마포어가 준다. 읽기는 프레임 펜스 뒤다 — 마지막 그래픽스 제출이 남은 컴퓨트 신호를 기다린다.
         const VkSemaphore graphicsDone = acquireAsyncSemaphore();
         const VkSemaphore computeDone  = acquireAsyncSemaphore();
-        submitFrameWorkNow( graphicsDone );
+        submitFrameJobNow( graphicsDone );
         const VkCommandBuffer      listBuffer = pList->nativeCommandBuffer();
         const VkPipelineStageFlags waitStage  = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         VkSubmitInfo               submitInfo{};
@@ -2735,7 +2735,7 @@ namespace sw
         if ( _listAsyncSignalWaited[signalIndex] != SW_FALSE )
             return;
         // 조인: 그 전 그래픽스 일은 기다리지 않게 먼저 큐에 낸다(포크와 조인 사이가 겹친다). 이 신호는 다음 그래픽스 제출이 기다린다.
-        submitFrameWorkNow( VK_NULL_HANDLE );
+        submitFrameJobNow( VK_NULL_HANDLE );
         _listPendingComputeWait.push_back( _listAsyncSignal[signalIndex] );
         _listAsyncSignalWaited[signalIndex] = SW_TRUE;
     }

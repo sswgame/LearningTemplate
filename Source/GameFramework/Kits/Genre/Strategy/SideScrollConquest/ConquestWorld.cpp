@@ -489,7 +489,7 @@ namespace sw
         stepCapture( deltaTime );
         stepEconomy( deltaTime );
         stepWaves( deltaTime );
-        refreshOutcome();
+        refreshResult();
     }
 
     void ConquestWorld::stepCommander( float32 deltaTime )
@@ -777,7 +777,7 @@ namespace sw
         }
     }
 
-    void ConquestWorld::refreshOutcome()
+    void ConquestWorld::refreshResult()
     {
         bool bEnemyHolds  = false;
         bool bPlayerHolds = false;

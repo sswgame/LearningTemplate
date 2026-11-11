@@ -1,0 +1,7 @@
+{
+  "_comment": "NamingWords 기준선 — 지금 남은 위반 이름(규칙마다). 줄기만 한다: 새 위반은 린트가 막고, 고친 이름은 --lower-baseline 으로 뺀다. 영역별 이전이 0 으로 줄인다.",
+  "verb": [],
+  "term": [],
+  "predicate": [],
+  "lookup": []
+}

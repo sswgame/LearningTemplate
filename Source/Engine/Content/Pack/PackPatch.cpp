@@ -155,7 +155,7 @@ namespace sw
             return false;
         }
         PackPatchManifestParams params;
-        if ( XMLFields::readFields( root, params, sourceName ) == false )
+        if ( XMLFields::readProperties( root, params, sourceName ) == false )
             return false; // 읽기가 원소 · 속성 이름으로 오류를 남겼다
         if ( params._from == params._to )
         {
@@ -196,10 +196,10 @@ namespace sw
         outManifest._packFileName = params._pack;
         for ( XMLNode removed = root.findChild( PackPatchInternal::kRemovedName ); removed.isValid(); removed = removed.findNextSibling( PackPatchInternal::kRemovedName ) )
         {
-            PackPathFields removedFields;
-            if ( XMLFields::readFields( removed, removedFields, sourceName ) == false || removedFields._hash.empty() == false )
+            PackPathFields removedProperties;
+            if ( XMLFields::readProperties( removed, removedProperties, sourceName ) == false || removedProperties._hash.empty() == false )
                 return false;
-            outManifest._listRemovedPath.push_back( removedFields._path );
+            outManifest._listRemovedPath.push_back( removedProperties._path );
         }
         return true;
     }
@@ -217,12 +217,12 @@ namespace sw
             params._packSHA256 = manifest._packSHA256Hex;
             params._signature  = manifest._signatureHex;
         }
-        XMLFields::writeFields( root, params );
+        XMLFields::writeProperties( root, params );
         for ( const string& removedPath : manifest._listRemovedPath )
         {
             PackPathFields removed;
             removed._path = removedPath;
-            XMLFields::writeFields( root.appendChild( PackPatchInternal::kRemovedName ), removed );
+            XMLFields::writeProperties( root.appendChild( PackPatchInternal::kRemovedName ), removed );
         }
         return document.saveToString();
     }
@@ -248,7 +248,7 @@ namespace sw
             return false;
         }
         PackBuildRecordParams params;
-        if ( XMLFields::readFields( root, params, sourceName ) == false )
+        if ( XMLFields::readProperties( root, params, sourceName ) == false )
             return false; // 옛 기록(patching 이 없는 것)은 다시 굽는다 — 없는 값을 Chain 으로 보지 않는다
         if ( params._patching == PackPatchInternal::kPatchingChain )
             outRecord._patching = PackPatching::Chain;
@@ -278,7 +278,7 @@ namespace sw
         for ( XMLNode entry = root.findChild( PackPatchInternal::kEntryName ); entry.isValid(); entry = entry.findNextSibling( PackPatchInternal::kEntryName ) )
         {
             PackPathFields entryParams;
-            if ( XMLFields::readFields( entry, entryParams, sourceName ) == false )
+            if ( XMLFields::readProperties( entry, entryParams, sourceName ) == false )
                 return false;
             PackContentEntry content;
             content._path = entryParams._path;
@@ -314,7 +314,7 @@ namespace sw
         params._patching = record._patching == PackPatching::None ? PackPatchInternal::kPatchingNone : PackPatchInternal::kPatchingChain;
         if ( record._patching == PackPatching::Chain )
             params._build = record._build; // 패치를 쓰지 않는 빌드는 번호도 내용 목록도 갖지 않는다
-        XMLFields::writeFields( root, params );
+        XMLFields::writeProperties( root, params );
         if ( record._patching == PackPatching::None )
             return document.saveToString();
         for ( const PackContentEntry* pEntry : listSorted )
@@ -322,7 +322,7 @@ namespace sw
             PackPathFields entryParams;
             entryParams._path = pEntry->_path;
             entryParams._hash = PackPatchInternal::makeHashText( pEntry->_contentHash );
-            XMLFields::writeFields( root.appendChild( PackPatchInternal::kEntryName ), entryParams );
+            XMLFields::writeProperties( root.appendChild( PackPatchInternal::kEntryName ), entryParams );
         }
         return document.saveToString();
     }

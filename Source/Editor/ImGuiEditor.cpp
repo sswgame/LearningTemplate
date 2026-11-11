@@ -121,7 +121,7 @@ namespace sw::editor
         // 엔진이 비동기로 나르는 일 — 도착하면 화면이 바뀌지만 창 메시지는 오지 않는다(시나리오가 기다리는 `Assets.Pending` 과 같은 판정).
         SceneManager&      sceneManager = editor::getSubsystem<SceneManager>();
         const Scene* const pScene       = sceneManager.getActiveScene();
-        const bool         bLoading     = sceneManager.isTransitioning() || CaptureReadiness::countPendingWork( pScene != nullptr ? pScene->getObjectManager() : nullptr ) > 0;
+        const bool         bLoading     = sceneManager.isTransitioning() || CaptureReadiness::countPendingJobs( pScene != nullptr ? pScene->getObjectManager() : nullptr ) > 0;
         uint32             reasons      = 0;
         reasons |= bInput ? static_cast<uint32>( EditorRedrawReason::Input ) : 0u;
         reasons |= bActive ? static_cast<uint32>( EditorRedrawReason::ActiveItem ) : 0u;

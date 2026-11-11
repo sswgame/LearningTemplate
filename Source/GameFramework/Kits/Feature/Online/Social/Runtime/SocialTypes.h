@@ -49,7 +49,7 @@ namespace sw
      * @brief 친구 · 길드 결과입니다. 업무 결과(`SocialResult`) 또는 공통 범주(`OnlineError`)입니다.
      * @details 자기 자신 · 0 · 규칙 밖 값은 `kInvalidRequest`, 저장소 · 캐시 장애는 `kUnavailable`, 다시 해도 경합이면 `kBusy`, 로그인 없음은 `kUnauthenticated` 이다.
      */
-    using SocialOutcome = OnlineOutcome<SocialResult>;
+    using SocialServiceResult = OnlineServiceResult<SocialResult>;
 } // namespace sw
 
 namespace sw

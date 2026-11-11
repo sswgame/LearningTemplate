@@ -181,7 +181,7 @@ namespace
             random.setSeed( 3 );
             sw::SpawnDirector director;
             director.initialize( nullptr, 1u );
-            sw::ShopState shop;
+            sw::ShopManager shop;
             shop.initialize( nullptr, nullptr );
 
             sw::Archive written;

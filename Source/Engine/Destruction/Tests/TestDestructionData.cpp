@@ -315,12 +315,12 @@ SW_TEST_CASE( FractureGraphTest, SingleLeafIsItsOwnRoot )
 // 구조 검사는 틀린 곳마다 이유를 말한다.
 SW_TEST_CASE( FractureGraphTest, IsValidExplainsWhatIsWrong )
 {
-    const auto reasonOf = []( const FractureGraph& graph )
+    const auto getReasonOf = []( const FractureGraph& graph )
     {
         const expected<void> valid = graph.validate();
         return valid.has_value() ? string{} : string( valid.error().message() );
     };
-    SW_EXPECT_EQUAL( reasonOf( FractureGraph{} ), string( "no leaves" ) );
+    SW_EXPECT_EQUAL( getReasonOf( FractureGraph{} ), string( "no leaves" ) );
 
     FractureGraph  base = DestructionDataTestUtil::makeLeaves( 2 );
     vector<uint32> listOrder;
@@ -330,23 +330,23 @@ SW_TEST_CASE( FractureGraphTest, IsValidExplainsWhatIsWrong )
 
     FractureGraph badLink = base;
     badLink._listLink[0]  = FractureLink{ 1, 0, 1.0f };
-    SW_EXPECT_EQUAL( reasonOf( badLink ), string( "bad link" ) );
+    SW_EXPECT_EQUAL( getReasonOf( badLink ), string( "bad link" ) );
 
     FractureGraph badRoot               = base;
     badRoot._listNode.back()._leafCount = 1;
-    SW_EXPECT_EQUAL( reasonOf( badRoot ), string( "root must hold every leaf" ) );
+    SW_EXPECT_EQUAL( getReasonOf( badRoot ), string( "root must hold every leaf" ) );
 
     FractureGraph badParent        = base;
     badParent._listNode[0]._parent = 0;
-    SW_EXPECT_EQUAL( reasonOf( badParent ), string( "a parent must come after its child" ) );
+    SW_EXPECT_EQUAL( getReasonOf( badParent ), string( "a parent must come after its child" ) );
 
     FractureGraph badChild     = base;
     badChild._listChildNode[0] = 99;
-    SW_EXPECT_EQUAL( reasonOf( badChild ), string( "child does not point back at its parent" ) );
+    SW_EXPECT_EQUAL( getReasonOf( badChild ), string( "child does not point back at its parent" ) );
 
     FractureGraph badLeaf = base;
     badLeaf._leafCount    = 3;
-    SW_EXPECT_EQUAL( reasonOf( badLeaf ), string( "root must hold every leaf" ) );
+    SW_EXPECT_EQUAL( getReasonOf( badLeaf ), string( "root must hold every leaf" ) );
 }
 
 /**

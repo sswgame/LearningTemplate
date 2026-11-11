@@ -51,7 +51,7 @@ namespace
         void  collectConnected( vector<int32>& outListConnection ) const override { _inner.collectConnected( outListConnection ); }
         int32 getMaxBytesPerSecond() const override { return _inner.getMaxBytesPerSecond(); }
         bool  isConnectionSaturated( int32 connectionID ) const override { return _inner.isConnectionSaturated( connectionID ); }
-        void  addSentKindTally( NetMessageKindStatsTable& outTable ) const override { _inner.addSentKindTally( outTable ); }
+        void  addSentKindStats( NetMessageKindStatsTable& outTable ) const override { _inner.addSentKindStats( outTable ); }
 
     private:
         NetEndpoint&                 _inner;

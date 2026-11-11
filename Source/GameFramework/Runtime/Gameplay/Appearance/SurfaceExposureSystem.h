@@ -7,7 +7,7 @@
  *          언리얼 `UWorldSubsystem` 이 등록받은 목록을 돌고, Mass 처리기가 한 종류를 한 번에 도는 자리다.
  *
  *          - 왜 씬 서비스가 아닌가: 씬 서비스 표(`SW_SCENE_SERVICE`)는 Engine 이미지 안에서만 채운다. GameFramework 의 타입은 프레임 시스템으로 붙고 뗀다 —
- *            첫 노출 컴포넌트의 `onRegister` 가 붙이고(`ensureFor`), 마지막의 `onUnregister` 가 뗀다(`releaseIfUnused`).
+ *            첫 노출 컴포넌트의 `onRegister` 가 붙이고(`findOrCreate`), 마지막의 `onUnregister` 가 뗀다(`releaseIfUnused`).
  *          - 같은 프레임의 순서: 넣은 일은 그 프레임의 틱이 미룬 일보다 앞에 돈다(넣은 순서). 노출이 쓰는 외형 표면 상태는 외형의 다음 틱이 감쇠 · 머티리얼로 올린다 — 예전과 같다.
  */
 #pragma once
@@ -39,7 +39,7 @@ namespace sw
         /** @brief 매니저에 붙은 시스템입니다. 없으면 nullptr 입니다. */
         static SurfaceExposureSystem* find( const GameObjectManager& manager );
         /** @brief 매니저의 시스템을 반환합니다. 없으면 붙입니다(게임 스레드, 틱 밖). */
-        static SurfaceExposureSystem& ensureFor( GameObjectManager& manager );
+        static SurfaceExposureSystem& findOrCreate( GameObjectManager& manager );
         /** @brief 노출 컴포넌트가 하나도 등록되어 있지 않으면 시스템을 뗍니다. */
         static void releaseIfUnused( GameObjectManager& manager );
 

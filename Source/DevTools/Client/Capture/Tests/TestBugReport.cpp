@@ -15,7 +15,7 @@ SW_TEST_CASE( BugReportTest, ReportThatVanishedIsNotAnError )
 }
 
 /** @brief [BugReportTest] 재현 환경(플랫폼 · 타깃 · 씬 · 설정 해시)과 입력 기록 길이가 info.txt 를 돌아 그대로 온다 */
-SW_TEST_CASE( BugReportTest, EnvironmentAndInputFieldsRoundTrip )
+SW_TEST_CASE( BugReportTest, EnvironmentAndInputPropertiesRoundTrip )
 {
     const string directory = test::makeScratchPath( "SwBugReportEnvironment" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( directory ) );
@@ -40,7 +40,7 @@ SW_TEST_CASE( BugReportTest, EnvironmentAndInputFieldsRoundTrip )
 }
 
 /** @brief [BugReportTest] 환경 대조는 다른 칸만 `칸: 기록 -> 지금` 으로 낸다. 기록하지 못한 빈 칸은 대조하지 않는다 */
-SW_TEST_CASE( BugReportTest, EnvironmentMismatchListsOnlyDifferingFields )
+SW_TEST_CASE( BugReportTest, EnvironmentMismatchListsOnlyDifferingProperties )
 {
     BugReport recorded;
     recorded._platform   = "Windows";

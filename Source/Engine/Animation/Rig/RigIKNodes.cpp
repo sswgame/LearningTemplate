@@ -48,7 +48,7 @@ namespace sw
                 {
                     RigXMLReader        limitReader( limits.at( index ), reader.getContext() );
                     RigJointLimitParams params;
-                    bool                bOk = limitReader.readFields( params );
+                    bool                bOk = limitReader.readProperties( params );
                     bOk                     = limitReader.finish() && bOk;
                     if ( bOk == false || params._type == RigJointLimitType::None )
                     {
@@ -80,7 +80,7 @@ namespace sw
                 {
                     RigXMLReader footReader( feet.at( index ), reader.getContext() );
                     RigLegParams leg;
-                    bOk = footReader.readFields( leg );
+                    bOk = footReader.readProperties( leg );
                     bOk = footReader.finish() && bOk;
                     TFoot foot{};
                     foot._rootName = leg._root;
@@ -149,7 +149,7 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                return reader.readFields( _params );
+                return reader.readProperties( _params );
             }
 
             [[nodiscard]] bool bind( const RigBindContext& context ) override
@@ -244,7 +244,7 @@ namespace sw
             {
 
                 // 한 관절의 회전 상한은 CCD 만 받는다 — FABRIK 은 사슬 공통 칸만 읽는다(그 키를 적으면 모르는 키다).
-                bool bOk                  = ( _bFABRIK == SW_TRUE ) ? reader.readFields( static_cast<RigChainIKParams&>( _params ) ) : reader.readFields( _params );
+                bool bOk                  = ( _bFABRIK == SW_TRUE ) ? reader.readProperties( static_cast<RigChainIKParams&>( _params ) ) : reader.readProperties( _params );
                 _settings._iterationCount = _params._iterations;
                 _settings._tolerance      = _params._tolerance;
                 _settings._maxStepAngle   = _params._maxStepDegrees * MathUtil::kDegreeToRadian;
@@ -307,7 +307,7 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                bool bOk               = reader.readFields( _params ); // 0..180 도는 PROPERTY 가 본다
+                bool bOk               = reader.readProperties( _params ); // 0..180 도는 PROPERTY 가 본다
                 _maxAngle              = _params._maxDegrees * MathUtil::kDegreeToRadian;
                 _aimAxis               = _params._aimAxis.normalize();
                 const RigXMLList chain = reader.readArray( "chain", false );
@@ -315,7 +315,7 @@ namespace sw
                 {
                     RigXMLReader      entryReader( chain.at( index ), reader.getContext() );
                     RigAimChainParams entryParams;
-                    bOk = entryReader.readFields( entryParams );
+                    bOk = entryReader.readProperties( entryParams );
                     bOk = entryReader.finish() && bOk;
                     ChainEntry entry{};
                     entry._name     = entryParams._bone;
@@ -431,7 +431,7 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                bool bOk       = reader.readFields( _params );
+                bool bOk       = reader.readProperties( _params );
                 _maxAlignAngle = _params._maxAlignDegrees * MathUtil::kDegreeToRadian;
                 bOk            = RigIKNodesInternal::parseLegs( reader, _listFoot ) && bOk;
                 return bOk && reader.isOk();
@@ -623,7 +623,7 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                bool bOk                    = reader.readFields( _params ); // 골반 내림 >= 0 은 PROPERTY 가 본다
+                bool bOk                    = reader.readProperties( _params ); // 골반 내림 >= 0 은 PROPERTY 가 본다
                 bOk                         = RigIKNodesInternal::parseLegs( reader, _listFoot ) && bOk;
                 const bool bScaleRangeValid = 0.0f < _params._minScale && _params._minScale <= _params._maxScale;
                 if ( bOk && bScaleRangeValid == false )
@@ -765,7 +765,7 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                bool bOk                  = reader.readFields( _params ); // 골반 오프셋 >= 0 은 PROPERTY 가 본다
+                bool bOk                  = reader.readProperties( _params ); // 골반 오프셋 >= 0 은 PROPERTY 가 본다
                 _settings._iterationCount = _params._iterations;
                 _settings._tolerance      = _params._tolerance;
                 const RigXMLList chains   = reader.readArray( "chains", true );
@@ -774,7 +774,7 @@ namespace sw
                     RigXMLReader           chainReader( chains.at( index ), reader.getContext() );
                     RigFullBodyChainParams chainParams;
                     Chain                  chain{};
-                    bOk                   = chainReader.readFields( chainParams );
+                    bOk                   = chainReader.readProperties( chainParams );
                     bOk                   = chainReader.readNameList( "bones", chain._listBoneName, true ) && bOk;
                     bOk                   = chainReader.finish() && bOk;
                     chain._targetName     = chainParams._target;

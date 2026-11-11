@@ -214,15 +214,15 @@ namespace sw
         /** @brief 객체 하나(칸 이름의 자식 요소)를 꺼냅니다. 없으면 무효 노드입니다. */
         XMLNode readObject( string_view key, bool bRequired );
         /**
-         * @brief 이 요소의 속성을 리플렉션 칸 구조체(@p pInstance, @p typeInfo) 하나로 읽습니다(`XMLFields::readFields` — RigNodeParams.h). 칸의 키는 읽은 것으로 기록합니다.
+         * @brief 이 요소의 속성을 리플렉션 칸 구조체(@p pInstance, @p typeInfo) 하나로 읽습니다(`XMLFields::readProperties` — RigNodeParams.h). 칸의 키는 읽은 것으로 기록합니다.
          * @details 모르는 키는 `finish` 가 손으로 읽은 키와 함께 한 번에 낸다. 칸 오류(필수 · 값 · 범위)는 이 리더의 오류(`Rig.Rig`)로 남고 리더는 실패 상태가 된다.
          */
-        [[nodiscard]] bool readFields( void* pInstance, const TypeInfo& typeInfo );
-        /** @brief `readFields` 의 타입 지정 버전입니다(`TParams::StaticType()`). */
+        [[nodiscard]] bool readProperties( void* pInstance, const TypeInfo& typeInfo );
+        /** @brief `readProperties` 의 타입 지정 버전입니다(`TParams::StaticType()`). */
         template <typename TParams>
-        [[nodiscard]] bool readFields( TParams& outParams )
+        [[nodiscard]] bool readProperties( TParams& outParams )
         {
-            return readFields( &outParams, *TParams::StaticType() );
+            return readProperties( &outParams, *TParams::StaticType() );
         }
 
         /** @brief 오류를 남기고 실패로 둡니다. */

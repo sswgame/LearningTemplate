@@ -22,11 +22,11 @@ namespace
     /** @brief 파티 찾기의 답을 받습니다. */
     struct PartyFoundSink
     {
-        PartySnapshot      _party{};
-        int32              _count{ 0 };
-        MatchmakingOutcome _result{ MatchmakingResult::Ok };
+        PartySnapshot            _party{};
+        int32                    _count{ 0 };
+        MatchmakingServiceResult _result{ MatchmakingResult::Ok };
 
-        void onFound( uint64 /*tag*/, MatchmakingOutcome result, const PartySnapshot& party )
+        void onFound( uint64 /*tag*/, MatchmakingServiceResult result, const PartySnapshot& party )
         {
             ++_count;
             _result = result;
@@ -101,13 +101,13 @@ namespace
             return created._party._partyID;
         }
 
-        MatchmakingOutcome invite( AccountID leaderID, AccountID targetID )
+        MatchmakingServiceResult invite( AccountID leaderID, AccountID targetID )
         {
             _service.inviteToParty( leaderID, targetID, 2 );
             return take( 2 )._result;
         }
 
-        MatchmakingOutcome accept( AccountID accountID, uint64 partyID )
+        MatchmakingServiceResult accept( AccountID accountID, uint64 partyID )
         {
             _service.acceptPartyInvite( accountID, partyID, 3 );
             return take( 3 )._result;
@@ -145,13 +145,13 @@ namespace
             return take( 5 );
         }
 
-        MatchmakingOutcome ready( AccountID accountID, uint64 lobbyID, bool bReady = true )
+        MatchmakingServiceResult ready( AccountID accountID, uint64 lobbyID, bool bReady = true )
         {
             _service.setLobbyReady( accountID, lobbyID, bReady, 6 );
             return take( 6 )._result;
         }
 
-        MatchmakingOutcome start( AccountID accountID, uint64 lobbyID )
+        MatchmakingServiceResult start( AccountID accountID, uint64 lobbyID )
         {
             _service.startLobby( accountID, lobbyID, 7 );
             return take( 7 )._result;

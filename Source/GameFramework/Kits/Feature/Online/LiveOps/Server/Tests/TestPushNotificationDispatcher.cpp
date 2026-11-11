@@ -68,12 +68,12 @@ namespace
             pump();
         }
 
-        LiveOpsOutcome takeCompletion()
+        LiveOpsServiceResult takeCompletion()
         {
             vector<PushDeviceCompletion> listCompletion;
             _dispatcher.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
-            return listCompletion.empty() ? LiveOpsOutcome::fail( OnlineError::kUnavailable ) : listCompletion[0]._result;
+            return listCompletion.empty() ? LiveOpsServiceResult::fail( OnlineError::kUnavailable ) : listCompletion[0]._result;
         }
     };
 } // namespace
@@ -250,7 +250,7 @@ SW_TEST_CASE( PushDispatcherTest, StoreFailureDropsTheNotification )
     rig._database.armFault( ServiceStoreFault::RejectRead );
     rig.notify();
     SW_EXPECT_TRUE( rig._provider.getSent().empty() );
-    SW_EXPECT_EQUAL( 0, rig._dispatcher.getPendingWorkCount() );
+    SW_EXPECT_EQUAL( 0, rig._dispatcher.getPendingJobCount() );
     rig.notify();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._provider.getSent().size() );
 }

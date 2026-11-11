@@ -190,7 +190,7 @@ namespace sw
             // ------------------------------------------------------------------------------
 
             /** @brief 매니페스트 @p pManifest 가 목록의 몇 번째인지입니다. */
-            static size_t indexOf( const ModuleCatalog& catalog, const ModuleManifest* pManifest )
+            static size_t getIndexOf( const ModuleCatalog& catalog, const ModuleManifest* pManifest )
             {
                 return static_cast<size_t>( pManifest - catalog.getManifests().data() );
             }
@@ -207,7 +207,7 @@ namespace sw
                     const ModuleManifest* pTarget = catalog.findManifest( entry._name );
                     if ( pTarget == nullptr )
                         return unexpected( Error{ ErrorKind::NotFound, "a module override names an unknown module", entry._name }.appendDetail( " in " ).appendDetail( pProject->_sourcePath ) );
-                    outListOverride[indexOf( catalog, pTarget )] = entry._bEnabled ? 1 : 0;
+                    outListOverride[getIndexOf( catalog, pTarget )] = entry._bEnabled ? 1 : 0;
                 }
                 return {};
             }
@@ -251,7 +251,7 @@ namespace sw
                             const ModuleManifest* pDependency = catalog.findManifest( dependency._name );
                             if ( pDependency == nullptr )
                                 break; // 없는 의존은 다음 단계(`collectDependencies`)가 오류로 알린다
-                            const size_t dependencyIndex = indexOf( catalog, pDependency );
+                            const size_t dependencyIndex = getIndexOf( catalog, pDependency );
                             if ( inoutListActive[dependencyIndex] == SW_FALSE )
                             {
                                 inoutListActive[index] = SW_FALSE;
@@ -281,7 +281,7 @@ namespace sw
                             return unexpected( Error{ ErrorKind::NotFound, "a module depends on a module that has no manifest (missing module)", manifest._name }
                                                    .appendDetail( " -> " )
                                                    .appendDetail( dependency._name ) );
-                        const size_t dependencyIndex = indexOf( catalog, pDependency );
+                        const size_t dependencyIndex = getIndexOf( catalog, pDependency );
                         if ( listActive[dependencyIndex] == SW_FALSE )
                             return unexpected( Error{ ErrorKind::NotFound, "a module depends on an inactive module", manifest._name }
                                                    .appendDetail( " -> " )
@@ -309,12 +309,12 @@ namespace sw
                 const size_t        manifestCount = catalog.getManifestCount();
                 vector<uint32>      listActiveIndex;
                 vector<string_view> listActiveName;
-                vector<uint32>      listCompactOf( manifestCount, 0 );
+                vector<uint32>      getListCompactOf( manifestCount, 0 );
                 for ( size_t index = 0; index < manifestCount; ++index )
                 {
                     if ( listActive[index] == SW_FALSE )
                         continue;
-                    listCompactOf[index] = static_cast<uint32>( listActiveIndex.size() );
+                    getListCompactOf[index] = static_cast<uint32>( listActiveIndex.size() );
                     listActiveIndex.push_back( static_cast<uint32>( index ) );
                     listActiveName.push_back( catalog.getManifests()[index]._name );
                 }
@@ -323,7 +323,7 @@ namespace sw
                 {
                     for ( const uint32 dependencyIndex : listDependency[listActiveIndex[compactIndex]] )
                     {
-                        graph.addDependency( compactIndex, listCompactOf[dependencyIndex] );
+                        graph.addDependency( compactIndex, getListCompactOf[dependencyIndex] );
                     }
                 }
 

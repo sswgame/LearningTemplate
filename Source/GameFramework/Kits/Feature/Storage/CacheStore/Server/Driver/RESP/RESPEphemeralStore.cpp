@@ -127,7 +127,7 @@ namespace sw
     {
         if ( _bInitialized == SW_TRUE && _bShutdown == SW_FALSE )
         {
-            pumpTransport();
+            pollTransport();
             vector<RESPReplyRecord> listRecord;
             {
                 ScopedLock<mutex> lock{ _mutex };
@@ -208,7 +208,7 @@ namespace sw
     {
         if ( _bInitialized == SW_TRUE && _bShutdown == SW_FALSE )
         {
-            pumpTransport();
+            pollTransport();
             vector<RESPValue> listValue;
             {
                 ScopedLock<mutex> lock{ _mutex };
@@ -308,7 +308,7 @@ namespace sw
         }
     }
 
-    void RESPEphemeralStore::pumpTransport()
+    void RESPEphemeralStore::pollTransport()
     {
         if ( _transportSettings->_ioThreadCount == 0 )
             (void)_transport->pollIO( 0 );
@@ -771,7 +771,7 @@ namespace sw
         vector<RESPValue> listValue;
         while ( _subscriptionAckCount < targetAckCount && deadline.isExpired() == false )
         {
-            pumpTransport();
+            pollTransport();
             listValue.clear();
             {
                 ScopedLock<mutex> lock{ _mutex };

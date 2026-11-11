@@ -329,7 +329,7 @@ namespace sw
         PhysicsBodyHandle findHandle( const JPH::BodyID& bodyID ) const;
         void              setHandle( const JPH::BodyID& bodyID, PhysicsBodyHandle body );
         /** @brief 바디들에 붙은 관절과 바퀴 차를 지웁니다(바디를 지우기 전에 호출합니다). */
-        void destroyJointsOf( span<const PhysicsBodyHandle> listBody );
+        void destroyJoints( span<const PhysicsBodyHandle> listBody );
         /** @brief 바디 쌍의 접촉을 받을지 쌍 필터로 정합니다(잡 스레드, `JoltContactListener::OnContactValidate`). */
         JPH::ValidateResult validateContact( const JPH::Body& bodyA, const JPH::Body& bodyB ) const;
         /** @brief 접촉이 생기거나 유지될 때 재질을 섞고 알림을 붙입니다(잡 스레드, `_reportMutex`). */

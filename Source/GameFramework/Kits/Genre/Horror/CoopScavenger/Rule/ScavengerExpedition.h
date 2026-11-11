@@ -1,7 +1,7 @@
 /**
  * @file ScavengerExpedition.h
  * @brief 협동 수집 공포 한 판을 진행합니다. 위성 고르기(이동 비용), 착륙, 하루(기반 WorldClock, 도착과 해 질 녘과 자정 자동 이륙), 날씨(기반 WeatherSystem),
- *        시설, 고철 운반, 위협(기반 SpawnDirector 의 실내와 실외), 죽음과 시신 회수, 벌금, 전멸 손실, 회사 매입, 할당량, 터미널 상점(기반 ShopState 와 Wallet)을 다룹니다.
+ *        시설, 고철 운반, 위협(기반 SpawnDirector 의 실내와 실외), 죽음과 시신 회수, 벌금, 전멸 손실, 회사 매입, 할당량, 터미널 상점(기반 ShopManager 와 Wallet)을 다룹니다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -221,7 +221,7 @@ namespace sw
         ScavengerFacility           _facility;
         SpawnDirector               _indoorDirector;
         SpawnDirector               _outdoorDirector;
-        ShopState                   _shop;
+        ShopManager                 _shop;
         GameRandom                  _random;
         Inventory*                  _pShipStorage; ///< 우주선 창고(빌림)
         Wallet*                     _pWallet;      ///< 빌린 지갑(회사 돈)

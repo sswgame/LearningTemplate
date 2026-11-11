@@ -23,7 +23,7 @@ namespace sw
         [[nodiscard]] bool readLootEntry( const XMLNode& node, string_view sourceName, LootEntry& outEntry )
         {
             LootEntryRowDef row;
-            if ( XMLFields::readFields( node, row, sourceName ) == false )
+            if ( XMLFields::readProperties( node, row, sourceName ) == false )
                 return false;
             const bool bHasMax = node.findAttribute( "max" ) != nullptr;
             if ( bHasMax && row._max < row._min )
@@ -68,9 +68,9 @@ namespace sw
         const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
         if ( pID == nullptr )
             return false;
-        // 기본값 · 범위는 스키마(LootTableRowDef · LootEntryRowDef)가 정한다. 오류가 있는 테이블 · 항목은 넣지 않는다(오류는 readFields 가 남긴다).
+        // 기본값 · 범위는 스키마(LootTableRowDef · LootEntryRowDef)가 정한다. 오류가 있는 테이블 · 항목은 넣지 않는다(오류는 readProperties 가 남긴다).
         LootTableRowDef row;
-        if ( XMLFields::readFields( node, row, sourceName, { "id" } ) == false )
+        if ( XMLFields::readProperties( node, row, sourceName, { "id" } ) == false )
             return false;
         const bool bHasRollsMax = node.findAttribute( "rollsMax" ) != nullptr;
         if ( bHasRollsMax && row._rollsMax < row._rolls )

@@ -297,22 +297,22 @@ namespace sw
     {
         if ( LiveEventRules::isValid( definition ) == false )
         {
-            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } );
+            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        ServiceAuditedWrite work;
-        if ( LiveOpsProtocol::encodeEvent( definition, work._bytes ) == false )
+        ServiceAuditedWrite pendingJob;
+        if ( LiveOpsProtocol::encodeEvent( definition, pendingJob._bytes ) == false )
         {
-            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
+            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
-        work._key                 = definition._eventID;
-        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
-        work._auditEntry._action  = "liveops.event.put";
-        work._auditEntry._subject = "liveops/" + definition._eventID;
-        work._auditEntry._memo    = string( memo );
-        work._auditEntry._timeMs  = nowMs.count();
-        submitWrite( std::move( work ), requestTag );
+        pendingJob._key                 = definition._eventID;
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._auditEntry._action  = "liveops.event.put";
+        pendingJob._auditEntry._subject = "liveops/" + definition._eventID;
+        pendingJob._auditEntry._memo    = string( memo );
+        pendingJob._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( pendingJob ), requestTag );
     }
 
     void LiveOpsService::putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
@@ -320,7 +320,7 @@ namespace sw
         LiveEventDef definition;
         if ( LiveOpsProtocol::readEventJSON( definitionJSON, definition ) == false )
         {
-            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } ); // JSON 이 아니거나 모르는 필드가 있다
+            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsServiceResult::fail( OnlineError::kInvalidRequest ) } ); // JSON 이 아니거나 모르는 필드가 있다
             return;
         }
         putEvent( definition, actorID, memo, nowMs, requestTag ); // 규칙 검사는 같은 길(`LiveEventRules::isValid`)이다
@@ -357,34 +357,34 @@ namespace sw
     {
         if ( LiveOpsLimit::isValidKey( eventID, LiveOpsLimit::kMaxIDSize ) == false )
         {
-            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } );
+            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        ServiceAuditedWrite work;
-        work._key                 = string( eventID );
-        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
-        work._auditEntry._action  = "liveops.event.remove";
-        work._auditEntry._subject = "liveops/" + work._key;
-        work._auditEntry._memo    = string( memo );
-        work._auditEntry._timeMs  = nowMs.count();
-        submitWrite( std::move( work ), requestTag );
+        ServiceAuditedWrite pendingJob;
+        pendingJob._key                 = string( eventID );
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._auditEntry._action  = "liveops.event.remove";
+        pendingJob._auditEntry._subject = "liveops/" + pendingJob._key;
+        pendingJob._auditEntry._memo    = string( memo );
+        pendingJob._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( pendingJob ), requestTag );
     }
 
-    void LiveOpsService::submitWrite( ServiceAuditedWrite&& work, uint64 requestTag )
+    void LiveOpsService::submitWrite( ServiceAuditedWrite&& pendingJob, uint64 requestTag )
     {
-        work._table = LiveOpsServiceInternal::getEventTable();
-        _store.submit( [work = std::move( work )]( IServiceStoreConnection& connection )
-        { return work.commit( connection ); },
+        pendingJob._table = LiveOpsServiceInternal::getEventTable();
+        _store.submit( [pendingJob = std::move( pendingJob )]( IServiceStoreConnection& connection )
+        { return pendingJob.commit( connection ); },
                        [this, requestTag]( ServiceStoreResult result )
         {
-            const LiveOpsOutcome outcome = result == ServiceStoreResult::Ok       ? LiveOpsOutcome{ LiveOpsResult::Ok }
-                                         : result == ServiceStoreResult::NotFound ? LiveOpsOutcome{ LiveOpsResult::NotFound }
-                                                                                  : LiveOpsOutcome::fail( OnlineError::kUnavailable );
-            applyWrite( requestTag, outcome );
+            const LiveOpsServiceResult serviceResult = result == ServiceStoreResult::Ok       ? LiveOpsServiceResult{ LiveOpsResult::Ok }
+                                                     : result == ServiceStoreResult::NotFound ? LiveOpsServiceResult{ LiveOpsResult::NotFound }
+                                                                                              : LiveOpsServiceResult::fail( OnlineError::kUnavailable );
+            applyWrite( requestTag, serviceResult );
         } );
     }
 
-    void LiveOpsService::applyWrite( uint64 requestTag, LiveOpsOutcome result )
+    void LiveOpsService::applyWrite( uint64 requestTag, LiveOpsServiceResult result )
     {
         _completionBuffer.push( LiveOpsCompletion{ requestTag, result } );
         if ( result != LiveOpsResult::Ok )

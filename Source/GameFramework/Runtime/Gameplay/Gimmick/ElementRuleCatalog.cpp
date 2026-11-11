@@ -217,7 +217,7 @@ namespace sw
     bool ElementRuleCatalog::readStimulusRule( const XMLNode& node, ElementStimulusRule& outRule, string_view sourceName ) const
     {
         ElementStimulusRuleParams params;
-        bool                      bValid = XMLFields::readFields( node, params, sourceName );
+        bool                      bValid = XMLFields::readProperties( node, params, sourceName );
         bValid                           = readIndex( params._material, node, "material", &ElementRuleCatalog::findMaterial, outRule._material, sourceName ) && bValid;
         bValid                           = readIndex( params._flag, node, "flag", &ElementRuleCatalog::findFlag, outRule._flag, sourceName ) && bValid;
         bValid                           = readIndex( params._status, node, "status", &ElementRuleCatalog::findStatus, outRule._status, sourceName ) && bValid;
@@ -250,7 +250,7 @@ namespace sw
             return false;
         }
         ElementStepRuleParams params; // 상태 필수 · 형태는 ENUM() 이름 · after >= 0
-        bool                  bValid = XMLFields::readFields( node, params, sourceName );
+        bool                  bValid = XMLFields::readProperties( node, params, sourceName );
         bValid                       = readIndex( params._status, node, "status", &ElementRuleCatalog::findStatus, outRule._status, sourceName ) && bValid;
         bValid                       = readIndex( params._neighbor, node, "neighbor", &ElementRuleCatalog::findMaterial, outRule._material, sourceName ) && bValid;
         bValid                       = readIndex( params._setMaterial, node, "setMaterial", &ElementRuleCatalog::findMaterial, outRule._setMaterial, sourceName ) && bValid;
@@ -273,7 +273,7 @@ namespace sw
         clear();
         // 적지 않으면 clear() 가 둔 기본 스텝 길이다. 0 이하 · 깨진 값은 오류다.
         ElementRuleRootParams rootParams{ _stepTime };
-        const bool            bRoot = XMLFields::readFields( root, rootParams, sourceName ); // stepTime > 0 은 PROPERTY 가 본다
+        const bool            bRoot = XMLFields::readProperties( root, rootParams, sourceName ); // stepTime > 0 은 PROPERTY 가 본다
         _stepTime                   = bRoot ? rootParams._stepTime : _stepTime;
         // 이름은 앞에서 선언한 것만 가리킬 수 있다. 그래서 플래그, 상태, 재질을 먼저 모두 읽고 규칙을 읽는다.
         using Element                          = XMLCatalogElement<ElementRuleCatalog>;
@@ -290,7 +290,7 @@ namespace sw
     bool ElementRuleCatalog::loadFlag( const XMLNode& node, string_view sourceName )
     {
         ElementNameParams flag;
-        const bool        bRead = XMLFields::readFields( node, flag, sourceName );
+        const bool        bRead = XMLFields::readProperties( node, flag, sourceName );
         if ( addFlag( flag._id ).has_value() == false )
         {
             SW_LOG_WARNING_ID( "ElementRuleCatalog.MoreFlags", "%#: more than %# flags", sourceName, kMaxFlagCount );
@@ -302,7 +302,7 @@ namespace sw
     bool ElementRuleCatalog::loadStatus( const XMLNode& node, string_view sourceName )
     {
         ElementStatusDef status; // 종류는 ENUM() 이름 · steps >= 1
-        const bool       bRead = XMLFields::readFields( node, status, sourceName );
+        const bool       bRead = XMLFields::readProperties( node, status, sourceName );
         if ( addStatus( status._id, status._kind, status._steps ).has_value() == false )
         {
             SW_LOG_WARNING_ID( "ElementRuleCatalog.DuplicateStatusMoreStatuses", "%#: duplicate status or more than %# statuses", sourceName, kMaxStatusCount );
@@ -346,9 +346,9 @@ namespace sw
     {
         bool bValid = true;
 
-        ElementNameParams stimulusFields;
-        bValid               = XMLFields::readFields( child, stimulusFields, sourceName ) && bValid;
-        const int32 stimulus = addStimulus( stimulusFields._id );
+        ElementNameParams stimulusProperties;
+        bValid               = XMLFields::readProperties( child, stimulusProperties, sourceName ) && bValid;
+        const int32 stimulus = addStimulus( stimulusProperties._id );
         for ( XMLNode ruleNode = child.findChild( "On" ); ruleNode; ruleNode = ruleNode.findNextSibling( "On" ) )
         {
             ElementStimulusRule rule;

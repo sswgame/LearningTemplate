@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    uint64 GPUMaterialRegistry::permutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance, bool bAppearanceDither )
+    uint64 GPUMaterialRegistry::computePermutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance, bool bAppearanceDither )
     {
         if ( pMaterial == nullptr )
             return 0;
@@ -52,7 +52,7 @@ namespace sw
         permutation._renderStateOverride = material.getRenderStateOverride(); // 인스턴스는 렌더 상태를 덮지 않는다(`MaterialInstance` 설명)
         if ( bAppearanceDither )
             permutation._listDefine.push_back( string( kAppearanceDitherDefine ) ); // 쿠커도 머티리얼 define 끝에 붙인다(`ShaderCookRequest`)
-        permutation._hash = permutationHashFor( &material, pInstance, bAppearanceDither );
+        permutation._hash = computePermutationHashFor( &material, pInstance, bAppearanceDither );
         return permutation;
     }
 
@@ -67,7 +67,7 @@ namespace sw
         _bElementsChanged = SW_TRUE;
     }
 
-    uint32 GPUMaterialRegistry::materialGroupFor( const Material* pMaterial, GPUSceneSnapshot& inoutSnapshot )
+    uint32 GPUMaterialRegistry::findOrAddMaterialGroup( const Material* pMaterial, GPUSceneSnapshot& inoutSnapshot )
     {
         if ( pMaterial == nullptr )
             return kInvalidMaterialGroup;
@@ -86,11 +86,11 @@ namespace sw
         return groupIndex;
     }
 
-    uint32 GPUMaterialRegistry::shaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance, bool bAppearanceDither, GPUSceneSnapshot& inoutSnapshot )
+    uint32 GPUMaterialRegistry::getShaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance, bool bAppearanceDither, GPUSceneSnapshot& inoutSnapshot )
     {
         if ( pMaterial == nullptr )
             return kInvalidShaderPermutation;
-        const uint64 hash = permutationHashFor( pMaterial, pInstance, bAppearanceDither );
+        const uint64 hash = computePermutationHashFor( pMaterial, pInstance, bAppearanceDither );
         const auto   it   = _mapPermutationToIndex.find( hash );
         if ( it != _mapPermutationToIndex.end() )
             return it->second;
@@ -158,8 +158,8 @@ namespace sw
         return elementIndex;
     }
 
-    void GPUMaterialRegistry::stampBatchElements( const vector<GPUMeshBatch>& listBatch, const vector<GPUInstanceDirtyRange>& listBatchElementRange,
-                                                  const vector<uint32>& listBatchElementIndex )
+    void GPUMaterialRegistry::markBatchElements( const vector<GPUMeshBatch>& listBatch, const vector<GPUInstanceDirtyRange>& listBatchElementRange,
+                                                 const vector<uint32>& listBatchElementIndex )
     {
         ++_buildCounter;
         const size_t batchCount = MathUtil::min( listBatch.size(), listBatchElementRange.size() );

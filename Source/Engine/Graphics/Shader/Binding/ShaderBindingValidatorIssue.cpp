@@ -43,7 +43,7 @@ namespace sw
                 Other
             };
 
-            static RegisterClass registerClassOf( ShaderBindingKind kind )
+            static RegisterClass getRegisterClassOf( ShaderBindingKind kind )
             {
                 switch ( kind )
                 {
@@ -62,7 +62,7 @@ namespace sw
                 }
             }
 
-            static GlNamespace glNamespaceOf( ShaderBindingKind kind )
+            static GlNamespace getGlNamespaceOf( ShaderBindingKind kind )
             {
                 switch ( kind )
                 {
@@ -153,7 +153,7 @@ namespace sw
             static bool isInRange( uint32 binding, uint32 shift, uint32 width ) { return ( binding - shift ) < width; }
 
             /// @brief Vulkan 세트 0 binding 이 어느 레지스터 범위(b/t/u)인지 반환합니다. 범위 밖이면 Other 입니다.
-            static RegisterClass vulkanRangeClassOf( uint32 binding )
+            static RegisterClass getVulkanRangeClassOf( uint32 binding )
             {
                 namespace vk = shaderslot::vk;
                 if ( isInRange( binding, vk::kBShift, vk::kRangeSize ) )
@@ -455,7 +455,7 @@ namespace sw
             /** @brief DX12 space0 슬롯 하나가 루트 시그니처의 슬롯 수 안인지 봅니다. */
             void checkDx12SlotLimit( const Internal::ReflectedBinding& reflected )
             {
-                const Internal::RegisterClass registerClass = Internal::registerClassOf( reflected._kind );
+                const Internal::RegisterClass registerClass = Internal::getRegisterClassOf( reflected._kind );
                 uint32                        limit         = 0;
                 switch ( registerClass )
                 {
@@ -527,7 +527,7 @@ namespace sw
                 namespace vk       = shaderslot::vk;
                 if ( reflected._space == 0 )
                 {
-                    const Internal::RegisterClass rangeClass = Internal::vulkanRangeClassOf( reflected._bindPoint );
+                    const Internal::RegisterClass rangeClass = Internal::getVulkanRangeClassOf( reflected._bindPoint );
                     if ( rangeClass == Internal::RegisterClass::Other )
                     {
                         StringBuilder<constant::buffer::kMax256> textBuilder;
@@ -577,16 +577,16 @@ namespace sw
                     }
                     else if ( _bOpenGl )
                     {
-                        const Internal::GlNamespace nsA = Internal::glNamespaceOf( reflectedA._kind );
-                        bCollide                        = ( nsA != Internal::GlNamespace::Other && nsA == Internal::glNamespaceOf( reflectedB._kind ) );
+                        const Internal::GlNamespace nsA = Internal::getGlNamespaceOf( reflectedA._kind );
+                        bCollide                        = ( nsA != Internal::GlNamespace::Other && nsA == Internal::getGlNamespaceOf( reflectedB._kind ) );
                         StringBuilder<constant::buffer::kMax256> whereBuilder;
                         whereBuilder.appendFormat( "%# binding %#", string( Internal::glNamespaceName( nsA ) ), reflectedA._bindPoint );
                         where = string( whereBuilder.view() );
                     }
                     else
                     {
-                        const Internal::RegisterClass registerClassA = Internal::registerClassOf( reflectedA._kind );
-                        bCollide                                     = ( reflectedA._space == reflectedB._space && registerClassA != Internal::RegisterClass::Other && registerClassA == Internal::registerClassOf( reflectedB._kind ) );
+                        const Internal::RegisterClass registerClassA = Internal::getRegisterClassOf( reflectedA._kind );
+                        bCollide                                     = ( reflectedA._space == reflectedB._space && registerClassA != Internal::RegisterClass::Other && registerClassA == Internal::getRegisterClassOf( reflectedB._kind ) );
                         StringBuilder<constant::buffer::kMax256> whereBuilder;
                         whereBuilder.appendFormat( "%#%# space%#", string( Internal::registerClassLetter( registerClassA ) ), reflectedA._bindPoint, reflectedA._space );
                         where = string( whereBuilder.view() );
@@ -626,7 +626,7 @@ namespace sw
             {
                 // SPIR-V 의 StorageBuffer 는 읽기 · 쓰기를 모른다(Vulkan · GL) — 다만 WebGPU 리플렉션은 띠로 정확히 가른 이름을 준다(`reflectWebGPU`).
                 const bool bAmbiguousStorage = Internal::isSPIRV( _targetFormat ) && _targetFormat != ShaderTargetFormat::WGSL_WebGPU;
-                const bool bWritableKind     = Internal::registerClassOf( reflected._kind ) == Internal::RegisterClass::UnorderedAccess ||
+                const bool bWritableKind     = Internal::getRegisterClassOf( reflected._kind ) == Internal::RegisterClass::UnorderedAccess ||
                                            ( bAmbiguousStorage && reflected._kind == ShaderBindingKind::StructuredBuffer );
                 if ( reflected._space != 0 || bWritableKind == false )
                     return;

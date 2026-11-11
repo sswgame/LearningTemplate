@@ -70,7 +70,7 @@ namespace sw
 
     uint32 AdventureDungeonCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 던전을 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 던전을 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<AdventureDungeonCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&AdventureDungeonCatalog::loadDungeon>( "Dungeon" ),
@@ -82,11 +82,11 @@ namespace sw
     bool AdventureDungeonCatalog::loadDungeon( const XMLNode& dungeonNode, string_view sourceName )
     {
         AdventureDungeonDef dungeon;
-        bool                bValid = XMLFields::readFields( dungeonNode, dungeon, sourceName );
+        bool                bValid = XMLFields::readProperties( dungeonNode, dungeon, sourceName );
         for ( XMLNode node = dungeonNode.findChild( "Door" ); node; node = node.findNextSibling( "Door" ) )
         {
             AdventureDoorDef door;
-            bool             bDoorValid = XMLFields::readFields( node, door, sourceName );
+            bool             bDoorValid = XMLFields::readProperties( node, door, sourceName );
             if ( door._kind == AdventureDoorKind::Condition && door._requires.empty() )
             {
                 SW_LOG_ERROR_ID( "AdventureDungeon.ConditionDoorNeedsRequires", "%#: condition door '%#' needs requires=\"...\"", sourceName, door._id.c_str() );
@@ -100,7 +100,7 @@ namespace sw
         for ( XMLNode node = dungeonNode.findChild( "Treasure" ); node; node = node.findNextSibling( "Treasure" ) )
         {
             AdventureTreasureDef treasure;
-            if ( XMLFields::readFields( node, treasure, sourceName ) )
+            if ( XMLFields::readProperties( node, treasure, sourceName ) )
                 dungeon._listTreasure.push_back( treasure );
             else
                 bValid = false;
@@ -108,7 +108,7 @@ namespace sw
         for ( XMLNode node = dungeonNode.findChild( "Device" ); node; node = node.findNextSibling( "Device" ) )
         {
             AdventureDeviceDef device;
-            bool               bDeviceValid = XMLFields::readFields( node, device, sourceName );
+            bool               bDeviceValid = XMLFields::readProperties( node, device, sourceName );
             if ( device._kind == AdventureDeviceKind::TimedSwitch && device._duration <= 0.0f )
             {
                 SW_LOG_ERROR_ID( "AdventureDungeon.TimedSwitchNeedsDuration", "%#: timed switch '%#' needs duration=\"...\" above 0", sourceName, device._id.c_str() );

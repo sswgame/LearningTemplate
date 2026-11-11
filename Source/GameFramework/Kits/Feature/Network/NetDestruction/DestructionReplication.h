@@ -60,11 +60,11 @@ namespace sw
         using SnapshotRequest = NetMessageDef<4, NetMessageDirection::ToServer, NetChannelType::ReliableOrdered>;    ///< 스냅숏을 요청한다
         using Table           = NetMessageTable<NetKitMessageRange::kDestruction, Event, Snapshot, Pose, Hash, SnapshotRequest>;
 
-        static constexpr uint8 kEvent           = Table::kindOf<Event>();
-        static constexpr uint8 kSnapshot        = Table::kindOf<Snapshot>();
-        static constexpr uint8 kPose            = Table::kindOf<Pose>();
-        static constexpr uint8 kHash            = Table::kindOf<Hash>();
-        static constexpr uint8 kSnapshotRequest = Table::kindOf<SnapshotRequest>();
+        static constexpr uint8 kEvent           = Table::getKindOf<Event>();
+        static constexpr uint8 kSnapshot        = Table::getKindOf<Snapshot>();
+        static constexpr uint8 kPose            = Table::getKindOf<Pose>();
+        static constexpr uint8 kHash            = Table::getKindOf<Hash>();
+        static constexpr uint8 kSnapshotRequest = Table::getKindOf<SnapshotRequest>();
     };
 } // namespace sw
 

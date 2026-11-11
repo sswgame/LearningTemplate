@@ -21,7 +21,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 열린 대화상자 하나입니다. 스레드는 결과를 담고 `_bDone` 을 올릴 뿐이고, 합류 · 전달은 메인 스레드(`pumpResults`)가 한다. */
+        /** @brief 열린 대화상자 하나입니다. 스레드는 결과를 담고 `_bDone` 을 올릴 뿐이고, 합류 · 전달은 메인 스레드(`pollResults`)가 한다. */
         struct OpenFileDialog
         {
             thread             _thread{};
@@ -79,7 +79,7 @@ namespace sw
         } );
     }
 
-    void FileDialog::pumpResults()
+    void FileDialog::pollResults()
     {
         if ( s_pOpenDialog == nullptr || s_pOpenDialog->_bDone.load( std::memory_order_acquire ) == false )
             return;

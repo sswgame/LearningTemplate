@@ -103,9 +103,9 @@ namespace sw
 
     uint32 KartItemCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         KartItemsRootDef rootDef;
-        if ( XMLFields::readFields( root, rootDef, sourceName ) )
+        if ( XMLFields::readProperties( root, rootDef, sourceName ) )
             _referencePlaceCount = rootDef._referencePlaceCount;
         // 순위 표는 아이템을 가리키므로 아이템을 모두 읽은 뒤에 읽는다(적힌 순서와 상관없게).
         using Element                          = XMLCatalogElement<KartItemCatalog>;
@@ -119,8 +119,8 @@ namespace sw
     bool KartItemCatalog::loadItem( const XMLNode& node, string_view sourceName )
     {
         KartItemDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false )
-            return false; // 오류는 readFields 가 남겼고, 그 아이템만 빠진다
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
+            return false; // 오류는 readProperties 가 남겼고, 그 아이템만 빠진다
         if ( def.isProjectile() && def._projectileID.empty() )
         {
             SW_LOG_ERROR_ID( "KartItems.ItemNeedsProjectile", "%#: <Item id=\"%#\"> flies or is dropped and needs projectile=\"...\" (a ProjectileCatalog id) - skipped", sourceName, def._id.c_str() );
@@ -133,12 +133,12 @@ namespace sw
     bool KartItemCatalog::loadRankTable( const XMLNode& node, string_view sourceName )
     {
         KartRankRangeDef  range;
-        bool              bValid = XMLFields::readFields( node, range, sourceName );
+        bool              bValid = XMLFields::readProperties( node, range, sourceName );
         vector<LootEntry> listEntry;
         for ( XMLNode entryNode = node.findChild( "Entry" ); entryNode; entryNode = entryNode.findNextSibling( "Entry" ) )
         {
             KartRankEntryDef entry;
-            if ( XMLFields::readFields( entryNode, entry, sourceName ) == false )
+            if ( XMLFields::readProperties( entryNode, entry, sourceName ) == false )
             {
                 bValid = false;
                 continue;

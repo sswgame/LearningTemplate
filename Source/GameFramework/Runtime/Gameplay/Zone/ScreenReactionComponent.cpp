@@ -27,7 +27,7 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<ScreenReactionComponent>( this );
-        (void)ZoneSystem::ensureFor( manager );
+        (void)ZoneSystem::findOrCreate( manager );
     }
 
     void ScreenReactionComponent::onUnregister( GameObjectManager& manager )

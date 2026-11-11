@@ -29,7 +29,7 @@ namespace sw
         if ( maxDurability <= 0.0f || stack._durability <= 0.0f )
             return result; // 닳지 않는 무기
         const float32 wear = bThrown ? _settings._wearPerThrow : _settings._wearPerHit;
-        if ( inventory.wearSlot( slot, wear ) )
+        if ( inventory.reduceSlotDurability( slot, wear ) )
         {
             result._bBroke         = SW_TRUE;
             result._durabilityLeft = 0.0f;

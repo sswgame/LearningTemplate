@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 지형(TerrainComponent) 지오모프판 - terrain.material 과 같되 TERRAIN_GEOMORPH 를 가져 정점 셰이더가 LOD 교체 때의 튐을 거친 LOD 높이로 섞어 없앤다(terrain.hlsl 의 computeWorldPositionOffset). 그림자는 지오모프 없이 그려진다(FrameRendererUtil::drawsDepthWithMaterialShader). 컴포넌트가 지오모프를 켜면 이 머티리얼을 쓴다(TerrainComponent::_bGeomorph). 레이어 색 · 디테일 · 3 축 투영 · 스플랫 · 디테일 맵은 컴포넌트가 인스턴스에 싣는다 — 여기 값은 기본값이다.
+<!-- 지형(TerrainComponent) 지오모프판 - terrain.material 과 같되 TERRAIN_GEOMORPH 를 가져 정점 셰이더가 LOD 교체 때의 튐을 거친 LOD 높이로 섞어 없앤다(terrain.hlsl 의 computeWorldPositionOffset). 그림자는 지오모프 없이 그려진다(FrameRendererUtil::usesMaterialShaderForDepth). 컴포넌트가 지오모프를 켜면 이 머티리얼을 쓴다(TerrainComponent::_bGeomorph). 레이어 색 · 디테일 · 3 축 투영 · 스플랫 · 디테일 맵은 컴포넌트가 인스턴스에 싣는다 — 여기 값은 기본값이다.
      프로퍼티 이름 · 타입은 terrain.hlsl 의 SW_MATERIAL 구조체와 같다. -->
 <MaterialDef formatVersion="0" name="TerrainGeomorph" _base="engine/materials/terrain.material">
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">

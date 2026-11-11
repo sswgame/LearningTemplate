@@ -31,7 +31,7 @@ namespace sw::editor
         struct AssetReferenceCheckEntryInternal
         {
             /** @brief 리플렉션 `AssetPath` 프로퍼티 가운데 칸 목록에 없는 것을 오류로 남깁니다. 반환은 그 수입니다. */
-            static uint32 checkReflectedFields( const AssetReferenceFields& params )
+            static uint32 checkReflectedProperties( const AssetReferenceFields& params )
             {
                 uint32 problemCount{ 0 };
                 editor::getSubsystem<TypeRegistry>().forEachType( [&params, &problemCount]( const TypeInfo& type )
@@ -56,7 +56,7 @@ namespace sw::editor
                 uint32 problemCount{ 0 };
                 for ( const AssetReference& reference : listReference )
                 {
-                    if ( params.isChecked( reference._path ) == false || params.resolves( reference._path, assets ) )
+                    if ( params.isChecked( reference._path ) == false || params.canResolve( reference._path, assets ) )
                         continue;
                     SW_LOG_ERROR_ID( "AssetReferenceCheck.Missing", "%#:%#: %# = '%#' does not exist", label, reference._line, reference._field, reference._path );
                     ++problemCount;
@@ -71,7 +71,7 @@ namespace sw::editor
                 AssetReferenceFields params;
                 if ( params.load( projectRoot ) == false )
                     return -1;
-                uint32 problemCount = checkReflectedFields( params );
+                uint32 problemCount = checkReflectedProperties( params );
 
                 // 트리의 파일이 있는 것이다(임포트 산출물 포함 — ctest 는 임포트 단계 뒤에 돈다). 참조자는 그 가운데 글 에셋이다.
                 const string&  contentRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
@@ -100,7 +100,7 @@ namespace sw::editor
                     string text;
                     if ( FileUtil::readTextFile( filePath, text ) == false )
                         return -1; // 이유는 FileUtil 이 남겼다
-                    problemCount += checkFile( params, assets, "Content/" + assetID, text, AssetReferenceFields::syntaxOf( assetID ) );
+                    problemCount += checkFile( params, assets, "Content/" + assetID, text, AssetReferenceFields::getSyntaxOf( assetID ) );
                     ++scannedCount;
                 }
                 for ( const string& cmakeFile : params.getCMakeFiles() )

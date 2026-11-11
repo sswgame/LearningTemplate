@@ -476,8 +476,8 @@ namespace sw
     {
         if ( _pTileCache == nullptr )
             return false;
-        const bool bHadWork = _pParts->_pendingRequestCount > 0 || _pParts->_bUpToDate == false;
-        if ( bHadWork == false )
+        const bool bHadJobs = _pParts->_pendingRequestCount > 0 || _pParts->_bUpToDate == false;
+        if ( bHadJobs == false )
             return false;
         bool           bUpToDate = false;
         const dtStatus status    = _pTileCache->update( deltaSeconds, &navMesh, &bUpToDate );

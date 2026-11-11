@@ -116,7 +116,7 @@ namespace sw
         HealthDamageResult result;
         amount      = MathUtil::max( 0.0f, amount );
         poiseDamage = MathUtil::max( 0.0f, poiseDamage );
-        if ( ignoresDamage() )
+        if ( shouldIgnoreDamage() )
         {
             result._bIgnored = SW_TRUE;
             return result;

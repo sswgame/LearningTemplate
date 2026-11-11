@@ -82,7 +82,7 @@ SW_TEST_CASE( MaterialXMLTest, ShaderTypeIsNotAFileField )
     sw::XMLDocument plain;
     SW_REQUIRE_TRUE( plain.parse( "<item name=\"_color\" type=\"Color\" defaultValue=\"1 1 1 1\"/>" ) );
     SW_REQUIRE_TRUE( sw::MaterialXML::parsePropertyNode( plain.getRoot( "item" ), prop ) );
-    SW_EXPECT_TRUE( prop._shaderType == sw::MaterialPropertyType::Unknown ); // 패킹 · 리플렉션이 채운다(`defaultShaderTypeFor` · `matchPropertiesToSchema`)
+    SW_EXPECT_TRUE( prop._shaderType == sw::MaterialPropertyType::Unknown ); // 패킹 · 리플렉션이 채운다(`getDefaultShaderTypeFor` · `matchPropertiesToSchema`)
 }
 
 /**

@@ -64,15 +64,15 @@ namespace sw
             {
                 RhythmNoteDef     noteDef;
                 optional<float32> endBeat;
-                const bool        bFields = XMLFields::readFields( node, noteDef, sourceName, { "endBeat" } );
-                const bool        bEnd    = node.readOptionalAttribute( "endBeat", endBeat );
-                const bool        bLane   = noteDef._lane < laneCount;
-                const bool        bOrder  = endBeat.has_value() == false || *endBeat >= noteDef._beat;
+                const bool        bProperties = XMLFields::readProperties( node, noteDef, sourceName, { "endBeat" } );
+                const bool        bEnd        = node.readOptionalAttribute( "endBeat", endBeat );
+                const bool        bLane       = noteDef._lane < laneCount;
+                const bool        bOrder      = endBeat.has_value() == false || *endBeat >= noteDef._beat;
                 if ( bLane == false )
                     SW_LOG_ERROR_ID( "RhythmChart.InvalidNote", "%#: note at beat %# is on lane %# outside 0..%#", sourceName, noteDef._beat, noteDef._lane, laneCount - 1 );
                 if ( bOrder == false )
                     SW_LOG_ERROR_ID( "RhythmChart.InvalidNote", "%#: note at beat %# ends at %# before it starts", sourceName, noteDef._beat, *endBeat );
-                const bool bNote = bFields && bEnd && bLane && bOrder;
+                const bool bNote = bProperties && bEnd && bLane && bOrder;
                 if ( bNote == false )
                     return false;
                 RhythmNote note;
@@ -186,7 +186,7 @@ namespace sw
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 원소가 하나라도 있으면 차트를 읽지 못한 것으로 본다(반쪽 차트를 치게 하지 않는다).
         RhythmChartRootDef rootDef;
-        bool               bValid = XMLFields::readFields( root, rootDef, sourceName, { "baseBpm" } );
+        bool               bValid = XMLFields::readProperties( root, rootDef, sourceName, { "baseBpm" } );
         _title                    = rootDef._title;
         _artist                   = rootDef._artist;
         _level                    = rootDef._level;

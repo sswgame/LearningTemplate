@@ -62,8 +62,8 @@ namespace sw
     /** @brief 변경 요청의 완료입니다. */
     struct ServerDirectoryCompletion
     {
-        uint64                 _requestTag{ 0 };
-        ServerDirectoryOutcome _result{ ServerDirectoryResult::Ok };
+        uint64                       _requestTag{ 0 };
+        ServerDirectoryServiceResult _result{ ServerDirectoryResult::Ok };
     };
 } // namespace sw
 
@@ -116,8 +116,8 @@ namespace sw
         // 클라이언트 요청 함수들이며 동기이고 메모리에서 처리한다
         ServerDirectoryStatus makeStatus( UnixMilliseconds nowMs ) const;
         /** @brief 서버를 고릅니다. 모르는 종류 · 틀린 지역 이름은 키트 오류 `kUnknownKind`, 아니면 업무 결과(`Ok` · `NoServer` · `Maintenance`)이고 @p outAssignment 를 채웁니다. */
-        [[nodiscard]] ServerDirectoryOutcome assignServer( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs, ServerAssignment& outAssignment );
-        [[nodiscard]] ServerDirectoryOutcome listServers( string_view kind, UnixMilliseconds nowMs, vector<ServerListEntry>& outListEntry ) const;
+        [[nodiscard]] ServerDirectoryServiceResult assignServer( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs, ServerAssignment& outAssignment );
+        [[nodiscard]] ServerDirectoryServiceResult listServers( string_view kind, UnixMilliseconds nowMs, vector<ServerListEntry>& outListEntry ) const;
         /** @brief 지금 @p kind 에 걸린 점검이 @p accountID 를 막으면 true 입니다. 계정 서버와 게임 서버가 조립 단계에서 물을 수 있습니다. 막으면 그 점검 창을 @p pOutWindow 에 채웁니다. */
         bool isBlockedByMaintenance( string_view kind, AccountID accountID, UnixMilliseconds nowMs, MaintenanceWindow* pOutWindow = nullptr ) const;
 
@@ -139,7 +139,7 @@ namespace sw
 
         /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceAnnouncement>&& listNotice, bool bReadOk, UnixMilliseconds nowMs );
-        void applyWrite( uint64 requestTag, ServerDirectoryOutcome result );
+        void applyWrite( uint64 requestTag, ServerDirectoryServiceResult result );
 
     private:
         void                  startReload( UnixMilliseconds nowMs );
@@ -148,7 +148,7 @@ namespace sw
         ServerRegistryReader* findReader( string_view kind ) const;
         /** @brief 아는 종류 · 맞는 지역의 배정입니다(`assignServer` 가 먼저 가린다). */
         ServerAssignment pickAssignment( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs );
-        void             submitWrite( ServiceAuditedWrite&& work, uint64 requestTag );
+        void             submitWrite( ServiceAuditedWrite&& job, uint64 requestTag );
 
     private:
         vector<unique_ptr<ServerRegistryReader>> _listReader;

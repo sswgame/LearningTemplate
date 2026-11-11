@@ -77,7 +77,7 @@ namespace sw
         struct LoginCallResult
         {
             LoginCompletion  _completion{};
-            LoginStoreResult _outcome{};
+            LoginStoreResult _serviceResult{};
         };
 
         /** @brief 저장소 스레드에서 도는 로그인 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다. */
@@ -91,7 +91,7 @@ namespace sw
                 done._completion._operation  = input._operation;
                 done._completion._requestTag = input._requestTag;
                 LoginCompletion& completion  = done._completion;
-                LoginStoreLogic  logic{ connection, crypto, settings, authority, done._outcome };
+                LoginStoreLogic  logic{ connection, crypto, settings, authority, done._serviceResult };
                 const int64      nowMs = input._nowMs.count();
                 switch ( input._operation )
                 {
@@ -189,15 +189,15 @@ namespace sw
             static LoginStoreResult runMaintenance( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& authority,
                                                     const LoginMaintenanceInput& input )
             {
-                LoginStoreResult outcome;
-                LoginStoreLogic  logic{ connection, crypto, settings, authority, outcome };
+                LoginStoreResult serviceResult;
+                LoginStoreLogic  logic{ connection, crypto, settings, authority, serviceResult };
                 if ( input._disconnectedSessionID != 0 )
                     logic.markDisconnected( input._disconnectedSessionID, input._nowMs.count() );
                 if ( input._listOnline.empty() == false )
                     logic.refreshSessions( input._listOnline, input._nowMs.count() );
                 if ( input._purgeCount > 0 )
                     (void)logic.purgeDueDeletions( input._nowMs.count(), input._purgeCount );
-                return outcome;
+                return serviceResult;
             }
         };
     } // namespace
@@ -351,7 +351,7 @@ namespace sw
         LoginGrant limited; // 가입도 비싼 비밀번호 해시를 돌린다 - 로그인과 같은 버킷으로 막지 않으면 해시로 서버를 묶을 수 있다
         if ( consumeAttempt( clientKey, nowMs, limited._retryAfterMs ) == false )
         {
-            pushImmediate( LoginOperation::Register, requestTag, LoginOutcome::fail( OnlineError::kRateLimited ), limited );
+            pushImmediate( LoginOperation::Register, requestTag, LoginServiceResult::fail( OnlineError::kRateLimited ), limited );
             return;
         }
         seedAccount( credential, nowMs, requestTag );
@@ -366,8 +366,8 @@ namespace sw
 
     void LoginService::login( const LoginCredential& credential, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        LoginGrant         buildGrant;
-        const LoginOutcome build = evaluateClientBuild( clientInfo, buildGrant );
+        LoginGrant               buildGrant;
+        const LoginServiceResult build = evaluateClientBuild( clientInfo, buildGrant );
         if ( build != LoginResult::Ok )
         {
             pushImmediate( LoginOperation::Login, requestTag, build, buildGrant );
@@ -375,7 +375,7 @@ namespace sw
         }
         if ( consumeAttempt( clientKey, nowMs, buildGrant._retryAfterMs ) == false )
         {
-            pushImmediate( LoginOperation::Login, requestTag, LoginOutcome::fail( OnlineError::kRateLimited ), buildGrant );
+            pushImmediate( LoginOperation::Login, requestTag, LoginServiceResult::fail( OnlineError::kRateLimited ), buildGrant );
             return;
         }
         LoginCallInput input      = makeCallInput( LoginOperation::Login, requestTag, nowMs );
@@ -388,8 +388,8 @@ namespace sw
     void LoginService::guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs,
                                    uint64 requestTag )
     {
-        LoginGrant         buildGrant;
-        const LoginOutcome build = evaluateClientBuild( clientInfo, buildGrant );
+        LoginGrant               buildGrant;
+        const LoginServiceResult build = evaluateClientBuild( clientInfo, buildGrant );
         if ( build != LoginResult::Ok )
         {
             pushImmediate( LoginOperation::GuestLogin, requestTag, build, buildGrant );
@@ -397,7 +397,7 @@ namespace sw
         }
         if ( consumeAttempt( clientKey, nowMs, buildGrant._retryAfterMs ) == false )
         {
-            pushImmediate( LoginOperation::GuestLogin, requestTag, LoginOutcome::fail( OnlineError::kRateLimited ), buildGrant );
+            pushImmediate( LoginOperation::GuestLogin, requestTag, LoginServiceResult::fail( OnlineError::kRateLimited ), buildGrant );
             return;
         }
         LoginCallInput input = makeCallInput( LoginOperation::GuestLogin, requestTag, nowMs );
@@ -410,8 +410,8 @@ namespace sw
     void LoginService::platformLogin( string_view provider, const vector<uint8>& ticketBytes, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs,
                                       uint64 requestTag )
     {
-        LoginGrant         buildGrant;
-        const LoginOutcome build = evaluateClientBuild( clientInfo, buildGrant );
+        LoginGrant               buildGrant;
+        const LoginServiceResult build = evaluateClientBuild( clientInfo, buildGrant );
         if ( build != LoginResult::Ok )
         {
             pushImmediate( LoginOperation::PlatformLogin, requestTag, build, buildGrant );
@@ -419,7 +419,7 @@ namespace sw
         }
         if ( consumeAttempt( clientKey, nowMs, buildGrant._retryAfterMs ) == false )
         {
-            pushImmediate( LoginOperation::PlatformLogin, requestTag, LoginOutcome::fail( OnlineError::kRateLimited ), buildGrant );
+            pushImmediate( LoginOperation::PlatformLogin, requestTag, LoginServiceResult::fail( OnlineError::kRateLimited ), buildGrant );
             return;
         }
         beginVerification( LoginOperation::PlatformLogin, provider, ticketBytes, LoginSessionToken{}, buildGrant, nowMs, requestTag );
@@ -427,8 +427,8 @@ namespace sw
 
     void LoginService::resumeSession( const LoginSessionToken& token, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        LoginGrant         buildGrant;
-        const LoginOutcome build = evaluateClientBuild( clientInfo, buildGrant );
+        LoginGrant               buildGrant;
+        const LoginServiceResult build = evaluateClientBuild( clientInfo, buildGrant );
         if ( build != LoginResult::Ok )
         {
             pushImmediate( LoginOperation::Resume, requestTag, build, buildGrant );
@@ -436,7 +436,7 @@ namespace sw
         }
         if ( consumeAttempt( clientKey, nowMs, buildGrant._retryAfterMs ) == false )
         {
-            pushImmediate( LoginOperation::Resume, requestTag, LoginOutcome::fail( OnlineError::kRateLimited ), buildGrant );
+            pushImmediate( LoginOperation::Resume, requestTag, LoginServiceResult::fail( OnlineError::kRateLimited ), buildGrant );
             return;
         }
         LoginCallInput input      = makeCallInput( LoginOperation::Resume, requestTag, nowMs );
@@ -596,7 +596,7 @@ namespace sw
         _store.submit( [pCrypto, pAuthority, settings = _settings, input = std::move( input )]( IServiceStoreConnection& connection ) mutable
         { return LoginStoreRun::runCall( connection, *pCrypto, settings, *pAuthority, input ); },
                        [this]( LoginCallResult& done )
-        { applyCompletion( std::move( done._completion ), done._outcome ); } );
+        { applyCompletion( std::move( done._completion ), done._serviceResult ); } );
     }
 
     void LoginService::submitMaintenance( LoginMaintenanceInput&& input )
@@ -605,11 +605,11 @@ namespace sw
         const LoginTicketAuthority* pAuthority = &_ticketAuthority;
         _store.submit( [pCrypto, pAuthority, settings = _settings, input = std::move( input )]( IServiceStoreConnection& connection )
         { return LoginStoreRun::runMaintenance( connection, *pCrypto, settings, *pAuthority, input ); },
-                       [this]( const LoginStoreResult& outcome )
+                       [this]( const LoginStoreResult& serviceResult )
         {
             LoginCompletion none;
             none._requestTag = 0; // 요청 태그 0은 완료 목록에 쌓지 않는다(applyCompletion)
-            applyCompletion( std::move( none ), outcome );
+            applyCompletion( std::move( none ), serviceResult );
         } );
     }
 
@@ -622,9 +622,9 @@ namespace sw
         return input;
     }
 
-    void LoginService::applyCompletion( LoginCompletion&& completion, const LoginStoreResult& outcome )
+    void LoginService::applyCompletion( LoginCompletion&& completion, const LoginStoreResult& serviceResult )
     {
-        for ( const LoginSessionRef& revoked : outcome._listRevoked )
+        for ( const LoginSessionRef& revoked : serviceResult._listRevoked )
         {
             const auto onlineIt = _mapAccountToSession.find( revoked._accountID );
             if ( onlineIt == _mapAccountToSession.end() || onlineIt->second != revoked._sessionID )
@@ -636,13 +636,13 @@ namespace sw
             _mapAccountToSession.erase( onlineIt );
             _eventBuffer.push( LoginEvent{ revoked._accountID, revoked._sessionID, revoked._reason, LoginEvent::Kind::Revoked } );
         }
-        for ( const LoginSessionRef& offline : outcome._listOffline )
+        for ( const LoginSessionRef& offline : serviceResult._listOffline )
         {
             const auto onlineIt = _mapAccountToSession.find( offline._accountID );
             if ( onlineIt != _mapAccountToSession.end() && onlineIt->second == offline._sessionID )
                 _mapAccountToSession.erase( onlineIt );
         }
-        for ( const LoginSessionRef& disconnected : outcome._listDisconnected )
+        for ( const LoginSessionRef& disconnected : serviceResult._listDisconnected )
         {
             const auto onlineIt = _mapAccountToSession.find( disconnected._accountID );
             if ( onlineIt == _mapAccountToSession.end() || onlineIt->second != disconnected._sessionID )
@@ -650,14 +650,14 @@ namespace sw
             _mapAccountToSession.erase( onlineIt );
             _eventBuffer.push( LoginEvent{ disconnected._accountID, disconnected._sessionID, LoginRevokeReason::None, LoginEvent::Kind::Disconnected } );
         }
-        for ( const LoginSessionRef& online : outcome._listOnline )
+        for ( const LoginSessionRef& online : serviceResult._listOnline )
         {
             const auto onlineIt = _mapAccountToSession.find( online._accountID );
             if ( onlineIt != _mapAccountToSession.end() && onlineIt->second != online._sessionID )
                 _eventBuffer.push( LoginEvent{ online._accountID, onlineIt->second, LoginRevokeReason::DuplicateLogin, LoginEvent::Kind::Revoked } );
             _mapAccountToSession[online._accountID] = online._sessionID;
         }
-        for ( const LoginEvent& event : outcome._listEvent )
+        for ( const LoginEvent& event : serviceResult._listEvent )
         {
             _eventBuffer.push( event );
         }
@@ -693,7 +693,7 @@ namespace sw
         return _mapClientToAttemptBucket.tryConsume( clientKey, nowMs.count(), outRetryAfterMs );
     }
 
-    void LoginService::pushImmediate( LoginOperation operation, uint64 requestTag, LoginOutcome result, const LoginGrant& grant )
+    void LoginService::pushImmediate( LoginOperation operation, uint64 requestTag, LoginServiceResult result, const LoginGrant& grant )
     {
         LoginCompletion completion;
         completion._operation  = operation;
@@ -703,7 +703,7 @@ namespace sw
         _completionBuffer.push( std::move( completion ) );
     }
 
-    LoginOutcome LoginService::evaluateClientBuild( const AccountClientInfo& clientInfo, LoginGrant& outGrant ) const
+    LoginServiceResult LoginService::evaluateClientBuild( const AccountClientInfo& clientInfo, LoginGrant& outGrant ) const
     {
         if ( _pRemoteConfig == nullptr )
             return LoginResult::Ok;
@@ -716,7 +716,7 @@ namespace sw
         const bool bRecommended = _pRemoteConfig->findText( LoginServiceInternal::makeConfigKey( LoginServiceInternal::kRecommendedBuildKey, clientInfo._platform ),
                                                             recommendedBuild );
         if ( bMinimum && AccountUtil::compareBuild( clientInfo._build, minimumBuild ) < 0 )
-            return LoginOutcome::fail( OnlineError::kUpdateRequired );
+            return LoginServiceResult::fail( OnlineError::kUpdateRequired );
         if ( bRecommended && AccountUtil::compareBuild( clientInfo._build, recommendedBuild ) < 0 )
             outGrant._bUpdateRecommended = SW_TRUE;
         else
@@ -757,7 +757,7 @@ namespace sw
     {
         if ( verification.isVerified() == false )
         {
-            const LoginOutcome result = verification._bUnavailable == SW_TRUE ? LoginResult::ProviderUnavailable : LoginResult::ProviderRejected;
+            const LoginServiceResult result = verification._bUnavailable == SW_TRUE ? LoginResult::ProviderUnavailable : LoginResult::ProviderRejected;
             pushImmediate( pending._operation, pending._requestTag, result, LoginGrant{} );
             return;
         }

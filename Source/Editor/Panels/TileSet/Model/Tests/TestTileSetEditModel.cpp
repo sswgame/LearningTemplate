@@ -27,7 +27,7 @@ namespace
         }
 
         /** @brief 모델의 글을 런타임 읽기로 다시 읽습니다. 규칙 위반이 있으면 false 입니다. */
-        static bool rereads( const TileSetEditModel& model, TileSetAsset& outAsset )
+        static bool canReread( const TileSetEditModel& model, TileSetAsset& outAsset )
         {
             return outAsset.loadFromXMLText( model.captureText(), "<model>" );
         }
@@ -49,7 +49,7 @@ SW_TEST_CASE( TileSetEditModelTest, NeighborCyclesAndTheRuntimeFollows )
     SW_EXPECT_TRUE( model.findSelectedBrush()->_listRule[1]._arrNeighbor[6] == TileNeighborRule::Other );
 
     TileSetAsset asset;
-    SW_REQUIRE_TRUE( Util::rereads( model, asset ) );
+    SW_REQUIRE_TRUE( Util::canReread( model, asset ) );
     // 1 × 2 맵의 위 칸(땅): 위는 맵 밖(같음으로 본다)이라 첫 규칙(위가 다름)은 안 맞고, 아래가 빈 칸이라 둘째 규칙(아래가 다름)이 맞는다.
     const uint16         ground  = 1;
     const vector<uint16> cells   = { ground, 0 };
@@ -70,7 +70,7 @@ SW_TEST_CASE( TileSetEditModelTest, AppendedFramesStayLoadable )
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( pVisual->_listFrameCell.size() ) );
     SW_EXPECT_TRUE( pVisual->_framesPerSecond > 0.0f );
     TileSetAsset asset;
-    SW_EXPECT_TRUE( Util::rereads( model, asset ) );
+    SW_EXPECT_TRUE( Util::canReread( model, asset ) );
     SW_EXPECT_TRUE( model.removeLastFrame() );
     SW_EXPECT_TRUE( model.removeLastFrame() );
     SW_EXPECT_FALSE( model.removeLastFrame() );
@@ -91,7 +91,7 @@ SW_TEST_CASE( TileSetEditModelTest, BrushNamesStayUnique )
     SW_EXPECT_FALSE( model.renameSelectedBrush( "" ) );
     SW_EXPECT_TRUE( model.renameSelectedBrush( "grass" ) );
     TileSetAsset asset;
-    SW_EXPECT_TRUE( Util::rereads( model, asset ) );
+    SW_EXPECT_TRUE( Util::canReread( model, asset ) );
     SW_EXPECT_TRUE( asset.findBrush( hashed_string( "grass" ) ) == 2u );
 }
 

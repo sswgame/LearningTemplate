@@ -14,7 +14,7 @@ namespace sw
 {
     uint32 LeaderboardCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 정의의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값 · 모르는 열거 이름은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 정의의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값 · 모르는 열거 이름은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<LeaderboardCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&LeaderboardCatalog::loadBoard>( "Board" ),
@@ -34,15 +34,15 @@ namespace sw
 
     bool LeaderboardCatalog::readBoard( const XMLNode& node, string_view sourceName, LeaderboardDef& outBoard )
     {
-        bool bValid = XMLFields::readFields( node, outBoard, sourceName );
+        bool bValid = XMLFields::readProperties( node, outBoard, sourceName );
         for ( XMLNode seasonNode = node.findChild( "Season" ); seasonNode; seasonNode = seasonNode.findNextSibling( "Season" ) )
         {
             LeaderboardSeason season;
-            bValid = XMLFields::readFields( seasonNode, season, sourceName ) && bValid;
+            bValid = XMLFields::readProperties( seasonNode, season, sourceName ) && bValid;
             for ( XMLNode rewardNode = seasonNode.findChild( "Reward" ); rewardNode; rewardNode = rewardNode.findNextSibling( "Reward" ) )
             {
                 LeaderboardRewardTier tier;
-                if ( XMLFields::readFields( rewardNode, tier, sourceName ) )
+                if ( XMLFields::readProperties( rewardNode, tier, sourceName ) )
                     season._listRewardTier.push_back( std::move( tier ) );
                 else
                     bValid = false;

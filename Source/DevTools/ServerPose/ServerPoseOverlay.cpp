@@ -64,18 +64,18 @@ namespace sw
              */
             static bool peelSection( string_view& rest, string_view keyword, float32* pOutValue, int32 count )
             {
-                string_view work = rest;
+                string_view job = rest;
                 for ( int32 index = count - 1; index >= 0; --index )
                 {
-                    const size_t space = work.rfind( ' ' );
-                    if ( space == string_view::npos || StringUtil::parseFloat( work.substr( space + 1 ), pOutValue[index] ) == false )
+                    const size_t space = job.rfind( ' ' );
+                    if ( space == string_view::npos || StringUtil::parseFloat( job.substr( space + 1 ), pOutValue[index] ) == false )
                         return false;
-                    work = work.substr( 0, space );
+                    job = job.substr( 0, space );
                 }
-                const size_t keywordSpace = work.rfind( ' ' );
-                if ( keywordSpace == string_view::npos || work.substr( keywordSpace + 1 ) != keyword )
+                const size_t keywordSpace = job.rfind( ' ' );
+                if ( keywordSpace == string_view::npos || job.substr( keywordSpace + 1 ) != keyword )
                     return false;
-                rest = work.substr( 0, keywordSpace );
+                rest = job.substr( 0, keywordSpace );
                 return true;
             }
 

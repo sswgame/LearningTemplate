@@ -70,7 +70,7 @@ namespace sw
     {
         // 적지 않은 칸은 생성자의 초기값이다. 깨진 값 · 범위 밖 값(슬롯 1..64 등)은 읽기 실패다 — PROPERTY 가 본다.
         const string previousGroup = _group;
-        bool         bValid        = XMLFields::readFields( root, *this, sourceName );
+        bool         bValid        = XMLFields::readProperties( root, *this, sourceName );
         // 자리(폴더)는 로컬 저장소가 정한다 - 데이터는 슬롯 그룹 이름만 적는다(경로 · `..` 는 슬롯 이름 규칙에 걸린다).
         if ( ILocalStore::isValidGroupPrefix( _group + "/" ) == false )
         {

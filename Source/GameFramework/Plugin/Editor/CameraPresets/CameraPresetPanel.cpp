@@ -130,7 +130,7 @@ namespace sw::editor
         EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
     }
 
-    bool CameraPresetPanel::acceptsDocumentPath( string_view assetPath ) const
+    bool CameraPresetPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return StringUtil::endsWith( assetPath, ".cameras.xml" );
     }

@@ -232,7 +232,7 @@ namespace sw
     /**
      * @class AIDirectorProfile
      * @brief `*.director.xml` 하나입니다.
-     * @details 모르는 원소, 속성, 종류, 단계, 신호와 겹친 id, 단계 없음, 깨진 값과 PROPERTY( Min · Max ) 밖 값은 로드 오류이며, 오류를 남기고 false 를 반환한다. 칸은 `XMLFields::readFields` 가 읽는다.
+     * @details 모르는 원소, 속성, 종류, 단계, 신호와 겹친 id, 단계 없음, 깨진 값과 PROPERTY( Min · Max ) 밖 값은 로드 오류이며, 오류를 남기고 false 를 반환한다. 칸은 `XMLFields::readProperties` 가 읽는다.
      * @code
      *     <AIDirector startPhase="BuildUp">
      *       <Calendar weathers="sunny,rain"/>                                         <!-- 조건 이름 검사(선택) -->

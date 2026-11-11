@@ -17,7 +17,7 @@ namespace sw
         /** @brief 연금술 물건 하나를 읽습니다. 오일은 칼에 바른 뒤 적중 횟수(`hits`)가 1 이상이어야 합니다. */
         [[nodiscard]] bool readAlchemyItem( const XMLNode& node, string_view sourceName, MonsterHuntAlchemyDef& outItem )
         {
-            if ( XMLFields::readFields( node, outItem, sourceName ) == false )
+            if ( XMLFields::readProperties( node, outItem, sourceName ) == false )
                 return false;
             if ( outItem._kind == MonsterHuntAlchemyKind::Oil && outItem._hits < 1 )
             {
@@ -49,7 +49,7 @@ namespace sw
 
     uint32 MonsterHuntCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<MonsterHuntCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&MonsterHuntCatalog::_alchemy>( "Alchemy" ),
@@ -93,13 +93,13 @@ namespace sw
     bool MonsterHuntCatalog::loadMonster( const XMLNode& node, string_view sourceName )
     {
         MonsterHuntMonsterDef monster;
-        bool                  bValid = XMLFields::readFields( node, monster, sourceName );
+        bool                  bValid = XMLFields::readProperties( node, monster, sourceName );
         if ( monster._listElement.empty() && monster._category.empty() == false )
             monster._listElement.push_back( monster._category ); // 방어 속성을 적지 않으면 분류 하나다(`_listElement` 의 정의)
         for ( XMLNode child = node.findChild( "Weakness" ); child; child = child.findNextSibling( "Weakness" ) )
         {
             MonsterHuntWeakness weakness;
-            if ( XMLFields::readFields( child, weakness, sourceName ) == false )
+            if ( XMLFields::readProperties( child, weakness, sourceName ) == false )
             {
                 bValid = false;
                 continue;
@@ -121,15 +121,15 @@ namespace sw
     bool MonsterHuntCatalog::loadContract( const XMLNode& node, string_view sourceName )
     {
         MonsterHuntContractDef contract;
-        bool                   bValid = XMLFields::readFields( node, contract, sourceName );
+        bool                   bValid = XMLFields::readProperties( node, contract, sourceName );
         for ( XMLNode stepNode = node.findChild( "Step" ); stepNode; stepNode = stepNode.findNextSibling( "Step" ) )
         {
             MonsterHuntContractStepDef step;
-            bValid = XMLFields::readFields( stepNode, step, sourceName ) && bValid;
+            bValid = XMLFields::readProperties( stepNode, step, sourceName ) && bValid;
             for ( XMLNode clueNode = stepNode.findChild( "Clue" ); clueNode; clueNode = clueNode.findNextSibling( "Clue" ) )
             {
                 MonsterHuntClueDef clue;
-                if ( XMLFields::readFields( clueNode, clue, sourceName ) )
+                if ( XMLFields::readProperties( clueNode, clue, sourceName ) )
                     step._listClue.push_back( clue );
                 else
                     bValid = false;

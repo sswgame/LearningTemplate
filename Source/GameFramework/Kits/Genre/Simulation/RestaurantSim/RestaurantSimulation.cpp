@@ -585,7 +585,7 @@ namespace sw
 
     void RestaurantSimulation::stepFixed()
     {
-        finishStaffWork();
+        finishStaffJob();
         updatePatience();
         if ( _bOpen != SW_FALSE && _minutes < static_cast<float32>( _pCatalog->getCloseHour() - _pCatalog->getOpenHour() ) * RestaurantSimulationInternal::kMinutesPerHour )
             spawnArrivals();
@@ -596,7 +596,7 @@ namespace sw
         _minutes += kStepMinutes;
     }
 
-    void RestaurantSimulation::finishStaffWork()
+    void RestaurantSimulation::finishStaffJob()
     {
         // 조리: 주문의 남은 시간이 요리사의 시계이다.
         for ( KitchenOrder& order : _listOrder )

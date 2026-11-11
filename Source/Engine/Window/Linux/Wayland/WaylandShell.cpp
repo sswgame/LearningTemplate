@@ -66,7 +66,7 @@ namespace sw
         return bConfigured;
     }
 
-    bool WaylandShell::pumpEvents( wl_display* pDisplay )
+    bool WaylandShell::pollEvents( wl_display* pDisplay )
     {
         wl_display_dispatch_pending( pDisplay );
         while ( wl_display_prepare_read( pDisplay ) != 0 )

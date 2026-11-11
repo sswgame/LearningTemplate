@@ -47,8 +47,8 @@ namespace sw
             {
                 if ( _pService == nullptr )
                     return;
-                const string      channelID = makeChannelID( kind, groupID );
-                const ChatOutcome result    = _pService->addMember( accountID, channelID, nowMs );
+                const string            channelID = makeChannelID( kind, groupID );
+                const ChatServiceResult result    = _pService->addMember( accountID, channelID, nowMs );
                 if ( result != ChatResult::Ok )
                     SW_LOG_WARNING_ID( "ChatOnlineServerKit.ChatAccountNotAdded", "Chat: account %# was not added to %# (result %#, error %#)", accountID, channelID.c_str(), static_cast<int32>( result._result ),
                                        static_cast<int32>( result._errorCode ) );
@@ -123,7 +123,7 @@ namespace sw
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 채팅 기록 · 접속 상태 조회. */
-            int32 getOpenWorkCount() const override { return _service.getPendingCount(); }
+            int32 getOpenJobCount() const override { return _service.getPendingCount(); }
 
             void stop() override
             {

@@ -249,7 +249,7 @@ namespace sw
         // 게임 코드가 UI 를 모르고 묻는 창구다(`IInputCaptureQuery` — `getInputCaptureQuery`). 서지 않았으면 모두 false 다(전용 서버).
         [[nodiscard]] bool isGameInputCaptured() const;
         [[nodiscard]] bool isActionCaptured( const InputMap& inputMap, const hashed_string& action ) const;
-        [[nodiscard]] bool isCursorCaptured() const;
+        [[nodiscard]] bool shouldShowCursor() const;
         /** @brief Loading 레이어 화면(로딩 화면)이 떠 있으면 true 입니다(닫는 중인 화면은 제외). 자동화의 "씬 플레이 중" 판정은 이 값이 false 가 된 뒤에 합니다. */
         bool isLoadingScreenShown() const;
         /**
@@ -276,7 +276,7 @@ namespace sw
         IUILayerVisibility& getUILayerVisibility() { return _layerVisibility; }
         IEngineUIDriver&    getEngineUIDriver() { return _engineUIDriver; }
         /** @brief 활성 화면이 OS 커서를 필요로 하면 true 입니다(플레이어 컨트롤러가 마우스 잠금을 쉽니다). */
-        bool wantsCursor() const;
+        bool needsCursor() const;
         /**
          * @brief UI 입력 라우터입니다 — 포커스, 포인터, 소비된 입력(`isActionConsumed` · `consumeAction` · `getConsumption`), UI 액션 맵, 입력 방식.
          * @details 플레이어 컨트롤러가 의도를 만들 때 `getInputRouter().isActionConsumed( map, action )` 만 확인하면 된다. 입력 방식을 바꾸는 일은 화면 포커스를 함께
@@ -398,7 +398,7 @@ namespace sw
 
             [[nodiscard]] bool isGameInputCaptured() const override { return _owner.isGameInputCaptured(); }
             [[nodiscard]] bool isActionCaptured( const InputMap& inputMap, const hashed_string& action ) const override { return _owner.isActionCaptured( inputMap, action ); }
-            [[nodiscard]] bool isCursorCaptured() const override { return _owner.isCursorCaptured(); }
+            [[nodiscard]] bool shouldShowCursor() const override { return _owner.shouldShowCursor(); }
 
         private:
             const UISystem& _owner;

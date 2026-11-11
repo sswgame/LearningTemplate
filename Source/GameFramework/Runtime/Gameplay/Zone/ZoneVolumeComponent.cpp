@@ -60,7 +60,7 @@ namespace sw
         Component::onRegister( manager );
         manager.getComponentRegistry().add<ZoneVolumeComponent>( this );
         ZoneOccupantIndex::addLayerReader( manager );
-        (void)ZoneSystem::ensureFor( manager );
+        (void)ZoneSystem::findOrCreate( manager );
     }
 
     void ZoneVolumeComponent::onUnregister( GameObjectManager& manager )

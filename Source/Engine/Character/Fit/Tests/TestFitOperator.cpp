@@ -25,7 +25,7 @@ namespace
 
         const hashed_string& getName() const override { return _name; }
         FitPhase             getPhase() const override { return FitPhase::Validate; }
-        bool                 acceptsArgument( const hashed_string& ) const override { return false; }
+        bool                 canAcceptArgument( const hashed_string& ) const override { return false; }
         void                 execute( FitSolveState&, const FitPairContext& ) const override {}
 
     private:
@@ -191,19 +191,19 @@ SW_TEST_CASE( FitOperatorTest, DefaultOperatorsDeclarePhaseAndArguments )
 
     for ( const utf8* pName : { "strength", "margin", "searchDistance", "falloffWidth" } )
     {
-        SW_EXPECT_TRUE( pShrink->acceptsArgument( hashed_string( pName ) ) );
+        SW_EXPECT_TRUE( pShrink->canAcceptArgument( hashed_string( pName ) ) );
     }
-    SW_EXPECT_FALSE( pShrink->acceptsArgument( hashed_string( "distance" ) ) );
+    SW_EXPECT_FALSE( pShrink->canAcceptArgument( hashed_string( "distance" ) ) );
     for ( const utf8* pName : { "strength", "distance", "searchDistance", "falloffWidth" } )
     {
-        SW_EXPECT_TRUE( pPush->acceptsArgument( hashed_string( pName ) ) );
+        SW_EXPECT_TRUE( pPush->canAcceptArgument( hashed_string( pName ) ) );
     }
-    SW_EXPECT_FALSE( pPush->acceptsArgument( hashed_string( "margin" ) ) );
-    SW_EXPECT_TRUE( pCut->acceptsArgument( hashed_string( "distance" ) ) );
-    SW_EXPECT_FALSE( pCut->acceptsArgument( hashed_string( "strength" ) ) );
-    SW_EXPECT_TRUE( pReport->acceptsArgument( hashed_string( "tolerance" ) ) );
-    SW_EXPECT_TRUE( pReport->acceptsArgument( hashed_string( "searchDistance" ) ) );
-    SW_EXPECT_FALSE( pReport->acceptsArgument( hashed_string( "distance" ) ) );
+    SW_EXPECT_FALSE( pPush->canAcceptArgument( hashed_string( "margin" ) ) );
+    SW_EXPECT_TRUE( pCut->canAcceptArgument( hashed_string( "distance" ) ) );
+    SW_EXPECT_FALSE( pCut->canAcceptArgument( hashed_string( "strength" ) ) );
+    SW_EXPECT_TRUE( pReport->canAcceptArgument( hashed_string( "tolerance" ) ) );
+    SW_EXPECT_TRUE( pReport->canAcceptArgument( hashed_string( "searchDistance" ) ) );
+    SW_EXPECT_FALSE( pReport->canAcceptArgument( hashed_string( "distance" ) ) );
 }
 
 /**

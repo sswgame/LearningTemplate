@@ -91,7 +91,7 @@ namespace sw
         /** @brief 있는 원본과 고르기 결과로 표를 만듭니다. */
         void build( const vector<PackDomainSources>& listSources, const PackReachResult& reach );
         /** @brief 도메인 기준 @p relativePath 의 산출물을 담으면 true 입니다. */
-        [[nodiscard]] bool selects( string_view domain, string_view relativePath ) const;
+        [[nodiscard]] bool isSelected( string_view domain, string_view relativePath ) const;
 
     private:
         unordered_map<string, bool> _mapSourceStem; ///< `<폴더 id>/<줄기>` → 그 줄기의 원본 가운데 쓰이는 것이 있는가

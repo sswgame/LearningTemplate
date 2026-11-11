@@ -95,7 +95,7 @@ namespace sw
                 return s_name;
             }
             FitPhase getPhase() const override { return FitPhase::Deform; }
-            bool     acceptsArgument( const hashed_string& name ) const override
+            bool     canAcceptArgument( const hashed_string& name ) const override
             {
                 static constexpr const utf8* kArrArgument[] = { "strength", "margin", "searchDistance", "falloffWidth" };
                 return FitOperatorInternal::containsName( name, kArrArgument );
@@ -195,7 +195,7 @@ namespace sw
                 return s_name;
             }
             FitPhase getPhase() const override { return FitPhase::Deform; }
-            bool     acceptsArgument( const hashed_string& name ) const override
+            bool     canAcceptArgument( const hashed_string& name ) const override
             {
                 static constexpr const utf8* kArrArgument[] = { "strength", "distance", "searchDistance", "falloffWidth" };
                 return FitOperatorInternal::containsName( name, kArrArgument );
@@ -248,7 +248,7 @@ namespace sw
                 return s_name;
             }
             FitPhase getPhase() const override { return FitPhase::Coverage; }
-            bool     acceptsArgument( const hashed_string& name ) const override
+            bool     canAcceptArgument( const hashed_string& name ) const override
             {
                 static constexpr const utf8* kArrArgument[] = { "distance" };
                 return FitOperatorInternal::containsName( name, kArrArgument );
@@ -289,7 +289,7 @@ namespace sw
                 return s_name;
             }
             FitPhase getPhase() const override { return FitPhase::Validate; }
-            bool     acceptsArgument( const hashed_string& name ) const override
+            bool     canAcceptArgument( const hashed_string& name ) const override
             {
                 static constexpr const utf8* kArrArgument[] = { "tolerance", "searchDistance" };
                 return FitOperatorInternal::containsName( name, kArrArgument );

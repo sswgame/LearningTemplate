@@ -303,13 +303,13 @@ namespace sw::editor
                 if ( object.has( "name" ) )
                     modifier.setName( object.get( "name" ).asString() );
                 // 적지 않은 칸은 모디파이어의 초기값이다.
-                bool               bEnabled    = modifier.isEnabled();
-                bool               bWorldSpace = modifier.isWorldSpace();
-                MeshModifierGizmo& gizmo       = modifier.getGizmo();
-                const bool         bFieldsRead = object.readOptionalInto( "enabled", bEnabled ) && object.readOptionalInto( "worldSpace", bWorldSpace ) &&
-                                         readVector3( object, "center", gizmo._center ) && readVector3( object, "rotation", gizmo._rotationDegree ) &&
-                                         object.readOptionalInto( "axis", gizmo._axisIndex ) && gizmo._axisIndex <= 2;
-                if ( bFieldsRead == false )
+                bool               bEnabled        = modifier.isEnabled();
+                bool               bWorldSpace     = modifier.isWorldSpace();
+                MeshModifierGizmo& gizmo           = modifier.getGizmo();
+                const bool         bPropertiesRead = object.readOptionalInto( "enabled", bEnabled ) && object.readOptionalInto( "worldSpace", bWorldSpace ) &&
+                                             readVector3( object, "center", gizmo._center ) && readVector3( object, "rotation", gizmo._rotationDegree ) &&
+                                             object.readOptionalInto( "axis", gizmo._axisIndex ) && gizmo._axisIndex <= 2;
+                if ( bPropertiesRead == false )
                 {
                     SW_LOG_ERROR_ID( "MeshModifierStack.MeshModifierBrokenEnabled", "Mesh modifier '%#' has a broken enabled, worldSpace, center, rotation or axis (0 to 2)", typeID.c_str() );
                     return false;

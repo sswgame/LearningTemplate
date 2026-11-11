@@ -21,7 +21,7 @@ namespace
 /**
  * @brief [AutomationStepOptionsTest] 선택 항목을 적지 않으면 틱 뒤에 도는 평범한 단계이고, 적은 항목은 다른 칸을 건드리지 않고 등록 칸으로 가는지 검증
  */
-SW_TEST_CASE( AutomationStepOptionsTest, OptionsReachTheirRegistrationFields )
+SW_TEST_CASE( AutomationStepOptionsTest, OptionsReachTheirRegistrationProperties )
 {
     using Util = AutomationStepOptionsTestUtil;
 
@@ -47,14 +47,14 @@ SW_TEST_CASE( AutomationStepOptionsTest, OptionsReachTheirRegistrationFields )
 /**
  * @brief [AutomationStepOptionsTest] 스키마 검사 함수가 모르는 속성을 거절하고 스키마에 맞는 단계를 통과시키는지 검증
  */
-SW_TEST_CASE( AutomationStepOptionsTest, ValidateFieldsFollowsTheSchema )
+SW_TEST_CASE( AutomationStepOptionsTest, ValidatePropertiesFollowsTheSchema )
 {
     AutomationStep step;
     step._kind = "Pass";
-    SW_EXPECT_TRUE( AutomationStep::validateFields<AutomationNoParams>( step ).has_value() );
+    SW_EXPECT_TRUE( AutomationStep::validateProperties<AutomationNoParams>( step ).has_value() );
 
     step._listAttribute.push_back( { "unknown", "1" } );
-    const expected<void> rejected = AutomationStep::validateFields<AutomationNoParams>( step );
+    const expected<void> rejected = AutomationStep::validateProperties<AutomationNoParams>( step );
     SW_REQUIRE_FALSE( rejected.has_value() );
     SW_EXPECT_TRUE( rejected.error().detail().find( "unknown" ) != string_view::npos );
 }

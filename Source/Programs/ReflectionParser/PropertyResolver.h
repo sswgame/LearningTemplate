@@ -44,7 +44,7 @@ namespace sw
 
     private:
         /** @brief @p spelling 에 식별자 `ComponentHandle` 이나 `TComponentHandle` 이 낱말로 들어 있으면 true 입니다(`vector<sw::ComponentHandle>` 같은 템플릿 인자 포함). */
-        static bool spellsComponentHandle( const string& spelling );
+        static bool isComponentHandleSpelling( const string& spelling );
         /** @brief 정규화한 표기 @p name 이 @p templateOpen 으로 여는 템플릿(`TComponentHandle<대상>` · `AssetRef<대상>`)이면 true 이고, 대상 타입 이름을 @p outTarget 에 넣습니다. */
         [[nodiscard]] static bool tryReadTemplateTarget( const string& name, string_view templateOpen, string& outTarget );
         /** @brief @p text 안의 @p from 을 모두 @p to 로 바꿉니다. */

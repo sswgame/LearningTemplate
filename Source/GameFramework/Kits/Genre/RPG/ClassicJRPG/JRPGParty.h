@@ -1,7 +1,7 @@
 /**
  * @file JRPGParty.h
  * @brief JRPG 파티입니다. 멤버(직업, 레벨, 능력치, HP/MP, 내공, 배운 주문, 비급 숙련, 장비), 전직(레벨 1로 돌아가고 능력치는 절반이 되며 주문은 유지, DQ3),
- *        경험치와 골드 분배, 여관(살아 있는 멤버 회복)과 교회(부활), 지갑과 인벤토리(기반 ShopState 와 그대로 함께 씀)를 관리합니다.
+ *        경험치와 골드 분배, 여관(살아 있는 멤버 회복)과 교회(부활), 지갑과 인벤토리(기반 ShopManager 와 그대로 함께 씀)를 관리합니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -57,7 +57,7 @@ namespace sw
 
         bool  isAlive() const { return _hp > 0; }
         int32 getStat( JRPGStat stat ) const { return _arrStat[static_cast<size_t>( stat )]; }
-        bool  knowsSpell( const hashed_string& spellID ) const;
+        bool  hasLearnedSpell( const hashed_string& spellID ) const;
         /** @brief 비급 숙련을 반환합니다. 배우지 않았으면 비어 있습니다. */
         optional<int32> findProficiency( const hashed_string& manualID ) const;
         /** @brief 읽은 멤버가 카탈로그의 id 만 가리키고 값이 범위 안인지입니다(음수, 최대 초과, 겹친 주문 · 비급, 곡선을 넘는 레벨을 거절합니다). */

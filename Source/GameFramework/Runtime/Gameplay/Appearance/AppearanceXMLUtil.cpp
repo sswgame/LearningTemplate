@@ -93,13 +93,13 @@ namespace sw
         return result;
     }
 
-    bool AppearanceXMLUtil::readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, AppearanceLoadReport& report, string_view sourceName,
-                                        std::initializer_list<string_view> listHandRead )
+    bool AppearanceXMLUtil::readProperties( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, AppearanceLoadReport& report, string_view sourceName,
+                                            std::initializer_list<string_view> listHandRead )
     {
         const XMLFieldsIssueSink sink{ []( void* pContext, const utf8* pID, string_view text )
         { static_cast<AppearanceLoadReport*>( pContext )->addErrorWithID( pID, "%#", text ); },
                                        &report };
-        return XMLFields::readFields( node, pInstance, typeInfo, sourceName, listHandRead, nullptr, sink );
+        return XMLFields::readProperties( node, pInstance, typeInfo, sourceName, listHandRead, nullptr, sink );
     }
 
     bool AppearanceXMLUtil::reportUnknownAttributes( const XMLNode& node, const utf8* const* ppKnownName, uint32 knownCount, AppearanceLoadReport& report, string_view sourceName )

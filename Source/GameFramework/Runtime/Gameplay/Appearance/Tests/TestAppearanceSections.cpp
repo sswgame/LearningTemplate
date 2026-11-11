@@ -169,7 +169,7 @@ SW_TEST_CASE( AppearanceSectionsTest, RigidAndSpritePartsAreSocketBound )
 }
 
 /** @brief [AppearanceSectionsTest] 읽지 못할 칸은 로드 오류다: 휘는 스프라이트, 소켓 없는 단단한 조각, 스프라이트가 아닌 부품의 layer, 부품에 없는 구간을 짚는 변형 */
-SW_TEST_CASE( AppearanceSectionsTest, UnreadableFieldsFailToLoad )
+SW_TEST_CASE( AppearanceSectionsTest, UnreadablePropertiesFailToLoad )
 {
     using Util = AppearanceSectionsTestUtil;
     ItemVisualCatalog    catalog;

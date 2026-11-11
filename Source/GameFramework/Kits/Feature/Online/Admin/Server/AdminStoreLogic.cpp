@@ -25,7 +25,7 @@ namespace sw
         {
             static constexpr const utf8* kGMSenderName = "mail.sender.gm";
 
-            static AdminOutcome finish( AdminReply& outReply, AdminOutcome result )
+            static AdminServiceResult finish( AdminReply& outReply, AdminServiceResult result )
             {
                 outReply._result = result._result;
                 return result;
@@ -48,7 +48,7 @@ namespace sw
                 return string( arrBuffer );
             }
 
-            static AdminOutcome toAdminResult( LedgerResult result )
+            static AdminServiceResult toAdminResult( LedgerResult result )
             {
                 switch ( result )
                 {
@@ -59,14 +59,14 @@ namespace sw
                     case LedgerResult::CapExceeded:
                         return AdminResult::CapExceeded;
                     case LedgerResult::Conflict:
-                        return AdminOutcome::fail( OnlineError::kBusy );
+                        return AdminServiceResult::fail( OnlineError::kBusy );
                     case LedgerResult::JournalKeyReused:
                     case LedgerResult::Invalid:
-                        return AdminOutcome::fail( OnlineError::kInvalidRequest );
+                        return AdminServiceResult::fail( OnlineError::kInvalidRequest );
                     case LedgerResult::Unavailable:
-                        return AdminOutcome::fail( OnlineError::kUnavailable );
+                        return AdminServiceResult::fail( OnlineError::kUnavailable );
                 }
-                return AdminOutcome::fail( OnlineError::kUnavailable );
+                return AdminServiceResult::fail( OnlineError::kUnavailable );
             }
 
             static ServiceMailMessage makeGMMail( const AdminCommand& command, AccountID recipient, string idempotencyKey )
@@ -89,8 +89,8 @@ namespace sw
                 return message;
             }
 
-            static AdminOutcome stageAdjust( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply,
-                                             ServiceAuditEntry& inoutAudit )
+            static AdminServiceResult stageAdjust( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply,
+                                                   ServiceAuditEntry& inoutAudit )
             {
                 const AdminRequest& request   = command._request;
                 const bool          bGrant    = request._amount > 0;
@@ -98,7 +98,7 @@ namespace sw
                 const LedgerHolder  account   = LedgerHolder::makeAccount( request._accountID );
                 LedgerBalance       before;
                 if ( Ledger::readBalance( connection, account, request._assetID, before ) != ServiceStoreResult::Ok )
-                    return AdminOutcome::fail( OnlineError::kUnavailable );
+                    return AdminServiceResult::fail( OnlineError::kUnavailable );
                 const bool            bRefund = bGrant == false && request._bRefund == SW_TRUE;
                 LedgerTransferRequest transfer;
                 transfer._journalKey = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAdminScope( command._adminID ), command._keyHigh, command._keyLow );
@@ -113,12 +113,12 @@ namespace sw
                     transfer._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, request._assetID, magnitude } );
                 else
                     transfer._listPosting.push_back( LedgerPosting{ account, LedgerHolder::makeSink(), request._assetID, magnitude } );
-                LedgerTransferResult outcome;
-                const LedgerResult   staged = Ledger::stageTransfer( connection, transfer, inoutTransaction, outcome );
+                LedgerTransferResult serviceResult;
+                const LedgerResult   staged = Ledger::stageTransfer( connection, transfer, inoutTransaction, serviceResult );
                 if ( staged != LedgerResult::Ok )
                     return toAdminResult( staged );
                 int64 after = before._amount;
-                for ( const LedgerTransferResult::HolderBalance& holderBalance : outcome._listHolderBalance )
+                for ( const LedgerTransferResult::HolderBalance& holderBalance : serviceResult._listHolderBalance )
                 {
                     outReply._listBalance.push_back( holderBalance._balance );
                     after = holderBalance._balance._amount;
@@ -129,13 +129,13 @@ namespace sw
                 return AdminResult::Ok;
             }
 
-            static AdminOutcome stageSanction( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply,
-                                               ServiceAuditEntry& inoutAudit )
+            static AdminServiceResult stageSanction( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply,
+                                                     ServiceAuditEntry& inoutAudit )
             {
                 const AdminRequest&  request = command._request;
                 ServiceSanctionState state;
                 if ( ServiceSanction::readState( connection, request._accountID, state ) != ServiceStoreResult::Ok )
-                    return AdminOutcome::fail( OnlineError::kUnavailable );
+                    return AdminServiceResult::fail( OnlineError::kUnavailable );
                 inoutAudit._before                                             = formatSanction( state );
                 const bool bBan                                                = request._sanctionKind == ServiceSanctionKind::Ban && request._untilMs != 0;
                 state._arrUntilMs[static_cast<int32>( request._sanctionKind )] = bBan ? ServiceSanctionState::kPermanentMs : request._untilMs;
@@ -151,8 +151,8 @@ namespace sw
                 return AdminResult::Ok;
             }
 
-            static AdminOutcome stageBulkMail( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply,
-                                               ServiceAuditEntry& inoutAudit )
+            static AdminServiceResult stageBulkMail( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply,
+                                                     ServiceAuditEntry& inoutAudit )
             {
                 const AdminRequest& request = command._request;
                 for ( const AccountID recipient : request._listAccountID )
@@ -172,15 +172,15 @@ namespace sw
                 return AdminResult::Ok;
             }
 
-            static AdminOutcome stageSetRole( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, ServiceAuditEntry& inoutAudit )
+            static AdminServiceResult stageSetRole( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, ServiceAuditEntry& inoutAudit )
             {
                 const AdminRequest& request = command._request;
                 if ( request._accountID == command._adminID )
-                    return AdminOutcome::fail( OnlineError::kForbidden ); // 자기 등급은 바꿀 수 없다. 마지막 Super 가 스스로 권한을 잃지 않게 하려는 것이다
+                    return AdminServiceResult::fail( OnlineError::kForbidden ); // 자기 등급은 바꿀 수 없다. 마지막 Super 가 스스로 권한을 잃지 않게 하려는 것이다
                 AdminRole current = AdminRole::None;
                 uint64    version = 0;
                 if ( AdminStoreLogic::readRole( connection, request._accountID, current, version ) != ServiceStoreResult::Ok )
-                    return AdminOutcome::fail( OnlineError::kUnavailable );
+                    return AdminServiceResult::fail( OnlineError::kUnavailable );
                 const string key = ServiceKeyUtil::makeHex64( request._accountID );
                 if ( request._role == AdminRole::None )
                 {
@@ -198,8 +198,8 @@ namespace sw
             }
 
             /** @brief 상태를 바꾸는 명령 하나의 효과를 @p inoutTransaction 에 붙입니다. 감사 기록도 포함합니다. */
-            static AdminOutcome stageResolveReport( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply,
-                                                    ServiceAuditEntry& inoutAudit )
+            static AdminServiceResult stageResolveReport( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply,
+                                                          ServiceAuditEntry& inoutAudit )
             {
                 const AdminRequest&      request = command._request;
                 ServiceReport            report;
@@ -208,9 +208,9 @@ namespace sw
                 if ( staged == ServiceStoreResult::NotFound )
                     return AdminResult::NotFound;
                 if ( staged == ServiceStoreResult::Invalid )
-                    return AdminOutcome::fail( OnlineError::kInvalidRequest );
+                    return AdminServiceResult::fail( OnlineError::kInvalidRequest );
                 if ( staged != ServiceStoreResult::Ok )
-                    return AdminOutcome::fail( OnlineError::kUnavailable );
+                    return AdminServiceResult::fail( OnlineError::kUnavailable );
                 inoutAudit._action  = "admin.report";
                 inoutAudit._subject = makeSubject( report._targetID );
                 inoutAudit._before  = request._reportKey;
@@ -219,15 +219,15 @@ namespace sw
                 return AdminResult::Ok;
             }
 
-            static AdminOutcome stageEffect( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply )
+            static AdminServiceResult stageEffect( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply )
             {
                 const AdminRequest& request = command._request;
                 ServiceAuditEntry   audit;
-                audit._actor        = ServiceAuditLog::makeOperatorActor( command._adminID );
-                audit._subject      = makeSubject( request._accountID );
-                audit._memo         = request._memo;
-                audit._timeMs       = command._nowMs;
-                AdminOutcome staged = AdminOutcome::fail( OnlineError::kInvalidRequest );
+                audit._actor              = ServiceAuditLog::makeOperatorActor( command._adminID );
+                audit._subject            = makeSubject( request._accountID );
+                audit._memo               = request._memo;
+                audit._timeMs             = command._nowMs;
+                AdminServiceResult staged = AdminServiceResult::fail( OnlineError::kInvalidRequest );
                 switch ( command._method )
                 {
                     case AdminMethod::AdjustAsset::kID:
@@ -268,7 +268,7 @@ namespace sw
                         campaign._startMs        = request._startMs;
                         campaign._endMs          = request._endMs;
                         campaign._actorID        = command._adminID;
-                        staged                   = ServiceMailCampaign::stageCreate( campaign, inoutTransaction ) ? AdminResult::Ok : AdminOutcome::fail( OnlineError::kInvalidRequest );
+                        staged                   = ServiceMailCampaign::stageCreate( campaign, inoutTransaction ) ? AdminResult::Ok : AdminServiceResult::fail( OnlineError::kInvalidRequest );
                         audit._action            = "admin.campaign";
                         audit._subject           = "campaign." + ServiceKeyUtil::makeHex64( request._batchID );
                         break;
@@ -338,7 +338,7 @@ namespace sw
              * @brief 계정 하나를 조회합니다. 계정 id 가 없으면 표시 이름으로 계정 키트의 이름 색인에서 찾으므로 접속하지 않은 계정도 찾습니다.
              * @details 찾은 계정 id 와 공개 신원은 `_identity` 에 담는다. 접속 여부는 서비스가 이 프로세스의 디렉터리로 채운다.
              */
-            static AdminOutcome lookup( IServiceStoreConnection& connection, const AdminCommand& command, AdminReply& outReply )
+            static AdminServiceResult lookup( IServiceStoreConnection& connection, const AdminCommand& command, AdminReply& outReply )
             {
                 AdminRequest request = command._request;
                 if ( request._accountID == kInvalidAccountID )
@@ -349,7 +349,7 @@ namespace sw
                     if ( found == ServiceStoreResult::NotFound )
                         return AdminResult::UnknownAccount;
                     if ( found != ServiceStoreResult::Ok )
-                        return AdminOutcome::fail( OnlineError::kUnavailable );
+                        return AdminServiceResult::fail( OnlineError::kUnavailable );
                     request._accountID = outReply._identity._accountID;
                 }
                 else if ( command._pNameIndex != nullptr )
@@ -358,21 +358,21 @@ namespace sw
                     if ( found == ServiceStoreResult::NotFound )
                         return AdminResult::UnknownAccount;
                     if ( found != ServiceStoreResult::Ok )
-                        return AdminOutcome::fail( OnlineError::kUnavailable );
+                        return AdminServiceResult::fail( OnlineError::kUnavailable );
                 }
                 outReply._identity._accountID = request._accountID;
                 const LedgerHolder account    = LedgerHolder::makeAccount( request._accountID );
                 if ( Ledger::listBalances( connection, account, outReply._listBalance ) != ServiceStoreResult::Ok )
-                    return AdminOutcome::fail( OnlineError::kUnavailable );
+                    return AdminServiceResult::fail( OnlineError::kUnavailable );
                 if ( ServiceSanction::readState( connection, request._accountID, outReply._sanction ) != ServiceStoreResult::Ok )
-                    return AdminOutcome::fail( OnlineError::kUnavailable );
+                    return AdminServiceResult::fail( OnlineError::kUnavailable );
                 uint64 roleVersion = 0;
                 if ( AdminStoreLogic::readRole( connection, request._accountID, outReply._targetRole, roleVersion ) != ServiceStoreResult::Ok )
-                    return AdminOutcome::fail( OnlineError::kUnavailable );
+                    return AdminServiceResult::fail( OnlineError::kUnavailable );
                 vector<LedgerJournalEntry> listEntry;
                 string                     ignoredCursor;
                 if ( Ledger::listHistory( connection, account, "", AdminProtocol::kMaxLookupCount, listEntry, ignoredCursor ) != ServiceStoreResult::Ok )
-                    return AdminOutcome::fail( OnlineError::kUnavailable );
+                    return AdminServiceResult::fail( OnlineError::kUnavailable );
                 for ( const LedgerJournalEntry& entry : listEntry )
                 {
                     AdminJournalLine& line = outReply._listJournal.emplace_back();
@@ -390,7 +390,7 @@ namespace sw
                 }
                 const string             subject = makeSubject( request._accountID ) + "/";
                 const ServiceStoreResult listed  = ServiceAuditLog::listEntries( connection, subject, "", AdminProtocol::kMaxLookupCount, outReply._listAudit, ignoredCursor );
-                return listed == ServiceStoreResult::Ok ? AdminResult::Ok : AdminOutcome::fail( OnlineError::kUnavailable );
+                return listed == ServiceStoreResult::Ok ? AdminResult::Ok : AdminServiceResult::fail( OnlineError::kUnavailable );
             }
         };
     } // namespace
@@ -420,18 +420,18 @@ namespace sw
         return ServiceStoreResult::Ok;
     }
 
-    AdminOutcome AdminStoreLogic::execute( IServiceStoreConnection& connection, const AdminCommand& command, AdminReply& outReply )
+    AdminServiceResult AdminStoreLogic::execute( IServiceStoreConnection& connection, const AdminCommand& command, AdminReply& outReply )
     {
         outReply          = AdminReply{};
         AdminRole role    = AdminRole::None;
         uint64    version = 0;
         if ( readRole( connection, command._adminID, role, version ) != ServiceStoreResult::Ok )
-            return AdminStoreLogicInternal::finish( outReply, AdminOutcome::fail( OnlineError::kUnavailable ) );
+            return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kUnavailable ) );
         const AdminRole required = AdminProtocol::getRequiredRole( command._method, command._request._sanctionKind );
         if ( required == AdminRole::Count || role < required )
-            return AdminStoreLogicInternal::finish( outReply, AdminOutcome::fail( OnlineError::kForbidden ) );
+            return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kForbidden ) );
         if ( AdminStoreLogicInternal::isWellFormed( command ) == false )
-            return AdminStoreLogicInternal::finish( outReply, AdminOutcome::fail( OnlineError::kInvalidRequest ) );
+            return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kInvalidRequest ) );
         if ( AdminMethod::isForwardedMethod( command._method ) )
             return AdminStoreLogicInternal::finish( outReply, AdminResult::Ok ); // 등급과 형식만 확인했다. 효과와 감사 기록은 서비스가 넘긴 키트(서버 디렉터리, 라이브 운영)가 쓴다
         if ( command._method == AdminMethod::LookupAccount::kID )
@@ -440,14 +440,14 @@ namespace sw
         {
             const ServiceStoreResult listed = ServiceAuditLog::listEntries( connection, command._request._subject, command._request._cursor, command._request._maxCount,
                                                                             outReply._listAudit, outReply._nextCursor );
-            return AdminStoreLogicInternal::finish( outReply, listed == ServiceStoreResult::Ok ? AdminResult::Ok : AdminOutcome::fail( OnlineError::kUnavailable ) );
+            return AdminStoreLogicInternal::finish( outReply, listed == ServiceStoreResult::Ok ? AdminResult::Ok : AdminServiceResult::fail( OnlineError::kUnavailable ) );
         }
         if ( command._method == AdminMethod::ListReports::kID )
         {
             const bool               bOpen    = command._request._reportStatus == ServiceReportStatus::Open;
             const int32              maxCount = command._request._maxCount < AdminProtocol::kMaxReportListCount ? command._request._maxCount : AdminProtocol::kMaxReportListCount;
             const ServiceStoreResult listed   = ServiceReportStore::listReports( connection, bOpen, command._request._cursor, maxCount, outReply._listReport, outReply._nextCursor );
-            return AdminStoreLogicInternal::finish( outReply, listed == ServiceStoreResult::Ok ? AdminResult::Ok : AdminOutcome::fail( OnlineError::kUnavailable ) );
+            return AdminStoreLogicInternal::finish( outReply, listed == ServiceStoreResult::Ok ? AdminResult::Ok : AdminServiceResult::fail( OnlineError::kUnavailable ) );
         }
 
         const string scope = ServiceAuditLog::makeOperatorActor( command._adminID );
@@ -460,14 +460,14 @@ namespace sw
                 // 지난 결과이다. 멱등 기록에는 결과 한 바이트만 있고 세션 끊기 표시는 실리지 않으므로 재시도가 두 번 끊지 않는다.
                 outReply._bReplayed  = SW_TRUE;
                 const bool bStoredOk = listStoredReply.size() == 1 && listStoredReply[0] < static_cast<uint8>( AdminResult::Count );
-                return AdminStoreLogicInternal::finish( outReply, bStoredOk ? AdminOutcome{ static_cast<AdminResult>( listStoredReply[0] ) } : AdminOutcome{ AdminResult::Ok } );
+                return AdminStoreLogicInternal::finish( outReply, bStoredOk ? AdminServiceResult{ static_cast<AdminResult>( listStoredReply[0] ) } : AdminServiceResult{ AdminResult::Ok } );
             }
             if ( found != ServiceStoreResult::NotFound )
-                return AdminStoreLogicInternal::finish( outReply, AdminOutcome::fail( OnlineError::kUnavailable ) );
+                return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kUnavailable ) );
 
-            AdminReply         attemptReply;
-            ServiceTransaction transaction;
-            const AdminOutcome staged = AdminStoreLogicInternal::stageEffect( connection, command, transaction, attemptReply );
+            AdminReply               attemptReply;
+            ServiceTransaction       transaction;
+            const AdminServiceResult staged = AdminStoreLogicInternal::stageEffect( connection, command, transaction, attemptReply );
             if ( staged != AdminResult::Ok )
             {
                 outReply = attemptReply;
@@ -481,28 +481,28 @@ namespace sw
                 return AdminStoreLogicInternal::finish( outReply, AdminResult::Ok );
             }
             if ( committed == ServiceStoreResult::Invalid )
-                return AdminStoreLogicInternal::finish( outReply, AdminOutcome::fail( OnlineError::kInvalidRequest ) );
+                return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kInvalidRequest ) );
             if ( committed == ServiceStoreResult::Unavailable )
             {
                 // 적용됐는지 알 수 없다. 멱등 기록이 있으면 적용된 것이다.
                 const ServiceStoreResult recheck = ServiceIdempotency::findReply( connection, scope, command._keyHigh, command._keyLow, listStoredReply );
                 if ( recheck != ServiceStoreResult::Ok )
-                    return AdminStoreLogicInternal::finish( outReply, AdminOutcome::fail( OnlineError::kUnavailable ) );
+                    return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kUnavailable ) );
                 outReply            = attemptReply;
                 outReply._bReplayed = SW_TRUE;
                 return AdminStoreLogicInternal::finish( outReply, AdminResult::Ok );
             }
             // Conflict 이다. 다음 반복의 멱등 기록 확인이 "이미 됐다" 를 가려 준다
         }
-        return AdminStoreLogicInternal::finish( outReply, AdminOutcome::fail( OnlineError::kBusy ) );
+        return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kBusy ) );
     }
 
-    AdminOutcome AdminStoreLogic::seedRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole role, int64 nowMs )
+    AdminServiceResult AdminStoreLogic::seedRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole role, int64 nowMs )
     {
         AdminRole current = AdminRole::None;
         uint64    version = 0;
         if ( readRole( connection, accountID, current, version ) != ServiceStoreResult::Ok )
-            return AdminOutcome::fail( OnlineError::kUnavailable );
+            return AdminServiceResult::fail( OnlineError::kUnavailable );
         if ( version != 0 )
             return AdminResult::Ok; // 이미 있으므로 설정 파일이 운영 중에 바뀐 등급을 덮어쓰지 않는다
         ServiceTransaction transaction;
@@ -515,6 +515,6 @@ namespace sw
         audit._timeMs  = nowMs;
         ServiceAuditLog::stageEntry( transaction, audit, accountID, static_cast<uint64>( nowMs ) );
         const ServiceStoreResult committed = connection.commit( transaction );
-        return committed == ServiceStoreResult::Ok || committed == ServiceStoreResult::Conflict ? AdminResult::Ok : AdminOutcome::fail( OnlineError::kUnavailable );
+        return committed == ServiceStoreResult::Ok || committed == ServiceStoreResult::Conflict ? AdminResult::Ok : AdminServiceResult::fail( OnlineError::kUnavailable );
     }
 } // namespace sw

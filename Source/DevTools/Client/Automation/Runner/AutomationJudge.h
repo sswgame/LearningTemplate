@@ -79,10 +79,10 @@ namespace sw
         void deferExpectImage( AutomationStepContext& context, const AutomationStep& step );
         /** @brief `<ExpectImagesDiffer>` 를 미뤄 둡니다. 스크린샷은 렌더 스레드가 나중에 쓰므로 `<ExpectImage>` 와 같이 시나리오 끝에서 견준다. */
         void deferExpectImagesDiffer( const AutomationStep& step );
-        /** @brief 워커가 낼 값 @p pValue 가 @p limit 이하인지를 시나리오 끝(`judgeDeferred`)으로 미룹니다(`AutomationStepContext::deferExpectAtMost`). */
+        /** @brief 워커가 낼 값 @p pValue 가 @p limit 이하인지를 시나리오 끝(`evaluateDeferred`)으로 미룹니다(`AutomationStepContext::deferExpectAtMost`). */
         void deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue );
         /** @brief 미룬 `<ExpectImage>` 와 값 상한을 차례로 판정합니다. 스크린샷과 끝 차단 조건의 뒤의 일이 모두 끝난 뒤(`<Pass/>`) 부른다. */
-        void judgeDeferred( AutomationStepContext& context );
+        void evaluateDeferred( AutomationStepContext& context );
 
         /**
          * @brief 로그 게이트입니다. 시작한 시나리오의 처리하지 않은 Warning · Error 줄과 빠진 현지화 키를 모아 보고(`unhandledLogs`)에 싣습니다 — 결과가 실패여도 싣는다.
@@ -158,12 +158,12 @@ namespace sw
         /** @brief 시작할 때 `<ExpectVisited>` 가 보는 감시 값마다 이력을 만듭니다. */
         void prepareWatches( const AutomationScenario& scenario );
         /** @brief 미룬 `<ExpectImage>` 하나를 판정합니다(@p backendTag 는 단언한 때의 백엔드). 판정은 `AutomationGoldenUtil::judge` · `decide` 한 식이다. */
-        void judgeImage( AutomationStepContext& context, const AutomationStep& step, string_view backendTag );
+        void evaluateImage( AutomationStepContext& context, const AutomationStep& step, string_view backendTag );
         /** @brief 기록 모드에서 골든 @p goldenID 와 그 메타(`*.golden.json`)를 씁니다. @p pPrevious 는 쓰기 전 골든과의 차이(견주지 못했으면 nullptr)입니다. */
         void writeGolden( AutomationStepContext& context, const AutomationStep& step, const AutomationImage& image, const string& goldenID, string_view backendTag, const utf8* pReason,
                           const AutomationImageDifference* pPrevious, const AutomationGoldenLimits& limits );
         /** @brief 미룬 `<ExpectImagesDiffer>` 하나를 판정합니다. */
-        void judgeImagesDiffer( AutomationStepContext& context, const AutomationStep& step );
+        void evaluateImagesDiffer( AutomationStepContext& context, const AutomationStep& step );
 
     private:
         AutomationLogCapture             _logCapture;               ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)

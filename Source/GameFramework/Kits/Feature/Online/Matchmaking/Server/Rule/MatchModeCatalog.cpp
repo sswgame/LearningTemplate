@@ -15,7 +15,7 @@ namespace sw
 {
     uint32 MatchModeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<MatchModeCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&MatchModeCatalog::loadMode>( "Mode" ),
@@ -28,7 +28,7 @@ namespace sw
     {
         // 정의의 id 필드(`_modeID`)은 와이어 · 저장 이름이라 데이터의 `id` 속성은 손으로 읽는다.
         MatchModeDef mode;
-        bool         bValid = XMLFields::readFields( node, mode, sourceName, { "id" } );
+        bool         bValid = XMLFields::readProperties( node, mode, sourceName, { "id" } );
         const utf8*  pID    = node.findAttribute( "id" );
         if ( StringUtil::isNullOrEmpty( pID ) )
         {

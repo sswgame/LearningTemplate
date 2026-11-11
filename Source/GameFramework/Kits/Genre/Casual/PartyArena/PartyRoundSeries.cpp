@@ -120,7 +120,7 @@ namespace sw
                 return 0;
             }
         }
-        // 앞 판은 읽기가 끝나야 버린다. 틀린 판은 readFields 가 알리고 그 판만 빠진다.
+        // 앞 판은 읽기가 끝나야 버린다. 틀린 판은 readProperties 가 알리고 그 판만 빠진다.
         vector<PartyRoundDef> listPreviousRound;
         listPreviousRound.swap( _listRound );
         using Element                          = XMLCatalogElement<PartyRoundSeries>;

@@ -432,7 +432,7 @@ namespace sw::editor
 
         /** @brief CallInEditor 인자 입력란 하나를 그 C++ 타입의 위젯으로 그립니다. `ReflectBuiltins.xxx` 항목마다 하나씩 있습니다. */
         template <typename T>
-        bool drawMethodArgFor( const utf8* pLabel, TaskValue& value )
+        bool drawMethodArgument( const utf8* pLabel, TaskValue& value )
         {
             T edited = value.getValue<T>();
             if ( drawValueWidget( pLabel, edited ) == false )
@@ -445,7 +445,7 @@ namespace sw::editor
 
         /** @brief 인자 위젯 테이블입니다. 순서는 `InspectorBuiltinValue` 테이블과 같습니다. 같은 파일을 같은 순서로 include 합니다. */
         const DrawMethodArgFn kArrDrawMethodArg[] = {
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) &drawMethodArgFor<InspectorBuiltinCppTypeT<CppType>>,
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) &drawMethodArgument<InspectorBuiltinCppTypeT<CppType>>,
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE

@@ -79,7 +79,7 @@ namespace sw
         /** @brief 기하를 대신 내는 오브젝트입니다. */
         virtual const GameObject* getNavGeometryOwner() const = 0;
         /** @brief 지금 주인의 메시 · 강체 대신 이 소스를 써야 하면 true 입니다(온전한 파괴 오브젝트는 false — 보통 규칙으로 모은다). */
-        virtual bool overridesOwnerGeometry() const = 0;
+        virtual bool shouldOverrideOwnerGeometry() const = 0;
         /** @brief 월드 공간 기하를 @p outGeometry 에 더합니다(영역 @p area). */
         virtual void collectNavGeometry( NavMeshGeometry& outGeometry, uint8 area ) const = 0;
 

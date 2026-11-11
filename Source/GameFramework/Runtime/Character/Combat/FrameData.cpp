@@ -90,7 +90,7 @@ namespace sw
 
         // 적지 않은 칸은 MoveFrameData 의 초기값이다. 깨진 값 · 범위 밖 값 · 모르는 높이는 그 기술을 넣지 않는 오류다(자르지 않는다).
         MoveFrameData move;
-        bool          bValid = XMLFields::readFields( node, move, sourceName );
+        bool          bValid = XMLFields::readProperties( node, move, sourceName );
         if ( move._id.empty() )
             return false;
         const utf8* const pID = move._id.c_str();
@@ -104,7 +104,7 @@ namespace sw
             MoveHitbox hitbox;
             hitbox._fromFrame = move._startup;
             hitbox._toFrame   = move.getLastActiveFrame();
-            bool bHitboxValid = XMLFields::readFields( child, hitbox, sourceName ); // 크기 >= 0 · to >= from · 모양은 ENUM() 이름
+            bool bHitboxValid = XMLFields::readProperties( child, hitbox, sourceName ); // 크기 >= 0 · to >= from · 모양은 ENUM() 이름
             if ( bHitboxValid && hitbox._fromFrame > lastFrame )
             {
                 SW_LOG_ERROR_ID( "FrameData.MoveHitboxOutsideFrames", "%#: move '%#' has a hitbox outside its frames", sourceName, pID );
@@ -121,7 +121,7 @@ namespace sw
             MoveCancelWindow window;
             window._fromFrame = move.getLastActiveFrame() + 1;
             window._toFrame   = lastFrame;
-            bool bWindowValid = XMLFields::readFields( child, window, sourceName ); // to >= from 은 PROPERTY 가 본다
+            bool bWindowValid = XMLFields::readProperties( child, window, sourceName ); // to >= from 은 PROPERTY 가 본다
             if ( bWindowValid && ( window._listMoveID.empty() || window._toFrame < window._fromFrame ) )
             {
                 SW_LOG_ERROR_ID( "FrameData.MoveEmptyCancelWindow", "%#: move '%#' has an empty cancel window", sourceName, pID );
@@ -277,7 +277,7 @@ namespace sw
         return FrameDataInternal::computeAdvantage( _move, _frame, bOnBlock );
     }
 
-    GuardResult MoveTimeline::computeGuardOutcome( AttackHeight height, GuardStance stance, bool bUnblockable )
+    GuardResult MoveTimeline::computeGuardResult( AttackHeight height, GuardStance stance, bool bUnblockable )
     {
         switch ( stance )
         {

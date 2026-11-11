@@ -60,7 +60,7 @@ namespace sw
 
     uint32 CardBattleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 카드는 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 카드는 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<CardBattleCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&CardBattleCatalog::loadCard>( "Card" ),
@@ -71,7 +71,7 @@ namespace sw
     bool CardBattleCatalog::loadCard( const XMLNode& node, string_view sourceName )
     {
         CardBattleCardDef def;
-        bool              bValid = XMLFields::readFields( node, def, sourceName, { "effects" } );
+        bool              bValid = XMLFields::readProperties( node, def, sourceName, { "effects" } );
         XMLReadUtil::forEachNamedNumber( node.getAttributeText( "effects" ), ",; ", 0, XMLReadUtil::MissingValue::Reject,
                                          [&]( string_view token, string_view kindName, int32 amount, bool bAmount )
         {

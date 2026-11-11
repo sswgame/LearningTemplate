@@ -321,8 +321,8 @@ SW_TEST_CASE( NetEndpointTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
     client.initialize( network.createEndpoint( 5000 ), clientSettings );
     SW_REQUIRE_TRUE( server.listen() );
     SW_REQUIRE_TRUE( client.connect( NetAddress::makeLoopback( 4000 ) ) );
-    float64    time   = 0.0;
-    const auto runFor = [&]( float64 seconds, bool bServer, bool bClient )
+    float64    time          = 0.0;
+    const auto runForSeconds = [&]( float64 seconds, bool bServer, bool bClient )
     {
         for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += 1.0 / 60.0 )
         {
@@ -333,15 +333,15 @@ SW_TEST_CASE( NetEndpointTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
                 client.update( time );
         }
     };
-    runFor( 0.3, true, true );
+    runForSeconds( 0.3, true, true );
     SW_REQUIRE_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
     SW_EXPECT_TRUE( server.isDebugHoldAnnounced() );
     SW_EXPECT_FALSE( client.isDebugHoldAnnounced() );
 
     // 서버만 6 초 멈춘다 — 보통 시한(1 초)이면 끊겼을 것이다.
-    runFor( 6.0, false, true );
+    runForSeconds( 6.0, false, true );
     SW_EXPECT_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
-    runFor( 0.5, true, true ); // 서버가 쌓인 패킷을 비운다
+    runForSeconds( 0.5, true, true ); // 서버가 쌓인 패킷을 비운다
     SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
 
     // 둘 다 6 초 멈춘다 — 서버가 먼저 깨어난다. 클라이언트는 알리지 않았고 쌓인 패킷도 없으니 서버는 가상 시계로만 버틴다.
@@ -349,12 +349,12 @@ SW_TEST_CASE( NetEndpointTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
     server.update( time );
     SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
     client.update( time );
-    runFor( 0.5, true, true );
+    runForSeconds( 0.5, true, true );
     SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
     SW_EXPECT_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
     const vector<uint8> hello = NetTestUtil::makeMessage( 77 );
     SW_REQUIRE_TRUE( client.sendMessage( 0, NetChannelType::ReliableOrdered, hello ) );
-    runFor( 0.3, true, true );
+    runForSeconds( 0.3, true, true );
     int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
@@ -365,9 +365,9 @@ SW_TEST_CASE( NetEndpointTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
     vector<NetEndpointEvent> listEvent;
     client.pollEvents( listEvent );
     listEvent.clear();
-    runFor( 9.0, false, true );
+    runForSeconds( 9.0, false, true );
     SW_EXPECT_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
-    runFor( 3.0, false, true );
+    runForSeconds( 3.0, false, true );
     client.pollEvents( listEvent );
     SW_REQUIRE_TRUE( listEvent.empty() == false );
     SW_EXPECT_TRUE( listEvent.back()._reason == NetDisconnectReason::Timeout );

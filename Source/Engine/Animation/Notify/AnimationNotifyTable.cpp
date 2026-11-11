@@ -190,7 +190,7 @@ namespace sw
     void AnimationNotifyTable::readFootContact( const XMLNode& node, CharacterDataReader& reader )
     {
         AnimationFootContactDef def{};
-        if ( reader.readFields( node, def ) == false ) // 칸 · 양수 속도는 AnimationFootContactDef 의 PROPERTY 가 본다
+        if ( reader.readProperties( node, def ) == false ) // 칸 · 양수 속도는 AnimationFootContactDef 의 PROPERTY 가 본다
             return;
         if ( def._releaseHeight <= def._contactHeight )
             reader.addError( "Character.FootContactHeightOrder", node, "needs 'release_height' above 'contact_height'" );

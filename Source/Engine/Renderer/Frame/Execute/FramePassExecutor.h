@@ -98,16 +98,16 @@ namespace sw
         void setInputRoleEnabled( RenderPassInputRole role, bool bEnabled );
         /**
          * @brief 이 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
-         * @details 판정은 `FrameRendererUtil::drawsMaterialInPass` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다.
+         * @details 판정은 `FrameRendererUtil::shouldDrawMaterialInPass` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다.
          */
-        bool drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
+        bool shouldDrawBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
         /**
-         * @brief 파이프라인 패스 @p pass 가 이번 뷰에서 컬링됐으면 true 입니다(그릴 것이 없다) — 뷰 패스 고르기의 결과(`FrameViewTarget::_listPassCulled`)를 그대로 읽는다.
+         * @brief 파이프라인 패스 @p pass 가 이번 뷰에서 비활성이면 true 입니다(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스) — 뷰 패스 고르기의 결과(`FrameViewTarget::_listPassDisabled`)를 그대로 읽는다.
          * @details 덧그리는 패스(SSR · 왜곡 누적 · 왜곡 적용)의 실행이 따로 판정하지 않는다 — 판정이 둘이면 고르기가 뺀 사본을 실행이 읽거나, 실행이 쉬는데 사본을 만든다.
          */
-        bool isPassCulledInView( const RenderGraphPassDesc& pass ) const;
+        bool isPassDisabledInView( const RenderGraphPassDesc& pass ) const;
         /** @brief 그림자 캐시의 거르기(@p filter)가 이 배치를 그리게 하면 true 입니다(`GPUMeshBatch::_bStaticShadowCaster`). */
-        static bool drawsCasterBatch( ShadowCasterFilter filter, const GPUMeshBatch& batch );
+        static bool shouldDrawCasterBatch( ShadowCasterFilter filter, const GPUMeshBatch& batch );
 
         // ------------------------------------------------------------------------------
         // 3) 뷰 패스 상수(셋업의 주 시점 시드와 추가 뷰 기록이 함께 쓴다)
@@ -232,7 +232,7 @@ namespace sw
          */
         void executePass( FramePassContext& context, const RenderGraphPassDesc& passDesc );
         /** @brief 첨부의 이번 프레임 첫 사용이면 Clear, 아니면 Load 입니다(`markAttachmentCleared`). */
-        RHIRenderPassLoadOp colorLoadFor( const hashed_string& name );
+        RHIRenderPassLoadOp getColorLoadFor( const hashed_string& name );
         /** @brief @p targetName 하나에 풀스크린 삼각형을 그립니다. 열지 못하면 아무것도 하지 않습니다. */
         void executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor );
         /** @brief 일반 풀스크린 패스(테이블의 kGenericFullscreen)입니다. 선언한 입력을 모두 바인딩하고 선언한 첫 컬러 출력에 그립니다. 이 뷰에서 빠진 패스(`FrameViewResources::applyViewPassSelection`)는 기록하지 않습니다. */

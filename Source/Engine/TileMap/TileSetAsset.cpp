@@ -349,7 +349,7 @@ namespace sw
         }
         // 칸 · 범위는 스키마(`TileSetRootParams`)가 정본이다. 깨진 값 · 범위 밖 값은 읽기 실패다.
         TileSetRootParams rootParams;
-        if ( XMLFields::readFields( root, rootParams, sourceName ) == false )
+        if ( XMLFields::readProperties( root, rootParams, sourceName ) == false )
             return false;
         TileSetContent loaded;
         loaded._name            = rootParams._name;
@@ -380,7 +380,7 @@ namespace sw
             return false;
         }
         TileBrushParams params;
-        if ( XMLFields::readFields( node, params, sourceName, { "cell", "frames", "fps" } ) == false || params._name.empty() )
+        if ( XMLFields::readProperties( node, params, sourceName, { "cell", "frames", "fps" } ) == false || params._name.empty() )
             return false;
         TileBrush&        brush = outBrush;
         const string_view name  = params._name.view();
@@ -405,13 +405,13 @@ namespace sw
                 SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: unknown element <%#> in <%#> (only <Rule> inside <RuleTile>)", sourceName, ruleNode.getName(), node.getName() );
                 return false;
             }
-            TileRuleParams ruleFields;
-            if ( XMLFields::readFields( ruleNode, ruleFields, sourceName, { "cell", "frames", "fps" } ) == false )
+            TileRuleParams ruleProperties;
+            if ( XMLFields::readProperties( ruleNode, ruleProperties, sourceName, { "cell", "frames", "fps" } ) == false )
                 return false;
             TileRule rule{};
-            if ( Internal::parsePattern( ruleFields._pattern, rule._arrNeighbor ) == false )
+            if ( Internal::parsePattern( ruleProperties._pattern, rule._arrNeighbor ) == false )
             {
-                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: rule pattern '%#' of '%#' must be nine of . o x", sourceName, ruleFields._pattern.c_str(), name );
+                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: rule pattern '%#' of '%#' must be nine of . o x", sourceName, ruleProperties._pattern.c_str(), name );
                 return false;
             }
             if ( parseVisual( ruleNode, sourceName, rule._visual ) == false )

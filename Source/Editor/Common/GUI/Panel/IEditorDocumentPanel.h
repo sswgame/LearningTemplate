@@ -92,7 +92,7 @@ namespace sw::editor
          * @brief 닫을 때 미저장 편집을 확인해야 하면 true 입니다. 기본은 true 입니다.
          * @details 편집이 패널 밖(전역 변수 관리자처럼 바로 적용되는 곳)에 살아 있어서 패널을 닫아도 아무것도 잃지 않는 패널만 false 로 재정의한다.
          */
-        virtual bool asksBeforeClose() const { return true; }
+        virtual bool shouldAskBeforeClose() const { return true; }
         /**
          * @brief 닫기 확인과 제목의 미저장 표시보다 먼저 부릅니다. 패널이 접혀 있어도 `draw()` 마다 부릅니다.
          * @details 미리보기 씬의 Undo 스택처럼 패널 바깥의 기록에서 편집을 읽는 패널은 여기서 `markDocumentDirty` 를 부른다. 기본은 아무 일도 하지 않는다.

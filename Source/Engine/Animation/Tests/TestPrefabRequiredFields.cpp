@@ -1,4 +1,4 @@
-// PrefabRequiredFieldsTest — 프리팹 기반 + override 를 합친 상태에서 필수 칸(Required)을 본다. 필수 칸을 가진 컴포넌트(애니메이션 단)를 쓰므로
+// PrefabRequiredPropertiesTest — 프리팹 기반 + override 를 합친 상태에서 필수 칸(Required)을 본다. 필수 칸을 가진 컴포넌트(애니메이션 단)를 쓰므로
 // 월드 단(Object/Prefab) 테스트가 아니라 여기에 둔다 — 아래 층 부분은 위 층 헤더를 include 하지 못한다(EngineLayers.toml).
 #include "pch.h"
 
@@ -23,10 +23,10 @@ namespace
 } // namespace
 
 /**
- * @brief [PrefabRequiredFieldsTest] 필수 칸(`PROPERTY( Required )`)은 합친 상태에서 본다 — override 가 다른 칸만 적어도 기반에 있으면 읽고,
+ * @brief [PrefabRequiredPropertiesTest] 필수 칸(`PROPERTY( Required )`)은 합친 상태에서 본다 — override 가 다른 칸만 적어도 기반에 있으면 읽고,
  *        기반에도 없으면 오류 id 를 남기고 읽지 않는다(초기값이 데이터를 대신하지 않는다)
  */
-SW_TEST_CASE( PrefabRequiredFieldsTest, RequiredFieldsAreCheckedOnTheMergedState )
+SW_TEST_CASE( PrefabRequiredPropertiesTest, RequiredPropertiesAreCheckedOnTheMergedState )
 {
     static constexpr const utf8* kWritten = R"(<GameObject _schemaVersion="0" _name="Walker" _bActive="true"><_listComponent>)"
                                             R"(<LocomotionWarpingComponent _componentName="LocomotionWarpingComponent" _bStrideWarping="true" _speedCurve="Speed"/>)"

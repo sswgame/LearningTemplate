@@ -214,7 +214,7 @@ namespace sw
          */
         [[nodiscard]] bool resolveVariant( string_view basePath, string_view overrideXML, vector<PrefabInstanceNode> listOwnNode, string_view sourceName );
         /** @brief 변형을 파일에 쓸 값을 만듭니다 — 부모와 다른 점과 물려받지 않은 노드입니다. 부모를 읽지 못하거나 물려받은 노드를 지웠거나 옮겼으면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool makeVariantFileFields( string& outOverrideXML, vector<PrefabInstanceNode>& outListOwnNode ) const;
+        [[nodiscard]] bool makeVariantFileProperties( string& outOverrideXML, vector<PrefabInstanceNode>& outListOwnNode ) const;
 
     private:
         string                     _name;

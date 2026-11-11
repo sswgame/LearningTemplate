@@ -22,7 +22,7 @@
 #include "DevTools/Net/NetListenLaunch.h"
 #include "DevTools/Profiling/FrameProfileSession.h"
 #include "DevTools/Profiling/LeakBaselineDetailSwitch.h"
-#include "DevTools/Profiling/ProfilerLaunchSwitches.h"
+#include "DevTools/Profiling/ProfilerLaunchSubsystem.h"
 #include "DevTools/Profiling/ProfilerTraceExport.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 #include "DevTools/ServerPose/ServerPoseOverlay.h"
@@ -92,7 +92,7 @@ namespace sw
 
     void DevToolsHost::onFrameBegin( [[maybe_unused]] const EngineFrameContext& context )
     {
-        if ( ProfilerLaunchSwitches* const pProfilerSwitches = engine::findSubsystem<ProfilerLaunchSwitches>() )
+        if ( ProfilerLaunchSubsystem* const pProfilerSwitches = engine::findSubsystem<ProfilerLaunchSubsystem>() )
             pProfilerSwitches->onFrameBegin(); // 느린 프레임 판정의 시작 시각
         // 시작 명령(`-gv_devConsoleExec`)은 시작 씬이 열린 뒤 한 번 — 이 프레임의 입력 재생 앞이다.
         if ( _pConsole != nullptr )
@@ -126,7 +126,7 @@ namespace sw
             (void)startup.emplaceSubsystem<NetListenLaunchSubsystem>( *parts._pNetSession );
         }
         // 프로파일러 출력의 실행 인자(Tracy · 종료 트레이스 · 느린 프레임 캡처) — 서비스 범위의 프레임 프로파일러가 이미 섰다.
-        (void)startup.emplaceSubsystem<ProfilerLaunchSwitches>();
+        (void)startup.emplaceSubsystem<ProfilerLaunchSubsystem>();
         // 프레임 프로파일 실행(`-gv_profileFrames` · `-gv_profileSeconds`, 부하 시나리오의 측정 창) — 프레임 끝 훅이 돌린다. GPU 메모리 표는 렌더러 창구로 묻는다(전용 서버는 없다).
         (void)startup.emplaceSubsystem<FrameProfileSession>( parts._pRenderDriver );
         // 틱별 상태 해시 이력(`-gv_stateHashHistory`) — 이력 서비스는 서비스 범위라 이미 섰다. 초기화 때 용량을 건다(서버 디버깅 S7).
@@ -172,7 +172,7 @@ namespace sw
         EngineFrameExit exitCode = kEngineFrameRunning;
         if ( FrameProfileSession* const pProfileSession = engine::findSubsystem<FrameProfileSession>() )
             exitCode = pProfileSession->onFrameEnd( context._activeSceneID );
-        if ( ProfilerLaunchSwitches* const pProfilerSwitches = engine::findSubsystem<ProfilerLaunchSwitches>() )
+        if ( ProfilerLaunchSubsystem* const pProfilerSwitches = engine::findSubsystem<ProfilerLaunchSubsystem>() )
             pProfilerSwitches->onFrameEnd(); // 느린 프레임 자동 캡처(`-gv_traceSlowTickMs`)
         // 셰이더 재컴파일 · 강제 리로드 단축키(Debug 클라이언트) · 시작 인자 사진 — 클라이언트 전용 부분이 한다. 먼저 끝난 쪽의 종료 코드를 돌려준다.
         if ( IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find() )

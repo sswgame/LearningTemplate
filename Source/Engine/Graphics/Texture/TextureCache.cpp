@@ -58,7 +58,7 @@ namespace sw
         }
 
         /** @brief @p pDevice 의 것을 모두 `releaseHandle` 로 해제합니다(게임 스레드 — 이미 만든 패킷이 끝날 때까지 미룬다). */
-        void releaseFor( IRHIDevice* pDevice )
+        void releaseForDevice( IRHIDevice* pDevice )
         {
             vector<Item> listRelease;
             {
@@ -83,7 +83,7 @@ namespace sw
             }
         }
 
-        void releaseRHI( IRHIDevice* pDevice ) override { releaseFor( pDevice ); }
+        void releaseRHI( IRHIDevice* pDevice ) override { releaseForDevice( pDevice ); }
 
         void clearRHI( IRHIDevice* pDevice ) override
         {
@@ -474,7 +474,7 @@ namespace sw
     {
         // 업로드 전용 계측(렌더 스레드 업로드 판단 — DesignBacklog "렌더 스레드와 업로드"): 펌프 CPU 시간, 프레임당 제출 · 폴링 · 대기 수.
         SW_PROFILE_SCOPE( "RT.TextureUpload.pump" );
-        return pumpPendingLoads( pDevice, maxCount, false );
+        return processPendingLoads( pDevice, maxCount, false );
     }
 
     uint32 TextureCache::finishPendingLoads( IRHIDevice* pDevice )
@@ -484,14 +484,14 @@ namespace sw
         uint32 completedCount = 0;
         for ( ;; )
         {
-            completedCount += pumpPendingLoads( pDevice, UINT32_MAX, true );
+            completedCount += processPendingLoads( pDevice, UINT32_MAX, true );
             ScopedLock<mutex> lock{ _impl->_awaitingMutex };
             if ( _impl->_listAwaitingUpload.empty() && _impl->_listUploading.empty() )
                 return completedCount;
         }
     }
 
-    uint32 TextureCache::pumpPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking )
+    uint32 TextureCache::processPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking )
     {
         if ( pDevice == nullptr )
             return 0;
@@ -629,13 +629,13 @@ namespace sw
             if ( _impl->_mapScreenSize.empty() == false )
             {
                 const unordered_map<string, float32>& mapScreenSize = _impl->_mapScreenSize;
-                const auto                            sizeOf        = [&mapScreenSize]( const Impl::StreamingUpgrade& upgrade )
+                const auto                            getSizeOf     = [&mapScreenSize]( const Impl::StreamingUpgrade& upgrade )
                 {
                     const auto it = mapScreenSize.find( upgrade._key );
                     return it != mapScreenSize.end() ? it->second : 0.0f;
                 };
-                VectorUtil::stableSort( _impl->_listStreamingUpgrade, [&sizeOf]( const Impl::StreamingUpgrade& lhs, const Impl::StreamingUpgrade& rhs )
-                { return sizeOf( lhs ) > sizeOf( rhs ); } );
+                VectorUtil::stableSort( _impl->_listStreamingUpgrade, [&getSizeOf]( const Impl::StreamingUpgrade& lhs, const Impl::StreamingUpgrade& rhs )
+                { return getSizeOf( lhs ) > getSizeOf( rhs ); } );
                 _impl->_mapScreenSize.clear();
             }
             listUpgrade.assign( std::make_move_iterator( _impl->_listStreamingUpgrade.begin() ),
@@ -700,7 +700,7 @@ namespace sw
     void TextureCache::releaseRetiredTextures( IRHIDevice* pDevice )
     {
         if ( pDevice != nullptr )
-            _impl->_retired.releaseFor( pDevice );
+            _impl->_retired.releaseForDevice( pDevice );
     }
 
     uint32 TextureCache::countLoadsInFlight() const

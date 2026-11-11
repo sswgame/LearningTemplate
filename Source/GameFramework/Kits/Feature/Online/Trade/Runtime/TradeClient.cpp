@@ -150,24 +150,24 @@ namespace sw
 
 namespace sw
 {
-    TradeOutcome TradeClient::makeLegs( const Inventory& inventory, const vector<int32>& listSlot, AssetIDFromItem pAssetIDFromItem, vector<TradeLeg>& outListLeg )
+    TradeServiceResult TradeClient::makeLegs( const Inventory& inventory, const vector<int32>& listSlot, AssetIDFromItem pAssetIDFromItem, vector<TradeLeg>& outListLeg )
     {
         outListLeg.clear();
         if ( pAssetIDFromItem == nullptr )
-            return TradeOutcome::fail( OnlineError::kInvalidRequest );
+            return TradeServiceResult::fail( OnlineError::kInvalidRequest );
         for ( size_t slotIndex = 0; slotIndex < listSlot.size(); ++slotIndex )
         {
             const int32 slot = listSlot[slotIndex];
             for ( size_t previousIndex = 0; previousIndex < slotIndex; ++previousIndex )
             {
                 if ( listSlot[previousIndex] == slot )
-                    return TradeOutcome::fail( OnlineError::kInvalidRequest ); // 같은 슬롯을 두 번 지정했다
+                    return TradeServiceResult::fail( OnlineError::kInvalidRequest ); // 같은 슬롯을 두 번 지정했다
             }
             if ( slot < 0 || slot >= inventory.getSlotCount() )
-                return TradeOutcome::fail( OnlineError::kInvalidRequest );
+                return TradeServiceResult::fail( OnlineError::kInvalidRequest );
             const InventorySlot& stack = inventory.getSlot( slot );
             if ( stack.isEmpty() )
-                return TradeOutcome::fail( OnlineError::kInvalidRequest );
+                return TradeServiceResult::fail( OnlineError::kInvalidRequest );
             if ( stack.hasInstanceState() || stack._durability > 0.0f )
                 return TradeResult::NotTradable;
             string assetID;
@@ -186,7 +186,7 @@ namespace sw
             }
             pLeg->_amount += stack._count;
         }
-        return static_cast<int32>( outListLeg.size() ) > TradeConstant::kMaxLegsPerSide ? TradeOutcome{ TradeResult::TooManyLegs } : TradeOutcome{ TradeResult::Ok };
+        return static_cast<int32>( outListLeg.size() ) > TradeConstant::kMaxLegsPerSide ? TradeServiceResult{ TradeResult::TooManyLegs } : TradeServiceResult{ TradeResult::Ok };
     }
 } // namespace sw
 

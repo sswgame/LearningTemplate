@@ -103,7 +103,7 @@ namespace sw
          */
         uint32 completePendingLoads( IRHIDevice* pDevice, uint32 maxCount );
         /**
-         * @brief `completePendingLoads` 의 차단 판입니다 — 기다리는 로드를 상한 없이 모두 제출하고 업로드 끝남까지 기다립니다(결정적 실행, `DeterministicRunPolicy::_bFinishAssetWorkEachFrame`).
+         * @brief `completePendingLoads` 의 차단 판입니다 — 기다리는 로드를 상한 없이 모두 제출하고 업로드 끝남까지 기다립니다(결정적 실행, `DeterministicRunPolicy::_bFinishAssetJobsEachFrame`).
          * @details 스테이징이 차서 `Busy` 로 돌아간 로드는 앞 업로드가 끝난 뒤 다시 낸다 — 두 목록이 빌 때까지 되풀이한다. 끝낸 수를 반환합니다.
          */
         uint32 finishPendingLoads( IRHIDevice* pDevice );
@@ -246,7 +246,7 @@ namespace sw
         struct Impl;
 
         /** @brief `completePendingLoads` · `finishPendingLoads` 의 본체입니다 — 제출한 로드의 끝남 확인(@p bBlocking 이면 끝날 때까지) 뒤 @p maxCount 개까지 새로 제출합니다. */
-        uint32 pumpPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking );
+        uint32 processPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking );
 
     private:
         shared_ptr<Impl> _impl; ///< 로드 작업이 약한 참조로 가리킨다 — 캐시가 먼저 사라지면 로드 작업은 놓을 것이 없다

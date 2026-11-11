@@ -40,7 +40,7 @@ namespace
             return context;
         }
 
-        static size_t indexOf( const ModuleResolution& resolution, string_view name )
+        static size_t getIndexOf( const ModuleResolution& resolution, string_view name )
         {
             for ( size_t index = 0; index < resolution._listLoadOrder.size(); ++index )
             {
@@ -204,8 +204,8 @@ SW_TEST_CASE( ModuleCatalogTest, LoadOrderPutsDependenciesFirst )
     Util::add( catalog, Util::makeManifest( "KitA" ) );
     ModuleResolution resolution;
     SW_REQUIRE_TRUE( catalog.resolve( Util::makeContext(), resolution ).has_value() );
-    SW_EXPECT_TRUE( Util::indexOf( resolution, "KitA" ) < Util::indexOf( resolution, "KitB" ) );
-    SW_EXPECT_TRUE( Util::indexOf( resolution, "KitB" ) < Util::indexOf( resolution, "Game" ) );
+    SW_EXPECT_TRUE( Util::getIndexOf( resolution, "KitA" ) < Util::getIndexOf( resolution, "KitB" ) );
+    SW_EXPECT_TRUE( Util::getIndexOf( resolution, "KitB" ) < Util::getIndexOf( resolution, "Game" ) );
     SW_EXPECT_TRUE( resolution.isActive( "Game" ) );
     SW_EXPECT_FALSE( resolution.isActive( "Nope" ) );
 }

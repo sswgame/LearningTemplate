@@ -1,4 +1,4 @@
-// PackEntryIDFieldsTest — 쓰는 것만 담는 쿠킹의 항목 id 칸 표(`PackConfig::_cookRules._listEntryIDField`)를 저장소의 데이터와 대조한다(nogpu).
+// PackEntryIDPropertiesTest — 쓰는 것만 담는 쿠킹의 항목 id 칸 표(`PackConfig::_cookRules._listEntryIDField`)를 저장소의 데이터와 대조한다(nogpu).
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
@@ -17,7 +17,7 @@ using namespace sw;
 
 namespace
 {
-    struct PackEntryIDFieldsTestUtil
+    struct PackEntryIDPropertiesTestUtil
     {
         static constexpr const utf8* kExemptionPath = "Config/Dev/EntryIDFieldExemptions.json"; ///< 값이 우연히 항목 id 와 같은 칸(이유와 함께)
 
@@ -107,15 +107,15 @@ namespace
             }
         };
     };
-    using Util = PackEntryIDFieldsTestUtil;
+    using Util = PackEntryIDPropertiesTestUtil;
 } // namespace
 
 /**
- * @brief [PackEntryIDFieldsTest] 항목 id 를 값으로 드는 칸은 모두 표에 있다 — 표에 없는 칸으로만 불리는 항목의 에셋은 쿠킹이 통과한 채 배포 팩에서 빠진다
+ * @brief [PackEntryIDPropertiesTest] 항목 id 를 값으로 드는 칸은 모두 표에 있다 — 표에 없는 칸으로만 불리는 항목의 에셋은 쿠킹이 통과한 채 배포 팩에서 빠진다
  * @details 게이트를 두는 까닭: id 칸은 경로가 아니라 이름이고 손 형식 · 리플렉션 형식에 흩어져 있어 형식으로 표시할 수 없다(`AssetRef` 는 파일을 가리킨다). 값에서 거꾸로 찾는다.
  *          표에도 예외 표에도 없는 칸이 id 와 같은 값을 들면 진다. 카탈로그 줄이 항목을 하나도 못 찾으면 고르기가 조용히 비므로 그것도 진다. 언리얼은 Primary Asset 규칙이 같은 자리다(기억에 의존).
  */
-SW_TEST_CASE( PackEntryIDFieldsTest, EveryFieldHoldingAnEntryIDIsListed )
+SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
 {
     PackConfig config;
     SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );

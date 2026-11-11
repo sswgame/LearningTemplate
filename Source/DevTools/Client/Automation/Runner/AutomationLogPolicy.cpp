@@ -25,7 +25,7 @@ namespace sw
             if ( step._kind != "ExpectLog" )
                 continue;
             AutomationExpectLogParams params;
-            const bool                bAbsent = step.readFields( params ).has_value() && params._count == 0;
+            const bool                bAbsent = step.readProperties( params ).has_value() && params._count == 0;
             if ( bAbsent )
                 continue;                                   // count="0" 은 단언이지 선언이 아니다
             const string& id = *step.findAttribute( "id" ); // 검사 함수가 id 를 요구했다
@@ -68,24 +68,24 @@ namespace sw
         return VectorUtil::contains( _listAllowedID, string( id ) ) ? AutomationLogResult::Allowed : AutomationLogResult::NotAllowed;
     }
 
-    void AutomationLogPolicy::judge( LogLevel level, string_view id, string_view message, AutomationLogJudgement& inoutJudgement ) const
+    void AutomationLogPolicy::judge( LogLevel level, string_view id, string_view message, AutomationLogCheckResult& inoutResult ) const
     {
         const AutomationLogResult result = classify( level, id, message );
         if ( result == AutomationLogResult::Allowed )
         {
             const string idText{ id };
-            if ( VectorUtil::contains( inoutJudgement._listAllowedID, idText ) == false )
-                inoutJudgement._listAllowedID.push_back( idText );
+            if ( VectorUtil::contains( inoutResult._listAllowedID, idText ) == false )
+                inoutResult._listAllowedID.push_back( idText );
             return;
         }
         if ( result != AutomationLogResult::MissingID && result != AutomationLogResult::NotAllowed )
             return;
         const bool bMissingID = result == AutomationLogResult::MissingID;
         if ( bMissingID )
-            ++inoutJudgement._missingIDCount;
+            ++inoutResult._missingIDCount;
         else
-            ++inoutJudgement._notAllowedCount;
+            ++inoutResult._notAllowedCount;
         const string idText = bMissingID ? string( "(no log id)" ) : "(id=" + string( id ) + ")";
-        inoutJudgement._listUnhandled.push_back( string( level == LogLevel::Error ? "[Error] " : "[Warning] " ) + idText + " " + string( message ) );
+        inoutResult._listUnhandled.push_back( string( level == LogLevel::Error ? "[Error] " : "[Warning] " ) + idText + " " + string( message ) );
     }
 } // namespace sw

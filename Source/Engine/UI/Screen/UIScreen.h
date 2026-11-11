@@ -96,7 +96,7 @@ namespace sw
         UIScreenHandle     getHandle() const { return _handle; }
         UISystem*          getUISystem() const { return _pUISystem; }
         /** @brief 포커스와 UI 액션을 받는 화면이면 true 입니다. 성질이 그렇고 HUD 나 오버레이 레이어가 아니어야 합니다. */
-        bool takesFocus() const;
+        bool canTakeFocus() const;
         /** @brief 포인터 이벤트를 받는 화면이면 true 입니다. 오버레이 레이어(알림)와 레이어 가시성 요청으로 숨긴 화면은 받지 않습니다. */
         bool receivesPointer() const { return _desc._layer != UILayer::Overlay && _bHiddenByLayer == SW_FALSE; }
         /** @brief 레이어 가시성 요청(`UISystem::addLayerHideRequest`)이 이 화면의 레이어를 숨기고 있으면 true 입니다. 숨긴 화면은 그리지 않고 포인터를 받지 않습니다(상태·포커스는 그대로). */
@@ -108,7 +108,7 @@ namespace sw
          */
         virtual bool isDevOverlay() const { return false; }
         /** @brief 아래 화면과 게임의 입력을 막는 화면이면 true 입니다. 모달이거나 로딩 레이어입니다. */
-        bool blocksLowerInput() const { return _desc._bModal || _desc._layer == UILayer::Loading; }
+        bool shouldBlockLowerInput() const { return _desc._bModal || _desc._layer == UILayer::Loading; }
         /** @brief 닫기를 요청했는지 나타냅니다(이번 입력 처리가 끝나면 지워집니다). */
         bool isClosing() const { return _bClosing == SW_TRUE; }
         /** @brief 이 화면을 닫습니다(지연). `UISystem::closeScreen` 과 같습니다. */
@@ -173,7 +173,7 @@ namespace sw
         /** @brief `UISystem::update` 마다 바인딩 앞에서 불립니다. 시간에 따라 바꿔야 하는 것(카운트다운, 키 받기)을 처리하는 곳입니다. 기본은 아무것도 하지 않습니다. */
         virtual void onTick( float32 deltaSeconds );
         /** @brief 이 화면이 활성인 동안 UI 액션(탐색, 확인, 뒤로)을 받는지 나타냅니다. 원시 입력을 받는 화면(키 바인딩 창)이 false 로 액션을 끕니다. */
-        virtual bool wantsUIActions() const { return true; }
+        virtual bool needsUIActions() const { return true; }
         /** @brief 핫 리로드가 문서로 트리를 새로 만든 뒤 불립니다. 코드로 덧붙인 위젯(옵션 메뉴의 행)을 다시 만드는 곳입니다. 기본은 아무것도 하지 않습니다. */
         virtual void onTreeRebuilt();
 

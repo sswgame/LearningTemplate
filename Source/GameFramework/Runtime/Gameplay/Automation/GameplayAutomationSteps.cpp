@@ -37,7 +37,7 @@ namespace sw
             static expected<void> validateAdvanceGameTime( const AutomationStep& step )
             {
                 AdvanceGameTimeParams params;
-                const expected<void>  read = step.readFields( params );
+                const expected<void>  read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return read;
                 const uint32 count = ( params._minutes >= 0.0f ? 1u : 0u ) + ( params._hours >= 0.0f ? 1u : 0u ) + ( params._toHour >= 0.0f ? 1u : 0u );
@@ -54,7 +54,7 @@ namespace sw
             {
                 GameObjectManager*             pManager = runner.findActiveObjectManager();
                 uint32                         count    = 0;
-                const AdvanceGameTimeParams    params   = step.readValidatedFields<AdvanceGameTimeParams>();
+                const AdvanceGameTimeParams    params   = step.readValidatedProperties<AdvanceGameTimeParams>();
                 vector<SessionStateComponent*> listState;
                 SessionStateComponent::collectOpen( pManager, listState );
                 for ( SessionStateComponent* pState : listState )
@@ -96,7 +96,7 @@ namespace sw
             /** @brief 탑승자 폰을 탈것 오브젝트의 빈 좌석(운전석 먼저)에 태운다. 탈 수 없으면 그 까닭(`TooFar` 등)을 실패로 적는다. */
             static bool runMountStep( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const MountStepParams params      = step.readValidatedFields<MountStepParams>();
+                const MountStepParams params      = step.readValidatedProperties<MountStepParams>();
                 const string&         riderName   = params._rider;
                 const string&         vehicleName = params._vehicle;
                 PawnComponent*        pRider      = findPawn( runner, step, riderName );
@@ -123,7 +123,7 @@ namespace sw
 
             static bool runDismountStep( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const string   riderName = step.readValidatedFields<DismountStepParams>()._rider;
+                const string   riderName = step.readValidatedProperties<DismountStepParams>()._rider;
                 PawnComponent* pRider    = findPawn( runner, step, riderName );
                 if ( pRider != nullptr && VehicleSeatComponent::dismount( *pRider, false ) == false )
                     runner.recordFailure( step, "'" + riderName + "' is not seated" );
@@ -136,6 +136,6 @@ namespace sw
     SW_AUTOMATION_STEP( worldAdvanceGameTime, "AdvanceGameTime", &GameplayAutomationStepsInternal::runAdvanceGameTime, &GameplayAutomationStepsInternal::validateAdvanceGameTime, AutomationStepOptions{} );
 
     // 탈것 단계는 씬 틱 뒤(틱 밖)에 돈다 — `VehicleSeatComponent` 은 틱 안에서 부르지 않는다.
-    SW_AUTOMATION_STEP( controlMount, "Mount", &GameplayAutomationStepsInternal::runMountStep, &AutomationStep::validateFields<MountStepParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( controlDismount, "Dismount", &GameplayAutomationStepsInternal::runDismountStep, &AutomationStep::validateFields<DismountStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( controlMount, "Mount", &GameplayAutomationStepsInternal::runMountStep, &AutomationStep::validateProperties<MountStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( controlDismount, "Dismount", &GameplayAutomationStepsInternal::runDismountStep, &AutomationStep::validateProperties<DismountStepParams>, AutomationStepOptions{} );
 } // namespace sw

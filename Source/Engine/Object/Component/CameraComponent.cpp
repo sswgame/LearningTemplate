@@ -60,7 +60,7 @@ namespace sw
         {
             const GameObject*        pOwner   = camera.getOwner();
             const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-            return pManager != nullptr ? pManager->getUpdateSerial() : 0;
+            return pManager != nullptr ? pManager->getUpdateCount() : 0;
         }
     } // namespace
 

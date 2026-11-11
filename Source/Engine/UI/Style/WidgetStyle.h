@@ -198,6 +198,6 @@ namespace sw
 
         bool has( UIStyleField field ) const { return ( _setMask & UIStyleFieldTable::makeBit( field ) ) != 0; }
         /** @brief 두 스타일에서 값이나 정함이 다른 필드 비트입니다(nullptr 은 아무 필드도 정하지 않은 것). */
-        static uint32 computeChangedFields( const UIComputedStyle* pOld, const UIComputedStyle* pNew );
+        static uint32 computeChangedProperties( const UIComputedStyle* pOld, const UIComputedStyle* pNew );
     };
 } // namespace sw

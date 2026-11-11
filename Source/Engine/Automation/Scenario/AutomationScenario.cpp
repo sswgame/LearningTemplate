@@ -172,7 +172,7 @@ namespace sw
         return string( textBuilder.view() );
     }
 
-    expected<void> AutomationStep::readFieldsOf( void* pParams, const TypeInfo& typeInfo, std::initializer_list<string_view> listHandRead ) const
+    expected<void> AutomationStep::readPropertiesOf( void* pParams, const TypeInfo& typeInfo, std::initializer_list<string_view> listHandRead ) const
     {
         // 속성은 파일을 읽을 때 글로 풀어 뒀다 — 원소 하나를 다시 지어 XML 칸 읽기(`XMLFields`)와 같은 규칙으로 읽는다.
         XMLDocument   document;
@@ -191,7 +191,7 @@ namespace sw
             if ( issue.empty() ) // 첫 오류만 — 뒤 오류는 대개 첫 오류의 결과다
                 issue = string( text );
         };
-        if ( XMLFields::readFields( node, pParams, typeInfo, "attributes", listHandRead, nullptr, sink ) )
+        if ( XMLFields::readProperties( node, pParams, typeInfo, "attributes", listHandRead, nullptr, sink ) )
             return {};
         return unexpected( Error{ ErrorKind::InvalidArgument, "attributes do not fit the step", firstIssue } );
     }
@@ -421,7 +421,7 @@ namespace sw
             {
                 // 칸은 리플렉션 구조체가 정한다 — 원본 폴더는 경로 칸이라 참조 검사 · 옮기기가 따라간다(`AssetPath`).
                 AutomationScratchParams params;
-                if ( XMLFields::readFields( atNode, params, _sourcePath ) == false )
+                if ( XMLFields::readProperties( atNode, params, _sourcePath ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch> needs from=\"<source folder>\" and as=\"scratch/<folder>\"", _sourcePath } );
                 AutomationScratchFolder folder;
                 folder._sourceID  = std::move( params._from );

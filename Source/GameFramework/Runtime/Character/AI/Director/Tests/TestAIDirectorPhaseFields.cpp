@@ -16,7 +16,7 @@ SW_TEST_CASE( XMLFieldsNameListTest, ReadsEveryDataSeparatorIntoTheList )
     XMLDocument document;
     SW_REQUIRE_TRUE( document.parse( "<Phase id=\"BuildUp\" spawnTags=\"Skeleton, Boss;Elite|Scout Runner\"/>" ) );
     AIDirectorPhaseDef phase;
-    SW_REQUIRE_TRUE( XMLFields::readFields( document.getRoot(), phase, "test" ) );
+    SW_REQUIRE_TRUE( XMLFields::readProperties( document.getRoot(), phase, "test" ) );
     SW_REQUIRE_EQUAL( 5u, static_cast<uint32>( phase._listSpawnTag.size() ) );
     SW_EXPECT_TRUE( phase._listSpawnTag[0] == hashed_string( "Skeleton" ) );
     SW_EXPECT_TRUE( phase._listSpawnTag[4] == hashed_string( "Runner" ) );
@@ -28,7 +28,7 @@ SW_TEST_CASE( XMLFieldsNameListTest, EachAttributeGoesToItsOwnListField )
     XMLDocument eventDocument;
     SW_REQUIRE_TRUE( eventDocument.parse( "<Event id=\"e\" npcs=\"a,b\" archetypes=\"c\"/>" ) );
     ScheduleEventDef event;
-    SW_REQUIRE_TRUE( XMLFields::readFields( eventDocument.getRoot(), event, "test" ) );
+    SW_REQUIRE_TRUE( XMLFields::readProperties( eventDocument.getRoot(), event, "test" ) );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( event._listNPC.size() ) );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( event._listArchetype.size() ) );
     SW_EXPECT_TRUE( event._listArchetype[0] == hashed_string( "c" ) );
@@ -36,7 +36,7 @@ SW_TEST_CASE( XMLFieldsNameListTest, EachAttributeGoesToItsOwnListField )
     XMLDocument encounterDocument;
     SW_REQUIRE_TRUE( encounterDocument.parse( "<Encounter id=\"e\" areas=\"a,b\" pacing=\"c\"/>" ) );
     AIDirectorEncounterDef encounter;
-    SW_REQUIRE_TRUE( XMLFields::readFields( encounterDocument.getRoot(), encounter, "test" ) );
+    SW_REQUIRE_TRUE( XMLFields::readProperties( encounterDocument.getRoot(), encounter, "test" ) );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( encounter._listArea.size() ) );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( encounter._listPacing.size() ) );
     SW_EXPECT_TRUE( encounter._listPacing[0] == hashed_string( "c" ) );

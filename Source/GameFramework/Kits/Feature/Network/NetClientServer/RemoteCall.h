@@ -49,8 +49,8 @@ namespace sw
         using Rejected = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
         using Table    = NetMessageTable<NetKitMessageRange::kRemoteCall, Call, Rejected>;
 
-        static constexpr uint8 kCall     = Table::kindOf<Call>();
-        static constexpr uint8 kRejected = Table::kindOf<Rejected>();
+        static constexpr uint8 kCall     = Table::getKindOf<Call>();
+        static constexpr uint8 kRejected = Table::getKindOf<Rejected>();
 
         static constexpr int32 kMaxFunctionNameBytes = 64;  ///< 함수 이름 글의 상한
         static constexpr int32 kMaxArgumentBytes     = 256; ///< 인자 글 하나의 상한

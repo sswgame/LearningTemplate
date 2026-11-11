@@ -87,7 +87,7 @@ namespace sw
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 친구 · 길드 요청. */
-            int32 getOpenWorkCount() const override { return _socialService.getPendingCount() + _guildService.getPendingCount(); }
+            int32 getOpenJobCount() const override { return _socialService.getPendingCount() + _guildService.getPendingCount(); }
 
             void stop() override
             {

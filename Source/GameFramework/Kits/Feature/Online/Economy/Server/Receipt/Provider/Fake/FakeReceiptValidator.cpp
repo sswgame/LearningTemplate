@@ -11,7 +11,7 @@ namespace sw
             static constexpr int32 kFieldCount = 4;
 
             /** @brief `a|b|c|d` 를 네 부분으로 자릅니다. 부분의 수가 다르면 false 를 반환합니다. */
-            static bool splitFields( string_view payload, string_view* pOutFields )
+            static bool splitProperties( string_view payload, string_view* pOutProperties )
             {
                 int32  fieldIndex = 0;
                 size_t start      = 0;
@@ -22,8 +22,8 @@ namespace sw
                         continue;
                     if ( fieldIndex >= kFieldCount )
                         return false;
-                    pOutFields[fieldIndex++] = payload.substr( start, charIndex - start );
-                    start                    = charIndex + 1;
+                    pOutProperties[fieldIndex++] = payload.substr( start, charIndex - start );
+                    start                        = charIndex + 1;
                 }
                 return fieldIndex == kFieldCount;
             }
@@ -79,7 +79,7 @@ namespace sw
         result._ticket                  = request._ticket;
         result._accountID               = request._accountID;
         string_view arrField[FakeReceiptValidatorInternal::kFieldCount];
-        const bool  bSplit   = FakeReceiptValidatorInternal::splitFields( request._payload, arrField );
+        const bool  bSplit   = FakeReceiptValidatorInternal::splitProperties( request._payload, arrField );
         const bool  bShapeOk = bSplit && arrField[0] == "fake" && arrField[1].empty() == false && arrField[2].empty() == false;
         if ( bShapeOk == false )
         {

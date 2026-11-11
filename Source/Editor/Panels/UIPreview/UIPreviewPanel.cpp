@@ -894,7 +894,7 @@ namespace sw::editor
 
     void UIPreviewPanel::drawSlotSection( Widget& widget )
     {
-        const UIPreviewSlotParams params = UIPreviewLogic::findSlotFields( widget );
+        const UIPreviewSlotParams params = UIPreviewLogic::findSlotProperties( widget );
         if ( params._bSizeOverride == false )
             return; // 루트 — 부모가 없어 슬롯을 읽는 쪽이 없다
         const PropertyInfo* pSlotProp = UIPreviewLogic::findWidgetProperty( widget, "_slot" );

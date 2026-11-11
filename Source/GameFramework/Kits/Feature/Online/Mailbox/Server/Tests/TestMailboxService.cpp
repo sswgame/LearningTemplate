@@ -104,7 +104,7 @@ namespace
             return mailKey;
         }
 
-        int64 balanceOf( AccountID accountID )
+        int64 getBalanceOf( AccountID accountID )
         {
             LedgerBalance balance;
             SW_EXPECT_TRUE( Ledger::readBalance( _rig._database, LedgerHolder::makeAccount( accountID ), "cur.gold", balance ) == ServiceStoreResult::Ok );
@@ -158,7 +158,7 @@ SW_TEST_CASE( MailboxServiceTest, EntryRules )
     SW_REQUIRE_TRUE( MailboxProtocol::MessageTypes::write( claimBody, MailboxServiceTestUtil::makeMailRequest( mailKey ) ) );
     SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( MailboxMethod::Claim::kID, claimBody ) );
     SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( MailboxMethod::ClaimAll::kID, BitWriter{} ) );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kPlayer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kPlayer ) );
 
     BitWriter brokenBody;
     brokenBody.writeVarUint( 7 );
@@ -185,7 +185,7 @@ SW_TEST_CASE( MailboxServiceTest, ListClaimDelete )
     SW_EXPECT_TRUE( claimed.isOk() );
     SW_EXPECT_FALSE( claimed._reply._listBalance.empty() );
     SW_EXPECT_TRUE( claimed._idempotencyKey.isValid() ); // 키를 넘기지 않아도 창구가 만들었다
-    SW_EXPECT_EQUAL( int64( 5 ), rig.balanceOf( kPlayer ) );
+    SW_EXPECT_EQUAL( int64( 5 ), rig.getBalanceOf( kPlayer ) );
     SW_EXPECT_TRUE( rig._client.getMails()[0]._state == ServiceMailState::Claimed );
 
     SW_EXPECT_TRUE( rig.call<MailboxMethod::Delete>( MailboxServiceTestUtil::makeMailRequest( mailKey ) ).isOk() );
@@ -215,7 +215,7 @@ SW_TEST_CASE( MailboxServiceTest, ClaimAllCounts )
     const OnlineResult<MailboxClaimReply> claimed = rig.call<MailboxMethod::ClaimAll>( OnlineNoBody{} );
     SW_EXPECT_TRUE( claimed.isOk() );
     SW_EXPECT_EQUAL( 2, claimed._reply._claimedCount );
-    SW_EXPECT_EQUAL( int64( 12 ), rig.balanceOf( kPlayer ) );
+    SW_EXPECT_EQUAL( int64( 12 ), rig.getBalanceOf( kPlayer ) );
 }
 
 /** @brief [MailboxServiceTest] 캠페인: 틱이 읽어 메모리에 두고 첫 쪽 목록 앞에 끼운다. 끝난 캠페인은 빠지고, 읽기가 실패하면 있던 목록을 둔다 */
@@ -259,7 +259,7 @@ SW_TEST_CASE( MailboxServiceTest, SweepRemovesExpiredMail )
     rig._service.requestSweep();
     rig.tick( kNowMs + 11 );
     SW_EXPECT_TRUE( rig.list( kNowMs + 11 )._reply._listMail.empty() );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kPlayer ) ); // 발행한 재원은 받지 않으면 사라진다
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kPlayer ) ); // 발행한 재원은 받지 않으면 사라진다
 }
 
 /** @brief [MailboxServiceTest] 시작: 저장소가 없으면 서지 않는다 */
@@ -280,17 +280,17 @@ SW_TEST_CASE( MailboxServiceTest, RetryableCategoryReachesTheServiceAgain )
     const OnlineResult<MailboxClaimReply> failed = rig.call<MailboxMethod::Claim>( MailboxServiceTestUtil::makeMailRequest( mailKey ) );
     SW_EXPECT_EQUAL( OnlineError::kUnavailable, failed._errorCode );
     SW_EXPECT_TRUE( failed.isRetryable() );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kPlayer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kPlayer ) );
 
     const OnlineResult<MailboxClaimReply> retried = rig.call<MailboxMethod::Claim>( MailboxServiceTestUtil::makeMailRequest( mailKey ), failed._idempotencyKey );
     SW_EXPECT_TRUE( retried.isOk() );
     SW_EXPECT_EQUAL( 1, retried._reply._claimedCount );
-    SW_EXPECT_EQUAL( int64( 5 ), rig.balanceOf( kPlayer ) );
+    SW_EXPECT_EQUAL( int64( 5 ), rig.getBalanceOf( kPlayer ) );
 
     const OnlineResult<MailboxClaimReply> replayed = rig.call<MailboxMethod::Claim>( MailboxServiceTestUtil::makeMailRequest( mailKey ), failed._idempotencyKey );
     SW_EXPECT_TRUE( replayed.isOk() ); // 다시 처리했다면 AlreadyClaimed 이다
     SW_EXPECT_EQUAL( 1, replayed._reply._claimedCount );
-    SW_EXPECT_EQUAL( int64( 5 ), rig.balanceOf( kPlayer ) );
+    SW_EXPECT_EQUAL( int64( 5 ), rig.getBalanceOf( kPlayer ) );
 }
 
 /** @brief [MailboxServiceTest] 알림: 접속한 계정의 새 우편은 표에 적은 알림으로 클라이언트에 닿는다 */

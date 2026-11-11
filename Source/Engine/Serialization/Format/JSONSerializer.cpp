@@ -262,7 +262,7 @@ namespace sw
                     ContainerReadResult total{ ContainerReadResult::Read };
                     if ( container.isArray() )
                     {
-                        for ( size_t elementIndex = 0; elementIndex < container.size() && ContainerVisitor::stopsReading( total ) == false; ++elementIndex )
+                        for ( size_t elementIndex = 0; elementIndex < container.size() && ContainerVisitor::shouldStopReading( total ) == false; ++elementIndex )
                         {
                             _listCursor.push_back( container.at( elementIndex ) );
                             total = ContainerVisitor::mergeResult( total, visit( elementIndex ) );
@@ -271,7 +271,7 @@ namespace sw
                         return total;
                     }
                     const vector<string> listKey = container.getMemberNames();
-                    for ( size_t entryIndex = 0; entryIndex < listKey.size() && ContainerVisitor::stopsReading( total ) == false; ++entryIndex )
+                    for ( size_t entryIndex = 0; entryIndex < listKey.size() && ContainerVisitor::shouldStopReading( total ) == false; ++entryIndex )
                     {
                         _pCurrentKey = &listKey[entryIndex];
                         _listCursor.push_back( container.get( listKey[entryIndex] ) );
@@ -362,7 +362,7 @@ namespace sw
             };
 
             /** @brief 값 하나를 읽었는지(`bool`)를 필드 결과로 바꿉니다. 값 하나의 실패는 그 필드의 실패입니다 — 객체째 실패는 구조체 읽기만 압니다. */
-            static FieldReadResult fieldResultOf( const bool bRead )
+            static FieldReadResult makeFieldResult( const bool bRead )
             {
                 return bRead ? FieldReadResult::Read : FieldReadResult::FieldFailed;
             }
@@ -379,8 +379,8 @@ namespace sw
                 if ( pTextReader != nullptr )
                 {
                     if ( src.isString() )
-                        return fieldResultOf( ( *pTextReader )( pValPtr, src.asString() ) );
-                    return fieldResultOf( ( *pTextReader )( pValPtr, src.dump() ) );
+                        return makeFieldResult( ( *pTextReader )( pValPtr, src.asString() ) );
+                    return makeFieldResult( ( *pTextReader )( pValPtr, src.dump() ) );
                 }
 
                 const EnumInfo* pEnumInfo = engine::getSubsystem<TypeRegistry>().findEnum( typeName );
@@ -408,13 +408,13 @@ namespace sw
                     {
                         if ( src.isObject() )
                             return JSONSerializer::readObject( src, pValPtr, *pStructInfo, nullptr, nullptr, context );
-                        return fieldResultOf( JSONSerializer::deserialize( pValPtr, *pStructInfo, src.dump(), context ) );
+                        return makeFieldResult( JSONSerializer::deserialize( pValPtr, *pStructInfo, src.dump(), context ) );
                     }
                 }
 
                 if ( src.isString() )
-                    return fieldResultOf( parseTextValueCoerced( value, typeName, src.asString(), context ) );
-                return fieldResultOf( parseTextValueCoerced( value, typeName, src.dump(), context ) );
+                    return makeFieldResult( parseTextValueCoerced( value, typeName, src.asString(), context ) );
+                return makeFieldResult( parseTextValueCoerced( value, typeName, src.dump(), context ) );
             }
             static void writeProperty( JSONValue parent, const PropertyInfo& prop, const ObjectAddress instance, const SerializeContext& context )
             {
@@ -604,7 +604,7 @@ namespace sw
         for ( const string& keyRaw : src.getMemberNames() )
         {
             const JSONValue field = src.get( keyRaw );
-            if ( SerializerUtil::keysEqual( keyRaw, kSchemaVersionKey ) )
+            if ( SerializerUtil::isKeyEqual( keyRaw, kSchemaVersionKey ) )
             {
                 if ( pOutVersion == nullptr )
                     continue;

@@ -30,7 +30,7 @@ namespace
             return image;
         }
 
-        static GoldenResult judgeAgainst( const AutomationImage& actual, const AutomationImage& golden )
+        static GoldenResult compareAgainstGolden( const AutomationImage& actual, const AutomationImage& golden )
         {
             const expected<AutomationImageDifference> difference = AutomationImage::compare( actual, golden, kMeasure );
             SW_EXPECT_TRUE( difference.has_value() );
@@ -50,7 +50,7 @@ SW_TEST_CASE( AutomationGoldenTest, WideShallowPassesNarrowDeepFails )
     {
         shallow._listRGB[byteIndex] = static_cast<uint8>( byteIndex % 3u == 0u ? 101 : 100 ); // 모든 화소가 빨강 1 차이 — 전부 다르지만 "다른 화소" 문턱 아래
     }
-    SW_EXPECT_TRUE( Util::judgeAgainst( shallow, golden ) == GoldenResult::Pass );
+    SW_EXPECT_TRUE( Util::compareAgainstGolden( shallow, golden ) == GoldenResult::Pass );
 
     AutomationImage blob = golden;
     for ( uint32 y = 10; y < 15; ++y )
@@ -71,7 +71,7 @@ SW_TEST_CASE( AutomationGoldenTest, WideShallowPassesNarrowDeepFails )
 }
 
 /** @brief [AutomationGoldenTest] 판정은 한 식이다 — 한 축이라도 상한을 넘으면 Fail, 한 축이라도 상한의 절반을 넘으면 PassNearLimit, 아니면 Pass */
-SW_TEST_CASE( AutomationGoldenTest, VerdictPerAxis )
+SW_TEST_CASE( AutomationGoldenTest, ResultPerAxis )
 {
     const auto judge = []( float64 fraction, float64 mean, uint32 region )
     { return AutomationGoldenUtil::judge( AutomationImageDifference{ fraction, mean, region }, Util::kLimits, Util::kNearLimitRatio ); };

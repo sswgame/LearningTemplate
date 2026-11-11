@@ -348,7 +348,7 @@ SW_TEST_CASE( ZoneTest, SurfaceStampModuleChecksTheStamp )
 }
 
 /** @brief [ZoneTest] 배치 덮어쓰기 — 이름으로 칸 하나만 고치고, 빼고, 더한다. 없는 이름을 빼면 오류다 */
-SW_TEST_CASE( ZoneTest, PlacementOverridesWorkByName )
+SW_TEST_CASE( ZoneTest, PlacementOverridesModulesByName )
 {
     ZoneProfile preset;
     preset._listModule.push_back( ZoneFixture::makeModule( "sink", "Action", {
@@ -484,7 +484,7 @@ SW_TEST_CASE( ZoneOverrideTest, ParamOverrideAndRevertLeaveNoEmptyEntry )
 }
 
 // 매개변수를 되돌려도 다른 칸(조건)을 적은 항목은 남고, 통째로 바꾸기 항목에는 매개변수 하나를 얹지 않는다.
-SW_TEST_CASE( ZoneOverrideTest, RevertKeepsOtherFieldsAndSkipsReplace )
+SW_TEST_CASE( ZoneOverrideTest, RevertKeepsOtherPropertiesAndSkipsReplace )
 {
     sw::vector<sw::ZoneModuleDef> listOverride;
     const sw::hashed_string       kModule{ "Sink" };

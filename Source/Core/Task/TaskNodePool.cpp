@@ -276,7 +276,7 @@ namespace sw
     {
         if ( pGroup == nullptr )
             return;
-        if ( _groupPool.owns( pGroup ) )
+        if ( _groupPool.isOwnerOf( pGroup ) )
             _groupPool.release( pGroup );
         else
             sw_delete( pGroup );

@@ -232,7 +232,7 @@ SW_TEST_CASE( MaterialGraphCompilerTest, EmissiveStaysDeferred )
 }
 
 /** @brief [MaterialGraphCompilerTest] 셰이딩 모델 Hair 는 머리카락 조명 스위치 · 칸 셋 · 포워드 전용을 낸다. 기본(DefaultLit)은 생성물이 그대로다 */
-SW_TEST_CASE( MaterialGraphCompilerTest, HairShadingModelIsForwardOnlyWithHairFields )
+SW_TEST_CASE( MaterialGraphCompilerTest, HairShadingModelIsForwardOnlyWithHairProperties )
 {
     MaterialGraphCompileResult hair;
     SW_REQUIRE_TRUE( MaterialGraphTestUtil::compileNodes( MaterialGraphTestUtil::makeNode( "Out", "Output", {}, "BaseColor=0.3 0.2 0.1,ShadingModel=Hair" ), hair ) );
@@ -454,7 +454,7 @@ SW_TEST_CASE( MaterialGraphCompilerTest, LayerBlendsOverOutput )
 }
 
 /** @brief [MaterialGraphCompilerTest] 같은 층 파일을 두 번 쓰면 칸이 층 노드 이름으로 갈리고, 마스크 핀을 이으면 채널 대신 그 값이며, 층은 노드 차례로 쌓인다 */
-SW_TEST_CASE( MaterialGraphCompilerTest, SharedLayerGetsSeparateFields )
+SW_TEST_CASE( MaterialGraphCompilerTest, SharedLayerGetsSeparateProperties )
 {
     const test::ScopedScratchDomain domain;
     const string                    layerID = MaterialGraphTestUtil::writeLayer( domain, "paint.matgraph.xml" );

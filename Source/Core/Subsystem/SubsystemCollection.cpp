@@ -224,7 +224,7 @@ namespace sw
         _bSorted = SW_FALSE;
     }
 
-    void SubsystemCollection::shutdownDependentsOf( const ISubsystem& subsystem )
+    void SubsystemCollection::shutdownDependents( const ISubsystem& subsystem )
     {
         // 위상 순서로 훑으며 의존을 따라 표시한다 — 의존이 늘 먼저 오므로 한 번에 닫힌다(간접 의존 포함).
         vector<uint8> listDependent( _listEntry.size(), SW_FALSE );

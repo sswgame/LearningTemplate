@@ -109,7 +109,7 @@ namespace sw
         void handleMailPresenceResult( const AccountPresenceResult& result, const MailboxNewMail& newMail );
         void sendOfflinePush( AccountID accountID );
         /** @brief 수령으로 바뀐 잔액을 그 계정에 알립니다(경제 키트의 `BalanceChanged`). 경제 키트가 없으면 하지 않는다. */
-        void notifyClaimedBalances( AccountID accountID, const MailboxOutcome& outcome, const MailboxClaimReply& reply );
+        void notifyClaimedBalances( AccountID accountID, const MailboxServiceResult& serviceResult, const MailboxClaimReply& reply );
 
     private:
         vector<ServiceMailCampaign> _listCampaign;

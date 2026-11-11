@@ -128,10 +128,10 @@ namespace sw
         /** @brief @p text 에서 참조를 뽑아 @p outListReference 끝에 더합니다. 글 순서다. */
         void extract( string_view text, AssetReferenceSyntax syntax, vector<AssetReference>& outListReference ) const;
         /** @brief 파일 이름으로 문법을 고릅니다(`.json` → JSON, `CMakeLists.txt` · `.cmake` → CMake, 나머지 → XML). */
-        static AssetReferenceSyntax syntaxOf( string_view path );
+        static AssetReferenceSyntax getSyntaxOf( string_view path );
 
         /** @brief @p assetID 가 있거나(파일 · 폴더) 임포트 산출물이고 같은 자리의 원본이 있으면 true 입니다. */
-        bool resolves( string_view assetID, const AssetIDSet& assets ) const;
+        bool canResolve( string_view assetID, const AssetIDSet& assets ) const;
 
         /**
          * @brief @p oldID 를 @p newID 로 옮길 때의 규칙입니다 — 그것 자신(폴더면 그 아래 전부)과, 원본(`models_raw/x.glb`)이면 그 산출물 자리(`models/x…`).
@@ -143,7 +143,7 @@ namespace sw
 
     private:
         /** @brief 생성 표(`kGeneratedFile`)의 칸 이름을 더합니다. 없거나 꼴이 틀리면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool loadGeneratedFields( string_view projectRoot );
+        [[nodiscard]] bool loadGeneratedProperties( string_view projectRoot );
         bool               isImportedFromSource( string_view assetID, const AssetIDSet& assets ) const;
         void               appendTokens( string_view text, size_t valueStart, size_t valueEnd, string_view field, const vector<size_t>& listLineStart,
                                          vector<AssetReference>& outListReference ) const;

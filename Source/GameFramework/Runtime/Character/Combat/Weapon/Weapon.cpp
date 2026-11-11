@@ -58,7 +58,7 @@ namespace sw
         return ConditionExpr::compile( _accepts, sourceName, _acceptsExpr, WeaponInternal::kBareTag );
     }
 
-    bool WeaponDef::accepts( const ProjectileDef& projectile ) const
+    bool WeaponDef::canAccept( const ProjectileDef& projectile ) const
     {
         GameplayContext context;
         context.set<SubjectTagsSlot>( &projectile._tags );
@@ -87,7 +87,7 @@ namespace sw
 
         // 적지 않은 칸은 WeaponDef 의 초기값이다. 깨진 값 · 범위 밖 값(최소 <= 최대 퍼짐 · 감쇠 시작 <= 끝 — 필드 경계)은 그 무기를 넣지 않는 오류다(자르지 않는다).
         WeaponDef weapon;
-        bool      bValid = XMLFields::readFields( node, weapon, sourceName );
+        bool      bValid = XMLFields::readProperties( node, weapon, sourceName );
         if ( weapon._id.empty() )
             return false;
         const utf8* const pID = weapon._id.c_str();
@@ -97,7 +97,7 @@ namespace sw
         for ( XMLNode modifierNode = node.findChild( "Modifier" ); modifierNode; modifierNode = modifierNode.findNextSibling( "Modifier" ) )
         {
             ShotModifierDef modifier;
-            bValid = XMLFields::readFields( modifierNode, modifier, sourceName ) && bValid;
+            bValid = XMLFields::readProperties( modifierNode, modifier, sourceName ) && bValid;
             weapon._listModifier.push_back( modifier );
         }
         if ( bValid == false )
@@ -121,7 +121,7 @@ namespace sw
                 bComplete = false;
                 continue;
             }
-            if ( weapon.accepts( *pProjectile ) == false )
+            if ( weapon.canAccept( *pProjectile ) == false )
             {
                 SW_LOG_ERROR_ID( "Weapon.ProjectileNotAccepted", "weapon '%#' loads projectile '%#', which its accepts='%#' refuses", weapon._id.c_str(), weapon._projectileID.c_str(),
                                  weapon._accepts.c_str() );
@@ -148,7 +148,7 @@ namespace sw
 
     bool WeaponState::equip( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, uint32 spreadSeed )
     {
-        if ( weapon.accepts( projectile ) == false )
+        if ( weapon.canAccept( projectile ) == false )
         {
             SW_LOG_ERROR_ID( "Weapon.EquipRefusedProjectile", "weapon '%#' does not accept projectile '%#' (accepts='%#')", weapon._id.c_str(), projectile._id.c_str(), weapon._accepts.c_str() );
             return false;
@@ -166,7 +166,7 @@ namespace sw
 
     bool WeaponState::loadProjectile( const ProjectileDef& projectile, const vector<ShotModifierDef>& listAttachment )
     {
-        if ( _def.accepts( projectile ) == false )
+        if ( _def.canAccept( projectile ) == false )
         {
             SW_LOG_ERROR_ID( "Weapon.LoadRefusedProjectile", "weapon '%#' does not accept projectile '%#' (accepts='%#')", _def._id.c_str(), projectile._id.c_str(), _def._accepts.c_str() );
             return false;

@@ -44,7 +44,7 @@ namespace sw
         void onTick( float32 deltaSeconds ) override;
 
         /** @brief 보내기 결과를 상태 글로 바꿉니다. */
-        [[nodiscard]] static string makeStatusText( const ChatOutcome& outcome, int64 retryAfterMs );
+        [[nodiscard]] static string makeStatusText( const ChatServiceResult& result, int64 retryAfterMs );
 
     private:
         void rebuild();

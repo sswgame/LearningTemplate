@@ -103,8 +103,8 @@ namespace sw
         OnlineServiceHost& getHost();
         uint16             getListenPort() const;
         int32              getConnectionCount() const;
-        /** @brief 키트들의 진행 중인 일 수 합입니다(`IOnlineServerKit::getOpenWorkCount`). 종료 드레인이 0 이 될 때까지 기다린다. */
-        int32 getOpenWorkCount() const;
+        /** @brief 키트들의 진행 중인 일 수 합입니다(`IOnlineServerKit::getOpenJobCount`). 종료 드레인이 0 이 될 때까지 기다린다. */
+        int32 getOpenJobCount() const;
         /** @brief 종료 드레인 시작을 키트마다 알립니다(초기화 순서). */
         void beginShutdown( const ServerShutdownNotice& notice );
         /** @brief 붙은 키트 이름입니다(시작 순서). */

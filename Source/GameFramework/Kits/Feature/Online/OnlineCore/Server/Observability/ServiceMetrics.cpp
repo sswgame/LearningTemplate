@@ -121,7 +121,7 @@ namespace sw
             pLatency->observe( static_cast<float64>( MonotonicClock::nowNanoseconds() - receivedNanoseconds ) * 1e-9 );
     }
 
-    void ServiceMetrics::setPendingStoreWorkCount( int32 pendingCount )
+    void ServiceMetrics::setPendingCallCount( int32 pendingCount )
     {
         if ( _pPending != nullptr )
             _pPending->set( static_cast<float64>( pendingCount ) );

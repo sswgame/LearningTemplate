@@ -199,7 +199,7 @@ namespace sw
             if ( _listBucket.empty() )
                 return end();
             const uint32  tag          = makeTag( get_hasher()( key ) );
-            const size_t  bucketIndex  = bucketIndexOf( tag, _listBucket.size() );
+            const size_t  bucketIndex  = computeBucketIndex( tag, _listBucket.size() );
             const uint32* pBucketData  = std::as_const( _listBucket ).data();
             const Node*   pDenseData   = std::as_const( _listDenseData ).data();
             uint32        currentIndex = pBucketData[bucketIndex];
@@ -224,7 +224,7 @@ namespace sw
             if ( _listBucket.empty() )
                 return end();
             const uint32  tag          = makeTag( get_hasher()( key ) );
-            const size_t  bucketIndex  = bucketIndexOf( tag, _listBucket.size() );
+            const size_t  bucketIndex  = computeBucketIndex( tag, _listBucket.size() );
             const uint32* pBucketData  = std::as_const( _listBucket ).data();
             const Node*   pDenseData   = std::as_const( _listDenseData ).data();
             uint32        currentIndex = pBucketData[bucketIndex];
@@ -261,7 +261,7 @@ namespace sw
             SW_SCOPED_RACE_WRITE();
             check_expand();
             const uint32 tag          = makeTag( get_hasher()( value ) );
-            const size_t bucketIndex  = bucketIndexOf( tag, _listBucket.size() );
+            const size_t bucketIndex  = computeBucketIndex( tag, _listBucket.size() );
             uint32       currentIndex = _listBucket[bucketIndex];
             while ( currentIndex != kEmptySlot )
             {
@@ -285,7 +285,7 @@ namespace sw
             const Key& key = _listDenseData.back()._key;
 
             const uint32 tag          = makeTag( get_hasher()( key ) );
-            const size_t bucketIndex  = bucketIndexOf( tag, _listBucket.size() );
+            const size_t bucketIndex  = computeBucketIndex( tag, _listBucket.size() );
             uint32       currentIndex = _listBucket[bucketIndex];
             while ( currentIndex != kEmptySlot )
             {
@@ -319,7 +319,7 @@ namespace sw
                 return 0;
 
             const uint32 tag           = makeTag( get_hasher()( key ) );
-            const size_t bucketIndex   = bucketIndexOf( tag, _listBucket.size() );
+            const size_t bucketIndex   = computeBucketIndex( tag, _listBucket.size() );
             uint32       currentIndex  = _listBucket[bucketIndex];
             uint32       previousIndex = kEmptySlot;
 
@@ -338,7 +338,7 @@ namespace sw
                         _listDenseData[currentIndex] = std::move( _listDenseData[lastIndex] );
 
                         // 옮겨 온 노드의 태그로 버킷을 구한다(키를 다시 해시하지 않는다).
-                        const size_t lastBucketIndex   = bucketIndexOf( _listDenseData[currentIndex]._tag, _listBucket.size() );
+                        const size_t lastBucketIndex   = computeBucketIndex( _listDenseData[currentIndex]._tag, _listBucket.size() );
                         uint32       lastCurrentIndex  = _listBucket[lastBucketIndex];
                         uint32       lastPreviousIndex = kEmptySlot;
                         while ( lastCurrentIndex != kEmptySlot )
@@ -377,7 +377,7 @@ namespace sw
         {
             if ( count <= _listBucket.size() )
                 return;
-            // 2의 거듭제곱으로 올린다(`reserve( 3000 )` 이면 4096). `bucketIndexOf` 가 마스크로 자르는 전제다.
+            // 2의 거듭제곱으로 올린다(`reserve( 3000 )` 이면 4096). `computeBucketIndex` 가 마스크로 자르는 전제다.
             size_t bucketCount = _listBucket.empty() ? kMinBucketCount : _listBucket.size();
             while ( bucketCount < count )
             {
@@ -386,7 +386,7 @@ namespace sw
             _listBucket.assign( bucketCount, kEmptySlot );
             for ( uint32 denseIndex = 0; denseIndex < static_cast<uint32>( _listDenseData.size() ); ++denseIndex )
             {
-                const size_t bucketIndex         = bucketIndexOf( _listDenseData[denseIndex]._tag, _listBucket.size() ); // 태그가 해시를 들고 있다 — 키를 다시 해시하지 않는다
+                const size_t bucketIndex         = computeBucketIndex( _listDenseData[denseIndex]._tag, _listBucket.size() ); // 태그가 해시를 들고 있다 — 키를 다시 해시하지 않는다
                 _listDenseData[denseIndex]._next = _listBucket[bucketIndex];
                 _listBucket[bucketIndex]         = denseIndex;
             }
@@ -399,7 +399,7 @@ namespace sw
         /** @brief 빈 버킷 슬롯 표식(모든 비트 1)입니다. */
         static constexpr uint32 kEmptySlot = constant::invalid_index::kUint32;
 
-        /** @brief 버킷 수의 최솟값입니다. 버킷 수는 항상 2의 거듭제곱입니다(`bucketIndexOf` 가 마스크로 자르기 때문입니다). */
+        /** @brief 버킷 수의 최솟값입니다. 버킷 수는 항상 2의 거듭제곱입니다(`computeBucketIndex` 가 마스크로 자르기 때문입니다). */
         static constexpr size_t kMinBucketCount = 16;
 
         const hasher&    get_hasher() const noexcept { return _traits.first(); }
@@ -420,7 +420,7 @@ namespace sw
          *          `%` 만 쓰면 아래 비트만 남아 8바이트 정렬 포인터가 버킷 여덟 개 중 하나에 몰립니다.
          *          순회는 밀집 배열을 따라가므로 버킷 배치가 바뀌어도 순서는 그대로입니다.
          */
-        static size_t bucketIndexOf( uint32 tag, size_t bucketCount ) noexcept
+        static size_t computeBucketIndex( uint32 tag, size_t bucketCount ) noexcept
         {
             const uint64 product = static_cast<uint64>( tag ) * HashUtil::kGoldenRatio64;
             return static_cast<size_t>( product ^ ( product >> 32 ) ) & ( bucketCount - 1 );

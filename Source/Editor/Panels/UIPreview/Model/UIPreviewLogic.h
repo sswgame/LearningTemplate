@@ -246,7 +246,7 @@ namespace sw::editor
         /** @brief 위젯의 슬롯을 손잡이로 고칠 수 있으면 true 입니다 — 부모가 캔버스 패널(앵커와 오프셋)일 때입니다. */
         static bool canEditSlotByHandle( const Widget& widget );
         /** @brief 위젯 @p widget 의 부모 패널 종류로 Slot 필드에 보일 필드 그룹을 고릅니다. 부모가 없으면(루트) 모두 false 입니다. */
-        static UIPreviewSlotParams findSlotFields( const Widget& widget );
+        static UIPreviewSlotParams findSlotProperties( const Widget& widget );
         /**
          * @brief 손잡이 @p handle 을 UI 단위 @p deltaUI 만큼 끈 결과를 슬롯에 적용합니다. 가운데는 두 오프셋을 함께, 변은 그 변의 오프셋만 옮깁니다(자동 크기이면 오른쪽 · 아래 오프셋은 쓰이지 않아 옮기지 않는다).
          * @return 슬롯이 바뀌었으면 true 입니다.

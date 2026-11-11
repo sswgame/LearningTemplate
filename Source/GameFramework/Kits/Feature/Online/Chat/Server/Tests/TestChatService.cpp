@@ -131,7 +131,7 @@ namespace
         {
             while ( true )
             {
-                int32 work = _store.pollCompletions();
+                int32 job = _store.pollCompletions();
                 if ( _transport != nullptr )
                 {
                     vector<ChatBusTopicChange> listChange;
@@ -144,13 +144,13 @@ namespace
                             _transport->unsubscribe( change._topic );
                     }
                     vector<ServerBusMessage> listMessage;
-                    work += _transport->pollMessages( listMessage );
+                    job += _transport->pollMessages( listMessage );
                     for ( const ServerBusMessage& message : listMessage )
                     {
                         _service.handleBusMessage( message );
                     }
                 }
-                if ( work == 0 )
+                if ( job == 0 )
                     break;
             }
             (void)nowMs;
@@ -175,7 +175,7 @@ namespace
             return std::move( listCompletion[0] );
         }
 
-        ChatOutcome join( AccountID accountID, string_view channelID = kWorld )
+        ChatServiceResult join( AccountID accountID, string_view channelID = kWorld )
         {
             const uint64 tag = _nextTag++;
             _service.joinChannel( accountID, channelID, UnixMilliseconds{ kNowMs }, tag );
@@ -203,7 +203,7 @@ namespace
             return take( tag );
         }
 
-        ChatOutcome report( AccountID accountID, const ChatMessage& message, string_view reason = "abuse", int64 nowMs = kNowMs )
+        ChatServiceResult report( AccountID accountID, const ChatMessage& message, string_view reason = "abuse", int64 nowMs = kNowMs )
         {
             ChatReportRequest request;
             request._channelID = message._channelID;

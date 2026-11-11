@@ -289,7 +289,7 @@ namespace sw
             // 느린 프레임 — 이 다른 그림을 낸다). 게임이 서기 전에 건다(첫 단계는 게임이 이 뒤에 서고, 다음 단계는 아래에서 다시 선다). 환경 시간 멈춤은 시나리오가 고른다.
             DeterministicRunPolicy policy     = engine::getSubsystem<DeterministicRun>().getPolicy();
             policy._bWaitForAnimationClips    = SW_TRUE;
-            policy._bFinishAssetWorkEachFrame = SW_TRUE;
+            policy._bFinishAssetJobsEachFrame = SW_TRUE;
             policy._fixedFrameDelta           = _pRunner->getScenario().getFixedDelta(); // 시나리오 프레임 시간 — App 이 벽시계 대신 흘린다
             engine::getSubsystem<DeterministicRun>().setPolicy( policy );
             // 둘째 단계부터는 게임을 처음부터 다시 세운다 — 새 게임 인스턴스가 기동 때처럼 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵)을 열거나 벤치를 세운다.

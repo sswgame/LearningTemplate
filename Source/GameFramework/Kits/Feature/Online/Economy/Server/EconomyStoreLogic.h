@@ -84,7 +84,7 @@ namespace sw
         static const hashed_string& getRefundTable();        ///< "econ_refund" — 키는 지급 분개 키, 값은 1 바이트(1 환불 회수, 2 청약철회). 같은 거래를 두 번 회수하지 않는다
         static const hashed_string& getRefundCursorTable();  ///< "econ_refund_cursor" — 키는 스토어 이름, 값은 환불 조회의 기준 시각(가변 정수)
         static const hashed_string& getDeliveryTable();      ///< "econ_delivery" — 스토어에 아직 알리지 못한 지급. 키는 지급 분개 키, 값은 `[판 번호][스토어][알림 키][기한]`
-        static EconomyOutcome       toEconomyResult( LedgerResult result );
+        static EconomyServiceResult toEconomyResult( LedgerResult result );
 
         /** @brief 검증 결과의 지급 알림 하나를 만듭니다. 결과에 알림 키가 없거나 거래 id 로 레코드 키를 만들 수 없으면 false 입니다. */
         [[nodiscard]] static bool makeDeliveryTask( const ReceiptValidationResult& receipt, ReceiptDeliveryTask& outTask );
@@ -99,28 +99,28 @@ namespace sw
         [[nodiscard]] static ServiceStoreResult writeRefundCursor( IServiceStoreConnection& connection, string_view storeName, int64 lastReadMs );
 
         /** @brief 구매를 처리합니다. @p outReply 의 `_listBalance` 는 이 계정의 바뀐 잔액입니다. */
-        static EconomyOutcome purchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers, const EconomyPurchaseInput& input,
-                                        EconomyPurchaseReply& outReply );
+        static EconomyServiceResult purchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers, const EconomyPurchaseInput& input,
+                                              EconomyPurchaseReply& outReply );
         /** @brief 검증이 끝난 영수증으로 지급합니다. 구매자가 이 계정이 아니면 `NotPurchaser` 입니다. */
-        static EconomyOutcome redeemReceipt( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers, const EconomyRedeemInput& input,
-                                             EconomyRedeemReply& outReply );
+        static EconomyServiceResult redeemReceipt( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers, const EconomyRedeemInput& input,
+                                                   EconomyRedeemReply& outReply );
         /**
          * @brief 스토어 환불 알림으로 지급한 재화를 회수합니다. 빚을 허용하며(이미 쓴 재화도 회수한다) 사유는 "refund.revoke" 입니다.
          * @param outListChange 회수로 잔액이 바뀐 계정과 그 잔액입니다. 회수하지 않았으면(이미 환불했거나 지급 전이다) 비어 있습니다.
          * @details 지급 분개(`rcpt.<스토어>` 범위, 거래 id 토큰)를 찾아 같은 다리를 거꾸로 소각으로 보낸다. 환불 표시를 같은 트랜잭션에 쓰므로 두 번 오면 아무것도 하지 않는다.
          *          지급 전에 환불이 먼저 오면 표시만 남기고, 뒤에 온 지급은 ReceiptRefunded 로 거절된다. 청약철회한 거래면 이미 돌려받았으므로 표시만 본다.
          */
-        static EconomyOutcome revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotification& notice, int64 nowMs,
-                                            vector<EconomyBalanceChange>& outListChange );
+        static EconomyServiceResult revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotification& notice, int64 nowMs,
+                                                  vector<EconomyBalanceChange>& outListChange );
         /**
          * @brief 유상 구매를 청약철회합니다. 지급한 계정만, 기한 안에, 아직 쓰지 않은 만큼만 회수하며 빚은 만들지 않습니다. 회수한 양은 `_listWithdrawn` 입니다.
          * @details 사유는 "iap.withdraw" 이고 분개 키는 `withdraw.<스토어>` 범위의 거래 id 토큰이라 다시 와도 한 번만 적용된다. 실제 결제 환불은 스토어나 결제 대행이 회수한 양으로 한다.
          */
-        static EconomyOutcome withdrawPurchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const EconomyWithdrawInput& input,
-                                                EconomyWithdrawReply& outReply );
-        static EconomyOutcome readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyWalletReply& outReply );
-        static EconomyOutcome readHistory( IServiceStoreConnection& connection, uint64 accountID, const EconomyHistoryRequest& request, EconomyHistoryReply& outReply );
+        static EconomyServiceResult withdrawPurchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const EconomyWithdrawInput& input,
+                                                      EconomyWithdrawReply& outReply );
+        static EconomyServiceResult readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyWalletReply& outReply );
+        static EconomyServiceResult readHistory( IServiceStoreConnection& connection, uint64 accountID, const EconomyHistoryRequest& request, EconomyHistoryReply& outReply );
         /** @brief 이동 결과에서 @p accountID 의 잔액만 골라냅니다. */
-        static void collectAccountBalances( const LedgerTransferResult& outcome, uint64 accountID, vector<LedgerBalance>& outListBalance );
+        static void collectAccountBalances( const LedgerTransferResult& serviceResult, uint64 accountID, vector<LedgerBalance>& outListBalance );
     };
 } // namespace sw

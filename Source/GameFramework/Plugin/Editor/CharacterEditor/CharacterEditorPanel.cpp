@@ -465,7 +465,7 @@ namespace sw::editor
         EditorPreviewPanel::syncDocumentDirty();
     }
 
-    bool CharacterEditorPanel::acceptsDocumentPath( string_view assetPath ) const
+    bool CharacterEditorPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return StringUtil::endsWith( assetPath, SocketSet::kExtension );
     }

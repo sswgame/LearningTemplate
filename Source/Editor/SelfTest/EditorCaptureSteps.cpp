@@ -129,10 +129,10 @@ namespace sw::editor
                 }
                 if ( pPending->_bSettled == false )
                 {
-                    const EditorSettleResult verdict = pPending->_settle.advance( runner.findActiveObjectManager() );
-                    if ( verdict == EditorSettleResult::Oscillating )
+                    const EditorSettleResult evaluation = pPending->_settle.advance( runner.findActiveObjectManager() );
+                    if ( evaluation == EditorSettleResult::Oscillating )
                         runner.recordFailure( step, pPending->_settle.describeOscillation() ); // 그래도 찍는다 — 움직이는 화면이 결과 파일에 남는다
-                    if ( verdict == EditorSettleResult::Waiting )
+                    if ( evaluation == EditorSettleResult::Waiting )
                         return runner.holdUntilReady( step, input, false, std::numeric_limits<uint32>::max(), pPending->_settle.describeWait() + " before the UI capture" );
                     pPending->_bSettled = true;
                 }
@@ -147,7 +147,7 @@ namespace sw::editor
                         const bool bGaveUp = ++pPending->_phaseFrameCount >= kCaptureWaitFrames;
                         return runner.holdUntilReady( step, input, bGaveUp, std::numeric_limits<uint32>::max(), "the editor window contents to hold still before the UI capture" );
                     }
-                    pPending->_ticket          = pCapture->request( runner.resolveOutputPath( step.readValidatedFields<EditorCaptureParams>()._file ) );
+                    pPending->_ticket          = pCapture->request( runner.resolveOutputPath( step.readValidatedProperties<EditorCaptureParams>()._file ) );
                     pPending->_bRequested      = SW_TRUE;
                     pPending->_phaseFrameCount = 0;
                 }

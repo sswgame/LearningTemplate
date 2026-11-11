@@ -88,7 +88,7 @@ namespace sw
                 if ( pMoveID == nullptr )
                     return false;
                 FighterMove          move;
-                bool                 bValid   = XMLFields::readFields( node, move, sourceName, { "id", "frames", "command", "priority", "maxGap", "from", "breakButtons" } );
+                bool                 bValid   = XMLFields::readProperties( node, move, sourceName, { "id", "frames", "command", "priority", "maxGap", "from", "breakButtons" } );
                 const string_view    framesID = node.getAttributeText( "frames" );
                 const MoveFrameData* pFrame   = moveCatalog.find( hashed_string( framesID.empty() ? string_view( pMoveID ) : framesID ) );
                 if ( pFrame == nullptr )
@@ -215,9 +215,9 @@ namespace sw
             bool loadFighter( const XMLNode& node, string_view sourceName )
             {
                 using Internal = FighterCatalogInternal;
-                // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+                // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
                 FighterDef fighter;
-                bool       bValid = XMLFields::readFields( node, fighter, sourceName, { "sidestep", "sidestepDown", "jump" } );
+                bool       bValid = XMLFields::readProperties( node, fighter, sourceName, { "sidestep", "sidestepDown", "jump" } );
                 bValid            = Internal::readRequiredCommand( _parser, node, "sidestep", sourceName, fighter._sidestepUp ) && bValid;
                 bValid            = Internal::readRequiredCommand( _parser, node, "sidestepDown", sourceName, fighter._sidestepDown ) && bValid;
                 bValid            = Internal::readRequiredCommand( _parser, node, "jump", sourceName, fighter._jump ) && bValid;

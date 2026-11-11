@@ -20,7 +20,7 @@ namespace sw
             [[nodiscard]] static bool readOptionalChild( const XMLNode& root, const utf8* pName, string_view sourceName, TDef& outDef )
             {
                 const XMLNode node = root.findChild( pName );
-                return node ? XMLFields::readFields( node, outDef, sourceName ) : true;
+                return node ? XMLFields::readProperties( node, outDef, sourceName ) : true;
             }
         };
     } // namespace
@@ -44,7 +44,7 @@ namespace sw
         MetroidvaniaRules          rules;
         MetroidvaniaHealthDef      health;
         MetroidvaniaStaminaDef     stamina;
-        bool                       bValid = XMLFields::readFields( root, rootDef, sourceName );
+        bool                       bValid = XMLFields::readProperties( root, rootDef, sourceName );
         bValid                            = Internal::readOptionalChild( root, "Rules", sourceName, rules ) && bValid;
         bValid                            = Internal::readOptionalChild( root, "Health", sourceName, health ) && bValid;
         bValid                            = Internal::readOptionalChild( root, "Stamina", sourceName, stamina ) && bValid;
@@ -82,7 +82,7 @@ namespace sw
 
     uint32 MetroidvaniaCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         if ( loadRules( root, sourceName ) == false )
             return 0;
         // 줍는 것이 능력 · 부적을 가리킨다 — 연결은 참조 표가 보고, 읽기는 표의 순서다.
@@ -105,7 +105,7 @@ namespace sw
     bool MetroidvaniaCatalog::loadAbility( const XMLNode& node, string_view sourceName )
     {
         MetroidvaniaAbilityDef ability;
-        bool                   bValid = XMLFields::readFields( node, ability, sourceName );
+        bool                   bValid = XMLFields::readProperties( node, ability, sourceName );
         const XMLNode          motor  = node.findChild( "Motor" );
         if ( motor )
             ability._motor.addAttributes( motor ); // 속성이 없으면 빈 스탯이다
@@ -126,7 +126,7 @@ namespace sw
     bool MetroidvaniaCatalog::loadCharm( const XMLNode& node, string_view sourceName )
     {
         MetroidvaniaTrinketDef charm;
-        if ( XMLFields::readFields( node, charm, sourceName ) == false )
+        if ( XMLFields::readProperties( node, charm, sourceName ) == false )
             return false;
         const XMLNode stats = node.findChild( "Stats" );
         if ( stats )
@@ -139,7 +139,7 @@ namespace sw
     {
         // 주는 능력 · 부적은 같은 파일의 id 다 — 깨지면 참조 표(`engine/settings/datacatalogreferences.xml`)가 로드 · 쿠킹을 실패시킨다(줍는 것만 빼고 서지 않는다).
         MetroidvaniaPickupDef pickup;
-        if ( XMLFields::readFields( node, pickup, sourceName ) == false )
+        if ( XMLFields::readProperties( node, pickup, sourceName ) == false )
             return false;
         (void)_pickupCatalog.add( pickup );
         return true;
@@ -148,7 +148,7 @@ namespace sw
     bool MetroidvaniaCatalog::loadEnemy( const XMLNode& node, string_view sourceName )
     {
         MetroidvaniaEnemyDef enemy;
-        bool                 bValid = XMLFields::readFields( node, enemy, sourceName );
+        bool                 bValid = XMLFields::readProperties( node, enemy, sourceName );
         if ( enemy._bBoss && enemy._flag.empty() )
         {
             SW_LOG_ERROR_ID( "MetroidvaniaCatalog.BossNeedsFlagSet", "%#: boss '%#' needs flag=\"...\" (set when it is defeated)", sourceName, enemy._id.c_str() );

@@ -76,7 +76,7 @@ namespace sw
 
     uint32 JRPGCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<JRPGCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&JRPGCatalog::_curve>( "ExperienceCurve" ),
@@ -97,9 +97,9 @@ namespace sw
     {
         using Internal = JRPGCatalogInternal;
         JRPGClassDef def;
-        bool         bValid = XMLFields::readFields( node, def, sourceName,
-                                                     { "hp", "mp", "str", "agi", "vit", "intellect", "luck", "growHP", "growMP", "growStr", "growAgi", "growVit",
-                                                       "growIntellect", "growLuck" } );
+        bool         bValid = XMLFields::readProperties( node, def, sourceName,
+                                                         { "hp", "mp", "str", "agi", "vit", "intellect", "luck", "growHP", "growMP", "growStr", "growAgi", "growVit",
+                                                           "growIntellect", "growLuck" } );
         bValid              = Internal::readStats( node, Internal::kArrStatName, sourceName, def._arrBase ) && bValid;
         bValid              = Internal::readStats( node, Internal::kArrGrowthName, sourceName, def._arrGrowth ) && bValid;
         bValid              = Internal::checkMaxHP( def._arrBase, node, sourceName ) && bValid;
@@ -113,7 +113,7 @@ namespace sw
     bool JRPGCatalog::loadCombo( const XMLNode& node, string_view sourceName )
     {
         JRPGComboDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
             return false;
         if ( def._listMemberID.size() < 2 )
         {
@@ -126,7 +126,7 @@ namespace sw
     bool JRPGCatalog::loadManual( const XMLNode& node, string_view sourceName )
     {
         JRPGManualDef def;
-        bool          bValid = XMLFields::readFields( node, def, sourceName );
+        bool          bValid = XMLFields::readProperties( node, def, sourceName );
         for ( XMLNode stage = node.findChild( "Stage" ); stage; stage = stage.findNextSibling( "Stage" ) )
         {
             bValid = GameDataXML::readInto( stage, sourceName, def._listStage ) && bValid;
@@ -138,7 +138,7 @@ namespace sw
     {
         using Internal = JRPGCatalogInternal;
         JRPGEnemyDef def;
-        bool         bValid = XMLFields::readFields( node, def, sourceName, { "hp", "mp", "str", "agi", "vit", "intellect", "luck" } );
+        bool         bValid = XMLFields::readProperties( node, def, sourceName, { "hp", "mp", "str", "agi", "vit", "intellect", "luck" } );
         bValid              = Internal::readStats( node, Internal::kArrStatName, sourceName, def._arrStat ) && bValid;
         bValid              = Internal::checkMaxHP( def._arrStat, node, sourceName ) && bValid;
         return bValid && GameDataXML::addUnique( def, sourceName, _enemyCatalog );
@@ -147,11 +147,11 @@ namespace sw
     bool JRPGCatalog::loadArea( const XMLNode& node, string_view sourceName )
     {
         JRPGAreaDef def;
-        bool        bValid = XMLFields::readFields( node, def, sourceName );
+        bool        bValid = XMLFields::readProperties( node, def, sourceName );
         for ( XMLNode groupNode = node.findChild( "Group" ); groupNode; groupNode = groupNode.findNextSibling( "Group" ) )
         {
             JRPGEncounterGroup group;
-            bValid = XMLFields::readFields( groupNode, group, sourceName ) && bValid;
+            bValid = XMLFields::readProperties( groupNode, group, sourceName ) && bValid;
             if ( group._listEnemyID.empty() )
             {
                 SW_LOG_ERROR_ID( "JRPGCatalog.AreaGroupWithoutEnemies", "%#: area '%#' has a <Group> without enemies", sourceName, def._id.c_str() );

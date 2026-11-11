@@ -102,7 +102,7 @@ namespace sw::editor
         return bSaved;
     }
 
-    bool DataTablePanel::acceptsDocumentPath( string_view assetPath ) const
+    bool DataTablePanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return FileUtil::hasExtension( assetPath, ".xml" );
     }

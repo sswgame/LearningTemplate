@@ -533,7 +533,7 @@ namespace sw
     bool WidgetComponent::pickWorld( const Ray& ray, bool bRequireInside, WorldWidgetHit& outHit ) const
     {
         float4x4 quadWorld{};
-        if ( acceptsWorldInput() == false || computeWorldQuadMatrix( quadWorld ) == false )
+        if ( canAcceptWorldInput() == false || computeWorldQuadMatrix( quadWorld ) == false )
             return false;
         if ( WorldWidgetHit::intersectQuad( quadWorld, ray, getWorldTextureSize(), bRequireInside, outHit ) == false )
             return false;
@@ -542,7 +542,7 @@ namespace sw
 
     UIPointerResult WidgetComponent::dispatchWorldPointer( const UIPointerEvent& event )
     {
-        if ( acceptsWorldInput() == false )
+        if ( canAcceptWorldInput() == false )
             return UIPointerResult{};
         return _worldPointer.process( *_worldTree, event );
     }

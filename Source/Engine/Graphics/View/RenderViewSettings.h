@@ -156,7 +156,7 @@ namespace sw
         PostProcessValues _postProcess{};
         /**
          * @brief 이 뷰가 그릴 후처리 머티리얼입니다 — `_postProcess._listBlendable` 가운데 머티리얼 읽기를 마친 것만, 같은 차례로(`PostProcessMaterialSet::resolve`, 게임 스레드).
-         * @details 자리마다의 PostProcessMaterial 패스가 자기 자리의 것을 그리고, 그 자리에 하나도 없으면 패스가 빠진다(`drawsPostProcessMaterial`).
+         * @details 자리마다의 PostProcessMaterial 패스가 자기 자리의 것을 그리고, 그 자리에 하나도 없으면 패스가 빠진다(`shouldDrawPostProcessMaterial`).
          */
         vector<PostProcessMaterialDraw> _listPostProcessMaterial;
         /// @brief 이 뷰를 그리는 카메라의 피사계 심도 렌즈 값(초점 거리 · 조리개 · 센서 높이)입니다. 피사계 심도 패스가 `g_CameraLens` 로 읽습니다(`FramePassExecutor::applyViewPassConstants`).
@@ -184,7 +184,7 @@ namespace sw
         /** @brief 톤맵을 적용하는지 나타냅니다. 표면 값을 보이는 보기 모드(Normals, Depth, Overdraw)는 색을 바꾸지 않습니다. */
         bool usesTonemap() const { return getRenderViewModeInfo( _viewMode )._bShowsBuffer == false; }
         /** @brief @p location 자리에 그릴 후처리 머티리얼이 있는지 나타냅니다. 후처리를 끈 뷰는 없다고 답한다(효과 패스와 같은 규칙). */
-        bool drawsPostProcessMaterial( PostProcessBlendableLocation location ) const
+        bool shouldDrawPostProcessMaterial( PostProcessBlendableLocation location ) const
         {
             if ( usesPostProcess() == false )
                 return false;

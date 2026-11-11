@@ -63,7 +63,7 @@ namespace sw::editor
         _nodeGraph.setCommentsEnabled( true ); // 주석 상자는 그래프 파일에 실린다(`AudioGraphDef::_listComment`)
     }
 
-    bool AudioGraphPanel::acceptsDocumentPath( string_view assetPath ) const
+    bool AudioGraphPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return StringUtil::endsWith( assetPath, AudioGraphDef::kExtension );
     }

@@ -26,9 +26,9 @@ namespace sw
 
     uint32 GhostCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         GhostHuntRootDef rootDef;
-        if ( XMLFields::readFields( root, rootDef, sourceName ) )
+        if ( XMLFields::readProperties( root, rootDef, sourceName ) )
             _currency = rootDef._currency;
         using Element                          = XMLCatalogElement<GhostCatalog>;
         static constexpr Element kArrElement[] = {
@@ -47,7 +47,7 @@ namespace sw
     bool GhostCatalog::loadVacuum( const XMLNode& node, string_view sourceName )
     {
         GhostVacuumDef vacuum;
-        if ( XMLFields::readFields( node, vacuum, sourceName ) == false )
+        if ( XMLFields::readProperties( node, vacuum, sourceName ) == false )
             return false;
         // 단계가 없으면 흡입 피해가 0 이라 유령을 잡을 수 없다.
         if ( vacuum._listStagePower.empty() )
@@ -62,7 +62,7 @@ namespace sw
     bool GhostCatalog::loadFurniture( const XMLNode& node, string_view sourceName )
     {
         GhostFurnitureDef furniture;
-        bool              bValid = XMLFields::readFields( node, furniture, sourceName, { "search" } );
+        bool              bValid = XMLFields::readProperties( node, furniture, sourceName, { "search" } );
         // 뒤지는 방법은 적었으면 그것만 된다(적지 않으면 둘 다). 모르는 이름은 오류다.
         const string_view search = node.getAttributeText( "search" );
         if ( search.empty() == false )

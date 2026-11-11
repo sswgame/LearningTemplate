@@ -76,7 +76,7 @@ namespace sw
         clear();
         // 적지 않으면 clear() 가 둔 기본 스텝 길이(constant::time::kDefaultFixedStepSeconds)다. 0 이하 · 깨진 값은 오류다.
         GimmickCircuitRootParams rootParams{ _stepTime };
-        const bool               bRoot         = XMLFields::readFields( root, rootParams, _sourceName ); // stepTime > 0 은 PROPERTY 가 본다
+        const bool               bRoot         = XMLFields::readProperties( root, rootParams, _sourceName ); // stepTime > 0 은 PROPERTY 가 본다
         _stepTime                              = bRoot ? rootParams._stepTime : _stepTime;
         using Element                          = XMLCatalogElement<GimmickCircuitDef>;
         static constexpr Element kArrElement[] = {
@@ -108,7 +108,7 @@ namespace sw
     bool GimmickCircuitDef::loadWire( const XMLNode& element, string_view sourceName )
     {
         GimmickWireParams wire;
-        if ( XMLFields::readFields( element, wire, sourceName ) == false )
+        if ( XMLFields::readProperties( element, wire, sourceName ) == false )
             return false;
         if ( addWire( wire._from, wire._to, wire._bInvert ) == false )
         {

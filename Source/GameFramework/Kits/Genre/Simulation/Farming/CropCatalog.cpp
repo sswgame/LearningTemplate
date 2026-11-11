@@ -94,7 +94,7 @@ namespace sw
 
     uint32 CropCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         _listKnownSeason.clear();
         const utf8* pKnownSeasons = root.findAttribute( "seasons" );
         if ( pKnownSeasons != nullptr )
@@ -114,7 +114,7 @@ namespace sw
     bool CropCatalog::loadCrop( const XMLNode& node, string_view sourceName )
     {
         CropDef crop;
-        bool    bValid = XMLFields::readFields( node, crop, sourceName, { "seasons" } );
+        bool    bValid = XMLFields::readProperties( node, crop, sourceName, { "seasons" } );
         // 자라는 계절은 반드시 적는다 — 적지 않은 작물을 봄 작물로 읽지 않는다.
         const utf8* pSeasons = node.findAttribute( "seasons" );
         if ( pSeasons == nullptr )

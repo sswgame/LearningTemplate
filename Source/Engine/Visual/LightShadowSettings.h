@@ -19,7 +19,7 @@ namespace sw
      *          값싼 3x3 PCF 는 읽지 않습니다 — 그래서 기본값이 있어도 PCF 의 그림은 바뀌지 않습니다.
      *          접촉 그림자는 화면 공간에서 빛 쪽으로 짧게 걸어 그림자 맵이 놓친 가까운 가림(발치 · 틈)을 잡습니다(언리얼 `ContactShadowLength` 자리, 0 = 끔).
      *          켜진 빛은 한 프레임에 넷까지 접촉 그림자 패스(`RenderPassType::ContactShadow`)의 채널을 받습니다(`FrameShadowData::populateContactShadows`).
-     *          GPU 원소의 `_extra.x` 원천 크기 · `_extra.y` 접촉 길이에 실립니다(`writeGPULightFields`, 3D 빛의 덧칸 규약은 `GPULight::_extra`).
+     *          GPU 원소의 `_extra.x` 원천 크기 · `_extra.y` 접촉 길이에 실립니다(`writeGPULightProperties`, 3D 빛의 덧칸 규약은 `GPULight::_extra`).
      */
     REFLECT()
     struct SW_API LightShadowSettings
@@ -32,6 +32,6 @@ namespace sw
         float32 _contactShadowLength{ 0.0f };
 
         /** @brief 이 값을 3D 빛 원소의 덧칸(`_extra`)에 씁니다. 방향광의 원천 크기는 원소가 아니라 그림자 투영이 쓰지만(`DirectionalShadowProjection::_sourceAngle`) 같은 칸에 함께 싣습니다. */
-        void writeGPULightFields( GPULight& outLight ) const;
+        void writeGPULightProperties( GPULight& outLight ) const;
     };
 } // namespace sw

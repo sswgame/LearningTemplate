@@ -50,7 +50,7 @@ namespace sw
         /** @brief 도는 단계입니다. */
         virtual FitPhase getPhase() const = 0;
         /** @brief 이 인자 이름을 아는지 반환합니다. 테이블을 로드할 때 호출합니다(모르는 인자는 오류입니다). */
-        virtual bool acceptsArgument( const hashed_string& name ) const = 0;
+        virtual bool canAcceptArgument( const hashed_string& name ) const = 0;
         /** @brief 짝 하나에 연산을 겁니다. */
         virtual void execute( FitSolveState& state, const FitPairContext& pair ) const = 0;
     };

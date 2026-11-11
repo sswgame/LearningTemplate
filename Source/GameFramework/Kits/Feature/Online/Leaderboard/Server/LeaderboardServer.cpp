@@ -95,8 +95,8 @@ namespace sw
 
     void LeaderboardServer::respondCompletion( LeaderboardCompletion& completion )
     {
-        const uint64              callID  = completion._requestTag;
-        const LeaderboardOutcome& outcome = completion._result;
+        const uint64                    callID = completion._requestTag;
+        const LeaderboardServiceResult& result = completion._result;
         switch ( completion._operation )
         {
             case LeaderboardOperation::Submit:
@@ -104,8 +104,8 @@ namespace sw
             {
                 LeaderboardSubmitReply reply;
                 reply._score  = completion._score;
-                reply._result = outcome._result;
-                (void)finishCall( callID, outcome, reply );
+                reply._result = result._result;
+                (void)finishCall( callID, result, reply );
                 return;
             }
             case LeaderboardOperation::Top:
@@ -115,29 +115,29 @@ namespace sw
                 LeaderboardEntriesReply reply;
                 reply._listEntry = std::move( completion._listEntry );
                 reply._periodID  = completion._periodID;
-                reply._result    = outcome._result;
-                (void)finishCall( callID, outcome, reply );
+                reply._result    = result._result;
+                (void)finishCall( callID, result, reply );
                 return;
             }
             case LeaderboardOperation::Stats:
             {
                 LeaderboardStatsReply reply;
                 reply._listStat = std::move( completion._listStat );
-                (void)finishCall( callID, outcome, reply );
+                (void)finishCall( callID, result, reply );
                 return;
             }
             case LeaderboardOperation::Achievements:
             {
                 LeaderboardAchievementsReply reply;
                 reply._listAchievement = std::move( completion._listAchievement );
-                (void)finishCall( callID, outcome, reply );
+                (void)finishCall( callID, result, reply );
                 return;
             }
             case LeaderboardOperation::AchievementProgress:
             {
                 LeaderboardProgressReply reply;
                 reply._listProgress = std::move( completion._listProgress );
-                (void)finishCall( callID, outcome, reply );
+                (void)finishCall( callID, result, reply );
                 return;
             }
             case LeaderboardOperation::SeasonResult:
@@ -146,8 +146,8 @@ namespace sw
                 if ( completion._listEntry.empty() == false )
                     reply._entry = completion._listEntry.front();
                 reply._periodID = completion._periodID;
-                reply._result   = outcome._result;
-                (void)finishCall( callID, outcome, reply );
+                reply._result   = result._result;
+                (void)finishCall( callID, result, reply );
                 return;
             }
         }

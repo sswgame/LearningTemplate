@@ -105,7 +105,7 @@ namespace sw::editor
                 requestClose();
         }
         /**
-         * @brief 패널을 닫으려 합니다. 깨끗하면(또는 `asksBeforeClose` 가 false 면) 바로 닫고, 미저장 편집이 있으면 열어 둔 채 확인을 기다립니다.
+         * @brief 패널을 닫으려 합니다. 깨끗하면(또는 `shouldAskBeforeClose` 가 false 면) 바로 닫고, 미저장 편집이 있으면 열어 둔 채 확인을 기다립니다.
          * @details 이미 닫힌 패널이면 아무 일도 하지 않는다. 그려지지 않는 패널이 확인 대기 상태로 남지 않게 하기 위해서다.
          */
         void requestClose();

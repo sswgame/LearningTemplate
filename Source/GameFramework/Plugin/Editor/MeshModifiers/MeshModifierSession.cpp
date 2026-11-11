@@ -105,7 +105,7 @@ namespace sw::editor
                 if ( pModifier == nullptr || pModifier->isEnabled() == false )
                     continue;
                 const MeshModifierStack* pChild = pModifier->getGPUChildStack();
-                if ( pModifier->writesGPUVertexColor() || ( pChild != nullptr && hasColorPainter( *pChild ) ) )
+                if ( pModifier->isVertexColorModifier() || ( pChild != nullptr && hasColorPainter( *pChild ) ) )
                     return true;
             }
             return false;

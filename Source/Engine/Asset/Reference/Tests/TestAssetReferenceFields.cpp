@@ -12,7 +12,7 @@ using namespace sw;
 namespace
 {
     /** @brief 저장소의 칸 목록을 읽습니다. */
-    bool loadRepositoryFields( AssetReferenceFields& outParams )
+    bool loadRepositoryProperties( AssetReferenceFields& outParams )
     {
         return outParams.load( ProcessRoots::get()._project.str() );
     }
@@ -34,7 +34,7 @@ namespace
 SW_TEST_CASE( AssetReferenceFieldsTest, CatalogEntryBaseReferencesTheFileOnly )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( loadRepositoryProperties( params ) );
     const vector<string> listPath = extractPaths( params, R"(<Root><Item _base="common/data/items.xml#helmet_knight"/><Item _base="helmet_knight"/></Root>)", AssetReferenceSyntax::XML );
     SW_REQUIRE_EQUAL( listPath.size(), static_cast<size_t>( 1 ) );
     SW_EXPECT_EQUAL( listPath[0], string( "common/data/items.xml" ) );
@@ -43,10 +43,10 @@ SW_TEST_CASE( AssetReferenceFieldsTest, CatalogEntryBaseReferencesTheFileOnly )
 /**
  * @brief [AssetReferenceFieldsTest] XML 은 목록에 든 속성 · 요소 글 · 목록 원소만 경로이고, 주석 · 목록 밖 칸 · 도메인 없는 값 · 틀(`{…}`)은 아닌지 검증
  */
-SW_TEST_CASE( AssetReferenceFieldsTest, ExtractsOnlyListedFieldsFromXML )
+SW_TEST_CASE( AssetReferenceFieldsTest, ExtractsOnlyListedPropertiesFromXML )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( loadRepositoryProperties( params ) );
     constexpr string_view kText    = "<Root>\n"
                                      "  <!-- <entity prefab=\"game/x/commented.prefab.xml\"/> -->\n"
                                      "  <entity prefab=\"Game/X/A.prefab.xml\" name=\"game/x/notapath.xml\"/>\n"
@@ -74,7 +74,7 @@ SW_TEST_CASE( AssetReferenceFieldsTest, ExtractsOnlyListedFieldsFromXML )
 SW_TEST_CASE( AssetReferenceFieldsTest, ExtractsJSONAndCMake )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( loadRepositoryProperties( params ) );
     const vector<string> listJSON = extractPaths( params, R"({ "_materialPath": "engine/materials/a.material", "_listStyleSheet": [ "engine/ui/a.uistyle.xml", "x" ], "other": "engine/b" })",
                                                   AssetReferenceSyntax::JSON );
     SW_REQUIRE_EQUAL( listJSON.size(), static_cast<size_t>( 2 ) );
@@ -93,17 +93,17 @@ SW_TEST_CASE( AssetReferenceFieldsTest, ExtractsJSONAndCMake )
 SW_TEST_CASE( AssetReferenceFieldsTest, ImportedOutputsResolveFromTheirSource )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( loadRepositoryProperties( params ) );
     AssetIDSet assets;
     assets.addFile( "common/models_raw/kaykit/knight.glb" );
     assets.addFile( "game/x/textures_raw/wall.png" );
-    SW_EXPECT_TRUE( params.resolves( "common/models/kaykit/knight.mesh", assets ) );
-    SW_EXPECT_TRUE( params.resolves( "common/models/kaykit/knight/clips", assets ) ); // 옆 폴더
-    SW_EXPECT_TRUE( params.resolves( "common/models/kaykit/knight/knight.skeleton.xml", assets ) );
-    SW_EXPECT_TRUE( params.resolves( "game/x/textures/wall.dds", assets ) );
-    SW_EXPECT_TRUE( params.resolves( "common/models_raw", assets ) ); // 폴더
-    SW_EXPECT_FALSE( params.resolves( "common/models/kaykit/rogue.mesh", assets ) );
-    SW_EXPECT_FALSE( params.resolves( "game/x/textures/floor.dds", assets ) );
+    SW_EXPECT_TRUE( params.canResolve( "common/models/kaykit/knight.mesh", assets ) );
+    SW_EXPECT_TRUE( params.canResolve( "common/models/kaykit/knight/clips", assets ) ); // 옆 폴더
+    SW_EXPECT_TRUE( params.canResolve( "common/models/kaykit/knight/knight.skeleton.xml", assets ) );
+    SW_EXPECT_TRUE( params.canResolve( "game/x/textures/wall.dds", assets ) );
+    SW_EXPECT_TRUE( params.canResolve( "common/models_raw", assets ) ); // 폴더
+    SW_EXPECT_FALSE( params.canResolve( "common/models/kaykit/rogue.mesh", assets ) );
+    SW_EXPECT_FALSE( params.canResolve( "game/x/textures/floor.dds", assets ) );
     SW_EXPECT_FALSE( params.isChecked( "scratch/assetmanage/probe.material" ) );
     SW_EXPECT_FALSE( params.isReferrer( "common/models/kaykit/knight/materials/a.material" ) ); // 임포터가 쓴 산출물
     SW_EXPECT_TRUE( params.isReferrer( "game/x/maps/a.scene.xml" ) );
@@ -113,10 +113,10 @@ SW_TEST_CASE( AssetReferenceFieldsTest, ImportedOutputsResolveFromTheirSource )
 /**
  * @brief [AssetReferenceFieldsTest] 고쳐 쓰기가 경로 칸의 값만 바꾸고(칸 밖 · 주석은 그대로), 원본을 옮기면 산출물 경로도 바꾸는지 검증
  */
-SW_TEST_CASE( AssetReferenceFieldsTest, RewritesOnlyPathFields )
+SW_TEST_CASE( AssetReferenceFieldsTest, RewritesOnlyPathProperties )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( loadRepositoryProperties( params ) );
     string text = "<!-- game/x/a.material -->\n"
                   "<M _materialPath=\"game/x/a.material\" _meshID=\"game/x/models/rock.mesh\" note=\"game/x/a.material\"/>\n";
     SW_EXPECT_EQUAL( params.rewrite( text, AssetReferenceSyntax::XML, params.makeRewriteRules( "game/x/a.material", "game/y/b.material", false ) ), 1u );

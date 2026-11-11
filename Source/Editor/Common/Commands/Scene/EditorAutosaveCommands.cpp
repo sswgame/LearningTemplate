@@ -167,7 +167,7 @@ namespace sw::editor
                     if ( state._listRecoverable.empty() == false )
                     {
                         SW_LOG_WARNING_ID( "EditorAutosaveCommands.RecoveryOffered", "Autosave: the last editor session did not close - %# scene copy(ies) can be recovered (Window > Recovered Work)", state._listRecoverable.size() );
-                        editor::getSubsystem<EditorWorkspace>().requestOpenPanelByID( editorpanel::kRecoveredWork.getView() );
+                        editor::getSubsystem<EditorWorkspace>().requestOpenPanelByID( editorpanel::kRecoveredScene.getView() );
                     }
                 }
                 StringBuilder<constant::buffer::kMax256> textBuilder;

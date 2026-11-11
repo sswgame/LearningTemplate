@@ -213,19 +213,19 @@ namespace sw::editor
         using Internal = ModelImportVrmInternal;
         if ( result._listSection.empty() )
             return true;
-        const bool bSkinned   = result._bSkinned != SW_FALSE;
-        auto       resourceOf = [&]( string_view extension )
+        const bool bSkinned      = result._bSkinned != SW_FALSE;
+        auto       getResourceOf = [&]( string_view extension )
         { return assetPaths.toAssetID( FileUtil::joinPath( sideFolder, string( stem ) + string( extension ) ) ); };
         // 임포트가 쓰는 프리팹은 공유 머티리얼을 바로 가리킨다 — 같은 값의 구간이 머티리얼 객체 하나를 나눠 쓴다(인스턴스 값은 `MaterialInstance` 사본에 있어 섞이지 않는다).
         bool bMissingMaterial = false;
-        auto materialOf       = [&]( const ModelImportSection& section )
+        auto getMaterialOf    = [&]( const ModelImportSection& section )
         {
             string shared    = ModelImportMaterial::findSharedMaterial( sideFolder, section._fileStem );
             bMissingMaterial = bMissingMaterial || shared.empty();
             return shared;
         };
         const string meshID       = assetPaths.toAssetID( meshPath );
-        const string skeletonPath = resourceOf( Skeleton::kExtension );
+        const string skeletonPath = getResourceOf( Skeleton::kExtension );
 
         // 문서 트리로 만들어 엔진 XML 서식으로 저장한다(이스케이프는 문서가 한다) — 저장소의 엔진 형식 파일은 바이트 그대로 왕복해야 한다(XMLAssetMerge).
         XMLDocument   prefabDocument;
@@ -244,7 +244,7 @@ namespace sw::editor
         const ModelImportSection& first     = result._listSection.front();
         const XMLNode             mainMesh  = Internal::appendComponent( listComponent, pMainType );
         mainMesh.appendAttribute( "_meshID", string_view{ meshID } );
-        mainMesh.appendAttribute( "_materialPath", string_view{ materialOf( first ) } );
+        mainMesh.appendAttribute( "_materialPath", string_view{ getMaterialOf( first ) } );
         mainMesh.appendAttribute( "_sectionName", string_view{ first._sectionName } );
         if ( bSkinned )
             mainMesh.appendAttribute( "_skeletonPath", string_view{ skeletonPath } );
@@ -253,13 +253,13 @@ namespace sw::editor
             const ModelImportSection& section     = result._listSection[index];
             const XMLNode             meshSection = Internal::appendComponent( listComponent, "MeshSectionComponent" );
             meshSection.appendAttribute( "_attachComponent", string_view{ mainRef } );
-            meshSection.appendAttribute( "_materialPath", string_view{ materialOf( section ) } );
+            meshSection.appendAttribute( "_materialPath", string_view{ getMaterialOf( section ) } );
             meshSection.appendAttribute( "_sectionName", string_view{ section._sectionName } );
         }
         if ( VrmRuntimeAssets::hasFacialRig( result._avatar ) )
-            Internal::appendComponent( listComponent, "FacialAnimationComponent" ).appendAttribute( "_facialRigPath", string_view{ resourceOf( FacialRig::kExtension ) } );
+            Internal::appendComponent( listComponent, "FacialAnimationComponent" ).appendAttribute( "_facialRigPath", string_view{ getResourceOf( FacialRig::kExtension ) } );
         if ( VrmRuntimeAssets::hasSpringRig( result._avatar, result._skeleton ) )
-            Internal::appendComponent( listComponent, "PoseModifierComponent" ).appendAttribute( "_rigPath", string_view{ resourceOf( RigAsset::kExtension ) } );
+            Internal::appendComponent( listComponent, "PoseModifierComponent" ).appendAttribute( "_rigPath", string_view{ getResourceOf( RigAsset::kExtension ) } );
 
         if ( bMissingMaterial )
         {

@@ -223,7 +223,7 @@ namespace sw
                 return;
             for ( const INavGeometrySource* pSource : listSource )
             {
-                if ( pSource->getNavGeometryOwner() == pObject && pSource->overridesOwnerGeometry() )
+                if ( pSource->getNavGeometryOwner() == pObject && pSource->shouldOverrideOwnerGeometry() )
                 {
                     pSource->collectNavGeometry( outGeometry, result._area );
                     return;

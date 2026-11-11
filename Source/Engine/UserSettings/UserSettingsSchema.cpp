@@ -184,7 +184,7 @@ namespace sw
             template <typename T>
             [[nodiscard]] static bool readElement( const XMLNode& node, T& outDef, string_view sourceName, const utf8* pChild, std::initializer_list<string_view> listHandRead = {} )
             {
-                bool bOk = XMLFields::readFields( node, outDef, sourceName, listHandRead );
+                bool bOk = XMLFields::readProperties( node, outDef, sourceName, listHandRead );
                 for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     if ( pChild != nullptr && StringUtil::equals( child.getName(), pChild ) )
@@ -235,7 +235,7 @@ namespace sw
             /** @brief `<Scalability>` 하나(`<Preset>` · `<AutoDetect>` 자식 포함)를 읽습니다. */
             [[nodiscard]] static bool readScalability( const XMLNode& node, string_view sourceName, ScalabilityGroupDef& outGroup )
             {
-                bool bOk = XMLFields::readFields( node, outGroup, sourceName );
+                bool bOk = XMLFields::readProperties( node, outGroup, sourceName );
                 for ( XMLNode groupChild = node.findChild(); groupChild.isValid(); groupChild = groupChild.findNextSibling() )
                 {
                     if ( StringUtil::equals( groupChild.getName(), "Preset" ) )
@@ -343,14 +343,14 @@ namespace sw
                     return false;
                 }
                 bool bOk = true;
-                if ( registry.acceptsValue( def._targetName, def._defaultValue ) == false )
+                if ( registry.canAcceptValue( def._targetName, def._defaultValue ) == false )
                 {
                     SW_LOG_ERROR_ID( "UserSettingsSchema.SettingHandlerDoesNot", "setting '%#': handler '%#' does not accept the default '%#'", pID, def._targetName.c_str(), def._defaultValue );
                     bOk = false;
                 }
                 for ( const UserSettingOption& option : def._listOption )
                 {
-                    if ( registry.acceptsValue( def._targetName, option._value ) == false )
+                    if ( registry.canAcceptValue( def._targetName, option._value ) == false )
                     {
                         SW_LOG_ERROR_ID( "UserSettingsSchema.SettingHandlerDoesNot2", "setting '%#': handler '%#' does not accept option '%#'", pID, def._targetName.c_str(), option._value );
                         bOk = false;
@@ -592,7 +592,7 @@ namespace sw
         // 다 읽은 뒤에만 합친다. 반쯤 읽은 덧붙이기가 남으면 다음 검사가 엉뚱한 줄을 탓하기 때문이다.
         UserSettingsSchema           overlay;
         UserSettingsSchemaRootParams rootParams;
-        bool                         bOk = XMLFields::readFields( root, rootParams, sourceName );
+        bool                         bOk = XMLFields::readProperties( root, rootParams, sourceName );
         overlay._version                 = rootParams._version;
 
         const uint32 orderBase = static_cast<uint32>( _listSetting.size() );

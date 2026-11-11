@@ -146,7 +146,7 @@ namespace sw
         if ( observer._bActive == SW_FALSE )
         {
             observer = Observer{};
-            observer._updateOutcome.initialize( static_cast<int32>( NetMMOMessage::kMaxUnconfirmedTicks ) );
+            observer._updateResult.initialize( static_cast<int32>( NetMMOMessage::kMaxUnconfirmedTicks ) );
         }
         observer._entityID = entityID;
         observer._bActive  = SW_TRUE;
@@ -180,7 +180,7 @@ namespace sw
         const bool   bFromNow = tick > _tick; // 이 복제기가 단 값이 아니다(재초기화 전의 통지)
         if ( bTooOld || bFromNow )
             return;
-        observer._updateOutcome.acquire( tick ) = notice._result == NetDeliveryResult::Delivered ? SW_TRUE : SW_FALSE;
+        observer._updateResult.acquire( tick ) = notice._result == NetDeliveryResult::Delivered ? SW_TRUE : SW_FALSE;
     }
 
     void MMOReplicator::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
@@ -426,11 +426,11 @@ namespace sw
             VisibleEntry& entry = visible.second;
             if ( entry._bInFlight == SW_FALSE )
                 continue;
-            const uint8* pOutcome = observer._updateOutcome.find( entry._inFlightTick );
+            const uint8* pResult  = observer._updateResult.find( entry._inFlightTick );
             const bool   bExpired = _tick - entry._inFlightTick >= NetMMOMessage::kMaxUnconfirmedTicks;
-            if ( pOutcome == nullptr && bExpired == false )
+            if ( pResult == nullptr && bExpired == false )
                 continue; // 아직 판정이 없다(패킷이 오가는 중이다)
-            const bool bDelivered = pOutcome != nullptr && *pOutcome == SW_TRUE;
+            const bool bDelivered = pResult != nullptr && *pResult == SW_TRUE;
             if ( bDelivered )
                 entry._listSentState.swap( entry._listInFlightState );
             entry._listInFlightState.clear();

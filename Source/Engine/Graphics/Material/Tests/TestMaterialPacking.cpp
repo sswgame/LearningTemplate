@@ -103,10 +103,10 @@ SW_TEST_CASE( MaterialPackingTest, TypeNamesRoundTrip )
         const MaterialPropertyType type = static_cast<MaterialPropertyType>( typeIndex );
         uint32                     size{ 0 };
         SW_EXPECT_EQUAL( type, MaterialPacking::stringToType( MaterialPacking::typeToString( type ), size ) );
-        SW_EXPECT_EQUAL( MaterialPacking::packedSizeOf( type ), size );
+        SW_EXPECT_EQUAL( MaterialPacking::computePackedSizeOf( type ), size );
     }
     SW_EXPECT_TRUE( string_view( MaterialPacking::typeToString( MaterialPropertyType::Unknown ) ) == "Unknown" );
-    SW_EXPECT_EQUAL( 0u, MaterialPacking::packedSizeOf( MaterialPropertyType::Unknown ) );
+    SW_EXPECT_EQUAL( 0u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Unknown ) );
 }
 
 /**
@@ -114,13 +114,13 @@ SW_TEST_CASE( MaterialPackingTest, TypeNamesRoundTrip )
  */
 SW_TEST_CASE( MaterialPackingTest, PackedSizeAndTypeClasses )
 {
-    SW_EXPECT_EQUAL( 4u, MaterialPacking::packedSizeOf( MaterialPropertyType::Float ) );
-    SW_EXPECT_EQUAL( 8u, MaterialPacking::packedSizeOf( MaterialPropertyType::Uint2 ) );
-    SW_EXPECT_EQUAL( 12u, MaterialPacking::packedSizeOf( MaterialPropertyType::Int3 ) );
-    SW_EXPECT_EQUAL( 16u, MaterialPacking::packedSizeOf( MaterialPropertyType::Color ) );
-    SW_EXPECT_EQUAL( 64u, MaterialPacking::packedSizeOf( MaterialPropertyType::Float4x4 ) );
-    SW_EXPECT_EQUAL( 4u, MaterialPacking::packedSizeOf( MaterialPropertyType::Texture2DArray ) );
-    SW_EXPECT_EQUAL( 0u, MaterialPacking::packedSizeOf( MaterialPropertyType::Keyword ) );
+    SW_EXPECT_EQUAL( 4u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Float ) );
+    SW_EXPECT_EQUAL( 8u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Uint2 ) );
+    SW_EXPECT_EQUAL( 12u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Int3 ) );
+    SW_EXPECT_EQUAL( 16u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Color ) );
+    SW_EXPECT_EQUAL( 64u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Float4x4 ) );
+    SW_EXPECT_EQUAL( 4u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Texture2DArray ) );
+    SW_EXPECT_EQUAL( 0u, MaterialPacking::computePackedSizeOf( MaterialPropertyType::Keyword ) );
 
     SW_EXPECT_TRUE( MaterialPacking::isTextureType( MaterialPropertyType::Texture2D ) );
     SW_EXPECT_TRUE( MaterialPacking::isTextureType( MaterialPropertyType::TextureCube ) );
@@ -137,13 +137,13 @@ SW_TEST_CASE( MaterialPackingTest, PackedSizeAndTypeClasses )
  */
 SW_TEST_CASE( MaterialPackingTest, DefaultShaderTypes )
 {
-    SW_EXPECT_EQUAL( MaterialPropertyType::Uint, MaterialPacking::defaultShaderTypeFor( MaterialPropertyType::Bool ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Uint, MaterialPacking::defaultShaderTypeFor( MaterialPropertyType::BitFlag ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Uint, MaterialPacking::defaultShaderTypeFor( MaterialPropertyType::TextureCube ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Float, MaterialPacking::defaultShaderTypeFor( MaterialPropertyType::Range ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Float4, MaterialPacking::defaultShaderTypeFor( MaterialPropertyType::Color ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Unknown, MaterialPacking::defaultShaderTypeFor( MaterialPropertyType::Keyword ) );
-    SW_EXPECT_EQUAL( MaterialPropertyType::Int3, MaterialPacking::defaultShaderTypeFor( MaterialPropertyType::Int3 ) );
+    SW_EXPECT_EQUAL( MaterialPropertyType::Uint, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType::Bool ) );
+    SW_EXPECT_EQUAL( MaterialPropertyType::Uint, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType::BitFlag ) );
+    SW_EXPECT_EQUAL( MaterialPropertyType::Uint, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType::TextureCube ) );
+    SW_EXPECT_EQUAL( MaterialPropertyType::Float, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType::Range ) );
+    SW_EXPECT_EQUAL( MaterialPropertyType::Float4, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType::Color ) );
+    SW_EXPECT_EQUAL( MaterialPropertyType::Unknown, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType::Keyword ) );
+    SW_EXPECT_EQUAL( MaterialPropertyType::Int3, MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType::Int3 ) );
 }
 
 /**

@@ -37,9 +37,9 @@ namespace sw
          * @param bExists 기록이 있었는지 나타냅니다.
          * @param outbErase 참이면 기록을 지웁니다. 비교 후 지우기로 처리합니다.
          */
-        virtual MatchmakingOutcome mutate( bool bExists, const vector<uint8>& oldBytes, vector<uint8>& outNewBytes, bool& outbErase ) = 0;
+        virtual MatchmakingServiceResult mutate( bool bExists, const vector<uint8>& oldBytes, vector<uint8>& outNewBytes, bool& outbErase ) = 0;
         /** @brief 끝났을 때 불립니다. 결과와 마지막에 쓴 값을 받으며, 지웠으면 빈 값이고 규칙이 실패했으면 읽은 값입니다. */
-        virtual void onFinished( MatchmakingOutcome result, const vector<uint8>& finalBytes ) = 0;
+        virtual void onFinished( MatchmakingServiceResult result, const vector<uint8>& finalBytes ) = 0;
     };
 } // namespace sw
 

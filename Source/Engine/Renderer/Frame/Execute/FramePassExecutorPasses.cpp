@@ -171,6 +171,9 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ExecutePassNoActiveIRHICommandList", "executePass: no active IRHICommandList" );
             return;
         }
+        // 뷰 패스 고르기가 이번 뷰에 할 일이 없다고 정한 패스(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스)는 기록하지 않는다 — 패스마다 다시 판정하지 않는다.
+        if ( isPassDisabledInView( passDesc ) )
+            return;
 
         // 이벤트 표지(캡처의 구간 이름) + GPU 브레드크럼 시작 · 끝 표지 — 디바이스 소실 때 끝난 패스와 돌던 패스를 이름으로 싣는다. 어느 길로 돌아가도 짝이 맞는다.
         const GPUPassScope passScope{ *context._pCmd, passName };
@@ -216,7 +219,7 @@ namespace sw
                     // 그림자 캐시 층은 아틀라스 패스 앞에 다시 그리고(다른 깊이 대상이다) 셰이더 읽기로 돌린다 — 렌더 패스 안에서는 상태를 바꿀 수 없다.
                     const bool bShadows    = _pActiveView->_settings._bShadows == SW_TRUE;
                     const bool bCacheLayer = bShadows && prepareShadowCacheLayer( context, passDepth, input._bTransparentBatch );
-                    beginDepthOnlyPass( context, passDepth, colorLoadFor( passDepth ) );
+                    beginDepthOnlyPass( context, passDepth, getColorLoadFor( passDepth ) );
                     // 그림자를 끈 뷰는 지우기만 한다. 깊이 1(가장 멀다)이면 모두 빛을 받는다.
                     if ( bShadows )
                         drawShadowTiles( context, input._bTransparentBatch, bCacheLayer );
@@ -225,7 +228,7 @@ namespace sw
                 }
                 case RenderPassType::DepthPrepass:
                 {
-                    beginDepthOnlyPass( context, passDepth, colorLoadFor( passDepth ) );
+                    beginDepthOnlyPass( context, passDepth, getColorLoadFor( passDepth ) );
                     drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::DepthPrepass ), input._bTransparentBatch );
                     context._pCmd->endRenderPass();
                     _bHasExecutedDepthPrepass.store( 1 );
@@ -365,7 +368,7 @@ namespace sw
         }
     }
 
-    RHIRenderPassLoadOp FramePassExecutor::colorLoadFor( const hashed_string& name )
+    RHIRenderPassLoadOp FramePassExecutor::getColorLoadFor( const hashed_string& name )
     {
         // 이름은 **이미 intern 된 것**만 받는다. string_view 를 받으면 패스마다 여기서 다시 intern 하게
         // 된다(FNV + 32-way 샤드 뮤텍스). 타깃 이름은 모두 코드 리터럴이라 attachmentNames() 캐시로 충분하다.
@@ -375,7 +378,7 @@ namespace sw
 
     void FramePassExecutor::executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor )
     {
-        if ( beginColorPass( context, targetName, hashed_string{}, passClearColor, colorLoadFor( targetName ), RHIRenderPassLoadOp::Load ) == false )
+        if ( beginColorPass( context, targetName, hashed_string{}, passClearColor, getColorLoadFor( targetName ), RHIRenderPassLoadOp::Load ) == false )
             return;
         drawFullscreen( context, pso );
         context._pCmd->endRenderPass();
@@ -549,8 +552,8 @@ namespace sw
 
     void FramePassExecutor::executeForwardOpaquePass( const PassExecuteInput& input )
     {
-        // ForwardOnlyOpaque 는 디퍼드의 G버퍼가 뺀 배치(MATERIAL_FORWARD_ONLY — 툰)만 조명 패스가 쓴 색과 장면 깊이 위에 그린다(거르기는 drawsBatchInPass).
-        // 첨부는 앞 패스가 이미 썼으므로 colorLoadFor 가 Load 를 고른다.
+        // ForwardOnlyOpaque 는 디퍼드의 G버퍼가 뺀 배치(MATERIAL_FORWARD_ONLY — 툰)만 조명 패스가 쓴 색과 장면 깊이 위에 그린다(거르기는 shouldDrawBatchInPass).
+        // 첨부는 앞 패스가 이미 썼으므로 getColorLoadFor 가 Load 를 고른다.
         // 그림자 맵은 선언한 입력 중 ShadowMap 역할이다(첨부의 `_role` 또는 원본 이름). 선언하지 않은 파이프라인(2D)은 그림자를 바인딩하지 않는다
         // — 옛 코드는 이름 ShadowMap 으로 찾았고, 그 첨부가 없는 파이프라인에서는 어차피 빈 바인딩이었다.
         using Internal                                              = FramePassExecutorInternal;
@@ -573,9 +576,9 @@ namespace sw
         {
             arrNames[colorIndex]  = declaredColor[colorIndex]._attachment;
             arrClears[colorIndex] = getTargetClearColor( arrNames[colorIndex] );
-            arrLoads[colorIndex]  = colorLoadFor( arrNames[colorIndex] );
+            arrLoads[colorIndex]  = getColorLoadFor( arrNames[colorIndex] );
         }
-        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, colorCount, passDepth, colorLoadFor( passDepth ) ) == false )
+        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, colorCount, passDepth, getColorLoadFor( passDepth ) ) == false )
             return;
         const bool bDepthAlreadyWritten = input._passType == RenderPassType::ForwardOpaque && _bHasExecutedDepthPrepass.load() != 0 &&
                                           _psoManager.getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0;
@@ -607,10 +610,10 @@ namespace sw
         const hashed_string       arrNames[]   = { albedoTarget, *pNormalTarget, *pMaterialTarget, *pVelocityTarget, *pCustomTarget, *pSceneTarget };
         const float4              arrClears[]  = { getTargetClearColor( albedoTarget ), getTargetClearColor( *pNormalTarget ), getTargetClearColor( *pMaterialTarget ),
                                                    getTargetClearColor( *pVelocityTarget ), getTargetClearColor( *pCustomTarget ), getTargetClearColor( *pSceneTarget ) };
-        const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget ), colorLoadFor( *pNormalTarget ), colorLoadFor( *pMaterialTarget ),
-                                                   colorLoadFor( *pVelocityTarget ), colorLoadFor( *pCustomTarget ), colorLoadFor( *pSceneTarget ) };
+        const RHIRenderPassLoadOp arrLoads[]   = { getColorLoadFor( albedoTarget ), getColorLoadFor( *pNormalTarget ), getColorLoadFor( *pMaterialTarget ),
+                                                   getColorLoadFor( *pVelocityTarget ), getColorLoadFor( *pCustomTarget ), getColorLoadFor( *pSceneTarget ) };
         static_assert( sizeof( arrNames ) / sizeof( arrNames[0] ) == GBufferLayout::kAttachmentCount, "G버퍼 패스의 MRT 는 GBufferLayout 의 첨부 수다" );
-        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, GBufferLayout::kAttachmentCount, passDepth, colorLoadFor( passDepth ) ) == false )
+        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, GBufferLayout::kAttachmentCount, passDepth, getColorLoadFor( passDepth ) ) == false )
             return;
         drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::GBuffer ), input._bTransparentBatch );
         context._pCmd->endRenderPass();
@@ -659,7 +662,7 @@ namespace sw
     {
         // 원본 색(SourceColor 역할 입력)을 선언한 컬러 출력으로 그대로 복사한다 — 셰이더도 PSO 도 없다. 반투명 패스는 장면 색에 섞으며 쓰므로 그 색을 읽을 수 없다(물의 굴절).
         // 둘은 같은 크기 · 형식이어야 한다(파이프라인이 같은 형식으로 선언한다). 계약(`RenderPassTypeInfo`)이 SourceColor 를 필수로 검사했다.
-        // 읽는 패스가 이번 뷰에 모두 쉬면 뷰 패스 고르기가 출력을 뺐다(`kAllowPassCulling`) — 기록하지 않는다(풀 해상도 HDR 복사 한 번이 매 프레임 0.27 ms 였다).
+        // 읽는 패스가 이번 뷰에 모두 비활성이면 뷰 패스 고르기가 출력을 빼고 이 패스를 비활성으로 적는다(`kCullWhenUnconsumed`) — 실행 입구가 거르지만 출력이 없는 경우도 지킨다(풀 해상도 HDR 복사 한 번이 매 프레임 0.27 ms 였다).
         const hashed_string& copyTarget = input._declaredColor[0]._attachment;
         if ( activePool().isForwarded( copyTarget ) )
             return;
@@ -678,7 +681,7 @@ namespace sw
 
     void FramePassExecutor::executeMeshOutlinePass( const PassExecuteInput& input )
     {
-        // 인버티드 헐(inverted hull) 외곽선이다. 불투명 패스가 그린 색과 깊이 위에, 외곽선을 켠 머티리얼의 배치만 앞면을 컬링해 그린다(drawsBatchInPass).
+        // 인버티드 헐(inverted hull) 외곽선이다. 불투명 패스가 그린 색과 깊이 위에, 외곽선을 켠 머티리얼의 배치만 앞면을 컬링해 그린다(shouldDrawBatchInPass).
         // 와이어프레임과 표면 값 보기(Normals, Depth, Overdraw)에서는 빠진다(껍질이 선과 값 위를 덮는다). 타깃은 선언한 컬러 출력이다(불투명 패스와 같은 규칙).
         const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
         if ( ( viewModeInfo._bWireframe && viewModeInfo._bOverlay == false ) || viewModeInfo._bShowsBuffer ) // 겹침(ShadedWireframe)은 Lit 그림이라 그린다
@@ -687,7 +690,7 @@ namespace sw
         const hashed_string& passDepth   = input._passDepth;
         const hashed_string& colorTarget = input._declaredColor[0]._attachment;
         const float4         sceneClear  = getTargetClearColor( colorTarget );
-        if ( beginColorPass( context, colorTarget, passDepth, sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
+        if ( beginColorPass( context, colorTarget, passDepth, sceneClear, getColorLoadFor( colorTarget ), getColorLoadFor( passDepth ) ) == false )
             return;
         drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::MeshOutline ), input._bTransparentBatch );
         context._pCmd->endRenderPass();
@@ -713,7 +716,7 @@ namespace sw
         RHIPipelineStateDesc psoDesc{};
         const bool           bUsesDepth = _psoManager.findDesc( pso, psoDesc ) && psoDesc._depthStencilFormat != RHIFormat::Unknown;
         const hashed_string  depthName  = bUsesDepth ? passDepth : hashed_string{};
-        if ( beginColorPass( context, colorTarget, depthName, sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
+        if ( beginColorPass( context, colorTarget, depthName, sceneClear, getColorLoadFor( colorTarget ), getColorLoadFor( passDepth ) ) == false )
             return;
         drawSceneMeshes( context, pso, false );
         context._pCmd->endRenderPass();
@@ -744,13 +747,15 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
-    bool FramePassExecutor::isPassCulledInView( const RenderGraphPassDesc& pass ) const
+    bool FramePassExecutor::isPassDisabledInView( const RenderGraphPassDesc& pass ) const
     {
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
-        const size_t                       index    = static_cast<size_t>( &pass - listPass.data() );
-        SW_ASSERT( index < listPass.size() ); // 실행은 파이프라인 패스 목록의 원소를 넘긴다
-        const vector<uint8>& listPassCulled = _pActiveView->_listPassCulled;
-        return index < listPassCulled.size() && listPassCulled[index] == SW_TRUE;
+        // 파이프라인 패스 목록 밖(모듈 확장 패스)은 고르기가 보지 않는다 — 늘 활성이다.
+        if ( listPass.empty() || &pass < listPass.data() || &pass >= listPass.data() + listPass.size() )
+            return false;
+        const size_t         index            = static_cast<size_t>( &pass - listPass.data() );
+        const vector<uint8>& listPassDisabled = _pActiveView->_listPassDisabled;
+        return index < listPassDisabled.size() && listPassDisabled[index] == SW_TRUE;
     }
 
     void FramePassExecutor::executeDistortionPass( const PassExecuteInput& input )
@@ -758,11 +763,11 @@ namespace sw
         // 화면 왜곡 누적 — 왜곡 머티리얼(MATERIAL_DISTORTION)의 반투명 배치가 화면 UV 오프셋을 선언한 출력에 더한다(가산 블렌드, 깊이는 테스트만).
         // 왜곡 배치가 없으면 기록하지 않는다 — 출력은 지워지지도 않지만 읽는 적용 패스도 같은 판정으로 돌지 않는다(쓰지 않을 때 비용이 없다).
         const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::Distortion );
-        if ( isPassCulledInView( input._passDesc ) || pso == 0 )
+        if ( pso == 0 )
             return;
         FramePassContext&    context = input._context;
         const hashed_string& target  = input._declaredColor[0]._attachment;
-        if ( beginColorPass( context, target, input._passDepth, getTargetClearColor( target ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+        if ( beginColorPass( context, target, input._passDepth, getTargetClearColor( target ), getColorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
             return;
         drawSceneMeshes( context, pso, input._bTransparentBatch );
         context._pCmd->endRenderPass();
@@ -773,7 +778,7 @@ namespace sw
         // 화면 왜곡 적용 — 장면 색 사본을 왜곡 오프셋만큼 비껴 읽어 장면 색에 쓴다(distortion_apply.hlsl). 왜곡이 없으면 출력(장면 색)이 이미 맞아 아무것도 하지 않는다
         // — 일반 풀스크린 패스의 복사 길을 타면 왜곡 없는 프레임에도 전 화면을 한 번 읽고 쓴다.
         const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::DistortionApply );
-        if ( isPassCulledInView( input._passDesc ) || pso == 0 )
+        if ( pso == 0 )
             return;
         FramePassContext&    context = input._context;
         const hashed_string& target  = input._declaredColor[0]._attachment;
@@ -807,7 +812,7 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._fogVolumeParams, volumeParams );
         context._passValues.setFloat4( passConstantNames()._fogDebugParams, FrameFog::makeDebugParams( bVolume, RenderDiagnostics::get() ) );
 
-        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), getColorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
             return;
         // drawFullscreen 과 같은 순서다. 볼륨 버퍼는 PSO 와 공통 바인딩(bindForDraw) 뒤에 건다 — setPipelineState 가 슬롯 상태를 비운다.
         setIdentityWorld( context );
@@ -827,13 +832,13 @@ namespace sw
         // 화면 공간 반사다. 맞은 자리의 장면 색 사본을 선언한 컬러 출력(장면 색) 위에 프리멀티플라이 블렌드한다(screen_space_reflection.hlsl).
         // 세기 0 · 후처리를 끈 뷰(CCTV) · 표면 값 보기(usesPostProcess 가 거른다)에서는 그리지 않는다 — 출력이 입력의 위(블렌드)라 "그리지 않음" 은 아무것도 하지 않는 것이다(안개와 같다).
         const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::ScreenSpaceReflection );
-        if ( isPassCulledInView( input._passDesc ) || pso == 0 )
+        if ( pso == 0 )
             return;
 
         FramePassContext&    context = input._context;
         const hashed_string& target  = input._declaredColor[0]._attachment;
         registerDeclaredInputs( context, input._passDesc );
-        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), getColorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
             return;
         setIdentityWorld( context );
         commitBindlessTextureBindings( context );
@@ -949,7 +954,7 @@ namespace sw
         FramePassContext&    context = input._context;
         const hashed_string& target  = input._declaredColor[0]._attachment;
         registerDeclaredInputs( context, input._passDesc );
-        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), getColorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
             return;
         // drawFullscreen 과 같은 순서다. 스프라이트 버퍼는 PSO 와 공통 바인딩(bindForDraw) 뒤에 건다 — setPipelineState 가 슬롯 상태를 비운다(안개 패스와 같다).
         setIdentityWorld( context );
@@ -992,7 +997,7 @@ namespace sw
             registerPassTexture( context, names._gbufferAlbedo, *pSrcName );
         else if ( activeView._taaHistory != 0 )
             context._resourceRegistry.registerTexture( names._gbufferAlbedo, activeView._taaHistory, activeView._taaHistorySRV );
-        if ( beginColorPass( context, taaTarget, hashed_string{}, _state._clearColor, colorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
+        if ( beginColorPass( context, taaTarget, hashed_string{}, _state._clearColor, getColorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
         {
             // TAA PSO 가 없으면(셋업이 알렸다) 원본을 복사해 TAA 없이 넘기지 않는다 — drawFullscreen 이 그리지 않는다.
             drawFullscreen( context, _psoManager.getEnginePSO( RenderPassType::TAA ) );
@@ -1201,8 +1206,8 @@ namespace sw
         ExtensionConstantScope<FramePassContext> constantScope( context, _frameArena );
         constantScope.apply( listConstant.data(), static_cast<uint32>( listConstant.size() ) );
         const float4              targetClear = getTargetClearColor( pass._colorTarget );
-        const RHIRenderPassLoadOp depthLoad   = pass._depthTarget.empty() ? RHIRenderPassLoadOp::Load : colorLoadFor( pass._depthTarget );
-        if ( beginColorPass( context, pass._colorTarget, pass._depthTarget, targetClear, colorLoadFor( pass._colorTarget ), depthLoad ) == false )
+        const RHIRenderPassLoadOp depthLoad   = pass._depthTarget.empty() ? RHIRenderPassLoadOp::Load : getColorLoadFor( pass._depthTarget );
+        if ( beginColorPass( context, pass._colorTarget, pass._depthTarget, targetClear, getColorLoadFor( pass._colorTarget ), depthLoad ) == false )
             return false;
         drawFullscreen( context, pass._pso );
         context._pCmd->endRenderPass();
@@ -1232,8 +1237,8 @@ namespace sw
         ExtensionConstantScope<FramePassContext> passScope( context, _frameArena );
         passScope.apply( listConstant.data(), static_cast<uint32>( listConstant.size() ) );
         const float4              targetClear = getTargetClearColor( pass._colorTarget );
-        const RHIRenderPassLoadOp depthLoad   = pass._depthTarget.empty() ? RHIRenderPassLoadOp::Load : colorLoadFor( pass._depthTarget );
-        if ( beginColorPass( context, pass._colorTarget, pass._depthTarget, targetClear, colorLoadFor( pass._colorTarget ), depthLoad ) == false )
+        const RHIRenderPassLoadOp depthLoad   = pass._depthTarget.empty() ? RHIRenderPassLoadOp::Load : getColorLoadFor( pass._depthTarget );
+        if ( beginColorPass( context, pass._colorTarget, pass._depthTarget, targetClear, getColorLoadFor( pass._colorTarget ), depthLoad ) == false )
             return false;
         bool bAllDrawn{ true };
         for ( const ExtensionDrawElement& element : _extensionHost.getDrawElements() )

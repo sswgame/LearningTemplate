@@ -323,7 +323,7 @@ namespace sw
                             continue;
 
                         // 씬 메시를 그리는 패스는 머티리얼과의 조합까지 쿠킹해야 한다(5단계).
-                        if ( FrameRendererUtil::drawsSceneMeshes( pass._type ) )
+                        if ( FrameRendererUtil::shouldDrawSceneMeshes( pass._type ) )
                         {
                             MeshPassInfo passInfo;
                             passInfo._shaderPath          = passShader._shaderPath;
@@ -333,7 +333,7 @@ namespace sw
                             passInfo._passType            = pass._type;
                             passInfo._listOrigin          = pipelineOrigin;
                             passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( pass._type );
-                            passInfo._bAppliesViewMode    = FrameRendererUtil::appliesViewMode( pass._type );
+                            passInfo._bAppliesViewMode    = FrameRendererUtil::shouldApplyViewMode( pass._type );
                             passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( pass, pipelineResource.getDesc()._listAttachment );
                             outListMeshPass.push_back( std::move( passInfo ) );
                         }
@@ -373,7 +373,7 @@ namespace sw
                     passInfo._passType            = slotType;
                     passInfo._listOrigin          = listOrigin;
                     passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( slotType );
-                    passInfo._bAppliesViewMode    = FrameRendererUtil::appliesViewMode( slotType );
+                    passInfo._bAppliesViewMode    = FrameRendererUtil::shouldApplyViewMode( slotType );
                     passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( slotType );
                     outListMeshPass.push_back( std::move( passInfo ) );
                     appendRequestUnique( outListRequest, slotShader._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, slotShader._listDefine, listOrigin );
@@ -408,7 +408,7 @@ namespace sw
                         appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, listComputeDefine, {} );
                         continue;
                     }
-                    if ( FrameRendererUtil::drawsSceneMeshes( passType ) )
+                    if ( FrameRendererUtil::shouldDrawSceneMeshes( passType ) )
                     {
                         const RenderPassShaderSelection passShader = selectRenderPassShader( passType, nullptr, nullptr, engineDefaultAssets );
                         MeshPassInfo                    passInfo;
@@ -418,7 +418,7 @@ namespace sw
                         passInfo._listPermutation     = passShader._listDefine;
                         passInfo._passType            = passType;
                         passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( passType );
-                        passInfo._bAppliesViewMode    = FrameRendererUtil::appliesViewMode( passType );
+                        passInfo._bAppliesViewMode    = FrameRendererUtil::shouldApplyViewMode( passType );
                         passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( passType );
                         outListMeshPass.push_back( std::move( passInfo ) );
                     }
@@ -480,7 +480,7 @@ namespace sw
                     MaterialVariantInfo variant;
                     variant._shaderPath = material->getShaderPath();
                     variant._listOrigin = { makeOriginID( matPath ) };
-                    // 불투명 머티리얼은 등장 디더 변형도 쿠킹한다 — 로드가 끝나 서서히 나타나는 메시가 그 변형으로 그려진다(`GPUMaterialRegistry::permutationHashFor`).
+                    // 불투명 머티리얼은 등장 디더 변형도 쿠킹한다 — 로드가 끝나 서서히 나타나는 메시가 그 변형으로 그려진다(`GPUMaterialRegistry::computePermutationHashFor`).
                     const bool bCooksAppearanceDither = material->getBlendMode() != BlendMode::Transparent;
                     for ( vector<string>& listDefine : listRuntimeDefine )
                     {
@@ -566,19 +566,19 @@ namespace sw
                     {
                         const MaterialVariantInfo& variant = *listUniqueVariant[variantIndex];
                         // 패스가 그리지 않는 머티리얼(외곽선 패스 · 외곽선을 켜지 않은 머티리얼)은 런타임도 변형을 만들지 않는다.
-                        if ( FrameRendererUtil::drawsMaterialInPass( passInfo._passType, &variant._listDefine ) == false )
+                        if ( FrameRendererUtil::shouldDrawMaterialInPass( passInfo._passType, &variant._listDefine ) == false )
                             continue;
                         // 후처리 머티리얼은 메시에 붙지 않는다 — 풀스크린 VS · PS(정의 없는 변형, 4 단계)만 쓴다(`FramePostProcessMaterials` 의 확장 프로그램 PSO).
                         if ( VectorUtil::contains( variant._listDefine, string( kMaterialDomainPostProcessDefine ) ) )
                             continue;
                         // 머티리얼 셰이더를 쓰는 패스만 .hlsl 을 갈아탄다. 그림자 · 뎁스는 자기 셰이더에 define 만 얹고, 모양을 머티리얼이 정하는
                         // 배치(알파 컷오프 · 정점 변형)만 머티리얼 셰이더로 그린다(createMaterialPSOVariant 와 같은 판정).
-                        const bool    bMaterialDepthShader = FrameRendererUtil::drawsDepthWithMaterialShader( passInfo._passType, &variant._listDefine );
+                        const bool    bMaterialDepthShader = FrameRendererUtil::usesMaterialShaderForDepth( passInfo._passType, &variant._listDefine );
                         const string& shaderPath           = ( passInfo._bUsesMaterialShader || bMaterialDepthShader ) ? variant._shaderPath : passInfo._shaderPath;
                         const bool    bHasPixelStage =
                             bMaterialDepthShader ? FrameRendererUtil::hasMaterialDepthPixelStage( passInfo._passType, &variant._listDefine )
-                                                    : ( passInfo._bHasPixelStage || FrameRendererUtil::addsAppearanceDitherPixelStage( passInfo._passType, &variant._listDefine ) );
-                        const bool          bTessellates = FrameRendererUtil::tessellatesMaterial( passInfo._passType, &variant._listDefine );
+                                                    : ( passInfo._bHasPixelStage || FrameRendererUtil::needsAppearanceDitherPixelStage( passInfo._passType, &variant._listDefine ) );
+                        const bool          bTessellates = FrameRendererUtil::isMaterialTessellated( passInfo._passType, &variant._listDefine );
                         vector<OriginGroup> listOriginGroup;
                         listOriginGroup.reserve( listPassOrigin.size() * listVariantOrigins[variantIndex].size() );
                         for ( const vector<string>& passOrigin : listPassOrigin )

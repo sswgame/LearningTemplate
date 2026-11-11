@@ -114,7 +114,7 @@ namespace sw
             pOperation->runLoadIfUnclaimed();
             return;
         }
-        engine::getSubsystem<AssetManager>().launchLoadWork( "AssetLoad", SW_DELEGATE_LAMBDA( TaskDelegate, [pOperation]()
+        engine::getSubsystem<AssetManager>().launchLoadJob( "AssetLoad", SW_DELEGATE_LAMBDA( TaskDelegate, [pOperation]()
         {
             pOperation->runLoadIfUnclaimed();
         } ) );

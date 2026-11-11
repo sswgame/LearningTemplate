@@ -39,7 +39,7 @@ namespace sw
             static expected<void> validateCapture( const AutomationStep& step )
             {
                 AutomationFileStepParams params;
-                const expected<void>     read = step.readFields( params );
+                const expected<void>     read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return read;
                 if ( StringUtil::endsWith( params._file, ".png", true ) )
@@ -50,7 +50,7 @@ namespace sw
             static expected<void> validateAppSuspend( const AutomationStep& step )
             {
                 AutomationAppSuspendParams params;
-                const expected<void>       read = step.readFields( params );
+                const expected<void>       read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return read;
                 if ( params._ticks > 0 )
@@ -66,7 +66,7 @@ namespace sw
                 if ( pWindow == nullptr )
                     runner.recordFailure( step, "there is no window to suspend" );
                 else
-                    pWindow->simulateAppInterruption( step.readValidatedFields<AutomationAppSuspendParams>()._ticks );
+                    pWindow->simulateAppInterruption( step.readValidatedProperties<AutomationAppSuspendParams>()._ticks );
                 return true;
             }
 
@@ -121,7 +121,7 @@ namespace sw
                     runner.recordFailure( step, "there is no window to send a message to" );
                     return true;
                 }
-                const AutomationWindowMessage message = step.readValidatedFields<AutomationWindowMessageParams>()._message;
+                const AutomationWindowMessage message = step.readValidatedProperties<AutomationWindowMessageParams>()._message;
                 RECT                          client{};
                 GetClientRect( hwnd, &client );
                 const LPARAM center = MAKELPARAM( ( client.right - client.left ) / 2, ( client.bottom - client.top ) / 2 );
@@ -171,7 +171,7 @@ namespace sw
                                    GetSystemMetrics( SM_XVIRTUALSCREEN ) + GetSystemMetrics( SM_CXVIRTUALSCREEN ),
                                    GetSystemMetrics( SM_YVIRTUALSCREEN ) + GetSystemMetrics( SM_CYVIRTUALSCREEN ) };
                 const bool bWholeScreen = clip.left <= screen.left && clip.top <= screen.top && clip.right >= screen.right && clip.bottom >= screen.bottom;
-                const bool bWantLocked  = step.readValidatedFields<AutomationCursorClipParams>()._state == AutomationCursorClipState::Locked;
+                const bool bWantLocked  = step.readValidatedProperties<AutomationCursorClipParams>()._state == AutomationCursorClipState::Locked;
                 if ( bWantLocked ? bInsideClient : bWholeScreen )
                     return true;
                 // 커서는 전경 창만 가둔다(`InputManager::applyMouseLockMode`). 도는 사이 다른 창이 전경을 가져갔으면 잠금은 볼 수 없는 것이지 틀린 것이 아니다 —
@@ -316,7 +316,7 @@ namespace sw
                             memset( &bytes[( static_cast<size_t>( y ) * static_cast<size_t>( width ) + static_cast<size_t>( x ) ) * 4u], 0, 4u );
                     }
                 }
-                const string path = runner.resolveOutputPath( step.readValidatedFields<AutomationFileStepParams>()._file );
+                const string path = runner.resolveOutputPath( step.readValidatedProperties<AutomationFileStepParams>()._file );
                 if ( FileUtil::ensureParentDirectoryExists( path ) == false ||
                      ImageFileWriter::writePNGRGBA8( path, bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
                 {
@@ -335,7 +335,7 @@ namespace sw
             }
             static bool runMessage( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const AutomationWindowMessage message = step.readValidatedFields<AutomationWindowMessageParams>()._message;
+                const AutomationWindowMessage message = step.readValidatedProperties<AutomationWindowMessageParams>()._message;
                 if ( message == AutomationWindowMessage::KillFocus || message == AutomationWindowMessage::SetFocus )
                     return runFocusMessage( runner, step, message == AutomationWindowMessage::SetFocus );
                 return runUnsupported( runner, step );
@@ -361,7 +361,7 @@ namespace sw
     }
 
     SW_AUTOMATION_STEP( windowAppSuspend, "SimulateAppSuspend", &AutomationWindowStepsInternal::runAppSuspend, &AutomationWindowStepsInternal::validateAppSuspend, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( windowMessage, "PostWindowMessage", &AutomationWindowStepsInternal::runMessage, &AutomationStep::validateFields<AutomationWindowMessageParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( windowCursorClip, "ExpectCursorClip", &AutomationWindowStepsInternal::runClip, &AutomationStep::validateFields<AutomationCursorClipParams>, AutomationStepOptions{}.withDesktop() );
+    SW_AUTOMATION_STEP( windowMessage, "PostWindowMessage", &AutomationWindowStepsInternal::runMessage, &AutomationStep::validateProperties<AutomationWindowMessageParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( windowCursorClip, "ExpectCursorClip", &AutomationWindowStepsInternal::runClip, &AutomationStep::validateProperties<AutomationCursorClipParams>, AutomationStepOptions{}.withDesktop() );
     SW_AUTOMATION_STEP( windowCapture, "CaptureWindow", &AutomationWindowStepsInternal::runCapture, &AutomationWindowStepsInternal::validateCapture, AutomationStepOptions{}.withDesktop() );
 } // namespace sw

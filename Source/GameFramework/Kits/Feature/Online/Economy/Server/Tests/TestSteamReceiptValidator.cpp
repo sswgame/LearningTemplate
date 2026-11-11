@@ -373,7 +373,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, TruncatedBodyIsRetry )
 }
 
 /** @brief [SteamReceiptValidatorTest] 구매 시각이 틀린 주문은 시각만 비고 판정은 그대로다. 숫자로 온 주문 번호 · 상품 번호도 글로 읽는다 */
-SW_TEST_CASE( SteamReceiptValidatorTest, LooseFieldsStayReadable )
+SW_TEST_CASE( SteamReceiptValidatorTest, LoosePropertiesStayReadable )
 {
     SteamFixture rig;
     rig._queryBody                = R"({"response":{"result":"OK","params":{"orderid":"1234","status":"Succeeded","time":"2023-11-14T-1:13:20","items":[{"itemid":"100"}]}}})";

@@ -327,7 +327,7 @@ namespace sw
         // 7) 표시 설정
         // --------------------------------------------------------------------------
         void                 setShowDamageNumbers( bool bShow ) { _bShowDamageNumbers = bShow; }
-        bool                 showsDamageNumbers() const { return _bShowDamageNumbers; }
+        bool                 shouldShowDamageNumbers() const { return _bShowDamageNumbers; }
         void                 setHealthAttributes( const hashed_string& health, const hashed_string& maxHealth );
         const hashed_string& getHealthAttribute() const { return _healthAttribute; }
         const hashed_string& getMaxHealthAttribute() const { return _maxHealthAttribute; }

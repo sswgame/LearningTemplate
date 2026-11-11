@@ -43,7 +43,7 @@ namespace sw
     {
     }
 
-    bool GimmickSensorComponent::acceptsOccupant( const GameObject& object ) const
+    bool GimmickSensorComponent::canAcceptOccupant( const GameObject& object ) const
     {
         return _requiredTags.getTagCount() == 0 || object.getTags().hasAllTags( _requiredTags );
     }
@@ -75,7 +75,7 @@ namespace sw
     {
         Component::onOverlapBegin( overlap );
         const bool bIgnoredTrigger = overlap._bOtherTrigger == SW_TRUE && _bCountTriggers == false;
-        const bool bIgnoreOverlap  = overlap._pOther == nullptr || bIgnoredTrigger || acceptsOccupant( *overlap._pOther ) == false;
+        const bool bIgnoreOverlap  = overlap._pOther == nullptr || bIgnoredTrigger || canAcceptOccupant( *overlap._pOther ) == false;
         if ( bIgnoreOverlap )
             return;
         addOccupant( *overlap._pOther );

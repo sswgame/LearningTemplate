@@ -75,7 +75,7 @@ namespace sw
          * @brief 이 큐가 메시(동적 메시 밖)의 정점 버퍼를 만드는 쪽이면 true 입니다 — 워커 생성을 허용하는 백엔드이고 `-gv_gpuUploadQueue` 가 켜져 있다.
          * @details 메시 하나를 만드는 쪽은 하나다. 이 값이 참인 패킷의 메시는 렌더 스레드가 다시 만들지 않는다(`GPUSceneSnapshot::_bMeshesCreatedBeforeHandoff`).
          */
-        bool createsMeshes() const;
+        bool shouldCreateMeshes() const;
         /** @brief 아직 만들지 않은 요청 수입니다. */
         uint32 getPendingCount() const { return static_cast<uint32>( _listPendingMesh.size() ); }
 

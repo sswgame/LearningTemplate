@@ -299,7 +299,7 @@ namespace sw::editor
                 const JSONValue      notify = notifies.at( notifyIndex );
                 AnimationNotifyEvent event{};
                 // 이름과 시각은 여기서 필수다(스프라이트 클립은 같은 칸을 생략할 수 있어 구조체에 필수를 달지 않는다).
-                const bool bInvalidNotify = JSONFields::readFields( notify, event, clipDataPath ) == false || notify.has( "name" ) == false || notify.has( "time" ) == false;
+                const bool bInvalidNotify = JSONFields::readProperties( notify, event, clipDataPath ) == false || notify.has( "name" ) == false || notify.has( "time" ) == false;
                 if ( bInvalidNotify )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.ClipDataNotifyNeeds", "Clip data '%#': notify %# of '%#' needs a name and a time", clipDataPath, static_cast<uint32>( notifyIndex ), clipName );

@@ -86,7 +86,7 @@ namespace sw
         def._rotationDegrees = _rotationDegrees;
         def._bMirror         = _bMirror != SW_FALSE;
         def._bHidden         = _bHidden != SW_FALSE;
-        const bool bRead     = AppearanceXMLUtil::readFields( node, def, report, sourceName );
+        const bool bRead     = AppearanceXMLUtil::readProperties( node, def, report, sourceName );
         _layer               = def._layer;
         _color               = def._color;
         _opacity             = def._opacity;
@@ -276,7 +276,7 @@ namespace sw
                 continue;
             }
             SkinLayerDef layer;
-            if ( AppearanceXMLUtil::readFields( node, layer, report, sourceName ) == false )
+            if ( AppearanceXMLUtil::readProperties( node, layer, report, sourceName ) == false )
                 continue;
             const bool bInvalidRegion = layer._regionMin._x >= layer._regionMax._x || layer._regionMin._y >= layer._regionMax._y;
             if ( bInvalidRegion )

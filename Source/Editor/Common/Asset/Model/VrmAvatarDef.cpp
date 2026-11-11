@@ -237,7 +237,7 @@ namespace sw::editor
             }
 
             /** @brief 0.x 의 "없음" 이 -1 인 노드 필드(center · firstPersonBone)가 노드를 가리키는지 봅니다. 없거나 음수면 false 이고, 정수가 아니면 @p outbInvalid 입니다. */
-            static bool refersToNode( const JSONValue& value, bool& outbInvalid )
+            static bool isNodeReference( const JSONValue& value, bool& outbInvalid )
             {
                 outbInvalid = false;
                 if ( value.isValid() == false || value.isNull() )
@@ -505,7 +505,7 @@ namespace sw::editor
                     string          centerBone;
                     const JSONValue center         = group.get( "center" );
                     bool            bCenterInvalid = false;
-                    const bool      bHasCenter     = refersToNode( center, bCenterInvalid );
+                    const bool      bHasCenter     = isNodeReference( center, bCenterInvalid );
                     if ( bCenterInvalid )
                         return unexpected( makeError( ErrorKind::InvalidArgument, "the center is not a node number", context, "center", center.dump() ) );
                     if ( bHasCenter )
@@ -567,7 +567,7 @@ namespace sw::editor
                 collectUnknownKeys( firstPerson, kArrVrm0FirstPersonKey, "VRM.firstPerson", pOutListIgnored );
                 const JSONValue bone         = firstPerson.get( "firstPersonBone" );
                 bool            bBoneInvalid = false;
-                const bool      bHasBone     = refersToNode( bone, bBoneInvalid );
+                const bool      bHasBone     = isNodeReference( bone, bBoneInvalid );
                 if ( bBoneInvalid )
                     return unexpected( makeError( ErrorKind::InvalidArgument, "firstPersonBone is not a node number", "VRM 0.x firstPersonBone", {}, bone.dump() ) );
                 if ( bHasBone )

@@ -54,7 +54,7 @@ namespace sw::editor
 
     protected:
         /** @brief 이름이 `abilities.xml` 인 파일만 받습니다(런타임 카탈로그의 파일 이름 — 게임 폴더 밖의 사본도 받는다). */
-        bool acceptsDocumentPath( string_view assetPath ) const override;
+        bool canAcceptDocumentPath( string_view assetPath ) const override;
         /** @brief 받아들인 문서 경로의 글을 읽어 모델을 엽니다. 읽지 못하면 `Malformed` 라 저장이 막힌다(앞 파일의 글을 이 파일에 쓰지 않는다). */
         ToolAssetLoadResult loadDocument() override;
 

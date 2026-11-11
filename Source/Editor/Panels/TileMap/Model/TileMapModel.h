@@ -171,7 +171,7 @@ namespace sw::editor
         /** @brief 좌표가 맵 범위 안이면 true 입니다. */
         bool isInBounds( int32 x, int32 y ) const;
         /** @brief (x, y)의 1차원 인덱스를 반환합니다. */
-        size_t indexOf( int32 x, int32 y ) const;
+        size_t getIndexOf( int32 x, int32 y ) const;
 
         /** @brief 현재 선택한 플래그 레이어에서 켜진 셀 수를 반환합니다. 플래그 레이어가 아니면 0 입니다. */
         uint32 countSelectedFlagCells() const;
@@ -196,7 +196,7 @@ namespace sw::editor
         /** @brief 셀의 값을 칠할 값으로 가져옵니다(스포이트). */
         void pickCell( int32 x, int32 y );
         /** @brief 칸에 워프를 찍고 걸을 수 있게 합니다. 이미 있으면 그 자리에서 고쳐 순서와 짝 id(`_pairID`)를 지킵니다. 바뀐 것이 없으면 false 입니다. */
-        bool stampWarp( int32 x, int32 y, const utf8* pTargetMap, int32 targetX, int32 targetY );
+        bool paintWarp( int32 x, int32 y, const utf8* pTargetMap, int32 targetX, int32 targetY );
 
     private:
         fixed_string<constant::buffer::kMax256> _pathBuffer;

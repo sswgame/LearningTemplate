@@ -21,8 +21,8 @@ namespace
     class FakeGMAccountService final : public IOnlineServerService
     {
     public:
-        vector<uint16> _listMethod{};
-        LoginOutcome   _result{ LoginResult::Ok };
+        vector<uint16>     _listMethod{};
+        LoginServiceResult _result{ LoginResult::Ok };
 
         const OnlineProtocolEntry& getProtocol() const override { return AccountProtocol::kOnlineEntry; }
         bool                       isAnonymousMethod( uint16 method ) const override

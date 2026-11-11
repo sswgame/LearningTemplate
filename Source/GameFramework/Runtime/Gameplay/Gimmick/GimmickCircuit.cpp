@@ -235,7 +235,7 @@ namespace sw
     {
         // 고리를 끊는 노드(Delay)는 앞 스텝의 입력을 쓰므로 맨 앞에 두고 간선에서 뺀다. 나머지는 배선의 원천이 먼저인 위상 순서다(준비된 것은 데이터 차례).
         const auto isEvaluated = []( const NodeRuntime& node )
-        { return node._pKind != nullptr && node._pKind->breaksCycle() == false; };
+        { return node._pKind != nullptr && node._pKind->canBreakCycle() == false; };
         DependencyGraph graph{ static_cast<uint32>( _listNode.size() ) };
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
@@ -308,7 +308,7 @@ namespace sw
         for ( const uint32 nodeIndex : _listOrder )
         {
             NodeRuntime&       node     = _listNode[nodeIndex];
-            const bool         bBreaker = node._pKind->breaksCycle();
+            const bool         bBreaker = node._pKind->canBreakCycle();
             GimmickNodeContext context  = makeContext( node );
             context._inputBits          = bBreaker ? node._previousInputBits : gatherInputs( node );
             node._pKind->_pStep( context );
@@ -326,7 +326,7 @@ namespace sw
         for ( const uint32 nodeIndex : _listOrder )
         {
             NodeRuntime& node = _listNode[nodeIndex];
-            if ( node._pKind->breaksCycle() == false )
+            if ( node._pKind->canBreakCycle() == false )
                 continue;
             GimmickNodeContext context = makeContext( node );
             context._inputBits         = gatherInputs( node );

@@ -42,7 +42,7 @@ namespace sw
      * @details **시점은 폰의 조종 회전이다.** 같은 오브젝트에 `PawnComponent` 가 있으면 `TickGroup::PrePhysics` 에서 그 의도의 조종 요와 피치를 시점으로 둔다.
      *          마우스와 스틱은 플레이어 조종자가, 바라볼 곳은 AI 조종자가 조종 회전으로 낸다. 이 컴포넌트는 입력을 읽지 않는다.
      *          폰이 없으면(관전 카메라) `setAngles` 로 정한 시점을 지킨다.
-     *          마우스 잠금과 Esc 는 플레이어 조종자의 일이다(`PawnComponent::wantsMouseLock`).
+     *          마우스 잠금과 Esc 는 플레이어 조종자의 일이다(`PawnComponent::needsMouseLock`).
      *          몸을 움직이는 게임 컴포넌트는 **같은 오브젝트**에서 뒤 그룹에 돈다. 이 시점(`getLook`)으로 걷고 쏜 뒤 `setEyePosition` 으로 눈 위치를 넣으면,
      *          카메라와 뷰 모델이 그 위치에 바로 다시 놓인다.
      *          코드가 시점을 정할 때(시작 시점, 반동)는 `setAngles` 와 `addRecoil` 을 쓴다. 폰이 있으면 그 값이 조종 회전 요청과 오프셋으로 넘어가서 다음 틱부터 조종자의 값이 된다.

@@ -91,32 +91,32 @@ namespace sw
         /** @brief `hasOnlyAttributes` 에 더해 @p listRequired 의 속성이 모두 있는지 봅니다. 없으면 빠진 이름이 대상인 오류입니다. */
         [[nodiscard]] expected<void> hasRequiredAttributes( std::initializer_list<string_view> listAllowed, std::initializer_list<string_view> listRequired ) const;
         /**
-         * @brief 속성을 스키마 구조체 @p outParams 로 읽습니다(`XMLFields::readFields` 와 같은 규칙 — 모르는 이름 · 필수 · 범위가 `PROPERTY` 에서 나온다). 틀리면 그 글이 대상인 오류입니다.
+         * @brief 속성을 스키마 구조체 @p outParams 로 읽습니다(`XMLFields::readProperties` 와 같은 규칙 — 모르는 이름 · 필수 · 범위가 `PROPERTY` 에서 나온다). 틀리면 그 글이 대상인 오류입니다.
          * @param listHandRead 적었는지가 뜻인 속성(스키마 기본값으로 담지 못한다) — 부르는 쪽이 `findAttribute` 로 읽는다.
          */
         template <typename TParams>
-        [[nodiscard]] expected<void> readFields( TParams& outParams, std::initializer_list<string_view> listHandRead = {} ) const
+        [[nodiscard]] expected<void> readProperties( TParams& outParams, std::initializer_list<string_view> listHandRead = {} ) const
         {
-            return readFieldsOf( &outParams, *TParams::StaticType(), listHandRead );
+            return readPropertiesOf( &outParams, *TParams::StaticType(), listHandRead );
         }
         /** @brief 스키마 구조체를 읽을 수 있는지만 보는 검사 함수입니다(`AutomationStepValidateFunction`). 의미 검사가 없는 단계의 등록이 이 함수를 가리킵니다. */
         template <typename TParams>
-        [[nodiscard]] static expected<void> validateFields( const AutomationStep& step )
+        [[nodiscard]] static expected<void> validateProperties( const AutomationStep& step )
         {
             TParams params;
-            return step.readFields( params );
+            return step.readProperties( params );
         }
         /** @brief 검사를 지난 단계의 스키마 구조체입니다(실행 함수가 읽는다). 시작 때 검사한 값이라 실패하면 단언합니다. */
         template <typename TParams>
-        [[nodiscard]] TParams readValidatedFields( std::initializer_list<string_view> listHandRead = {} ) const
+        [[nodiscard]] TParams readValidatedProperties( std::initializer_list<string_view> listHandRead = {} ) const
         {
             TParams              params{};
-            const expected<void> read = readFieldsOf( &params, *TParams::StaticType(), listHandRead );
+            const expected<void> read = readPropertiesOf( &params, *TParams::StaticType(), listHandRead );
             SW_LOG_ASSERT( read.has_value(), "%#", read.has_value() ? string{} : describeError( read.error() ) );
             return params;
         }
-        /** @brief `readFields` 의 몸통입니다. */
-        [[nodiscard]] expected<void> readFieldsOf( void* pParams, const TypeInfo& typeInfo, std::initializer_list<string_view> listHandRead ) const;
+        /** @brief `readProperties` 의 몸통입니다. */
+        [[nodiscard]] expected<void> readPropertiesOf( void* pParams, const TypeInfo& typeInfo, std::initializer_list<string_view> listHandRead ) const;
         /** @brief 꼭 있어야 하는 속성입니다. 없으면 그 이름이 대상인 `NotFound` 오류입니다(값은 nullptr 이 아니다). */
         [[nodiscard]] expected<const string*> requireAttribute( string_view name ) const;
     };

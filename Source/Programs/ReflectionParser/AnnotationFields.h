@@ -130,7 +130,7 @@ namespace sw
         static bool validateBindings( const AnnotationMeta& meta );
 
         /** @brief 이벤트 필드의 PROPERTY 가 받는 필드인지 봅니다 — 표에서 Display 인 PROPERTY 줄과 이름(`Name`)입니다. */
-        static bool acceptsOnEvent( string_view propertyFieldID );
+        static bool canAcceptOnEvent( string_view propertyFieldID );
         /** @brief 이벤트가 받는 필드 이름을 ", " 로 이은 글입니다(오류 글). */
         static string makeEventFieldList();
     };

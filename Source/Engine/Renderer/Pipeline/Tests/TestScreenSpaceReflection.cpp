@@ -21,12 +21,12 @@ SW_TEST_CASE( ScreenSpaceReflectionTest, PassTypeRowDeclaresBlendedDrawOverScene
     SW_EXPECT_TRUE( info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha ) );
     SW_EXPECT_FALSE( info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) );
     SW_EXPECT_FALSE( info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) );
-    SW_EXPECT_TRUE( info._inputContract.reads( RenderPassInputRole::SceneColorCopy ) );
-    SW_EXPECT_TRUE( info._inputContract.reads( RenderPassInputRole::SceneDepth ) );
-    SW_EXPECT_TRUE( info._inputContract.reads( RenderPassInputRole::GBufferNormal ) );
-    SW_EXPECT_TRUE( info._inputContract.reads( RenderPassInputRole::GBufferAlbedo ) ); // 그려짐 판정(알베도 알파의 셰이딩 모델) — 걸지 않으면 무효 인덱스라 판정이 늘 같다
-    SW_EXPECT_TRUE( info._inputContract.reads( RenderPassInputRole::GBufferMaterial ) );
-    SW_EXPECT_FALSE( info._inputContract.reads( RenderPassInputRole::SourceColor ) ); // 쓰는 장면 색을 읽지 않는다 — 사본을 읽는다
+    SW_EXPECT_TRUE( info._inputContract.hasRole( RenderPassInputRole::SceneColorCopy ) );
+    SW_EXPECT_TRUE( info._inputContract.hasRole( RenderPassInputRole::SceneDepth ) );
+    SW_EXPECT_TRUE( info._inputContract.hasRole( RenderPassInputRole::GBufferNormal ) );
+    SW_EXPECT_TRUE( info._inputContract.hasRole( RenderPassInputRole::GBufferAlbedo ) ); // 그려짐 판정(알베도 알파의 셰이딩 모델) — 걸지 않으면 무효 인덱스라 판정이 늘 같다
+    SW_EXPECT_TRUE( info._inputContract.hasRole( RenderPassInputRole::GBufferMaterial ) );
+    SW_EXPECT_FALSE( info._inputContract.hasRole( RenderPassInputRole::SourceColor ) ); // 쓰는 장면 색을 읽지 않는다 — 사본을 읽는다
 }
 
 /** @brief [ScreenSpaceReflectionTest] 기본 후처리 값은 반사를 끈다(세기 0) — 패스가 그리지 않아 지금 그림이 그대로다 */

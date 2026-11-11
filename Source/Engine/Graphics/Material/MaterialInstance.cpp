@@ -65,7 +65,7 @@ namespace sw
              *          쓸 때가 아니라 렌더 사본을 만들 때(`rebuildRenderData`, 게임 스레드, 부모 초기화 뒤) 본다 — 부모의 속성 목록은 디바이스 초기화가 채우고
              *          맞추므로 쓸 때 읽으면 비어 있거나(검사가 조용히 빠진다) 비동기 씬 로드 워커에서 게임 스레드의 초기화와 겹친다(언리얼 MID 도 쓸 때는 이름 · 값만 둔다).
              */
-            [[nodiscard]] static bool acceptsShape( const Material* pParent, hashed_string name, bool bScalar )
+            [[nodiscard]] static bool canAcceptShape( const Material* pParent, hashed_string name, bool bScalar )
             {
                 const MaterialProperty* pProp = pParent != nullptr ? pParent->findProperty( name ) : nullptr;
                 if ( pProp == nullptr )
@@ -179,14 +179,14 @@ namespace sw
         XMLDocument doc;
         XMLNode     root = doc.appendRoot( "MaterialInstanceDef" );
         AssetXMLFormat::writeXMLVersion( root, kAssetType._formatVersion );
-        XMLFields::writeFields( root, MaterialInstanceRootParams{ _desc._name, _desc._parentPath } );
+        XMLFields::writeProperties( root, MaterialInstanceRootParams{ _desc._name, _desc._parentPath } );
         if ( _desc._quality.empty() == false )
             root.appendAttribute( "quality", string_view( _desc._quality ) ); // 적지 않음이 "덮어쓰지 않음"이다
 
         XMLNode overrides = root.appendChild( "_overrides" );
         for ( const MaterialInstanceDef::Override& overrideItem : _desc._listOverride )
         {
-            XMLFields::writeFields( overrides.appendChild( "item" ), MaterialOverrideParams{ overrideItem._name, overrideItem._value, overrideItem._assetPath } );
+            XMLFields::writeProperties( overrides.appendChild( "item" ), MaterialOverrideParams{ overrideItem._name, overrideItem._value, overrideItem._assetPath } );
         }
 
         if ( _desc._listKeyword.empty() == false )
@@ -194,7 +194,7 @@ namespace sw
             XMLNode list = root.appendChild( "_keywords" );
             for ( const MaterialInstanceDef::KeywordOverride& keywordItem : _desc._listKeyword )
             {
-                XMLFields::writeFields( list.appendChild( "item" ), MaterialKeywordOverrideParams{ keywordItem._name, keywordItem._bEnabled } );
+                XMLFields::writeProperties( list.appendChild( "item" ), MaterialKeywordOverrideParams{ keywordItem._name, keywordItem._bEnabled } );
             }
         }
         if ( _desc._listMultiCompile.empty() == false )
@@ -202,7 +202,7 @@ namespace sw
             XMLNode list = root.appendChild( "_multiCompiles" );
             for ( const MaterialInstanceDef::MultiCompileOverride& multiCompileItem : _desc._listMultiCompile )
             {
-                XMLFields::writeFields( list.appendChild( "item" ), MaterialMultiCompileParams{ multiCompileItem._name, multiCompileItem._selected } );
+                XMLFields::writeProperties( list.appendChild( "item" ), MaterialMultiCompileParams{ multiCompileItem._name, multiCompileItem._selected } );
             }
         }
 
@@ -267,7 +267,7 @@ namespace sw
         // 어긋난 값은 한 번 알리고 버린다(쓸 때 거절하던 것과 같은 결과) — 남겨 두면 사본을 만들 때마다 다시 알린다.
         const Material* pParent = _pParentMaterial;
         VectorUtil::removeIf( _listValueOverride, [pParent]( const ValueOverride& valueOverride )
-        { return valueOverride._kind != ValueKind::Text && MaterialInstanceInternal::acceptsShape( pParent, valueOverride._name, valueOverride._kind == ValueKind::Scalar ) == false; } );
+        { return valueOverride._kind != ValueKind::Text && MaterialInstanceInternal::canAcceptShape( pParent, valueOverride._name, valueOverride._kind == ValueKind::Scalar ) == false; } );
     }
 
     string MaterialInstance::ValueOverride::makeText() const
@@ -607,9 +607,9 @@ namespace sw
             VectorUtil::sort( _listCachedDefine );
             _cachedPermutationHash = MaterialPermutation::hashDefines( _listCachedDefine );
             // 렌더 상태 · 그리기 순서는 부모의 것이다 — 부모와 같은 해시 규칙으로 섞어야 다른 렌더 상태의 부모가 한 배치로 합쳐지지 않는다.
-            const uint64 renderFieldsHash = _pParentMaterial != nullptr ? _pParentMaterial->getRenderFieldsHash() : 0u;
-            if ( renderFieldsHash != 0 )
-                _cachedPermutationHash = HashUtil::combine( _cachedPermutationHash, renderFieldsHash );
+            const uint64 renderPropertiesHash = _pParentMaterial != nullptr ? _pParentMaterial->getRenderPropertiesHash() : 0u;
+            if ( renderPropertiesHash != 0 )
+                _cachedPermutationHash = HashUtil::combine( _cachedPermutationHash, renderPropertiesHash );
             _bDefinesDirty = SW_FALSE;
         }
     }
@@ -711,7 +711,7 @@ namespace sw
         const string_view              sourceName{ root.getAttributeText( "name" ) };
         MaterialInstanceRootParams     rootParams;
         optional<MaterialQualityLevel> quality;
-        if ( XMLFields::readFields( root, rootParams, sourceName, { "formatVersion", "quality" } ) == false ||
+        if ( XMLFields::readProperties( root, rootParams, sourceName, { "formatVersion", "quality" } ) == false ||
              XMLFields::readOptionalEnum( root, "quality", quality, sourceName ) == false )
             return false;
         _desc             = MaterialInstanceDef{};
@@ -725,7 +725,7 @@ namespace sw
             for ( XMLNode item = overrides.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialOverrideParams params;
-                if ( XMLFields::readFields( item, params, sourceName ) == false )
+                if ( XMLFields::readProperties( item, params, sourceName ) == false )
                     return false;
                 _desc._listOverride.push_back( MaterialInstanceDef::Override{ std::move( params._name ), std::move( params._value ), std::move( params._assetPath ) } );
             }
@@ -736,7 +736,7 @@ namespace sw
             for ( XMLNode item = keywords.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialKeywordOverrideParams params;
-                if ( XMLFields::readFields( item, params, sourceName ) == false )
+                if ( XMLFields::readProperties( item, params, sourceName ) == false )
                     return false;
                 _desc._listKeyword.push_back( MaterialInstanceDef::KeywordOverride{ std::move( params._name ), params._bEnabled } );
             }
@@ -747,7 +747,7 @@ namespace sw
             for ( XMLNode item = multiCompileNode.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialMultiCompileParams params;
-                if ( XMLFields::readFields( item, params, sourceName ) == false )
+                if ( XMLFields::readProperties( item, params, sourceName ) == false )
                     return false;
                 _desc._listMultiCompile.push_back( MaterialInstanceDef::MultiCompileOverride{ std::move( params._name ), std::move( params._selected ) } );
             }

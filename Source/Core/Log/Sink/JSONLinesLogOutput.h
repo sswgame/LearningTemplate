@@ -53,7 +53,7 @@ namespace sw
         void               close() override;
         void               write( const LogRecord& record ) override;
         void               flushWithoutWaiting() override;
-        bool               needsStructuredFields() const override { return true; }
+        bool               needsStructuredProperties() const override { return true; }
 
         /** @brief @p params 를 JSON 한 줄(끝의 줄바꿈 포함)로 만들어 @p outLine 뒤에 붙입니다. 싱크와 테스트가 같이 씁니다. */
         static void appendLine( string& outLine, const JSONLogFields& params );

@@ -116,9 +116,9 @@ namespace
         {
             for ( int32 round = 0; round < 8; ++round )
             {
-                const int32 routerWork = _router.pump();
-                const int32 storeWork  = _store.pollCompletions();
-                if ( routerWork == 0 && storeWork == 0 && _cache.getPendingCount() == 0 )
+                const int32 routerJob = _router.pump();
+                const int32 storeJob  = _store.pollCompletions();
+                if ( routerJob == 0 && storeJob == 0 && _cache.getPendingCount() == 0 )
                     return;
             }
         }
@@ -142,16 +142,16 @@ namespace
         }
 
         /** @brief 지금 시각으로 배정합니다. @p pOutAssignment 가 있으면 배정을 받습니다. */
-        ServerDirectoryOutcome assign( AccountID accountID, const ServerAssignmentRequest& request, ServerAssignment* pOutAssignment = nullptr )
+        ServerDirectoryServiceResult assign( AccountID accountID, const ServerAssignmentRequest& request, ServerAssignment* pOutAssignment = nullptr )
         {
-            ServerAssignment             assignment;
-            const ServerDirectoryOutcome outcome = _service.assignServer( accountID, request, UnixMilliseconds{ kNowMs }, assignment );
+            ServerAssignment                   assignment;
+            const ServerDirectoryServiceResult result = _service.assignServer( accountID, request, UnixMilliseconds{ kNowMs }, assignment );
             if ( pOutAssignment != nullptr )
                 *pOutAssignment = assignment;
-            return outcome;
+            return result;
         }
 
-        ServerDirectoryOutcome finishOne()
+        ServerDirectoryServiceResult finishOne()
         {
             pump();
             vector<ServerDirectoryCompletion> listCompletion;
@@ -160,13 +160,13 @@ namespace
             return listCompletion.empty() ? ServerDirectoryResult::Count : listCompletion.back()._result;
         }
 
-        ServerDirectoryOutcome setMaintenance( const MaintenanceWindow& window )
+        ServerDirectoryServiceResult setMaintenance( const MaintenanceWindow& window )
         {
             _service.setMaintenance( window, 7, "memo", UnixMilliseconds{ kNowMs }, 1 );
             return finishOne();
         }
 
-        ServerDirectoryOutcome postNotice( const ServiceAnnouncement& notice )
+        ServerDirectoryServiceResult postNotice( const ServiceAnnouncement& notice )
         {
             _service.postNotice( notice, 7, UnixMilliseconds{ kNowMs }, 1 );
             return finishOne();
@@ -461,7 +461,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, ControlInterfaceMapsResults )
     vector<ServerDirectoryControlCompletion> listCompletion;
     control.takeControlCompletions( listCompletion );
     SW_REQUIRE_EQUAL( size_t( 5 ), listCompletion.size() );
-    const auto resultOf = [&listCompletion]( uint64 requestTag )
+    const auto getResultOf = [&listCompletion]( uint64 requestTag )
     {
         for ( const ServerDirectoryControlCompletion& completion : listCompletion )
         {
@@ -470,11 +470,11 @@ SW_TEST_CASE( ServerDirectoryServiceTest, ControlInterfaceMapsResults )
         }
         return ServerDirectoryControlResult::Unavailable;
     };
-    SW_EXPECT_TRUE( resultOf( 11 ) == ServerDirectoryControlResult::Ok );
-    SW_EXPECT_TRUE( resultOf( 12 ) == ServerDirectoryControlResult::Invalid );
-    SW_EXPECT_TRUE( resultOf( 13 ) == ServerDirectoryControlResult::NotFound );
-    SW_EXPECT_TRUE( resultOf( 14 ) == ServerDirectoryControlResult::Ok );
-    SW_EXPECT_TRUE( resultOf( 15 ) == ServerDirectoryControlResult::Unavailable );
+    SW_EXPECT_TRUE( getResultOf( 11 ) == ServerDirectoryControlResult::Ok );
+    SW_EXPECT_TRUE( getResultOf( 12 ) == ServerDirectoryControlResult::Invalid );
+    SW_EXPECT_TRUE( getResultOf( 13 ) == ServerDirectoryControlResult::NotFound );
+    SW_EXPECT_TRUE( getResultOf( 14 ) == ServerDirectoryControlResult::Ok );
+    SW_EXPECT_TRUE( getResultOf( 15 ) == ServerDirectoryControlResult::Unavailable );
 
     rig.tick( kNowMs );
     const ServerDirectoryStatus status = rig._service.makeStatus( nowMs );

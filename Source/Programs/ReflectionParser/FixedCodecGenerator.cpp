@@ -207,7 +207,7 @@ namespace sw
                 state.addDependency( FixedCodecGeneratorInternal::kBaseFieldName, type._parentFQN );
             }
             state._listInlineFqn.push_back( type._fullyQualifiedName );
-            FixedCodecValueEmitter::emitFields( state, type, "object", "a", "b", 0, canonical );
+            FixedCodecValueEmitter::emitProperties( state, type, "object", "a", "b", 0, canonical );
 
             if ( state._bError == SW_TRUE )
                 bValid = false;

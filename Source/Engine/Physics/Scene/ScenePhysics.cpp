@@ -535,8 +535,8 @@ namespace sw
         _listFrameEvent2D.clear();
         _listSweptOverlap2D.clear();
         // 물리 컴포넌트도 바디도 없는 씬은 아무것도 하지 않는다(시간도 쌓지 않는다 — 처음 바디가 생긴 프레임이 따라잡느라 여러 스텝을 돌지 않게).
-        const bool bHasWork = getComponentCount() != 0 || _pScene3D != nullptr || _pScene2D != nullptr;
-        if ( bHasWork == false )
+        const bool bHasJobs = getComponentCount() != 0 || _pScene3D != nullptr || _pScene2D != nullptr;
+        if ( bHasJobs == false )
             return;
         SW_MEMORY_SCOPE( Physics );
         configureOnce();

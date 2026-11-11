@@ -87,8 +87,8 @@ namespace sw
 
     /**
      * @brief 등장 중인 인스턴스(`GPUInstance::_appearance` < 1)의 퍼뮤테이션 define 입니다. 셰이더가 등장 비율만큼의 픽셀만 남긴다(binding.hlsli 8-1).
-     * @details 머티리얼 에셋이 아니라 빌더가 붙인다(`GPUMaterialRegistry::permutationHashFor`). 등장 중인 인스턴스만 이 변형이라 다 보이는 물체는
-     *          픽셀 버리기 없이 그린다. 깊이만 쓰는 패스도 이 변형에는 픽셀 스테이지를 붙인다(`FrameRendererUtil::addsAppearanceDitherPixelStage`).
+     * @details 머티리얼 에셋이 아니라 빌더가 붙인다(`GPUMaterialRegistry::computePermutationHashFor`). 등장 중인 인스턴스만 이 변형이라 다 보이는 물체는
+     *          픽셀 버리기 없이 그린다. 깊이만 쓰는 패스도 이 변형에는 픽셀 스테이지를 붙인다(`FrameRendererUtil::needsAppearanceDitherPixelStage`).
      */
     inline constexpr const utf8* kAppearanceDitherDefine = "SW_APPEARANCE_DITHER";
 
@@ -97,7 +97,7 @@ namespace sw
 
     /**
      * @brief 높이 맵으로 표면을 노멀 방향으로 옮기는 머티리얼(`material_displacement.hlsli`)의 define 입니다. 그 배치는 헐 · 도메인 스테이지가 붙은 변형 PSO 로 그린다.
-     * @details 깊이 패스(그림자 · 깊이 프리패스)도 머티리얼 셰이더로 같은 변위를 그린다(`FrameRendererUtil::drawsDepthWithMaterialShader`) — 패스 셰이더로 그리면 윤곽이 평면으로 남는다.
+     * @details 깊이 패스(그림자 · 깊이 프리패스)도 머티리얼 셰이더로 같은 변위를 그린다(`FrameRendererUtil::usesMaterialShaderForDepth`) — 패스 셰이더로 그리면 윤곽이 평면으로 남는다.
      *          테셀레이션이 없는 백엔드(`RHICapabilities::_bMaterialTessellation`)에서는 변형을 만들지 않고 오류를 남긴다 — 평면으로 대신 그리지 않는다.
      */
     inline constexpr const utf8* kMaterialDisplacementDefine = "MATERIAL_DISPLACEMENT";
@@ -237,7 +237,7 @@ namespace sw
          * @brief 읽는 쪽을 위해서만 도는 생산 패스다(장면 색 사본) — 출력을 혼자 쓰고, 출력을 읽는 패스가 이번 뷰에 모두 쉬면 뷰 패스 고르기가 출력을 빼고 실행은 기록하지 않는다.
          * @details 일반 풀스크린 패스(장면 깊이 사본)는 이 표시 없이도 같은 규칙을 탄다. 읽는 쪽이 누구인지는 파이프라인 선언과 그 패스의 이번 뷰 판정이 정한다 — 생산 패스가 읽는 쪽을 알지 않는다(언리얼 RDG 의 소비자 없는 패스 컬링).
          */
-        static constexpr uint32 kAllowPassCulling = SW_BIT( 30 );
+        static constexpr uint32 kCullWhenUnconsumed = SW_BIT( 30 );
     };
 } // namespace sw
 
@@ -255,7 +255,7 @@ namespace sw
         const utf8* _pPassDefine{ nullptr };
         /**
          * @brief 이 패스가 그리는 배치의 머티리얼 퍼뮤테이션에 있어야 하는 define 입니다. nullptr 이면 모든 배치를 그립니다.
-         * @details 없는 배치(머티리얼 없는 배치 포함)는 드로우, 머티리얼 PSO 변형, 셰이더 쿠킹에서 함께 빠집니다(`FrameRendererUtil::drawsBatchInPass`).
+         * @details 없는 배치(머티리얼 없는 배치 포함)는 드로우, 머티리얼 PSO 변형, 셰이더 쿠킹에서 함께 빠집니다(`FrameRendererUtil::shouldDrawBatchInPass`).
          */
         const utf8* _pRequiredMaterialDefine{ nullptr };
         /** @brief 이 패스가 빼는 배치의 머티리얼 define 입니다(G버퍼의 `MATERIAL_FORWARD_ONLY`). nullptr 이면 빼지 않습니다. 빠지는 범위는 `_pRequiredMaterialDefine` 과 같습니다. */

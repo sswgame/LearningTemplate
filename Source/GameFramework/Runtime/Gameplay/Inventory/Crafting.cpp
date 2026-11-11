@@ -30,7 +30,7 @@ namespace sw
                 for ( XMLNode child = node.findChild( pChildName ); child; child = child.findNextSibling( pChildName ) )
                 {
                     RecipeItemParams line; // item 필수 · count >= 1(적지 않으면 한 개)은 PROPERTY 가 본다
-                    if ( XMLFields::readFields( child, line, sourceName ) )
+                    if ( XMLFields::readProperties( child, line, sourceName ) )
                         outItems.addItem( line._item, line._count );
                     else
                         bValid = false;
@@ -101,7 +101,7 @@ namespace sw
 
         // 적지 않은 칸은 RecipeDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 레시피를 넣지 않는 오류다(자르지 않는다).
         RecipeDef         recipe;
-        bool              bValid = XMLFields::readFields( node, recipe, sourceName );
+        bool              bValid = XMLFields::readProperties( node, recipe, sourceName );
         const utf8* const pID    = recipe._id.c_str();
         bValid                   = CraftingInternal::readItems( node, "In", recipe._inputs, sourceName ) && bValid;
         bValid                   = CraftingInternal::readItems( node, "Tool", recipe._tools, sourceName ) && bValid;

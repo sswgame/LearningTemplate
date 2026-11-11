@@ -197,7 +197,7 @@ namespace sw
          *          여기에 닿는 상대 경로는 결함이다. 파일 시스템 연산(`PlatformFileSystem` 의 경로 변환 길목)과 이 구조체의 여는 함수가 부른다.
          *          할당하므로 크래시 경로(`createNativeFileForWrite`)는 부르지 않는다. 빈 경로는 여기서 거절하지 않는다(부르는 쪽이 이미 실패로 다룬다).
          */
-        [[nodiscard]] static bool acceptsPathInput( string_view path );
+        [[nodiscard]] static bool canAcceptPathInput( string_view path );
 
 #if defined( SW_PLATFORM_WINDOWS )
         /**

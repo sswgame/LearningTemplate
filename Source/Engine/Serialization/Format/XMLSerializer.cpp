@@ -195,7 +195,7 @@ namespace sw
                     // 자식이 없으면 false 다 — 빈 컨테이너라 볼 것이 없다.
                     (void)_backend.iterateChildren( SW_DELEGATE_LAMBDA( XMLChildVisitDelegate, [&]( string_view tagName )
                     {
-                        if ( ContainerVisitor::stopsReading( total ) )
+                        if ( ContainerVisitor::shouldStopReading( total ) )
                             return;
                         _currentTagName = tagName;
                         total           = ContainerVisitor::mergeResult( total, visit( elementIndex++ ) );
@@ -361,10 +361,10 @@ namespace sw
             [[nodiscard]] static FieldReadResult readNestedXMLIntoInstance( const MutableObjectAddress instance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& context,
                                                                             vector<SchemaOrphanValue>* pOutListOrphan )
             {
-                const FieldReadResult fieldsResult = readXMLIntoInstance( instance, typeInfo, backend, context, pOutListOrphan );
+                const FieldReadResult propertiesResult = readXMLIntoInstance( instance, typeInfo, backend, context, pOutListOrphan );
                 if ( pOutListOrphan != nullptr )
                     appendUnknownXMLChildOrphans( backend.getCurrentNode(), typeInfo, pOutListOrphan, typeInfo._name.c_str() );
-                return fieldsResult;
+                return propertiesResult;
             }
 
             /**
@@ -678,14 +678,14 @@ namespace sw
                 }
 
                 // 칸 하나를 읽지 못해도 멈추지 않는다 — 루트의 모르는 자식과 범위 밖 값까지 모아야 부르는 쪽이 한 번에 다 알린다(C-60).
-                const bool bFieldsRead = readXMLIntoInstance( MutableObjectAddress{ pInstance }, typeInfo, backend, context, pOutListOrphan ) == FieldReadResult::Read;
+                const bool bPropertiesRead = readXMLIntoInstance( MutableObjectAddress{ pInstance }, typeInfo, backend, context, pOutListOrphan ) == FieldReadResult::Read;
 
                 if ( pOutListOrphan != nullptr )
                     appendUnknownXMLChildOrphans( root, typeInfo, pOutListOrphan );
 
                 // 선언된 범위는 읽기 공통 끝에서 본다(바이너리 · JSON 과 같다).
                 const bool bWithinRange = SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } );
-                return bFieldsRead && bWithinRange ? SoftReadResult::Read : SoftReadResult::Rejected;
+                return bPropertiesRead && bWithinRange ? SoftReadResult::Read : SoftReadResult::Rejected;
             }
         };
     } // namespace

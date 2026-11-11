@@ -80,7 +80,7 @@ namespace sw
             }
 
             /** @brief ALooper 를 한 번 비웁니다. @p timeoutMs 가 0 이면 기다리지 않는다. 끝내라고 하면 false 입니다. */
-            static bool pumpLooper( int32 timeoutMs )
+            static bool pollLooper( int32 timeoutMs )
             {
                 int32                events  = 0;
                 android_poll_source* pSource = nullptr;
@@ -172,7 +172,7 @@ namespace sw
         constexpr int32 kPollTimeoutMs = 100;
         while ( pApp->window == nullptr )
         {
-            if ( AndroidWindowInternal::pumpLooper( kPollTimeoutMs ) == false )
+            if ( AndroidWindowInternal::pollLooper( kPollTimeoutMs ) == false )
                 return false;
         }
         return true;
@@ -213,7 +213,7 @@ namespace sw
     bool AndroidWindow::processMessages()
     {
         // 명령 · 입력 콜백이 이 안에서 불린다(같은 스레드) — 모인 입력은 바탕이 처리기로 넘긴다.
-        if ( AndroidWindowInternal::pumpLooper( 0 ) == false )
+        if ( AndroidWindowInternal::pollLooper( 0 ) == false )
             requestClose();
         if ( _gamepadScanCountdown == 0 )
         {

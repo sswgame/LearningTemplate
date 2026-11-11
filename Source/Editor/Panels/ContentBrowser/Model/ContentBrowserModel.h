@@ -42,7 +42,7 @@ namespace sw::editor
         void select( uint32 index );
 
         /** @brief 파일 @p path 가 고른 필터를 지나면 true 입니다. 폴더는 부르는 쪽이 거르지 않습니다. */
-        bool passes( string_view path ) const;
+        bool matches( string_view path ) const;
 
     private:
         vector<EditorAssetBrowserFilter> _listFilter;

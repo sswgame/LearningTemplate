@@ -37,7 +37,7 @@ namespace sw
         uint32 _vertexAnimationBase{ 0xFFFFFFFFu };
         /**
          * @brief 변형(모프 · 스킨 · VAT)이 필요한 메시인데 풀이 받지 못했습니다(상한 초과 · 버퍼 생성 실패). 이 배치는 그리지 않습니다.
-         * @details 바인드 · 레스트 포즈로 대신 그리지 않는다 — 풀이 이유를 오류로 남겼다(`FramePassExecutor::drawsBatchInPass` 가 거른다).
+         * @details 바인드 · 레스트 포즈로 대신 그리지 않는다 — 풀이 이유를 오류로 남겼다(`FramePassExecutor::shouldDrawBatchInPass` 가 거른다).
          */
         uint8 _bDeformRefused{ SW_FALSE };
         /** @brief 배치 머리 원소(`GPUMeshBatch::_materialIndex`)의 머티리얼 상수 버퍼 bindless 인덱스입니다(`MaterialRenderProxy::sync`). */

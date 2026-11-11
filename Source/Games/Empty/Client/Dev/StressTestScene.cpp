@@ -683,7 +683,7 @@ namespace sw
 
     void StressTestScene::finishGrid( Scene* pScene, uint32 side )
     {
-        const float32 halfExtent = halfExtentOf( side, _settings._cubeSpacing );
+        const float32 halfExtent = computeHalfExtentOf( side, _settings._cubeSpacing );
         spawnLight( pScene, halfExtent );
         spawnBenchLights( pScene, halfExtent );
         spawnGround( pScene, halfExtent );
@@ -1214,7 +1214,7 @@ namespace sw
         return ( hash % 100u ) < percent;
     }
 
-    float32 StressTestScene::halfExtentOf( uint32 side, float32 spacing )
+    float32 StressTestScene::computeHalfExtentOf( uint32 side, float32 spacing )
     {
         return 0.5f * static_cast<float32>( side ) * spacing;
     }
@@ -1400,7 +1400,7 @@ namespace sw
         // 격자 한 변의 절반이 시야각 안에 들어오는 거리까지 카메라를 뒤로 뺍니다. 기본 카메라는 (0, 1.2, 3.2) 라서
         // 큐브 5000개(71x71 = 140 유닛)를 놓으면 화면에 몇 개밖에 걸리지 않습니다. 그러면 드로우는 실행되지만
         // 눈으로 확인할 수가 없습니다.
-        const float32 halfExtent = halfExtentOf( side, spacing );
+        const float32 halfExtent = computeHalfExtentOf( side, spacing );
         const float32 fovY       = pCamera->getFieldOfViewY();
         const float32 tanHalf    = MathUtil::tan( fovY * 0.5f );
         const float32 distance   = ( tanHalf > MathUtil::kEpsilon ) ? ( halfExtent / tanHalf ) : ( halfExtent * 2.0f );

@@ -672,14 +672,14 @@ namespace sw
                 continue;
             }
             const ShaderVariableInfo& var = *pVar;
-            // 칸 형식은 셰이더가 정한다 — `.material` 에는 적지 않는다(언리얼 머티리얼 파라미터 · 유니티 ShaderLab Properties 도 칸 형식을 셰이더에서 얻는다). 리플렉션 전의 기본 형식(`defaultShaderTypeFor`)은 여기서 바뀐다.
+            // 칸 형식은 셰이더가 정한다 — `.material` 에는 적지 않는다(언리얼 머티리얼 파라미터 · 유니티 ShaderLab Properties 도 칸 형식을 셰이더에서 얻는다). 리플렉션 전의 기본 형식(`getDefaultShaderTypeFor`)은 여기서 바뀐다.
             const MaterialPropertyType reflected = MaterialPacking::shaderTypeFromReflectionName( var._type, var._size );
             if ( reflected != MaterialPropertyType::Unknown )
                 prop._shaderType = reflected;
-            else if ( MaterialPacking::packedSizeOf( prop._shaderType ) != 0 && MaterialPacking::packedSizeOf( prop._shaderType ) != var._size )
+            else if ( MaterialPacking::computePackedSizeOf( prop._shaderType ) != 0 && MaterialPacking::computePackedSizeOf( prop._shaderType ) != var._size )
             {
                 SW_LOG_ERROR_ID( "Material.MaterialPropertySizeMismatch", "Material '%#' property '%#' size mismatch (shaderType %# bytes vs shader %#, %#)",
-                                 _desc._name.c_str(), prop._name.c_str(), MaterialPacking::packedSizeOf( prop._shaderType ), var._size, _desc._shaderPath.c_str() );
+                                 _desc._name.c_str(), prop._name.c_str(), MaterialPacking::computePackedSizeOf( prop._shaderType ), var._size, _desc._shaderPath.c_str() );
                 bAllPacked = false;
             }
             prop._offset = var._offset;
@@ -739,7 +739,7 @@ namespace sw
             }
 
             if ( prop._shaderType == MaterialPropertyType::Unknown )
-                prop._shaderType = MaterialPacking::defaultShaderTypeFor( prop._type );
+                prop._shaderType = MaterialPacking::getDefaultShaderTypeFor( prop._type );
 
             // 이 순회는 비버퍼 타입을 0 으로 되돌리고 셰이더 타입을 채우는 것까지다. 오프셋 패킹은 아래 두 번째 순회가 한다.
         }
@@ -765,9 +765,9 @@ namespace sw
                 continue;
 
             if ( prop._shaderType == MaterialPropertyType::Unknown )
-                prop._shaderType = MaterialPacking::defaultShaderTypeFor( prop._type );
+                prop._shaderType = MaterialPacking::getDefaultShaderTypeFor( prop._type );
 
-            uint32 packSize = MaterialPacking::packedSizeOf( prop._shaderType );
+            uint32 packSize = MaterialPacking::computePackedSizeOf( prop._shaderType );
             if ( prop._size != 0 )
                 packSize = prop._size;
             if ( packSize == 0 )
@@ -1045,19 +1045,19 @@ namespace sw
             }
 
             VectorUtil::sort( _listCachedDefine );
-            _cachedPermutationHash        = MaterialPermutation::hashDefines( _listCachedDefine );
-            const uint64 renderFieldsHash = getRenderFieldsHash();
-            if ( renderFieldsHash != 0 )
-                _cachedPermutationHash = HashUtil::combine( _cachedPermutationHash, renderFieldsHash );
+            _cachedPermutationHash            = MaterialPermutation::hashDefines( _listCachedDefine );
+            const uint64 renderPropertiesHash = getRenderPropertiesHash();
+            if ( renderPropertiesHash != 0 )
+                _cachedPermutationHash = HashUtil::combine( _cachedPermutationHash, renderPropertiesHash );
             _bDefinesDirty = SW_FALSE;
         }
         return _listCachedDefine;
     }
 
-    uint64 Material::getRenderFieldsHash() const
+    uint64 Material::getRenderPropertiesHash() const
     {
-        const bool bNoFields = _desc._renderQueue == 0 && _desc._renderStateOverride.hasAny() == false;
-        return bNoFields ? 0u : HashUtil::combine( _desc._renderStateOverride.computeHash(), static_cast<uint64>( static_cast<uint32>( _desc._renderQueue ) ) + 1u );
+        const bool bNoProperties = _desc._renderQueue == 0 && _desc._renderStateOverride.hasAny() == false;
+        return bNoProperties ? 0u : HashUtil::combine( _desc._renderStateOverride.computeHash(), static_cast<uint64>( static_cast<uint32>( _desc._renderQueue ) ) + 1u );
     }
 
     void Material::setShaderPath( string_view shaderPath )
@@ -1161,7 +1161,7 @@ namespace sw
         if ( _desc._alphaMode == MaterialAlphaMode::Mask && getScalarParameter( hashed_string( kAlphaCutoffProperty ), rootParams._alphaCutoff ) == false )
             rootParams._alphaCutoff = _desc._alphaCutoff;
         XMLFields::writeEveryField( root, rootParams );
-        MaterialXML::appendRenderFields( root, _desc );
+        MaterialXML::appendRenderProperties( root, _desc );
 
         XMLNode props = root.appendChild( "_properties" );
 
@@ -1249,10 +1249,10 @@ namespace sw
         if ( AssetXMLFormat::upgradeToCurrentXMLVersion( Material::kAssetType, root ) == false )
             return false;
 
-        // 루트 칸(이름 · 셰이더 · 알파 모드)은 스키마로 읽는다 — 적지 않은 알파 모드는 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다). 렌더 상태 칸은 뒤의 `parseRenderFields` 가 읽는다.
+        // 루트 칸(이름 · 셰이더 · 알파 모드)은 스키마로 읽는다 — 적지 않은 알파 모드는 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다). 렌더 상태 칸은 뒤의 `parseRenderProperties` 가 읽는다.
         MaterialRootParams rootParams;
         const string_view  sourceName{ root.getAttributeText( "name" ) };
-        if ( XMLFields::readFields( root, rootParams, sourceName, { "formatVersion" }, &MaterialXML::isRenderStateAttribute ) == false )
+        if ( XMLFields::readProperties( root, rootParams, sourceName, { "formatVersion" }, &MaterialXML::isRenderStateAttribute ) == false )
             return false;
         _desc             = MaterialDef{};
         _desc._name       = rootParams._name;
@@ -1274,16 +1274,16 @@ namespace sw
 
         if ( MaterialXML::parsePermutationNode( root, _desc._permutations ) == false )
             return false;
-        if ( MaterialXML::parseRenderFields( root, rootParams, sourceName, _desc ) == false )
+        if ( MaterialXML::parseRenderProperties( root, rootParams, sourceName, _desc ) == false )
             return false;
         // 그리기 목록과 셰이더가 어긋난 머티리얼은 읽지 않는다 — 불투명 목록의 굴절은 사본이 없는 패스에서 빈 색을 읽고(언리얼: 불투명의 SceneColor 는 컴파일 오류),
         // 블렌드 define 과 알파 모드가 다르면 알파가 새거나 불투명 목록에서 섞인다.
         const bool bBlend       = _desc._alphaMode == MaterialAlphaMode::Blend;
         const bool bTranslucent = _desc._permutations.hasAlwaysDefine( kTranslucentDefine );
-        if ( bTranslucent != bBlend || ( readsSceneColorCopy() && bBlend == false ) )
+        if ( bTranslucent != bBlend || ( usesSceneColorCopy() && bBlend == false ) )
         {
             SW_LOG_ERROR_ID( "Material.DrawListMismatch", "Material '%#' (%#): alphaMode Blend %#, %# %#, %# %# - refraction needs Blend, and %# goes with Blend only", _desc._name, sourceLabel,
-                             bBlend ? "yes" : "no", kTranslucentDefine, bTranslucent ? "yes" : "no", kRefractionDefine, readsSceneColorCopy() ? "yes" : "no", kTranslucentDefine );
+                             bBlend ? "yes" : "no", kTranslucentDefine, bTranslucent ? "yes" : "no", kRefractionDefine, usesSceneColorCopy() ? "yes" : "no", kTranslucentDefine );
             return false;
         }
 

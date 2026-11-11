@@ -28,7 +28,7 @@ namespace sw
             static expected<void> validateDevCommand( const AutomationStep& step )
             {
                 AutomationDevCommandParams params;
-                const expected<void>       read = step.readFields( params );
+                const expected<void>       read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return read;
 #if !defined( SW_SHIPPING )
@@ -49,7 +49,7 @@ namespace sw
             {
 #if !defined( SW_SHIPPING )
                 vector<string> listToken;
-                listToken                              = StringUtil::splitQuotedTokens( step.readValidatedFields<AutomationDevCommandParams>()._line );
+                listToken                              = StringUtil::splitQuotedTokens( step.readValidatedProperties<AutomationDevCommandParams>()._line );
                 const DevCommandRegistration* pCommand = listToken.empty() ? nullptr : engine::getSubsystem<DevCommandRegistry>().findCommand( listToken[0] );
                 if ( pCommand == nullptr )
                 {
@@ -93,7 +93,7 @@ namespace sw
             /** @brief 창을 창 모드의 그 클라이언트 크기로 바꿉니다. 창의 최소 크기보다 작으면 창이 최소 크기에서 멈춘다(그것을 보는 단언은 뒤 단계가 한다). */
             static bool runResize( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const AutomationResizeWindowParams params      = step.readValidatedFields<AutomationResizeWindowParams>();
+                const AutomationResizeWindowParams params      = step.readValidatedProperties<AutomationResizeWindowParams>();
                 MainWindowSubsystem*               pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
                 IWindow*                           pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 if ( pWindow == nullptr || pWindow->setDisplayMode( WindowDisplayMode::Windowed, params._width, params._height ) == false )
@@ -115,7 +115,7 @@ namespace sw
     }
 
     SW_AUTOMATION_STEP( devCommand, AutomationEnvironmentSteps::kDevCommandKind, &AutomationEnvironmentStepsInternal::runDevCommand, &AutomationEnvironmentStepsInternal::validateDevCommand, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( resizeWindow, "ResizeWindow", &AutomationEnvironmentStepsInternal::runResize, &AutomationStep::validateFields<AutomationResizeWindowParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( minimizeWindow, "MinimizeWindow", &AutomationEnvironmentStepsInternal::runMinimize, &AutomationStep::validateFields<AutomationNoParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( restoreWindow, "RestoreWindow", &AutomationEnvironmentStepsInternal::runRestore, &AutomationStep::validateFields<AutomationNoParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( resizeWindow, "ResizeWindow", &AutomationEnvironmentStepsInternal::runResize, &AutomationStep::validateProperties<AutomationResizeWindowParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( minimizeWindow, "MinimizeWindow", &AutomationEnvironmentStepsInternal::runMinimize, &AutomationStep::validateProperties<AutomationNoParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( restoreWindow, "RestoreWindow", &AutomationEnvironmentStepsInternal::runRestore, &AutomationStep::validateProperties<AutomationNoParams>, AutomationStepOptions{} );
 } // namespace sw

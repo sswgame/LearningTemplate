@@ -330,20 +330,20 @@ namespace sw
         // 게임 스레드가 맡긴 텍스처 구간(지형 스플랫 칠하기)을 기록 전에 올린다. 업로드는 뒤이은 드로우보다 먼저 실행된다(IRHIResourceFactory 계약).
         if ( engine::areEngineServicesBound() )
         {
-            // 결정적 실행(`DeterministicRunPolicy::_bFinishAssetWorkEachFrame`)이면 아래 프레임당 상한을 모두 푼다 — 상한 안에 무엇이 드느냐가 워커의 도착 순서에 달린다.
-            const bool bFinishAssetWork = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetWorkEachFrame == SW_TRUE;
+            // 결정적 실행(`DeterministicRunPolicy::_bFinishAssetJobsEachFrame`)이면 아래 프레임당 상한을 모두 푼다 — 상한 안에 무엇이 드느냐가 워커의 도착 순서에 달린다.
+            const bool bFinishAssetJobs = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
             // 새 머티리얼의 초기화는 여기서 하지 않는다 — 머티리얼은 게임 스레드 객체다(`Engine::submitRenderPacket`). 상수 버퍼는 `GPUScene::upload` 의 프록시가 만든다.
             SW_PROFILE_SCOPE( "RT.TextureRegionUpdates" );
             TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
             (void)textures.flushRegionUpdates( pDevice );
             // 워커가 읽어 둔 비동기 텍스처를 올린다 — 디바이스를 쓰는 스레드는 여기다(DX11 즉시 컨텍스트 · GL). 프레임당 상한이 있다.
             // 결정적 실행이면 상한 없이 모두 올리고 업로드 끝남까지 이 자리에서 기다린다.
-            if ( bFinishAssetWork )
+            if ( bFinishAssetJobs )
                 (void)textures.finishPendingLoads( pDevice );
             else
                 (void)textures.completePendingLoads( pDevice, TextureCache::kMaxUploadsPerFrame );
             // 아래쪽 밉만 올린 텍스처의 위쪽 밉을 프레임 예산 안에서 업로드한다(밉 스트리밍). 옛 자원은 게임 스레드가 해제한다(`Engine`).
-            (void)textures.updateStreaming( pDevice, bFinishAssetWork ? UINT32_MAX : TextureCache::kMaxStreamingUpgradesPerFrame );
+            (void)textures.updateStreaming( pDevice, bFinishAssetJobs ? UINT32_MAX : TextureCache::kMaxStreamingUpgradesPerFrame );
         }
 
         _pDevice                   = pDevice;
@@ -548,14 +548,14 @@ namespace sw
 
         // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 정한다. 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
         // 만드는 일은 빌더 스레드가 한다(`MaterialPSOBuilder`) — 먼저 지난 프레임까지 끝난 결과를 캐시에 합치고, 이번 프레임에 필요한 키를 줄에 넣는다.
-        _psoManager.pumpMaterialPSOBuilds();
+        _psoManager.pollMaterialPSOBuilds();
         const uint32 viewModeMask = collectFrameViewModeMask();
         _psoManager.ensureMaterialPSOs( viewModeMask );
         // 아직 씬에 없는 고정 머티리얼(프리로드)의 PSO 도 같은 자리에서 미리 만든다(급하지 않은 줄). 줄은 하나라 주 렌더러만 꺼낸다 — 미리보기 렌더러가 꺼내 가면 주 렌더러가 만들지 못한다.
         if ( _host._pPinnedMaterials != nullptr )
             _psoManager.warmPinnedMaterialPSOs( *_host._pPinnedMaterials, viewModeMask );
         // 빌더 스레드를 쓰지 않는 경로(GL · `-gv_psoAsync=0`)는 방금 넣은 줄을 이 자리에서 만들어 같은 프레임에 그린다.
-        _psoManager.pumpMaterialPSOBuilds();
+        _psoManager.pollMaterialPSOBuilds();
 
         // 캔버스의 아틀라스 텍스처, 사각형 버퍼, 렌더 텍스처 대상도 기록 전에 갖춘다(Canvas 패스와 대상 그리기는 그리기만 한다).
         _state._canvasRenderer.prepareFrame( *pDevice, _state._canvasFrame, _psoManager.getCache() );
@@ -637,14 +637,14 @@ namespace sw
         _state._shadowCache.update( _state._frameShadow._listLocalTile, atlasResolution, _state._gpuScene.getStaticShadowGeneration(), static_cast<bool>( gv_shadowCache ) );
     }
 
-    FrameViewResources::PassCullingContext FrameRenderer::makePassCullingContext() const
+    FrameViewResources::ViewPassSceneState FrameRenderer::captureViewPassSceneState() const
     {
-        FrameViewResources::PassCullingContext facts{};
-        facts._bObjectMotion       = _state._gpuScene.hasObjectMotion() ? SW_TRUE : SW_FALSE;
-        facts._bContactShadows     = _state._frameShadow.hasContactShadows() ? SW_TRUE : SW_FALSE;
-        facts._bTransparentBatches = _state._gpuScene.getTransparentBatches().empty() ? SW_FALSE : SW_TRUE;
-        facts._bDistortionBatches  = _state._gpuScene.hasDistortionBatches() ? SW_TRUE : SW_FALSE;
-        return facts;
+        FrameViewResources::ViewPassSceneState sceneState{};
+        sceneState._bObjectMotion      = _state._gpuScene.hasObjectMotion() ? SW_TRUE : SW_FALSE;
+        sceneState._bContactShadows    = _state._frameShadow.hasContactShadows() ? SW_TRUE : SW_FALSE;
+        sceneState._bRefractionBatches = _state._gpuScene.hasRefractionBatches() ? SW_TRUE : SW_FALSE;
+        sceneState._bDistortionBatches = _state._gpuScene.hasDistortionBatches() ? SW_TRUE : SW_FALSE;
+        return sceneState;
     }
 
     void FrameRenderer::updatePassConstants( FramePassContext& context, const float4x4& mainViewProj )
@@ -660,7 +660,7 @@ namespace sw
         beginViewHistory( _state._mainView );
         // 지난 뷰-투영과 견주므로 applyViewProjection(지난 것을 이번 것으로 바꾼다) 앞이다.
         // 주 시점의 첨부만 렌더 타깃 목록(에디터 패널)에 싣는다 — 가리키는 곳이 바뀌거나 타깃을 만들고 놓았을 때만 다시 싣는다.
-        const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _state._mainView, mainViewProj, makePassCullingContext() );
+        const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _state._mainView, mainViewProj, captureViewPassSceneState() );
         if ( selection._bTargetsRepointed == SW_TRUE || selection._bTargetsChanged == SW_TRUE )
             publishRenderTargets();
         if ( selection._bTargetsChanged == SW_TRUE )
@@ -1212,7 +1212,7 @@ namespace sw
         // 기록을 버릴지는 컬링(가림 판정)이 기록 전에 보므로 그리기(renderExtraView)가 아니라 여기서 정한다.
         beginViewHistory( view );
         // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.
-        (void)_viewResources.applyViewPassSelection( view, request._viewProj, makePassCullingContext() ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
+        (void)_viewResources.applyViewPassSelection( view, request._viewProj, captureViewPassSceneState() ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
         _upscale.prepareUpscale( view, view._outputWidth, view._outputHeight );
         _postProcessMaterials.prepareView( view );
     }
@@ -1389,7 +1389,7 @@ namespace sw
     {
         // 호스트는 걸지 않는다(주 렌더러의 일). PSO 저장소는 initialize 앞에 둔다 — 같은 파이프라인일 때만 함께 쓴다.
         if ( pipelinePath.empty() )
-            _psoManager.shareCacheOf( mainRenderer._psoManager );
+            _psoManager.shareCache( mainRenderer._psoManager );
         return initialize( pDevice, mainRenderer._state._pTaskManager, pipelinePath.empty() ? string_view{ mainRenderer._pipelinePath } : pipelinePath );
     }
 } // namespace sw

@@ -109,17 +109,17 @@ namespace sw
         return VectorUtil::findBy<&CreatureTileRule::_from>( _listRule, object );
     }
 
-    bool CreatureSpeciesDef::likesHabitat( const hashed_string& habitatID ) const
+    bool CreatureSpeciesDef::isFavoriteHabitat( const hashed_string& habitatID ) const
     {
         return VectorUtil::contains( _listHabitat, habitatID );
     }
 
-    bool CreatureSpeciesDef::likesFood( const hashed_string& itemID ) const
+    bool CreatureSpeciesDef::isFavoriteFood( const hashed_string& itemID ) const
     {
         return VectorUtil::contains( _listFood, itemID );
     }
 
-    bool CreatureSpeciesDef::likesGift( const hashed_string& itemID ) const
+    bool CreatureSpeciesDef::isFavoriteGift( const hashed_string& itemID ) const
     {
         return VectorUtil::contains( _listGift, itemID );
     }
@@ -129,12 +129,12 @@ namespace sw
         return VectorUtil::contains( _listAbility, abilityID );
     }
 
-    bool CreatureSpeciesDef::offersRequest( const hashed_string& questID ) const
+    bool CreatureSpeciesDef::canOfferRequest( const hashed_string& questID ) const
     {
         return VectorUtil::contains( _listRequest, questID );
     }
 
-    bool CreatureSpeciesDef::comesIn( DayPhase phase, const hashed_string& weatherID ) const
+    bool CreatureSpeciesDef::canAppearIn( DayPhase phase, const hashed_string& weatherID ) const
     {
         ScheduleConditionContext context;
         context._phase   = phase;
@@ -179,7 +179,7 @@ namespace sw
 
     uint32 CreatureLifeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         // 종은 능력 · 서식지를 가리키므로 표의 순서대로 읽고, 가리키는 id 는 모두 읽은 뒤 확인한다.
         using Element                          = XMLCatalogElement<CreatureLifeCatalog>;
         static constexpr Element kArrElement[] = {
@@ -197,7 +197,7 @@ namespace sw
     bool CreatureLifeCatalog::loadHabitat( const XMLNode& node, string_view sourceName )
     {
         HabitatDef habitat;
-        bool       bValid = XMLFields::readFields( node, habitat, sourceName );
+        bool       bValid = XMLFields::readProperties( node, habitat, sourceName );
         bValid            = bValid && CreatureLifeCatalogInternal::parsePattern( node, sourceName, habitat._id.c_str(), habitat );
         if ( bValid )
             (void)_habitatCatalog.add( habitat ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
@@ -207,11 +207,11 @@ namespace sw
     bool CreatureLifeCatalog::loadAbility( const XMLNode& node, string_view sourceName )
     {
         CreatureAbilityDef ability;
-        bool               bValid = XMLFields::readFields( node, ability, sourceName );
+        bool               bValid = XMLFields::readProperties( node, ability, sourceName );
         for ( XMLNode ruleNode = node.findChild( "Rule" ); ruleNode; ruleNode = ruleNode.findNextSibling( "Rule" ) )
         {
             CreatureTileRule rule;
-            if ( XMLFields::readFields( ruleNode, rule, sourceName ) == false )
+            if ( XMLFields::readProperties( ruleNode, rule, sourceName ) == false )
             {
                 bValid = false;
                 continue;
@@ -239,7 +239,7 @@ namespace sw
     bool CreatureLifeCatalog::loadSpecies( const XMLNode& node, string_view sourceName )
     {
         CreatureSpeciesDef species;
-        bool               bValid = XMLFields::readFields( node, species, sourceName, { "weathers", "phases" } );
+        bool               bValid = XMLFields::readProperties( node, species, sourceName, { "weathers", "phases" } );
         bValid                    = species._visitCondition.loadFromXML( node, ScheduleConditionSchema{}, sourceName, species._id.view() ) && bValid; // 적은 `weathers` · `phases` 만 절이 된다
         if ( species._listHabitat.empty() )
         {
@@ -254,11 +254,11 @@ namespace sw
     bool CreatureLifeCatalog::loadAppeal( const XMLNode& node, string_view sourceName )
     {
         TownAppealDef appeal;
-        bool          bValid = XMLFields::readFields( node, appeal, sourceName );
+        bool          bValid = XMLFields::readProperties( node, appeal, sourceName );
         for ( XMLNode tierNode = node.findChild( "Tier" ); tierNode; tierNode = tierNode.findNextSibling( "Tier" ) )
         {
             TownAppealTier tier;
-            if ( XMLFields::readFields( tierNode, tier, sourceName ) )
+            if ( XMLFields::readProperties( tierNode, tier, sourceName ) )
                 appeal._listTier.push_back( tier );
             else
                 bValid = false;

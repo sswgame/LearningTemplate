@@ -274,11 +274,11 @@ namespace sw
         RHIPipelineStateHandle getEnginePSO( RenderPassType passType ) const;
         /**
          * @brief 이 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
-         * @details 판정은 `FrameRendererUtil::drawsMaterialInPass` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다. 드로우 루프(`FramePassExecutor`)와 같은 함수다.
+         * @details 판정은 `FrameRendererUtil::shouldDrawMaterialInPass` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다. 드로우 루프(`FramePassExecutor`)와 같은 함수다.
          */
-        bool drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
+        bool shouldDrawBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
         {
-            return _passExecutor.drawsBatchInPass( passType, batch, binding );
+            return _passExecutor.shouldDrawBatchInPass( passType, batch, binding );
         }
         /**
          * @brief PSO 를 만들 때 쓴 디스크립터(셰이더 경로, define, 렌더 상태)를 반환합니다. 모르는 PSO 면 false 입니다.
@@ -361,7 +361,7 @@ namespace sw
          */
         void updatePassConstants( FramePassContext& context, const float4x4& mainViewProj );
         /** @brief 뷰 패스 고르기가 보는 이번 프레임의 씬 사실입니다 — 주 시점과 추가 뷰가 같은 값을 쓴다(스냅샷을 적용한 뒤 부른다). */
-        [[nodiscard]] FrameViewResources::PassCullingContext makePassCullingContext() const;
+        [[nodiscard]] FrameViewResources::ViewPassSceneState captureViewPassSceneState() const;
 
         /** @brief 이번 프레임의 하늘(`_state._frameSky` · `_state._bHasFrameSky`)을 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
         void applyFrameSky( bool bHasSky, const SkyGradient& sky );
@@ -424,7 +424,7 @@ namespace sw
         FrameRenderState    _state;
         RenderPipelineAsset _pipelineResource;
         /**
-         * @brief 이 렌더러의 PSO(엔진 패스 · 출력 · 머티리얼 변형 · 입자 · 폴백 버퍼)를 만들고 찾는 관리자입니다. 미리보기 씬 렌더러는 주 렌더러의 저장소를 빌린다(`shareCacheOf`).
+         * @brief 이 렌더러의 PSO(엔진 패스 · 출력 · 머티리얼 변형 · 입자 · 폴백 버퍼)를 만들고 찾는 관리자입니다. 미리보기 씬 렌더러는 주 렌더러의 저장소를 빌린다(`shareCache`).
          * @details `_pipelineResource` · `_gpuScene` 을 참조로 읽으므로 그 둘보다 뒤에 선언한다. 언리얼이 PSO 조립을 메시 패스 프로세서 · PSO 캐시로 렌더러 밖에 두는 것과 같다.
          */
         FramePSOManager _psoManager;

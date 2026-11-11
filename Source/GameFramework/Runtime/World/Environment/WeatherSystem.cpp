@@ -32,7 +32,7 @@ namespace sw
     {
         // 적지 않은 칸은 초기값이다. 깨진 값 · 범위 밖 값은 오류다(자르지 않는다). 날씨는 그 원소를, 전환 시간은 표 전체를 넣지 않는다.
         WeatherCatalogRootParams rootParams{ _transitionTime };
-        if ( XMLFields::readFields( root, rootParams, sourceName ) == false )
+        if ( XMLFields::readProperties( root, rootParams, sourceName ) == false )
             return 0;
         _transitionTime                        = rootParams._transition;
         using Element                          = XMLCatalogElement<WeatherCatalog>;
@@ -47,7 +47,7 @@ namespace sw
     {
 
         WeatherDef  weather;
-        bool        bValid = XMLFields::readFields( node, weather, sourceName, { "seasons" } ); // 칸 · 범위는 WeatherDef 의 PROPERTY
+        bool        bValid = XMLFields::readProperties( node, weather, sourceName, { "seasons" } ); // 칸 · 범위는 WeatherDef 의 PROPERTY
         const utf8* pID    = weather._id.c_str();
         if ( bValid && weather._maxDuration < weather._minDuration )
         {

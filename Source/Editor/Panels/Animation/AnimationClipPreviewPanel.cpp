@@ -142,7 +142,7 @@ namespace sw::editor
         return true;
     }
 
-    bool AnimationClipPreviewPanel::acceptsDocumentPath( string_view assetPath ) const
+    bool AnimationClipPreviewPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return StringUtil::endsWith( assetPath, AnimationClip::kExtension );
     }

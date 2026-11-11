@@ -118,9 +118,9 @@ namespace sw
     {
         static constexpr const utf8* kArrRootChild[] = { "layers", "layer", "action", "override", "remove" };
         InputMapRootParams           params;
-        const bool                   bFields   = XMLFields::readFields( root, params, absPath );
-        const bool                   bChildren = XMLNameCheck::reportUnknownChildren( root, kArrRootChild, absPath );
-        if ( bFields == false || bChildren == false )
+        const bool                   bProperties = XMLFields::readProperties( root, params, absPath );
+        const bool                   bChildren   = XMLNameCheck::reportUnknownChildren( root, kArrRootChild, absPath );
+        if ( bProperties == false || bChildren == false )
             return false;
         if ( bAppend )
         {
@@ -147,8 +147,8 @@ namespace sw
     bool InputMap::readLayer( const XMLNode& layerNode, string_view absPath, bool bAppend, std::initializer_list<string_view> listChild, hashed_string& outName )
     {
         InputMapLayerParams params;
-        const bool          bFields   = XMLFields::readFields( layerNode, params, absPath );
-        bool                bChildren = true;
+        const bool          bProperties = XMLFields::readProperties( layerNode, params, absPath );
+        bool                bChildren   = true;
         for ( XMLNode child = layerNode.findChild(); child.isValid(); child = child.findNextSibling() )
         {
             if ( VectorUtil::contains( listChild, string_view{ child.getName() } ) )
@@ -156,7 +156,7 @@ namespace sw
             SW_LOG_ERROR_ID( "InputMap.LayerUnknownElement", "InputMap %#: <layer name=\"%#\"> has unknown element <%#>", absPath, params._name.c_str(), child.getName() );
             bChildren = false;
         }
-        if ( bFields == false || bChildren == false )
+        if ( bProperties == false || bChildren == false )
             return false;
         outName = params._name;
         if ( bAppend && hasLayer( params._name ) && listChild.size() == 0 )
@@ -296,9 +296,9 @@ namespace sw
     void InputMap::readRemove( const XMLNode& node, string_view absPath, bool& inoutbValid )
     {
         InputMapRemoveParams params;
-        const bool           bFields   = XMLFields::readFields( node, params, absPath );
-        const bool           bChildren = XMLNameCheck::reportUnknownChildren( node, nullptr, 0, absPath );
-        if ( bFields == false || bChildren == false )
+        const bool           bProperties = XMLFields::readProperties( node, params, absPath );
+        const bool           bChildren   = XMLNameCheck::reportUnknownChildren( node, nullptr, 0, absPath );
+        if ( bProperties == false || bChildren == false )
         {
             inoutbValid = false;
             return;
@@ -427,7 +427,7 @@ namespace sw
         rootParams._holdThreshold          = _triggerRules._holdThreshold;
         rootParams._dragThreshold          = _triggerRules._dragThreshold;
         rootParams._virtualCursor          = _virtualCursorStick;
-        XMLFields::writeFields( root, rootParams );
+        XMLFields::writeProperties( root, rootParams );
 
         const XMLNode layersNode = root.appendChild( "layers" );
         for ( const hashed_string& layerName : _listLayerName )
@@ -462,7 +462,7 @@ namespace sw
         layerParams._bEnabled    = pLayer->_bEnabled != SW_FALSE;
         layerParams._bBlockLower = pLayer->_bBlockLower != SW_FALSE;
         layerParams._bAlwaysOn   = pLayer->_bAlwaysOn != SW_FALSE;
-        XMLFields::writeFields( layersNode.appendChild( "layer" ), layerParams );
+        XMLFields::writeProperties( layersNode.appendChild( "layer" ), layerParams );
     }
 
     bool InputMap::fillSourceDocument( uint32 sourceIndex, XMLDocument& outDoc ) const
@@ -478,7 +478,7 @@ namespace sw
             rootParams._holdThreshold          = _triggerRules._holdThreshold;
             rootParams._dragThreshold          = _triggerRules._dragThreshold;
             rootParams._virtualCursor          = source._bVirtualCursor == SW_TRUE ? _virtualCursorStick : InputMapVirtualCursor::Off;
-            XMLFields::writeFields( root, rootParams );
+            XMLFields::writeProperties( root, rootParams );
         }
         else if ( source._bVirtualCursor == SW_TRUE )
         {
@@ -521,9 +521,9 @@ namespace sw
         }
         for ( const hashed_string& actionName : source._listRemove )
         {
-            InputMapRemoveParams removeFields;
-            removeFields._name = actionName;
-            XMLFields::writeFields( root.appendChild( "remove" ), removeFields );
+            InputMapRemoveParams removeProperties;
+            removeProperties._name = actionName;
+            XMLFields::writeProperties( root.appendChild( "remove" ), removeProperties );
         }
         return bAllWritten;
     }

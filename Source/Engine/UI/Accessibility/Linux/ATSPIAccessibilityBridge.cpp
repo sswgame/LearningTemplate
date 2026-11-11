@@ -481,7 +481,7 @@ namespace sw
                     appendNodeRef( pIter, *parent );
             }
 
-            const AccessibleNode& nodeOf( const ATSPIInternal::Target& target ) { return findSnapshot()->_listNode[target._node]; }
+            const AccessibleNode& getNodeOf( const ATSPIInternal::Target& target ) { return findSnapshot()->_listNode[target._node]; }
 
             /** @brief 속성 @p pName 의 값을 변이로 덧붙입니다. 모르는 속성이면 false. */
             bool appendProperty( DBusMessageIter* pIter, const utf8* pIface, const utf8* pName, const ATSPIInternal::Target& target )
@@ -495,7 +495,7 @@ namespace sw
                     const bool bTextProperty = name == "Name" || name == "Description" || name == "Locale";
                     if ( bTextProperty )
                     {
-                        const string text = ( name == "Name" ) ? ( target._bRoot ? string( kToolkitName ) : nodeOf( target )._info._name ) : string{};
+                        const string text = ( name == "Name" ) ? ( target._bRoot ? string( kToolkitName ) : getNodeOf( target )._info._name ) : string{};
                         dbus_message_iter_open_container( pIter, DBUS_TYPE_VARIANT, "s", &variant );
                         appendString( &variant, text.c_str() );
                     }
@@ -507,7 +507,7 @@ namespace sw
                     else if ( name == "ChildCount" )
                     {
                         dbus_message_iter_open_container( pIter, DBUS_TYPE_VARIANT, "i", &variant );
-                        appendInt( &variant, static_cast<int32>( ( target._bRoot || nodeOf( target )._info._bLeaf == false ) ? listChildren( target ).size() : 0 ) );
+                        appendInt( &variant, static_cast<int32>( ( target._bRoot || getNodeOf( target )._info._bLeaf == false ) ? listChildren( target ).size() : 0 ) );
                     }
                     else
                         return false;
@@ -519,7 +519,7 @@ namespace sw
                 }
                 else if ( iface == kIfaceValue && target._bRoot == false )
                 {
-                    const AccessibleInfo& info  = nodeOf( target )._info;
+                    const AccessibleInfo& info  = getNodeOf( target )._info;
                     float64               value = 0.0;
                     if ( name == "MinimumValue" )
                         value = info._rangeMin;
@@ -588,7 +588,7 @@ namespace sw
                     if ( dbus_message_iter_get_arg_type( &variant ) != DBUS_TYPE_DOUBLE )
                         return replyError( pMessage, DBUS_ERROR_INVALID_ARGS, "a D-Bus double is expected" );
                     dbus_message_iter_get_basic( &variant, &value );
-                    const AccessibleNode& node = nodeOf( target );
+                    const AccessibleNode& node = getNodeOf( target );
                     if ( UIAccessibilityActions::setRangeValue( _ui, node._screen, node._widget, static_cast<float32>( value ) ) == false )
                         return replyError( pMessage, DBUS_ERROR_FAILED, "the widget did not take the value" );
                     return sendEmptyReturn( pMessage );
@@ -610,7 +610,7 @@ namespace sw
                 DBusMessage*    pRep = dbus_message_new_method_return( pMessage );
                 DBusMessageIter iter;
                 dbus_message_iter_init_append( pRep, &iter );
-                const AccessibleRole role = target._bRoot ? AccessibleRole::Group : nodeOf( target )._info._role;
+                const AccessibleRole role = target._bRoot ? AccessibleRole::Group : getNodeOf( target )._info._role;
                 bool                 bOk  = true;
                 if ( member == "GetRole" )
                     appendUint( &iter, target._bRoot ? kRoleApp : ATSPIMapping::getRole( role ) );
@@ -618,7 +618,7 @@ namespace sw
                     appendString( &iter, target._bRoot ? "application" : ATSPIMapping::getRoleName( role ) );
                 else if ( member == "GetState" )
                 {
-                    const ATSPIStateSet set = ATSPIMapping::makeStateSet( role, target._bRoot ? 0u : nodeOf( target )._info._states );
+                    const ATSPIStateSet set = ATSPIMapping::makeStateSet( role, target._bRoot ? 0u : getNodeOf( target )._info._states );
                     DBusMessageIter     array;
                     dbus_message_iter_open_container( &iter, DBUS_TYPE_ARRAY, "u", &array );
                     appendUint( &array, set._word[0] );
@@ -627,7 +627,7 @@ namespace sw
                 }
                 else if ( member == "GetChildren" || member == "GetChildAtIndex" )
                 {
-                    const vector<uint32> children = ( target._bRoot || nodeOf( target )._info._bLeaf == false ) ? listChildren( target ) : vector<uint32>{};
+                    const vector<uint32> children = ( target._bRoot || getNodeOf( target )._info._bLeaf == false ) ? listChildren( target ) : vector<uint32>{};
                     if ( member == "GetChildren" )
                     {
                         DBusMessageIter array;
@@ -653,7 +653,7 @@ namespace sw
                     int32 position = constant::invalid_index::kInt32; // AT-SPI 규약: 부모가 없으면 -1
                     if ( target._bRoot == false )
                     {
-                        const optional<uint32>&        parent    = nodeOf( target )._parent;
+                        const optional<uint32>&        parent    = getNodeOf( target )._parent;
                         int32                          count     = 0;
                         const UIAccessibilitySnapshot* pSnapshot = findSnapshot();
                         for ( uint32 index = 0; index < target._node; ++index )
@@ -717,7 +717,7 @@ namespace sw
                 using namespace ATSPIInternal;
                 if ( target._bRoot )
                     return replyError( pMessage, DBUS_ERROR_UNKNOWN_METHOD, "the application root has no extents" );
-                const AccessibleNode& node = nodeOf( target );
+                const AccessibleNode& node = getNodeOf( target );
                 if ( member == "GrabFocus" )
                 {
                     DBusMessage*    pRep = dbus_message_new_method_return( pMessage );
@@ -775,7 +775,7 @@ namespace sw
                 using namespace ATSPIInternal;
                 if ( target._bRoot )
                     return replyError( pMessage, DBUS_ERROR_UNKNOWN_METHOD, "the application root has no actions" );
-                const AccessibleNode& node  = nodeOf( target );
+                const AccessibleNode& node  = getNodeOf( target );
                 dbus_int32_t          index = constant::invalid_index::kInt32;
                 dbus_message_get_args( pMessage, nullptr, DBUS_TYPE_INT32, &index, DBUS_TYPE_INVALID );
                 DBusMessage*    pRep = dbus_message_new_method_return( pMessage );

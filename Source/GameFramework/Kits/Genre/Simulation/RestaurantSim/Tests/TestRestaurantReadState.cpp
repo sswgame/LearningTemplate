@@ -85,7 +85,7 @@ namespace
             _listStation.push_back( ForgedStation{ "stove", 1 } );
         }
 
-        void write( sw::Archive& outArchive, const sw::ShopState& market ) const
+        void write( sw::Archive& outArchive, const sw::ShopManager& market ) const
         {
             outArchive << static_cast<uint32>( _listStaff.size() );
             for ( const sw::StaffMember& staff : _listStaff )
@@ -448,7 +448,7 @@ SW_TEST_CASE_F( RestaurantReadStateTest, RefusesBrokenBatches )
 }
 
 /**
- * @brief [RestaurantReadStateTest] 결함: 시장이 음수 배율(`setPriceModifier` 는 거절한다)과 음수 날을 받았다. 기반 `ShopState` 가 거절하고 상태를 둔다
+ * @brief [RestaurantReadStateTest] 결함: 시장이 음수 배율(`setPriceModifier` 는 거절한다)과 음수 날을 받았다. 기반 `ShopManager` 가 거절하고 상태를 둔다
  */
 SW_TEST_CASE( RestaurantReadStateTestShop, ShopStateRefusesNegativePrices )
 {
@@ -465,7 +465,7 @@ SW_TEST_CASE( RestaurantReadStateTestShop, ShopStateRefusesNegativePrices )
         written << buyModifier;
         written << sellModifier;
         written << daysSinceRestock;
-        sw::ShopState state;
+        sw::ShopManager state;
         state.initialize( nullptr, nullptr );
         sw::Archive reading( written.getData(), written.getSize() );
         return state.readState( reading );

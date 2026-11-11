@@ -45,13 +45,13 @@ namespace sw
         using Denied   = NetMessageDef<6, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
         using Table    = NetMessageTable<NetKitMessageRange::kTurnRelay, Join, Joined, Action, Applied, Rejected, Started, Denied>;
 
-        static constexpr uint8 kJoin     = Table::kindOf<Join>();
-        static constexpr uint8 kJoined   = Table::kindOf<Joined>();
-        static constexpr uint8 kAction   = Table::kindOf<Action>();
-        static constexpr uint8 kApplied  = Table::kindOf<Applied>();
-        static constexpr uint8 kRejected = Table::kindOf<Rejected>();
-        static constexpr uint8 kStarted  = Table::kindOf<Started>();
-        static constexpr uint8 kDenied   = Table::kindOf<Denied>();
+        static constexpr uint8 kJoin     = Table::getKindOf<Join>();
+        static constexpr uint8 kJoined   = Table::getKindOf<Joined>();
+        static constexpr uint8 kAction   = Table::getKindOf<Action>();
+        static constexpr uint8 kApplied  = Table::getKindOf<Applied>();
+        static constexpr uint8 kRejected = Table::getKindOf<Rejected>();
+        static constexpr uint8 kStarted  = Table::getKindOf<Started>();
+        static constexpr uint8 kDenied   = Table::getKindOf<Denied>();
         /**
          * @brief 행동 하나의 바이트 상한입니다. 클라이언트는 넘는 행동을 보내지 않고, 서버와 클라이언트는 넘는 길이를 손상된 메시지로 봅니다.
          * @details 큰 행동은 신뢰 순서 채널이 1 KB 조각으로 나눠 전송한다. 조각마다 신뢰 창 슬롯을 하나씩 쓰므로, 창이 차면 대기 큐와 `flushSeat` 가 기다린다.

@@ -25,7 +25,7 @@ namespace sw::editor
      * @details 닫기 확인(Save / Don't Save / Cancel)은 `IEditorPanel::requestClose` 가 문서 패널이 아닌 패널과 함께 한다. 저장하지 않고 닫으면
      *          `revertDocument` 로 편집을 버린다(기본은 `reloadDocument`).
      *          파일 하나를 문서로 고치는 패널은 모두 이 기반으로 연다(언리얼 `FAssetEditorToolkit` 의 자리) — 콘텐츠 브라우저 · 패널 안 목록 · 경로 칸 · 시나리오(`asset.openScratch`)가
-     *          같은 길(워크스페이스 포커스 → `acceptsDocumentPath` → `loadDocument`)로 열고, 저장 왕복 시나리오(`panel.saveDocument` · `panel.reloadDocument`)가 사본 문서를 다룬다.
+     *          같은 길(워크스페이스 포커스 → `canAcceptDocumentPath` → `loadDocument`)로 열고, 저장 왕복 시나리오(`panel.saveDocument` · `panel.reloadDocument`)가 사본 문서를 다룬다.
      *          자체 열기 길을 둔 패널(카탈로그 · 입력 맵 · 오디오 이벤트 · UI Preview · 어빌리티 카탈로그 · 데이터 테이블)은 시나리오가 사본을 가리킬 수 없어 이 기반으로 옮겼다.
      *          연 문서 경로가 없는 문서 패널(전역 변수 · 프로젝트 설정 · 메시 모디파이어)은 `EditorStateDocumentPanel` 이고, `IEditorDocumentPanel` 은 이 둘만 상속할 수 있다.
      */
@@ -53,13 +53,13 @@ namespace sw::editor
 
         /** @brief 포커스가 이 종류이고 현재 로드 경로와 다르면 true 입니다. */
         bool hasNewFocusedDocument() const;
-        /** @brief 매칭된 포커스 경로를 반환합니다. 종류가 맞고 `acceptsDocumentPath` 가 받는 경로만이며, 매칭이 없으면 빈 문자열입니다. */
+        /** @brief 매칭된 포커스 경로를 반환합니다. 종류가 맞고 `canAcceptDocumentPath` 가 받는 경로만이며, 매칭이 없으면 빈 문자열입니다. */
         string_view getMatchingFocusedPath() const;
         /**
          * @brief 이 패널이 @p assetPath(리소스 id)를 문서로 받으면 true 입니다. 기본은 종류만 맞으면 받습니다.
          * @details 한 종류 안의 일부만 다루는 패널이 좁힌다(Data 종류 중 `*.vfx.xml` 만 보는 VFX 미리보기). "Open..." 목록은 이 판정에 더해 파일의 첫 종류가 이 패널의 종류여야 한다 — 포커스는 그보다 넓다(스프라이트 클립은 포커스한 이미지를 아틀라스로 열지만, 이미지를 모두 목록에 넣지는 않는다).
          */
-        virtual bool acceptsDocumentPath( string_view assetPath ) const
+        virtual bool canAcceptDocumentPath( string_view assetPath ) const
         {
             (void)assetPath;
             return true;

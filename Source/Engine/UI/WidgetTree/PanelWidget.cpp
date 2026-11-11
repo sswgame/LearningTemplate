@@ -112,7 +112,7 @@ namespace sw
     void PanelWidget::arrangeChild( const UILayoutContext& context, Widget& child, const float2& localPosition, const float2& size )
     {
         _maxChildSlotHeight = MathUtil::max( _maxChildSlotHeight, size._y );
-        if ( isRightToLeft() && mirrorsChildrenInRightToLeft() )
+        if ( isRightToLeft() && shouldMirrorChildrenInRightToLeft() )
         {
             const float2 mirrored{ getGeometry()._size._x - localPosition._x - size._x, localPosition._y };
             UILayoutPass::arrange( child, context, getGeometry(), mirrored, size );

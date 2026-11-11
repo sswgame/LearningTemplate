@@ -57,7 +57,7 @@ namespace
         }
 
         /** @brief 보낸 것이 상대에게 닿을 만큼 망을 돌립니다. */
-        void pumpUntilDelivered()
+        void pollUntilDelivered()
         {
             for ( int32 step = 0; step < 8; ++step )
             {
@@ -71,7 +71,7 @@ namespace
             _server.beginTick( tick );
             _server.endTick();
             _server.sendSnapshots();
-            pumpUntilDelivered();
+            pollUntilDelivered();
         }
 
         static ControlIntent makeIntent()
@@ -96,7 +96,7 @@ SW_TEST_CASE( ReplicationIntentTest, IntentAndClaimsRoundTrip )
     listSentClaim.push_back( MeleeHitClaim{ 1, 7 } );
     listSentClaim.push_back( MeleeHitClaim{ 1, 9 } );
     SW_REQUIRE_TRUE( rig._client.sendIntent( 1, sent, listSentClaim ) );
-    rig.pumpUntilDelivered();
+    rig.pollUntilDelivered();
 
     rig._server.beginTick( 10 );
     ControlIntent         received;
@@ -124,7 +124,7 @@ SW_TEST_CASE( ReplicationIntentTest, PopBeforeFirstInputKeepsTheWindow )
     SW_EXPECT_FALSE( rig._server.popIntent( rig._connectionID, 1, received, bExact, listClaim ) );
 
     SW_REQUIRE_TRUE( rig._client.sendIntent( 1, ReplicationIntentTestRig::makeIntent(), {} ) );
-    rig.pumpUntilDelivered();
+    rig.pollUntilDelivered();
     SW_REQUIRE_TRUE( rig._server.popIntent( rig._connectionID, 1, received, bExact, listClaim ) );
     SW_EXPECT_TRUE( bExact );
     SW_EXPECT_TRUE( received.wasTriggered( 2 ) );
@@ -136,7 +136,7 @@ SW_TEST_CASE( ReplicationIntentTest, OldestInputTickFollowsTheFirstReceived )
     ReplicationIntentTestRig rig;
     SW_EXPECT_FALSE( rig._server.findOldestInputTick( rig._connectionID ).has_value() );
     SW_REQUIRE_TRUE( rig._client.sendIntent( 40, ReplicationIntentTestRig::makeIntent(), {} ) );
-    rig.pumpUntilDelivered();
+    rig.pollUntilDelivered();
     const sw::optional<uint32> oldestTick = rig._server.findOldestInputTick( rig._connectionID );
     SW_REQUIRE_TRUE( oldestTick.has_value() );
     SW_EXPECT_EQUAL( 40u, *oldestTick );
@@ -149,7 +149,7 @@ SW_TEST_CASE( ReplicationIntentTest, RepeatedInputClearsTriggersAndClaims )
     vector<MeleeHitClaim>    listSentClaim;
     listSentClaim.push_back( MeleeHitClaim{ 1, 7 } );
     SW_REQUIRE_TRUE( rig._client.sendIntent( 1, ReplicationIntentTestRig::makeIntent(), listSentClaim ) );
-    rig.pumpUntilDelivered();
+    rig.pollUntilDelivered();
     rig._server.beginTick( 10 );
     ControlIntent         received;
     bool                  bExact = false;
@@ -189,7 +189,7 @@ SW_TEST_CASE( ReplicationIntentTest, ViewTickIsClampedOnTheServerClock )
     const vector<MeleeHitClaim> listNoClaim;
     SW_REQUIRE_TRUE( rig._client.sendIntent( 1, ReplicationIntentTestRig::makeIntent(), listNoClaim ) );
     SW_REQUIRE_TRUE( rig._client.sendIntent( 2, ReplicationIntentTestRig::makeIntent(), listNoClaim ) );
-    rig.pumpUntilDelivered();
+    rig.pollUntilDelivered();
 
     rig._server.beginTick( 501 );
     ControlIntent         received;

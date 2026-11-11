@@ -316,7 +316,7 @@ namespace sw
         if ( binPath.empty() )
             binPath = resolvedPath;
 
-        if ( AssetIO::readsSource() == false )
+        if ( AssetIO::usesSource() == false )
         {
             if ( asset->loadFromBinaryFile( AssetID{ binPath } ) == false )
             {
@@ -766,7 +766,7 @@ namespace sw
         out += '/';
 
         unordered_set<string> uniqueSetWrittenKey; // 중복 판정만 한다 — 출력 순서는 정렬된 `listFile` 가 정한다
-        CookStats             tally;
+        CookStats             stats;
         const CookJobDesc     desc = makeCookJobDesc();
         for ( const string& filePath : listFile )
         {
@@ -809,10 +809,10 @@ namespace sw
                 continue;
             }
             uniqueSetWrittenKey.insert( outputKey );
-            tally.add( result );
+            stats.add( result );
         }
-        SW_LOG_INFO_ID( "PrefabAsset.PrefabCookReusedDDC", "Prefab cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
-        return tally.getWrittenCount();
+        SW_LOG_INFO_ID( "PrefabAsset.PrefabCookReusedDDC", "Prefab cook: %# reused from the DDC, %# cooked", stats._reusedCount, stats._cookedCount );
+        return stats.getWrittenCount();
     }
 
     CookJobDesc PrefabCache::makeCookJobDesc()

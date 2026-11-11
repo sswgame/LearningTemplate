@@ -55,7 +55,7 @@ namespace sw
             static expected<void> validateIntentStep( const AutomationStep& step )
             {
                 ControlIntentStepParams params;
-                const expected<void>    read = step.readFields( params, { "yaw", "pitch" } );
+                const expected<void>    read = step.readProperties( params, { "yaw", "pitch" } );
                 if ( read.has_value() == false )
                     return read;
                 for ( const string_view name : { string_view{ "yaw" }, string_view{ "pitch" } } )
@@ -73,7 +73,7 @@ namespace sw
             /** @brief 폰을 기록 조종자로 `frames` 틱 동안 몰고 원래 조종자에게 돌려준다. 버튼은 첫 틱에 발동 + 내내 누름. */
             static bool runIntentStep( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const ControlIntentStepParams params  = step.readValidatedFields<ControlIntentStepParams>( { "yaw", "pitch" } );
+                const ControlIntentStepParams params  = step.readValidatedProperties<ControlIntentStepParams>( { "yaw", "pitch" } );
                 GameObject*                   pObject = findObject( runner, step, params._pawn );
                 if ( pObject == nullptr )
                     return true;
@@ -127,7 +127,7 @@ namespace sw
             /** @brief 조종자 오브젝트가 폰을 쥐게 한다(`pawn` 이 없으면 놓게). */
             static bool runPossessStep( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const ControlPossessStepParams params  = step.readValidatedFields<ControlPossessStepParams>();
+                const ControlPossessStepParams params  = step.readValidatedProperties<ControlPossessStepParams>();
                 GameObject*                    pObject = findObject( runner, step, params._controller );
                 if ( pObject == nullptr )
                     return true;
@@ -158,5 +158,5 @@ namespace sw
 
     // 행동 층 단계는 그 프레임의 입력 재생 · 조종 시스템 전에 돈다 — 그 프레임의 의도부터 바뀐다.
     SW_AUTOMATION_STEP( controlIntent, "Intent", &ControlAutomationStepsInternal::runIntentStep, &ControlAutomationStepsInternal::validateIntentStep, AutomationStepOptions{}.withBeforeInput() );
-    SW_AUTOMATION_STEP( controlPossess, "Possess", &ControlAutomationStepsInternal::runPossessStep, &AutomationStep::validateFields<ControlPossessStepParams>, AutomationStepOptions{}.withBeforeInput() );
+    SW_AUTOMATION_STEP( controlPossess, "Possess", &ControlAutomationStepsInternal::runPossessStep, &AutomationStep::validateProperties<ControlPossessStepParams>, AutomationStepOptions{}.withBeforeInput() );
 } // namespace sw

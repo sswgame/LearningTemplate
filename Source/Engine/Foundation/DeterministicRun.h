@@ -24,7 +24,7 @@ namespace sw
      */
     struct SW_API DeterministicRunPolicy
     {
-        uint8   _bFinishAssetWorkEachFrame : 1; ///< 프레임 경계마다 걸린 에셋 로드 · IO · 업로드 · PSO · 컴포넌트 등록을 끝낸다(도착이 벽시계 · 워커 순서에 달리지 않게)
+        uint8   _bFinishAssetJobsEachFrame : 1; ///< 프레임 경계마다 걸린 에셋 로드 · IO · 업로드 · PSO · 컴포넌트 등록을 끝낸다(도착이 벽시계 · 워커 순서에 달리지 않게)
         uint8   _bWaitForAnimationClips    : 1; ///< 애니메이터가 시작 때 비동기로 읽는 클립을 `onBeginPlay` 에서 기다린다(첫 포즈가 디스크 지연에 달리지 않게)
         uint8   _bFreezeEnvironmentTime    : 1; ///< 바람 · 파도 시간을 0 에 멈춘다(백엔드끼리 사진 비교 · 결정적 측정)
         float32 _fixedFrameDelta;               ///< 0 보다 크면 프레임마다 벽시계 대신 이 시간(초)을 흘린다(시나리오 · 픽셀 비교 · 재현). 0 이면 벽시계 — 배포본은 늘 0

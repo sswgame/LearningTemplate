@@ -56,7 +56,7 @@ namespace sw
         _listRing.clear();
         _listCorrective.clear();
         FitPartRootParams rootParams;
-        (void)reader.readFields( root, rootParams ); // 오류는 읽개의 목록에 쌓인다
+        (void)reader.readProperties( root, rootParams ); // 오류는 읽개의 목록에 쌓인다
         _layer   = rootParams._layer;
         _profile = rootParams._profile;
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
@@ -65,7 +65,7 @@ namespace sw
             if ( StringUtil::equals( pName, "Hide" ) )
             {
                 FitHideParams hide;
-                (void)reader.readFields( child, hide );
+                (void)reader.readProperties( child, hide );
                 const hashed_string& region = hide._region;
                 if ( region.empty() == false )
                     _listHiddenRegion.push_back( region );
@@ -73,8 +73,8 @@ namespace sw
             else if ( StringUtil::equals( pName, "Ring" ) )
             {
                 FitRingDef ring;
-                const bool bFieldsRead = reader.readFields( child, ring ); // 반지름 > 0 · 폭 >= 0 은 PROPERTY 가 본다
-                if ( bFieldsRead && ring._axis.getLengthSquared() <= 0.0f )
+                const bool bPropertiesRead = reader.readProperties( child, ring ); // 반지름 > 0 · 폭 >= 0 은 PROPERTY 가 본다
+                if ( bPropertiesRead && ring._axis.getLengthSquared() <= 0.0f )
                     reader.addError( "Character.FitRingInvalid", child, "needs a non-zero axis" );
                 else
                     _listRing.push_back( ring );
@@ -82,7 +82,7 @@ namespace sw
             else if ( StringUtil::equals( pName, "Corrective" ) )
             {
                 FitCorrectiveDef corrective;
-                (void)reader.readFields( child, corrective );
+                (void)reader.readProperties( child, corrective );
                 for ( XMLNode deltaNode = child.findChild(); deltaNode; deltaNode = deltaNode.findNextSibling() )
                 {
                     if ( StringUtil::equals( deltaNode.getName(), "Delta" ) == false )
@@ -91,7 +91,7 @@ namespace sw
                         continue;
                     }
                     FitCorrectiveDelta delta;
-                    if ( reader.readFields( deltaNode, delta ) ) // 정점 번호는 부호 없는 수라 음수는 읽기 오류다
+                    if ( reader.readProperties( deltaNode, delta ) ) // 정점 번호는 부호 없는 수라 음수는 읽기 오류다
                         corrective._listDelta.push_back( delta );
                 }
                 _listCorrective.push_back( std::move( corrective ) );

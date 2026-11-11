@@ -215,7 +215,7 @@ namespace sw
         [[nodiscard]] SW_API static bool copySameNamedProperties( const void* pSrc, const TypeInfo& srcType, void* pDst, const TypeInfo& dstType );
 
         /** @brief 키 문자열이 철자 그대로 같은지 비교합니다(대소문자가 다르면 다른 키 — 별칭 없음). */
-        static bool keysEqual( string_view left, string_view right );
+        static bool isKeyEqual( string_view left, string_view right );
 
         /**
          * @brief Alias 로 들어온 이름을 `SerializeContext` 핸들러가 아는 원본 이름(`_name`)으로 바꿉니다.
@@ -274,7 +274,7 @@ namespace sw
         SW_API static void collectRangeErrors( const TypeInfo& typeInfo, ObjectAddress instance, const string& prefix, vector<string>& outListError );
         /**
          * @brief `collectRangeErrors` 의 칸 하나입니다. @p instance 는 @p prop 을 가진 객체의 주소입니다.
-         * @details 파일에 적힌 칸만 보는 읽기(`XMLFields::readFields`)가 부른다 — 적지 않은 칸은 코드의 초기값이라 데이터 오류가 아니다.
+         * @details 파일에 적힌 칸만 보는 읽기(`XMLFields::readProperties`)가 부른다 — 적지 않은 칸은 코드의 초기값이라 데이터 오류가 아니다.
          */
         SW_API static void collectPropertyRangeErrors( const PropertyInfo& prop, ObjectAddress instance, const string& prefix, vector<string>& outListError );
         /**

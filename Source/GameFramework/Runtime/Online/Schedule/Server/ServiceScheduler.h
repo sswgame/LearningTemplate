@@ -92,7 +92,7 @@ namespace sw
         void completeRun( const ScheduledRun& run, bool bSucceeded );
 
         /** @brief 저장소에 요청해 아직 회수하지 않은 작업의 수입니다. */
-        int32 getPendingWorkCount() const { return _store.getOpenCount(); }
+        int32 getPendingJobCount() const { return _store.getOpenCount(); }
 
         /** @brief @p nowMs 직전(포함)의 회차 시각입니다(테스트 · 표시). 없으면 -1. */
         static int64                computeLatestOccurrence( const ScheduleDef& definition, int64 nowMs );

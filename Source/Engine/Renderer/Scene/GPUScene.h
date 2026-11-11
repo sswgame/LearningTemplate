@@ -304,8 +304,13 @@ namespace sw
         uint32 getPrevInstanceWorldCount() const { return static_cast<uint32>( _listUploadedPrevWorld.size() ); }
         /** @brief 마지막 upload 에서 기록이 있는 물체가 하나라도 움직였으면 true 입니다. 카메라가 서 있어도 모션 블러를 끄지 않는 근거다(`FrameViewResources::applyViewPassSelection`). */
         bool hasObjectMotion() const { return _bObjectMotion != SW_FALSE; }
-        /** @brief 배치 가운데 화면 왜곡 머티리얼(`kMaterialDistortionDefine`)이 있으면 true 입니다. 없으면 왜곡 누적 · 적용 패스가 기록되지 않는다(쓰지 않을 때 비용이 없다). 스냅샷이 바뀐 upload 가 정한다. */
+        /**
+         * @brief 배치 가운데 화면 왜곡 머티리얼(`kMaterialDistortionDefine`)이 있으면 true 입니다. 없으면 왜곡 누적 · 적용 패스가 비활성이다(쓰지 않을 때 비용이 없다).
+         * @details 스냅샷을 적용할 때 정한다(`applyCPUSnapshot`) — 뷰 패스 고르기가 업로드보다 먼저 돌아, 업로드에서 정하면 왜곡이 처음 나타나는 프레임에 한 프레임 늦었다.
+         */
         bool hasDistortionBatches() const { return _bDistortionBatches != SW_FALSE; }
+        /** @brief 배치 가운데 굴절 머티리얼(`Material::kRefractionDefine` — 물 · 유리)이 있으면 true 입니다. 없으면 반투명 패스가 장면 색 · 깊이 사본을 필요로 하지 않는다. `hasDistortionBatches` 와 같은 때 정한다. */
+        bool hasRefractionBatches() const { return _bRefractionBatches != SW_FALSE; }
 
     private:
         /// @brief 그룹에서 (버퍼, SRV, 원소 수)를 찾는 테이블입니다. 배치 루프가 조회 대신 읽습니다. 프레임마다 다시 채웁니다.
@@ -354,8 +359,8 @@ namespace sw
          * @details 내용이 지난번 올린 것과 같으면(모두 멈춘 씬의 두 번째 프레임부터) 올리지 않는다.
          */
         void updateMotionHistory( IRHIDevice* pDevice );
-        /** @brief 배치의 퍼뮤테이션에 화면 왜곡 define 이 있는지 다시 봅니다(스냅샷이 바뀐 upload 에서). */
-        void refreshDistortionBatches();
+        /** @brief 배치의 퍼뮤테이션에 화면 왜곡 · 굴절 define 이 있는지 다시 봅니다(CPU 내용이 바뀐 스냅샷을 적용할 때). */
+        void refreshScreenEffectBatches();
 
     private:
         /** @brief 패킷에서 받은 스냅샷입니다. 이 안의 것만 GT 가 만든 값입니다. */
@@ -425,5 +430,7 @@ namespace sw
         uint8 _bObjectMotion{ SW_FALSE };
         /// @brief 배치에 화면 왜곡 머티리얼이 있는지입니다(`hasDistortionBatches`).
         uint8 _bDistortionBatches{ SW_FALSE };
+        /// @brief 배치에 굴절 머티리얼이 있는지입니다(`hasRefractionBatches`).
+        uint8 _bRefractionBatches{ SW_FALSE };
     };
 } // namespace sw

@@ -84,7 +84,7 @@
 
 | # | 문제 | 근거 | 조치 · 상태 | 상용 엔진 |
 |---|---|---|---|---|
-| 7 | App · Server 의 종료 순서 · 프레임 본문 두 벌 | 프레임(beginFrame → fixed/update → 리로드 갱신 → 상태 해시)이 두 파일에 | **끝(2026-11-01)** — 겹치던 게임 걸음(고정 스텝 반복 → 갱신, 프로파일 구간)은 `GameModuleManager::updateGameFrame` 하나. 나머지는 실행 파일마다 다른 일이다(App: 에디터 UI · 페이싱 · 사용자 설정 · 백엔드 교체, Server: 서비스 재시작 · 틱 지표 · 드레인). 종료의 `shutdownDependentsOf` 는 모듈 이미지 호스트가 있는 App 만의 일이다 | FEngineLoop::Tick |
+| 7 | App · Server 의 종료 순서 · 프레임 본문 두 벌 | 프레임(beginFrame → fixed/update → 리로드 갱신 → 상태 해시)이 두 파일에 | **끝(2026-11-01)** — 겹치던 게임 걸음(고정 스텝 반복 → 갱신, 프로파일 구간)은 `GameModuleManager::updateGameFrame` 하나. 나머지는 실행 파일마다 다른 일이다(App: 에디터 UI · 페이싱 · 사용자 설정 · 백엔드 교체, Server: 서비스 재시작 · 틱 지표 · 드레인). 종료의 `shutdownDependents` 는 모듈 이미지 호스트가 있는 App 만의 일이다 | FEngineLoop::Tick |
 | 8 | 파일 감시 넷이 나란히 | `LiveReloadManager` 의 날 감시기, `FileWatchDispatcher` 셋(설정 · 콘텐츠 폴더 · 편집기 애셋), 셰이더는 손 단축키 | **닫음(2026-11-01, 같은 구현 하나다)** — 넷 모두 OS 감시기 추상 하나(`IFileWatcher::createNative` — ReadDirectoryChangesW · inotify)를 쓰고, 접두사 · 확장자 거르기는 `FileWatchDispatcher` 하나다. 뿌리 폴더(설정 · 콘텐츠 · 모듈 폴더)마다 인스턴스가 따로일 뿐이다(언리얼 DirectoryWatcher 도 폴더마다 등록한다). 셰이더는 일부러 수동 재컴파일(Ctrl+F8 — 언리얼 `recompileshaders changed` 와 같다) | 언리얼 DirectoryWatcher 모듈 하나 |
 | 12 | 온라인 소도우미 복사 | JSON `readText` 넷, HTTP `isTransientStatus` 둘, `encodeID` 둘 | **닫음(2026-11-01, 같은 일이 아니다)** — `encodeID` 는 저장 형식이 다르고(16 진 글 · 버전 + varint, 합치면 저장된 값이 바뀐다), `isTransientStatus` 는 제공자마다 뜻이 다르다(애플 401 · 스팀 401 · 403). `readText` 는 `JSONValue::findPathText` 의 한 줄 포장이고, 기본값을 받는 것(로그인 제공자 설정)은 종류마다 정한 문서화된 기본이며 필수 칸은 `isValidSettings` 가 따로 본다 | 끝 |
 | 14 | Runtime 에 장르 기믹 | `Runtime/Gameplay/Gimmick/Genre/*` 약 2.2k 줄 | **닫음(2026-11-01, 두기로)** — 콘텐츠를 보니 이 컴포넌트들은 장르 키트 하나가 아니라 공용 프리팹 라이브러리(`common/prefabs/gimmicks/{shooter,platformer,racing,horror,…}`)가 쓰고, 쇼케이스와 여러 게임이 장르를 가리지 않고 가져다 쓴다. 장르 키트로 쪼개면 공용 프리팹을 쓰는 게임마다 그 키트를 매니페스트에 넣어야 해 결합이 는다 — 언리얼 GameplayFramework · 스타터 콘텐츠처럼 공용 런타임 라이브러리로 둔다 | 끝 |
@@ -196,6 +196,6 @@
 | 선택 | 구간 컴포넌트는 주 메시의 단계를 따른다(`MeshComponent::setLODIndex`). 스킨 칸 · 구간 메시는 늘 CPU 가 고른다 — GPU 인스턴스 LOD 그룹과 CPU 선택이 한 규칙(`MeshLODSystem::isGPUSelectable`)을 쓴다 |
 | 스킨 캐시 | 팔레트가 단계를 싣고(`GPUSkinPalette::_lodIndex`, 군중 묶음은 멤버마다 거리가 달라 모든 단계) 모프 풀이 그 단계 정점만 스킨 행으로. 칸 표 원소는 (결과 시작, 단계 첫 정점)(`GPUSkinResultOffset`, 셰이더 `uint2`) |
 | 단순화 | `CharacterMeshLOD::buildLODs` — 구간마다 `meshopt_simplify`(경계 잠금, 옷과 몸 틈이 벌어지지 않게), 단계가 쓰는 정점만 스킨과 함께 모은다. 표는 데이터(`engine/character/characterlod.xml`) |
-| 짓기 | 외형의 굽기 · 합치기 · LOD 를 `CharacterAppearanceMeshBuild` 로 묶어 워커에서(`AssetManager::launchLoadWork` — 게임 모듈은 태스크 매니저를 보지 않는다, 로드 단계라 결정적 실행이 기다린다). 캐시 읽기 · 쓰기와 걸기는 게임 스레드. 짓는 중인 같은 차림은 키로 나눈다 |
+| 짓기 | 외형의 굽기 · 합치기 · LOD 를 `CharacterAppearanceMeshBuild` 로 묶어 워커에서(`AssetManager::launchLoadJob` — 게임 모듈은 태스크 매니저를 보지 않는다, 로드 단계라 결정적 실행이 기다린다). 캐시 읽기 · 쓰기와 걸기는 게임 스레드. 짓는 중인 같은 차림은 키로 나눈다 |
 
 잰 것(DX12 Release, `load/townsfolk` 200 명): 스키닝 컴퓨트 7.5 ms(100 명일 때 8.4) · 그림자 3.5 · 불투명 5.4 ms · GT 프레임 17.3 ms, 칸마다 스킨 정점 평균 16,653(LOD 0 은 28,696), 변형 · 정점 풀 한도 안.

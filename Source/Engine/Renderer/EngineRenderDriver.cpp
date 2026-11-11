@@ -132,9 +132,9 @@ namespace sw
             _pRenderThread->setPresentInterval( interval );
     }
 
-    uint32 EngineRenderDriver::countPendingCaptureWork( const GameObjectManager* pManager ) const
+    uint32 EngineRenderDriver::countPendingCaptureJobs( const GameObjectManager* pManager ) const
     {
-        return CaptureReadiness::countPendingWork( pManager );
+        return CaptureReadiness::countPendingJobs( pManager );
     }
 
     bool EngineRenderDriver::rebindSceneAfterDeviceRecreate( string* pOutTiming )
@@ -147,7 +147,7 @@ namespace sw
         const Stopwatch rebindWatch;
         // 머티리얼을 다시 올리면 텍스처를 요청한다 — 캐시가 새 디바이스를 먼저 알아야 한다(SceneRHI 단계는 아래 `restartStopped` 에서야 다시 선다).
         SceneRHISubsystem::bindAssetCaches( &_pRHI->getDevice() );
-        RHIRenderResource::initAllFor( &_pRHI->getDevice() );
+        RHIRenderResource::initAllForDevice( &_pRHI->getDevice() );
         const uint64 initMicroseconds = rebindWatch.getElapsedMicroseconds();
 
         // 내렸던 단계를 기동과 같은 본문으로 다시 세운다: 렌더러(업로드 큐 · 배치 합치기 설정을 새 디바이스로) → 렌더 스레드 → 라이브 셰이더 →
@@ -203,7 +203,7 @@ namespace sw
             // 객체이고 GPU 자원(상수 버퍼)은 렌더 스레드의 프록시가 만든다(언리얼 `UMaterial` / `FMaterialRenderProxy`) — 그래서 렌더 스레드를 기다리지 않는다.
             // 줄이 비어도 부른다 — 초기화를 마친 고정 머티리얼을 PSO 미리 만들기 값으로 옮기는 일도 여기서 한다.
             engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().initializePending(
-                &_pRHI->getDevice(), engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetWorkEachFrame == SW_TRUE ? UINT32_MAX : MaterialCache::kMaxInitsPerFrame );
+                &_pRHI->getDevice(), engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE ? UINT32_MAX : MaterialCache::kMaxInitsPerFrame );
             // 밉 스트리밍이 바꿔 끼운 옛 텍스처를 게임 스레드에서 해제한다 — 이미 만든 패킷이 옛 SRV 번호를 쓰는 동안은 `releaseHandle` 이 미룬다.
             engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().releaseRetiredTextures( &_pRHI->getDevice() );
         }
@@ -260,7 +260,7 @@ namespace sw
         {
             // RHI 에 (간접으로라도) 의존하는 단계(씬의 디바이스 · 라이브 셰이더 · 렌더 스레드 · 렌더러)를 기동 표의 역순으로, 기동과 같은
             // 본문으로 내린다. 씬 스냅샷 빌더가 든 머티리얼 · 인스턴스도 FrameRenderer 단계의 종료가 옛 디바이스가 살아 있을 때 놓는다.
-            _startupScope.getCollection().shutdownDependentsOf( _rhiSubsystem );
+            _startupScope.getCollection().shutdownDependents( _rhiSubsystem );
 
             // 옛 디바이스의 GPU 자원은 recreateDevice 안의 shutdown 이 레지스트리에 통보하며 거둔다.
             _pRHI->getDevice().waitIdle( RHIWaitIdleReason::BackendSwap );

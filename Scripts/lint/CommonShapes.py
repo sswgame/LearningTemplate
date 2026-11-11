@@ -9,7 +9,7 @@ Scripts/lint/CommonShapes.py
 1. 철자 같은 열거 이름 표: 모든 case 가 열거자 철자 글을 돌려주는 switch. `ENUM()` + `getEnumName` 이 맡는다(`Core` 는 리플렉션 아래 층이라 보지 않는다).
 2. 다시 읽기 횟수 손 대조: `_seen…ReloadCount` 칸 · `getReloadCount` 호출. `AssetReloadWatch` 가 맡는다.
 3. 첫 컴포넌트 손 찾기: `if ( pFound == nullptr ) pFound = …` 람다. `AutomationComponentWatch::findFirst` 가 맡는다.
-4. 스키마만 읽는 한 줄 검사 함수: `AutomationStep::validateFields<TParams>` 가 맡는다.
+4. 스키마만 읽는 한 줄 검사 함수: `AutomationStep::validateProperties<TParams>` 가 맡는다.
 5. 캔버스 지우기 손 구간: `ed::BeginDelete`. `EditorNodeGraph::collectRemovals` 가 맡는다.
 6. 저장 글 칸 · 부모 차이 손 저장: `string _savedText` 는 `EditorDocumentState`, `DataInheritance::makeDelta` 는 `ResourceComposer::saveDelta` 가 맡는다.
 7. id 를 버리는 리소스 입구: 이름이 `load…` 인 입구(`loadFromAsset` · `loadFromFile` · `loadFromPack` · `load` …)가 리소스 글(`AssetIO::readTextAsset`)을 읽은 뒤
@@ -52,7 +52,7 @@ kDefaultNullPattern = re.compile(r"\bdefault\s*:\s*return\s+nullptr")
 kSeenCountPattern = re.compile(r"\b_seen\w*ReloadCount\b")
 kReloadCallPattern = re.compile(r"::getReloadCount\(\s*\)")
 kFirstComponentPattern = re.compile(r"forEachComponentOfType<[^>]*>\([^\n]*\n\s*\{\s*\n\s*if \( pFound == nullptr \)\s*\n\s*pFound = ")
-kOneLineValidatorPattern = re.compile(r"expected<void>\s+(?:\w+::)?\w+\(\s*const AutomationStep& step\s*\)\s*\{\s*\w+ params;\s*return step\.readFields\( params \);\s*\}")
+kOneLineValidatorPattern = re.compile(r"expected<void>\s+(?:\w+::)?\w+\(\s*const AutomationStep& step\s*\)\s*\{\s*\w+ params;\s*return step\.readProperties\( params \);\s*\}")
 kCanvasDeletePattern = re.compile(r"\bed::BeginDelete\(")
 kSavedTextPattern = re.compile(r"^\s*string\s+_savedText\s*;", re.M)
 kMakeDeltaPattern = re.compile(r"\bDataInheritance::makeDelta\(")
@@ -119,7 +119,7 @@ def collectViolations(path: str, text: str) -> list[tuple[str, str, str]]:
     if kFirstComponentPattern.search(code):
         listViolation.append(("firstComponent", path, "첫 컴포넌트 손 찾기 — AutomationComponentWatch::findFirst"))
     if kOneLineValidatorPattern.search(code):
-        listViolation.append(("oneLineValidator", path, "스키마만 읽는 한 줄 검사 함수 — AutomationStep::validateFields<TParams>"))
+        listViolation.append(("oneLineValidator", path, "스키마만 읽는 한 줄 검사 함수 — AutomationStep::validateProperties<TParams>"))
     if kCanvasDeletePattern.search(code):
         listViolation.append(("canvasDelete", path, "캔버스 지우기 손 구간 — EditorNodeGraph::collectRemovals"))
     if kSavedTextPattern.search(code):
@@ -181,7 +181,7 @@ def runSelfCheck() -> None:
     assert findProblems([("Source/A/a.cpp", same)], {"enumNameSwitch": {"Source/A/a.cpp|Kind": "이유"}}) == []
     stale = findProblems([("Source/A/a.cpp", "int x;")], {"enumNameSwitch": {"Source/A/a.cpp|Kind": "이유"}})
     assert len(stale) == 1 and "낡은" in stale[0], stale
-    validator = "static expected<void> validateX( const AutomationStep& step )\n{\n    MyParams params;\n    return step.readFields( params );\n}"
+    validator = "static expected<void> validateX( const AutomationStep& step )\n{\n    MyParams params;\n    return step.readProperties( params );\n}"
     assert [v[0] for v in collectViolations("Source/A/a.cpp", validator)] == ["oneLineValidator"]
     assert collectViolations("Source/A/a.cpp", "// ed::BeginDelete()\nint x;") == []
     assert [v[0] for v in collectViolations("Source/A/a.cpp", "if ( ed::BeginDelete() )")] == ["canvasDelete"]

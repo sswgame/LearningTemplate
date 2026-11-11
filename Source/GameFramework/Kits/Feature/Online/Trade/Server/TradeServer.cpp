@@ -196,7 +196,7 @@ namespace sw
         }
     }
 
-    void TradeServer::respondImmediately( uint64 callID, TradeOutcome result )
+    void TradeServer::respondImmediately( uint64 callID, TradeServiceResult result )
     {
         TradeReply reply;
         reply._result = result._result;

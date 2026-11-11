@@ -4,7 +4,7 @@
  *        같은 효과의 재료끼리는 효과 세기와 지속 시간이 더해지고, 서로 다른 효과가 섞이면 효과가 사라진 수상한 요리가 됩니다. 회복량은 재료 회복량의 합에 배율을 곱한 값입니다.
  * @details 요리 이름(꼬치, 스튜)은 기반 `Crafting` 의 레시피로 정한다. 작업대가 `_station` 이고 재료가 냄비와 똑같은 레시피가 있으면 `Crafter::craft` 로 그 결과를 만들고, 없으면 일반 요리(`_genericDish`)가 된다.
  *          효과와 회복량은 어느 쪽이든 이 파일의 규칙으로 정한다. 정의 구조체는 리플렉션 스키마다 — 기본값은 초기값, 범위는 `PROPERTY( Min · Max )`, 필수는 `Required` 이고
- *          `XMLFields::readFields` 가 읽는다.
+ *          `XMLFields::readProperties` 가 읽는다.
  */
 #pragma once
 #include "Core/Container/vector.h"
