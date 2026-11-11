@@ -36,7 +36,20 @@ namespace sw
         /** @brief POSIX 훅의 도우미입니다. 시그널 처리기와 그 뒤의 보고 단계입니다(주인 타입은 크로스 플랫폼이라 시그널 형식을 들 수 없다). */
         struct PosixCrashHandlerInternal
         {
-            static constexpr int32 kArrFatalSignal[] = { SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT };
+            static constexpr int32  kArrFatalSignal[] = { SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT };
+            static constexpr size_t kFatalSignalCount = sizeof( kArrFatalSignal ) / sizeof( kArrFatalSignal[0] );
+            /**
+             * @brief 설치 전에 걸려 있던 처리기입니다(`kArrFatalSignal` 순서). 보고 뒤와 `uninstall` 이 이것을 되돌린다 — 덮어쓰면 Android debuggerd(tombstone · Play Console 기록)와
+             *        ASan · TSan 의 SEGV 처리기가 사라진다(감사 C-13, Breakpad · Crashpad 와 같은 순서). `install` 이 시그널을 걸기 전에 채우고 그 뒤로는 읽기만 한다.
+             *        주인 타입(`CrashHandlerProcessHook`)은 크로스 플랫폼이라 `struct sigaction` 을 들 수 없어 여기 둔다.
+             */
+            static inline struct sigaction s_arrPreviousAction[kFatalSignalCount]{};
+
+            /** @brief 우리가 걸기 전의 처리기를 되돌립니다(없으면 기본 동작). 시그널 안에서도 부른다 — `sigaction` 은 async-signal-safe 다. */
+            static void restorePreviousAction( size_t index )
+            {
+                sigaction( kArrFatalSignal[index], &s_arrPreviousAction[index], nullptr );
+            }
 
             /**
              * @brief 현재 스레드의 64비트 ID 입니다.
@@ -146,11 +159,12 @@ namespace sw
                 if ( pHandler != nullptr )
                     reportCrash( *pHandler, signalNumber, signalName( signalNumber ), pFaultAddress, pPlatformContext );
 
-                // 기본 동작으로 되돌려 시그널을 다시 올린다. 코어 덤프가 켜져 있으면 그때 남는다.
-                struct sigaction restoreAction{};
-                restoreAction.sa_handler = SIG_DFL;
-                sigemptyset( &restoreAction.sa_mask );
-                sigaction( signalNumber, &restoreAction, nullptr );
+                // 앞 처리기(없으면 기본 동작)로 되돌려 시그널을 다시 올린다 — debuggerd · 새니타이저가 이어 받고, 기본 동작이면 코어 덤프가 그때 남는다.
+                for ( size_t index = 0; index < kFatalSignalCount; ++index )
+                {
+                    if ( kArrFatalSignal[index] == signalNumber )
+                        restorePreviousAction( index );
+                }
                 std::raise( signalNumber );
             }
         };
@@ -172,9 +186,10 @@ namespace sw
         sigemptyset( &action.sa_mask );
         action.sa_flags = SA_SIGINFO | SA_RESTART | SA_ONSTACK;
 
-        for ( int32 signalNumber : PosixCrashHandlerInternal::kArrFatalSignal )
+        for ( size_t index = 0; index < PosixCrashHandlerInternal::kFatalSignalCount; ++index )
         {
-            if ( sigaction( signalNumber, &action, nullptr ) != 0 )
+            const int32 signalNumber = PosixCrashHandlerInternal::kArrFatalSignal[index];
+            if ( sigaction( signalNumber, &action, &PosixCrashHandlerInternal::s_arrPreviousAction[index] ) != 0 )
                 SW_LOG_WARNING_ID( "PosixCrashHandler.SigactionFailedSignalNot", "sigaction(%#) failed - this signal will not be recorded.", signalNumber );
         }
 
@@ -183,12 +198,9 @@ namespace sw
 
     void CrashHandlerProcessHook::uninstall()
     {
-        struct sigaction restoreAction{};
-        restoreAction.sa_handler = SIG_DFL;
-        sigemptyset( &restoreAction.sa_mask );
-        for ( int32 signalNumber : PosixCrashHandlerInternal::kArrFatalSignal )
+        for ( size_t index = 0; index < PosixCrashHandlerInternal::kFatalSignalCount; ++index )
         {
-            sigaction( signalNumber, &restoreAction, nullptr );
+            PosixCrashHandlerInternal::restorePreviousAction( index );
         }
 
         // 이 스레드의 대체 스택도 해제한다. 커널이 보관한 등록을 지워 두는 편이 뒤에 오는 핸들러(테스트 · 도구)와 엉키지 않는다.
