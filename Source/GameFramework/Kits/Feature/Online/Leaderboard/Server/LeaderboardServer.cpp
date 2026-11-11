@@ -68,7 +68,7 @@ namespace sw
         AccountIdentity identity;
         if ( _pDirectory == nullptr || _pDirectory->findIdentity( context._accountID, identity ) == false )
             identity._displayName.clear();
-        _pService->submitScore( request._boardID, context._accountID, identity._displayName, request._score, context._nowMs, call._callID );
+        _pService->submitScore( request._boardID, context._accountID, identity._displayName, request._score, context._idempotencyKey, context._nowMs, call._callID );
     }
 
     void LeaderboardServer::handleCall( OnlineServerCall<LeaderboardMethod::GetAchievements> call, const OnlineCallContext& context, const OnlineNoBody& request )

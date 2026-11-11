@@ -23,6 +23,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Network/Message/NetRequest.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -133,13 +134,19 @@ namespace sw
         /** @brief 현재 기간 id 를 반환합니다. 기간 시작 시각이며 None 이면 0입니다. */
         uint64 computePeriodID( const LeaderboardDef& definition, UnixMilliseconds nowMs ) const;
 
-        /** @brief 점수를 냅니다. 서버 게임 로직이 부르며, 클라이언트 제출은 바인딩이 `_bClientSubmit` 보드만 넘깁니다. 요청 태그가 0이면 완료가 없습니다. */
-        void submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, UnixMilliseconds nowMs, uint64 requestTag );
+        /**
+         * @brief 점수를 냅니다. 서버 게임 로직이 부르며, 클라이언트 제출은 바인딩이 `_bClientSubmit` 보드만 넘깁니다. 요청 태그가 0이면 완료가 없습니다.
+         * @details Sum · Latest 보드는 @p idempotencyKey 의 멱등 기록을 점수와 같은 트랜잭션에 남긴다 — 커밋이 Unavailable(적용 여부 모름)이어도 같은 키의 재시도가
+         *          두 번 더하지 않는다(감사 O-5, PlayFab 통계 Version · Nakama 유일 키 자리). 같은 키로 다시 오면 그때의 값을 돌려준다.
+         */
+        void submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs,
+                          uint64 requestTag );
         void readTop( string_view boardID, int32 offset, int32 count, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 내 순위 주변을 조회합니다. 위아래로 @p radius 명씩이며 나를 포함합니다. 점수가 없으면 NotRanked 입니다. */
         void readAround( string_view boardID, AccountID accountID, int32 radius, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 통계를 바꿉니다. @p update 방식을 따르며 Best 는 큰 값을 씁니다. 그 통계에 연결된 보드에 같은 값을 냅니다. */
-        void changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, UnixMilliseconds nowMs, uint64 requestTag );
+        void changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, const NetIdempotencyKey& idempotencyKey,
+                         UnixMilliseconds nowMs, uint64 requestTag );
         void readStats( AccountID accountID, uint64 requestTag );
         // IAccountStatSource. 바인딩이 계정이 붙을 때 · 떠날 때 부르고, 매칭이 다른 서버의 파티원을 줄 세우는 동안 부른다
         AccountStatLookup findStat( AccountID accountID, string_view statName, int64& outValue ) const override;

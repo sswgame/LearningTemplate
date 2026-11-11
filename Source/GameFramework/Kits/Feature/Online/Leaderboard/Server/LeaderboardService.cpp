@@ -7,6 +7,7 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
@@ -17,6 +18,7 @@
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
+#include <cstring>
 
 namespace sw
 {
@@ -235,6 +237,7 @@ namespace sw
         UnixMilliseconds  _nowMs{ 0 };
         LeaderboardUpdate _update{ LeaderboardUpdate::Best };
         LeaderboardOrder  _order{ LeaderboardOrder::Descending };
+        NetIdempotencyKey _idempotencyKey{}; ///< Sum · Latest 쓰기의 멱등 기록 키. 비면(서버 안의 파생 쓰기) 기록하지 않는다
     };
 
     namespace
@@ -259,12 +262,38 @@ namespace sw
         struct LeaderboardStoreRun
         {
             /** @brief 갱신 방식에 따라 새 값을 정하고 버전 조건으로 씁니다. 충돌이면 다시 읽어 `OnlineLimit::kMaxConflictRetry` 번까지 다시 한다. */
+            /** @brief 멱등 기록의 응답(적용한 뒤의 값)을 읽습니다. 처음 요청이면 NotFound 입니다. */
+            static ServiceStoreResult findReplayedValue( IServiceStoreConnection& connection, const LeaderboardWriteInput& input, int64& outValue )
+            {
+                vector<uint8>            listReply;
+                const ServiceStoreResult found = ServiceIdempotency::findReply( connection, input._key, input._idempotencyKey._high, input._idempotencyKey._low, listReply );
+                if ( found != ServiceStoreResult::Ok )
+                    return found;
+                if ( listReply.size() != sizeof( int64 ) )
+                    return ServiceStoreResult::Invalid;
+                std::memcpy( &outValue, listReply.data(), sizeof( int64 ) );
+                return ServiceStoreResult::Ok;
+            }
+
             static LeaderboardWriteResult writeValue( IServiceStoreConnection& connection, const LeaderboardWriteInput& input )
             {
                 using Internal = LeaderboardServiceInternal;
                 LeaderboardWriteResult write;
+                // 누적 · 덮어쓰기는 다시 적용하면 값이 달라진다 — 멱등 기록이 재시도를 가린다(Best 는 다시 해도 같다)
+                const bool bRecorded = input._idempotencyKey.isValid() && ( input._update == LeaderboardUpdate::Sum || input._update == LeaderboardUpdate::Latest );
                 for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
                 {
+                    if ( bRecorded )
+                    {
+                        const ServiceStoreResult replayed = findReplayedValue( connection, input, write._finalValue );
+                        if ( replayed == ServiceStoreResult::Ok )
+                        {
+                            write._result = LeaderboardResult::Ok; // 이미 적용했다 — 그때의 값을 돌려준다
+                            return write;
+                        }
+                        if ( replayed != ServiceStoreResult::NotFound )
+                            return write;
+                    }
                     ServiceRecord            record;
                     const ServiceStoreResult readResult = connection.readRecord( input._table, input._key, record );
                     if ( readResult != ServiceStoreResult::Ok && readResult != ServiceStoreResult::NotFound )
@@ -280,8 +309,16 @@ namespace sw
                     }
                     ServiceTransaction transaction;
                     transaction.put( input._table, input._key, Internal::encodeScore( write._finalValue, input._nowMs.count(), input._displayName ), record._version );
+                    if ( bRecorded )
+                    {
+                        vector<uint8> listReply( sizeof( int64 ) );
+                        std::memcpy( listReply.data(), &write._finalValue, sizeof( int64 ) );
+                        ServiceIdempotency::addReply( transaction, input._key, input._idempotencyKey._high, input._idempotencyKey._low, std::move( listReply ) );
+                    }
                     const ServiceStoreResult commitResult = connection.commit( transaction );
-                    if ( commitResult == ServiceStoreResult::Ok )
+                    const bool               bApplied     = commitResult == ServiceStoreResult::Ok ||
+                                          ( bRecorded && commitResult == ServiceStoreResult::Unavailable && findReplayedValue( connection, input, write._finalValue ) == ServiceStoreResult::Ok );
+                    if ( bApplied )
                     {
                         write._result   = LeaderboardResult::Ok;
                         write._bChanged = SW_TRUE;
@@ -675,7 +712,8 @@ namespace sw
         return string( "lb/" ) + string( boardID ) + "/" + ServiceKeyUtil::makeHex64( periodID );
     }
 
-    void LeaderboardService::submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, UnixMilliseconds nowMs, uint64 requestTag )
+    void LeaderboardService::submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, const NetIdempotencyKey& idempotencyKey,
+                                          UnixMilliseconds nowMs, uint64 requestTag )
     {
         const LeaderboardDef* pBoard = findBoard( boardID );
         if ( pBoard == nullptr )
@@ -697,13 +735,14 @@ namespace sw
             return;
         }
         LeaderboardWriteInput input;
-        input._table       = LeaderboardServiceInternal::getScoreTable();
-        input._key         = LeaderboardServiceInternal::makeScorePrefix( pBoard->_boardID, periodID ) + ServiceKeyUtil::makeHex64( accountID );
-        input._displayName = string( displayName );
-        input._value       = score;
-        input._nowMs       = nowMs;
-        input._update      = pBoard->_update;
-        input._order       = pBoard->_order;
+        input._table          = LeaderboardServiceInternal::getScoreTable();
+        input._key            = LeaderboardServiceInternal::makeScorePrefix( pBoard->_boardID, periodID ) + ServiceKeyUtil::makeHex64( accountID );
+        input._displayName    = string( displayName );
+        input._value          = score;
+        input._nowMs          = nowMs;
+        input._update         = pBoard->_update;
+        input._order          = pBoard->_order;
+        input._idempotencyKey = idempotencyKey;
         submitWrite( input, pBoard->_boardID, accountID, periodID, requestTag, LeaderboardOperation::Submit );
     }
 
@@ -716,8 +755,8 @@ namespace sw
         { applyScoreWrite( boardID, periodID, accountID, displayName, write._finalValue, write._bChanged == SW_TRUE, write._result, requestTag, operation, nowMs ); } );
     }
 
-    void LeaderboardService::changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, UnixMilliseconds nowMs,
-                                         uint64 requestTag )
+    void LeaderboardService::changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update,
+                                         const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs, uint64 requestTag )
     {
         const bool bValid = LeaderboardNameRule::isValidID( statName ) && update < LeaderboardUpdate::Count && accountID != kInvalidAccountID &&
                           -LeaderboardLimit::kMaxAbsScore <= value && value <= LeaderboardLimit::kMaxAbsScore;
@@ -727,13 +766,14 @@ namespace sw
             return;
         }
         LeaderboardWriteInput input;
-        input._table       = LeaderboardServiceInternal::getStatTable();
-        input._key         = ServiceKeyUtil::makeHex64( accountID ) + "/" + string( statName );
-        input._displayName = string( displayName );
-        input._value       = value;
-        input._nowMs       = nowMs;
-        input._update      = update;
-        input._order       = LeaderboardOrder::Descending; // 통계의 Best 는 큰 값이다
+        input._table          = LeaderboardServiceInternal::getStatTable();
+        input._key            = ServiceKeyUtil::makeHex64( accountID ) + "/" + string( statName );
+        input._displayName    = string( displayName );
+        input._value          = value;
+        input._nowMs          = nowMs;
+        input._update         = update;
+        input._order          = LeaderboardOrder::Descending; // 통계의 Best 는 큰 값이다
+        input._idempotencyKey = idempotencyKey;
         submitWrite( input, string( statName ), accountID, 0, requestTag, LeaderboardOperation::StatChange );
     }
 
@@ -760,7 +800,7 @@ namespace sw
             for ( const auto& [id, board] : _mapBoard )          // 통계에 연결된 보드에 같은 값을 낸다. 요청 태그가 0이라 완료가 없다
             {
                 if ( board._sourceStat == boardID )
-                    submitScore( board._boardID, accountID, displayName, finalScore, nowMs, 0 );
+                    submitScore( board._boardID, accountID, displayName, finalScore, NetIdempotencyKey{}, nowMs, 0 ); // 통계 쓰기가 이미 멱등이다. 연결 보드는 Sum 일 수 없다
             }
             for ( const auto& [achievementID, achievement] : _mapAchievement ) // 임계값을 넘은 업적이다. 이미 달성했으면 작업은 아무것도 하지 않는다
             {

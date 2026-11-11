@@ -91,10 +91,11 @@ namespace
             return std::move( listCompletion[0] );
         }
 
-        LeaderboardCompletion submit( string_view boardID, AccountID accountID, int64 score, int64 nowMs = kNowMs, string_view name = "name" )
+        LeaderboardCompletion submit( string_view boardID, AccountID accountID, int64 score, int64 nowMs = kNowMs, string_view name = "name",
+                                      const NetIdempotencyKey& idempotencyKey = NetIdempotencyKey::makeRandom() )
         {
             const uint64 tag = _nextTag++;
-            _service.submitScore( boardID, accountID, name, score, UnixMilliseconds{ nowMs }, tag );
+            _service.submitScore( boardID, accountID, name, score, idempotencyKey, UnixMilliseconds{ nowMs }, tag );
             return take( tag );
         }
 
@@ -122,7 +123,7 @@ namespace
         LeaderboardCompletion stat( AccountID accountID, string_view statName, int64 value, LeaderboardUpdate update )
         {
             const uint64 tag = _nextTag++;
-            _service.changeStat( accountID, "name", statName, value, update, UnixMilliseconds{ kNowMs }, tag );
+            _service.changeStat( accountID, "name", statName, value, update, NetIdempotencyKey::makeRandom(), UnixMilliseconds{ kNowMs }, tag );
             return take( tag );
         }
 
@@ -261,6 +262,26 @@ SW_TEST_CASE( LeaderboardServiceTest, RegistrationRefusesBrokenDefinitions )
     SW_EXPECT_FALSE( service.registerAchievement( achievement ) );
 }
 
+/** @brief [LeaderboardServiceTest] 같은 멱등 키로 다시 낸 Sum · Latest 제출은 다시 더하지 · 덮지 않고 그때의 값을 돌려준다(감사 O-5 — 커밋 결과를 모른 채 재시도해도 한 번만 든다) */
+SW_TEST_CASE( LeaderboardServiceTest, RetriedSumWithSameKeyCountsOnce )
+{
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
+    rig.addBoard( "sum", LeaderboardOrder::Descending, LeaderboardUpdate::Sum );
+    rig.addBoard( "latest", LeaderboardOrder::Descending, LeaderboardUpdate::Latest );
+    const NetIdempotencyKey key = NetIdempotencyKey::makeRandom();
+
+    SW_EXPECT_EQUAL( int64( 10 ), rig.submit( "sum", 1, 10, kNowMs, "name", key )._score );
+    SW_EXPECT_EQUAL( int64( 10 ), rig.submit( "sum", 1, 10, kNowMs, "name", key )._score ); // 재시도 — 20 이 아니다
+    SW_EXPECT_EQUAL( int64( 15 ), rig.submit( "sum", 1, 5 )._score );                       // 다른 요청은 더한다
+
+    const NetIdempotencyKey latestKey = NetIdempotencyKey::makeRandom();
+    SW_EXPECT_EQUAL( int64( 7 ), rig.submit( "latest", 1, 7, kNowMs, "name", latestKey )._score );
+    SW_EXPECT_EQUAL( int64( 3 ), rig.submit( "latest", 1, 3 )._score );
+    SW_EXPECT_EQUAL( int64( 7 ), rig.submit( "latest", 1, 7, kNowMs, "name", latestKey )._score ); // 늦게 온 재시도가 새 값을 덮지 않는다
+    SW_EXPECT_EQUAL( 0, rig._service.getPendingCount() );
+}
+
 /** @brief [LeaderboardServiceTest] 갱신 방식: Best 는 정렬 방향으로 더 좋을 때만, Latest 는 덮어쓰기, Sum 은 더하되 상한에서 멈춘다 */
 SW_TEST_CASE( LeaderboardServiceTest, UpdateModesApply )
 {
@@ -307,7 +328,7 @@ SW_TEST_CASE( LeaderboardServiceTest, InvalidSubmitsAreRefused )
     SW_EXPECT_TRUE( rig.submit( "season", 1, 1, kSeasonEndMs )._result == LeaderboardResult::NotRanked ); // 끝 시각은 시즌 밖이다
     SW_EXPECT_EQUAL( commitsBefore, world._database.getCommitCount() );
 
-    rig._service.submitScore( "nope", 1, "", 1, UnixMilliseconds{ kNowMs }, 0 );
+    rig._service.submitScore( "nope", 1, "", 1, NetIdempotencyKey::makeRandom(), UnixMilliseconds{ kNowMs }, 0 );
     rig.pump();
     vector<LeaderboardCompletion> listCompletion;
     rig._service.takeCompletions( listCompletion );
@@ -428,7 +449,7 @@ SW_TEST_CASE( LeaderboardServiceTest, RebuildsRanksAfterCacheLoss )
 
     LeaderboardFixture restarted{ world._clock, world._database };
     restarted.addBoard( "fastest", LeaderboardOrder::Ascending );
-    restarted._service.submitScore( "fastest", 3, "late", 20, UnixMilliseconds{ kNowMs }, 0 ); // 완료는 다시 채우는 동안 온다
+    restarted._service.submitScore( "fastest", 3, "late", 20, NetIdempotencyKey::makeRandom(), UnixMilliseconds{ kNowMs }, 0 ); // 완료는 다시 채우는 동안 온다
     restarted._service.readTop( "fastest", 0, 10, UnixMilliseconds{ kNowMs }, 1 );
     restarted._router.pump();                                                     // 준비 표시가 없어 다시 채우기를 맡긴다
     restarted._service.readTop( "fastest", 0, 1, UnixMilliseconds{ kNowMs }, 2 ); // 그동안 온 읽기는 기다린다
