@@ -89,7 +89,7 @@ namespace sw
     {
     public:
         static constexpr uint32 kStateTag     = FourCCUtil::make( "CLOK" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2; ///< 2: 하루 안 시각이 float64 다
 
         WorldClock();
 
@@ -140,7 +140,7 @@ namespace sw
     private:
         WorldClockSettings           _settings;
         EventBuffer<WorldClockEvent> _eventBuffer;
-        float32                      _secondOfDay; ///< 0.._secondsPerDay
+        float64                      _secondOfDay; ///< 0.._secondsPerDay. float64 다 — 작은 걸음(1 분 · 프레임)을 하루 내내 더해도 자정에 닿는다(float32 는 하루 5000 초에서 0.1 초 남짓 모자라 날이 넘어가지 않았다, 언리얼 FTimespan 의 정수 틱 자리)
         float32                      _timeScale;
         int32                        _day;
         uint8                        _bPaused;

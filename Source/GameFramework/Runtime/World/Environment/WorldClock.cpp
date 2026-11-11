@@ -24,7 +24,7 @@ namespace sw
     WorldClock::WorldClock()
         : _settings{}
         , _eventBuffer{}
-        , _secondOfDay{ 0.0f }
+        , _secondOfDay{ 0.0 }
         , _timeScale{ 1.0f }
         , _day{ 0 }
         , _bPaused{ SW_FALSE }
@@ -70,13 +70,13 @@ namespace sw
             return false;
         }
         _day         = day;
-        _secondOfDay = hour / 24.0f * _settings._secondsPerDay;
+        _secondOfDay = static_cast<float64>( hour ) / 24.0 * _settings._secondsPerDay;
         return true;
     }
 
     float32 WorldClock::getHour() const
     {
-        return _secondOfDay / _settings._secondsPerDay * 24.0f;
+        return static_cast<float32>( _secondOfDay / _settings._secondsPerDay * 24.0 );
     }
 
     int32 WorldClock::getMinute() const
@@ -143,7 +143,7 @@ namespace sw
     void WorldClock::advanceToHour( float32 hour )
     {
         const float32 target = MathUtil::clamp( hour, 0.0f, 23.9999f ) / 24.0f * _settings._secondsPerDay;
-        float32       gap    = target - _secondOfDay;
+        float32       gap    = static_cast<float32>( target - _secondOfDay );
         if ( gap <= 0.0f )
             gap += _settings._secondsPerDay;
         advanceGameSeconds( gap );
@@ -158,33 +158,34 @@ namespace sw
 
     void WorldClock::advanceGameSeconds( float32 gameSeconds )
     {
-        constexpr int32 kHoursPerDay   = 24;
-        const float32   secondsPerHour = _settings._secondsPerDay / static_cast<float32>( kHoursPerDay );
+        constexpr int32   kHoursPerDay   = 24;
+        constexpr float64 kHourEpsilon   = 1.0e-9; // 경계에 올려놓은 시각을 나눈 몫이 N 바로 아래로 반올림되지 않게
+        const float64     secondsPerHour = static_cast<float64>( _settings._secondsPerDay ) / kHoursPerDay;
         // 시 경계마다 끊어 가며 넘긴다(하루를 건너뛰어도 모든 경계를 알린다). 지금 시를 **정수로** 들고 경계를 넘을 때마다 하나 올린다 — 예전에는 매 걸음
         // `getHour()` 를 다시 구해, 경계에 올려놓은 시각이 N 바로 아래로 반올림되면 다음 경계까지가 0 이 되어 걸음이 1e-4 로 고정됐고 하루 길이에 따라
         // (3500 · 5000 · 7000 · 10000 …) 2048 초를 넘은 시각에서는 그 걸음이 float 에 더해지지 않아 시계가 영구히 멈췄다(감사 G-2). 매 반복은 남은 시간을
         // 다 쓰거나 시를 하나 올리므로 반드시 끝난다(언리얼 FTimespan 의 정수 틱 자리).
-        int32   hour = MathUtil::clamp( static_cast<int32>( _secondOfDay / secondsPerHour ), 0, kHoursPerDay - 1 );
-        float32 left = gameSeconds;
-        while ( left > 0.0f )
+        int32   hour = MathUtil::clamp( static_cast<int32>( _secondOfDay / secondsPerHour + kHourEpsilon ), 0, kHoursPerDay - 1 );
+        float64 left = gameSeconds;
+        while ( left > 0.0 )
         {
             const DayPhase phaseBefore = computePhase( getHour() );
-            const float32  boundary    = static_cast<float32>( hour + 1 ) * secondsPerHour;
-            const float32  toNextHour  = boundary - _secondOfDay;
-            if ( left < toNextHour - 1.0e-3f )
+            const float64  boundary    = static_cast<float64>( hour + 1 ) * secondsPerHour;
+            const float64  toNextHour  = boundary - _secondOfDay;
+            if ( left < toNextHour - 1.0e-6 )
             {
                 _secondOfDay += left; // 이 시 안에서 끝난다
-                left = 0.0f;
+                left = 0.0;
             }
             else
             {
-                left         = MathUtil::max( 0.0f, left - MathUtil::max( toNextHour, 0.0f ) );
+                left         = MathUtil::max( 0.0, left - MathUtil::max( toNextHour, 0.0 ) );
                 _secondOfDay = boundary;
                 ++hour;
                 if ( hour >= kHoursPerDay )
                 {
                     hour                     = 0;
-                    _secondOfDay             = 0.0f;
+                    _secondOfDay             = 0.0;
                     const int32 seasonBefore = getSeasonIndex();
                     const int32 yearBefore   = getYear();
                     ++_day;
@@ -209,12 +210,13 @@ namespace sw
 
     void WorldClock::serializeState( StateIO& io )
     {
+        io.header( kStateTag, kStateVersion ); // 판 1(float32 시각 · 머리표 없음)은 거절한다
         io.value( _day );
         io.value( _secondOfDay );
         io.value( _timeScale );
         io.flag( _bPaused );
         // NaN 은 비교가 모두 거짓이라 여기서 걸린다.
-        io.check( 0 <= _day && 0.0f <= _secondOfDay && _secondOfDay < _settings._secondsPerDay && 0.0f <= _timeScale );
+        io.check( 0 <= _day && 0.0 <= _secondOfDay && _secondOfDay < _settings._secondsPerDay && 0.0f <= _timeScale );
         if ( io.isReading() )
         {
             _eventBuffer.clear();
