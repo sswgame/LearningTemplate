@@ -45,15 +45,36 @@ namespace sw
                 return 16 + NetSecurityConstant::kX25519KeySize + tokenSize;
             }
 
-            /** @brief 세션 비밀로 증명 AEAD 를 만듭니다. 유도한 키는 지웁니다. */
-            static unique_ptr<INetAEAD> createProofAEAD( INetSecurityProvider& provider, NetAEADAlgorithm algorithm, const NetSessionSecret& secret )
+            /**
+             * @brief 증명 태그 = HKDF-SHA256( 증명 키, info = 라벨 ‖ 전사 ) 의 앞 16 바이트입니다. 유도한 키는 지웁니다.
+             * @details 예전에는 같은 키 · 고정 nonce(0) 의 AEAD 로 봉인했다 — 같은 비밀로 태그가 두 번 나가면(시간 초과 재시도 · 창 경계의 챌린지 둘)
+             *          GCM · ChaCha20-Poly1305 의 인증 키가 복원되어 위조할 수 있었다(감사 N-1). PRF 출력은 nonce 가 없어 재사용이 문제가 아니다
+             *          (netcode.io connect token · Steam 티켓이 HMAC · 서명으로 묶는 자리).
+             */
+            [[nodiscard]] static bool computeProof( INetSecurityProvider& provider, const NetSessionSecret& secret, const uint8* pAad, int32 aadSize, uint8* pOutTag )
             {
-                uint8                arrProofKey[NetSecurityConstant::kAEADKeySize]{};
-                unique_ptr<INetAEAD> proof;
-                if ( NetSessionKeys::computeProofKey( provider, secret, arrProofKey ) )
-                    proof = provider.createAEAD( algorithm, arrProofKey );
+                static constexpr char kLabel[] = "sw.net.connect-proof.v2";
+                uint8                 arrProofKey[NetSecurityConstant::kAEADKeySize]{};
+                uint8                 arrInfo[sizeof( kLabel ) + NetPacketSealer::kMaxProofAadSize]{};
+                bool                  bComputed = NetSessionKeys::computeProofKey( provider, secret, arrProofKey );
+                if ( bComputed )
+                {
+                    std::memcpy( arrInfo, kLabel, sizeof( kLabel ) );
+                    std::memcpy( arrInfo + sizeof( kLabel ), pAad, static_cast<size_t>( aadSize ) );
+                    bComputed = provider.computeHKDFSHA256( arrProofKey, static_cast<int32>( sizeof( arrProofKey ) ), nullptr, 0, arrInfo,
+                                                            static_cast<int32>( sizeof( kLabel ) ) + aadSize, pOutTag, NetSecurityConstant::kAEADTagSize );
+                }
                 std::memset( arrProofKey, 0, sizeof( arrProofKey ) );
-                return proof;
+                return bComputed;
+            }
+
+            /** @brief 길이가 같은 두 바이트 열을 내용과 무관한 시간에 견줍니다(태그 비교가 첫 다른 바이트에서 멈추면 시간으로 한 바이트씩 맞춰 간다). */
+            [[nodiscard]] static bool isEqualConstantTime( const uint8* pLeft, const uint8* pRight, int32 size )
+            {
+                uint8 difference = 0;
+                for ( int32 index = 0; index < size; ++index )
+                    difference = static_cast<uint8>( difference | ( pLeft[index] ^ pRight[index] ) );
+                return difference == 0;
             }
         };
     } // namespace
@@ -169,26 +190,18 @@ namespace sw
     bool NetPacketSealer::computeProofTag( INetSecurityProvider& provider, NetAEADAlgorithm algorithm, const NetSessionSecret& secret, uint64 clientSalt, uint64 serverSalt,
                                            const uint8* pPublicKey, const uint8* pToken, int32 tokenSize, uint8* pOutTag )
     {
+        (void)algorithm; // 증명은 AEAD 가 아니라 PRF 다 — 알고리즘은 세션 봉인에만 쓴다
         uint8                 arrAad[kMaxProofAadSize]{};
         const optional<int32> aadSize = NetPacketSealerInternal::makeProofAad( clientSalt, serverSalt, pPublicKey, pToken, tokenSize, arrAad );
-        if ( aadSize.has_value() == false )
-            return false;
-        const unique_ptr<INetAEAD> proof = NetPacketSealerInternal::createProofAEAD( provider, algorithm, secret );
-        if ( proof == nullptr )
-            return false;
-        const uint8 arrZeroNonce[NetSecurityConstant::kAEADNonceSize]{};
-        return proof->seal( arrZeroNonce, arrAad, *aadSize, nullptr, 0, pOutTag );
+        return aadSize.has_value() && NetPacketSealerInternal::computeProof( provider, secret, arrAad, *aadSize, pOutTag );
     }
 
     bool NetPacketSealer::isProofTagValid( INetSecurityProvider& provider, NetAEADAlgorithm algorithm, const NetSessionSecret& secret, uint64 clientSalt, uint64 serverSalt,
                                            const uint8* pPublicKey, const uint8* pToken, int32 tokenSize, const uint8* pTag )
     {
-        uint8                 arrAad[kMaxProofAadSize]{};
-        const optional<int32> aadSize = NetPacketSealerInternal::makeProofAad( clientSalt, serverSalt, pPublicKey, pToken, tokenSize, arrAad );
-        if ( aadSize.has_value() == false )
+        uint8 arrExpected[NetSecurityConstant::kAEADTagSize]{};
+        if ( computeProofTag( provider, algorithm, secret, clientSalt, serverSalt, pPublicKey, pToken, tokenSize, arrExpected ) == false )
             return false;
-        const unique_ptr<INetAEAD> proof = NetPacketSealerInternal::createProofAEAD( provider, algorithm, secret );
-        const uint8                arrZeroNonce[NetSecurityConstant::kAEADNonceSize]{};
-        return proof != nullptr && proof->open( arrZeroNonce, arrAad, *aadSize, pTag, NetSecurityConstant::kAEADTagSize, nullptr );
+        return NetPacketSealerInternal::isEqualConstantTime( arrExpected, pTag, NetSecurityConstant::kAEADTagSize );
     }
 } // namespace sw
