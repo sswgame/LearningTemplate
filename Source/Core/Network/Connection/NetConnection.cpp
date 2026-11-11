@@ -98,7 +98,6 @@ namespace sw
         , _nextReliableSendID{ 0 }
         , _oldestUnackedReliableID{ 0 }
         , _nextReliableReceiveID{ 0 }
-        , _nextSequencedSendID{ 0 }
         , _bAckPending{ SW_FALSE }
         , _bDiscardingAssembly{ SW_FALSE }
         , _bUnreliableFirst{ SW_FALSE }
@@ -120,6 +119,7 @@ namespace sw
         _listOutgoingSequenced.clear();
         _listOutgoingUnreliable.clear();
         _listSequencedReceive.clear();
+        _listSequencedSend.clear();
         _listReliableAssembly.clear(); // 끊긴 연결의 반쪽 메시지가 같은 슬롯의 새 연결 메시지 앞에 붙지 않게 한다.
         _listDeliveryNotice.clear();   // 끊긴 연결의 판정은 내지 않는다 — 처리기는 연결 닫힘(`onConnectionClosed`)으로 그 연결의 상태를 지운다.
         _stats                   = NetConnectionStats{};
@@ -134,7 +134,6 @@ namespace sw
         _nextReliableSendID      = 0;
         _oldestUnackedReliableID = 0;
         _nextReliableReceiveID   = 0;
-        _nextSequencedSendID     = 0;
         _bAckPending             = SW_FALSE;
         _bDiscardingAssembly     = SW_FALSE;
         _bUnreliableFirst        = SW_FALSE;
@@ -472,16 +471,29 @@ namespace sw
         }
     }
 
+    NetConnection::SequencedStream& NetConnection::findOrAddSequencedStream( vector<SequencedStream>& listStream, uint8 kind )
+    {
+        for ( SequencedStream& stream : listStream )
+        {
+            if ( stream._kind == kind )
+                return stream;
+        }
+        return listStream.emplace_back( SequencedStream{ 0, kind } );
+    }
+
     void NetConnection::writeSequencedMessages( PacketBody& body )
     {
         // 쌓을 때 같은 종류의 옛것은 이미 새것으로 바뀌었다.
         size_t sequencedWritten = 0;
-        while ( sequencedWritten < _listOutgoingSequenced.size() &&
-                body.tryWriteMessage( NetChannelType::UnreliableSequenced, _nextSequencedSendID, _listOutgoingSequenced[sequencedWritten], false ) )
+        while ( sequencedWritten < _listOutgoingSequenced.size() )
         {
-            const vector<uint8>& written = _listOutgoingSequenced[sequencedWritten];
-            recordFlow( NetChannelType::UnreliableSequenced, NetConnectionInternal::makeWirePosition( body._sequence, body._written - 1 ), written.data(), written.size(), false );
-            ++_nextSequencedSendID;
+            const vector<uint8>& pending = _listOutgoingSequenced[sequencedWritten];
+            SequencedStream&     stream  = findOrAddSequencedStream( _listSequencedSend, pending.empty() ? static_cast<uint8>( 0 ) : pending[0] );
+            const uint16         id      = static_cast<uint16>( stream._lastID + 1 );
+            if ( body.tryWriteMessage( NetChannelType::UnreliableSequenced, id, pending, false ) == false )
+                break;
+            recordFlow( NetChannelType::UnreliableSequenced, NetConnectionInternal::makeWirePosition( body._sequence, body._written - 1 ), pending.data(), pending.size(), false );
+            stream._lastID = id;
             ++sequencedWritten;
         }
         _listOutgoingSequenced.erase( _listOutgoingSequenced.begin(), _listOutgoingSequenced.begin() + static_cast<std::ptrdiff_t>( sequencedWritten ) );
@@ -621,7 +633,7 @@ namespace sw
             }
             case NetChannelType::UnreliableSequenced:
             {
-                // 번호는 연결 하나에서 증가하기만 하므로 종류마다 마지막 번호와 비교한다. 늦게 온 같은 종류의 옛 메시지만 버린다.
+                // 번호는 종류(흐름)마다 따로 센다. 종류마다 마지막 번호와 비교해 늦게 온 같은 종류의 옛 메시지만 버린다.
                 const uint8      kind    = message._buffer.empty() ? static_cast<uint8>( 0 ) : message._buffer[0];
                 SequencedStream* pStream = nullptr;
                 for ( SequencedStream& stream : _listSequencedReceive )

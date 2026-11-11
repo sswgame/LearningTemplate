@@ -222,7 +222,7 @@ namespace sw
             int32                _byteCount{ 0 }; ///< 쌓인 메시지 바이트 + 메시지마다 `kIncomingMessageOverheadBytes`
         };
 
-        /** @brief 순서만 채널의 흐름 하나(메시지 첫 바이트가 종류)에서 마지막으로 넘긴 메시지 번호입니다. */
+        /** @brief 순서만 채널의 흐름 하나(메시지 첫 바이트가 종류)에서 마지막으로 보낸 · 넘긴 메시지 번호입니다. 번호는 흐름마다 따로 센다. */
         struct SequencedStream
         {
             uint16 _lastID{ 0 };
@@ -268,6 +268,8 @@ namespace sw
         void writeReliableMessages( PacketBody& body );
         /** @brief 순서만 메시지를 종류마다 가장 새 것 하나씩 싣습니다. 못 실은 것은 다음 패킷으로 남깁니다. */
         void writeSequencedMessages( PacketBody& body );
+        /** @brief 순서만 채널 흐름 목록에서 @p kind 의 흐름을 찾고, 없으면 번호 0 으로 더합니다. */
+        static SequencedStream& findOrAddSequencedStream( vector<SequencedStream>& listStream, uint8 kind );
         /** @brief 비신뢰 메시지를 들어가는 만큼 싣습니다. 못 실은 것은 다음 패킷으로 남깁니다. */
         void writeUnreliableMessages( PacketBody& body );
 
@@ -316,6 +318,7 @@ namespace sw
         deque<QueuedUnreliable>                                                  _listOutgoingUnreliable;
         vector<ParsedMessage>                                                    _listParsedScratch;    ///< 받은 패킷을 먼저 다 읽어 두는 스크래치 버퍼(용량을 다시 쓴다).
         vector<SequencedStream>                                                  _listSequencedReceive; ///< 순서만 채널에서 종류마다 마지막으로 넘긴 번호.
+        vector<SequencedStream>                                                  _listSequencedSend;    ///< 순서만 채널에서 종류마다 마지막으로 보낸 번호 — 연결 공용 번호면 한 종류가 쉬는 동안 다른 종류가 반 바퀴(32768) 넘게 나가 다시 나온 그 종류가 "옛 메시지" 로 버려진다(감사 N-2, 언리얼 · ENet 의 채널별 번호)
         vector<uint8>                                                            _listReliableAssembly; ///< 모으는 중인 신뢰 순서 메시지(앞 조각들). 마지막 조각이 오면 넘긴다.
         vector<vector<uint8>>                                                    _listSpareBuffer;      ///< 다 쓴 메시지 버퍼(용량만). 받기 · 비신뢰 보내기가 메시지마다 할당하지 않게 한다.
         vector<NetDeliveryNotice>                                                _listDeliveryNotice;   ///< 판정이 나서 `pollDeliveryNotices` 를 기다리는 전달 통지.
@@ -331,7 +334,6 @@ namespace sw
         uint16                                                                   _nextReliableSendID;
         uint16                                                                   _oldestUnackedReliableID;
         uint16                                                                   _nextReliableReceiveID;
-        uint16                                                                   _nextSequencedSendID;
         uint8                                                                    _bAckPending;         ///< 받은 패킷이 있어 확인을 돌려줘야 한다.
         uint8                                                                    _bDiscardingAssembly; ///< 모으던 메시지가 상한을 넘었다(상대의 규약 위반). 마지막 조각까지 버린다.
         uint8                                                                    _bUnreliableFirst;    ///< 다음 패킷은 순서만과 비신뢰 메시지부터 싣는다(앞 패킷의 조각이 그쪽을 남겼다).

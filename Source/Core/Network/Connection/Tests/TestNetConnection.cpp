@@ -625,3 +625,43 @@ SW_TEST_CASE( NetConnectionTest, UnreliableMessagesExpireAfterWaitingTooLong )
     SW_EXPECT_EQUAL( 0, sender.getQueuedUnreliableCount() );
     SW_EXPECT_EQUAL( uint64( 3 ), sender.getStats()._expiredUnreliableCount );
 }
+
+/**
+ * @brief [NetConnectionTest] 한 종류가 쉬는 동안 다른 종류가 번호 공간의 반(32768) 넘게 나가도, 다시 나온 그 종류는 버려지지 않는다 — 번호는 종류마다 따로 센다(감사 N-2)
+ */
+SW_TEST_CASE( NetConnectionTest, SequencedKindIdleForHalfTheSequenceSpaceStillDelivers )
+{
+    constexpr int32     kOtherKindPacketCount = 40000;
+    NetConnection       sender;
+    NetConnection       receiver;
+    const vector<uint8> poseOld{ 0x15, 1 };
+    const vector<uint8> snapshot{ 0x10, 2 };
+    const vector<uint8> poseNew{ 0x15, 3 };
+
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, poseOld.data(), 2 ) );
+    BitWriter firstPacket;
+    sender.writePacket( 0.0, firstPacket, 300 );
+    for ( int32 packet = 0; packet < kOtherKindPacketCount; ++packet )
+    {
+        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, snapshot.data(), 2 ) );
+        BitWriter dropped; // 받는 쪽에 닿지 않아도 된다 — 보내는 쪽 번호만 나아간다
+        sender.writePacket( 0.0, dropped, 300 );
+    }
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, poseNew.data(), 2 ) );
+    BitWriter lastPacket;
+    sender.writePacket( 0.0, lastPacket, 300 );
+
+    BitReader firstReader( firstPacket.getBytes().data(), firstPacket.getByteCount() );
+    BitReader lastReader( lastPacket.getBytes().data(), lastPacket.getByteCount() );
+    SW_EXPECT_TRUE( receiver.readPacket( 0.1, firstReader ) );
+    SW_EXPECT_TRUE( receiver.readPacket( 0.2, lastReader ) );
+    vector<vector<uint8>> listReceived;
+    vector<uint8>         buffer;
+    while ( receiver.receiveMessage( NetChannelType::UnreliableSequenced, buffer ) )
+    {
+        listReceived.push_back( buffer );
+    }
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listReceived.size() );
+    SW_EXPECT_TRUE( listReceived[0] == poseOld );
+    SW_EXPECT_TRUE( listReceived[1] == poseNew );
+}
