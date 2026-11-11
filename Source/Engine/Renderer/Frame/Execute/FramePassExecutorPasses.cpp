@@ -659,8 +659,11 @@ namespace sw
     {
         // 원본 색(SourceColor 역할 입력)을 선언한 컬러 출력으로 그대로 복사한다 — 셰이더도 PSO 도 없다. 반투명 패스는 장면 색에 섞으며 쓰므로 그 색을 읽을 수 없다(물의 굴절).
         // 둘은 같은 크기 · 형식이어야 한다(파이프라인이 같은 형식으로 선언한다). 계약(`RenderPassTypeInfo`)이 SourceColor 를 필수로 검사했다.
-        // 사본을 읽는 것은 반투명 메시(물의 굴절 — water.hlsl)뿐이다. 이 프레임에 반투명 메시 배치가 없으면 복사하지 않는다(풀 해상도 HDR 복사 한 번이 매 프레임 0.27 ms 였다).
-        if ( _state._gpuScene.getTransparentBatches().empty() )
+        // 이번 뷰에 사본을 읽을 패스가 없으면 복사하지 않는다(풀 해상도 HDR 복사 한 번이 매 프레임 0.27 ms 였다) — 읽는 쪽은 파이프라인 선언과 그 패스의 그리기 판정으로 안다.
+        const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
+        const bool                         bRead    = VectorUtil::containsIf( listPass, [this]( const RenderGraphPassDesc& pass )
+                                   { return readsSceneColorCopyThisView( pass ); } );
+        if ( bRead == false )
             return;
         using Internal                                              = FramePassExecutorInternal;
         const RenderGraphPassDesc::ResolvedAttachment* pSourceInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::SourceColor );
@@ -744,6 +747,31 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
+    bool FramePassExecutor::drawsScreenSpaceReflectionThisView() const
+    {
+        const RenderViewSettings& settings = _pActiveView->_settings;
+        return settings.usesPostProcess() && settings._postProcess._screenSpaceReflectionIntensity > 0.0f;
+    }
+
+    bool FramePassExecutor::readsSceneColorCopyThisView( const RenderGraphPassDesc& pass ) const
+    {
+        if ( FramePassExecutorInternal::findInputByRole( pass, RenderPassInputRole::SceneColorCopy ) == nullptr )
+            return false;
+        switch ( pass._type )
+        {
+            case RenderPassType::DistortionApply:
+                return drawsDistortionThisView();
+            case RenderPassType::ScreenSpaceReflection:
+                return drawsScreenSpaceReflectionThisView();
+            default:
+                break;
+        }
+        // 반투명 배치를 그리는 패스(물의 굴절)는 그 배치가 있을 때만 읽는다.
+        if ( getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) )
+            return _state._gpuScene.getTransparentBatches().empty() == false;
+        return true;
+    }
+
     bool FramePassExecutor::drawsDistortionThisView() const
     {
         // 값 보기(노멀 · 깊이 · 오버드로)와 와이어프레임은 장면 색을 덮지 않는다 — 왜곡도 없다(안개와 같은 판정).
@@ -825,10 +853,8 @@ namespace sw
     {
         // 화면 공간 반사다. 맞은 자리의 장면 색 사본을 선언한 컬러 출력(장면 색) 위에 프리멀티플라이 블렌드한다(screen_space_reflection.hlsl).
         // 세기 0 · 후처리를 끈 뷰(CCTV) · 표면 값 보기(usesPostProcess 가 거른다)에서는 그리지 않는다 — 출력이 입력의 위(블렌드)라 "그리지 않음" 은 아무것도 하지 않는 것이다(안개와 같다).
-        const RenderViewSettings&    settings = _pActiveView->_settings;
-        const RHIPipelineStateHandle pso      = _psoManager.getEnginePSO( RenderPassType::ScreenSpaceReflection );
-        const bool                   bDraws   = settings.usesPostProcess() && settings._postProcess._screenSpaceReflectionIntensity > 0.0f && pso != 0;
-        if ( bDraws == false )
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::ScreenSpaceReflection );
+        if ( drawsScreenSpaceReflectionThisView() == false || pso == 0 )
             return;
 
         FramePassContext&    context = input._context;

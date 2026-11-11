@@ -8,7 +8,7 @@
  * 깊이 · 노멀은 Load 로 읽는다 — 반복 안의 기울기 샘플은 DX11(FXC)이 거절한다.
  * 언리얼 SSR 은 HZB(깊이 밉 사슬)로 빈 칸을 건너뛴다. 이 엔진에는 HZB 가 없어 같은 걸음으로 나아간다(걸음 수 kSsrStepCount) — 걸음이 굵어 얇은 물체를 건너뛸 수 있다.
  *
- * 바인딩 계약: 패스 상수 g_SSRParams(세기, 최대 거리 m, 두께 m, 최대 거칠기), 입력 역할 SceneColorCopy · SceneDepth · GBufferNormal(필수) · GBufferMaterial(선택).
+ * 바인딩 계약: 패스 상수 g_SSRParams(세기, 최대 거리 m, 두께 m, 최대 거칠기), 입력 역할 SceneColorCopy · SceneDepth · GBufferNormal · GBufferAlbedo(필수 — 알파가 셰이딩 모델) · GBufferMaterial(선택).
  */
 #include "binding.hlsli"
 #include "fullscreen.hlsli"

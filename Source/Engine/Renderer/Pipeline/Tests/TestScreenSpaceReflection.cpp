@@ -24,6 +24,7 @@ SW_TEST_CASE( ScreenSpaceReflectionTest, PassTypeRowDeclaresBlendedDrawOverScene
     SW_EXPECT_TRUE( info._inputContract.reads( RenderPassInputRole::SceneColorCopy ) );
     SW_EXPECT_TRUE( info._inputContract.reads( RenderPassInputRole::SceneDepth ) );
     SW_EXPECT_TRUE( info._inputContract.reads( RenderPassInputRole::GBufferNormal ) );
+    SW_EXPECT_TRUE( info._inputContract.reads( RenderPassInputRole::GBufferAlbedo ) ); // 그려짐 판정(알베도 알파의 셰이딩 모델) — 걸지 않으면 무효 인덱스라 판정이 늘 같다
     SW_EXPECT_TRUE( info._inputContract.reads( RenderPassInputRole::GBufferMaterial ) );
     SW_EXPECT_FALSE( info._inputContract.reads( RenderPassInputRole::SourceColor ) ); // 쓰는 장면 색을 읽지 않는다 — 사본을 읽는다
 }

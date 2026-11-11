@@ -311,6 +311,7 @@
 				<item>SceneColorCopy</item>
 				<item>SceneDepth</item>
 				<item>GBufferNormal</item>
+				<item>GBufferAlbedo</item>
 				<item>GBufferMaterial</item>
 			</_listInput>
 			<_listOutput>
