@@ -5,6 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Input/Map/InputKeyTable.h"
 #include "Engine/Window/WindowPlatform.h"
 
 #include <android/configuration.h>
@@ -414,8 +415,12 @@ namespace sw
             input._kind    = action == AKEY_EVENT_ACTION_UP ? PlatformInputKind::KeyUp : PlatformInputKind::KeyDown;
             input._keyCode = AKeyEvent_getKeyCode( pEvent );
             input._bRepeat = AKeyEvent_getRepeatCount( pEvent ) > 0 ? 1u : 0u;
+            // 엔진 키로 옮겨지는 키만 소비한다(뒤로 가기는 Escape — 시스템이 액티비티를 닫지 않게). 볼륨 · 음소거 · 카메라처럼 엔진 키가 없는 키는 0 을 돌려
+            // 시스템이 처리한다 — 예전에는 모든 키를 소비해 볼륨 버튼이 먹통이었다(감사 P0-10). 답은 입력의 키 표 하나다.
+            if ( InputKeyTable::mapAndroidKeyCode( input._keyCode ) == Key::Unknown )
+                return 0;
             pWindow->queueInput( input );
-            return 1; // 뒤로 가기를 엔진이 받는다(Escape) — 시스템이 액티비티를 닫지 않게
+            return 1;
         }
         if ( AInputEvent_getType( pEvent ) != AINPUT_EVENT_TYPE_MOTION )
             return 0;

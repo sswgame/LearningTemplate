@@ -32,6 +32,11 @@ namespace sw
          *          그 배열에서 WASD · 단축키가 통째로 죽는다. Win32 가 비라틴 배열에서도 라틴 VK 를 주는 것, GLFW 가 키 코드 표를 쓰는 것과 같은 자리다.
          */
         static Key mapX11Key( uint64 keySym, uint32 keyCode );
+        /**
+         * @brief Android 키 번호(`AKEYCODE_*`)를 Key 로 바꿉니다. 엔진 키가 없으면(볼륨 · 음소거 · 카메라 · 미디어) `Key::Unknown` 입니다.
+         * @details 창 글루(`AndroidWindow::onInputEvent`)가 이 답으로 이벤트를 소비할지 정한다 — 옮기지 못한 키는 시스템에 돌려줘야 볼륨 버튼이 산다(SDL 이 볼륨 키에 0 을 돌려주는 것과 같다).
+         */
+        static Key mapAndroidKeyCode( int32 keyCode );
         /** @brief Win32 마우스 메시지를 MouseButton 으로 바꿉니다. */
         static MouseButton mapWin32MouseButton( uint32 message, uintptr_t wParam );
 
