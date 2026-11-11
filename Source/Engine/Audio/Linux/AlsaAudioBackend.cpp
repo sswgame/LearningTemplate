@@ -208,9 +208,12 @@ namespace sw
                 const int64 result = _impl->_pfnWritei( _impl->_pPCM, pWrite + static_cast<size_t>( written ) * channelCount, Internal::kWriteFrameCount - written );
                 if ( result < 0 )
                 {
-                    // 언더런 · 일시정지 복귀는 복원하고 이어 쓴다. 복원하지 못하면 이 블록을 버린다.
+                    // 언더런 · 일시정지 복귀는 복원하고 이어 쓴다. 복원하지 못하면 장치를 잃은 것이다 — 알리고 스레드를 끝낸다(예전에는 쉬지 않고 다시 렌더 · 쓰기를 돌았다).
                     if ( _impl->_pfnRecover( _impl->_pPCM, static_cast<int32>( result ), 1 ) < 0 )
-                        break;
+                    {
+                        notifyOutputLost();
+                        return;
+                    }
                     continue;
                 }
                 written += static_cast<uint32>( result );

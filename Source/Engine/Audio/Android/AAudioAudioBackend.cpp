@@ -2,7 +2,6 @@
 
 #include "Engine/Audio/Android/AAudioAudioBackend.h"
 
-#include "Core/Concurrency/atomic.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Audio/AudioEngine.h"
@@ -15,12 +14,10 @@ namespace sw
     struct AAudioAudioBackendImpl
     {
         AAudioStream* _pStream;      /**< 열린 출력 스트림입니다(시작 전 · 닫은 뒤에는 nullptr). */
-        atomic<bool>  _bStreamLost;  /**< 오류 콜백이 세운다(장치 분리 · 라우팅 변경 — AAUDIO_ERROR_DISCONNECTED). 스트림은 더 부르지 않는다. */
         uint32        _channelCount; /**< 스트림의 채널 수입니다. */
 
         AAudioAudioBackendImpl()
             : _pStream{ nullptr }
-            , _bStreamLost{ false }
             , _channelCount{ 0 }
         {
         }
@@ -39,13 +36,13 @@ namespace sw
             return AAUDIO_CALLBACK_RESULT_CONTINUE;
         }
 
-        /** @brief 오류 콜백 — 장치가 사라지면(헤드폰 뽑기 · 블루투스 끊김) 스트림이 멈춘다. 다시 여는 것은 장치 유실 계약(감사 P0-13)이 맡는다. */
+        /** @brief 오류 콜백 — 장치가 사라지면(헤드폰 뽑기 · 블루투스 끊김) 스트림이 멈춘다. 서비스에 알린다(`IAudioService::notifyOutputLost`). */
         static void onError( AAudioStream* pStream, void* pUserData, aaudio_result_t error )
         {
             (void)pStream;
             AAudioAudioBackend* const pBackend = static_cast<AAudioAudioBackend*>( pUserData );
-            pBackend->_impl->_bStreamLost.store( true, std::memory_order_release );
-            SW_LOG_WARNING_ID( "AAudioAudioBackend.StreamLost", "AAudio output stream stopped (%#) - audio is silent until the device comes back", AAudio_convertResultToText( error ) );
+            SW_LOG_WARNING_ID( "AAudioAudioBackend.StreamLost", "AAudio output stream stopped (%#)", AAudio_convertResultToText( error ) );
+            pBackend->notifyOutputLost(); // 서비스가 오프라인으로 넘기고 기본 장치를 다시 연다
         }
     };
 
@@ -105,8 +102,7 @@ namespace sw
             return false;
         }
         _impl->_channelCount = channelCount;
-        _impl->_bStreamLost.store( false, std::memory_order_release );
-        result = AAudioStream_requestStart( _impl->_pStream );
+        result               = AAudioStream_requestStart( _impl->_pStream );
         if ( result != AAUDIO_OK )
         {
             SW_LOG_WARNING_ID( "AAudioAudioBackend.StartFailed", "AAudio output stream could not start (%#). Rendering offline.", AAudio_convertResultToText( result ) );

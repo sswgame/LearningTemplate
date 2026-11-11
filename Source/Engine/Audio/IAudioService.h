@@ -10,6 +10,7 @@
  *       정하고(`resolveLayout`) 엔진을 그 레이아웃으로 만든 뒤 장치가 엔진을 당기기 시작합니다(`startOutput`). 장치가 그만큼의 채널을 갖지 않는 명시 모드는 오류로 멈춥니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -18,6 +19,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Time/ExponentialBackoff.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioSoundPlayer.h"
@@ -102,6 +104,12 @@ namespace sw
         bool isInitialized() const { return _bInitialized; }
         /** @brief 출력 장치가 엔진을 당기고 있는지입니다. false 면 `update` 가 렌더합니다. */
         bool isOutputOpen() const { return _bOutputOpen; }
+        /**
+         * @brief (아무 스레드 — 장치 콜백 · 스트림 스레드) 장치 출력이 죽었다고 알립니다. 다음 `update` 가 스트림을 닫고 오프라인 렌더로 넘긴 뒤 백오프 간격으로 다시 엽니다.
+         * @details 예전에는 백엔드마다 유실을 따로 다뤘다 — ALSA 는 복원에 지면 쉬지 않고 다시 써 코어 하나를 쓰고 오디오 시계가 실시간보다 빨리 흘렀고, XAudio2 는 유실을 몰라
+         *          렌더가 멈춰 재생 끝남을 기다리는 게임 로직이 영영 기다렸다(감사 P0-13). 언리얼 AudioMixer 의 Null 장치 넘김 → 새 기본 장치 스왑과 같은 자리다.
+         */
+        void notifyOutputLost() { _bOutputLost.store( true, std::memory_order_release ); }
 
         /**
          * @brief 스피커 모드를 정합니다. 초기화 전이면 값만 두고 `initialize` 가 씁니다. 초기화 뒤면 출력을 멈추고 엔진 레이아웃을 바꾼 뒤 다시 엽니다(재생은 이어집니다).
@@ -234,6 +242,10 @@ namespace sw
         virtual void closeDevice() {}
 
     private:
+        /** @brief 죽은 출력을 닫고 오프라인으로 넘깁니다(게임 스레드, `update`). */
+        void closeLostOutput();
+        /** @brief 장치 없이 도는 동안 백오프 간격이 지났으면 장치를 다시 열어 엔진의 지금 레이아웃으로 출력을 잇습니다(게임 스레드, `update`). */
+        void retryOpenOutput( float32 deltaSeconds );
         /** @brief 소리 그래프 파일이고 클립 캐시가 이미 읽어 둔 것이면 캐시의 경로를 @p outGraphPath 에 돌려줍니다(핫 리로드 대상). */
         [[nodiscard]] bool findLoadedGraphPath( string_view assetPath, hashed_string& outGraphPath ) const;
 
@@ -263,6 +275,9 @@ namespace sw
         string                  _mixerPath;         /**< 마지막으로 읽은 믹서 그래프 경로입니다. */
         AudioPlayingID          _musicPlayingID;    /**< 배경음악 재생 id 입니다. */
         float64                 _offlineFrameDebt;  /**< 장치가 없을 때 아직 렌더하지 않은 프레임(소수)입니다. */
+        float64                 _reopenSecondsLeft; /**< 장치를 다시 열어 볼 때까지 남은 시간(초)입니다(`retryOpenOutput`). */
+        ExponentialBackoff      _reopenBackoff;     /**< 장치 다시 열기의 간격입니다 — 성공하면 처음부터. */
+        atomic<bool>            _bOutputLost;       /**< 장치 출력이 죽었다는 알림입니다(`notifyOutputLost` — 아무 스레드). */
         AudioOutputDevice       _device;            /**< 열린 장치의 형식입니다(장치가 없으면 채널 수 0). */
         float32                 _masterVolume;      /**< 마스터 볼륨 [0,1] 입니다. */
         float32                 _musicVolume;       /**< 배경음악 볼륨 [0,1] 입니다. */

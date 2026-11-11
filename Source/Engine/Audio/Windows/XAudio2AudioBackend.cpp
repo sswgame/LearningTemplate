@@ -231,6 +231,7 @@ namespace sw
             struct StreamCallback : public IXAudio2VoiceCallback
             {
                 AudioEngine*         _pEngine{ nullptr };
+                IAudioService*       _pService{ nullptr }; ///< 보이스 오류를 알릴 곳(`notifyOutputLost`)
                 IXAudio2SourceVoice* _pVoice{ nullptr };
                 uint32               _channelCount{ 0 }; ///< 엔진 레이아웃의 채널 수다. 장치로 보내는 교차 버퍼의 프레임 크기다.
                 vector<float32>      _listBuffer{};      ///< 버퍼 `kStreamBufferCount` 개를 이어 붙인 것이다.
@@ -259,7 +260,29 @@ namespace sw
                 void STDMETHODCALLTYPE OnBufferStart( void* ) noexcept override {}
                 void STDMETHODCALLTYPE OnBufferEnd( void* ) noexcept override { submitNext(); }
                 void STDMETHODCALLTYPE OnLoopEnd( void* ) noexcept override {}
-                void STDMETHODCALLTYPE OnVoiceError( void*, HRESULT ) noexcept override {}
+                void STDMETHODCALLTYPE OnVoiceError( void*, HRESULT ) noexcept override
+                {
+                    if ( _pService != nullptr )
+                        _pService->notifyOutputLost();
+                }
+            };
+
+            /**
+             * @brief XAudio2 엔진 콜백입니다. 장치를 잃으면(헤드폰 뽑기 · 기본 장치 바뀜) XAudio2 가 `OnCriticalError` 를 부르고 보이스 처리를 멈춘다 — 서비스에 알려 오프라인으로 넘기고 다시 연다.
+             * @details 예전에는 등록하지 않아 유실을 몰랐다 — 콜백이 끊겨 렌더가 멈추고 재생 끝남을 기다리는 게임 로직이 영영 기다렸다(감사 P0-13).
+             */
+            struct EngineCallback : public IXAudio2EngineCallback
+            {
+                IAudioService* _pService{ nullptr };
+
+                virtual ~EngineCallback() = default;
+                void STDMETHODCALLTYPE OnProcessingPassStart() noexcept override {}
+                void STDMETHODCALLTYPE OnProcessingPassEnd() noexcept override {}
+                void STDMETHODCALLTYPE OnCriticalError( HRESULT ) noexcept override
+                {
+                    if ( _pService != nullptr )
+                        _pService->notifyOutputLost();
+                }
             };
         };
     } // namespace
@@ -273,6 +296,7 @@ namespace sw
     struct XAudio2AudioBackendImpl
     {
         XAudio2AudioBackendInternal::StreamCallback _callback;            /**< 스트리밍 콜백(버퍼 포함)입니다. */
+        XAudio2AudioBackendInternal::EngineCallback _engineCallback;      /**< 엔진 콜백(장치 유실)입니다. */
         IXAudio2*                                   _pXAudio;             /**< XAudio2 엔진입니다. */
         IXAudio2MasteringVoice*                     _pMasterVoice;        /**< 마스터링 보이스입니다(볼륨은 엔진의 master 버스가 맡는다). */
         IXAudio2SourceVoice*                        _pStreamVoice;        /**< 엔진 출력을 흘리는 소스 보이스입니다. */
@@ -283,6 +307,7 @@ namespace sw
         /** @brief 아직 아무 장치도 잡지 않은 상태로 둡니다. */
         XAudio2AudioBackendImpl()
             : _callback{}
+            , _engineCallback{}
             , _pXAudio{ nullptr }
             , _pMasterVoice{ nullptr }
             , _pStreamVoice{ nullptr }
@@ -338,6 +363,9 @@ namespace sw
             closeDevice();
             return false;
         }
+        _impl->_engineCallback._pService = this;
+        if ( FAILED( _impl->_pXAudio->RegisterForCallbacks( &_impl->_engineCallback ) ) )
+            SW_LOG_WARNING_ID( "XAudio2AudioBackend.EngineCallbackFailed", "XAudio2 engine callbacks could not be registered - a lost device is not noticed" );
         // 마스터링 보이스는 장치의 채널 수 그대로 연다. 엔진 레이아웃은 그 채널 수와 마스크를 보고 서비스가 정한다(협상).
         hr = _impl->_pXAudio->CreateMasteringVoice( &_impl->_pMasterVoice, XAUDIO2_DEFAULT_CHANNELS, audio::kSampleRate );
         if ( FAILED( hr ) || _impl->_pMasterVoice == nullptr )
@@ -389,6 +417,7 @@ namespace sw
 
         XAudio2AudioBackendInternal::StreamCallback& callback = _impl->_callback;
         callback._pEngine                                     = &getEngine();
+        callback._pService                                    = this;
         callback._pVoice                                      = _impl->_pStreamVoice;
         callback._channelCount                                = channelCount;
         callback._nextBuffer                                  = 0;
@@ -441,6 +470,7 @@ namespace sw
         }
         if ( _impl->_pXAudio != nullptr )
         {
+            _impl->_pXAudio->UnregisterForCallbacks( &_impl->_engineCallback );
             _impl->_pXAudio->Release();
             _impl->_pXAudio = nullptr;
         }

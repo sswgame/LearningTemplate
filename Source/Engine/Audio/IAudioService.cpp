@@ -32,6 +32,10 @@ namespace sw
             static constexpr float32 kMusicCrossfadeSeconds = 0.25f;
             /** @brief 장치 없이 한 번의 update 가 렌더할 최대 시간(초)입니다. 멈춘 프레임 뒤에 몇 분을 몰아서 렌더하지 않게 합니다. */
             static constexpr float64 kMaxOfflineSecondsPerUpdate = 0.25;
+            /** @brief 장치 다시 열기의 첫 간격과 상한(ms)입니다 — 헤드폰을 다시 꽂으면 곧 붙고, 장치가 없는 기계는 30 초에 한 번만 본다. */
+            static constexpr int64   kReopenFirstDelayMs    = 1000;
+            static constexpr int64   kReopenMaxDelayMs      = 30000;
+            static constexpr float64 kMillisecondsPerSecond = 1000.0;
             /** @brief 스피커 모드의 설정 값입니다(`AudioSpeakerMode` 순서). */
             static constexpr const utf8* kArrSpeakerModeName[] = { "auto", "stereo", "surround51", "surround71", "headphones" };
 
@@ -97,6 +101,9 @@ namespace sw
         , _mixerPath{}
         , _musicPlayingID{ 0 }
         , _offlineFrameDebt{ 0.0 }
+        , _reopenSecondsLeft{ 0.0 }
+        , _reopenBackoff{ IAudioServiceInternal::kReopenFirstDelayMs }
+        , _bOutputLost{ false }
         , _device{}
         , _masterVolume{ 1.0f }
         , _musicVolume{ 1.0f }
@@ -309,10 +316,56 @@ namespace sw
         SW_LOG_INFO_ID( "AudioService.ShutDown", "Shut down." );
     }
 
+    void IAudioService::closeLostOutput()
+    {
+        _bOutputLost.store( false, std::memory_order_release );
+        if ( _bOutputOpen )
+            stopOutput();
+        _bOutputOpen = SW_FALSE;
+        _pEngine->releaseAudioThread(); // 장치 스레드가 끝났다 — 오프라인 렌더(게임 스레드)가 받는다
+        if ( _bDeviceOpen )
+            closeDevice();
+        _bDeviceOpen       = SW_FALSE;
+        _device            = AudioOutputDevice{};
+        _offlineFrameDebt  = 0.0;
+        _reopenSecondsLeft = static_cast<float64>( _reopenBackoff.takeDelayMs( IAudioServiceInternal::kReopenMaxDelayMs ) ) / IAudioServiceInternal::kMillisecondsPerSecond;
+        SW_LOG_WARNING_ID( "AudioService.OutputLost", "The audio output device was lost - rendering offline and reopening the default device" );
+    }
+
+    void IAudioService::retryOpenOutput( float32 deltaSeconds )
+    {
+        _reopenSecondsLeft -= static_cast<float64>( deltaSeconds );
+        if ( _reopenSecondsLeft > 0.0 )
+            return;
+        _reopenSecondsLeft = static_cast<float64>( _reopenBackoff.takeDelayMs( IAudioServiceInternal::kReopenMaxDelayMs ) ) / IAudioServiceInternal::kMillisecondsPerSecond;
+        AudioOutputDevice device{};
+        if ( openDevice( device ) == false )
+            return;
+        // 엔진의 지금 레이아웃으로 잇는다 — 새 장치가 그 채널 수를 못 받으면(5.1 로 돌다 스테레오 헤드폰) 스피커 모드 협상(`setSpeakerMode`)이 바꿀 일이다. 여기서는 열지 않는다.
+        const AudioChannelLayout layout       = _pEngine->getChannelLayout();
+        const bool               bFitsChannel = device._channelCount >= AudioChannelLayoutUtil::getChannelCount( layout );
+        _pEngine->releaseAudioThread(); // 렌더를 부를 스레드가 바뀐다(오프라인 → 장치 스레드)
+        if ( bFitsChannel == false || startOutput( layout ) == false )
+        {
+            _pEngine->releaseAudioThread();
+            closeDevice();
+            return;
+        }
+        _device      = device;
+        _bDeviceOpen = SW_TRUE;
+        _bOutputOpen = SW_TRUE;
+        _reopenBackoff.reset();
+        SW_LOG_INFO_ID( "AudioService.OutputReopened", "Audio output reopened (%# channels)", AudioChannelLayoutUtil::getChannelCount( layout ) );
+    }
+
     void IAudioService::update( float32 deltaSeconds )
     {
         SW_MEMORY_SCOPE( Audio );
-        if ( _bInitialized == false || _bOutputOpen )
+        if ( _bInitialized == false )
+            return;
+        if ( _bOutputLost.load( std::memory_order_acquire ) )
+            closeLostOutput();
+        if ( _bOutputOpen )
             return;
         // 장치가 없으면 흐른 시간만큼 바로 렌더한다. 끝남, 박자, 가상 보이스가 장치가 있을 때와 같이 진행한다.
         const float64 seconds = MathUtil::clamp( static_cast<float64>( deltaSeconds ), 0.0, IAudioServiceInternal::kMaxOfflineSecondsPerUpdate );
@@ -326,6 +379,7 @@ namespace sw
             if ( bListened )
                 AudioRenderListenerRegistry::notifyRenderedBlock( _listOfflineBlock.data(), audio::kBlockFrameCount, layout );
         }
+        retryOpenOutput( deltaSeconds );
     }
 
     bool IAudioService::play( const AssetID& assetID, const hashed_string& bus )
