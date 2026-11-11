@@ -31,7 +31,7 @@ namespace sw
         /**
          * @brief 일시정지를 뺀 누적 시간(초)입니다.
          */
-        float32 getTotalTime() const noexcept;
+        float64 getTotalTime() const noexcept;
         /**
          * @brief 직전 updateTimer 호출 이후의 시간(초)입니다.
          */

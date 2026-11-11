@@ -19,6 +19,23 @@ namespace
 } // namespace
 
 /**
+ * @brief [TimeTest] 열 시간 뒤에도 누적 시간의 1 ms 차이가 1 ms 로 보인다(감사 C-12 — float32 초면 한 눈금이 3.9 ms 였다)
+ */
+SW_TEST_CASE( TimeTest, TotalTimeKeepsMillisecondsAfterTenHours )
+{
+    sw::ManualClock clock = makeClock();
+    sw::GameTimer   timer{ clock };
+    timer.resetTimer();
+    timer.startTimer();
+    clock.advanceMilliseconds( 10 * 3600 * 1000 );
+    timer.updateTimer();
+    const float64 before = timer.getTotalTime();
+    clock.advanceMilliseconds( 1 );
+    timer.updateTimer();
+    SW_EXPECT_NEAR( 0.001, timer.getTotalTime() - before, 1e-6 );
+}
+
+/**
  * @brief [TimeTest] GameTimer 기본 — 민 만큼이 델타이자 누적이다
  */
 SW_TEST_CASE( TimeTest, GameTimerBasic )
@@ -87,7 +104,7 @@ SW_TEST_CASE( TimeTest, GameTimerResetAndPause )
     clock.advanceMilliseconds( 5 );
     timer.stopTimer();
 
-    const float32 pausedTotal = timer.getTotalTime();
+    const float64 pausedTotal = timer.getTotalTime();
     SW_EXPECT_NEAR( 0.005f, pausedTotal, 1e-6f );
     clock.advanceMilliseconds( 5 );
     SW_EXPECT_NEAR( pausedTotal, timer.getTotalTime(), 1e-6f );

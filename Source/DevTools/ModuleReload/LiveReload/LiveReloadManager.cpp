@@ -413,7 +413,7 @@ namespace sw
                 continue;
 
             context._debounceTimer.updateTimer();
-            const float32 elapsedSec = context._debounceTimer.getTotalTime();
+            const float64 elapsedSec = context._debounceTimer.getTotalTime();
             if ( elapsedSec < static_cast<float32>( kMtimeDebounceMs ) / constant::time::kMillisecondsPerSecond )
                 continue;
 
