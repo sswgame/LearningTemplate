@@ -289,11 +289,12 @@ namespace sw
     {
 
         const float32 sinp = 2.f * ( _w * _x - _y * _z );
-        float32       pitch{};
-        if ( MathUtil::abs( sinp ) >= 1.f )
-            pitch = ( sinp >= 0.f ) ? MathUtil::kHalfPi : -MathUtil::kHalfPi;
-        else
-            pitch = MathUtil::asin( sinp );
+        // 짐벌 잠금(피치 ±90°): 요와 롤이 한 축이 되어 평소 식의 두 atan2 가 (0, 0) 근처 잡음을 받는다 — 롤을 0 으로 두고 합친 회전을 요로 낸다(감사 C-1,
+        // 언리얼 FQuat::Rotator 의 특이점 처리). 이 꼴(요 → 피치 → 롤)에서는 두 극 모두 요 = 2·atan2( y, w ) 다. 문턱은 float 의 sin 해상도다.
+        constexpr float32 kGimbalLockThreshold = 1.0f - 1.0e-6f;
+        if ( MathUtil::abs( sinp ) >= kGimbalLockThreshold )
+            return float3{ ( sinp >= 0.f ) ? MathUtil::kHalfPi : -MathUtil::kHalfPi, 2.f * MathUtil::atan2( _y, _w ), 0.f };
+        const float32 pitch = MathUtil::asin( sinp );
 
         const float32 siny_cosp = 2.f * ( _w * _y + _z * _x );
         const float32 cosy_cosp = 1.f - 2.f * ( _x * _x + _y * _y );
