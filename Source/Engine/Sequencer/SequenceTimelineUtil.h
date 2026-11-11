@@ -16,6 +16,7 @@ namespace sw
 {
     struct PropertyInfo;
     struct SequenceKeyTrack;
+    struct SequencePlaybackStep;
 
     class AnimationClip;
     class Component;

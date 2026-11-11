@@ -16,6 +16,7 @@
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Foundation/PhysicsHandle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Physics/IPhysicsSceneFwd.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/TileMap/TileGridUtil.h"
 #include "Engine/TileMap/TileMapXML.h"
@@ -23,7 +24,7 @@
 
 namespace sw
 {
-    class IPhysicsScene2D;
+
     struct TileMapXMLData;
     class Material;
     class SceneComponent;

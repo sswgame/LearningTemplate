@@ -1270,7 +1270,7 @@ namespace sw::editor
     {
         if ( _previewPlayer == nullptr || _previewPlayer->isPlaying() == false )
             return;
-        _previewPlayer->update( deltaSeconds );
+        (void)_previewPlayer->update( deltaSeconds ); // 미리보기는 지금 프레임만 적용한다 — 이벤트를 내지 않으니 지난 구간은 쓰지 않는다
         _currentFrame = _previewPlayer->getCurrentFrame();
         applyPreviewFrame( _previewPlayer->getAsset(), _currentFrame );
     }

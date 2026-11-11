@@ -113,7 +113,6 @@ SW_TEST_CASE( NetClockTest, RenderTickAdvancesAfterDaysOfTicks )
     clock.observeServerTick( kDaysOfTicks );
     clock.advance( 1.0f / 60.0f );
     const float64 before = clock.getRenderTick();
-    clock.observeServerTick( kDaysOfTicks + 1u );
-    clock.advance( 1.0f / 60.0f );
+    clock.advance( 1.0f / 60.0f ); // 새 틱 없이 한 프레임 — 틱 간격의 절반만큼 나아간다
     SW_EXPECT_NEAR( 0.5, clock.getRenderTick() - before, 1.0e-3 );
 }

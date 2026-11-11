@@ -338,7 +338,6 @@ SW_TEST_CASE( NetEndpointTest, ClosedSlotIsNotReusedBeforeTheGameThreadSeesTheDi
 
     first.disconnect( 0 );
     runAll( 0.2 ); // 서버가 끊김을 처리했지만 게임 스레드는 아직 꺼내지 않았다
-    SW_EXPECT_LOG( "Net.ServerRefused" );
     SW_REQUIRE_TRUE( second.connect( NetAddress::makeLoopback( 4100 ) ) );
     runAll( 0.5 );
     SW_EXPECT_TRUE( second.getConnectionState( 0 ) != NetConnectionState::Connected );

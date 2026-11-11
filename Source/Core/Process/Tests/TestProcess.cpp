@@ -427,25 +427,20 @@ SW_TEST_CASE( ProcessTest, MissingPathExecutableFailsToLaunch )
 }
 
 /**
- * @brief 줄 분리는 조각 경계를 넘는다 — 끝의  은 다음 조각을 기다리고(CRLF 가 빈 줄을 만들지 않는다), 끝난 스트림에서는 줄을 닫는다(감사 P0-17)
+ * @brief 줄 분리는 조각 경계를 넘는다 — 끝의 CR 은 다음 조각을 기다리고(CRLF 가 빈 줄을 만들지 않는다), 끝난 스트림에서는 줄을 닫는다(감사 P0-17)
  */
 SW_TEST_CASE( ProcessTest, BufferedLineSplitsAcrossChunks )
 {
-    sw::string     buffer = "abc
-                            ";
-        sw::string line;
-    SW_EXPECT_FALSE( sw::Process::takeBufferedLine( buffer, false, line ) ); //
-    이 다음 조각일 수 있다
-        buffer += "
-        def ";
-        SW_REQUIRE_TRUE( sw::Process::takeBufferedLine( buffer, false, line ) );
+    sw::string buffer = "abc\r";
+    sw::string line;
+    SW_EXPECT_FALSE( sw::Process::takeBufferedLine( buffer, false, line ) ); // \n 이 다음 조각일 수 있다
+    buffer += "\ndef";
+    SW_REQUIRE_TRUE( sw::Process::takeBufferedLine( buffer, false, line ) );
     SW_EXPECT_TRUE( line == "abc" );
     SW_EXPECT_FALSE( sw::Process::takeBufferedLine( buffer, false, line ) ); // "def" 는 아직 끝나지 않았다
-    buffer += "
-              ";
-        SW_REQUIRE_TRUE( sw::Process::takeBufferedLine( buffer, true, line ) ); // 끝난 스트림의
-    은 줄 끝이다
-        SW_EXPECT_TRUE( line == "def" );
+    buffer += "\r";
+    SW_REQUIRE_TRUE( sw::Process::takeBufferedLine( buffer, true, line ) ); // 끝난 스트림의 \r 은 줄 끝이다
+    SW_EXPECT_TRUE( line == "def" );
     SW_EXPECT_TRUE( buffer.empty() );
 }
 
