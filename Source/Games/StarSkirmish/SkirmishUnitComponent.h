@@ -32,7 +32,7 @@ namespace sw
         float32       _width{ 1.0f };
     };
 
-    /** @brief `unitmodels.xml` 의 `<Model id model width/>` 한 줄의 스키마입니다(`XMLFields::readFields`). 세 칸 모두 필수이고 폭은 0.01 ~ 1000 이다. */
+    /** @brief `unitmodels.xml` 의 `<Model id model width/>` 한 줄의 스키마입니다(`XMLFields::readProperties`). 세 칸 모두 필수이고 폭은 0.01 ~ 1000 이다. */
     REFLECT()
     struct SkirmishUnitModelDef
     {

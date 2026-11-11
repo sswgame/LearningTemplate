@@ -195,8 +195,8 @@ namespace sw
         uint64       getMalformedCount() const { return _malformedCount; }
         /** @brief 그 종류를 보낸다고 등록한 처리기가 없어 버린 전달 통지 수입니다(첫 번째는 오류 로그도 남긴다 — 보낸 쪽이 처리기를 등록하지 않았다). */
         uint64 getUnclaimedNoticeCount() const { return _unclaimedNoticeCount; }
-        /** @brief `pump` 가 지금까지 꺼낸 종류별 메시지 수와 바이트입니다(받은 쪽 셈 — 처리기가 없는 메시지도 센다. 보낸 쪽은 `INetPeers::addSentKindTally`). */
-        const NetMessageKindStatsTable& getKindTally() const { return _kindTally; }
+        /** @brief `pump` 가 지금까지 꺼낸 종류별 메시지 수와 바이트입니다(받은 쪽 셈 — 처리기가 없는 메시지도 센다. 보낸 쪽은 `INetPeers::addSentKindStats`). */
+        const NetMessageKindStatsTable& getKindStats() const { return _kindStats; }
 
     private:
         /** @brief 처리기의 등록 구독이 풀렸습니다. 그 처리기(같은 처리기가 여럿 올랐으면 먼저 것 하나)를 빼고 종류 표를 다시 짓습니다. */
@@ -209,7 +209,7 @@ namespace sw
         vector<INetMessageHandler*> _listHandler; ///< 등록 순서대로 보관한다. 사건만 받는 처리기는 등록마다 하나씩 오르므로(중복 허용) `RegistrationList` 가 아니다.
         INetMessageHandler*         _arrKindHandler[kKindCount];
         INetMessageHandler*         _arrNoticeHandler[kKindCount]; ///< 종류마다 그 종류를 전달 통지로 보내는 처리기(`getNotifiedKindMask`).
-        NetMessageKindStatsTable    _kindTally;                    ///< `pump` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
+        NetMessageKindStatsTable    _kindStats;                    ///< `pump` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
         NetInbound                  _inbound;                      ///< `pump` 가 다시 쓰는 버퍼.
         uint64                      _malformedCount;
         uint64                      _unclaimedNoticeCount;

@@ -31,7 +31,7 @@ namespace sw::editor
         struct AssetReferenceCheckEntryInternal
         {
             /** @brief 리플렉션 `AssetPath` 프로퍼티 가운데 칸 목록에 없는 것을 오류로 남깁니다. 반환은 그 수입니다. */
-            static uint32 checkReflectedFields( const AssetReferenceFields& params )
+            static uint32 checkReflectedProperties( const AssetReferenceFields& params )
             {
                 uint32 problemCount{ 0 };
                 editor::getSubsystem<TypeRegistry>().forEachType( [&params, &problemCount]( const TypeInfo& type )
@@ -71,7 +71,7 @@ namespace sw::editor
                 AssetReferenceFields params;
                 if ( params.load( projectRoot ) == false )
                     return -1;
-                uint32 problemCount = checkReflectedFields( params );
+                uint32 problemCount = checkReflectedProperties( params );
 
                 // 트리의 파일이 있는 것이다(임포트 산출물 포함 — ctest 는 임포트 단계 뒤에 돈다). 참조자는 그 가운데 글 에셋이다.
                 const string&  contentRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();

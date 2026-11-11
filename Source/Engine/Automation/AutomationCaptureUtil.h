@@ -17,11 +17,11 @@ namespace sw
     {
         /**
          * @brief 지금 찍으면 자리 잡은 그림인지입니다 — 캡처를 미루는 조건(로딩 화면 · 화면 페이드 · 시계 잡기, `AutomationBlockScope`)이 없고
-         *        남은 일(`CaptureReadiness::countPendingWork` — 씬 쪽 에셋 일과 주 렌더러의 PSO 대기)이 0 입니다.
+         *        남은 일(`CaptureReadiness::countPendingJobs` — 씬 쪽 에셋 일과 주 렌더러의 PSO 대기)이 0 입니다.
          * @details 씬이 플레이를 시작했는지는 보지 않는다(편집 모드 시나리오도 찍는다). 첫 씬을 기다려야 하는 시작 인자 캡처는 그것을 따로 본다.
          */
         [[nodiscard]] static bool isReadyForCapture( const GameObjectManager* pManager );
-        /** @brief 씬 @p pManager 의 주 화면 캡처까지 남은 일 수입니다(`IEngineRenderDriver::countPendingCaptureWork`). 렌더러가 없으면(전용 서버) 찍을 그림도 없어 0 입니다. */
-        [[nodiscard]] static uint32 countPendingWork( const GameObjectManager* pManager );
+        /** @brief 씬 @p pManager 의 주 화면 캡처까지 남은 일 수입니다(`IEngineRenderDriver::countPendingCaptureJobs`). 렌더러가 없으면(전용 서버) 찍을 그림도 없어 0 입니다. */
+        [[nodiscard]] static uint32 countPendingJobs( const GameObjectManager* pManager );
     };
 } // namespace sw

@@ -209,7 +209,7 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForTheRenderThreadFrame )
  * @brief [RHIDeferredHandleTest] 렌더 스레드 비우기(`flushRenderThread`)는 GPU 를 기다리지도, 미룬 핸들을 내리지도 않는다 — 옛 자원은 패킷 · GPU 뒤로 계속 미뤄진다
  * @details 씬 활성화 · 에셋 핫 리로드 · 캡처가 쓰는 길이다. 비우기가 핸들을 내리면 게임 스레드가 짓고 있는 패킷의 옛 인덱스가 다른 텍스처로 다시 쓰인다.
  */
-SW_TEST_CASE( RHIDeferredHandleTest, DrainRenderThreadWaitsForNoGPUWork )
+SW_TEST_CASE( RHIDeferredHandleTest, DrainRenderThreadWaitsForGPUIdle )
 {
     test::FakeRHIDevice device;
     device.notifyRenderFrameQueued();

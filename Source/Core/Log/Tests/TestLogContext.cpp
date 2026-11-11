@@ -86,7 +86,7 @@ SW_TEST_CASE( LogContextTest, ThreadsDoNotShareTheContext )
     SW_EXPECT_TRUE( first != LogTraceID::makeRandom() );
 }
 
-SW_TEST_CASE( LogContextTest, TagHasOnlyThePresentFields )
+SW_TEST_CASE( LogContextTest, TagHasOnlyThePresentProperties )
 {
     LogContext context;
     SW_EXPECT_TRUE( makeFormatTag( context ).empty() );

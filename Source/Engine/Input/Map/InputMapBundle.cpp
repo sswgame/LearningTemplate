@@ -69,7 +69,7 @@ namespace sw
         for ( XMLNode line = root.findChild( kSettingsElement ); line.isValid(); line = line.findNextSibling( kSettingsElement ) )
         {
             InputMapBundleLine params;
-            if ( XMLFields::readFields( line, params, absPath ) == false )
+            if ( XMLFields::readProperties( line, params, absPath ) == false )
             {
                 SW_LOG_ERROR_ID( "InputMapBundle.LineInvalid", "Input map bundle %#: an <%#> line needs path=\"<input map>\" and nothing else", absPath, kSettingsElement );
                 return false;

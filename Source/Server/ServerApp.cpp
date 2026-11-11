@@ -447,10 +447,10 @@ namespace sw
     {
         // 서비스 연결(로그인 · 채팅 …) + 게임 UDP 접속(복제 키트의 플레이어) + 키트가 끝내야 하는 진행 중인 일(매치 · 거래). 셋이 모두 0 이어야 조용히 내려갈 수 있다.
         const int32           serviceConnections = getServiceConnectionCount();
-        const int32           openWork           = _serverServices != nullptr ? _serverServices->getOpenWorkCount() : 0;
+        const int32           openJob            = _serverServices != nullptr ? _serverServices->getOpenJobCount() : 0;
         const GameNetSession* pNetSession        = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
         const int32           gameConnections    = pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server ? pNetSession->getConnectedCount() : 0;
-        return serviceConnections + gameConnections + openWork;
+        return serviceConnections + gameConnections + openJob;
     }
 
     void ServerApp::beginDrain( ShutdownCause cause, int64 monotonicMs )

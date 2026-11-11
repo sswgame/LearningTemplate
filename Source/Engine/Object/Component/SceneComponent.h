@@ -228,7 +228,7 @@ namespace sw
          * @details 부모가 없는데 찾지 못한 참조를 남겨 두었으면(`keepUnresolvedAttach`) 그것을 그대로 적는다. 지우지 않는다. 남겨 둔 id 가
          *          지금 쓰는 공간(`options._pSavedIDMap` 유무)과 다르면 id 를 비우고 이름과 컴포넌트 키만 적는다.
          */
-        void syncAttachSerializeFields( const ObjectSaveOptions& options ) const;
+        void syncAttachSerializeProperties( const ObjectSaveOptions& options ) const;
         /** @brief 상태에서 읽은 부착 필드를 반환합니다. 공간은 `ObjectStateBatch` 가 알고 있으므로 `_idSpace` 는 채우지 않습니다. */
         SceneAttachReference getLoadedAttachReference() const;
         /**

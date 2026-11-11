@@ -1,6 +1,6 @@
 /**
  * @file GameplayAutomationParams.h
- * @brief 게임플레이 시나리오 단계(`AdvanceGameTime` · `Mount` · `Dismount`)의 인자 스키마입니다(`AutomationStep::readFields`).
+ * @brief 게임플레이 시나리오 단계(`AdvanceGameTime` · `Mount` · `Dismount`)의 인자 스키마입니다(`AutomationStep::readProperties`).
  */
 #pragma once
 #include "Core/Container/string.h"

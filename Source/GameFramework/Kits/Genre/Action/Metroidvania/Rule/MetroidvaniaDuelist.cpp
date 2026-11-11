@@ -86,13 +86,13 @@ namespace sw
 
     MetroidvaniaDefenseOutcome MetroidvaniaDuelist::receiveAttack( float32 damage, float32 poiseDamage, int32 attackerID )
     {
-        MetroidvaniaDefenseOutcome outcome;
+        MetroidvaniaDefenseOutcome result;
         // 죽었거나 무적(시간 · 면역)이면 맞은 것이 아니다 — 가드 스태미나를 쓰거나 패리 창을 열거나 맞음 연출을 낼 결과를 주지 않는다.
         const bool bNothingHappens = _pCatalog == nullptr || _healthMachine.isAlive() == false || _healthMachine.shouldIgnoreDamage();
         if ( bNothingHappens )
         {
-            outcome._result = MetroidvaniaDefenseResult::Ignored;
-            return outcome;
+            result._result = MetroidvaniaDefenseResult::Ignored;
+            return result;
         }
         const MetroidvaniaRules& rules = _pCatalog->getRules();
         // 음수 피해는 막기 비용이 음수라 가드가 깨지고, NaN 피해는 막기 비용으로 스태미나를 NaN 으로 만든다. 없는 피해로 친다.
@@ -105,33 +105,33 @@ namespace sw
         {
             _parryPressTime = MetroidvaniaDuelistInternal::kNeverPressed;
             _riposteWindow.start( rules._riposteTime );
-            outcome._result     = MetroidvaniaDefenseResult::Parried;
-            outcome._parryGrade = parry._pWindow->_grade;
-            return outcome;
+            result._result     = MetroidvaniaDefenseResult::Parried;
+            result._parryGrade = parry._pWindow->_grade;
+            return result;
         }
 
         float32 healthDamage = damage * _damageTakenScale;
         float32 poise        = poiseDamage;
-        outcome._result      = MetroidvaniaDefenseResult::Hit;
+        result._result       = MetroidvaniaDefenseResult::Hit;
         if ( _bGuarding == SW_TRUE )
         {
             if ( _stamina.trySpend( damage * rules._guardStaminaPerDamage ) )
             {
-                outcome._result = MetroidvaniaDefenseResult::Blocked;
-                healthDamage    = healthDamage * rules._guardChipRatio;
-                poise           = poise * MetroidvaniaDuelistInternal::kGuardPoiseRatio;
+                result._result = MetroidvaniaDefenseResult::Blocked;
+                healthDamage   = healthDamage * rules._guardChipRatio;
+                poise          = poise * MetroidvaniaDuelistInternal::kGuardPoiseRatio;
             }
             else
             {
                 // 가드 붕괴다. 남은 스태미나를 모두 잃고 그대로 맞는다.
-                outcome._result = MetroidvaniaDefenseResult::GuardBroken;
+                result._result = MetroidvaniaDefenseResult::GuardBroken;
                 (void)_stamina.reduce( _stamina.getValue() );
             }
         }
         const HealthDamageResult damageResult = _healthMachine.applyDamage( healthDamage, poise, attackerID );
-        outcome._healthDamage                 = damageResult._healthDamage;
-        outcome._bStaggered                   = damageResult._bPoiseBroken;
-        return outcome;
+        result._healthDamage                  = damageResult._healthDamage;
+        result._bStaggered                    = damageResult._bPoiseBroken;
+        return result;
     }
 
     float32 MetroidvaniaDuelist::computeAttackDamage( float32 baseDamage, const MetroidvaniaDuelist& target )

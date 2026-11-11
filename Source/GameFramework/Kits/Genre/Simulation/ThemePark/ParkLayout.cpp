@@ -52,7 +52,7 @@ namespace sw
     {
         // 형식 · 필수 · 범위는 스키마(ParkLayoutRootDef · ParkFlatRideDef · ParkCoasterDef)가 정한다. 여기에는 기본값 리터럴이 없다.
         ParkLayoutRootDef rootDef;
-        const bool        bRoot = XMLFields::readFields( root, rootDef, sourceName );
+        const bool        bRoot = XMLFields::readProperties( root, rootDef, sourceName );
         _gatePosition           = float3{ rootDef._gateX, 0.0f, rootDef._gateZ };
         _entryFee               = rootDef._entryFee;
         _startingCash           = rootDef._startingCash;
@@ -81,7 +81,7 @@ namespace sw
     {
 
         ParkFlatRideDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
         {
             return false;
         }
@@ -111,7 +111,7 @@ namespace sw
     {
 
         ParkCoasterDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
         {
             return false;
         }

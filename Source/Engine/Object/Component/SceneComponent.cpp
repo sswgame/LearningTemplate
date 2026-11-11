@@ -571,7 +571,7 @@ namespace sw
         }
 
         if ( _pManager != nullptr )
-            _pManager->notifyTransformDirtied();
+            _pManager->notifyTransformDirty();
 
         SceneComponent* pRoot = markSelfAndAncestorsDirty();
         if ( pRoot != nullptr && _pManager != nullptr )
@@ -579,7 +579,7 @@ namespace sw
         markDescendantsDirty();
     }
 
-    void SceneComponent::syncAttachSerializeFields( const ObjectSaveOptions& options ) const
+    void SceneComponent::syncAttachSerializeProperties( const ObjectSaveOptions& options ) const
     {
         _attachOwner     = {};
         _attachOwnerID   = 0;

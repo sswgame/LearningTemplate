@@ -105,7 +105,7 @@ namespace sw
         string                  makeRecordPath( string_view outputID ) const;
         const DerivedDataCache& getDerivedDataCache() const { return _derivedDataCache; }
         /** @brief 이 저장소로 만든 출력의 결과 수입니다(누적). */
-        const CookStats& getTally() const { return _tally; }
+        const CookStats& getStats() const { return _stats; }
         /** @brief 이 저장소가 출력 내용 해시(재사용 판정 · 기록 만들기)에 쓴 시간의 누적(ns)입니다. 쿠킹 요약이 전후 차로 읽는다. */
         int64 getOutputHashNanos() const { return _outputHashNanos; }
 
@@ -125,7 +125,7 @@ namespace sw
     private:
         string                        _recordRootPath;
         DerivedDataCache              _derivedDataCache;
-        mutable CookStats             _tally;           ///< 결과 수만 센다 — 출력을 만드는 일은 저장소의 상태를 바꾸지 않는다
+        mutable CookStats             _stats;           ///< 결과 수만 센다 — 출력을 만드는 일은 저장소의 상태를 바꾸지 않는다
         mutable unordered_set<string> _setRequestedID;  ///< 이 저장소로 `cookFile` 한 출력 id(`removeUnrequestedOutputs` 의 기준)
         mutable int64                 _outputHashNanos; ///< `hashOutput` 에 쓴 시간(ns) — `_tally` 처럼 `cookFile` 을 부르는 스레드에서만 바뀐다
     };

@@ -81,7 +81,7 @@ namespace sw
         [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
         {
             TDef def;
-            if ( XMLFields::readFields( node, def, sourceName ) == false )
+            if ( XMLFields::readProperties( node, def, sourceName ) == false )
                 return false;
             return addUnique( def, sourceName, outCatalog );
         }
@@ -102,7 +102,7 @@ namespace sw
         [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, vector<TDef>& outList )
         {
             TDef def;
-            if ( XMLFields::readFields( node, def, sourceName ) == false )
+            if ( XMLFields::readProperties( node, def, sourceName ) == false )
                 return false;
             outList.push_back( def );
             return true;
@@ -112,7 +112,7 @@ namespace sw
         [[nodiscard]] static bool readSetting( const XMLNode& node, string_view sourceName, TDef& outSetting, std::initializer_list<string_view> listHandRead = {} )
         {
             TDef def;
-            if ( XMLFields::readFields( node, def, sourceName, listHandRead ) == false )
+            if ( XMLFields::readProperties( node, def, sourceName, listHandRead ) == false )
                 return false;
             outSetting = def;
             return true;

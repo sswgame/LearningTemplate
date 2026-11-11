@@ -209,7 +209,7 @@ namespace sw
         public:
             GuildStoreRun( const GuildRequest& request, const ILedgerPolicy* pLedgerPolicy )
                 : _request{ request }
-                , _outcome{}
+                , _serviceResult{}
                 , _pLedgerPolicy{ pLedgerPolicy }
             {
             }
@@ -218,7 +218,7 @@ namespace sw
             GuildResult run( IServiceStoreConnection& connection )
             {
                 runAttempts( connection );
-                return std::move( _outcome );
+                return std::move( _serviceResult );
             }
 
         private:
@@ -226,7 +226,7 @@ namespace sw
             {
                 for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
                 {
-                    _outcome                        = GuildResult{};
+                    _serviceResult                  = GuildResult{};
                     const ServiceStoreResult result = runOnce( connection );
                     if ( result == ServiceStoreResult::Ok )
                     {
@@ -235,19 +235,19 @@ namespace sw
                     }
                     if ( result != ServiceStoreResult::Conflict )
                     {
-                        if ( _outcome._result == SocialResult::Ok )
-                            _outcome._result = SocialOutcome::fail( OnlineError::kUnavailable );
+                        if ( _serviceResult._result == SocialResult::Ok )
+                            _serviceResult._result = SocialServiceResult::fail( OnlineError::kUnavailable );
                         return;
                     }
                 }
-                _outcome         = GuildResult{};
-                _outcome._result = SocialOutcome::fail( OnlineError::kBusy );
+                _serviceResult         = GuildResult{};
+                _serviceResult._result = SocialServiceResult::fail( OnlineError::kBusy );
             }
 
             /** @brief 규칙 실패를 처리합니다. 결과를 적고 Invalid 를 반환하며 다시 시도하지 않습니다. */
-            ServiceStoreResult fail( SocialOutcome result )
+            ServiceStoreResult fail( SocialServiceResult result )
             {
-                _outcome._result = result;
+                _serviceResult._result = result;
                 return ServiceStoreResult::Invalid;
             }
 
@@ -291,8 +291,8 @@ namespace sw
                     {
                         if ( bSelfInGuild == false )
                             return fail( SocialResult::NotInGuild );
-                        _outcome._guildID    = guildID;
-                        _outcome._attachedID = _request._accountID;
+                        _serviceResult._guildID    = guildID;
+                        _serviceResult._attachedID = _request._accountID;
                         return ServiceStoreResult::Ok;
                     }
                     default:
@@ -306,7 +306,7 @@ namespace sw
             {
                 using Internal = GuildServiceInternal;
                 if ( GuildService::isValidName( _request._text ) == false )
-                    return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
+                    return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
                 ServiceRecord            nameRecord;
                 ServiceRecord            sequenceRecord;
                 const string             nameKey      = Internal::makeNameKey( _request._text );
@@ -335,9 +335,9 @@ namespace sw
                 const ServiceStoreResult commitResult = connection.commit( transaction );
                 if ( commitResult == ServiceStoreResult::Ok )
                 {
-                    _outcome._info     = info;
-                    _outcome._guildID  = nextID;
-                    _outcome._joinedID = _request._accountID;
+                    _serviceResult._info     = info;
+                    _serviceResult._guildID  = nextID;
+                    _serviceResult._joinedID = _request._accountID;
                 }
                 return commitResult; // 이름이 그사이 선점됐으면 다시 읽어 GuildNameTaken 으로 끝낸다
             }
@@ -388,7 +388,7 @@ namespace sw
             {
                 using Internal = GuildServiceInternal;
                 if ( _request._amount <= 0 )
-                    return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
+                    return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
                 ServiceRecord guildRecord;
                 GuildInfo     info;
                 const string  guildKey = ServiceKeyUtil::makeHex64( _request._guildID );
@@ -403,8 +403,8 @@ namespace sw
                 const ServiceStoreResult commitResult = connection.commit( transaction );
                 if ( commitResult == ServiceStoreResult::Ok )
                 {
-                    _outcome._guildID = _request._guildID;
-                    _outcome._info    = info;
+                    _serviceResult._guildID = _request._guildID;
+                    _serviceResult._info    = info;
                 }
                 return commitResult;
             }
@@ -441,8 +441,8 @@ namespace sw
                 const ServiceStoreResult commitResult = connection.commit( transaction );
                 if ( commitResult == ServiceStoreResult::Ok )
                 {
-                    _outcome._guildID  = _request._guildID;
-                    _outcome._joinedID = _request._accountID;
+                    _serviceResult._guildID  = _request._guildID;
+                    _serviceResult._joinedID = _request._accountID;
                 }
                 return commitResult;
             }
@@ -463,14 +463,14 @@ namespace sw
                                      Internal::decodeMember( selfMemberRecord._bytes, selfMember );
                 if ( bReadOk == false )
                     return ServiceStoreResult::Unavailable;
-                _outcome._guildID = guildID;
+                _serviceResult._guildID = guildID;
 
                 ServiceTransaction transaction;
                 switch ( _request._operation )
                 {
                     case GuildOperation::Get:
                     {
-                        _outcome._info = info;
+                        _serviceResult._info = info;
                         return ServiceStoreResult::Ok; // 멤버 목록은 collectMembers 가 채운다
                     }
                     case GuildOperation::Invite:
@@ -491,7 +491,7 @@ namespace sw
                         if ( selfMember._role < GuildRole::Officer )
                             return fail( SocialResult::NotAllowed );
                         if ( _request._text.size() > static_cast<size_t>( GuildLimit::kMaxNoticeSize ) )
-                            return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
+                            return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
                         info._notice = _request._text;
                         transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
                         return connection.commit( transaction );
@@ -523,7 +523,7 @@ namespace sw
                     }
                     default:
                     {
-                        return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
+                        return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
                     }
                 }
             }
@@ -535,7 +535,7 @@ namespace sw
                 if ( selfMember._role < GuildRole::Officer )
                     return fail( SocialResult::NotAllowed );
                 if ( _request._targetID == kInvalidAccountID || _request._targetID == _request._accountID )
-                    return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
+                    return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
                 uint64                   targetGuildID = 0;
                 ServiceRecord            targetRecord;
                 const ServiceStoreResult targetRead = readAccountGuild( connection, _request._targetID, targetGuildID, targetRecord );
@@ -546,7 +546,7 @@ namespace sw
                 ServiceTransaction transaction;
                 transaction.put( Internal::getInviteTable(), Internal::makePairKey( _request._targetID, guildID ),
                                  Internal::encodeInvite( _request._accountID, _request._nowMs.count() + GuildLimit::kInviteLifetimeMs ) ); // 다시 보내면 덮어쓴다
-                _outcome._invitedID = _request._targetID;
+                _serviceResult._invitedID = _request._targetID;
                 return connection.commit( transaction );
             }
 
@@ -578,7 +578,7 @@ namespace sw
                     --inoutInfo._memberCount;
                     transaction.put( Internal::getGuildTable(), ServiceKeyUtil::makeHex64( guildID ), Internal::encodeGuild( inoutInfo ), guildRecord._version );
                 }
-                _outcome._leftID = _request._accountID;
+                _serviceResult._leftID = _request._accountID;
                 return connection.commit( transaction );
             }
 
@@ -590,10 +590,10 @@ namespace sw
                 if ( Ledger::listBalances( connection, Internal::makeStorageHolder( guildID ), listBalance ) != ServiceStoreResult::Ok )
                     return ServiceStoreResult::Unavailable;
                 const size_t count = listBalance.size() < static_cast<size_t>( GuildLimit::kMaxStorageItem ) ? listBalance.size() : static_cast<size_t>( GuildLimit::kMaxStorageItem );
-                _outcome._listStorage.reserve( count );
+                _serviceResult._listStorage.reserve( count );
                 for ( size_t index = 0; index < count; ++index )
                 {
-                    _outcome._listStorage.push_back( GuildStorageItem{ listBalance[index]._assetID, listBalance[index]._amount } );
+                    _serviceResult._listStorage.push_back( GuildStorageItem{ listBalance[index]._assetID, listBalance[index]._amount } );
                 }
                 return ServiceStoreResult::Ok;
             }
@@ -615,7 +615,7 @@ namespace sw
                         const bool       bLive     = Internal::decodeApplication( record._bytes, application._appliedMs, expiresMs ) && _request._nowMs.count() < expiresMs &&
                                            ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), application._accountID );
                         if ( bLive )
-                            _outcome._listApplication.push_back( application );
+                            _serviceResult._listApplication.push_back( application );
                     }
                     return ServiceStoreResult::Ok;
                 }
@@ -650,7 +650,7 @@ namespace sw
                 transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._targetID ), Internal::encodeID( guildID ), ServiceRecord::kAbsentVersion );
                 const ServiceStoreResult commitResult = connection.commit( transaction );
                 if ( commitResult == ServiceStoreResult::Ok )
-                    _outcome._joinedID = _request._targetID;
+                    _serviceResult._joinedID = _request._targetID;
                 return commitResult;
             }
 
@@ -682,13 +682,13 @@ namespace sw
                     transaction.erase( Internal::getMemberTable(), targetMemberKey, targetMemberRecord._version );
                     transaction.erase( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._targetID ), targetGuildRecord._version );
                     transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( inoutInfo ), guildRecord._version );
-                    _outcome._leftID = _request._targetID;
+                    _serviceResult._leftID = _request._targetID;
                     return connection.commit( transaction );
                 }
                 if ( selfMember._role != GuildRole::Master )
                     return fail( SocialResult::NotAllowed );
                 if ( _request._role >= GuildRole::Count ) // 와이어에서 온 값이다. 그대로 쓰면 그 멤버 레코드를 다시 읽지 못한다
-                    return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
+                    return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
                 transaction.put( Internal::getMemberTable(), targetMemberKey, Internal::encodeMember( _request._role, targetMember._joinedMs ), targetMemberRecord._version );
                 if ( _request._role == GuildRole::Master ) // 길드장을 넘기면 나는 임원이 된다
                 {
@@ -714,7 +714,7 @@ namespace sw
                     case LedgerResult::Unavailable:
                         return ServiceStoreResult::Unavailable;
                     default:
-                        return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) ); // 규칙 밖의 자산이나 양, 다른 내용에 다시 쓴 멱등 키이다
+                        return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) ); // 규칙 밖의 자산이나 양, 다른 내용에 다시 쓴 멱등 키이다
                 }
             }
 
@@ -729,7 +729,7 @@ namespace sw
                 const bool bValid = LedgerUtil::isValidAssetID( _request._assetID ) && _request._amount > 0 && _request._amount <= LedgerConstant::kMaxAmount &&
                                     LedgerUtil::isValidJournalKey( _request._journalKey );
                 if ( bValid == false )
-                    return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
+                    return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
                 const LedgerHolder storage = Internal::makeStorageHolder( guildID );
                 const LedgerHolder account = LedgerHolder::makeAccount( _request._accountID );
 
@@ -746,27 +746,27 @@ namespace sw
                 transaction.requireVersion( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord._version );
                 if ( bDeposit ) // 길드 레코드 버전을 올려 해산의 "창고가 비었다" 확인과 겹치지 않게 한다
                     transaction.put( Internal::getGuildTable(), ServiceKeyUtil::makeHex64( guildID ), Internal::encodeGuild( info ), guildRecord._version );
-                LedgerTransferResult transferOutcome;
-                const LedgerResult   staged = Ledger::stageTransfer( connection, transfer, transaction, transferOutcome );
+                LedgerTransferResult transferResult;
+                const LedgerResult   staged = Ledger::stageTransfer( connection, transfer, transaction, transferResult );
                 if ( staged != LedgerResult::Ok )
                     return failLedger( staged );
-                if ( transferOutcome._bReplayed == SW_FALSE && connection.commit( transaction ) != ServiceStoreResult::Ok )
+                if ( transferResult._bReplayed == SW_FALSE && connection.commit( transaction ) != ServiceStoreResult::Ok )
                 {
-                    const LedgerResult resolved = Ledger::resolveConflict( connection, transfer, transferOutcome );
+                    const LedgerResult resolved = Ledger::resolveConflict( connection, transfer, transferResult );
                     if ( resolved != LedgerResult::Ok )
                         return resolved == LedgerResult::Conflict ? ServiceStoreResult::Conflict : ServiceStoreResult::Unavailable;
                 }
-                for ( const LedgerTransferResult::HolderBalance& holderBalance : transferOutcome._listHolderBalance )
+                for ( const LedgerTransferResult::HolderBalance& holderBalance : transferResult._listHolderBalance )
                 {
                     if ( holderBalance._holder == storage )
                     {
-                        _outcome._listStorage.push_back( GuildStorageItem{ holderBalance._balance._assetID, holderBalance._balance._amount } );
+                        _serviceResult._listStorage.push_back( GuildStorageItem{ holderBalance._balance._assetID, holderBalance._balance._amount } );
                         return ServiceStoreResult::Ok;
                     }
                 }
                 LedgerBalance balance; // 다시 온 요청이면 이동 뒤 잔액이 없을 수 있어 지금 잔액을 읽는다
                 if ( Ledger::readBalance( connection, storage, _request._assetID, balance ) == ServiceStoreResult::Ok )
-                    _outcome._listStorage.push_back( GuildStorageItem{ _request._assetID, balance._amount } );
+                    _serviceResult._listStorage.push_back( GuildStorageItem{ _request._assetID, balance._amount } );
                 return ServiceStoreResult::Ok;
             }
 
@@ -777,12 +777,12 @@ namespace sw
                                       _request._operation == GuildOperation::ListStorage;
                 const bool bApplication = _request._operation == GuildOperation::Apply || _request._operation == GuildOperation::ListApplications ||
                                           _request._operation == GuildOperation::Reject;
-                const bool bSkip = _outcome._guildID == 0 || _request._operation == GuildOperation::Attach || _request._operation == GuildOperation::Invite || bStorage ||
+                const bool bSkip = _serviceResult._guildID == 0 || _request._operation == GuildOperation::Attach || _request._operation == GuildOperation::Invite || bStorage ||
                                    bApplication;
                 if ( bSkip )
                     return;
                 vector<ServiceRecord> listRecord;
-                const string          prefix = ServiceKeyUtil::makeHex64( _outcome._guildID ) + "/";
+                const string          prefix = ServiceKeyUtil::makeHex64( _serviceResult._guildID ) + "/";
                 if ( connection.listRecords( GuildServiceInternal::getMemberTable(), prefix, "", GuildLimit::kMaxMember, false, listRecord ) != ServiceStoreResult::Ok )
                     return; // 알림만 빠지며 클라이언트가 다시 조회한다
                 for ( const ServiceRecord& record : listRecord )
@@ -792,15 +792,15 @@ namespace sw
                                          GuildServiceInternal::decodeMember( record._bytes, member );
                     if ( bParsed == false )
                         continue;
-                    _outcome._listNotifyMember.push_back( member._accountID );
+                    _serviceResult._listNotifyMember.push_back( member._accountID );
                     if ( _request._operation == GuildOperation::Get )
-                        _outcome._info._listMember.push_back( member );
+                        _serviceResult._info._listMember.push_back( member );
                 }
             }
 
         private:
             GuildRequest         _request;
-            GuildResult          _outcome;
+            GuildResult          _serviceResult;
             const ILedgerPolicy* _pLedgerPolicy; ///< 서비스 스레드에서 복사해 둔다. 저장소 스레드는 서비스를 읽지 않는다
         };
     } // namespace
@@ -854,8 +854,8 @@ namespace sw
         {
             GuildStoreRun runner{ request, pLedgerPolicy };
             return runner.run( connection );
-        }, [this, request, requestTag]( GuildResult& outcome )
-        { applyOutcome( request, requestTag, std::move( outcome ) ); } );
+        }, [this, request, requestTag]( GuildResult& serviceResult )
+        { applyServiceResult( request, requestTag, std::move( serviceResult ) ); } );
     }
 
     void GuildService::attachAccount( AccountID accountID, UnixMilliseconds nowMs )
@@ -912,40 +912,40 @@ namespace sw
         return level;
     }
 
-    void GuildService::applyOutcome( const GuildRequest& request, uint64 requestTag, GuildResult&& outcome )
+    void GuildService::applyServiceResult( const GuildRequest& request, uint64 requestTag, GuildResult&& serviceResult )
     {
         const bool bServerOperation = request._operation == GuildOperation::Attach || request._operation == GuildOperation::AddExperience;
         if ( bServerOperation == false )
         {
             GuildCompletion completion;
             completion._requestTag      = requestTag;
-            completion._result          = outcome._result;
-            completion._info            = outcome._info;
-            completion._info._level     = computeLevel( outcome._info._experience );
-            completion._listStorage     = std::move( outcome._listStorage );
-            completion._listApplication = std::move( outcome._listApplication );
+            completion._result          = serviceResult._result;
+            completion._info            = serviceResult._info;
+            completion._info._level     = computeLevel( serviceResult._info._experience );
+            completion._listStorage     = std::move( serviceResult._listStorage );
+            completion._listApplication = std::move( serviceResult._listApplication );
             _completionBuffer.push( std::move( completion ) );
         }
-        if ( outcome._result != SocialResult::Ok )
+        if ( serviceResult._result != SocialResult::Ok )
             return;
-        if ( outcome._attachedID != kInvalidAccountID )
-            raiseEvent( outcome._attachedID, outcome._guildID, GuildEvent::Kind::MemberAttached, request._nowMs );
-        if ( outcome._joinedID != kInvalidAccountID )
-            raiseEvent( outcome._joinedID, outcome._guildID, GuildEvent::Kind::Joined, request._nowMs );
-        if ( outcome._leftID != kInvalidAccountID )
+        if ( serviceResult._attachedID != kInvalidAccountID )
+            raiseEvent( serviceResult._attachedID, serviceResult._guildID, GuildEvent::Kind::MemberAttached, request._nowMs );
+        if ( serviceResult._joinedID != kInvalidAccountID )
+            raiseEvent( serviceResult._joinedID, serviceResult._guildID, GuildEvent::Kind::Joined, request._nowMs );
+        if ( serviceResult._leftID != kInvalidAccountID )
         {
-            raiseEvent( outcome._leftID, outcome._guildID, GuildEvent::Kind::Left, request._nowMs );
-            if ( outcome._leftID != request._accountID ) // 내보내진 사람이다. 이제 멤버 목록에 없다
-                _notificationBuffer.push( SocialNotification{ SocialPresence{}, outcome._leftID, request._accountID, outcome._guildID, SocialNotificationKind::GuildChanged } );
+            raiseEvent( serviceResult._leftID, serviceResult._guildID, GuildEvent::Kind::Left, request._nowMs );
+            if ( serviceResult._leftID != request._accountID ) // 내보내진 사람이다. 이제 멤버 목록에 없다
+                _notificationBuffer.push( SocialNotification{ SocialPresence{}, serviceResult._leftID, request._accountID, serviceResult._guildID, SocialNotificationKind::GuildChanged } );
         }
-        if ( outcome._invitedID != kInvalidAccountID )
-            _notificationBuffer.push( SocialNotification{ SocialPresence{}, outcome._invitedID, request._accountID, outcome._guildID, SocialNotificationKind::GuildInvited } );
+        if ( serviceResult._invitedID != kInvalidAccountID )
+            _notificationBuffer.push( SocialNotification{ SocialPresence{}, serviceResult._invitedID, request._accountID, serviceResult._guildID, SocialNotificationKind::GuildInvited } );
         if ( request._operation == GuildOperation::Get )
             return;
-        for ( const AccountID memberID : outcome._listNotifyMember )
+        for ( const AccountID memberID : serviceResult._listNotifyMember )
         {
             if ( memberID != request._accountID )
-                _notificationBuffer.push( SocialNotification{ SocialPresence{}, memberID, request._accountID, outcome._guildID, SocialNotificationKind::GuildChanged } );
+                _notificationBuffer.push( SocialNotification{ SocialPresence{}, memberID, request._accountID, serviceResult._guildID, SocialNotificationKind::GuildChanged } );
         }
     }
 

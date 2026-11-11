@@ -214,11 +214,11 @@ namespace sw
 
         /** @brief 요청 하나를 결과 @p outcome 과 응답 @p reply 로 끝냅니다. 저장 일의 완료와 영수증 거절이 부릅니다. 응답과 지표를 처리합니다. */
         template <typename TReply>
-        void completeCall( uint64 callID, const EconomyOutcome& outcome, const TReply& reply )
+        void completeCall( uint64 callID, const EconomyServiceResult& serviceResult, const TReply& reply )
         {
-            if ( outcome.isFailed() )
+            if ( serviceResult.isFailed() )
             {
-                failCallByID( callID, outcome._errorCode );
+                failCallByID( callID, serviceResult._errorCode );
                 return;
             }
             if ( LocalCallTable::isLocal( callID ) )
@@ -227,14 +227,14 @@ namespace sw
                 local._reply.assign( reply );
                 (void)_localCalls.finish( callID, local );
             }
-            else if ( finishCall( callID, outcome, reply ) == false ) // 스토어 대기는 `EconomyRedeemReply::isRetryable` 이 정한다
+            else if ( finishCall( callID, serviceResult, reply ) == false ) // 스토어 대기는 `EconomyRedeemReply::isRetryable` 이 정한다
                 _calls.warnUnknownCall( callID );
         }
         /** @brief 호출을 공통 범주 @p errorCode 로 끝냅니다. 원격이면 공통 오류, 같은 프로세스면 `OnlineResult::_errorCode` 입니다. 공통 범주는 기억하지 않는다. */
         void  failCallByID( uint64 callID, uint16 errorCode );
         int32 getPendingCallCount() const { return _calls.getCount() + _localCalls.getCount(); }
         /** @brief 종료 드레인이 기다리는 일 수입니다 — 원격 · 같은 프로세스 호출과 저장소에 맡긴 일. */
-        int32 getOpenWorkCount() const { return getPendingCallCount() + _store.getOpenCount(); }
+        int32 getOpenJobCount() const { return getPendingCallCount() + _store.getOpenCount(); }
 
     protected:
         /** @brief 구매 · 지급 · 철회는 원격 설정의 기능 플래그가 꺼져 있으면 본문을 읽기 전에 `kFeatureDisabled` 로 끝냅니다. 조회는 된다. */
@@ -257,13 +257,13 @@ namespace sw
         };
 
         void startCall( const EconomyCall& call, uint64 callID );
-        /** @brief 요청 하나의 저장 함수 @p run( 연결, 응답& ) -> EconomyOutcome 을 맡기고 완료에서 `completeCall` 로 끝냅니다. */
+        /** @brief 요청 하나의 저장 함수 @p run( 연결, 응답& ) -> EconomyServiceResult 을 맡기고 완료에서 `completeCall` 로 끝냅니다. */
         template <typename TReply, typename TRun>
         void submitStoreCall( uint64 callID, TRun&& run );
         /** @brief 보존 검사의 완료입니다. 지표와 로그를 남기고 예약 회차를 마칩니다. */
         void completeLedgerAudit( ServiceStoreResult result, const LedgerAuditReport& report, ServiceStoreCompletion completion );
         /** @brief 환불 회수의 완료입니다. 지표와 로그를 남기고 회수로 바뀐 잔액을 계정에 알립니다. 회수를 끝내지 못했으면 제공자가 그 환불을 잊어 겹친 조회가 다시 알립니다. */
-        void completeRefund( const ReceiptRefundNotification& notice, EconomyOutcome result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion );
+        void completeRefund( const ReceiptRefundNotification& notice, EconomyServiceResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion );
         /** @brief 기준 시각 읽기의 완료입니다. 읽었으면 제공자에 넘기고, 못 읽었으면 다시 읽게 합니다. */
         void completeRefundCursorRead( const vector<EconomyRefundCursor>& listCursor, ServiceStoreResult result, ServiceStoreCompletion completion );
         /** @brief 기준 시각 쓰기의 완료입니다. */

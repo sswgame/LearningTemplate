@@ -715,10 +715,10 @@ namespace sw
     {
         if ( const WriteGate gate = FileUtilInternal::s_writeCounters._writeGate.load( std::memory_order_acquire ); gate != nullptr )
         {
-            const expected<void> verdict = gate( path );
-            if ( verdict.has_value() == false )
+            const expected<void> evaluation = gate( path );
+            if ( evaluation.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %# (%#)", path, verdict.error().message(), verdict.error().detail() );
+                SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %# (%#)", path, evaluation.error().message(), evaluation.error().detail() );
                 return false;
             }
         }
@@ -731,10 +731,10 @@ namespace sw
         const WriteGate rule = FileUtilInternal::s_writeCounters._createRule.load( std::memory_order_acquire );
         if ( rule == nullptr || exists( path ) )
             return true;
-        const expected<void> verdict = rule( path );
-        if ( verdict.has_value() )
+        const expected<void> evaluation = rule( path );
+        if ( evaluation.has_value() )
             return true;
-        SW_LOG_ERROR_ID( "File.CreateRefused", "Creating %# was refused: %# (%#)", path, verdict.error().message(), verdict.error().detail() );
+        SW_LOG_ERROR_ID( "File.CreateRefused", "Creating %# was refused: %# (%#)", path, evaluation.error().message(), evaluation.error().detail() );
         return false;
     }
 

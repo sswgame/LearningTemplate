@@ -115,7 +115,7 @@ namespace sw
     {
         // 세 칸은 리플렉션 필수 칸이다 — 빠진 칸 · 빈 이름(XMLFields.RequiredFieldMissing) · 범위 밖 폭(XMLFields.ValueOutOfRange)을 이름과 함께 알린다.
         SkirmishUnitModelDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
         {
             SW_LOG_ERROR_ID( "SkirmishUnit.ModelInvalidFieldsSkipped", "%#: model '%#' has invalid fields - skipped", sourceName, def._id.viewOrEmpty() );
             return false;

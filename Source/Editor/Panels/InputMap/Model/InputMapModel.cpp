@@ -220,7 +220,7 @@ namespace sw::editor
         return kind == BindingKind::SingleSlot || kind == BindingKind::Shortcut || kind == BindingKind::Axis1DComposite || kind == BindingKind::Chord;
     }
 
-    bool InputMapModel::canEditTriggerFields( const hashed_string& action, uint32 bindIndex ) const
+    bool InputMapModel::canEditTriggerProperties( const hashed_string& action, uint32 bindIndex ) const
     {
         const ActionBinding* pBinding = _inputMap.getBinding( action, bindIndex );
         return pBinding != nullptr && canSaveTriggerProperties( pBinding->_kind );
@@ -228,22 +228,22 @@ namespace sw::editor
 
     bool InputMapModel::setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger )
     {
-        return canEditTriggerFields( action, bindIndex ) && recordEdit( _inputMap.setBindingTrigger( action, bindIndex, trigger ) );
+        return canEditTriggerProperties( action, bindIndex ) && recordEdit( _inputMap.setBindingTrigger( action, bindIndex, trigger ) );
     }
 
     bool InputMapModel::setBindingTriggerTime( const hashed_string& action, uint32 bindIndex, float32 seconds )
     {
-        return canEditTriggerFields( action, bindIndex ) && recordEdit( _inputMap.setBindingTriggerTime( action, bindIndex, seconds ) );
+        return canEditTriggerProperties( action, bindIndex ) && recordEdit( _inputMap.setBindingTriggerTime( action, bindIndex, seconds ) );
     }
 
     bool InputMapModel::setBindingNegate( const hashed_string& action, uint32 bindIndex, bool bNegate )
     {
-        return canEditTriggerFields( action, bindIndex ) && recordEdit( _inputMap.setBindingNegate( action, bindIndex, bNegate ) );
+        return canEditTriggerProperties( action, bindIndex ) && recordEdit( _inputMap.setBindingNegate( action, bindIndex, bNegate ) );
     }
 
     bool InputMapModel::setBindingTapCount( const hashed_string& action, uint32 bindIndex, uint8 tapCount )
     {
-        return canEditTriggerFields( action, bindIndex ) && recordEdit( _inputMap.setBindingTapCount( action, bindIndex, tapCount ) );
+        return canEditTriggerProperties( action, bindIndex ) && recordEdit( _inputMap.setBindingTapCount( action, bindIndex, tapCount ) );
     }
 
     bool InputMapModel::setBindingLayer( const hashed_string& action, uint32 bindIndex, const hashed_string& layer )

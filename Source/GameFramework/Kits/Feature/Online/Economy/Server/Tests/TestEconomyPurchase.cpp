@@ -58,7 +58,7 @@ namespace
         return balance._amount;
     }
 
-    EconomyOutcome buy( MemoryServiceDatabase& database, const CurrencyCatalog& currencies, const OfferCatalog& offers, string_view offerID, uint64 idempotencyLow )
+    EconomyServiceResult buy( MemoryServiceDatabase& database, const CurrencyCatalog& currencies, const OfferCatalog& offers, string_view offerID, uint64 idempotencyLow )
     {
         EconomyPurchaseInput input;
         input._offerID    = string( offerID );

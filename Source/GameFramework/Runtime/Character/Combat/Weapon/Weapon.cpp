@@ -87,7 +87,7 @@ namespace sw
 
         // 적지 않은 칸은 WeaponDef 의 초기값이다. 깨진 값 · 범위 밖 값(최소 <= 최대 퍼짐 · 감쇠 시작 <= 끝 — 필드 경계)은 그 무기를 넣지 않는 오류다(자르지 않는다).
         WeaponDef weapon;
-        bool      bValid = XMLFields::readFields( node, weapon, sourceName );
+        bool      bValid = XMLFields::readProperties( node, weapon, sourceName );
         if ( weapon._id.empty() )
             return false;
         const utf8* const pID = weapon._id.c_str();
@@ -97,7 +97,7 @@ namespace sw
         for ( XMLNode modifierNode = node.findChild( "Modifier" ); modifierNode; modifierNode = modifierNode.findNextSibling( "Modifier" ) )
         {
             ShotModifierDef modifier;
-            bValid = XMLFields::readFields( modifierNode, modifier, sourceName ) && bValid;
+            bValid = XMLFields::readProperties( modifierNode, modifier, sourceName ) && bValid;
             weapon._listModifier.push_back( modifier );
         }
         if ( bValid == false )

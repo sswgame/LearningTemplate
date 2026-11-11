@@ -177,7 +177,7 @@ namespace sw
             (void)now;
         }
         /** @brief 끝난 지급 알림을 @p outListOutcome 뒤에 붙입니다. */
-        virtual void pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListOutcome ) { (void)outListOutcome; }
+        virtual void pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListServiceResult ) { (void)outListServiceResult; }
         virtual void shutdown() {}
     };
 } // namespace sw
@@ -210,7 +210,7 @@ namespace sw
         bool usesDeliveryConfirmation() const;
         /** @brief 그 스토어의 제공자에 지급 알림을 맡깁니다. 모르는 스토어이면 false 입니다. */
         [[nodiscard]] bool confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now );
-        void               pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListOutcome );
+        void               pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListServiceResult );
         void               shutdown();
 
     private:

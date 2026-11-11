@@ -129,7 +129,7 @@ namespace sw
                     context.recordFailure( step, "no <BeginFrameStats/> before this step" );
                     return true;
                 }
-                const string path = context.resolveOutputPath( step.readValidatedFields<AutomationFileStepParams>()._file );
+                const string path = context.resolveOutputPath( step.readValidatedProperties<AutomationFileStepParams>()._file );
                 if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, AutomationFrameStats::toJSON( summary, path ) ) == false )
                 {
                     context.recordFailure( step, "could not write the frame stats to " + path );
@@ -142,6 +142,6 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_STEP( frameStatsBegin, "BeginFrameStats", &AutomationFrameStatsSteps::runBegin, &AutomationStep::validateFields<AutomationNoParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( frameStatsEnd, "EndFrameStats", &AutomationFrameStatsSteps::runEnd, &AutomationStep::validateFields<AutomationFileStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( frameStatsBegin, "BeginFrameStats", &AutomationFrameStatsSteps::runBegin, &AutomationStep::validateProperties<AutomationNoParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( frameStatsEnd, "EndFrameStats", &AutomationFrameStatsSteps::runEnd, &AutomationStep::validateProperties<AutomationFileStepParams>, AutomationStepOptions{} );
 } // namespace sw

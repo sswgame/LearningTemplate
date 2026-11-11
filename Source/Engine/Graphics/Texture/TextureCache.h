@@ -103,7 +103,7 @@ namespace sw
          */
         uint32 completePendingLoads( IRHIDevice* pDevice, uint32 maxCount );
         /**
-         * @brief `completePendingLoads` 의 차단 판입니다 — 기다리는 로드를 상한 없이 모두 제출하고 업로드 끝남까지 기다립니다(결정적 실행, `DeterministicRunPolicy::_bFinishAssetWorkEachFrame`).
+         * @brief `completePendingLoads` 의 차단 판입니다 — 기다리는 로드를 상한 없이 모두 제출하고 업로드 끝남까지 기다립니다(결정적 실행, `DeterministicRunPolicy::_bFinishAssetJobsEachFrame`).
          * @details 스테이징이 차서 `Busy` 로 돌아간 로드는 앞 업로드가 끝난 뒤 다시 낸다 — 두 목록이 빌 때까지 되풀이한다. 끝낸 수를 반환합니다.
          */
         uint32 finishPendingLoads( IRHIDevice* pDevice );

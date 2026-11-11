@@ -1,6 +1,6 @@
 /**
  * @file ControlAutomationParams.h
- * @brief 조종 시나리오 단계(`Intent` · `Possess`)의 인자 스키마입니다(`AutomationStep::readFields`).
+ * @brief 조종 시나리오 단계(`Intent` · `Possess`)의 인자 스키마입니다(`AutomationStep::readProperties`).
  */
 #pragma once
 #include "Core/Container/string.h"

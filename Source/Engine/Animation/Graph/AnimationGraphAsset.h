@@ -1,7 +1,7 @@
 /**
  * @file AnimationGraphAsset.h
  * @brief 에디터와 런타임이 함께 쓰는 애니메이션 그래프 XML 에셋입니다.
- * @details 원소마다 받는 칸은 스키마(`AnimationGraphParams.h`)의 `PROPERTY` 가 정본이고 `XMLFields::readFields` · `writeFields` 가 읽고 쓴다. 여기 코드는 원소 구조와 칸 사이의 의미만 본다.
+ * @details 원소마다 받는 칸은 스키마(`AnimationGraphParams.h`)의 `PROPERTY` 가 정본이고 `XMLFields::readProperties` · `writeProperties` 가 읽고 쓴다. 여기 코드는 원소 구조와 칸 사이의 의미만 본다.
  */
 #pragma once
 #include "Core/Container/string.h"

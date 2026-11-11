@@ -125,7 +125,7 @@ namespace
             return listCompletion.empty() ? SocialCompletion{} : std::move( listCompletion[0] );
         }
 
-        SocialOutcome change( SocialLinkOperation operation, AccountID accountID, AccountID otherID )
+        SocialServiceResult change( SocialLinkOperation operation, AccountID accountID, AccountID otherID )
         {
             _service.changeLink( operation, accountID, otherID, UnixMilliseconds{ kNowMs }, _nextTag++ );
             return take()._result;
@@ -152,7 +152,7 @@ namespace
             (void)takeNotifications();
         }
 
-        SocialOutcome setPresence( AccountID accountID, SocialPresenceStatus status, string_view activity = "", int64 nowMs = kNowMs )
+        SocialServiceResult setPresence( AccountID accountID, SocialPresenceStatus status, string_view activity = "", int64 nowMs = kNowMs )
         {
             _service.setPresence( accountID, status, activity, UnixMilliseconds{ nowMs }, _nextTag++ );
             return take()._result;

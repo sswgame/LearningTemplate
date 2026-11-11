@@ -6,7 +6,7 @@ Scripts/lint/NamingWords.py
 이름이 업계 용어(언리얼 · 유니티 · Godot · 일반 프로그래밍)를 쓰는지 표(`Config/Rules/Lint/NamingWords.json`)와 대조한다.
 
 **왜 린트인가.** 이름이 업계 용어인지는 형식이 말할 수 없다. 표 없이 눈에 띈 이름만 고치면 `drain` · `Since` 처럼 같은 일에 새 낱말이
-계속 들어온다(2026-11-07). 예전 검사는 함수 첫 단어와 형식 끝 단어만 봐서, 이름 가운데의 금지어(`hasPendingWork` · `XMLFields::readFields`)와
+계속 들어온다(2026-11-07). 예전 검사는 함수 첫 단어와 형식 끝 단어만 봐서, 이름 가운데의 금지어(`hasPendingJobs` · `XMLFields::readProperties`)와
 3인칭 문장형 술어(`shouldDrawBatchInPass`) · 동사 없는 게터(`findOrAddMaterialGroup`)가 그대로 통과했다(2026-11-12 Source 전체 점검 약 470 건).
 
 규칙:
@@ -207,18 +207,18 @@ def checkNamingWords(projectRoot: Path) -> list[str]:
 def runSelfCheck() -> None:
     table = {"_functionWords": ["get", "has", "find", "draws", "material", "set", "focus", "starts"], "_typeSuffixes": ["Component", "Result"], "_banned": {"drain": "flush 또는 poll"},
              "_bannedTerms": {"Verdict": "Result", "Work": "Job"}, "_keepTerms": ["WorkArea"], "_predicateWords": ["is", "has", "uses", "starts"], "_lookupWords": ["get", "find"],
-             "_keep": {"MailboxOutcome": "이유"}}
-    clean = 'struct FooComponent {}; int getValue( int x ); struct MailboxOutcome {}; // drainEvents() hasWork\nconst char* s = "drainEvents() Verdict"; bool hasValue(); bool setAxisTags(); bool focusPanel(); bool startsWith(); RECT readWorkArea; int getSlotFor( int x );'
+             "_keep": {"MailboxServiceResult": "이유"}}
+    clean = 'struct FooComponent {}; int getValue( int x ); struct MailboxServiceResult {}; // drainEvents() hasWork\nconst char* s = "drainEvents() Verdict"; bool hasValue(); bool setAxisTags(); bool focusPanel(); bool startsWith(); RECT readWorkArea; int getSlotFor( int x );'
     problems, ratchet = classifyNames([("a.h", clean)], table)
     assert problems == [] and all(not names for names in ratchet.values()), (problems, ratchet)
-    bad = 'void drainEvents( int x ); struct FooVerdict {}; bool hasPendingWork(); bool drawsBatch(); int findOrAddMaterialGroup( int x ); int _verdictCount;'
+    bad = 'void drainEvents( int x ); struct FooVerdict {}; bool hasPendingJobs(); bool drawsBatch(); int findOrAddMaterialGroup( int x ); int _verdictCount;'
     problems, ratchet = classifyNames([("a.h", bad)], table)
     assert len(problems) == 1 and "'Verdict'" in problems[0], problems   # 형식 끝 단어 Verdict 는 표에 없다
     assert set(ratchet["verb"]) == {"drainEvents"}, ratchet
-    assert set(ratchet["term"]) == {"FooVerdict", "hasPendingWork", "_verdictCount"}, ratchet
+    assert set(ratchet["term"]) == {"FooVerdict", "hasPendingJobs", "_verdictCount"}, ratchet
     assert set(ratchet["predicate"]) == {"drawsBatch"}, ratchet
     assert set(ratchet["lookup"]) == {"findOrAddMaterialGroup"}, ratchet
-    baseline = {"verb": ["drainEvents"], "term": ["FooVerdict", "hasPendingWork", "_verdictCount", "goneName"], "predicate": ["drawsBatch"], "lookup": []}
+    baseline = {"verb": ["drainEvents"], "term": ["FooVerdict", "hasPendingJobs", "_verdictCount", "goneName"], "predicate": ["drawsBatch"], "lookup": []}
     ratchetProblems = compareBaseline(ratchet, baseline)
     assert any("findOrAddMaterialGroup" in line for line in ratchetProblems), ratchetProblems   # 기준선에 없는 새 위반
     assert any("goneName" in line for line in ratchetProblems), ratchetProblems   # 고쳐 사라진 이름은 빼라고 한다

@@ -1,7 +1,7 @@
 /**
  * @file RigNodeParams.h
  * @brief 리그 파일(`*.rig.xml`)의 원소마다 받는 칸입니다 — 에셋 루트 · 대상 · 노드 공통 키 · 노드 종류마다의 키와 그 목록 원소(`<item>`).
- * @details `RigXMLReader::readFields` 가 이 스키마로 속성을 읽는다. 칸의 초기값이 "적지 않음" 값이고, 범위는 PROPERTY( Min · Max ) 가 정본이다.
+ * @details `RigXMLReader::readProperties` 가 이 스키마로 속성을 읽는다. 칸의 초기값이 "적지 않음" 값이고, 범위는 PROPERTY( Min · Max ) 가 정본이다.
  *          이름 목록(`<bones><item>…`)과 객체 목록(`<feet>` 등)은 자식 요소라 노드가 손으로 푼다. 파일 키는 밑줄 이름이라 칸마다 `Name` 을 적는다.
  *          도 단위로 적는 각은 파일 단위 그대로(`Units = deg`) 읽고, 노드가 라디안이나 쿼터니언으로 옮긴다.
  *          언리얼 애님 노드의 UPROPERTY 파라미터 구조체 자리다 — 키 · 기본값 · 범위를 한 곳에 둔다.

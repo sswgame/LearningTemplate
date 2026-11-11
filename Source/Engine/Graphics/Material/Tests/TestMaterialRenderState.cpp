@@ -44,7 +44,7 @@ namespace
 } // namespace
 
 /** @brief [MaterialRenderStateTest] 적은 칸만 덮고 적지 않은 칸은 패스의 값이다. 비트필드 칸도 옆 칸을 건드리지 않는다 */
-SW_TEST_CASE( MaterialRenderStateTest, OnlyWrittenFieldsOverride )
+SW_TEST_CASE( MaterialRenderStateTest, OnlyWrittenPropertiesOverride )
 {
     RenderState pass{};
     pass._bEnableDepthWrite = SW_TRUE;
@@ -193,12 +193,12 @@ SW_TEST_CASE( MaterialRenderStateTest, PresetsMatchTheCodeValues )
 }
 
 /** @brief [MaterialRenderStateTest] 칸이 배치 분류 · define · 덮어쓰기 · 해시까지 간다. 적지 않으면 해시가 define 만의 값이다 */
-SW_TEST_CASE( MaterialRenderStateTest, FieldsReachBatchAndDefines )
+SW_TEST_CASE( MaterialRenderStateTest, PropertiesReachBatchAndDefines )
 {
     shared_ptr<Material> plain = Material::create();
     SW_REQUIRE_TRUE( RenderStateTestUtil::load( *plain, "alphaMode=\"Opaque\"" ) );
     SW_EXPECT_TRUE( plain->getBlendMode() == BlendMode::Opaque );
-    SW_EXPECT_TRUE( plain->getRenderFieldsHash() == 0 );
+    SW_EXPECT_TRUE( plain->getRenderPropertiesHash() == 0 );
 
     shared_ptr<Material> blended = Material::create();
     SW_REQUIRE_TRUE( RenderStateTestUtil::load( *blended, "alphaMode=\"Blend\" blendPreset=\"Additive\" renderQueue=\"5\" enableDepthWrite=\"false\"", "<_permutations><_alwaysDefines><item>MATERIAL_BLEND_TRANSLUCENT</item></_alwaysDefines></_permutations>" ) );
@@ -221,7 +221,7 @@ SW_TEST_CASE( MaterialRenderStateTest, FieldsReachBatchAndDefines )
 }
 
 /** @brief [MaterialRenderStateTest] 저장한 글을 다시 읽으면 같은 칸이다 — 적지 않은 칸은 적히지 않아 패스의 값으로 남는다 */
-SW_TEST_CASE( MaterialRenderStateTest, FieldsSurviveSaving )
+SW_TEST_CASE( MaterialRenderStateTest, PropertiesSurviveSaving )
 {
     shared_ptr<Material> material = Material::create();
     SW_REQUIRE_TRUE( RenderStateTestUtil::load( *material, "alphaMode=\"Blend\" blendPreset=\"Multiply\" depthCompare=\"Greater\" stencilRef=\"9\" enableStencil=\"true\" renderQueue=\"-2\"", "<_permutations><_alwaysDefines><item>MATERIAL_BLEND_TRANSLUCENT</item></_alwaysDefines></_permutations>" ) );

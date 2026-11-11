@@ -108,7 +108,7 @@ namespace sw::editor
                 if ( applyInheritance( presetObj, rule ) == false )
                     return clearAndFail();
                 rule._name = name; // 상속이 부모 이름을 덮어썼을 수 있다. 이 프리셋의 이름이 원본이다.
-                if ( JSONFields::readFields( presetObj, rule, "TextureImportConfig preset '" + name + "'" ) == false )
+                if ( JSONFields::readProperties( presetObj, rule, "TextureImportConfig preset '" + name + "'" ) == false )
                     return clearAndFail();
                 _mapPreset[name] = rule;
             }
@@ -126,7 +126,7 @@ namespace sw::editor
                 TextureImportRule                      rule;
                 fixed_string<constant::buffer::kMax64> sourceName;
                 formatstring( sourceName.data(), sourceName.capacity(), "TextureImportConfig rule %#", index );
-                if ( applyInheritance( ruleObj, rule ) == false || JSONFields::readFields( ruleObj, rule, sourceName.view() ) == false )
+                if ( applyInheritance( ruleObj, rule ) == false || JSONFields::readProperties( ruleObj, rule, sourceName.view() ) == false )
                     return clearAndFail();
                 _listRule.push_back( rule );
             }

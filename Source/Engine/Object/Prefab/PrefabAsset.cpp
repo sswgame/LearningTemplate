@@ -204,7 +204,7 @@ namespace sw
                         return false;
                     }
                     PrefabInstanceParams params;
-                    if ( XMLFields::readFields( element, params, sourceName ) == false )
+                    if ( XMLFields::readProperties( element, params, sourceName ) == false )
                         return false;
                     PrefabInstanceNode node{};
                     node._name              = std::move( params._name );
@@ -230,7 +230,7 @@ namespace sw
                     if ( node._parentIndex != parentIndex )
                         continue;
                     XMLNode element = parent.appendChild( kNestedInstance );
-                    XMLFields::writeFields( element, PrefabInstanceParams{ node._name, node._prefabPath, node._attachKey } );
+                    XMLFields::writeProperties( element, PrefabInstanceParams{ node._name, node._prefabPath, node._attachKey } );
                     if ( node._overrideXML.empty() == false )
                     {
                         XMLDocument overrideDoc;
@@ -573,7 +573,7 @@ namespace sw
         }
 
         PrefabRootParams rootParams;
-        if ( XMLFields::readFields( root, rootParams, absPath, { "formatVersion", DataInheritance::kBaseAttribute } ) == false )
+        if ( XMLFields::readProperties( root, rootParams, absPath, { "formatVersion", DataInheritance::kBaseAttribute } ) == false )
             return false;
         if ( rootParams._name.empty() == false )
             _name = rootParams._name;
@@ -732,7 +732,7 @@ namespace sw
         return true;
     }
 
-    bool PrefabAsset::makeVariantFileFields( string& outOverrideXML, vector<PrefabInstanceNode>& outListOwnNode ) const
+    bool PrefabAsset::makeVariantFileProperties( string& outOverrideXML, vector<PrefabInstanceNode>& outListOwnNode ) const
     {
         outOverrideXML.clear();
         PrefabAsset base;
@@ -868,7 +868,7 @@ namespace sw
         root.appendAttribute( "formatVersion", static_cast<uint32>( PrefabAsset::kAssetType._formatVersion ) );
         if ( _basePath.empty() == false )
             root.appendAttribute( DataInheritance::kBaseAttribute, string_view( _basePath ) );
-        XMLFields::writeFields( root, PrefabRootParams{ _name } );
+        XMLFields::writeProperties( root, PrefabRootParams{ _name } );
 
         // 변형은 부모와 다른 점만 쓴다. 다른 점을 만들지 못하면 쓰지 않는다 — 모든 칸을 적어 부모를 끊지 않는다.
         if ( _basePath.empty() == false )
@@ -876,10 +876,10 @@ namespace sw
             string                     overrideXML;
             vector<PrefabInstanceNode> listOwnNode;
             XMLDocument                overrideDoc;
-            const bool                 bFields = makeVariantFileFields( overrideXML, listOwnNode );
-            if ( bFields && overrideXML.empty() == false && overrideDoc.parse( overrideXML ) )
+            const bool                 bProperties = makeVariantFileProperties( overrideXML, listOwnNode );
+            if ( bProperties && overrideXML.empty() == false && overrideDoc.parse( overrideXML ) )
                 (void)root.appendClone( overrideDoc.getRoot() );
-            if ( bFields == false || PrefabAssetInternal::writeNodesToXML( root, listOwnNode, -1 ) == false )
+            if ( bProperties == false || PrefabAssetInternal::writeNodesToXML( root, listOwnNode, -1 ) == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.PrefabVariantNotWritten", "Prefab variant '%#' could not be written - '%#' is left as it was", _name, absPath.str() );
                 return false;
@@ -943,7 +943,7 @@ namespace sw
         {
             string                     overrideXML;
             vector<PrefabInstanceNode> listOwnNode;
-            if ( makeVariantFileFields( overrideXML, listOwnNode ) == false )
+            if ( makeVariantFileProperties( overrideXML, listOwnNode ) == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.PrefabVariantNotWrittenJSON", "Prefab variant '%#' could not be written; nothing written: %#", _name, absPath.str() );
                 return false;

@@ -176,14 +176,14 @@ namespace
             task._deliveryKey = string( deliveryKey );
             _pValidator->confirmDelivery( task, UnixMilliseconds{ _nowMs } );
             pump();
-            vector<ReceiptDeliveryResult> listOutcome;
-            _pValidator->pollDeliveryOutcomes( listOutcome );
-            SW_EXPECT_EQUAL( size_t( 1 ), listOutcome.size() );
-            if ( listOutcome.empty() )
+            vector<ReceiptDeliveryResult> listServiceResult;
+            _pValidator->pollDeliveryOutcomes( listServiceResult );
+            SW_EXPECT_EQUAL( size_t( 1 ), listServiceResult.size() );
+            if ( listServiceResult.empty() )
                 return ReceiptDeliveryStatus::Retry;
-            SW_EXPECT_EQUAL( string( "google" ), listOutcome[0]._storeName );
-            SW_EXPECT_EQUAL( string( "rcpt.google/rec" ), listOutcome[0]._recordKey );
-            return listOutcome[0]._status;
+            SW_EXPECT_EQUAL( string( "google" ), listServiceResult[0]._storeName );
+            SW_EXPECT_EQUAL( string( "rcpt.google/rec" ), listServiceResult[0]._recordKey );
+            return listServiceResult[0]._status;
         }
 
         vector<ReceiptRefundNotification> takeRefunds()
@@ -756,7 +756,7 @@ SW_TEST_CASE( AppleReceiptValidatorTest, UnreadableAnswersAreRetry )
 }
 
 /** @brief [AppleReceiptValidatorTest] 서명한 답의 대조: 다른 거래 · 다른 번들 · 상품 없음 · 환경 없음은 Invalid, 취소된 거래는 Refunded 다 */
-SW_TEST_CASE( AppleReceiptValidatorTest, SignedFieldsAreCompared )
+SW_TEST_CASE( AppleReceiptValidatorTest, SignedPropertiesAreCompared )
 {
     AppleFixture rig;
     for ( const utf8* pPayload : {

@@ -266,7 +266,7 @@ namespace sw
          * @brief 시계 잡기 조건(`SW_AUTOMATION_CLOCK_HOLDER`, 저장 검증 같은 백그라운드 작업)이 참이면 이 프레임을 세지 않고 true 입니다 — 시작 전이면 시작을 미룹니다.
          * @details 그 프레임은 단계를 돌리지 않고 뒤의 입력 이벤트를 한 프레임 민다(`WaitUntil` 과 같다). 벽시계로 `kClockHoldTimeoutSeconds` 를 넘기면 시간 초과로 끝낸다.
          */
-        [[nodiscard]] bool holdClockForBackgroundWork( InputManager& input );
+        [[nodiscard]] bool holdClockForBackgroundJobs( InputManager& input );
         /** @brief 시작 씬(`requireStartScene`)이 아직 활성이 아니면 true 입니다 — 로드를 요청하고 기다린다. 못 열면 결과를 정하고 true 입니다. */
         [[nodiscard]] bool holdForStartScene();
         /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */

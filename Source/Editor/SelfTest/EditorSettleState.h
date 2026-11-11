@@ -30,12 +30,12 @@ namespace sw::editor
 
         uint32 _idleMovingFrames{ 0 };
 
-        /** @brief 이번 프레임의 재료로 판정합니다. @p bScreenSettled 화면이 자리 잡았다, @p bWorkDone 씬 · 에셋 · 뒤에 끝날 일이 모두 끝났다. */
-        [[nodiscard]] EditorSettleResult advance( bool bScreenSettled, bool bWorkDone )
+        /** @brief 이번 프레임의 재료로 판정합니다. @p bScreenSettled 화면이 자리 잡았다, @p bJobDone 씬 · 에셋 · 뒤에 끝날 일이 모두 끝났다. */
+        [[nodiscard]] EditorSettleResult advance( bool bScreenSettled, bool bJobDone )
         {
-            if ( bScreenSettled && bWorkDone )
+            if ( bScreenSettled && bJobDone )
                 return EditorSettleResult::Ready;
-            _idleMovingFrames = bWorkDone ? _idleMovingFrames + 1 : 0;
+            _idleMovingFrames = bJobDone ? _idleMovingFrames + 1 : 0;
             return _idleMovingFrames > kMaxIdleMovingFrames ? EditorSettleResult::Oscillating : EditorSettleResult::Waiting;
         }
     };

@@ -143,7 +143,7 @@ namespace sw
         void handleCompletion( OnlineServiceHost& host, const LoginCompletion& completion );
         void handleEvent( OnlineServiceHost& host, const LoginEvent& event );
         /** @brief 업무 결과가 공통 오류(시도 제한, 저장소, 빌드 버전)이면 그 오류로 응답하고 true 를 반환합니다. */
-        bool respondCommonError( uint64 callID, LoginOutcome result, const LoginGrant& grant );
+        bool respondCommonError( uint64 callID, LoginServiceResult result, const LoginGrant& grant );
         /** @brief 세션의 연결에 알림을 보내고 끊습니다. 세션 테이블에서 먼저 빼서 `onAccountLeft` 가 유예를 걸지 않게 합니다. */
         void revokeBound( OnlineServiceHost& host, AccountID accountID, LoginRevokeReason reason );
         /** @brief 처음 틱에서 호스트의 캐시와 버스를 연결하고 주제를 구독합니다. */

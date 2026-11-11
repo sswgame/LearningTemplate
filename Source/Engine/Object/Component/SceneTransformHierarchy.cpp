@@ -539,7 +539,7 @@ namespace sw
         mergeQueuedDirtyRoots();
         clearQueuedWrites();
         if ( changedCount > 0 )
-            notifyDirtied();
+            notifyDirty();
         return changedCount;
     }
 
@@ -659,7 +659,7 @@ namespace sw
         mergeQueuedDirtyRoots();
 
         if ( changedCount > 0 )
-            notifyDirtied();
+            notifyDirty();
         return changedCount;
     }
 

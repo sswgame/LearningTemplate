@@ -103,8 +103,8 @@ namespace sw::editor
         , _selectedNodeID{ 0 }
         , _preview{}
         , _actionGrid{}
-        , _actionFields{}
-        , _actionFieldsText{}
+        , _actionProperties{}
+        , _actionPropertiesText{}
         , _actionError{}
         , _listActionName{}
         , _pActionEntry{ nullptr }
@@ -322,7 +322,7 @@ namespace sw::editor
 
             const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( pSelectedNode->_type );
             if ( pInfo != nullptr )
-                drawNodeFields( *pSelectedNode, *pInfo );
+                drawNodeProperties( *pSelectedNode, *pInfo );
             ImGui::Separator();
         }
         drawSpeakerList();
@@ -598,18 +598,18 @@ namespace sw::editor
         }
     }
 
-    void DialogueGraphPanel::drawActionFields( DialogueNode& node )
+    void DialogueGraphPanel::drawActionProperties( DialogueNode& node )
     {
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Command" ), "Command" ), node._actionCommand );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "CommandTip" ) );
 
-        if ( _actionFieldsText != node._actionCommand || _actionFields.isValid() == false )
+        if ( _actionPropertiesText != node._actionCommand || _actionProperties.isValid() == false )
         {
-            _actionFieldsText = node._actionCommand;
+            _actionPropertiesText = node._actionCommand;
             _actionError.clear();
-            if ( const expected<void> read = GameActionCall::tryReadFields( node._actionCommand, _pActionEntry, _actionFields ); read.has_value() == false )
+            if ( const expected<void> read = GameActionCall::tryReadProperties( node._actionCommand, _pActionEntry, _actionProperties ); read.has_value() == false )
             {
                 _actionError  = string( read.error().message().data(), read.error().message().size() ) + ": " + string( read.error().detail().data(), read.error().detail().size() );
                 _pActionEntry = nullptr;
@@ -639,8 +639,8 @@ namespace sw::editor
         }
         _pActionTargetText = &node._actionCommand;
         EditorPropertyGridTarget target{};
-        target._pInstance = _actionFields.getInstance();
-        target._pType     = _actionFields.getType();
+        target._pInstance = _actionProperties.getInstance();
+        target._pType     = _actionProperties.getType();
         target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &DialogueGraphPanel::onActionFieldEdited, this );
         _actionGrid.drawProperties( target, nullptr, {} );
         _pActionTargetText = nullptr;
@@ -650,12 +650,12 @@ namespace sw::editor
     {
         if ( _pActionTargetText == nullptr || _pActionEntry == nullptr )
             return;
-        *_pActionTargetText = GameActionCall::formatText( *_pActionEntry, _actionFields );
-        _actionFieldsText   = *_pActionTargetText;
+        *_pActionTargetText   = GameActionCall::formatText( *_pActionEntry, _actionProperties );
+        _actionPropertiesText = *_pActionTargetText;
         notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
     }
 
-    void DialogueGraphPanel::drawNodeFields( DialogueNode& node, const DialogueNodeInfo& info )
+    void DialogueGraphPanel::drawNodeProperties( DialogueNode& node, const DialogueNodeInfo& info )
     {
         if ( info._bHasSpeaker )
         {
@@ -708,7 +708,7 @@ namespace sw::editor
             }
             case DialogueNodeBody::Action:
             {
-                drawActionFields( node );
+                drawActionProperties( node );
                 break;
             }
             case DialogueNodeBody::None:

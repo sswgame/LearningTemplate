@@ -62,15 +62,15 @@ namespace sw
         return matchCount;
     }
 
-    AutomationLogJudgement AutomationLogCapture::evaluateLines( const AutomationLogPolicy& policy ) const
+    AutomationLogCheckResult AutomationLogCapture::evaluateLines( const AutomationLogPolicy& policy ) const
     {
-        AutomationLogJudgement judgement;
-        ScopedLock<mutex>      lock{ _mutex };
+        AutomationLogCheckResult result;
+        ScopedLock<mutex>        lock{ _mutex };
         for ( const AutomationLogLine& line : _listLogLine )
         {
-            policy.judge( line._level, line._id, line._message, judgement );
+            policy.judge( line._level, line._id, line._message, result );
         }
-        return judgement;
+        return result;
     }
 
     bool AutomationLogCapture::containsLine( string_view needle ) const

@@ -298,7 +298,7 @@ SW_TEST_CASE( AccountServerTest, SessionMethodsCheckTheirBodies )
     SW_EXPECT_NOT_EQUAL( uint64( 0 ), rig._accountServer.findSessionID( accountID ) );
 }
 
-/** @brief [AccountServerTest] 로그인 전: 세션 메서드는 호스트가 kUnauthenticated 로 막는다 — 클라이언트 결과는 공통 범주 실패다(업무 결과 InvalidToken 이 아니다 — OnlineOutcome 계약) */
+/** @brief [AccountServerTest] 로그인 전: 세션 메서드는 호스트가 kUnauthenticated 로 막는다 — 클라이언트 결과는 공통 범주 실패다(업무 결과 InvalidToken 이 아니다 — OnlineServiceResult 계약) */
 SW_TEST_CASE( AccountServerTest, SessionMethodsNeedALogin )
 {
     AccountServerFixture rig;

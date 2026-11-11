@@ -39,7 +39,7 @@ namespace sw
             }
 
             /** @brief 우편 하나를 읽어 해독합니다. 받는 계정 확인도 포함합니다. */
-            static MailboxOutcome readMail( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey, ServiceMailRecord& outRecord )
+            static MailboxServiceResult readMail( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey, ServiceMailRecord& outRecord )
             {
                 uint64 recipient = 0;
                 if ( ServiceMail::parseRecipient( mailKey, recipient ) == false || recipient != accountID )
@@ -49,13 +49,13 @@ namespace sw
                 if ( read == ServiceStoreResult::NotFound )
                     return MailboxResult::NotFound;
                 if ( read != ServiceStoreResult::Ok || ServiceMail::decodeRecord( record._bytes, outRecord ) == false )
-                    return MailboxOutcome::fail( OnlineError::kUnavailable );
+                    return MailboxServiceResult::fail( OnlineError::kUnavailable );
                 outRecord._mailKey = string( mailKey );
                 outRecord._version = record._version;
                 return MailboxResult::Ok;
             }
 
-            static MailboxOutcome toOutcome( LedgerResult result )
+            static MailboxServiceResult toResult( LedgerResult result )
             {
                 switch ( result )
                 {
@@ -64,20 +64,20 @@ namespace sw
                     case LedgerResult::CapExceeded:
                         return MailboxResult::CapExceeded;
                     case LedgerResult::Conflict:
-                        return MailboxOutcome::fail( OnlineError::kBusy );
+                        return MailboxServiceResult::fail( OnlineError::kBusy );
                     case LedgerResult::InsufficientFunds:
                     case LedgerResult::JournalKeyReused:
                     case LedgerResult::Invalid:
                     case LedgerResult::Unavailable:
-                        return MailboxOutcome::fail( OnlineError::kUnavailable );
+                        return MailboxServiceResult::fail( OnlineError::kUnavailable );
                 }
-                return MailboxOutcome::fail( OnlineError::kUnavailable );
+                return MailboxServiceResult::fail( OnlineError::kUnavailable );
             }
 
-            static void collectAccountBalances( const LedgerTransferResult& outcome, uint64 accountID, vector<LedgerBalance>& inoutListBalance )
+            static void collectAccountBalances( const LedgerTransferResult& serviceResult, uint64 accountID, vector<LedgerBalance>& inoutListBalance )
             {
                 const LedgerHolder account = LedgerHolder::makeAccount( accountID );
-                for ( const LedgerTransferResult::HolderBalance& holderBalance : outcome._listHolderBalance )
+                for ( const LedgerTransferResult::HolderBalance& holderBalance : serviceResult._listHolderBalance )
                 {
                     if ( holderBalance._holder != account )
                         continue;
@@ -95,7 +95,7 @@ namespace sw
                 }
             }
 
-            static MailboxOutcome claimCampaign( IServiceStoreConnection& connection, uint64 campaignID, const MailboxClaimInput& input, MailboxClaimReply& outReply )
+            static MailboxServiceResult claimCampaign( IServiceStoreConnection& connection, uint64 campaignID, const MailboxClaimInput& input, MailboxClaimReply& outReply )
             {
                 ServiceRecord            campaignRecord;
                 const ServiceStoreResult read = connection.readRecord( ServiceMailCampaign::getCampaignTable(), ServiceKeyUtil::makeHex64( campaignID ), campaignRecord );
@@ -103,13 +103,13 @@ namespace sw
                     return MailboxResult::NotFound;
                 ServiceMailCampaign campaign;
                 if ( read != ServiceStoreResult::Ok || ServiceMailCampaign::decode( campaignRecord._bytes, campaign ) == false )
-                    return MailboxOutcome::fail( OnlineError::kUnavailable );
+                    return MailboxServiceResult::fail( OnlineError::kUnavailable );
                 if ( campaign.isActive( input._nowMs ) == false )
                     return MailboxResult::Expired;
                 const string          claimKey = ServiceMailCampaign::makeClaimKey( campaignID, input._accountID );
                 LedgerTransferRequest request;
                 if ( LedgerJournalKey::makeFromToken( "mail.campaign", claimKey, request._journalKey ) == false )
-                    return MailboxOutcome::fail( OnlineError::kInvalidRequest );
+                    return MailboxServiceResult::fail( OnlineError::kInvalidRequest );
                 request._reason    = "mail.campaign";
                 request._memo      = campaign._titleKey.substr( 0, static_cast<size_t>( LedgerConstant::kMaxMemoSize ) );
                 request._pPolicy   = input._pPolicy;
@@ -123,33 +123,33 @@ namespace sw
                 for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
                 {
                     ServiceTransaction   transaction;
-                    LedgerTransferResult outcome;
-                    const LedgerResult   staged = Ledger::stageTransfer( connection, request, transaction, outcome );
+                    LedgerTransferResult serviceResult;
+                    const LedgerResult   staged = Ledger::stageTransfer( connection, request, transaction, serviceResult );
                     if ( staged != LedgerResult::Ok )
-                        return toOutcome( staged );
-                    if ( outcome._bReplayed == SW_TRUE )
+                        return toResult( staged );
+                    if ( serviceResult._bReplayed == SW_TRUE )
                         return MailboxResult::AlreadyClaimed;
                     transaction.put( ServiceMailCampaign::getClaimTable(), claimKey, vector<uint8>{}, ServiceRecord::kAbsentVersion );
                     const ServiceStoreResult committed = connection.commit( transaction );
                     if ( committed == ServiceStoreResult::Ok )
                     {
-                        collectAccountBalances( outcome, input._accountID, outReply._listBalance );
+                        collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );
                         ++outReply._claimedCount;
                         return MailboxResult::Ok;
                     }
-                    const LedgerResult resolved = Ledger::resolveConflict( connection, request, outcome );
+                    const LedgerResult resolved = Ledger::resolveConflict( connection, request, serviceResult );
                     if ( resolved == LedgerResult::Ok )
                         return MailboxResult::AlreadyClaimed;
                     if ( resolved != LedgerResult::Conflict || committed == ServiceStoreResult::Unavailable )
-                        return MailboxOutcome::fail( OnlineError::kUnavailable );
+                        return MailboxServiceResult::fail( OnlineError::kUnavailable );
                 }
-                return MailboxOutcome::fail( OnlineError::kBusy );
+                return MailboxServiceResult::fail( OnlineError::kBusy );
             }
 
             /** @brief 이동으로 바뀐 계정 보유자의 잔액을 모읍니다. */
-            static void collectAccountChanges( const LedgerTransferResult& outcome, vector<MailboxBalanceChange>& outListChange )
+            static void collectAccountChanges( const LedgerTransferResult& serviceResult, vector<MailboxBalanceChange>& outListChange )
             {
-                for ( const LedgerTransferResult::HolderBalance& holderBalance : outcome._listHolderBalance )
+                for ( const LedgerTransferResult::HolderBalance& holderBalance : serviceResult._listHolderBalance )
                 {
                     if ( holderBalance._holder._kind == LedgerHolderKind::Account )
                         outListChange.push_back( MailboxBalanceChange{ holderBalance._holder._accountID, holderBalance._balance } );
@@ -190,11 +190,11 @@ namespace sw
                 {
                     request._listPosting.push_back( LedgerPosting{ escrow, target, attachment._assetID, attachment._amount } );
                 }
-                LedgerTransferResult outcome;
-                if ( Ledger::stageTransfer( connection, request, inoutTransaction, outcome ) != LedgerResult::Ok || outcome._bReplayed == SW_TRUE )
+                LedgerTransferResult serviceResult;
+                if ( Ledger::stageTransfer( connection, request, inoutTransaction, serviceResult ) != LedgerResult::Ok || serviceResult._bReplayed == SW_TRUE )
                     return false;
                 if ( outbReturned )
-                    collectAccountChanges( outcome, outListChange );
+                    collectAccountChanges( serviceResult, outListChange );
                 return true;
             }
         };
@@ -203,8 +203,8 @@ namespace sw
 
 namespace sw
 {
-    MailboxOutcome MailboxStoreLogic::listMail( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, const vector<ServiceMailCampaign>& listActiveCampaign,
-                                                const MailboxListRequest& request, MailboxListReply& outReply )
+    MailboxServiceResult MailboxStoreLogic::listMail( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, const vector<ServiceMailCampaign>& listActiveCampaign,
+                                                      const MailboxListRequest& request, MailboxListReply& outReply )
     {
         outReply = MailboxListReply{};
         if ( request._cursor.empty() )
@@ -219,7 +219,7 @@ namespace sw
                 if ( claimed == ServiceStoreResult::Ok )
                     continue;
                 if ( claimed != ServiceStoreResult::NotFound )
-                    return MailboxOutcome::fail( OnlineError::kUnavailable );
+                    return MailboxServiceResult::fail( OnlineError::kUnavailable );
                 MailView& view       = outReply._listMail.emplace_back();
                 view._mailKey        = string( MailboxProtocol::kCampaignPrefix ) + ServiceKeyUtil::makeHex64( campaign._campaignID );
                 view._titleKey       = campaign._titleKey;
@@ -236,7 +236,7 @@ namespace sw
         const ServiceStoreResult listed = connection.listRecords( ServiceMail::getMailTable(), MailboxStoreLogicInternal::makeAccountPrefix( accountID ), request._cursor,
                                                                   request._maxCount, true, listRecord );
         if ( listed != ServiceStoreResult::Ok )
-            return MailboxOutcome::fail( OnlineError::kUnavailable );
+            return MailboxServiceResult::fail( OnlineError::kUnavailable );
         for ( const ServiceRecord& record : listRecord )
         {
             ServiceMailRecord mail;
@@ -255,10 +255,10 @@ namespace sw
         return MailboxResult::Ok;
     }
 
-    MailboxOutcome MailboxStoreLogic::markRead( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey )
+    MailboxServiceResult MailboxStoreLogic::markRead( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey )
     {
-        ServiceMailRecord    mail;
-        const MailboxOutcome read = MailboxStoreLogicInternal::readMail( connection, accountID, mailKey, mail );
+        ServiceMailRecord          mail;
+        const MailboxServiceResult read = MailboxStoreLogicInternal::readMail( connection, accountID, mailKey, mail );
         if ( read != MailboxResult::Ok || mail._state != ServiceMailState::Unread )
             return read;
         mail._state = ServiceMailState::Read;
@@ -267,10 +267,10 @@ namespace sw
         const ServiceStoreResult committed = connection.commit( transaction );
         if ( committed == ServiceStoreResult::Conflict )
             return MailboxResult::Ok; // 그사이 받았거나 읽었으므로 읽음 표시는 덮어쓰지 않는다
-        return committed == ServiceStoreResult::Ok ? MailboxOutcome{ MailboxResult::Ok } : MailboxOutcome::fail( OnlineError::kUnavailable );
+        return committed == ServiceStoreResult::Ok ? MailboxServiceResult{ MailboxResult::Ok } : MailboxServiceResult::fail( OnlineError::kUnavailable );
     }
 
-    MailboxOutcome MailboxStoreLogic::claim( IServiceStoreConnection& connection, const MailboxClaimInput& input, MailboxClaimReply& outReply )
+    MailboxServiceResult MailboxStoreLogic::claim( IServiceStoreConnection& connection, const MailboxClaimInput& input, MailboxClaimReply& outReply )
     {
         const string_view mailKey = input._mailKey;
         if ( StringUtil::startsWith( mailKey, MailboxProtocol::kCampaignPrefix ) )
@@ -282,8 +282,8 @@ namespace sw
         }
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
-            ServiceMailRecord    mail;
-            const MailboxOutcome read = MailboxStoreLogicInternal::readMail( connection, input._accountID, mailKey, mail );
+            ServiceMailRecord          mail;
+            const MailboxServiceResult read = MailboxStoreLogicInternal::readMail( connection, input._accountID, mailKey, mail );
             if ( read != MailboxResult::Ok )
                 return read;
             if ( mail._state == ServiceMailState::Claimed )
@@ -293,14 +293,14 @@ namespace sw
 
             ServiceTransaction    transaction;
             LedgerTransferRequest request;
-            LedgerTransferResult  outcome;
+            LedgerTransferResult  serviceResult;
             const bool            bHasAttachment = mail._message._listAttachment.empty() == false;
             if ( bHasAttachment )
             {
                 const LedgerHolder escrow  = ServiceMail::makeEscrowHolder( mailKey );
                 const LedgerHolder funding = mail._message._fundingHolder._kind == LedgerHolderKind::Mint ? LedgerHolder::makeMint() : escrow;
                 if ( LedgerJournalKey::makeFromToken( "mail.claim", escrow._escrowToken, request._journalKey ) == false )
-                    return MailboxOutcome::fail( OnlineError::kInvalidRequest );
+                    return MailboxServiceResult::fail( OnlineError::kInvalidRequest );
                 request._reason    = "mail.claim";
                 request._memo      = mail._message._titleKey.substr( 0, static_cast<size_t>( LedgerConstant::kMaxMemoSize ) );
                 request._pPolicy   = input._pPolicy;
@@ -311,14 +311,14 @@ namespace sw
                 {
                     request._listPosting.push_back( LedgerPosting{ funding, LedgerHolder::makeAccount( input._accountID ), attachment._assetID, attachment._amount } );
                 }
-                const LedgerResult staged = Ledger::stageTransfer( connection, request, transaction, outcome );
+                const LedgerResult staged = Ledger::stageTransfer( connection, request, transaction, serviceResult );
                 if ( staged != LedgerResult::Ok )
                 {
                     if ( staged == LedgerResult::InsufficientFunds )
                         SW_LOG_ERROR_ID( "MailboxStoreLogic.MailEscrowHoldsLess", "Mail '%#' escrow holds less than its attachments", mailKey );
-                    return MailboxStoreLogicInternal::toOutcome( staged );
+                    return MailboxStoreLogicInternal::toResult( staged );
                 }
-                if ( outcome._bReplayed == SW_TRUE )
+                if ( serviceResult._bReplayed == SW_TRUE )
                     return MailboxResult::AlreadyClaimed; // 분개와 상태는 한 트랜잭션이라 여기에 올 수 없다. 방어 코드이다
             }
             mail._state = ServiceMailState::Claimed;
@@ -328,42 +328,42 @@ namespace sw
             const ServiceStoreResult committed = connection.commit( transaction );
             if ( committed == ServiceStoreResult::Ok )
             {
-                MailboxStoreLogicInternal::collectAccountBalances( outcome, input._accountID, outReply._listBalance );
+                MailboxStoreLogicInternal::collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );
                 ++outReply._claimedCount;
                 return MailboxResult::Ok;
             }
             if ( committed == ServiceStoreResult::Invalid )
-                return MailboxOutcome::fail( OnlineError::kInvalidRequest );
+                return MailboxServiceResult::fail( OnlineError::kInvalidRequest );
             if ( bHasAttachment )
             {
-                const LedgerResult resolved = Ledger::resolveConflict( connection, request, outcome );
+                const LedgerResult resolved = Ledger::resolveConflict( connection, request, serviceResult );
                 if ( resolved == LedgerResult::Ok )
                 {
                     // 응답만 잃었거나(이번 수령이 들어갔다) 다른 기기가 먼저 받았다. 어느 쪽이든 원장은 한 번만 움직인다.
-                    MailboxStoreLogicInternal::collectAccountBalances( outcome, input._accountID, outReply._listBalance );
+                    MailboxStoreLogicInternal::collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );
                     return MailboxResult::Ok;
                 }
                 if ( resolved == LedgerResult::Unavailable || committed == ServiceStoreResult::Unavailable )
-                    return MailboxOutcome::fail( OnlineError::kUnavailable );
+                    return MailboxServiceResult::fail( OnlineError::kUnavailable );
             }
             else if ( committed == ServiceStoreResult::Unavailable )
             {
-                return MailboxOutcome::fail( OnlineError::kUnavailable );
+                return MailboxServiceResult::fail( OnlineError::kUnavailable );
             }
             // Conflict 이다. 그사이 읽음 표시 등으로 버전이 바뀌었으므로 다시 읽고 다시 시도한다
         }
-        return MailboxOutcome::fail( OnlineError::kBusy );
+        return MailboxServiceResult::fail( OnlineError::kBusy );
     }
 
-    MailboxOutcome MailboxStoreLogic::claimAll( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, const ILedgerPolicy* pPolicy, MailboxClaimReply& outReply )
+    MailboxServiceResult MailboxStoreLogic::claimAll( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, const ILedgerPolicy* pPolicy, MailboxClaimReply& outReply )
     {
         outReply = MailboxClaimReply{};
         vector<ServiceRecord>    listRecord;
         const ServiceStoreResult listed = connection.listRecords( ServiceMail::getMailTable(), MailboxStoreLogicInternal::makeAccountPrefix( accountID ), "",
                                                                   MailboxProtocol::kMaxListCount, true, listRecord );
         if ( listed != ServiceStoreResult::Ok )
-            return MailboxOutcome::fail( OnlineError::kUnavailable );
-        MailboxOutcome firstFailure = MailboxResult::Ok;
+            return MailboxServiceResult::fail( OnlineError::kUnavailable );
+        MailboxServiceResult firstFailure = MailboxResult::Ok;
         for ( const ServiceRecord& record : listRecord )
         {
             if ( outReply._claimedCount >= kMaxClaimAllCount )
@@ -374,24 +374,24 @@ namespace sw
             if ( bClaimable == false )
                 continue;
             MailboxClaimInput input;
-            input._mailKey                     = record._key;
-            input._accountID                   = accountID;
-            input._nowMs                       = nowMs;
-            input._pPolicy                     = pPolicy;
-            const MailboxOutcome result        = claim( connection, input, outReply );
-            const bool           bFirstFailure = result != MailboxResult::Ok && result != MailboxResult::AlreadyClaimed && firstFailure == MailboxResult::Ok;
+            input._mailKey                           = record._key;
+            input._accountID                         = accountID;
+            input._nowMs                             = nowMs;
+            input._pPolicy                           = pPolicy;
+            const MailboxServiceResult result        = claim( connection, input, outReply );
+            const bool                 bFirstFailure = result != MailboxResult::Ok && result != MailboxResult::AlreadyClaimed && firstFailure == MailboxResult::Ok;
             if ( bFirstFailure )
                 firstFailure = result; // 하나가 상한에 걸려도 나머지는 받는다. 첫 실패를 알린다
         }
-        const MailboxOutcome outcome = outReply._claimedCount > 0 ? MailboxOutcome{ MailboxResult::Ok } : firstFailure;
-        outReply._result             = outcome._result;
-        return outcome;
+        const MailboxServiceResult serviceResult = outReply._claimedCount > 0 ? MailboxServiceResult{ MailboxResult::Ok } : firstFailure;
+        outReply._result                         = serviceResult._result;
+        return serviceResult;
     }
 
-    MailboxOutcome MailboxStoreLogic::deleteMail( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey )
+    MailboxServiceResult MailboxStoreLogic::deleteMail( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey )
     {
-        ServiceMailRecord    mail;
-        const MailboxOutcome read = MailboxStoreLogicInternal::readMail( connection, accountID, mailKey, mail );
+        ServiceMailRecord          mail;
+        const MailboxServiceResult read = MailboxStoreLogicInternal::readMail( connection, accountID, mailKey, mail );
         if ( read != MailboxResult::Ok )
             return read;
         if ( mail._state != ServiceMailState::Claimed && mail._message._listAttachment.empty() == false )
@@ -402,8 +402,8 @@ namespace sw
             transaction.erase( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( mail._message._expiresMs, mailKey ) );
         const ServiceStoreResult committed = connection.commit( transaction );
         if ( committed == ServiceStoreResult::Conflict )
-            return MailboxOutcome::fail( OnlineError::kBusy );
-        return committed == ServiceStoreResult::Ok ? MailboxOutcome{ MailboxResult::Ok } : MailboxOutcome::fail( OnlineError::kUnavailable );
+            return MailboxServiceResult::fail( OnlineError::kBusy );
+        return committed == ServiceStoreResult::Ok ? MailboxServiceResult{ MailboxResult::Ok } : MailboxServiceResult::fail( OnlineError::kUnavailable );
     }
 
     void MailboxStoreLogic::sweepExpired( IServiceStoreConnection& connection, int64 nowMs, int32 maxCount, MailboxSweepStats& outStats )

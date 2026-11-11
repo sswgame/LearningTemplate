@@ -196,6 +196,6 @@
 | 선택 | 구간 컴포넌트는 주 메시의 단계를 따른다(`MeshComponent::setLODIndex`). 스킨 칸 · 구간 메시는 늘 CPU 가 고른다 — GPU 인스턴스 LOD 그룹과 CPU 선택이 한 규칙(`MeshLODSystem::isGPUSelectable`)을 쓴다 |
 | 스킨 캐시 | 팔레트가 단계를 싣고(`GPUSkinPalette::_lodIndex`, 군중 묶음은 멤버마다 거리가 달라 모든 단계) 모프 풀이 그 단계 정점만 스킨 행으로. 칸 표 원소는 (결과 시작, 단계 첫 정점)(`GPUSkinResultOffset`, 셰이더 `uint2`) |
 | 단순화 | `CharacterMeshLOD::buildLODs` — 구간마다 `meshopt_simplify`(경계 잠금, 옷과 몸 틈이 벌어지지 않게), 단계가 쓰는 정점만 스킨과 함께 모은다. 표는 데이터(`engine/character/characterlod.xml`) |
-| 짓기 | 외형의 굽기 · 합치기 · LOD 를 `CharacterAppearanceMeshBuild` 로 묶어 워커에서(`AssetManager::launchLoadWork` — 게임 모듈은 태스크 매니저를 보지 않는다, 로드 단계라 결정적 실행이 기다린다). 캐시 읽기 · 쓰기와 걸기는 게임 스레드. 짓는 중인 같은 차림은 키로 나눈다 |
+| 짓기 | 외형의 굽기 · 합치기 · LOD 를 `CharacterAppearanceMeshBuild` 로 묶어 워커에서(`AssetManager::launchLoadJob` — 게임 모듈은 태스크 매니저를 보지 않는다, 로드 단계라 결정적 실행이 기다린다). 캐시 읽기 · 쓰기와 걸기는 게임 스레드. 짓는 중인 같은 차림은 키로 나눈다 |
 
 잰 것(DX12 Release, `load/townsfolk` 200 명): 스키닝 컴퓨트 7.5 ms(100 명일 때 8.4) · 그림자 3.5 · 불투명 5.4 ms · GT 프레임 17.3 ms, 칸마다 스킨 정점 평균 16,653(LOD 0 은 28,696), 변형 · 정점 풀 한도 안.

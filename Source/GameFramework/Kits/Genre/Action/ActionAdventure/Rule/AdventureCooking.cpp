@@ -43,9 +43,9 @@ namespace sw
 
     uint32 AdventureCooking::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         AdventureCookingRulesDef rules;
-        if ( XMLFields::readFields( root, rules, sourceName ) == false )
+        if ( XMLFields::readProperties( root, rules, sourceName ) == false )
             return 0;
         _rules = rules;
         // 재료가 효과를 가리키므로 효과를 먼저 다 읽는다.
@@ -61,7 +61,7 @@ namespace sw
     {
 
         AdventureIngredientDef ingredient;
-        if ( XMLFields::readFields( node, ingredient, sourceName ) == false )
+        if ( XMLFields::readProperties( node, ingredient, sourceName ) == false )
             return false;
         if ( ingredient._effect.empty() == false && _effectCatalog.find( ingredient._effect ) == nullptr )
         {

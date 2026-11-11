@@ -28,7 +28,7 @@ namespace sw
                 for ( XMLNode child = parent.findChild( pChildName ); child; child = child.findNextSibling( pChildName ) )
                 {
                     AbilityTagParams params;
-                    if ( XMLFields::readFields( child, params, "AbilityCatalog" ) == false || params._tag.empty() )
+                    if ( XMLFields::readProperties( child, params, "AbilityCatalog" ) == false || params._tag.empty() )
                         continue;
                     outTags.addTag( TagID::request( string_view( params._tag ) ) );
                 }
@@ -47,7 +47,7 @@ namespace sw
                 for ( XMLNode grantNode = node.findChild( "GrantAbility" ); grantNode; grantNode = grantNode.findNextSibling( "GrantAbility" ) )
                 {
                     AbilityIDParams grant;
-                    if ( XMLFields::readFields( grantNode, grant, sourceName ) == false )
+                    if ( XMLFields::readProperties( grantNode, grant, sourceName ) == false )
                     {
                         SW_LOG_ERROR_ID( "AbilityCatalog.EffectGrantAbilityWithoutId", "%#: effect '%#' has a <GrantAbility> without an id - skipped", sourceName, pID );
                         return false;
@@ -70,7 +70,7 @@ namespace sw
             {
                 // 칸 · 열거 이름은 AbilityModifierParams 의 PROPERTY 가 본다. 깨진 칸은 그 모디파이어를 넣지 않는 오류다.
                 AbilityModifierParams params;
-                if ( XMLFields::readFields( node, params, sourceName ) == false )
+                if ( XMLFields::readProperties( node, params, sourceName ) == false )
                 {
                     SW_LOG_ERROR_ID( "AbilityCatalog.EffectModifierInvalidParams", "%#: effect '%#' has a <Modifier> with invalid fields - skipped", sourceName, pEffectID );
                     return false;
@@ -108,7 +108,7 @@ namespace sw
             static shared_ptr<const IGameplayEffectExecution> createDamageExecution( const XMLNode& node )
             {
                 DamageExecutionParams params; // 세 인자 모두 필수
-                if ( XMLFields::readFields( node, params, "AbilityCatalog" ) == false )
+                if ( XMLFields::readProperties( node, params, "AbilityCatalog" ) == false )
                     return nullptr;
                 shared_ptr<DamageExecution> pExecution = make_shared<DamageExecution>();
                 pExecution->setParameters( params._setByCaller, params._attackPowerCoefficient, params._base );
@@ -355,7 +355,7 @@ namespace sw
     {
         // 칸 · 열거 이름 · 범위(주기 >= 0 · 겹침 상한 >= 1)는 AbilityEffectParams 의 PROPERTY 가 본다. 깨진 칸은 그 이펙트를 넣지 않는 오류다(자르지 않는다).
         AbilityEffectParams params;
-        if ( XMLFields::readFields( node, params, sourceName ) == false )
+        if ( XMLFields::readProperties( node, params, sourceName ) == false )
         {
             SW_LOG_ERROR_ID( "AbilityCatalog.EffectInvalidFieldsSkipped", "%#: <AbilityEffect id=\"%#\"> has invalid fields - skipped", sourceName, params._id.c_str() );
             return false;
@@ -412,7 +412,7 @@ namespace sw
     bool AbilityCatalog::readCue( const XMLNode& node, string_view sourceName, AbilityPresentationDef& outDef )
     {
         AbilityPresentationParams params;
-        if ( XMLFields::readFields( node, params, sourceName ) == false )
+        if ( XMLFields::readProperties( node, params, sourceName ) == false )
         {
             SW_LOG_ERROR_ID( "AbilityCatalog.GameplayCueInvalidParams", "%#: <AbilityPresentation tag=\"%#\"> has invalid fields - skipped", sourceName, params._tag );
             return false;
@@ -436,7 +436,7 @@ namespace sw
     bool AbilityCatalog::readAbility( const XMLNode& node, string_view sourceName, AbilityDef& outDef ) const
     {
         AbilityParams params; // id · 클래스 필수
-        if ( XMLFields::readFields( node, params, sourceName ) == false )
+        if ( XMLFields::readProperties( node, params, sourceName ) == false )
         {
             SW_LOG_WARNING_ID( "AbilityCatalog.AbilityInvalidHeadSkipped", "%#: <Ability id=\"%#\"> has an invalid head (id, class) - skipped", sourceName, params._id.c_str() );
             return false;
@@ -466,7 +466,7 @@ namespace sw
         for ( XMLNode paramNode = node.findChild( "Param" ); paramNode; paramNode = paramNode.findNextSibling( "Param" ) )
         {
             AbilityParamEntryParams param;
-            if ( XMLFields::readFields( paramNode, param, sourceName ) == false )
+            if ( XMLFields::readProperties( paramNode, param, sourceName ) == false )
             {
                 bValid = false; // 이름 없는 · 깨진 매개변수를 조용히 건너뛰지 않는다
                 continue;
@@ -493,7 +493,7 @@ namespace sw
     bool AbilityCatalog::readAbilitySet( const XMLNode& node, string_view sourceName, AbilitySetDef& outDef ) const
     {
         AbilityIDParams head;
-        if ( XMLFields::readFields( node, head, sourceName ) == false )
+        if ( XMLFields::readProperties( node, head, sourceName ) == false )
         {
             SW_LOG_WARNING_ID( "AbilityCatalog.AbilitySetWithoutIdSkipped", "%#: <AbilitySet> without an id - skipped", sourceName );
             return false;
@@ -504,9 +504,9 @@ namespace sw
         for ( XMLNode setNode = node.findChild( "AttributeSet" ); setNode; setNode = setNode.findNextSibling( "AttributeSet" ) )
         {
             AbilitySetAttributeSetEntry setEntry;
-            AbilityClassParams          setFields;
-            const bool                  bSetRead = XMLFields::readFields( setNode, setFields, sourceName );
-            setEntry._className                  = setFields._class;
+            AbilityClassParams          setProperties;
+            const bool                  bSetRead = XMLFields::readProperties( setNode, setProperties, sourceName );
+            setEntry._className                  = setProperties._class;
             if ( bSetRead == false )
             {
                 SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAttributeSetWithout", "%#: ability set '%#' has an <AttributeSet> without a class - skipped", sourceName, pID );
@@ -517,7 +517,7 @@ namespace sw
             {
                 // 범위는 적은 쪽만 막는다 — 적지 않은 쪽은 구조체 초기값(실수의 끝)이라 "제한 없음" 이다.
                 AbilitySetAttributeEntry attributeEntry;
-                if ( XMLFields::readFields( attributeNode, attributeEntry, sourceName ) == false )
+                if ( XMLFields::readProperties( attributeNode, attributeEntry, sourceName ) == false )
                 {
                     SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAttributeInvalid", "%#: ability set '%#' has an <Attribute> with invalid fields - skipped", sourceName, pID );
                     return false;
@@ -532,7 +532,7 @@ namespace sw
         for ( XMLNode abilityNode = node.findChild( "Ability" ); abilityNode; abilityNode = abilityNode.findNextSibling( "Ability" ) )
         {
             AbilitySetAbilityEntry abilityEntry; // id 필수 · 레벨 >= 1 · 입력 >= -1
-            if ( XMLFields::readFields( abilityNode, abilityEntry, sourceName ) == false )
+            if ( XMLFields::readProperties( abilityNode, abilityEntry, sourceName ) == false )
             {
                 SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetGrantsAbility", "%#: ability set '%#' has an <Ability> with invalid fields - skipped", sourceName, pID );
                 return false;
@@ -543,7 +543,7 @@ namespace sw
         for ( XMLNode effectNode = node.findChild( "Effect" ); effectNode; effectNode = effectNode.findNextSibling( "Effect" ) )
         {
             AbilitySetEffectEntry effectEntry; // id 필수 · 레벨 >= 1
-            if ( XMLFields::readFields( effectNode, effectEntry, sourceName ) == false )
+            if ( XMLFields::readProperties( effectNode, effectEntry, sourceName ) == false )
             {
                 SW_LOG_ERROR_ID( "AbilityCatalog.AbilitySetAppliesEffect", "%#: ability set '%#' has an <Effect> with invalid fields - skipped", sourceName, pID );
                 return false;

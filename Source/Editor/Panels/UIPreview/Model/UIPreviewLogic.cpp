@@ -430,7 +430,7 @@ namespace sw::editor
         return castTo<const CanvasPanel>( widget.getParent() ) != nullptr;
     }
 
-    UIPreviewSlotParams UIPreviewLogic::findSlotFields( const Widget& widget )
+    UIPreviewSlotParams UIPreviewLogic::findSlotProperties( const Widget& widget )
     {
         UIPreviewSlotParams params{};
         const auto*         pParent = widget.getParent();

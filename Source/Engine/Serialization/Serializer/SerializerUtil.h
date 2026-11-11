@@ -274,7 +274,7 @@ namespace sw
         SW_API static void collectRangeErrors( const TypeInfo& typeInfo, ObjectAddress instance, const string& prefix, vector<string>& outListError );
         /**
          * @brief `collectRangeErrors` 의 칸 하나입니다. @p instance 는 @p prop 을 가진 객체의 주소입니다.
-         * @details 파일에 적힌 칸만 보는 읽기(`XMLFields::readFields`)가 부른다 — 적지 않은 칸은 코드의 초기값이라 데이터 오류가 아니다.
+         * @details 파일에 적힌 칸만 보는 읽기(`XMLFields::readProperties`)가 부른다 — 적지 않은 칸은 코드의 초기값이라 데이터 오류가 아니다.
          */
         SW_API static void collectPropertyRangeErrors( const PropertyInfo& prop, ObjectAddress instance, const string& prefix, vector<string>& outListError );
         /**

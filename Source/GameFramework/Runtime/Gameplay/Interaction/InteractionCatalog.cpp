@@ -49,7 +49,7 @@ namespace sw
             [[nodiscard]] static bool readStep( const XMLNode& node, InteractionStepDef& inoutStep, string_view sourceName, XMLFields::AcceptAttributeFunction pfnOtherField )
             {
                 // 칸은 InteractionStepDef 의 PROPERTY(적지 않은 칸은 @p inoutStep 의 값 그대로). 페어드 애니메이션 경로 목록만 손으로 푼다.
-                const bool  bValid           = XMLFields::readFields( node, inoutStep, sourceName, { "pairedAnimation" }, pfnOtherField );
+                const bool  bValid           = XMLFields::readProperties( node, inoutStep, sourceName, { "pairedAnimation" }, pfnOtherField );
                 const utf8* pPairedAnimation = node.findAttribute( "pairedAnimation" );
                 if ( pPairedAnimation != nullptr )
                 {
@@ -119,7 +119,7 @@ namespace sw
     {
         using Internal = InteractionCatalogInternal;
         // 적지 않은 칸은 InteractionDef 의 초기값이다. 각은 라디안이다. 범위 밖 값은 자르지 않고 오류다(PROPERTY 가 본다).
-        bool bValid = XMLFields::readFields( node, outDef, sourceName, { "requiredTags", "forbiddenTags" }, &Internal::isStepField );
+        bool bValid = XMLFields::readProperties( node, outDef, sourceName, { "requiredTags", "forbiddenTags" }, &Internal::isStepField );
         Internal::readTags( node.getAttributeText( "requiredTags" ), outDef._requiredTags );
         Internal::readTags( node.getAttributeText( "forbiddenTags" ), outDef._forbiddenTags );
 
@@ -150,7 +150,7 @@ namespace sw
     bool InteractionCatalog::readSmartObject( const XMLNode& node, SmartObjectDef& outDef, string_view sourceName ) const
     {
         using Internal = InteractionCatalogInternal;
-        bool bValid    = XMLFields::readFields( node, outDef, sourceName );
+        bool bValid    = XMLFields::readProperties( node, outDef, sourceName );
         for ( XMLNode slotNode = node.findChild(); slotNode; slotNode = slotNode.findNextSibling() )
         {
             if ( StringUtil::equals( slotNode.getName(), "Slot" ) == false )
@@ -160,7 +160,7 @@ namespace sw
                 continue;
             }
             SmartObjectSlotDef slot; // 각은 라디안(±2π)이다 — PROPERTY 가 본다
-            bValid = XMLFields::readFields( slotNode, slot, sourceName, { "tags" } ) && bValid;
+            bValid = XMLFields::readProperties( slotNode, slot, sourceName, { "tags" } ) && bValid;
             Internal::readTags( slotNode.getAttributeText( "tags" ), slot._tags );
             outDef._listSlot.push_back( slot );
         }

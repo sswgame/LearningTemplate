@@ -127,7 +127,7 @@ namespace sw
         /** @brief 클라이언트 쪽에서 받은 번들로 값을 모두 바꿉니다. 깨졌으면 false 이고 바꾸지 않습니다. */
         [[nodiscard]] bool readClientSnapshot( BitReader& reader );
 
-        int32              getPendingWorkCount() const { return _store.getOpenCount(); }
+        int32              getPendingJobCount() const { return _store.getOpenCount(); }
         ServiceStoreResult getLastReloadResult() const { return _lastReloadResult; }
         ServiceStoreResult getLastSetResult() const { return _lastSetResult; }
         int32              getValueCount() const { return static_cast<int32>( _mapEntry.size() ); }

@@ -129,7 +129,7 @@ namespace sw
         _listLayoutDirtyRoot.push_back( widget._id );
     }
 
-    bool WidgetTree::hasPendingWork() const
+    bool WidgetTree::hasPendingJobs() const
     {
         return _listLayoutDirtyRoot.empty() == false || _listPaintDirty.empty() == false || _listStyleDirty.empty() == false;
     }

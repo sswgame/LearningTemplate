@@ -66,7 +66,7 @@ namespace sw
         constexpr uint32 kIdleSpinCount = 64;
         /**
          * @brief 워커가 잠들기 전에 작업을 기다리며 스핀하는 시간(마이크로초)입니다. 짧게 둡니다(측정해 본 결과입니다).
-         * @details 스핀은 `_workEpoch` 캐시 라인 하나만 읽으므로 큐 경합은 없습니다. 그런데도 길게(50 us) 돌리면 손해입니다. 워커가
+         * @details 스핀은 `_jobEpoch` 캐시 라인 하나만 읽으므로 큐 경합은 없습니다. 그런데도 길게(50 us) 돌리면 손해입니다. 워커가
          *          SMT 형제 코어를 차지해 게임 · 렌더 스레드가 느려집니다. 렌더 그래프 병렬 기록이 150~192 us(2 us 스핀) 대
          *          214~242 us(50 us 스핀)였습니다. 일부 워커만 길게 돌리는 hot pool(2 · 4개)도 이득이 없었습니다. 이 엔진의 프레임
          *          (~0.7 ms)은 잡 사이의 빈틈이 워커 수만큼의 코어를 깨어 있게 유지할 만큼 길지 않습니다. 상용 엔진의 8~16 ms
@@ -219,7 +219,7 @@ namespace sw
         , _pHelperSlotPool{ std::make_shared<HelperSlotPool>() }
         , _instanceID{ s_nextInstanceID.fetch_add( 1, std::memory_order_relaxed ) }
         , _idleWorkerMask{ 0 }
-        , _workEpoch{ 0 }
+        , _jobEpoch{ 0 }
         , _completionBroadcast{}
         , _mainThreadParkedSlot{ -1 }
         , _globalHighQueue{}
@@ -999,12 +999,12 @@ namespace sw
             dispatchMainThreadTasks();
 
         // **세대를 먼저 읽고 큐를 본다**(워커 루프와 같은 순서). 읽은 뒤에 들어온 일은 세대를 바꿔 다음 걸음이 보고, 읽기 전에 들어온 일은 바로 아래에서 본다.
-        const uint32 workEpoch     = _workEpoch.load( std::memory_order_acquire );
-        const bool   bQueueChanged = inoutState._bQueueCheckDue || workEpoch != inoutState._observedWorkEpoch;
+        const uint32 jobEpoch      = _jobEpoch.load( std::memory_order_acquire );
+        const bool   bQueueChanged = inoutState._bQueueCheckDue || jobEpoch != inoutState._observedJobEpoch;
         if ( bQueueChanged )
         {
-            inoutState._observedWorkEpoch = workEpoch;
-            inoutState._bQueueCheckDue    = false;
+            inoutState._observedJobEpoch = jobEpoch;
+            inoutState._bQueueCheckDue   = false;
             if ( tryHelpAndExecute( bHelpLowQueue ) )
             {
                 // 같은 세대에 일이 더 남았을 수 있다(배치 하나에 세대는 한 번 오른다). 다음 걸음도 큐를 본다.
@@ -1381,7 +1381,7 @@ namespace sw
     void TaskManager::wakeSleepingWorkers( uint32 requestedCount )
     {
         // 스핀 중인 워커는 세대로 알아챈다. seq_cst 인 이유는 워커 쪽의 "유휴 비트 올리기 → 큐 확인" 과 Dekker 식 짝을 이루기 때문이다.
-        _workEpoch.fetch_add( 1, std::memory_order_seq_cst );
+        _jobEpoch.fetch_add( 1, std::memory_order_seq_cst );
         if ( requestedCount == 0 )
             return;
 
@@ -1436,13 +1436,13 @@ namespace sw
             // **세대를 먼저 읽고 큐를 본다.** 그래야 그 사이에 들어온 작업이 세대를 올려 스핀이 알아챈다.
             // (읽은 뒤에 들어온 작업은 세대를 바꾸고, 읽기 전에 들어온 작업은 바로 아래 tryTakeItem 이 본다.)
             bool            bFoundInSpin  = false;
-            uint32          observedEpoch = _workEpoch.load( std::memory_order_acquire );
+            uint32          observedEpoch = _jobEpoch.load( std::memory_order_acquire );
             const Stopwatch spinStopwatch;
             for ( ;; )
             {
-                if ( _workEpoch.load( std::memory_order_acquire ) != observedEpoch )
+                if ( _jobEpoch.load( std::memory_order_acquire ) != observedEpoch )
                 {
-                    observedEpoch = _workEpoch.load( std::memory_order_acquire );
+                    observedEpoch = _jobEpoch.load( std::memory_order_acquire );
                     if ( tryTakeItem( static_cast<int32>( workerID ), true, item ) )
                     {
                         bFoundInSpin = true;

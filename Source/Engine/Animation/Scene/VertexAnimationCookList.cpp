@@ -67,7 +67,7 @@ namespace sw
     bool VertexAnimationCookList::parseRoot( const XMLNode& root, string_view sourceLabel )
     {
         static constexpr const utf8* kArrRootChild[] = { "clips" };
-        if ( XMLFields::readFields( root, *this, sourceLabel ) == false || XMLNameCheck::reportUnknownChildren( root, kArrRootChild, sourceLabel ) == false )
+        if ( XMLFields::readProperties( root, *this, sourceLabel ) == false || XMLNameCheck::reportUnknownChildren( root, kArrRootChild, sourceLabel ) == false )
             return false;
         const XMLNode clips                 = root.findChild( "clips" );
         const bool    bInvalidAnimationList = clips.isValid() == false || clips.findChild().isValid() == false;
@@ -197,7 +197,7 @@ namespace sw
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
         const CookJobDesc desc           = makeCookJobDesc( framesPerSecond );
-        CookStats         tally;
+        CookStats         stats;
         for ( const string& filePath : listFile )
         {
             if ( StringUtil::endsWith( filePath, VertexAnimationCookList::kExtension, true ) == false )
@@ -229,11 +229,11 @@ namespace sw
                     return bCooked ? CookStep::Written : CookStep::Failed;
                 } );
                 outFailedCount += result == CookResult::Failed ? 1u : 0u;
-                tally.add( result );
+                stats.add( result );
             }
         }
-        SW_LOG_INFO_ID( "VertexAnimationCooker.VertexAnimationCookReused", "Vertex animation cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
-        return tally.getWrittenCount();
+        SW_LOG_INFO_ID( "VertexAnimationCooker.VertexAnimationCookReused", "Vertex animation cook: %# reused from the DDC, %# cooked", stats._reusedCount, stats._cookedCount );
+        return stats.getWrittenCount();
     }
 } // namespace sw
 

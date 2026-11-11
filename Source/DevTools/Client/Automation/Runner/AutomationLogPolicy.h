@@ -31,8 +31,8 @@ namespace sw
         MissingID,  ///< id 가 없는 줄 — 허용할 수 없다
     };
 
-    /** @struct AutomationLogJudgement @brief 한 실행에서 `judge` 가 모은 결과입니다. 처리하지 않은 줄이 하나라도 있으면 실패입니다. */
-    struct AutomationLogJudgement
+    /** @struct AutomationLogCheckResult @brief 한 실행에서 `judge` 가 모은 결과입니다. 처리하지 않은 줄이 하나라도 있으면 실패입니다. */
+    struct AutomationLogCheckResult
     {
         vector<string> _listUnhandled{}; ///< 처리하지 않은 줄 — `[Error] [호출자] (id=…) 본문` · `[Warning] [호출자] (no log id) 본문`
         vector<string> _listAllowedID{}; ///< 허용이 맞은 id(중복 없이) — 보고에 적는다(허용했는데 나오지 않는 id 는 낡은 허용이다)
@@ -76,7 +76,7 @@ namespace sw
         /** @brief 줄 하나를 판정합니다. @p id 가 비었으면 id 없는 줄입니다. 아무 스레드에서나 부를 수 있다(에디터 콘솔은 `Declared` 를 흐리게 그린다). */
         AutomationLogResult classify( LogLevel level, string_view id, string_view message ) const;
         /** @brief 줄 하나를 판정해 처리하지 않은 줄이면 @p inoutJudgement 에 더하고, 허용이 맞았으면 그 id 를 적습니다. */
-        void judge( LogLevel level, string_view id, string_view message, AutomationLogJudgement& inoutJudgement ) const;
+        void judge( LogLevel level, string_view id, string_view message, AutomationLogCheckResult& inoutResult ) const;
 
     private:
         /** @brief @p id 가 `<ExpectLog id>` 선언 하나와 같으면 true 입니다. 빈 id(id 없는 줄)는 항상 false 입니다. */

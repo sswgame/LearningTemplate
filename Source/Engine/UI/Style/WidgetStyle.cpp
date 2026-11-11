@@ -185,7 +185,7 @@ namespace sw
         return false;
     }
 
-    uint32 UIComputedStyle::computeChangedFields( const UIComputedStyle* pOld, const UIComputedStyle* pNew )
+    uint32 UIComputedStyle::computeChangedProperties( const UIComputedStyle* pOld, const UIComputedStyle* pNew )
     {
         if ( pOld == pNew )
             return 0;

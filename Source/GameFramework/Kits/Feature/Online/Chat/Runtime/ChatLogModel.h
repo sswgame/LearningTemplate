@@ -50,9 +50,9 @@ namespace sw
 
         const deque<ChatMessage>& getLines() const { return _listLine; }
         /** @brief 마지막 보내기 결과입니다. 공통 범주(로그인 · 장애 · 버전 · 빈 글)는 `_errorCode` 로 온다. */
-        const ChatOutcome& getLastResult() const { return _lastResult; }
-        int64              getRetryAfterMs() const { return _retryAfterMs; }
-        uint64             getRevision() const { return _revision; }
+        const ChatServiceResult& getLastResult() const { return _lastResult; }
+        int64                    getRetryAfterMs() const { return _retryAfterMs; }
+        uint64                   getRevision() const { return _revision; }
 
     private:
         deque<ChatMessage>  _listLine;
@@ -61,6 +61,6 @@ namespace sw
         ChatClient*         _pClient;
         uint64              _revision;
         int64               _retryAfterMs;
-        ChatOutcome         _lastResult;
+        ChatServiceResult   _lastResult;
     };
 } // namespace sw

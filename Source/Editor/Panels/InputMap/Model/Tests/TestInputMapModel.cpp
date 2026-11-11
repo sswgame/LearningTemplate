@@ -230,7 +230,7 @@ SW_TEST_CASE( InputMapModelTest, SlotCaptureOnlyFitsSingleBindings )
 }
 
 // 결함: 2D 합성 · 마우스 축의 발화 규칙 · Negate 를 고칠 수 있었지만 파일 형식에 그 칸이 없어 저장 뒤 말없이 사라졌다.
-SW_TEST_CASE( InputMapModelTest, FieldsTheFileCannotKeepAreNotEditable )
+SW_TEST_CASE( InputMapModelTest, PropertiesTheFileCannotKeepAreNotEditable )
 {
     SW_EXPECT_TRUE( InputMapModel::canSaveTriggerProperties( BindingKind::SingleSlot ) );
     SW_EXPECT_TRUE( InputMapModel::canSaveTriggerProperties( BindingKind::Shortcut ) );

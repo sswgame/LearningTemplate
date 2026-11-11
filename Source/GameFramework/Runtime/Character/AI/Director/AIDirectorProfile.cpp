@@ -119,7 +119,7 @@ namespace sw
             AIDirectorProfile&      _profile;
             ScheduleConditionSchema _vocabulary;
 
-            bool loadCalendar( const XMLNode& node, string_view sourceName ) { return XMLFields::readFields( node, _vocabulary, sourceName ); }
+            bool loadCalendar( const XMLNode& node, string_view sourceName ) { return XMLFields::readProperties( node, _vocabulary, sourceName ); }
             bool loadIntensity( const XMLNode& node, string_view sourceName ) { return _profile.readIntensity( node, sourceName ); }
             bool loadPhase( const XMLNode& node, string_view sourceName ) { return _profile.readPhase( node, sourceName ); }
             bool loadPool( const XMLNode& node, string_view sourceName ) { return _profile.readPool( node, _vocabulary, sourceName ); }
@@ -145,11 +145,11 @@ namespace sw
         using Internal                                    = AIDirectorProfileInternal;
         static constexpr const utf8* kArrIntensityChild[] = { "Signal" };
         bool                         bValid               = Internal::validateChildren( node, kArrIntensityChild, sourceName );
-        bValid                                            = XMLFields::readFields( node, _intensity, sourceName ) && bValid;
+        bValid                                            = XMLFields::readProperties( node, _intensity, sourceName ) && bValid;
         for ( XMLNode child = node.findChild( "Signal" ); child; child = child.findNextSibling( "Signal" ) )
         {
             AIDirectorSignalDef signal;
-            if ( XMLFields::readFields( child, signal, sourceName ) == false ) // 종류는 ENUM() 이름(필수)
+            if ( XMLFields::readProperties( child, signal, sourceName ) == false ) // 종류는 ENUM() 이름(필수)
             {
                 bValid = false;
                 continue;
@@ -171,13 +171,13 @@ namespace sw
         static constexpr const utf8* kArrPhaseChild[] = { "Curve", "Exit" };
         bool                         bValid           = Internal::validateChildren( node, kArrPhaseChild, sourceName );
         AIDirectorPhaseDef           phase;
-        if ( XMLFields::readFields( node, phase, sourceName ) == false )
+        if ( XMLFields::readProperties( node, phase, sourceName ) == false )
             return false;
         bValid = GameDataXML::readFloatCurve( node, "Curve", 0.0f, phase._spawnCurve, sourceName ) && bValid; // 키가 없으면 곡선이 대체값을 쓴다
         for ( XMLNode child = node.findChild( "Exit" ); child; child = child.findNextSibling( "Exit" ) )
         {
             AIDirectorExitDef exit;
-            if ( XMLFields::readFields( child, exit, sourceName ) )
+            if ( XMLFields::readProperties( child, exit, sourceName ) )
                 phase._listExit.push_back( exit );
             else
                 bValid = false;
@@ -198,7 +198,7 @@ namespace sw
         bool                         bValid          = Internal::validateChildren( node, kArrPoolChild, sourceName );
         AIDirectorPoolDef            pool;
         // 종류는 적지 않으면 조우 풀이다(Def 초기값). 계기는 반드시 적는다 — 둘 다 ENUM() 이름이다.
-        if ( XMLFields::readFields( node, pool, sourceName ) == false )
+        if ( XMLFields::readProperties( node, pool, sourceName ) == false )
             return false;
         if ( pool._trigger == AIDirectorPoolTrigger::PhaseEnter && pool._phase.empty() )
         {
@@ -209,7 +209,7 @@ namespace sw
         for ( XMLNode child = node.findChild( "Encounter" ); child; child = child.findNextSibling( "Encounter" ) )
         {
             AIDirectorEncounterDef encounter;
-            if ( XMLFields::readFields( child, encounter, sourceName, {}, &ScheduleCondition::isConditionAttribute ) == false )
+            if ( XMLFields::readProperties( child, encounter, sourceName, {}, &ScheduleCondition::isConditionAttribute ) == false )
             {
                 bValid = false;
                 continue;

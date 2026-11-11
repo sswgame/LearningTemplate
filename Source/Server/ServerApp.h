@@ -92,7 +92,7 @@ namespace sw
         [[nodiscard]] bool collectPreviousCrashes();
         /** @brief 종료 요청이 처음 보였을 때 드레인(서버 운영 O3)을 시작합니다. `/readyz` 를 503 으로 바꾸고 접속이 빌 때까지의 기한을 정합니다. */
         void beginDrain( ShutdownCause cause, int64 monotonicMs );
-        /** @brief 드레인이 기다리는 것의 수입니다 — 서비스 연결 + 게임 UDP 접속(O3) + 키트의 진행 중인 일(`IServerService::getOpenWorkCount`). 0 이면 조용히 내려갈 수 있다. */
+        /** @brief 드레인이 기다리는 것의 수입니다 — 서비스 연결 + 게임 UDP 접속(O3) + 키트의 진행 중인 일(`IServerService::getOpenJobCount`). 0 이면 조용히 내려갈 수 있다. */
         [[nodiscard]] int32 countDrainBlockers() const;
         /** @brief 드레인이 끝났는지입니다 — 기다릴 이유가 없거나(접속 0 · 기다림 0 초) 기한이 지났으면 true. */
         [[nodiscard]] bool isDrainFinished( int64 monotonicMs ) const;

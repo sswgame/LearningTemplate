@@ -388,7 +388,7 @@ namespace sw
             // 전경에서 켜지게. 시작 뒤의 단계로는 늦다(게임의 첫 틱이 먼저 돈다). 시작 시한까지 얻지 못하면 이 세션에서 볼 수 없는 시나리오라 건너뛴다.
             const bool bForegroundMissing = _scenario.getTestOptions()._bRequiresForeground && AutomationWindowUtil::bringToForeground() == false;
             // 앞 시나리오(체인)가 남긴 백그라운드 작업이 끝나야 시작한다 — 그 결과 줄이 이 시나리오 창에 떨어지지 않게. 시작 시한은 세지 않는다(벽시계 시한이 본다).
-            if ( holdClockForBackgroundWork( input ) )
+            if ( holdClockForBackgroundJobs( input ) )
                 return;
             // 시작 씬이 서기 전에는 시작 조건(씬 플레이)을 보지 않는다 — 앞 단계의 씬이 플레이 중이어도 그 씬으로 시작하지 않게.
             if ( holdForStartScene() )
@@ -438,7 +438,7 @@ namespace sw
             updateCrashContext( "started" );
             startLoadWindow();
         }
-        else if ( holdClockForBackgroundWork( input ) )
+        else if ( holdClockForBackgroundJobs( input ) )
         {
             return; // 이 프레임은 단계를 돌리지 않는다(`onFrameEnd` 도 `_run._bClockHeld` 를 본다)
         }
@@ -951,7 +951,7 @@ namespace sw
         return *_run._pHeldStepState;
     }
 
-    bool AutomationRunner::holdClockForBackgroundWork( InputManager& input )
+    bool AutomationRunner::holdClockForBackgroundJobs( InputManager& input )
     {
         const utf8* pHolder = AutomationStepRegistry::findClockHolder();
         if ( pHolder == nullptr )

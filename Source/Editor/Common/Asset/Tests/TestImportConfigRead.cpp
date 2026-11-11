@@ -48,7 +48,7 @@ SW_TEST_CASE( ImportConfigReadTest, UnknownKeysAndNamesFailTheLoad )
 /**
  * @brief [ImportConfigReadTest] 모델 규칙은 이름을 지정한 칸 · 고정 배열 · 벡터 글 · 안쪽 파쇄 설정을 읽고, 파쇄를 적으면 `_bFracture` 가 켜진다.
  */
-SW_TEST_CASE( ImportConfigReadTest, ModelRuleReadsNamedArrayAndNestedFields )
+SW_TEST_CASE( ImportConfigReadTest, ModelRuleReadsNamedArrayAndNestedProperties )
 {
     sw::editor::ModelImportConfig config;
     SW_REQUIRE_TRUE( config.loadFromJSONString( R"({ "rules": [ {

@@ -159,7 +159,7 @@ namespace
 /**
  * @brief [StateIOTest] 한 함수가 쓴 바이트가 손으로 놓은 칸 순서 · 폭과 같고, 다시 읽어 같은 상태가 된다
  */
-SW_TEST_CASE( StateIOTest, WritesFieldsInOrderAndRoundTrips )
+SW_TEST_CASE( StateIOTest, WritesPropertiesInOrderAndRoundTrips )
 {
     StateIOTestState state;
     state._name    = sw::hashed_string( "hero" );

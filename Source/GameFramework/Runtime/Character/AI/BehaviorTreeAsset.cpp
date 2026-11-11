@@ -43,7 +43,7 @@ namespace sw
             }
 
             /** @brief 종류와 스키마의 짝은 이 switch 하나다 — 읽기 · 쓰기 · 인스펙터가 모두 이것을 지난다. */
-            static const InstancedStructOps& findFieldsOps( BehaviorNodeKind type )
+            static const InstancedStructOps& findPropertiesOps( BehaviorNodeKind type )
             {
                 switch ( type )
                 {
@@ -234,7 +234,7 @@ namespace sw
             }
 
             BehaviorTreeNodeData data;
-            bool                 bValid = BehaviorTreeXML::readNodeFields( node, type, _sourceName, data );
+            bool                 bValid = BehaviorTreeXML::readNodeProperties( node, type, _sourceName, data );
             if ( bValid == false )
                 return false; // 칸이 틀린 노드는 뜻을 모른다 - 스키마 값을 믿고 더하지 않는다
             if ( type == BehaviorNodeKind::SubTree )
@@ -316,30 +316,30 @@ namespace sw
 
 namespace sw
 {
-    void BehaviorTreeXML::resetNodeFields( BehaviorNodeKind type, BehaviorTreeNodeData& inoutData )
+    void BehaviorTreeXML::resetNodeProperties( BehaviorNodeKind type, BehaviorTreeNodeData& inoutData )
     {
         inoutData._type         = type;
-        inoutData._params       = InstancedStruct( BehaviorTreeAssetInternal::findFieldsOps( type ) );
+        inoutData._params       = InstancedStruct( BehaviorTreeAssetInternal::findPropertiesOps( type ) );
         inoutData._actionParams = InstancedStruct{};
         inoutData._listRawParam.clear();
     }
 
-    bool BehaviorTreeXML::readNodeFields( const XMLNode& node, BehaviorNodeKind type, string_view sourceName, BehaviorTreeNodeData& inoutData )
+    bool BehaviorTreeXML::readNodeProperties( const XMLNode& node, BehaviorNodeKind type, string_view sourceName, BehaviorTreeNodeData& inoutData )
     {
         using Internal = BehaviorTreeAssetInternal;
-        resetNodeFields( type, inoutData );
+        resetNodeProperties( type, inoutData );
         inoutData._inheritID = string( node.getAttributeText( "id" ) );
         inoutData._name      = string( node.getAttributeText( "name" ) );
         if ( type != BehaviorNodeKind::Action )
         {
-            return XMLFields::readFields( node, inoutData._params.getInstance(), *inoutData._params.getType(), sourceName, { "id", "name" } );
+            return XMLFields::readProperties( node, inoutData._params.getInstance(), *inoutData._params.getType(), sourceName, { "id", "name" } );
         }
-        bool                     bValid = XMLFields::readFields( node, inoutData._params.getInstance(), *inoutData._params.getType(), sourceName, {}, &Internal::isNotTaskField );
+        bool                     bValid = XMLFields::readProperties( node, inoutData._params.getInstance(), *inoutData._params.getType(), sourceName, {}, &Internal::isNotTaskField );
         const ActionEntry* const pEntry = ActionRegistry::find( inoutData._params.find<BehaviorActionParams>()->_task );
         if ( pEntry != nullptr )
         {
             inoutData._actionParams = InstancedStruct( *pEntry->_pParamsOps );
-            return XMLFields::readFields( node, inoutData._actionParams.getInstance(), *inoutData._actionParams.getType(), sourceName, { "id", "name", "task" } ) && bValid;
+            return XMLFields::readProperties( node, inoutData._actionParams.getInstance(), *inoutData._actionParams.getType(), sourceName, { "id", "name", "task" } ) && bValid;
         }
         for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
@@ -349,18 +349,18 @@ namespace sw
         return bValid;
     }
 
-    void BehaviorTreeXML::writeNodeFields( const XMLNode& node, const BehaviorTreeNodeData& data )
+    void BehaviorTreeXML::writeNodeProperties( const XMLNode& node, const BehaviorTreeNodeData& data )
     {
         if ( data._inheritID.empty() == false )
             node.appendAttribute( "id", string_view{ data._inheritID } );
         if ( data._name.empty() == false )
             node.appendAttribute( "name", string_view{ data._name } );
-        const InstancedStruct defaults( BehaviorTreeAssetInternal::findFieldsOps( data._type ) );
-        XMLFields::writeFields( node, data._params.getInstance(), defaults.getInstance(), *data._params.getType() );
+        const InstancedStruct defaults( BehaviorTreeAssetInternal::findPropertiesOps( data._type ) );
+        XMLFields::writeProperties( node, data._params.getInstance(), defaults.getInstance(), *data._params.getType() );
         if ( data._actionParams.isValid() )
         {
             const InstancedStruct defaultParams( *data._actionParams.getOps() );
-            XMLFields::writeFields( node, data._actionParams.getInstance(), defaultParams.getInstance(), *data._actionParams.getType() );
+            XMLFields::writeProperties( node, data._actionParams.getInstance(), defaultParams.getInstance(), *data._actionParams.getType() );
         }
         for ( const BehaviorRawParam& param : data._listRawParam )
         {

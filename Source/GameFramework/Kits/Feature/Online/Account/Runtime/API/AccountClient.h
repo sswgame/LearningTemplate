@@ -43,7 +43,7 @@ namespace sw
         CancelDeletion
     };
 
-    /** @brief 끝난 요청 하나입니다. 전송 오류나 공통 범주이면 `_errorCode`(`OnlineError`)가 0이 아니며 `_result` 도 그 범주입니다(`LoginOutcome`). */
+    /** @brief 끝난 요청 하나입니다. 전송 오류나 공통 범주이면 `_errorCode`(`OnlineError`)가 0이 아니며 `_result` 도 그 범주입니다(`LoginServiceResult`). */
     struct AccountClientReply
     {
         LoginGrant             _grant{}; ///< 공통 범주면 그 자세한 몸만 담긴다(`kRateLimited` 의 `_retryAfterMs`, `kUpdateRequired` 의 `_storeURL`)
@@ -51,7 +51,7 @@ namespace sw
         AccountLinkSummary     _linkSummary{};
         uint64                 _requestID{ 0 };
         uint16                 _errorCode{ 0 };
-        LoginOutcome           _result{ LoginResult::Ok };
+        LoginServiceResult     _result{ LoginResult::Ok };
         AccountClientOperation _operation{ AccountClientOperation::Login };
         uint8                  _bAutomatic{ SW_FALSE }; ///< 다시 연결된 뒤 이 객체가 스스로 보낸 재접속이다
     };

@@ -626,7 +626,7 @@ namespace sw
     bool SceneManager::processPendingSceneRegistration()
     {
         // 결정적 실행은 한 프레임에 모두 부른다 — 시나리오의 첫 프레임이 벽시계 아닌 값에 달리지 않게(언리얼 FlushAsyncLoading 자리).
-        const bool bAllAtOnce = gv_sceneRegisterComponentsPerFrame <= 0 || engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetWorkEachFrame == SW_TRUE;
+        const bool bAllAtOnce = gv_sceneRegisterComponentsPerFrame <= 0 || engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
         // 어차피 버릴 결과(다른 경로가 대기 · 타입 표가 바뀜)는 훅을 부르지 않는다 — 내릴 모듈의 훅을 돌리지 않는다.
         const bool bTypeTableChanged = _services._pTypeRegistry != nullptr && _asyncLoad->_typeTableGeneration != _services._pTypeRegistry->getGeneration();
         Scene*     pScene{ nullptr };

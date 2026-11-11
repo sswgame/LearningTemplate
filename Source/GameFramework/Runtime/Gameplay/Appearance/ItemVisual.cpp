@@ -84,7 +84,7 @@ namespace sw
             static AppearanceMaterialValueDef readMaterialValue( const XMLNode& node, AppearanceLoadReport& report, string_view sourceName )
             {
                 AppearanceMaterialValueDef value;
-                (void)AppearanceXMLUtil::readFields( node, value, report, sourceName, { "value" } );
+                (void)AppearanceXMLUtil::readProperties( node, value, report, sourceName, { "value" } );
                 AppearanceXMLUtil::readRequiredShaderValue( node, "value", value._value, report, sourceName );
                 return value;
             }
@@ -94,7 +94,7 @@ namespace sw
                                      const hashed_string& partName )
             {
                 AppearanceSectionDef section;
-                if ( AppearanceXMLUtil::readFields( node, section, report, sourceName, { "groups" } ) == false )
+                if ( AppearanceXMLUtil::readProperties( node, section, report, sourceName, { "groups" } ) == false )
                     return; // 빠진 이름 · 머티리얼은 위 읽기가 보고서에 남겼다
                 AppearanceXMLUtil::readNameList( node, "groups", section._listGroup );
                 if ( VectorUtil::containsBy<&AppearanceSectionDef::_name>( inoutListSection, section._name ) )
@@ -154,7 +154,7 @@ namespace sw
                 {
                     reportMisplacedAssetAttributes( child, inoutPart._kind, report, sourceName, visualID );
                     AppearancePartVariantDef variant;
-                    (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName ); // 에셋 칸 중 무엇을 쓰는지는 부품 종류가 정한다(`pickAsset`)
+                    (void)AppearanceXMLUtil::readProperties( child, variant, report, sourceName ); // 에셋 칸 중 무엇을 쓰는지는 부품 종류가 정한다(`pickAsset`)
                     readVariantChildren( child, inoutPart, variant, report, sourceName, visualID );
                     variant._asset = pickAsset( inoutPart._kind, variant );
                     if ( variant._skeleton.empty() == false && inoutPart._kind != AppearancePartKind::Skinned )
@@ -167,7 +167,7 @@ namespace sw
                 else if ( StringUtil::equals( pName, "MaterialVariant" ) && bModification == false )
                 {
                     AppearancePartVariantDef variant;
-                    (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName, {} );
+                    (void)AppearanceXMLUtil::readProperties( child, variant, report, sourceName, {} );
                     readVariantChildren( child, inoutPart, variant, report, sourceName, visualID );
                     // 에셋 칸은 메시 변형(`<Variant>`)의 것이다 — 머티리얼 변형이 적으면 읽히고 쓰이지 않으므로 오류다.
                     if ( variant._meshAsset.empty() == false || variant._prefabAsset.empty() == false || variant._spriteAsset.empty() == false )
@@ -188,7 +188,7 @@ namespace sw
                 else if ( StringUtil::equals( pName, "Morph" ) && bModification )
                 {
                     AppearanceMorphDef morph;
-                    (void)AppearanceXMLUtil::readFields( child, morph, report, sourceName, {} );
+                    (void)AppearanceXMLUtil::readProperties( child, morph, report, sourceName, {} );
                     inoutPart._listMorph.push_back( morph );
                 }
                 else if ( StringUtil::equals( pName, "Material" ) && bModification )
@@ -198,7 +198,7 @@ namespace sw
                 else if ( StringUtil::equals( pName, "ChannelMaterial" ) && bModification == false )
                 {
                     AppearanceChannelMaterialDef channelMaterial;
-                    if ( AppearanceXMLUtil::readFields( child, channelMaterial, report, sourceName, {} ) == false )
+                    if ( AppearanceXMLUtil::readProperties( child, channelMaterial, report, sourceName, {} ) == false )
                         return; // 빠진 칸은 위 읽기가 보고서에 남겼다
                     if ( channelMaterial._channelMax <= channelMaterial._channelMin )
                         report.addErrorWithID( "Appearance.ChannelMaterialRange", "%#: visual '%#' part '%#' <ChannelMaterial channel='%#'> needs channelMax > channelMin", sourceName, visualID.c_str(),
@@ -223,7 +223,7 @@ namespace sw
             {
                 AppearancePartDef part;
                 // 에셋은 종류가 속성을 정하고, 배치 · 충격 · 깃발은 적었는지가 기본값을 가른다.
-                if ( AppearanceXMLUtil::readFields( node, part, report, sourceName, { "socket", "offset", "rotation", "deforms", "breakable", "impulse" } ) == false )
+                if ( AppearanceXMLUtil::readProperties( node, part, report, sourceName, { "socket", "offset", "rotation", "deforms", "breakable", "impulse" } ) == false )
                     return;
                 if ( part._name.empty() || inoutVisual.findPart( part._name ) != nullptr )
                 {
@@ -335,7 +335,7 @@ namespace sw
             static void readDamageStage( const XMLNode& node, ItemVisualDef& inoutVisual, AppearanceLoadReport& report, string_view sourceName )
             {
                 AppearanceDamageStageDef stage;
-                if ( AppearanceXMLUtil::readFields( node, stage, report, sourceName, {} ) == false )
+                if ( AppearanceXMLUtil::readProperties( node, stage, report, sourceName, {} ) == false )
                     return;
                 const float32 previous            = inoutVisual._listDamageStage.empty() ? 0.0f : inoutVisual._listDamageStage.back()._threshold;
                 const bool    bOrdered            = previous < stage._threshold && stage._threshold <= 1.0f;
@@ -387,7 +387,7 @@ namespace sw
             static void readBodyChannel( const XMLNode& node, ItemVisualDef& inoutVisual, AppearanceLoadReport& report, string_view sourceName )
             {
                 BodyChannelLayerDef layer;
-                if ( AppearanceXMLUtil::readFields( node, layer, report, sourceName ) == false )
+                if ( AppearanceXMLUtil::readProperties( node, layer, report, sourceName ) == false )
                     return;
                 if ( VectorUtil::containsBy<&BodyChannelLayerDef::_name>( inoutVisual._listBodyChannel, layer._name ) )
                     report.addErrorWithID( "Appearance.BodyChannelRepeated", "%#: visual '%#' repeats body channel '%#'", sourceName, inoutVisual._id.c_str(), layer._name.c_str() );
@@ -397,7 +397,7 @@ namespace sw
 
             static void readVisual( const XMLNode& node, ItemVisualDef& outVisual, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXMLUtil::readFields( node, outVisual, report, sourceName, { "id", "tags" } );
+                (void)AppearanceXMLUtil::readProperties( node, outVisual, report, sourceName, { "id", "tags" } );
                 AppearanceXMLUtil::readTags( node, "tags", outVisual._tags );
                 // 부품을 먼저 모두 읽는다. 상태와 피해 단계가 파일 안의 순서와 상관없이 부품을 가리킬 수 있게 하기 위해서다.
                 for ( XMLNode child = node.findChild( "Part" ); child; child = child.findNextSibling( "Part" ) )

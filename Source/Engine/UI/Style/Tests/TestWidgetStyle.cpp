@@ -155,7 +155,7 @@ SW_TEST_CASE( UIStyleTest, ComponentsMapToNamedMembers )
 }
 
 /** @brief [UIStyleTest] 수치가 아닌 필드는 성분 읽기 · 쓰기가 아무것도 하지 않는다 */
-SW_TEST_CASE( UIStyleTest, NonNumericFieldsIgnoreComponents )
+SW_TEST_CASE( UIStyleTest, NonNumericPropertiesIgnoreComponents )
 {
     WidgetStyle style;
     style._transition         = "Opacity 1 Linear";
@@ -202,38 +202,38 @@ SW_TEST_CASE( UIStyleTest, CopyFieldMovesOnlyThatField )
 }
 
 /** @brief [UIStyleTest] 비교 — 같은 객체는 0, 한쪽이 없으면 다른 쪽이 정한 필드 전부다(둘 다 없으면 0) */
-SW_TEST_CASE( UIStyleTest, ChangedFieldsWithMissingStyles )
+SW_TEST_CASE( UIStyleTest, ChangedPropertiesWithMissingStyles )
 {
     UIComputedStyle style;
     style._setMask = UIStyleFieldTable::makeBit( UIStyleField::Opacity ) | UIStyleFieldTable::makeBit( UIStyleField::Padding );
-    SW_EXPECT_EQUAL( 0u, UIComputedStyle::computeChangedFields( &style, &style ) );
-    SW_EXPECT_EQUAL( 0u, UIComputedStyle::computeChangedFields( nullptr, nullptr ) );
-    SW_EXPECT_EQUAL( style._setMask, UIComputedStyle::computeChangedFields( &style, nullptr ) );
-    SW_EXPECT_EQUAL( style._setMask, UIComputedStyle::computeChangedFields( nullptr, &style ) );
+    SW_EXPECT_EQUAL( 0u, UIComputedStyle::computeChangedProperties( &style, &style ) );
+    SW_EXPECT_EQUAL( 0u, UIComputedStyle::computeChangedProperties( nullptr, nullptr ) );
+    SW_EXPECT_EQUAL( style._setMask, UIComputedStyle::computeChangedProperties( &style, nullptr ) );
+    SW_EXPECT_EQUAL( style._setMask, UIComputedStyle::computeChangedProperties( nullptr, &style ) );
 }
 
 /** @brief [UIStyleTest] 비교 — 한쪽만 정한 필드는 값이 같아도 바뀐 것이고, 정하지 않은 필드의 값 차이는 보지 않는다 */
-SW_TEST_CASE( UIStyleTest, ChangedFieldsFollowTheMasks )
+SW_TEST_CASE( UIStyleTest, ChangedPropertiesFollowTheMasks )
 {
     UIComputedStyle oldStyle;
     UIComputedStyle newStyle;
     oldStyle._setMask = UIStyleFieldTable::makeBit( UIStyleField::Opacity );
     newStyle._setMask = UIStyleFieldTable::makeBit( UIStyleField::FontSize );
-    SW_EXPECT_EQUAL( oldStyle._setMask | newStyle._setMask, UIComputedStyle::computeChangedFields( &oldStyle, &newStyle ) );
+    SW_EXPECT_EQUAL( oldStyle._setMask | newStyle._setMask, UIComputedStyle::computeChangedProperties( &oldStyle, &newStyle ) );
 
     newStyle._setMask            = oldStyle._setMask;
     oldStyle._value._borderWidth = 3.0f; // 어느 쪽도 정하지 않은 필드다
     newStyle._value._borderWidth = 9.0f;
-    SW_EXPECT_EQUAL( 0u, UIComputedStyle::computeChangedFields( &oldStyle, &newStyle ) );
+    SW_EXPECT_EQUAL( 0u, UIComputedStyle::computeChangedProperties( &oldStyle, &newStyle ) );
 }
 
 /** @brief [UIStyleTest] 비교 — 둘 다 정한 필드는 필드마다 값으로 본다. 벡터는 성분 하나만 달라도 다르다. 폰트 · 전환은 글과 값째 본다 */
-SW_TEST_CASE( UIStyleTest, ChangedFieldsCompareEachFieldByValue )
+SW_TEST_CASE( UIStyleTest, ChangedPropertiesCompareEachFieldByValue )
 {
     const UIComputedStyle base = Util::makeAllSet();
-    SW_EXPECT_EQUAL( 0u, UIComputedStyle::computeChangedFields( &base, &base ) );
+    SW_EXPECT_EQUAL( 0u, UIComputedStyle::computeChangedProperties( &base, &base ) );
     UIComputedStyle same = Util::makeAllSet();
-    SW_EXPECT_EQUAL( 0u, UIComputedStyle::computeChangedFields( &base, &same ) );
+    SW_EXPECT_EQUAL( 0u, UIComputedStyle::computeChangedProperties( &base, &same ) );
 
     for ( uint32 index = 0; index < Util::kFieldCount; ++index )
     {
@@ -246,24 +246,24 @@ SW_TEST_CASE( UIStyleTest, ChangedFieldsCompareEachFieldByValue )
             UIStyleFieldTable::readComponents( changed._value, field, arrValue );
             arrValue[component] += 1.0f;
             UIStyleFieldTable::writeComponents( changed._value, field, arrValue );
-            SW_EXPECT_EQUAL( UIStyleFieldTable::makeBit( field ), UIComputedStyle::computeChangedFields( &base, &changed ) );
+            SW_EXPECT_EQUAL( UIStyleFieldTable::makeBit( field ), UIComputedStyle::computeChangedProperties( &base, &changed ) );
         }
     }
 
     const uint32    fontBit     = UIStyleFieldTable::makeBit( UIStyleField::Font );
     UIComputedStyle family      = Util::makeAllSet();
     family._value._font._family = "Roboto";
-    SW_EXPECT_EQUAL( fontBit, UIComputedStyle::computeChangedFields( &base, &family ) );
+    SW_EXPECT_EQUAL( fontBit, UIComputedStyle::computeChangedProperties( &base, &family ) );
     UIComputedStyle weight      = Util::makeAllSet();
     weight._value._font._weight = FontWeight::Bold;
-    SW_EXPECT_EQUAL( fontBit, UIComputedStyle::computeChangedFields( &base, &weight ) );
+    SW_EXPECT_EQUAL( fontBit, UIComputedStyle::computeChangedProperties( &base, &weight ) );
     UIComputedStyle slant     = Util::makeAllSet();
     slant._value._font._slant = FontSlant::Italic;
-    SW_EXPECT_EQUAL( fontBit, UIComputedStyle::computeChangedFields( &base, &slant ) );
+    SW_EXPECT_EQUAL( fontBit, UIComputedStyle::computeChangedProperties( &base, &slant ) );
 
     UIComputedStyle transition    = Util::makeAllSet();
     transition._value._transition = "Opacity 1 Linear";
-    SW_EXPECT_EQUAL( UIStyleFieldTable::makeBit( UIStyleField::Transition ), UIComputedStyle::computeChangedFields( &base, &transition ) );
+    SW_EXPECT_EQUAL( UIStyleFieldTable::makeBit( UIStyleField::Transition ), UIComputedStyle::computeChangedProperties( &base, &transition ) );
 }
 
 /** @brief [UIStyleTest] 자기 스타일은 쓴 필드만 비트가 서고 값이 함께 들어간다(값과 비트가 어긋날 길이 없다) */

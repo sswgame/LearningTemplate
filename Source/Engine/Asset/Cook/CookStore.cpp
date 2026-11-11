@@ -105,7 +105,7 @@ namespace sw
 
     CookResult CookStore::record( string_view outputID, CookResult result ) const
     {
-        _tally.add( result );
+        _stats.add( result );
         if ( result != CookResult::Skipped )
             _setRequestedID.insert( string( outputID ) );
         return result;

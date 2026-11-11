@@ -49,7 +49,7 @@ SW_TEST_CASE( NetStatsReportTest, ReportLineRoundTripsThroughALogLine )
 /**
  * @brief [NetStatsReportTest] 머리가 없거나 아는 칸이 깨진 줄은 읽지 않고 받는 쪽을 바꾸지 않는다 — 회선 흉내 보고 줄과도 섞이지 않는다
  */
-SW_TEST_CASE( NetStatsReportTest, RejectsOtherLinesAndBrokenFields )
+SW_TEST_CASE( NetStatsReportTest, RejectsOtherLinesAndBrokenProperties )
 {
     NetStatsReport untouched;
     untouched._resentMessageCount = 7;

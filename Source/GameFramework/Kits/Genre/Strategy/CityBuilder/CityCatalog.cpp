@@ -36,9 +36,9 @@ namespace sw
 
     uint32 CityCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         CityCatalogRootDef rootDef;
-        if ( XMLFields::readFields( root, rootDef, sourceName ) )
+        if ( XMLFields::readProperties( root, rootDef, sourceName ) )
             _roadCost = rootDef._roadCost;
         _listHouseLevel.clear();
         using Element                          = XMLCatalogElement<CityCatalog>;
@@ -63,7 +63,7 @@ namespace sw
     bool CityCatalog::loadBuilding( const XMLNode& node, string_view sourceName )
     {
         CityBuildingDef building;
-        bool            bValid = XMLFields::readFields( node, building, sourceName, { "terrain" } );
+        bool            bValid = XMLFields::readProperties( node, building, sourceName, { "terrain" } );
         // 땅 조건은 적었을 때만 있다(적지 않으면 아무 땅). 모르는 땅 이름은 오류다.
         const string_view terrainText = node.getAttributeText( "terrain" );
         if ( terrainText.empty() == false )
@@ -89,7 +89,7 @@ namespace sw
     bool CityCatalog::loadHouseLevel( const XMLNode& node, string_view sourceName )
     {
         CityHouseLevelDef level;
-        bool              bValid = XMLFields::readFields( node, level, sourceName, { "services" } );
+        bool              bValid = XMLFields::readProperties( node, level, sourceName, { "services" } );
         StringUtil::forEachToken( node.getAttributeText( "services" ), ",; ", [&]( string_view token )
         {
             CityService service = CityService::Count;

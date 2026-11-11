@@ -15,7 +15,7 @@ using namespace sw;
 /**
  * @brief [AnimationNotifyTableTest] 발 닿음 — 밑줄 이름 칸(`contact_height` 등)을 읽고, 읽은 값을 그대로 둔다
  */
-SW_TEST_CASE( AnimationNotifyTableTest, FootContactReadsUnderscoreFields )
+SW_TEST_CASE( AnimationNotifyTableTest, FootContactReadsUnderscoreProperties )
 {
     const AnimationNotifyHandlerRegistry& registry = sw::engine::getSubsystem<sw::AnimationNotifyHandlerRegistry>();
     AnimationNotifyTable                  table;

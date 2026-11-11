@@ -199,11 +199,11 @@ namespace sw
         return pShard != nullptr && pShard->isConnectionSaturated( localConnectionID );
     }
 
-    void NetEndpointShardSet::addSentKindTally( NetMessageKindStatsTable& outTable ) const
+    void NetEndpointShardSet::addSentKindStats( NetMessageKindStatsTable& outTable ) const
     {
         for ( const NetEndpoint* pShard : _listShard )
         {
-            pShard->addSentKindTally( outTable );
+            pShard->addSentKindStats( outTable );
         }
     }
 } // namespace sw

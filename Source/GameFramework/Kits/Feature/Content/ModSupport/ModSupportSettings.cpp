@@ -37,7 +37,7 @@ namespace sw
         }
         ModSupportSettings settings;
         // 한계는 리플렉션 칸이다 — 빠진 칸(XMLFields.RequiredFieldMissing) · 0 인 한계(XMLFields.ValueOutOfRange) · 숫자가 아닌 글을 모두 이름과 함께 알린다.
-        if ( XMLFields::readFields( root, settings, sourceName ) == false )
+        if ( XMLFields::readProperties( root, settings, sourceName ) == false )
             return false;
         using Element                          = XMLCatalogElement<ModSupportSettings>;
         static constexpr Element kArrElement[] = {

@@ -311,8 +311,8 @@ namespace sw
             const CompressSlot& slot   = listSlot[index];
             compressCPUNanos += slot._nanos;
 
-            const bool bFitsEntryFields = pEntry->_bytes.size() <= MathUtil::kMaxUInt32 && stringPoolBytes.size() <= MathUtil::kMaxUInt32;
-            if ( bFitsEntryFields == false )
+            const bool bFitsEntryProperties = pEntry->_bytes.size() <= MathUtil::kMaxUInt32 && stringPoolBytes.size() <= MathUtil::kMaxUInt32;
+            if ( bFitsEntryProperties == false )
             {
                 SW_LOG_ERROR_ID( "PackWriter.PackEntryDoesNot", "Pack entry '%#' does not fit the 32-bit entry fields", pEntry->_relativePath );
                 return false;

@@ -118,7 +118,7 @@ namespace
         {
             for ( int32 round = 0; round < 8; ++round )
             {
-                int32 work = _router.pump();
+                int32 job = _router.pump();
                 if ( _transport != nullptr )
                 {
                     vector<MatchQueueTopicChange> listChange;
@@ -131,13 +131,13 @@ namespace
                             _transport->unsubscribe( change._topic );
                     }
                     vector<ServerBusMessage> listMessage;
-                    work += _transport->pollMessages( listMessage );
+                    job += _transport->pollMessages( listMessage );
                     for ( const ServerBusMessage& message : listMessage )
                     {
                         _queue.handleBusMessage( message, UnixMilliseconds{ nowMs } );
                     }
                 }
-                if ( work == 0 )
+                if ( job == 0 )
                     return;
             }
         }

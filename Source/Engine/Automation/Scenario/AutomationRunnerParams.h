@@ -1,6 +1,6 @@
 /**
  * @file AutomationRunnerParams.h
- * @brief 실행기가 맡는 시나리오 단계(입력 · 변수 · 감시 값 · 로그 · 이미지 · 종료)의 인자 스키마입니다(`AutomationStep::readFields`).
+ * @brief 실행기가 맡는 시나리오 단계(입력 · 변수 · 감시 값 · 로그 · 이미지 · 종료)의 인자 스키마입니다(`AutomationStep::readProperties`).
  * @details 수 비교(`equals` · `near` · `atLeast` · `atMost`)는 어느 속성을 적었는지가 곧 규칙이라 스키마 칸이 아니라 손으로 읽습니다(`AutomationStepArgsUtil::parseNumberComparison`).
  *          감시 값 참조(`watch` · `target` · `key`)의 뜻 검사도 등록표를 봐야 해서 단계의 검사 함수가 합니다.
  * @note 실행기는 개발 도구(`DevTools/Client/Automation`)에 있지만 이 스키마는 엔진의 단계 형식 곁에 둔다 — 리플렉션 코드 생성(`REFLECT`)은 엔진 · 모듈 타깃만 돌고 DevTools 에는 그 단계가 없다.

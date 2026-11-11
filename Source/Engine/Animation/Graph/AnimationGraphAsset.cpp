@@ -34,18 +34,18 @@ namespace sw
             [[nodiscard]] static bool readElement( const XMLNode& element, TParams& outParams, string_view sourceLabel, const utf8* const ( &arrChild )[ChildCount],
                                                    std::initializer_list<string_view> listHandRead = {} )
             {
-                const bool bFields   = XMLFields::readFields( element, outParams, sourceLabel, listHandRead );
-                const bool bChildren = XMLNameCheck::reportUnknownChildren( element, arrChild, sourceLabel );
-                return bFields && bChildren;
+                const bool bProperties = XMLFields::readProperties( element, outParams, sourceLabel, listHandRead );
+                const bool bChildren   = XMLNameCheck::reportUnknownChildren( element, arrChild, sourceLabel );
+                return bProperties && bChildren;
             }
 
             /** @brief 자식이 없는 원소 하나를 스키마 @p TParams 로 읽습니다. */
             template <typename TParams>
             [[nodiscard]] static bool readLeafElement( const XMLNode& element, TParams& outParams, string_view sourceLabel )
             {
-                const bool bFields   = XMLFields::readFields( element, outParams, sourceLabel );
-                const bool bChildren = XMLNameCheck::reportUnknownChildren( element, nullptr, 0, sourceLabel );
-                return bFields && bChildren;
+                const bool bProperties = XMLFields::readProperties( element, outParams, sourceLabel );
+                const bool bChildren   = XMLNameCheck::reportUnknownChildren( element, nullptr, 0, sourceLabel );
+                return bProperties && bChildren;
             }
 
             /** @brief @p parent 아래의 원소가 모두 @p pTag 인지 봅니다. 아니면 오류를 남기고 false 입니다. */
@@ -536,7 +536,7 @@ namespace sw
                 params._name          = mask._name;
                 params._file          = mask._filePath;
                 const XMLNode maskXML = masksXML.appendChild( "bone_mask" );
-                XMLFields::writeFields( maskXML, params );
+                XMLFields::writeProperties( maskXML, params );
                 if ( mask._filePath.empty() )
                     mask.writeObject( maskXML );
             }
@@ -557,7 +557,7 @@ namespace sw
             params._maxLod      = layer._maxLODGrade;
             params._blend       = layer._blend;
             params._bLoop       = layer._bLoop == SW_TRUE;
-            XMLFields::writeFields( layersXML.appendChild( "layer" ), params );
+            XMLFields::writeProperties( layersXML.appendChild( "layer" ), params );
         }
     }
 
@@ -581,7 +581,7 @@ namespace sw
         params._syncGroup     = node._syncGroup;
         params._maxLod        = node._maxLODGrade;
         const XMLNode nodeXML = nodesXML.appendChild( "node" );
-        XMLFields::writeFields( nodeXML, params );
+        XMLFields::writeProperties( nodeXML, params );
         if ( node._loop.has_value() )
             nodeXML.appendAttribute( "loop", *node._loop );
         if ( node.hasBlendSpace() )
@@ -592,15 +592,15 @@ namespace sw
             blendSpace._y               = def._parameterY;
             blendSpace._notify          = def._notifyMode;
             const XMLNode blendSpaceXML = nodeXML.appendChild( "blend_space" );
-            XMLFields::writeFields( blendSpaceXML, blendSpace );
+            XMLFields::writeProperties( blendSpaceXML, blendSpace );
             const XMLNode samplesXML = blendSpaceXML.appendChild( "samples" );
             for ( const BlendSpaceSample& sample : def._space.getSamples() )
             {
-                AnimationGraphSampleParams sampleFields;
-                sampleFields._clip = sample._clipName;
-                sampleFields._x    = sample._position._x;
-                sampleFields._y    = sample._position._y;
-                XMLFields::writeFields( samplesXML.appendChild( "sample" ), sampleFields );
+                AnimationGraphSampleParams sampleProperties;
+                sampleProperties._clip = sample._clipName;
+                sampleProperties._x    = sample._position._x;
+                sampleProperties._y    = sample._position._y;
+                XMLFields::writeProperties( samplesXML.appendChild( "sample" ), sampleProperties );
             }
         }
         if ( node.hasPoseNode() )
@@ -610,7 +610,7 @@ namespace sw
             poseNode._type            = def._type;
             poseNode._weight          = def._weightParameter;
             const XMLNode poseNodeXML = nodeXML.appendChild( "pose_node" );
-            XMLFields::writeFields( poseNodeXML, poseNode );
+            XMLFields::writeProperties( poseNodeXML, poseNode );
             const XMLNode inputsXML = poseNodeXML.appendChild( "inputs" );
             for ( const hashed_string& input : def._listInput )
             {
@@ -629,14 +629,14 @@ namespace sw
         params._blendMode     = link._blendMode;
         params._halfLife      = link._halfLifeSeconds;
         const XMLNode linkXML = linksXML.appendChild( "link" );
-        XMLFields::writeFields( linkXML, params );
+        XMLFields::writeProperties( linkXML, params );
         if ( link._op == AnimationConditionOp::None )
             return;
         AnimationGraphConditionParams condition;
         condition._param = link._parameter;
         condition._op    = link._op;
         condition._value = link._threshold;
-        XMLFields::writeFields( linkXML.appendChild( "condition" ), condition );
+        XMLFields::writeProperties( linkXML.appendChild( "condition" ), condition );
     }
 
     string AnimationGraphAsset::toXML() const
@@ -668,7 +668,7 @@ namespace sw
                 params._y    = comment._position._y;
                 params._w    = comment._size._x;
                 params._h    = comment._size._y;
-                XMLFields::writeFields( commentsXML.appendChild( "comment" ), params );
+                XMLFields::writeProperties( commentsXML.appendChild( "comment" ), params );
             }
         }
 

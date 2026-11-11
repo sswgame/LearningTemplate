@@ -290,13 +290,13 @@ namespace sw
         return s_table;
     }
 
-    void ServiceScheduler::onClaimCompleted( size_t jobIndex, int64 occurrenceMs, ClaimResult outcome, uint64 runToken, int64 retryAtMs )
+    void ServiceScheduler::onClaimCompleted( size_t jobIndex, int64 occurrenceMs, ClaimResult serviceResult, uint64 runToken, int64 retryAtMs )
     {
         if ( jobIndex >= _listJob.size() )
             return; // 종료한 뒤에 회수한 일
         Job& job           = _listJob[jobIndex];
         job._bClaimPending = SW_FALSE;
-        switch ( outcome )
+        switch ( serviceResult )
         {
             case ClaimResult::Claimed:
             {

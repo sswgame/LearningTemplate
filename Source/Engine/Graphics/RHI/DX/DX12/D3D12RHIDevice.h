@@ -662,8 +662,8 @@ namespace sw
          * @brief 지금까지 기록한 프레임 스트림 조각과 대기 리스트(구조 버퍼 복사 포함)를 곧바로 그래픽스 큐에 내고, 이어 기록할 새 조각을 엽니다.
          * @details 큐 사이 동기화(신호 · 대기)는 큐에 낸 일에만 걸린다 — 모아 두었다가 프레임 끝에 내면 포크의 신호가 그 일을 덮지 못한다.
          */
-        void submitFrameWorkNow();
-        /** @brief 프레임 스트림의 새 조각을 열고 바인딩 캐시 · 뷰포트 · 시저를 다시 깝니다(`executeCommandList` · `submitFrameWorkNow` 가 함께 쓴다). */
+        void submitFrameJobNow();
+        /** @brief 프레임 스트림의 새 조각을 열고 바인딩 캐시 · 뷰포트 · 시저를 다시 깝니다(`executeCommandList` · `submitFrameJobNow` 가 함께 쓴다). */
         void openNextFrameSegment();
         /**
          * @brief 링 상수 버퍼들의 힙 CBV 를 이번 프레임 슬롯으로 맞춥니다. 프레임당 한 번, 기록 시작 전에 부릅니다.

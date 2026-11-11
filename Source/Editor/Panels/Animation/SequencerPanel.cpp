@@ -367,7 +367,7 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "sequencer.pasteItem" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PasteItemTip" ) );
-        drawItemFields();
+        drawItemProperties();
 
         // ImSequencer 는 여러 항목을 그리는 위젯이라 IsItemEdited("마지막 항목")가 클립 끌기 · 더하기 · 지우기를 뜻하지 않는다 — 부르기 전후의 배치를 비교한다.
         const vector<SequenceTrackItem>& listItem = _document._asset._listItem;
@@ -722,7 +722,7 @@ namespace sw::editor
         return bEdited;
     }
 
-    void SequencerPanel::drawItemFields()
+    void SequencerPanel::drawItemProperties()
     {
         constexpr float32 kClipFieldRowCount = 4.0f; // 이름 · 바인딩 · 종류의 칸 · 안내(초안이면 만들기 단추)
         // 고른 항목의 편집 필드는 늘 같은 높이의 구역에 그린다 — 고를 때만 필드가 생기면 그만큼 타임라인이 밀려 내려간다.
@@ -745,7 +745,7 @@ namespace sw::editor
             bool               bEdited = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "ItemName" ), "Item Name" ), edit._name, nullptr, nullptr, "sequencer.item.name" );
             if ( pKindInfo->allowsField( SequenceItemField::Binding ) )
                 bEdited = drawItemBindingCombo( edit, *pKindInfo ) || bEdited;
-            // 종류가 쓰는 칸만 그린다 — 칸 목록은 종류 표 한 곳이다(`SequenceItemKindInfo::_allowedFields`).
+            // 종류가 쓰는 칸만 그린다 — 칸 목록은 종류 표 한 곳이다(`SequenceItemKindInfo::_allowedProperties`).
             for ( const SequenceItemFieldView& view : kArrItemFieldView )
             {
                 string* pText = edit.accessTextField( view._field );

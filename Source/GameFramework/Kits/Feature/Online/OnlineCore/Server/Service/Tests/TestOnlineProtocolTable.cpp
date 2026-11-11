@@ -128,14 +128,14 @@ SW_TEST_CASE( OnlineProtocolTableTest, NoBodyWritesNothing )
 }
 
 /** @brief [OnlineProtocolTableTest] 저장 함수 결과: 공통 범주는 어떤 업무 결과와도 같지 않고, 재시도 범주는 일시 장애 · 과부하 · 충돌이다 */
-SW_TEST_CASE( OnlineProtocolTableTest, OutcomeSeparatesKitResultFromCommonCategory )
+SW_TEST_CASE( OnlineProtocolTableTest, ServiceResultSeparatesKitResultFromCommonCategory )
 {
-    const OnlineOutcome<TestResult> found = TestResult::NotFound;
+    const OnlineServiceResult<TestResult> found = TestResult::NotFound;
     SW_EXPECT_TRUE( found == TestResult::NotFound );
     SW_EXPECT_TRUE( found != TestResult::Ok );
     SW_EXPECT_FALSE( found.isFailed() );
 
-    const OnlineOutcome<TestResult> failed = OnlineOutcome<TestResult>::fail( OnlineError::kBusy );
+    const OnlineServiceResult<TestResult> failed = OnlineServiceResult<TestResult>::fail( OnlineError::kBusy );
     SW_EXPECT_TRUE( failed.isFailed() );
     SW_EXPECT_TRUE( failed != TestResult::Ok );
     SW_EXPECT_TRUE( failed != TestResult::NotFound );

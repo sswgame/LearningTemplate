@@ -724,7 +724,7 @@ namespace sw
         void unregisterCommandList( VulkanRHICommandList* pCmdList );
         /** @brief 프레임 스트림의 다음 세그먼트 버퍼를 얻어 기록을 시작합니다. */
         VkCommandBuffer beginNextFrameSegment();
-        /** @brief 프레임 스트림의 새 세그먼트를 열고 기록 상태 · 뷰포트 · 시저를 다시 깝니다(`executeCommandList` · `submitFrameWorkNow` 가 함께 쓴다). 못 열면 프레임을 멈춘다. */
+        /** @brief 프레임 스트림의 새 세그먼트를 열고 기록 상태 · 뷰포트 · 시저를 다시 깝니다(`executeCommandList` · `submitFrameJobNow` 가 함께 쓴다). 못 열면 프레임을 멈춘다. */
         void openNextFrameSegment();
         /**
          * @brief 대기 중인 그래픽스 버퍼(`_listPendingSubmit`)를 곧바로 그래픽스 큐에 냅니다. 남은 acquire 대기와 비동기 컴퓨트 대기를 이 제출이 기다리고, @p signal 이 있으면 신호합니다.
@@ -732,7 +732,7 @@ namespace sw
          */
         void submitPendingGraphics( VkSemaphore signal );
         /** @brief 지금 세그먼트를 닫아 대기열에 넣고 대기열을 곧바로 큐에 낸 뒤 새 세그먼트를 엽니다. @p signal 은 `submitPendingGraphics` 와 같다. */
-        void submitFrameWorkNow( VkSemaphore signal );
+        void submitFrameJobNow( VkSemaphore signal );
         /** @brief 이번 프레임 슬롯의 이진 세마포어를 하나 빌립니다(슬롯의 펜스가 지나면 다시 쓴다). 만들지 못하면 멈춘다. */
         VkSemaphore acquireAsyncSemaphore();
 

@@ -639,7 +639,7 @@ namespace sw
         const CookJobDesc preloadDesc    = makePreloadCookJobDesc();
 
         // 병렬 씬 쿠킹 판단(DesignBacklog "비동기 · 병렬"): 다시 구운 씬의 시간 합과 가장 느린 씬. 합이 쿠킹 전체를 지배할 때만 캐시 격리 · 결과 병합을 설계한다.
-        CookStats tally;
+        CookStats stats;
         int64     cookedNanoseconds  = 0;
         int64     slowestNanoseconds = 0;
         string    slowestScene;
@@ -662,7 +662,7 @@ namespace sw
             const CookResult result = store.cookFile( desc, outputID, outputPath, [&]()
             { return SceneCookerInternal::cookScene( services, registry, scenePath, relativeScene, activePackRoot, outputPath ); } );
             outFailedCount += result == CookResult::Failed ? 1u : 0u;
-            tally.add( result );
+            stats.add( result );
             const int64 sceneNanoseconds = sceneStopwatch.getElapsedNanoseconds();
             if ( result == CookResult::Cooked )
                 cookedNanoseconds += sceneNanoseconds;
@@ -676,17 +676,17 @@ namespace sw
             const bool bSceneWritten = result == CookResult::Cooked || result == CookResult::Reused;
             if ( bSceneWritten == false )
                 continue;
-            const string     preloadID      = ScenePreloadList::makeListPath( outputID );
-            const string     preloadPath    = ScenePreloadList::makeListPath( outputPath );
-            const CookResult preloadOutcome = store.cookFile( preloadDesc, preloadID, preloadPath, [&]()
+            const string     preloadID     = ScenePreloadList::makeListPath( outputID );
+            const string     preloadPath   = ScenePreloadList::makeListPath( outputPath );
+            const CookResult preloadResult = store.cookFile( preloadDesc, preloadID, preloadPath, [&]()
             { return SceneCookerInternal::cookPreloadList( services, scenePath, preloadPath ); } );
-            outFailedCount += preloadOutcome == CookResult::Failed ? 1u : 0u;
+            outFailedCount += preloadResult == CookResult::Failed ? 1u : 0u;
         }
 
-        SW_LOG_INFO_ID( "SceneCooker.SceneCookReusedDDC", "Scene cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
+        SW_LOG_INFO_ID( "SceneCooker.SceneCookReusedDDC", "Scene cook: %# reused from the DDC, %# cooked", stats._reusedCount, stats._cookedCount );
         SW_LOG_INFO_ID( "SceneCooker.SceneCookTime", "Scene cook time: %# ms over %# cooked scenes, slowest %# ms ('%#')", cookedNanoseconds / constant::time::kNanosecondsPerMillisecond,
-                        tally._cookedCount, slowestNanoseconds / constant::time::kNanosecondsPerMillisecond, slowestScene );
-        return tally.getWrittenCount();
+                        stats._cookedCount, slowestNanoseconds / constant::time::kNanosecondsPerMillisecond, slowestScene );
+        return stats.getWrittenCount();
     }
 
     bool SceneCooker::splitStreamingCells( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view sceneName,

@@ -80,7 +80,7 @@ namespace sw
 
     uint32 ConquestCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<ConquestCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&ConquestCatalog::loadRules>( "Rules" ).uncounted(),
@@ -98,7 +98,7 @@ namespace sw
     bool ConquestCatalog::loadRules( const XMLNode& node, string_view sourceName )
     {
         ConquestRules rules;
-        if ( XMLFields::readFields( node, rules, sourceName ) == false )
+        if ( XMLFields::readProperties( node, rules, sourceName ) == false )
             return false;
         rules._startResources = _rules._startResources; // `<Start>` 는 따로 읽는다(적힌 순서와 상관없게)
         _rules                = rules;
@@ -113,7 +113,7 @@ namespace sw
     bool ConquestCatalog::loadUnit( const XMLNode& node, string_view sourceName )
     {
         ConquestUnitDef unit;
-        if ( XMLFields::readFields( node, unit, sourceName ) == false )
+        if ( XMLFields::readProperties( node, unit, sourceName ) == false )
             return false;
         return ConquestCatalogInternal::readResourceChild( node, "Cost", sourceName, unit._cost ) && GameDataXML::addUnique( unit, sourceName, _unitCatalog );
     }
@@ -121,7 +121,7 @@ namespace sw
     bool ConquestCatalog::loadBuilding( const XMLNode& node, string_view sourceName )
     {
         ConquestBuildingDef building;
-        if ( XMLFields::readFields( node, building, sourceName ) == false )
+        if ( XMLFields::readProperties( node, building, sourceName ) == false )
             return false;
         return ConquestCatalogInternal::readResourceChild( node, "Cost", sourceName, building._cost ) && GameDataXML::addUnique( building, sourceName, _buildingCatalog );
     }
@@ -129,7 +129,7 @@ namespace sw
     bool ConquestCatalog::loadSite( const XMLNode& node, string_view sourceName )
     {
         ConquestSiteDef site;
-        bool            bValid = XMLFields::readFields( node, site, sourceName, { "garrison" } );
+        bool            bValid = XMLFields::readProperties( node, site, sourceName, { "garrison" } );
         bValid                 = ConquestCatalogInternal::readGarrison( node.getAttributeText( "garrison" ), site._listGarrison, sourceName, site._id ) && bValid;
         // 판이 중립 병사를 만들지 않는다(`spawnUnit`) — 중립 거점의 주둔군은 말없이 사라진다.
         if ( site._owner == ConquestTeam::Neutral && site._listGarrison.empty() == false )

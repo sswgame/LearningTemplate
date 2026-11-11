@@ -40,10 +40,10 @@ namespace sw
     {
         static const hashed_string& getRoleTable(); ///< "admin_role" 이다. 키는 계정 16진 문자열이고 값은 등급 1바이트이다
 
-        static AdminOutcome execute( IServiceStoreConnection& connection, const AdminCommand& command, AdminReply& outReply );
+        static AdminServiceResult execute( IServiceStoreConnection& connection, const AdminCommand& command, AdminReply& outReply );
         /** @brief 등급을 읽습니다. 레코드가 없으면 None 과 버전 0을 반환합니다. */
         [[nodiscard]] static ServiceStoreResult readRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole& outRole, uint64& outVersion );
         /** @brief 서버 설정의 첫 관리자를 넣습니다. 레코드가 없을 때만 넣으며 감사 기록의 actor 는 "system.bootstrap" 입니다. 운영 중에 바뀐 등급은 덮어쓰지 않습니다. */
-        static AdminOutcome seedRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole role, int64 nowMs );
+        static AdminServiceResult seedRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole role, int64 nowMs );
     };
 } // namespace sw

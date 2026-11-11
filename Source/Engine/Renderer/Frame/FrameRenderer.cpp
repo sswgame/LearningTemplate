@@ -330,20 +330,20 @@ namespace sw
         // 게임 스레드가 맡긴 텍스처 구간(지형 스플랫 칠하기)을 기록 전에 올린다. 업로드는 뒤이은 드로우보다 먼저 실행된다(IRHIResourceFactory 계약).
         if ( engine::areEngineServicesBound() )
         {
-            // 결정적 실행(`DeterministicRunPolicy::_bFinishAssetWorkEachFrame`)이면 아래 프레임당 상한을 모두 푼다 — 상한 안에 무엇이 드느냐가 워커의 도착 순서에 달린다.
-            const bool bFinishAssetWork = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetWorkEachFrame == SW_TRUE;
+            // 결정적 실행(`DeterministicRunPolicy::_bFinishAssetJobsEachFrame`)이면 아래 프레임당 상한을 모두 푼다 — 상한 안에 무엇이 드느냐가 워커의 도착 순서에 달린다.
+            const bool bFinishAssetJobs = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
             // 새 머티리얼의 초기화는 여기서 하지 않는다 — 머티리얼은 게임 스레드 객체다(`Engine::submitRenderPacket`). 상수 버퍼는 `GPUScene::upload` 의 프록시가 만든다.
             SW_PROFILE_SCOPE( "RT.TextureRegionUpdates" );
             TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
             (void)textures.flushRegionUpdates( pDevice );
             // 워커가 읽어 둔 비동기 텍스처를 올린다 — 디바이스를 쓰는 스레드는 여기다(DX11 즉시 컨텍스트 · GL). 프레임당 상한이 있다.
             // 결정적 실행이면 상한 없이 모두 올리고 업로드 끝남까지 이 자리에서 기다린다.
-            if ( bFinishAssetWork )
+            if ( bFinishAssetJobs )
                 (void)textures.finishPendingLoads( pDevice );
             else
                 (void)textures.completePendingLoads( pDevice, TextureCache::kMaxUploadsPerFrame );
             // 아래쪽 밉만 올린 텍스처의 위쪽 밉을 프레임 예산 안에서 업로드한다(밉 스트리밍). 옛 자원은 게임 스레드가 해제한다(`Engine`).
-            (void)textures.updateStreaming( pDevice, bFinishAssetWork ? UINT32_MAX : TextureCache::kMaxStreamingUpgradesPerFrame );
+            (void)textures.updateStreaming( pDevice, bFinishAssetJobs ? UINT32_MAX : TextureCache::kMaxStreamingUpgradesPerFrame );
         }
 
         _pDevice                   = pDevice;

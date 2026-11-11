@@ -44,14 +44,14 @@ namespace sw
             };
 
             /** @brief 동작 원소 @p node 의 칸을 읽습니다. 그 동작이 받지 않는 칸은 오류입니다. 모르는 동작이면 false 입니다. */
-            [[nodiscard]] static bool readActionFields( const XMLNode& node, AppearanceRuleActionParams& outParams, AppearanceLoadReport& report, string_view sourceName )
+            [[nodiscard]] static bool readActionProperties( const XMLNode& node, AppearanceRuleActionParams& outParams, AppearanceLoadReport& report, string_view sourceName )
             {
                 for ( const ActionFieldSet& set : kArrActionField )
                 {
                     if ( StringUtil::equals( node.getName(), set._pElement ) == false )
                         continue;
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, set._ppField, set._fieldCount, report, sourceName );
-                    (void)AppearanceXMLUtil::readFields( node, outParams, report, sourceName, { "parent", "offset", "rotation", "value" } );
+                    (void)AppearanceXMLUtil::readProperties( node, outParams, report, sourceName, { "parent", "offset", "rotation", "value" } );
                     return true;
                 }
                 return false;
@@ -60,7 +60,7 @@ namespace sw
             [[nodiscard]] static bool readCondition( const XMLNode& node, AppearanceRuleCondition& outCondition, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleID )
             {
                 AppearanceRuleWhenParams params;
-                (void)AppearanceXMLUtil::readFields( node, params, report, sourceName, { "bodyShape", "bodyType" } ); // 오류는 보고서에 쌓인다
+                (void)AppearanceXMLUtil::readProperties( node, params, report, sourceName, { "bodyShape", "bodyType" } ); // 오류는 보고서에 쌓인다
                 outCondition._bNegate      = params._bNot ? SW_TRUE : SW_FALSE;
                 outCondition._target       = params._target; // 태그 조건에서만 쓰는 선택 이름
                 const utf8* pTag           = node.findAttribute( "tag" );
@@ -156,7 +156,7 @@ namespace sw
             {
                 const utf8*                pName = node.getName();
                 AppearanceRuleActionParams params;
-                if ( readActionFields( node, params, report, sourceName ) == false )
+                if ( readActionProperties( node, params, report, sourceName ) == false )
                 {
                     report.addErrorWithID( "Appearance.UnknownElement", "%#: rule '%#' has unknown element <%#>", sourceName, ruleID.c_str(), pName );
                     return false;
@@ -226,7 +226,7 @@ namespace sw
                     AppearanceXMLUtil::readRequiredShaderValue( node, "value", outAction._materialValue, report, sourceName );
                     return outAction._name.empty() == false;
                 }
-                // OverrideSocket(남은 하나 — readActionFields 가 모르는 원소를 걸렀다)
+                // OverrideSocket(남은 하나 — readActionProperties 가 모르는 원소를 걸렀다)
                 outAction._kind = AppearanceRuleActionKind::OverrideSocket;
                 outAction._name = params._name;
                 AppearanceXMLUtil::readPlacement( node, "parent", outAction._placement, report, sourceName );
@@ -286,7 +286,7 @@ namespace sw
                 continue;
             }
             AppearanceRuleDef rule;
-            (void)AppearanceXMLUtil::readFields( ruleNode, rule, report, sourceName );
+            (void)AppearanceXMLUtil::readProperties( ruleNode, rule, report, sourceName );
             if ( rule._id.empty() )
                 continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
             if ( findRule( rule._id ) != nullptr )

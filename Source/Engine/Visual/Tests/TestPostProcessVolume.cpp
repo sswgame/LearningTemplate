@@ -98,7 +98,7 @@ SW_TEST_CASE( PostProcessVolumeTest, WeightFallsOffOverBlendRadius )
 }
 
 /** @brief [PostProcessVolumeTest] 볼륨은 켠 칸만 카메라 값 위에 섞고, 겹치면 우선순위가 높은 것이 마지막에 덮는다. 꺼진 칸은 카메라 값 그대로다 */
-SW_TEST_CASE( PostProcessVolumeTest, ResolveBlendsOverriddenFieldsByPriority )
+SW_TEST_CASE( PostProcessVolumeTest, ResolveBlendsOverriddenPropertiesByPriority )
 {
     GameObjectManager           manager;
     PostProcessVolumeComponent* pLow  = addVolume( manager, "Low", float3{} );

@@ -21,18 +21,18 @@ namespace sw
     struct SW_API CaptureReadiness
     {
         /** @brief (게임 스레드) @p pManager 씬의 남은 일 수입니다 — 메시 대기 · 내비메시 대기 · 텍스처 읽기 · 올리기. @p pManager 가 nullptr 이면 텍스처만 센다. */
-        [[nodiscard]] static uint32 countPendingSceneWork( const GameObjectManager* pManager );
+        [[nodiscard]] static uint32 countPendingSceneJobs( const GameObjectManager* pManager );
         /**
          * @brief (게임 스레드) 씬 키 @p sceneKey(0 = 주 화면, 미리보기 씬 키)를 그린 렌더러가 지난 프레임에 빠뜨린 배치 수입니다(`RenderThread::findPendingMaterialPSOBatchCount`).
          * @details 지난 프레임에 그 씬을 그리지 않았으면 1 이다(아직 그려진 그림이 없다). 렌더 스레드가 없는 호스트(전용 서버)는 0 이다.
          */
-        [[nodiscard]] static uint32 countPendingRenderWork( uint32 sceneKey );
+        [[nodiscard]] static uint32 countPendingRenderJobs( uint32 sceneKey );
         /** @brief (게임 스레드) 씬 @p pManager 를 @p sceneKey 로 찍는 캡처의 남은 일 수입니다 — 씬 쪽과 렌더 쪽의 합입니다(감시 값 `Assets.Pending` 은 주 화면). */
-        [[nodiscard]] static uint32 countPendingWork( const GameObjectManager* pManager, uint32 sceneKey = 0 )
+        [[nodiscard]] static uint32 countPendingJobs( const GameObjectManager* pManager, uint32 sceneKey = 0 )
         {
             // 전용 서버는 Renderer 폴더를 짓지 않고 찍을 그림도 없다.
             if constexpr ( build::kWithClientCode )
-                return countPendingSceneWork( pManager ) + countPendingRenderWork( sceneKey );
+                return countPendingSceneJobs( pManager ) + countPendingRenderJobs( sceneKey );
             else
                 return 0u;
         }

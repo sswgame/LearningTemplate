@@ -231,27 +231,27 @@ namespace sw
      *          (예전에는 키트마다 공통 범주 변환 표를 두었다). `TResult` 는 `Ok` 를 가지고 암시 변환으로 받으므로 저장 함수는 `return XResult::NotFound;` 로 씁니다.
      */
     template <typename TResult>
-    struct OnlineOutcome
+    struct OnlineServiceResult
     {
         TResult _result;
         uint16  _errorCode;
 
-        OnlineOutcome()
+        OnlineServiceResult()
             : _result{ TResult::Ok }
             , _errorCode{ OnlineError::kOk }
         {
         }
-        OnlineOutcome( TResult result ) // NOLINT(google-explicit-constructor): 저장 함수가 업무 결과를 그대로 돌려주는 자리다
+        OnlineServiceResult( TResult result ) // NOLINT(google-explicit-constructor): 저장 함수가 업무 결과를 그대로 돌려주는 자리다
             : _result{ result }
             , _errorCode{ OnlineError::kOk }
         {
         }
 
-        [[nodiscard]] static OnlineOutcome fail( uint16 errorCode )
+        [[nodiscard]] static OnlineServiceResult fail( uint16 errorCode )
         {
-            OnlineOutcome outcome;
-            outcome._errorCode = errorCode;
-            return outcome;
+            OnlineServiceResult serviceResult;
+            serviceResult._errorCode = errorCode;
+            return serviceResult;
         }
 
         [[nodiscard]] bool isFailed() const { return _errorCode != OnlineError::kOk; }

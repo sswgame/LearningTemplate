@@ -69,7 +69,7 @@ namespace sw
 namespace sw
 {
     /** @brief 로직의 결과입니다. 업무 결과(`LeaderboardResult`) 또는 공통 범주(`OnlineError` — 범위 밖 요청 · 일시 장애 · 경합)입니다. */
-    using LeaderboardOutcome = OnlineOutcome<LeaderboardResult>;
+    using LeaderboardServiceResult = OnlineServiceResult<LeaderboardResult>;
 
     /** @brief 요청 하나의 완료입니다. 바인딩이 `_operation` 으로 메서드의 응답 타입을 고른다. */
     struct LeaderboardCompletion
@@ -81,7 +81,7 @@ namespace sw
         uint64                      _periodID{ 0 };
         uint64                      _requestTag{ 0 };
         int64                       _score{ 0 }; ///< Submit 과 StatChange 의 적용 뒤 값이다
-        LeaderboardOutcome          _result{ LeaderboardResult::Ok };
+        LeaderboardServiceResult    _result{ LeaderboardResult::Ok };
         LeaderboardOperation        _operation{ LeaderboardOperation::Submit };
     };
 } // namespace sw
@@ -187,15 +187,15 @@ namespace sw
     private:
         /** @brief 저장소 일의 완료입니다. */
         void applyScoreWrite( const string& boardID, uint64 periodID, AccountID accountID, const string& displayName, int64 finalScore, bool bChanged,
-                              LeaderboardOutcome result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs );
-        void applyStats( uint64 requestTag, LeaderboardOutcome result, vector<LeaderboardStat>&& listStat );
+                              LeaderboardServiceResult result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs );
+        void applyStats( uint64 requestTag, LeaderboardServiceResult result, vector<LeaderboardStat>&& listStat );
         void applyStatCache( AccountID accountID, bool bReadOk, ServiceStoreCompletion completion, vector<LeaderboardStat>&& listStat );
         void applyRebuildRead( const string& rankKey, vector<LeaderboardScoreRow>&& listScore, bool bReadOk );
         void applyAchievementUnlock( AccountID accountID, const AchievementState& achievement, bool bUnlocked );
-        void applyAchievements( uint64 requestTag, LeaderboardOutcome result, vector<AchievementState>&& listAchievement );
-        void applyAchievementProgress( uint64 requestTag, LeaderboardOutcome result, vector<AchievementProgress>&& listProgress );
-        void applyScores( uint64 requestTag, uint64 periodID, LeaderboardOutcome result, vector<LeaderboardEntry>&& listEntry );
-        void applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardOutcome result, const LeaderboardEntry& entry );
+        void applyAchievements( uint64 requestTag, LeaderboardServiceResult result, vector<AchievementState>&& listAchievement );
+        void applyAchievementProgress( uint64 requestTag, LeaderboardServiceResult result, vector<AchievementProgress>&& listProgress );
+        void applyScores( uint64 requestTag, uint64 periodID, LeaderboardServiceResult result, vector<LeaderboardEntry>&& listEntry );
+        void applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardServiceResult result, const LeaderboardEntry& entry );
         /** @brief 정산의 순위 읽기가 끝났습니다. 순위대로 정렬한 점수를 받아 첫 페이지를 맡깁니다. */
         void applySettlementRanking( uint64 settlementID, bool bReadOk, vector<LeaderboardScoreRow>&& listRanked );
         /** @brief 정산 페이지 하나가 끝났습니다. 다 썼으면 다음 페이지를, 실패했거나 끝이면 정산을 마칩니다. */
@@ -250,8 +250,8 @@ namespace sw
         void onRangeReply( const EphemeralReply& reply );
         void onNameReply( const EphemeralReply& reply );
         void finishQuery( uint64 queryID );
-        void completeRead( const PendingRead& read, LeaderboardOutcome result );
-        void pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardOutcome result );
+        void completeRead( const PendingRead& read, LeaderboardServiceResult result );
+        void pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardServiceResult result );
         void submitCacheScore( const string& rankKey, AccountID accountID, int64 cacheScore );
         /** @brief 점수 · 통계 쓰기 일 하나를 맡깁니다. 완료가 `applyScoreWrite` 로 간다. */
         void submitWrite( const LeaderboardWriteInput& input, const string& boardID, AccountID accountID, uint64 periodID, uint64 requestTag, LeaderboardOperation operation );

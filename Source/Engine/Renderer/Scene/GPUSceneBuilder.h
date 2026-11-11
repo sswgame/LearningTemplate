@@ -669,7 +669,7 @@ namespace sw
                                           uint32 rawCount, InstanceRefreshChunk& chunk );
 
         /** @brief 이번 프레임의 쓰기 슬롯을 반환합니다(`GPUInstanceRing::acquireWrite`). */
-        vector<GPUInstance>& instanceWork() { return _instanceRing.acquireWrite(); }
+        vector<GPUInstance>& instanceJob() { return _instanceRing.acquireWrite(); }
         /** @brief 쓰기 슬롯을 발행합니다. 이번 빌드의 더티 구간을 이력으로 남깁니다. */
         void publishInstances();
         /** @brief 부분 갱신 전에 쓰기 슬롯을 마지막 발행본에 맞춥니다(`GPUInstanceRing::syncWriteFromPublished`). */
@@ -752,7 +752,7 @@ namespace sw
 
         /**
          * @brief 인스턴스 배열 링입니다. 되복사 없는 발행과 낡은 슬롯 따라잡기는 `GPUInstanceRing` 이 맡습니다.
-         * @details 빌더는 주로 세 함수를 쓴다. `instanceWork()`(이번 프레임 쓰기 슬롯), `syncWriteSlotFromPublished()`(부분 갱신 전),
+         * @details 빌더는 주로 세 함수를 쓴다. `instanceJob()`(이번 프레임 쓰기 슬롯), `syncWriteSlotFromPublished()`(부분 갱신 전),
          *          `publishInstances()`(스냅샷에 포인터 넘기기)다. 이전 값은 `getPublished()` 로 읽는다. 규칙과 이유는 그 타입의 주석에 있다.
          */
         GPUInstanceRing _instanceRing;

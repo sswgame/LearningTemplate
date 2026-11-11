@@ -994,7 +994,7 @@ namespace sw
             // 소유자 필드가 비었으면 자기 자신이다(같은 오브젝트 안의 부착은 소유자 필드를 비워 쓴다).
             if ( ownerName.empty() )
                 return entry._pObject;
-            // 이름만 남은 다른 오브젝트의 부모다. 찾지 못한 참조를 다른 id 공간으로 옮겨 적으면 id 를 비운다(`SceneComponent::syncAttachSerializeFields`).
+            // 이름만 남은 다른 오브젝트의 부모다. 찾지 못한 참조를 다른 id 공간으로 옮겨 적으면 id 를 비운다(`SceneComponent::syncAttachSerializeProperties`).
             // **이 배치의 저장된 이름**에서만 찾는다. 매니저에서 찾으면 유일하게 바뀐 이름 때문에 다른 오브젝트에 붙는다.
             return findBySavedName( ownerName );
         }

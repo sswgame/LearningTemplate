@@ -194,7 +194,7 @@ namespace sw
                 params._index          = static_cast<int32>( bindIndex );
                 params._slot           = slotText;
                 const XMLNode bindNode = root.appendChild( kBindElement );
-                XMLFields::writeFields( bindNode, params );
+                XMLFields::writeProperties( bindNode, params );
                 if ( bKeyboardChord )
                 {
                     const string modifierText = InputRemapSerializer::formatModifierNames( pCurrent->_modifierMask );
@@ -235,7 +235,7 @@ namespace sw
             // `modifier` 는 적지 않음(슬롯만 바꿈) · `None`(수정 키 없음) · 이름 셋이라 스키마 칸이 아니다.
             DebugKeyRebindParams params;
             InputSlot            slot{};
-            if ( XMLFields::readFields( bindNode, params, filePath, { kModifierAttr } ) == false || InputSlot::tryParse( params._slot, slot ) == false )
+            if ( XMLFields::readProperties( bindNode, params, filePath, { kModifierAttr } ) == false || InputSlot::tryParse( params._slot, slot ) == false )
             {
                 SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings3", "Debug key user bindings '%#': a <bind> with action '%#' and slot '%#' cannot be read - skipped", filePath, params._action.c_str(),
                                    params._slot.c_str() );

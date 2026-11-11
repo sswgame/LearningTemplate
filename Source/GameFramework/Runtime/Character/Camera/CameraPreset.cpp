@@ -28,14 +28,14 @@ namespace sw
             [[nodiscard]] static bool readBlend( const XMLNode& node, BlendCurveDef& inoutBlend, string_view sourceName,
                                                  std::initializer_list<string_view> listHandRead = {} )
             {
-                bool    bValid  = XMLFields::readFields( node, inoutBlend, sourceName, listHandRead );
+                bool    bValid  = XMLFields::readProperties( node, inoutBlend, sourceName, listHandRead );
                 XMLNode keyNode = node.findChild( "Key" );
                 if ( keyNode.isValid() )
                     inoutBlend._listCustomKey.clear();
                 for ( ; keyNode; keyNode = keyNode.findNextSibling( "Key" ) )
                 {
                     BlendCurveKey key;
-                    if ( XMLFields::readFields( keyNode, key, sourceName ) == false )
+                    if ( XMLFields::readProperties( keyNode, key, sourceName ) == false )
                     {
                         bValid = false;
                         continue;
@@ -53,7 +53,7 @@ namespace sw
             /** @brief 렌즈를 읽습니다. 먼 면은 가까운 면보다 멀어야 합니다. */
             [[nodiscard]] static bool readLens( const XMLNode& node, CameraLensDef& outLens, string_view sourceName )
             {
-                bool bValid = XMLFields::readFields( node, outLens, sourceName );
+                bool bValid = XMLFields::readProperties( node, outLens, sourceName );
                 if ( outLens._farPlane <= outLens._nearPlane )
                 {
                     SW_LOG_ERROR_ID( "CameraPreset.LensFarPlaneMustBeyond", "%#: <Lens> farPlane %# must be beyond nearPlane %#", sourceName, outLens._farPlane, outLens._nearPlane );
@@ -65,7 +65,7 @@ namespace sw
             /** @brief 제한 상자를 읽습니다. `bounds` 를 켰으면 두 모서리를 모두 적어야 하고, 피치 범위는 뒤집히지 않아야 합니다. */
             [[nodiscard]] static bool readConfiner( const XMLNode& node, CameraConfinerDef& outConfiner, string_view sourceName )
             {
-                bool       bValid      = XMLFields::readFields( node, outConfiner, sourceName );
+                bool       bValid      = XMLFields::readProperties( node, outConfiner, sourceName );
                 const bool bBothCorner = node.findAttribute( "boundsMin" ) != nullptr && node.findAttribute( "boundsMax" ) != nullptr;
                 if ( outConfiner._bBounds && bBothCorner == false )
                 {
@@ -83,7 +83,7 @@ namespace sw
             /** @brief 프레이밍을 읽습니다. 소프트 존은 데드 존보다 작을 수 없습니다. */
             [[nodiscard]] static bool readFraming( const XMLNode& node, CameraFramingDef& outFraming, string_view sourceName )
             {
-                bool       bValid      = XMLFields::readFields( node, outFraming, sourceName );
+                bool       bValid      = XMLFields::readProperties( node, outFraming, sourceName );
                 const bool bSoftInDead = outFraming._softZone._x < outFraming._deadZone._x || outFraming._softZone._y < outFraming._deadZone._y;
                 if ( bSoftInDead )
                 {
@@ -96,14 +96,14 @@ namespace sw
             /** @brief 돌리 경로를 읽습니다. `<Point>` 의 `position` 은 필수이고 점은 둘 이상이어야 합니다. */
             [[nodiscard]] static bool readDolly( const XMLNode& node, CameraDollyDef& outDolly, string_view sourceName )
             {
-                bool    bValid    = XMLFields::readFields( node, outDolly, sourceName );
+                bool    bValid    = XMLFields::readProperties( node, outDolly, sourceName );
                 XMLNode pointNode = node.findChild( "Point" );
                 if ( pointNode.isValid() )
                     outDolly._listPoint.clear();
                 for ( ; pointNode; pointNode = pointNode.findNextSibling( "Point" ) )
                 {
                     CameraDollyPointParams point;
-                    if ( XMLFields::readFields( pointNode, point, sourceName ) )
+                    if ( XMLFields::readProperties( pointNode, point, sourceName ) )
                         outDolly._listPoint.push_back( point._position );
                     else
                         bValid = false;
@@ -116,7 +116,7 @@ namespace sw
                 return bValid;
             }
 
-            /** @brief 프리셋 하나를 읽습니다. 섹션마다 스키마(Def 의 초기값 · `Min`/`Max`)로 읽고, 오류가 하나라도 있으면 false 입니다(오류는 `readFields` 가 이름과 함께 알린다). */
+            /** @brief 프리셋 하나를 읽습니다. 섹션마다 스키마(Def 의 초기값 · `Min`/`Max`)로 읽고, 오류가 하나라도 있으면 false 입니다(오류는 `readProperties` 가 이름과 함께 알린다). */
             [[nodiscard]] static bool readPreset( const XMLNode& node, CameraPresetDef& inoutDef, string_view sourceName )
             {
                 bool bValid = true; // 머리 칸(id · 모르는 속성)은 부르는 쪽이 CameraPresetHeadParams 로 읽었다
@@ -125,7 +125,7 @@ namespace sw
                     const utf8* pName = child.getName();
                     if ( StringUtil::equals( pName, "View" ) )
                     {
-                        bValid = XMLFields::readFields( child, inoutDef._view, sourceName ) && bValid;
+                        bValid = XMLFields::readProperties( child, inoutDef._view, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "Lens" ) )
                     {
@@ -133,7 +133,7 @@ namespace sw
                     }
                     else if ( StringUtil::equals( pName, "Damping" ) )
                     {
-                        bValid = XMLFields::readFields( child, inoutDef._damping, sourceName ) && bValid;
+                        bValid = XMLFields::readProperties( child, inoutDef._damping, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "BlendIn" ) )
                     {
@@ -141,7 +141,7 @@ namespace sw
                     }
                     else if ( StringUtil::equals( pName, "Input" ) )
                     {
-                        bValid = XMLFields::readFields( child, inoutDef._input, sourceName ) && bValid;
+                        bValid = XMLFields::readProperties( child, inoutDef._input, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "Confiner" ) )
                     {
@@ -154,20 +154,20 @@ namespace sw
                     else if ( StringUtil::equals( pName, "Collision" ) )
                     {
                         // 섹션이 있으면 켜진다 — `enabled` 를 따로 적지 않는다.
-                        bValid                        = XMLFields::readFields( child, inoutDef._collision, sourceName ) && bValid;
+                        bValid                        = XMLFields::readProperties( child, inoutDef._collision, sourceName ) && bValid;
                         inoutDef._collision._bEnabled = SW_TRUE;
                     }
                     else if ( StringUtil::equals( pName, "Noise" ) )
                     {
-                        bValid = XMLFields::readFields( child, inoutDef._noise, sourceName ) && bValid;
+                        bValid = XMLFields::readProperties( child, inoutDef._noise, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "HeadBob" ) )
                     {
-                        bValid = XMLFields::readFields( child, inoutDef._headBob, sourceName ) && bValid;
+                        bValid = XMLFields::readProperties( child, inoutDef._headBob, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "Sweep" ) )
                     {
-                        bValid = XMLFields::readFields( child, inoutDef._sweep, sourceName ) && bValid;
+                        bValid = XMLFields::readProperties( child, inoutDef._sweep, sourceName ) && bValid;
                     }
                     else if ( StringUtil::equals( pName, "Dolly" ) )
                     {
@@ -175,7 +175,7 @@ namespace sw
                     }
                     else if ( StringUtil::equals( pName, "PostProcess" ) )
                     {
-                        bValid = XMLFields::readFields( child, inoutDef._postProcess, sourceName ) && bValid;
+                        bValid = XMLFields::readProperties( child, inoutDef._postProcess, sourceName ) && bValid;
                     }
                     else
                     {
@@ -281,7 +281,7 @@ namespace sw
     bool CameraPresetCatalog::loadPreset( const XMLNode& node, string_view sourceName )
     {
         CameraPresetHeadParams head;
-        if ( XMLFields::readFields( node, head, sourceName ) == false )
+        if ( XMLFields::readProperties( node, head, sourceName ) == false )
             return false;
         const utf8* const pID = head._id.c_str();
         CameraPresetDef   def;

@@ -271,7 +271,7 @@ namespace sw
         /**
          * @brief 퍼뮤테이션 해시에 섞을 렌더 칸의 해시입니다(`MaterialInstance` 도 부모의 것을 섞는다). 덮는 칸이 없고 순서가 기본이면 0 입니다 — 0 은 섞지 않아 기본 머티리얼의 해시 · 배치 순서가 그대로다.
          */
-        uint64 getRenderFieldsHash() const;
+        uint64 getRenderPropertiesHash() const;
         /** @brief 셰이더 경로를 반환합니다. */
         const string& getShaderPath() const { return _desc._shaderPath; }
 

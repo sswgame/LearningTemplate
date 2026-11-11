@@ -77,31 +77,31 @@ namespace sw
         LoginStoreLogic( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& ticketAuthority,
                          LoginStoreResult& outResult );
 
-        LoginOutcome registerAccount( const LoginCredential& credential, uint64* pOutAccountID );
-        LoginOutcome login( const LoginCredential& credential, int64 nowMs, LoginGrant& outGrant );
+        LoginServiceResult registerAccount( const LoginCredential& credential, uint64* pOutAccountID );
+        LoginServiceResult login( const LoginCredential& credential, int64 nowMs, LoginGrant& outGrant );
         /** @brief 장치 비밀로 들어옵니다. 그 장치의 게스트 계정이 없으면 만들고 `_bCreated` 를 켭니다. 비밀은 저장하지 않고 다이제스트만 저장합니다. */
-        LoginOutcome guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], int64 nowMs, LoginGrant& outGrant );
+        LoginServiceResult guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], int64 nowMs, LoginGrant& outGrant );
         /** @brief 제공자가 확인한 주체로 들어옵니다. 연결된 계정이 없으면 만들고 `_bCreated` 를 켜며, 표시 이름은 @p displayNameHint 에서 가져옵니다. */
-        LoginOutcome platformLogin( string_view provider, string_view subject, string_view displayNameHint, const vector<uint8>* pSealedLinkSecret, int64 nowMs,
-                                    LoginGrant& outGrant );
-        LoginOutcome resumeSession( const LoginSessionToken& token, int64 nowMs, LoginGrant& outGrant );
-        LoginOutcome validateSession( const LoginSessionToken& token, int64 nowMs, AccountIdentity& outIdentity, LoginRevokeReason* pOutRevokeReason = nullptr );
-        LoginOutcome logout( const LoginSessionToken& token, int64 nowMs );
-        void         markDisconnected( uint64 sessionID, int64 nowMs );
-        LoginOutcome revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, int64 nowMs );
-        LoginOutcome issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, int64 nowMs, NetGameTicket& outTicket );
+        LoginServiceResult platformLogin( string_view provider, string_view subject, string_view displayNameHint, const vector<uint8>* pSealedLinkSecret, int64 nowMs,
+                                          LoginGrant& outGrant );
+        LoginServiceResult resumeSession( const LoginSessionToken& token, int64 nowMs, LoginGrant& outGrant );
+        LoginServiceResult validateSession( const LoginSessionToken& token, int64 nowMs, AccountIdentity& outIdentity, LoginRevokeReason* pOutRevokeReason = nullptr );
+        LoginServiceResult logout( const LoginSessionToken& token, int64 nowMs );
+        void               markDisconnected( uint64 sessionID, int64 nowMs );
+        LoginServiceResult revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, int64 nowMs );
+        LoginServiceResult issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, int64 nowMs, NetGameTicket& outTicket );
 
         /** @brief 세션의 계정에 이름과 비밀번호를 붙여 게스트를 정식 계정으로 바꿉니다. 이 계정에 이미 이름이 있거나 그 이름이 다른 계정의 것이면 `AlreadyLinked` 입니다. */
-        LoginOutcome linkCredential( const LoginSessionToken& token, const LoginCredential& credential, int64 nowMs, AccountIdentity& outIdentity );
+        LoginServiceResult linkCredential( const LoginSessionToken& token, const LoginCredential& credential, int64 nowMs, AccountIdentity& outIdentity );
         /** @brief 세션의 계정에 외부 계정을 붙입니다. 그 주체가 다른 계정의 것이거나 이 계정에 그 제공자가 이미 있으면 `AlreadyLinked` 입니다. */
-        LoginOutcome linkPlatform( const LoginSessionToken& token, string_view provider, string_view subject, const vector<uint8>* pSealedLinkSecret, int64 nowMs,
-                                   AccountIdentity& outIdentity );
+        LoginServiceResult linkPlatform( const LoginSessionToken& token, string_view provider, string_view subject, const vector<uint8>* pSealedLinkSecret, int64 nowMs,
+                                         AccountIdentity& outIdentity );
         /** @brief 외부 계정 연결을 해제합니다. 마지막 로그인 수단(이름과 외부 계정의 합이 1)이면 `LastLoginMethod` 입니다. */
-        LoginOutcome unlinkPlatform( const LoginSessionToken& token, string_view provider, int64 nowMs );
-        LoginOutcome listLinks( const LoginSessionToken& token, int64 nowMs, AccountLinkSummary& outSummary );
+        LoginServiceResult unlinkPlatform( const LoginSessionToken& token, string_view provider, int64 nowMs );
+        LoginServiceResult listLinks( const LoginSessionToken& token, int64 nowMs, AccountLinkSummary& outSummary );
         /** @brief 탈퇴를 예약하고 세션을 끊습니다. 유예 시간은 `_deletionGraceMs` 이며, 유예 안에 다시 로그인해 `cancelDeletion` 으로 취소할 수 있습니다. 이미 예약돼 있으면 그 시각을 반환합니다. */
-        LoginOutcome requestDeletion( const LoginSessionToken& token, int64 nowMs, int64& outDueMs );
-        LoginOutcome cancelDeletion( const LoginSessionToken& token, int64 nowMs );
+        LoginServiceResult requestDeletion( const LoginSessionToken& token, int64 nowMs, int64& outDueMs );
+        LoginServiceResult cancelDeletion( const LoginSessionToken& token, int64 nowMs );
         /**
          * @brief 예약 시각이 지난 계정을 @p maxCount 개까지 지웁니다. 이름, 프로필, 게스트, 외부 연결, 세션을 지웁니다.
          * @details 원장과 감사 기록은 남긴다. 거기에는 계정 id 만 있고 개인정보는 없다.
@@ -123,19 +123,19 @@ namespace sw
         [[nodiscard]] static ServiceStoreResult readIdentityByDisplayName( IServiceStoreConnection& connection, string_view displayName, AccountIdentity& outIdentity );
 
     private:
-        LoginOutcome recordFailure( string_view nameKey, const vector<uint8>& accountBytes, uint64 accountVersion, int64 nowMs, int64& outRetryAfterMs );
+        LoginServiceResult recordFailure( string_view nameKey, const vector<uint8>& accountBytes, uint64 accountVersion, int64 nowMs, int64& outRetryAfterMs );
         /** @brief 없는 계정에도 해시를 한 번 돌립니다. 응답 시간으로 계정 유무가 드러나지 않게 하려는 것입니다. */
         void burnPasswordHash( string_view password );
         /** @brief 로그인을 막는 제재(정지, 영구 정지)가 있으면 `AccountSuspended` 와 종료 시각, 사유를 @p outGrant 에 채웁니다. 읽지 못하면 `StoreUnavailable` 입니다. */
-        LoginOutcome evaluateSanction( uint64 accountID, int64 nowMs, LoginGrant& outGrant );
+        LoginServiceResult evaluateSanction( uint64 accountID, int64 nowMs, LoginGrant& outGrant );
         /** @brief 이전 세션을 정책대로 거절하거나 묘비로 바꾸고, 새 세션과 계정에서 세션으로 가는 연결을 @p inoutTransaction 에 붙입니다. */
-        LoginOutcome stageSessionOpen( uint64 accountID, int64 nowMs, ServiceTransaction& inoutTransaction, LoginSessionToken& outToken, int64& outExpiresAtMs,
-                                       uint64& outReplacedSessionID );
+        LoginServiceResult stageSessionOpen( uint64 accountID, int64 nowMs, ServiceTransaction& inoutTransaction, LoginSessionToken& outToken, int64& outExpiresAtMs,
+                                             uint64& outReplacedSessionID );
         /** @brief 커밋된 새 세션을 결과(밀려남, 온라인, 이벤트)에 적습니다. */
         void recordSessionOpened( uint64 accountID, const LoginSessionToken& token, uint64 replacedSessionID );
         /** @brief 계정의 현재 세션을 @p reason 이유의 묘비로 바꾸고 연결을 지우는 쓰기를 붙입니다. 세션이 없으면 아무것도 붙이지 않고 @p outSessionID 는 0입니다. */
-        LoginOutcome stageSessionRevoke( uint64 accountID, LoginRevokeReason reason, int64 nowMs, ServiceTransaction& inoutTransaction, uint64& outSessionID );
-        LoginOutcome purgeAccount( uint64 accountID, string_view deletionKey, int64 nowMs );
+        LoginServiceResult stageSessionRevoke( uint64 accountID, LoginRevokeReason reason, int64 nowMs, ServiceTransaction& inoutTransaction, uint64& outSessionID );
+        LoginServiceResult purgeAccount( uint64 accountID, string_view deletionKey, int64 nowMs );
 
     private:
         IServiceStoreConnection&    _connection;

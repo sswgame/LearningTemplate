@@ -112,7 +112,7 @@ namespace sw
     expected<AutomationStepArgsUtil::ExpectImageArgs> AutomationStepArgsUtil::parseExpectImage( const AutomationStep& step )
     {
         AutomationExpectImageParams params;
-        const expected<void>        read = step.readFields( params );
+        const expected<void>        read = step.readProperties( params );
         if ( read.has_value() == false )
             return unexpected( read.error() );
         // 골든 이름은 파일 이름의 한 조각이다 — 경로 · 점을 받지 않는다(`<시나리오>.<이름>.<백엔드>.ppm` 이 하나로 읽혀야 한다).

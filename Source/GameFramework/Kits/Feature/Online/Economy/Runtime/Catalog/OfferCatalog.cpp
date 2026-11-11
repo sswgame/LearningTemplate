@@ -33,7 +33,7 @@ namespace sw
                 for ( XMLNode node = parent.findChild( pElement ); node; node = node.findNextSibling( pElement ) )
                 {
                     TDef def;
-                    if ( XMLFields::readFields( node, def, sourceName ) )
+                    if ( XMLFields::readProperties( node, def, sourceName ) )
                         outListDef.push_back( def );
                     else
                         bValid = false;
@@ -88,7 +88,7 @@ namespace sw
 
     uint32 OfferCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<OfferCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&OfferCatalog::loadOffer>( "Offer" ),
@@ -101,7 +101,7 @@ namespace sw
     {
         using Internal = OfferCatalogInternal;
         OfferDef def;
-        bool     bValid = XMLFields::readFields( node, def, sourceName );
+        bool     bValid = XMLFields::readProperties( node, def, sourceName );
         bValid          = Internal::readChildren( node, "Price", sourceName, def._listPrice ) && bValid;
         bValid          = Internal::readChildren( node, "Grant", sourceName, def._listGrant ) && bValid;
         bValid          = Internal::readChildren( node, "Product", sourceName, def._listProduct ) && bValid;

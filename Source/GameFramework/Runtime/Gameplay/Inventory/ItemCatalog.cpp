@@ -36,7 +36,7 @@ namespace sw
                     return false;
                 }
                 EquipmentRequiresParams params;
-                if ( XMLFields::readFields( node, params, sourceName, { "bodyShape" } ) == false ) // 모르는 속성 · 깨진 pieces 는 오류다
+                if ( XMLFields::readProperties( node, params, sourceName, { "bodyShape" } ) == false ) // 모르는 속성 · 깨진 pieces 는 오류다
                     return false;
                 // 속성은 공통 어휘의 줄임말이다. 칸은 읽기 때의 정적 검사(조건 순환 · 없는 세트)가 읽는다.
                 string text;
@@ -111,7 +111,7 @@ namespace sw
 
         // 적지 않은 칸은 ItemDef 의 초기값이다. 깨진 값 · 범위 밖 값 · 모르는 깨짐 정책은 그 아이템을 넣지 않는 오류다(자르지 않는다).
         ItemDef def;
-        bool    bValid = XMLFields::readFields( node, def, sourceName );
+        bool    bValid = XMLFields::readProperties( node, def, sourceName );
         if ( def._id.empty() )
             return false;
         const utf8* const pID = def._id.c_str();

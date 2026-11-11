@@ -14,13 +14,13 @@ namespace sw
 {
     bool AutomationCaptureUtil::isReadyForCapture( const GameObjectManager* pManager )
     {
-        return AutomationStepRegistry::findCaptureBlocker() == nullptr && countPendingWork( pManager ) == 0;
+        return AutomationStepRegistry::findCaptureBlocker() == nullptr && countPendingJobs( pManager ) == 0;
     }
 
-    uint32 AutomationCaptureUtil::countPendingWork( const GameObjectManager* pManager )
+    uint32 AutomationCaptureUtil::countPendingJobs( const GameObjectManager* pManager )
     {
         const IEngineRenderDriver* const pRenderDriver = engine::findSubsystem<IEngineRenderDriver>();
-        return pRenderDriver != nullptr ? pRenderDriver->countPendingCaptureWork( pManager ) : 0u;
+        return pRenderDriver != nullptr ? pRenderDriver->countPendingCaptureJobs( pManager ) : 0u;
     }
 } // namespace sw
 

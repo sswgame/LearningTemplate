@@ -269,7 +269,7 @@ namespace sw::editor
 
     void AdminToolSession::rejectLocally( uint16 method )
     {
-        _lastResult    = AdminOutcome::fail( OnlineError::kInvalidRequest );
+        _lastResult    = AdminServiceResult::fail( OnlineError::kInvalidRequest );
         _lastMethod    = method;
         _bLastReplayed = SW_FALSE;
         _statusLine    = string( AdminToolModel::getMethodName( method ) ) + ": InvalidRequest (the duration must be zero or a positive number that fits)";
@@ -281,7 +281,7 @@ namespace sw::editor
         if ( _pendingCount > 0 )
             --_pendingCount;
         ++_completedCount;
-        _lastResult    = reply._errorCode != OnlineError::kOk ? AdminOutcome::fail( reply._errorCode ) : AdminOutcome{ reply._reply._result };
+        _lastResult    = reply._errorCode != OnlineError::kOk ? AdminServiceResult::fail( reply._errorCode ) : AdminServiceResult{ reply._reply._result };
         _lastMethod    = reply._method;
         _bLastReplayed = reply._reply._bReplayed == SW_TRUE;
 

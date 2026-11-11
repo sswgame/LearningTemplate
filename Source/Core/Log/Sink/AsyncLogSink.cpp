@@ -274,7 +274,7 @@ namespace sw
     {
         if ( output == nullptr )
             return false;
-        const bool bStructured = output->needsStructuredFields();
+        const bool bStructured = output->needsStructuredProperties();
 
         // 락 안에서는 목록만 만진다. 거절 경고(`SW_LOG_WARNING`)는 이 싱크로 되돌아와 같은 `_mutex` 를 잡고(`dispatchToOutputs`),
         // 리스너가 있으면 방송(`_onLogWritten`)까지 하므로 락 밖에서 남긴다.

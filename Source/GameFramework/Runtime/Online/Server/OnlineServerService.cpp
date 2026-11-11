@@ -31,7 +31,7 @@ namespace sw
             void                         shutdown() override { _runtime.shutdown(); }
             void                         update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
             int32                        getConnectionCount() const override { return _runtime.getConnectionCount(); }
-            int32                        getOpenWorkCount() const override { return _runtime.getOpenWorkCount(); }
+            int32                        getOpenJobCount() const override { return _runtime.getOpenJobCount(); }
             void                         beginShutdown( const ServerShutdownNotice& notice ) override { _runtime.beginShutdown( notice ); }
 
         private:

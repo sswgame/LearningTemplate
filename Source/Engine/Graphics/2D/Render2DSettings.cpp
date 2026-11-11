@@ -120,7 +120,7 @@ namespace sw
     bool Render2DSettings::readTransparencySort( const XMLNode& node, string_view sourceName )
     {
         Render2DTransparencySortParams params;
-        if ( XMLFields::readFields( node, params, sourceName ) == false || XMLNameCheck::reportUnknownChildren( node, nullptr, 0, sourceName ) == false )
+        if ( XMLFields::readProperties( node, params, sourceName ) == false || XMLNameCheck::reportUnknownChildren( node, nullptr, 0, sourceName ) == false )
             return false;
         if ( params._axis.getLengthSquared() <= MathUtil::kEpsilon )
         {
@@ -143,7 +143,7 @@ namespace sw
                 return false;
             }
             Render2DSortingLayerParams params;
-            if ( XMLFields::readFields( layerNode, params, sourceName ) == false || params._name.empty() )
+            if ( XMLFields::readProperties( layerNode, params, sourceName ) == false || params._name.empty() )
                 return false;
             const hashed_string& layerName = params._name;
             if ( findSortingLayer( layerName ).has_value() )

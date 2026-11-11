@@ -372,7 +372,7 @@ namespace sw
         revokeBound( host, event._accountID, event._reason );
     }
 
-    bool AccountServer::respondCommonError( uint64 callID, LoginOutcome result, const LoginGrant& grant )
+    bool AccountServer::respondCommonError( uint64 callID, LoginServiceResult result, const LoginGrant& grant )
     {
         if ( result.isFailed() == false )
             return false;

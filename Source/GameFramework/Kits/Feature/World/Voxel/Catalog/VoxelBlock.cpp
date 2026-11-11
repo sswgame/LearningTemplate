@@ -121,9 +121,9 @@ namespace sw
 
     uint32 VoxelBlockCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         VoxelBlockCatalogRootDef rootDef;
-        if ( XMLFields::readFields( root, rootDef, sourceName ) == false )
+        if ( XMLFields::readProperties( root, rootDef, sourceName ) == false )
             return 0;
         _atlasColumns                          = rootDef._atlasColumns;
         _atlasRows                             = rootDef._atlasRows;
@@ -149,7 +149,7 @@ namespace sw
     {
         using Internal = VoxelBlockInternal;
         VoxelBlockDef block;
-        bool          bValid = XMLFields::readFields( node, block, sourceName, { "tile", "top", "bottom", "side" } );
+        bool          bValid = XMLFields::readProperties( node, block, sourceName, { "tile", "top", "bottom", "side" } );
         // 면은 `tile` 하나 또는 `top` · `bottom` · `side` 셋이다. 빠진 면을 다른 면 값으로 채우지 않는다.
         int32      tile    = 0;
         int32      top     = 0;

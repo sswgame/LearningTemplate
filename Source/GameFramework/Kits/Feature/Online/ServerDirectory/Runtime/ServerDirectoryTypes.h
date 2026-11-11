@@ -23,7 +23,7 @@ namespace sw
 {
     /**
      * @brief 서버 디렉터리 업무 결과입니다. 배정 응답 본문과 변경 완료에 씁니다.
-     * @details 공통 범주(규칙 밖 값 · 일시 장애)와 키트 오류(모르는 종류 `ServerDirectoryError::kUnknownKind`)는 여기 두지 않는다 — 로직은 `ServerDirectoryOutcome::fail` 로 낸다.
+     * @details 공통 범주(규칙 밖 값 · 일시 장애)와 키트 오류(모르는 종류 `ServerDirectoryError::kUnknownKind`)는 여기 두지 않는다 — 로직은 `ServerDirectoryServiceResult::fail` 로 낸다.
      */
     ENUM( Count = Count )
     enum class ServerDirectoryResult : uint8
@@ -36,7 +36,7 @@ namespace sw
     };
 
     /** @brief 서버 로직의 결과입니다. 업무 결과(`ServerDirectoryResult`) 또는 공통 범주 · 키트 오류(`OnlineError` · `ServerDirectoryError`)입니다. */
-    using ServerDirectoryOutcome = OnlineOutcome<ServerDirectoryResult>;
+    using ServerDirectoryServiceResult = OnlineServiceResult<ServerDirectoryResult>;
 
     /** @brief 상한 값들입니다. */
     struct ServerDirectoryLimit
@@ -99,7 +99,7 @@ namespace sw
         /** @brief 클라이언트에 보이는 부분입니다. 허용 목록은 빠집니다. */
         MaintenanceView makeView() const { return MaintenanceView{ _scope, _messageKey, _startMs, _endMs }; }
         /// 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)이다. PROPERTY 가 아니다 — 영속 읽기가 담고 쓰기가 그대로 싣는다(`ServiceRecordUtil`).
-        ServiceRecordUnknownFields _unknownFields{};
+        ServiceRecordUnknownFields _unknownProperties{};
     };
 } // namespace sw
 
@@ -125,7 +125,7 @@ namespace sw
 
         bool isActive( int64 nowMs ) const { return _startMs <= nowMs && ( _endMs == 0 || nowMs < _endMs ); }
         /// 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)이다. PROPERTY 가 아니다 — 영속 읽기가 담고 쓰기가 그대로 싣는다(`ServiceRecordUtil`).
-        ServiceRecordUnknownFields _unknownFields{};
+        ServiceRecordUnknownFields _unknownProperties{};
     };
 } // namespace sw
 

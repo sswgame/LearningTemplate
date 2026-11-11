@@ -87,7 +87,7 @@ namespace sw
         explicit MemoryServiceStore( MemoryServiceDatabase* pDatabase );
         ~MemoryServiceStore() override;
 
-        void  submit( unique_ptr<IServiceStoreJob> work ) override;
+        void  submit( unique_ptr<IServiceStoreJob> job ) override;
         int32 pollCompletions() override;
         int32 getPendingCount() const override;
         void  shutdown() override;

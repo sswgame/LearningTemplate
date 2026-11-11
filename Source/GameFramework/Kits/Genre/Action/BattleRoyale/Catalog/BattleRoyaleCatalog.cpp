@@ -36,10 +36,10 @@ namespace sw
 
     uint32 BattleRoyaleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         // 맵 크기가 깨진 글을 앞의 크기로 읽어 나가지 않는다(자기장 · 비행 경로가 말없이 다른 맵에서 돈다).
         BattleRoyaleCatalogRootDef rootDef;
-        if ( XMLFields::readFields( root, rootDef, sourceName ) == false )
+        if ( XMLFields::readProperties( root, rootDef, sourceName ) == false )
             return 0;
         _mapSize = rootDef._mapSize;
 
@@ -63,7 +63,7 @@ namespace sw
     bool BattleRoyaleCatalog::loadArmor( const XMLNode& node, string_view sourceName )
     {
         BattleRoyaleArmorDef armor;
-        if ( XMLFields::readFields( node, armor, sourceName ) == false )
+        if ( XMLFields::readProperties( node, armor, sourceName ) == false )
             return false;
         // 장비는 헬멧이 아니면 조끼로 입는다. 슬롯 오타가 말없이 조끼가 되지 않게 여기서 막는다.
         if ( armor._slot != BattleRoyaleCatalog::getHelmetSlotName() && armor._slot != hashed_string( "Vest" ) )
@@ -78,11 +78,11 @@ namespace sw
     bool BattleRoyaleCatalog::loadZone( const XMLNode& node, string_view sourceName )
     {
         BattleRoyaleZoneDef zone;
-        bool                bValid = XMLFields::readFields( node, zone, sourceName );
+        bool                bValid = XMLFields::readProperties( node, zone, sourceName );
         for ( XMLNode phaseNode = node.findChild( "Phase" ); phaseNode; phaseNode = phaseNode.findNextSibling( "Phase" ) )
         {
             BattleRoyaleZonePhaseDef phase;
-            if ( XMLFields::readFields( phaseNode, phase, sourceName ) )
+            if ( XMLFields::readProperties( phaseNode, phase, sourceName ) )
                 zone._listPhase.push_back( phase );
             else
                 bValid = false;
@@ -96,7 +96,7 @@ namespace sw
     bool BattleRoyaleCatalog::loadSupplyDrop( const XMLNode& node, string_view sourceName )
     {
         BattleRoyaleSupplyDropDef supplyDrop;
-        if ( XMLFields::readFields( node, supplyDrop, sourceName ) == false )
+        if ( XMLFields::readProperties( node, supplyDrop, sourceName ) == false )
             return false;
         VectorUtil::sort( supplyDrop._listTime );
         _supplyDrop = supplyDrop;

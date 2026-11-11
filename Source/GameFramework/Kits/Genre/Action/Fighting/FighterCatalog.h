@@ -2,7 +2,7 @@
  * @file FighterCatalog.h
  * @brief 철권 같은 3D 격투의 캐릭터 데이터입니다. 기반 `MoveCatalog` 의 프레임 데이터에 커맨드(철권 표기), 시작 자세, 조건, 스트링, 콤보 성질을 붙입니다.
  *        체력, 걷기, 몸 크기, 횡이동, 점프 수치도 여기에 둡니다.
- * @details 정의 구조체는 리플렉션 스키마다 — 기본값은 초기값, 범위는 `PROPERTY( Min · Max )`, 필수는 `Required` 이고 `XMLFields::readFields` 가 읽는다.
+ * @details 정의 구조체는 리플렉션 스키마다 — 기본값은 초기값, 범위는 `PROPERTY( Min · Max )`, 필수는 `Required` 이고 `XMLFields::readProperties` 가 읽는다.
  *          커맨드 표기 · 자세 목록 · 프레임 데이터처럼 칸 하나로 담지 않는 값은 손으로 읽는다.
  */
 #pragma once

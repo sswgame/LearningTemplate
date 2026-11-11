@@ -225,8 +225,8 @@ namespace sw
         struct Observer
         {
             unordered_map<uint32, VisibleEntry> _mapVisible{};
-            NetPrioritizer                      _prioritizer{};   ///< 보이는 엔티티마다 쌓인 우선도
-            TickRingBuffer<uint8>               _updateOutcome{}; ///< 판정이 난 갱신 틱. 값이 `SW_TRUE` 면 전달, `SW_FALSE` 면 잃음이다. 항목이 없으면 아직 판정이 없다
+            NetPrioritizer                      _prioritizer{};  ///< 보이는 엔티티마다 쌓인 우선도
+            TickRingBuffer<uint8>               _updateResult{}; ///< 판정이 난 갱신 틱. 값이 `SW_TRUE` 면 전달, `SW_FALSE` 면 잃음이다. 항목이 없으면 아직 판정이 없다
             uint32                              _entityID{ 0 };
             uint8                               _bActive{ SW_FALSE };
         };

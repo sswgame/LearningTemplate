@@ -48,14 +48,14 @@ namespace sw
     void ReferencePoseOverride::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
         ReferencePoseRootParams rootParams;
-        (void)reader.readFields( root, rootParams ); // 오류는 읽개의 목록에 쌓인다
+        (void)reader.readProperties( root, rootParams ); // 오류는 읽개의 목록에 쌓인다
         _mirrorAxis = rootParams._mirrorAxis;
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Bone" ) )
             {
                 BoneOverrideParams params;
-                (void)reader.readFields( child, params );
+                (void)reader.readProperties( child, params );
                 BoneOverride boneOverride;
                 boneOverride._bone = params._name;
                 // 덮어쓰기 층이라 적은 칸만 표시한다.
@@ -86,7 +86,7 @@ namespace sw
             else if ( StringUtil::equals( child.getName(), "Mirror" ) )
             {
                 BoneMirrorParams params;
-                if ( reader.readFields( child, params ) && params._left.empty() == false && params._right.empty() == false )
+                if ( reader.readProperties( child, params ) && params._left.empty() == false && params._right.empty() == false )
                     addMirrorPair( params._left, params._right );
             }
             else

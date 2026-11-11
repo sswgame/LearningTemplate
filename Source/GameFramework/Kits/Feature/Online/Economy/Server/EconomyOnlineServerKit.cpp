@@ -106,7 +106,7 @@ namespace sw
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 끝나지 않은 지급 · 구매 · 환불 호출(돈이 오가는 일이라 끊지 않고 마무리한다). */
-            int32 getOpenWorkCount() const override { return _service.getOpenWorkCount(); }
+            int32 getOpenJobCount() const override { return _service.getOpenJobCount(); }
 
             void stop() override
             {

@@ -423,7 +423,7 @@ namespace sw
         {
             mutex          _commandMutex;
             vector<uint32> _listCommandIndex;   ///< 다른 스레드가 맡긴 할 일(닫기, 읽기 재개, 열기).
-            vector<uint32> _listWorkIndex;      ///< 루프 스레드 전용. 할 일을 맞바꿔서 꺼낸다.
+            vector<uint32> _listJobIndex;       ///< 루프 스레드 전용. 할 일을 맞바꿔서 꺼낸다.
             vector<uint8>  _listReceiveScratch; ///< 루프 스레드 전용 읽기 버퍼(`_receiveChunkBytes`).
             sw::thread     _thread;
             int32          _epollFd{ -1 };
@@ -755,14 +755,14 @@ namespace sw
             }
             {
                 ScopedLock<mutex> lock{ loop._commandMutex };
-                loop._listWorkIndex.clear();
-                loop._listWorkIndex.swap( loop._listCommandIndex );
+                loop._listJobIndex.clear();
+                loop._listJobIndex.swap( loop._listCommandIndex );
             }
-            for ( const uint32 index : loop._listWorkIndex )
+            for ( const uint32 index : loop._listJobIndex )
             {
                 handleCommand( index, loopIndex );
             }
-            handled += static_cast<int32>( loop._listWorkIndex.size() );
+            handled += static_cast<int32>( loop._listJobIndex.size() );
             const int64 now = MonotonicClock::nowNanoseconds();
             if ( now >= inoutNextSweep )
             {

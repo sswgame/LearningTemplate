@@ -62,7 +62,7 @@ namespace sw::editor
                         continue;
                     }
                     MirrorTokenPair pair;
-                    if ( reader.readFields( child, pair ) == false ) // 칸은 MirrorTokenPair 의 PROPERTY
+                    if ( reader.readProperties( child, pair ) == false ) // 칸은 MirrorTokenPair 의 PROPERTY
                         continue;
                     if ( inoutRules.addPair( pair._first, pair._second ) == false )
                         reader.addError( "Character.MirrorPairInvalid", child, "needs two different non-empty attributes 'first' and 'second'" );
@@ -109,7 +109,7 @@ namespace sw::editor
         XMLNode     root = document.appendRoot( "MirrorNames" );
         for ( const MirrorTokenPair& pair : _listPair )
         {
-            XMLFields::writeFields( root.appendChild( "Pair" ), pair );
+            XMLFields::writeProperties( root.appendChild( "Pair" ), pair );
         }
         return document.saveToString();
     }

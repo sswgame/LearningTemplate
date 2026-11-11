@@ -66,7 +66,7 @@ namespace sw
             [[nodiscard]] static expected<SlotStepArgs> parseSlotStep( const AutomationStep& step )
             {
                 AutomationSlotStepParams params;
-                const expected<void>     read = step.readFields( params );
+                const expected<void>     read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return unexpected( read.error() );
                 SlotStepArgs args;
@@ -101,7 +101,7 @@ namespace sw
             static expected<void> validateVariable( const AutomationStep& step )
             {
                 AutomationVariableParams params;
-                const expected<void>     read = step.readFields( params );
+                const expected<void>     read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return read;
                 const expected<GlobalVariableInfo*> info = findRegisteredVariable( params._name );
@@ -117,7 +117,7 @@ namespace sw
             [[nodiscard]] static expected<bool> evaluateExpectVariable( const AutomationStep& step, const GlobalVariableInfo& info )
             {
                 AutomationExpectVariableParams params;
-                const expected<void>           read = step.readFields( params );
+                const expected<void>           read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return unexpected( read.error() );
                 if ( step.findAttribute( "tolerance" ) != nullptr && info._type != GlobalVariableType::Float )
@@ -136,7 +136,7 @@ namespace sw
             static expected<void> validateExpectVariable( const AutomationStep& step )
             {
                 AutomationExpectVariableParams params;
-                const expected<void>           read = step.readFields( params );
+                const expected<void>           read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return read;
                 const expected<GlobalVariableInfo*> info = findRegisteredVariable( params._name );
@@ -187,7 +187,7 @@ namespace sw
             static expected<void> validateExpect( const AutomationStep& step )
             {
                 AutomationExpectParams params;
-                return step.readFields( params, { "equals", "near", "atLeast", "atMost" } ).and_then( [&]()
+                return step.readProperties( params, { "equals", "near", "atLeast", "atMost" } ).and_then( [&]()
                 { return validateWatchComparison( step ); } );
             }
 
@@ -195,7 +195,7 @@ namespace sw
             static expected<void> validateWaitUntil( const AutomationStep& step )
             {
                 AutomationWaitUntilParams params;
-                const expected<void>      read = step.readFields( params, { "equals", "near", "atLeast", "atMost" } );
+                const expected<void>      read = step.readProperties( params, { "equals", "near", "atLeast", "atMost" } );
                 if ( read.has_value() == false )
                     return read;
                 const uint32 timeoutCount = ( step.findAttribute( "timeoutFrames" ) != nullptr ? 1u : 0u ) + ( step.findAttribute( "timeoutSeconds" ) != nullptr ? 1u : 0u ) +
@@ -219,7 +219,7 @@ namespace sw
             static expected<void> validateExpectVisited( const AutomationStep& step )
             {
                 AutomationExpectVisitedParams params;
-                const expected<void>          read = step.readFields( params ).and_then( [&]()
+                const expected<void>          read = step.readProperties( params ).and_then( [&]()
                 { return validateWatchReference( step ); } );
                 if ( read.has_value() == false )
                     return read;
@@ -232,7 +232,7 @@ namespace sw
             static expected<void> validateRecord( const AutomationStep& step )
             {
                 AutomationRecordParams params;
-                return step.readFields( params ).and_then( [&]()
+                return step.readProperties( params ).and_then( [&]()
                 { return validateWatchReference( step ); } );
             }
 
@@ -240,7 +240,7 @@ namespace sw
             static expected<void> validateRemember( const AutomationStep& step )
             {
                 AutomationRememberParams params;
-                return step.readFields( params ).and_then( [&]()
+                return step.readProperties( params ).and_then( [&]()
                 { return validateWatchReference( step ); } );
             }
 
@@ -249,7 +249,7 @@ namespace sw
                 // 사건은 로그 id 로만 센다 — 문장으로 세면 문구를 고칠 때 단언이 조용히 낡는다. contains 는 그 id 줄의 값(경로 · 수)을 좁히는 데만 쓴다.
                 // 세려는 줄에 id 가 없으면 소스에서 `SW_LOG_*_ID` 로 쓴다.
                 AutomationExpectLogParams params;
-                const expected<void>      read = step.readFields( params );
+                const expected<void>      read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return read;
                 if ( ( params._count == kAutomationNoCount ) == ( params._atLeast == kAutomationNoCount ) )
@@ -264,13 +264,13 @@ namespace sw
              */
             [[nodiscard]] static bool shouldCaptureWithoutSettling( const AutomationStep& step )
             {
-                return step.readValidatedFields<AutomationScreenshotParams>()._bWaitForSettle == false;
+                return step.readValidatedProperties<AutomationScreenshotParams>()._bWaitForSettle == false;
             }
 
             static expected<void> validateExpectImagesDiffer( const AutomationStep& step )
             {
                 AutomationExpectImagesDifferParams params;
-                const expected<void>               read = step.readFields( params );
+                const expected<void>               read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return read;
                 if ( params._minDiffering > params._maxDiffering )
@@ -338,7 +338,7 @@ namespace sw
         {
             AutomationRunner&        runner = asRunner( context );
             AutomationAxisPairParams args;
-            const expected<void>     read = step.readFields( args );
+            const expected<void>     read = step.readProperties( args );
             if ( read.has_value() == false )
                 return read;
             if ( args._y != 0.0f )
@@ -352,7 +352,7 @@ namespace sw
         {
             AutomationRunner&        runner = asRunner( context );
             AutomationAxisPairParams args;
-            const expected<void>     read = step.readFields( args );
+            const expected<void>     read = step.readProperties( args );
             if ( read.has_value() == false )
                 return read;
             runner._inputScript.addMouseDelta( step._frameIndex, args._x, args._y );
@@ -369,7 +369,7 @@ namespace sw
             if ( bNoWindowForPointer )
                 return unexpected( Error{ ErrorKind::Unsupported, "no window to place the pointer in" } );
             AutomationMousePositionParams args;
-            const expected<void>          read = step.readFields( args );
+            const expected<void>          read = step.readProperties( args );
             if ( read.has_value() == false )
                 return read;
             const float32 maxX = static_cast<float32>( pWindow->getWidth() - 1 );
@@ -388,7 +388,7 @@ namespace sw
             if ( bNoWindowForTouch )
                 return unexpected( Error{ ErrorKind::Unsupported, "no window to touch" } );
             AutomationTouchParams args;
-            const expected<void>  read = step.readFields( args );
+            const expected<void>  read = step.readProperties( args );
             if ( read.has_value() == false )
                 return read;
             const int32 x = static_cast<int32>( MathUtil::round( args._x * static_cast<float32>( pWindow->getWidth() - 1 ) ) );
@@ -402,7 +402,7 @@ namespace sw
         {
             AutomationRunner&           runner = asRunner( context );
             AutomationGamepadAxisParams args;
-            const expected<void>        read = step.readFields( args );
+            const expected<void>        read = step.readProperties( args );
             if ( read.has_value() == false )
                 return read;
             // 가상 입력 세션의 패드는 끊긴 채 시작하고 끊긴 패드의 스틱은 입력 맵 · 가상 커서가 읽지 않는다 — 축을 내는 단계는 그 패드를 먼저 연결한다.
@@ -436,7 +436,7 @@ namespace sw
         static bool runVariable( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&              runner = asRunner( context );
-            const AutomationVariableParams params = step.readValidatedFields<AutomationVariableParams>();
+            const AutomationVariableParams params = step.readValidatedProperties<AutomationVariableParams>();
             if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( params._name, params._value ) == false )
                 runner.recordFailure( step, "could not set " + params._name + " to '" + params._value + "'" );
             return true;
@@ -445,7 +445,7 @@ namespace sw
         static bool runExpectVariable( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&                    runner = asRunner( context );
-            const AutomationExpectVariableParams params = step.readValidatedFields<AutomationExpectVariableParams>();
+            const AutomationExpectVariableParams params = step.readValidatedProperties<AutomationExpectVariableParams>();
             const string&                        name   = params._name;
             const string&                        value  = params._value;
             const GlobalVariableInfo*            pInfo  = engine::getSubsystem<GlobalVariableManager>().findVariable( name );
@@ -501,7 +501,7 @@ namespace sw
         static bool runScreenshot( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner    = asRunner( context );
-            const string      path      = runner.resolveOutputPath( step.readValidatedFields<AutomationScreenshotParams>()._file );
+            const string      path      = runner.resolveOutputPath( step.readValidatedProperties<AutomationScreenshotParams>()._file );
             const string      directory = FileUtil::getDirectoryPart( path );
             if ( directory.empty() == false )
                 (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
@@ -527,7 +527,7 @@ namespace sw
         [[nodiscard]] static bool startExitDeadline( AutomationRunner& runner, const AutomationStep& step, bool bClose )
         {
             string        error;
-            const float32 seconds = bClose ? step.readValidatedFields<AutomationCloseWindowParams>()._withinSeconds : step.readValidatedFields<AutomationExpectExitWithinParams>()._seconds;
+            const float32 seconds = bClose ? step.readValidatedProperties<AutomationCloseWindowParams>()._withinSeconds : step.readValidatedProperties<AutomationExpectExitWithinParams>()._seconds;
             // 종료 시한도 멈춘 루프를 잡는 그물이다(통과는 창이 닫힌 사건) — 다른 벽시계 시한처럼 기계 배율로 늘린다.
             runner._run._exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + AutomationRunner::scaleWallSeconds( seconds );
             if ( bClose == false )
@@ -658,12 +658,12 @@ namespace sw
     SW_AUTOMATION_STEP( runnerPress, "Press", nullptr, &AutomationRunnerStepsInternal::validateSlotStep, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareSlotStep ) );
     SW_AUTOMATION_STEP( runnerRelease, "Release", nullptr, &AutomationRunnerStepsInternal::validateSlotStep, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareSlotStep ) );
     SW_AUTOMATION_STEP( runnerTap, "Tap", nullptr, &AutomationRunnerStepsInternal::validateSlotStep, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareSlotStep ) );
-    SW_AUTOMATION_STEP( runnerMouseDelta, "MouseDelta", nullptr, &AutomationStep::validateFields<AutomationAxisPairParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareMouseDelta ) );
-    SW_AUTOMATION_STEP( runnerWheel, "Wheel", nullptr, &AutomationStep::validateFields<AutomationAxisPairParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareWheel ) );
-    SW_AUTOMATION_STEP( runnerMousePosition, "MousePosition", nullptr, &AutomationStep::validateFields<AutomationMousePositionParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareMousePosition ) );
-    SW_AUTOMATION_STEP( runnerTouch, "Touch", nullptr, &AutomationStep::validateFields<AutomationTouchParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareTouch ) );
-    SW_AUTOMATION_STEP( runnerGamepadAxis, "GamepadAxis", nullptr, &AutomationStep::validateFields<AutomationGamepadAxisParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareGamepadAxis ) );
-    SW_AUTOMATION_STEP( runnerText, "Text", nullptr, &AutomationStep::validateFields<AutomationTextStepParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareText ) );
+    SW_AUTOMATION_STEP( runnerMouseDelta, "MouseDelta", nullptr, &AutomationStep::validateProperties<AutomationAxisPairParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareMouseDelta ) );
+    SW_AUTOMATION_STEP( runnerWheel, "Wheel", nullptr, &AutomationStep::validateProperties<AutomationAxisPairParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareWheel ) );
+    SW_AUTOMATION_STEP( runnerMousePosition, "MousePosition", nullptr, &AutomationStep::validateProperties<AutomationMousePositionParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareMousePosition ) );
+    SW_AUTOMATION_STEP( runnerTouch, "Touch", nullptr, &AutomationStep::validateProperties<AutomationTouchParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareTouch ) );
+    SW_AUTOMATION_STEP( runnerGamepadAxis, "GamepadAxis", nullptr, &AutomationStep::validateProperties<AutomationGamepadAxisParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareGamepadAxis ) );
+    SW_AUTOMATION_STEP( runnerText, "Text", nullptr, &AutomationStep::validateProperties<AutomationTextStepParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareText ) );
     SW_AUTOMATION_STEP( runnerVariable, "Variable", &AutomationRunnerEngineSteps::runVariable, &AutomationRunnerStepsInternal::validateVariable, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerExpectVariable, "ExpectVariable", &AutomationRunnerEngineSteps::runExpectVariable, &AutomationRunnerStepsInternal::validateExpectVariable, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerExpect, "Expect", &AutomationRunnerEngineSteps::runExpect, &AutomationRunnerStepsInternal::validateExpect, AutomationStepOptions{} );
@@ -672,13 +672,13 @@ namespace sw
     SW_AUTOMATION_STEP( runnerRecord, "Record", &AutomationRunnerEngineSteps::runRecord, &AutomationRunnerStepsInternal::validateRecord, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerRemember, "Remember", &AutomationRunnerEngineSteps::runRemember, &AutomationRunnerStepsInternal::validateRemember, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerExpectLog, "ExpectLog", &AutomationRunnerEngineSteps::runExpectLog, &AutomationRunnerStepsInternal::validateExpectLog, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationStep::validateFields<AutomationScreenshotParams>, AutomationStepOptions{}.withHold( &AutomationRunnerEngineSteps::holdScreenshot ) );
+    SW_AUTOMATION_STEP( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationStep::validateProperties<AutomationScreenshotParams>, AutomationStepOptions{}.withHold( &AutomationRunnerEngineSteps::holdScreenshot ) );
     SW_AUTOMATION_STEP( runnerExpectImage, "ExpectImage", &AutomationRunnerEngineSteps::runExpectImage, &AutomationRunnerStepsInternal::validateExpectImage, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerExpectImagesDiffer, "ExpectImagesDiffer", &AutomationRunnerEngineSteps::runExpectImagesDiffer, &AutomationRunnerStepsInternal::validateExpectImagesDiffer, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerCloseWindow, "CloseWindow", &AutomationRunnerEngineSteps::runCloseWindow, &AutomationStep::validateFields<AutomationCloseWindowParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerExpectExitWithin, "ExpectExitWithin", &AutomationRunnerEngineSteps::runExpectExitWithin, &AutomationStep::validateFields<AutomationExpectExitWithinParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerPass, "Pass", &AutomationRunnerEngineSteps::runPass, &AutomationStep::validateFields<AutomationNoParams>, AutomationStepOptions{}.withHold( &AutomationRunnerEngineSteps::holdPass ) );
-    SW_AUTOMATION_STEP( runnerFail, "Fail", &AutomationRunnerEngineSteps::runFail, &AutomationStep::validateFields<AutomationEndStepParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerSkip, "Skip", &AutomationRunnerEngineSteps::runSkip, &AutomationStep::validateFields<AutomationEndStepParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerSkipUnless, "SkipUnless", &AutomationRunnerEngineSteps::runSkipUnless, &AutomationStep::validateFields<AutomationSkipUnlessParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( runnerCloseWindow, "CloseWindow", &AutomationRunnerEngineSteps::runCloseWindow, &AutomationStep::validateProperties<AutomationCloseWindowParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( runnerExpectExitWithin, "ExpectExitWithin", &AutomationRunnerEngineSteps::runExpectExitWithin, &AutomationStep::validateProperties<AutomationExpectExitWithinParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( runnerPass, "Pass", &AutomationRunnerEngineSteps::runPass, &AutomationStep::validateProperties<AutomationNoParams>, AutomationStepOptions{}.withHold( &AutomationRunnerEngineSteps::holdPass ) );
+    SW_AUTOMATION_STEP( runnerFail, "Fail", &AutomationRunnerEngineSteps::runFail, &AutomationStep::validateProperties<AutomationEndStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( runnerSkip, "Skip", &AutomationRunnerEngineSteps::runSkip, &AutomationStep::validateProperties<AutomationEndStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( runnerSkipUnless, "SkipUnless", &AutomationRunnerEngineSteps::runSkipUnless, &AutomationStep::validateProperties<AutomationSkipUnlessParams>, AutomationStepOptions{} );
 } // namespace sw

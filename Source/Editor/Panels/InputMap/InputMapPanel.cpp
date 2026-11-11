@@ -365,8 +365,8 @@ namespace sw::editor
         ImGui::Text( "%u  %s", bindIndex, _document.describeBinding( action, bindIndex ).c_str() );
         ImGui::SameLine( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "InputMapLayerColumnEm" ) );
         drawBindingLayerCombo( action, bindIndex );
-        const bool bTriggerFields = InputMapModel::canSaveTriggerProperties( binding._kind ); // 파일에 남지 않는 칸은 보이지 않는다
-        if ( bTriggerFields )
+        const bool bTriggerProperties = InputMapModel::canSaveTriggerProperties( binding._kind ); // 파일에 남지 않는 칸은 보이지 않는다
+        if ( bTriggerProperties )
         {
             ImGui::SameLine( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "InputMapActionColumnEm" ) );
             drawTriggerCombo( action, bindIndex );
@@ -383,7 +383,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
         const bool bRemove = ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RemoveBindingTip" ) );
-        if ( bTriggerFields )
+        if ( bTriggerProperties )
             drawTriggerOptions( action, bindIndex, binding, rightEdgeX );
         return bRemove;
     }

@@ -58,8 +58,8 @@ namespace sw
     /** @brief 기기 등록과 해지 요청의 완료입니다. */
     struct PushDeviceCompletion
     {
-        uint64         _requestTag{ 0 };
-        LiveOpsOutcome _result{ LiveOpsResult::Ok };
+        uint64               _requestTag{ 0 };
+        LiveOpsServiceResult _result{ LiveOpsResult::Ok };
     };
 } // namespace sw
 
@@ -106,7 +106,7 @@ namespace sw
 
         const PushDispatcherStats& getStats() const { return _stats; }
         int32                      getInFlightCount() const { return static_cast<int32>( _mapDelivery.size() ); }
-        int32                      getPendingWorkCount() const { return _store.getOpenCount(); }
+        int32                      getPendingJobCount() const { return _store.getOpenCount(); }
         bool                       hasProvider( string_view providerID ) const { return findProvider( providerID ) != nullptr; }
 
         static string makeDeviceKey( AccountID accountID, string_view providerID, string_view token );
@@ -117,7 +117,7 @@ namespace sw
         void submitWrite( AccountID accountID, string&& key, vector<uint8>&& bytes, uint64 requestTag );
         /** @brief 저장소 일의 완료입니다. */
         void applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, UnixMilliseconds nowMs );
-        void applyWrite( uint64 requestTag, LiveOpsOutcome result );
+        void applyWrite( uint64 requestTag, LiveOpsServiceResult result );
         void applyTopicClaim( const string& topic, const PushNotificationMessage& message, ServiceStoreResult result, UnixMilliseconds nowMs );
 
         struct Delivery

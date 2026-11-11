@@ -31,7 +31,7 @@ namespace sw
             /** @brief `source` · `target` 속성 쌍 하나를 씁니다. */
             static void writePair( const XMLNode& element, const hashed_string& source, const hashed_string& target )
             {
-                XMLFields::writeFields( element, RetargetBonePair{ source, target } );
+                XMLFields::writeProperties( element, RetargetBonePair{ source, target } );
             }
 
             /** @brief 열쇠 있는 목록의 규칙 하나입니다. */
@@ -185,7 +185,7 @@ namespace sw
         rootParams._translation    = _translationMode;
         rootParams._bMapSameNames  = _bMapSameNames == SW_TRUE;
         rootParams._heightRatio    = _heightRatioOverride;
-        XMLFields::writeFields( root, rootParams ); // 기본값과 같은 칸은 적지 않는다
+        XMLFields::writeProperties( root, rootParams ); // 기본값과 같은 칸은 적지 않는다
         // 아직 고르지 않은 쌍(새 문서)은 적지 않는다 — 적으면 빈 이름이 필수 칸 검사에 걸려 되돌리기 스냅샷이 다시 읽히지 않는다. 쓰는 쪽(`PoseRetargeter`)이 없는 뼈를 오류로 낸다.
         if ( _sourceRoot.empty() == false || _targetRoot.empty() == false )
             Internal::writePair( root.appendChild( "root" ), _sourceRoot, _targetRoot );
@@ -198,7 +198,7 @@ namespace sw
             RetargetChainParams chainParams;
             chainParams._name    = chain._name;
             chainParams._bIKGoal = chain._bIKGoal == SW_TRUE;
-            XMLFields::writeFields( entry, chainParams );
+            XMLFields::writeProperties( entry, chainParams );
             Internal::writeNames( entry.appendChild( "source" ), chain._listSourceBone );
             Internal::writeNames( entry.appendChild( "target" ), chain._listTargetBone );
         }
@@ -215,7 +215,7 @@ namespace sw
             const XMLNode targetPose = root.appendChild( "target_pose" );
             for ( const RetargetPoseBone& poseBone : _listTargetPose )
             {
-                XMLFields::writeFields( targetPose.appendChild( "item" ), RetargetPoseBoneParams{ poseBone._bone, poseBone._rotationDegrees } );
+                XMLFields::writeProperties( targetPose.appendChild( "item" ), RetargetPoseBoneParams{ poseBone._bone, poseBone._rotationDegrees } );
             }
         }
         return document.saveToString();
@@ -231,7 +231,7 @@ namespace sw
     {
         RigXMLReader              reader( root, sourceLabel );
         RetargetProfileRootParams rootParams;
-        bool                      bOk = reader.readFields( rootParams ); // 높이 비 > 0(적었을 때)은 PROPERTY( Min ) 가 본다
+        bool                      bOk = reader.readProperties( rootParams ); // 높이 비 > 0(적었을 때)은 PROPERTY( Min ) 가 본다
         _sourceSkeletonPath           = rootParams._sourceSkeleton;
         _targetSkeletonPath           = rootParams._targetSkeleton;
         _translationMode              = rootParams._translation;
@@ -250,7 +250,7 @@ namespace sw
         {
             RigXMLReader     entryReader( boneMap.at( index ), sourceLabel );
             RetargetBonePair pair{};
-            bOk = entryReader.readFields( pair );
+            bOk = entryReader.readProperties( pair );
             if ( ( entryReader.finish() && bOk ) == false )
                 return false;
             _listBonePair.push_back( pair );
@@ -260,7 +260,7 @@ namespace sw
         {
             RigXMLReader           entryReader( targetPose.at( index ), sourceLabel );
             RetargetPoseBoneParams poseParams;
-            bOk = entryReader.readFields( poseParams );
+            bOk = entryReader.readProperties( poseParams );
             const RetargetPoseBone poseBone{ poseParams._bone, poseParams._rotation };
             if ( ( entryReader.finish() && bOk ) == false )
                 return false;
@@ -283,7 +283,7 @@ namespace sw
                 continue;
             RigXMLReader     pairReader( arrPair[pairIndex], sourceLabel );
             RetargetBonePair pair{};
-            bOk = pairReader.readFields( pair );
+            bOk = pairReader.readProperties( pair );
             if ( ( pairReader.finish() && bOk ) == false )
                 return false;
             *arrSource[pairIndex] = pair._source;
@@ -295,7 +295,7 @@ namespace sw
             RigXMLReader        chainReader( chains.at( index ), sourceLabel );
             RetargetChain       chain{};
             RetargetChainParams chainParams;
-            bOk            = chainReader.readFields( chainParams );
+            bOk            = chainReader.readProperties( chainParams );
             bOk            = chainReader.readNameList( "source", chain._listSourceBone, true ) && bOk;
             bOk            = chainReader.readNameList( "target", chain._listTargetBone, true ) && bOk;
             chain._name    = chainParams._name;

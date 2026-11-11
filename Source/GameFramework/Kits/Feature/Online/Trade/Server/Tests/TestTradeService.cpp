@@ -138,8 +138,8 @@ namespace
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), string( assetID ), amount } );
             request._journalKey = "test/grant/" + to_string( accountID ) + "/" + string( assetID );
             request._reason     = "test.grant";
-            LedgerTransferResult outcome;
-            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, outcome ) == LedgerResult::Ok );
+            LedgerTransferResult result;
+            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, result ) == LedgerResult::Ok );
         }
 
         void spend( AccountID accountID, string_view assetID, int64 amount )
@@ -148,8 +148,8 @@ namespace
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeAccount( accountID ), LedgerHolder::makeSink(), string( assetID ), amount } );
             request._journalKey = "test/spend/" + to_string( accountID ) + "/" + string( assetID );
             request._reason     = "test.spend";
-            LedgerTransferResult outcome;
-            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, outcome ) == LedgerResult::Ok );
+            LedgerTransferResult result;
+            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, result ) == LedgerResult::Ok );
         }
 
         int64 getBalanceOf( AccountID accountID, string_view assetID )

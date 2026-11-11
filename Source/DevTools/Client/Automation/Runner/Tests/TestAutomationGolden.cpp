@@ -71,7 +71,7 @@ SW_TEST_CASE( AutomationGoldenTest, WideShallowPassesNarrowDeepFails )
 }
 
 /** @brief [AutomationGoldenTest] 판정은 한 식이다 — 한 축이라도 상한을 넘으면 Fail, 한 축이라도 상한의 절반을 넘으면 PassNearLimit, 아니면 Pass */
-SW_TEST_CASE( AutomationGoldenTest, VerdictPerAxis )
+SW_TEST_CASE( AutomationGoldenTest, ResultPerAxis )
 {
     const auto judge = []( float64 fraction, float64 mean, uint32 region )
     { return AutomationGoldenUtil::judge( AutomationImageDifference{ fraction, mean, region }, Util::kLimits, Util::kNearLimitRatio ); };

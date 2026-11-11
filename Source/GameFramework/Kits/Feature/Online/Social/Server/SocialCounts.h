@@ -51,14 +51,14 @@ namespace sw
     /** @brief 규칙의 결정입니다. `_newOtherState` 는 "상대에서 나로" 가는 줄의 새 상태이며 None 이면 줄을 지웁니다. */
     struct SocialLinkDecision
     {
-        SocialCounts    _selfDelta{};
-        SocialCounts    _otherDelta{};
-        SocialLinkState _newSelfState{ SocialLinkState::None };
-        SocialLinkState _newOtherState{ SocialLinkState::None };
-        SocialOutcome   _result{ SocialResult::Ok };
-        uint8           _bWrite{ SW_FALSE }; ///< true 이면 쓴다. 아무것도 쓰지 않는 Ok 는 나를 막은 사람에게 신청했거나 이미 막은 경우이다
-        uint8           _bNotifyOtherRequested{ SW_FALSE };
-        uint8           _bNotifyBothAdded{ SW_FALSE };
-        uint8           _bNotifyOtherRemoved{ SW_FALSE };
+        SocialCounts        _selfDelta{};
+        SocialCounts        _otherDelta{};
+        SocialLinkState     _newSelfState{ SocialLinkState::None };
+        SocialLinkState     _newOtherState{ SocialLinkState::None };
+        SocialServiceResult _result{ SocialResult::Ok };
+        uint8               _bWrite{ SW_FALSE }; ///< true 이면 쓴다. 아무것도 쓰지 않는 Ok 는 나를 막은 사람에게 신청했거나 이미 막은 경우이다
+        uint8               _bNotifyOtherRequested{ SW_FALSE };
+        uint8               _bNotifyBothAdded{ SW_FALSE };
+        uint8               _bNotifyOtherRemoved{ SW_FALSE };
     };
 } // namespace sw

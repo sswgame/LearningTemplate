@@ -80,7 +80,7 @@ namespace sw
             if ( StringUtil::equals( pName, "RequiredData" ) )
             {
                 RequiredDataParams line;
-                const bool         bRead = XMLFields::readFields( child, line, sourceName ); // 두 칸 모두 필수
+                const bool         bRead = XMLFields::readProperties( child, line, sourceName ); // 두 칸 모두 필수
                 if ( bRead == false || line._kind.empty() || line._pack.empty() )
                 {
                     SW_LOG_ERROR_ID( "GameSettings.GameSettingsRequiredDataNeedsBoth", "GameSettings %#: <RequiredData> needs both kind and pack (kind='%#' pack='%#')", sourceName, line._kind.c_str(), line._pack.c_str() );

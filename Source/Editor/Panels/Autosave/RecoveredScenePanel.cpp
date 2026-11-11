@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/Autosave/RecoveredWorkPanel.h"
+#include "Editor/Panels/Autosave/RecoveredScenePanel.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -19,18 +19,18 @@
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( RecoveredWorkPanel, RecoveredWorkPanel::kPanelID, EditorPanelCategory::Tool, 2046 );
+    SW_EDITOR_PANEL( RecoveredScenePanel, RecoveredScenePanel::kPanelID, EditorPanelCategory::Tool, 2046 );
 
-    RecoveredWorkPanel::RecoveredWorkPanel()
+    RecoveredScenePanel::RecoveredScenePanel()
         : IEditorPanel( false ) // 후보가 있을 때 자동 저장이 연다
         , _viewState{}
     {
     }
 
-    void RecoveredWorkPanel::drawContent()
+    void RecoveredScenePanel::drawContent()
     {
-        RecoveredWorkViewModel::gather( _viewState );
-        const vector<RecoveredWorkRow>& listRow = _viewState._listRow;
+        RecoveredSceneViewModel::gather( _viewState );
+        const vector<RecoveredSceneRow>& listRow = _viewState._listRow;
         if ( listRow.empty() )
         {
             // 빈 칸은 틀을 두고 왜 비었는지 한 문장으로 말한다
@@ -55,7 +55,7 @@ namespace sw::editor
         uint32 discardIndex = MathUtil::kMaxUInt32;
         for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( listRow.size() ); ++rowIndex )
         {
-            const RecoveredWorkRow& row = listRow[rowIndex];
+            const RecoveredSceneRow& row = listRow[rowIndex];
             ImGui::PushID( static_cast<int32>( rowIndex ) );
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex( 0 );
@@ -99,8 +99,8 @@ namespace sw::editor
         }
         ImGui::EndTable();
         if ( restoreIndex != MathUtil::kMaxUInt32 )
-            RecoveredWorkViewModel::restore( restoreIndex );
+            RecoveredSceneViewModel::restore( restoreIndex );
         else if ( discardIndex != MathUtil::kMaxUInt32 )
-            RecoveredWorkViewModel::discard( discardIndex );
+            RecoveredSceneViewModel::discard( discardIndex );
     }
 } // namespace sw::editor

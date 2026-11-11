@@ -33,7 +33,7 @@ namespace sw
                 for ( XMLNode item = list.isValid() ? list.findChild( "item" ) : XMLNode{}; item; item = item.findNextSibling( "item" ) )
                 {
                     MaterialEnumEntryParams params;
-                    if ( XMLFields::readFields( item, params, sourceName ) == false )
+                    if ( XMLFields::readProperties( item, params, sourceName ) == false )
                         return false;
                     outListEntry.push_back( MaterialEnumEntry{ std::move( params._name ), params._value } );
                 }
@@ -75,7 +75,7 @@ namespace sw
         MaterialProperty& prop = outProp;
         // 칸은 스키마(`MaterialPropertyParams`)가 정한다 — 철자가 다른 속성(bSRGB · bHDR 처럼)이 조용히 기본값이 되지 않게 모르는 이름은 로드 오류다.
         MaterialPropertyParams params;
-        if ( XMLFields::readFields( item, params, string_view{ item.getAttributeText( "name" ) } ) == false )
+        if ( XMLFields::readProperties( item, params, string_view{ item.getAttributeText( "name" ) } ) == false )
             return false;
         prop._name = params._name;
         uint32 size{ 0 };
@@ -143,7 +143,7 @@ namespace sw
 
         const string_view         sourceName{ root.getAttributeText( "name" ) };
         MaterialPermutationParams params;
-        if ( XMLFields::readFields( permutationsNode, params, sourceName ) == false ) // 적은 값은 읽혀야 한다 — 읽지 못한 값을 기본값으로 바꿔 계속하지 않는다
+        if ( XMLFields::readProperties( permutationsNode, params, sourceName ) == false ) // 적은 값은 읽혀야 한다 — 읽지 못한 값을 기본값으로 바꿔 계속하지 않는다
             return false;
         outDesc._quality   = params._quality;
         outDesc._shaderLOD = params._shaderLOD;
@@ -157,15 +157,15 @@ namespace sw
         {
             for ( XMLNode item = switches.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
-                MaterialStaticSwitchParams switchFields;
-                if ( XMLFields::readFields( item, switchFields, sourceName ) == false )
+                MaterialStaticSwitchParams switchProperties;
+                if ( XMLFields::readProperties( item, switchProperties, sourceName ) == false )
                     return false;
                 MaterialStaticSwitch entry{};
-                entry._name           = switchFields._name.empty() ? switchFields._keyword : switchFields._name;
-                entry._keyword        = switchFields._keyword;
-                entry._keywordOff     = switchFields._keywordOff;
-                entry._bEnabled       = switchFields._bEnabled;
-                entry._bShaderFeature = switchFields._bShaderFeature;
+                entry._name           = switchProperties._name.empty() ? switchProperties._keyword : switchProperties._name;
+                entry._keyword        = switchProperties._keyword;
+                entry._keywordOff     = switchProperties._keywordOff;
+                entry._bEnabled       = switchProperties._bEnabled;
+                entry._bShaderFeature = switchProperties._bShaderFeature;
                 if ( entry._keyword.empty() == false || entry._name.empty() == false )
                     outDesc._listStaticSwitch.push_back( std::move( entry ) );
             }
@@ -176,12 +176,12 @@ namespace sw
         {
             for ( XMLNode item = multiCompileNode.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
-                MaterialMultiCompileParams multiCompileFields;
-                if ( XMLFields::readFields( item, multiCompileFields, sourceName ) == false )
+                MaterialMultiCompileParams multiCompileProperties;
+                if ( XMLFields::readProperties( item, multiCompileProperties, sourceName ) == false )
                     return false;
                 MaterialMultiCompile multiCompile{};
-                multiCompile._name     = multiCompileFields._name;
-                multiCompile._selected = multiCompileFields._selected;
+                multiCompile._name     = multiCompileProperties._name;
+                multiCompile._selected = multiCompileProperties._selected;
                 XMLNode optionsNode    = item.findChild( "_options" );
                 MaterialXMLInternal::parseStringListItems( optionsNode, multiCompile._listOption );
                 if ( multiCompile._selected.empty() == false || multiCompile._listOption.empty() == false )
@@ -203,13 +203,13 @@ namespace sw
             XMLNode list = node.appendChild( "_staticSwitches" );
             for ( const MaterialStaticSwitch& entry : permutationsNode._listStaticSwitch )
             {
-                MaterialStaticSwitchParams switchFields;
-                switchFields._name           = entry._name;
-                switchFields._keyword        = entry._keyword;
-                switchFields._keywordOff     = entry._keywordOff;
-                switchFields._bEnabled       = entry._bEnabled;
-                switchFields._bShaderFeature = entry._bShaderFeature;
-                XMLFields::writeFields( list.appendChild( "item" ), switchFields );
+                MaterialStaticSwitchParams switchProperties;
+                switchProperties._name           = entry._name;
+                switchProperties._keyword        = entry._keyword;
+                switchProperties._keywordOff     = entry._keywordOff;
+                switchProperties._bEnabled       = entry._bEnabled;
+                switchProperties._bShaderFeature = entry._bShaderFeature;
+                XMLFields::writeProperties( list.appendChild( "item" ), switchProperties );
             }
         }
 
@@ -219,7 +219,7 @@ namespace sw
             for ( const MaterialMultiCompile& mc : permutationsNode._listMultiCompile )
             {
                 XMLNode item = list.appendChild( "item" );
-                XMLFields::writeFields( item, MaterialMultiCompileParams{ mc._name, mc._selected } );
+                XMLFields::writeProperties( item, MaterialMultiCompileParams{ mc._name, mc._selected } );
                 MaterialXMLInternal::appendMaterialStringList( item, "_options", mc._listOption );
             }
         }
@@ -253,7 +253,7 @@ namespace sw
         return false;
     }
 
-    bool MaterialXML::parseRenderFields( XMLNode root, const MaterialRootParams& rootParams, string_view sourceName, MaterialDef& inoutDesc )
+    bool MaterialXML::parseRenderProperties( XMLNode root, const MaterialRootParams& rootParams, string_view sourceName, MaterialDef& inoutDesc )
     {
         // 렌더 상태 칸을 0 으로 채운 값과 1 로 채운 값 위에 두 번 읽으면 두 값이 같은 비트가 적은 칸이다(`RenderStateOverride::makeFromReads`). 다른 스키마의 속성은 모르는 칸이 아니다.
         const auto isOtherAttribute = []( const utf8* pName )
@@ -261,7 +261,7 @@ namespace sw
         const TypeInfo&  stateType = *FixedRenderState::StaticType();
         FixedRenderState overZeros = RenderStateOverride::makeFilledState( 0x00 );
         FixedRenderState overOnes  = RenderStateOverride::makeFilledState( 0xFF );
-        if ( XMLFields::readFields( root, &overZeros, stateType, sourceName, {}, isOtherAttribute ) == false || XMLFields::readFields( root, &overOnes, stateType, sourceName, {}, isOtherAttribute ) == false )
+        if ( XMLFields::readProperties( root, &overZeros, stateType, sourceName, {}, isOtherAttribute ) == false || XMLFields::readProperties( root, &overOnes, stateType, sourceName, {}, isOtherAttribute ) == false )
             return false;
         RenderStateOverride stateOverride = RenderStateOverride::makeFromReads( overZeros, overOnes );
 
@@ -317,7 +317,7 @@ namespace sw
         for ( XMLNode item = blendTargets.isValid() ? blendTargets.findChild( "BlendTargetState" ) : XMLNode{}; item; item = item.findNextSibling( "BlendTargetState" ) )
         {
             BlendTargetState target{};
-            if ( XMLFields::readFields( item, target, sourceName ) == false )
+            if ( XMLFields::readProperties( item, target, sourceName ) == false )
             {
                 fail();
                 continue;
@@ -370,7 +370,7 @@ namespace sw
         return bValid;
     }
 
-    void MaterialXML::appendRenderFields( XMLNode root, const MaterialDef& desc )
+    void MaterialXML::appendRenderProperties( XMLNode root, const MaterialDef& desc )
     {
         // 적은 칸의 비트를 뒤집은 값을 "기본값" 으로 넘기면 적은 칸만 다르다 — 적지 않은 칸은 쓰이지 않는다.
         const FixedRenderState& values   = desc._renderStateOverride._values;
@@ -382,7 +382,7 @@ namespace sw
         {
             pFlipped[byteIndex] = static_cast<uint8>( pFlipped[byteIndex] ^ pMask[byteIndex] );
         }
-        XMLFields::writeFields( root, &values, &flipped, *FixedRenderState::StaticType() );
+        XMLFields::writeProperties( root, &values, &flipped, *FixedRenderState::StaticType() );
         if ( desc._listBlendTarget.empty() )
             return;
         const XMLNode list = root.appendChild( MaterialXMLInternal::kBlendTargetListName );

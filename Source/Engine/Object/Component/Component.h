@@ -571,7 +571,7 @@ namespace sw
         /** @brief 주 틱에 참여하면 true 입니다. */
         bool canEverTick() const { return _bCanEverTick == SW_TRUE; }
         /** @brief 틱에 참여할 일이 있으면 true 입니다. 주 틱이 켜졌거나 서브틱이 하나라도 등록되어 있을 때이며, 소유 오브젝트의 틱 항목을 다시 만들지 정하는 기준입니다. */
-        bool hasTickWork() const { return canEverTick() || _listSubTick.empty() == false; }
+        bool hasTickJobs() const { return canEverTick() || _listSubTick.empty() == false; }
         /**
          * @brief 씬 컴포넌트(트랜스폼을 가진 것)인지 리플렉션 없이 답합니다.
          * @details `castTo<SceneComponent>` 는 가상 호출 하나, 캐시 조회 둘, 조상 테이블 비교로 이루어져 약 8 ns 가 든다. 워커 14개가

@@ -202,7 +202,7 @@ SW_TEST_CASE( ServiceSchedulerTest, ExactlyOneServerRunsAnOccurrence )
 
     rig._first.completeRun( run, true );
     rig.pump();
-    SW_EXPECT_EQUAL( 0, rig._first.getPendingWorkCount() );
+    SW_EXPECT_EQUAL( 0, rig._first.getPendingJobCount() );
 
     const int64 afterLease = kNowMs + ScheduleDef{}._leaseMs + 1;
     rig.tickBoth( afterLease );
@@ -261,7 +261,7 @@ SW_TEST_CASE( ServiceSchedulerTest, StoreFailureRetriesLater )
     SW_EXPECT_TRUE( rig._firstSink._listRun.empty() );
 
     rig._first.update( UnixMilliseconds{ kNowMs + 4999 } );
-    SW_EXPECT_EQUAL( 0, rig._first.getPendingWorkCount() );
+    SW_EXPECT_EQUAL( 0, rig._first.getPendingJobCount() );
 
     rig._first.update( UnixMilliseconds{ kNowMs + 5000 } );
     rig.pump();
@@ -382,7 +382,7 @@ SW_TEST_CASE( ServiceRetentionTest, JobSweepsOnSchedule )
     SW_EXPECT_FALSE( job.isRunning() );
     SW_EXPECT_EQUAL( int64( 1 ), job.getLastDeletedCount() );
     SW_EXPECT_EQUAL( 1, rig.count() );
-    SW_EXPECT_EQUAL( 0, scheduler.getPendingWorkCount() );
+    SW_EXPECT_EQUAL( 0, scheduler.getPendingJobCount() );
 
     scheduler.update( UnixMilliseconds{ kNowMs + 1 } ); // 끝낸 회차는 다시 돌지 않는다
     while ( store.pollCompletions() > 0 )

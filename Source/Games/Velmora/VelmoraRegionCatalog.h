@@ -52,7 +52,7 @@ namespace sw
         ActionRoomLayout makeLayout() const;
     };
 
-    /** @brief `<Region id name min max respawn startQuest>` 속성의 스키마입니다(`XMLFields::readFields`). 이름이 비면 id 를 쓴다. */
+    /** @brief `<Region id name min max respawn startQuest>` 속성의 스키마입니다(`XMLFields::readProperties`). 이름이 비면 id 를 쓴다. */
     REFLECT()
     struct VelmoraRegionAttributeDef
     {

@@ -17,7 +17,7 @@ namespace sw
     {
         /**
          * @brief 단계 원소 @p node 의 `<Reward>` 를 @p outReward 에 읽습니다. 보상이 없으면 아무것도 하지 않습니다.
-         * @return 보상 `<Item>` 에 스키마(`QuestRewardItemRowDef`) 오류가 있으면 false 입니다(오류는 readFields 가 남긴다).
+         * @return 보상 `<Item>` 에 스키마(`QuestRewardItemRowDef`) 오류가 있으면 false 입니다(오류는 readProperties 가 남긴다).
          */
         [[nodiscard]] bool readQuestReward( const XMLNode& node, string_view sourceName, QuestReward& outReward )
         {
@@ -29,7 +29,7 @@ namespace sw
             for ( XMLNode item = rewardNode.findChild( "Item" ); item; item = item.findNextSibling( "Item" ) )
             {
                 QuestRewardItemRowDef row;
-                if ( XMLFields::readFields( item, row, sourceName ) == false )
+                if ( XMLFields::readProperties( item, row, sourceName ) == false )
                 {
                     bValid = false;
                     continue;
@@ -40,7 +40,7 @@ namespace sw
             {
                 QuestRewardActionRowDef row;
                 GameActionCall          call;
-                if ( XMLFields::readFields( action, row, sourceName ) == false || GameActionCall::compileText( row._call, sourceName, call ) == false )
+                if ( XMLFields::readProperties( action, row, sourceName ) == false || GameActionCall::compileText( row._call, sourceName, call ) == false )
                 {
                     bValid = false;
                     continue;
@@ -69,9 +69,9 @@ namespace sw
     bool QuestCatalog::loadQuest( const XMLNode& questNode, string_view sourceName )
     {
 
-        // 기본값 · 범위는 스키마가 정한다. 칸 하나라도 오류면 그 퀘스트를 넣지 않는다(오류는 readFields 가 남긴다).
+        // 기본값 · 범위는 스키마가 정한다. 칸 하나라도 오류면 그 퀘스트를 넣지 않는다(오류는 readProperties 가 남긴다).
         QuestDef quest;
-        bool     bValid = XMLFields::readFields( questNode, quest, sourceName );
+        bool     bValid = XMLFields::readProperties( questNode, quest, sourceName );
         if ( quest._id.empty() )
             return false;
         const utf8* const pID = quest._id.c_str();
@@ -80,17 +80,17 @@ namespace sw
         for ( XMLNode stageNode = questNode.findChild( "Stage" ); stageNode; stageNode = stageNode.findNextSibling( "Stage" ) )
         {
             QuestStage stage;
-            bValid = XMLFields::readFields( stageNode, stage, sourceName ) && bValid;
+            bValid = XMLFields::readProperties( stageNode, stage, sourceName ) && bValid;
             for ( XMLNode node = stageNode.findChild( "Objective" ); node; node = node.findNextSibling( "Objective" ) )
             {
                 QuestObjective objective;
-                bValid = XMLFields::readFields( node, objective, sourceName ) && bValid;
+                bValid = XMLFields::readProperties( node, objective, sourceName ) && bValid;
                 stage._listObjective.push_back( objective );
             }
             for ( XMLNode node = stageNode.findChild( "Branch" ); node; node = node.findNextSibling( "Branch" ) )
             {
                 QuestBranch branch;
-                bValid = XMLFields::readFields( node, branch, sourceName ) && bValid;
+                bValid = XMLFields::readProperties( node, branch, sourceName ) && bValid;
                 stage._listBranch.push_back( branch );
             }
             bValid = readQuestReward( stageNode, sourceName, stage._reward ) && bValid;

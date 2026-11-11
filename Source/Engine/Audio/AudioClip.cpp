@@ -157,7 +157,7 @@ namespace sw
 
     AudioClipCache::~AudioClipCache()
     {
-        // 띄운 디코드 태스크가 끝나기 전에 지워지면 태스크가 해제된 맵 · 뮤텍스에 쓴다. 디코드는 에셋 로드 단계에 들어 있으므로(프레임 경계 대기 `finishPendingAssetWork` 도 본다)
+        // 띄운 디코드 태스크가 끝나기 전에 지워지면 태스크가 해제된 맵 · 뮤텍스에 쓴다. 디코드는 에셋 로드 단계에 들어 있으므로(프레임 경계 대기 `finishPendingAssetJobs` 도 본다)
         // 그 단계를 기다린다. 태스크는 엔진 서비스가 묶여 있을 때만 띄우므로, 묶여 있지 않으면 띄운 적이 없다.
         bool bSubmittedDecode = false;
         {
@@ -232,7 +232,7 @@ namespace sw
         }
         TaskManager& taskManager = engine::getSubsystem<TaskManager>();
         TaskHandle   handle      = taskManager.emplaceTask( "AudioClipDecode", SW_DELEGATE_METHOD( TaskArgsDelegate, &AudioClipCache::decodeClipTask, this ), MakeTaskArgs( string( path.viewOrEmpty() ) ) );
-        // 에셋 로드 단계에 넣는다(제출 전) — 프레임 경계의 에셋 대기(`finishPendingAssetWork`)가 오디오 디코드도 기다리고, 소멸자도 같은 단계를 기다린다.
+        // 에셋 로드 단계에 넣는다(제출 전) — 프레임 경계의 에셋 대기(`finishPendingAssetJobs`)가 오디오 디코드도 기다리고, 소멸자도 같은 단계를 기다린다.
         // 예전에는 자기 단계를 따로 써서 결정적 실행에서 소리 도착이 디스크 · 워커 속도에 달렸다.
         engine::getSubsystem<AssetManager>().addLoadTask( handle );
         {

@@ -41,7 +41,7 @@ namespace sw
                         continue;
                     }
                     AnimationBoneMaskEntryParams params;
-                    if ( XMLFields::readFields( entryNode, params, context ) == false || XMLNameCheck::reportUnknownChildren( entryNode, nullptr, 0, context ) == false )
+                    if ( XMLFields::readProperties( entryNode, params, context ) == false || XMLNameCheck::reportUnknownChildren( entryNode, nullptr, 0, context ) == false )
                     {
                         bValid = false;
                         continue;
@@ -138,7 +138,7 @@ namespace sw
                 AnimationBoneMaskEntryParams params;
                 params._bone   = entry._bone;
                 params._weight = entry._weight;
-                XMLFields::writeFields( listNode.appendChild( AnimationBoneMaskInternal::kEntryTag ), params );
+                XMLFields::writeProperties( listNode.appendChild( AnimationBoneMaskInternal::kEntryTag ), params );
             }
         }
     }

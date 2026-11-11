@@ -142,7 +142,7 @@ namespace sw
     bool WesternCatalog::loadHuntWeapon( const XMLNode& node, string_view sourceName )
     {
         WesternHuntWeaponDef weapon;
-        if ( XMLFields::readFields( node, weapon, sourceName, { "sizes" } ) == false || WesternCatalogInternal::readSizeMask( node, sourceName, weapon._sizeMask ) == false )
+        if ( XMLFields::readProperties( node, weapon, sourceName, { "sizes" } ) == false || WesternCatalogInternal::readSizeMask( node, sourceName, weapon._sizeMask ) == false )
             return false;
         (void)_huntWeaponCatalog.add( weapon );
         return true;
@@ -150,9 +150,9 @@ namespace sw
 
     uint32 WesternCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         WesternCatalogRootDef rootDef;
-        if ( XMLFields::readFields( root, rootDef, sourceName ) )
+        if ( XMLFields::readProperties( root, rootDef, sourceName ) )
         {
             _currency        = rootDef._currency;
             _extraHitPenalty = rootDef._extraHitPenalty;
@@ -196,7 +196,7 @@ namespace sw
     bool WesternCatalog::loadHonor( const XMLNode& node, string_view sourceName )
     {
         WesternHonorRangeDef range;
-        if ( XMLFields::readFields( node, range, sourceName ) == false )
+        if ( XMLFields::readProperties( node, range, sourceName ) == false )
             return false; // 깨진 범위로 세력을 만들면 값을 뒤집힌 범위로 자른다
         bool       bValid = true;
         FactionDef faction;
@@ -211,8 +211,8 @@ namespace sw
             // 한 원소가 두 스키마(경계와 효과)로 읽힌다 — 서로의 칸은 손으로 읽는 칸으로 넘긴다.
             WesternHonorTierBoundDef bound;
             WesternHonorTierDef      effect;
-            const bool               bBound  = XMLFields::readFields( child, bound, sourceName, { "name", "flag", "discount" } );
-            const bool               bEffect = XMLFields::readFields( child, effect, sourceName, { "min" } );
+            const bool               bBound  = XMLFields::readProperties( child, bound, sourceName, { "name", "flag", "discount" } );
+            const bool               bEffect = XMLFields::readProperties( child, effect, sourceName, { "min" } );
             if ( bBound == false || bEffect == false )
             {
                 bValid = false;
@@ -229,7 +229,7 @@ namespace sw
         for ( XMLNode child = node.findChild( "Action" ); child; child = child.findNextSibling( "Action" ) )
         {
             WesternHonorActionDef action;
-            if ( XMLFields::readFields( child, action, sourceName ) )
+            if ( XMLFields::readProperties( child, action, sourceName ) )
                 (void)_honorActionCatalog.add( action );
             else
                 bValid = false;

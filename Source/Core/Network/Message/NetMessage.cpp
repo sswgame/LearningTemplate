@@ -58,7 +58,7 @@ namespace sw
         : _listHandler{}
         , _arrKindHandler{}
         , _arrNoticeHandler{}
-        , _kindTally{}
+        , _kindStats{}
         , _inbound{}
         , _malformedCount{ 0 }
         , _unclaimedNoticeCount{ 0 }
@@ -190,7 +190,7 @@ namespace sw
         for ( const NetInboundMessage& message : _inbound._listMessage )
         {
             const uint8* pData = _inbound._bytes.data() + message._offset;
-            _kindTally.add( pData, message._size );
+            _kindStats.add( pData, message._size );
             if ( dispatch( NetMessageContext{ pData, message._size, message._connectionID, message._channel, message._size > 0 ? pData[0] : uint8{ 0 } }, pData, message._size ) !=
                      NetHandleResult::NotMine ||
                  pOutUnhandled == nullptr )

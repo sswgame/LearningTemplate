@@ -68,10 +68,10 @@ namespace sw
             template <typename TParams>
             [[nodiscard]] static bool readLeaf( const XMLNode& element, TParams& outParams, const ActionContext& context )
             {
-                const bool bFields   = XMLFields::readFields( element, outParams, context._sourceName );
-                const bool bChildren = XMLNameCheck::reportUnknownChildren( element, nullptr, 0, context._sourceName );
-                context._bValid      = bFields && bChildren && context._bValid;
-                return bFields && bChildren;
+                const bool bProperties = XMLFields::readProperties( element, outParams, context._sourceName );
+                const bool bChildren   = XMLNameCheck::reportUnknownChildren( element, nullptr, 0, context._sourceName );
+                context._bValid        = bProperties && bChildren && context._bValid;
+                return bProperties && bChildren;
             }
 
             /** @brief 패드 번호가 슬롯 안인지 봅니다. 밖이면 오류를 남기고 false 입니다(없는 패드에 말없이 묶지 않는다). */
@@ -271,7 +271,7 @@ namespace sw
                             break;
                         if ( binding._kind == BindingKind::Shortcut )
                             params._modifier = InputRemapSerializer::formatModifierNames( binding._modifierMask );
-                        XMLFields::writeFields( actionNode.appendChild( "bind" ), params );
+                        XMLFields::writeProperties( actionNode.appendChild( "bind" ), params );
                         return true;
                     }
                     case BindingKind::Axis1DComposite:
@@ -285,7 +285,7 @@ namespace sw
                                             tryNameSlot( binding._arrSlot[1], positiveSource, params._positive, positivePad );
                         if ( bNamed == false || positiveSource != params._source || positivePad != params._pad || params._source == InputBindSource::Mouse )
                             break; // 두 장치에 걸친 축은 이 형식이 이름 붙이지 못한다
-                        XMLFields::writeFields( actionNode.appendChild( "axis1d" ), params );
+                        XMLFields::writeProperties( actionNode.appendChild( "axis1d" ), params );
                         return true;
                     }
                     case BindingKind::Chord:
@@ -295,7 +295,7 @@ namespace sw
                         params._modifier    = static_cast<Key>( binding._arrSlot[0]._controlIndex );
                         params._trigger     = static_cast<Key>( binding._arrSlot[1]._controlIndex );
                         params._triggerMode = binding._trigger;
-                        XMLFields::writeFields( actionNode.appendChild( "chord" ), params );
+                        XMLFields::writeProperties( actionNode.appendChild( "chord" ), params );
                         return true;
                     }
                     case BindingKind::Vector2DComposite:
@@ -307,7 +307,7 @@ namespace sw
                         params._right    = static_cast<Key>( binding._arrSlot[3]._controlIndex );
                         params._deadzone = binding._deadzone;
                         params._layer    = binding._layer;
-                        XMLFields::writeFields( actionNode.appendChild( "vector2d" ), params );
+                        XMLFields::writeProperties( actionNode.appendChild( "vector2d" ), params );
                         return true;
                     }
                     case BindingKind::GamepadStick2D:
@@ -323,7 +323,7 @@ namespace sw
                         params._bScaleByDelta    = binding._bScaleByDelta;
                         params._axis             = binding._stickAxis;
                         params._layer            = binding._layer;
-                        XMLFields::writeFields( actionNode.appendChild( "stick" ), params );
+                        XMLFields::writeProperties( actionNode.appendChild( "stick" ), params );
                         return true;
                     }
                     case BindingKind::MouseDelta2D:
@@ -332,7 +332,7 @@ namespace sw
                         InputMapMouseAxisParams params;
                         params._scale = binding._scale;
                         params._layer = binding._layer;
-                        XMLFields::writeFields( actionNode.appendChild( binding._kind == BindingKind::MouseDelta2D ? "mouseDelta" : "mouseWheel" ), params );
+                        XMLFields::writeProperties( actionNode.appendChild( binding._kind == BindingKind::MouseDelta2D ? "mouseDelta" : "mouseWheel" ), params );
                         return true;
                     }
                     case BindingKind::VirtualJoystick2D:
@@ -343,14 +343,14 @@ namespace sw
                         params._deadzone      = binding._deadzone;
                         params._outerDeadzone = binding._outerDeadzone;
                         params._layer         = binding._layer;
-                        XMLFields::writeFields( actionNode.appendChild( "virtualJoystick" ), params );
+                        XMLFields::writeProperties( actionNode.appendChild( "virtualJoystick" ), params );
                         return true;
                     }
                     case BindingKind::AnyKey:
                     {
                         InputMapAnyKeyParams params;
                         params._layer = binding._layer;
-                        XMLFields::writeFields( actionNode.appendChild( "anyKey" ), params );
+                        XMLFields::writeProperties( actionNode.appendChild( "anyKey" ), params );
                         return true;
                     }
                     case BindingKind::Count:
@@ -372,9 +372,9 @@ namespace sw
         // `valueType` 은 적지 않음이 뜻이다(바인딩이 정한다) — 스키마 칸이 아니라 적었을 때만 읽는다.
         InputMapActionParams           params;
         optional<InputActionValueType> valueType;
-        const bool                     bFields   = XMLFields::readFields( actionNode, params, sourceName, { "valueType" } ) && XMLFields::readOptionalEnum( actionNode, "valueType", valueType, sourceName );
-        const bool                     bChildren = XMLNameCheck::reportUnknownChildren( actionNode, Internal::kArrBindingElement, sourceName );
-        if ( bFields == false || bChildren == false )
+        const bool                     bProperties = XMLFields::readProperties( actionNode, params, sourceName, { "valueType" } ) && XMLFields::readOptionalEnum( actionNode, "valueType", valueType, sourceName );
+        const bool                     bChildren   = XMLNameCheck::reportUnknownChildren( actionNode, Internal::kArrBindingElement, sourceName );
+        if ( bProperties == false || bChildren == false )
         {
             inoutbValid = false;
             return;
@@ -414,7 +414,7 @@ namespace sw
         InputMapActionParams params;
         params._name             = action;
         const XMLNode actionNode = parent.appendChild( pElementName );
-        XMLFields::writeFields( actionNode, params );
+        XMLFields::writeProperties( actionNode, params );
         actionNode.appendAttribute( "valueType", getEnumName( valueType ) );
         bool bAllWritten = true;
         for ( const ActionBinding& binding : listBinding )

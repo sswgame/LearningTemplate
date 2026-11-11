@@ -50,7 +50,7 @@ namespace sw::editor
         /** @brief 이름표 열이 있는 실수 드래그 필드 하나입니다. 손을 떼며 값이 바뀌었으면 편집으로 기록합니다. @p pTooltip 이 nullptr 이면 툴팁이 없습니다. */
         void drawEditedDragFloat( const utf8* pLabel, float32* pValue, float32 speed, const utf8* pTooltip, const utf8* pUndoLabel );
         /** @brief 고른 프레임의 9-슬라이스 픽셀 테두리 칸입니다(유니티 Sprite Border). */
-        void drawFrameBorderFields( SpriteClipFrame& frame );
+        void drawFrameBorderProperties( SpriteClipFrame& frame );
         /** @brief 고른 구간(없으면 프레임 전체)을 돌려 보는 미리보기입니다(Godot SpriteFrames 의 재생). */
         void   drawPreviewSection();
         string captureDocumentText() const override;

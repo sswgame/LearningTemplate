@@ -25,7 +25,7 @@ namespace sw
         {
             static bool runRecordStateHash( AutomationStepContext& context, const AutomationStep& step )
             {
-                const AutomationStateHashStepParams params   = step.readValidatedFields<AutomationStateHashStepParams>();
+                const AutomationStateHashStepParams params   = step.readValidatedProperties<AutomationStateHashStepParams>();
                 const GameObjectManager*            pManager = context.findActiveObjectManager();
                 if ( pManager == nullptr )
                 {
@@ -42,7 +42,7 @@ namespace sw
 
             static bool runExpectStateHash( AutomationStepContext& context, const AutomationStep& step )
             {
-                const AutomationStateHashStepParams params   = step.readValidatedFields<AutomationStateHashStepParams>();
+                const AutomationStateHashStepParams params   = step.readValidatedProperties<AutomationStateHashStepParams>();
                 const GameObjectManager*            pManager = context.findActiveObjectManager();
                 const string*                       pReport  = context.findRememberedText( params._key );
                 if ( pReport == nullptr )
@@ -79,6 +79,6 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_STEP( stateRecordStateHash, "RecordStateHash", &AutomationStateHashStepsInternal::runRecordStateHash, &AutomationStep::validateFields<AutomationStateHashStepParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( stateExpectStateHash, "ExpectStateHash", &AutomationStateHashStepsInternal::runExpectStateHash, &AutomationStep::validateFields<AutomationStateHashStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( stateRecordStateHash, "RecordStateHash", &AutomationStateHashStepsInternal::runRecordStateHash, &AutomationStep::validateProperties<AutomationStateHashStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( stateExpectStateHash, "ExpectStateHash", &AutomationStateHashStepsInternal::runExpectStateHash, &AutomationStep::validateProperties<AutomationStateHashStepParams>, AutomationStepOptions{} );
 } // namespace sw

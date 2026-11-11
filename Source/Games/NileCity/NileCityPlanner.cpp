@@ -144,7 +144,7 @@ namespace sw
             SW_LOG_ERROR_ID( "NileCityPlanner.AutoPlanCouldNot", "[Nile] auto plan '%#' could not be read: %#", planPath, document.getLastError().c_str() );
             return false;
         }
-        // 한 줄이 한 단계다(적힌 순서). 칸의 이름 · 필수 · 형식은 스키마(NileAutoPlanStepDef)가 정하고 readFields 가 모르는 속성까지 막는다.
+        // 한 줄이 한 단계다(적힌 순서). 칸의 이름 · 필수 · 형식은 스키마(NileAutoPlanStepDef)가 정하고 readProperties 가 모르는 속성까지 막는다.
         bool bValid = true;
         for ( XMLNode node = root.findChild(); node.isValid(); node = node.findNextSibling() )
         {
@@ -152,12 +152,12 @@ namespace sw
             if ( kind.empty() )
                 continue; // 주석 · 글 노드
             NileAutoPlanStep step{};
-            step._bRoad             = kind == "Road";
-            const bool bKnownKind   = step._bRoad || kind == "Building";
-            const bool bFieldsRead  = bKnownKind && XMLFields::readFields( node, step._def, planPath );
-            const bool bBlockInPlan = step._def._block >= 1 && step._def._block <= 3;
+            step._bRoad                = kind == "Road";
+            const bool bKnownKind      = step._bRoad || kind == "Building";
+            const bool bPropertiesRead = bKnownKind && XMLFields::readProperties( node, step._def, planPath );
+            const bool bBlockInPlan    = step._def._block >= 1 && step._def._block <= 3;
             // 도로는 건물 id 가 없고 건물은 있어야 한다.
-            const bool bShapeValid = bFieldsRead && bBlockInPlan && ( step._bRoad == step._def._id.empty() );
+            const bool bShapeValid = bPropertiesRead && bBlockInPlan && ( step._bRoad == step._def._id.empty() );
             if ( bShapeValid == false )
             {
                 SW_LOG_ERROR_ID( "NileCityPlanner.AutoPlanNeedsX", "[Nile] auto plan '%#': <%#> needs from=\"x,y\" (to), block 1..3 (extra) and Building an id (Road none) - %#", planPath,

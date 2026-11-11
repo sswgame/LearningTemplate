@@ -15,7 +15,7 @@ using namespace sw;
 /**
  * @brief [RigAssetTest] 노드 종류마다의 칸과 목록 원소를 읽는다 — 공통 키(가중치 · 켜짐), 열거(충돌체 모양 · 관절 제한 종류), 도 단위 회전
  */
-SW_TEST_CASE( RigAssetTest, ReadsNodeFieldsAndItems )
+SW_TEST_CASE( RigAssetTest, ReadsNodePropertiesAndItems )
 {
     RigAsset asset;
     SW_REQUIRE_TRUE( asset.loadFromXMLText( R"(<RigAsset planar="true">

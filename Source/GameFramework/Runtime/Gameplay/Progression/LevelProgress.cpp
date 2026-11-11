@@ -60,7 +60,7 @@ namespace sw
         for ( XMLNode child = node.findChild( "Level" ); child; child = child.findNextSibling( "Level" ) )
         {
             ExperienceLevelParams level; // xp 필수 · >= 1 은 PROPERTY 가 본다
-            if ( XMLFields::readFields( child, level, sourceName ) )
+            if ( XMLFields::readProperties( child, level, sourceName ) )
                 listXPToNext.push_back( level._xp );
             else
                 bValid = false;
@@ -73,7 +73,7 @@ namespace sw
             return true;
         }
         ExperienceCurveParams params{ _base, _exponent, _linear, _maxLevel };
-        return XMLFields::readFields( node, params, sourceName ) && setFormula( params._base, params._exponent, params._linear, params._maxLevel );
+        return XMLFields::readProperties( node, params, sourceName ) && setFormula( params._base, params._exponent, params._linear, params._maxLevel );
     }
 
     int64 ExperienceCurve::getXPToNext( int32 level ) const

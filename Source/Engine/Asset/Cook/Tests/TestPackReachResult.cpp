@@ -35,7 +35,7 @@ namespace
             }
         };
 
-        static bool loadRepositoryFields( AssetReferenceFields& outParams ) { return outParams.load( ProcessRoots::get()._project.str() ); }
+        static bool loadRepositoryProperties( AssetReferenceFields& outParams ) { return outParams.load( ProcessRoots::get()._project.str() ); }
 
         /** @brief 맵 폴더를 항상 담고, 필수 데이터로 외형 폴더 · 아이템 파일을 아는 규칙입니다. */
         static PackCookRules makeRules()
@@ -132,7 +132,7 @@ namespace
 SW_TEST_CASE( PackReachabilityTest, FollowsReferencesFromTheRoots )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( Util::loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
     PackReachFiles     files;
     Util::MemorySource source;
     Util::addGame( files, source, "" );
@@ -165,7 +165,7 @@ SW_TEST_CASE( PackReachabilityTest, FollowsReferencesFromTheRoots )
 SW_TEST_CASE( PackReachabilityTest, MissingReferenceStopsTheCook )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( Util::loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
     PackReachFiles     files;
     Util::MemorySource source;
     Util::addGame( files, source, "" );
@@ -180,7 +180,7 @@ SW_TEST_CASE( PackReachabilityTest, MissingReferenceStopsTheCook )
 SW_TEST_CASE( PackReachabilityTest, ExcludedSourceIsNotMissing )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( Util::loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
     PackReachFiles     files;
     Util::MemorySource source;
     Util::addGame( files, source, "" );
@@ -198,7 +198,7 @@ SW_TEST_CASE( PackReachabilityTest, ExcludedSourceIsNotMissing )
 SW_TEST_CASE( PackReachabilityTest, AlwaysCookRulesAreRoots )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( Util::loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
     PackReachFiles     files;
     Util::MemorySource source;
     Util::addText( files, source, "engine/data/defaults.xml", R"(<Defaults><Item material="common/materials/default.material"/></Defaults>)" );
@@ -222,7 +222,7 @@ SW_TEST_CASE( PackReachabilityTest, AlwaysCookRulesAreRoots )
 SW_TEST_CASE( PackReachabilityTest, RequiredDataAddsTheNamedKindOnly )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( Util::loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
     PackReachFiles     files;
     Util::MemorySource source;
     Util::addGame( files, source, R"(<RequiredData kind="appearance" pack="common"/>)" );
@@ -244,7 +244,7 @@ SW_TEST_CASE( PackReachabilityTest, RequiredDataAddsTheNamedKindOnly )
 SW_TEST_CASE( PackReachabilityTest, UnknownRequiredDataKindIsAnError )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( Util::loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
     PackReachFiles     files;
     Util::MemorySource source;
     Util::addGame( files, source, R"(<RequiredData kind="quests" pack="common"/>)" );
@@ -256,10 +256,10 @@ SW_TEST_CASE( PackReachabilityTest, UnknownRequiredDataKindIsAnError )
 }
 
 /** @brief [PackReachabilityTest] 따라가지 않는 칸(현지화 수집 뿌리 `assetRoots`)이 가리키는 폴더는 담지 않는다 — 런타임이 읽지 않는 도구 입력이다 */
-SW_TEST_CASE( PackReachabilityTest, UnfollowedFieldsAreNotFollowed )
+SW_TEST_CASE( PackReachabilityTest, UnfollowedPropertiesAreNotFollowed )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( Util::loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
     PackReachFiles     files;
     Util::MemorySource source;
     Util::addGame( files, source, "" );
@@ -285,7 +285,7 @@ SW_TEST_CASE( PackReachabilityTest, CodeRootsAreRoots )
     SW_EXPECT_TRUE( AssetCookRootRegistry::hasRoot( "engine/physics/physicssettings.xml" ) );
 
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( Util::loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
     PackReachFiles     files;
     Util::MemorySource source;
     Util::addText( files, source, "engine/data/defaults.xml", R"(<Defaults _defaultMaterial="engine/materials/default.material"/>)" );
@@ -307,7 +307,7 @@ SW_TEST_CASE( PackReachabilityTest, CodeRootsAreRoots )
 SW_TEST_CASE( PackReachabilityTest, AutomationRulesNeedTheAutomationRuntime )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( Util::loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
     PackReachFiles     files;
     Util::MemorySource source;
     Util::addText( files, source, "game/x/automation/a.scenario.xml", R"(<Scenario><Load path="game/x/maps/test.scene.xml"/></Scenario>)" );
@@ -336,7 +336,7 @@ SW_TEST_CASE( PackReachabilityTest, AutomationRulesNeedTheAutomationRuntime )
 SW_TEST_CASE( PackReachabilityTest, EntryCatalogFollowsNamedEntriesOnly )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( Util::loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
     PackReachFiles     files;
     Util::MemorySource source;
     EntryUtil::addCatalogs( files, source, R"(<RequiredData kind="appearance" pack="common"/>)", R"(<Scene><Component _presetID="Farmer"/></Scene>)" );
@@ -353,7 +353,7 @@ SW_TEST_CASE( PackReachabilityTest, EntryCatalogFollowsNamedEntriesOnly )
 SW_TEST_CASE( PackReachabilityTest, EntryCatalogReachedByFolderIsWhole )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( Util::loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
     PackReachFiles     files;
     Util::MemorySource source;
     EntryUtil::addCatalogs( files, source, "", R"(<Scene><Editor appearance="common/data/appearance"/></Scene>)" );
@@ -368,7 +368,7 @@ SW_TEST_CASE( PackReachabilityTest, EntryCatalogReachedByFolderIsWhole )
 SW_TEST_CASE( PackReachabilityTest, EntryCatalogFileHashIDNamesOneEntry )
 {
     AssetReferenceFields params;
-    SW_REQUIRE_TRUE( Util::loadRepositoryFields( params ) );
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
     PackReachFiles     files;
     Util::MemorySource source;
     EntryUtil::addCatalogs( files, source, "", R"(<Scene><Item _base="common/data/appearance/itemvisuals.xml#body_knight"/></Scene>)" );

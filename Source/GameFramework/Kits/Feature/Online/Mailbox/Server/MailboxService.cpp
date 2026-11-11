@@ -34,41 +34,41 @@ namespace sw
         /** @brief 메서드마다의 저장 함수입니다. 오버로드라 표에 메서드를 더하고 줄을 빠뜨리면 컴파일되지 않습니다. */
         struct MailboxStoreCall
         {
-            static MailboxOutcome run( MailboxMethod::List, IServiceStoreConnection& connection, const MailboxListRequest& request, const MailboxCallInput& input, MailboxListReply& outReply )
+            static MailboxServiceResult run( MailboxMethod::List, IServiceStoreConnection& connection, const MailboxListRequest& request, const MailboxCallInput& input, MailboxListReply& outReply )
             {
                 return MailboxStoreLogic::listMail( connection, input._accountID, input._nowMs, input._listCampaign, request, outReply );
             }
 
-            static MailboxOutcome run( MailboxMethod::MarkRead, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxResultReply& outReply )
+            static MailboxServiceResult run( MailboxMethod::MarkRead, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxResultReply& outReply )
             {
-                const MailboxOutcome outcome = MailboxStoreLogic::markRead( connection, input._accountID, request._mailKey );
-                outReply._result             = outcome._result;
-                return outcome;
+                const MailboxServiceResult serviceResult = MailboxStoreLogic::markRead( connection, input._accountID, request._mailKey );
+                outReply._result                         = serviceResult._result;
+                return serviceResult;
             }
 
-            static MailboxOutcome run( MailboxMethod::Claim, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxClaimReply& outReply )
+            static MailboxServiceResult run( MailboxMethod::Claim, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxClaimReply& outReply )
             {
                 MailboxClaimInput claimInput;
-                claimInput._mailKey          = request._mailKey;
-                claimInput._accountID        = input._accountID;
-                claimInput._nowMs            = input._nowMs;
-                claimInput._pPolicy          = input._pPolicy;
-                const MailboxOutcome outcome = MailboxStoreLogic::claim( connection, claimInput, outReply );
-                outReply._result             = outcome._result;
-                return outcome;
+                claimInput._mailKey                      = request._mailKey;
+                claimInput._accountID                    = input._accountID;
+                claimInput._nowMs                        = input._nowMs;
+                claimInput._pPolicy                      = input._pPolicy;
+                const MailboxServiceResult serviceResult = MailboxStoreLogic::claim( connection, claimInput, outReply );
+                outReply._result                         = serviceResult._result;
+                return serviceResult;
             }
 
-            static MailboxOutcome run( MailboxMethod::ClaimAll, IServiceStoreConnection& connection, const OnlineNoBody& request, const MailboxCallInput& input, MailboxClaimReply& outReply )
+            static MailboxServiceResult run( MailboxMethod::ClaimAll, IServiceStoreConnection& connection, const OnlineNoBody& request, const MailboxCallInput& input, MailboxClaimReply& outReply )
             {
                 (void)request;
                 return MailboxStoreLogic::claimAll( connection, input._accountID, input._nowMs, input._pPolicy, outReply );
             }
 
-            static MailboxOutcome run( MailboxMethod::Delete, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxResultReply& outReply )
+            static MailboxServiceResult run( MailboxMethod::Delete, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxResultReply& outReply )
             {
-                const MailboxOutcome outcome = MailboxStoreLogic::deleteMail( connection, input._accountID, request._mailKey );
-                outReply._result             = outcome._result;
-                return outcome;
+                const MailboxServiceResult serviceResult = MailboxStoreLogic::deleteMail( connection, input._accountID, request._mailKey );
+                outReply._result                         = serviceResult._result;
+                return serviceResult;
             }
         };
 
@@ -208,9 +208,9 @@ namespace sw
         }
     }
 
-    void MailboxService::notifyClaimedBalances( AccountID accountID, const MailboxOutcome& outcome, const MailboxClaimReply& reply )
+    void MailboxService::notifyClaimedBalances( AccountID accountID, const MailboxServiceResult& serviceResult, const MailboxClaimReply& reply )
     {
-        const bool bNothingChanged = outcome.isFailed() || reply._listBalance.empty() || _settings._pBalanceNotice == nullptr;
+        const bool bNothingChanged = serviceResult.isFailed() || reply._listBalance.empty() || _settings._pBalanceNotice == nullptr;
         if ( bNothingChanged )
             return;
         _settings._pBalanceNotice->notifyBalancesChanged( accountID, reply._listBalance ); // 지갑은 서버의 잔액 변경 알림으로 맞는다 — 게임이 응답의 잔액을 옮기지 않는다
@@ -263,16 +263,16 @@ namespace sw
             input._listCampaign = _listCampaign;
         _store.submit( [request, input = std::move( input )]( IServiceStoreConnection& connection )
         {
-            ServiceStoreCallResult<MailboxOutcome, typename TMethod::Reply> done;
-            done._outcome = MailboxStoreCall::run( TMethod{}, connection, request, input, done._reply );
+            ServiceStoreCallResult<MailboxServiceResult, typename TMethod::Reply> done;
+            done._serviceResult = MailboxStoreCall::run( TMethod{}, connection, request, input, done._reply );
             return done;
-        }, [this, call, accountID = context._accountID]( const ServiceStoreCallResult<MailboxOutcome, typename TMethod::Reply>& done )
+        }, [this, call, accountID = context._accountID]( const ServiceStoreCallResult<MailboxServiceResult, typename TMethod::Reply>& done )
         {
             if constexpr ( std::is_same_v<typename TMethod::Reply, MailboxClaimReply> )
-                notifyClaimedBalances( accountID, done._outcome, done._reply );
+                notifyClaimedBalances( accountID, done._serviceResult, done._reply );
             else
-                (void)accountID;                              // 잔액 알림이 있는 메서드만 쓴다
-            (void)finish( call, done._outcome, done._reply ); // 모르는 표지는 호출 표가 경고한다
+                (void)accountID;                                    // 잔액 알림이 있는 메서드만 쓴다
+            (void)finish( call, done._serviceResult, done._reply ); // 모르는 표지는 호출 표가 경고한다
         } );
     }
 

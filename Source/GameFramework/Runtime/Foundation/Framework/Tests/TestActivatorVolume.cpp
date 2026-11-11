@@ -80,7 +80,7 @@ SW_TEST_CASE( ActivatorVolumeTest, OnceFiresOnlyTheFirstTime )
 }
 
 /** @brief [ActivatorVolumeTest] 일을 못 하면(관리자가 없는 게임) 발동한 것으로 치지 않는다 */
-SW_TEST_CASE( ActivatorVolumeTest, RefusedWorkDoesNotCountAsFired )
+SW_TEST_CASE( ActivatorVolumeTest, RefusedJobDoesNotCountAsFired )
 {
     AutosaveVolumeRig rig;
     SubsystemScope    emptyScope;

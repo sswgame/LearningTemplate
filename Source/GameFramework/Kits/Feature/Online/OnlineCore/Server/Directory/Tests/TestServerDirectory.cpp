@@ -100,7 +100,7 @@ SW_TEST_CASE( ServerDirectoryTest, RecordKeysAndNameRule )
 /**
  * @brief [ServerDirectoryTest] 기록은 모든 칸을 되읽고, 다른 형식 판 · 포트 수 0 이나 상한 밖 · 모르는 상태 · 잘린 바이트는 거절한다
  */
-SW_TEST_CASE( ServerDirectoryTest, RecordRoundTripsAndRejectsBadFields )
+SW_TEST_CASE( ServerDirectoryTest, RecordRoundTripsAndRejectsBadProperties )
 {
     sw::ServerStatus status           = makeStatus( 0xBEEF, "kr", 12, 100 );
     status._state                     = sw::ServerState::Maintenance;

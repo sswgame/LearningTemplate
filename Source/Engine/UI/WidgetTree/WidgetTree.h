@@ -58,7 +58,7 @@ namespace sw
         /** @brief 위젯이 무효화를 알립니다(`Widget::invalidate` 만 부릅니다). */
         void notifyDirty( Widget& widget, uint32 dirtyReason );
         /** @brief 무효화 뒤 처리할 것(레이아웃, 그리기, 스타일)이 있으면 true 입니다. 없으면 프레임이 트리를 건너뜁니다. */
-        bool hasPendingWork() const;
+        bool hasPendingJobs() const;
         /** @brief 다시 측정할 루트(레이아웃 경계, 루트)의 번호입니다. 레이아웃 순회가 읽고 비웁니다. */
         const vector<WidgetID>& getLayoutDirtyRoots() const { return _listLayoutDirtyRoot; }
         /** @brief 그림(또는 변환, 불투명도)이 바뀐 위젯 번호입니다. 그리기 순회가 읽고 비웁니다. */

@@ -420,10 +420,10 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, ParryWindowBoundaries )
     SW_EXPECT_TRUE( duelist.receiveAttack( 10.0f, 0.0f )._result == sw::MetroidvaniaDefenseResult::Hit );
     duelist.pressParry();
     duelist.update( 0.25f );
-    sw::MetroidvaniaDefenseOutcome outcome = duelist.receiveAttack( 10.0f, 5.0f );
-    SW_EXPECT_TRUE( outcome._result == sw::MetroidvaniaDefenseResult::Parried );
-    SW_EXPECT_EQUAL( sw::hashed_string( "Perfect" ), outcome._parryGrade );
-    SW_EXPECT_NEAR( 0.0f, outcome._healthDamage, kDuelTolerance );
+    sw::MetroidvaniaDefenseOutcome result = duelist.receiveAttack( 10.0f, 5.0f );
+    SW_EXPECT_TRUE( result._result == sw::MetroidvaniaDefenseResult::Parried );
+    SW_EXPECT_EQUAL( sw::hashed_string( "Perfect" ), result._parryGrade );
+    SW_EXPECT_NEAR( 0.0f, result._healthDamage, kDuelTolerance );
     SW_EXPECT_NEAR( 90.0f, duelist.getHealthMachine().getHealth(), kDuelTolerance );
     SW_EXPECT_NEAR( 30.0f, duelist.getHealthMachine().getPoise(), kDuelTolerance ); // 패리는 강인도 피해도 없다
     SW_EXPECT_TRUE( duelist.isRiposteReady() );
@@ -451,9 +451,9 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, GuardSpendsStaminaAndCanBreak )
     SW_REQUIRE_TRUE( duelist.initialize( &catalog ) );
 
     duelist.setDamageTakenScale( 2.0f );
-    sw::MetroidvaniaDefenseOutcome outcome = duelist.receiveAttack( 5.0f, 4.0f );
-    SW_EXPECT_TRUE( outcome._result == sw::MetroidvaniaDefenseResult::Hit );
-    SW_EXPECT_NEAR( 10.0f, outcome._healthDamage, kDuelTolerance );
+    sw::MetroidvaniaDefenseOutcome result = duelist.receiveAttack( 5.0f, 4.0f );
+    SW_EXPECT_TRUE( result._result == sw::MetroidvaniaDefenseResult::Hit );
+    SW_EXPECT_NEAR( 10.0f, result._healthDamage, kDuelTolerance );
     SW_EXPECT_NEAR( 26.0f, duelist.getHealthMachine().getPoise(), kDuelTolerance );
     duelist.setDamageTakenScale( 0.0f ); // 0 이하는 배율 없음
     duelist.setDamageTakenScale( -3.0f );
@@ -462,22 +462,22 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, GuardSpendsStaminaAndCanBreak )
     duelist.setGuarding( true );
     SW_EXPECT_TRUE( duelist.isGuarding() );
     const float32 healthBefore = duelist.getHealthMachine().getHealth();
-    outcome                    = duelist.receiveAttack( 40.0f, 8.0f );
-    SW_EXPECT_TRUE( outcome._result == sw::MetroidvaniaDefenseResult::Blocked );
-    SW_EXPECT_NEAR( 10.0f, outcome._healthDamage, kDuelTolerance ); // 40 × 0.25
+    result                     = duelist.receiveAttack( 40.0f, 8.0f );
+    SW_EXPECT_TRUE( result._result == sw::MetroidvaniaDefenseResult::Blocked );
+    SW_EXPECT_NEAR( 10.0f, result._healthDamage, kDuelTolerance ); // 40 × 0.25
     SW_EXPECT_NEAR( healthBefore - 10.0f, duelist.getHealthMachine().getHealth(), kDuelTolerance );
     SW_EXPECT_NEAR( 60.0f, duelist.getStamina().getValue(), kDuelTolerance );
     SW_EXPECT_NEAR( 22.0f, duelist.getHealthMachine().getPoise(), kDuelTolerance ); // 8 의 절반
 
-    outcome = duelist.receiveAttack( 60.0f, 0.0f ); // 스태미나 정확히 60 — 막는다
-    SW_EXPECT_TRUE( outcome._result == sw::MetroidvaniaDefenseResult::Blocked );
+    result = duelist.receiveAttack( 60.0f, 0.0f ); // 스태미나 정확히 60 — 막는다
+    SW_EXPECT_TRUE( result._result == sw::MetroidvaniaDefenseResult::Blocked );
     SW_EXPECT_NEAR( 0.0f, duelist.getStamina().getValue(), kDuelTolerance );
 
     SW_REQUIRE_TRUE( duelist.getStamina().trySpend( 0.0f ) );
     duelist.getStamina().restore( 10.0f );
-    outcome = duelist.receiveAttack( 20.0f, 2.0f ); // 스태미나 10 < 20
-    SW_EXPECT_TRUE( outcome._result == sw::MetroidvaniaDefenseResult::GuardBroken );
-    SW_EXPECT_NEAR( 20.0f, outcome._healthDamage, kDuelTolerance ); // 다 맞는다(health 는 남아 있다)
+    result = duelist.receiveAttack( 20.0f, 2.0f ); // 스태미나 10 < 20
+    SW_EXPECT_TRUE( result._result == sw::MetroidvaniaDefenseResult::GuardBroken );
+    SW_EXPECT_NEAR( 20.0f, result._healthDamage, kDuelTolerance ); // 다 맞는다(health 는 남아 있다)
     SW_EXPECT_NEAR( 0.0f, duelist.getStamina().getValue(), kDuelTolerance );
     SW_EXPECT_NEAR( 20.0f, duelist.getHealthMachine().getPoise(), kDuelTolerance ); // 강인도도 그대로 깎인다
 }
@@ -496,9 +496,9 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, InvalidDamageDoesNotBreakTheGuard )
     const float32 arrDamage[] = { -50.0f, std::numeric_limits<float32>::quiet_NaN() };
     for ( const float32 damage : arrDamage )
     {
-        const sw::MetroidvaniaDefenseOutcome outcome = duelist.receiveAttack( damage, damage );
-        SW_EXPECT_TRUE( outcome._result == sw::MetroidvaniaDefenseResult::Blocked );
-        SW_EXPECT_NEAR( 0.0f, outcome._healthDamage, kDuelTolerance );
+        const sw::MetroidvaniaDefenseOutcome result = duelist.receiveAttack( damage, damage );
+        SW_EXPECT_TRUE( result._result == sw::MetroidvaniaDefenseResult::Blocked );
+        SW_EXPECT_NEAR( 0.0f, result._healthDamage, kDuelTolerance );
         SW_EXPECT_NEAR( 100.0f, duelist.getStamina().getValue(), kDuelTolerance );
         SW_EXPECT_NEAR( 100.0f, duelist.getHealthMachine().getHealth(), kDuelTolerance );
         SW_EXPECT_NEAR( 30.0f, duelist.getHealthMachine().getPoise(), kDuelTolerance );

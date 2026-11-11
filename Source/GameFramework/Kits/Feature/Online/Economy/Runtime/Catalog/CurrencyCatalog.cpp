@@ -63,7 +63,7 @@ namespace sw
 
     uint32 CurrencyCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<CurrencyCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&CurrencyCatalog::loadCurrency>( "Currency" ),
@@ -87,7 +87,7 @@ namespace sw
     bool CurrencyCatalog::loadCurrency( const XMLNode& node, string_view sourceName )
     {
         CurrencyDef def;
-        bool        bValid = XMLFields::readFields( node, def, sourceName );
+        bool        bValid = XMLFields::readProperties( node, def, sourceName );
         if ( bValid && LedgerUtil::isValidAssetID( def._id ) == false )
         {
             SW_LOG_ERROR_ID( "CurrencyCatalog.CurrencyIdMustZ", "%#: currency id '%#' must be [0-9a-z_.-]", sourceName, def._id );
@@ -96,7 +96,7 @@ namespace sw
         for ( XMLNode fundingNode = node.findChild( "Funding" ); fundingNode; fundingNode = fundingNode.findNextSibling( "Funding" ) )
         {
             CurrencyFundingDef funding;
-            if ( XMLFields::readFields( fundingNode, funding, sourceName ) )
+            if ( XMLFields::readProperties( fundingNode, funding, sourceName ) )
                 def._listFundingAsset.push_back( funding._asset );
             else
                 bValid = false;

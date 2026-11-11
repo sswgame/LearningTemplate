@@ -124,7 +124,7 @@ namespace sw
         mutex                                            _cvMutex; ///< 조건 변수 대기용 뮤텍스
         atomic<bool>                                     _bIsRunning;
         atomic<bool>                                     _bInitialized;      ///< 쓰는 스레드는 락 없이 읽는다(초기화 · 종료와 경쟁하지 않게 원자값)
-        atomic<bool>                                     _bWantsStructured;  ///< `needsStructuredFields` 장치가 달렸으면 true. 생산자가 줄마다 JSON 을 만들지 정한다
+        atomic<bool>                                     _bWantsStructured;  ///< `needsStructuredProperties` 장치가 달렸으면 true. 생산자가 줄마다 JSON 을 만들지 정한다
         atomic<bool>                                     _bJSONLinesEnabled; ///< `enableJSONLinesOutput` 이 이미 장치를 달았다
         /**
          * @brief 작업 스레드가 조건 변수에서 잠들려 하거나 잠들어 있으면 true 입니다. 생산자는 이때만 깨웁니다.

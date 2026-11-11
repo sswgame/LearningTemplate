@@ -921,9 +921,9 @@ namespace sw
             report._lossPercent     = MathUtil::max( report._lossPercent, stats._packetLoss * GameNetSessionInternal::kPercent );
             report._rttMilliseconds = MathUtil::max( report._rttMilliseconds, stats._rtt * constant::time::kMillisecondsPerSecond );
         }
-        NetMessageKindStatsTable sentTally;
-        _peers.addSentKindTally( sentTally );
-        report.populateKinds( _router.getKindTally(), sentTally );
+        NetMessageKindStatsTable sentStats;
+        _peers.addSentKindStats( sentStats );
+        report.populateKinds( _router.getKindStats(), sentStats );
         // 상한 안에서 앞 절반은 지난 보고 뒤 늘어난 바이트가 큰 것(표의 초당 바이트와 같은 기준), 나머지는 누적 바이트가 큰 것.
         const auto getIncreaseOf = []( const ReplicaStat& stat )
         {

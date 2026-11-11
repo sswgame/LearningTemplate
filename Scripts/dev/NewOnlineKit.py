@@ -104,7 +104,7 @@ namespace sw
         Ok = 0,
     }};
 
-    using {name}Outcome = OnlineOutcome<{name}Result>;
+    using {name}Outcome = OnlineServiceResult<{name}Result>;
 }} // namespace sw
 
 namespace sw
@@ -221,7 +221,7 @@ sw_linkRuntimeKit(GF_Server_{name} GF_Server_OnlineCore)
     files[f"Server/{name}Service.h"] = f'''/**
  * @file {name}Service.h
  * @brief {name} 요청 처리기입니다. 서비스 스레드에서 씁니다.
- * @details 저장소 왕복은 `_store.submit( 일 람다, 완료 람다 )` 로 맡기고, 완료에서 `finish( call, outcome, reply )` 로 끝낸다. 맡긴 일 수는 기반이 센다(`isIdle` · `getOpenWorkCount`).
+ * @details 저장소 왕복은 `_store.submit( 일 람다, 완료 람다 )` 로 맡기고, 완료에서 `finish( call, outcome, reply )` 로 끝낸다. 맡긴 일 수는 기반이 센다(`isIdle` · `getOpenJobCount`).
  */
 #pragma once
 #include "GameFramework/GameFrameworkExports.h"
@@ -313,7 +313,7 @@ namespace sw
                 return true;
             }}
 
-            int32 getOpenWorkCount() const override {{ return _service.getOpenWorkCount(); }}
+            int32 getOpenJobCount() const override {{ return _service.getOpenJobCount(); }}
 
             void stop() override
             {{

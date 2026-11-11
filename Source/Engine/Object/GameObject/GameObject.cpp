@@ -635,7 +635,7 @@ namespace sw
         if ( _pOwnerManager->hasBegunPlay() )
             _pOwnerManager->queueBeginPlay( pComp->getHandle() );
         // 틱에 참여하는 컴포넌트만 이 오브젝트의 틱 항목을 다시 만들게 한다. 메시와 태그 같은 것은 틱과 무관하다.
-        if ( pComp->hasTickWork() )
+        if ( pComp->hasTickJobs() )
             markTickOrderDirty();
     }
 
@@ -696,10 +696,10 @@ namespace sw
         _listComponent.clear();
         _pPrimaryScene.store( nullptr, std::memory_order_relaxed );
         // 파괴 뒤에는 물을 수 없으니 지금 확인한다. 틱에 참여하던 것이 하나라도 있었을 때만 틱 항목을 다시 만든다.
-        bool bTickWork = false;
+        bool bTickJobs = false;
         for ( Component* pComp : listOwned )
         {
-            bTickWork = bTickWork || ( pComp != nullptr && pComp->hasTickWork() );
+            bTickJobs = bTickJobs || ( pComp != nullptr && pComp->hasTickJobs() );
         }
         for ( Component* pComp : listOwned )
         {
@@ -708,7 +708,7 @@ namespace sw
         }
         if ( _pOwnerManager != nullptr )
             _pOwnerManager->notifyStructureChanged();
-        if ( bTickWork )
+        if ( bTickJobs )
             markTickOrderDirty();
         // primary 가 없어졌으니 부모도 없다(자식들은 부모 컴포넌트의 소멸자가 분리하며 스스로 맞췄다).
         if ( isPendingDestroy() == false )
@@ -765,7 +765,7 @@ namespace sw
         if ( pComp == nullptr || pComp->getOwner() != this )
             return false;
         // 파괴 뒤에는 물을 수 없으니 지금 본다.
-        const bool bTickWork = pComp->hasTickWork();
+        const bool bTickJobs = pComp->hasTickJobs();
 
         if ( isComponentMutationFrozen() )
         {
@@ -790,7 +790,7 @@ namespace sw
         destroyOwnedComponent( pComp );
         if ( _pOwnerManager != nullptr )
             _pOwnerManager->notifyStructureChanged();
-        if ( bTickWork )
+        if ( bTickJobs )
             markTickOrderDirty();
         // primary 가 바뀌면 부모(primary 의 부모)도 바뀐다. 값이 그대로면 재계산은 O(1) 로 끝난다.
         if ( bWasScene && isPendingDestroy() == false )
@@ -811,7 +811,7 @@ namespace sw
         {
             SceneComponent* pSceneComp = castTo<SceneComponent>( pComp );
             if ( pSceneComp != nullptr )
-                pSceneComp->syncAttachSerializeFields( options );
+                pSceneComp->syncAttachSerializeProperties( options );
         }
     }
 } // namespace sw

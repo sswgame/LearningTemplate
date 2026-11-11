@@ -168,7 +168,7 @@ namespace sw
 
         // 적지 않은 칸은 ShopDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 상점을 넣지 않는 오류다(자르지 않는다).
         ShopDef def;
-        bool    bValid = XMLFields::readFields( node, def, sourceName );
+        bool    bValid = XMLFields::readProperties( node, def, sourceName );
         if ( def._id.empty() )
             return false;
         const utf8* const pID = def._id.c_str();
@@ -177,7 +177,7 @@ namespace sw
         for ( XMLNode stockNode = node.findChild( "Stock" ); stockNode; stockNode = stockNode.findNextSibling( "Stock" ) )
         {
             ShopStockDef stock; // item 필수 · 재고 범위는 PROPERTY 가 본다
-            if ( XMLFields::readFields( stockNode, stock, sourceName ) == false || stock._itemID.empty() )
+            if ( XMLFields::readProperties( stockNode, stock, sourceName ) == false || stock._itemID.empty() )
             {
                 SW_LOG_ERROR_ID( "Shop.ShopStockInvalid", "%#: shop '%#' has a <Stock> without an item or with invalid fields", sourceName, pID );
                 bValid = false;

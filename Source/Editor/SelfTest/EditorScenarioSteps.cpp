@@ -173,7 +173,7 @@ namespace sw::editor
                     return holdUntilMarkSettled( runner, step, input );
                 if ( EditorSelfTestMarks::setEnabled( true ) == false )
                     return AutomationStepHold::Run; // 에디터 컨텍스트가 없다 — 단계가 돌며 실패를 적는다
-                const EditorClickParams params   = step.readValidatedFields<EditorClickParams>();
+                const EditorClickParams params   = step.readValidatedProperties<EditorClickParams>();
                 bool                    bDrawn   = true;
                 bool                    bSettled = true;
                 checkMark( &params._mark, bDrawn, bSettled );
@@ -212,14 +212,14 @@ namespace sw::editor
                 SettleWaitState* pState = static_cast<SettleWaitState*>( runner.findHeldStepState( step ) );
                 if ( pState == nullptr )
                     pState = static_cast<SettleWaitState*>( &runner.setHeldStepState( step, make_unique<SettleWaitState>() ) );
-                const EditorSettleResult verdict = pState->_wait.advance( runner.findActiveObjectManager() );
-                if ( verdict == EditorSettleResult::Oscillating )
+                const EditorSettleResult evaluation = pState->_wait.advance( runner.findActiveObjectManager() );
+                if ( evaluation == EditorSettleResult::Oscillating )
                     runner.recordFailure( step, pState->_wait.describeOscillation() );
                 // 진행 중인 일에는 시한이 없다(`EditorSettleState`) — 끝나지 않으면 시나리오 벽시계 상한이 까닭과 함께 잡는다.
                 // Run 이면 실행기가 상태를 지운다 — 까닭을 먼저 복사해 넘긴다.
                 const string waitingFor = pState->_wait.describeWait();
-                return runner.holdUntilReady( step, input, verdict == EditorSettleResult::Ready,
-                                              verdict == EditorSettleResult::Oscillating ? 0u : std::numeric_limits<uint32>::max(), waitingFor );
+                return runner.holdUntilReady( step, input, evaluation == EditorSettleResult::Ready,
+                                              evaluation == EditorSettleResult::Oscillating ? 0u : std::numeric_limits<uint32>::max(), waitingFor );
             }
 
             /**
@@ -264,7 +264,7 @@ namespace sw::editor
             /** @brief 레이블 가운데(또는 `anchor` 위치)로 마우스를 옮기고 누른 뒤 뗍니다. ImGui 입력 큐가 누름과 뗌을 프레임에 나눠 넣습니다. 레이블이 없으면 실패를 기록합니다. */
             static bool runClick( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const EditorClickParams params = step.readValidatedFields<EditorClickParams>();
+                const EditorClickParams params = step.readValidatedProperties<EditorClickParams>();
                 const string&           mark   = params._mark;
                 uint8                   modifierMask{ 0 };
                 (void)Validation::parseModifiers( params._mods, modifierMask ); // 시작 때 검사했다
@@ -325,7 +325,7 @@ namespace sw::editor
              */
             static bool runDrag( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const EditorDragParams params = step.readValidatedFields<EditorDragParams>();
+                const EditorDragParams params = step.readValidatedProperties<EditorDragParams>();
                 const string&          mark   = params._mark;
                 EditorSelfTestMark     found{};
                 if ( EditorSelfTestMarks::find( mark, found ) == false )
@@ -390,7 +390,7 @@ namespace sw::editor
                     EditorSelfTestInput::releaseMouseHold();
                     return true;
                 }
-                const EditorHoverParams params = step.readValidatedFields<EditorHoverParams>( { "release" } );
+                const EditorHoverParams params = step.readValidatedProperties<EditorHoverParams>( { "release" } );
                 const string&           mark   = params._mark;
                 const float2            anchor = params._anchor;
                 if ( EditorSelfTestInput::holdMouseAtMark( mark, anchor ) == false )
@@ -400,7 +400,7 @@ namespace sw::editor
 
             static bool runText( AutomationStepContext& /*runner*/, const AutomationStep& step )
             {
-                EditorSelfTestInput::typeText( step.readValidatedFields<EditorTextParams>()._value );
+                EditorSelfTestInput::typeText( step.readValidatedProperties<EditorTextParams>()._value );
                 return true;
             }
 
@@ -431,7 +431,7 @@ namespace sw::editor
             [[nodiscard]] static expected<KeyArgs> parseKey( const AutomationStep& step )
             {
                 EditorKeyParams      params;
-                const expected<void> read = step.readFields( params );
+                const expected<void> read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return unexpected( read.error() );
                 KeyArgs args;
@@ -489,7 +489,7 @@ namespace sw::editor
                 const expected<void> marks = prepareMarks( runner, step );
                 if ( marks.has_value() == false )
                     return marks;
-                const string component = step.readValidatedFields<EditorExpectObjectParams>()._component;
+                const string component = step.readValidatedProperties<EditorExpectObjectParams>()._component;
                 if ( component.empty() )
                     return {};
                 if ( editor::getSubsystem<TypeRegistry>().findType( hashed_string( component ) ) == nullptr )
@@ -499,7 +499,7 @@ namespace sw::editor
 
             static bool runExpectObject( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const EditorExpectObjectParams params        = step.readValidatedFields<EditorExpectObjectParams>();
+                const EditorExpectObjectParams params        = step.readValidatedProperties<EditorExpectObjectParams>();
                 const uint32                   expectedCount = params._count;
                 const uint32                   bSelected     = params._selected;
                 const hashed_string            name( params._name );
@@ -572,7 +572,7 @@ namespace sw::editor
 
             static bool runDockLayout( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const uint32  minNodeSide = step.readValidatedFields<EditorDockLayoutParams>()._minNodeSize; // 0 이면 아래의 기본 최소 변
+                const uint32  minNodeSide = step.readValidatedProperties<EditorDockLayoutParams>()._minNodeSize; // 0 이면 아래의 기본 최소 변
                 const float32 minSide     = minNodeSide > 0 ? static_cast<float32>( minNodeSide ) : kDefaultMinDockNodeSide;
 
                 const MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
@@ -632,7 +632,7 @@ namespace sw::editor
             /** @brief 이 단계가 돌릴 패턴 — 명령줄(`gv_editorSelfTestPattern`)이 있으면 그것, 없으면 시나리오 값. */
             static string readSelfTestPattern( const AutomationStep& step )
             {
-                return gv_editorSelfTestPattern.empty() ? step.readValidatedFields<EditorSelfTestParams>()._pattern : gv_editorSelfTestPattern;
+                return gv_editorSelfTestPattern.empty() ? step.readValidatedProperties<EditorSelfTestParams>()._pattern : gv_editorSelfTestPattern;
             }
 
             static AutomationStepHold holdUntilSelfTestsEnd( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
@@ -677,11 +677,11 @@ namespace sw::editor
     SW_AUTOMATION_STEP( editorClick, EditorScenarioStepValidation::kClickKind, &EditorScenarioStepsInternal::runClick, &EditorScenarioStepValidation::validateClick, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilClickAimed ) );
     SW_AUTOMATION_STEP( editorDrag, EditorScenarioStepValidation::kDragKind, &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepValidation::validateDrag, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilMarkSettled ) );
     SW_AUTOMATION_STEP( editorHover, EditorScenarioStepValidation::kHoverKind, &EditorScenarioStepsInternal::runHover, &EditorScenarioStepValidation::validateHover, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilMarkSettled ) );
-    SW_AUTOMATION_STEP( editorText, EditorScenarioStepValidation::kTextKind, &EditorScenarioStepsInternal::runText, &AutomationStep::validateFields<EditorTextParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilTextTarget ) );
+    SW_AUTOMATION_STEP( editorText, EditorScenarioStepValidation::kTextKind, &EditorScenarioStepsInternal::runText, &AutomationStep::validateProperties<EditorTextParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilTextTarget ) );
     SW_AUTOMATION_STEP( editorKey, EditorScenarioStepValidation::kKeyKind, &EditorScenarioStepsInternal::runKey, &EditorScenarioStepValidation::validateKey, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareKey ).withHold( &EditorScenarioStepsInternal::holdUntilKeyboardSettled ) );
-    SW_AUTOMATION_STEP( editorExpectObject, EditorScenarioStepValidation::kExpectObjectKind, &EditorScenarioStepsInternal::runExpectObject, &AutomationStep::validateFields<EditorExpectObjectParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareExpectObject ) );
-    SW_AUTOMATION_STEP( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, &EditorScenarioStepsInternal::runDockLayout, &AutomationStep::validateFields<EditorDockLayoutParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ) );
-    SW_AUTOMATION_STEP( editorWaitSettled, EditorScenarioStepValidation::kWaitSettledKind, nullptr, &AutomationStep::validateFields<EditorNoParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilScreenSettled ) );
-    SW_AUTOMATION_STEP( editorSelfTest, EditorScenarioStepValidation::kSelfTestKind, &EditorScenarioStepsInternal::runSelfTest, &AutomationStep::validateFields<EditorSelfTestParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilSelfTestsEnd ) );
+    SW_AUTOMATION_STEP( editorExpectObject, EditorScenarioStepValidation::kExpectObjectKind, &EditorScenarioStepsInternal::runExpectObject, &AutomationStep::validateProperties<EditorExpectObjectParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareExpectObject ) );
+    SW_AUTOMATION_STEP( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, &EditorScenarioStepsInternal::runDockLayout, &AutomationStep::validateProperties<EditorDockLayoutParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ) );
+    SW_AUTOMATION_STEP( editorWaitSettled, EditorScenarioStepValidation::kWaitSettledKind, nullptr, &AutomationStep::validateProperties<EditorNoParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilScreenSettled ) );
+    SW_AUTOMATION_STEP( editorSelfTest, EditorScenarioStepValidation::kSelfTestKind, &EditorScenarioStepsInternal::runSelfTest, &AutomationStep::validateProperties<EditorSelfTestParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilSelfTestsEnd ) );
 
 } // namespace sw::editor

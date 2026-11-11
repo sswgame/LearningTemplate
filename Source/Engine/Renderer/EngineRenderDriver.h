@@ -51,7 +51,7 @@ namespace sw
         [[nodiscard]] bool          applyPendingBackendChange() override;
         void                        setScenarioCaptureEnabled( bool bEnabled ) override;
         void                        setPresentInterval( uint32 interval ) override;
-        [[nodiscard]] uint32        countPendingCaptureWork( const GameObjectManager* pManager ) const override;
+        [[nodiscard]] uint32        countPendingCaptureJobs( const GameObjectManager* pManager ) const override;
 
     private:
         /**

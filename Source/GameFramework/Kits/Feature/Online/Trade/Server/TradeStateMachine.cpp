@@ -12,7 +12,7 @@ namespace sw
         return assetID.substr( 0, 5 ) == "item." || assetID.substr( 0, 4 ) == "cur.";
     }
 
-    TradeOutcome TradeStateMachine::validateOffer( const vector<TradeLeg>& listLeg, const ITradePolicy& policy )
+    TradeServiceResult TradeStateMachine::validateOffer( const vector<TradeLeg>& listLeg, const ITradePolicy& policy )
     {
         if ( static_cast<int32>( listLeg.size() ) > policy.getMaxLegsPerSide() || static_cast<int32>( listLeg.size() ) > TradeConstant::kMaxLegsPerSide )
             return TradeResult::TooManyLegs;
@@ -22,13 +22,13 @@ namespace sw
             const bool      bInstance = LedgerItemInstance::isInstanceAssetID( leg._assetID );
             const bool      bAmountOk = bInstance ? leg._amount == 1 : 1 <= leg._amount && leg._amount <= LedgerConstant::kMaxAmount; // 인스턴스 아이템은 하나씩이며 상태 레코드가 따라간다
             if ( LedgerUtil::isValidAssetID( leg._assetID ) == false || bAmountOk == false )
-                return TradeOutcome::fail( OnlineError::kInvalidRequest );
+                return TradeServiceResult::fail( OnlineError::kInvalidRequest );
             if ( policy.isTradable( leg._assetID ) == false )
                 return TradeResult::NotTradable;
             for ( size_t otherIndex = 0; otherIndex < legIndex; ++otherIndex )
             {
                 if ( listLeg[otherIndex]._assetID == leg._assetID )
-                    return TradeOutcome::fail( OnlineError::kInvalidRequest ); // 같은 자산은 한 항목으로 합쳐야 한다
+                    return TradeServiceResult::fail( OnlineError::kInvalidRequest ); // 같은 자산은 한 항목으로 합쳐야 한다
             }
         }
         return TradeResult::Ok;
@@ -43,7 +43,7 @@ namespace sw
         inoutTrade._updatedMs   = nowMs;
     }
 
-    TradeOutcome TradeStateMachine::apply( TradeSnapshot& inoutTrade, const TradeCommand& command, const ITradePolicy& policy, int64 nowMs )
+    TradeServiceResult TradeStateMachine::apply( TradeSnapshot& inoutTrade, const TradeCommand& command, const ITradePolicy& policy, int64 nowMs )
     {
         const optional<int32> foundSide = inoutTrade.findSideIndex( command._actorID );
         if ( foundSide.has_value() == false )
@@ -83,7 +83,7 @@ namespace sw
         {
             case TradeCommandKind::SetOffer:
             {
-                const TradeOutcome validated = validateOffer( command._listLeg, policy );
+                const TradeServiceResult validated = validateOffer( command._listLeg, policy );
                 if ( validated != TradeResult::Ok )
                     return validated;
                 own._listLeg = command._listLeg;

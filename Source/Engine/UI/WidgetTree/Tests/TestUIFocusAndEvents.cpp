@@ -665,20 +665,20 @@ SW_TEST_CASE( WidgetTreeTest, StructureGenerationOnlyMovesWithStructure )
     SW_EXPECT_TRUE( grid._tree.getStructureGeneration() > before );
 }
 
-SW_TEST_CASE( WidgetTreeTest, InvalidationCollectsWorkUntilCleared )
+SW_TEST_CASE( WidgetTreeTest, InvalidationCollectsJobsUntilCleared )
 {
     UIFocusGrid grid;
     grid._tree.clearAllDirty();
-    SW_EXPECT_FALSE( grid._tree.hasPendingWork() );
+    SW_EXPECT_FALSE( grid._tree.hasPendingJobs() );
 
     grid._pA->invalidate( WidgetDirty::kPaint );
-    SW_EXPECT_TRUE( grid._tree.hasPendingWork() );
+    SW_EXPECT_TRUE( grid._tree.hasPendingJobs() );
     SW_EXPECT_EQUAL( size_t{ 1 }, grid._tree.getPaintDirtyWidgets().size() );
     grid._pA->invalidate( WidgetDirty::kPaint );
     SW_EXPECT_EQUAL( size_t{ 1 }, grid._tree.getPaintDirtyWidgets().size() ); // 같은 위젯은 한 번이다
 
     grid._tree.clearAllDirty();
-    SW_EXPECT_FALSE( grid._tree.hasPendingWork() );
+    SW_EXPECT_FALSE( grid._tree.hasPendingJobs() );
     SW_EXPECT_EQUAL( 0u, grid._pA->getDirtyFlags() );
 }
 

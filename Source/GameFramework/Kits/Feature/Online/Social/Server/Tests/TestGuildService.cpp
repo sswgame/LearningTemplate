@@ -74,7 +74,7 @@ namespace
             return std::move( listCompletion[0] );
         }
 
-        SocialOutcome setRole( AccountID accountID, AccountID targetID, GuildRole role )
+        SocialServiceResult setRole( AccountID accountID, AccountID targetID, GuildRole role )
         {
             GuildRequest request;
             request._operation = GuildOperation::SetRole;
@@ -97,7 +97,7 @@ namespace
             return runRequest( request );
         }
 
-        SocialOutcome setOpen( AccountID accountID, bool bOpen )
+        SocialServiceResult setOpen( AccountID accountID, bool bOpen )
         {
             GuildRequest request;
             request._operation = GuildOperation::SetJoinPolicy;
@@ -135,8 +135,8 @@ namespace
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), "cur.gold", amount } );
             request._journalKey = "test/grant/" + to_string( accountID ) + "/" + to_string( amount );
             request._reason     = "test.grant";
-            LedgerTransferResult outcome;
-            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, outcome ) == LedgerResult::Ok );
+            LedgerTransferResult result;
+            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, result ) == LedgerResult::Ok );
         }
 
         int64 getBalanceOf( AccountID accountID )

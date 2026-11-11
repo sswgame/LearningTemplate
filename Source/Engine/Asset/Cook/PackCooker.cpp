@@ -160,8 +160,8 @@ namespace sw
                 const CookJob reachJob( reachDesc );
 
                 // 작업 범위 안에서 읽는다 — 쿠킹 세션은 작업 밖 읽기를 막는다. 이 표가 바뀌면 고르는 파일도 바뀌므로 입력이다.
-                AssetReferenceFields fields;
-                if ( fields.load( params._projectRoot ) == false )
+                AssetReferenceFields properties;
+                if ( properties.load( params._projectRoot ) == false )
                 {
                     SW_LOG_ERROR_ID( "PackCooker.ReferenceFieldsUnreadable", "Pack cook: the asset reference fields under %# could not be read - references cannot be followed", params._projectRoot );
                     return false;
@@ -200,7 +200,7 @@ namespace sw
                 AssetCookRootRegistry::appendRoots( files._listCodeRoot );
                 files._automation = params._automationContent;
                 PackReachResult reach;
-                const bool      bReached = PackReachResult::collect( fields, config._cookRules, files, source, reach );
+                const bool      bReached = PackReachResult::collect( properties, config._cookRules, files, source, reach );
                 logSelection( listCandidates, reach );
                 if ( bReached == false )
                 {

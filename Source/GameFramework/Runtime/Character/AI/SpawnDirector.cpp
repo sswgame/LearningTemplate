@@ -46,7 +46,7 @@ namespace sw
         _curve._listKey.clear();
         // 적지 않은 칸은 생성자의 초기값이다. 깨진 값 · 범위 밖 값은 표 전체를 읽지 않는 오류다(자르지 않는다).
         SpawnTableRootParams rootParams{ _budgetPerMinute, _maxBudget, _startBudget, _bRefundOnDespawn == SW_TRUE };
-        bool                 bValid = XMLFields::readFields( root, rootParams, sourceName );
+        bool                 bValid = XMLFields::readProperties( root, rootParams, sourceName );
         _budgetPerMinute            = rootParams._budgetPerMinute;
         _maxBudget                  = rootParams._maxBudget;
         _startBudget                = rootParams._startBudget;
@@ -70,7 +70,7 @@ namespace sw
     bool SpawnTable::loadEntry( const XMLNode& node, string_view sourceName )
     {
         SpawnEntryDef entry;
-        if ( XMLFields::readFields( node, entry, sourceName ) == false )
+        if ( XMLFields::readProperties( node, entry, sourceName ) == false )
             return false;
         (void)_catalog.add( entry );
         return true;

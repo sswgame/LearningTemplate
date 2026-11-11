@@ -27,7 +27,7 @@ namespace sw
             return false;
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 원소가 하나라도 있으면 설정 전체를 읽지 못한 것으로 본다(반쪽 지도를 만들지 않는다).
         RunMapSettings settings;
-        bool           bValid = XMLFields::readFields( root, settings, sourceName );
+        bool           bValid = XMLFields::readProperties( root, settings, sourceName );
         if ( bValid == false )
             return false; // 범위 밖 층 수(음수)로 아래 표를 만들면 터무니없는 크기를 할당한다
         settings._listForcedFloor.assign( static_cast<size_t>( settings._floorCount ), hashed_string{} );
@@ -40,7 +40,7 @@ namespace sw
             bool loadFloor( const XMLNode& node, string_view sourceName )
             {
                 RunForcedFloorDef forced;
-                if ( XMLFields::readFields( node, forced, sourceName ) == false )
+                if ( XMLFields::readProperties( node, forced, sourceName ) == false )
                     return false;
                 const int32 index        = forced._index < 0 ? forced._index + _settings._floorCount : forced._index; // −1 은 마지막 층이다
                 const bool  bInsideFloor = index >= 0 && index < _settings._floorCount;

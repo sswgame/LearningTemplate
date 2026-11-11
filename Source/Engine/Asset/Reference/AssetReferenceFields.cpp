@@ -162,7 +162,7 @@ namespace sw
         using Internal       = AssetReferenceFieldsInternal;
         const JSONValue root = document.getRoot();
         // 구조체 목록 칸은 `JSONFields` 가 직렬화기로 넘겨 C++ 칸 이름을 키로 기대한다 — 이 파일은 칸 이름 규칙이라 원소마다 읽는다.
-        bool                        bValid   = JSONFields::readFields( root, config, path, { "listImportedFolder" } );
+        bool                        bValid   = JSONFields::readProperties( root, config, path, { "listImportedFolder" } );
         const JSONValue             imported = root.get( "listImportedFolder" );
         vector<AssetImportedFolder> listImported;
         if ( imported.isArray() == false )
@@ -173,7 +173,7 @@ namespace sw
         for ( size_t index = 0; imported.isArray() && index < imported.size(); ++index )
         {
             AssetImportedFolder folder;
-            bValid = JSONFields::readFields( imported.at( index ), folder, path ) && bValid;
+            bValid = JSONFields::readProperties( imported.at( index ), folder, path ) && bValid;
             listImported.push_back( std::move( folder ) );
         }
         bValid = Internal::hasNoEmptyText( config._listDomain, "listDomain", path ) && bValid;
@@ -194,10 +194,10 @@ namespace sw
         _listCMakeArgument   = std::move( config._listCMakeArgument );
         _listImported        = std::move( listImported );
         _setField.clear();
-        return loadGeneratedFields( projectRoot );
+        return loadGeneratedProperties( projectRoot );
     }
 
-    bool AssetReferenceFields::loadGeneratedFields( string_view projectRoot )
+    bool AssetReferenceFields::loadGeneratedProperties( string_view projectRoot )
     {
         const string path = FileUtil::joinPath( projectRoot, kGeneratedFile );
         JSONDocument document;

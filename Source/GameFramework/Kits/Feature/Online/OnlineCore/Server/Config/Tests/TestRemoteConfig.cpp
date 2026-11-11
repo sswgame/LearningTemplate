@@ -75,9 +75,9 @@ SW_TEST_CASE( RemoteConfigTest, ReloadReadsValuesAndTheSnapshotHash )
 
     RemoteConfig reader; // 다른 서버 — 다시 읽어야 안다
     reader.requestReload( front );
-    SW_EXPECT_EQUAL( 1, reader.getPendingWorkCount() );
+    SW_EXPECT_EQUAL( 1, reader.getPendingJobCount() );
     (void)front.pollCompletions();
-    SW_EXPECT_EQUAL( 0, reader.getPendingWorkCount() );
+    SW_EXPECT_EQUAL( 0, reader.getPendingJobCount() );
     int64 minimumBuild = 0;
     SW_EXPECT_TRUE( reader.findInteger( "account.minimum_build.windows", minimumBuild ) );
     SW_EXPECT_EQUAL( int64( 42 ), minimumBuild );

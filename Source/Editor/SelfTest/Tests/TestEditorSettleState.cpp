@@ -8,14 +8,14 @@
 using namespace sw;
 using namespace sw::editor;
 
-SW_TEST_CASE( EditorSettleJudgeTest, ReadyWhenScreenAndWorkSettled )
+SW_TEST_CASE( EditorSettleJudgeTest, ReadyWhenScreenAndJobsSettled )
 {
     EditorSettleState judge;
     SW_EXPECT_TRUE( judge.advance( true, true ) == EditorSettleResult::Ready );
 }
 
 /** @brief 일이 남은 동안은 몇 프레임이든 기다린다 — 시한이 없다(Debug 의 느린 PNG 쓰기). */
-SW_TEST_CASE( EditorSettleJudgeTest, PendingWorkWaitsWithoutLimit )
+SW_TEST_CASE( EditorSettleJudgeTest, PendingJobsWaitWithoutLimit )
 {
     EditorSettleState judge;
     for ( uint32 frame = 0; frame < EditorSettleState::kMaxIdleMovingFrames * 10; ++frame )
@@ -33,7 +33,7 @@ SW_TEST_CASE( EditorSettleJudgeTest, IdleMovementBeyondLimitOscillates )
 }
 
 /** @brief 일이 끼어든 프레임은 셈을 0 으로 되돌린다 — 그 움직임은 그 일 때문일 수 있다. */
-SW_TEST_CASE( EditorSettleJudgeTest, PendingWorkResetsIdleMovement )
+SW_TEST_CASE( EditorSettleJudgeTest, PendingJobsResetIdleMovement )
 {
     EditorSettleState judge;
     for ( uint32 frame = 0; frame < EditorSettleState::kMaxIdleMovingFrames; ++frame )

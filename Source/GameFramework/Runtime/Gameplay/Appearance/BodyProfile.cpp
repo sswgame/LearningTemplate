@@ -84,7 +84,7 @@ namespace sw
             static void readWrinkle( const XMLNode& node, CharacterBodyProfileDef& inoutProfile, AppearanceLoadReport& report, string_view sourceName )
             {
                 WrinkleRegionDef region;
-                if ( AppearanceXMLUtil::readFields( node, region, report, sourceName ) == false )
+                if ( AppearanceXMLUtil::readProperties( node, region, report, sourceName ) == false )
                     return;
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
@@ -94,7 +94,7 @@ namespace sw
                         continue;
                     }
                     WrinkleSourceDef source;
-                    if ( AppearanceXMLUtil::readFields( child, source, report, sourceName ) )
+                    if ( AppearanceXMLUtil::readProperties( child, source, report, sourceName ) )
                         region._listSource.push_back( source );
                 }
                 if ( VectorUtil::containsBy<&WrinkleRegionDef::_region>( inoutProfile._listWrinkle, region._region ) )
@@ -113,13 +113,13 @@ namespace sw
                     if ( StringUtil::equals( pName, "BodyChannel" ) )
                     {
                         BodyChannelLayerDef layer;
-                        if ( AppearanceXMLUtil::readFields( child, layer, report, sourceName ) )
+                        if ( AppearanceXMLUtil::readProperties( child, layer, report, sourceName ) )
                             outProfile._listChannel.push_back( layer );
                     }
                     else if ( StringUtil::equals( pName, "Jiggle" ) )
                     {
                         RigJiggleGroupParams group;
-                        const bool           bRead = AppearanceXMLUtil::readFields( child, group, report, sourceName );
+                        const bool           bRead = AppearanceXMLUtil::readProperties( child, group, report, sourceName );
                         if ( bRead && VectorUtil::containsBy<&RigJiggleGroupParams::_group>( outProfile._listJiggle, group._group ) )
                             report.addErrorWithID( "Appearance.IDDuplicate", "%#: body profile '%#' repeats jiggle group '%#'", sourceName, outProfile._id.c_str(), group._group.c_str() );
                         else if ( bRead )
@@ -128,7 +128,7 @@ namespace sw
                     else if ( StringUtil::equals( pName, "ActionScale" ) )
                     {
                         BodyActionScaleDef scale;
-                        if ( AppearanceXMLUtil::readFields( child, scale, report, sourceName ) )
+                        if ( AppearanceXMLUtil::readProperties( child, scale, report, sourceName ) )
                             outProfile._listActionScale.push_back( scale );
                     }
                     else if ( StringUtil::equals( pName, "Wrinkle" ) )
@@ -137,7 +137,7 @@ namespace sw
                     }
                     else if ( StringUtil::equals( pName, "Pupil" ) )
                     {
-                        outProfile._bHasPupil    = AppearanceXMLUtil::readFields( child, outProfile._pupil, report, sourceName ) ? SW_TRUE : SW_FALSE;
+                        outProfile._bHasPupil    = AppearanceXMLUtil::readProperties( child, outProfile._pupil, report, sourceName ) ? SW_TRUE : SW_FALSE;
                         const bool bInvalidPupil = outProfile._pupil._minSize > outProfile._pupil._maxSize || outProfile._pupil._darkLuminance >= outProfile._pupil._brightLuminance;
                         if ( bInvalidPupil )
                             report.addErrorWithID( "Appearance.PupilRangeInvalid", "%#: body profile '%#' <Pupil> needs minSize <= maxSize and darkLuminance < brightLuminance", sourceName, outProfile._id.c_str() );

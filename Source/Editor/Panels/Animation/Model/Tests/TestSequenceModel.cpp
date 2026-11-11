@@ -43,7 +43,7 @@ namespace
         }
 
         /** @brief 항목 종류가 요구하는 칸을 채웁니다(종류 표의 필수 칸). 스폰은 혼자 채울 바인딩 @p spawnBinding 을 받는다. */
-        static void fillRequiredFields( SequenceTrackItem& item, uint32 spawnBinding = 1 )
+        static void fillRequiredProperties( SequenceTrackItem& item, uint32 spawnBinding = 1 )
         {
             const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
             if ( pInfo->requiresField( SequenceItemField::Binding ) )
@@ -67,7 +67,7 @@ namespace
         {
             SequenceTrackItem item{};
             item._kind = kind;
-            fillRequiredFields( item );
+            fillRequiredProperties( item );
             return item;
         }
     };
@@ -137,7 +137,7 @@ SW_TEST_CASE( SequenceModelTest, EveryKindCanBeCreatedAndSurvivesSaveAndLoad )
         if ( document.addItem( kind, "Kind" ).has_value() )
             continue;
         SW_REQUIRE_TRUE( document.isDraftingItem() );
-        SequenceModelTestUtil::fillRequiredFields( document._itemEdit, spawnBinding );
+        SequenceModelTestUtil::fillRequiredProperties( document._itemEdit, spawnBinding );
         SW_EXPECT_TRUE( document.commitItemDraft().has_value() );
     }
     SW_REQUIRE_EQUAL( size_t{ SequenceAsset::getItemKindCount() }, document._asset._listItem.size() );
@@ -150,7 +150,7 @@ SW_TEST_CASE( SequenceModelTest, EveryKindCanBeCreatedAndSurvivesSaveAndLoad )
     SW_EXPECT_TRUE( readBack._listItem[static_cast<size_t>( SequenceItemKind::Scenario )]._scenario == "a.scenario.xml" );
 }
 
-SW_TEST_CASE( SequenceModelTest, KindsThatNeedFieldsOpenADraftInsteadOfAnItem )
+SW_TEST_CASE( SequenceModelTest, KindsThatNeedPropertiesOpenADraftInsteadOfAnItem )
 {
     SequenceModel document = SequenceModelTestUtil::makeDocument();
     for ( const SequenceItemKind kind : { SequenceItemKind::Spawn, SequenceItemKind::Appearance, SequenceItemKind::Scenario } )
@@ -167,7 +167,7 @@ SW_TEST_CASE( SequenceModelTest, KindsThatNeedFieldsOpenADraftInsteadOfAnItem )
 }
 
 // 초안이 열려 있어도 문서는 언제나 저장 · 되돌리기 스냅숏으로 읽힌다 - 이 불변식이 설계의 전부다.
-SW_TEST_CASE( SequenceModelTest, DraftWithEmptyFieldsNeverEntersTheDocument )
+SW_TEST_CASE( SequenceModelTest, DraftWithEmptyPropertiesNeverEntersTheDocument )
 {
     SequenceModel document    = SequenceModelTestUtil::makeDocument();
     document._asset._frameMin = 5;

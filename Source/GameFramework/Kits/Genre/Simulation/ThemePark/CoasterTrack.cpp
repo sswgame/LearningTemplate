@@ -416,7 +416,7 @@ namespace sw
 
     uint32 CoasterLayoutCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<CoasterLayoutCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&CoasterLayoutCatalog::loadLayout>( "Layout" ),
@@ -428,11 +428,11 @@ namespace sw
     bool CoasterLayoutCatalog::loadLayout( const XMLNode& node, string_view sourceName )
     {
         CoasterLayoutDef layout;
-        bool             bValid = XMLFields::readFields( node, layout, sourceName );
+        bool             bValid = XMLFields::readProperties( node, layout, sourceName );
         for ( XMLNode pieceNode = node.findChild( "Piece" ); pieceNode; pieceNode = pieceNode.findNextSibling( "Piece" ) )
         {
             CoasterTrackPiece piece;
-            if ( XMLFields::readFields( pieceNode, piece, sourceName ) )
+            if ( XMLFields::readProperties( pieceNode, piece, sourceName ) )
                 layout._listPiece.push_back( piece );
             else
                 bValid = false;

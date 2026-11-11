@@ -86,7 +86,7 @@ namespace sw
         PROPERTY()
         ServiceReportStatus _status{ ServiceReportStatus::Open };
         /// 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)이다. PROPERTY 가 아니다 — 영속 읽기가 담고 쓰기가 그대로 싣는다(`ServiceRecordUtil`).
-        ServiceRecordUnknownFields _unknownFields{};
+        ServiceRecordUnknownFields _unknownProperties{};
     };
 } // namespace sw
 

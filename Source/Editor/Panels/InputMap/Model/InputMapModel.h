@@ -209,7 +209,7 @@ namespace sw::editor
         /** @brief 저장하지 않은 표시를 @p bChanged 면 켜고 그대로 돌려줍니다. */
         bool recordEdit( bool bChanged );
         /** @brief 이 바인딩의 발화 칸을 고쳐도 저장에 남으면 true 입니다(`canSaveTriggerProperties`). */
-        bool canEditTriggerFields( const hashed_string& action, uint32 bindIndex ) const;
+        bool canEditTriggerProperties( const hashed_string& action, uint32 bindIndex ) const;
         /** @brief 지금 키 잡기가 패드 버튼을 받을 수 있으면 true 입니다. */
         bool canCaptureSlot() const;
         /** @brief 새 바인딩이 들어갈 레이어입니다. 마지막 바인딩의 레이어, 없으면 맵의 기본 레이어입니다. */

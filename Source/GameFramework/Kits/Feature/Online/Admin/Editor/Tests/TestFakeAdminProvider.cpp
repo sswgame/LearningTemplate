@@ -52,12 +52,12 @@ namespace
         }
 
         /** @brief 명령 하나를 보내고 결과를 돌려줍니다. 답은 정확히 한 번이어야 합니다. */
-        static AdminOutcome send( FakeAdminProvider& provider, uint16 method, const AdminRequest& request, const NetIdempotencyKey& key = NetIdempotencyKey{} )
+        static AdminServiceResult send( FakeAdminProvider& provider, uint16 method, const AdminRequest& request, const NetIdempotencyKey& key = NetIdempotencyKey{} )
         {
             ReplyRecorder recorder;
             provider.sendCommand( method, request, key, AdminClient::ReplyDelegate::create<&ReplyRecorder::onReply>( &recorder ) );
             SW_EXPECT_EQUAL( 1, recorder._count );
-            return recorder._last._errorCode != OnlineError::kOk ? AdminOutcome::fail( recorder._last._errorCode ) : AdminOutcome{ recorder._last._reply._result };
+            return recorder._last._errorCode != OnlineError::kOk ? AdminServiceResult::fail( recorder._last._errorCode ) : AdminServiceResult{ recorder._last._reply._result };
         }
 
         static int64 findGold( const FakeAdminProvider& provider )

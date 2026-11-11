@@ -69,7 +69,7 @@ namespace sw
                 CustomizationDriveDef drive;
                 drive._from = inoutParam._min;
                 drive._to   = inoutParam._max;
-                if ( AppearanceXMLUtil::readFields( node, drive, report, sourceName, { "include", "exclude" } ) == false )
+                if ( AppearanceXMLUtil::readProperties( node, drive, report, sourceName, { "include", "exclude" } ) == false )
                     return;
                 AppearanceXMLUtil::readNameList( node, "include", drive._listInclude );
                 AppearanceXMLUtil::readNameList( node, "exclude", drive._listExclude );
@@ -98,7 +98,7 @@ namespace sw
             static void readOption( const XMLNode& node, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName, const hashed_string& schemaID )
             {
                 CustomizationOptionParams params;
-                (void)AppearanceXMLUtil::readFields( node, params, report, sourceName ); // 오류는 보고서에 쌓인다
+                (void)AppearanceXMLUtil::readProperties( node, params, report, sourceName ); // 오류는 보고서에 쌓인다
                 CustomizationOptionDef option;
                 option._name               = params._name;
                 option._visual             = params._visual;
@@ -126,7 +126,7 @@ namespace sw
             {
                 CustomizationConditionParams params;
                 CustomizationConditionDef    condition;
-                (void)AppearanceXMLUtil::readFields( node, params, report, sourceName, { "options" } ); // 구간은 대상을 안 뒤에 다시 읽는다
+                (void)AppearanceXMLUtil::readProperties( node, params, report, sourceName, { "options" } ); // 구간은 대상을 안 뒤에 다시 읽는다
                 condition._parameter = params._parameter;
                 AppearanceXMLUtil::readNameList( node, "options", condition._listOption );
                 // 조건은 앞에 선언한 매개변수만 가리킬 수 있다. 아직 목록에 들어가지 않은 자기 자신도 가리킬 수 없으므로 순환이 생길 수 없다.
@@ -162,7 +162,7 @@ namespace sw
             {
                 reportUnknownParamAttributes( node, kind, report, sourceName ); // 종류마다 받는 칸
                 CustomizationParamEntryParams params;
-                (void)AppearanceXMLUtil::readFields( node, params, report, sourceName, { "default" } ); // 기본값은 종류마다 꼴이 달라 아래에서 읽는다
+                (void)AppearanceXMLUtil::readProperties( node, params, report, sourceName, { "default" } ); // 기본값은 종류마다 꼴이 달라 아래에서 읽는다
                 CustomizationParamDef param;
                 param._kind     = kind;
                 param._name     = params._name;
@@ -312,7 +312,7 @@ namespace sw
             }
 
             CustomizationSchemaDef schema;
-            (void)AppearanceXMLUtil::readFields( schemaNode, schema, report, sourceName );
+            (void)AppearanceXMLUtil::readProperties( schemaNode, schema, report, sourceName );
             if ( schema._id.empty() )
                 continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
             if ( findSchema( schema._id ) != nullptr )

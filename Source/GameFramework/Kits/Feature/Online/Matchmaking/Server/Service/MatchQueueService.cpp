@@ -254,7 +254,7 @@ namespace sw
         }
         if ( ServerRecord::isValidName( region ) == false ) // 와이어에서 온 값이다. 서버 지역 이름이 될 수 없는 값은 어떤 서버에도 배정되지 않아 시한까지 기다리기만 한다
         {
-            _completionBuffer.push( MatchQueueCompletion{ requestTag, 0, MatchmakingOutcome::fail( OnlineError::kInvalidRequest ) } );
+            _completionBuffer.push( MatchQueueCompletion{ requestTag, 0, MatchmakingServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
         if ( _mapAccountToTicket.count( accountID ) != 0 || isJoinPending( accountID ) )
@@ -279,7 +279,7 @@ namespace sw
         _dependencies._pPartyLobby->findPartyOfAccount( accountID, lookupTag, PartyLobbyService::PartyFoundDelegate::create<&MatchQueueService::onPartyFound>( this ) );
     }
 
-    void MatchQueueService::onPartyFound( uint64 lookupTag, MatchmakingOutcome result, const PartySnapshot& party )
+    void MatchQueueService::onPartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party )
     {
         const auto joinIt = _mapLookupToJoin.find( lookupTag );
         if ( joinIt == _mapLookupToJoin.end() )
@@ -545,7 +545,7 @@ namespace sw
         }
     }
 
-    bool MatchQueueService::placeMatch( ModeState& state, const MatchFormed& match, MatchQueueResult failOutcome, UnixMilliseconds nowMs )
+    bool MatchQueueService::placeMatch( ModeState& state, const MatchFormed& match, MatchQueueResult failResult, UnixMilliseconds nowMs )
     {
         const MatchModeDef&  mode = _mapMode[match._modeID];
         ServerSelectionQuery query;
@@ -559,7 +559,7 @@ namespace sw
         }
         ServerStatus picked;
         const bool   bPlaced = state._reader->pickServer( query, nowMs, picked );
-        if ( bPlaced == false && failOutcome == MatchQueueResult::Count )
+        if ( bPlaced == false && failResult == MatchQueueResult::Count )
             return false;
 
         if ( bPlaced && _dependencies._pBus != nullptr )                                                                                         // 게임 서버에 접속할 사람을 먼저 알린다
@@ -570,7 +570,7 @@ namespace sw
             assignment._ticketID = ticket._ticketID;
             assignment._matchID  = match._matchID;
             assignment._modeID   = match._modeID;
-            assignment._result   = bPlaced ? MatchQueueResult::Found : failOutcome;
+            assignment._result   = bPlaced ? MatchQueueResult::Found : failResult;
             if ( bPlaced )
             {
                 assignment._serverID = picked._descriptor._serverID;

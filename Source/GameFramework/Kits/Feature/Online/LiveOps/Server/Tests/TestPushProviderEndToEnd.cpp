@@ -349,7 +349,7 @@ namespace
             _dispatcher.registerDevice( kAccount, registration, 0 );
             SW_EXPECT_TRUE( test::pollUntil( [this]()
             { pump(); }, [this]()
-            { return _dispatcher.getPendingWorkCount() == 0; } ) );
+            { return _dispatcher.getPendingJobCount() == 0; } ) );
         }
 
         /** @brief 계정에 알림 하나를 보내고 맡긴 배달이 모두 끝날 때까지 돌립니다. */
@@ -362,7 +362,7 @@ namespace
             SW_EXPECT_TRUE( _dispatcher.notifyAccount( kAccount, message, getNow() ) );
             SW_EXPECT_TRUE( test::pollUntil( [this]()
             { pump(); }, [this]()
-            { return _dispatcher.getPendingWorkCount() == 0 && _dispatcher.getInFlightCount() == 0; } ) );
+            { return _dispatcher.getPendingJobCount() == 0 && _dispatcher.getInFlightCount() == 0; } ) );
         }
     };
 } // namespace

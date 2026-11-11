@@ -7,7 +7,7 @@
  *          - 응답 타입이 표지의 메서드에서 나오므로 메서드에 맞지 않는 응답은 컴파일되지 않습니다.
  *          - 결과는 두 길입니다. 키트 업무 결과는 `respond`(응답 칸 `_result` — 끝난 결과이므로 요청 층이 기억합니다), 공통 범주는 `fail`(`OnlineError` — 재시도할 범주는 기억하지 않습니다,
  *            `OnlineServiceHost::respondError`). 어느 길인지가 보존을 정하므로 키트가 보존을 고를 일이 없습니다.
- *          - 키트 결과 열거형에는 공통 범주가 없다. 로직은 `OnlineOutcome::fail` 로 내고 `finish` · `finishCall` 이 공통 오류로 끝낸다. 그래서 지표 · 보존이 형식에서 나온다.
+ *          - 키트 결과 열거형에는 공통 범주가 없다. 로직은 `OnlineServiceResult::fail` 로 내고 `finish` · `finishCall` 이 공통 오류로 끝낸다. 그래서 지표 · 보존이 형식에서 나온다.
  *            응답에 `isRetryable()` 이 있으면(공통 범주가 아니면서 같은 키로 다시 할 업무 결과, 스토어 대기) 그 응답은 기억하지 않습니다.
  *          - 완료 큐로 답하는 로직(`XxxService::takeCompletions`)은 호출 번호(`call._callID`)를 요청 태그로 받고, 바인딩이 `completeCall` 로 답합니다. 표에 없는 태그(내부 작업 · 끝난 호출)는 조용히 버립니다.
  *          - 모르는 메서드와 깨진 본문의 답은 모든 키트가 `kInvalidRequest` 로 같습니다. 멱등 키가 필수인 메서드(`RequiresIdempotencyKey`)에 키가 없어도 같습니다.
@@ -289,15 +289,15 @@ namespace sw
          * @details 키트 결과 열거형에 공통 범주를 두지 않는다 — 실패는 이 길로만 나가므로 보존 · 지표가 형식에서 나온다.
          */
         template <typename TResult, typename TReply>
-        bool finishCall( uint64 callID, const OnlineOutcome<TResult>& outcome, const TReply& reply )
+        bool finishCall( uint64 callID, const OnlineServiceResult<TResult>& result, const TReply& reply )
         {
-            return outcome.isFailed() ? failCall( callID, outcome._errorCode ) : completeCall( callID, reply );
+            return result.isFailed() ? failCall( callID, result._errorCode ) : completeCall( callID, reply );
         }
 
         /**
          * @brief 로직의 완료 @p completion 으로 호출 @p callID 를 끝냅니다. 응답 타입은 그 호출의 메서드(표지)에서 나옵니다.
          * @details 완료가 메서드를 모르는 로직(친구 · 길드처럼 완료 형식 하나로 답하는 키트)이 씁니다. 파생은 응답 타입마다 공개 `fillReply( XxxReply&, TCompletion& )` 를 두고,
-         *          완료의 `_result` 는 `OnlineOutcome` 이어야 합니다(공통 범주면 `failCall`). 그 메서드의 응답 타입에 맞는 `fillReply` 가 없으면 조립 실수이므로
+         *          완료의 `_result` 는 `OnlineServiceResult` 이어야 합니다(공통 범주면 `failCall`). 그 메서드의 응답 타입에 맞는 `fillReply` 가 없으면 조립 실수이므로
          *          어서션을 내고 `kInternal` 로 끝냅니다. 표에 없는 번호(내부 작업 · 끝난 호출)는 조용히 false 입니다.
          */
         template <typename TCompletion>
@@ -317,10 +317,10 @@ namespace sw
         /** @brief 열린 호출이 없고 저장소에 맡긴 일도 없으면 true 입니다. 종료 대기(`flushUntilIdle`)가 이것을 본다. */
         bool isIdle() const { return _calls.isEmpty() && _store.isIdle(); }
         /**
-         * @brief 종료 드레인이 기다리는 일 수입니다 — 열린 호출 + 저장소에 맡긴 일(`IOnlineServerKit::getOpenWorkCount`).
+         * @brief 종료 드레인이 기다리는 일 수입니다 — 열린 호출 + 저장소에 맡긴 일(`IOnlineServerKit::getOpenJobCount`).
          * @details 저장소 왕복 중인 요청은 둘로 센다. 드레인은 0 이 되는지만 보고, 수는 로그에만 나온다.
          */
-        int32 getOpenWorkCount() const { return _calls.getCount() + _store.getOpenCount(); }
+        int32 getOpenJobCount() const { return _calls.getCount() + _store.getOpenCount(); }
 
         /** @brief 공통 범주 @p errorCode 로 끝냅니다. 저장소 완료가 부릅니다. */
         template <typename TMethod>
@@ -331,9 +331,9 @@ namespace sw
 
         /** @brief 저장 함수의 결과로 끝냅니다. 공통 범주면 `fail`, 아니면 `respond` 입니다. */
         template <typename TMethod, typename TResult>
-        bool finish( OnlineServerCall<TMethod> call, const OnlineOutcome<TResult>& outcome, const typename TMethod::Reply& reply )
+        bool finish( OnlineServerCall<TMethod> call, const OnlineServiceResult<TResult>& result, const typename TMethod::Reply& reply )
         {
-            return outcome.isFailed() ? fail( call, outcome._errorCode ) : respond( call, reply );
+            return result.isFailed() ? fail( call, result._errorCode ) : respond( call, reply );
         }
 
     protected:

@@ -56,7 +56,7 @@ namespace
         return balance._amount;
     }
 
-    MailboxOutcome claim( MemoryServiceDatabase& database, uint64 accountID, const string& mailKey, const ILedgerPolicy& policy )
+    MailboxServiceResult claim( MemoryServiceDatabase& database, uint64 accountID, const string& mailKey, const ILedgerPolicy& policy )
     {
         MailboxClaimInput input;
         input._mailKey   = mailKey;

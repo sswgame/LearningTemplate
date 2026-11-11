@@ -43,7 +43,7 @@ namespace sw
      * @brief 매칭 결과입니다. 업무 결과(`MatchmakingResult`) 또는 공통 범주(`OnlineError`)입니다.
      * @details 규칙 밖 값은 `kInvalidRequest`, 저장소 · 캐시 장애는 `kUnavailable`, 다시 해도 경합이면 `kBusy` 이다. 전용 서버 배정 결과는 `MatchQueueResult` 가 따로 든다(옛 `NoServer` 는 쓰는 곳이 없어 지웠다).
      */
-    using MatchmakingOutcome = OnlineOutcome<MatchmakingResult>;
+    using MatchmakingServiceResult = OnlineServiceResult<MatchmakingResult>;
 } // namespace sw
 
 namespace sw

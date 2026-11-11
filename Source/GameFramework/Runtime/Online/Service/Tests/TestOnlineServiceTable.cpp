@@ -81,11 +81,11 @@ SW_TEST_CASE( OnlineServiceTableTest, MethodTableNumbersFollowEnumeratorOrder )
 /**
  * @brief [OnlineServiceTableTest] 로직의 결과: 업무 결과는 그 값과만 같고, 공통 범주로 끝난 결과는 어떤 업무 결과(Ok 포함)와도 같지 않으며 그 범주만 갖는다
  */
-SW_TEST_CASE( OnlineServiceTableTest, OutcomeSeparatesDomainResultAndCommonCategory )
+SW_TEST_CASE( OnlineServiceTableTest, ServiceResultSeparatesDomainResultAndCommonCategory )
 {
-    using TestOutcome             = sw::OnlineOutcome<TestResult>;
-    const TestOutcome found       = TestResult::NotFound;
-    const TestOutcome unavailable = TestOutcome::fail( sw::OnlineError::kUnavailable );
+    using TestServiceResult             = sw::OnlineServiceResult<TestResult>;
+    const TestServiceResult found       = TestResult::NotFound;
+    const TestServiceResult unavailable = TestServiceResult::fail( sw::OnlineError::kUnavailable );
     SW_EXPECT_TRUE( found == TestResult::NotFound );
     SW_EXPECT_FALSE( found.isFailed() );
     SW_EXPECT_TRUE( unavailable.isFailed() );

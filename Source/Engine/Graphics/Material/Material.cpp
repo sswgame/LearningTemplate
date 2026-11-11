@@ -1045,19 +1045,19 @@ namespace sw
             }
 
             VectorUtil::sort( _listCachedDefine );
-            _cachedPermutationHash        = MaterialPermutation::hashDefines( _listCachedDefine );
-            const uint64 renderFieldsHash = getRenderFieldsHash();
-            if ( renderFieldsHash != 0 )
-                _cachedPermutationHash = HashUtil::combine( _cachedPermutationHash, renderFieldsHash );
+            _cachedPermutationHash            = MaterialPermutation::hashDefines( _listCachedDefine );
+            const uint64 renderPropertiesHash = getRenderPropertiesHash();
+            if ( renderPropertiesHash != 0 )
+                _cachedPermutationHash = HashUtil::combine( _cachedPermutationHash, renderPropertiesHash );
             _bDefinesDirty = SW_FALSE;
         }
         return _listCachedDefine;
     }
 
-    uint64 Material::getRenderFieldsHash() const
+    uint64 Material::getRenderPropertiesHash() const
     {
-        const bool bNoFields = _desc._renderQueue == 0 && _desc._renderStateOverride.hasAny() == false;
-        return bNoFields ? 0u : HashUtil::combine( _desc._renderStateOverride.computeHash(), static_cast<uint64>( static_cast<uint32>( _desc._renderQueue ) ) + 1u );
+        const bool bNoProperties = _desc._renderQueue == 0 && _desc._renderStateOverride.hasAny() == false;
+        return bNoProperties ? 0u : HashUtil::combine( _desc._renderStateOverride.computeHash(), static_cast<uint64>( static_cast<uint32>( _desc._renderQueue ) ) + 1u );
     }
 
     void Material::setShaderPath( string_view shaderPath )
@@ -1161,7 +1161,7 @@ namespace sw
         if ( _desc._alphaMode == MaterialAlphaMode::Mask && getScalarParameter( hashed_string( kAlphaCutoffProperty ), rootParams._alphaCutoff ) == false )
             rootParams._alphaCutoff = _desc._alphaCutoff;
         XMLFields::writeEveryField( root, rootParams );
-        MaterialXML::appendRenderFields( root, _desc );
+        MaterialXML::appendRenderProperties( root, _desc );
 
         XMLNode props = root.appendChild( "_properties" );
 
@@ -1249,10 +1249,10 @@ namespace sw
         if ( AssetXMLFormat::upgradeToCurrentXMLVersion( Material::kAssetType, root ) == false )
             return false;
 
-        // 루트 칸(이름 · 셰이더 · 알파 모드)은 스키마로 읽는다 — 적지 않은 알파 모드는 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다). 렌더 상태 칸은 뒤의 `parseRenderFields` 가 읽는다.
+        // 루트 칸(이름 · 셰이더 · 알파 모드)은 스키마로 읽는다 — 적지 않은 알파 모드는 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다). 렌더 상태 칸은 뒤의 `parseRenderProperties` 가 읽는다.
         MaterialRootParams rootParams;
         const string_view  sourceName{ root.getAttributeText( "name" ) };
-        if ( XMLFields::readFields( root, rootParams, sourceName, { "formatVersion" }, &MaterialXML::isRenderStateAttribute ) == false )
+        if ( XMLFields::readProperties( root, rootParams, sourceName, { "formatVersion" }, &MaterialXML::isRenderStateAttribute ) == false )
             return false;
         _desc             = MaterialDef{};
         _desc._name       = rootParams._name;
@@ -1274,7 +1274,7 @@ namespace sw
 
         if ( MaterialXML::parsePermutationNode( root, _desc._permutations ) == false )
             return false;
-        if ( MaterialXML::parseRenderFields( root, rootParams, sourceName, _desc ) == false )
+        if ( MaterialXML::parseRenderProperties( root, rootParams, sourceName, _desc ) == false )
             return false;
         // 그리기 목록과 셰이더가 어긋난 머티리얼은 읽지 않는다 — 불투명 목록의 굴절은 사본이 없는 패스에서 빈 색을 읽고(언리얼: 불투명의 SceneColor 는 컴파일 오류),
         // 블렌드 define 과 알파 모드가 다르면 알파가 새거나 불투명 목록에서 섞인다.

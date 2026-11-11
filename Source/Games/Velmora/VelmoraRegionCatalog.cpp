@@ -35,7 +35,7 @@ namespace sw
                     return false;
                 }
                 VelmoraSiteAttributeDef def;
-                if ( XMLFields::readFields( node, def, where ) == false )
+                if ( XMLFields::readProperties( node, def, where ) == false )
                     return false;
                 outSite._id       = def._id;
                 outSite._position = def._at;
@@ -46,7 +46,7 @@ namespace sw
             [[nodiscard]] static bool readSpawn( const XMLNode& node, string_view where, vector<ActionRoomSpawnDef>& outListSpawn )
             {
                 VelmoraSpawnAttributeDef def;
-                if ( XMLFields::readFields( node, def, where ) == false )
+                if ( XMLFields::readProperties( node, def, where ) == false )
                     return false;
                 ActionRoomSpawnDef spawn;
                 spawn._monsterID = def._monster;
@@ -89,7 +89,7 @@ namespace sw
         const string where = string( sourceName ) + " <Region id=\"" + pID + "\">";
         // 속성은 리플렉션 칸이다 — 빠진 경계 · 일어설 자리는 XMLFields.RequiredFieldMissing, 깨진 `x,z` 는 XMLFields.ValueUnreadable 로 이름과 함께 알린다.
         VelmoraRegionAttributeDef attribute;
-        bool                      bValid = XMLFields::readFields( node, attribute, where );
+        bool                      bValid = XMLFields::readProperties( node, attribute, where );
         VelmoraRegionDef          region;
         region._id      = attribute._id.empty() ? hashed_string( pID ) : attribute._id;
         region._name    = attribute._name.empty() ? string( pID ) : attribute._name;

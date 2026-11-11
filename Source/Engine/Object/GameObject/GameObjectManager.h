@@ -543,7 +543,7 @@ namespace sw
         void markTickStagesDirty();
         /**
          * @brief 틱 레지스트리가 오브젝트 항목을 다시 지은 틱의 수입니다. 진단 · 회귀 테스트용입니다.
-         * @details 틱에 참여하는 컴포넌트(`Component::hasTickWork`)가 생기거나 없어지거나 순서가 바뀔 때만 올라야 합니다.
+         * @details 틱에 참여하는 컴포넌트(`Component::hasTickJobs`)가 생기거나 없어지거나 순서가 바뀔 때만 올라야 합니다.
          *          틱하지 않는 MeshComponent 를 붙였다 떼는 것으로는 오르지 않습니다. 다시 지을 때도 바뀐 오브젝트의 컴포넌트 몇 개만 훑습니다.
          */
         /** @brief 선행 조건 스테이지 경계에서 틱 중 트랜스폼 쓰기를 적용한 횟수(누적)입니다. 진단 · 회귀 테스트용입니다. */
@@ -553,7 +553,7 @@ namespace sw
         static vector<hashed_string> getRegisteredComponentTypeNames();
 
         /** @brief 트랜스폼이 바뀌었음을 알려 세대를 올립니다(`getTransformHierarchy().notifyDirtied()`). */
-        void notifyTransformDirtied();
+        void notifyTransformDirty();
         /** @brief 현재 트랜스폼 더티 세대 번호를 반환합니다. */
         uint64 getTransformGeneration() const;
 

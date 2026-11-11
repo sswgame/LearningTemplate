@@ -101,7 +101,7 @@ namespace sw
 
     uint32 SurvivalHorrorCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<SurvivalHorrorCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&SurvivalHorrorCatalog::_rules>( "Rules" ),
@@ -121,7 +121,7 @@ namespace sw
     bool SurvivalHorrorCatalog::loadCombine( const XMLNode& node, string_view sourceName )
     {
         SurvivalHorrorCombineDef combine;
-        if ( XMLFields::readFields( node, combine, sourceName ) == false )
+        if ( XMLFields::readProperties( node, combine, sourceName ) == false )
             return false;
         RecipeDef recipe;
         recipe._id      = combine._id;
@@ -135,7 +135,7 @@ namespace sw
     bool SurvivalHorrorCatalog::loadDialLock( const XMLNode& node, string_view sourceName )
     {
         SurvivalHorrorDialLockDef lock;
-        bool                      bValid = XMLFields::readFields( node, lock, sourceName, { "code" } );
+        bool                      bValid = XMLFields::readProperties( node, lock, sourceName, { "code" } );
         bValid                           = SurvivalHorrorCatalogInternal::readDigits( node.getAttributeText( "code" ), lock._listDigit, sourceName, lock._id ) && bValid;
         return bValid && GameDataXML::addUnique( lock, sourceName, _dialLockCatalog );
     }
@@ -143,7 +143,7 @@ namespace sw
     bool SurvivalHorrorCatalog::loadSequence( const XMLNode& node, string_view sourceName )
     {
         SurvivalHorrorSequenceDef sequence;
-        if ( XMLFields::readFields( node, sequence, sourceName ) == false )
+        if ( XMLFields::readProperties( node, sequence, sourceName ) == false )
             return false;
         if ( sequence._listStep.empty() )
         {
@@ -156,7 +156,7 @@ namespace sw
     bool SurvivalHorrorCatalog::loadDocument( const XMLNode& node, string_view sourceName )
     {
         SurvivalHorrorDocumentDef document;
-        if ( XMLFields::readFields( node, document, sourceName ) == false )
+        if ( XMLFields::readProperties( node, document, sourceName ) == false )
             return false;
         return GameDataXML::addUnique( document, sourceName, _documentCatalog );
     }
@@ -164,7 +164,7 @@ namespace sw
     bool SurvivalHorrorCatalog::loadDeduction( const XMLNode& node, string_view sourceName )
     {
         SurvivalHorrorDeductionDef deduction;
-        bool                       bValid = XMLFields::readFields( node, deduction, sourceName, { "links" } );
+        bool                       bValid = XMLFields::readProperties( node, deduction, sourceName, { "links" } );
         bValid                            = SurvivalHorrorCatalogInternal::readLinks( node.getAttributeText( "links" ), deduction._listRequiredLink, sourceName, deduction._id ) && bValid;
         return bValid && GameDataXML::addUnique( deduction, sourceName, _deductionCatalog );
     }

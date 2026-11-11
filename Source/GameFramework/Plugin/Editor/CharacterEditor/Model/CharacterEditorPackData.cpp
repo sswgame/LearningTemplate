@@ -68,7 +68,7 @@ namespace sw::editor
     {
         using Internal = CharacterEditorPackDataInternal;
         bool bOk       = true;
-        bOk            = XMLFields::readFields( root, *this, sourceName ) && bOk;
+        bOk            = XMLFields::readProperties( root, *this, sourceName ) && bOk;
         if ( root.findChild().isValid() )
         {
             SW_LOG_ERROR_ID( "CharacterEditorPackData.TakesAttributesOnly", "%#: <%#> takes attributes only", sourceName, Internal::kRootName );

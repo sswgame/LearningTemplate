@@ -157,7 +157,7 @@ namespace sw
                 return unexpected( OnlineServerRuntimeInternal::makeKitError( result.error(), _entry._name, "start" ) );
             }
             void          update( UnixMilliseconds nowMs ) { _kit->update( nowMs ); }
-            int32         getOpenWorkCount() const { return _kit->getOpenWorkCount(); }
+            int32         getOpenJobCount() const { return _kit->getOpenJobCount(); }
             void          beginShutdown( const ServerShutdownNotice& notice ) { _kit->beginShutdown( notice ); }
             const string& getKitName() const { return _entry._name; }
 
@@ -693,14 +693,14 @@ namespace sw
         return _bInitialized == SW_TRUE ? _parts->_host.getConnectionCount() : 0;
     }
 
-    int32 OnlineServerRuntime::getOpenWorkCount() const
+    int32 OnlineServerRuntime::getOpenJobCount() const
     {
         if ( _bInitialized == SW_FALSE )
             return 0;
         int32 count = 0;
         for ( const OnlineServerKitNode* pKit : _parts->_listKit )
         {
-            count += pKit->getOpenWorkCount();
+            count += pKit->getOpenJobCount();
         }
         return count;
     }

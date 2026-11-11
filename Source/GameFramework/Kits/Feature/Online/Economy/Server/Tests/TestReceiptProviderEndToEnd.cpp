@@ -299,14 +299,14 @@ SW_TEST_CASE_F( ReceiptEndToEndTest, GoogleReachesTheEndpoint )
     task._recordKey   = "rcpt.google/rec";
     task._deliveryKey = result._deliveryKey;
     SW_REQUIRE_TRUE( _registry.confirmDelivery( task, UnixMilliseconds{ ReceiptEndpointTestUtil::getNowMs() } ) );
-    vector<ReceiptDeliveryResult> listOutcome;
+    vector<ReceiptDeliveryResult> listServiceResult;
     SW_REQUIRE_TRUE( test::pollUntil( [this]()
-    { pump(); }, [this, &listOutcome]()
+    { pump(); }, [this, &listServiceResult]()
     {
-        _registry.pollDeliveryOutcomes( listOutcome );
-        return listOutcome.empty() == false;
+        _registry.pollDeliveryOutcomes( listServiceResult );
+        return listServiceResult.empty() == false;
     } ) );
-    SW_EXPECT_TRUE( listOutcome[0]._status == ReceiptDeliveryStatus::Confirmed );
+    SW_EXPECT_TRUE( listServiceResult[0]._status == ReceiptDeliveryStatus::Confirmed );
     SW_EXPECT_EQUAL( 1, _endpoint._acknowledgeCount );
 }
 

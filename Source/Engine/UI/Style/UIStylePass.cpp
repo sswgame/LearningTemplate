@@ -14,15 +14,15 @@
 
 namespace sw
 {
-    uint32 UIStylePass::makeDirtyReason( uint32 changedFields )
+    uint32 UIStylePass::makeDirtyReason( uint32 changedProperties )
     {
-        if ( changedFields == 0 )
+        if ( changedProperties == 0 )
             return WidgetDirty::kNone;
         uint32 reason = WidgetDirty::kPaint;
         for ( uint32 index = 0; index < static_cast<uint32>( UIStyleField::Count ); ++index )
         {
             const UIStyleField field = static_cast<UIStyleField>( index );
-            if ( ( changedFields & UIStyleFieldTable::makeBit( field ) ) == 0 )
+            if ( ( changedProperties & UIStyleFieldTable::makeBit( field ) ) == 0 )
                 continue;
             const uint32 flags = UIStyleFieldTable::getFlags( field );
             if ( ( flags & UIStyleFieldTable::kAffectsLayout ) != 0 )
@@ -64,18 +64,18 @@ namespace sw
         // 부모는 목표(공유하는) 스타일로 쓴다. 전환 중인 보간 값을 물려받으면 공유 키가 프레임마다 바뀐다.
         const UIComputedStyle*                  pParentStyle = widget.getParent() != nullptr ? widget.getParent()->_computedStyle.get() : nullptr;
         uint64                                  ancestorKey{ 0 };
-        const shared_ptr<const UIComputedStyle> style         = styleSet.computeStyle( widget, pParentStyle, bNavigationMode, ancestorKey );
-        const uint32                            changedFields = UIComputedStyle::computeChangedFields( widget._computedStyle.get(), style.get() );
-        const bool                              bPropagate    = style != widget._computedStyle || ancestorKey != widget._styleAncestorKey;
-        const uint32                            styleStates   = widget.computeStyleStates();
-        if ( changedFields != 0 )
-            UIStyleTransitionState::onStyleChanged( widget, widget._computedStyle.get(), style.get(), changedFields, widget._styleStates, styleStates );
+        const shared_ptr<const UIComputedStyle> style             = styleSet.computeStyle( widget, pParentStyle, bNavigationMode, ancestorKey );
+        const uint32                            changedProperties = UIComputedStyle::computeChangedProperties( widget._computedStyle.get(), style.get() );
+        const bool                              bPropagate        = style != widget._computedStyle || ancestorKey != widget._styleAncestorKey;
+        const uint32                            styleStates       = widget.computeStyleStates();
+        if ( changedProperties != 0 )
+            UIStyleTransitionState::onStyleChanged( widget, widget._computedStyle.get(), style.get(), changedProperties, widget._styleStates, styleStates );
         widget._computedStyle    = style;
         widget._styleAncestorKey = ancestorKey;
         widget._styleStates      = styleStates;
         widget._dirtyFlags &= ~WidgetDirty::kStyle;
 
-        uint32 reason = makeDirtyReason( changedFields );
+        uint32 reason = makeDirtyReason( changedProperties );
         if ( bSelfDirty )
             reason |= WidgetDirty::kPaint;
         if ( reason != WidgetDirty::kNone )

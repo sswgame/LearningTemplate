@@ -75,7 +75,7 @@ namespace sw
     {
 
         SkillTreeHeadParams head;
-        if ( XMLFields::readFields( treeNode, head, sourceName ) == false )
+        if ( XMLFields::readProperties( treeNode, head, sourceName ) == false )
             return false;
         SkillTreeDef tree;
         tree._id = head._id;
@@ -83,7 +83,7 @@ namespace sw
         {
             // 적지 않은 칸은 SkillDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 스킬을 넣지 않는 오류다(자르지 않는다).
             SkillDef skill;
-            bool     bValid = XMLFields::readFields( node, skill, sourceName, { "requires" } );
+            bool     bValid = XMLFields::readProperties( node, skill, sourceName, { "requires" } );
             if ( skill._id.empty() )
                 continue;
             const utf8* const pID = skill._id.c_str();

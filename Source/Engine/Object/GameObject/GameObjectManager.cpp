@@ -565,9 +565,9 @@ namespace sw
         return _pState->_tickScheduler.getStageTransformApplyCount();
     }
 
-    void GameObjectManager::notifyTransformDirtied()
+    void GameObjectManager::notifyTransformDirty()
     {
-        _pState->_transformHierarchy.notifyDirtied();
+        _pState->_transformHierarchy.notifyDirty();
     }
 
     uint64 GameObjectManager::getTransformGeneration() const

@@ -85,8 +85,8 @@ namespace sw
     {
         SequenceItemKind           _kind;                                                                                                                                /**< 종류입니다. 표의 순번과 같아야 합니다. */
         uint32                     _defaultColor;                                                                                                                        /**< 에디터에서 새 항목에 칠하는 색(0xAABBGGRR)입니다. */
-        uint16                     _requiredFields;                                                                                                                      /**< 비어 있으면 읽기 오류인 칸(`makeSequenceFieldBit`)입니다. */
-        uint16                     _allowedFields;                                                                                                                       /**< 적을 수 있는 칸입니다(필수 칸 포함). 그 밖의 칸이 차 있으면 읽기 오류입니다. */
+        uint16                     _requiredProperties;                                                                                                                  /**< 비어 있으면 읽기 오류인 칸(`makeSequenceFieldBit`)입니다. */
+        uint16                     _allowedProperties;                                                                                                                   /**< 적을 수 있는 칸입니다(필수 칸 포함). 그 밖의 칸이 차 있으면 읽기 오류입니다. */
         const SequenceSpanHandler* _pSpanHandler;                                                                                                                        /**< 구간에 들어갈 때 · 머무는 동안 · 나갈 때의 동작(애니메이션 · 소리 · 자막)입니다. 없으면 nullptr 입니다. */
         bool                       _bDrivesTarget; /**< 구간 동안 대상 오브젝트의 활성 상태를 정하는지 나타냅니다. */                                                    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool                       _bFiresOnCross; /**< 시작 프레임을 지날 때 이벤트로 알리는지입니다. */                                                                ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -96,9 +96,9 @@ namespace sw
         bool                       _bPlaysScenario; /**< 시작 프레임을 지날 때 `_scenario` 를 재생하는지입니다(`SequencePlayerComponent`). */                            ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /** @brief @p field 가 필수인지입니다. */
-        bool requiresField( SequenceItemField field ) const { return ( _requiredFields & makeSequenceFieldBit( field ) ) != 0; }
+        bool requiresField( SequenceItemField field ) const { return ( _requiredProperties & makeSequenceFieldBit( field ) ) != 0; }
         /** @brief @p field 를 적을 수 있는지입니다. */
-        bool allowsField( SequenceItemField field ) const { return ( _allowedFields & makeSequenceFieldBit( field ) ) != 0; }
+        bool allowsField( SequenceItemField field ) const { return ( _allowedProperties & makeSequenceFieldBit( field ) ) != 0; }
     };
 
     /**

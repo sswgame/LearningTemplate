@@ -33,14 +33,14 @@ namespace sw::editor
         const bool              bScreenSettled = AutomationEnvironmentSteps::isWindowResizeApplied() && pDockLayout != nullptr && pDockLayout->isApplyPending() == false &&
                                     EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isLayoutSettledAfter( _waitSerial );
         const bool                               bSceneSettled  = editor::getSubsystem<SceneManager>().isTransitioning() == false;
-        const bool                               bAssetsSettled = CaptureReadiness::countPendingWork( pActiveManager ) == 0;
-        const utf8* const                        pPendingWork   = AutomationStepRegistry::findFinishBlocker(); // 뒤에 끝날 일(저장 · 스크린샷 · 캡처 쓰기) — 모듈이 제 일을 등록한다
+        const bool                               bAssetsSettled = CaptureReadiness::countPendingJobs( pActiveManager ) == 0;
+        const utf8* const                        pPendingJob    = AutomationStepRegistry::findFinishBlocker(); // 뒤에 끝날 일(저장 · 스크린샷 · 캡처 쓰기) — 모듈이 제 일을 등록한다
         StringBuilder<constant::buffer::kMax256> waitingForBuilder;
         waitingForBuilder.appendFormat( "the editor to settle (screen %#, scene %#, assets %#, work %#)",
                                         bScreenSettled ? "settled" : ( "moving: " + EditorSelfTestInput::describeLastLayoutChange() ).c_str(),
-                                        bSceneSettled ? "settled" : "transitioning", bAssetsSettled ? "settled" : "pending", pPendingWork != nullptr ? pPendingWork : "none" );
+                                        bSceneSettled ? "settled" : "transitioning", bAssetsSettled ? "settled" : "pending", pPendingJob != nullptr ? pPendingJob : "none" );
         _waitingFor = string( waitingForBuilder.view() );
-        return _judge.advance( bScreenSettled, bSceneSettled && bAssetsSettled && pPendingWork == nullptr );
+        return _judge.advance( bScreenSettled, bSceneSettled && bAssetsSettled && pPendingJob == nullptr );
     }
 
     string EditorSettleWait::describeOscillation() const

@@ -460,7 +460,7 @@
 		</entry>
 		<entry key="EdButton.Discard" source="Discard">
 			<origins>
-				<item>Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp</item>
+				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdButton.Fix" source="Fix">
@@ -561,7 +561,7 @@
 		</entry>
 		<entry key="EdButton.Restore" source="Restore">
 			<origins>
-				<item>Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp</item>
+				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdButton.ResumeServer" source="Resume server">
@@ -5589,29 +5589,29 @@
 		</entry>
 		<entry key="EditorAutosave.CanRestore" source="Ready to restore">
 			<origins>
-				<item>Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp</item>
+				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAutosave.DiscardTooltip" source="Delete every copy of this scene">
 			<origins>
-				<item>Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp</item>
+				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAutosave.NothingToRecover"
 		       source="No unsaved work to recover. Copies appear here when the editor did not close normally.">
 			<origins>
-				<item>Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp</item>
+				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAutosave.RecoveryIntro"
 		       source="The last editor session did not close normally. Restore opens the newest copy of a scene with unsaved changes; the original file changes only when you save.">
 			<origins>
-				<item>Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp</item>
+				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAutosave.RestoreTooltip" source="Open the newest copy as an unsaved scene. Save to keep it">
 			<origins>
-				<item>Source/Editor/Panels/Autosave/RecoveredWorkPanel.cpp</item>
+				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorBugReport.Capture"

@@ -193,10 +193,10 @@ namespace
             sw::StateIO::writeName( outArchive, sw::hashed_string{} );
             outArchive << static_cast<uint32>( 0 );
             outArchive << static_cast<uint32>( 0 );
-            writeUnitFields( outArchive, sw::int2{ -1, -1 }, 0, 0.0f, 1.0f, 0.0f, -1, 0, 0, 0, SW_FALSE );
+            writeUnitProperties( outArchive, sw::int2{ -1, -1 }, 0, 0.0f, 1.0f, 0.0f, -1, 0, 0, 0, SW_FALSE );
         }
 
-        static void writeUnitFields( sw::Archive& outArchive, const sw::int2& cell, uint64 idPacked, float32 hp, float32 buildProgress, float32 gatherTimer, int32 owner, int32 resourceLeft, int32 cargoAmount, int32 supplyReserved, uint8 bAlive )
+        static void writeUnitProperties( sw::Archive& outArchive, const sw::int2& cell, uint64 idPacked, float32 hp, float32 buildProgress, float32 gatherTimer, int32 owner, int32 resourceLeft, int32 cargoAmount, int32 supplyReserved, uint8 bAlive )
         {
             outArchive << sw::float3{ 1.5f, 0.0f, 1.5f };
             outArchive << sw::float3{};
@@ -248,7 +248,7 @@ namespace
             {
                 sw::StateIO::writeName( written, productionID );
             }
-            writeUnitFields( written, _cell, _idPacked, _hp, _buildProgress, _gatherTimer, _owner, _resourceLeft, _cargoAmount, _supplyReserved, _bAlive );
+            writeUnitProperties( written, _cell, _idPacked, _hp, _buildProgress, _gatherTimer, _owner, _resourceLeft, _cargoAmount, _supplyReserved, _bAlive );
             if ( _bDeadSecondSlot != SW_FALSE )
                 writeDeadSlot( written );
             written << static_cast<uint32>( _listFreeSlot.size() );

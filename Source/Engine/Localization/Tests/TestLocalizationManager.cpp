@@ -166,7 +166,7 @@ SW_TEST_CASE( LocalizationManagerTest, MissingKeysAreReportedOnce )
 /**
  * @brief [LocalizationManagerTest] 표 파일의 모르는 칸은 로드 오류다 — 오타 난 칸이 조용히 버려지지 않는다
  */
-SW_TEST_CASE( LocalizationManagerTest, UnknownFieldsInTablesAreLoadErrors )
+SW_TEST_CASE( LocalizationManagerTest, UnknownPropertiesInTablesAreLoadErrors )
 {
     sw::SourceStringTable    source;
     const sw::expected<void> sourceRead = source.loadFromXMLText( R"(<SourceStringTable culture="en"><entries><entry key="a" source="A" maxLenght="3" /></entries></SourceStringTable>)", "test" );

@@ -110,7 +110,7 @@ namespace sw
     bool ElementChart::loadElement( const XMLNode& node, string_view sourceName )
     {
         ElementDeclParams element;
-        if ( XMLFields::readFields( node, element, sourceName ) == false )
+        if ( XMLFields::readProperties( node, element, sourceName ) == false )
             return false;
         addElement( element._id );
         return true;
@@ -120,7 +120,7 @@ namespace sw
     {
 
         ElementRuleParams rule; // 칸 · 배율 >= 0 은 PROPERTY 가 본다
-        if ( XMLFields::readFields( node, rule, sourceName ) == false )
+        if ( XMLFields::readProperties( node, rule, sourceName ) == false )
             return false;
         if ( hasElement( rule._attack ) == false || hasElement( rule._defend ) == false )
         {
@@ -135,7 +135,7 @@ namespace sw
     {
 
         ElementStatusChance entry; // 칸 · 확률 0..1 은 PROPERTY 가 본다
-        const bool          bEntryValid = XMLFields::readFields( node, entry, sourceName ) && hasElement( entry._element );
+        const bool          bEntryValid = XMLFields::readProperties( node, entry, sourceName ) && hasElement( entry._element );
         if ( bEntryValid == false )
         {
             SW_LOG_WARNING_ID( "ElementChart.StatusInvalidSkipped", "%#: status '%#' on '%#' is invalid - skipped", sourceName, entry._status.c_str(), entry._element.c_str() );

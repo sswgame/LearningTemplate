@@ -36,7 +36,7 @@ SW_TEST_CASE( InteractionBlockReasonTest, ReasonsComeInOrder )
 }
 
 /** @brief [InteractionBlockReasonTest] 정의의 효과 칸은 XML 속성으로 읽고, 시작 효과는 기본으로 끝에 지운다(endStartEffect) */
-SW_TEST_CASE( InteractionBlockReasonTest, EffectFieldsReadFromData )
+SW_TEST_CASE( InteractionBlockReasonTest, EffectPropertiesReadFromData )
 {
     InteractionCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<Interactions>

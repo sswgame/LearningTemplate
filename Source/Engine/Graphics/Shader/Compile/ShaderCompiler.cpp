@@ -866,14 +866,14 @@ namespace sw
 #endif // SW_PLATFORM_WINDOWS
 
 #if defined( SW_HAS_DXC_API )
-        const Internal::DxcResult outcome = Internal::compileDXC( desc, resolver->getIncludeResolver(), *input, profile, result );
-        if ( outcome == Internal::DxcResult::Compiled )
+        const Internal::DxcResult serviceResult = Internal::compileDXC( desc, resolver->getIncludeResolver(), *input, profile, result );
+        if ( serviceResult == Internal::DxcResult::Compiled )
         {
             Internal::saveToCacheIfEnabled( cachePath, result );
             reportCompiled( result );
             return result;
         }
-        if ( outcome == Internal::DxcResult::Rejected )
+        if ( serviceResult == Internal::DxcResult::Rejected )
             return result;
         // DXC 가 출력을 못 냈으면 실패다 - 예전에는 DX12 타깃을 FXC 로 다시 컴파일했지만 FXC 는 SM6 을 못 해 늘 실패했고, DXC 의 진짜 까닭을 FXC 의 글로 덮었다.
 #endif // SW_HAS_DXC_API

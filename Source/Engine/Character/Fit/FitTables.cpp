@@ -93,7 +93,7 @@ namespace sw
             if ( StringUtil::equals( pName, "Layer" ) )
             {
                 FitLayerDef layer;
-                (void)reader.readFields( child, layer ); // 칸은 FitLayerDef 의 PROPERTY — 오류는 읽개의 목록에 쌓인다
+                (void)reader.readProperties( child, layer ); // 칸은 FitLayerDef 의 PROPERTY — 오류는 읽개의 목록에 쌓인다
                 if ( layer._name.empty() )
                     continue;
                 if ( findLayer( layer._name ) != nullptr )
@@ -104,7 +104,7 @@ namespace sw
             else if ( StringUtil::equals( pName, "Region" ) )
             {
                 BodyRegionDef region;
-                (void)reader.readFields( child, region, { "bones" } );
+                (void)reader.readProperties( child, region, { "bones" } );
                 reader.readNameList( child, "bones", region._listBone ); // 이름 목록 글이라 손으로 푼다
                 const bool bHasBones = region._listBone.empty() == false;
                 const bool bHasGroup = region._group.empty() == false;
@@ -120,7 +120,7 @@ namespace sw
             else if ( StringUtil::equals( pName, "Profile" ) )
             {
                 FitProfileDef profile;
-                (void)reader.readFields( child, profile ); // 단단함 0..1 등 범위는 PROPERTY 가 본다
+                (void)reader.readProperties( child, profile ); // 단단함 0..1 등 범위는 PROPERTY 가 본다
                 if ( profile._name.empty() )
                     continue;
                 if ( findProfile( profile._name ) != nullptr )
@@ -141,7 +141,7 @@ namespace sw
         for ( const XMLNode& node : listInteractionNode )
         {
             FitInteractionDef interaction;
-            (void)reader.readFields( node, interaction, { "args" } ); // 인자(`args`)는 `이름=수` 목록 글이라 손으로 푼다
+            (void)reader.readProperties( node, interaction, { "args" } ); // 인자(`args`)는 `이름=수` 목록 글이라 손으로 푼다
             FitTablesInternal::readArguments( node, reader, interaction._listArgument );
             if ( interaction._inner.empty() == false && findProfile( interaction._inner ) == nullptr )
                 reader.addError( "Character.FitProfileUnknown", node, string( "names unknown inner profile '" ) + interaction._inner.c_str() + "'" );

@@ -400,7 +400,7 @@ namespace sw
 
     uint32 KartTrackCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 트랙을 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 트랙을 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<KartTrackCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&KartTrackCatalog::loadTrack>( "Track" ),
@@ -412,38 +412,38 @@ namespace sw
     bool KartTrackCatalog::loadTrack( const XMLNode& trackNode, string_view sourceName )
     {
         KartTrackDef def;
-        bool         bValid = XMLFields::readFields( trackNode, def, sourceName );
+        bool         bValid = XMLFields::readProperties( trackNode, def, sourceName );
         for ( XMLNode node = trackNode.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
             if ( name == "Point" )
             {
                 KartTrackPointDef point;
-                bValid = XMLFields::readFields( node, point, sourceName ) && bValid;
+                bValid = XMLFields::readProperties( node, point, sourceName ) && bValid;
                 def._listControlPoint.push_back( float3{ point._x, point._y, point._z } );
             }
             else if ( name == "Checkpoint" )
             {
                 KartCheckpointDef checkpoint;
-                bValid = XMLFields::readFields( node, checkpoint, sourceName ) && bValid;
+                bValid = XMLFields::readProperties( node, checkpoint, sourceName ) && bValid;
                 def._listCheckpoint.push_back( checkpoint._at );
             }
             else if ( name == "ItemBox" )
             {
                 KartItemBoxDef box;
-                bValid = XMLFields::readFields( node, box, sourceName ) && bValid;
+                bValid = XMLFields::readProperties( node, box, sourceName ) && bValid;
                 def._listItemBox.push_back( box );
             }
             else if ( name == "BoostPad" )
             {
                 KartBoostPadDef pad;
-                bValid = XMLFields::readFields( node, pad, sourceName ) && bValid;
+                bValid = XMLFields::readProperties( node, pad, sourceName ) && bValid;
                 def._listBoostPad.push_back( pad );
             }
             else if ( name == "Surface" )
             {
                 KartSurfaceZoneDef zone;
-                bValid = XMLFields::readFields( node, zone, sourceName ) && bValid;
+                bValid = XMLFields::readProperties( node, zone, sourceName ) && bValid;
                 def._listSurfaceZone.push_back( zone );
             }
             else

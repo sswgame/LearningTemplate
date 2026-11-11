@@ -80,7 +80,7 @@ namespace sw
         {
         }
 
-        MatchmakingOutcome mutate( bool bExists, const vector<uint8>& oldBytes, vector<uint8>& outNewBytes, bool& outbErase ) override
+        MatchmakingServiceResult mutate( bool bExists, const vector<uint8>& oldBytes, vector<uint8>& outNewBytes, bool& outbErase ) override
         {
             PartySnapshot party;
             _removedID      = kInvalidAccountID;
@@ -88,12 +88,12 @@ namespace sw
             if ( _request._operation == PartyLobbyOperation::PartyCreate )
             {
                 if ( bExists )
-                    return MatchmakingOutcome::fail( OnlineError::kBusy ); // id 가 겹쳤다. 서버 id 와 순번으로 만들므로 생길 수 없는 경우이다
+                    return MatchmakingServiceResult::fail( OnlineError::kBusy ); // id 가 겹쳤다. 서버 id 와 순번으로 만들므로 생길 수 없는 경우이다
                 party._partyID        = _request._partyID;
                 party._maxMemberCount = _pService->getMaxPartySize();
                 party._listMemberID.push_back( _request._actorID );
                 _snapshot = party;
-                return MatchmakingProtocol::encodeParty( party, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingOutcome::fail( OnlineError::kInvalidRequest );
+                return MatchmakingProtocol::encodeParty( party, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
             }
             if ( bExists == false || MatchmakingProtocol::decodeParty( oldBytes, party ) == false )
             {
@@ -134,7 +134,7 @@ namespace sw
                     if ( bKick && party.getLeaderID() != _request._actorID )
                         return MatchmakingResult::NotPartyLeader;
                     if ( bKick && leaving == _request._actorID )
-                        return MatchmakingOutcome::fail( OnlineError::kInvalidRequest ); // 파티장은 자신을 내보낼 수 없다. 떠나기를 써야 한다
+                        return MatchmakingServiceResult::fail( OnlineError::kInvalidRequest ); // 파티장은 자신을 내보낼 수 없다. 떠나기를 써야 한다
                     if ( party.hasMember( leaving ) == false )
                         return MatchmakingResult::NotInParty;
                     for ( size_t index = 0; index < party._listMemberID.size(); ++index )
@@ -158,14 +158,14 @@ namespace sw
                 }
                 default:
                 {
-                    return MatchmakingOutcome::fail( OnlineError::kInvalidRequest );
+                    return MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
                 }
             }
             _snapshot = party;
-            return MatchmakingProtocol::encodeParty( party, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingOutcome::fail( OnlineError::kInvalidRequest );
+            return MatchmakingProtocol::encodeParty( party, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
         }
 
-        void onFinished( MatchmakingOutcome result, const vector<uint8>& finalBytes ) override
+        void onFinished( MatchmakingServiceResult result, const vector<uint8>& finalBytes ) override
         {
             PartySnapshot party = _snapshot;
             if ( result == MatchmakingResult::Ok && finalBytes.empty() == false )
@@ -198,7 +198,7 @@ namespace sw
         {
         }
 
-        MatchmakingOutcome mutate( bool bExists, const vector<uint8>& oldBytes, vector<uint8>& outNewBytes, bool& outbErase ) override
+        MatchmakingServiceResult mutate( bool bExists, const vector<uint8>& oldBytes, vector<uint8>& outNewBytes, bool& outbErase ) override
         {
             LobbySnapshot lobby;
             _removedID = kInvalidAccountID;
@@ -206,14 +206,14 @@ namespace sw
             if ( _request._operation == PartyLobbyOperation::LobbyCreate )
             {
                 if ( bExists )
-                    return MatchmakingOutcome::fail( OnlineError::kBusy );
+                    return MatchmakingServiceResult::fail( OnlineError::kBusy );
                 lobby          = _request._lobby;
                 lobby._lobbyID = _request._lobbyID;
                 lobby._state   = LobbyState::Open;
                 lobby._listMember.clear();
                 lobby._listMember.push_back( LobbyMember{ _request._actorID, 0, SW_FALSE } );
                 _snapshot = lobby;
-                return MatchmakingProtocol::encodeLobby( lobby, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingOutcome::fail( OnlineError::kInvalidRequest );
+                return MatchmakingProtocol::encodeLobby( lobby, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
             }
             if ( bExists == false || MatchmakingProtocol::decodeLobby( oldBytes, lobby ) == false )
             {
@@ -232,7 +232,7 @@ namespace sw
                         return MatchmakingResult::Ok;
                     }
                     if ( lobby._state != LobbyState::Open )
-                        return MatchmakingOutcome::fail( OnlineError::kInvalidRequest );
+                        return MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
                     if ( static_cast<int32>( lobby._listMember.size() ) >= lobby._maxMemberCount )
                         return MatchmakingResult::LobbyFull;
                     lobby._listMember.push_back( LobbyMember{ _request._actorID, PartyLobbyServiceInternal::findSmallerTeam( lobby ), SW_FALSE } );
@@ -277,7 +277,7 @@ namespace sw
                     if ( lobby.getOwnerID() != _request._actorID )
                         return MatchmakingResult::NotLobbyOwner;
                     if ( lobby._state != LobbyState::Open )
-                        return MatchmakingOutcome::fail( OnlineError::kInvalidRequest );
+                        return MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
                     if ( lobby.isEveryoneReady() == false )
                         return MatchmakingResult::LobbyNotReady;
                     lobby._state = LobbyState::Starting;
@@ -290,14 +290,14 @@ namespace sw
                 }
                 default:
                 {
-                    return MatchmakingOutcome::fail( OnlineError::kInvalidRequest );
+                    return MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
                 }
             }
             _snapshot = lobby;
-            return MatchmakingProtocol::encodeLobby( lobby, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingOutcome::fail( OnlineError::kInvalidRequest );
+            return MatchmakingProtocol::encodeLobby( lobby, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
         }
 
-        void onFinished( MatchmakingOutcome result, const vector<uint8>& finalBytes ) override
+        void onFinished( MatchmakingServiceResult result, const vector<uint8>& finalBytes ) override
         {
             LobbySnapshot lobby = _snapshot;
             if ( result == MatchmakingResult::Ok && finalBytes.empty() == false )
@@ -431,7 +431,7 @@ namespace sw
         request._requestTag = requestTag;
         if ( targetID == kInvalidAccountID || targetID == leaderID )
         {
-            completeParty( request, MatchmakingOutcome::fail( OnlineError::kInvalidRequest ), PartySnapshot{} );
+            completeParty( request, MatchmakingServiceResult::fail( OnlineError::kInvalidRequest ), PartySnapshot{} );
             return;
         }
         submitStep( EphemeralRequest::makeGet( makeAccountPartyKey( leaderID ) ), StepKind::IndexRead, request );
@@ -485,7 +485,7 @@ namespace sw
         if ( _pRouter == nullptr )
         {
             if ( onFound.isBound() )
-                onFound( lookupTag, MatchmakingOutcome::fail( OnlineError::kUnavailable ), PartySnapshot{} );
+                onFound( lookupTag, MatchmakingServiceResult::fail( OnlineError::kUnavailable ), PartySnapshot{} );
             return;
         }
         submitStep( EphemeralRequest::makeGet( makeAccountPartyKey( accountID ) ), StepKind::IndexRead, request );
@@ -503,7 +503,7 @@ namespace sw
         request._requestTag       = requestTag;
         if ( PartyLobbyServiceInternal::isValidLobbyRequest( lobbyRequest ) == false )
         {
-            completeLobby( request, MatchmakingOutcome::fail( OnlineError::kInvalidRequest ), LobbySnapshot{} );
+            completeLobby( request, MatchmakingServiceResult::fail( OnlineError::kInvalidRequest ), LobbySnapshot{} );
             return;
         }
         startLobbyMutation( request );
@@ -605,7 +605,7 @@ namespace sw
                 if ( reply._result == EphemeralResult::Conflict )
                     completeParty( step._request, MatchmakingResult::AlreadyInParty, PartySnapshot{} );
                 else if ( reply._result != EphemeralResult::Ok )
-                    completeParty( step._request, MatchmakingOutcome::fail( OnlineError::kUnavailable ), PartySnapshot{} );
+                    completeParty( step._request, MatchmakingServiceResult::fail( OnlineError::kUnavailable ), PartySnapshot{} );
                 else
                     startPartyMutation( step._request );
                 break;
@@ -619,7 +619,7 @@ namespace sw
             {
                 if ( bUnavailable )
                 {
-                    completeParty( step._request, MatchmakingOutcome::fail( OnlineError::kUnavailable ), PartySnapshot{} );
+                    completeParty( step._request, MatchmakingServiceResult::fail( OnlineError::kUnavailable ), PartySnapshot{} );
                     break;
                 }
                 if ( reply._result != EphemeralResult::Ok )
@@ -634,11 +634,11 @@ namespace sw
             }
             case StepKind::PartyRead:
             {
-                PartySnapshot      party;
-                MatchmakingOutcome result = MatchmakingResult::Ok;
+                PartySnapshot            party;
+                MatchmakingServiceResult result = MatchmakingResult::Ok;
                 if ( bUnavailable )
                 {
-                    result = MatchmakingOutcome::fail( OnlineError::kUnavailable );
+                    result = MatchmakingServiceResult::fail( OnlineError::kUnavailable );
                 }
                 else
                 {
@@ -655,7 +655,7 @@ namespace sw
             {
                 if ( reply._result != EphemeralResult::Ok && reply._result != EphemeralResult::NotFound )
                 {
-                    completeLobby( step._request, MatchmakingOutcome::fail( OnlineError::kUnavailable ), LobbySnapshot{} );
+                    completeLobby( step._request, MatchmakingServiceResult::fail( OnlineError::kUnavailable ), LobbySnapshot{} );
                     break;
                 }
                 if ( reply._listMember.empty() )
@@ -695,13 +695,13 @@ namespace sw
 
     void PartyLobbyService::handleIndexRead( const Request& request, const EphemeralReply& reply )
     {
-        const bool         bFind   = request._operation == PartyLobbyOperation::PartyFind;
-        uint64             partyID = 0;
-        MatchmakingOutcome result  = MatchmakingResult::Ok;
+        const bool               bFind   = request._operation == PartyLobbyOperation::PartyFind;
+        uint64                   partyID = 0;
+        MatchmakingServiceResult result  = MatchmakingResult::Ok;
         if ( reply._result == EphemeralResult::NotFound )
             result = MatchmakingResult::NotInParty;
         else if ( reply._result != EphemeralResult::Ok )
-            result = MatchmakingOutcome::fail( OnlineError::kUnavailable );
+            result = MatchmakingServiceResult::fail( OnlineError::kUnavailable );
         else if ( MatchmakingProtocol::decodeID( reply._value, partyID ) == false )
             result = MatchmakingResult::NotInParty;
         if ( result != MatchmakingResult::Ok )
@@ -760,7 +760,7 @@ namespace sw
         _completionBuffer.push( std::move( completion ) );
     }
 
-    void PartyLobbyService::finishParty( const Request& request, MatchmakingOutcome result, const PartySnapshot& party, AccountID removedID, uint64 brokenTicketID )
+    void PartyLobbyService::finishParty( const Request& request, MatchmakingServiceResult result, const PartySnapshot& party, AccountID removedID, uint64 brokenTicketID )
     {
         const vector<uint8> indexValue = MatchmakingProtocol::encodeID( request._partyID );
         switch ( request._operation )
@@ -830,7 +830,7 @@ namespace sw
         completeParty( request, result, party );
     }
 
-    void PartyLobbyService::finishLobby( const Request& request, MatchmakingOutcome result, const LobbySnapshot& lobby, AccountID removedID, bool bErased )
+    void PartyLobbyService::finishLobby( const Request& request, MatchmakingServiceResult result, const LobbySnapshot& lobby, AccountID removedID, bool bErased )
     {
         if ( result == MatchmakingResult::Ok )
         {
@@ -934,7 +934,7 @@ namespace sw
         _notificationBuffer.push( std::move( removed ) );
     }
 
-    void PartyLobbyService::completeParty( const Request& request, MatchmakingOutcome result, const PartySnapshot& party )
+    void PartyLobbyService::completeParty( const Request& request, MatchmakingServiceResult result, const PartySnapshot& party )
     {
         PartyLobbyCompletion completion;
         completion._operation  = request._operation;
@@ -945,7 +945,7 @@ namespace sw
         _completionBuffer.push( std::move( completion ) );
     }
 
-    void PartyLobbyService::completeLobby( const Request& request, MatchmakingOutcome result, const LobbySnapshot& lobby )
+    void PartyLobbyService::completeLobby( const Request& request, MatchmakingServiceResult result, const LobbySnapshot& lobby )
     {
         PartyLobbyCompletion completion;
         completion._operation  = request._operation;

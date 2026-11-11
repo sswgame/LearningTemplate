@@ -93,9 +93,9 @@ namespace sw
         /** @brief 판정입니다 — 한 축이라도 상한을 넘으면 `Fail`, 한 축이라도 상한 × @p nearLimitRatio 를 넘으면 `PassNearLimit`, 아니면 `Pass`. */
         [[nodiscard]] static GoldenResult judge( const AutomationImageDifference& difference, const AutomationGoldenLimits& limits, float64 nearLimitRatio );
         /** @brief 판정 뒤 할 일입니다. 기록 모드(@p bUpdateGolden)는 `Pass` 가 아닌 모든 골든을 쓴다 — 근접도 쓴다. */
-        [[nodiscard]] static GoldenAction decide( bool bHasGolden, bool bCompared, GoldenResult verdict, bool bUpdateGolden );
+        [[nodiscard]] static GoldenAction decide( bool bHasGolden, bool bCompared, GoldenResult result, bool bUpdateGolden );
         /** @brief 메타의 `_reason` 글입니다(`decide` 가 `Write` 인 까닭). */
-        [[nodiscard]] static const utf8* describeWriteReason( bool bHasGolden, bool bCompared, GoldenResult verdict );
+        [[nodiscard]] static const utf8* describeWriteReason( bool bHasGolden, bool bCompared, GoldenResult result );
 
         /** @brief 백엔드 열거값(`RHI.Backend` 감시 값)의 골든 꼬리 — 쿠킹 표의 명령줄 이름(`dx12` · `wgpu` …)입니다. 표 밖이면 없음. */
         [[nodiscard]] static optional<string_view> findBackendTag( uint32 backendIndex );

@@ -157,7 +157,7 @@ namespace sw
         /** @brief 지금 스레드(패킷을 실행하는 스레드)에서 명령 하나를 실행합니다. 패킷처럼 컨텍스트를 잡고 끝나면 놓습니다. */
         [[nodiscard]] bool runCommand( const RenderCommandDelegate& command );
         /** @brief 실행 스레드가 잡은 컨텍스트를 놓습니다(패킷 · 명령 하나가 끝날 때). */
-        void releaseContextAfterWork();
+        void releaseContextAfterJob();
         /**
          * @brief 씬 렌더부터 present 훅, Present 까지의 프레임 본문입니다.
          * @details 남은 본문은 프레임 단계의 순서(컨텍스트 → beginFrame → 게임 뷰 → 미리보기 → 백버퍼 → 훅 → Present → 촬영)가 곧 의미라 더 나누지 않는다.

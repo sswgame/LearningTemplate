@@ -138,7 +138,7 @@ namespace sw
 
         // 속성은 리플렉션 필수 칸이다 — 빠진 칸(XMLFields.RequiredFieldMissing) · 숫자가 아닌 글(XMLFields.ValueUnreadable) · 모르는 속성을 이름과 함께 알린다.
         ModManifestRootDef rootDef;
-        if ( XMLFields::readFields( root, rootDef, sourceName ) == false )
+        if ( XMLFields::readProperties( root, rootDef, sourceName ) == false )
             return false;
         ModManifest manifest;
         if ( Internal::checkID( rootDef._id, kRootElement, sourceName ) == false || Internal::parseVersion( rootDef._version, "version", kRootElement, sourceName, manifest._version ) == false )
@@ -180,7 +180,7 @@ namespace sw
     {
         using Internal = ModManifestInternal;
         ModDependencyDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false || Internal::checkID( def._id, "Dependency", sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false || Internal::checkID( def._id, "Dependency", sourceName ) == false )
             return false;
         ModDependency dependency;
         if ( Internal::parseVersion( def._minVersion, "minVersion", "Dependency", sourceName, dependency._minVersion ) == false )
@@ -199,7 +199,7 @@ namespace sw
     bool ModManifest::readConflict( const XMLNode& node, string_view sourceName )
     {
         ModConflictDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false || ModManifestInternal::checkID( def._id, "Conflict", sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false || ModManifestInternal::checkID( def._id, "Conflict", sourceName ) == false )
             return false;
         string conflictID = def._id;
         if ( conflictID == _id || VectorUtil::contains( _listConflict, conflictID ) )
@@ -214,7 +214,7 @@ namespace sw
     bool ModManifest::readOverride( const XMLNode& node, string_view sourceName )
     {
         ModPathDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false || ModManifestInternal::checkOverridePath( def._path, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false || ModManifestInternal::checkOverridePath( def._path, sourceName ) == false )
             return false;
         const string_view path = def._path;
         if ( VectorUtil::contains( _listOverride, string{ path } ) || VectorUtil::contains( _listLayer, string{ path } ) )
@@ -230,7 +230,7 @@ namespace sw
     {
         // 층은 덮어쓰기와 같은 경로 규칙이다(정규형 · 기본 리소스만) — 한 리소스를 통째로 바꾸면서 그 위에 차이를 얹는 것은 뜻이 없어 겹치면 거절한다.
         ModPathDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false || ModManifestInternal::checkOverridePath( def._path, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false || ModManifestInternal::checkOverridePath( def._path, sourceName ) == false )
             return false;
         const string_view path = def._path;
         if ( VectorUtil::contains( _listOverride, string{ path } ) || VectorUtil::contains( _listLayer, string{ path } ) )

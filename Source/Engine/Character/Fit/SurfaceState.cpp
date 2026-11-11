@@ -59,7 +59,7 @@ namespace sw
             }
             // 칸 · 범위(감쇠 >= 0, 상한 > 0, 마스크 해상도 0..4096)는 SurfaceChannelDef 의 PROPERTY 가 정본이다.
             SurfaceChannelDef channel;
-            (void)reader.readFields( child, channel );
+            (void)reader.readProperties( child, channel );
             if ( channel._name.empty() )
                 continue;
             if ( findChannelIndex( channel._name ).has_value() )

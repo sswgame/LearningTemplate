@@ -143,7 +143,7 @@ namespace sw
 
     private:
         /** @brief 생성 표(`kGeneratedFile`)의 칸 이름을 더합니다. 없거나 꼴이 틀리면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool loadGeneratedFields( string_view projectRoot );
+        [[nodiscard]] bool loadGeneratedProperties( string_view projectRoot );
         bool               isImportedFromSource( string_view assetID, const AssetIDSet& assets ) const;
         void               appendTokens( string_view text, size_t valueStart, size_t valueEnd, string_view field, const vector<size_t>& listLineStart,
                                          vector<AssetReference>& outListReference ) const;

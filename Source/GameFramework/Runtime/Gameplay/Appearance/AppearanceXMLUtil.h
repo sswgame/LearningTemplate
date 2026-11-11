@@ -28,18 +28,18 @@ namespace sw
     struct SW_GF_API AppearanceXMLUtil
     {
         /**
-         * @brief 원소 @p node 의 속성을 리플렉션 칸 구조체 하나로 읽습니다(`XMLFields::readFields`). 오류(모르는 속성 · 필수 · 값 · 범위)는 @p report 에 쌓인다.
-         * @details 외형 카탈로그는 오류를 모았다가 로드 끝에 한꺼번에 낸다 — 캐릭터 데이터 읽개(`CharacterDataReader::readFields`)와 같은 길이다.
+         * @brief 원소 @p node 의 속성을 리플렉션 칸 구조체 하나로 읽습니다(`XMLFields::readProperties`). 오류(모르는 속성 · 필수 · 값 · 범위)는 @p report 에 쌓인다.
+         * @details 외형 카탈로그는 오류를 모았다가 로드 끝에 한꺼번에 낸다 — 캐릭터 데이터 읽개(`CharacterDataReader::readProperties`)와 같은 길이다.
          *          @p listHandRead 의 속성(이름 목록 · 배치처럼 칸 하나로 담지 않는 값)은 부르는 쪽이 따로 읽는다.
          * @return 오류가 하나도 없으면 true 입니다.
          */
-        static bool readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, AppearanceLoadReport& report, string_view sourceName,
-                                std::initializer_list<string_view> listHandRead );
-        /** @brief `readFields` 의 타입 지정 버전입니다(`TDef::StaticType()`). */
+        static bool readProperties( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, AppearanceLoadReport& report, string_view sourceName,
+                                    std::initializer_list<string_view> listHandRead );
+        /** @brief `readProperties` 의 타입 지정 버전입니다(`TDef::StaticType()`). */
         template <typename TDef>
-        static bool readFields( const XMLNode& node, TDef& outDef, AppearanceLoadReport& report, string_view sourceName, std::initializer_list<string_view> listHandRead = {} )
+        static bool readProperties( const XMLNode& node, TDef& outDef, AppearanceLoadReport& report, string_view sourceName, std::initializer_list<string_view> listHandRead = {} )
         {
-            return readFields( node, &outDef, *TDef::StaticType(), report, sourceName, listHandRead );
+            return readProperties( node, &outDef, *TDef::StaticType(), report, sourceName, listHandRead );
         }
         /** @brief 테이블에 없는 속성마다 오류를 추가합니다. 모두 아는 속성이면 true 입니다. */
         template <size_t Count>

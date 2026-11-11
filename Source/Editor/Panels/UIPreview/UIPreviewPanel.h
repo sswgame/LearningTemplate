@@ -111,7 +111,7 @@ namespace sw::editor
          */
         void drawLayoutHandle( UIScreen& screen, const float2& drawSize, const float2& origin );
         /**
-         * @brief 인스펙터 위에 고른 위젯의 Slot 필드를 그립니다 — 부모 패널이 읽는 필드만(`UIPreviewLogic::findSlotFields`) 보입니다(상자 · 겹침 · 격자 · 흐름 · 캔버스 …).
+         * @brief 인스펙터 위에 고른 위젯의 Slot 필드를 그립니다 — 부모 패널이 읽는 필드만(`UIPreviewLogic::findSlotProperties`) 보입니다(상자 · 겹침 · 격자 · 흐름 · 캔버스 …).
          * @details 되돌리기는 슬롯 손잡이와 같다 — 끄는 동안은 슬롯을 바로 고치고, 손을 놓으면 `_slot` 텍스트 전후 한 쌍을 `commitSlotEdit` 로 남긴다.
          */
         void drawSlotSection( Widget& widget );

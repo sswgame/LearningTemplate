@@ -280,7 +280,7 @@ namespace sw
         };
 
         void stepFixed();
-        void finishStaffWork();
+        void finishStaffJob();
         void updatePatience();
         void spawnArrivals();
         void seatCustomers();

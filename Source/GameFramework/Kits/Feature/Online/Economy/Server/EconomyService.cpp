@@ -49,7 +49,7 @@ namespace sw
         {
             ReceiptRefundNotification    _notice{};
             vector<EconomyBalanceChange> _listChange{};
-            EconomyOutcome               _outcome{ EconomyOutcome::fail( OnlineError::kUnavailable ) };
+            EconomyServiceResult         _serviceResult{ EconomyServiceResult::fail( OnlineError::kUnavailable ) };
         };
 
         struct EconomyDevOnlineInternal
@@ -141,7 +141,7 @@ namespace sw
     {
         // 영수증 검증 완료도 호출을 끝내므로 단계마다 같이 회수한다.
         _store.flushUntilIdle( [this]()
-        { return getOpenWorkCount() == 0; }, [this]()
+        { return getOpenJobCount() == 0; }, [this]()
         { pollReceipts(); } );
         _calls.abandonAll();
         _localCalls.clear();
@@ -239,17 +239,17 @@ namespace sw
     {
         if ( _settings._pReceiptRegistry == nullptr || _settings._pReceiptRegistry->usesDeliveryConfirmation() == false )
             return;
-        vector<ReceiptDeliveryResult> listOutcome;
-        _settings._pReceiptRegistry->pollDeliveryOutcomes( listOutcome );
-        for ( ReceiptDeliveryResult& outcome : listOutcome )
+        vector<ReceiptDeliveryResult> listServiceResult;
+        _settings._pReceiptRegistry->pollDeliveryOutcomes( listServiceResult );
+        for ( ReceiptDeliveryResult& serviceResult : listServiceResult )
         {
-            _uniqueSetDeliveryInFlight.erase( outcome._recordKey );
-            if ( outcome._status == ReceiptDeliveryStatus::Retry )
+            _uniqueSetDeliveryInFlight.erase( serviceResult._recordKey );
+            if ( serviceResult._status == ReceiptDeliveryStatus::Retry )
                 continue; // 레코드가 남아 다음 훑기가 다시 보낸다
-            _uniqueSetDeliveryAlarmed.erase( outcome._recordKey );
-            _store.submit( [recordKey = outcome._recordKey]( IServiceStoreConnection& connection )
+            _uniqueSetDeliveryAlarmed.erase( serviceResult._recordKey );
+            _store.submit( [recordKey = serviceResult._recordKey]( IServiceStoreConnection& connection )
             { return EconomyStoreLogic::eraseDelivery( connection, recordKey ); },
-                           [this, recordKey = outcome._recordKey]( ServiceStoreResult result, ServiceStoreCompletion completion )
+                           [this, recordKey = serviceResult._recordKey]( ServiceStoreResult result, ServiceStoreCompletion completion )
             { completeDeliveryErase( recordKey, result, completion ); } );
         }
         if ( _deliveryJob.tryStart( nowMs ) == false )
@@ -365,13 +365,13 @@ namespace sw
     {
         const int32 methodIndex = EconomyMethod::toIndex( call._method );
 
-        EconomyOutcome refused{ EconomyResult::Ok };
+        EconomyServiceResult refused{ EconomyResult::Ok };
         if ( methodIndex < 0 || _store.hasStore() == false )
-            refused = EconomyOutcome::fail( OnlineError::kInvalidRequest );
+            refused = EconomyServiceResult::fail( OnlineError::kInvalidRequest );
         else if ( call._accountID == kInvalidAccountID )
-            refused = EconomyOutcome::fail( OnlineError::kUnauthenticated ); // 호스트가 이미 막지만 submitCall 경로도 같은 규칙을 따른다
+            refused = EconomyServiceResult::fail( OnlineError::kUnauthenticated ); // 호스트가 이미 막지만 submitCall 경로도 같은 규칙을 따른다
         else if ( call._method == EconomyMethod::Purchase::kID && call._idempotencyKey.isValid() == false )
-            refused = EconomyOutcome::fail( OnlineError::kInvalidRequest ); // 상태를 바꾸는 요청에는 멱등 키가 필수이다
+            refused = EconomyServiceResult::fail( OnlineError::kInvalidRequest ); // 상태를 바꾸는 요청에는 멱등 키가 필수이다
         if ( refused != EconomyResult::Ok )
         {
             failCallByID( callID, refused._errorCode );
@@ -386,7 +386,7 @@ namespace sw
             {
                 EconomyRedeemReply invalid;
                 invalid._result = EconomyResult::ReceiptInvalid;
-                completeCall( callID, EconomyOutcome{ EconomyResult::ReceiptInvalid }, invalid );
+                completeCall( callID, EconomyServiceResult{ EconomyResult::ReceiptInvalid }, invalid );
                 return;
             }
             _mapTicketToCall[ticket] = EconomyReceiptCall{ callID, call._accountID }; // 지급 작업은 검증 결과가 오면 맡긴다(pollReceipts)
@@ -447,11 +447,11 @@ namespace sw
     {
         _store.submit( [run = std::forward<TRun>( run )]( IServiceStoreConnection& connection )
         {
-            ServiceStoreCallResult<EconomyOutcome, TReply> done;
-            done._outcome = run( connection, done._reply );
+            ServiceStoreCallResult<EconomyServiceResult, TReply> done;
+            done._serviceResult = run( connection, done._reply );
             return done;
-        }, [this, callID]( const ServiceStoreCallResult<EconomyOutcome, TReply>& done )
-        { completeCall( callID, done._outcome, done._reply ); } );
+        }, [this, callID]( const ServiceStoreCallResult<EconomyServiceResult, TReply>& done )
+        { completeCall( callID, done._serviceResult, done._reply ); } );
     }
 
     void EconomyService::pollReceipts()
@@ -478,14 +478,14 @@ namespace sw
             ReceiptValidationResult receipt     = redeem._receipt; // 지급이 커밋되면 완료가 스토어에 알린다
             _store.submit( [pCurrencies, pOffers, redeem = std::move( redeem )]( IServiceStoreConnection& connection )
             {
-                ServiceStoreCallResult<EconomyOutcome, EconomyRedeemReply> done;
-                done._outcome = EconomyStoreLogic::redeemReceipt( connection, *pCurrencies, *pOffers, redeem, done._reply );
+                ServiceStoreCallResult<EconomyServiceResult, EconomyRedeemReply> done;
+                done._serviceResult = EconomyStoreLogic::redeemReceipt( connection, *pCurrencies, *pOffers, redeem, done._reply );
                 return done;
-            }, [this, callID = receiptCall._callID, receipt = std::move( receipt )]( const ServiceStoreCallResult<EconomyOutcome, EconomyRedeemReply>& done )
+            }, [this, callID = receiptCall._callID, receipt = std::move( receipt )]( const ServiceStoreCallResult<EconomyServiceResult, EconomyRedeemReply>& done )
             {
-                if ( done._outcome == EconomyResult::Ok )
+                if ( done._serviceResult == EconomyResult::Ok )
                     confirmDelivery( receipt ); // 지급이 커밋된 뒤다
-                completeCall( callID, done._outcome, done._reply );
+                completeCall( callID, done._serviceResult, done._reply );
             } );
         }
     }
@@ -593,15 +593,15 @@ namespace sw
             _store.submit( [pCurrencies, nowMs, notice = std::move( notice )]( IServiceStoreConnection& connection )
             {
                 EconomyRefundResult done;
-                done._notice  = notice;
-                done._outcome = EconomyStoreLogic::revokeRefund( connection, *pCurrencies, notice, nowMs, done._listChange );
+                done._notice        = notice;
+                done._serviceResult = EconomyStoreLogic::revokeRefund( connection, *pCurrencies, notice, nowMs, done._listChange );
                 return done;
             }, [this]( const EconomyRefundResult& done, ServiceStoreCompletion completion )
-            { completeRefund( done._notice, done._outcome, done._listChange, completion ); } );
+            { completeRefund( done._notice, done._serviceResult, done._listChange, completion ); } );
         }
     }
 
-    void EconomyService::completeRefund( const ReceiptRefundNotification& notice, EconomyOutcome result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion )
+    void EconomyService::completeRefund( const ReceiptRefundNotification& notice, EconomyServiceResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion )
     {
         for ( const EconomyBalanceChange& change : listChange )
         {

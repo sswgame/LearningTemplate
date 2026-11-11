@@ -289,11 +289,11 @@ namespace sw
         return false;
     }
 
-    ServerDirectoryOutcome ServerDirectoryService::assignServer( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs, ServerAssignment& outAssignment )
+    ServerDirectoryServiceResult ServerDirectoryService::assignServer( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs, ServerAssignment& outAssignment )
     {
         outAssignment = ServerAssignment{};
         if ( findReader( request._kind ) == nullptr || ServerRecord::isValidName( request._region ) == false )
-            return ServerDirectoryOutcome::fail( ServerDirectoryError::kUnknownKind );
+            return ServerDirectoryServiceResult::fail( ServerDirectoryError::kUnknownKind );
         outAssignment = pickAssignment( accountID, request, nowMs );
         return outAssignment._result;
     }
@@ -337,11 +337,11 @@ namespace sw
         return assignment;
     }
 
-    ServerDirectoryOutcome ServerDirectoryService::listServers( string_view kind, UnixMilliseconds nowMs, vector<ServerListEntry>& outListEntry ) const
+    ServerDirectoryServiceResult ServerDirectoryService::listServers( string_view kind, UnixMilliseconds nowMs, vector<ServerListEntry>& outListEntry ) const
     {
         const ServerRegistryReader* pReader = findReader( kind );
         if ( pReader == nullptr )
-            return ServerDirectoryOutcome::fail( ServerDirectoryError::kUnknownKind );
+            return ServerDirectoryServiceResult::fail( ServerDirectoryError::kUnknownKind );
         for ( const ServerStatus& status : pReader->getSnapshot() )
         {
             const bool bStale      = nowMs.count() - status._heartbeatMs > _settings._staleMs;
@@ -376,23 +376,23 @@ namespace sw
         using Internal = ServerDirectoryServiceInternal;
         if ( Internal::isValidWindow( window ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } );
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        ServiceAuditedWrite work;
-        if ( ServerDirectoryProtocol::encodeMaintenance( window, work._bytes ) == false )
+        ServiceAuditedWrite pendingJob;
+        if ( ServerDirectoryProtocol::encodeMaintenance( window, pendingJob._bytes ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
-        work._table               = Internal::getMaintenanceTable();
-        work._key                 = window._scope;
-        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
-        work._auditEntry._action  = "sd.maintenance.set";
-        work._auditEntry._subject = "sd/" + window._scope;
-        work._auditEntry._memo    = string( memo );
-        work._auditEntry._timeMs  = nowMs.count();
-        submitWrite( std::move( work ), requestTag );
+        pendingJob._table               = Internal::getMaintenanceTable();
+        pendingJob._key                 = window._scope;
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._auditEntry._action  = "sd.maintenance.set";
+        pendingJob._auditEntry._subject = "sd/" + window._scope;
+        pendingJob._auditEntry._memo    = string( memo );
+        pendingJob._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( pendingJob ), requestTag );
     }
 
     void ServerDirectoryService::clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
@@ -400,18 +400,18 @@ namespace sw
         using Internal = ServerDirectoryServiceInternal;
         if ( scope != MaintenanceWindow::kScopeAll && ServerRecord::isValidName( scope ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } );
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        ServiceAuditedWrite work;
-        work._table               = Internal::getMaintenanceTable();
-        work._key                 = string( scope );
-        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
-        work._auditEntry._action  = "sd.maintenance.clear";
-        work._auditEntry._subject = "sd/" + string( scope );
-        work._auditEntry._memo    = string( memo );
-        work._auditEntry._timeMs  = nowMs.count();
-        submitWrite( std::move( work ), requestTag );
+        ServiceAuditedWrite pendingJob;
+        pendingJob._table               = Internal::getMaintenanceTable();
+        pendingJob._key                 = string( scope );
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._auditEntry._action  = "sd.maintenance.clear";
+        pendingJob._auditEntry._subject = "sd/" + string( scope );
+        pendingJob._auditEntry._memo    = string( memo );
+        pendingJob._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( pendingJob ), requestTag );
     }
 
     void ServerDirectoryService::postNotice( const ServiceAnnouncement& notice, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
@@ -419,36 +419,36 @@ namespace sw
         using Internal = ServerDirectoryServiceInternal;
         if ( Internal::isValidNotice( notice ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } );
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        ServiceAuditedWrite work;
-        if ( ServerDirectoryProtocol::encodeNotice( notice, work._bytes ) == false )
+        ServiceAuditedWrite pendingJob;
+        if ( ServerDirectoryProtocol::encodeNotice( notice, pendingJob._bytes ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
-        work._table               = Internal::getNoticeTable();
-        work._key                 = ServiceKeyUtil::makeHex64( notice._noticeID );
-        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
-        work._auditEntry._action  = "sd.notice.post";
-        work._auditEntry._subject = "sd/notice/" + work._key;
-        work._auditEntry._after   = notice._text;
-        work._auditEntry._timeMs  = nowMs.count();
-        submitWrite( std::move( work ), requestTag );
+        pendingJob._table               = Internal::getNoticeTable();
+        pendingJob._key                 = ServiceKeyUtil::makeHex64( notice._noticeID );
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._auditEntry._action  = "sd.notice.post";
+        pendingJob._auditEntry._subject = "sd/notice/" + pendingJob._key;
+        pendingJob._auditEntry._after   = notice._text;
+        pendingJob._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( pendingJob ), requestTag );
     }
 
     void ServerDirectoryService::removeNotice( uint64 noticeID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         using Internal = ServerDirectoryServiceInternal;
-        ServiceAuditedWrite work;
-        work._table               = Internal::getNoticeTable();
-        work._key                 = ServiceKeyUtil::makeHex64( noticeID );
-        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
-        work._auditEntry._action  = "sd.notice.remove";
-        work._auditEntry._subject = "sd/notice/" + work._key;
-        work._auditEntry._timeMs  = nowMs.count();
-        submitWrite( std::move( work ), requestTag );
+        ServiceAuditedWrite pendingJob;
+        pendingJob._table               = Internal::getNoticeTable();
+        pendingJob._key                 = ServiceKeyUtil::makeHex64( noticeID );
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._auditEntry._action  = "sd.notice.remove";
+        pendingJob._auditEntry._subject = "sd/notice/" + pendingJob._key;
+        pendingJob._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( pendingJob ), requestTag );
     }
 
     void ServerDirectoryService::setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
@@ -491,20 +491,20 @@ namespace sw
         }
     }
 
-    void ServerDirectoryService::submitWrite( ServiceAuditedWrite&& work, uint64 requestTag )
+    void ServerDirectoryService::submitWrite( ServiceAuditedWrite&& pendingJob, uint64 requestTag )
     {
-        _store.submit( [work = std::move( work )]( IServiceStoreConnection& connection )
-        { return work.commit( connection ); },
+        _store.submit( [pendingJob = std::move( pendingJob )]( IServiceStoreConnection& connection )
+        { return pendingJob.commit( connection ); },
                        [this, requestTag]( ServiceStoreResult result )
         {
-            const ServerDirectoryOutcome outcome = result == ServiceStoreResult::Ok       ? ServerDirectoryOutcome{ ServerDirectoryResult::Ok }
-                                                 : result == ServiceStoreResult::NotFound ? ServerDirectoryOutcome{ ServerDirectoryResult::NotFound }
-                                                                                          : ServerDirectoryOutcome::fail( OnlineError::kUnavailable );
-            applyWrite( requestTag, outcome );
+            const ServerDirectoryServiceResult serviceResult = result == ServiceStoreResult::Ok       ? ServerDirectoryServiceResult{ ServerDirectoryResult::Ok }
+                                                             : result == ServiceStoreResult::NotFound ? ServerDirectoryServiceResult{ ServerDirectoryResult::NotFound }
+                                                                                                      : ServerDirectoryServiceResult::fail( OnlineError::kUnavailable );
+            applyWrite( requestTag, serviceResult );
         } );
     }
 
-    void ServerDirectoryService::applyWrite( uint64 requestTag, ServerDirectoryOutcome result )
+    void ServerDirectoryService::applyWrite( uint64 requestTag, ServerDirectoryServiceResult result )
     {
         _completionBuffer.push( ServerDirectoryCompletion{ requestTag, result } );
         if ( result != ServerDirectoryResult::Ok )

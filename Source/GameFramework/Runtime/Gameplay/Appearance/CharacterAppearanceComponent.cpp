@@ -1590,8 +1590,8 @@ namespace sw
             }
             mapInFlight[buildKey] = build;
         }
-        // 언리얼 Mutable 처럼 메시 짓기는 워커에서 한다(마을 사람 하나에 수십 ms). 로드 단계에 넣어 결정적 실행의 프레임 경계가 기다린다(`AssetManager::finishPendingAssetWork`).
-        game::getSubsystem<AssetManager>().launchLoadWork( "AppearanceMeshBuild", SW_DELEGATE_LAMBDA( TaskDelegate, [build]()
+        // 언리얼 Mutable 처럼 메시 짓기는 워커에서 한다(마을 사람 하나에 수십 ms). 로드 단계에 넣어 결정적 실행의 프레임 경계가 기다린다(`AssetManager::finishPendingAssetJobs`).
+        game::getSubsystem<AssetManager>().launchLoadJob( "AppearanceMeshBuild", SW_DELEGATE_LAMBDA( TaskDelegate, [build]()
         {
             build->run();
             build->_bDone.store( true, std::memory_order_release );
