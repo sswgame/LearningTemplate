@@ -102,7 +102,7 @@ namespace sw
         , _musicPlayingID{ 0 }
         , _offlineFrameDebt{ 0.0 }
         , _reopenSecondsLeft{ 0.0 }
-        , _reopenBackoff{ IAudioServiceInternal::kReopenFirstDelayMs }
+        , _reopenBackoff{ ExponentialBackoff::createWithRandomSeed( IAudioServiceInternal::kReopenFirstDelayMs ) }
         , _bOutputLost{ false }
         , _device{}
         , _masterVolume{ 1.0f }

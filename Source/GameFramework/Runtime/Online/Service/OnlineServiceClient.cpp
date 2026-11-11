@@ -40,7 +40,7 @@ namespace sw
         , _connection{}
         , _nowMs{ 0 }
         , _nextConnectMs{ 0 }
-        , _backoff{ OnlineServiceClientInternal::kFirstBackoffMs }
+        , _backoff{ ExponentialBackoff::createWithRandomSeed( OnlineServiceClientInternal::kFirstBackoffMs ) }
         , _serverTimeMs{ 0 }
         , _remoteConfigHash{ 0 }
         , _schemaHash{ 0 }

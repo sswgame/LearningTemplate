@@ -142,12 +142,33 @@ SW_TEST_CASE( TimeTest, ContinuousFrameTicksAndTotalTime )
 
 SW_TEST_CASE( ExponentialBackoffTest, FirstRetryIsImmediateThenDoublesUpToTheCap )
 {
-    sw::ExponentialBackoff backoff( 100 );
-    SW_EXPECT_EQUAL( int64( 0 ), backoff.takeDelayMs( 350 ) );   // 첫 실패는 바로 다시
-    SW_EXPECT_EQUAL( int64( 100 ), backoff.takeDelayMs( 350 ) ); // 첫 지연
-    SW_EXPECT_EQUAL( int64( 200 ), backoff.takeDelayMs( 350 ) );
-    SW_EXPECT_EQUAL( int64( 350 ), backoff.takeDelayMs( 350 ) ); // 상한
-    SW_EXPECT_EQUAL( int64( 350 ), backoff.takeDelayMs( 350 ) );
+    sw::ExponentialBackoff backoff( 100, 7u );
+    const auto             expectWithin = [&backoff]( int64 lowMs, int64 highMs )
+    {
+        const int64 delayMs = backoff.takeDelayMs( 350 );
+        SW_EXPECT_TRUE( lowMs <= delayMs && delayMs <= highMs );
+    };
+    expectWithin( 0, 100 ); // 첫 실패는 [0, 첫 지연]
+    SW_EXPECT_EQUAL( int64( 100 ), backoff.getNextDelayMs() );
+    expectWithin( 50, 100 ); // 그다음은 [지연/2, 지연]
+    expectWithin( 100, 200 );
+    expectWithin( 175, 350 ); // 상한
+    expectWithin( 175, 350 );
     backoff.reset();
-    SW_EXPECT_EQUAL( int64( 0 ), backoff.takeDelayMs( 350 ) ); // 성공 뒤에는 처음부터
+    expectWithin( 0, 100 ); // 성공 뒤에는 처음부터
+}
+
+/**
+ * @brief [ExponentialBackoffTest] 씨앗이 다른 두 클라이언트는 같은 실패 순서에서 다른 시각에 다시 시도한다(감사 C-11 — 한꺼번에 몰리지 않는다)
+ */
+SW_TEST_CASE( ExponentialBackoffTest, DifferentSeedsSpreadTheRetries )
+{
+    sw::ExponentialBackoff first( 1000, 1u );
+    sw::ExponentialBackoff second( 1000, 2u );
+    int32                  differentCount = 0;
+    for ( int32 failure = 0; failure < 6; ++failure )
+    {
+        differentCount += first.takeDelayMs( 30000 ) != second.takeDelayMs( 30000 ) ? 1 : 0;
+    }
+    SW_EXPECT_TRUE( differentCount >= 5 );
 }

@@ -53,8 +53,8 @@ namespace sw
         , _tlsContext{}
         , _nextCommandConnectNanoseconds{ 0 }
         , _nextSubscribeConnectNanoseconds{ 0 }
-        , _commandBackoff{ RESPEphemeralStoreInternal::kFirstBackoffMs }
-        , _subscribeBackoff{ RESPEphemeralStoreInternal::kFirstBackoffMs }
+        , _commandBackoff{ ExponentialBackoff::createWithRandomSeed( RESPEphemeralStoreInternal::kFirstBackoffMs ) }
+        , _subscribeBackoff{ ExponentialBackoff::createWithRandomSeed( RESPEphemeralStoreInternal::kFirstBackoffMs ) }
         , _requestIDAllocator{}
         , _subscriptionAckCount{ 0 }
         , _subscriptionSentCount{ 0 }
