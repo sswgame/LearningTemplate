@@ -64,6 +64,7 @@
         "Source/Editor/Common/Asset/Model/ModelImporter.cpp|sideFolder": "모델 하나의 곁 폴더(그 원본 옆)만 훑는다 — 트리를 걷지 않아 남의 사본으로 건너가지 않는다",
         "Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp|source": "사람이 옮기거나 복사하려고 고른 폴더 하나의 내용이다 — 그 폴더를 통째로 다룬다",
         "Source/Editor/Common/Commands/Asset/EditorDataTableCommands.cpp|dataFolder": "데이터 표 폴더 하나(재귀 아님)다 — scratch 를 지나지 않는다",
-        "Source/Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.cpp|sourceAbs": "사람이 옮기려고 고른 폴더 하나에 남은 파일이다 — 그 폴더를 통째로 다룬다"
+        "Source/Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.cpp|sourceAbs": "사람이 옮기려고 고른 폴더 하나에 남은 파일이다 — 그 폴더를 통째로 다룬다",
+        "Source/Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.cpp|configFolder": "프로젝트 설정 창이 표 페이지로 여는 `Config/` 다 — 리소스 트리(Content) 밖이라 다른 프로세스의 시나리오 사본이 없다"
     }
 }

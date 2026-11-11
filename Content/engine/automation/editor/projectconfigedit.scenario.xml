@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — 프로젝트 설정 창: 커맨드 팔레트로 열면 설정 색인(docs/Config/ConfigReference.json)에서 만든 파일 목록이 보인다.
+  에디터 시나리오 — 프로젝트 설정 창: 커맨드 팔레트로 열면 읽힌 설정과 Config/ 의 나머지 JSON 표로 만든 파일 목록이 보인다.
   EngineConfig 를 고르면 바탕 층(값이 파일에만 있다)이라 모든 키를 쓰는 문서다. _maxFrameDeltaTime 을 0.2 로 바꾸면 페이지가 바뀜 상태가 되고, Revert 를 누르면 돌아온다.
-  끝으로 활성 팩의 <Engine> 요소 페이지(PackEngineSettings)를 열어 캡처한다.
+  다음으로 활성 팩의 <Engine> 요소 페이지(PackEngineSettings)를 열어 캡처하고, 끝으로 형식 없는 격리 표에 원소를 더했다가 되돌린다.
   저장하지 않으므로 저장소의 Config 파일과 팩 파일은 건드리지 않는다. 저장과 호스트 다시 읽기는 EditorTest 의 ProjectSettingsDocument 테스트가 임시 폴더에서 본다.
   실행: App -EnableEditor -scenario=engine/automation/editor/projectconfigedit.scenario.xml -unattended
 -->
@@ -43,6 +43,21 @@
 	<Expect watch="Editor.ProjectSettingsKeyCount" atLeast="1"/>
 	<Expect watch="Editor.ProjectSettingsDirtyPageCount" equals="0"/>
 	<CaptureEditorUI file="projectconfigedit/packenginesettings.png"/>
+	<!-- 형식 없는 표(Config/Rules/Test/Quarantine.json) — 범용 JSON 행으로 고친다. 빈 배열을 펼쳐 원소를 하나 더하면(객체 원소가 없어 빈 글) 바뀜 상태가 되고 Revert 로 돌아온다. -->
+	<EditorWaitSettled/>
+	<EditorClick mark="projectsettings.page.Rules/Test/Quarantine"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.ProjectSettingsKeyCount" equals="1"/>
+	<EditorClick mark="projectsettings.table._quarantined"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="projectsettings.table._quarantined.add"/>
+	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="1" timeoutFrames="60"/>
+	<Expect watch="Editor.ProjectSettingsKeyCount" equals="2"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="projectconfigedit/quarantinetable.png"/>
+	<EditorClick mark="projectsettings.revert"/>
+	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="0" timeoutFrames="60"/>
+	<Expect watch="Editor.ProjectSettingsKeyCount" equals="1"/>
 	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

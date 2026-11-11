@@ -65,6 +65,7 @@ namespace sw::editor
         : EditorStateDocumentPanel()
         , _listPage{}
         , _grid{}
+        , _tableView{}
         , _pSelected{ nullptr }
         , _statusText{}
         , _bCatalogLoaded{ SW_FALSE }
@@ -135,22 +136,27 @@ namespace sw::editor
 
     void ProjectSettingsPanel::drawPageList()
     {
+        bool bTableHeaderDrawn = false;
         for ( size_t index = 0; index < _listPage.size(); ++index )
         {
             Page& page = *_listPage[index];
-            // 목록에는 형식 이름(`PackEngineSettings`)이 아닌 읽는 이름("Pack Engine Settings")을 보인다. 형식 이름은 표식 · 툴팁에 남는다.
-            string label = EditorDisplayNameUtil::makeDisplayName( page._entry._page );
+            // 표 페이지는 형식 페이지 뒤에 모인다(`collectPages`) — 경계에 구획 이름을 한 번 둔다.
+            if ( page._entry.isTable() && bTableHeaderDrawn == false )
+            {
+                bTableHeaderDrawn = true;
+                ImGui::Spacing();
+                EditorThemeUtil::textMuted( "Tables" );
+                EditorWidgets::drawTooltip( "Config files without a settings type: lint, test, environment and tool tables. Edited as plain JSON values" );
+            }
+            // 목록에는 형식 이름(`PackEngineSettings`)이 아닌 읽는 이름("Pack Engine Settings")을 보인다. 형식 이름은 표식 · 툴팁에 남는다. 표는 `Config/` 아래 경로다.
+            string label = page._entry.isTable() ? page._entry._page : EditorDisplayNameUtil::makeDisplayName( page._entry._page );
             if ( page._bDirty )
                 label += " *";
             ImGui::PushID( static_cast<int32>( index ) );
             if ( page._bTypeFound == false )
                 ImGui::BeginDisabled();
             if ( ImGui::Selectable( label.c_str(), _pSelected == &page ) )
-            {
-                _pSelected = &page;
-                if ( page._bOpened == false )
-                    page.open();
-            }
+                selectPage( page );
             if ( page._bTypeFound == false )
                 ImGui::EndDisabled();
             EditorSelfTestMarks::record( ( "projectsettings.page." + page._entry._page ).c_str() );
@@ -159,8 +165,38 @@ namespace sw::editor
         }
     }
 
+    void ProjectSettingsPanel::selectPage( Page& page )
+    {
+        _pSelected = &page;
+        _tableView.resetDraft();
+        if ( page._bOpened == false )
+            page.open();
+    }
+
     void ProjectSettingsPanel::drawPageDetail( Page& page )
     {
+        if ( page._entry.isTable() )
+        {
+            ProjectSettingsJSONDocument& table = page._tableDocument;
+            if ( page._bOpened == false || table.isOpen() == false )
+            {
+                EditorThemeUtil::textError( "This table cannot be opened - see the log" );
+                return;
+            }
+            ImGui::TextUnformatted( page._entry._relativePath.c_str() );
+            ImGui::SameLine();
+            if ( table.isReadOnly() )
+                EditorWidgets::drawChip( "Generated - read only", SW_THEME_COLOR( "Signal", "Warning" ) );
+            else
+                EditorWidgets::drawChip( "Table", SW_THEME_COLOR( "Base", "Accent" ) );
+            drawPageActions( page );
+            ImGui::BeginChild( "##ProjectSettingsTable", ImVec2{ 0.0f, 0.0f } );
+            if ( _tableView.draw( table, _statusText ) )
+                refreshDirtyState();
+            ImGui::EndChild();
+            return;
+        }
+
         ProjectSettingsDocument& document = page._document;
         if ( page._bOpened == false || document.isOpen() == false )
         {
@@ -181,14 +217,29 @@ namespace sw::editor
         EditorWidgets::drawChip( text.c_str(), SW_THEME_COLOR( "Base", "Accent" ) );
         if ( document.isLoadFailed() )
             EditorThemeUtil::textError( "The file could not be read (see the log). Reset to Default replaces it when saved" );
+        drawPageActions( page );
 
-        ImGui::BeginDisabled( page._bDirty == false || document.isLoadFailed() );
+        _grid.drawSearchBar( "projectsettings.search" );
+        ImGui::BeginChild( "##ProjectSettingsProperties", ImVec2{ 0.0f, 0.0f } );
+        EditorPropertyGridTarget target{};
+        target._pInstance = document.getInstance();
+        target._pType     = document.getType();
+        target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &ProjectSettingsPanel::onPropertyEdited, this );
+        _grid.drawProperties( target, nullptr, {} );
+        ImGui::EndChild();
+    }
+
+    void ProjectSettingsPanel::drawPageActions( Page& page )
+    {
+        const bool bTable      = page._entry.isTable();
+        const bool bLoadFailed = bTable == false && page._document.isLoadFailed();
+        ImGui::BeginDisabled( page._bDirty == false || bLoadFailed );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Save" ), SW_LOCKEY( "EdVerb", "Save" ), "Save" ) ) )
         {
             bool bApplied = false;
             if ( page.saveDocument( bApplied ) )
             {
-                _statusText = bApplied ? "Saved - the running host reloaded the file" : "Saved - applies on the next start";
+                _statusText = bApplied ? "Saved - the running host reloaded the file" : ( bTable ? "Saved - read again by its tool or on the next start" : "Saved - applies on the next start" );
                 refreshDirtyState();
             }
             else
@@ -199,38 +250,34 @@ namespace sw::editor
         EditorSelfTestMarks::record( "projectsettings.save" );
         ImGui::EndDisabled();
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Undo" ), SW_LOCKEY( "EdVerb", "Revert" ), "Revert" ) ) );
-        ImGui::BeginDisabled( page._bDirty == false && document.isLoadFailed() == false );
+        ImGui::BeginDisabled( page._bDirty == false && bLoadFailed == false );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Undo" ), SW_LOCKEY( "EdVerb", "Revert" ), "Revert" ) ) )
         {
+            _tableView.resetDraft();
             page.revert();
             refreshDirtyState();
             _statusText = "Reverted to the file";
         }
         EditorSelfTestMarks::record( "projectsettings.revert" );
         ImGui::EndDisabled();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetToDefault" ), "Reset to Default" ) ) );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetToDefault" ), "Reset to Default" ) ) )
+        // 표는 형식이 없어 기본값을 모른다 — 단추를 두지 않는다(누를 수 없는 단추가 이유 없이 흐리게 남지 않게).
+        if ( bTable == false )
         {
-            page.resetToDefault();
-            refreshDirtyState();
-            _statusText = "Reset to the default values - Save writes the file";
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetToDefault" ), "Reset to Default" ) ) );
+            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetToDefault" ), "Reset to Default" ) ) )
+            {
+                page.resetToDefault();
+                refreshDirtyState();
+                _statusText = "Reset to the default values - Save writes the file";
+            }
+            EditorSelfTestMarks::record( "projectsettings.reset" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "SetsEveryValueToItsDefaultThe" ) );
         }
-        EditorSelfTestMarks::record( "projectsettings.reset" );
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "SetsEveryValueToItsDefaultThe" ) );
         if ( _statusText.empty() == false )
         {
             ImGui::SameLine();
             EditorThemeUtil::textMuted( _statusText.c_str() );
         }
-
-        _grid.drawSearchBar( "projectsettings.search" );
-        ImGui::BeginChild( "##ProjectSettingsProperties", ImVec2{ 0.0f, 0.0f } );
-        EditorPropertyGridTarget target{};
-        target._pInstance = document.getInstance();
-        target._pType     = document.getType();
-        target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &ProjectSettingsPanel::onPropertyEdited, this );
-        _grid.drawProperties( target, nullptr, {} );
-        ImGui::EndChild();
     }
 
     void ProjectSettingsPanel::drawContent()
@@ -245,7 +292,7 @@ namespace sw::editor
             dirtyCount += pPage->_bDirty ? 1u : 0u;
         }
         probe._dirtyPageCount   = dirtyCount;
-        probe._selectedKeyCount = ( _pSelected != nullptr && _pSelected->_bOpened ) ? _pSelected->_document.countNonDefaultKeys() : 0u;
+        probe._selectedKeyCount = _pSelected != nullptr ? _pSelected->countKeys() : 0u;
 
         if ( _listPage.empty() )
         {
@@ -261,9 +308,7 @@ namespace sw::editor
         {
             if ( _pSelected != nullptr || pPage->_bTypeFound == false )
                 continue;
-            _pSelected = pPage.get();
-            if ( pPage->_bOpened == false )
-                pPage->open();
+            selectPage( *pPage );
         }
         ImGui::BeginChild( "##ProjectSettingsPages", ImVec2{ listWidth, 0.0f }, ImGuiChildFlags_Borders );
         drawPageList();
