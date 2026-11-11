@@ -182,7 +182,7 @@ namespace sw
     {
         for ( const Entry& entry : _listEntry )
         {
-            _listRequest.push_back( Request{ connectionID, entry._netID } );
+            queueRequest( connectionID, entry._netID );
         }
     }
 
@@ -202,8 +202,20 @@ namespace sw
         if ( body.hasOverflowed() || context._connectionID < 0 )
             return NetHandleResult::Malformed;
         if ( findEntry( netID ) != nullptr )
-            _listRequest.push_back( Request{ context._connectionID, netID } );
+            queueRequest( context._connectionID, netID );
         return NetHandleResult::Handled;
+    }
+
+    void DestructionReplicationServer::queueRequest( int32 connectionID, uint32 netID )
+    {
+        // (연결, netID) 하나에 요청 하나 — 같은 요청을 거듭 보내도 줄은 늘지 않는다. 예전에는 받은 요청마다 쌓아 1 만 개(약 40 KB)면 창이 빌 때까지
+        // 매 틱 1 만 번 직렬화했다(감사 N-5, 언리얼 RPC DoS 감지 자리). 줄의 길이는 연결 수 × 파괴 엔티티 수로 묶인다.
+        for ( const Request& request : _listRequest )
+        {
+            if ( request._connectionID == connectionID && request._netID == netID )
+                return;
+        }
+        _listRequest.push_back( Request{ connectionID, netID } );
     }
 
     int32 DestructionReplicationServer::broadcast( NetChannelType channel )

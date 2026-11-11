@@ -14,7 +14,8 @@ description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에�
 1. 처음 한 번: `setup`(Xvfb · 글꼴을 sudo 없이 `~/lt-deps` 에 푼다). 클론과 `build/Linux-Debug`(컴파일러 캐시) · `build/Linux-Server` 구성은 아래 "클론 환경" 을 따른다.
 2. `all`: HEAD 로 Release 빌드 → 단위 · 서버 → 모든 체인(4 개씩 동시). 끝 줄 `LINUX_OK=<sha>`. 앞이 지면 긴 체인을 돌리지 않는다.
 3. 영향 범위만: `build` → `chain <이름…>`(또는 `stages`).
-4. 골든을 새로 뜰 때: `chain --record <이름…>` → `goldens`(본 저장소로 복사, 한 색 사진 경고) → 표본을 눈으로 본다 → 커밋 → `--record` 없이 다시 `chain`.
+4. 새니타이저(감사 P-8): 묶음마다 `sanitize`(ASan + UBSan, `Linux-Debug-ASan`) 한 번, 경쟁을 다룬 묶음 뒤에는 `sanitize thread`(TSan — `x64-linux-tsan` 트리플릿을 따로 깐다). 끝 줄 `SANITIZE_OK=<종류>`. 누수는 기준선을 만들기 전까지 끈다(`detect_leaks=0`).
+5. 골든을 새로 뜰 때: `chain --record <이름…>` → `goldens`(본 저장소로 복사, 한 색 사진 경고) → 표본을 눈으로 본다 → 커밋 → `--record` 없이 다시 `chain`.
 
 ## 지킬 것
 

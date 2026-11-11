@@ -158,8 +158,10 @@ namespace sw
         };
 
         FractureComponentBase* resolve( const Entry& entry ) const;
-        Entry*                 findEntry( uint32 netID );
-        void                   sendEvents( Entry& entry, FractureComponentBase& component, uint32 serverTick );
+        /** @brief 스냅숏 요청을 줄에 넣습니다. 같은 (연결, netID) 가 이미 있으면 넣지 않는다. */
+        void   queueRequest( int32 connectionID, uint32 netID );
+        Entry* findEntry( uint32 netID );
+        void   sendEvents( Entry& entry, FractureComponentBase& component, uint32 serverTick );
         /** @brief 스냅숏 메시지 하나를 보냅니다. 신뢰 창이 찼으면 false 를 반환하고, 호출한 쪽이 요청을 다음 `update` 로 미룹니다. */
         [[nodiscard]] bool sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionID );
         void               sendPoses( Entry& entry, FractureComponentBase& component, uint32 serverTick );
@@ -173,7 +175,7 @@ namespace sw
 
     private:
         vector<Entry>                _listEntry;
-        vector<Request>              _listRequest;
+        vector<Request>              _listRequest; ///< 보낼 스냅숏 요청 — (연결, netID) 하나에 하나(`queueRequest`)
         DestructionReplicationConfig _settings;
         DestructionReplicationStats  _stats;
         NetMessageWriter             _writer;

@@ -1740,3 +1740,29 @@ SW_TEST_CASE( TaskManagerTest, DescribeUnfinishedTaskIgnoresUnsubmittedTask )
     manager.shutdown();
 }
 #endif
+
+/**
+ * @brief 잠든 풀에 깨우지 않고(submitWithoutWake) High 큐 용량(1024)보다 많이 넣어도 끝난다(감사 C-4)
+ * @details 큐가 가득 차면 넣는 스레드가 yield 만 하며 기다렸다 — 워커가 모두 잠들어 아무도 비우지 않아 영원히 돌았다. 지금은 가득 차면 잠든 워커를 깨운다.
+ */
+SW_TEST_CASE( TaskManagerTest, SubmitWithoutWakePastQueueCapacityFinishes )
+{
+    sw::TaskManager manager;
+    SW_REQUIRE_TRUE( manager.initialize( kWorkerCount ) );
+    manager.waitAll( "TaskManagerTest" ); // 워커가 잠들게 둔다
+    constexpr int32   kTaskCount = 2000;
+    sw::atomic<int32> ranCount{ 0 };
+    for ( int32 index = 0; index < kTaskCount; ++index )
+    {
+        sw::TaskHandle handle = manager.emplaceTask( "Unit", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&ranCount]()
+        {
+            ranCount.fetch_add( 1, std::memory_order_relaxed );
+        } ) );
+        handle.setPriority( sw::TaskPriority::High );
+        manager.submitWithoutWake( handle );
+    }
+    manager.wakeSleepingWorkers();
+    manager.waitAll( "TaskManagerTest" );
+    SW_EXPECT_EQUAL( kTaskCount, ranCount.load() );
+    manager.shutdown();
+}

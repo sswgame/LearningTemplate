@@ -72,7 +72,8 @@ namespace sw
         atomic<int32>           _pendingBytes{ 0 };                      ///< 큐에 쌓였지만 아직 pump 가 넘기지 않은 본문 바이트.
         StreamCloseReason       _errorReason{ StreamCloseReason::None }; ///< 엔드포인트가 연결을 끊은 이유(ProtocolError, SendQueueOverflow, SecurityFailure). 전송이 알려 주는 이유보다 우선한다.
         uint8                   _bAccepted{ SW_FALSE };
-        uint8                   _bOpenAnnounced{ SW_FALSE };
+        atomic<bool>            _bOpenAnnounced{ false };      ///< 쓰기는 연결 잠금 안 — pump 의 핸드셰이크 시한이 잠금 없이 먼저 걸러 본다
+        int64                   _streamOpenedNanoseconds{ 0 }; ///< 전송이 연 시각 — 이때부터 `_handshakeTimeoutSeconds` 안에 열림이 알려져야 한다
         uint8                   _bReceivePaused{ SW_FALSE };
         /** @brief 잠금 안에서 모은 로그(사건, 글)입니다. `_mutex` 가 지키고 잠금을 놓은 뒤 `flushDeferredLog` 가 쓴다 — 잠금은 잎이라 쥔 채 로그를 쓰지 않는다. */
         vector<pair<DeferredLogKind, string>> _listDeferredLog{};
@@ -201,10 +202,11 @@ namespace sw
 
     void StreamMessageEndpoint::onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted )
     {
-        shared_ptr<Connection> connection = make_shared<Connection>( _settings->_maxFrameBodySize );
-        connection->_handle               = handle;
-        connection->_remote               = remote;
-        connection->_bAccepted            = bAccepted ? SW_TRUE : SW_FALSE;
+        shared_ptr<Connection> connection    = make_shared<Connection>( _settings->_maxFrameBodySize );
+        connection->_streamOpenedNanoseconds = MonotonicClock::nowNanoseconds();
+        connection->_handle                  = handle;
+        connection->_remote                  = remote;
+        connection->_bAccepted               = bAccepted ? SW_TRUE : SW_FALSE;
         // 세션은 테이블에 넣기 전에 만든다. 테이블에서 찾은 다른 스레드의 보내기가 세션 없이 평문을 내보내지 않게 하기 위해서다.
         if ( _settings->_security._pTLSContext != nullptr )
             connection->_tlsSession = _settings->_security._pTLSContext->createSession();
@@ -231,7 +233,7 @@ namespace sw
 
     void StreamMessageEndpoint::announceOpenLocked( Connection& connection )
     {
-        connection._bOpenAnnounced = SW_TRUE;
+        connection._bOpenAnnounced.store( true, std::memory_order_release );
         pushEvent( Event{ connection._remote, connection._handle, 0, 0, StreamCloseReason::None, StreamFrameKind::Message, EndpointEventKind::Opened, connection._bAccepted },
                    nullptr, 0 );
     }
@@ -270,7 +272,7 @@ namespace sw
             closeForError( connection, StreamCloseReason::SecurityFailure );
             return false;
         }
-        if ( session.getState() == TLSSessionState::Established && connection._bOpenAnnounced == SW_FALSE )
+        if ( session.getState() == TLSSessionState::Established && connection._bOpenAnnounced.load( std::memory_order_relaxed ) == false )
         {
             announceOpenLocked( connection );
             (void)flushCiphertextLocked( connection ); // 핸드셰이크 중에 모아 둔 평문이 이제 레코드로 나왔다.
@@ -514,6 +516,30 @@ namespace sw
                     listener.onEndpointClosed( event._handle, event._reason );
                     break;
                 }
+            }
+        }
+        // 핸드셰이크 시한 — 수락한 뒤 상한 안에 열림(TLS 핸드셰이크 끝)이 알려지지 않은 연결은 닫는다. 위 층은 열림 전의 연결을 볼 수도 끊을 수도 없어서
+        // 여기가 막아야 한다(nginx client_header_timeout · 언리얼 Stateless 핸드셰이크 자리, 감사 N-10).
+        if ( _settings->_handshakeTimeoutSeconds > 0.0 )
+        {
+            const int64                    now   = MonotonicClock::nowNanoseconds();
+            const int64                    limit = MonotonicClock::secondsToNanoseconds( _settings->_handshakeTimeoutSeconds );
+            vector<shared_ptr<Connection>> listConnection;
+            {
+                ScopedLock<mutex> lock{ _tableMutex };
+                for ( const auto& [packed, connection] : _mapConnection )
+                {
+                    if ( connection->_bOpenAnnounced.load( std::memory_order_acquire ) == false && now - connection->_streamOpenedNanoseconds > limit )
+                        listConnection.push_back( connection ); // 열리지 않고 오래된 것만 — 닫기 전에 연결 잠금 안에서 한 번 더 본다
+                }
+            }
+            for ( const shared_ptr<Connection>& pConnection : listConnection )
+            {
+                const AfterScope  flushLog{ [this, &pConnection]()
+                { flushDeferredLog( *pConnection ); } }; // 잠금보다 먼저 선언 — 잠금을 놓은 뒤에 지연 로그를 쓴다
+                ScopedLock<mutex> lock{ pConnection->_mutex };
+                if ( pConnection->_bOpenAnnounced.load( std::memory_order_relaxed ) == false )
+                    closeForError( *pConnection, StreamCloseReason::SecurityFailure );
             }
         }
         // 핑은 열린 연결마다 간격이 지났을 때 보낸다(전송의 유휴 시한을 넘지 않게 하고 RTT 를 측정한다).

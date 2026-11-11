@@ -268,6 +268,10 @@ namespace sw
         GameObject*           pOwner = getOwner();
         if ( pDef == nullptr || pOwner == nullptr )
             return;
+        // 완료는 틱 뒤로 미뤄진다 — 그 사이 다른 하는 쪽이 먼저 끝냈으면(쿨다운이 섰다) · 대상이 꺼졌으면 다시 내지 않는다(감사 G-6, 보상 복제 길).
+        // 같은 프레임의 둘을 가르는 점유(언리얼 SmartObject 의 Claim → Use → Release)는 남은 몫 — 쿨다운 0 인 대상은 아직 둘 다 끝낸다.
+        if ( findBlockReason( interactor ) != InteractionBlockReason::None )
+            return;
         _cooldownRemaining = pDef->_cooldown;
         _completedCount.fetch_add( 1, std::memory_order_relaxed );
         InteractionCompletedEvent event;

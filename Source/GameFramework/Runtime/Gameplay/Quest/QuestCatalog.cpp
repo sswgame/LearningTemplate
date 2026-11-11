@@ -108,6 +108,15 @@ namespace sw
             const bool bDeadEnd = stage._bComplete == false && stage._bFail == false && stage._nextStage.empty() && stage._listBranch.empty();
             if ( bDeadEnd )
                 SW_LOG_WARNING_ID( "QuestCatalog.QuestStageDeadEnd", "%#: quest '%#' stage '%#' has no next stage and is neither complete nor fail - the quest stays active forever", sourceName, pID, stage._id.c_str() );
+            // 보상은 완료 단계에서만 준다 — 앞 단계의 보상은 퀘스트를 포기 · 실패한 뒤 다시 받으면 다시 나간다(받은 단계 기록이 없다, 감사 G-4 — 보상 복제 길).
+            const bool bRewarded = stage._reward._items.isEmpty() == false || stage._reward._values.isEmpty() == false || stage._reward._listAction.empty() == false;
+            if ( bRewarded && stage._bComplete == false )
+            {
+                SW_LOG_ERROR_ID( "QuestCatalog.StageRewardBeforeComplete",
+                                 "%#: quest '%#' stage '%#' gives a reward but is not the complete stage - abandoning and taking the quest again would repeat it; move the reward to the complete stage",
+                                 sourceName, pID, stage._id.c_str() );
+                bValid = false;
+            }
             // 없는 단계로 가는 다음 · 갈래는 참조 표(`engine/settings/datacatalogreferences.xml` — 같은 퀘스트 안)가 오류로 알리고 로드를 멈춘다(예전에는 경고만 하고 영원히 도는 퀘스트가 섰다).
         }
         if ( quest._listStage.empty() )

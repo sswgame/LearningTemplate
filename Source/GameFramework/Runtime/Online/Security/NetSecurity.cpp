@@ -133,6 +133,12 @@ namespace sw
         {
             return unexpected( pem.error() );
         }
+        // 서버 이름도 지문도 없는 클라이언트는 없다(감사 O-2): 이름 없이 믿을 파일을 주면 그 파일이 곧 서버 인증서다 — 지문을 고정한다. 예전에는 이름 검증을 건너뛰어
+        // 믿을 파일에 공인 CA 번들을 넣으면 그 CA 가 낸 아무 도메인의 인증서로 로그인 · 세션 토큰 · GM 연결을 가로챌 수 있었다. CA 번들을 쓰려면 이름을 준다
+        // (언리얼 SSL 모듈의 호스트 이름 검증 · 공개 키 고정 자리).
+        if ( settings._serverName.empty() && settings._pinnedCertificateSHA256Hex.empty() &&
+             provider.computeCertificateSHA256( settings._trustPem, settings._pinnedCertificateSHA256Hex ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a client TLS context needs a server name or a pinned certificate - the trust file is not one certificate", *trustPath } );
         return provider.createTLSContext( settings );
     }
 

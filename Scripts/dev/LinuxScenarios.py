@@ -15,6 +15,7 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
   goldens                클론의 .linux 골든을 본 저장소로 복사하고 한 색인 사진을 알린다
   stop                   돌고 있는 실행을 끝낸다(체인 · 게임 · Xvfb). 게임 프로세스는 이름이 GameThread 로 바뀌어 있다
   all [--record]         build → 모든 체인(병렬) · Release 단위 · 서버 빌드 · 단위. 끝 줄 LINUX_OK=<sha> 가 나와야 그 커밋을 push 한다
+  sanitize [address|thread]  새니타이저 Debug(프리셋 Linux-Debug-ASan · Linux-Debug-TSan)로 App 을 짓고 단위 테스트를 돈다. 끝 줄 SANITIZE_OK=<종류>
 """
 import concurrent.futures
 import contextlib
@@ -407,6 +408,44 @@ def verify_all(arguments):
     return 0
 
 
+def sanitize(arguments):
+    """새니타이저 Debug 로 단위 테스트를 돈다(감사 P-8). ASan 은 묶음마다 한 번, TSan 은 주기로 — 수명 · 경쟁 결함의 자동 그물이다."""
+    kind = arguments[0] if arguments else 'address'
+    if kind not in ('address', 'thread'):
+        print(f'sanitize 는 address 또는 thread 다: {kind}')
+        return 2
+    sync_clone()
+    cache = pathlib.Path(f'{CLONE}/build/Linux-Debug/CMakeCache.txt').read_text(errors='replace')
+
+    def cached(key):
+        return re.search(rf'^{key}:[^=]*=(.*)$', cache, re.M).group(1)
+
+    preset = 'Linux-Debug-ASan' if kind == 'address' else 'Linux-Debug-TSan'
+    build_dir = f'{CLONE}/build/{preset}'
+    # 컴파일러 · 툴체인은 Linux-Debug 캐시의 절대 경로를 쓴다(서버 구성과 같은 이유). TSan 은 계측한 포트 트리플릿을 따로 깐다.
+    installed = cached('VCPKG_INSTALLED_DIR') if kind == 'address' else f'{CLONE}/build/{preset}/vcpkg_installed'
+    triplet = '' if kind == 'address' else '-DVCPKG_TARGET_TRIPLET=x64-linux-tsan '
+    configure = (f'cmake --preset {preset} -S {CLONE} -B {build_dir} {triplet}'
+                 f'-DCMAKE_C_COMPILER="{cached("CMAKE_C_COMPILER")}" -DCMAKE_CXX_COMPILER="{cached("CMAKE_CXX_COMPILER")}" '
+                 f'-DCMAKE_TOOLCHAIN_FILE="{cached("CMAKE_TOOLCHAIN_FILE")}" -DVCPKG_INSTALLED_DIR="{installed}"')
+    if shell(f'cd {CLONE} && {configure} > {build_dir}.configure.log 2>&1').returncode != 0:
+        print(f'구성 실패 - {build_dir}.configure.log')
+        return 1
+    if shell(f'ninja -C {build_dir} -k 0 App > {build_dir}.build.log 2>&1').returncode != 0:
+        print(f'빌드 실패 - {build_dir}.build.log')
+        return 1
+    # 누수는 처음에는 끈다 — 기준선을 만든 뒤 켠다(감사 P-8 "detect_leaks=0 으로 시작"). 첫 오류에서 멈춰 보고를 읽게 한다.
+    options = ('ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1' if kind == 'address'
+               else 'TSAN_OPTIONS=halt_on_error=1:second_deadlock_stack=1')
+    rc = shell(f'cd {build_dir} && {options} ./Bin/App --test -unattended > /tmp/lt.sanitize.log 2>&1; rc=$?; '
+               f'grep -E "case run|FAILED|ERROR: (Address|Thread)Sanitizer|runtime error|WARNING: ThreadSanitizer" /tmp/lt.sanitize.log | head -n 20 | cut -c1-200; exit $rc').returncode
+    if rc != 0:
+        print(f'SANITIZE_FAILED={kind} - /tmp/lt.sanitize.log')
+        return rc
+    print(f'SANITIZE_OK={kind}')
+    return 0
+
+
 def find_run_processes():
     """이 도구가 띄운 프로세스의 pid 입니다. 명령줄을 직접 읽는다 - `pkill -f` 는 그 문구를 품은 자기 셸까지 끝낸다."""
     own = os.getpid()
@@ -489,6 +528,8 @@ def main(argv):
         return stop()
     if command == 'all':
         return verify_all(arguments)
+    if command == 'sanitize':
+        return sanitize(arguments)
     print(__doc__)
     return 2
 
