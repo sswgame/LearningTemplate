@@ -22,20 +22,20 @@ namespace sw
     class SocketSet;
 
     /** @brief 소켓 에셋을 엔진 기본 소켓 종류 테이블로 읽어 나눠 줍니다("SocketSet"). 모르는 필드나 종류는 오류를 남기고 nullptr 입니다. 제자리에서 다시 읽습니다. */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<SocketSet>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, SocketSet );
     /**
      * @brief 페어드 애니메이션 에셋을 나눠 줍니다("PairedAnimationDef").
      * @details 다시 읽기는 제자리에서 바꾸지 않고 표에서 떼어 낸다(`SharedAssetReloadMode::Detach`) — 돌고 있는 세션은 역할 인덱스로 옛 에셋을 읽으므로 끝까지
      *          옛 객체를 쥔다. 쓰는 쪽(`PairedAnimationComponent`)은 다시 읽은 횟수가 바뀌면 다음 시작 전에 다시 `acquire` 한다.
      */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<PairedAnimationDef>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, PairedAnimationDef );
     /**
      * @brief 피팅 표(`*.fit.xml`)를 엔진 기본 연산 레지스트리로 읽어 나눠 줍니다("FitTables"). 제자리에서 다시 읽고, 외형 컴포넌트는 다시 읽은 횟수가 바뀌면 다시 조립합니다.
      * @details 사용자 연산을 등록한 풀이기의 표는 이 캐시가 아니라 그 풀이기의 레지스트리로 직접 읽는다(캐시는 경로만으로 나눠 주므로 레지스트리를 고를 수 없다).
      */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<FitTables>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, FitTables );
     /** @brief 부품 피팅 데이터(`*.partfit.xml`)를 나눠 줍니다("FitPartDef"). 표와 따로 읽고 이름은 조립이 대조합니다(`FitPartDef::validateNames`). */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<FitPartDef>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, FitPartDef );
     /** @brief 체형 축 데이터(`*.bodyshape.xml`)를 나눠 줍니다("bodyshape" — 데이터 파일 종류의 이름). 제자리에서 다시 읽고, 외형 컴포넌트는 다시 읽은 횟수가 바뀌면 다시 조립합니다. */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<BodyShapeSet>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, BodyShapeSet );
 } // namespace sw

@@ -19,7 +19,7 @@ namespace sw
     class SpriteLibrary;
 
     /** @brief 파일 머리말을 참고하세요. 쓰는 쪽은 `SharedAssetCache<SpriteClipAsset>` 으로 부릅니다. */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<SpriteClipAsset>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, SpriteClipAsset );
     /** @brief 파일 머리말을 참고하세요. 쓰는 쪽은 `SharedAssetCache<SpriteLibrary>` 로 부릅니다. */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<SpriteLibrary>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, SpriteLibrary );
 } // namespace sw

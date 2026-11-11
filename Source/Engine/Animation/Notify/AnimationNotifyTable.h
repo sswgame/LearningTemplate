@@ -255,7 +255,7 @@ namespace sw
      * @brief 알림 테이블을 기본 처리기 레지스트리로 읽어 나눠 줍니다("AnimationNotifyTable"). 모르는 처리기나 인자는 오류입니다. 제자리에서 다시 읽습니다.
      * @details 종류의 주인(이 폴더)이 캐시 줄을 든다 — 예전에는 캐릭터의 공유 캐시 묶음(`CharacterDataCache`)이 들어 캐릭터가 알림 디스패치를 include 했다.
      */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<AnimationNotifyTable>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, AnimationNotifyTable );
 } // namespace sw
 
 /*

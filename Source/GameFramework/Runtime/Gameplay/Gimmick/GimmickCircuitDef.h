@@ -154,5 +154,5 @@ namespace sw
      * @brief 기믹 회로 정의를 경로마다 한 벌 나눠 줍니다("GimmickCircuitDef", 인스턴스화는 `GimmickCircuitDef.cpp`). 제자리에서 다시 읽습니다.
      * @details 회로(`GimmickCircuit::populate`)는 정의에서 노드 · 배선 상태를 지어 자기가 든다 — 같은 회로를 여러 오브젝트가 써도 정의는 한 벌이다.
      */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<GimmickCircuitDef>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, GimmickCircuitDef );
 } // namespace sw

@@ -13,15 +13,6 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
-// FractureAssetCache — 이 파일만 쓴다(한 파일 전용 도우미는 따로 헤더를 두지 않는다)
-namespace sw
-{
-    struct FractureAsset;
-
-    /** @brief 파일 머리말을 참고하세요. 쓰는 쪽은 `SharedAssetCache<FractureAsset>` 으로 부릅니다. */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<FractureAsset>;
-} // namespace sw
-
 namespace sw
 {
     /** 쪼갠 조각의 바디와 렌더링이 이전 형상을 가리킨 채 내용만 바뀌면 안 되므로 제자리로 바꾸지 않고 떼어 낸다. */

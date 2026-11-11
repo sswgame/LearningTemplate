@@ -157,5 +157,5 @@ namespace sw
      * @brief 얼굴 리그를 경로마다 한 벌 나눠 줍니다("FacialRig", 인스턴스화는 `FacialRig.cpp`). 제자리에서 다시 읽습니다.
      * @details 같은 얼굴을 쓰는 캐릭터가 파일을 다시 읽지 않는다. 쥔 쪽(`FacialAnimationComponent`)은 핫 리로드 알림(`onPropertyChanged`)에서 번호를 다시 짓는다.
      */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<FacialRig>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, FacialRig );
 } // namespace sw

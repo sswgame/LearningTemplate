@@ -126,7 +126,7 @@ namespace sw
      * @brief 립싱크 분석 표를 경로마다 한 벌 나눠 줍니다("lipsync", 인스턴스화는 `LipSync.cpp`). 제자리에서 다시 읽습니다.
      * @details 얼굴 컴포넌트마다 엔진 기본 표를 다시 읽지 않는다(첫 말하기에서 받는다). 오프라인 임포트(`--import-lipsync`)도 같은 한 벌을 읽는다.
      */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<LipSyncSettings>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, LipSyncSettings );
 } // namespace sw
 
 namespace sw

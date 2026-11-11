@@ -197,5 +197,5 @@ namespace sw
      * @brief 공원 배치를 경로마다 한 벌 나눠 줍니다("parklayout", 인스턴스화는 `ThemeParkDataKind.cpp`). 제자리에서 다시 읽습니다.
      * @details 게임 모드는 시작할 때 배치를 자기 놀이기구 목록으로 옮겨 짓는다(배치 데이터 → 실행 상태).
      */
-    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<ParkLayout>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_API_EXTERN_TEMPLATE, ParkLayout );
 } // namespace sw

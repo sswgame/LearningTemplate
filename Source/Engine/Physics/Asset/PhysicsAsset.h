@@ -181,5 +181,5 @@ namespace sw
      * @brief 물리 에셋을 나눠 줍니다("PhysicsAsset"). 제자리에서 다시 읽고, 래그돌은 다시 읽은 횟수가 바뀌면 다시 짓습니다.
      * @details 캐시는 에셋과 같은 물리 층에 둔다 — 캐릭터 층(`CharacterDataCache`)에 두면 물리 · 애니메이션 층 코드가 이 선언을 볼 수 없다.
      */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<PhysicsAsset>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, PhysicsAsset );
 } // namespace sw

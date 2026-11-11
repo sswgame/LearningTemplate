@@ -89,7 +89,7 @@ namespace sw
      * @brief 표면 채널 표를 경로마다 한 벌 나눠 줍니다("surfacechannels", 인스턴스화는 `SurfaceState.cpp`). 제자리에서 다시 읽습니다.
      * @details 캐릭터마다 엔진 기본 채널 표를 다시 읽지 않는다. 표면 상태(`CharacterSurfaceState`)는 만들 때 표를 복사해 든다(영역 × 채널 값의 배치가 표 순서다).
      */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<SurfaceChannelTable>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, SurfaceChannelTable );
 } // namespace sw
 
 namespace sw

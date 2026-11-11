@@ -209,5 +209,5 @@ namespace sw
      * @brief 악보를 경로마다 한 벌 나눠 줍니다("RhythmChart", 인스턴스화는 `RhythmChart.cpp`). 제자리에서 다시 읽습니다.
      * @details 연주 세션(`RhythmPlaySession`)은 악보를 빌려 읽고 실행 상태(판정 · 콤보)는 자기가 든다 — 같은 곡을 여러 자리가 연주해도 악보는 한 벌이다.
      */
-    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<RhythmChart>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_API_EXTERN_TEMPLATE, RhythmChart );
 } // namespace sw

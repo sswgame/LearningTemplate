@@ -19,16 +19,16 @@ namespace sw
     class SkeletonBoneLOD;
 
     /** @brief 스켈레톤을 경로별로 나눠 줍니다("Skeleton"). 같은 경로는 같은 객체라서 클립에서 본으로 가는 테이블을 스켈레톤 포인터로 캐시할 수 있습니다. */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<Skeleton>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, Skeleton );
     /** @brief 애니메이션 클립을 경로로 나눠 줍니다("AnimationClip"). 같은 클립을 쓰는 캐릭터 백 명이 파일을 백 번 읽지 않습니다. */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<AnimationClip>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, AnimationClip );
     /** @brief 애니메이션 셋을 경로로 나눠 줍니다("AnimationSet"). 같은 셋을 쓰는 캐릭터 백 명이 XML 을 백 번 읽지 않습니다. */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<AnimationSet>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, AnimationSet );
     /** @brief 스켈레톤 옆의 본 LOD 테이블을 나눠 줍니다("SkeletonBoneLOD"). 유닛은 `SkeletonBoneLOD::getRevision` 으로 다시 읽힌 것을 알아챕니다. */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<SkeletonBoneLOD>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, SkeletonBoneLOD );
     /**
      * @brief 후처리 리그를 나눠 줍니다("RigAsset"). 다시 읽으면 내용 번호(`RigAsset::getContentID`)가 바뀌므로, 쓰는 `PoseModifierComponent` 가 다음 프레임에
      *        다시 바인딩합니다.
      */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<RigAsset>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, RigAsset );
 } // namespace sw

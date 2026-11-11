@@ -11,6 +11,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -120,4 +121,7 @@ namespace sw
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         [[nodiscard]] bool           loadRegion( const XMLNode& node, string_view sourceName );
     };
+
+    /** @brief 이 종류의 공유 캐시입니다 — 인스턴스화는 `VelmoraRegionCatalog.cpp` 의 정의 줄이 한다. */
+    SW_DECLARE_SHARED_ASSET_CACHE(, VelmoraRegionCatalog );
 } // namespace sw

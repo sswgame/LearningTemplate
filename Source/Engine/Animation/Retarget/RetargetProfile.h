@@ -238,5 +238,5 @@ namespace sw
      * @details 같은 프로필을 쓰는 캐릭터가 파일을 다시 읽지 않는다. 쥔 쪽(`PoseRetargetComponent`)은 핫 리로드 알림(`onPropertyChanged`)에서 리타기터를 다시 묶는다.
      *          에디터 리타깃 창은 이 한 벌을 사본으로 받아 고친다(언리얼 IK Retargeter 에셋 한 벌, 기억에 의존).
      */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<RetargetProfile>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, RetargetProfile );
 } // namespace sw

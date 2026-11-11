@@ -10,6 +10,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
@@ -116,4 +117,7 @@ namespace sw
         uint8       _bPlaced  : 1; ///< 한 번이라도 자리를 맞췄다(그 전에는 숨어 있다)
         uint8       _reserved : 7;
     };
+
+    /** @brief 이 종류의 공유 캐시입니다 — 인스턴스화는 `SkirmishUnitComponent.cpp` 의 정의 줄이 한다. */
+    SW_DECLARE_SHARED_ASSET_CACHE(, SkirmishUnitModelCatalog );
 } // namespace sw

@@ -238,7 +238,7 @@ namespace sw
     };
 
     /** @brief 튜닝 파일을 경로마다 한 벌 나눠 줍니다(인스턴스화는 `KinematicVehicleMotor.cpp`). */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<KinematicVehicleSettings>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, KinematicVehicleSettings );
 } // namespace sw
 
 namespace sw

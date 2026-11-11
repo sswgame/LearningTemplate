@@ -396,5 +396,5 @@ namespace sw
      * @details 다시 읽기는 떼어 낸다(`Detach`) — 시뮬레이션과 렌더 스레드가 방출기 정의를 효과의 별칭 포인터로 쥐므로 쥔 객체를 제자리에서 바꾸지 않는다.
      *          핫 리로드는 효과 경로 칸을 가진 컴포넌트에 알리고(`onPropertyChanged`) 컴포넌트가 새 객체를 받는다(언리얼 Niagara 시스템 에셋 한 벌 · 유니티 프리팹 파티클 한 벌, 기억에 의존).
      */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<VFXEffectDef>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, VFXEffectDef );
 } // namespace sw

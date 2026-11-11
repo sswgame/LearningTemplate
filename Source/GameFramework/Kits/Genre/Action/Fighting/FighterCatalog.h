@@ -157,5 +157,5 @@ namespace sw
     };
 
     /** @brief 캐릭터 카탈로그를 경로마다 한 벌 나눠 줍니다("FighterCatalog", 인스턴스화는 `FighterCatalog.cpp`). 제자리에서 다시 읽습니다(쥔 쪽은 id 로 찾는다). */
-    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<FighterCatalog>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_API_EXTERN_TEMPLATE, FighterCatalog );
 } // namespace sw

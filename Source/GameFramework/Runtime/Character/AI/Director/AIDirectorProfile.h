@@ -304,5 +304,5 @@ namespace sw
      *          쥔 쪽은 다시 읽은 횟수가 바뀌면 새 객체를 받아 감독이 번호를 이어 옮긴다(`AIDirector::rebindProfile` — 구조가 같은 변경만, 구조가 바뀌면 그 판은 옛 객체로 돈다).
      *          언리얼 AI 감독 데이터 에셋 한 벌과 같은 자리다(기억에 의존).
      */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<AIDirectorProfile>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, AIDirectorProfile );
 } // namespace sw

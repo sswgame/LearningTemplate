@@ -6,7 +6,7 @@
  *          그 이름으로 찾은 캐시의 표를 쓴다 — `SharedAssetCacheLookup`). Engine 종류는 매니저가 내장 캐시로 만들어 소유하고(`SW_SHARED_ASSET_CACHE`), GameFramework · 키트 · 게임 종류는
  *          그 모듈이 인스턴스화해 모듈 서브시스템이 소유하며 모듈 수명으로 오르내립니다(`SW_MODULE_SHARED_ASSET_CACHE`) — 예전 `GameDataCache<T>` 의 자리다. 멤버 정의는 이 헤더에 두지 않고
  *          `SharedAssetCacheDefinition.h` 에 두며, 에셋 종류의 .cpp 하나가 그것을 포함해 명시적으로 인스턴스화합니다. 쓰는 쪽 헤더는
- *          `extern template class <그 이미지의 _EXTERN_TEMPLATE 매크로> SharedAssetCache<에셋>;` 만 둡니다 — 한 종류의 표는 한 이미지에만 있습니다.
+ *          `SW_DECLARE_SHARED_ASSET_CACHE( <그 이미지의 _EXTERN_TEMPLATE 매크로>, 에셋 );` 만 둡니다 — 한 종류의 표는 한 이미지에만 있습니다.
  *          옛 객체를 살려 두는 동작은 `SharedAssetReloadMode::Detach` 와 쥔 쪽의 `shared_ptr` 가 맡습니다(세대 수로 옛 표를 들고 있지 않는다). 별칭(`using SkeletonCache = …`)은 두지 않고 쓰는 쪽이 `SharedAssetCache<Skeleton>` 으로 부릅니다(이름이 둘이면 찾기가 갈라집니다).
  *
  *          종류마다 다른 것(종류 이름 · 읽는 함수 · 메모리 태그 · 다시 읽기 방식)은 그 종류의 정의(`AssetTypeDef` — 이름과 `AssetTypeLoader`) 한 벌에만 적습니다.
@@ -43,6 +43,13 @@ namespace sw
     /** @brief 에셋 종류의 정의(`static constexpr AssetTypeDef kType`)입니다. 인스턴스화하는 .cpp 의 캐시 등록 줄이 특수화합니다(`SharedAssetCacheDefinition.h` 참고). */
     template <typename AssetType>
     struct SharedAssetCacheTraits;
+
+    /** @brief 종류의 헤더가 `SW_DECLARE_SHARED_ASSET_CACHE` 로 캐시를 선언했으면 참입니다. 정의 줄(`SW_SHARED_ASSET_CACHE` · `SW_MODULE_SHARED_ASSET_CACHE`)이 단언한다. */
+    template <typename AssetType>
+    struct SharedAssetCacheDecl
+    {
+        static constexpr bool kValue = false;
+    };
 
     template <typename AssetType>
     class SharedAssetLoadOperation;
@@ -167,3 +174,16 @@ namespace sw
         shared_ptr<const TAsset> _pAsset;
     };
 } // namespace sw
+
+/**
+ * @brief 종류 @p AssetType 의 캐시를 그 종류의 헤더에서 선언합니다(`namespace sw` 안). 인스턴스화는 한 이미지의 .cpp 정의 줄이 한다 — 쓰는 TU 가 몸체 없이 부르면
+ *        `-Werror=undefined-func-template` 로 지므로(플랫폼마다 include 닫힘이 달라 한쪽에서만 나온다) 정의 줄이 이 선언을 단언한다.
+ * @param ExternMacro 그 이미지의 `_EXTERN_TEMPLATE` 매크로(게임처럼 내보내지 않으면 빈 칸)
+ */
+#define SW_DECLARE_SHARED_ASSET_CACHE( ExternMacro, AssetType ) \
+    template <>                                                 \
+    struct SharedAssetCacheDecl<AssetType>                      \
+    {                                                           \
+        static constexpr bool kValue = true;                    \
+    };                                                          \
+    extern template class ExternMacro SharedAssetCache<AssetType>
