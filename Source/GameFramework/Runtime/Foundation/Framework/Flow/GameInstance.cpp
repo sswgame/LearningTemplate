@@ -114,6 +114,7 @@ namespace sw
         , _bStarted{ SW_FALSE }
         , _bDerivedEntered{ SW_FALSE }
         , _bSecuritySet{ SW_FALSE }
+        , _bSaveBlockedByFailedRestore{ SW_FALSE }
     {
         // 인스턴스 서브시스템 — initialize 가 onInitialize 앞에 초기화하고 shutdown 이 onShutdown 뒤에 역순으로 종료한다.
         ScreenTransitionManager& screenTransition = _gameScope.emplaceSubsystem<ScreenTransitionManager>();
@@ -477,6 +478,11 @@ namespace sw
 
     bool GameInstance::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
     {
+        if ( purpose == SerializePurpose::SaveGame && _bSaveBlockedByFailedRestore == SW_TRUE )
+        {
+            SW_LOG_ERROR_ID( "GameInstance.SaveBlockedAfterFailedRestore", "Saving is blocked: the last save restore failed and the scene is only partly restored - load a save that restores or restart" );
+            return false;
+        }
         // 순서: 올린 타입의 상태를 싣고 걷기 → 파생 훅(그 밖의 상태를 싣는다) → 봉투(파생의 리플렉션 상태 포함).
         _stateSnapshot.beginCapture();
         onBeforeStateSerialize();
@@ -497,7 +503,11 @@ namespace sw
     {
         if ( inBytes.empty() )
             return false;
-        return readStateEnvelope( purpose, inBytes.data(), static_cast<uint32>( inBytes.size() ) );
+        const bool bRestored = readStateEnvelope( purpose, inBytes.data(), static_cast<uint32>( inBytes.size() ) );
+        // 씬을 비운 뒤 실패했을 수 있다(GameStateSnapshot::readScene) — 그 씬을 세이브에 쓰지 않는다. 성공한 복원이 풀어 준다.
+        if ( purpose == SerializePurpose::SaveGame )
+            _bSaveBlockedByFailedRestore = bRestored ? SW_FALSE : SW_TRUE;
+        return bRestored;
     }
 
     bool GameInstance::resolveSaveSlot( string_view slot, string& outSlot ) const

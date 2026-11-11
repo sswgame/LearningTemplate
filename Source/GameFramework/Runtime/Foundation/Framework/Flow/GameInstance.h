@@ -310,5 +310,11 @@ namespace sw
         uint8                             _bStarted        : 1; ///< `initialize` 가 끝까지 섰다 — 종료 저장 · 세션 명령은 이때만
         uint8                             _bDerivedEntered : 1; ///< `onInitialize` 에 들어갔다 — `onShutdown` 은 이때만(파생은 자기 부분 실패를 스스로 거둔다)
         uint8                             _bSecuritySet    : 1; ///< 넷 세션에 이 인스턴스의 보안 제공자를 넣었다 — 거둘 때 이 인스턴스가 넣은 것만 뺀다
+        /**
+         * @brief 마지막 세이브 복원이 실패했다 — 씬은 이미 비워져 일부만 되살았다. 다음 성공한 복원까지 세이브 목적 캡처를 거절한다(감사 P0-6).
+         * @details 예전에는 실패를 경고만 하고 간격 자동 저장(예: 300 초 · 슬롯 셋)이 깨진 씬을 15 분 안에 모든 슬롯에 썼다. 수동 · 간격 · 종료 저장이 모두
+         *          `captureSnapshot( SaveGame )` 한 곳을 지나므로 거기서 막는다(종료 저장은 자동 저장의 막기를 무시하기 때문이다).
+         */
+        uint8 _bSaveBlockedByFailedRestore : 1;
     };
 } // namespace sw
