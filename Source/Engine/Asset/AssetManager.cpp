@@ -353,7 +353,14 @@ namespace sw
             else if ( isGiven( CommandLineArgument::COOKED_CONTENT ) )
                 source = ContentSource::Cooked;
         }
-        (void)mountContent( engine::getSubsystem<EngineConfig>()._listResourcePriority, source ); // 느슨한 트리만 있어도 기동한다
+        // 쿠킹한 콘텐츠는 팩만 읽는다(낱개 파일을 읽지 않는다) — 마운트가 지면(패치 서명 · 사슬 분기 · 신뢰 키) 팩 0 개로 이어 가면 그 뒤 읽기가 모두 "없음" 이 된다.
+        // 기동 실패로 멈춘다(감사 A-4, 언리얼의 필수 pak 마운트 · 서명 실패 치명 오류). 소스 콘텐츠는 느슨한 트리만 있어도 기동한다.
+        const bool bMounted = mountContent( engine::getSubsystem<EngineConfig>()._listResourcePriority, source );
+        if ( source == ContentSource::Cooked && bMounted == false )
+        {
+            SW_LOG_ERROR_ID( "AssetManager.CookedMountFailed", "Cooked content: the startup packs could not be mounted - a cooked build reads only packs, so it cannot start" );
+            return SubsystemInitResult::Failed;
+        }
         return SubsystemInitResult::Succeeded;
     }
 

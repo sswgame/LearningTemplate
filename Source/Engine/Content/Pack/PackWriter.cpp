@@ -3,6 +3,7 @@
 #include "Engine/Content/Pack/PackWriter.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Compression/CompressionStream.h"
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
@@ -311,6 +312,13 @@ namespace sw
             const CompressSlot& slot   = listSlot[index];
             compressCPUNanos += slot._nanos;
 
+            // 읽는 쪽(PackReader)이 받는 항목 크기 한도와 같은 상수를 본다 — 예전에는 쓰기가 4 GiB 까지 받고 읽기는 1 GiB 위 항목 하나로 팩 전체를 거절했다(감사 A-3).
+            if ( pEntry->_bytes.size() > CompressionStream::kMaxUncompressedSize )
+            {
+                SW_LOG_ERROR_ID( "PackWriter.EntryOverReaderLimit", "Pack entry '%#' is %# bytes - over the %#-byte entry limit the pack reader accepts", pEntry->_relativePath,
+                                 static_cast<uint64>( pEntry->_bytes.size() ), CompressionStream::kMaxUncompressedSize );
+                return false;
+            }
             const bool bFitsEntryProperties = pEntry->_bytes.size() <= MathUtil::kMaxUInt32 && stringPoolBytes.size() <= MathUtil::kMaxUInt32;
             if ( bFitsEntryProperties == false )
             {
