@@ -125,3 +125,25 @@ SW_TEST_CASE( WorldClockTest, PhasesFollowTheConfiguredHours )
     SW_EXPECT_TRUE( WorldClock::computePhaseAt( settings, 19.0f ) == DayPhase::Dusk );
     SW_EXPECT_TRUE( WorldClock::computePhaseAt( settings, 22.0f ) == DayPhase::Night );
 }
+
+/**
+ * @brief [WorldClockTest] 어떤 하루 길이에서도 하루를 걸으면 시 경계 24 개를 모두 지나 다음 날이 된다(감사 G-2)
+ * @details 하루 3500 · 5000 · 7000 · 10000 · 20000 초에서 시 경계에 올려놓은 시각이 N 바로 아래로 반올림되어 걸음이 1e-4 로 고정됐고,
+ *          2048 초를 넘은 시각에서는 그 걸음이 float 에 더해지지 않아 시계가 영구히 멈췄다. 1 분씩 하루를 흘린다.
+ */
+SW_TEST_CASE( WorldClockTest, AdvancesAcrossEveryHourForAnyDayLength )
+{
+    for ( const float32 secondsPerDay : { 1440.0f, 3500.0f, 5000.0f, 7000.0f, 10000.0f, 20000.0f, 86400.0f } )
+    {
+        WorldClockSettings settings = WorldClockTestUtil::makeSettings();
+        settings._secondsPerDay     = secondsPerDay;
+        WorldClock clock;
+        SW_REQUIRE_TRUE( clock.initialize( settings ) );
+        for ( int32 minute = 0; minute < 24 * 60; ++minute )
+            clock.advanceMinutes( 1.0f );
+        vector<WorldClockEvent> listEvent;
+        clock.pollEvents( listEvent );
+        SW_EXPECT_EQUAL( 24u, WorldClockTestUtil::countEvents( listEvent, WorldClockEvent::Kind::HourChanged ) );
+        SW_EXPECT_EQUAL( 1u, WorldClockTestUtil::countEvents( listEvent, WorldClockEvent::Kind::DayChanged ) );
+    }
+}

@@ -986,7 +986,7 @@
     "Source/GameFramework/Runtime/Online/Service/OnlineServiceClient.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.cpp": {"hex": 1},
     "Source/GameFramework/Runtime/World/Environment/WeatherSystem.cpp": {"float": 1},
-    "Source/GameFramework/Runtime/World/Environment/WorldClock.cpp": {"float": 13},
+    "Source/GameFramework/Runtime/World/Environment/WorldClock.cpp": {"float": 9},
     "Source/GameFramework/Runtime/World/Spline/ArcLengthSpan.h": {"float": 1},
     "Source/GameFramework/Runtime/World/Spline/SplinePath.cpp": {"float": 15},
     "Source/GameFramework/Runtime/World/Spline/SplinePath.h": {"integer": 1},

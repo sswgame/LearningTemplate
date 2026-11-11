@@ -158,36 +158,45 @@ namespace sw
 
     void WorldClock::advanceGameSeconds( float32 gameSeconds )
     {
-        const float32 secondsPerHour = _settings._secondsPerDay / 24.0f;
-        float32       left           = gameSeconds;
-        // 시 경계마다 끊어 가며 넘긴다(하루를 건너뛰어도 모든 경계를 알린다).
+        constexpr int32 kHoursPerDay   = 24;
+        const float32   secondsPerHour = _settings._secondsPerDay / static_cast<float32>( kHoursPerDay );
+        // 시 경계마다 끊어 가며 넘긴다(하루를 건너뛰어도 모든 경계를 알린다). 지금 시를 **정수로** 들고 경계를 넘을 때마다 하나 올린다 — 예전에는 매 걸음
+        // `getHour()` 를 다시 구해, 경계에 올려놓은 시각이 N 바로 아래로 반올림되면 다음 경계까지가 0 이 되어 걸음이 1e-4 로 고정됐고 하루 길이에 따라
+        // (3500 · 5000 · 7000 · 10000 …) 2048 초를 넘은 시각에서는 그 걸음이 float 에 더해지지 않아 시계가 영구히 멈췄다(감사 G-2). 매 반복은 남은 시간을
+        // 다 쓰거나 시를 하나 올리므로 반드시 끝난다(언리얼 FTimespan 의 정수 틱 자리).
+        int32   hour = MathUtil::clamp( static_cast<int32>( _secondOfDay / secondsPerHour ), 0, kHoursPerDay - 1 );
+        float32 left = gameSeconds;
         while ( left > 0.0f )
         {
-            const float32  hourBefore    = getHour();
-            const int32    hourIntBefore = static_cast<int32>( hourBefore );
-            const DayPhase phaseBefore   = computePhase( hourBefore );
-            const float32  toNextHour    = static_cast<float32>( hourIntBefore + 1 ) * secondsPerHour - _secondOfDay;
-            float32        step          = MathUtil::min( left, MathUtil::max( toNextHour, 1.0e-4f ) );
-            if ( MathUtil::abs( left - toNextHour ) < 1.0e-3f )
-                step = toNextHour; // 반올림 오차로 경계 바로 앞에 멈추지 않게
-            _secondOfDay += step;
-            left = MathUtil::abs( left - step ) < 1.0e-3f ? 0.0f : left - step;
-            if ( _secondOfDay >= _settings._secondsPerDay - 1.0e-3f )
+            const DayPhase phaseBefore = computePhase( getHour() );
+            const float32  boundary    = static_cast<float32>( hour + 1 ) * secondsPerHour;
+            const float32  toNextHour  = boundary - _secondOfDay;
+            if ( left < toNextHour - 1.0e-3f )
             {
-                _secondOfDay             = 0.0f;
-                const int32 seasonBefore = getSeasonIndex();
-                const int32 yearBefore   = getYear();
-                ++_day;
-                _eventBuffer.push( WorldClockEvent{ _day, WorldClockEvent::Kind::DayChanged } );
-                if ( getSeasonIndex() != seasonBefore )
-                    _eventBuffer.push( WorldClockEvent{ getSeasonIndex(), WorldClockEvent::Kind::SeasonChanged } );
-                if ( getYear() != yearBefore )
-                    _eventBuffer.push( WorldClockEvent{ getYear(), WorldClockEvent::Kind::YearChanged } );
+                _secondOfDay += left; // 이 시 안에서 끝난다
+                left = 0.0f;
             }
-            const float32 hourAfter = getHour();
-            if ( static_cast<int32>( hourAfter ) != hourIntBefore )
-                _eventBuffer.push( WorldClockEvent{ static_cast<int32>( hourAfter ), WorldClockEvent::Kind::HourChanged } );
-            const DayPhase phaseAfter = computePhase( hourAfter );
+            else
+            {
+                left         = MathUtil::max( 0.0f, left - MathUtil::max( toNextHour, 0.0f ) );
+                _secondOfDay = boundary;
+                ++hour;
+                if ( hour >= kHoursPerDay )
+                {
+                    hour                     = 0;
+                    _secondOfDay             = 0.0f;
+                    const int32 seasonBefore = getSeasonIndex();
+                    const int32 yearBefore   = getYear();
+                    ++_day;
+                    _eventBuffer.push( WorldClockEvent{ _day, WorldClockEvent::Kind::DayChanged } );
+                    if ( getSeasonIndex() != seasonBefore )
+                        _eventBuffer.push( WorldClockEvent{ getSeasonIndex(), WorldClockEvent::Kind::SeasonChanged } );
+                    if ( getYear() != yearBefore )
+                        _eventBuffer.push( WorldClockEvent{ getYear(), WorldClockEvent::Kind::YearChanged } );
+                }
+                _eventBuffer.push( WorldClockEvent{ hour, WorldClockEvent::Kind::HourChanged } );
+            }
+            const DayPhase phaseAfter = computePhase( getHour() );
             if ( phaseAfter != phaseBefore )
                 _eventBuffer.push( WorldClockEvent{ static_cast<int32>( phaseAfter ), WorldClockEvent::Kind::PhaseChanged } );
         }
