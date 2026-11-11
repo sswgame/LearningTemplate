@@ -263,9 +263,10 @@ namespace sw
                 formatstring( _pBuffer + _length, available, format, args... );
                 const uint32 written = StringUtil::strlen( _pBuffer + _length );
 
-                // formatstring 이 available - 1 까지 꽉 채웠다면 버퍼가 모자랐을 수 있으므로, 늘린 뒤 다시 시도한다
-
-                if ( written < available - 1 )
+                // formatstring 이 available - 1 근처까지 채웠다면 버퍼가 모자랐을 수 있으므로, 늘린 뒤 다시 시도한다. 잘릴 때 UTF-8 글자 시작까지
+                // 최대 3 바이트 물러나 끝까지 채우지 않으므로 그 여유만큼 먼저 본다 — 예전에는 한글이 경계에 걸려 잘린 출력을 다 들어갔다고 봤다(감사 C-10).
+                constexpr uint32 kMaxUTF8BackOffBytes = 3;
+                if ( written + kMaxUTF8BackOffBytes < available - 1 )
                 {
                     _length += written;
                     return *this;

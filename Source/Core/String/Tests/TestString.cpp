@@ -2006,3 +2006,16 @@ SW_TEST_CASE( StringTest, KeyValueSplitsAtTheFirstSeparator )
     SW_EXPECT_FALSE( sw::StringUtil::trySplitKeyValue( "", key, value ) );
     SW_EXPECT_TRUE( key == "unchanged" && value == "unchanged" );
 }
+
+// 작은 버퍼에 한글이 경계에 걸리면 포맷이 글자 시작까지 물러나 끝까지 채우지 않는다 — 그것을 "다 들어갔다" 로 보면 뒤가 잘린 채 끝났다(감사 C-10).
+// 접두 길이를 바꿔 경계가 글자 안 여러 자리에 오게 한다.
+SW_TEST_CASE( StringTest, AppendFormatGrowsAcrossUTF8Boundary )
+{
+    const sw::string_view text = "a가나다라마바"; // 19 바이트 — StringBuilder<16> 의 경계가 글자 안에 걸린다
+    for ( const sw::string_view prefix : { sw::string_view{ "" }, sw::string_view{ "a" }, sw::string_view{ "ab" } } )
+    {
+        sw::StringBuilder<16> builder;
+        builder.appendFormat( "%#%#", prefix, text );
+        SW_EXPECT_TRUE( builder.view() == sw::string( prefix ) + sw::string( text ) );
+    }
+}
