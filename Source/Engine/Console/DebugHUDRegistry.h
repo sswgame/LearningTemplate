@@ -204,8 +204,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
 
 /**
- * @brief 디버그 HUD 섹션을 그 섹션의 .cpp 에서 등록합니다. Shipping 에서는 아무것도 남기지 않습니다 — 본문 함수도 `#if !defined( SW_SHIPPING )`
- *        안에 두십시오.
+ * @brief 디버그 HUD 섹션을 그 섹션의 .cpp 에서 등록합니다. Shipping 에서는 등록을 남기지 않습니다 — 본문 함수는 컴파일되지만 부르는 곳이 없어 링크에서 빠진다.
  * @param varName 파일 안에서 유일한 이름 조각(변수 이름용)
  * @param pName   명령 · 설정에 쓰는 이름(리터럴, `hud <이름> on`)
  * @param pTitle  HUD 에 보이는 제목
@@ -222,6 +221,8 @@ namespace sw
 
 #else
 
-    #define SW_DEBUG_HUD_SECTION( varName, pName, pTitle, order, flags, pFunc ) static_assert( true, "SW_DEBUG_HUD_SECTION is compiled out of Shipping" )
+    // 인자를 평가 없이 참조한다 — 등록에만 쓰이는 순서 상수 · 본문 함수가 Shipping 에서만 '안 쓰임' 경고를 내지 않게.
+    #define SW_DEBUG_HUD_SECTION( varName, pName, pTitle, order, flags, pFunc ) \
+        static_assert( sizeof( pFunc ) > 0 && sizeof( order ) > 0 && sizeof( flags ) > 0, "SW_DEBUG_HUD_SECTION is compiled out of Shipping" )
 
 #endif
