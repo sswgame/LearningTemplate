@@ -63,6 +63,7 @@
 						        _herbExperience="15"
 						        _herbRespawnSeconds="5"
 						        _maxMoveStep="12"
+						        _moveSpeed="6"
 						        _worldHalfExtent="64"
 						        _partyMaxSize="4"
 						        _partyShareRange="30"

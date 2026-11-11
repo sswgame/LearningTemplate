@@ -62,6 +62,7 @@ namespace
     {
         ValeRules rules;
         rules._listLevelExperience = { 100, 250, 450, 700 };
+        rules._moveSpeed           = 6.0f;
         ValePlacement spawn;
         spawn._kind     = ValePlacementKind::Creature;
         spawn._position = float3{ 2.0f, 0.0f, 0.0f };
