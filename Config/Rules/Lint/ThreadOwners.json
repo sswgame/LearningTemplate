@@ -25,6 +25,7 @@
         { "_path": "Source/Engine/Renderer/Frame/Resource/MaterialPSOBuilder", "_reason": "PSO 생성 — 드라이버가 직렬이라 생성 하나가 워커를 수 ms 막는다(머리말)" },
         { "_path": "Source/GameFramework/Runtime/Online/HTTP/HTTPClient", "_reason": "이름 해석(getaddrinfo) — OS 에서 막힌다" },
         { "_path": "Source/GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HTTP2Client", "_reason": "이름 해석(getaddrinfo) — OS 에서 막힌다" },
+        { "_path": "Source/Engine/Telemetry/TelemetryService", "_reason": "텔레메트리 스풀 쓰기 · 올리기 — 디스크 쓰기와 막히는 HTTP 요청을 게임 스레드 밖에서 순서대로(감사 N-6)" },
         { "_path": "Source/GameFramework/Runtime/Online/HTTP/TelemetryUploadLink", "_reason": "크래시 보고 올리기 — 막히는 HTTP 요청을 순서대로" },
         { "_path": "Source/GameFramework/Runtime/Foundation/Framework/Save/Local/ThreadedLocalStore", "_reason": "로컬 저장 — 순서가 있는 디스크 쓰기 · fsync 가 OS 에서 막힌다" },
         { "_path": "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool", "_reason": "DB 드라이버 호출이 망을 막고 기다린다 — 연결 하나가 스레드 하나(연결은 스레드 사이에 나누지 않는다), 수는 연결 수다" }
