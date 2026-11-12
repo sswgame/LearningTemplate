@@ -1318,7 +1318,7 @@ namespace sw
             _listScratchSamplePose.resize( sampleCount );
         _listScratchSamplePosePointer.clear();
         _listScratchSampleWeight.clear();
-        // 가중치가 0 인 표본은 샘플하지 않는다(1D 는 많아야 둘, 2D 는 표본 위면 하나).
+        // 가중치가 0 인 표본은 샘플하지 않는다(1D 는 많아야 둘, 2D 는 삼각형이라 많아야 셋).
         for ( uint32 sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
         {
             const float32 weight = pState->getSampleWeight( sampleIndex );

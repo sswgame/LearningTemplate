@@ -232,6 +232,12 @@ namespace sw
             SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBlend6", "Animation graph node '%#' has a blend space without samples", inoutNode._name.c_str() );
             bValid = false;
         }
+        // 2D 가중치는 삼각분할의 무게중심이라 넓이가 없는 표본(둘 · 한 줄)은 섞을 삼각형이 없다 — 대신할 규칙을 두지 않고 로드 오류로 멈춘다.
+        if ( bValid && def._space.getAxisCount() == 2 && def._space.getSampleCount() >= 2 && def._space.hasArea() == false )
+        {
+            SW_LOG_ERROR_ID( "AnimationGraphAsset.BlendSpaceNoArea", "Animation graph node '%#' has a 2D blend space whose samples do not span an area (need three not on one line)", inoutNode._name.c_str() );
+            bValid = false;
+        }
         return bValid;
     }
 
