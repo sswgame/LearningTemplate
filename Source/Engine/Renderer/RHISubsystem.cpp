@@ -147,6 +147,22 @@ namespace sw
                 return true;
             }
 
+            /** @brief 감시 값 `RHI.GeometryStage` · `RHI.TessellationStages` 입니다. 패스 XML 의 선택 스테이지를 붙일 수 있는 장치면 1 입니다(`RHICapabilities` 의 같은 이름 칸). */
+            [[nodiscard]] static bool readCapability( uint8 RHICapabilities::* pField, float64& outValue )
+            {
+                const RHISubsystem* const pSubsystem = engine::findSubsystem<RHISubsystem>();
+                const RHI* const          pRHI       = pSubsystem != nullptr ? pSubsystem->findRHI() : nullptr;
+                if ( pRHI == nullptr || pRHI->hasDevice() == false )
+                    return false;
+                outValue = pRHI->getDevice().getCapabilities().*pField != SW_FALSE ? 1.0 : 0.0;
+                return true;
+            }
+            [[nodiscard]] static bool readGeometryStage( const GameObjectManager* /*pManager*/, float64& outValue ) { return readCapability( &RHICapabilities::_bGeometryStage, outValue ); }
+            [[nodiscard]] static bool readTessellationStages( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readCapability( &RHICapabilities::_bTessellationStages, outValue );
+            }
+
             /** @brief 감시 값 `Texture.FormatVariantActive` 입니다. 이 장치가 임포트한 DDS 가 아닌 쿠킹 변형을 읽으면 1 입니다(데스크톱 대상은 0 — 그림이 바뀌지 않는다는 뜻이다). */
             [[nodiscard]] static bool readFormatVariantActive( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -162,6 +178,10 @@ namespace sw
     SW_AUTOMATION_WATCH( rhiSupportsBC7, "RHI.SupportsBC7", "1 when this device can sample BC7 textures", &RHISubsystemInternal::readSupportsBC7 );
     SW_AUTOMATION_WATCH( rhiMaterialTessellation, "RHI.MaterialTessellation", "1 when this device draws displaced materials (hull and domain stages on material shaders) - 0 on OpenGL and WebGPU",
                          &RHISubsystemInternal::readMaterialTessellation );
+    SW_AUTOMATION_WATCH( rhiGeometryStage, "RHI.GeometryStage", "1 when pipeline passes can add a geometry stage - 0 on WebGPU and on Vulkan devices without geometryShader",
+                         &RHISubsystemInternal::readGeometryStage );
+    SW_AUTOMATION_WATCH( rhiTessellationStages, "RHI.TessellationStages", "1 when pipeline passes can add hull and domain stages - 0 on WebGPU and on Vulkan devices without tessellationShader (dzn)",
+                         &RHISubsystemInternal::readTessellationStages );
     SW_AUTOMATION_WATCH( textureFormatVariantActive, "Texture.FormatVariantActive", "1 when textures read a cooked format variant instead of the imported DDS (0 on the desktop target)", &RHISubsystemInternal::readFormatVariantActive );
 } // namespace sw
 

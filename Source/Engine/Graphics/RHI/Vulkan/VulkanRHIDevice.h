@@ -263,6 +263,8 @@ namespace sw
             caps._bNativeBindless       = _textureSet != nullptr ? 1u : 0u;
             caps._bWireframeFill        = _bFillModeNonSolid;
             caps._bMaterialTessellation = _bTessellationShader != 0 ? SW_TRUE : SW_FALSE;
+            caps._bGeometryStage        = _bGeometryShader != 0 ? SW_TRUE : SW_FALSE;
+            caps._bTessellationStages   = _bTessellationShader != 0 ? SW_TRUE : SW_FALSE;
             caps._bGPUBreadcrumbs       = _breadcrumbMode != VulkanBreadcrumbMode::None ? SW_TRUE : SW_FALSE;
             caps._bAsyncCompute         = _asyncComputeQueue != nullptr ? SW_TRUE : SW_FALSE;
             caps._bGraphicsShaderWrites = _bFragmentStores;

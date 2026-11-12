@@ -8,6 +8,7 @@
 	<Launch variable="gv_renderPipeline" value="game/empty/pipeline/tessellationstagepipeline.xml"/>
 	<Launch variable="gv_renderScale" value="1"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<SkipUnless watch="RHI.TessellationStages" reason="this device has no hull and domain stages (Vulkan without tessellationShader, e.g. dzn; WebGPU) - the pipeline PSO is refused (VulkanRHIResourceFactory.CreatePipelineStateOptionalStageFailed)"/>
 	<Wait frames="40"/>
 	<Screenshot file="tessellationstage.ppm"/>
 	<Wait frames="5"/>
