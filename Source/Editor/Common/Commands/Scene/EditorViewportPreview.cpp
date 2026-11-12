@@ -7,6 +7,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
@@ -101,7 +102,7 @@ namespace sw::editor
         GameObjectManager* pManager = editor::getActiveObjectManager();
         if ( pManager == nullptr )
             return; // 선택(②): 미리보기는 씬이 없는 에디터에서도 열 수 있다. 재생할 대상이 없다
-        const vector<GameObject*> listObject = pManager->getAllGameObjects();
+        const vector<GameObject*> listObject = pManager->getAllGameObjects( editor::EditorSceneIterationAccess::getKey() );
         for ( GameObject* pObject : listObject )
         {
             if ( pObject == nullptr || pObject == pPrimary )
@@ -126,7 +127,7 @@ namespace sw::editor
         GameObjectHandle   speakerObject{};
         if ( pManager != nullptr )
         {
-            const vector<GameObject*> listObject = pManager->getAllGameObjects();
+            const vector<GameObject*> listObject = pManager->getAllGameObjects( editor::EditorSceneIterationAccess::getKey() );
             for ( GameObject* pObject : listObject )
             {
                 if ( pObject == nullptr )

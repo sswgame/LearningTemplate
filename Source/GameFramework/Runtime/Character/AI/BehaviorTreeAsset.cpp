@@ -439,7 +439,7 @@ namespace sw
     {
         _tree = BehaviorTree{};
         // 손 읽기: 트리는 원소 이름이 노드 종류인 재귀 구조라 원소 표로 적을 수 없다 — 루트 아래 노드 하나를 읽기 도구(`BehaviorTreeReader`)에 넘긴다.
-        const XMLNode& rootNode = root.getNodeForHandRead();
+        const XMLNode& rootNode = root.getRawNode();
         bool           bValid   = XMLNameCheck::reportUnknownAttributes( rootNode, nullptr, 0, sourceName, LogLevel::Error );
         const XMLNode  first    = rootNode.findChild();
         if ( first.isValid() == false )

@@ -584,7 +584,7 @@ namespace sw
             _listThread.reserve( _threadCount );
             for ( uint32 index = 0; index < _threadCount; ++index )
             {
-                _listThread.emplace_back( &ThreadPoolAsyncFileIOBackend::runWorker, this, memoryTag );
+                _listThread.emplace_back( ThreadCreationKey{}, &ThreadPoolAsyncFileIOBackend::runWorker, this, memoryTag );
             }
             return true;
         }

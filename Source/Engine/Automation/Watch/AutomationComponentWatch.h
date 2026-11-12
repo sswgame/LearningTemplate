@@ -14,14 +14,14 @@ namespace sw
     /** @brief 컴포넌트 감시 값의 몸통입니다. 매크로(`SW_AUTOMATION_COMPONENT_WATCH`)가 씁니다. */
     struct AutomationComponentWatch
     {
-        /** @brief 씬의 첫 @p TComponent(파생 포함)입니다. 없거나 씬이 없으면 nullptr 입니다. 단언 단계에서만 불리므로 프레임 경로가 아닙니다. */
+        /** @brief 씬의 첫 @p TComponent(파생 포함)입니다. 없거나 씬이 없으면 nullptr 입니다. 단언 단계에서만 불리므로 프레임 경로가 아닙니다 — 열쇠는 감시 값 레지스트리가 넘긴다. */
         template <typename TComponent>
-        static const TComponent* findFirst( const GameObjectManager* pManager )
+        static const TComponent* findFirst( SceneIterationKey key, const GameObjectManager* pManager )
         {
             const TComponent* pFound = nullptr;
             if ( pManager == nullptr )
                 return nullptr;
-            pManager->forEachComponentOfType<TComponent>( [&pFound]( const TComponent* pComponent )
+            pManager->forEachComponentOfType<TComponent>( key, [&pFound]( const TComponent* pComponent )
             {
                 if ( pFound == nullptr )
                     pFound = pComponent;
@@ -31,17 +31,17 @@ namespace sw
 
         /** @brief 첫 @p TComponent 에서 @p TRead 로 읽습니다. 컴포넌트가 없거나 @p TRead 가 false 면 값이 없습니다. */
         template <typename TComponent, bool ( *TRead )( const TComponent&, float64& )>
-        [[nodiscard]] static bool read( const GameObjectManager* pManager, float64& outValue )
+        [[nodiscard]] static bool read( SceneIterationKey key, const GameObjectManager* pManager, float64& outValue )
         {
-            const TComponent* pComponent = findFirst<TComponent>( pManager );
+            const TComponent* pComponent = findFirst<TComponent>( key, pManager );
             return pComponent != nullptr && TRead( *pComponent, outValue );
         }
 
         /** @brief 첫 @p TComponent 의 인자 없는 const 게터(수 · bool · 열거) @p TGetter 값입니다. 컴포넌트가 없으면 값이 없습니다. */
         template <typename TComponent, auto TGetter>
-        [[nodiscard]] static bool readGetter( const GameObjectManager* pManager, float64& outValue )
+        [[nodiscard]] static bool readGetter( SceneIterationKey key, const GameObjectManager* pManager, float64& outValue )
         {
-            const TComponent* pComponent = findFirst<TComponent>( pManager );
+            const TComponent* pComponent = findFirst<TComponent>( key, pManager );
             if ( pComponent == nullptr )
                 return false;
             outValue = static_cast<float64>( ( pComponent->*TGetter )() );
@@ -57,7 +57,7 @@ namespace sw
  *     SW_AUTOMATION_COMPONENT_WATCH( shooterStrideScale, "Shooter3D.StrideScale", "Stride scale; absent until the rig is bound", ShooterAvatarComponent, &readStrideScale );
  * @endcode
  */
-#define SW_AUTOMATION_COMPONENT_WATCH( id, pName, pTooltip, TComponent, pRead ) SW_AUTOMATION_WATCH( id, pName, pTooltip, (&::sw::AutomationComponentWatch::read<TComponent, pRead>))
+#define SW_AUTOMATION_COMPONENT_WATCH( id, pName, pTooltip, TComponent, pRead ) SW_AUTOMATION_SCENE_WATCH( id, pName, pTooltip, (&::sw::AutomationComponentWatch::read<TComponent, pRead>))
 
 /**
  * @brief 씬의 첫 @p TComponent 의 const 게터 하나를 그대로 읽는 감시 값을 등록합니다. 값을 가공하거나 "값 없음" 을 고르면 `SW_AUTOMATION_COMPONENT_WATCH` 를 씁니다.
@@ -65,4 +65,4 @@ namespace sw
  *     SW_AUTOMATION_GETTER_WATCH( arenaKillCount, "Arena.KillCount", "Enemies felled this game", ArenaGameModeComponent, &ArenaGameModeComponent::getKillCount );
  * @endcode
  */
-#define SW_AUTOMATION_GETTER_WATCH( id, pName, pTooltip, TComponent, pGetter ) SW_AUTOMATION_WATCH( id, pName, pTooltip, (&::sw::AutomationComponentWatch::readGetter<TComponent, pGetter>))
+#define SW_AUTOMATION_GETTER_WATCH( id, pName, pTooltip, TComponent, pGetter ) SW_AUTOMATION_SCENE_WATCH( id, pName, pTooltip, (&::sw::AutomationComponentWatch::readGetter<TComponent, pGetter>))

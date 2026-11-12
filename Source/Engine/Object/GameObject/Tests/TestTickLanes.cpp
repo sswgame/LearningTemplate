@@ -76,7 +76,7 @@ namespace
         uint64 computeHash() const
         {
             StateHashBuilder builder;
-            const uint64     sceneHash = SceneObjectHash::compute( _manager );
+            const uint64     sceneHash = SceneObjectHash::compute( SceneIterationTestAccess::getKey(), _manager );
             builder.addBytes( &sceneHash, sizeof( sceneHash ) );
             for ( const TickLaneMoverTestComponent* pMover : _listMover )
             {

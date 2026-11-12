@@ -39,7 +39,7 @@ namespace sw
         _listThread.reserve( _workerCount - 1 );
         for ( uint32 workerIndex = 1; workerIndex < _workerCount; ++workerIndex )
         {
-            _listThread.push_back( sw::thread( &Box2DWorkerPool::runWorker, this, workerIndex ) );
+            _listThread.push_back( sw::thread( ThreadCreationKey{}, &Box2DWorkerPool::runWorker, this, workerIndex ) );
         }
     }
 

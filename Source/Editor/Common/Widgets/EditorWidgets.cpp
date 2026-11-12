@@ -964,7 +964,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    EditorWidgetID EditorWidgetID::fromRuntime( const utf8* pHiddenID )
+    EditorWidgetID EditorWidgetID::fromString( const utf8* pHiddenID )
     {
         if ( pHiddenID == nullptr || pHiddenID[0] != '#' || pHiddenID[1] != '#' )
             SW_FATAL( "Editor widget id '%#' would show its label on the right of the field - draw the label first (EditorWidgets::drawPropertyRowLabel / drawInlineLabel) and pass a '##' id",

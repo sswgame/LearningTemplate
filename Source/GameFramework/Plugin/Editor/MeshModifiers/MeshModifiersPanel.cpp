@@ -11,6 +11,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -141,7 +142,7 @@ namespace sw::editor
                     GameObjectManager*  pManager = getActiveObjectManager();
                     vector<GameObject*> listObject;
                     if ( pManager != nullptr )
-                        pManager->getAllGameObjects( listObject );
+                        pManager->getAllGameObjects( editor::EditorSceneIterationAccess::getKey(), listObject );
                     // 걸러 볼 컴포넌트가 있으면 그것을 가진 오브젝트만, 하나도 없으면 알리고 전체를 보인다
                     bool bAnyMatch = false;
                     for ( const GameObject* pObject : listObject )

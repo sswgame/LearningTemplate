@@ -19,6 +19,7 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -134,11 +135,10 @@ namespace sw
         /** @brief 이 매니저에서 넷 폰 컴포넌트가 달린 오브젝트를 찾습니다. 없으면 빈 핸들입니다. */
         GameObjectHandle findPawnObject( GameObjectManager& manager )
         {
-            vector<GameObject*> listObject;
-            manager.getAllGameObjects( listObject );
-            for ( GameObject* pObject : listObject )
+            for ( const ShooterNetPawnComponent* pPawn : manager.getComponentRegistry().getAll<ShooterNetPawnComponent>() )
             {
-                if ( pObject->getComponent<ShooterNetPawnComponent>() != nullptr )
+                const GameObject* pObject = pPawn->getOwner();
+                if ( pObject != nullptr )
                     return pObject->getHandle();
             }
             return GameObjectHandle{};

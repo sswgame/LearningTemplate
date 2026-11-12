@@ -7,6 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Foundation/SceneIterationKey.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -92,11 +93,11 @@ namespace sw
          * @details 매니저 타입을 템플릿으로 받아서, 이 헤더는 오브젝트 매니저를 include 하지 않는다. 부르는 쪽은 이미 include 했다.
          */
         template <typename TComponent, typename TManager>
-        uint32 capture( TManager& manager )
+        uint32 capture( SceneIterationKey key, TManager& manager )
         {
             const hashed_string& typeName = TComponent::StaticType()->_name;
             uint32               count    = 0;
-            manager.template forEachComponentOfType<TComponent>( [this, &typeName, &count]( TComponent* pComponent )
+            manager.template forEachComponentOfType<TComponent>( key, [this, &typeName, &count]( TComponent* pComponent )
             {
                 Archive archive;
                 StateIO::writeObject( *pComponent, archive );
@@ -113,10 +114,10 @@ namespace sw
          * @details 컴포넌트를 먼저 모으고 순회 밖에서 넘긴다. `restoreState` 가 스폰한 오브젝트를 정리할 수 있는데, 순회 콜백 안(매니저 잠금)에서는 지울 수 없기 때문이다.
          */
         template <typename TComponent, typename TManager>
-        uint32 restore( TManager& manager ) const
+        uint32 restore( SceneIterationKey key, TManager& manager ) const
         {
             vector<TComponent*> listComponent;
-            manager.template forEachComponentOfType<TComponent>( [&listComponent]( TComponent* pComponent )
+            manager.template forEachComponentOfType<TComponent>( key, [&listComponent]( TComponent* pComponent )
             { listComponent.push_back( pComponent ); } );
             const hashed_string& typeName = TComponent::StaticType()->_name;
             uint32               count    = 0;
@@ -151,9 +152,9 @@ namespace sw
     class SW_GF_API StatefulComponentRegistration
     {
     public:
-        using CaptureFn = void ( * )( ComponentStateStore& store, GameObjectManager& manager );
-        using RestoreFn = void ( * )( const ComponentStateStore& store, GameObjectManager& manager );
-        using DespawnFn = void ( * )( GameObjectManager& manager );
+        using CaptureFn = void ( * )( SceneIterationKey key, ComponentStateStore& store, GameObjectManager& manager );
+        using RestoreFn = void ( * )( SceneIterationKey key, const ComponentStateStore& store, GameObjectManager& manager );
+        using DespawnFn = void ( * )( SceneIterationKey key, GameObjectManager& manager );
 
         /** @param pDespawn 상태 저장 전에 세운 런타임 오브젝트를 걷는 일입니다(`GameStateSnapshot::registerViewOwner` 와 같은 일). 세운 것이 없는 타입은 nullptr 입니다. */
         StatefulComponentRegistration( const utf8* pTypeName, CaptureFn pCapture, RestoreFn pRestore, DespawnFn pDespawn );
@@ -244,34 +245,34 @@ namespace sw
                 return nullptr;
         }
         /** @brief 컴포넌트를 먼저 모으고 순회 밖에서 걷는다 — 순회 콜백 안(매니저 잠금)에서는 오브젝트를 지울 수 없다. */
-        static void despawnAllViews( GameObjectManager& manager )
+        static void despawnAllViews( SceneIterationKey key, GameObjectManager& manager )
         {
             if constexpr ( ComponentStateStoreTraits::HasDespawnViews<TComponent>::value )
             {
                 vector<TComponent*> listComponent;
-                manager.template forEachComponentOfType<TComponent>( [&listComponent]( TComponent* pComponent )
+                manager.template forEachComponentOfType<TComponent>( key, [&listComponent]( TComponent* pComponent )
                 { listComponent.push_back( pComponent ); } );
                 for ( TComponent* pComponent : listComponent )
                     pComponent->despawnViews();
             }
             else
             {
-                (void)manager;
+                (void)key, (void)manager;
             }
         }
-        static void captureAllComponentStates( ComponentStateStore& store, GameObjectManager& manager )
+        static void captureAllComponentStates( SceneIterationKey key, ComponentStateStore& store, GameObjectManager& manager )
         {
             if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )
-                (void)store.capture<TComponent>( manager );
+                (void)store.capture<TComponent>( key, manager );
             else
-                (void)store, (void)manager;
+                (void)key, (void)store, (void)manager;
         }
-        static void restoreAllComponentStates( const ComponentStateStore& store, GameObjectManager& manager )
+        static void restoreAllComponentStates( SceneIterationKey key, const ComponentStateStore& store, GameObjectManager& manager )
         {
             if constexpr ( ComponentStateStoreTraits::HasRestoreState<TComponent>::value )
-                (void)store.restore<TComponent>( manager ); // 짝이 없는 컴포넌트는 그대로 둔다
+                (void)store.restore<TComponent>( key, manager ); // 짝이 없는 컴포넌트는 그대로 둔다
             else
-                (void)store, (void)manager;
+                (void)key, (void)store, (void)manager;
         }
     };
 } // namespace sw

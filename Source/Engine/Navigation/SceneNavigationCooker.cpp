@@ -54,7 +54,7 @@ namespace sw
         GameObjectManager&    manager    = *scene.getObjectManager();
         SceneNavigation&      navigation = manager.getSubsystem<SceneNavigation>();
         vector<hashed_string> listAgentType;
-        manager.forEachComponentOfType<NavMeshSurfaceComponent>( [&listAgentType]( NavMeshSurfaceComponent* pSurface )
+        manager.forEachComponentOfType<NavMeshSurfaceComponent>( SceneIterationKey{}, [&listAgentType]( NavMeshSurfaceComponent* pSurface )
         {
             if ( pSurface->getAgentTypes().empty() )
                 listAgentType.push_back( hashed_string{} );

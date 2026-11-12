@@ -117,7 +117,7 @@ namespace sw
         if ( expected<void> tls = _crashClient.registerHostTLS( endpoint, _settings._telemetryUploadTrustFile, TelemetryUploadLinkInternal::kTrustOption ); tls.has_value() == false )
             return tls;
         _pCrashUploader = make_unique<HTTPCrashReportUploader>( _crashClient, endpoint );
-        _crashWorker.start( "CrashUpload", DedicatedWorker<CrashUploadJob>::ProcessDelegate::create<&TelemetryUploadLink::uploadCrashReports>( this ) );
+        _crashWorker.start( ThreadCreationKey{}, "CrashUpload", DedicatedWorker<CrashUploadJob>::ProcessDelegate::create<&TelemetryUploadLink::uploadCrashReports>( this ) );
         CrashUploadJob job;
         job._reportsFolder = reportsFolder;
         if ( _crashWorker.submit( std::move( job ) ) == false )

@@ -391,7 +391,7 @@ namespace sw::editor
         }
         pChild->_processID = pChild->_process.getProcessID();
         SW_LOG_INFO_ID( "NetPlay.LaunchedPid", "Launched %# (pid %#): %#", label, pChild->_processID, command.toCommandLine() );
-        pChild->_reader = sw::thread( &EditorNetPlaySession::readChildOutput, pChild.get() );
+        pChild->_reader = sw::thread( ThreadCreationKey{}, &EditorNetPlaySession::readChildOutput, pChild.get() );
         _listProcess.push_back( std::move( pChild ) );
         return true;
     }

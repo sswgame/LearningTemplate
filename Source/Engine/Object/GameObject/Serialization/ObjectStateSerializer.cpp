@@ -18,7 +18,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
-#include "Engine/Reflection/ReflectedValueWalk.h"
+#include "Engine/Reflection/ReflectedValueVisitor.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -311,32 +311,32 @@ namespace sw
             }
 
             /**
-             * @brief 오브젝트의 컴포넌트 속성마다 @p walk 를 돌려, 옮기지 못한 속성이 있으면 false 를 반환합니다.
+             * @brief 오브젝트의 컴포넌트 속성마다 @p visitor 를 돌려, 옮기지 못한 속성이 있으면 false 를 반환합니다.
              * @details 같은 실행의 상태(`Live`)면 런타임 id 그대로가 맞다. 파일 id 는 이 실행에서 다른 오브젝트일 수 있으므로 옮기지 못한 것은 로드 오류다.
              *          비우지 않는다 — 값이 조용히 사라지는 폴백이다.
              */
-            template <typename TWalk>
-            static bool walkAllProperties( TWalk& walk, GameObject* pObject, ObjectIDSpace idSpace, const utf8* pLeafKind )
+            template <typename TVisitor>
+            static bool visitAllProperties( TVisitor& visitor, GameObject* pObject, ObjectIDSpace idSpace, const utf8* pLeafKind )
             {
-                bool bAllWalked = true;
+                bool bAllVisited = true;
                 for ( Component* pComp : pObject->getComponents() )
                 {
                     const TypeInfo* pTypeInfo = ( pComp != nullptr && pComp->isPendingDestroy() == false ) ? pComp->getTypeInfo() : nullptr;
-                    if ( pTypeInfo == nullptr || walk.hasLeaf( *pTypeInfo ) == false )
+                    if ( pTypeInfo == nullptr || visitor.hasLeaf( *pTypeInfo ) == false )
                         continue;
                     for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
                     {
-                        if ( walk.walkProperty( MutableObjectAddress{ pComp }, *pTypeInfo, prop ) )
+                        if ( visitor.visitProperty( MutableObjectAddress{ pComp }, *pTypeInfo, prop ) )
                             continue;
                         if ( idSpace != ObjectIDSpace::Saved )
                             continue;
                         SW_LOG_ERROR_ID( "Object.PropertyCannotRemap", "Property '%#::%#' of '%#' holds %# a load batch cannot remap (inside a set element or a map key that is a struct or "
                                                                        "container, or a copy failed) - the load fails",
                                          pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str(), pObject->getName().c_str(), pLeafKind );
-                        bAllWalked = false;
+                        bAllVisited = false;
                     }
                 }
-                return bAllWalked;
+                return bAllVisited;
             }
 
             /** @brief 파일 형태의 컴포넌트 자리(키 해시)에 세우는 표지 비트입니다. 런타임 컴포넌트 id 는 작은 카운터라 이 비트를 쓰지 않는다. */
@@ -966,17 +966,17 @@ namespace sw
         const TypeRegistry& registry = context.getTypeRegistry();
         auto                remap    = [this, &entry]( const GameObjectHandle& savedHandle, const PropertyInfo& )
         { return resolveObjectReference( savedHandle, entry._savedIDScope ); };
-        ReflectedValueWalk<GameObjectHandle, decltype( filter ), decltype( remap )> objectWalk( registry, ObjectStateSerializerInternal::getObjectHandleTypeName(), filter, remap );
+        ReflectedValueVisitor<GameObjectHandle, decltype( filter ), decltype( remap )> objectVisitor( registry, ObjectStateSerializerInternal::getObjectHandleTypeName(), filter, remap );
 
         // 컴포넌트 핸들은 오브젝트 핸들과 같은 깊이를 같은 방식으로 내려가되, 잎이 든 필드의 대상 타입을 확인한다.
         bool bInvalid       = false;
         auto remapComponent = [this, &entry, &registry, &bInvalid]( const ComponentHandle& savedHandle, const PropertyInfo& leafProperty )
         { return resolveComponentReference( entry, registry, savedHandle, leafProperty, bInvalid ); };
-        ReflectedValueWalk<ComponentHandle, decltype( filter ), decltype( remapComponent )> componentWalk( registry, ObjectStateSerializerInternal::getComponentHandleTypeName(), filter,
-                                                                                                           remapComponent );
+        ReflectedValueVisitor<ComponentHandle, decltype( filter ), decltype( remapComponent )> componentVisitor( registry, ObjectStateSerializerInternal::getComponentHandleTypeName(), filter,
+                                                                                                                 remapComponent );
 
-        bool bAllRemapped = ObjectStateSerializerInternal::walkAllProperties( objectWalk, pObject, _idSpace, "object handles" );
-        bAllRemapped      = ObjectStateSerializerInternal::walkAllProperties( componentWalk, pObject, _idSpace, "component handles" ) && bAllRemapped;
+        bool bAllRemapped = ObjectStateSerializerInternal::visitAllProperties( objectVisitor, pObject, _idSpace, "object handles" );
+        bAllRemapped      = ObjectStateSerializerInternal::visitAllProperties( componentVisitor, pObject, _idSpace, "component handles" ) && bAllRemapped;
         // 대상이 있는데 대상 타입이 아닌 핸들(`resolveComponentReference` 가 이유를 로그에 남겼다)은 어느 id 공간이든 로드 오류다.
         return bAllRemapped && bInvalid == false;
     }

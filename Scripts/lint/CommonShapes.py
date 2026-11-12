@@ -6,7 +6,7 @@ Scripts/lint/CommonShapes.py
 공통 기반이 있는데 손으로 다시 적은 모양을 막는다. 기반을 만들어 일부만 옮겨 태우면 옛 모양이 남아 복사되는 것이 근본 원인이었다(2026-11-07 조사 `refactor_common.md`).
 **린트는 최후의 수단이다.** 접근 제어 · 선언 막기로 막을 수 있는 모양은 코드로 옮겼다(2026-11-12): 다시 읽기 횟수 손 대조(`SharedAssetCache::getReloadCount` 비공개,
 `AssetReloadWatch` 만 friend), 캔버스 지우기 손 구간(`ed::BeginDelete` 를 `EditorInputBan.h` 가 사용 중단으로 선언, 입구 `EditorNodeGraph.cpp` 만 받지 않는다),
-타입 부모 사슬 손 걷기(`TypeInfo::getParentType` 비공개), 에디터 자동화 포인터 손 옮기기(`EditorSelfTestInput::moveMouse` 비공개, 끌기는 `moveByOffsetFromAim`).
+타입 부모 사슬 손 걷기(`TypeInfo::getParentType` 비공개), 에디터 자동화 포인터 손 옮기기(`EditorSelfTestInput::moveMouse` 비공개, 끌기는 `moveByOffset`).
 남은 여덟은 항목마다 적은 까닭으로 형식이 말하지 못한다 — 합법인 C++ 의 글자 · 칸 이름 · 인자의 뜻이거나, 정당한 사용처가 여러 층에 걸쳐 friend 로 묶을 수 없다.
 
 1. 철자 같은 열거 이름 표: 모든 case 가 열거자 철자 글을 돌려주는 switch. `ENUM()` + `getEnumName` 이 맡는다(`Core` 는 리플렉션 아래 층이라 보지 않는다).

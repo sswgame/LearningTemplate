@@ -38,8 +38,10 @@ namespace sw
             const GameObjectManager* pManager = engine::findActiveObjectManager();
             bool                     bBehind  = false;
             if ( pManager != nullptr )
-                pManager->forEachComponentOfType<FoliageComponent>( [&bBehind]( const FoliageComponent* pFoliage )
-                { bBehind = bBehind || pFoliage->isBehindTerrainEdits(); } );
+                for ( const FoliageComponent* pFoliage : pManager->getComponentRegistry().getAll<FoliageComponent>() )
+                {
+                    bBehind = bBehind || pFoliage->isBehindTerrainEdits();
+                }
             return bBehind;
         }
     } // namespace

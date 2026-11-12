@@ -7,7 +7,7 @@
  *          맥락 메뉴 · 끌어 놓기 · 포인터 · 글 칸의 편집 키는 `EditorInputGUI`(`Common/Input`).
  *          금지를 받지 않는 곳은 ImGui 를 직접 부르는 두 파일뿐이다 — 어댑터(`Common/Input/EditorInputGUI.cpp`)와 ImGui 키를 엔진 입력으로 옮기는
  *          `Common/Backend/ImGuiKeyForward.cpp`. 둘에만 CMake 가 소스 속성으로 `SW_EDITOR_INPUT_ADAPTER=1` 을 준다(`sw_applyEditorInputBan`, 유니티 묶음 · PCH 에서 빠진다).
- *          나머지 파일은 강제 포함한 `EditorInputBanGate.h` 가 0 으로 정해 두어, 소스 안에서 1 로 정의하면 다시 정의 오류(`-Werror=macro-redefined`)로 멈춘다.
+ *          나머지 파일은 강제 포함한 `EditorInputBanConfig.h` 가 0 으로 정해 두어, 소스 안에서 1 로 정의하면 다시 정의 오류(`-Werror=macro-redefined`)로 멈춘다.
  *          imgui_internal.h 의 다른 겹(키 주인 · 입력 플래그를 받는 것)과 그 밖의 여는 길(`OpenPopupEx` · `Shortcut` · `BeginDragDropTargetCustom` …)도 막는다.
  *          C++ 는 앞서 선언한 함수를 속성을 붙여 다시 선언하는 것을 허용한다(기본 인자는 다른 선언의 것을 쓰므로 여기서 적지 않는다).
  */
@@ -65,7 +65,7 @@ namespace ImGui
 
 // 노드 캔버스 지우기 구간(imgui-node-editor `BeginDelete`)은 `EditorNodeGraph::collectRemovals` 한 곳만 연다 — 패널마다 손 구간을 두면 링크 거절 · 주석 노드 가르기가
 // 갈린다. 이 선언이 imgui_node_editor.h 의 선언보다 먼저라(그 헤더가 imgui.h 를 먼저 끌어 온다) 뒤의 선언도 사용 중단을 잇는다. 정적 라이브러리라 API 매크로는 비어 있다.
-// 받지 않는 곳은 `Common/Widgets/EditorNodeGraph.cpp` 하나다 — CMake 가 그 파일에만 `SW_EDITOR_NODE_GRAPH_ADAPTER=1` 을 준다(`EditorInputBanGate.h` 와 같은 방식).
+// 받지 않는 곳은 `Common/Widgets/EditorNodeGraph.cpp` 하나다 — CMake 가 그 파일에만 `SW_EDITOR_NODE_GRAPH_ADAPTER=1` 을 준다(`EditorInputBanConfig.h` 와 같은 방식).
 #if defined( IMGUI_VERSION ) && SW_EDITOR_NODE_GRAPH_ADAPTER == 0
 namespace ax::NodeEditor
 {
@@ -74,7 +74,7 @@ namespace ax::NodeEditor
 #endif // defined( IMGUI_VERSION ) && SW_EDITOR_NODE_GRAPH_ADAPTER == 0
 
 // 입력 위젯 — 에디터 코드는 ImGui 의 이름표 받는 입력 위젯을 직접 부르지 않는다. `EditorWidgets` 의 감싼 함수가 숨은 id 형식(`EditorWidgetID`)만 받아
-// 보이는 이름표가 칸 오른쪽에 붙을 수 없다. 감싼 함수를 정의하는 `Common/Widgets/EditorWidgets.cpp` 만 CMake 가 준 `SW_EDITOR_WIDGET_ADAPTER=1` 로 이 절을 받지 않는다(`EditorInputBanGate.h` 와 같은 방식).
+// 보이는 이름표가 칸 오른쪽에 붙을 수 없다. 감싼 함수를 정의하는 `Common/Widgets/EditorWidgets.cpp` 만 CMake 가 준 `SW_EDITOR_WIDGET_ADAPTER=1` 로 이 절을 받지 않는다(`EditorInputBanConfig.h` 와 같은 방식).
 #if defined( IMGUI_VERSION ) && SW_EDITOR_WIDGET_ADAPTER == 0
 
     #define SW_EDITOR_WIDGET_BAN_MESSAGE "editor code does not call ImGui input widgets directly - use EditorWidgets::inputInt / dragFloat / sliderFloat / combo / beginCombo ... with a '##' EditorWidgetID and draw the label first"

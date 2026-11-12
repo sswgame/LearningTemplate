@@ -10,6 +10,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/EditorProfile.h"
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
@@ -153,8 +154,8 @@ namespace sw::editor
         const EditorWorkspace& workspace     = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>();
         const GameObject*      pEditorCamera = pCamera->getOwner();
         vector<GameObject*>    listInside;
-        pManager->forEachGameObject(
-            [&]( GameObject* pObj )
+        pManager->forEachGameObject( editor::EditorSceneIterationAccess::getKey(),
+                                     [&]( GameObject* pObj )
         {
             const SceneComponent* pRoot    = pObj->getPrimarySceneComponent();
             const bool            bSkipped = pObj == pEditorCamera || pRoot == nullptr || pObj->isRenderHidden() || workspace.isObjectLocked( pObj->getObjectID() );

@@ -4,6 +4,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 #include "Engine/Audio/CircularAudioBuffer.h"
 
@@ -95,7 +96,7 @@ SW_TEST_CASE( CircularAudioBufferTest, ProducerConsumerThreadsKeepSequence )
     constexpr uint32        kTotalSample = 1u << 18;
     constexpr uint32        kChunk       = 96; // 용량(256)의 약수가 아니라 묶음이 끝에서 갈린다
     sw::CircularAudioBuffer buffer( 256 );
-    sw::thread              producer( &CircularAudioBufferTestInternal::produceSequence, &buffer, kTotalSample, kChunk );
+    sw::thread              producer( sw::ThreadTestAccess::getKey(), &CircularAudioBufferTestInternal::produceSequence, &buffer, kTotalSample, kChunk );
 
     sw::vector<float32> listOut( 64 );
     uint32              received = 0;

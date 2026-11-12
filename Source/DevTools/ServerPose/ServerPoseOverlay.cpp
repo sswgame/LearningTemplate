@@ -12,6 +12,8 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "DevTools/Diagnostics/DevSceneIterationAccess.h"
+
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
@@ -228,7 +230,7 @@ namespace sw
     void ServerPoseOverlay::collectPoses( const GameObjectManager& manager, vector<AuthorityPose>& outListPose )
     {
         outListPose.clear();
-        manager.forEachGameObject( [&outListPose]( GameObject* pObject )
+        manager.forEachGameObject( DevSceneIterationAccess::getKey(), [&outListPose]( GameObject* pObject )
         {
             const SceneComponent* pRoot = pObject->getName().empty() ? nullptr : pObject->getComponent<SceneComponent>();
             if ( pRoot == nullptr )

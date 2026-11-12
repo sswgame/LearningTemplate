@@ -17,6 +17,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Foundation/SceneIterationKey.h"
 
 namespace sw
 {
@@ -34,7 +35,7 @@ namespace sw
         static string makeListPath( string_view scenePath );
 
         /** @brief @p objects 의 모든 오브젝트 컴포넌트에서 에셋 경로를 모아 @p outListPath 에 오름차순 · 중복 없이 채웁니다(먼저 비운다). */
-        static void collect( const GameObjectManager& objects, vector<string>& outListPath );
+        static void collect( SceneIterationKey key, const GameObjectManager& objects, vector<string>& outListPath );
 
         /** @brief 목록을 디스크 절대 경로 @p diskPath 에 씁니다(쿠킹 출력). */
         [[nodiscard]] static bool write( string_view diskPath, const vector<string>& listPath );

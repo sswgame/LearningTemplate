@@ -8,6 +8,7 @@
 #include "Core/Task/LockFreeObjectPool.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 using namespace sw;
 
@@ -177,7 +178,7 @@ SW_TEST_CASE( LockFreeObjectPoolTest, Concurrent )
     sw::vector<sw::thread> workers;
     for ( int32 threadIndex = 0; threadIndex < kNumThreads; ++threadIndex )
     {
-        workers.emplace_back( [&pool, &successfulAcquires, threadIndex]()
+        workers.emplace_back( ThreadTestAccess::getKey(), [&pool, &successfulAcquires, threadIndex]()
         {
             for ( int32 iter = 0; iter < kIterations; ++iter )
             {
@@ -230,7 +231,7 @@ SW_TEST_CASE( LockFreeObjectPoolTest, LosesNoBlockUnderContention )
     sw::vector<sw::thread> workers;
     for ( int32 threadIndex = 0; threadIndex < kThreads; ++threadIndex )
     {
-        workers.emplace_back( [&pool]()
+        workers.emplace_back( ThreadTestAccess::getKey(), [&pool]()
         {
             for ( int32 iter = 0; iter < kIterations; ++iter )
             {

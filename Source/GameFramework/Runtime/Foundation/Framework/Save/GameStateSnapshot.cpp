@@ -167,12 +167,12 @@ namespace sw
         for ( const StatefulComponentType& type : _listStatefulType )
         {
             if ( type._pCapture != nullptr )
-                type._pCapture( *_pComponentStateStore, *pManager );
+                type._pCapture( SceneIterationKey{}, *_pComponentStateStore, *pManager );
         }
         for ( const StatefulComponentType& type : _listStatefulType )
         {
             if ( type._pDespawn != nullptr )
-                type._pDespawn( *pManager );
+                type._pDespawn( SceneIterationKey{}, *pManager );
         }
     }
 
@@ -340,7 +340,7 @@ namespace sw
         for ( const StatefulComponentType& type : _listStatefulType )
         {
             if ( type._pRestore != nullptr )
-                type._pRestore( *_pComponentStateStore, *pManager );
+                type._pRestore( SceneIterationKey{}, *_pComponentStateStore, *pManager );
         }
     }
 
@@ -352,7 +352,7 @@ namespace sw
 
         // 살아 있는 것만 담는다. `forEachGameObject` 가 파괴 대기 오브젝트를 이미 건너뛴다. 실행 중에 세운 파생 오브젝트(`isTransient`)는 세운 쪽이 다시 세운다.
         vector<GameObject*> listValidObject;
-        pObjectManager->forEachGameObject( [&listValidObject]( GameObject* pObj )
+        pObjectManager->forEachGameObject( SceneIterationKey{}, [&listValidObject]( GameObject* pObj )
         {
             if ( pObj->isTransient() == false )
                 listValidObject.push_back( pObj );

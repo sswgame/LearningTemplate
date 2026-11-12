@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -173,7 +174,7 @@ namespace sw::editor
         vector<GameObject*> listInstance;
         if ( pManager != nullptr && oldBaseState.empty() == false )
         {
-            pManager->forEachGameObject( [&]( GameObject* pOther )
+            pManager->forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [&]( GameObject* pOther )
             {
                 const bool bNotOtherLiveObject = pOther == nullptr || pOther == pObj || pOther->isPendingDestroy();
                 if ( bNotOtherLiveObject )

@@ -11,6 +11,9 @@
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
@@ -34,7 +37,7 @@ namespace sw
             static void writeInteraction( DebugHUDSectionWriter& writer )
             {
                 const GameObjectManager* const   pManager    = GameplayDebugTarget::findActiveObjectManager();
-                const InteractorComponent* const pInteractor = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<InteractorComponent>( *pManager ) : nullptr;
+                const InteractorComponent* const pInteractor = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<InteractorComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
                 const GameObject* const          pOwner      = pInteractor != nullptr ? pInteractor->getOwner() : nullptr;
                 if ( pManager == nullptr )
                 {
@@ -42,30 +45,32 @@ namespace sw
                     return;
                 }
                 writer.addLine( "interactor", pOwner != nullptr ? string( pOwner->getName().c_str() ) : string( "none (no interactor in the active scene)" ) );
-                uint32 lineCount = 1;
-                for ( const GameObject* pObject : pManager->getAllGameObjects() )
+                uint32                   lineCount = 1;
+                const ComponentRegistry& registry  = pManager->getComponentRegistry();
+                for ( const InteractableComponent* pInteractable : registry.getAll<InteractableComponent>() )
                 {
+                    const GameObject* const pObject = pInteractable->getOwner();
                     if ( pObject == nullptr || lineCount >= GameplayDebugTarget::kMaxLines )
                         continue;
-                    if ( const InteractableComponent* pInteractable = pObject->getComponent<InteractableComponent>() )
+                    const InteractionDef* const pDef  = pInteractable->getDefinition();
+                    string                      value = pOwner != nullptr ? string( getEnumName( pInteractable->findBlockReason( *pOwner ) ) ) : string( "-" );
+                    if ( pInteractable->getCooldownRemaining() > 0.0f )
+                        value += " " + to_string( pInteractable->getCooldownRemaining() ) + "s";
+                    if ( pOwner != nullptr && pDef != nullptr )
                     {
-                        const InteractionDef* const pDef  = pInteractable->getDefinition();
-                        string                      value = pOwner != nullptr ? string( getEnumName( pInteractable->findBlockReason( *pOwner ) ) ) : string( "-" );
-                        if ( pInteractable->getCooldownRemaining() > 0.0f )
-                            value += " " + to_string( pInteractable->getCooldownRemaining() ) + "s";
-                        if ( pOwner != nullptr && pDef != nullptr )
-                        {
-                            const float32 distance = ( findWorldPosition( *pObject ) - findWorldPosition( *pOwner ) ).getLength();
-                            value += " dist " + to_string( distance ) + "/" + to_string( pDef->_maxDistance );
-                        }
-                        writer.addLine( string( "use " ) + pObject->getName().c_str() + ( pDef != nullptr ? string( " (" ) + pDef->_id.c_str() + ")" : string{} ), value );
-                        ++lineCount;
+                        const float32 distance = ( findWorldPosition( *pObject ) - findWorldPosition( *pOwner ) ).getLength();
+                        value += " dist " + to_string( distance ) + "/" + to_string( pDef->_maxDistance );
                     }
-                    if ( const ZoneVolumeComponent* pVolume = pObject->getComponent<ZoneVolumeComponent>() )
-                    {
-                        writer.addLine( string( "volume " ) + pObject->getName().c_str(), to_string( pVolume->getTracker().getOccupants().size() ) + " inside" );
-                        ++lineCount;
-                    }
+                    writer.addLine( string( "use " ) + pObject->getName().c_str() + ( pDef != nullptr ? string( " (" ) + pDef->_id.c_str() + ")" : string{} ), value );
+                    ++lineCount;
+                }
+                for ( const ZoneVolumeComponent* pVolume : registry.getAll<ZoneVolumeComponent>() )
+                {
+                    const GameObject* const pObject = pVolume->getOwner();
+                    if ( pObject == nullptr || lineCount >= GameplayDebugTarget::kMaxLines )
+                        continue;
+                    writer.addLine( string( "volume " ) + pObject->getName().c_str(), to_string( pVolume->getTracker().getOccupants().size() ) + " inside" );
+                    ++lineCount;
                 }
             }
         };

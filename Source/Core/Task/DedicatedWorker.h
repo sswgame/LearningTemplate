@@ -52,9 +52,10 @@ namespace sw
 
         /**
          * @brief @p pThreadName 이라는 스레드를 띄워 @p process 로 일을 처리합니다. 한 번만 부릅니다.
+         * @param key 스레드를 만드는 열쇠 — 허용 주인(`ThreadCreationKey` 의 친구)만 만든다.
          * @param pThreadName 디버거 · 프로파일러에 보일 이름. 문자열 리터럴처럼 이 객체보다 오래 사는 글이어야 합니다.
          */
-        void start( const utf8* pThreadName, const ProcessDelegate& process )
+        void start( ThreadCreationKey key, const utf8* pThreadName, const ProcessDelegate& process )
         {
             SW_ASSERT( _thread.joinable() == false && process.isBound() );
             _process     = process;
@@ -63,7 +64,7 @@ namespace sw
                 ScopedLock<mutex> lock{ _mutex };
                 _bAccepting = SW_TRUE;
             }
-            _thread = sw::thread( &DedicatedWorker::run, this );
+            _thread = sw::thread( key, &DedicatedWorker::run, this );
         }
 
         /**

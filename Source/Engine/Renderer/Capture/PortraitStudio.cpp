@@ -53,10 +53,10 @@ namespace sw
             }
 
             /** @brief 스튜디오 씬의 그릴 메시(로컬 경계 상자를 월드로 옮긴 것)를 모두 덮는 구(중심과 반지름)입니다. 메시가 없으면 false 입니다. */
-            static bool computeSubjectSphere( GameObjectManager& manager, float3& outCenter, float32& outRadius )
+            static bool computeSubjectSphere( SceneIterationKey key, GameObjectManager& manager, float3& outCenter, float32& outRadius )
             {
                 vector<GameObject*> listObject;
-                manager.getAllGameObjects( listObject );
+                manager.getAllGameObjects( key, listObject );
                 float3 boundsMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat, MathUtil::kMaxFloat };
                 float3 boundsMax{ MathUtil::kMinFloat, MathUtil::kMinFloat, MathUtil::kMinFloat };
                 bool   bAny = false;
@@ -142,7 +142,7 @@ namespace sw
         assetManager.getAssetCache<MaterialCache>().initializePending( _capture.getDevice() );
         float3  center{};
         float32 radius = 1.0f;
-        if ( PortraitStudioInternal::computeSubjectSphere( *pManager, center, radius ) == false )
+        if ( PortraitStudioInternal::computeSubjectSphere( SceneIterationKey{}, *pManager, center, radius ) == false )
         {
             SW_LOG_ERROR_ID( "PortraitStudio.PortraitPrefabNoMesh", "Portrait: prefab '%#' has no mesh to draw", request._prefabPath.c_str() );
             return false;

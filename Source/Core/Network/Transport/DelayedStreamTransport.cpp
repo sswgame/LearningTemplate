@@ -38,7 +38,7 @@ namespace sw
         _stop        = StopSource{};
         _bManualPoll = settings._ioThreadCount == 0 ? SW_TRUE : SW_FALSE;
         if ( _bManualPoll == SW_FALSE )
-            _timerThread = sw::thread( &DelayedStreamTransport::runTimer, this );
+            _timerThread = sw::thread( ThreadCreationKey{}, &DelayedStreamTransport::runTimer, this );
         return true;
     }
 

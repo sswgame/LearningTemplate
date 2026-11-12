@@ -60,7 +60,7 @@ namespace sw
     {
         // 칸 이름의 원본은 리플렉션 칸 표 하나다. 경로 칸은 `DataPath` 처리기만 값을 넣을 수 있어 이 텍스트 읽기를 거친다.
         // 손 읽기: 원소 이름이 리플렉션 칸 표에서 나오고 다른 읽는 쪽(엔진 설정 · 입력 맵 · 기본값)의 원소를 건너뛴다 — 고정 원소 표로 적을 수 없다.
-        const XMLNode&          rootNode     = root.getNodeForHandRead();
+        const XMLNode&          rootNode     = root.getRawNode();
         const SerializeContext& context      = SerializeContext::getDefault( SerializePurpose::Authoring );
         const auto&             listProperty = StaticType()->getPropertiesWithBase();
         bool                    bOk          = true;

@@ -66,14 +66,14 @@ namespace sw
              * @brief 씬에서 모르는 타입으로 지어진 컴포넌트(`MissingComponent`)를 오브젝트 · 원래 타입 이름과 함께 오류로 알리고 그 수를 돌려줍니다.
              * @details 그 컴포넌트는 원문 그대로 쿠킹돼 배포본에서도 `MissingComponent` 로 읽힌다 — 동작하지 않는 컴포넌트가 실린다.
              */
-            static uint32 reportMissingComponents( const Scene& scene )
+            static uint32 reportMissingComponents( SceneIterationKey key, const Scene& scene )
             {
                 const GameObjectManager* pManager = scene.getObjectManager();
                 if ( pManager == nullptr )
                     return 0;
                 uint32              missingCount{ 0 };
                 vector<GameObject*> listObject;
-                pManager->getAllGameObjects( listObject );
+                pManager->getAllGameObjects( key, listObject );
                 for ( const GameObject* pObject : listObject )
                 {
                     if ( pObject == nullptr )
@@ -462,7 +462,7 @@ namespace sw
              * @brief 씬 하나의 프리로드 목록(`ScenePreloadList`)을 만들어 @p outputPath 에 씁니다. 씬을 런타임과 같은 길로 지어 컴포넌트의 에셋 경로 프로퍼티를 모은다.
              * @details 씬 쿠킹과 따로 도는 작업이다(쿠킹 기록은 작업 하나에 출력 하나). 입력은 씬이 지어지며 읽은 모든 것이라, 프리팹을 고치면 목록도 다시 구워진다.
              */
-            static CookStep cookPreloadList( const SceneEngineServices& services, const string& scenePath, const string& outputPath )
+            static CookStep cookPreloadList( SceneIterationKey key, const SceneEngineServices& services, const string& scenePath, const string& outputPath )
             {
                 SceneDocument doc{};
                 if ( doc.loadXMLFromDiskFile( scenePath ) == false )
@@ -478,7 +478,7 @@ namespace sw
                     return CookStep::Failed;
                 }
                 vector<string> listPath;
-                ScenePreloadList::collect( *source.getObjectManager(), listPath );
+                ScenePreloadList::collect( key, *source.getObjectManager(), listPath );
                 if ( ScenePreloadList::write( outputPath, listPath ) == false )
                 {
                     SW_LOG_ERROR_ID( "SceneCooker.ScenePreloadCookFailed2", "Scene preload cook failed to write '%#'.", outputPath );
@@ -519,7 +519,7 @@ namespace sw
         source.setBuildAllDataLayers(); // 끈 레이어의 엔티티도 굽는다
         if ( source.instantiate( inoutDoc ) == false )
             return 0;
-        const uint32 missingComponentCount = SceneCookerInternal::reportMissingComponents( source );
+        const uint32 missingComponentCount = SceneCookerInternal::reportMissingComponents( SceneIterationKey{}, source );
         if ( pOutMissingComponentCount != nullptr )
             *pOutMissingComponentCount = missingComponentCount;
         unordered_map<uint64, GameObject*> mapSourceByFileID;
@@ -679,7 +679,7 @@ namespace sw
             const string     preloadID     = ScenePreloadList::makeListPath( outputID );
             const string     preloadPath   = ScenePreloadList::makeListPath( outputPath );
             const CookResult preloadResult = store.cookFile( preloadDesc, preloadID, preloadPath, [&]()
-            { return SceneCookerInternal::cookPreloadList( services, scenePath, preloadPath ); } );
+            { return SceneCookerInternal::cookPreloadList( SceneIterationKey{}, services, scenePath, preloadPath ); } );
             outFailedCount += preloadResult == CookResult::Failed ? 1u : 0u;
         }
 

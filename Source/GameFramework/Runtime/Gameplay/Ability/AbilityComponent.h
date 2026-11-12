@@ -100,6 +100,9 @@ namespace sw
         AbilityComponent();
         ~AbilityComponent() override;
 
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
+
         void onBeginPlay() override;
         void onEndPlay() override;
         /**

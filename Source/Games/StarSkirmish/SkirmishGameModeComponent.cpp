@@ -20,6 +20,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/Scene.h"
@@ -100,8 +101,10 @@ namespace sw
         /** @brief 감시 값 `Skirmish.AITask` 입니다. 플레이어 `key`(0 · 1)를 맡은 컴퓨터 상대의 행동 트리가 도는 잎(`GatherIdle` · `TrainWorkers` · `Defend` …)입니다. */
         [[nodiscard]] bool readAITask( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const SkirmishGameModeComponent* pGameMode = AutomationComponentWatch::findFirst<SkirmishGameModeComponent>( query._pManager );
-            int32                            player    = -1;
+            const SkirmishGameModeComponent* pGameMode = nullptr;
+            if ( query._pManager != nullptr && query._pManager->getComponentRegistry().getAll<SkirmishGameModeComponent>().empty() == false )
+                pGameMode = query._pManager->getComponentRegistry().getAll<SkirmishGameModeComponent>()[0];
+            int32 player = -1;
             if ( pGameMode == nullptr || StringUtil::parseInt( query._key, player ) == false )
             {
                 outValue.setText( pGameMode == nullptr ? string( "no skirmish game mode" ) : "key must be a player index, got '" + string( query._key ) + "'" );
@@ -132,11 +135,11 @@ namespace sw
                 SkirmishGameModeComponent* pDirector = nullptr;
                 if ( pManager != nullptr )
                 {
-                    pManager->forEachComponentOfType<SkirmishGameModeComponent>( [&pDirector]( SkirmishGameModeComponent* pFound )
+                    for ( SkirmishGameModeComponent* pFound : pManager->getComponentRegistry().getAll<SkirmishGameModeComponent>() )
                     {
                         if ( pDirector == nullptr )
                             pDirector = pFound;
-                    } );
+                    }
                 }
                 if ( pDirector == nullptr )
                     outReply = "skirmish: no skirmish director in the active scene";
@@ -983,5 +986,17 @@ namespace sw
     CameraDirectorComponent* SkirmishGameModeComponent::findCameraRig() const
     {
         return findOn<CameraDirectorComponent>( _cameraRig );
+    }
+
+    void SkirmishGameModeComponent::onRegister( GameObjectManager& manager )
+    {
+        GameModeComponent::onRegister( manager );
+        manager.getComponentRegistry().add<SkirmishGameModeComponent>( this );
+    }
+
+    void SkirmishGameModeComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<SkirmishGameModeComponent>( this );
+        GameModeComponent::onUnregister( manager );
     }
 } // namespace sw

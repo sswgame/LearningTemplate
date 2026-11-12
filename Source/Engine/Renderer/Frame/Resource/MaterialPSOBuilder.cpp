@@ -25,7 +25,7 @@ namespace sw
         if ( bThread == false )
             return;
         if ( _worker.isRunning() == false )
-            _worker.start( "MaterialPSOBuilder", DedicatedWorker<uint8>::ProcessDelegate::create<&MaterialPSOBuilder::buildOneOnWorker>( this ) );
+            _worker.start( ThreadCreationKey{}, "MaterialPSOBuilder", DedicatedWorker<uint8>::ProcessDelegate::create<&MaterialPSOBuilder::buildOneOnWorker>( this ) );
         // 작업 하나에 신호 하나다. 그 사이 `buildOnCaller` 가 먼저 꺼내 갔으면 신호는 할 일 없이 끝난다.
         [[maybe_unused]] const bool bAccepted = _worker.submit( uint8{ 0 } );
         SW_ASSERT( bAccepted ); // 방금 띄웠거나 돌고 있다 — `shutdown` 과 같은 스레드(렌더 스레드)가 부른다

@@ -110,7 +110,7 @@ namespace sw
     {
         using Internal = AIDirectorProfileInternal;
         clear();
-        bool bValid = Internal::validateAttributes( root.getNodeForHandRead(), Internal::kArrRootAttribute, false, sourceName ); // 손 읽기: 루트 속성 이름만 본다
+        bool bValid = Internal::validateAttributes( root.getRawNode(), Internal::kArrRootAttribute, false, sourceName ); // 손 읽기: 루트 속성 이름만 본다
         _startPhase = hashed_string( root.getAttributeText( "startPhase" ) );
 
         /** 풀은 달력 어휘를 받아야 해서 문맥을 든 읽는 쪽을 둔다. 함수 안의 형식이라 이 클래스의 비공개를 볼 수 있다. */

@@ -66,11 +66,11 @@ namespace sw
         if ( pManager == nullptr )
             return nullptr;
         const QuestLog* pQuestLog = nullptr;
-        pManager->forEachComponentOfType<SessionStateComponent>( [&outCount, &pQuestLog]( SessionStateComponent* pState )
+        for ( SessionStateComponent* pState : pManager->getComponentRegistry().getAll<SessionStateComponent>() )
         {
             ++outCount;
             pQuestLog = &pState->getQuestLog();
-        } );
+        }
         return outCount == 1 ? pQuestLog : nullptr;
     }
 } // namespace sw

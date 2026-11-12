@@ -59,7 +59,7 @@ namespace sw
                 }
                 const vector<string> listArgument( listToken.begin() + 1, listToken.end() );
                 string               reply;
-                if ( pCommand->_pFunc( listArgument, reply ) == false )
+                if ( DevCommandRegistry::run( *pCommand, listArgument, reply ) == false )
                 {
                     runner.recordFailure( step, "dev command failed: " + ( reply.empty() ? string( pCommand->_pUsage ) : reply ) );
                     return true;

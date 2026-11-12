@@ -710,7 +710,7 @@ namespace sw::editor
                     string                 droppedPath;
                     const AssetFieldAction action = drawAssetPathField(
                         [&edited, &bChanged]( const utf8* pID )
-                    { bChanged = drawNameInput( EditorWidgetID::fromRuntime( pID ), edited ); }, row, model, pValue->view(), droppedPath );
+                    { bChanged = drawNameInput( EditorWidgetID::fromString( pID ), edited ); }, row, model, pValue->view(), droppedPath );
                     bApplied = applyAssetFieldAction( action, row, model, droppedPath );
                 }
                 else

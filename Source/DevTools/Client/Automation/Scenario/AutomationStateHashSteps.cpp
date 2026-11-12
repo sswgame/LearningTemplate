@@ -10,6 +10,8 @@
 
 #include "Core/Container/string.h"
 
+#include "DevTools/Diagnostics/DevSceneIterationAccess.h"
+
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
@@ -33,7 +35,7 @@ namespace sw
                     return true;
                 }
                 vector<SceneObjectHash> listObject;
-                SceneObjectHash::collectObjects( *pManager, listObject );
+                SceneObjectHash::collectObjects( DevSceneIterationAccess::getKey(), *pManager, listObject );
                 string report;
                 SceneObjectHash::writeObjectReport( listObject, report );
                 context.rememberText( params._key, std::move( report ) );
@@ -62,7 +64,7 @@ namespace sw
                     return true;
                 }
                 vector<SceneObjectHash> listActual;
-                SceneObjectHash::collectObjects( *pManager, listActual );
+                SceneObjectHash::collectObjects( DevSceneIterationAccess::getKey(), *pManager, listActual );
                 vector<string> listDiffering;
                 if ( SceneObjectHash::findDifferingObjects( listExpected, listActual, listDiffering ) )
                 {

@@ -58,6 +58,9 @@ namespace sw
         GimmickSensorComponent();
         virtual ~GimmickSensorComponent() override = default;
 
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
+
         void onOverlapBegin( const OverlapInfo& overlap ) override;
         void onOverlapEnd( const OverlapInfo& overlap ) override;
 

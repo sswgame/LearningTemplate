@@ -42,7 +42,7 @@ namespace sw
     {
         /**
          * @brief 필드 하나의 값 아래에 든 `SceneObjectReference` 를 모읍니다(필드 자체, 구조체 안의 칸, 컨테이너 원소 · 맵 키와 값, 그 중첩). 값을 고치면 포인터가 무효가 됩니다.
-         * @details `ReflectedValueWalk` 를 쓰지 않은 이유: 그 걷기는 바이트로 복사할 수 있는 잎을 제자리에서 바꾸는 쓰기 도구이고 `SceneObjectReference` 는 문자열을 가져 잎이 될 수 없다.
+         * @details `ReflectedValueVisitor` 를 쓰지 않은 이유: 그 걷기는 바이트로 복사할 수 있는 잎을 제자리에서 바꾸는 쓰기 도구이고 `SceneObjectReference` 는 문자열을 가져 잎이 될 수 없다.
          *          여기는 읽기만 하므로 같은 모양(구조체 · 컨테이너 단계)을 읽기 전용으로 내려간다.
          *          구조체 타입은 레지스트리로 찾는다. 레지스트리는 필수 참조라 "없어서 구조체 안을 못 보는" 상태가 만들어지지 않는다.
          */
@@ -141,7 +141,7 @@ namespace sw
         {
             if ( scene->getObjectManager() == nullptr )
                 continue;
-            scene->getObjectManager()->forEachGameObject( [&]( GameObject* pObject )
+            scene->getObjectManager()->forEachGameObject( SceneIterationKey{}, [&]( GameObject* pObject )
             {
                 for ( Component* pComponent : pObject->getComponents() )
                 {

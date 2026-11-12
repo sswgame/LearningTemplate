@@ -97,18 +97,18 @@ namespace sw::editor
                 string               _scrollIntoViewKey;              ///< 다음에 기록할 때 잘려 있으면 그린 창을 스크롤해 보이게 할 레이블(`requestScrollIntoView`)
                 float2               _heldMousePosition{};
                 uint32               _heldMouseViewportID{ 0 };
-                float2               _aimPoint{}; ///< 마지막으로 `Reachable` 로 판정한 점(`moveByOffsetFromAim` 의 기준)
-                uint32               _aimViewportID{ 0 };
-                bool                 _bAimed{ false };      ///< `_aimPoint` 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                float2               _hoverPoint{}; ///< 마지막으로 `Reachable` 로 판정한 점(`moveByOffset` 의 기준)
+                uint32               _hoverViewportID{ 0 };
+                bool                 _bHovered{ false };    ///< `_hoverPoint` 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 bool                 _bHoldMouse{ false };  ///< 누른 채 두는 동안 프레임마다 커서를 이 위치로 다시 넣는다(플랫폼이 실제 커서를 넣어 호버가 풀리지 않게) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 bool                 _bEnabled{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
-                /** @brief 닿는다고 판정한 점을 끌기 기준(`EditorSelfTestInput::moveByOffsetFromAim`)으로 남깁니다. */
-                void rememberAim( const float2& point, uint32 viewportID )
+                /** @brief 닿는다고 판정한 점을 끌기 기준(`EditorSelfTestInput::moveByOffset`)으로 남깁니다. */
+                void rememberHover( const float2& point, uint32 viewportID )
                 {
-                    _aimPoint      = point;
-                    _aimViewportID = viewportID;
-                    _bAimed        = true;
+                    _hoverPoint      = point;
+                    _hoverViewportID = viewportID;
+                    _bHovered        = true;
                 }
             };
 
@@ -293,11 +293,11 @@ namespace sw::editor
                 return false;
             }
 
-            /** @brief 테스트가 끝난 포인터를 두는 화면 밖 자리입니다(`parkMouse`). */
-            static constexpr float32 kParkedMouseCoordinate = -10000.0f;
+            /** @brief 테스트가 끝난 포인터를 두는 화면 밖 자리입니다(`moveMouseAway`). */
+            static constexpr float32 kMouseAwayPosition = -10000.0f;
 
             /** @brief 레이블의 @p anchor 위치(0..1)입니다. */
-            static float2 computeAimPoint( const EditorSelfTestMark& mark, const float2& anchor )
+            static float2 computeHoverPoint( const EditorSelfTestMark& mark, const float2& anchor )
             {
                 return float2{ mark._min._x + ( mark._max._x - mark._min._x ) * anchor._x, mark._min._y + ( mark._max._y - mark._min._y ) * anchor._y };
             }
@@ -305,22 +305,22 @@ namespace sw::editor
             /** @brief 두 점이 같은 픽셀이면 true 입니다. ImGui 는 마우스 좌표를 정수로 내린다. */
             static bool isSamePixel( const float2& lhs, const float2& rhs )
             {
-                constexpr float32 kAimTolerance = 1.0f;
-                return fabsf( lhs._x - rhs._x ) <= kAimTolerance && fabsf( lhs._y - rhs._y ) <= kAimTolerance;
+                constexpr float32 kHoverTolerance = 1.0f;
+                return fabsf( lhs._x - rhs._x ) <= kHoverTolerance && fabsf( lhs._y - rhs._y ) <= kHoverTolerance;
             }
 
             /**
-             * @brief 포인터가 @p mark 의 @p anchor 자리에 있던 프레임에 그 점의 최상위 창이 레이블 주인인지 판정합니다(`EditorSelfTestInput::aimAtMark` 의 판정).
+             * @brief 포인터가 @p mark 의 @p anchor 자리에 있던 프레임에 그 점의 최상위 창이 레이블 주인인지 판정합니다(`EditorSelfTestInput::hoverMark` 의 판정).
              * @details 지금 포인터(이번 프레임)와 표본(바로 앞 프레임이 끝난 뒤) 둘 다 그 점이어야 판정한다 — 표본의 창은 그 포인터로 정한 것이다.
              */
             static EditorMarkHit evaluateMarkHit( const State& state, const EditorSelfTestMark& mark, const float2& anchor, string& outCoverName )
             {
-                const HitSample& sample = state._hitSample;
-                const float2     target = computeAimPoint( mark, anchor );
-                const ImVec2     mouse  = ImGui::GetIO().MousePos;
-                const bool       bFresh = sample._bValid != SW_FALSE && sample._frame + 1 >= static_cast<uint32>( ImGui::GetFrameCount() );
-                const bool       bAimed = isSamePixel( float2{ mouse.x, mouse.y }, target ) && isSamePixel( sample._mousePos, target );
-                if ( bFresh == false || bAimed == false )
+                const HitSample& sample    = state._hitSample;
+                const float2     target    = computeHoverPoint( mark, anchor );
+                const ImVec2     mouse     = ImGui::GetIO().MousePos;
+                const bool       bFresh    = sample._bValid != SW_FALSE && sample._frame + 1 >= static_cast<uint32>( ImGui::GetFrameCount() );
+                const bool       bOnTarget = isSamePixel( float2{ mouse.x, mouse.y }, target ) && isSamePixel( sample._mousePos, target );
+                if ( bFresh == false || bOnTarget == false )
                     return EditorMarkHit::Pending;
                 if ( sample._bMouseDown != SW_FALSE )
                     return EditorMarkHit::Reachable; // 누른 동안은 ImGui 가 호버 창을 누른 곳에 묶는다 — 이 점의 창을 말하지 않는다(누른 채 다른 버튼을 누르는 단계)
@@ -413,7 +413,7 @@ namespace sw::editor
             pState->_listMark.clear();
             pState->_listEvent.clear();
             pState->_bHoldMouse = false;
-            pState->_bAimed     = false;
+            pState->_bHovered   = false;
         }
         return true;
     }
@@ -521,24 +521,24 @@ namespace sw::editor
         return false;
     }
 
-    EditorMarkHit EditorSelfTestInput::aimAtMark( string_view key, const float2& anchor, string& outCoverName )
+    EditorMarkHit EditorSelfTestInput::hoverMark( string_view key, const float2& anchor, string& outCoverName )
     {
         using Internal = EditorSelfTestInputInternal;
         EditorSelfTestMark mark;
         Internal::State*   pState = Internal::findState();
         if ( pState == nullptr || EditorSelfTestMarks::find( key, mark ) == false )
             return EditorMarkHit::Missing;
-        pState->_heldMousePosition   = Internal::computeAimPoint( mark, anchor );
+        pState->_heldMousePosition   = Internal::computeHoverPoint( mark, anchor );
         pState->_heldMouseViewportID = mark._viewportID;
         pState->_bHoldMouse          = true;
 
         const EditorMarkHit hit = Internal::evaluateMarkHit( *pState, mark, anchor, outCoverName );
         if ( hit == EditorMarkHit::Reachable )
-            pState->rememberAim( Internal::computeAimPoint( mark, anchor ), mark._viewportID );
+            pState->rememberHover( Internal::computeHoverPoint( mark, anchor ), mark._viewportID );
         return hit;
     }
 
-    EditorMarkHit EditorSelfTestInput::pressAtMark( string_view key, const float2& anchor, int32 button, string& outCoverName )
+    EditorMarkHit EditorSelfTestInput::pressMark( string_view key, const float2& anchor, int32 button, string& outCoverName )
     {
         using Internal = EditorSelfTestInputInternal;
         EditorSelfTestMark mark;
@@ -548,38 +548,38 @@ namespace sw::editor
         const EditorMarkHit hit = Internal::evaluateMarkHit( *pState, mark, anchor, outCoverName );
         if ( hit != EditorMarkHit::Reachable )
             return hit;
-        pState->rememberAim( Internal::computeAimPoint( mark, anchor ), mark._viewportID );
-        moveMouse( pState->_aimPoint, pState->_aimViewportID );
+        pState->rememberHover( Internal::computeHoverPoint( mark, anchor ), mark._viewportID );
+        moveMouse( pState->_hoverPoint, pState->_hoverViewportID );
         setMouseButton( button, true );
         return hit;
     }
 
-    bool EditorSelfTestInput::releaseAtMark( string_view key, const float2& anchor, int32 button )
+    bool EditorSelfTestInput::releaseMark( string_view key, const float2& anchor, int32 button )
     {
         EditorSelfTestMark mark;
         const bool         bDrawn = EditorSelfTestMarks::find( key, mark );
         if ( bDrawn )
-            moveMouse( EditorSelfTestInputInternal::computeAimPoint( mark, anchor ), mark._viewportID );
+            moveMouse( EditorSelfTestInputInternal::computeHoverPoint( mark, anchor ), mark._viewportID );
         setMouseButton( button, false );
         return bDrawn;
     }
 
-    bool EditorSelfTestInput::moveByOffsetFromAim( const float2& offset )
+    bool EditorSelfTestInput::moveByOffset( const float2& offset )
     {
         const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
-        if ( pState == nullptr || pState->_bAimed == false )
+        if ( pState == nullptr || pState->_bHovered == false )
             return false;
-        moveMouse( float2{ pState->_aimPoint._x + offset._x, pState->_aimPoint._y + offset._y }, pState->_aimViewportID );
+        moveMouse( float2{ pState->_hoverPoint._x + offset._x, pState->_hoverPoint._y + offset._y }, pState->_hoverViewportID );
         return true;
     }
 
-    void EditorSelfTestInput::parkMouse()
+    void EditorSelfTestInput::moveMouseAway()
     {
         EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
         if ( pState != nullptr )
-            pState->_bAimed = false;
+            pState->_bHovered = false;
         releaseMouseHold();
-        moveMouse( float2{ EditorSelfTestInputInternal::kParkedMouseCoordinate, EditorSelfTestInputInternal::kParkedMouseCoordinate } );
+        moveMouse( float2{ EditorSelfTestInputInternal::kMouseAwayPosition, EditorSelfTestInputInternal::kMouseAwayPosition } );
     }
 
     bool EditorSelfTestInput::hasPendingEvents()

@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -31,7 +32,7 @@ namespace sw::editor
                 if ( pScopeRoot == nullptr )
                     return;
 
-                const vector<GameObject*> listObject = manager.getAllGameObjects();
+                const vector<GameObject*> listObject = manager.getAllGameObjects( editor::EditorSceneIterationAccess::getKey() );
                 for ( GameObject* pObject : listObject )
                 {
                     if ( pObject == nullptr || pObject->isPendingDestroy() )
@@ -72,7 +73,7 @@ namespace sw::editor
         }
 
         GameObject*               pFirst     = nullptr;
-        const vector<GameObject*> listObject = manager.getAllGameObjects();
+        const vector<GameObject*> listObject = manager.getAllGameObjects( editor::EditorSceneIterationAccess::getKey() );
         for ( GameObject* pObject : listObject )
         {
             if ( pObject == nullptr || pObject->isPendingDestroy() )

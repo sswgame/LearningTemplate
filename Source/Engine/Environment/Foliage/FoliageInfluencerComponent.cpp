@@ -73,11 +73,11 @@ namespace sw
                 if ( pManager == nullptr )
                     return false;
                 uint32 count = 0;
-                pManager->forEachComponentOfType<FoliageInfluencerComponent>( [&count]( const FoliageInfluencerComponent* pInfluencer )
+                for ( const FoliageInfluencerComponent* pInfluencer : pManager->getComponentRegistry().getAll<FoliageInfluencerComponent>() )
                 {
                     if ( pInfluencer->isActive() && pInfluencer->getRadius() > 0.0f )
                         ++count;
-                } );
+                }
                 outValue = static_cast<float64>( count );
                 return true;
             }

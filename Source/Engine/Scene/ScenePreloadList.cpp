@@ -44,10 +44,10 @@ namespace sw
         return {};
     }
 
-    void ScenePreloadList::collect( const GameObjectManager& objects, vector<string>& outListPath )
+    void ScenePreloadList::collect( SceneIterationKey key, const GameObjectManager& objects, vector<string>& outListPath )
     {
         outListPath.clear();
-        objects.forEachGameObject( [&outListPath]( GameObject* pObject )
+        objects.forEachGameObject( key, [&outListPath]( GameObject* pObject )
         {
             for ( Component* pComponent : pObject->getComponents() )
             {

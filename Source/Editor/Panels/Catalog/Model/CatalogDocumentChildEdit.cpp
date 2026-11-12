@@ -222,7 +222,7 @@ namespace sw::editor
                     const optional<int32> index = inoutDraft.find( prefix );
                     if ( index.has_value() )
                     {
-                        if ( isEmptyWritten( inoutDraft.get( *index ), prefix.back()._keyAttribute ) == false || parentEntry.isValid() == false || CatalogInheritanceView::walkPath( parentEntry, prefix ).isValid() == false )
+                        if ( isEmptyWritten( inoutDraft.get( *index ), prefix.back()._keyAttribute ) == false || parentEntry.isValid() == false || CatalogInheritanceView::findByPath( parentEntry, prefix ).isValid() == false )
                             return true;
                         if ( inoutDraft.removeElement( *index ) == false )
                             return false;
@@ -307,7 +307,7 @@ namespace sw::editor
                 return false;
             const CatalogChildPath ownerPath  = Internal::makeOwnerPath( path );
             const int32            ownerIndex = draft.find( ownerPath ).value(); // 적은 원소의 담는 원소다
-            if ( Internal::isGroupSameAsParent( draft, ownerIndex, parentEntry.isValid() ? CatalogInheritanceView::walkPath( parentEntry, ownerPath ) : XMLNode{}, leaf._name ) )
+            if ( Internal::isGroupSameAsParent( draft, ownerIndex, parentEntry.isValid() ? CatalogInheritanceView::findByPath( parentEntry, ownerPath ) : XMLNode{}, leaf._name ) )
             {
                 if ( draft.removeGroup( ownerIndex, leaf._name ) == false || Internal::pruneEmpty( draft, parentEntry, ownerPath ) == false )
                     return false;
@@ -315,7 +315,7 @@ namespace sw::editor
             return commitChildEdit( draft.getText() );
         }
 
-        const XMLNode parentNode = parentEntry.isValid() ? CatalogInheritanceView::walkPath( parentEntry, path ) : XMLNode{};
+        const XMLNode parentNode = parentEntry.isValid() ? CatalogInheritanceView::findByPath( parentEntry, path ) : XMLNode{};
         const bool    bKey       = leaf._keyAttribute.empty() == false && column == string_view( leaf._keyAttribute );
         if ( bKey && parentNode.isValid() )
         {
@@ -366,7 +366,7 @@ namespace sw::editor
         if ( keyAttribute.empty() == false )
         {
             const string  keyName{ keyAttribute };
-            const XMLNode flatOwner = CatalogInheritanceView::walkPath( _inheritance.findFlatEntry( row ), ownerPath );
+            const XMLNode flatOwner = CatalogInheritanceView::findByPath( _inheritance.findFlatEntry( row ), ownerPath );
             const auto    isTaken   = [&]( const string& candidate )
             {
                 for ( XMLNode child = flatOwner.isValid() ? flatOwner.findChild( nameText.c_str() ) : XMLNode{}; child.isValid(); child = child.findNextSibling( nameText.c_str() ) )
@@ -391,7 +391,7 @@ namespace sw::editor
 
         // 규칙에 없는 칸: 적으면 그 이름 전체가 바뀌므로 물려받은 원소를 먼저 옮기고 더한다.
         const XMLNode         parentEntry  = _inheritance.findParentEntry( row );
-        const XMLNode         parentOwner  = parentEntry.isValid() ? CatalogInheritanceView::walkPath( parentEntry, ownerPath ) : XMLNode{};
+        const XMLNode         parentOwner  = parentEntry.isValid() ? CatalogInheritanceView::findByPath( parentEntry, ownerPath ) : XMLNode{};
         const optional<int32> ensuredOwner = draft.ensure( ownerPath );
         if ( ensuredOwner.has_value() == false )
             return false;
@@ -458,7 +458,7 @@ namespace sw::editor
                 return false;
             // 마지막 원소를 지우면 다시 물려받게 된다 - 지운 뜻대로 비운다.
             const int32   ownerIndex  = draft.find( ownerPath ).value(); // 지운 원소를 담던 원소다
-            const XMLNode parentOwner = parentEntry.isValid() ? CatalogInheritanceView::walkPath( parentEntry, ownerPath ) : XMLNode{};
+            const XMLNode parentOwner = parentEntry.isValid() ? CatalogInheritanceView::findByPath( parentEntry, ownerPath ) : XMLNode{};
             const bool    bAnyLeft    = VectorUtil::containsIf( draft.get( ownerIndex )._listChild, [&]( int32 childIndex )
                   { return draft.get( childIndex )._name == path.back()._name; } );
             if ( bAnyLeft == false && parentOwner.isValid() && parentOwner.findChild( path.back()._name.c_str() ).isValid() &&
@@ -469,7 +469,7 @@ namespace sw::editor
             return commitChildEdit( draft.getText() );
         }
 
-        const bool bInherited = parentEntry.isValid() && CatalogInheritanceView::walkPath( parentEntry, path ).isValid();
+        const bool bInherited = parentEntry.isValid() && CatalogInheritanceView::findByPath( parentEntry, path ).isValid();
         if ( written.has_value() && draft.removeElement( *written ) == false )
             return false;
         if ( bInherited )
@@ -503,7 +503,7 @@ namespace sw::editor
         if ( checkChildRow( rowIndex ) == false || path.empty() || path.back()._keyAttribute.empty() )
             return false;
         const CatalogChildStep& leaf      = path.back();
-        const XMLNode           flatOwner = CatalogInheritanceView::walkPath( _inheritance.findFlatEntry( _parsed.getElement( rowIndex ) ), CatalogDocumentChildEditInternal::makeOwnerPath( path ) );
+        const XMLNode           flatOwner = CatalogInheritanceView::findByPath( _inheritance.findFlatEntry( _parsed.getElement( rowIndex ) ), CatalogDocumentChildEditInternal::makeOwnerPath( path ) );
         vector<string>          listKey;
         for ( XMLNode child = flatOwner.isValid() ? flatOwner.findChild( leaf._name.c_str() ) : XMLNode{}; child.isValid(); child = child.findNextSibling( leaf._name.c_str() ) )
         {
@@ -584,7 +584,7 @@ namespace sw::editor
             return false;
         const string  nameText{ name };
         const XMLNode parentEntry = _inheritance.findParentEntry( _parsed.getElement( rowIndex ) );
-        const XMLNode parentOwner = parentEntry.isValid() ? CatalogInheritanceView::walkPath( parentEntry, ownerPath ) : XMLNode{};
+        const XMLNode parentOwner = parentEntry.isValid() ? CatalogInheritanceView::findByPath( parentEntry, ownerPath ) : XMLNode{};
         if ( parentOwner.isValid() == false || parentOwner.findChild( nameText.c_str() ).isValid() == false )
         {
             _error = "there is nothing to override";

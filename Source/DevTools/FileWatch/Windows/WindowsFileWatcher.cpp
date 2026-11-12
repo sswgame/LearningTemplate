@@ -95,7 +95,7 @@ namespace sw
         _bRecursive    = bRecursive;
         _bIsWatching   = true;
 
-        _workerThread = sw::thread( &WindowsFileWatcher::workerThreadMain, this, Memory::getCurrentMemoryTag() );
+        _workerThread = sw::thread( ThreadCreationKey{}, &WindowsFileWatcher::workerThreadMain, this, Memory::getCurrentMemoryTag() );
 
         SW_LOG_INFO_ID( "WindowsFileWatcher.StartedWatchingDirectory", "Started watching directory: %#", directoryPath );
         return true;

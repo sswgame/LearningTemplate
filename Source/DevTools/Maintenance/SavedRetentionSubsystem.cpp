@@ -178,7 +178,7 @@ namespace sw
 
     SubsystemInitResult SavedRetentionSubsystem::initializeSubsystem()
     {
-        _worker = thread( []( StopToken stopToken )
+        _worker = thread( ThreadCreationKey{}, []( StopToken stopToken )
         { SavedRetentionSubsystemInternal::run( stopToken ); } );
         return SubsystemInitResult::Succeeded;
     }

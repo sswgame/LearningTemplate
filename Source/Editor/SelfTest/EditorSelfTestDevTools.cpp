@@ -319,7 +319,7 @@ namespace sw::editor
             {
                 GizmoProbe()
                     : _objectID{ 0 }
-                    , _aimSteps{ 0 }
+                    , _hoverSteps{ 0 }
                     , _startPosition{}
                     , _bWasOver{ SW_FALSE }
                     , _bWasUsing{ SW_FALSE }
@@ -328,7 +328,7 @@ namespace sw::editor
 
                 void finishGizmo( GameObjectManager* pManager ) const
                 {
-                    EditorSelfTestInput::parkMouse();
+                    EditorSelfTestInput::moveMouseAway();
                     EditorContext& editorContext = editor::getSubsystem<EditorContext>();
                     editorContext.getSubsystem<EditorWorkspace>().clearSelection();
                     GameObject* pObj = pManager != nullptr ? pManager->findGameObjectByID( _objectID ) : nullptr;
@@ -339,14 +339,14 @@ namespace sw::editor
                 {
                     constexpr float32     kDragPixel       = 60.0f;
                     constexpr uint32      kDragStepCount   = 4;
-                    constexpr uint32      kMaxAimSteps     = 60; ///< 기즈모 가운데 조준을 기다리는 프레임 상한(보통 두세 프레임)
+                    constexpr uint32      kMaxHoverSteps   = 60; ///< 기즈모 가운데 조준을 기다리는 프레임 상한(보통 두세 프레임)
                     constexpr const utf8* kGizmoCenterMark = "sceneView.gizmoCenter";
                     GameObjectManager*    pManager         = editor::getActiveObjectManager();
                     Scene*                pScene           = editor::getActiveScene();
                     if ( openSceneView( context ) == nullptr || context.expect( pManager != nullptr && pScene != nullptr, "no active scene" ) == false )
                         return EditorSelfTestStep::Done;
                     GizmoProbe&      probe     = context.getTestState<GizmoProbe>();
-                    const uint32     stepIndex = context.getStepIndex() - probe._aimSteps; // 조준하는 동안 같은 단계에 머문다
+                    const uint32     stepIndex = context.getStepIndex() - probe._hoverSteps; // 조준하는 동안 같은 단계에 머문다
                     CameraComponent* pCamera   = EditorCamera::find( pScene );
                     if ( context.expect( pCamera != nullptr, "no editor camera" ) == false )
                         return EditorSelfTestStep::Done;
@@ -373,17 +373,17 @@ namespace sw::editor
                     // 아래부터는 프레임마다 한 걸음인 입력(옮기기 · 누르기 · 끌기 · 놓기)이다 — 프레임 자체가 시험 내용이다.
                     if ( stepIndex == 1 )
                     {
-                        // 기즈모 가운데 사각형(화면 평면 이동)에 포인터를 둔다 — 시나리오 · 다른 자체 테스트와 같은 입구(`aimAtMark`)라 툴바 오버레이가 덮으면 누르지 않고 실패한다.
+                        // 기즈모 가운데 사각형(화면 평면 이동)에 포인터를 둔다 — 시나리오 · 다른 자체 테스트와 같은 입구(`hoverMark`)라 툴바 오버레이가 덮으면 누르지 않고 실패한다.
                         string              coverName;
-                        const EditorMarkHit hit = EditorSelfTestInput::aimAtMark( kGizmoCenterMark, float2{ 0.5f, 0.5f }, coverName );
-                        if ( hit == EditorMarkHit::Pending && probe._aimSteps < kMaxAimSteps )
+                        const EditorMarkHit hit = EditorSelfTestInput::hoverMark( kGizmoCenterMark, float2{ 0.5f, 0.5f }, coverName );
+                        if ( hit == EditorMarkHit::Pending && probe._hoverSteps < kMaxHoverSteps )
                         {
-                            ++probe._aimSteps; // 같은 단계에 머문다(단계 번호에서 뺀다)
+                            ++probe._hoverSteps; // 같은 단계에 머문다(단계 번호에서 뺀다)
                             return EditorSelfTestStep::Continue;
                         }
-                        const bool   bAimed = hit == EditorMarkHit::Reachable;
-                        const string what   = hit == EditorMarkHit::Covered ? "the gizmo center is covered by window '" + coverName + "'" : string{ "the gizmo center was not drawn or never settled under the pointer" };
-                        if ( context.expect( bAimed, what.c_str() ) == false )
+                        const bool   bOnTarget = hit == EditorMarkHit::Reachable;
+                        const string what      = hit == EditorMarkHit::Covered ? "the gizmo center is covered by window '" + coverName + "'" : string{ "the gizmo center was not drawn or never settled under the pointer" };
+                        if ( context.expect( bOnTarget, what.c_str() ) == false )
                         {
                             probe.finishGizmo( pManager );
                             return EditorSelfTestStep::Done;
@@ -395,8 +395,8 @@ namespace sw::editor
                         probe._bWasOver = ImGuizmo::IsOver() ? SW_TRUE : SW_FALSE;
                         EditorSelfTestInput::releaseMouseHold(); // 아래 누름 · 끌기 이동이 포인터를 이어받는다
                         string coverName;
-                        if ( context.expect( EditorSelfTestInput::pressAtMark( kGizmoCenterMark, float2{ 0.5f, 0.5f }, ImGuiMouseButton_Left, coverName ) == EditorMarkHit::Reachable,
-                                             "the gizmo center stopped being pressable between aiming and pressing" ) == false )
+                        if ( context.expect( EditorSelfTestInput::pressMark( kGizmoCenterMark, float2{ 0.5f, 0.5f }, ImGuiMouseButton_Left, coverName ) == EditorMarkHit::Reachable,
+                                             "the gizmo center stopped being pressable between hovering and pressing" ) == false )
                         {
                             probe.finishGizmo( pManager );
                             return EditorSelfTestStep::Done;
@@ -407,12 +407,12 @@ namespace sw::editor
                     if ( stepIndex < 3 + kDragStepCount )
                     {
                         const float32 offset = kDragPixel * static_cast<float32>( stepIndex - 2 ) / static_cast<float32>( kDragStepCount );
-                        (void)EditorSelfTestInput::moveByOffsetFromAim( float2{ offset, 0.0f } ); // 위에서 누른 점(Reachable)에서 잰다
+                        (void)EditorSelfTestInput::moveByOffset( float2{ offset, 0.0f } ); // 위에서 누른 점(Reachable)에서 잰다
                         return EditorSelfTestStep::Continue;
                     }
                     if ( stepIndex == 3 + kDragStepCount )
                     {
-                        (void)EditorSelfTestInput::moveByOffsetFromAim( float2{ kDragPixel, 0.0f } );
+                        (void)EditorSelfTestInput::moveByOffset( float2{ kDragPixel, 0.0f } );
                         EditorSelfTestInput::setMouseButton( ImGuiMouseButton_Left, false );
                         return EditorSelfTestStep::Continue;
                     }
@@ -428,7 +428,7 @@ namespace sw::editor
 
             private:
                 uint64 _objectID;
-                uint32 _aimSteps; ///< 기즈모 가운데 조준에 쓴 프레임 수 — 단계 번호에서 빼 같은 단계에 머문다
+                uint32 _hoverSteps; ///< 기즈모 가운데 조준에 쓴 프레임 수 — 단계 번호에서 빼 같은 단계에 머문다
                 float3 _startPosition;
                 uint8  _bWasOver  : 1;
                 uint8  _bWasUsing : 1;

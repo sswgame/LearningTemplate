@@ -12,6 +12,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 using namespace sw;
 
@@ -157,7 +158,7 @@ SW_TEST_CASE( LockedSwapQueueTest, StampsMatchQueueOrderAcrossThreads )
         vector<thread> listThread;
         for ( int32 index = 0; index < kThreadCount; ++index )
         {
-            listThread.emplace_back( [&queue, &nextStamp]
+            listThread.emplace_back( ThreadTestAccess::getKey(), [&queue, &nextStamp]
             {
                 for ( int32 push = 0; push < kPushCount; ++push )
                 {
@@ -205,7 +206,7 @@ SW_TEST_CASE( SpinLockTest, ProtectsACounterUnderContention )
         vector<thread> listThread;
         for ( int32 index = 0; index < kThreadCount; ++index )
         {
-            listThread.emplace_back( [&lock, &counter]
+            listThread.emplace_back( ThreadTestAccess::getKey(), [&lock, &counter]
             {
                 for ( int32 add = 0; add < kAddCount; ++add )
                 {
@@ -230,7 +231,7 @@ SW_TEST_CASE( SpinLockTest, SleepingWaitersAllWakeAfterALongHold )
         vector<thread> listThread;
         for ( int32 index = 0; index < kWaiterCount; ++index )
         {
-            listThread.emplace_back( [&lock, &acquiredCount]
+            listThread.emplace_back( ThreadTestAccess::getKey(), [&lock, &acquiredCount]
             {
                 ScopedLock<SpinLock> guard{ lock };
                 acquiredCount.fetch_add( 1, std::memory_order_relaxed );
@@ -260,7 +261,7 @@ SW_TEST_CASE( SpinLockTest, OversubscribedSectionsWithHeapAllocationStayExclusiv
         vector<thread> listThread;
         for ( int32 index = 0; index < threadCount; ++index )
         {
-            listThread.emplace_back( [&lock, &listValue, &insideCount, &overlapCount, index]
+            listThread.emplace_back( ThreadTestAccess::getKey(), [&lock, &listValue, &insideCount, &overlapCount, index]
             {
                 for ( int32 add = 0; add < kAddCount; ++add )
                 {
@@ -376,7 +377,7 @@ SW_TEST_CASE( MutexTest, SharedLocksCoexistExclusiveDoesNot )
     atomic<bool> bSharedWhileExclusive{ true };
     {
         ScopedSharedLock<shared_mutex> guard{ lock };
-        thread                         other{ [&]
+        thread                         other{ ThreadTestAccess::getKey(), [&]
         {
             const bool bShared = lock.try_lock_shared();
             bSharedWhileShared.store( bShared );
@@ -391,7 +392,7 @@ SW_TEST_CASE( MutexTest, SharedLocksCoexistExclusiveDoesNot )
     }
     {
         ScopedLock<shared_mutex> guard{ lock };
-        thread                   other{ [&]
+        thread                   other{ ThreadTestAccess::getKey(), [&]
         {
             const bool bShared = lock.try_lock_shared();
             bSharedWhileExclusive.store( bShared );
@@ -438,7 +439,7 @@ SW_TEST_CASE( FutexTest, WakeAllReleasesEveryWaiter )
         vector<thread> listWaiter;
         for ( uint32 index = 0; index < kWaiterCount; ++index )
         {
-            listWaiter.emplace_back( [&]
+            listWaiter.emplace_back( ThreadTestAccess::getKey(), [&]
             {
                 arrived.fetch_add( 1 );
                 while ( word.load() == 0 ) // 약속대로 조건을 다시 확인한다
@@ -467,7 +468,7 @@ SW_TEST_CASE( ThreadNameTest, NameIsReadBackOnTheSameThread )
     atomic<bool> bMatches{ false };
     atomic<bool> bEmptyKept{ false };
     {
-        thread other{ [&]
+        thread other{ ThreadTestAccess::getKey(), [&]
         {
             utf8 arrName[64]{};
             bBefore.store( ThreadName::tryGetCurrentThreadName( arrName, sizeof( arrName ) ) );
@@ -490,7 +491,7 @@ SW_TEST_CASE( ThreadNameTest, SmallBufferIsTerminatedNotOverrun )
 {
     atomic<bool> bTerminated{ false };
     {
-        thread other{ [&]
+        thread other{ ThreadTestAccess::getKey(), [&]
         {
             ThreadName::setCurrentThreadName( "SwTestThread" );
             utf8 arrName[6];

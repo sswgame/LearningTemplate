@@ -101,7 +101,7 @@ namespace sw
                 return pHistory;
             }
 
-            static bool runStateHash( const vector<string>& listArgument, string& outReply )
+            static bool runStateHash( SceneIterationKey key, const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.empty() == false )
                     return false;
@@ -112,19 +112,19 @@ namespace sw
                     return false;
                 }
                 vector<StateHashSample> listSample;
-                listSample.push_back( StateHashSample{ 0, SceneObjectHash::compute( *pManager ) } );
+                listSample.push_back( StateHashSample{ 0, SceneObjectHash::compute( key, *pManager ) } );
                 outReply.clear();
                 StateHashHistory::writeReport( listSample, outReply );
                 return true;
             }
 
             /** @brief `state.objects` — 이름 있는 오브젝트마다 해시(`<16자리 16진 해시> <이름>`)를 답합니다. 어긋난 틱 근처에서 두 프로세스의 답을 견주면 어느 오브젝트가 다른지 나옵니다(`SceneObjectHash::findDifferingObjects`). */
-            static bool runStateObjects( const vector<string>& listArgument, string& outReply )
+            static bool runStateObjects( SceneIterationKey key, const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.empty() == false )
                     return false;
                 vector<SceneObjectHash> listObject;
-                const expected<uint64>  tick = collectTickedObjects( listObject );
+                const expected<uint64>  tick = collectTickedObjects( key, listObject );
                 if ( tick.has_value() == false )
                 {
                     outReply = string( tick.error().message() );
@@ -135,12 +135,12 @@ namespace sw
             }
 
             /** @brief `state.objectline` — `state.objects` 와 같은 값(틱 + 오브젝트별 해시)을 한 줄(`SceneObjectHash::writeObjectReportLine`)로 답합니다. 표준 입력으로 묻는 에디터 Sync 탭의 클라이언트 칸이 쓴다. */
-            static bool runStateObjectLine( const vector<string>& listArgument, string& outReply )
+            static bool runStateObjectLine( SceneIterationKey key, const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.empty() == false )
                     return false;
                 vector<SceneObjectHash> listObject;
-                const expected<uint64>  tick = collectTickedObjects( listObject );
+                const expected<uint64>  tick = collectTickedObjects( key, listObject );
                 if ( tick.has_value() == false )
                 {
                     outReply = string( tick.error().message() );
@@ -159,7 +159,7 @@ namespace sw
              * @brief 두 `state.objects*` 명령이 같이 쓰는 값입니다. 돌려주는 틱은 이력의 가장 최근 틱이다 — 이력이 없으면 어느 틱의 해시인지 말할 수 없어
              *        답하지 않는다(그 까닭 — 문장이 명령 답이다).
              */
-            [[nodiscard]] static expected<uint64> collectTickedObjects( vector<SceneObjectHash>& outListObject )
+            [[nodiscard]] static expected<uint64> collectTickedObjects( SceneIterationKey key, vector<SceneObjectHash>& outListObject )
             {
                 const expected<const StateHashHistory*> history = findRecordingHistory();
                 if ( history.has_value() == false )
@@ -170,7 +170,7 @@ namespace sw
                 GameObjectManager* pManager = engine::findActiveObjectManager();
                 if ( pManager == nullptr )
                     return unexpected( Error{ ErrorKind::NotFound, "no active scene" } );
-                SceneObjectHash::collectObjects( *pManager, outListObject );
+                SceneObjectHash::collectObjects( key, *pManager, outListObject );
                 return latest._tick;
             }
 
@@ -291,11 +291,11 @@ namespace sw
     // 샘플 하나는 가장 길 때 `<20자리 틱>:<16자리 해시>,` = 38 바이트다.
     static_assert( 38u * StateHashHistory::kMaxReportLineSamples + 32u <= DebugReplyLine::kMaxBytes, "kMaxReportLineSamples 가 한 줄 상한 안에 들어야 한다" );
 
-    uint64 SceneObjectHash::compute( const GameObjectManager& manager )
+    uint64 SceneObjectHash::compute( SceneIterationKey key, const GameObjectManager& manager )
     {
         // 오브젝트 해시를 (이름, 해시) 정수 순으로 접는다 — 실수 비교로 정렬하면 NaN 에서 순서가 깨진다(std::sort 미정의 동작).
         vector<SceneObjectHash> listObject;
-        collectObjects( manager, listObject );
+        collectObjects( key, manager, listObject );
         uint64 hash = HashUtil::kFNVOffset64;
         for ( const SceneObjectHash& object : listObject )
         {
@@ -305,12 +305,12 @@ namespace sw
         return hash;
     }
 
-    void SceneObjectHash::collectObjects( const GameObjectManager& manager, vector<SceneObjectHash>& outListObject )
+    void SceneObjectHash::collectObjects( SceneIterationKey key, const GameObjectManager& manager, vector<SceneObjectHash>& outListObject )
     {
         // 비용은 이름 있는 오브젝트 × 컴포넌트 수의 가상 호출이다 — 이력이 켜진 틱에만 돈다. 측정은 이 구간과 오브젝트 수 카운터로 본다.
         SW_PROFILE_SCOPE( "GT.StateHash.collect" );
         outListObject.clear();
-        manager.forEachGameObject( [&outListObject]( GameObject* pObject )
+        manager.forEachGameObject( key, [&outListObject]( GameObject* pObject )
         {
             if ( pObject->getName().empty() || pObject->isTransient() ) // 세운 쪽이 상태에서 다시 세우는 파생 오브젝트는 상태가 아니다
                 return;
@@ -515,7 +515,7 @@ namespace sw
         const Scene* pScene = engine::getSubsystem<SceneManager>().getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return;
-        record( tick, SceneObjectHash::compute( *pScene->getObjectManager() ) );
+        record( tick, SceneObjectHash::compute( SceneIterationKey{}, *pScene->getObjectManager() ) );
         recordChannels( tick );
     }
 
@@ -822,9 +822,9 @@ namespace sw
         return bFound;
     }
 
-    SW_DEV_COMMAND( StateHash, "state.hash", "state.hash", "Print the state hash of the active scene right now", &SceneStateHashCommandsInternal::runStateHash );
-    SW_DEV_COMMAND( StateObjects, "state.objects", "state.objects", "Print one hash per named object of the active scene (compare two processes to find which object differs)",
-                    &SceneStateHashCommandsInternal::runStateObjects );
+    SW_DEV_SCENE_COMMAND( StateHash, "state.hash", "state.hash", "Print the state hash of the active scene right now", &SceneStateHashCommandsInternal::runStateHash );
+    SW_DEV_SCENE_COMMAND( StateObjects, "state.objects", "state.objects", "Print one hash per named object of the active scene (compare two processes to find which object differs)",
+                          &SceneStateHashCommandsInternal::runStateObjects );
     SW_DEV_COMMAND( StateHashes, "state.hashes", "state.hashes <fromTick> <count> [channel]",
                     "Print the recorded per-tick state hashes (needs -gv_stateHashHistory); channel is a kit's hash line from state.hashnames, default the scene",
                     &SceneStateHashCommandsInternal::runStateHashes );
@@ -833,8 +833,8 @@ namespace sw
     SW_DEV_COMMAND( StateHashLine, "state.hashline", "state.hashline <count> [channel]",
                     "Print the latest <count> recorded state hashes (of a kit's hash line, default the scene) on one line (the editor Sync tab reads client histories this way)",
                     &SceneStateHashCommandsInternal::runStateHashLine );
-    SW_DEV_COMMAND( StateObjectLine, "state.objectline", "state.objectline", "Print the state.objects hashes with their tick on one line (the editor Sync tab reads client object hashes this way)",
-                    &SceneStateHashCommandsInternal::runStateObjectLine );
+    SW_DEV_SCENE_COMMAND( StateObjectLine, "state.objectline", "state.objectline", "Print the state.objects hashes with their tick on one line (the editor Sync tab reads client object hashes this way)",
+                          &SceneStateHashCommandsInternal::runStateObjectLine );
 } // namespace sw
 
 namespace sw

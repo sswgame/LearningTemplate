@@ -5,6 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -44,7 +45,7 @@ namespace
     uint32 countObjects( const sw::GameObjectManager& manager )
     {
         uint32 count = 0;
-        manager.forEachGameObject( [&count]( sw::GameObject* )
+        manager.forEachGameObject( sw::SceneIterationTestAccess::getKey(), [&count]( sw::GameObject* )
         { ++count; } );
         return count;
     }

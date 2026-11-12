@@ -193,7 +193,7 @@ namespace sw
             SW_LOG_WARNING_ID( "AsyncLogSink.LogOutputsCouldNot", "%# of %# log outputs could not be opened - they drop every line", failedCount, deviceCount );
 
         _bIsRunning.store( true, std::memory_order_release );
-        _workerThread = sw::thread( &AsyncLogSink::workerLoop, this );
+        _workerThread = sw::thread( ThreadCreationKey{}, &AsyncLogSink::workerLoop, this );
         _bInitialized = SW_TRUE;
     }
 

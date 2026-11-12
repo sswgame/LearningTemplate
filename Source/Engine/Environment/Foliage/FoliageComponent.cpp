@@ -202,11 +202,13 @@ namespace sw
     void FoliageComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
+        manager.getComponentRegistry().add<FoliageComponent>( this );
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
     }
 
     void FoliageComponent::onUnregister( GameObjectManager& manager )
     {
+        manager.getComponentRegistry().remove<FoliageComponent>( this );
         releaseCells();
         _listLayerMaterial.clear();
         _listLayerCandidate.clear();

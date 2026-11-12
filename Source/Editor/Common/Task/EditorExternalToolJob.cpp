@@ -32,7 +32,7 @@ namespace sw::editor
         input._workingDirectory = string{ workingDirectory };
         const uint32 generation = beginRequest( std::move( input ) );
         _pProcess               = sw::make_shared<Process>();
-        _thread                 = sw::thread( &EditorExternalToolJob::runJob, _pState, _pProcess, generation );
+        _thread                 = sw::thread( ThreadCreationKey{}, &EditorExternalToolJob::runJob, _pState, _pProcess, generation );
         return true;
     }
 

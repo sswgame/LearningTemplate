@@ -185,14 +185,14 @@ namespace sw
         /**
          * @brief 상태 스냅샷 직렬화 직전에 부르는 준비 훅입니다.
          * @details 부르기 전에 봉투의 컴포넌트 상태 저장소(`getStateSnapshot().getComponentStateStore()`)를 비우고, `register*` 로 올린 타입의 상태를 싣고 세운 것을 걷는다.
-         *          그 밖의 상태는 여기서 `getStateSnapshot().getComponentStateStore().capture<T>( manager )` 로 싣는다.
+         *          그 밖의 상태는 여기서 `getStateSnapshot().getComponentStateStore().capture<T>( key, manager )`(열쇠는 저장 틀이 넘긴다 — `StatefulComponentRegistrar` 로 등록하는 길이 먼저다) 로 싣는다.
          *          한 번의 캡처에 두 번 불릴 수 있다(크기 묻기와 채우기).
          */
         virtual void onBeforeStateSerialize() {}
         /**
          * @brief 상태 스냅샷 역직렬화 직후에 부르는 복원 훅입니다.
          * @details 씬 오브젝트가 다시 서고 `register*` 로 올린 타입이 상태를 돌려받은 뒤에 불린다.
-         *          그 밖에 실어 둔 상태는 `getStateSnapshot().getComponentStateStore().restore<T>( manager )` 로 넘긴다. 이 훅이 끝나면 저장소를 비운다.
+         *          그 밖에 실어 둔 상태는 `getStateSnapshot().getComponentStateStore().restore<T>( key, manager )` 로 넘긴다. 이 훅이 끝나면 저장소를 비운다.
          */
         virtual void onAfterStateDeserialize() {}
 

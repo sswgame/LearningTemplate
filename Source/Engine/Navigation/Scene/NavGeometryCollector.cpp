@@ -183,7 +183,7 @@ namespace sw
         return bounds;
     }
 
-    uint32 NavGeometryCollector::collectGeometry( GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
+    uint32 NavGeometryCollector::collectGeometry( SceneIterationKey key, GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
                                                   const vector<INavGeometrySource*>& listSource, NavMeshArrival arrival, NavMeshGeometry& outGeometry )
     {
         using Internal = NavGeometryCollectorInternal;
@@ -199,7 +199,7 @@ namespace sw
         const TypeInfo*         pSkinnedType = findStaticType<SkeletalMeshComponent>();
         const TypeInfo*         pLinkType    = findStaticType<NavMeshLinkComponent>();
         uint32                  pendingMeshCount{ 0 };
-        manager.forEachGameObject( [&]( GameObject* pObject )
+        manager.forEachGameObject( key, [&]( GameObject* pObject )
         {
             if ( pObject->isActiveInHierarchy() == false )
                 return;

@@ -70,7 +70,7 @@ namespace sw::editor
         using Internal = CharacterEditorPackDataInternal;
         bool bOk       = true;
         bOk            = root.readProperties( *this, sourceName ) && bOk;
-        if ( root.getNodeForHandRead().findChild().isValid() ) // 손 읽기: 자식이 하나라도 있으면 틀린 파일이다(읽을 원소 표가 없다)
+        if ( root.getRawNode().findChild().isValid() ) // 손 읽기: 자식이 하나라도 있으면 틀린 파일이다(읽을 원소 표가 없다)
         {
             SW_LOG_ERROR_ID( "CharacterEditorPackData.TakesAttributesOnly", "%#: <%#> takes attributes only", sourceName, Internal::kRootName );
             bOk = false;

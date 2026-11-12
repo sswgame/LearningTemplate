@@ -682,7 +682,7 @@ namespace sw
         bool bRefreshedAny = false;
         if ( bAll )
         {
-            manager.forEachGameObject( [this, &manager]( GameObject* pObj )
+            manager.forEachGameObject( SceneIterationKey{}, [this, &manager]( GameObject* pObj )
             {
                 pObj->_bTickDirty.store( SW_FALSE, std::memory_order_relaxed );
                 refreshObject( manager, pObj );

@@ -122,7 +122,7 @@ namespace sw
         _impl->_contextID    = contextID;
         _impl->_channelCount = channelCount;
         _impl->_listRender.assign( static_cast<size_t>( Internal::kMixFrameCount ) * channelCount, 0.0f );
-        _impl->_mixerThread = thread( &WebAudioBackend::runMixer, this );
+        _impl->_mixerThread = thread( ThreadCreationKey{}, &WebAudioBackend::runMixer, this );
         SW_LOG_INFO_ID( "WebAudioBackend.StreamReady", "Web Audio stream ready (%# Hz, %# channels, ring %# frames). Sound starts after the first user gesture.", audio::kSampleRate,
                         channelCount, Internal::kRingFrameCount );
         return true;

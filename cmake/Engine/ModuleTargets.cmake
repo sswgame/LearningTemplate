@@ -481,7 +481,7 @@ endfunction()
 #
 # 그 헤더가 ImGui 입력 · 팝업 · 끌어 놓기 함수(imgui_internal.h 의 다른 겹 포함)를 [[deprecated]] 로 다시 선언한다(`docs/agents/EditorUI.md` 입력 절).
 # 금지를 받지 않는 파일(ImGui 입력 어댑터 둘 · 노드 캔버스 지우기 입구 EditorNodeGraph.cpp · 입력 위젯을 감싸는 EditorWidgets.cpp)의 표시는 이 함수가 소스 속성으로만 준다
-# (SW_EDITOR_INPUT_ADAPTER=1 · SW_EDITOR_NODE_GRAPH_ADAPTER=1 · SW_EDITOR_WIDGET_ADAPTER=1). 나머지 파일은 강제 포함한 EditorInputBanGate.h 가 0 으로 정해 두므로 소스 안
+# (SW_EDITOR_INPUT_ADAPTER=1 · SW_EDITOR_NODE_GRAPH_ADAPTER=1 · SW_EDITOR_WIDGET_ADAPTER=1). 나머지 파일은 강제 포함한 EditorInputBanConfig.h 가 0 으로 정해 두므로 소스 안
 # `#define` 은 다시 정의 오류(-Werror=macro-redefined)로 멈춘다 — 다른 파일이 매크로로 금지를 풀 수 없다. 소스 정의가 붙은 파일은 유니티 묶음에서 빠지고,
 # 관문이 PCH 에 구워 둔 0 과 부딪히지 않게 PCH 도 쓰지 않는다. 옵션 SW_EDITOR_INPUT_BAN(Source/Editor/CMakeLists.txt, 기본 ON)이 꺼져 있으면 아무것도 하지 않는다.
 # ------------------------------------------------------------------------------
@@ -496,7 +496,7 @@ function(sw_applyEditorInputBan TARGET_NAME)
 	else()
 		target_compile_options(${TARGET_NAME} PRIVATE -Werror=deprecated-declarations -Werror=macro-redefined)
 	endif()
-	set(gateHeader "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorInputBanGate.h")
+	set(gateHeader "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorInputBanConfig.h")
 	if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 		target_compile_options(${TARGET_NAME} PRIVATE "/FI${gateHeader}")
 	else()

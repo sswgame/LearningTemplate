@@ -1830,4 +1830,16 @@ namespace sw
     {
         PhysicsNameValidation::validateLayer( context, "_debrisLayer", _debrisLayer );
     }
+
+    void FractureComponentBase::onRegister( GameObjectManager& manager )
+    {
+        PhysicsComponent::onRegister( manager );
+        manager.getComponentRegistry().add<FractureComponentBase>( this );
+    }
+
+    void FractureComponentBase::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<FractureComponentBase>( this );
+        PhysicsComponent::onUnregister( manager );
+    }
 } // namespace sw

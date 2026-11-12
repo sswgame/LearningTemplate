@@ -16,6 +16,7 @@
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Foundation/SceneIterationKey.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameAccess.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
@@ -154,6 +155,13 @@ namespace sw
 
         /** @brief 이름으로 GameObject 를 찾습니다. */
         GameObject* findGameObjectByName( hashed_string name ) const;
+        /**
+         * @brief 밑 이름이 @p baseName 인 살아 있는 오브젝트(`Tree` · `Tree_2` …, 대소문자 무시)를 @p outListGameObject 에 채웁니다(먼저 비운다, 순서는 약속하지 않는다).
+         * @details 저장소의 밑 이름 색인을 찾는 좁은 질의라 열쇠(`SceneIterationKey`) 없이 부른다 — 비용은 그 이름의 오브젝트 수다.
+         */
+        void findGameObjectsByBaseName( string_view baseName, vector<GameObject*>& outListGameObject ) const;
+        /** @brief @p name 의 밑 이름입니다(`Tree_3` → `Tree`, `Tree_03` · `Tree_` 는 그대로). 오브젝트 저장소가 번호를 붙이는 규칙과 같다. */
+        static string_view computeBaseName( string_view name );
 
         /** @brief 오브젝트 ID 로 GameObject 를 찾습니다. 락이 없습니다(칸이 그 id 를 들고 있으면). */
         GameObject* findGameObjectByID( uint64 objectID ) const;
@@ -169,36 +177,37 @@ namespace sw
          * @details 값 반환형은 호출마다 씬
          *          전체를 새로 할당 · 복사하므로, 매 프레임 도는 곳이나 두 번 이상 쓰는 곳은 이쪽을
          *          씁니다. 순회만 하면 되는 곳은 forEachGameObject 가 복사조차 하지 않습니다.
+         * @note 씬 전체 순회는 열쇠(`SceneIterationKey`)를 받는다 — 컴포넌트 틱은 열쇠가 없다(찾기는 `getComponentRegistry`, 이름은 `findGameObjectsByBaseName`).
          */
-        void getAllGameObjects( vector<GameObject*>& outListGameObject ) const;
+        void getAllGameObjects( SceneIterationKey key, vector<GameObject*>& outListGameObject ) const;
 
         /** @brief 살아 있는 오브젝트 목록을 새 벡터로 반환합니다(한 번만 쓰는 곳 전용). */
-        vector<GameObject*> getAllGameObjects() const;
+        vector<GameObject*> getAllGameObjects( SceneIterationKey key ) const;
 
         /**
          * @brief 힙 할당 없이 등록된 모든 유효한 GameObject 를 순회합니다.
-         * @note 공유 잠금을 쥔 채 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`GameObjectStore::WalkScope`) —
+         * @note 공유 잠금을 쥔 채 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`GameObjectStore::IterationScope`) —
          *       그런 일을 하는 순회는 `getAllGameObjects( out )` 로 목록을 받아 잠금 없이 돕니다(`beginPlay` 처럼).
          */
         template <typename Func>
-        void forEachGameObject( Func&& func ) const;
+        void forEachGameObject( SceneIterationKey key, Func&& func ) const;
 
         /** @brief 힙 할당 없이 씬의 모든 유효한 Component 를 순회합니다. */
         template <typename Func>
-        void forEachComponent( Func&& func ) const;
+        void forEachComponent( SceneIterationKey key, Func&& func ) const;
 
         /**
          * @brief 힙 할당 없이 씬에서 TComponent 와 그 파생 컴포넌트를 순회합니다. 오브젝트를 훑지 않고 타입별 버킷을 돕니다(`GameObjectStore::forEachComponentOfType`).
          * @details 비용은 씬의 정확한 타입 수와 맞는 컴포넌트 수의 합입니다. **방문 순서는 약속하지 않습니다** — 순서가 결과에 나오는 곳은 모은 뒤 정렬합니다.
          *          버킷에서 꺼낸 포인터를 `static_cast` 로 바꿉니다. REFLECT 타입은 가상이 아닌 단일 상속만 받으므로(파서 7-b) 보정이 맞습니다.
-         * @note 공유 잠금 안에서 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`WalkScope`).
+         * @note 공유 잠금 안에서 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`IterationScope`).
          */
         template <typename TComponent, typename Func>
-        void forEachComponentOfType( Func&& func ) const;
+        void forEachComponentOfType( SceneIterationKey key, Func&& func ) const;
 
         /** @brief 런타임 타입 @p pToType 이나 그 파생 컴포넌트를 순회합니다. 콜백은 `Component*` 를 받습니다. 타입을 템플릿으로 모르는 곳(인스펙터 선택기)이 씁니다. */
         template <typename Func>
-        void forEachComponentOfType( const TypeInfo* pToType, Func&& func ) const;
+        void forEachComponentOfType( SceneIterationKey key, const TypeInfo* pToType, Func&& func ) const;
 
         /** @brief 비어 있지 않은 타입별 버킷 수입니다. 진단과 회귀 테스트(모듈 언로드 뒤 묘비)용입니다. */
         uint32 getTypedComponentBucketCount() const;
@@ -545,6 +554,8 @@ namespace sw
          * @return 지운 컴포넌트 수입니다.
          */
         uint32 destroyComponentsOfModule( string_view moduleName );
+        /** @brief 씬의 모든 컴포넌트에 `Component::onModuleUnloading( moduleName )` 을 알립니다 — 남의 모듈 타입 객체를 든 컴포넌트가 먼저 놓는다(`destroyComponentsOfModule` 앞, 틱 밖). */
+        void notifyModuleUnloading( string_view moduleName );
 
         /**
          * @brief 타입 이름(짧은 이름 · FQN · 옛 이름 별칭, `이름#번호` 꼬리는 무시)으로 컴포넌트를 만들어 붙입니다. 에디터 · 직렬화 전용이고, 게임은 addComponent<T> 를 씁니다.

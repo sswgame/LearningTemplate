@@ -23,6 +23,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <algorithm>
@@ -483,8 +484,8 @@ namespace sw::test
         // 출력을 읽는 이 스레드는 자식이 말없이 멈추면 깨지 않는다 — 감시 스레드가 시한에 죽인다(`terminate` 는 다른 스레드가 읽는 중에도 안전한 계약).
         atomic<bool>   bTimedOut{ false };
         const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( static_cast<float64>( timeoutSeconds ) * 1000.0 ) );
-        thread         watchThread( [&process, &bTimedOut, deadline]( const StopToken& stopToken )
-        {
+        thread         watchThread( ThreadTestAccess::getKey(), [&process, &bTimedOut, deadline]( const StopToken& stopToken )
+                {
             while ( stopToken.isStopRequested() == false )
             {
                 if ( deadline.isExpired() )
@@ -750,7 +751,7 @@ namespace sw::test
         Subscription                       logListener = Logger::registerGlobalListener( SW_DELEGATE_FUNCTION( LogWrittenDelegate, &Internal::onLogWritten ) );
         thread                             watchThread;
         if ( Process::isDebuggerPresent() == false )
-            watchThread = thread( &Internal::watchCaseDeadline );
+            watchThread = thread( ThreadTestAccess::getKey(), &Internal::watchCaseDeadline );
         const uint32   repeatCount = ( bChildRun || bIsolatedRun ) ? 1u : MathUtil::max( options._repeatCount, 1u );
         uint32         failedCount = 0;
         uint32         ranCount    = 0;

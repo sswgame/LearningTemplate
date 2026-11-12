@@ -140,12 +140,12 @@ namespace sw
     {
         _listVillager.clear();
         bool bAllPlaced = true;
-        manager.forEachComponentOfType<DialogueRunnerComponent>( [this, &bAllPlaced]( const DialogueRunnerComponent* pRunner )
+        for ( const DialogueRunnerComponent* pRunner : manager.getComponentRegistry().getAll<DialogueRunnerComponent>() )
         {
             const GameObject*     pObject = pRunner->getOwner();
             const SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
             if ( pScene == nullptr )
-                return;
+                continue;
             const int2 tile          = computeTile( pScene->getWorldPosition() );
             const bool bInsideTheMap = 0 <= tile._x && tile._x < _tileMap.getWidth() && 0 <= tile._y && tile._y < _tileMap.getHeight();
             if ( bInsideTheMap == false )
@@ -153,11 +153,11 @@ namespace sw
                 SW_LOG_ERROR_ID( "TownGameMode.VillagerStandsOutsideX", "[Town] villager '%#' stands outside the %#x%# map (tile %#,%#)", pObject->getName().c_str(), _tileMap.getWidth(), _tileMap.getHeight(),
                                  tile._x, tile._y );
                 bAllPlaced = false;
-                return;
+                continue;
             }
             _tileMap.setWalkable( tile._x, tile._y, false ); // 주민이 선 칸은 걸어 들어갈 수 없다
             _listVillager.push_back( Villager{ tile, pObject->getHandle() } );
-        } );
+        }
         return bAllPlaced;
     }
 

@@ -26,8 +26,10 @@ namespace sw
                 if ( pManager == nullptr )
                     return false;
                 uint64 total = 0;
-                pManager->forEachComponentOfType<NavWanderComponent>( [&total]( const NavWanderComponent* pWander )
-                { total += ( pWander->*Read )(); } );
+                for ( const NavWanderComponent* pWander : pManager->getComponentRegistry().getAll<NavWanderComponent>() )
+                {
+                    total += ( pWander->*Read )();
+                }
                 outValue = static_cast<float64>( total );
                 return true;
             }
@@ -68,11 +70,13 @@ namespace sw
     void NavWanderComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
+        manager.getComponentRegistry().add<NavWanderComponent>( this );
         _pSceneNavigation = &manager.getSubsystem<SceneNavigation>();
     }
 
     void NavWanderComponent::onUnregister( GameObjectManager& manager )
     {
+        manager.getComponentRegistry().remove<NavWanderComponent>( this );
         _pSceneNavigation = nullptr;
         Component::onUnregister( manager );
     }

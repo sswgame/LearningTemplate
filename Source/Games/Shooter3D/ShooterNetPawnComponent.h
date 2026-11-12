@@ -72,6 +72,10 @@ namespace sw
         ShooterNetPawnComponent();
         ~ShooterNetPawnComponent() override;
 
+        void onRegister( GameObjectManager& manager ) override;
+
+        void onUnregister( GameObjectManager& manager ) override;
+
         void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( TickContext& context ) override;

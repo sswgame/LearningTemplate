@@ -1,6 +1,0 @@
-{
-    "_comment": "컴포넌트 틱에서 씬 전체 순회에 닿아도 되는 자리(Scripts/lint/TickSceneWalk.py). 키는 경로::클래스::함수, 값은 까닭이다.",
-    "_exceptions": {
-        "Source/GameFramework/Runtime/Gameplay/Gimmick/Genre/ShooterGimmicks.cpp::ExplosiveBarrelComponent::onTick": "폭발 순간 한 번(틱마다가 아니다), 틱 뒤 게임 스레드에서 돈다 — 대상이 반경 안 무엇이든(몸 없는 대상 포함)이라 등록 목록이 없고, 물리 겹침은 몸 없는 대상 · 가상 캐릭터를 빠뜨린다"
-    }
-}

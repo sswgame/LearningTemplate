@@ -16,6 +16,7 @@
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -84,7 +85,7 @@ namespace sw::editor
             if ( pActive == nullptr )
                 return false;
             uint32 count = 0;
-            pActive->forEachGameObject( [&count]( const GameObject* pObj )
+            pActive->forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [&count]( const GameObject* pObj )
             {
                 if ( pObj != nullptr && pObj->isPendingDestroy() == false )
                     ++count;
@@ -358,7 +359,7 @@ namespace sw::editor
         vector<pair<string, uint64>> listEntry;
         ObjectSaveOptions            options{ SerializePurpose::Authoring };
         options._bOmitExternalParent = SW_TRUE;
-        pActive->forEachGameObject( [&listEntry, &options]( const GameObject* pObject )
+        pActive->forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [&listEntry, &options]( const GameObject* pObject )
         {
             if ( pObject == nullptr || pObject->isPendingDestroy() )
                 return;

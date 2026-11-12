@@ -16,22 +16,22 @@
 namespace sw
 {
     template <typename Func>
-    void GameObjectManager::forEachGameObject( Func&& func ) const
+    void GameObjectManager::forEachGameObject( SceneIterationKey /*key*/, Func&& func ) const
     {
         getObjectStore().forEachGameObject( std::forward<Func>( func ) );
     }
 
     template <typename Func>
-    void GameObjectManager::forEachComponent( Func&& func ) const
+    void GameObjectManager::forEachComponent( SceneIterationKey key, Func&& func ) const
     {
-        forEachGameObject( [&func]( GameObject* pObj )
+        forEachGameObject( key, [&func]( GameObject* pObj )
         {
             pObj->forEachComponent( func );
         } );
     }
 
     template <typename TComponent, typename Func>
-    void GameObjectManager::forEachComponentOfType( Func&& func ) const
+    void GameObjectManager::forEachComponentOfType( SceneIterationKey /*key*/, Func&& func ) const
     {
         static_assert( std::is_base_of_v<Component, TComponent>, "TComponent must derive from sw::Component" );
         getObjectStore().forEachComponentOfType( findStaticType<TComponent>(), [&func]( Component* pComp )
@@ -41,7 +41,7 @@ namespace sw
     }
 
     template <typename Func>
-    void GameObjectManager::forEachComponentOfType( const TypeInfo* pToType, Func&& func ) const
+    void GameObjectManager::forEachComponentOfType( SceneIterationKey /*key*/, const TypeInfo* pToType, Func&& func ) const
     {
         getObjectStore().forEachComponentOfType( pToType, std::forward<Func>( func ) );
     }

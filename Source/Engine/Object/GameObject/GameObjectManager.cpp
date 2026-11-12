@@ -354,11 +354,17 @@ namespace sw
         return _pState->_store.createGameObject( name );
     }
 
-    vector<GameObject*> GameObjectManager::getAllGameObjects() const
+    vector<GameObject*> GameObjectManager::getAllGameObjects( SceneIterationKey /*key*/ ) const
     {
         vector<GameObject*> listAllGameObject;
         _pState->_store.getAllGameObjects( listAllGameObject );
         return listAllGameObject;
+    }
+
+    void GameObjectManager::notifyModuleUnloading( string_view moduleName )
+    {
+        forEachComponent( SceneIterationKey{}, [moduleName]( Component* pComponent )
+        { pComponent->onModuleUnloading( moduleName ); } );
     }
 
     uint32 GameObjectManager::destroyComponentsOfModule( string_view moduleName )
@@ -383,6 +389,16 @@ namespace sw
         _pState->_store.notifyNameChanged( pObj, oldName, newName );
     }
 
+    void GameObjectManager::findGameObjectsByBaseName( string_view baseName, vector<GameObject*>& outListGameObject ) const
+    {
+        _pState->_store.findGameObjectsByBaseName( hashed_string( baseName.data(), static_cast<uint32>( baseName.size() ) ), outListGameObject );
+    }
+
+    string_view GameObjectManager::computeBaseName( string_view name )
+    {
+        return GameObjectStore::computeBaseName( name );
+    }
+
     GameObject* GameObjectManager::findGameObjectByName( hashed_string name ) const
     {
         return _pState->_store.findGameObjectByName( name );
@@ -398,7 +414,7 @@ namespace sw
         return _pState->_store.getOverflowObjectCount();
     }
 
-    void GameObjectManager::getAllGameObjects( vector<GameObject*>& outListGameObject ) const
+    void GameObjectManager::getAllGameObjects( SceneIterationKey /*key*/, vector<GameObject*>& outListGameObject ) const
     {
         _pState->_store.getAllGameObjects( outListGameObject );
     }

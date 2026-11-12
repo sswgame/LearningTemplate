@@ -5,6 +5,7 @@
 #include "Core/Container/deque.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/Tests/FakeSQLDriver.h"
@@ -286,7 +287,7 @@ SW_TEST_CASE( SQLConnectionPoolTest, ShutdownCancelsQueuedJobsAndCanRestart )
 
     PoolJobResult queued;
     pool.submit( sw::make_unique<PoolTestJob>( queued ) );
-    sw::thread stopper{ [&pool]()
+    sw::thread stopper{ ThreadTestAccess::getKey(), [&pool]()
     { pool.shutdown(); } };
 
     // 종료가 깃발을 세웠는지는 새 일이 그 자리에서 취소되는 것으로 본다. 그 전의 일은 줄에 서고 워커는 문에 잡혀 있어 칸을 만지지 않는다.

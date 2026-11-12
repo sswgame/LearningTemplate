@@ -27,7 +27,7 @@ namespace sw
     {
         struct GameObjectStoreInternal
         {
-            /** @brief 이 스레드가 들어가 있는 `forEachGameObject` 의 깊이입니다(`WalkScope`). Engine 의 이 TU 하나에만 있습니다. */
+            /** @brief 이 스레드가 들어가 있는 `forEachGameObject` 의 깊이입니다(`IterationScope`). Engine 의 이 TU 하나에만 있습니다. */
             inline static thread_local uint32 s_walkDepth = 0;
         };
     } // namespace
@@ -46,6 +46,7 @@ namespace sw
         , _listGameObject{}
         , _mapNameToObject{}
         , _mapNameSuffix{}
+        , _mapBaseNameToObject{}
         , _nameFallbackSerial{ 0 }
         , _mapIDToObject{}
         , _objectSlotTable{}
@@ -66,31 +67,31 @@ namespace sw
     {
     }
 
-    GameObjectStore::WalkScope::WalkScope()
+    GameObjectStore::IterationScope::IterationScope()
     {
         ++GameObjectStoreInternal::s_walkDepth;
     }
 
-    GameObjectStore::WalkScope::~WalkScope()
+    GameObjectStore::IterationScope::~IterationScope()
     {
         --GameObjectStoreInternal::s_walkDepth;
     }
 
-    bool GameObjectStore::WalkScope::isInsideWalk()
+    bool GameObjectStore::IterationScope::isIterating()
     {
         return GameObjectStoreInternal::s_walkDepth != 0;
     }
 
     GameObject* GameObjectStore::createGameObject( hashed_string name )
     {
-        SW_ASSERT( WalkScope::isInsideWalk() == false );
+        SW_ASSERT( IterationScope::isIterating() == false );
         UniqueLock<shared_mutex> lock{ _mutex };
         return createGameObjectUnlocked( name, allocateID() );
     }
 
     GameObject* GameObjectStore::createGameObjectWithID( hashed_string name, uint64 objectID )
     {
-        SW_ASSERT( WalkScope::isInsideWalk() == false );
+        SW_ASSERT( IterationScope::isIterating() == false );
         UniqueLock<shared_mutex> lock{ _mutex };
         if ( objectID == 0 )
             return createGameObjectUnlocked( name, allocateID() );
@@ -117,6 +118,7 @@ namespace sw
 
         nameEntry._pObject = pObj;
         _mapNameToObject.insert_or_assign( uniqueName, nameEntry );
+        addBaseNameUnlocked( uniqueName, pObj );
         if ( _objectSlotTable.tryStore( objectID, pObj ) == false )
         {
             _mapIDToObject.insert_or_assign( objectID, pObj );
@@ -135,7 +137,7 @@ namespace sw
     {
         if ( pObj == nullptr )
             return;
-        SW_ASSERT( WalkScope::isInsideWalk() == false );
+        SW_ASSERT( IterationScope::isIterating() == false );
 
         UniqueLock<shared_mutex> lock{ _mutex };
         if ( findRegisteredUnlocked( pObj->getObjectID() ) != pObj )
@@ -159,6 +161,7 @@ namespace sw
             releaseNameSuffixUnlocked( oldIt->second );
             _mapNameToObject.erase( oldIt );
         }
+        removeBaseNameUnlocked( oldName, pObj );
 
         NameEntry           nameEntry{};
         const hashed_string uniqueName = makeUniqueNameUnlocked( newName, nameEntry );
@@ -166,6 +169,56 @@ namespace sw
             pObj->_name = uniqueName;
         nameEntry._pObject = pObj;
         _mapNameToObject.insert_or_assign( uniqueName, nameEntry );
+        addBaseNameUnlocked( uniqueName, pObj );
+    }
+
+    void GameObjectStore::findGameObjectsByBaseName( hashed_string baseName, vector<GameObject*>& outListGameObject ) const
+    {
+        outListGameObject.clear();
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
+        const auto                     it = _mapBaseNameToObject.find( baseName );
+        if ( it == _mapBaseNameToObject.end() )
+            return;
+        for ( GameObject* pObj : it->second )
+        {
+            if ( pObj->isPendingDestroy() == false )
+                outListGameObject.push_back( pObj );
+        }
+    }
+
+    string_view GameObjectStore::computeBaseName( string_view name )
+    {
+        const size_t underscore = name.rfind( '_' );
+        const bool   bHasNumber = underscore != string_view::npos && underscore + 1 < name.size() && name[underscore + 1] != '0';
+        if ( bHasNumber == false )
+            return name;
+        for ( size_t index = underscore + 1; index < name.size(); ++index )
+        {
+            if ( name[index] < '0' || name[index] > '9' )
+                return name;
+        }
+        return name.substr( 0, underscore );
+    }
+
+    void GameObjectStore::addBaseNameUnlocked( hashed_string name, GameObject* pObj )
+    {
+        const string_view   text{ name.c_str() };
+        const string_view   base = computeBaseName( text );
+        const hashed_string key  = base.size() == text.size() ? name : hashed_string( base.data(), static_cast<uint32>( base.size() ) );
+        _mapBaseNameToObject[key].push_back( pObj );
+    }
+
+    void GameObjectStore::removeBaseNameUnlocked( hashed_string name, GameObject* pObj )
+    {
+        const string_view   text{ name.c_str() };
+        const string_view   base = computeBaseName( text );
+        const hashed_string key  = base.size() == text.size() ? name : hashed_string( base.data(), static_cast<uint32>( base.size() ) );
+        const auto          it   = _mapBaseNameToObject.find( key );
+        if ( it == _mapBaseNameToObject.end() )
+            return;
+        (void)VectorUtil::removeSingleSwap( it->second, pObj ); // 없으면 이미 빠진 것이다
+        if ( it->second.empty() )
+            _mapBaseNameToObject.erase( it );
     }
 
     GameObject* GameObjectStore::findGameObjectByName( hashed_string name ) const
@@ -336,7 +389,7 @@ namespace sw
     {
         if ( pObj == nullptr )
             return;
-        SW_ASSERT( WalkScope::isInsideWalk() == false );
+        SW_ASSERT( IterationScope::isIterating() == false );
 
         // **표시를 먼저, 원자적으로 선점한다.** 확인하고 나서 표시하면(check-then-set) 같은 오브젝트를 같은 프레임에
         // 없애는 두 스레드가 나란히 통과해 파괴 목록에 같은 포인터가 두 번 들어가고
@@ -372,7 +425,7 @@ namespace sw
 
     void GameObjectStore::destroyComponent( Component* pComp )
     {
-        SW_ASSERT( WalkScope::isInsideWalk() == false );
+        SW_ASSERT( IterationScope::isIterating() == false );
         // destroyGameObject 와 같은 이유로 먼저 선점한다. 여기 목록에 두 번 들어가면
         // `removeComponent` 가 두 번 불리고 컴포넌트 풀이 같은 블록을 두 번 받는다.
         if ( pComp == nullptr || pComp->tryMarkPendingDestroy() == false )
@@ -400,7 +453,7 @@ namespace sw
         ComponentPoolEntry* pEntry = pComp->_pPoolEntry;
         if ( pEntry != nullptr && pComp->_poolEntrySlot != Component::kNotInPoolEntry )
         {
-            SW_ASSERT( WalkScope::isInsideWalk() == false );
+            SW_ASSERT( IterationScope::isIterating() == false );
             UniqueLock<shared_mutex> lock{ _mutex };
             vector<Component*>&      listBucket = pEntry->_listComponent;
             const uint32             slot       = pComp->_poolEntrySlot;
@@ -490,6 +543,7 @@ namespace sw
                         releaseNameSuffixUnlocked( nameIt->second );
                         _mapNameToObject.erase( nameIt );
                     }
+                    removeBaseNameUnlocked( pObj->getName(), pObj );
                     if ( _objectSlotTable.tryRemove( pObj->getObjectID(), pObj ) == false )
                     {
                         _mapIDToObject.erase( pObj->getObjectID() );
@@ -546,6 +600,7 @@ namespace sw
             _listPendingAdd.clear();
             _mapNameToObject.clear();
             _mapNameSuffix.clear();
+            _mapBaseNameToObject.clear();
             _mapIDToObject.clear();
             _overflowObjectCount.store( 0, std::memory_order_release );
             _objectSlotTable.clear();
@@ -728,7 +783,7 @@ namespace sw
         if ( pTypeInfo == nullptr || pTypeInfo->_fullyQualifiedName.empty() )
             return nullptr;
 
-        SW_ASSERT( WalkScope::isInsideWalk() == false );
+        SW_ASSERT( IterationScope::isIterating() == false );
         UniqueLock<shared_mutex> lock{ _mutex };
         auto                     iter = _mapComponentPool.find( pTypeInfo->_fullyQualifiedName );
         if ( iter != _mapComponentPool.end() )
@@ -750,7 +805,7 @@ namespace sw
             SW_ASSERT( pComp->_pTypeInfo == nullptr );
             return;
         }
-        SW_ASSERT( WalkScope::isInsideWalk() == false );
+        SW_ASSERT( IterationScope::isIterating() == false );
         UniqueLock<shared_mutex> lock{ _mutex };
         SW_ASSERT( pComp->_poolEntrySlot == Component::kNotInPoolEntry );
         if ( pEntry->_listComponent.empty() )

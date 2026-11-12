@@ -6,7 +6,7 @@
  *          틱 중인지는 `StructuralChangeBuffer::isFrozen` 으로만 읽는다.
  *
  *          **헤더 템플릿(`forEachGameObject`)은 이 타입의 멤버 위치를 부르는 모듈에 컴파일해 넣는다.** 멤버를 바꾸면 모든 모듈(게임, 킷, 에디터, RHI)을
- *          함께 다시 빌드해야 한다. 스레드별 상태와 정적 상태(`WalkScope` 의 깊이, id 발급 카운터)는 Engine 의 TU 에 있다. 헤더의
+ *          함께 다시 빌드해야 한다. 스레드별 상태와 정적 상태(`IterationScope` 의 깊이, id 발급 카운터)는 Engine 의 TU 에 있다. 헤더의
  *          `inline thread_local` 로 옮기면 모듈마다 별도 변수가 생겨 모듈의 순회를 세지 못한다.
  *
  *          잠금 순서: `_mutex` → `_beginPlayMutex`(선언의 `SW_ACQUIRED_AFTER`) → `TickRegistry` 의 잠금(가장 안쪽).
@@ -80,20 +80,20 @@ namespace sw
         static constexpr uint64 kObjectSlotCount = 1ull << 22;
 
         /**
-         * @struct WalkScope
+         * @struct IterationScope
          * @brief `forEachGameObject` 가 공유 잠금을 쥔 동안을 표시합니다(스레드별 깊이). 그 안에서 구조를 바꾸는 호출은 Debug 에서 단언합니다.
          * @details `_mutex` 는 재진입하지 않는다. 순회 콜백이 오브젝트를 만들거나(배타 잠금) 컴포넌트를 붙이면(풀 맵의 배타 잠금) 같은
          *          스레드가 자기 공유 잠금을 기다리며 **멈춘다.** 예를 들어 beginPlay → onBeginPlay → addTag → addComponent 경로에서 에디터 Play 가 멈춘다.
          *          멈추는 대신 단언으로 알린다. 깊이는 엔진 쪽 변수 하나라서 모듈이 순회를 인스턴스화해도 같은 변수를 센다.
          */
-        struct SW_API WalkScope
+        struct SW_API IterationScope
         {
-            WalkScope();
-            ~WalkScope();
-            WalkScope( const WalkScope& )            = delete;
-            WalkScope& operator=( const WalkScope& ) = delete;
+            IterationScope();
+            ~IterationScope();
+            IterationScope( const IterationScope& )            = delete;
+            IterationScope& operator=( const IterationScope& ) = delete;
             /** @brief 지금 스레드가 `forEachGameObject` 안에 있으면 true 입니다. */
-            static bool isInsideWalk();
+            static bool isIterating();
         };
         /**
          * @brief 매니저의 다른 단위를 받아 만듭니다. 받은 참조는 매니저가 함께 소유하므로 이 타입보다 오래 삽니다.
@@ -128,6 +128,13 @@ namespace sw
 
         /** @brief 살아 있는 오브젝트를 outList 에 채웁니다(부르는 쪽 버퍼 재사용). */
         void getAllGameObjects( vector<GameObject*>& outListGameObject ) const;
+        /**
+         * @brief 밑 이름이 @p baseName 인 살아 있는 오브젝트(`Tree` · `Tree_2` · `Tree_7` …)를 @p outListGameObject 에 채웁니다(먼저 비운다, 순서는 약속하지 않는다).
+         * @details 밑 이름 색인(`_mapBaseNameToObject`)을 찾으므로 비용은 그 밑의 오브젝트 수다 — 씬을 돌지 않는다(틱에서도 부를 수 있는 좁은 질의).
+         */
+        void findGameObjectsByBaseName( hashed_string baseName, vector<GameObject*>& outListGameObject ) const;
+        /** @brief @p name 의 밑 이름입니다. 끝이 `_` + 0 으로 시작하지 않는 숫자면 그것을 뗀다(`Tree_3` → `Tree`, `Tree_03` · `Tree_` 는 그대로). */
+        static string_view computeBaseName( string_view name );
         /** @brief 병합된 오브젝트가 하나라도 있으면 true 입니다. 틱이 컴포넌트 단계를 건너뛸지 판단할 때 씁니다(게임 스레드). */
         bool hasMergedObjects() const { return _listGameObject.empty() == false; }
 
@@ -143,13 +150,13 @@ namespace sw
 
         /**
          * @brief 힙 할당 없이 등록된 모든 유효한 GameObject 를 순회합니다.
-         * @note 공유 잠금을 쥔 채 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`WalkScope`).
+         * @note 공유 잠금을 쥔 채 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`IterationScope`).
          */
         template <typename Func>
         void forEachGameObject( Func&& func ) const
         {
             ScopedSharedLock<shared_mutex> lock{ _mutex };
-            const WalkScope                walkScope{};
+            const IterationScope           walkScope{};
             for ( GameObject* pObj : _listGameObject )
             {
                 if ( pObj != nullptr && pObj->isPendingDestroy() == false )
@@ -172,7 +179,7 @@ namespace sw
          *          방문한 포인터는 콜백 동안 유효하다.
          *          **순서는 약속하지 않는다.** 버킷은 타입이 처음 나온 순서, 버킷 안은 추가 순서지만 제거가 마지막 원소를 빈 자리로 옮긴다.
          *          런타임 `TypeInfo` 로 부를 수 있으므로 타입을 템플릿으로 모르는 곳(인스펙터 선택기)도 쓴다. @p pToType 이 nullptr 이면 아무것도 방문하지 않는다.
-         * @note `forEachGameObject` 와 같이 공유 잠금과 `WalkScope` 안에서 콜백을 부른다. 콜백 안에서 구조를 바꾸면 안 된다.
+         * @note `forEachGameObject` 와 같이 공유 잠금과 `IterationScope` 안에서 콜백을 부른다. 콜백 안에서 구조를 바꾸면 안 된다.
          */
         template <typename Func>
         void forEachComponentOfType( const TypeInfo* pToType, Func&& func ) const
@@ -180,7 +187,7 @@ namespace sw
             if ( pToType == nullptr )
                 return;
             ScopedSharedLock<shared_mutex> lock{ _mutex };
-            const WalkScope                walkScope{};
+            const IterationScope           walkScope{};
             for ( const ComponentPoolEntry* pEntry : _listComponentPoolEntry )
             {
                 if ( isTypeDerivedFrom( pEntry->_pType, pToType ) == false )
@@ -346,6 +353,10 @@ namespace sw
          *          때문이다. 대신 파괴 쪽은 맵 항목이 **자기 것**일 때만 지운다.
          */
         bool isNameTakenUnlocked( hashed_string name ) const;
+        /** @brief 잠금 안에서 @p pObj 를 이름 @p name 의 밑 이름 색인에 올립니다. */
+        void addBaseNameUnlocked( hashed_string name, GameObject* pObj ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 잠금 안에서 @p pObj 를 이름 @p name 의 밑 이름 색인에서 뺍니다. 없으면 할 일이 없습니다. */
+        void removeBaseNameUnlocked( hashed_string name, GameObject* pObj ) SW_REQUIRES_LOCK( _mutex );
 
     private:
         GameObjectManager*                             _pManager;                ///< 만든 오브젝트의 소유 매니저(`GameObject::_pOwnerManager`)
@@ -357,10 +368,11 @@ namespace sw
         unordered_map<hashed_string, unique_ptr<ComponentPoolEntry>> _mapComponentPool SW_GUARDED_BY( _mutex ); ///< 키는 타입 FQN(`getOrCreateComponentPoolEntry` 설명 참고)
         vector<ComponentPoolEntry*> _listComponentPoolEntry                            SW_GUARDED_BY( _mutex ); ///< 항목을 처음 나온 순서로 둔다. 순회(`forEachComponentOfType`)가 이 목록을 돈다
 
-        vector<GameObject*>                           _listGameObject;
-        unordered_map<hashed_string, NameEntry>       _mapNameToObject;
-        unordered_map<hashed_string, NameSuffixState> _mapNameSuffix;      ///< 밑 이름마다 번호 상태다. 중복 이름을 만드는 비용이 O(1) 이다(언리얼의 MakeUniqueObjectName 에 해당)
-        uint32                                        _nameFallbackSerial; ///< 번호 붙인 이름이 1024 번 겹쳤을 때의 `_x<번호>` 뒷번호(저장소 잠금 안에서만 올린다 — 이름은 이 저장소 안에서만 겹치지 않으면 된다)
+        vector<GameObject*>                               _listGameObject;
+        unordered_map<hashed_string, NameEntry>           _mapNameToObject;
+        unordered_map<hashed_string, NameSuffixState>     _mapNameSuffix;       ///< 밑 이름마다 번호 상태다. 중복 이름을 만드는 비용이 O(1) 이다(언리얼의 MakeUniqueObjectName 에 해당)
+        unordered_map<hashed_string, vector<GameObject*>> _mapBaseNameToObject; ///< 밑 이름(`computeBaseName`)마다 그 이름을 가진 오브젝트(삭제 대기 포함 — 찾기가 거른다). 이름으로 고르는 질의가 씬을 돌지 않게 한다
+        uint32                                            _nameFallbackSerial;  ///< 번호 붙인 이름이 1024 번 겹쳤을 때의 `_x<번호>` 뒷번호(저장소 잠금 안에서만 올린다 — 이름은 이 저장소 안에서만 겹치지 않으면 된다)
         /**
          * @brief id → 오브젝트 맵입니다. **슬롯 테이블의 슬롯을 다른 살아 있는 오브젝트가 쓰는 id 만** 보관합니다(보통 비어 있습니다).
          * @details 모든 오브젝트를 넣지 않는다. 테이블과 같은 정보를 두 번 보관하게 되고, 스폰마다 노드 할당 하나와 파괴마다 해제 하나가 붙는다.

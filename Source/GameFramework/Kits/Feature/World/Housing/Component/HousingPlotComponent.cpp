@@ -13,6 +13,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionValidation.h"
@@ -753,11 +754,11 @@ namespace sw
             return;
         const float32 cellSize = pCatalog->getRoot()._cellSize;
         const float3  origin   = getPlotOrigin();
-        pManager->forEachComponentOfType<HousingPlotComponent>( [this, &context, cellSize, &origin]( const HousingPlotComponent* pOther )
+        for ( const HousingPlotComponent* pOther : pManager->getComponentRegistry().getAll<HousingPlotComponent>() )
         {
             const GameObject* pOtherOwner = pOther->getOwner();
             if ( pOther == this || pOtherOwner == nullptr || pOtherOwner->getPrimarySceneComponent() == nullptr )
-                return; // 루트가 없는 부지는 제 검증이 알린다
+                continue; // 루트가 없는 부지는 제 검증이 알린다
             if ( pOther->_settings._plotID == _settings._plotID )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder2;
@@ -775,6 +776,18 @@ namespace sw
                 textBuilder.appendFormat( "plot '%#' overlaps plot '%#'", _settings._plotID.c_str(), pOther->_settings._plotID.c_str() );
                 context.addError( textBuilder.view() );
             }
-        } );
+        }
+    }
+
+    void HousingPlotComponent::onRegister( GameObjectManager& manager )
+    {
+        GameModeComponent::onRegister( manager );
+        manager.getComponentRegistry().add<HousingPlotComponent>( this );
+    }
+
+    void HousingPlotComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<HousingPlotComponent>( this );
+        GameModeComponent::onUnregister( manager );
     }
 } // namespace sw

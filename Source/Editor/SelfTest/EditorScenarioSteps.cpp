@@ -11,6 +11,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -109,14 +110,14 @@ namespace sw::editor
             }
 
             /**
-             * @brief 레이블에 포인터를 두고(`EditorSelfTestInput::aimAtMark`) 그 점이 레이블에 닿지 않으면 실패로 알리고 true 를 반환합니다. 누르기 · 호버 전에 부른다.
+             * @brief 레이블에 포인터를 두고(`EditorSelfTestInput::hoverMark`) 그 점이 레이블에 닿지 않으면 실패로 알리고 true 를 반환합니다. 누르기 · 호버 전에 부른다.
              * @details 잘림 검사는 창 밖으로 잘린 것만 잡았다 — 씬 뷰 하단 툴바(같은 창의 자식 오버레이)가 기즈모를 덮어 끌기가 툴바를 눌렀는데 단계는 성공했다(editor.gizmotoplevel).
              *          아직 판정이 없으면(조준 붙잡기가 시한을 넘겼다) 누르지 않는다 — 옛 좌표로 누르면 엉뚱한 것을 누른다.
              */
             static bool reportUnreachableMark( AutomationStepContext& runner, const AutomationStep& step, const string& mark, const float2& anchor )
             {
                 string              coverName;
-                const EditorMarkHit hit = EditorSelfTestInput::aimAtMark( mark, anchor, coverName );
+                const EditorMarkHit hit = EditorSelfTestInput::hoverMark( mark, anchor, coverName );
                 if ( hit == EditorMarkHit::Reachable )
                     return false;
                 EditorSelfTestInput::releaseMouseHold();
@@ -187,11 +188,11 @@ namespace sw::editor
              * @brief 클릭 · 끌기 · 호버는 포인터를 레이블에 옮기고, 포인터가 거기 있는 상태로 레이블이 멈추고 그 점의 최상위 창이 판정될 때까지 시나리오 시계를 붙잡습니다.
              * @details 사람의 클릭과 같다: 포인터가 먼저 도착한다. 포인터가 오면 호버 때문에 배치가 바뀌기도 하므로(선택 동기화 · 툴팁) 옛 좌표를 큐에 넣어 누르면
              *          엉뚱한 칸을 누른다. 지난 프레임 자리로 답하는 쪽(ImGuizmo::IsOver)도 포인터가 한 프레임 먼저 와 있어야 맞게 답한다. 언리얼 Automation Driver 의 "이동 후 클릭" 과 같은 자리다.
-             *          그 점의 창 판정(`EditorSelfTestInput::aimAtMark`)은 포인터가 닿은 프레임이 끝나야 나온다 — 단계(`runClick` · `runDrag` · `runHover`)가 가려졌으면 누르지 않고 실패로 적는다.
+             *          그 점의 창 판정(`EditorSelfTestInput::hoverMark`)은 포인터가 닿은 프레임이 끝나야 나온다 — 단계(`runClick` · `runDrag` · `runHover`)가 가려졌으면 누르지 않고 실패로 적는다.
              *          끌기는 `toMark` 도 자리 잡기를 기다린다(클릭에는 그 속성이 없어 빈칸이다).
              */
             template <typename TParams>
-            static AutomationStepHold holdUntilPressAimed( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
+            static AutomationStepHold holdUntilHoverReady( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
                 if ( isRelease( step ) )
                     return holdUntilMarkSettled( runner, step, input );
@@ -205,7 +206,7 @@ namespace sw::editor
                 const bool bInputDrained = EditorSelfTestInput::hasPendingEvents() == false;
                 // 플랫폼이 다음 프레임에 실제 커서를 다시 넣으므로 옮기기 한 번으로는 머물지 않는다 - 입구가 프레임마다 붙잡는다. 단계가 놓는다.
                 string                   coverName;
-                const EditorMarkHit      hit    = EditorSelfTestInput::aimAtMark( params._mark, params._anchor, coverName );
+                const EditorMarkHit      hit    = EditorSelfTestInput::hoverMark( params._mark, params._anchor, coverName );
                 const bool               bReady = bSettled && bInputDrained && hit != EditorMarkHit::Pending && hit != EditorMarkHit::Missing;
                 const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames,
                                                                          "the pointer to reach editor widget '" + params._mark + ( bDrawn ? "' and it to settle" : "' (not drawn yet)" ) );
@@ -303,7 +304,7 @@ namespace sw::editor
                 // state="Down" 은 누른 채로 두고(드래그, 뷰포트 비행), state="Up" 은 그 버튼을 놓는다. 그 사이 프레임에 다른 단계(키를 누른 채)를 넣을 수 있다.
                 if ( state == PressState::Up )
                 {
-                    if ( EditorSelfTestInput::releaseAtMark( mark, anchor, button ) == false )
+                    if ( EditorSelfTestInput::releaseMark( mark, anchor, button ) == false )
                         runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?) - released where the pointer was" );
                     EditorSelfTestInput::releaseMouseHold();
                     return true;
@@ -318,12 +319,12 @@ namespace sw::editor
                     EditorSelfTestInput::setKey( modifier, true );
                 }
                 string coverName;
-                (void)EditorSelfTestInput::pressAtMark( mark, anchor, button, coverName ); // 바로 위에서 닿는다고 판정했다
+                (void)EditorSelfTestInput::pressMark( mark, anchor, button, coverName ); // 바로 위에서 닿는다고 판정했다
                 if ( state == PressState::Down )
                     return true;
                 EditorSelfTestInput::waitNextFrame();
                 // 누른 뒤 위젯이 사라졌으면(닫힌 팝업) 그 자리에서 놓는다 — 그래도 놓아야 버튼이 눌린 채로 남지 않는다.
-                if ( EditorSelfTestInput::releaseAtMark( mark, anchor, button ) == false )
+                if ( EditorSelfTestInput::releaseMark( mark, anchor, button ) == false )
                     SW_LOG_INFO_ID( "EditorScenarioSteps.EditorWidgetGoneWhen", "[Scenario] editor widget '%#' was gone when the click released", mark.c_str() );
                 for ( const int32 modifier : listModifier )
                 {
@@ -372,20 +373,20 @@ namespace sw::editor
                 // 끌기 경로는 판정한 점(`start`)에서 잰다 — 레이블 좌표로 손 옮기는 공개 함수는 없다.
                 const float2 middle{ static_cast<float32>( deltaX ) * 0.5f, static_cast<float32>( deltaY ) * 0.5f };
                 const float2 end{ static_cast<float32>( deltaX ), static_cast<float32>( deltaY ) };
-                (void)EditorSelfTestInput::moveByOffsetFromAim( float2{} ); // 위 reportUnreachableMark 가 `start` 를 Reachable 로 판정했다
+                (void)EditorSelfTestInput::moveByOffset( float2{} ); // 위 reportUnreachableMark 가 `start` 를 Reachable 로 판정했다
                 for ( const int32 modifier : listModifier )
                 {
                     EditorSelfTestInput::setKey( modifier, true );
                 }
                 EditorSelfTestInput::waitNextFrame();
                 string coverName;
-                (void)EditorSelfTestInput::pressAtMark( mark, params._anchor, button, coverName ); // 위에서 닿는다고 판정했다 — 누르는 점은 `start` 다
+                (void)EditorSelfTestInput::pressMark( mark, params._anchor, button, coverName ); // 위에서 닿는다고 판정했다 — 누르는 점은 `start` 다
                 EditorSelfTestInput::waitNextFrame();
-                (void)EditorSelfTestInput::moveByOffsetFromAim( middle );
+                (void)EditorSelfTestInput::moveByOffset( middle );
                 EditorSelfTestInput::waitNextFrame();
-                (void)EditorSelfTestInput::moveByOffsetFromAim( end );
+                (void)EditorSelfTestInput::moveByOffset( end );
                 EditorSelfTestInput::waitNextFrame();
-                (void)EditorSelfTestInput::moveByOffsetFromAim( end );
+                (void)EditorSelfTestInput::moveByOffset( end );
                 EditorSelfTestInput::setMouseButton( button, false );
                 for ( const int32 modifier : listModifier )
                 {
@@ -526,7 +527,7 @@ namespace sw::editor
                 if ( params._component.empty() == false )
                     EditorSceneCommands::collectObjectsWithComponent( *pManager, editor::getSubsystem<TypeRegistry>().findType( hashed_string( params._component ) ), listObject );
                 else
-                    pManager->getAllGameObjects( listObject );
+                    pManager->getAllGameObjects( editor::EditorSceneIterationAccess::getKey(), listObject );
 
                 uint32 foundCount = 0;
                 uint32 pickCount  = 0;
@@ -686,9 +687,9 @@ namespace sw::editor
 
     SW_EDITOR_SUBSYSTEM( EditorSelfTestStepState, EditorSelfTestStepState::kSubsystemOrder );
 
-    SW_AUTOMATION_STEP( editorClick, EditorScenarioStepValidation::kClickKind, &EditorScenarioStepsInternal::runClick, &EditorScenarioStepValidation::validateClick, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilPressAimed<EditorClickParams> ) );
-    SW_AUTOMATION_STEP( editorDrag, EditorScenarioStepValidation::kDragKind, &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepValidation::validateDrag, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilPressAimed<EditorDragParams> ) );
-    SW_AUTOMATION_STEP( editorHover, EditorScenarioStepValidation::kHoverKind, &EditorScenarioStepsInternal::runHover, &EditorScenarioStepValidation::validateHover, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilPressAimed<EditorHoverParams> ) );
+    SW_AUTOMATION_STEP( editorClick, EditorScenarioStepValidation::kClickKind, &EditorScenarioStepsInternal::runClick, &EditorScenarioStepValidation::validateClick, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilHoverReady<EditorClickParams> ) );
+    SW_AUTOMATION_STEP( editorDrag, EditorScenarioStepValidation::kDragKind, &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepValidation::validateDrag, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilHoverReady<EditorDragParams> ) );
+    SW_AUTOMATION_STEP( editorHover, EditorScenarioStepValidation::kHoverKind, &EditorScenarioStepsInternal::runHover, &EditorScenarioStepValidation::validateHover, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilHoverReady<EditorHoverParams> ) );
     SW_AUTOMATION_STEP( editorText, EditorScenarioStepValidation::kTextKind, &EditorScenarioStepsInternal::runText, &AutomationStep::validateProperties<EditorTextParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilTextTarget ) );
     SW_AUTOMATION_STEP( editorKey, EditorScenarioStepValidation::kKeyKind, &EditorScenarioStepsInternal::runKey, &EditorScenarioStepValidation::validateKey, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareKey ).withHold( &EditorScenarioStepsInternal::holdUntilKeyboardSettled ) );
     SW_AUTOMATION_STEP( editorExpectObject, EditorScenarioStepValidation::kExpectObjectKind, &EditorScenarioStepsInternal::runExpectObject, &AutomationStep::validateProperties<EditorExpectObjectParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareExpectObject ) );

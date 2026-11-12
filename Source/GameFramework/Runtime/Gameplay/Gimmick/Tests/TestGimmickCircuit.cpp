@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuitDef.h"
@@ -195,7 +196,7 @@ SW_TEST_CASE( GimmickCircuitTest, RecentTransitionsAreRecordedAndCapped )
     rig._circuit.collectRecentTransitions( listTransition );
     SW_EXPECT_EQUAL( size_t( GimmickCircuit::kTransitionCapacity ), listTransition.size() );
 
-    DebugHUDSectionWriter writer;
+    DebugHUDSectionWriter writer{ sw::SceneIterationTestAccess::getKey() };
     rig._circuit.writeDebugLines( writer, 64 );
     SW_REQUIRE_TRUE( writer.getLineCount() > 3 );
     SW_EXPECT_EQUAL( string( "step" ), writer.getLineAt( 0 )._label );

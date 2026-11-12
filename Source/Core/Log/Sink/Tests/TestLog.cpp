@@ -19,6 +19,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 #include <cstring>
 
@@ -390,7 +391,7 @@ SW_TEST_CASE( LogTest, ConcurrentMultiThreadedLogging )
     sw::thread arrWorker[kThreadCount];
     for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
     {
-        arrWorker[threadIndex] = sw::thread( [threadIndex]
+        arrWorker[threadIndex] = sw::thread( sw::ThreadTestAccess::getKey(), [threadIndex]
         {
             for ( uint32 logIndex = 0; logIndex < kLogsPerThread; ++logIndex )
             {
@@ -447,7 +448,7 @@ SW_TEST_CASE( LogTest, ShutdownQueueDrainConsistency )
  */
 SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
 {
-    sw::thread emitter( []
+    sw::thread emitter( sw::ThreadTestAccess::getKey(), []
     {
         for ( uint32 index = 0; index < 500; ++index )
         {

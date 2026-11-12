@@ -21,7 +21,7 @@ namespace sw::editor
         float2 _min{};
         float2 _max{};
         uint32 _itemID{ 0 };
-        uint32 _windowID{ 0 };         ///< 위젯을 그린 ImGui 창. 누를 점의 최상위 창이 이 창(또는 그 조상 · 이 위젯이 담은 자식 창)이 아니면 가려진 것이다(`EditorSelfTestInput::aimAtMark`)
+        uint32 _windowID{ 0 };         ///< 위젯을 그린 ImGui 창. 누를 점의 최상위 창이 이 창(또는 그 조상 · 이 위젯이 담은 자식 창)이 아니면 가려진 것이다(`EditorSelfTestInput::hoverMark`)
         uint32 _viewportID{ 0 };       ///< 위젯이 그려진 뷰포트. 떠 있는 창(자기 플랫폼 창)이면 마우스를 옮길 때 그 뷰포트를 "커서 아래" 로 알린다
         uint32 _frame{ 0 };            ///< 기록한 ImGui 프레임 번호. 지난 프레임에 그려지지 않은 위젯을 누르지 않게 한다
         uint32 _stableStartFrame{ 0 }; ///< 사각형 · 뷰포트 · 잘림이 지금 값으로 이어서 그려진 첫 프레임(그 사이 빠진 프레임이 있으면 다시 센다)
@@ -71,7 +71,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 레이블의 누를 점에 포인터를 두었을 때 그 점의 입력을 받는 쪽입니다(`EditorSelfTestInput::aimAtMark` · `pressAtMark`). */
+    /** @brief 레이블의 누를 점에 포인터를 두었을 때 그 점의 입력을 받는 쪽입니다(`EditorSelfTestInput::hoverMark` · `pressMark`). */
     enum class EditorMarkHit : uint8
     {
         Missing,   ///< 레이블이 지난 프레임에 그려지지 않았다
@@ -106,32 +106,32 @@ namespace sw::editor
         /**
          * @brief 레이블 위에 포인터를 두는 입구입니다 — 레이블의 @p anchor 위치(0..1, 가운데가 (0.5, 0.5))에 커서를 붙잡고(`releaseMouseHold` 까지 프레임마다 다시 넣는다)
          *        그 점에 누가 닿는지 판정합니다. 가려졌으면 @p outCoverName 에 덮은 창 이름을 넣습니다.
-         * @details 레이블을 누르거나 호버하는 모든 길(시나리오 `EditorClick` · `EditorDrag` · `EditorHover`, 자체 테스트)이 이 입구와 `pressAtMark` 만 거친다 — 레이블 좌표로
-         *          포인터를 옮기는 다른 공개 함수는 없다(끌기는 판정한 점에서 재는 `moveByOffsetFromAim`). 판정은 포인터가 그 점에 있던 프레임의 최상위 창(ImGui `HoveredWindow`)이 레이블 주인인지다: 레이블을 그린 창,
+         * @details 레이블을 누르거나 호버하는 모든 길(시나리오 `EditorClick` · `EditorDrag` · `EditorHover`, 자체 테스트)이 이 입구와 `pressMark` 만 거친다 — 레이블 좌표로
+         *          포인터를 옮기는 다른 공개 함수는 없다(끌기는 판정한 점에서 재는 `moveByOffset`). 판정은 포인터가 그 점에 있던 프레임의 최상위 창(ImGui `HoveredWindow`)이 레이블 주인인지다: 레이블을 그린 창,
          *          그 조상(제목 표시줄 · 도크 탭 · 열린 메뉴 머리), 레이블 사각형 안에 든 자식 창(목록 상자처럼 레이블이 담은 내용). 잘림 검사(`_bClipped`)는 창 밖으로
          *          잘린 것만 잡아, 같은 창 위의 오버레이(씬 뷰 하단 툴바 자식 창) · 팝업에 가려지면 누름이 그쪽으로 가고 단계는 성공했다.
          *          언리얼 Automation Driver 의 hit-test 확인 · Playwright actionability 의 "receives events"(elementFromPoint) 와 같은 자리다.
          *          붙잡기는 플랫폼이 다음 프레임에 넣는 실제 커서가 호버를 풀지 않게 한다(누른 채 두는 `EditorClick state="Down"` · 뷰포트 비행).
-         * @return `Pending` 이면 다음 프레임에 다시 부른다. `Reachable` 일 때만 누른다(`pressAtMark` 도 같은 판정을 다시 본다).
+         * @return `Pending` 이면 다음 프레임에 다시 부른다. `Reachable` 일 때만 누른다(`pressMark` 도 같은 판정을 다시 본다).
          */
-        [[nodiscard]] static EditorMarkHit aimAtMark( string_view key, const float2& anchor, string& outCoverName );
+        [[nodiscard]] static EditorMarkHit hoverMark( string_view key, const float2& anchor, string& outCoverName );
         /**
-         * @brief 레이블을 누르는 입구입니다 — `aimAtMark` 와 같은 판정이 `Reachable` 일 때만 그 점으로 옮기고 @p button 을 누르는 이벤트를 넣습니다. 아니면 아무것도 넣지 않고 판정을 돌려줍니다.
+         * @brief 레이블을 누르는 입구입니다 — `hoverMark` 와 같은 판정이 `Reachable` 일 때만 그 점으로 옮기고 @p button 을 누르는 이벤트를 넣습니다. 아니면 아무것도 넣지 않고 판정을 돌려줍니다.
          * @details 붙잡기는 건드리지 않는다 — 누른 채 둘 단계는 붙잡은 채로, 한 번 누르고 놓을 단계는 먼저 `releaseMouseHold` 하고 부른다. 수정자 키는 이 앞에 넣는다.
          */
-        [[nodiscard]] static EditorMarkHit pressAtMark( string_view key, const float2& anchor, int32 button, string& outCoverName );
+        [[nodiscard]] static EditorMarkHit pressMark( string_view key, const float2& anchor, int32 button, string& outCoverName );
         /**
-         * @brief 마지막으로 닿는다고 판정한 점(`aimAtMark` · `pressAtMark` 가 `Reachable` 을 돌려준 점)에서 @p offset 픽셀만큼 떨어진 곳으로 포인터를 옮기는 이벤트를 넣습니다.
+         * @brief 마지막으로 닿는다고 판정한 점(`hoverMark` · `pressMark` 가 `Reachable` 을 돌려준 점)에서 @p offset 픽셀만큼 떨어진 곳으로 포인터를 옮기는 이벤트를 넣습니다.
          *        끌기의 시작 · 중간 · 끝 점이 이 입구로만 움직인다 — 언리얼 Automation Driver 의 `MoveByOffset` 과 같은 자리다.
          * @details 좌표를 받는 포인터 옮기기(`moveMouse`)는 비공개다 — 레이블 좌표로 손 옮겨 누르면 가림 판정을 건너뛰어 오버레이가 덮어도 단계가 성공했다(editor.gizmotoplevel).
-         *          기준점은 판정한 때의 점이라, 끄는 동안 레이블이 움직여도(기즈모 가운데) 끌기 경로는 누른 점에서 잰다. 판정한 점은 `parkMouse` 가 지운다.
+         *          기준점은 판정한 때의 점이라, 끄는 동안 레이블이 움직여도(기즈모 가운데) 끌기 경로는 누른 점에서 잰다. 판정한 점은 `moveMouseAway` 가 지운다.
          * @return 판정한 점이 없으면(조준 · 누름이 `Reachable` 이 아니었다) 아무것도 넣지 않고 false 입니다.
          */
-        [[nodiscard]] static bool moveByOffsetFromAim( const float2& offset );
+        [[nodiscard]] static bool moveByOffset( const float2& offset );
         /** @brief 레이블의 @p anchor 위치로 옮겨 @p button 을 놓는 이벤트를 넣습니다. 레이블이 사라졌으면(누름이 팝업을 닫았다) 그 자리에서 놓고 false 입니다 — 그래도 놓아야 버튼이 눌린 채 남지 않는다. */
-        static bool releaseAtMark( string_view key, const float2& anchor, int32 button );
+        static bool releaseMark( string_view key, const float2& anchor, int32 button );
         /** @brief 붙잡기를 풀고 포인터를 화면 밖으로 치웁니다 — 테스트가 끝날 때 다음 테스트의 호버를 흐리지 않게 한다. */
-        static void parkMouse();
+        static void moveMouseAway();
         static void releaseMouseHold();
         /** @brief 앞 단계가 넣은 이벤트가 아직 ImGui 에 다 들어가지 않았으면 true 입니다. 입력 단계는 앞 입력이 다 들어간 뒤에 자리를 본다. */
         [[nodiscard]] static bool hasPendingEvents();
@@ -161,7 +161,7 @@ namespace sw::editor
         static void flushIntoImGui();
 
     private:
-        /** @brief 마우스를 옮깁니다. @p viewportID 가 0 이 아니면 그 뷰포트를 커서 아래 뷰포트로 알립니다. 입구(`pressAtMark` · `releaseAtMark` · `parkMouse` · `moveByOffsetFromAim`)만 부른다. */
+        /** @brief 마우스를 옮깁니다. @p viewportID 가 0 이 아니면 그 뷰포트를 커서 아래 뷰포트로 알립니다. 입구(`pressMark` · `releaseMark` · `moveMouseAway` · `moveByOffset`)만 부른다. */
         static void moveMouse( const float2& position, uint32 viewportID = 0 );
     };
 } // namespace sw::editor

@@ -17,10 +17,10 @@ namespace
     const sw::float3 kEye{ 0.0f, 0.0f, 0.0f };
     const sw::float3 kForward{ 0.0f, 0.0f, 1.0f };
 
-    constexpr uint64  kTargetFront  = 7;
-    constexpr uint64  kTargetRight  = 8;
-    constexpr float32 kAimStep      = 0.125f; // 2 의 거듭제곱 분수라 시간 더하기가 정확하다
-    constexpr float32 kAimTolerance = 1.0e-4f;
+    constexpr uint64  kTargetFront    = 7;
+    constexpr uint64  kTargetRight    = 8;
+    constexpr float32 kAimStep        = 0.125f; // 2 의 거듭제곱 분수라 시간 더하기가 정확하다
+    constexpr float32 kHoverTolerance = 1.0e-4f;
 
     struct AdventureTargetingTestUtil
     {
@@ -249,16 +249,16 @@ SW_TEST_CASE( AdventureTargetingTest, CycleAndTrackTheTarget )
     sw::vector<sw::LockOnCandidate> listCandidate = AdventureTargetingTestUtil::makeTwoTargets();
     SW_REQUIRE_TRUE( targeting.press( kEye, kForward, listCandidate ) );
     SW_EXPECT_EQUAL( kTargetFront, targeting.getTarget() );
-    SW_EXPECT_NEAR( 10.0f, targeting.getTargetPosition()._z, kAimTolerance );
+    SW_EXPECT_NEAR( 10.0f, targeting.getTargetPosition()._z, kHoverTolerance );
 
     SW_EXPECT_EQUAL( kTargetRight, targeting.cycleTarget( kEye, kForward, listCandidate, 1 ) );
-    SW_EXPECT_NEAR( 5.0f, targeting.getTargetPosition()._x, kAimTolerance );
+    SW_EXPECT_NEAR( 5.0f, targeting.getTargetPosition()._x, kHoverTolerance );
     SW_EXPECT_EQUAL( kTargetRight, targeting.cycleTarget( kEye, kForward, listCandidate, 1 ) );
     SW_EXPECT_EQUAL( kTargetFront, targeting.cycleTarget( kEye, kForward, listCandidate, -1 ) );
 
     listCandidate[0]._position = sw::float3{ 2.0f, 0.0f, 12.0f };
     (void)AdventureTargetingTestUtil::tick( targeting, listCandidate );
-    SW_EXPECT_NEAR( 12.0f, targeting.getTargetPosition()._z, kAimTolerance );
+    SW_EXPECT_NEAR( 12.0f, targeting.getTargetPosition()._z, kHoverTolerance );
 }
 
 /**
@@ -270,14 +270,14 @@ SW_TEST_CASE( AdventureTargetingTest, MoveDirectionFollowsCameraOrTarget )
     AdventureTargetingTestUtil::setUp( targeting );
 
     sw::float3 direction = targeting.computeMoveDirection( sw::float3{}, sw::float3{ 0.0f, 5.0f, 2.0f }, sw::float2{ 1.0f, 0.0f } );
-    SW_EXPECT_NEAR( 1.0f, direction._x, kAimTolerance );
-    SW_EXPECT_NEAR( 0.0f, direction._y, kAimTolerance );
-    SW_EXPECT_NEAR( 0.0f, direction._z, kAimTolerance );
+    SW_EXPECT_NEAR( 1.0f, direction._x, kHoverTolerance );
+    SW_EXPECT_NEAR( 0.0f, direction._y, kHoverTolerance );
+    SW_EXPECT_NEAR( 0.0f, direction._z, kHoverTolerance );
     direction = targeting.computeMoveDirection( sw::float3{}, kForward, sw::float2{ 0.0f, 0.5f } );
-    SW_EXPECT_NEAR( 0.5f, direction._z, kAimTolerance );
+    SW_EXPECT_NEAR( 0.5f, direction._z, kHoverTolerance );
 
     direction = targeting.computeMoveDirection( sw::float3{}, sw::float3{ 0.0f, 1.0f, 0.0f }, sw::float2{ 1.0f, 1.0f } ); // 카메라가 바로 위를 본다
-    SW_EXPECT_NEAR( 0.0f, direction.getLength(), kAimTolerance );
+    SW_EXPECT_NEAR( 0.0f, direction.getLength(), kHoverTolerance );
 
     sw::LockOnCandidate east;
     east._id       = kTargetFront;
@@ -285,12 +285,12 @@ SW_TEST_CASE( AdventureTargetingTest, MoveDirectionFollowsCameraOrTarget )
     const sw::vector<sw::LockOnCandidate> listEast{ east };
     SW_REQUIRE_TRUE( targeting.press( kEye, sw::float3{ 1.0f, 0.0f, 0.0f }, listEast ) );
     direction = targeting.computeMoveDirection( sw::float3{}, kForward, sw::float2{ 1.0f, 0.0f } ); // 앞이 +X 면 오른쪽은 -Z
-    SW_EXPECT_NEAR( 0.0f, direction._x, kAimTolerance );
-    SW_EXPECT_NEAR( -1.0f, direction._z, kAimTolerance );
+    SW_EXPECT_NEAR( 0.0f, direction._x, kHoverTolerance );
+    SW_EXPECT_NEAR( -1.0f, direction._z, kHoverTolerance );
     direction = targeting.computeMoveDirection( sw::float3{}, kForward, sw::float2{ 0.0f, 1.0f } );
-    SW_EXPECT_NEAR( 1.0f, direction._x, kAimTolerance );
+    SW_EXPECT_NEAR( 1.0f, direction._x, kHoverTolerance );
     direction = targeting.computeMoveDirection( sw::float3{ 10.0f, 0.0f, 0.0f }, kForward, sw::float2{ 1.0f, 0.0f } ); // 대상 위에 섰다
-    SW_EXPECT_NEAR( 0.0f, direction.getLength(), kAimTolerance );
+    SW_EXPECT_NEAR( 0.0f, direction.getLength(), kHoverTolerance );
 }
 
 /**
@@ -313,7 +313,7 @@ SW_TEST_CASE( AdventureTargetingTest, StateRoundTripResumesTheEvade )
     SW_EXPECT_EQUAL( kTargetFront, restored.getTarget() );
     SW_EXPECT_TRUE( restored.isHeld() );
     SW_EXPECT_TRUE( restored.isEvading() );
-    SW_EXPECT_NEAR( 10.0f, restored.getTargetPosition()._z, kAimTolerance );
+    SW_EXPECT_NEAR( 10.0f, restored.getTargetPosition()._z, kHoverTolerance );
 
     for ( int32 tick = 0; tick < 6; ++tick )
     {

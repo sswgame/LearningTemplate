@@ -69,7 +69,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "AsyncFileIO.CreateIoCompletionPortFailedError", "CreateIoCompletionPort failed (error %#)", static_cast<uint32>( GetLastError() ) );
                 return false;
             }
-            _thread = sw::thread( &IocpAsyncFileIOBackend::run, this, Memory::getCurrentMemoryTag() );
+            _thread = sw::thread( ThreadCreationKey{}, &IocpAsyncFileIOBackend::run, this, Memory::getCurrentMemoryTag() );
             return true;
         }
 

@@ -174,7 +174,7 @@ namespace sw
         pSession->_state        = SessionState::Resolving;
         pSession->_resolveState = ResolveState::Pending;
         if ( _resolver.isRunning() == false )
-            _resolver.start( "HTTP2Resolve", DedicatedWorker<uint64>::ProcessDelegate::create<&HTTP2Client::resolveSession>( this ) );
+            _resolver.start( ThreadCreationKey{}, "HTTP2Resolve", DedicatedWorker<uint64>::ProcessDelegate::create<&HTTP2Client::resolveSession>( this ) );
         uint64 resolveJob = sessionID;
         (void)_resolver.submit( std::move( resolveJob ) ); // 바로 위에서 띄웠으니 받는다 — 못 받아도 요청은 시한이 끝낸다
         return pSession;

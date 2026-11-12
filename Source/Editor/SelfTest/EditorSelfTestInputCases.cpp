@@ -43,30 +43,30 @@ namespace sw::editor
             /** @brief 레이블을 누르는 한 걸음의 결과입니다(`pressOnMark`). */
             enum class PressStep : uint8
             {
-                Aiming,  ///< 포인터가 닿은 프레임의 판정이 아직이다 — 같은 단계를 다음 프레임에 다시 부른다
-                Pressed, ///< 누르는 이벤트를 넣었다 — 다음 단계에서 `releaseOnMark` 로 놓는다
-                Failed,  ///< 레이블이 없거나 가려졌거나 끝내 닿지 않았다(실패는 적었고 포인터는 치웠다)
+                Hovering, ///< 포인터가 닿은 프레임의 판정이 아직이다 — 같은 단계를 다음 프레임에 다시 부른다
+                Pressed,  ///< 누르는 이벤트를 넣었다 — 다음 단계에서 `releaseOnMark` 로 놓는다
+                Failed,   ///< 레이블이 없거나 가려졌거나 끝내 닿지 않았다(실패는 적었고 포인터는 치웠다)
             };
 
             /** @brief 테스트 하나가 레이블 조준을 기다리는 프레임 수의 합 상한입니다(누를 때마다 보통 두세 프레임). */
-            static constexpr uint32 kMaxAimSteps = 60;
+            static constexpr uint32 kMaxHoverSteps = 60;
 
             /**
-             * @brief 자체 테스트가 레이블을 누르는 입구입니다 — 시나리오 단계와 같은 판정(`EditorSelfTestInput::aimAtMark` · `pressAtMark`)을 지나, 누를 점이 레이블에 닿을 때만 왼쪽 버튼을 누릅니다.
-             * @details @p inoutAimSteps 는 테스트가 조준에 쓴 프레임 수다(줄지 않는다) — 단계 번호로 진행하는 테스트는 이것을 빼서 같은 단계에 머문다.
+             * @brief 자체 테스트가 레이블을 누르는 입구입니다 — 시나리오 단계와 같은 판정(`EditorSelfTestInput::hoverMark` · `pressMark`)을 지나, 누를 점이 레이블에 닿을 때만 왼쪽 버튼을 누릅니다.
+             * @details @p inoutHoverSteps 는 테스트가 조준에 쓴 프레임 수다(줄지 않는다) — 단계 번호로 진행하는 테스트는 이것을 빼서 같은 단계에 머문다.
              */
-            static PressStep pressOnMark( EditorSelfTestContext& context, const utf8* pKey, uint32& inoutAimSteps )
+            static PressStep pressOnMark( EditorSelfTestContext& context, const utf8* pKey, uint32& inoutHoverSteps )
             {
                 string              coverName;
-                const EditorMarkHit hit = EditorSelfTestInput::aimAtMark( pKey, float2{ 0.5f, 0.5f }, coverName );
-                if ( hit == EditorMarkHit::Pending && inoutAimSteps < kMaxAimSteps )
+                const EditorMarkHit hit = EditorSelfTestInput::hoverMark( pKey, float2{ 0.5f, 0.5f }, coverName );
+                if ( hit == EditorMarkHit::Pending && inoutHoverSteps < kMaxHoverSteps )
                 {
-                    ++inoutAimSteps;
-                    return PressStep::Aiming;
+                    ++inoutHoverSteps;
+                    return PressStep::Hovering;
                 }
                 if ( hit != EditorMarkHit::Reachable )
                 {
-                    EditorSelfTestInput::parkMouse();
+                    EditorSelfTestInput::moveMouseAway();
                     string what = string{ "could not press '" } + pKey + "': ";
                     if ( hit == EditorMarkHit::Missing )
                         what += "it left no mark";
@@ -78,12 +78,12 @@ namespace sw::editor
                     return PressStep::Failed;
                 }
                 EditorSelfTestInput::releaseMouseHold(); // 아래 누름 · 다음 단계의 놓기 이벤트가 포인터를 이어받는다
-                (void)EditorSelfTestInput::pressAtMark( pKey, float2{ 0.5f, 0.5f }, ImGuiMouseButton_Left, coverName );
+                (void)EditorSelfTestInput::pressMark( pKey, float2{ 0.5f, 0.5f }, ImGuiMouseButton_Left, coverName );
                 return PressStep::Pressed;
             }
 
             /** @brief `pressOnMark` 로 누른 왼쪽 버튼을 레이블 위에서 놓습니다(버튼은 놓을 때 눌린다). 레이블이 사라졌으면 그 자리에서 놓습니다. */
-            static void releaseOnMark( const utf8* pKey ) { (void)EditorSelfTestInput::releaseAtMark( pKey, float2{ 0.5f, 0.5f }, ImGuiMouseButton_Left ); }
+            static void releaseOnMark( const utf8* pKey ) { (void)EditorSelfTestInput::releaseMark( pKey, float2{ 0.5f, 0.5f }, ImGuiMouseButton_Left ); }
 
             // --------------------------------------------------------------------------------------------------
             // input.hierarchySearchTyping: 검색 입력란을 클릭하고 타이핑하면 `tag:` 필터가 걸리고, 없는 이름은 0건 안내를 그린다
@@ -100,7 +100,7 @@ namespace sw::editor
                     GameObject* pObj = ( pManager != nullptr ) ? pManager->findGameObjectByID( _objectID ) : nullptr;
                     if ( pObj != nullptr )
                         pManager->destroyGameObject( pObj );
-                    EditorSelfTestInput::parkMouse();
+                    EditorSelfTestInput::moveMouseAway();
                 }
                 static EditorSelfTestStep runHierarchySearchTyping( EditorSelfTestContext& context )
                 {
@@ -129,8 +129,8 @@ namespace sw::editor
                         case 5:
                         {
                             // 검색 입력란을 누른다(InputText 는 누를 때 잡힌다). 두 번째(5)는 지운 입력란을 다시 잡는다.
-                            const PressStep press = pressOnMark( context, "hierarchy.filter", probe._aimSteps );
-                            if ( press == PressStep::Aiming )
+                            const PressStep press = pressOnMark( context, "hierarchy.filter", probe._hoverSteps );
+                            if ( press == PressStep::Hovering )
                                 return EditorSelfTestStep::Continue;
                             if ( press == PressStep::Failed )
                             {
@@ -210,7 +210,7 @@ namespace sw::editor
                 uint64 _objectID{ 0 };
                 uint32 _hintCountBefore{ 0 };
                 uint32 _phase{ 0 };      ///< 현재 단계. 프레임 번호가 아니며, 글자를 기다리는 동안 머문다
-                uint32 _aimSteps{ 0 };   ///< 입력란 조준에 쓴 프레임 수(`pressOnMark`)
+                uint32 _hoverSteps{ 0 }; ///< 입력란 조준에 쓴 프레임 수(`pressOnMark`)
                 uint32 _waitFrames{ 0 }; ///< 글자가 입력란에 도착하기를 기다린 프레임 수
 
                 /** @brief 글자가 입력란에 도착하기를 기다리는 최대 프레임 수입니다. */
@@ -294,29 +294,29 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue; // 레이블이 생기도록 한 번 그린다
                 if ( bShown && stepIndex > 1 )
                 {
-                    EditorSelfTestInput::parkMouse();
+                    EditorSelfTestInput::moveMouseAway();
                     return EditorSelfTestStep::Done;
                 }
                 if ( stepIndex >= kMaxTooltipWaitStep )
                 {
                     (void)context.expect( false, "hovering the button never opened its tooltip" );
-                    EditorSelfTestInput::parkMouse();
+                    EditorSelfTestInput::moveMouseAway();
                     return EditorSelfTestStep::Done;
                 }
                 // 지연 동안 마우스를 버튼 위에 붙잡아 둔다(입구가 그 점에 누가 닿는지도 판정한다 — 가려졌으면 덮은 창의 툴팁을 기다리지 않는다).
                 string              coverName;
-                const EditorMarkHit hit = EditorSelfTestInput::aimAtMark( "selftest.tooltipButton", float2{ 0.5f, 0.5f }, coverName );
+                const EditorMarkHit hit = EditorSelfTestInput::hoverMark( "selftest.tooltipButton", float2{ 0.5f, 0.5f }, coverName );
                 if ( hit == EditorMarkHit::Missing || hit == EditorMarkHit::Covered )
                 {
                     (void)context.expect( false, hit == EditorMarkHit::Missing ? "the probe button left no mark" : ( "the probe button is covered by window '" + coverName + "'" ).c_str() );
-                    EditorSelfTestInput::parkMouse();
+                    EditorSelfTestInput::moveMouseAway();
                     return EditorSelfTestStep::Done;
                 }
                 return EditorSelfTestStep::Continue;
             }
 
             // --------------------------------------------------------------------------------------------------
-            // input.coveredMarkHitTest: 같은 창의 자식 오버레이가 덮은 레이블은 "가려짐", 덮지 않은 레이블 · 레이블이 담은 자식 창은 "닿음" 이다(`EditorSelfTestInput::aimAtMark`)
+            // input.coveredMarkHitTest: 같은 창의 자식 오버레이가 덮은 레이블은 "가려짐", 덮지 않은 레이블 · 레이블이 담은 자식 창은 "닿음" 이다(`EditorSelfTestInput::hoverMark`)
             // --------------------------------------------------------------------------------------------------
             /** @brief 지금 조준하는 레이블과 그 판정을 기다린 프레임 수입니다. */
             struct HitTestProbe
@@ -381,21 +381,21 @@ namespace sw::editor
                 HitTestProbe& probe = context.getTestState<HitTestProbe>();
                 if ( probe._caseIndex >= std::size( kArrCase ) )
                 {
-                    EditorSelfTestInput::parkMouse();
+                    EditorSelfTestInput::moveMouseAway();
                     return EditorSelfTestStep::Done;
                 }
                 const HitCase&      hitCase = kArrCase[probe._caseIndex];
                 string              coverName;
-                const EditorMarkHit hit = EditorSelfTestInput::aimAtMark( hitCase._pMark, float2{ 0.5f, 0.5f }, coverName );
+                const EditorMarkHit hit = EditorSelfTestInput::hoverMark( hitCase._pMark, float2{ 0.5f, 0.5f }, coverName );
                 if ( context.expect( hit != EditorMarkHit::Missing, "the hit probe window left no mark" ) == false )
                 {
-                    EditorSelfTestInput::parkMouse();
+                    EditorSelfTestInput::moveMouseAway();
                     return EditorSelfTestStep::Done;
                 }
                 if ( hit == EditorMarkHit::Pending && ++probe._waitSteps < kMaxHitWaitStep )
                     return EditorSelfTestStep::Continue;
                 StringBuilder<constant::buffer::kMax256> whatBuilder;
-                whatBuilder.appendFormat( "aim at '%#' judged %# (cover '%#'), expected %#", hitCase._pMark, static_cast<uint32>( hit ), coverName.c_str(),
+                whatBuilder.appendFormat( "hover '%#' judged %# (cover '%#'), expected %#", hitCase._pMark, static_cast<uint32>( hit ), coverName.c_str(),
                                           static_cast<uint32>( hitCase._expected ) );
                 const string what{ whatBuilder.view() };
                 (void)context.expect( hit == hitCase._expected, what.c_str() );
@@ -413,7 +413,7 @@ namespace sw::editor
                 SwatchProbe()
                     : _theme{}
                     , _configBytes{}
-                    , _aimSteps{ 0 }
+                    , _hoverSteps{ 0 }
                     , _bConfigExisted{ SW_FALSE }
                 {
                 }
@@ -422,9 +422,9 @@ namespace sw::editor
                 {
                     // 세 번째 스와치(Neon Violet)의 색은 대화상자와 같은 토큰에서 읽는다 — 숫자를 따로 적으면 토큰 값(#RRGGBB 반올림)이 바뀔 때 어긋났다.
                     const Color violet = SW_THEME_COLOR( "AccentSwatch", "NeonViolet" );
-                    // 스와치를 조준하는 동안(`pressOnMark` 가 Aiming) 같은 단계에 머문다 — 조준에 쓴 프레임만큼 단계 번호를 뺀다.
+                    // 스와치를 조준하는 동안(`pressOnMark` 가 Hovering) 같은 단계에 머문다 — 조준에 쓴 프레임만큼 단계 번호를 뺀다.
                     SwatchProbe& stepProbe = context.getTestState<SwatchProbe>();
-                    switch ( context.getStepIndex() - stepProbe._aimSteps )
+                    switch ( context.getStepIndex() - stepProbe._hoverSteps )
                     {
                         case 0:
                         {
@@ -449,7 +449,7 @@ namespace sw::editor
                         }
                         case 3:
                         {
-                            if ( pressOnMark( context, "theme.swatch.violet", stepProbe._aimSteps ) == PressStep::Failed )
+                            if ( pressOnMark( context, "theme.swatch.violet", stepProbe._hoverSteps ) == PressStep::Failed )
                                 break;
                             return EditorSelfTestStep::Continue;
                         }
@@ -481,14 +481,14 @@ namespace sw::editor
                     // 원래 없던 파일은 지운다. 지우지 못하면 테스트 테마가 사용자 설정에 남으므로 위의 쓰기 실패처럼 테스트 실패로 알린다.
                     if ( probe._bConfigExisted == false && FileUtil::removeFile( getEditorConfigPath() ) == false )
                         (void)context.expect( false, "could not remove the editor config file the test created" );
-                    EditorSelfTestInput::parkMouse();
+                    EditorSelfTestInput::moveMouseAway();
                     return EditorSelfTestStep::Done;
                 }
 
             private:
                 EditorThemeConfig _theme;
                 vector<uint8>     _configBytes;
-                uint32            _aimSteps; ///< 스와치 조준에 쓴 프레임 수(`pressOnMark`) — 단계 번호에서 뺀다
+                uint32            _hoverSteps; ///< 스와치 조준에 쓴 프레임 수(`pressOnMark`) — 단계 번호에서 뺀다
                 uint8             _bConfigExisted : 1;
             };
 

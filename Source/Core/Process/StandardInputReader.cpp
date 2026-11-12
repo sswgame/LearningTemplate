@@ -25,7 +25,7 @@ namespace sw
     {
         if ( _thread.joinable() )
             return;
-        _thread = sw::thread( &StandardInputReader::readLoop, this );
+        _thread = sw::thread( ThreadCreationKey{}, &StandardInputReader::readLoop, this );
     }
 
     void StandardInputReader::stop()

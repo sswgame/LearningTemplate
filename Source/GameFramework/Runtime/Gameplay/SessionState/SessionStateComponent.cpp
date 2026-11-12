@@ -84,11 +84,14 @@ namespace sw
                     return nullptr;
                 }
                 SessionStateComponent* pFound = nullptr;
-                pManager->forEachComponentOfType<SessionStateComponent>( [&pFound]( SessionStateComponent* pComponent )
+                for ( SessionStateComponent* pComponent : pManager->getComponentRegistry().getAll<SessionStateComponent>() )
                 {
-                    if ( pFound == nullptr && pComponent->isInitialized() )
+                    if ( pComponent->isInitialized() )
+                    {
                         pFound = pComponent;
-                } );
+                        break;
+                    }
+                }
                 if ( pFound == nullptr )
                     outReply = "cheat: no initialized SessionStateComponent in the active scene";
                 return pFound;
@@ -479,7 +482,7 @@ namespace sw
             static const SessionStateComponent* findTarget( DebugHUDSectionWriter& writer )
             {
                 const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
-                const SessionStateComponent*   pState   = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<SessionStateComponent>( *pManager ) : nullptr;
+                const SessionStateComponent*   pState   = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<SessionStateComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
                 if ( pState == nullptr || pState->isInitialized() == false )
                 {
                     writer.addLine( "target", "none (no open game state in the active scene)" );
