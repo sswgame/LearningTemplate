@@ -94,13 +94,6 @@
 
 ### 네트워크 · 텔레메트리
 
-#### N-6 텔레메트리 업로드가 게임 스레드에서, 서비스 잠금을 쥔 채 블로킹 HTTP 로 나간다
-- 분류: 성능 · 확신: 확인
-- 근거: `Source/Engine/Telemetry/TelemetryService.cpp:612-617` → `:583-596` → `:690` → `:731-753` — 프레임 훅 `onAfterSceneTick` 이 `uploader.upload` 까지 이어지고 끝은 `IHTTPClient::send`(계약이 "부른 스레드에서 막는다", `Source/Engine/Net/HTTPClient.h:44`)다. 끝점이 느리면 flush 주기마다 프레임이 HTTP 시한만큼 멈추고 그동안 다른 스레드의 `record()` 도 `_mutex` 에서 막힌다. 크래시 보고는 이미 전용 스레드다.
-- 상용 엔진: 언리얼 `FHttpModule` 은 비동기 + 분석 공급자가 배치 플러시한다.
-- 제안: 스풀 쓰기와 업로드를 `DedicatedWorker` 로 옮기고 `record` 는 잠금 아래 메모리 줄에만 넣는다. 업로드 실패에 지수 백오프(C-11)를 둔다.
-- 확인: 수신기가 5 초 지연하는 `Scripts/net/TelemetryLocalRun.py` 변형에서 Tracy `GT.Frame` 최대값.
-
 #### N-7 게임 UDP 포트의 지표가 운영 끝점에 하나도 없다
 - 분류: 구조(관측) · 확신: 확인
 - 근거: `registerCounter|Gauge|Histogram` 전수 검색 결과는 `Source/Engine/Server/ServerObservability.cpp:81-85`(틱 · 드롭 · 서비스 연결 · 사용률)와 `ProcessMetrics` 등뿐이다. `NetEndpoint::getRejectedPacketCount` · `getAuthenticationFailureCount` · `getReplayRejectedCount`(`Source/Core/Network/Connection/NetEndpoint.h:332-338`)는 테스트만 읽는다. 접속 수 · 샤드별 pps · RTT/손실 분포 · 끊김 사유가 `/metrics` 에 없다. 덧붙여 접속 로그가 클라이언트 IP 를 Info 로 남기고(`Source/Engine/Net/GameNetSession.cpp:624`) 보존 · 가림 정책이 코드에 없다.
