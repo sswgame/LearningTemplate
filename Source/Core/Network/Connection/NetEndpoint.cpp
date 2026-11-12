@@ -100,6 +100,10 @@ namespace sw
         , _listReceived{}
         , _flushBatch{}
         , _listDeliver{}
+        , _listSealed{}
+        , _openedBytes{}
+        , _listReceiveCrypt{}
+        , _listRetiredConnection{}
         , _plainWriter{}
         , _credentials{}
         , _settings{}
@@ -135,7 +139,7 @@ namespace sw
             _pTransport = pTransport;
             _settings   = settings;
             _challenge.initialize( settings._saltSeed );
-            _slotTable.reset( 0 );
+            resetSlots( 0 );
             _packetWriter.reserve( kNetMaxPacketSize );
             _pendingBatch.clear();
             _pendingBatch._bytes.reserve( static_cast<size_t>( kNetMaxPacketSize ) * 4 );
@@ -207,7 +211,7 @@ namespace sw
 #endif
         _bServer    = SW_TRUE;
         _protocolID = NetProtocol::makeProtocolID( _settings._gameID, _settings._wireVersion, computeFeatureMask() );
-        _slotTable.reset( MathUtil::max( 1, _settings._maxConnections ) );
+        resetSlots( MathUtil::max( 1, _settings._maxConnections ) );
         return true;
     }
 
@@ -278,7 +282,7 @@ namespace sw
         }
         _bServer    = SW_FALSE;
         _protocolID = NetProtocol::makeProtocolID( _settings._gameID, _settings._wireVersion, computeFeatureMask() );
-        _slotTable.reset( 1 );
+        resetSlots( 1 );
         _slotTable.bindAddress( 0, serverAddress );
         NetEndpointSlot& slot = _slotTable.get( 0 );
         _slotTable.open( 0, NetConnectionState::Connecting );
@@ -647,18 +651,34 @@ namespace sw
             }
             // 2) 처리, 타임아웃, 보낼 패킷 생성(잠금 안). 받은 것은 일괄 받기 크기(`kReceiveBatchSize`)씩 잠금을 따로 잡아 처리한다 —
             //    복호까지 512 개를 한 잠금에서 하면 그동안 게임 스레드 · 복제 워커의 `sendMessage` 가 모두 기다린다(감사 N-8). 묶음 사이에 그들이 끼어든다.
+            //    암호화 데이터는 잠금 안에서 슬롯 · 연결 값만 확인하고, 잠금을 놓고 열고(AEAD — 패킷마다 가장 무거운 일), 다시 잠금을 잡아 연결에 넘긴다.
             {
                 ScopedLock<mutex> lock{ _mutex };
                 updateDebugHold( nowSeconds );
+                wipeRetiredReceiveCrypt();
             }
             for ( int32 first = 0; first < receivedCount; first += kReceiveBatchSize )
             {
-                const int32       last = MathUtil::min( receivedCount, first + kReceiveBatchSize );
-                ScopedLock<mutex> lock{ _mutex };
-                for ( int32 index = first; index < last; ++index )
+                const int32 last = MathUtil::min( receivedCount, first + kReceiveBatchSize );
+                _listSealed.clear();
+                _openedBytes.clear();
+                uint32 protocolID = 0;
                 {
-                    const NetReceivedDatagram& datagram = _listReceived[static_cast<size_t>( index )];
-                    handlePacket( nowSeconds, datagram._from, datagram._buffer.data(), static_cast<int32>( datagram._buffer.size() ) );
+                    ScopedLock<mutex> lock{ _mutex };
+                    protocolID = _protocolID;
+                    for ( int32 index = first; index < last; ++index )
+                    {
+                        const NetReceivedDatagram& datagram = _listReceived[static_cast<size_t>( index )];
+                        handlePacket( nowSeconds, datagram._from, datagram._buffer.data(), static_cast<int32>( datagram._buffer.size() ) );
+                    }
+                }
+                if ( _listSealed.empty() )
+                    continue;
+                openSealedPackets( protocolID );
+                ScopedLock<mutex> lock{ _mutex };
+                for ( const SealedDatagram& sealed : _listSealed )
+                {
+                    handleOpenedPacket( nowSeconds, sealed );
                 }
             }
             vector<DeferredWarning> listWarning;
@@ -796,7 +816,7 @@ namespace sw
             _slotTable.touch( *slotIndex ); // 받은 것이 확인 · 응답 · 상태를 바꿨을 수 있다 — 이번 갱신에서 그 슬롯을 본다
         if ( isEncrypted() && ( type == PacketType::Payload || type == PacketType::Disconnect ) )
         {
-            handleSealedPacket( nowSeconds, type, slotIndex, pData + NetEndpointInternal::kHeaderSize, size - NetEndpointInternal::kHeaderSize );
+            queueSealedPacket( nowSeconds, type, slotIndex, pData + NetEndpointInternal::kHeaderSize, size - NetEndpointInternal::kHeaderSize );
             return;
         }
         if ( type == PacketType::Payload )
@@ -889,6 +909,8 @@ namespace sw
                     return;
                 if ( slot._security != nullptr && acceptSecureAccepted( reader, slot, *slotIndex, static_cast<uint32>( packet._valueA ) ) == false )
                     return; // 키 확인이 틀렸다. 연결은 그 함수 안에서 닫았다.
+                if ( slot._security != nullptr )
+                    installReceiveCrypt( *slotIndex, slot );
                 slot._state           = NetConnectionState::Connected;
                 slot._lastReceiveTime = packet._nowSeconds;
                 slot._lastSendTime    = -1.0;
@@ -1018,12 +1040,15 @@ namespace sw
         slot._security = std::move( security );
         // 키 확인 태그는 서버에서 클라이언트로 가는 키로 빈 데이터를 봉인한 값이다. 수락을 다시 보낼 때도 같은 태그를 쓴다.
         if ( slot._security != nullptr )
+        {
             (void)NetPacketSealer::sealKeyConfirmTag( *slot._security, static_cast<uint32>( freeIndex ), slot._serverSalt ); // 실패하면 0 태그라 클라이언트가 키 확인에서 끊는다.
+            installReceiveCrypt( freeIndex, slot );
+        }
         pushEvent( NetEndpointEvent{ freeIndex, NetDisconnectReason::None, NetEndpointEvent::Kind::Connected } );
         sendAccepted( freeIndex );
     }
 
-    void NetEndpoint::handleSealedPacket( float64 nowSeconds, PacketType type, const optional<int32> slotIndex, const uint8* pBody, int32 bodySize )
+    void NetEndpoint::queueSealedPacket( float64 nowSeconds, PacketType type, const optional<int32> slotIndex, const uint8* pBody, int32 bodySize )
     {
         // 본문 형식은 [종류와 0][연결 값 4바이트][패킷 번호 8바이트][AEAD + 태그]다. 바이트 정렬이므로 BitReader 를 거치지 않는다.
         const uint32     token  = bodySize >= 5 ? LittleEndianUtil::readUint32( pBody + 1 ) : 0u;
@@ -1044,7 +1069,44 @@ namespace sw
             ++_rejectedPacketCount;
             return;
         }
-        switch ( _sealer.open( *pSlot->_security, _protocolID, _bServer == SW_TRUE, pBody, bodySize ) )
+        SealedDatagram sealed;
+        sealed._pBody           = pBody;
+        sealed._bodySize        = bodySize;
+        sealed._slotIndex       = *slotIndex;
+        sealed._connectionToken = pSlot->getConnectionToken();
+        sealed._type            = type;
+        _listSealed.push_back( sealed );
+    }
+
+    void NetEndpoint::openSealedPackets( uint32 protocolID )
+    {
+        // 잠금이 없다 — 받는 키(`_listReceiveCrypt`)와 평문 버퍼는 이 스레드만 만진다. 그사이 다른 스레드가 연결을 닫아도 키는 다음 `update` 가 지우므로
+        // 여기서 쓰는 키가 사라지지 않고, 닫힌 연결의 평문은 `handleOpenedPacket` 이 연결 값을 보고 버린다.
+        for ( SealedDatagram& sealed : _listSealed )
+        {
+            const size_t index  = static_cast<size_t>( sealed._slotIndex );
+            const bool   bKeyed = index < _listReceiveCrypt.size() && _listReceiveCrypt[index]._connectionToken == sealed._connectionToken &&
+                                _listReceiveCrypt[index]._context._aead != nullptr;
+            if ( bKeyed == false )
+                continue;
+            const size_t plainStart = _openedBytes.size();
+            sealed._result          = NetPacketSealer::open( _listReceiveCrypt[index]._context, protocolID, sealed._pBody, sealed._bodySize, _openedBytes );
+            sealed._plainOffset     = static_cast<int32>( plainStart );
+            sealed._plainSize       = static_cast<int32>( _openedBytes.size() - plainStart );
+        }
+    }
+
+    void NetEndpoint::handleOpenedPacket( float64 nowSeconds, const SealedDatagram& sealed )
+    {
+        const int32 slotIndex       = sealed._slotIndex;
+        const bool  bSameConnection = _slotTable.isValid( slotIndex ) && _slotTable.get( slotIndex )._state == NetConnectionState::Connected &&
+                                     _slotTable.get( slotIndex ).getConnectionToken() == sealed._connectionToken;
+        if ( bSameConnection == false || sealed._result.has_value() == false )
+        {
+            ++_rejectedPacketCount; // 연 사이에 닫혔거나 다른 연결이 그 슬롯을 받았다.
+            return;
+        }
+        switch ( *sealed._result )
         {
             case NetPacketSealer::OpenResult::Opened:
             {
@@ -1066,22 +1128,65 @@ namespace sw
                 return;
             }
         }
-        const vector<uint8>& listPlain = _sealer.getOpened();
-        if ( type == PacketType::Disconnect )
+        NetEndpointSlot& slot = _slotTable.get( slotIndex );
+        if ( sealed._type == PacketType::Disconnect )
         {
-            if ( listPlain.empty() )
-                closeSlot( *slotIndex, NetDisconnectReason::Remote, false );
+            if ( sealed._plainSize == 0 )
+                closeSlot( slotIndex, NetDisconnectReason::Remote, false );
             return;
         }
-        BitReader   plainReader( listPlain.data(), static_cast<int32>( listPlain.size() ) );
+        BitReader   plainReader( _openedBytes.data() + sealed._plainOffset, sealed._plainSize );
         const uint8 bRemoteDebugHold = plainReader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
-        if ( pSlot->_connection.readPacket( nowSeconds, plainReader ) )
+        if ( slot._connection.readPacket( nowSeconds, plainReader ) )
         {
-            pSlot->_lastReceiveTime  = nowSeconds;
-            pSlot->_bRemoteDebugHold = bRemoteDebugHold;
+            slot._lastReceiveTime  = nowSeconds;
+            slot._bRemoteDebugHold = bRemoteDebugHold;
         }
-        if ( pSlot->_connection.hasReceiveOverflowed() )
-            closeSlot( *slotIndex, NetDisconnectReason::ReceiveOverflow, true );
+        if ( slot._connection.hasReceiveOverflowed() )
+            closeSlot( slotIndex, NetDisconnectReason::ReceiveOverflow, true );
+    }
+
+    void NetEndpoint::installReceiveCrypt( int32 slotIndex, NetEndpointSlot& slot )
+    {
+        const size_t index = static_cast<size_t>( slotIndex );
+        if ( _listReceiveCrypt.size() <= index )
+            _listReceiveCrypt.resize( index + 1 );
+        ReceiveCryptSlot&       entry   = _listReceiveCrypt[index];
+        NetReceiveCryptContext& receive = slot._security->_receive;
+        entry._context.wipe(); // 아직 지우지 못한 옛 연결의 키(닫힘을 남긴 뒤 다음 update 전)
+        entry._context._aead = std::move( receive._aead );
+        std::memcpy( entry._context._arrIv, receive._arrIv, sizeof( entry._context._arrIv ) );
+        entry._connectionToken = slot.getConnectionToken();
+        receive.wipe(); // 슬롯에는 보내는 쪽만 남는다 — 다른 스레드가 슬롯을 닫아도 받는 키는 건드리지 않는다
+    }
+
+    void NetEndpoint::wipeRetiredReceiveCrypt()
+    {
+        for ( const RetiredConnection& retired : _listRetiredConnection )
+        {
+            const size_t index = static_cast<size_t>( retired._slotIndex );
+            if ( index < _listReceiveCrypt.size() && _listReceiveCrypt[index]._connectionToken == retired._connectionToken )
+            {
+                _listReceiveCrypt[index]._context.wipe();
+                _listReceiveCrypt[index]._connectionToken = 0;
+            }
+        }
+        _listRetiredConnection.clear();
+    }
+
+    void NetEndpoint::retireConnection( int32 slotIndex, const NetEndpointSlot& slot )
+    {
+        if ( slot._security != nullptr )
+            _listRetiredConnection.push_back( RetiredConnection{ slot.getConnectionToken(), slotIndex } );
+    }
+
+    void NetEndpoint::resetSlots( int32 slotCount )
+    {
+        for ( const NetLiveSlot& live : _slotTable.getLiveSlots() )
+        {
+            retireConnection( live._slotIndex, _slotTable.get( live._slotIndex ) );
+        }
+        _slotTable.reset( slotCount );
     }
 
     void NetEndpoint::closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote )
@@ -1101,6 +1206,7 @@ namespace sw
             }
         }
         const bool bWasVisible = slot._state == NetConnectionState::Connected || _bServer == SW_FALSE;
+        retireConnection( slotIndex, slot ); // 받는 키는 `update` 스레드가 지운다
         _slotTable.unbindAddress( slotIndex );
         _slotTable.close( slotIndex, bWasVisible ); // 보인 끊김은 게임 스레드가 사건을 꺼낼 때까지 번호를 다시 주지 않는다(`releaseDisconnectedSlots`)
         slot._bRemoteDebugHold = SW_FALSE;

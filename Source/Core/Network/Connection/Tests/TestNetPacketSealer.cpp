@@ -2,8 +2,11 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Connection/NetPacketSealer.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/Network/Tests/LoopbackCluster.h"
+#include "Core/Network/Tests/NetTestUtil.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -11,6 +14,7 @@
 
 // NetPacketSealer — 봉인한 본문을 반대 방향 키로 열고, 재전송 · 변조 · 짧은 본문을 결과 종류로 가른다.
 // 키 유도는 양쪽이 같은 키를 만들고, 키 확인 태그와 증명 태그는 입력(슬롯 번호 · 솔트 · 토큰)이 하나라도 다르면 맞지 않는다.
+// 엔드포인트는 암호화 방식으로 붙어 메시지를 주고받고(복호는 잠금 밖 — 받는 키는 update 스레드 소유), 끊긴 슬롯에 다시 붙으면 새 키로 연다.
 // 암호 구현은 Engine 이라 바이트를 섞는 가짜 제공자로 본다. 가짜 X25519 는 공개 키 = 비밀 키, 공유 비밀 = 둘의 XOR 이라 양쪽이 같은 값을 얻는다.
 
 using namespace sw;
@@ -228,8 +232,8 @@ SW_TEST_CASE( NetPacketSealerTest, SealedBodyOpensOnceWithTheOppositeKey )
     SW_EXPECT_TRUE( server._keyPair._arrPublicKey[1] != 0 );
 
     NetPacketSealer clientSealer;
-    NetPacketSealer serverSealer;
     BitWriter       writer;
+    vector<uint8>   listPlain( 1, 0xEE ); // 연 평문은 뒤에 덧붙는다 — 앞의 바이트는 그대로
     const uint8     arrPlain[] = { 10, 20, 30, 40, 50 };
     SW_REQUIRE_TRUE( clientSealer.seal( client, 5, 0xCAFEBABEu, NetPacketSealerTestInternal::kProtocolID, false, arrPlain, 5, writer ) );
     SW_EXPECT_EQUAL( NetPacketSealer::kSecureHeadSize + 5 + NetSecurityConstant::kAEADTagSize, writer.getByteCount() );
@@ -239,19 +243,21 @@ SW_TEST_CASE( NetPacketSealerTest, SealedBodyOpensOnceWithTheOppositeKey )
     SW_EXPECT_EQUAL( 0, static_cast<int32>( body[12] ) );   // 첫 패킷 번호 0 의 마지막 바이트(빅 엔디언)
     SW_EXPECT_EQUAL( static_cast<uint64>( 1 ), client._sendPacketNumber );
 
-    SW_REQUIRE_TRUE( serverSealer.open( server, NetPacketSealerTestInternal::kProtocolID, true, body.data(), static_cast<int32>( body.size() ) ) ==
+    SW_REQUIRE_TRUE( NetPacketSealer::open( server._receive, NetPacketSealerTestInternal::kProtocolID, body.data(), static_cast<int32>( body.size() ), listPlain ) ==
                      NetPacketSealer::OpenResult::Opened );
-    SW_REQUIRE_EQUAL( 5, static_cast<int32>( serverSealer.getOpened().size() ) );
-    SW_EXPECT_TRUE( std::memcmp( serverSealer.getOpened().data(), arrPlain, sizeof( arrPlain ) ) == 0 );
+    SW_REQUIRE_EQUAL( 6, static_cast<int32>( listPlain.size() ) );
+    SW_EXPECT_EQUAL( 0xEE, static_cast<int32>( listPlain[0] ) );
+    SW_EXPECT_TRUE( std::memcmp( listPlain.data() + 1, arrPlain, sizeof( arrPlain ) ) == 0 );
 
     // 같은 번호를 다시 받으면 재전송이다.
-    SW_EXPECT_TRUE( serverSealer.open( server, NetPacketSealerTestInternal::kProtocolID, true, body.data(), static_cast<int32>( body.size() ) ) ==
+    SW_EXPECT_TRUE( NetPacketSealer::open( server._receive, NetPacketSealerTestInternal::kProtocolID, body.data(), static_cast<int32>( body.size() ), listPlain ) ==
                     NetPacketSealer::OpenResult::Replayed );
     // 같은 방향 키(서버가 서버 키로 연다)로는 열리지 않는다.
-    SW_EXPECT_TRUE( serverSealer.open( client, NetPacketSealerTestInternal::kProtocolID, true, body.data(), static_cast<int32>( body.size() ) ) ==
+    SW_EXPECT_TRUE( NetPacketSealer::open( client._receive, NetPacketSealerTestInternal::kProtocolID, body.data(), static_cast<int32>( body.size() ), listPlain ) ==
                     NetPacketSealer::OpenResult::AuthenticationFailed );
+    SW_EXPECT_EQUAL( 6, static_cast<int32>( listPlain.size() ) ); // 열지 못한 것은 덧붙지 않는다
     // 헤더와 태그보다 짧은 본문.
-    SW_EXPECT_TRUE( serverSealer.open( server, NetPacketSealerTestInternal::kProtocolID, true, body.data(), NetPacketSealer::kSecureHeadSize ) ==
+    SW_EXPECT_TRUE( NetPacketSealer::open( server._receive, NetPacketSealerTestInternal::kProtocolID, body.data(), NetPacketSealer::kSecureHeadSize, listPlain ) ==
                     NetPacketSealer::OpenResult::Malformed );
 }
 
@@ -263,19 +269,20 @@ SW_TEST_CASE( NetPacketSealerTest, TamperedOrForeignBodyFailsWithoutBurningThePa
     SW_REQUIRE_TRUE( NetPacketSealerTestInternal::makeKeyedPair( provider, client, server ) );
     NetPacketSealer sealer;
     BitWriter       writer;
+    vector<uint8>   listPlain;
     const uint8     arrPlain[] = { 1, 2, 3 };
     SW_REQUIRE_TRUE( sealer.seal( client, 5, 7u, NetPacketSealerTestInternal::kProtocolID, false, arrPlain, 3, writer ) );
     vector<uint8> body( writer.getBytes().begin(), writer.getBytes().begin() + writer.getByteCount() );
 
     vector<uint8> tampered = body;
     tampered[NetPacketSealer::kSecureHeadSize] ^= 0x01u;
-    SW_EXPECT_TRUE( sealer.open( server, NetPacketSealerTestInternal::kProtocolID, true, tampered.data(), static_cast<int32>( tampered.size() ) ) ==
+    SW_EXPECT_TRUE( NetPacketSealer::open( server._receive, NetPacketSealerTestInternal::kProtocolID, tampered.data(), static_cast<int32>( tampered.size() ), listPlain ) ==
                     NetPacketSealer::OpenResult::AuthenticationFailed );
     // 다른 프로토콜 ID 는 AAD 가 달라 열리지 않는다.
-    SW_EXPECT_TRUE( sealer.open( server, NetPacketSealerTestInternal::kProtocolID + 1, true, body.data(), static_cast<int32>( body.size() ) ) ==
+    SW_EXPECT_TRUE( NetPacketSealer::open( server._receive, NetPacketSealerTestInternal::kProtocolID + 1, body.data(), static_cast<int32>( body.size() ), listPlain ) ==
                     NetPacketSealer::OpenResult::AuthenticationFailed );
     // 실패한 열기는 번호를 표시하지 않는다 — 진짜 패킷은 그 뒤에도 열린다.
-    SW_EXPECT_TRUE( sealer.open( server, NetPacketSealerTestInternal::kProtocolID, true, body.data(), static_cast<int32>( body.size() ) ) ==
+    SW_EXPECT_TRUE( NetPacketSealer::open( server._receive, NetPacketSealerTestInternal::kProtocolID, body.data(), static_cast<int32>( body.size() ), listPlain ) ==
                     NetPacketSealer::OpenResult::Opened );
 }
 
@@ -314,4 +321,46 @@ SW_TEST_CASE( NetPacketSealerTest, ProofTagBindsSecretSaltsKeyAndToken )
     // 상한을 넘는 토큰은 AAD 를 만들지 않고 거절한다(스택 버퍼를 넘지 않는다).
     SW_EXPECT_FALSE( NetPacketSealer::computeProofTag( provider, NetAEADAlgorithm::AES256Gcm, secret, 1, 2, arrPublic, arrToken, NetSecurityConstant::kMaxTokenSize + 1,
                                                        arrTag ) );
+}
+
+SW_TEST_CASE( NetPacketSealerTest, EncryptedEndpointsExchangeAndReconnectWithFreshReceiveKeys )
+{
+    MixingSecurityProvider provider;
+    NetEndpointConfig      settings;
+    settings._maxConnections      = 1; // 다시 붙을 때 같은 슬롯(0)을 받는다 — 옛 연결의 받는 키를 지우고 새 키를 넣는 길
+    settings._security._mode      = NetSecurityMode::Encrypted;
+    settings._security._pProvider = &provider;
+    test::LoopbackCluster cluster( 5u );
+    test::NetTestUtil::addServerAndClient( cluster, settings );
+    SW_REQUIRE_TRUE( cluster.connectClients( 30 ) );
+
+    for ( int32 round = 0; round < 2; ++round )
+    {
+        SW_REQUIRE_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, test::NetTestUtil::makeMessage( 100 + round ) ) );
+        SW_REQUIRE_TRUE( cluster.getServer().sendMessage( 0, NetChannelType::ReliableOrdered, test::NetTestUtil::makeMessage( 200 + round ) ) );
+        cluster.run( 0.2 );
+        int32          connectionID = -1;
+        NetChannelType channel      = NetChannelType::Unreliable;
+        vector<uint8>  buffer;
+        SW_REQUIRE_TRUE( cluster.getServer().receiveMessage( connectionID, channel, buffer ) );
+        SW_EXPECT_EQUAL( 0, connectionID );
+        SW_EXPECT_EQUAL( 100 + round, test::NetTestUtil::readMessageValue( buffer ) );
+        SW_REQUIRE_TRUE( cluster.getClient( 0 ).receiveMessage( connectionID, channel, buffer ) );
+        SW_EXPECT_EQUAL( 200 + round, test::NetTestUtil::readMessageValue( buffer ) );
+        if ( round == 1 )
+            break;
+        // 서버가 끊는다 — 봉인한 끊기 패킷을 클라이언트가 잠금 밖에서 열어 Remote 로 끊는다. 서버가 끊김 사건을 꺼내야 슬롯 0 을 다시 준다.
+        cluster.getServer().disconnect( 0 );
+        cluster.run( 0.2 );
+        SW_REQUIRE_TRUE( cluster.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Disconnected );
+        vector<NetEndpointEvent> listEvent;
+        cluster.getServer().pollEvents( listEvent );
+        cluster.getClient( 0 ).pollEvents( listEvent );
+        SW_REQUIRE_TRUE( cluster.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
+        cluster.run( 0.3 );
+        SW_REQUIRE_TRUE( cluster.areClientsConnected() );
+    }
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), cluster.getServer().getAuthenticationFailureCount() );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), cluster.getClient( 0 ).getAuthenticationFailureCount() );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), cluster.getServer().getReplayRejectedCount() );
 }
