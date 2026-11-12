@@ -443,9 +443,9 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
     constexpr const utf8* kServerJSON    = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "local", "_driver": "memory" } ] })";
     const auto            makeOnlineJSON = [&providersFile]( string_view trustOption )
     {
-        StringBuilder<constant::buffer::kMax256> resultBuilder;
-        resultBuilder.appendFormat( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "liveops", "_settings": { "_pushProvidersFile": "%#"%# } } ] })", providersFile, trustOption );
-        return string( resultBuilder.view() );
+        StringBuilder<constant::buffer::kMax1024> resultBuilder;
+        resultBuilder.appendFormat( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "liveops", "_settings": { "_pushClaimTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 }, "_pushProvidersFile": "%#"%# } } ] })", providersFile, trustOption );
+        return test::OnlineRuntimeFixture::withBaseTTL( resultBuilder.view() );
     };
     const int64 nowMs = WallClock::nowUnixMilliseconds().count();
 

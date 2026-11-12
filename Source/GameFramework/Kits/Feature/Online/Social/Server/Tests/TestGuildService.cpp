@@ -9,7 +9,7 @@
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 using namespace sw;
 
@@ -225,7 +225,7 @@ SW_TEST_CASE( GuildServiceTest, NameRules )
     SW_EXPECT_FALSE( GuildService::isValidName( "bad\xFFutf8" ) );
 }
 
-/** @brief [GuildServiceTest] 보존 규칙: 만료된 초대는 기간 뒤에 지우고, 다시 보내 늦춰진 초대는 낡은 색인 줄로 지우지 않는다(감사 O-9) */
+/** @brief [GuildServiceTest] TTL 규칙: 만료된 초대는 기간 뒤에 지우고, 다시 보내 늦춰진 초대는 낡은 색인 줄로 지우지 않는다(감사 O-9) */
 SW_TEST_CASE( GuildServiceTest, ExpiredInvitesAreSwept )
 {
     GuildFixture rig;
@@ -237,16 +237,44 @@ SW_TEST_CASE( GuildServiceTest, ExpiredInvitesAreSwept )
     SW_REQUIRE_EQUAL( 1, rig._database.countRecords( inviteTable ) );
     SW_REQUIRE_EQUAL( 2, rig._database.countRecords( expiryTable ) );
 
-    ServiceRetentionRule   rule = GuildService::makeInviteRetentionRule( 1000 );
-    ServiceRetentionReport report;
-    const int64            firstExpiryMs = kNowMs + GuildLimit::kInviteLifetimeMs;
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, firstExpiryMs + 1500, 100, 100, report ) == ServiceStoreResult::Ok );
+    ServiceTTLRule        rule = GuildService::makeInviteTTLRule( 1000 );
+    ServiceTTLSweepReport report;
+    const int64           firstExpiryMs = kNowMs + GuildLimit::kInviteLifetimeMs;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, firstExpiryMs + 1500, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 0, report._deletedCount );
     SW_EXPECT_EQUAL( 1, rig._database.countRecords( inviteTable ) );
     SW_EXPECT_EQUAL( 1, rig._database.countRecords( expiryTable ) ); // 낡은 줄만 지웠다
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, firstExpiryMs + 3000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, firstExpiryMs + 3000, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, report._deletedCount );
     SW_EXPECT_EQUAL( 0, rig._database.countRecords( inviteTable ) );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( expiryTable ) );
+}
+
+/** @brief [GuildServiceTest] TTL 규칙: 만료된 가입 신청은 기간 뒤에 지우고, 다시 낸 신청은 낡은 색인 줄로 지우지 않는다(감사 O-9 — 해산한 길드의 신청은 runApply 가 다시 돌지 않는다) */
+SW_TEST_CASE( GuildServiceTest, ExpiredApplicationsAreSwept )
+{
+    GuildFixture rig;
+    const uint64 guildID = rig.makeGuild();
+    SW_REQUIRE_TRUE( rig.setOpen( kMaster, true ) == SocialResult::Ok );
+    constexpr AccountID kLate = 900;
+    SW_REQUIRE_TRUE( rig.run( GuildOperation::Apply, kOutside, kInvalidAccountID, "", guildID )._result == SocialResult::Ok );
+    SW_REQUIRE_TRUE( rig.run( GuildOperation::Apply, kLate, kInvalidAccountID, "", guildID )._result == SocialResult::Ok );
+    SW_REQUIRE_TRUE( rig.run( GuildOperation::Apply, kLate, kInvalidAccountID, "", guildID, kNowMs + 1000 )._result == SocialResult::Ok ); // 다시 내 만료가 늦춰졌다
+    const hashed_string applicationTable{ "social_guild_application" };
+    const hashed_string expiryTable{ "social_guild_application_expiry" };
+    SW_REQUIRE_EQUAL( 2, rig._database.countRecords( applicationTable ) );
+    SW_REQUIRE_EQUAL( 3, rig._database.countRecords( expiryTable ) );
+
+    ServiceTTLRule        rule = GuildService::makeApplicationTTLRule( 1000 );
+    ServiceTTLSweepReport report;
+    const int64           firstExpiryMs = kNowMs + GuildLimit::kApplicationLifetimeMs;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, firstExpiryMs + 1500, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._deletedCount ); // 처음 신청만 기간이 지났다
+    SW_EXPECT_EQUAL( 1, rig._database.countRecords( applicationTable ) );
+    SW_EXPECT_EQUAL( 1, rig._database.countRecords( expiryTable ) ); // 다시 낸 신청의 낡은 줄도 지웠다
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, firstExpiryMs + 3000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._deletedCount );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( applicationTable ) );
     SW_EXPECT_EQUAL( 0, rig._database.countRecords( expiryTable ) );
 }
 

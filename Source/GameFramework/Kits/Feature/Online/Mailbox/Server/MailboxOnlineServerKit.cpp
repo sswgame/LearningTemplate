@@ -4,6 +4,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxService.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Mail/ServiceMailCampaign.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
@@ -36,7 +37,9 @@ namespace sw
                 _settings._claimedRetentionMs = static_cast<int64>( kitConfig._claimedRetentionDays ) * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond;
                 if ( expected<void> result = registerServerService( context, entry, &_service ); result.has_value() == false )
                     return result;
-                return {};
+                const ServiceTTLConfig& campaignTTL = kitConfig._endedCampaignTTL;
+                return addTTLRule( context, entry, ServiceMailCampaign::makeCampaignTTLRule( campaignTTL.getExpireAfterMs() ), campaignTTL ).and_then( [&]
+                { return addTTLRule( context, entry, ServiceMailCampaign::makeClaimTTLRule( campaignTTL.getExpireAfterMs() ), campaignTTL ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override

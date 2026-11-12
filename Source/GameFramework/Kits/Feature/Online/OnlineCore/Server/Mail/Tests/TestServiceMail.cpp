@@ -6,7 +6,7 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 // ServiceMailTest — 우편 넣기(보상 · 플레이어 첨부 맡김), 멱등 키 재전송, 새 우편 알림이 한 번만 나가는지, 보낸 기록의 보존 기간 쓸기. (nogpu)
 
@@ -133,7 +133,7 @@ SW_TEST_CASE( ServiceMailTest, RejectsInvalidMessages )
 }
 
 /**
- * @brief [ServiceMailTest] 보낸 기록(`mail_sent`)은 보낸 시각부터 보존 기간이 지나면 보존 규칙이 지우고, 그 전에는 같은 멱등 키를 재생으로 가린다. 시각을 읽지 못하는 기록은 남긴다
+ * @brief [ServiceMailTest] 보낸 기록(`mail_sent`)은 보낸 시각부터 보존 기간이 지나면 TTL 규칙이 지우고, 그 전에는 같은 멱등 키를 재생으로 가린다. 시각을 읽지 못하는 기록은 남긴다
  */
 SW_TEST_CASE( ServiceMailTest, SentRecordExpiresByRetentionRule )
 {
@@ -154,20 +154,17 @@ SW_TEST_CASE( ServiceMailTest, SentRecordExpiresByRetentionRule )
     broken.put( sw::ServiceMail::getSentTable(), "0000000000000016/broken", sw::vector<uint8>{ 'x' }, sw::ServiceRecord::kAbsentVersion );
     SW_REQUIRE_TRUE( database.commit( broken ) == sw::ServiceStoreResult::Ok );
 
-    sw::ServiceRetentionRule rule;
-    rule._table       = sw::ServiceMail::getSentTable();
-    rule._retentionMs = kRetentionMs;
-    rule._pfnReadTime = &sw::ServiceMail::readSentTimeMs;
-    sw::ServiceRetentionReport report;
-    SW_REQUIRE_TRUE( sw::ServiceRetentionRule::sweep( database, rule, kNowMs + kRetentionMs - 1, 64, 64, report ) == sw::ServiceStoreResult::Ok );
+    sw::ServiceTTLRule        rule = sw::ServiceMail::makeSentTTLRule( kRetentionMs ); // 운영과 같은 TTL 색인 규칙
+    sw::ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( sw::ServiceTTLRule::sweep( database, rule, kNowMs + kRetentionMs - 1, 64, 64, report ) == sw::ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 2, database.countRecords( sw::ServiceMail::getSentTable() ) );
     sw::string again;
     SW_REQUIRE_TRUE( send( database, reward, again, bReplayed ) == sw::LedgerResult::Ok );
     SW_EXPECT_TRUE( bReplayed ); // 보존 기간 안이라 재생이다
 
     rule._cursor.clear();
-    SW_REQUIRE_TRUE( sw::ServiceRetentionRule::sweep( database, rule, kNowMs + kRetentionMs, 64, 64, report ) == sw::ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( sw::ServiceTTLRule::sweep( database, rule, kNowMs + kRetentionMs, 64, 64, report ) == sw::ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, report._deletedCount );
     SW_EXPECT_EQUAL( 1, database.countRecords( sw::ServiceMail::getSentTable() ) ); // 깨진 기록만 남는다
-    SW_EXPECT_EQUAL( 1, database.countRecords( sw::ServiceMail::getMailTable() ) ); // 우편은 보존 규칙이 아니라 우편함 정리가 지운다
+    SW_EXPECT_EQUAL( 1, database.countRecords( sw::ServiceMail::getMailTable() ) ); // 우편은 TTL 규칙이 아니라 우편함 정리가 지운다
 }

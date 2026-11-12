@@ -9,8 +9,8 @@
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeSessionRecord.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -21,6 +21,12 @@ namespace sw
         {
             static constexpr uint64 kSettleAuditUnique = 0x5E771Eull; ///< 정산 감사 기록은 거래당 하나이다. 재시도가 둘을 만들지 않게 한다
             static constexpr int32  kMaxRecoverCount   = 256;
+            /**
+             * @brief 정산 트랜잭션의 쓰기 상한입니다. 원장: 잔액(두 계정 × 양쪽 항목 자산) + 묘비 조건 2 + 분개 · 분개 TTL 색인 · 내역 2,
+             *        거래: 레코드 · TTL 색인 · 활성 2 · 주인, 감사: 줄 · TTL 색인. 원장 상한 64 를 넘으면 정산이 Invalid 로 진다.
+             */
+            static constexpr int32 kMaxSettleWriteCount = 2 * TradeConstant::kMaxLegsOnWire + 2 + 1 + 1 + 2 + 5 + 2;
+            static_assert( kMaxSettleWriteCount <= ServiceTransaction::kMaxWriteCount, "거래 정산 트랜잭션이 쓰기 상한을 넘을 수 있다 - 항목 상한을 줄이거나 쓰기를 나눈다" );
 
             /** @brief 거래 레코드를 써 @p inoutTransaction 에 넣습니다. 못 쓰면 오류 로그를 남기고 false 이며 아무것도 넣지 않습니다. */
             [[nodiscard]] static bool stageSession( const TradeSnapshot& snapshot, uint64 ownerServerID, uint64 expectedVersion, ServiceTransaction& inoutTransaction )
@@ -30,7 +36,7 @@ namespace sw
                     return false;
                 const string sessionKey = ServiceKeyUtil::makeHex64( snapshot._tradeID );
                 if ( snapshot.isClosed() ) // 닫는 모든 경로가 이 함수를 지나므로 색인 줄을 빠뜨리는 경로가 없다
-                    inoutTransaction.put( TradeStoreLogic::getSessionExpiryTable(), ServiceRetentionRule::makeIndexKey( snapshot._updatedMs, sessionKey ), vector<uint8>{},
+                    inoutTransaction.put( TradeStoreLogic::getSessionExpiryTable(), ServiceTTLRule::makeTTLIndexKey( snapshot._updatedMs, sessionKey ), vector<uint8>{},
                                           ServiceRecord::kAnyVersion );
                 inoutTransaction.put( TradeStoreLogic::getSessionTable(), sessionKey, std::move( bytes ), expectedVersion );
                 return true;
@@ -136,13 +142,15 @@ namespace sw
         return s_table;
     }
 
-    ServiceRetentionRule TradeStoreLogic::makeRetentionRule( int64 retentionMs )
+    ServiceTTLRule TradeStoreLogic::makeTTLRule( int64 expireAfterMs )
     {
-        ServiceRetentionRule rule;
-        rule._table       = getSessionTable();
-        rule._indexTable  = getSessionExpiryTable();
-        rule._retentionMs = retentionMs;
-        rule._pfnReadTime = &TradeStoreLogicInternal::readClosedTimeMs;
+        ServiceTTLRule rule;
+        rule._table           = getSessionTable();
+        rule._ttlIndexTable   = getSessionExpiryTable();
+        rule._expireAfterMs   = expireAfterMs;
+        rule._pfnReadTime     = &TradeStoreLogicInternal::readClosedTimeMs;
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&TradeStoreLogicInternal::readClosedTimeMs>(); // 열린 거래는 닫을 때 줄이 생긴다
+        rule._backfillVersion = 1;
         return rule;
     }
 

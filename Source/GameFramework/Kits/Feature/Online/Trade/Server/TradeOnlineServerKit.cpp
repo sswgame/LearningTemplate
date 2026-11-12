@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Foundation/Constants.h"
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeKitConfig.h"
@@ -66,8 +65,8 @@ namespace sw
                 _policy._maxLegsPerSide     = kitConfig._maxLegsPerSide;
                 if ( expected<void> result = registerServerService( context, entry, &_server ); result.has_value() == false )
                     return result;
-                return addRetentionRule( context, entry,
-                                         TradeStoreLogic::makeRetentionRule( kitConfig._closedRetentionDays * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond ) );
+                return addTTLRule( context, entry,
+                                   TradeStoreLogic::makeTTLRule( kitConfig._closedSessionTTL.getExpireAfterMs() ), kitConfig._closedSessionTTL );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override

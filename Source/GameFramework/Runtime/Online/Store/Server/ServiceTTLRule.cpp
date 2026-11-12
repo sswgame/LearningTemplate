@@ -1,24 +1,77 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
 
 namespace sw
 {
-    ServiceStoreResult ServiceRetentionRule::sweep( IServiceStoreConnection& connection, ServiceRetentionRule& inoutRule, int64 nowMs, int32 maxScanCount, int32 maxDeleteCount,
-                                                    ServiceRetentionReport& outReport )
+    namespace
     {
-        outReport = ServiceRetentionReport{};
+        struct ServiceTTLRuleInternal
+        {
+            static constexpr uint64 kBackfillRunning = 1; ///< 이 바퀴가 도는 중이다
+            static constexpr uint64 kBackfillDone    = 2; ///< 이 판은 끝났다 — 판이 오르기 전에는 다시 훑지 않는다
+
+            /** @brief 백필 진행 한 줄입니다(`ServiceTTLRule::getBackfillTable`). */
+            struct BackfillProgress
+            {
+                string _cursor{};
+                int64  _activatedMs{ 0 }; ///< 이 판을 처음 본 시각 — 배포 창을 잰다
+                int64  _passStartMs{ 0 }; ///< 이 바퀴를 시작한 시각
+                uint64 _version{ 0 };
+                uint64 _state{ kBackfillRunning };
+            };
+
+            static vector<uint8> encodeProgress( const BackfillProgress& progress )
+            {
+                BitWriter writer;
+                writer.writeVarUint( progress._version );
+                writer.writeVarUint( progress._state );
+                writer.writeVarInt( progress._activatedMs );
+                writer.writeVarInt( progress._passStartMs );
+                ServiceKeyUtil::writeString( writer, progress._cursor );
+                return writer.releaseBytes();
+            }
+
+            [[nodiscard]] static bool decodeProgress( const vector<uint8>& bytes, BackfillProgress& outProgress )
+            {
+                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+                outProgress._version     = reader.readVarUint();
+                outProgress._state       = reader.readVarUint();
+                outProgress._activatedMs = reader.readVarInt();
+                outProgress._passStartMs = reader.readVarInt();
+                return ServiceKeyUtil::readString( reader, OnlineLimit::kMaxKeySize, outProgress._cursor ) && reader.hasOverflowed() == false;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    ServiceStoreResult ServiceTTLRule::sweep( IServiceStoreConnection& connection, ServiceTTLRule& inoutRule, int64 nowMs, int32 maxScanCount, int32 maxDeleteCount,
+                                              ServiceTTLSweepReport& outReport )
+    {
+        outReport = ServiceTTLSweepReport{};
         if ( inoutRule.isValid() == false )
             return ServiceStoreResult::Invalid;
-        const int64 cutoffMs = nowMs - inoutRule._retentionMs;
-        if ( inoutRule._indexTable.empty() == false )
-            return sweepIndex( connection, inoutRule, cutoffMs, maxScanCount, maxDeleteCount, outReport );
+        const int64 cutoffMs = nowMs - inoutRule._expireAfterMs;
+        if ( inoutRule._ttlIndexTable.empty() == false )
+        {
+            if ( inoutRule._pBackfillSource != nullptr )
+            {
+                const ServiceStoreResult backfilled = backfillTTLIndex( connection, inoutRule, nowMs, maxScanCount, outReport );
+                if ( backfilled != ServiceStoreResult::Ok )
+                    return backfilled; // 채우지 못한 줄은 다음 회차가 이어서 넣는다 - 범위 읽기는 그 뒤에 해도 늦지 않다
+            }
+            return sweepTTLIndex( connection, inoutRule, cutoffMs, maxScanCount, maxDeleteCount, outReport );
+        }
         while ( outReport._scannedCount < maxScanCount && outReport._deletedCount < maxDeleteCount )
         {
             const int32              pageSize = MathUtil::min( kPageSize, maxScanCount - outReport._scannedCount );
@@ -82,12 +135,92 @@ namespace sw
         return ServiceStoreResult::Ok;
     }
 
-    bool ServiceRetentionRule::isValid() const
+    bool ServiceTTLRule::isValid() const
     {
-        return _retentionMs > 0 && ( _pfnReadTime != nullptr || _indexTable.empty() == false );
+        const bool bBackfillOk = _pBackfillSource == nullptr || ( _ttlIndexTable.empty() == false && _backfillVersion > 0 && _backfillRolloutMs >= 0 );
+        return _expireAfterMs > 0 && ( _pfnReadTime != nullptr || _ttlIndexTable.empty() == false ) && bBackfillOk;
     }
 
-    string ServiceRetentionRule::makeIndexKey( int64 timeMs, string_view target )
+    bool ServiceTTLRule::isSchedulable() const
+    {
+        return isValid() && _maxScanPerSweep > 0 && _maxDeletePerSweep > 0;
+    }
+
+    const hashed_string& ServiceTTLRule::getBackfillTable()
+    {
+        static const hashed_string s_table{ "service_ttl_backfill" };
+        return s_table;
+    }
+
+    ServiceStoreResult ServiceTTLRule::backfillTTLIndex( IServiceStoreConnection& connection, const ServiceTTLRule& rule, int64 nowMs, int32 maxScanCount,
+                                                         ServiceTTLSweepReport& inoutReport )
+    {
+        using Internal = ServiceTTLRuleInternal;
+        string progressKey{ rule._table.viewOrEmpty() };
+        progressKey.push_back( '/' );
+        progressKey += rule._keyPrefix;
+        int32 scannedCount = 0;
+        while ( scannedCount < maxScanCount )
+        {
+            ServiceRecord            progressRecord;
+            const ServiceStoreResult read = connection.readRecord( getBackfillTable(), progressKey, progressRecord );
+            if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
+                return read;
+            Internal::BackfillProgress progress;
+            const bool                 bKnown = read == ServiceStoreResult::Ok && Internal::decodeProgress( progressRecord._bytes, progress );
+            if ( bKnown && progress._version >= rule._backfillVersion && progress._state == Internal::kBackfillDone )
+                return ServiceStoreResult::Ok; // 이 판은 끝났다
+            if ( bKnown == false || progress._version < rule._backfillVersion )
+            {
+                // 처음이거나 판이 올랐다(모르는 값도 처음부터 다시 훑는다 - 겹쳐 넣어도 같은 줄이다)
+                progress              = Internal::BackfillProgress{};
+                progress._version     = rule._backfillVersion;
+                progress._activatedMs = nowMs;
+                progress._passStartMs = nowMs;
+            }
+            // 한 트랜잭션에 진행 줄 하나가 함께 들어가므로 쓰기 상한보다 하나 적게 읽는다
+            const int32              pageSize = MathUtil::min( ServiceTransaction::kMaxWriteCount - 1, maxScanCount - scannedCount );
+            vector<ServiceRecord>    listRecord;
+            const ServiceStoreResult listed = connection.listRecords( rule._table, rule._keyPrefix, progress._cursor, pageSize, false, listRecord );
+            if ( listed != ServiceStoreResult::Ok )
+                return listed;
+            ServiceTransaction transaction;
+            int32              indexedCount = 0;
+            for ( const ServiceRecord& record : listRecord )
+            {
+                string indexKey;
+                if ( rule._pBackfillSource->makeIndexKey( connection, record, indexKey ) == false )
+                    continue; // 기준 시각이 아직 없는 레코드(열린 거래 · 열린 신고)다. 시각이 생기는 쓰기가 줄을 넣는다
+                transaction.put( rule._ttlIndexTable, indexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
+                ++indexedCount;
+            }
+            scannedCount += static_cast<int32>( listRecord.size() );
+            const bool bPassEnded = static_cast<int32>( listRecord.size() ) < pageSize;
+            bool       bNewPass   = false;
+            if ( bPassEnded == false )
+                progress._cursor = listRecord.back()._key;
+            else if ( progress._passStartMs >= progress._activatedMs + rule._backfillRolloutMs )
+                progress._state = Internal::kBackfillDone; // 배포 창이 지난 뒤 시작한 바퀴다 - 옛 판 서버가 쓴 레코드까지 주웠다
+            else
+            {
+                progress._cursor.clear(); // 창 안에 끝난 바퀴다. 아직 옛 판으로 쓰는 서버가 있을 수 있어 처음부터 다시 돈다
+                progress._passStartMs = nowMs;
+                bNewPass              = true;
+            }
+            transaction.put( getBackfillTable(), progressKey, Internal::encodeProgress( progress ), progressRecord._version ); // 없으면 "없어야 함"이다
+            const ServiceStoreResult committed = connection.commit( transaction );
+            if ( committed == ServiceStoreResult::Conflict )
+                return ServiceStoreResult::Ok; // 다른 쓸기가 같은 진행을 옮겼다. 다음 회차가 이어 간다
+            if ( committed != ServiceStoreResult::Ok )
+                return committed;
+            inoutReport._backfilledCount += indexedCount;
+            if ( bPassEnded || bNewPass )
+                return ServiceStoreResult::Ok; // 새 바퀴는 다음 회차부터 돈다 - 한 회차에 같은 표를 두 번 훑지 않는다
+        }
+        return ServiceStoreResult::Ok;
+    }
+
+    string ServiceTTLRule::makeTTLIndexKey( int64 timeMs, string_view target )
     {
         string key;
         ServiceKeyUtil::appendHex64( key, static_cast<uint64>( timeMs < 0 ? 0 : timeMs ) );
@@ -96,7 +229,7 @@ namespace sw
         return key;
     }
 
-    bool ServiceRetentionRule::parseIndexKey( string_view indexKey, int64& outTimeMs, string_view& outTarget )
+    bool ServiceTTLRule::parseTTLIndexKey( string_view indexKey, int64& outTimeMs, string_view& outTarget )
     {
         const size_t width  = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
         uint64       timeMs = 0;
@@ -107,15 +240,15 @@ namespace sw
         return true;
     }
 
-    ServiceStoreResult ServiceRetentionRule::sweepIndex( IServiceStoreConnection& connection, const ServiceRetentionRule& rule, int64 cutoffMs, int32 maxScanCount,
-                                                         int32 maxDeleteCount, ServiceRetentionReport& outReport )
+    ServiceStoreResult ServiceTTLRule::sweepTTLIndex( IServiceStoreConnection& connection, const ServiceTTLRule& rule, int64 cutoffMs, int32 maxScanCount,
+                                                      int32 maxDeleteCount, ServiceTTLSweepReport& outReport )
     {
         string cursor; // 회차 안에서만 쓴다 - Conflict 로 남긴 줄을 이번 회차에 다시 보지 않으려는 것이다
         while ( outReport._scannedCount < maxScanCount && outReport._deletedCount < maxDeleteCount )
         {
             const int32              pageSize = MathUtil::min( kPageSize, maxScanCount - outReport._scannedCount );
             vector<ServiceRecord>    listEntry;
-            const ServiceStoreResult listed = connection.listRecords( rule._indexTable, "", cursor, pageSize, false, listEntry );
+            const ServiceStoreResult listed = connection.listRecords( rule._ttlIndexTable, "", cursor, pageSize, false, listEntry );
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             if ( listEntry.empty() )
@@ -129,7 +262,7 @@ namespace sw
                     return ServiceStoreResult::Ok;
                 int64       entryMs = 0;
                 string_view target;
-                const bool  bParsed = parseIndexKey( entry._key, entryMs, target );
+                const bool  bParsed = parseTTLIndexKey( entry._key, entryMs, target );
                 if ( bParsed && entryMs > cutoffMs )
                     return ServiceStoreResult::Ok; // 시각 순이다. 여기부터는 아직 기간 안이다
                 ++outReport._scannedCount;
@@ -139,14 +272,14 @@ namespace sw
                 {
                     // 색인 형식이 틀린 줄이다. 데이터가 아니라 색인이므로 지워도 잃는 것이 없고, 남기면 앞자리를 막는다
                     ServiceTransaction drop;
-                    drop.erase( rule._indexTable, entry._key, entry._version );
+                    drop.erase( rule._ttlIndexTable, entry._key, entry._version );
                     const ServiceStoreResult dropped = connection.commit( drop );
                     if ( dropped != ServiceStoreResult::Ok && dropped != ServiceStoreResult::Conflict )
                         return dropped;
                     continue;
                 }
                 bool                     bEntryDone = true;
-                const ServiceStoreResult expired    = expireIndexEntry( connection, rule, entry, target, cutoffMs, outReport, bEntryDone );
+                const ServiceStoreResult expired    = expireTTLIndexEntry( connection, rule, entry, target, cutoffMs, outReport, bEntryDone );
                 if ( expired != ServiceStoreResult::Ok && expired != ServiceStoreResult::Conflict )
                     return expired; // Conflict 는 다음 회차가 맨 앞에서 다시 본다
                 if ( expired == ServiceStoreResult::Ok && bEntryDone == false )
@@ -159,8 +292,8 @@ namespace sw
         return ServiceStoreResult::Ok;
     }
 
-    ServiceStoreResult ServiceRetentionRule::expireIndexEntry( IServiceStoreConnection& connection, const ServiceRetentionRule& rule, const ServiceRecord& entry,
-                                                               string_view target, int64 cutoffMs, ServiceRetentionReport& inoutReport, bool& outbEntryDone )
+    ServiceStoreResult ServiceTTLRule::expireTTLIndexEntry( IServiceStoreConnection& connection, const ServiceTTLRule& rule, const ServiceRecord& entry,
+                                                            string_view target, int64 cutoffMs, ServiceTTLSweepReport& inoutReport, bool& outbEntryDone )
     {
         vector<ServiceRecord> listTarget;
         bool                  bEntryDone = true; // 색인 줄도 지울지다
@@ -207,7 +340,7 @@ namespace sw
             listErased.push_back( &record );
         }
         if ( bEntryDone )
-            transaction.erase( rule._indexTable, entry._key, entry._version );
+            transaction.erase( rule._ttlIndexTable, entry._key, entry._version );
         if ( rule._pfnStageErase != nullptr && listErased.empty() == false )
         {
             const ServiceStoreResult staged = rule._pfnStageErase( connection, listErased, transaction );

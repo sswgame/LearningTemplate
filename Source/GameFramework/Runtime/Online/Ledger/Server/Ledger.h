@@ -8,8 +8,10 @@
  *          - 분개: 이동 한 건의 원본이다(다리, 사유, 주체, 시각, 이동 뒤 잔액, 키는 분개 키). "없어야 한다" 조건으로 넣으므로 분개 키가 멱등 키이다.
  *          - 내역 색인: 계정과 맡김마다 `<보유자 키>/<시각 16 진 16>/<분개 키>` 를 두며 값은 없다. 최근 것부터 읽는다.
  *          - 이월: 보존 쓸기가 분개를 지울 때 그 분개의 발행 · 소각 합을 자산별 이월 레코드(키 `<자산>`)에 같은 트랜잭션으로 더한다.
+ *            같은 트랜잭션이 그 분개의 내역 색인 줄도 지운다 — 내역은 분개의 색인이라 분개와 함께 사라진다(가리키는 분개가 없는 내역이 남지 않는다).
+ *            분개를 넣는 트랜잭션이 TTL 색인 `ledger_journal_expiry`(`<이동 시각>/<분개 키>`)를 함께 넣어 쓸기가 기간이 지난 분개만 범위로 읽는다.
  *            분개는 감사 내역이라 지워지지만 공급 합은 남는다. 멱등 기록이 필요한 쪽(영수증 지급)은 분개가 아니라 자기 표에 지우지 않는 레코드를 둔다.
- *            PlayFab 이 영수증 거래 id 를 거래 내역과 따로 타이틀 수명 동안 두는 자리다. 분개 쓸기 규칙은 `makeJournalRetentionRule` 하나로만 만든다.
+ *            PlayFab 이 영수증 거래 id 를 거래 내역과 따로 타이틀 수명 동안 두는 자리다. 분개 쓸기 규칙은 `makeJournalTTLRule` 하나로만 만든다.
  *          - 계정 삭제: 탈퇴 정리가 계정을 지우는 트랜잭션에 묘비(`ledger_tombstone`, 키 `acct/<16 진>`)와 소각 대기(`ledger_deletion_queue`)를 함께 넣는다(`stageAccountDeletion`).
  *            묘비가 선 계정은 어떤 이동에도 들 수 없고(`AccountDeleted` — 묘비가 없어야 함을 커밋 조건으로 건다), 남은 잔액은 `burnDeletedAccounts` 가 소각 분개(사유
  *            `account.delete`)로 Sink 에 보내고 빚은 Mint 에서 메워 0 으로 만든다. 잔액 레코드는 사라지고 공급 합은 분개 · 이월에 남아 감사 균형이 맞는다.
@@ -26,8 +28,8 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
@@ -64,24 +66,19 @@ namespace sw
          */
         [[nodiscard]] static ServiceStoreResult burnDeletedAccounts( IServiceStoreConnection& connection, int64 timeMs, int32 maxCount, int32& outBurnedCount );
         /**
-         * @brief 분개 표의 보존 쓸기 규칙을 만듭니다. 지우는 분개의 발행 · 소각 합을 이월 레코드에 같은 트랜잭션으로 더합니다.
+         * @brief 분개 표의 TTL 규칙을 만듭니다(TTL 색인 + 색인 없는 옛 분개의 백필). 지우는 분개의 발행 · 소각 합을 이월 레코드에 더하고 내역 줄을 지우는 쓰기를 같은 트랜잭션에 넣습니다.
          * @details 분개를 끝까지 읽지 못하면 시각도 읽지 않은 것으로 보고 지우지 않는다 — 이월에 넣지 못하는 분개를 지우면 감사 균형이 깨진다.
          */
-        [[nodiscard]] static ServiceRetentionRule makeJournalRetentionRule( int64 retentionMs );
+        [[nodiscard]] static ServiceTTLRule makeJournalTTLRule( int64 retentionMs );
         /** @brief 분개 @p entry 의 발행 · 소각 다리를 자산별로 @p inoutListSupply 에 더합니다. 이월과 감사(`LedgerAuditReport`)가 같은 셈을 씁니다. */
         static void addSupply( const LedgerJournalEntry& entry, vector<LedgerSupplyStats>& inoutListSupply );
         /** @brief 이월 레코드를 모두 읽어 @p inoutListSupply 에 더합니다. 읽지 못한 레코드는 @p outUnreadableCount 에 셉니다. */
         [[nodiscard]] static ServiceStoreResult addCarriedSupply( IServiceStoreConnection& connection, vector<LedgerSupplyStats>& inoutListSupply, int32& outUnreadableCount );
-        /**
-         * @brief 내역 레코드의 키 `<보유자>/<시각 16 진 16>/<분개 키>` 에서 이동 시각을 읽습니다. 계정 · 발행 · 소각 · 맡김(에스크로) 보유자의 키를 읽고, 모르는 키는 false 입니다.
-         * @details 맡김 키는 `esc/<도메인>/<토큰>` 이고 도메인(`[0-9a-z_]`)과 토큰(`[0-9a-z_.-]`)의 글자 규칙에 `/` 가 없어, 슬래시 셋째 뒤가 시각이다.
-         */
-        [[nodiscard]] static bool readHistoryTimeMs( const ServiceRecord& record, int64& outTimeMs );
 
         /**
          * @brief 이동을 @p inoutTransaction 에 붙입니다. 커밋은 하지 않으며, 자기 레코드와 한 트랜잭션에 넣는 쪽(거래, 우편 수령, 구매 한도)이 씁니다.
          * @details 분개 키가 이미 있으면 붙이지 않고 `Ok` 와 `_bReplayed` 를 반환한다. 내용이 다르면 `JournalKeyReused` 이다. 실패하면 아무것도 붙이지 않는다.
-         *          붙이는 쓰기 수는 바뀐 잔액 수에 분개 1 과 계정, 맡김 보유자 수(내역)와 계정 보유자 수(묘비가 없어야 한다는 조건)를 더한 값이다.
+         *          붙이는 쓰기 수는 바뀐 잔액 수에 분개 1, 분개의 TTL 색인 1 과 계정, 맡김 보유자 수(내역)와 계정 보유자 수(묘비가 없어야 한다는 조건)를 더한 값이다.
          *          다리의 계정에 묘비가 서 있으면(탈퇴로 지움) `AccountDeleted` 이다.
          *          부르는 쪽 쓰기와 합쳐 `ServiceTransaction::kMaxWriteCount` 를 넘으면 `Invalid` 이다.
          *          커밋이 `Conflict` 나 `Unavailable` 이면 `resolveConflict` 로 가린다.

@@ -38,7 +38,14 @@ namespace
 SW_TEST_CASE( OnlineServerConfigTest, SettingsObjectFillsTheKitConfig )
 {
     sw::ConfigManager manager;
-    SW_REQUIRE_TRUE( manager.loadConfigFromJSON<sw::OnlineServerConfig>( R"({ "_listKit": [ { "_name": "testkit", "_settings": { "_port": 7777, "_bDebug": true, "_listMode": [ "duel", "squad" ] } } ] })", "inline" ) );
+    SW_REQUIRE_TRUE( manager.loadConfigFromJSON<sw::OnlineServerConfig>( R"({ "_ttlSweepMinuteOfDay": 300, "_ttlBackfillRolloutHours": 24,
+"_auditRetention": { "_expireAfterDays": 365, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+"_ledgerRetention": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
+"_closedReportTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
+"_mailSentTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
+"_scheduleRunTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
+"_listKit": [ { "_name": "testkit", "_settings": { "_port": 7777, "_bDebug": true, "_listMode": [ "duel", "squad" ] } } ] })",
+                                                                         "inline" ) );
     const sw::OnlineServerConfig* pConfig = manager.getConfig<sw::OnlineServerConfig>();
     SW_REQUIRE_EQUAL( size_t( 1 ), pConfig->_listKit.size() );
     sw::OnlineConfigTestKitConfig kitConfig;
@@ -51,6 +58,8 @@ SW_TEST_CASE( OnlineServerConfigTest, SettingsObjectFillsTheKitConfig )
     SW_REQUIRE_EQUAL( size_t( 2 ), kitConfig._listMode.size() );
     SW_EXPECT_EQUAL( sw::string( "squad" ), kitConfig._listMode[1] );
     SW_EXPECT_EQUAL( 42, kitConfig._untouched );
+    SW_EXPECT_EQUAL( 365, pConfig->_auditRetention._expireAfterDays ); // 기반 표 TTL 은 구조체 칸으로 읽는다
+    SW_EXPECT_EQUAL( 5000, pConfig->_auditRetention._maxDeletePerSweep );
 }
 
 /**

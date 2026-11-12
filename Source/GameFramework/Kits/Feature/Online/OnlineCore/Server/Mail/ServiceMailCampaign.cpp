@@ -15,6 +15,31 @@ namespace sw
             static constexpr uint64 kFormat   = 1;
             static constexpr int32  kPageSize = 64;
         };
+
+        /**
+         * @brief 색인보다 먼저 쓴 수령 표식의 묶음 줄(`<끝>/<id>/`)을 만듭니다(백필). 끝 시각은 캠페인 레코드에서 읽는다.
+         * @details 캠페인이 이미 없으면 그 표식은 받을 캠페인이 없어 쓸모가 없으므로 시각 0 의 줄을 넣어 바로 지우게 한다.
+         */
+        class ServiceMailCampaignClaimBackfillSource final : public IServiceTTLBackfillSource
+        {
+        public:
+            [[nodiscard]] bool makeIndexKey( IServiceStoreConnection& connection, const ServiceRecord& record, string& outIndexKey ) const override
+            {
+                const size_t slash = record._key.find( '/' );
+                if ( slash == string::npos )
+                    return false;
+                const string             campaignKey = record._key.substr( 0, slash );
+                ServiceRecord            campaignRecord;
+                const ServiceStoreResult read  = connection.readRecord( ServiceMailCampaign::getCampaignTable(), campaignKey, campaignRecord );
+                int64                    endMs = 0;
+                if ( read == ServiceStoreResult::Ok && ServiceMailCampaign::readEndMs( campaignRecord, endMs ) == false )
+                    return false; // 읽지 못하는 캠페인의 표식은 남긴다
+                if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
+                    return false; // 저장소 문제면 줄을 만들지 않는다 - 다음 판이 아니라 이 레코드만 건너뛴다
+                outIndexKey = ServiceTTLRule::makeTTLIndexKey( endMs, campaignKey + "/" );
+                return true;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -30,6 +55,50 @@ namespace sw
     {
         static const hashed_string s_table{ "mail_campaign_claim" };
         return s_table;
+    }
+
+    const hashed_string& ServiceMailCampaign::getCampaignExpiryTable()
+    {
+        static const hashed_string s_table{ "mail_campaign_expiry" };
+        return s_table;
+    }
+
+    const hashed_string& ServiceMailCampaign::getClaimExpiryTable()
+    {
+        static const hashed_string s_table{ "mail_campaign_claim_expiry" };
+        return s_table;
+    }
+
+    bool ServiceMailCampaign::readEndMs( const ServiceRecord& record, int64& outTimeMs )
+    {
+        ServiceMailCampaign campaign;
+        if ( decode( record._bytes, campaign ) == false )
+            return false;
+        outTimeMs = campaign._endMs;
+        return true;
+    }
+
+    ServiceTTLRule ServiceMailCampaign::makeCampaignTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule;
+        rule._table           = getCampaignTable();
+        rule._ttlIndexTable   = getCampaignExpiryTable();
+        rule._expireAfterMs   = expireAfterMs;
+        rule._pfnReadTime     = &readEndMs;
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readEndMs>();
+        rule._backfillVersion = 1;
+        return rule;
+    }
+
+    ServiceTTLRule ServiceMailCampaign::makeClaimTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule;
+        rule._table           = getClaimTable();
+        rule._ttlIndexTable   = getClaimExpiryTable();
+        rule._expireAfterMs   = expireAfterMs; // 시각 읽기는 두지 않는다 - 표식에는 시각이 없고, 끝난 캠페인의 표식은 묶음째 쓸모가 없다
+        rule._pBackfillSource = make_shared<ServiceMailCampaignClaimBackfillSource>();
+        rule._backfillVersion = 1;
+        return rule;
     }
 
     bool ServiceMailCampaign::stageCreate( const ServiceMailCampaign& campaign, ServiceTransaction& inoutTransaction )
@@ -48,7 +117,11 @@ namespace sw
             if ( bAmountOk == false || LedgerUtil::isValidAssetID( attachment._assetID ) == false )
                 return false;
         }
-        inoutTransaction.put( getCampaignTable(), ServiceKeyUtil::makeHex64( campaign._campaignID ), encode( campaign ), ServiceRecord::kAbsentVersion );
+        const string campaignKey = ServiceKeyUtil::makeHex64( campaign._campaignID );
+        inoutTransaction.put( getCampaignTable(), campaignKey, encode( campaign ), ServiceRecord::kAbsentVersion );
+        // 끝난 캠페인은 받을 수 없다 - 레코드와 계정마다의 수령 표식(접두어 `<id>/` 묶음)을 끝난 뒤 TTL 쓸기가 지운다. 표식이 수십만이어도 줄은 하나다
+        inoutTransaction.put( getCampaignExpiryTable(), ServiceTTLRule::makeTTLIndexKey( campaign._endMs, campaignKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+        inoutTransaction.put( getClaimExpiryTable(), ServiceTTLRule::makeTTLIndexKey( campaign._endMs, campaignKey + "/" ), vector<uint8>{}, ServiceRecord::kAnyVersion );
         return true;
     }
 

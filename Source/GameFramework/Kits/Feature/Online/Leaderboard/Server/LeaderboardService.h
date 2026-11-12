@@ -11,8 +11,8 @@
  *          - 업적은 통계가 임계값을 넘으면 `lb_achievement` 를 "없어야 함" 조건으로 쓰고 보상 우편(`ServiceMail::stageSend`, 재원 발행, 멱등 키 `ach.<계정>.<업적>`)을 한 트랜잭션에 넣는다. 두 번 넘어도 한 번만 처리된다.
  *          - 시즌 정산은 예약 작업(`lb.settle.<보드>.<시즌 16진 8자리>`, 창 [끝, 끝 + 7일))이 한다. 점수를 모두 읽어 순위(같은 점수는 계정 id 오름차순)대로 결과 `lb_season_result`("없어야 함")와 구간 보상 우편을 15명씩 한 트랜잭션에 쓴다.
  *            결과가 이미 있는 사람은 건너뛰므로 다시 돌아도 한 번만 처리된다.
- *          - 지난 기간의 점수와 시즌 결과는 보존 규칙(`makeScoreRetentionRule` · `makeSeasonResultRetentionRule`, 기간은 `LeaderboardKitConfig`)이 지운다.
- *            점수는 처음 만들 때 만료 색인 `lb_score_expiry` 에 `<기간 끝 16진>/<점수 키>` 를 함께 넣는다. 기간 끝은 일간 · 주간이면 다음 초기화, 시즌이면
+ *          - 지난 기간의 점수와 시즌 결과는 TTL 규칙(`makeScoreTTLRule` · `makeSeasonResultTTLRule`, 기간은 `LeaderboardKitConfig`)이 지운다.
+ *            점수는 처음 만들 때 TTL 색인 `lb_score_expiry` 에 `<기간 끝 16진>/<점수 키>` 를 함께 넣는다. 기간 끝은 일간 · 주간이면 다음 초기화, 시즌이면
  *            시즌 끝 + 정산 창(7일)이라 정산이 읽기 전에 지워지지 않는다. 초기화 없는 보드는 색인을 넣지 않아 지우지 않는다.
  *            시즌 결과는 정산 멱등의 근거지만 정산 창 안에서만 쓰인다. 색인 `lb_season_result_expiry` 의 시각이 창의 끝이라 창이 닫힌 뒤에만 지운다.
  *
@@ -35,9 +35,9 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountStatSource.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
@@ -179,10 +179,14 @@ namespace sw
         /** @brief 시즌 정산 작업 id 를 만듭니다. `lb.settle.<보드>.<시즌 16진 8자리>` 형식입니다. */
         static string makeSettlementJobID( string_view boardID, uint32 seasonID );
 
-        /** @brief 지난 기간 점수의 보존 규칙입니다(만료 색인 규칙). 키트 조립이 `IOnlineServerKit::addRetentionRule` 로 올립니다. */
-        static ServiceRetentionRule makeScoreRetentionRule( int64 retentionMs );
-        /** @brief 시즌 결과의 보존 규칙입니다(만료 색인 규칙, 정산 창이 닫힌 뒤부터 잰다). */
-        static ServiceRetentionRule makeSeasonResultRetentionRule( int64 retentionMs );
+        /** @brief 지난 기간 점수의 TTL 규칙입니다(TTL 색인 규칙). 키트 조립이 `IOnlineServerKit::addTTLRule` 로 올립니다. */
+        static ServiceTTLRule makeScoreTTLRule( int64 expireAfterMs );
+        /** @brief 시즌 결과의 TTL 규칙입니다(TTL 색인 규칙, 정산 창이 닫힌 뒤부터 잰다). */
+        static ServiceTTLRule makeSeasonResultTTLRule( int64 expireAfterMs );
+        /** @brief 색인보다 먼저 쓴 점수의 백필 출처입니다. 줄의 시각이 보드 정의(초기화 · 시즌)에서 나오므로 @p listBoard 를 복사한 불변 사본을 든다. */
+        static shared_ptr<const IServiceTTLBackfillSource> makeScoreBackfillSource( const vector<LeaderboardDef>& listBoard );
+        /** @brief 색인보다 먼저 쓴 시즌 결과의 백필 출처입니다(시즌 끝 + 정산 창). */
+        static shared_ptr<const IServiceTTLBackfillSource> makeSeasonResultBackfillSource( const vector<LeaderboardDef>& listBoard );
 
         // 예약 작업
         void onScheduledRun( const ScheduledRun& run );

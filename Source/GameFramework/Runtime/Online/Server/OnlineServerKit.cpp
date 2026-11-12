@@ -26,20 +26,21 @@ namespace sw
         return unexpected( Error{ ErrorKind::AlreadyExists, "the method range of the kit is already taken", entry._name } );
     }
 
-    expected<void> IOnlineServerKit::addRetentionRule( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, ServiceRetentionRule rule )
+    expected<void> IOnlineServerKit::addTTLRule( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, ServiceTTLRule rule, const ServiceTTLConfig& config )
     {
-        if ( rule._table.empty() || rule.isValid() == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the retention rule needs a table, a positive retention and a time reader or an expiry index", entry._name } );
-        for ( const ServiceRetentionRule& other : context._listRetentionRule )
+        config.applySweepLimits( rule );
+        if ( rule._table.empty() || rule.isSchedulable() == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the TTL rule needs a table, a positive expire-after (days in the kit config), a time reader or a TTL index, and sweep limits", entry._name } );
+        for ( const ServiceTTLRule& other : context._listTTLRule )
         {
             if ( other._table == rule._table && other._keyPrefix == rule._keyPrefix )
             {
-                Error error{ ErrorKind::AlreadyExists, "the retention rule of the table is already registered", entry._name };
+                Error error{ ErrorKind::AlreadyExists, "the TTL rule of the table is already registered", entry._name };
                 error.appendDetail( " (" ).appendDetail( rule._table.viewOrEmpty() ).appendDetail( ")" );
                 return unexpected( error );
             }
         }
-        context._listRetentionRule.push_back( std::move( rule ) );
+        context._listTTLRule.push_back( std::move( rule ) );
         return {};
     }
 

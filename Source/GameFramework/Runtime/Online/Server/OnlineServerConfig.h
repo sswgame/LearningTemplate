@@ -20,7 +20,32 @@
 
 namespace sw
 {
+    struct ServiceTTLRule;
     struct TypeInfo;
+
+    /**
+     * @brief 표 하나의 TTL 설정입니다. 기간과 예약 쓸기 한 회차의 상한을 함께 적습니다(`ServiceTTLRule`). 세 칸 모두 필수다 — 코드에 기본값을 두지 않는다.
+     * @details MongoDB TTL 인덱스의 `expireAfterSeconds`, DynamoDB Time to Live 의 표마다 켜는 설정 자리다. 상한은 표 크기에 맞춘다(채팅 기록은 크고 닫힌 신고는 작다).
+     */
+    REFLECT()
+    struct SW_GF_API ServiceTTLConfig
+    {
+        REFLECT_BODY();
+
+        /** @brief 기준 시각 뒤 레코드를 남기는 기간(일)입니다. 0 은 기반 표(감사 · 원장 · 신고 · 보낸 우편)에서만 "지우지 않음"이고, 키트 표는 0 이면 기동 오류입니다. */
+        PROPERTY( Required, Min = 0, Max = 36500 )
+        int32 _expireAfterDays{ 0 };
+        /** @brief 예약 쓸기 한 회차에 훑는 레코드 상한입니다. */
+        PROPERTY( Required, Min = 1, Max = 10000000 )
+        int32 _maxScanPerSweep{ 0 };
+        /** @brief 예약 쓸기 한 회차에 지우는 레코드 상한입니다. 저장소를 오래 잡지 않게 훑기 상한보다 작게 둡니다. */
+        PROPERTY( Required, Min = 1, Max = 10000000 )
+        int32 _maxDeletePerSweep{ 0 };
+
+        int64 getExpireAfterMs() const;
+        /** @brief 쓸기 상한 둘을 @p inoutRule 에 옮깁니다. */
+        void applySweepLimits( ServiceTTLRule& inoutRule ) const;
+    };
 
     /** @brief 띄울 키트 하나입니다. */
     REFLECT()
@@ -108,22 +133,31 @@ namespace sw
         /** @brief 주소(IP)마다 동시에 여는 서비스 연결 상한입니다. 넘는 연결은 바로 닫습니다. 한 주소에서 많이 붙는 부하 봇이나 NAT 뒤 사무실은 올립니다. */
         PROPERTY( Min = 1, Max = 1000000 )
         int32 _maxConnectionsPerRemote{ 64 };
-        /** @brief 감사 기록(`service_audit`)을 남기는 기간(일)입니다. 0 이면 지우지 않습니다. */
-        PROPERTY( Min = 0, Max = 36500 )
-        int32 _retentionAuditDays{ 365 };
-        /** @brief 원장 분개와 내역(`ledger_journal`, `ledger_history`)을 남기는 기간(일)입니다. 0 이면 지우지 않습니다. 분개 키는 멱등 키이기도 해서 이 기간이 지나면 같은 키의 재시도를 가리지 못합니다. */
-        PROPERTY( Min = 0, Max = 36500 )
-        int32 _retentionLedgerDays{ 400 };
-        /** @brief 닫힌 신고(`service_report`)를 남기는 기간(일)입니다. 0 이면 지우지 않습니다. 열린 신고는 지우지 않습니다. */
-        PROPERTY( Min = 0, Max = 36500 )
-        int32 _retentionReportDays{ 90 };
-        /** @brief 우편 보낸 기록(`mail_sent`, 보내기 멱등)을 남기는 기간(일)입니다. 0 이면 지우지 않습니다. 이 기간이 지나면 같은 멱등 키로 다시 보낸 우편(일괄 우편 다시 돌리기 등)을 가리지 못합니다.
+        /** @brief 감사 기록(`service_audit`)의 보존 기간 · 쓸기 상한입니다. 기간 0 이면 지우지 않습니다. */
+        PROPERTY( Required )
+        ServiceTTLConfig _auditRetention{};
+        /** @brief 원장 분개와 내역(`ledger_journal`, `ledger_history`)의 보존 기간 · 쓸기 상한입니다. 기간 0 이면 지우지 않습니다. 분개 키는 멱등 키이기도 해서 이 기간이 지나면 같은 키의 재시도를 가리지 못합니다. */
+        PROPERTY( Required )
+        ServiceTTLConfig _ledgerRetention{};
+        /** @brief 닫힌 신고(`service_report`)의 TTL 입니다. 기간 0 이면 지우지 않습니다. 열린 신고는 지우지 않습니다. */
+        PROPERTY( Required )
+        ServiceTTLConfig _closedReportTTL{};
+        /** @brief 우편 보낸 기록(`mail_sent`, 보내기 멱등)의 TTL 입니다. 기간 0 이면 지우지 않습니다. 이 기간이 지나면 같은 멱등 키로 다시 보낸 우편(일괄 우편 다시 돌리기 등)을 가리지 못합니다.
          *         우편 보관(30 일) + 받은 우편 보관(우편함 `_claimedRetentionDays`)보다 길게 둔다. */
-        PROPERTY( Min = 0, Max = 36500 )
-        int32 _retentionMailSentDays{ 90 };
-        /** @brief 보존 기간 쓸기를 도는 시각(UTC 분, 0..1439)입니다. 저장소가 한가한 시간에 둡니다. */
-        PROPERTY( Min = 0, Max = 1439 )
-        int32 _retentionMinuteOfDay{ 5 * 60 };
+        PROPERTY( Required )
+        ServiceTTLConfig _mailSentTTL{};
+        /** @brief 예약 작업 차지 레코드(`service_schedule`)의 TTL 입니다. 기간 0 이면 지우지 않습니다. 가장 긴 구간 작업(시즌 정산 7 일)보다 길어야 합니다(짧으면 그 작업 등록이 진다). */
+        PROPERTY( Required )
+        ServiceTTLConfig _scheduleRunTTL{};
+        /**
+         * @brief TTL 색인 백필의 순차 배포 창(시간)입니다. 새 색인 판을 처음 본 뒤 이 시간 안에 끝난 백필 바퀴는 처음부터 다시 돈다.
+         * @details 옛 판 서버가 모두 내려갈 때까지(배포가 끝날 때까지) 걸리는 시간보다 길게 둔다 — 창이 지난 뒤 시작한 마지막 바퀴가 옛 판이 색인 줄 없이 쓴 레코드를 줍는다.
+         */
+        PROPERTY( Required, Min = 0, Max = 8760 )
+        int32 _ttlBackfillRolloutHours{ 0 };
+        /** @brief TTL 쓸기(`ServiceTTLMonitor`)를 도는 시각(UTC 분, 0..1439)입니다. 저장소가 한가한 시간에 둡니다. */
+        PROPERTY( Required, Min = 0, Max = 1439 )
+        int32 _ttlSweepMinuteOfDay{ 0 };
 
         /** @brief 서버 설정 파일 경로에서 온라인 설정 파일 경로를 만듭니다(`x.json` → `x.online.json`). */
         static string makeConfigPath( string_view serverConfigPath );

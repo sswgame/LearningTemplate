@@ -9,7 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStoreLogic.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 using namespace sw;
 
@@ -352,7 +352,7 @@ SW_TEST_CASE( TradeServiceTest, CloseForAccountWhenLeaving )
     SW_EXPECT_TRUE( rig.invite( kAlice, kCarol )._result == TradeResult::Ok );
 }
 
-/** @brief [TradeServiceTest] 보존 규칙: 거절된(닫힌) 거래는 닫은 뒤 기간이 지나면 지우고, 열린 거래는 남긴다(감사 O-9) */
+/** @brief [TradeServiceTest] TTL 규칙: 거절된(닫힌) 거래는 닫은 뒤 기간이 지나면 지우고, 열린 거래는 남긴다(감사 O-9) */
 SW_TEST_CASE( TradeServiceTest, ClosedTradesExpireByRetention )
 {
     TradeWorld    world;
@@ -366,11 +366,11 @@ SW_TEST_CASE( TradeServiceTest, ClosedTradesExpireByRetention )
     SW_REQUIRE_EQUAL( 4, world._database.countRecords( TradeStoreLogic::getSessionTable() ) );
     SW_EXPECT_EQUAL( 3, world._database.countRecords( TradeStoreLogic::getSessionExpiryTable() ) );
 
-    ServiceRetentionRule   rule = TradeStoreLogic::makeRetentionRule( 1000 );
-    ServiceRetentionReport report;
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( world._database, rule, kNowMs + 500, 100, 100, report ) == ServiceStoreResult::Ok );
+    ServiceTTLRule        rule = TradeStoreLogic::makeTTLRule( 1000 );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, rule, kNowMs + 500, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 4, world._database.countRecords( TradeStoreLogic::getSessionTable() ) ); // 아직 기간 안이다
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( world._database, rule, kNowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, rule, kNowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 3, report._deletedCount );
     SW_EXPECT_EQUAL( 1, world._database.countRecords( TradeStoreLogic::getSessionTable() ) );
     SW_EXPECT_EQUAL( 0, world._database.countRecords( TradeStoreLogic::getSessionExpiryTable() ) );

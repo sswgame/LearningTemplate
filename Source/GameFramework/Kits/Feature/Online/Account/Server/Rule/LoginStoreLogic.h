@@ -23,6 +23,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
@@ -114,6 +115,8 @@ namespace sw
         void refreshSessions( const vector<LoginSessionRef>& listOnline, int64 nowMs );
         /** @brief 철회 대기열을 @p maxCount 개까지 읽어 @p outListEntry 뒤에 붙입니다(키 순서). 키가 깨진 항목은 건너뜁니다. */
         [[nodiscard]] static ServiceStoreResult listRevocations( IServiceStoreConnection& connection, int32 maxCount, vector<LoginRevocationEntry>& outListEntry );
+        /** @brief 세션 표의 TTL 규칙입니다(TTL 색인 `login_session_expiry` + 색인 없는 옛 세션의 백필). 만료가 지난 세션 · 묘비를 지운다 — 지운 세션의 토큰은 이미 쓸 수 없다. */
+        static ServiceTTLRule makeSessionTTLRule( int64 expireAfterMs );
         /** @brief 철회가 끝난 항목을 지웁니다. */
         [[nodiscard]] static ServiceStoreResult eraseRevocation( IServiceStoreConnection& connection, string_view key );
         /** @brief 계정 id 의 공개 신원을 반환합니다. 이름 인덱스 `AccountNameIndex` 가 다른 키트의 저장소 작업 안에서 부릅니다. */

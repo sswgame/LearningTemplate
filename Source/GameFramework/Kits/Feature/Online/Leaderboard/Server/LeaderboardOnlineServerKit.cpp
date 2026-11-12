@@ -1,7 +1,5 @@
 #include "pch.h"
 
-#include "Core/Foundation/Constants.h"
-
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardServer.h"
@@ -45,15 +43,22 @@ namespace sw
                     return unexpected( Error{ ErrorKind::NotFound, "the leaderboard catalog could not be read", catalogPath } );
                 if ( catalogPath.empty() && _listInlineBoardID.empty() )
                     SW_LOG_WARNING_ID( "LeaderboardOnlineServerKit.LeaderboardKitNeitherCatalog", "Leaderboard kit: neither _catalog nor _listBoardID - no boards are registered" );
+                // 옛 점수 · 시즌 결과의 백필은 카탈로그 보드의 사본으로 줄 시각을 잰다. 인라인 보드(_listBoardID)는 초기화가 없어 지울 것이 없다
+                const vector<LeaderboardDef> listCatalogBoard = _pCatalog != nullptr ? _pCatalog->getBoards() : vector<LeaderboardDef>{};
+                ServiceTTLRule               scoreRule        = LeaderboardService::makeScoreTTLRule( kitConfig._pastScoreTTL.getExpireAfterMs() );
+                scoreRule._pBackfillSource                    = LeaderboardService::makeScoreBackfillSource( listCatalogBoard );
+                scoreRule._backfillVersion                    = 1;
+                ServiceTTLRule resultRule                     = LeaderboardService::makeSeasonResultTTLRule( kitConfig._seasonResultTTL.getExpireAfterMs() );
+                resultRule._pBackfillSource                   = LeaderboardService::makeSeasonResultBackfillSource( listCatalogBoard );
+                resultRule._backfillVersion                   = 1;
                 // 매칭 키트가 실력 모드의 통계를 읽는다. 접속한 계정의 통계만 메모리에 있다.
-                constexpr int64 kDayMs = constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond;
                 return registerServerService( context, entry, &_server )
                     .and_then( [&]
                 { return exposeInterface<IAccountStatSource>( context, entry, _service ); } )
                     .and_then( [&]
-                { return addRetentionRule( context, entry, LeaderboardService::makeScoreRetentionRule( kitConfig._pastScoreRetentionDays * kDayMs ) ); } )
+                { return addTTLRule( context, entry, scoreRule, kitConfig._pastScoreTTL ); } )
                     .and_then( [&]
-                { return addRetentionRule( context, entry, LeaderboardService::makeSeasonResultRetentionRule( kitConfig._seasonResultRetentionDays * kDayMs ) ); } );
+                { return addTTLRule( context, entry, resultRule, kitConfig._seasonResultTTL ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override

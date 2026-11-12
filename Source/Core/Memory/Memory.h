@@ -361,7 +361,7 @@ namespace sw
     /**
      * @brief `make_unique<T>( 인자… )` 와 `make_unique<T[]>( 개수 )` 의 몸체입니다. 아래 변수 템플릿 `make_unique` 로만 부릅니다.
      * @details 함수가 아니라 함수 객체인 이유: 함수 템플릿이면 std 타입 인자(STL 컨테이너 구성의 `vector` 등)가 인자 의존 탐색(ADL)으로
-     *          `std::make_unique` 를 끌어와 호출이 모호해진다(CI STL 빌드, `ServiceRetentionJob.cpp`). 일반 탐색이 객체를 찾으면 ADL 이 일어나지 않는다
+     *          `std::make_unique` 를 끌어와 호출이 모호해진다(CI STL 빌드, `ServiceTTLMonitor.cpp`). 일반 탐색이 객체를 찾으면 ADL 이 일어나지 않는다
      *          (C++20 표준 라이브러리의 niebloid 와 같은 방식). 배열 형태는 `std::make_unique<T[]>` 처럼 원소를 값 초기화하고, 원소는 소멸자가 하는 일이 없는
      *          타입이어야 한다(`default_delete<T[]>`).
      */

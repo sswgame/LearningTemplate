@@ -16,6 +16,7 @@
 #include "GameFramework/Runtime/Online/Server/Tests/OnlineRuntimeTestUtil.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 using namespace sw;
 
@@ -251,6 +252,38 @@ SW_TEST_CASE( MailboxServiceTest, CampaignsAppearInFirstPage )
     SW_EXPECT_TRUE( rig.list( kNowMs + 12000 )._reply._listMail.empty() );
 }
 
+/** @brief [MailboxServiceTest] TTL: 끝난 캠페인과 그 수령 표식(묶음 줄 하나)을 기간 뒤에 지운다. 색인 없는 옛 표식은 백필이 캠페인을 읽어 줄을 채운다(감사 O-9) */
+SW_TEST_CASE( MailboxServiceTest, EndedCampaignsAndClaimsExpire )
+{
+    MemoryServiceDatabase database;
+    ServiceMailCampaign   campaign;
+    campaign._campaignID = 1;
+    campaign._actorID    = 7;
+    campaign._titleKey   = "mail.campaign";
+    campaign._startMs    = kNowMs - 1;
+    campaign._endMs      = kNowMs + 10000;
+    campaign._listAttachment.push_back( ServiceMailAttachment{ "cur.gold", 3 } );
+    ServiceTransaction created;
+    SW_REQUIRE_TRUE( ServiceMailCampaign::stageCreate( campaign, created ) );
+    SW_REQUIRE_TRUE( database.commit( created ) == ServiceStoreResult::Ok );
+    ServiceTransaction claims; // 받은 계정의 표식 둘과, 색인보다 먼저 지운 캠페인의 옛 표식 하나
+    claims.put( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 1, 100 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+    claims.put( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 1, 101 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+    claims.put( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 9, 100 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+    SW_REQUIRE_TRUE( database.commit( claims ) == ServiceStoreResult::Ok );
+
+    ServiceTTLRule        claimRule    = ServiceMailCampaign::makeClaimTTLRule( 1000 );
+    ServiceTTLRule        campaignRule = ServiceMailCampaign::makeCampaignTTLRule( 1000 );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, claimRule, kNowMs + 5000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._deletedCount );                                          // 캠페인이 없는 옛 표식만 - 받을 캠페인이 없다
+    SW_EXPECT_EQUAL( 2, database.countRecords( ServiceMailCampaign::getClaimTable() ) ); // 진행 중인 캠페인의 표식은 남는다(다시 받기를 막는다)
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, claimRule, kNowMs + 12000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, database.countRecords( ServiceMailCampaign::getClaimTable() ) );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, campaignRule, kNowMs + 12000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, database.countRecords( ServiceMailCampaign::getCampaignTable() ) );
+}
+
 /** @brief [MailboxServiceTest] 정리: 만료된 우편을 치워 목록에서 사라진다 */
 SW_TEST_CASE( MailboxServiceTest, SweepRemovesExpiredMail )
 {
@@ -389,12 +422,12 @@ SW_TEST_CASE( MailboxServiceTest, MetricsCountKitResultsAndCommonCategories )
 SW_TEST_CASE( MailboxServiceTest, ServerAssembledFromConfigServesTheClient )
 {
     constexpr const utf8* kServerJSON = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "local", "_driver": "memory" } ] })";
-    constexpr const utf8* kOnlineJSON = R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "testLogin" }, { "_name": "mailbox" } ] })";
+    constexpr const utf8* kOnlineJSON = R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "testLogin" }, { "_name": "mailbox", "_settings": { "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 } } } ] })";
 
     MailboxClient              client; // 묶음보다 먼저 선언해 나중에 지운다 - 지울 때 스스로 등록을 푼다
     test::OnlineRuntimeFixture rig;
     {
-        const auto result = rig.fromConfig( kServerJSON, kOnlineJSON, kNowMs );
+        const auto result = rig.fromConfig( kServerJSON, test::OnlineRuntimeFixture::withBaseTTL( kOnlineJSON ), kNowMs );
         SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
     }
     const int32 clientIndex = rig._clients.connect( test::OnlineRuntimeFixture::kPort, { &client } );
@@ -413,7 +446,7 @@ SW_TEST_CASE( MailboxServiceTest, ServerAssembledFromConfigServesTheClient )
     SW_EXPECT_TRUE( bReplied );
 
     test::OnlineRuntimeFixture unnamed;
-    const auto                 failed1 = unnamed.fromConfig( kServerJSON, R"({ "_listKit": [ { "_name": "mailbox" } ] })", kNowMs );
+    const auto                 failed1 = unnamed.fromConfig( kServerJSON, test::OnlineRuntimeFixture::withBaseTTL( R"({ "_listKit": [ { "_name": "mailbox", "_settings": { "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 } } } ] })" ), kNowMs );
     SW_REQUIRE_FALSE( failed1.has_value() );
     const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
     SW_EXPECT_TRUE( error1.find( "_storeName" ) != string::npos );

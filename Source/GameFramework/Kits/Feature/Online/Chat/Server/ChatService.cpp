@@ -24,7 +24,7 @@ namespace sw
         struct ChatServiceInternal
         {
             static constexpr const utf8* kWhisperPrefix = "whisper.";
-            static constexpr int64       kIndexDayMs    = constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond; ///< 만료 색인 줄 하나가 맡는 날짜 폭
+            static constexpr int64       kIndexDayMs    = constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond; ///< TTL 색인 줄 하나가 맡는 날짜 폭
 
             static const hashed_string& getHistoryTable()
             {
@@ -40,12 +40,12 @@ namespace sw
 
             static int64 getDayEndMs( int64 sentMs ) { return ( MathUtil::max<int64>( 0, sentMs ) / kIndexDayMs + 1 ) * kIndexDayMs; }
 
-            /** @brief 채널 · 날짜의 만료 색인 키입니다. 시각은 날짜의 끝이라 그 줄이 기간을 넘기면 그 날짜의 기록이 모두 기간을 넘겼다. */
+            /** @brief 채널 · 날짜의 TTL 색인 키입니다. 시각은 날짜의 끝이라 그 줄이 기간을 넘기면 그 날짜의 기록이 모두 기간을 넘겼다. */
             static string makeGroupIndexKey( string_view channelID, int64 sentMs )
             {
                 string target{ channelID };
                 target.push_back( '/' );
-                return ServiceRetentionRule::makeIndexKey( getDayEndMs( sentMs ), target );
+                return ServiceTTLRule::makeTTLIndexKey( getDayEndMs( sentMs ), target );
             }
 
             /** @brief 기록 키 `<채널>/<보낸 시각 16진>.<서버>.<순번>` 에서 보낸 시각을 읽습니다. */
@@ -118,7 +118,7 @@ namespace sw
                 return read;
             }
 
-            /** @brief 쌓인 기록과 아직 이 서버가 넣지 않은 만료 색인 줄을 한 트랜잭션으로 씁니다. 색인 줄은 조건 없이 덮어쓴다(서버 여럿이 같은 줄을 넣어도 된다). */
+            /** @brief 쌓인 기록과 아직 이 서버가 넣지 않은 TTL 색인 줄을 한 트랜잭션으로 씁니다. 색인 줄은 조건 없이 덮어쓴다(서버 여럿이 같은 줄을 넣어도 된다). */
             static ChatHistoryWriteResult writeHistory( IServiceStoreConnection& connection, const vector<ChatMessage>& listMessage, const vector<string>& listIndexKey )
             {
                 ChatHistoryWriteResult write;
@@ -209,6 +209,20 @@ namespace sw
             }
         };
 
+        /** @brief 색인보다 먼저 쓴 기록의 색인 키입니다(백필). 쓰는 쪽과 같은 채널 · 날짜 줄이라 겹쳐 넣어도 한 줄이다. */
+        class ChatHistoryBackfillSource final : public IServiceTTLBackfillSource
+        {
+        public:
+            [[nodiscard]] bool makeIndexKey( IServiceStoreConnection& connection, const ServiceRecord& record, string& outIndexKey ) const override
+            {
+                (void)connection;
+                int64 sentMs = 0;
+                if ( ChatServiceInternal::readHistoryTimeMs( record, sentMs ) == false )
+                    return false;
+                outIndexKey = ChatServiceInternal::makeGroupIndexKey( string_view( record._key ).substr( 0, record._key.rfind( '/' ) ), sentMs );
+                return true;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -710,13 +724,15 @@ namespace sw
         { applyHistoryWrite( write._bCommitted == SW_TRUE, messageCount - write._rejectedCount, write._rejectedCount, listIndexKey, completion ); } );
     }
 
-    ServiceRetentionRule ChatService::makeRetentionRule( int64 retentionMs )
+    ServiceTTLRule ChatService::makeTTLRule( int64 expireAfterMs )
     {
-        ServiceRetentionRule rule;
-        rule._table       = ChatServiceInternal::getHistoryTable();
-        rule._indexTable  = ChatServiceInternal::getHistoryIndexTable();
-        rule._retentionMs = retentionMs;
-        rule._pfnReadTime = &ChatServiceInternal::readHistoryTimeMs;
+        ServiceTTLRule rule;
+        rule._table           = ChatServiceInternal::getHistoryTable();
+        rule._ttlIndexTable   = ChatServiceInternal::getHistoryIndexTable();
+        rule._expireAfterMs   = expireAfterMs;
+        rule._pfnReadTime     = &ChatServiceInternal::readHistoryTimeMs;
+        rule._pBackfillSource = make_shared<ChatHistoryBackfillSource>();
+        rule._backfillVersion = 1;
         return rule;
     }
 

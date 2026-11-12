@@ -15,7 +15,7 @@
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 using namespace sw;
 
@@ -218,7 +218,7 @@ namespace
     };
 } // namespace
 
-/** @brief [LeaderboardServiceTest] 보존 규칙: 지난 기간 점수는 기간 끝(시즌은 정산 창 끝) 뒤에 지우고, 초기화 없는 보드의 점수는 남긴다(감사 O-9) */
+/** @brief [LeaderboardServiceTest] TTL 규칙: 지난 기간 점수는 기간 끝(시즌은 정산 창 끝) 뒤에 지우고, 초기화 없는 보드의 점수는 남긴다(감사 O-9) */
 SW_TEST_CASE( LeaderboardServiceTest, PastScoresExpireAfterPeriodAndSettlementWindow )
 {
     constexpr int64     kSettlementWindowMs = 7 * kDayMs;
@@ -237,22 +237,70 @@ SW_TEST_CASE( LeaderboardServiceTest, PastScoresExpireAfterPeriodAndSettlementWi
     SW_REQUIRE_EQUAL( 5, world._database.countRecords( scoreTable ) );
     SW_EXPECT_EQUAL( 4, world._database.countRecords( hashed_string( "lb_score_expiry" ) ) );
 
-    ServiceRetentionRule   scoreRule = LeaderboardService::makeScoreRetentionRule( 1000 );
-    ServiceRetentionReport report;
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( world._database, scoreRule, kSeasonEndMs + kDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    ServiceTTLRule        scoreRule = LeaderboardService::makeScoreTTLRule( 1000 );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, scoreRule, kSeasonEndMs + kDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 0, report._deletedCount ); // 정산 창 안이다 - 정산이 읽을 점수를 지우지 않는다
     SW_EXPECT_EQUAL( 1, rig.settle( "season", 1 )._succeededCount );
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( world._database, scoreRule, kNowMs + 2 * kDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, scoreRule, kNowMs + 2 * kDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 4, report._deletedCount );
     SW_EXPECT_EQUAL( 1, world._database.countRecords( scoreTable ) ); // 초기화 없는 보드다
 
-    const hashed_string  resultTable{ "lb_season_result" };
-    ServiceRetentionRule resultRule = LeaderboardService::makeSeasonResultRetentionRule( 1000 );
+    const hashed_string resultTable{ "lb_season_result" };
+    ServiceTTLRule      resultRule = LeaderboardService::makeSeasonResultTTLRule( 1000 );
     SW_REQUIRE_EQUAL( 2, world._database.countRecords( resultTable ) );
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( world._database, resultRule, kSeasonEndMs + kSettlementWindowMs + 500, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, resultRule, kSeasonEndMs + kSettlementWindowMs + 500, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 2, world._database.countRecords( resultTable ) ); // 창이 닫힌 뒤부터 잰다
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( world._database, resultRule, kSeasonEndMs + kSettlementWindowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, resultRule, kSeasonEndMs + kSettlementWindowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 0, world._database.countRecords( resultTable ) );
+}
+
+/** @brief [LeaderboardServiceTest] 색인보다 먼저 쓴 점수 · 시즌 결과도 백필이 보드 정의의 사본으로 줄을 채워 지운다(감사 O-9). 초기화 없는 보드의 점수는 남는다 */
+SW_TEST_CASE( LeaderboardServiceTest, LegacyScoresAreBackfilledFromTheBoardCatalog )
+{
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
+    rig.addBoard( "daily", LeaderboardOrder::Descending, LeaderboardUpdate::Best, LeaderboardReset::Daily );
+    rig.addBoard( "best" );
+    rig.addSeasonBoard( "season", 2 );
+    SW_REQUIRE_TRUE( rig.submit( "daily", 1, 10 )._result == LeaderboardResult::Ok );
+    SW_REQUIRE_TRUE( rig.submit( "best", 1, 10 )._result == LeaderboardResult::Ok );
+    SW_REQUIRE_TRUE( rig.submit( "season", 1, 10, kInSeasonMs )._result == LeaderboardResult::Ok );
+    SW_EXPECT_EQUAL( 1, rig.settle( "season", 1 )._succeededCount );
+    for ( const utf8* pTable : { "lb_score_expiry", "lb_season_result_expiry" } ) // 색인보다 먼저 쓴 레코드로 만든다
+    {
+        vector<ServiceRecord> listIndex;
+        SW_REQUIRE_TRUE( world._database.listRecords( hashed_string( pTable ), "", "", 100, false, listIndex ) == ServiceStoreResult::Ok );
+        ServiceTransaction dropIndex;
+        for ( const ServiceRecord& entry : listIndex )
+        {
+            dropIndex.erase( hashed_string( pTable ), entry._key );
+        }
+        SW_REQUIRE_TRUE( world._database.commit( dropIndex ) == ServiceStoreResult::Ok );
+    }
+    vector<LeaderboardDef> listBoard;
+    for ( const utf8* pBoardID : { "daily", "best", "season" } )
+    {
+        const LeaderboardDef* pBoard = rig._service.findBoard( pBoardID );
+        SW_REQUIRE_TRUE( pBoard != nullptr );
+        listBoard.push_back( *pBoard );
+    }
+
+    ServiceTTLRule scoreRule   = LeaderboardService::makeScoreTTLRule( 1000 );
+    scoreRule._pBackfillSource = LeaderboardService::makeScoreBackfillSource( listBoard );
+    scoreRule._backfillVersion = 1;
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, scoreRule, kNowMs + 2 * kDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 2, report._backfilledCount ); // 일간 · 시즌 점수 - 초기화 없는 보드의 점수는 줄이 없다
+    SW_EXPECT_EQUAL( 2, report._deletedCount );
+    SW_EXPECT_EQUAL( 1, world._database.countRecords( hashed_string( "lb_score" ) ) );
+
+    ServiceTTLRule resultRule   = LeaderboardService::makeSeasonResultTTLRule( 1000 );
+    resultRule._pBackfillSource = LeaderboardService::makeSeasonResultBackfillSource( listBoard );
+    resultRule._backfillVersion = 1;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, resultRule, kSeasonEndMs + kSettlementWindowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._backfilledCount );
+    SW_EXPECT_EQUAL( 0, world._database.countRecords( hashed_string( "lb_season_result" ) ) );
 }
 
 /** @brief [LeaderboardServiceTest] 규칙에 맞지 않는 보드 · 업적은 등록하지 않는다 — 통계에 연결된 Sum 보드는 누적값을 또 더하므로 거절한다 */

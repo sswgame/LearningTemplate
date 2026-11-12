@@ -1,10 +1,10 @@
 /**
  * @file ServiceMail.h
  * @brief 우편 넣기와 우편 레코드 형식을 정의합니다(서버). 프로토콜이 싣는 값(첨부 · 상태 · 상한)은 공유 `Mail/ServiceMailTypes.h` 에 있습니다.
- * @details 우편 레코드, 보낸 기록(멱등), 만료 색인, 첨부 맡김 이동(재원이 발행이 아닐 때)을 부르는 쪽 트랜잭션에 붙인다.
+ * @details 우편 레코드, 보낸 기록(멱등), TTL 색인, 첨부 맡김 이동(재원이 발행이 아닐 때)을 부르는 쪽 트랜잭션에 붙인다.
  *          테이블은 세 개다.
  *          `mail_item` 의 키는 `<받는 계정 16 진>/<만든 시각 16 진>.<멱등 키 해시 16 진>` 이다.
- *          `mail_sent` 의 키는 `<받는 계정 16 진>/<멱등 키>` 이고 값은 우편 키이다. 보내기 멱등 기록이라 우편이 지워져도 남고, 보존 규칙(`OnlineServerConfig::_retentionMailSentDays`)이
+ *          `mail_sent` 의 키는 `<받는 계정 16 진>/<멱등 키>` 이고 값은 우편 키이다. 보내기 멱등 기록이라 우편이 지워져도 남고, TTL 규칙(`OnlineServerConfig::_mailSentTTL`)이
  *          보낸 시각(값인 우편 키의 만든 시각)부터 그 기간 뒤에 지운다. 그 뒤 같은 멱등 키로 다시 보내면 새 우편이 된다 — 멱등 키에 TTL 을 두는 PlayFab · Stripe 와 같은 계약이다.
  *          지워도 다른 곳의 합 · 멱등이 깨지지 않는다: 원장 분개 키(`mail.send` · `mail.claim` · `mail.expire`)는 우편 키에서 나오고, 업적 · 시즌 보상은 자기 레코드가 한 번만 보내기를 막는다.
  *          `mail_expiry` 의 키는 `<만료 16 진>/<우편 키>` 이고 값은 없다.
@@ -26,6 +26,7 @@
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Mail/ServiceMailTypes.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
@@ -90,10 +91,13 @@ namespace sw
         static const hashed_string& getMailTable();
         static const hashed_string& getSentTable();
         static const hashed_string& getExpiryTable();
-        static const hashed_string& getNoticeTable(); ///< "mail_notice"
+        static const hashed_string& getNoticeTable();     ///< "mail_notice"
+        static const hashed_string& getSentExpiryTable(); ///< "mail_sent_expiry" — 보낸 기록의 TTL 색인(`<만든 시각>/<보낸 키>`)
+        /** @brief 보낸 기록의 TTL 규칙입니다(TTL 색인 + 색인 없는 옛 기록의 백필). 기간은 운영 설정 `_mailSentTTL` 이 정한다. */
+        static ServiceTTLRule makeSentTTLRule( int64 expireAfterMs );
 
         /**
-         * @brief 우편 하나를 @p inoutTransaction 에 붙입니다. 우편, 보낸 기록, 만료 색인(만료가 있을 때), 재원에서 우편으로 가는 맡김 이동(재원이 발행이 아닐 때)을 붙입니다.
+         * @brief 우편 하나를 @p inoutTransaction 에 붙입니다. 우편, 보낸 기록, TTL 색인(만료가 있을 때), 재원에서 우편으로 가는 맡김 이동(재원이 발행이 아닐 때)을 붙입니다.
          * @return `Ok` 이면 성공이며, 같은 멱등 키의 우편이 이미 있으면 붙이지 않고 @p outbReplayed 를 켠다.
          *         `Invalid` 는 규칙이나 쓰기 상한을 어겼다는 뜻이고, `InsufficientFunds` 는 재원이 모자란다는 뜻이다. 저장소를 못 읽으면 `Unavailable` 이다.
          */
@@ -110,7 +114,7 @@ namespace sw
         /** @brief 우편의 맡김 보유자 `esc/mail/<토큰>` 을 반환합니다. 토큰은 우편 키의 `/` 를 `.` 로 바꾼 값입니다. */
         static LedgerHolder makeEscrowHolder( string_view mailKey );
         static string       makeExpiryKey( int64 expiresMs, string_view mailKey );
-        /** @brief 보낸 기록(`mail_sent`)의 값인 우편 키에서 보낸 시각을 읽습니다(보존 기간 쓸기 `ServiceRetentionRule` 용). 형식이 틀리면 false 이고 그 기록은 지우지 않습니다. */
+        /** @brief 보낸 기록(`mail_sent`)의 값인 우편 키에서 보낸 시각을 읽습니다(보존 기간 쓸기 `ServiceTTLRule` 용). 형식이 틀리면 false 이고 그 기록은 지우지 않습니다. */
         [[nodiscard]] static bool readSentTimeMs( const ServiceRecord& record, int64& outTimeMs );
         /** @brief 우편 키 앞의 받는 계정을 구합니다. 형식이 틀리면 false 입니다. */
         [[nodiscard]] static bool parseRecipient( string_view mailKey, uint64& outAccountID );
