@@ -379,13 +379,6 @@
 
 ### 플랫폼 · 창 · 입력 · 런타임 UI · 빌드
 
-#### P-1 Win32: 원시 마우스 입력을 등록하지 않아 `WM_INPUT` 처리기가 죽은 코드다
-- 분류: 결함 · 확신: 확인
-- 근거: `Source/Engine/Input/Windows/InputManagerWin32.cpp:226-242` 가 `WM_INPUT` 을 `makeMouseRawDelta` 로 바꾸지만 저장소 전체에 `RegisterRawInputDevices` 호출이 없다. `Source/Engine/Input/Devices/MouseDevice.cpp:82-87` 의 `getMovementDelta` 가 늘 폴백(커서 위치 차이)으로 간다 — Windows 의 시점 회전만 포인터 가속과 가운데 되돌림 경로를 탄다(X11 XI2 · Wayland · 웹은 원시 이동량이다). 시나리오는 `VirtualInputScript` 가 `MouseRawDelta` 를 직접 내서 통과한다.
-- 상용 엔진: 언리얼은 `HighPrecisionMouseMode` 에서 `RIDEV` 로 등록하고 `MOUSE_MOVE_ABSOLUTE` 를 따로 처리한다. 유니티 Input System 도 Raw Input 이다.
-- 제안: 잠금이 걸릴 때 `RegisterRawInputDevices( usage 1/2 )`, 풀릴 때 `RIDEV_REMOVE`. "0 이면 위치 차이" 폴백은 없애고 플랫폼이 원시 원천 유무를 선언하게 한다.
-- 확인: 감시 값 `Input.RawMouseEvents` 를 더하고 `engine/automation/mouselook` 에서 `SendInput` 으로 0 보다 큰지.
-
 #### P-2 리사이즈를 메시지 처리 안에서 동기로 하고, Win32 모달 이동 · 크기 루프 동안 프레임이 멈춘다
 - 분류: 구조 · 성능 · 확신: 확인(코드 경로), 체감 비용은 측정 필요
 - 근거: `Source/Engine/Renderer/EngineRenderDriver.cpp:187-196` — 크기 통보마다 `waitIdle( Resize )` 와 `device.resize()` 를 한다. `Source/Engine/Window/Linux/X11Window.cpp:642-654` 는 `while ( XPending )` 안에서 `ConfigureNotify` 마다 불러 한 펌프에 스왑체인을 여러 번 다시 만든다. Win32 는 `processMessages`(`Win32Window.cpp:336-348`)가 `DispatchMessageW` 안의 모달 루프에 갇혀 제목 줄을 끄는 동안 `App::tickMainLoop` 가 돌지 않는다(리슨 호스트 틱 · 오디오 갱신 정지).
