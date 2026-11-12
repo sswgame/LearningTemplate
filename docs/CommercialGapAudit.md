@@ -333,13 +333,6 @@
 - 제안: 쿠킹이 셀마다 구간을 쓰고 런타임은 셀 색인만 든다. 셀 로드는 워커에서 파싱 · 인스턴스화하고 등록은 `pumpHeldRegistration` 예산을 쓴다. 셀을 내릴 때는 `SaveGame` 표시가 있는 상태를 셀 키로 보관한다(G-7 과 같은 줄기).
 - 확인: `load/` 에 셀 400 × 오브젝트 2000, `GT.Scene.service.SceneStreamingSubsystem` 최대 프레임 시간.
 
-#### A-14 WeakInternTable 이 넣을 때마다 표 전체를 훑는다
-- 분류: 성능 · 확신: 확인(지금 규모의 비용은 측정 필요)
-- 근거: `Source/Engine/Asset/Cache/WeakInternTable.h:48-66` — `insertOrGetLive` 가 잠금을 쥔 채 `_mapValue` 전체를 돌며 만료 칸을 지운다. 한 종류의 에셋 N 개를 읽으면 N² 이고 그동안 같은 잠금의 `findLive` 가 막힌다. `AssetPinSet::findIndex`(`AssetPinSet.cpp:74-83`)도 넣을 때마다 선형 비교다.
-- 상용 엔진: 언리얼 · 유니티의 에셋 표는 해시 조회이고 수거는 따로(GC · `UnloadUnusedAssets`) 한다.
-- 제안: 값의 삭제자가 자기 키의 칸을 지우게 한다(만료 칸이 생기지 않는 형식). PinSet 은 키 맵과 LRU 목록으로 바꾼다.
-- 확인: 단위 벤치 `WeakInternTableTest.InsertIsNotQuadratic`(5 만 키).
-
 #### A-15 프리팹 스폰이 인스턴스마다 XML 텍스트를 파싱한다
 - 분류: 성능 · 확신: 구조 확인(통합 단계에서 다시 읽지 않음), 비용은 측정 필요
 - 근거: `Source/Engine/Object/Prefab/PrefabAsset.cpp:1017,1021` — 쿠킹본(`.prefab.bin`)이 상태를 XML 문자열로 싣고 `:1065-1066` 의 `applyStateTo` 가 스폰마다 `loadFromXMLString` 으로 파싱한다. 중첩 저작본은 스폰마다 XML 을 합친 뒤 파싱한다(`PrefabCache.cpp:504,580`).
