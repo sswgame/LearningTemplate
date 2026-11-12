@@ -1,10 +1,12 @@
-// AudioOutputLossTest — 장치 출력을 잃으면 서비스가 오프라인 렌더로 넘기고 백오프 간격으로 기본 장치를 다시 연다(감사 P0-13). 가짜 백엔드 — 장치 스레드 없음.
+// AudioServiceTest — 장치 출력을 잃으면 서비스가 오프라인 렌더로 넘기고 백오프 간격으로 기본 장치를 다시 연다(감사 P0-13). 가짜 백엔드 — 장치 스레드 없음.
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
+#include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/IAudioService.h"
+#include "Engine/Config/EngineConfig.h"
 
 namespace
 {
@@ -33,32 +35,61 @@ namespace
             return true;
         }
     };
+
+    /** @brief 엔진 설정 파일과 같은 다시 열기 간격입니다(첫 1 초, 상한 30 초 — `Config/Engine/EngineConfig.json`). */
+    sw::AudioOutputConfig makeOutputConfig()
+    {
+        sw::AudioOutputConfig config;
+        config._reopenFirstDelayMs = 1000;
+        config._reopenMaxDelayMs   = 30000;
+        return config;
+    }
 } // namespace
 
 /**
- * @brief [AudioOutputLossTest] 잃은 출력은 오프라인으로 넘기고, 장치가 돌아오면 다시 연다
- * @details 예전에는 ALSA 가 복원에 지면 쉬지 않고 다시 썼고 XAudio2 는 유실을 몰라 렌더가 멈췄다 — 재생 끝남을 기다리는 게임 로직이 영영 기다렸다.
- *          변이: `closeLostOutput` 을 빼면 둘째 단언이, `retryOpenOutput` 을 빼면 마지막 단언이 진다.
+ * @brief [AudioServiceTest] 잃은 출력은 오프라인 렌더로 넘기고(흐른 시간만큼만), 장치가 돌아오면 다시 연다
+ * @details 예전에는 ALSA 가 복원에 지면 쉬지 않고 다시 썼고(오디오 시계가 실시간보다 빨리 흘렀다) XAudio2 는 유실을 몰라 렌더가 멈췄다 — 재생 끝남을 기다리는 게임 로직이 영영 기다렸다.
+ *          변이: `closeLostOutput` 을 빼면 오프라인 단언이, 오프라인 렌더를 빼면 프레임 아래 끝이, `retryOpenOutput` 을 빼면 마지막 단언이 진다.
  */
-SW_TEST_CASE( AudioOutputLossTest, LostOutputRendersOfflineAndReopens )
+SW_TEST_CASE( AudioServiceTest, OutputLossFallsBackToOfflineRender )
 {
     FakeOutputBackend service;
-    SW_REQUIRE_TRUE( service.initialize() );
+    SW_REQUIRE_TRUE( service.initialize( makeOutputConfig() ) );
     SW_REQUIRE_TRUE( service.isOutputOpen() );
 
-    service._bDeviceAvailable       = false;
-    const int32 openCountBeforeLoss = service._openCount;
+    service._bDeviceAvailable = false;
+
+    const int32  openCountBeforeLoss = service._openCount;
+    const uint64 framesBeforeLoss    = service.getEngine().getStats()._renderedFrameCount;
     SW_EXPECT_LOG( "AudioService.OutputLost" );
     service.notifyOutputLost(); // 장치 스레드가 알린다
     service.update( 0.1f );     // 닫고 오프라인으로
     SW_EXPECT_FALSE( service.isOutputOpen() );
-    for ( int32 tick = 0; tick < 12 && service._openCount == openCountBeforeLoss; ++tick )
+    int32 offlineTickCount = 1;
+    for ( int32 tick = 0; tick < 12 && service._openCount == openCountBeforeLoss; ++tick, ++offlineTickCount )
         service.update( 0.1f ); // 첫 다시 열기는 [0, 첫 지연(1 초)] 안에 해 본다(지터 — 장치가 아직 없다)
     SW_EXPECT_TRUE( service._openCount > openCountBeforeLoss );
     SW_EXPECT_FALSE( service.isOutputOpen() );
+
+    // 오프라인 렌더는 흐른 시간만큼이다 — 넘으면 시계가 빨리 흐르고(옛 ALSA), 블록 하나보다 모자라면 렌더가 멈춘 것이다(옛 XAudio2).
+    const uint64 renderedFrames = service.getEngine().getStats()._renderedFrameCount - framesBeforeLoss;
+    const uint64 elapsedFrames  = static_cast<uint64>( offlineTickCount ) * ( sw::audio::kSampleRate / 10 );
+    SW_EXPECT_TRUE( renderedFrames <= elapsedFrames );
+    SW_EXPECT_TRUE( renderedFrames + sw::audio::kBlockFrameCount > elapsedFrames );
 
     service._bDeviceAvailable = true; // 헤드폰을 다시 꽂았다
     for ( int32 tick = 0; tick < 40 && service.isOutputOpen() == false; ++tick )
         service.update( 0.1f ); // 백오프(1 · 2 초 …) 안에 다시 연다
     SW_EXPECT_TRUE( service.isOutputOpen() );
+}
+
+/** @brief [AudioServiceTest] 다시 열기 상한이 첫 간격보다 작으면 초기화가 실패한다 — 코드 기본값으로 대신하지 않는다. */
+SW_TEST_CASE( AudioServiceTest, InvalidReopenDelayFailsInitialize )
+{
+    FakeOutputBackend     service;
+    sw::AudioOutputConfig config = makeOutputConfig();
+    config._reopenMaxDelayMs     = config._reopenFirstDelayMs - 1;
+    SW_EXPECT_LOG( "AudioService.InvalidReopenDelay" );
+    SW_EXPECT_FALSE( service.initialize( config ) );
+    SW_EXPECT_EQUAL( 0, service._openCount );
 }

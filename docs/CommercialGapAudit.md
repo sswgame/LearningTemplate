@@ -28,7 +28,7 @@
 3. **실패 · 잘림을 값으로 돌려주지 않거나 호출자가 버린다.** `(void)` 로 버린 신뢰 송신(N-3), 구간 읽기 실패 뒤 새 판(P0-5), exec 실패를 성공으로(P0-16), 잘린 포맷을 성공으로(C-10), 팩 마운트 실패 뒤 기동(A-4).
 4. **플랫폼 창이 "빠뜨려도 컴파일되는" 선택 훅을 가진다.** 포커스 전달 · 글 입력 · 닫기 완료 · 쉬기 · 수명 구독 · 오디오 백엔드(P0-9 ~ P0-11, P-3 ~ P-6).
 5. **플레이어 세이브가 핫 리로드용 엄격한 스냅샷 형식을 그대로 쓴다.** 판이 정확히 같아야 읽고, 개수 · 색인으로 짝짓고, 실패하면 조용히 새 판이다(P0-5 · P0-6 · A-6 · G-1).
-6. **상태 변화를 값이 아니라 호출 순서 규칙으로 다룬다.** 일시정지(P0-12), 오너 이동(P0-14), 배율 변경(S-4), 장치 유실(P0-13), 빨리 감기(K-2), 끌기 한 번(P0-1).
+6. **상태 변화를 값이 아니라 호출 순서 규칙으로 다룬다.** 일시정지(P0-12), 오너 이동(P0-14), 배율 변경(S-4), 빨리 감기(K-2), 끌기 한 번(P0-1).
 
 ## P0 — 확인된 오동작
 
@@ -80,13 +80,6 @@
 - 상용 엔진: 언리얼 AudioMixer 는 플랫폼마다 백엔드(AAudio/OpenSL, 웹 AudioWorklet)가 있고 없으면 Null 장치다. 유니티 · Godot 도 Dummy 드라이버가 있다.
 - 제안: `Audio/Android`(AAudio 콜백) · `Audio/Web`(AudioWorklet + 링 버퍼)을 더한다. 그 전에는 CMake 구성 단계에서 "이 플랫폼은 오디오 백엔드 없음" 으로 실패시켜 기동 뒤 치명 오류를 빌드 오류로 옮긴다.
 - 확인: `py -3 -m Scripts web-check --game Empty` 와 `android-apk` 기동 로그. 단위 `AudioBackendRegistryTest.EveryClientPlatformRegistersExactlyOne`.
-
-### P0-13 오디오: ALSA 장치를 잃으면 오디오 스레드가 쉬지 않고 돌고, XAudio2 는 유실을 모른다
-- 분류: 결함 · 확신: 확인(ALSA · XAudio2 동작은 기억 기준)
-- 근거: `Source/Engine/Audio/Linux/AlsaAudioBackend.cpp:196-218` — `snd_pcm_recover` 가 지면 안쪽 루프만 `break` 하고 바깥 루프가 곧바로 `render` → `writei` 실패를 되풀이한다. 코어 하나를 다 쓰고 오디오 시계(끝남 · 박자 · 가상 보이스)가 실시간보다 빨리 흐른다. Windows 는 `Source/Engine/Audio/Windows/XAudio2AudioBackend.cpp:262` 의 `OnVoiceError` 가 비어 있고 `OnCriticalError` 등록이 없다. 콜백이 끊기면 렌더가 멈춰 재생 끝남을 기다리는 게임 로직이 영영 기다린다. 장치 없이 시작한 뒤 장치가 생겨도 다시 열지 않는다(`Source/Engine/Audio/IAudioService.cpp:312-316`).
-- 상용 엔진: 언리얼 AudioMixer 는 장치 유실 때 Null 장치로 넘겼다가 새 기본 장치로 스왑한다. 유니티는 `OnAudioConfigurationChanged` 다.
-- 제안: 백엔드 계약에 "출력이 죽었다" 상태를 넣는다(백엔드가 원자 플래그를 세우고 스트림 스레드는 끝난다). `IAudioService::update` 가 그 상태를 보고 오프라인 렌더로 넘기고 주기적으로 다시 연다.
-- 확인: 단위 — 쓰기가 늘 실패하는 가짜 백엔드로 `AudioServiceTest.OutputLossFallsBackToOfflineRender`(렌더한 프레임 ≤ 흐른 시간 × 48000).
 
 ### P0-14 타일맵: 충돌이 오브젝트 이동을 따라가지 않고, 타일 한 칸 편집에 맵 전체 바디를 다시 만든다
 - 분류: 결함 + 성능 · 확신: 확인
@@ -814,7 +807,7 @@
 5. **영수증 멱등 기록 분리** — `econ_receipt` + 분개 이월 레코드: P0-7. 같은 묶음에서 읽은 것을 커밋 조건으로 자동으로 붙이는 연결 포장 O-1.
 6. **연결 ID 세대 핸들** — 슬롯 + 세대, 닫힌 슬롯의 재발급 시점: P0-8. 신뢰 송신 실패를 무시할 수 없게 N-3 을 같이.
 7. **Android 수명 · 키** — finish 요청과 닫힘 확정, 옮기지 못한 키는 소비하지 않음: P0-9 · P0-10. 가짜 `android_app` 단위 테스트로 데스크톱에서 고정한 뒤 실기기.
-8. **오디오 플랫폼과 장치 유실** — CMake 구성 오류(없는 백엔드) → AAudio · AudioWorklet 백엔드, "출력이 죽었다" 상태와 오프라인 렌더 넘김: P0-11 · P0-13.
+8. **웹 오디오 백엔드** — AudioWorklet + 링 버퍼: P0-11.
 9. **시퀀서 갱신 구간** — 플레이어가 지난 구간을 값으로 돌려준다: P0-12.
 10. **타일맵 충돌 청크** — 청크 단위 바디 · 더티 반영 · 오너 변환 추종: P0-14.
 11. **Win32 Alt · 전체 화면 · 원시 입력** — `SC_KEYMENU` · `WM_SYSCHAR` 처리, `MakeWindowAssociation`, `RegisterRawInputDevices`: P0-15 · R-1 · P-1. 재현 시나리오 먼저.
@@ -908,7 +901,7 @@
 
 - Animation — 읽음 — AnimGraph · Blend Space · 노티파이 · URO. S-5. 상태 기계 전이 · `Retarget/` · `Facial/` 은 안 읽음.
 - Asset — 읽음 — StreamableManager · DDC · Addressables. A-4 · A-7 · A-10 · A-11 · A-14 · A-19 · A-20.
-- Audio — 읽음 — AudioMixer · 보이스 가상화 · 장치 유실. P0-11 · P0-13, S-3 · S-10. `DSP/` · `Graph/` 는 안 읽음.
+- Audio — 읽음 — AudioMixer · 보이스 가상화 · 장치 유실. P0-11, S-3 · S-10. `DSP/` · `Graph/` 는 안 읽음.
 - Automation — 읽음 — Functional Test · Gauntlet. 이상 없음(시한 대소 `static_assert`).
 - Behavior — 읽음 — 조건 · 액션 컴파일. S-14.
 - Character — 훑음 — CharacterMovement. S-7 · S-8(컨트롤러는 Physics 쪽). `Fit/` · `PairedAnimation/` 은 안 읽음.

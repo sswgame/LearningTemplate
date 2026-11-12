@@ -96,6 +96,26 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct AudioOutputConfig
+     * @brief 오디오 출력 장치를 잃었거나 없이 시작했을 때 기본 장치를 다시 열어 보는 간격입니다(`IAudioService` 의 백오프 — 지터를 섞어 두 배씩 상한까지).
+     * @details 헤드폰을 다시 꽂으면 곧 붙고(첫 간격), 장치가 없는 기계는 상한마다 한 번만 본다. 언리얼 AudioMixer 의 장치 스왑 재시도 · 유니티 `OnAudioConfigurationChanged` 자리다.
+     */
+    REFLECT()
+    struct SW_API AudioOutputConfig
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 1, Units = ms )
+        uint32 _reopenFirstDelayMs{}; ///< 첫 다시 열기 간격의 위 끝(ms) — 첫 시도는 [0, 이 값] 안이다
+
+        PROPERTY( Min = 1, Units = ms )
+        uint32 _reopenMaxDelayMs{}; ///< 다시 열기 간격의 상한(ms) — `_reopenFirstDelayMs` 보다 작으면 오디오 초기화가 실패한다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct EngineConfig
      * @brief `Config/Engine/EngineConfig.json` 이 담는 엔진 기동 설정입니다.
      * @details 이 헤더는 형식(타입 · 범위)만 정하고 값은 모두 그 파일에 있습니다(언리얼 `BaseEngine.ini` 와 같은 바탕 층). 그래서 파일은 모든 키를 적고
@@ -152,6 +172,9 @@ namespace sw
 
         PROPERTY()
         TextureFormatSettings _textureFormats{}; ///< 대상별 텍스처 압축 형식 목록
+
+        PROPERTY()
+        AudioOutputConfig _audioOutput{}; ///< 오디오 출력 장치 다시 열기 간격
     };
 
     SW_SERVICE_SLOT_CONST( EngineConfig, Required );
