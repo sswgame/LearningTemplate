@@ -186,12 +186,16 @@ namespace sw
                 return listed;
             ServiceTransaction transaction;
             int32              indexedCount = 0;
+            vector<string>     listIndexKey; // 묶음 색인(우편 캠페인 수령 표식 — 캠페인 하나에 줄 하나)은 여러 레코드가 같은 줄을 낸다. 한 트랜잭션에 같은 키를 두 번 쓰면 커밋이 거절한다
             for ( const ServiceRecord& record : listRecord )
             {
                 string indexKey;
                 if ( rule._pBackfillSource->makeIndexKey( connection, record, indexKey ) == false )
                     continue; // 기준 시각이 아직 없는 레코드(열린 거래 · 열린 신고)다. 시각이 생기는 쓰기가 줄을 넣는다
+                if ( std::find( listIndexKey.begin(), listIndexKey.end(), indexKey ) != listIndexKey.end() )
+                    continue;
                 transaction.put( rule._ttlIndexTable, indexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
+                listIndexKey.push_back( std::move( indexKey ) );
                 ++indexedCount;
             }
             scannedCount += static_cast<int32>( listRecord.size() );
