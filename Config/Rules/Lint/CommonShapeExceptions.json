@@ -53,8 +53,9 @@
     "editorContentScan": {
         "Source/Editor/Common/Asset/EditorContentScan.cpp|folder": "입구 자신이다(훑은 뒤 남의 시나리오 사본을 뺀다)",
         "Source/Editor/Common/Commands/EditorBackgroundIO.cpp|input._folder": "프리셋 폴더 하나(인스펙터 · 전역 변수 프리셋, 재귀 아님)를 훑는 일반 잡이다 — 트리를 걷지 않는다. 리소스 트리를 훑는 곳은 EditorContentScan 을 쓴다",
-        "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|folder": "자동 저장 칸(Saved 아래)이다 — 리소스 트리 밖",
-        "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|getFolder()": "자동 저장 칸(Saved 아래)이다 — 리소스 트리 밖",
+        "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|EditorAutosaveCommandsInternal::getFolder()": "자동 저장 칸(Saved 아래)이다 — 리소스 트리 밖",
+        "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|root": "자동 저장 칸(Saved 아래)의 세션 폴더 목록이다 — 리소스 트리 밖",
+        "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|sessionFolder": "자동 저장 세션 폴더 하나(Saved 아래)다 — 리소스 트리 밖",
         "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|slotFolder": "자동 저장 칸 하나(Saved 아래)다 — 리소스 트리 밖",
         "Source/Editor/Common/Workspace/EditorLayoutStore.cpp|folder": "에디터 배치 ini 폴더(에디터 상태 폴더)다 — 리소스 트리 밖",
         "Source/Editor/Panels/BugReport/Model/BugReportViewModel.cpp|BugReportViewModelInternal::makeRoot()": "버그 보고 폴더(Saved/BugReports)다 — 리소스 트리 밖",

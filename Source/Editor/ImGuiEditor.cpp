@@ -474,6 +474,7 @@ namespace sw::editor
         , _listFrameDrawData{}
         , _renderSlot{ DrawSnapshotHandoff::kInvalidSlot }
         , _bInitialized{ SW_FALSE }
+        , _bAppExiting{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
     }
@@ -538,8 +539,9 @@ namespace sw::editor
 
     void ImGuiEditor::shutdownEditorData()
     {
-        EditorAutosaveCommands::endSession(); // 정상 종료 — 자동 저장 사본과 세션 잠금을 지운다(남으면 다음 기동이 비정상 종료로 보고 복구를 묻는다)
-        EditorPreferencesStore::close();      // 서비스가 서 있을 때 마지막으로 쓴다 — 뒤에 모듈이 내려가며 부르는 저장은 쓰지 않는다
+        // 편집기 종료만 자기 세션 폴더를 지운다(남으면 다음 기동이 비정상 종료로 보고 복구를 묻는다). 리로드 · 교체는 같은 세션으로 이어 쓴다.
+        EditorAutosaveCommands::endSession( _bAppExiting != SW_FALSE ? EditorAutosaveSessionEnd::EditorExit : EditorAutosaveSessionEnd::ModuleReload );
+        EditorPreferencesStore::close(); // 서비스가 서 있을 때 마지막으로 쓴다 — 뒤에 모듈이 내려가며 부르는 저장은 쓰지 않는다
         _pComponentIconTable.reset();
         _pIconGlyphTable.reset();
         _editorToolDefaults.reset();
@@ -1009,6 +1011,7 @@ namespace sw::editor
 
     void ImGuiEditor::requestBackgroundStop()
     {
+        _bAppExiting = SW_TRUE; // 호스트는 종료(`FlushReason::Shutdown`) 앞에서만 부른다 — 인스턴스를 내릴 때 자동 저장 세션을 닫는 근거다
         requestEditorBackgroundStop();
     }
 

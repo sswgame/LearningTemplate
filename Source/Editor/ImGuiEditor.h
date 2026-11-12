@@ -147,7 +147,9 @@ namespace sw::editor
         /// @brief 이번 프레임에 그릴 스냅샷 칸입니다. 렌더 스레드 전용 — `prepareRender` 가 집고(`DrawSnapshotHandoff::beginRender`) `render` 가 그린다. 집지 않았으면 무효입니다.
         uint32 _renderSlot;
 
-        uint8                  _bInitialized  : 1;
-        [[maybe_unused]] uint8 _reservedFlags : 7;
+        uint8 _bInitialized : 1;
+        /// @brief 호스트가 앱 종료를 알렸다(`requestBackgroundStop` — 종료 앞에서만 온다). 리로드 · 백엔드 교체와 편집기 종료를 가른다(자동 저장 세션 폴더는 종료 때만 지운다).
+        uint8                  _bAppExiting   : 1;
+        [[maybe_unused]] uint8 _reservedFlags : 6;
     };
 } // namespace sw::editor
