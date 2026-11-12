@@ -134,6 +134,10 @@ namespace sw::editor
         void revertDocument() override { reloadDocument(); }
         /** @brief 저장한 문서(`getLoadedAssetPath`)를 그 자리에서 캐시 · 씬 · 그것을 펼쳐 넣은 에셋에 반영합니다(`AssetHotReload::applySavedAsset`). 파일 감시의 늦은 사건을 기다리지 않는다. */
         void onDocumentSaved() override;
+        /** @brief 연 문서의 디스크 자리(`getDocumentDiskPath`)입니다. 다른 파일을 쓰거나 더 쓰는 패널(스프라이트 클립 · 타일맵 · 캐릭터 · 데이터 테이블)이 재정의한다. 풀지 못하면 더하지 않는다 — 저장 자신이 이유를 남기고 진다. */
+        void collectFilesToSave( vector<string>& outListPath ) const override;
+        /** @brief @p path(리소스 id 또는 절대 경로)의 쓸 자리를 @p outListPath 에 더합니다 — 쓰기와 같은 해석(`AssetPaths::toDiskPath`)이다. 비었거나 풀지 못하면 더하지 않는다. */
+        static void appendFileToSave( string_view path, vector<string>& outListPath );
         /**
          * @brief 문서가 바뀌었음을 알립니다 — dirty 로 표시하고 되돌리기를 남긴다. 위젯이 활성인 동안(끌기 · 슬라이더 · 글 칸)은 상호작용 구간으로 쥐고,
          *        풀린 프레임에 (구간 전 글, 끝 글)을 한 단계로 기록한다(`flushDocumentInteraction`, 감사 P0-1). 바뀐 것이 없으면 아무것도 하지 않는다.

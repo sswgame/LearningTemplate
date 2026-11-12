@@ -50,7 +50,9 @@ namespace sw::editor
 
     protected:
         [[nodiscard]] bool saveDocument() override;
-        void               revertDocument() override;
+        /** @brief 고친 설정 파일들(`ProjectSettingsPage::_absolutePath`)입니다 — `saveDocument` 가 고친 페이지만 쓴다. */
+        void collectFilesToSave( vector<string>& outListPath ) const override;
+        void revertDocument() override;
 
     private:
         using Page = ProjectSettingsPage;

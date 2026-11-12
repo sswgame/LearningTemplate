@@ -452,6 +452,14 @@ namespace sw::editor
         return true;
     }
 
+    void CharacterEditorPanel::collectFilesToSave( vector<string>& outListPath ) const
+    {
+        vector<string> listAssetID;
+        _document.collectFilesToSave( listAssetID );
+        for ( const string& assetID : listAssetID )
+            appendFileToSave( assetID, outListPath );
+    }
+
     void CharacterEditorPanel::syncDocumentDirty()
     {
         // 소켓 · 포즈 편집은 모델 안의 기록이고, 미리보기 씬 편집(인스펙터로 몸을 고친 것)은 창 스택이다 — 둘 다 문서의 미저장이다.
