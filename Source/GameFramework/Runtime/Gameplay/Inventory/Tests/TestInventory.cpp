@@ -7,6 +7,7 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 // InventoryTest — 넣기(겹침 · 무게 한도), 빼기(모두 있을 때만), 상태 저장 왕복. 카탈로그는 글로 준다(nogpu).
 
@@ -161,4 +162,50 @@ SW_TEST_CASE( CraftingTest, CancelReturnsWornInputWithSameDurability )
     SW_REQUIRE_TRUE( returnedSlot.has_value() );
     SW_EXPECT_EQUAL( 40.0f, inventory.getSlot( returnedSlot.value() )._durability );
     SW_EXPECT_EQUAL( 2, inventory.getItemCount( kStone ) );
+}
+
+/**
+ * @brief [ShopTest] 닳은 칼을 팔고 되사면 같은 내구도로 돌아오고 받은 돈 그대로 낸다(새것이 되지 않는다, 감사 G-3). 저장 · 복원한 되사기 목록도 같다
+ */
+SW_TEST_CASE( ShopTest, BuyBackReturnsWornItemWithSameDurability )
+{
+    sw::ItemCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<ItemCatalog>
+  <Item id="sword" category="Weapon" slot="MainHand" maxStack="1" weight="3" value="40" durability="100"/>
+</ItemCatalog>)",
+                                              "ShopTest" ) );
+    sw::ShopCatalog shops;
+    SW_REQUIRE_TRUE( shops.loadFromXMLText( R"(<ShopCatalog><Shop id="smith" sellMultiplier="0.5" buybackLimit="2"/></ShopCatalog>)", "ShopTest" ) );
+    const sw::hashed_string kSmith{ "smith" };
+
+    sw::Inventory inventory;
+    SW_REQUIRE_TRUE( inventory.initialize( &catalog, 2 ) );
+    SW_REQUIRE_EQUAL( 1, inventory.addItem( kSword, 1 ) );
+    SW_EXPECT_FALSE( inventory.reduceSlotDurability( inventory.findFirstSlot( kSword ).value(), 60.0f ) ); // 40 남음
+
+    sw::ShopManager shop;
+    shop.initialize( &shops, &catalog );
+    sw::Wallet wallet;
+    int64      received = 0;
+    SW_REQUIRE_TRUE( shop.sell( kSmith, kSword, 1, wallet, inventory, &received ) == sw::ShopResult::Ok );
+    SW_EXPECT_EQUAL( int64( 20 ), received );
+    SW_EXPECT_EQUAL( 0, inventory.getItemCount( kSword ) );
+
+    // 저장 · 복원한 가게도 판 조각의 개체 상태를 들고 있다
+    sw::Archive written;
+    shop.writeState( written );
+    sw::ShopManager restored;
+    restored.initialize( &shops, &catalog );
+    sw::Archive reading( written.getData(), written.getSize() );
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+
+    SW_EXPECT_TRUE( restored.buyBack( kSmith, 1, wallet, inventory ) == sw::ShopResult::InvalidCount );
+    int64 paid = 0;
+    SW_REQUIRE_TRUE( restored.buyBack( kSmith, 0, wallet, inventory, &paid ) == sw::ShopResult::Ok );
+    SW_EXPECT_EQUAL( received, paid );
+    SW_EXPECT_EQUAL( int64( 0 ), wallet.getBalance( restored.getCurrency( kSmith ) ) );
+    const sw::optional<int32> returnedSlot = inventory.findFirstSlot( kSword );
+    SW_REQUIRE_TRUE( returnedSlot.has_value() );
+    SW_EXPECT_EQUAL( 40.0f, inventory.getSlot( returnedSlot.value() )._durability );
+    SW_EXPECT_TRUE( restored.findRuntime( kSmith )->_listBuyback.empty() );
 }
