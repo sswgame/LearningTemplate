@@ -289,6 +289,7 @@ namespace sw
 {
     SocialService::SocialService()
         : _mapAccountToLocal{}
+        , _mapFriendToWatchers{}
         , _mapCacheRequestToRead{}
         , _mapQuery{}
         , _completionBuffer{}
@@ -318,6 +319,7 @@ namespace sw
         _mapCacheRequestToRead.clear();
         _mapQuery.clear();
         _mapAccountToLocal.clear();
+        _mapFriendToWatchers.clear();
         _dependencies = SocialServiceDependencies{};
         _store.bindStore( nullptr );
     }
@@ -408,8 +410,8 @@ namespace sw
             localIt->second._bLoading = SW_FALSE;
             if ( bReadOk )
             {
-                localIt->second._listLink = listLink;
-                localIt->second._bLoaded  = SW_TRUE;
+                replaceLinks( accountID, localIt->second, listLink );
+                localIt->second._bLoaded = SW_TRUE;
             }
             if ( localIt->second._bReloadPending == SW_TRUE ) // 이 읽기는 바뀌기 전 값일 수 있다 - 막음이 빠지면 차단이 새므로 다시 읽는다
             {
@@ -511,6 +513,7 @@ namespace sw
             if ( _dependencies._pRouter != nullptr )
                 _dependencies._pRouter->submit( EphemeralRequest::makeErase( SocialServiceInternal::makePresenceKey( accountID ) ) );
         }
+        removeFriendWatcher( accountID, localIt->second._listLink );
         _mapAccountToLocal.erase( localIt );
     }
 
@@ -556,6 +559,43 @@ namespace sw
             startLoad( accountID, 0 );
     }
 
+    void SocialService::replaceLinks( AccountID accountID, LocalAccount& local, const vector<SocialLink>& listLink )
+    {
+        removeFriendWatcher( accountID, local._listLink );
+        local._listLink = listLink;
+        addFriendWatcher( accountID, local._listLink );
+    }
+
+    void SocialService::addFriendWatcher( AccountID accountID, const vector<SocialLink>& listLink )
+    {
+        for ( const SocialLink& link : listLink )
+        {
+            if ( link._state == SocialLinkState::Friend )
+                _mapFriendToWatchers[link._otherID].push_back( accountID ); // 저장소 키가 `<나>/<상대>` 라 한 목록에 같은 상대가 두 번 오지 않는다
+        }
+    }
+
+    void SocialService::removeFriendWatcher( AccountID accountID, const vector<SocialLink>& listLink )
+    {
+        for ( const SocialLink& link : listLink )
+        {
+            if ( link._state != SocialLinkState::Friend )
+                continue;
+            const auto watchersIt = _mapFriendToWatchers.find( link._otherID );
+            if ( watchersIt == _mapFriendToWatchers.end() ) // addFriendWatcher 가 넣은 것만 뺀다 — 없으면 역색인이 관계 목록과 갈라진 것이다
+                SW_FATAL( "SocialService: friend index has no watchers of account %# while account %# lists it", link._otherID, accountID );
+            // shortcut: 지켜보는 계정 목록을 선형으로 찾는다. 한 서버에 같은 사람을 친구로 둔 계정이 수천을 넘는 일이 측정되면 집합으로 바꾼다
+            vector<AccountID>& listWatcher = watchersIt->second;
+            const auto         watcherIt   = std::find( listWatcher.begin(), listWatcher.end(), accountID );
+            if ( watcherIt == listWatcher.end() )
+                SW_FATAL( "SocialService: friend index lost watcher %# of account %#", accountID, link._otherID );
+            *watcherIt = listWatcher.back();
+            listWatcher.pop_back();
+            if ( listWatcher.empty() )
+                _mapFriendToWatchers.erase( watchersIt );
+        }
+    }
+
     bool SocialService::writePresenceRecord( const SocialPresence& presence )
     {
         vector<uint8> bytes;
@@ -579,18 +619,12 @@ namespace sw
 
     void SocialService::notifyFriendsOfPresence( const SocialPresence& presence )
     {
-        for ( const auto& [accountID, local] : _mapAccountToLocal )
+        const auto watchersIt = _mapFriendToWatchers.find( presence._accountID ); // 서버 전 계정을 훑지 않고 이 계정을 친구로 둔 계정만 본다
+        if ( watchersIt == _mapFriendToWatchers.end() )
+            return;
+        for ( const AccountID watcherID : watchersIt->second )
         {
-            if ( accountID == presence._accountID )
-                continue;
-            for ( const SocialLink& link : local._listLink )
-            {
-                if ( link._otherID == presence._accountID && link._state == SocialLinkState::Friend )
-                {
-                    _notificationBuffer.push( SocialNotification{ presence, accountID, presence._accountID, 0, SocialNotificationKind::PresenceChanged } );
-                    break;
-                }
-            }
+            _notificationBuffer.push( SocialNotification{ presence, watcherID, presence._accountID, 0, SocialNotificationKind::PresenceChanged } );
         }
     }
 
