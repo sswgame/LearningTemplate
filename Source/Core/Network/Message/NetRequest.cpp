@@ -438,6 +438,13 @@ namespace sw
                 admission._replyBytes  = entry._body;
                 return admission;
             }
+            // 같은 키 대기자는 진행 수에 들지 않는다 — 상한 없이 쌓으면 같은 키 재시도를 몰아 보내 메모리를 늘릴 수 있었다(감사 N-12). 진행 상한과 같은 수까지만.
+            if ( entry._bInProgress == SW_TRUE && static_cast<int32>( entry._listWaiter.size() ) >= _settings->_maxInFlightPerConnection )
+            {
+                admission._action      = RequestAdmission::Action::Reply;
+                admission._replyStatus = NetRequestStatus::Overloaded;
+                return admission;
+            }
             if ( entry._bInProgress == SW_TRUE )
             {
                 admission._action = RequestAdmission::Action::Wait;
