@@ -26,6 +26,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
+from common.FileCollect import listFilesUnder  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from generate.GeneratorOutput import GeneratorError, runGenerator, writeGeneratedFile  # noqa: E402
 
@@ -76,12 +77,13 @@ def generateModuleLayers(module: str, outputPath: Path) -> None:
         mapTier: dict[str, int] = tomllib.loads(ruleFile.read_text(encoding="utf-8"))["tier"]
     except (OSError, tomllib.TOMLDecodeError, KeyError) as exception:
         raise GeneratorError(f"{ruleFile.name}: 읽지 못했다 ({exception!r}) — [tier] 표가 있어야 한다") from exception
-    rootDir = getProjectRoot() / "Source" / table._rootFolder
+    sourceDir = getProjectRoot() / "Source"
+    rootDir = sourceDir / table._rootFolder
     mapSource: dict[int, list[str]] = {}
     mapHeader: dict[int, list[str]] = {}
     listUnknown: list[str] = []
-    for path in sorted(rootDir.rglob("*")):
-        if not path.is_file() or path.suffix not in kSourceSuffix | kHeaderSuffix:
+    for path in listFilesUnder(sourceDir):   # 같은 프로세스의 다른 층 표 · TargetLayers 와 한 번 훑은 목록을 나눠 쓴다
+        if path.suffix not in kSourceSuffix | kHeaderSuffix or not path.is_relative_to(rootDir):
             continue
         relative = path.relative_to(rootDir).as_posix()
         tier = findTier(mapTier, relative)

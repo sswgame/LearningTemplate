@@ -12,7 +12,7 @@
 # (언리얼 Core 의 ModuleManager 가 DLL 이고 Developer 모듈 HotReload 가 그 위에 서는 자리). 의존은 DevTools → ModuleManager 한 방향이다(TargetLayers).
 # 배포는 정적이다 — 모듈이 정적 링크라 갈아 끼울 것이 없고 DevTools 도 짓지 않는다. 개발 전용 폴더(`Dev/`)는 없다(테스트 `Tests/` 만 배포가 뺀다).
 # ------------------------------------------------------------------------------
-file(GLOB_RECURSE MODULE_HOST_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+sw_globSourceTree(MODULE_HOST_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 
 if(SW_SHIPPING_BUILD)
 	sw_excludeUnbuiltSources(MODULE_HOST_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})

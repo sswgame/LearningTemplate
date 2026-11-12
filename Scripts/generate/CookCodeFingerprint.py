@@ -6,15 +6,15 @@
 쿠커마다 볼 폴더 · 파일은 `Config/Dev/CookCodeInputs.json` 이 정합니다. 없는 경로는 오류입니다(조용히 빠지면 지문이 그 코드를 못 본다).
 지문은 내용 전부(주석 포함)입니다 — 주석만 고쳐도 그 쿠커는 다시 굽는데, 쿠커가 어떤 변경이 출력에 닿는지 판단하지 않는 쪽이 안전합니다.
 테스트(`Tests/` 폴더)는 쿠커 출력에 닿지 않으므로 뺍니다. 줄 끝은 LF 로 맞춰 어느 체크아웃 · OS 에서나 같은 값입니다.
+파일마다의 내용 지문은 빌드 트리의 캐시(`--cache`)에서 (mtime, 크기)가 같으면 다시 읽지 않습니다(`FileDigestCache.py` — 쿠커끼리 겹치는 파일도 한 번).
 
 임포터는 일부러 넣지 않습니다 — 텍스처 BC7 은 장당 수 분이라 소스를 고칠 때마다 모두 다시 임포트할 수 없습니다(`kImporterVersion`).
 
-사용법: py -3 Scripts/generate/CookCodeFingerprint.py --root <repo> --inputs <json> --vcpkg-status <status> --out <path/CookCodeFingerprint.gen.h>
+사용법: py -3 Scripts/generate/CookCodeFingerprint.py --root <repo> --inputs <json> --vcpkg-status <status> --out <path/CookCodeFingerprint.gen.h> --cache <빌드 트리 안 json>
 """
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import sys
@@ -23,6 +23,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
+from generate.FileDigestCache import FileDigestCache  # noqa: E402
 from generate.GeneratorOutput import writeGeneratedFile  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 
@@ -48,15 +49,9 @@ def collectFilesInternal(repositoryRoot: Path, listInput: Sequence[str]) -> list
     return sorted(set(listPath))
 
 
-def computeFingerprintInternal(repositoryRoot: Path, listInput: Sequence[str]) -> int:
-    """경로와 내용(줄 끝은 LF)을 차례로 넣은 SHA-1 의 앞 64 비트입니다. 0 은 "없음" 이라 쓰지 않습니다."""
-    digest = hashlib.sha1()
-    for relativePath in collectFilesInternal(repositoryRoot, listInput):
-        digest.update(relativePath.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update((repositoryRoot / relativePath).read_bytes().replace(b"\r\n", b"\n"))
-        digest.update(b"\0")
-    return int.from_bytes(digest.digest()[:8], "big") or 1
+def computeFingerprintInternal(repositoryRoot: Path, listInput: Sequence[str], cache: FileDigestCache) -> int:
+    """경로와 내용 지문(줄 끝은 LF)을 차례로 넣은 SHA-1 의 앞 64 비트입니다. 0 은 "없음" 이라 쓰지 않습니다."""
+    return int.from_bytes(cache.treeDigest(repositoryRoot, collectFilesInternal(repositoryRoot, listInput))[:8], "big") or 1
 
 
 def readInstalledVersionInternal(statusPath: Path, packageName: str) -> str:
@@ -90,12 +85,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--inputs", required=True, help="쿠커별 입력 경로 JSON")
     parser.add_argument("--vcpkg-status", required=True, help="vcpkg 설치 기록(<installed>/vcpkg/status)")
     parser.add_argument("--out", required=True, help="쓸 헤더 경로")
+    parser.add_argument("--cache", required=True, help="파일 지문 캐시(빌드 트리 안 JSON)")
     args = parser.parse_args(argv)
 
     repositoryRoot = Path(os.path.normpath(Path(args.root).absolute()))
     try:
         mapInput: dict[str, list[str]] = json.loads(Path(args.inputs).read_text(encoding="utf-8"))
-        mapFingerprint = {name: computeFingerprintInternal(repositoryRoot, listInput) for name, listInput in mapInput.items()}
+        cache = FileDigestCache(Path(args.cache))
+        mapFingerprint = {name: computeFingerprintInternal(repositoryRoot, listInput, cache) for name, listInput in mapInput.items()}
+        cache.save()
         compilerVersion = readInstalledVersionInternal(Path(args.vcpkg_status), kShaderCompilerPackage)
     except (OSError, ValueError, TypeError, AttributeError) as error:
         print(f"[CookCodeFingerprint] {error}", file=sys.stderr)

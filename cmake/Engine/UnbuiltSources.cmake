@@ -44,7 +44,7 @@ endforeach()
 list(APPEND SW_DEV_ONLY_SOURCE_PATTERNS ${swDevFolderPatterns})
 
 # 표 밖 `Dev/` 폴더 — 경로 비교는 저장소 기준 앞에 `/` 를 붙여 패턴과 같은 모양으로 한다(저장소를 담은 상위 폴더 이름에 걸리지 않게).
-file(GLOB_RECURSE swSourceFiles "${CMAKE_SOURCE_DIR}/Source/*")
+set(swSourceFiles ${SW_SOURCE_TREE_FILES})
 list(FILTER swSourceFiles INCLUDE REGEX "/Dev/")
 set(swStrayDevFolders "")
 foreach(swSourceFile IN LISTS swSourceFiles)
@@ -86,7 +86,7 @@ endfunction()
 # 끈 GameFramework)에 쓴다.
 function(sw_declareUnbuiltDirectory)
 	foreach(directory IN LISTS ARGN)
-		file(GLOB_RECURSE listSource CONFIGURE_DEPENDS "${directory}/*.c" "${directory}/*.cpp")
+		sw_globSourceTree(listSource RECURSE "${directory}/*.c" "${directory}/*.cpp")
 		sw_declareUnbuiltSources(${listSource})
 	endforeach()
 endfunction()

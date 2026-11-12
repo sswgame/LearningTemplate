@@ -141,22 +141,13 @@ function(sw_findDxcRuntimeDlls OUT_DXC OUT_DXIL)
 		endforeach()
 	endif()
 
-	set(swEngineCfg "${CMAKE_SOURCE_DIR}/Config/Environment/toolchain_config.json")
-
-	if(EXISTS "${swEngineCfg}")
-
-		if(dxc STREQUAL "")
-			sw_readOptionalJsonValue( cfgDxc "${swEngineCfg}" dxc_dll_path )
-			if(cfgDxc AND EXISTS "${cfgDxc}")
-				set(dxc "${cfgDxc}")
-			endif()
-		endif()
-		if(dxil STREQUAL "")
-			sw_readOptionalJsonValue( cfgDxil "${swEngineCfg}" dxil_dll_path )
-			if(cfgDxil AND EXISTS "${cfgDxil}")
-				set(dxil "${cfgDxil}")
-			endif()
-		endif()
+	# DXC 는 vcpkg 의 directx-dxc 하나만 쓴다 — 예전에는 여기서 못 찾으면 Windows SDK 를 재귀로 훑은 경로(toolchain_config.json)로 넘어갔는데,
+	# 그 탐색이 amd64 호스트에서 `Redist/D3D/arm64/` 를 먼저 집었다(폴백이 판 · 아키텍처를 고르지 못한다). vcpkg 가 이 플랫폼(vcpkg.json 의
+	# "windows | linux")에 까는데 없으면 구성을 세운다. 다른 플랫폼(웹 · Android · macOS)은 실행 파일 옆에 DXC 를 두지 않는다(쿠킹은 호스트 빌드가 한다).
+	if(CMAKE_SYSTEM_NAME MATCHES "^(Windows|Linux)$" AND (dxc STREQUAL "" OR dxil STREQUAL ""))
+		message(FATAL_ERROR "[dxc] ${dxcNames} / ${dxilNames} not found in the vcpkg install (${searchDirs}) - "
+			"install the vcpkg port directx-dxc (vcpkg.json, platform \"windows | linux\") by re-running the configure preset with vcpkg manifest install, "
+			"or check VCPKG_INSTALLED_DIR / VCPKG_TARGET_TRIPLET")
 	endif()
 
 	set(${OUT_DXC} "${dxc}" PARENT_SCOPE)

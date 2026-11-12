@@ -3,7 +3,7 @@
 # @brief 메인 애플리케이션(App) 빌드 스크립트. App · Server 가 같이 쓰는 모듈 호스트는 Source/ModuleManager 다.
 # ==============================================================================
 
-file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+sw_globSourceTree(APP_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 
 # ------------------------------------------------------------------------------
 # 1) App — 플레이어 실행 파일(창 · 렌더러). 전용 서버 타깃은 짓지 않는다.

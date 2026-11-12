@@ -20,10 +20,10 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from common.FileCollect import findFirstExistingFileInBinDirs, findFirstExistingFileRecursive, findFirstValidRoot, platformSearchRoots, selectLatestVersion
-from common.Paths import normalizePath, platformKey, sharedLibraryNames
+from common.FileCollect import findFirstValidRoot, platformSearchRoots, selectLatestVersion
+from common.Paths import normalizePath, platformKey
 from common.HostPlatform import isWindowsHost
-from common.ProjectConstants import kKeyNinjaDownloadUrls, kKeyNinjaSearchRoots, kKeyNinjaToolsSubdir, kKeyVcpkgInstalledRel
+from common.ProjectConstants import kKeyNinjaDownloadUrls, kKeyNinjaSearchRoots, kKeyNinjaToolsSubdir
 from common.RunProcess import runProcess
 from common.ToolDownload import ensureCachedDownload, extractZipSafe, resolveToolsSubdir, toolsCacheDir
 from common.ToolchainConfig import loadSearchPaths, recordEnginePath
@@ -122,77 +122,6 @@ def findToolRoot(
 # ==============================================================================
 # 호스트 SDK / 컴파일러 / 빌드 도구 경로
 # ==============================================================================
-
-def findVcpkgInstalledDirsInternal(projectRoot: Path) -> list[Path]:
-    """
-    프로젝트에서 사용 중인 vcpkg installed 디렉터리 목록을 탐색하여 반환합니다.
-
-    Args:
-        projectRoot: 프로젝트 최상위 경로
-
-    Returns:
-        vcpkg installed 경로(Path) 리스트
-    """
-    result: list[Path] = []
-    search = loadSearchPaths()
-    relativeInstalledPath = search.get(kKeyVcpkgInstalledRel)
-    if not relativeInstalledPath:
-        raise KeyError(f"[ToolchainDetect] Missing required key '{kKeyVcpkgInstalledRel}' in search_paths config")
-    if (preferred := projectRoot / relativeInstalledPath).is_dir():
-        result.append(preferred)
-    if (buildDir := projectRoot / "build").is_dir():
-        if (directInstalledPath := buildDir / "vcpkg_installed").is_dir() and directInstalledPath not in result:
-            result.append(directInstalledPath)
-        try:
-            for child in buildDir.iterdir():
-                if child.is_dir() and (candidate := child / "vcpkg_installed").is_dir() and candidate not in result:
-                    result.append(candidate)
-        except (OSError, PermissionError):
-            pass
-    return result
-
-
-def findHostLibraryInternal(names: list[str], vcpkgDirs: list[Path], searchRoots: list[Path]) -> str:
-    """
-    vcpkg 설치 디렉터리, 지정된 루트 폴더 및 시스템 PATH에서 동적 라이브러리를 탐색합니다.
-    """
-    if vcpkgDirs and (found := findFirstExistingFileInBinDirs(vcpkgDirs, names)):
-        return normalizePath(found)
-    if searchRoots and (found := findFirstExistingFileRecursive(searchRoots, names)):
-        return normalizePath(found)
-    if found := next((foundName for name in names if (foundName := shutil.which(name))), None):
-        return normalizePath(found)
-    return ""
-
-
-def findDxcDlls(sdkDir: str, sdkVer: str, projectRoot: Path) -> tuple[str, str]:
-    """
-    DirectX Shader Compiler (dxcompiler)와 dxil 라이브러리 경로를 찾습니다.
-    (우선순위: vcpkg_installed -> VULKAN_SDK -> Windows SDK -> PATH 순)
-
-    Args:
-        sdkDir: Windows SDK 디렉터리 경로
-        sdkVer: Windows SDK 버전
-        projectRoot: 프로젝트 최상위 경로
-
-    Returns:
-        (dxcompiler 경로, dxil 경로) 튜플
-    """
-    dxcNames = sharedLibraryNames("dxcompiler")
-    dxilNames = sharedLibraryNames("dxil")
-
-    vcpkgDirs = findVcpkgInstalledDirsInternal(projectRoot)
-    searchRoots: list[Path] = []
-
-    if vulkanSdk := os.environ.get("VULKAN_SDK"):
-        searchRoots.append(Path(vulkanSdk))
-    if isWindowsHost() and sdkDir and sdkVer:
-        searchRoots.append(Path(sdkDir))
-
-    dxcPath = findHostLibraryInternal(dxcNames, vcpkgDirs, searchRoots)
-    dxilPath = findHostLibraryInternal(dxilNames, vcpkgDirs, searchRoots)
-    return dxcPath, dxilPath
-
 
 @lru_cache(maxsize=1)
 def findMsvcPath() -> str:

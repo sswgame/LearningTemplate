@@ -33,7 +33,7 @@ endfunction()
 # 현재 소스 폴더를 훑어 반사 매크로가 있는 헤더(OUT_HEADERS)와 없는 헤더(OUT_OTHERS)로 가른다.
 function(sw_scanReflectionHeaders OUT_HEADERS OUT_OTHERS TARGET_NAME EXCLUDE_REGEX)
 	message(VERBOSE "[Reflection] No HEADERS specified for target: ${TARGET_NAME}, auto-scanning for REFLECT macros...")
-	file(GLOB_RECURSE listCandidateHeader "${CMAKE_CURRENT_SOURCE_DIR}/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
+	sw_globSourceTree(listCandidateHeader RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
 	# 하위 폴더의 다른 모듈(키트 · 게임의 Editor/ 확장)은 그 모듈이 따로 훑는다.
 	if(EXCLUDE_REGEX)
 		list(FILTER listCandidateHeader EXCLUDE REGEX "${EXCLUDE_REGEX}")

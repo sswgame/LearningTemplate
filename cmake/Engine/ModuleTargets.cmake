@@ -273,7 +273,7 @@ function(sw_addGameFrameworkKit KIT_NAME)
 	if(swSkip)
 		return()
 	endif()
-	file(GLOB_RECURSE listKitSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+	sw_globSourceTree(listKitSource RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 	# 키트의 에디터 확장은 Plugin/Editor/<이름>/ 의 별도 모듈이다(GF_EditorPlugin_<이름>) — 키트 DLL(배포본 포함)에 섞지 않는다. 게임의 Editor/ 도 같다.
 	list(FILTER listKitSource EXCLUDE REGEX "/Editor/")
 	sw_addModuleLibrary(${KIT_NAME}
@@ -357,7 +357,7 @@ function(sw_addGameModule MODULE_NAME)
 		set(listRegistryOption NO_REGISTRY)
 	endif()
 
-	file(GLOB_RECURSE listGameSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+	sw_globSourceTree(listGameSource RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 	# 게임의 에디터 확장(Editor/)은 따로 짓는 모듈이다(SWGameEditor).
 	list(FILTER listGameSource EXCLUDE REGEX "/Editor/")
 	# 게임의 클라이언트 전용 소스(Client/ — 그리는 벤치 · UI 시연)는 전용 서버가 짓지 않는다(cmake/Engine/UnbuiltSources.cmake).
@@ -416,7 +416,7 @@ endfunction()
 # ------------------------------------------------------------------------------
 function(sw_addEditorExtension TARGET_NAME)
 	cmake_parse_arguments(ARG "" "" "PANEL_VIEW_SOURCES" ${ARGN})
-	file(GLOB_RECURSE listExtensionSource CONFIGURE_DEPENDS "*.cpp" "*.h")
+	sw_globSourceTree(listExtensionSource RECURSE "*.cpp" "*.h")
 	set(listPanelViewSource "")
 	foreach(viewSource IN LISTS ARG_PANEL_VIEW_SOURCES)
 		set(viewPath "${CMAKE_CURRENT_SOURCE_DIR}/${viewSource}")

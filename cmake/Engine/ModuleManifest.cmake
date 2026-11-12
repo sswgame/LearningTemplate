@@ -316,7 +316,7 @@ endfunction()
 # 저장소의 매니페스트를 모두 읽는다. 고르지 않은 게임의 매니페스트는 읽지 않고, 함께 짓는 게임 팩(`SW_GAMES`)은 의존만 읽는다
 # (게임 모듈 이름은 모두 SWGame 이다 — `sw_readGamePackManifest`).
 function(sw_readAllModuleManifests)
-	file(GLOB_RECURSE swListManifest CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Source/*.module.json")
+	sw_globSourceTree(swListManifest RECURSE "${CMAKE_SOURCE_DIR}/Source/*.module.json")
 	list(SORT swListManifest)
 	# 매니페스트의 **내용**(켜짐 · 의존 · 종류)이 무엇을 지을지 정한다 — 내용이 바뀌면 다시 구성해야 한다(GLOB 의 CONFIGURE_DEPENDS 는 목록만 본다).
 	set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${swListManifest})

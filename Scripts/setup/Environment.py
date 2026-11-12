@@ -52,8 +52,9 @@ from common.Paths import getProjectRoot, normalizePath
 from common.HostPlatform import isWindowsHost, kHost
 from common.FileCollect import getOrFindCached, isVcpkgRoot
 from common.ExitCode import ExitCode  # noqa: E402
+from generate.GeneratorOutput import GeneratorError, writeGeneratedFile
+from generate.ToolchainCMake import generateToolchainCMake
 from setup.ToolchainDetect import (
-    findDxcDlls,
     findMsvcPath,
     findWindowsSdkPath,
     setupNinja,
@@ -102,8 +103,6 @@ class EngineConfig:
     libclang_dll_path: str
     windows_sdk_dir: str
     windows_sdk_version: str
-    dxc_dll_path: str
-    dxil_dll_path: str
     msvc_tools_dir: str
     vcpkg_root: str
     ninja_path: str
@@ -144,7 +143,7 @@ class EnvironmentSetupManager:
             ensureClangFormat(llvmPath, allowDownload=True)
         return llvmPath, libclangPath
 
-    def resolveWindowsSdkInternal(self) -> tuple[str, str, str, str, str]:
+    def resolveWindowsSdkInternal(self) -> tuple[str, str, str]:
         sdkDirectory = self.existing_config.get(kKeyWindowsSdkDir, "")
         sdkVersion = self.existing_config.get(kKeyWindowsSdkVersion, "")
 
@@ -153,9 +152,8 @@ class EnvironmentSetupManager:
         elif not isWindowsHost():
             sdkDirectory, sdkVersion = "", ""
 
-        foundDxc, foundDxil = findDxcDlls(sdkDirectory, sdkVersion, self.project_root)
         msvcPath = getOrFindCached(self.existing_config, kKeyMsvcToolsDir, findMsvcPath)
-        return sdkDirectory, sdkVersion, foundDxc, foundDxil, msvcPath
+        return sdkDirectory, sdkVersion, msvcPath
 
     def resolveToolsInternal(self) -> tuple[str, str]:
         cachedVcpkg = self.existing_config.get(kKeyVcpkgRoot, "")
@@ -187,7 +185,7 @@ class EnvironmentSetupManager:
 
     def run(self) -> EngineConfig:
         llvmPath, libclangPath = self.resolveLlvmInternal()
-        sdkDirectory, sdkVersion, dxcPath, dxilPath, msvcPath = self.resolveWindowsSdkInternal()
+        sdkDirectory, sdkVersion, msvcPath = self.resolveWindowsSdkInternal()
         vcpkgPath, ninjaPath = self.resolveToolsInternal()
 
         config = EngineConfig(
@@ -197,25 +195,12 @@ class EnvironmentSetupManager:
             libclang_dll_path=libclangPath,
             windows_sdk_dir=sdkDirectory,
             windows_sdk_version=sdkVersion,
-            dxc_dll_path=dxcPath,
-            dxil_dll_path=dxilPath,
             msvc_tools_dir=msvcPath,
             vcpkg_root=vcpkgPath,
             ninja_path=ninjaPath,
         )
 
-        newJson = json.dumps(asdict(config), indent=4)
-        shouldWrite = True
-
-        if self.toolchain_config_file.is_file():
-            try:
-                if self.toolchain_config_file.read_text(encoding="utf-8") == newJson:
-                    shouldWrite = False
-            except OSError:
-                pass
-
-        if shouldWrite:
-            self.toolchain_config_file.write_text(newJson, encoding="utf-8")
+        shouldWrite = writeGeneratedFile(self.toolchain_config_file, json.dumps(asdict(config), indent=4), tag="Environment", bQuiet=True)
 
         self.updateParserConfigInternal(config.target_platform)
         self.installPreCommitHookInternal()
@@ -263,9 +248,11 @@ class EnvironmentSetupManager:
         if localPaths:
             parserData[kKeyPaths] = localPaths
 
-        self.parser_config_file.write_text(json.dumps(parserData, indent=4), encoding="utf-8")
+        # 바뀌었을 때만 쓴다 — 모든 리플렉션 단계가 이 파일에 기대므로(ReflectionCodeGen.cmake), 같은 내용을 configure 마다 다시 쓰면
+        # 프리셋 하나를 구성할 때마다 모든 빌드 트리의 파서가 전부 다시 돌았다(파일은 소스 트리 하나를 빌드 트리 여럿이 같이 본다).
+        bWritten = writeGeneratedFile(self.parser_config_file, json.dumps(parserData, indent=4), tag="Environment", bQuiet=True)
         self.logger.info(
-            f"[Environment] Wrote {kDirConfigEnv}/{kFileParserConfig} "
+            f"[Environment] {'Wrote' if bWritten else 'Unchanged'} {kDirConfigEnv}/{kFileParserConfig} "
             f"(platform '{targetOs}', machine-local: {len(localPaths)} path(s), {len(argsData)} argument list(s); "
             f"everything else comes from {kFileParserDefaults})."
         )
@@ -279,6 +266,8 @@ def main(argv: list[str] | None = None) -> int:
         help="기존 캐시를 무시하고 설정을 처음부터 다시 탐색합니다.",
     )
     parser.add_argument("--verbose", action="store_true", help="상세 로그를 출력합니다.")
+    # configure 는 이 뒤에 늘 ToolchainVars.cmake 를 만든다 — 같은 프로세스에서 해 파이썬을 한 번 덜 띄운다(DetectToolchain.cmake).
+    parser.add_argument("--cmake-vars", type=Path, help="toolchain_config.json 을 CMake set() 목록으로도 쓴다(ToolchainCMake.py 와 같은 출력)")
     args = parser.parse_args(argv)
 
     log_level = logging.DEBUG if args.verbose else logging.INFO
@@ -286,6 +275,12 @@ def main(argv: list[str] | None = None) -> int:
 
     manager = EnvironmentSetupManager(force_refresh=args.force)
     manager.run()
+    if args.cmake_vars:
+        try:
+            generateToolchainCMake(args.cmake_vars)
+        except GeneratorError as error:
+            print(f"[ToolchainCMake] {error}", file=sys.stderr)
+            return ExitCode.Violation
     return ExitCode.Passed
 
 

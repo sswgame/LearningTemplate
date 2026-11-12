@@ -7,7 +7,7 @@
 # 1) 소스 — 폴더의 .cpp 전부. 플랫폼 폴더(Windows/ · Linux/ · Posix/)는 그 플랫폼에서만(`sw_filterPlatformSources` — 고르지 않은 것은
 #    소스 검사 게이트에 "이 구성이 짓지 않는다" 로 적힌다). 목록을 손으로 들지 않는다 — 빠지면 ReflectionParser(Core 를 링크한다) 링크에서야 깨지던 자리다.
 # ------------------------------------------------------------------------------
-file(GLOB_RECURSE listCoreSource CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
+sw_globSourceTree(listCoreSource RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 sw_filterPlatformSources(listCoreSource)
 # 단위 테스트(틀 `Testing/` 과 기능 폴더의 `Tests/`)는 배포 구성이 짓지 않는다 — 배포본에 테스트 코드가 없다(구성마다 다른 케이스 수가 아니라 0).
 if(SW_SHIPPING_BUILD)
@@ -68,7 +68,7 @@ list(GET listCoreTier -1 swCoreTopTier)
 list(APPEND swCoreTierSource_${swCoreTopTier} ${listCoreTopSource})
 
 # 헤더마다 티어 — 껍데기(아래 4)와 티어별 pch(아래 5)가 읽는다. 바로 아래 헤더(pch · CoreMinimal 진입 헤더)는 티어가 없다.
-file(GLOB_RECURSE listCoreHeader RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS
+sw_globSourceTree(listCoreHeader RECURSE RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
 	"${CMAKE_CURRENT_SOURCE_DIR}/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.inl")
 set(listCoreTieredHeader "")
 foreach(header IN LISTS listCoreHeader)

@@ -135,7 +135,6 @@ kKeyVcpkgSearchRoots = "vcpkg_search_roots"
 kKeyVcpkgGitUrl = "vcpkg_git_url"
 kKeyVcpkgGitCommit = "vcpkg_git_commit"
 kKeyVcpkgAutoBootstrap = "vcpkg_auto_bootstrap"
-kKeyVcpkgInstalledRel = "vcpkg_installed_rel"
 
 # Environment Variables
 kEnvSwLlvmAutoBootstrap = "SW_LLVM_AUTO_BOOTSTRAP"

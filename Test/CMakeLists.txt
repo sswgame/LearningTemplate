@@ -99,14 +99,14 @@ if(swActiveGameTarget)
 				continue()
 			endif()
 			get_target_property(kitFolder ${dependency} SOURCE_DIR)
-			file(GLOB_RECURSE listKitTest "${kitFolder}/*/Tests/*.cpp" "${kitFolder}/Tests/*.cpp")
+			sw_globTestsUnder(listKitTest "${kitFolder}")
 			list(FILTER listKitTest EXCLUDE REGEX "/Editor/") # 키트 폴더 아래의 에디터 확장 케이스는 `editor.unitTests` 가 돌린다 — 이 실행에는 등록되지 않는다
 			if(listKitTest)
 				file(RELATIVE_PATH kitRelative "${CMAKE_SOURCE_DIR}" "${kitFolder}")
 				list(APPEND listTestFolder "${kitRelative}/")
 			endif()
 		endforeach()
-		file(GLOB_RECURSE listGameTest "${CMAKE_SOURCE_DIR}/Source/Games/${game}/*/Tests/*.cpp" "${CMAKE_SOURCE_DIR}/Source/Games/${game}/Tests/*.cpp")
+		sw_globTestsUnder(listGameTest "${CMAKE_SOURCE_DIR}/Source/Games/${game}")
 		if(listGameTest)
 			list(APPEND listTestFolder "Source/Games/${game}/")
 		endif()
@@ -158,6 +158,11 @@ add_test(NAME Scripts.AssetReferenceFieldList
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/Tests/TestAssetReferenceFieldList.py")
 set_tests_properties(Scripts.AssetReferenceFieldList PROPERTIES LABELS nogpu TIMEOUT 120)
 
+# 빌드 지문 생성기(ABI 스탬프 · 쿠커 코드 지문)의 파일 지문 캐시 — 캐시가 있든 없든 같은 지문, 바뀐 파일만 다시 읽기, 지운 파일 줄 정리.
+add_test(NAME Scripts.FileDigestCache
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/Tests/TestFileDigestCache.py")
+set_tests_properties(Scripts.FileDigestCache PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 배포 패키지의 모드 스테이징 — 묶은 모드만 담고, 형식이 틀린 id · 묶지 않은 모드는 실패다(Scripts/package/Pack.py --mods).
 add_test(NAME Scripts.PackMods
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/Tests/TestPackMods.py")
@@ -201,7 +206,7 @@ if(TARGET OnlineLoadBot)
 	set(listOnlineKitTestFolder "")
 	foreach(swKit IN LISTS listLoadBotKit)
 		get_target_property(swKitFolder ${swKit} SOURCE_DIR)
-		file(GLOB_RECURSE listOnlineKitTest "${swKitFolder}/*/Tests/*.cpp" "${swKitFolder}/Tests/*.cpp")
+		sw_globTestsUnder(listOnlineKitTest "${swKitFolder}")
 		list(FILTER listOnlineKitTest EXCLUDE REGEX "/Editor/")
 		if(listOnlineKitTest)
 			file(RELATIVE_PATH swKitRelative "${CMAKE_SOURCE_DIR}" "${swKitFolder}")
@@ -242,7 +247,7 @@ if(TARGET ReflectionParser)
 		message(FATAL_ERROR "[ReflectionParser tests] no target macros found on sw_global_options / sw_flag_libraries")
 	endif()
 	string(JOIN "|" swParserTestTargetArgs ${listParserTestTargetArg})
-	file(GLOB listParserFixture CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/*.h")
+	sw_globSourceTree(listParserFixture "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/*.h")
 	foreach(swParserFixture IN LISTS listParserFixture)
 		get_filename_component(swParserFixtureName "${swParserFixture}" NAME_WE)
 		add_test(NAME ReflectionParser.${swParserFixtureName}

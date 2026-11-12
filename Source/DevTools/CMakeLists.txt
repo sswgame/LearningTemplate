@@ -12,7 +12,7 @@
 # 공유 라이브러리다 — 여러 이미지(App · EditorModule · GameFramework)가 링크하므로 정적이면 정적 등록이 이미지마다 돈다(언리얼 Developer 모듈도 DLL).
 # include 경로는 `DevTools/...` 다.
 # ------------------------------------------------------------------------------
-file(GLOB_RECURSE DEVTOOLS_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.h")
+sw_globSourceTree(DEVTOOLS_SOURCES RECURSE "*.cpp" "*.h")
 sw_filterPlatformSources(DEVTOOLS_SOURCES) # OS 파일 감시기(`FileWatch/Windows` · `FileWatch/Linux`)
 # 클라이언트 전용 부분(Client/ — 셰이더 라이브 리로드 · 디버그 HUD · 콘솔 오버레이, `IDevToolsClientPart`)은 전용 서버가 짓지 않는다(cmake/Engine/UnbuiltSources.cmake).
 # 자동화 시나리오 실행기(`Client/Automation` — 언리얼 Automation 컨트롤러 · Gauntlet 이 Developer 모듈인 자리)도 여기다. 창 · RHI · 렌더러 사진을 모는 클라이언트 구동기라 서버는 짓지 않고,
@@ -54,7 +54,7 @@ if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
 		message(FATAL_ERROR "[DevTools] Tracy link mode for platform '${sw_platform_name}' is not decided - name it here (SW_ENABLE_TRACY=OFF meanwhile)")
 	endif()
 	target_compile_definitions(DevTools PRIVATE SW_PROFILER_TRACY)
-	file(GLOB swTracyBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Profiling/Tracy/*.cpp")
+	sw_globSourceTree(swTracyBackendSources "${CMAKE_CURRENT_SOURCE_DIR}/Profiling/Tracy/*.cpp")
 	# include 경로는 시스템 경로로 준다 — Tracy C API 의 `___tracy_*` 이름이 -Wreserved-identifier 경고를 낸다.
 	get_target_property(swTracyIncludeDir Tracy::TracyClient INTERFACE_INCLUDE_DIRECTORIES)
 	if(MSVC)
