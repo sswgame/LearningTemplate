@@ -9,7 +9,7 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
   --gpu software         (어느 명령 앞에든) 시나리오를 WSL GPU(dzn Vulkan · d3d12 GL, 기본) 대신 소프트웨어(lavapipe · llvmpipe)로 돌린다
   build                  본 저장소 HEAD 를 클론으로 옮겨 Linux-Release 를 짓고 임포트 결과를 복사한다
   chain [--record] 이름… Scenario.<이름> 체인을 돌리고 진 단계와 까닭을 낸다(--record 는 .linux 골든 기록)
-  stages 묶음…           쉼표로 이은 단계 묶음을 부분 체인으로 돌린다(예: focusloss,graphaddnode)
+  stages [--record] 묶음… 쉼표로 이은 단계 묶음을 부분 체인으로 돌린다(예: focusloss,graphaddnode — 게임 단계는 리소스 경로로)
   culprit 단계 [체인]    체인에서만 지는 단계의 앞 단계를 이분 탐색한다(체인 기본값 editor, 먼저 chain 을 돌려 로그가 있어야 한다)
   report [체인]          마지막 체인 로그에서 진 단계와 까닭을 다시 낸다
   goldens                클론의 .linux 골든을 본 저장소로 복사하고 한 색인 사진을 알린다
@@ -296,20 +296,25 @@ def chain(arguments):
     return code
 
 
-def run_stage_set(names, env, log_name):
+def run_stage_set(names, env, log_name, record=False):
     """단계 이름 묶음을 부분 체인으로 돌린다. 건너뜀 · 실패가 있어도 끝까지 간다 - 없으면 뒤 단계가 돌지 않아 통과로 착각한다."""
-    listed = ','.join(f'engine/automation/editor/{n}.scenario.xml' for n in names)
-    return subprocess.run(['timeout', '1200', './App', AppArguments.flag('EnableEditor'), AppArguments.option('scenario', listed), AppArguments.flag('scenario-keep-going'),
-                           AppArguments.flag('unattended'), AppArguments.option('scenario-backends', 'vk'), *window_arguments(), AppArguments.option('log-file', f'{log_name}.log')],
+    # 이름은 에디터 단계, `/` 가 든 것은 리소스 경로 그대로(게임 단계 — 예: game/empty/automation/gpumessages.scenario.xml). 에디터는 에디터 단계만 있을 때 켠다.
+    listed = ','.join(n if '/' in n else f'engine/automation/editor/{n}.scenario.xml' for n in names)
+    editor = [AppArguments.flag('EnableEditor')] if all('/' not in n for n in names) else []
+    return subprocess.run(['timeout', '1200', './App', *editor, AppArguments.option('scenario', listed), AppArguments.flag('scenario-keep-going'),
+                           AppArguments.flag('unattended'), AppArguments.option('scenario-backends', 'vk'), *window_arguments(), AppArguments.option('log-file', f'{log_name}.log'),
+                           *([AppArguments.flag('scenario-update-golden')] if record else [])],
                           cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
 
 
 def stages(arguments):
+    record = '--record' in arguments  # 체인 전체가 못 도는 구간(앞 단계가 멈춤)의 골든을 기록할 때
+    arguments = [a for a in arguments if a != '--record']
     code = 0
     with Xvfb():
         env = scenario_env(99)
         for stage_set in arguments:
-            rc = run_stage_set(stage_set.split(','), env, 'x_stages')
+            rc = run_stage_set(stage_set.split(','), env, 'x_stages', record)
             print(f'[{stage_set}] rc={rc}')
             code = report_file(f'{RELEASE}/Bin/x_stages.vk.log') or code
     return code
