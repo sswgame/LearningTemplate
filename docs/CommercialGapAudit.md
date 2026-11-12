@@ -24,27 +24,13 @@
 항목 대부분이 아래 여섯 모양 가운데 하나다. 증상을 하나씩 고치지 말고 이 모양을 쓸 수 없게 형식을 바꾼다.
 
 1. **세대 없는 번호 · 순번 · 경로 글을 정체로 쓴다.** 연결 슬롯 번호(P0-8), 컴포넌트 `이름#순번`(A-2), 복셀 블록 순서 번호(K-3), 재시작마다 1 부터인 파티 · 티켓 id(O-7), 열린 문서의 경로 글(P0-4), 32 비트 이름 해시(C-8).
-2. **같은 사실을 두 곳이 따로 안다.** 쓰는 쪽 · 읽는 쪽의 한도와 판(A-3 · A-5 · A-6), 개수는 CPU · 목록은 GPU(RN-1), 문서 기록은 전역 스택 · Ctrl+Z 는 창 스택(P0-2), 캐시 기록과 서버 메모리 표(O-6 · O-7).
+2. **같은 사실을 두 곳이 따로 안다.** 쓰는 쪽 · 읽는 쪽의 한도와 판(A-3 · A-5 · A-6), 개수는 CPU · 목록은 GPU(RN-1), 캐시 기록과 서버 메모리 표(O-6 · O-7).
 3. **실패 · 잘림을 값으로 돌려주지 않거나 호출자가 버린다.** `(void)` 로 버린 신뢰 송신(N-3), 구간 읽기 실패 뒤 새 판(P0-5), exec 실패를 성공으로(P0-16), 잘린 포맷을 성공으로(C-10), 팩 마운트 실패 뒤 기동(A-4).
 4. **플랫폼 창이 "빠뜨려도 컴파일되는" 선택 훅을 가진다.** 포커스 전달 · 글 입력 · 닫기 완료 · 쉬기 · 수명 구독 · 오디오 백엔드(P0-9 ~ P0-11, P-3 ~ P-6).
-5. **플레이어 세이브가 핫 리로드용 엄격한 스냅샷 형식을 그대로 쓴다.** 판이 정확히 같아야 읽고, 개수 · 색인으로 짝짓고, 실패하면 조용히 새 판이다(P0-5 · P0-6 · A-6 · G-1).
-6. **상태 변화를 값이 아니라 호출 순서 규칙으로 다룬다.** 일시정지(P0-12), 배율 변경(S-4), 장치 유실(P0-13), 빨리 감기(K-2), 끌기 한 번(P0-1).
+5. **플레이어 세이브가 핫 리로드용 엄격한 스냅샷 형식을 그대로 쓴다.** 판이 정확히 같아야 읽고, 개수 · 색인으로 짝짓고, 실패하면 조용히 새 판이다(P0-5 · A-6 · G-1).
+6. **상태 변화를 값이 아니라 호출 순서 규칙으로 다룬다.** 일시정지(P0-12), 배율 변경(S-4), 빨리 감기(K-2).
 
 ## P0 — 확인된 오동작
-
-### P0-1 에디터: 문서 편집 합치기가 거래 구간 안에서 죽는다 — 끌기 한 번이 프레임마다 되돌리기 한 단계
-- 분류: 결함 · 확신: 확인
-- 근거: `Source/Editor/Common/Workspace/Undo/CommandStack.cpp:253-257` — `pushCoalesce` 는 거래 중이면 대기 목록에 넣고 돌아간다. `endTransaction`(`:218-225`)이 그것을 `push` 로 올리고, `push` 는 `_lastCoalesceKey.clear()`(`:174`)를 한다. 합치기 키를 주는 길은 `EditorDocumentPanel::notifyDocumentEdited`(`Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp:301`)와 `UIPreviewModel::pushPropertyEdit` 둘뿐이고 둘 다 `EditorTransaction` 을 먼저 연다. 그래서 병합 분기(`:264-271`)에 닿지 않는다. 머티리얼 슬라이더 · 그래프 노드 이동 · 타일맵 칠하기 · 시퀀서 편집이 프레임마다 한 단계를 쌓고, 한도 128(`:182`)이라 2 초쯤 끌면 씬 편집 기록까지 밀려 나간다. `DocumentCoalesceTest` 는 `stack.pushCoalesce` 를 직접 불러 이 길을 보지 않는다. 회귀 시작은 6ca2c5c73c(기록 함수를 인스턴스 멤버로).
-- 상용 엔진: 언리얼은 마우스를 누를 때 `FScopedTransaction` 을 열고 뗄 때 닫는다. 유니티는 `Undo.IncrementCurrentGroup` · `CollapseUndoOperations`, Godot 은 `MERGE_ENDS` 다.
-- 제안: 키 문자열 대신 "상호작용 구간" 을 형식으로 둔다. 위젯 활성 ~ 해제 동안 문서 패널이 편집 전 글 하나만 쥐고, 해제 때 (전, 후)를 한 번 기록한다(인스펙터 `InspectorEditRecorder` 와 같은 모양). `pushCoalesce` 와 span 병합은 지운다 — 병합을 그대로 되살리면 `reconstructBefore`(`Source/Editor/Common/Workspace/EditorTransaction.cpp:349-352`)가 첫 구간의 접두 · 접미 길이를 지금 글에 대는 둘째 결함이 드러난다.
-- 확인: 단위 `DocumentCoalesceTest.TransactionScopedEditsCoalesce`(`EditorTransaction` 두 번에 같은 키 → `getCommandCount()==1`, 되돌린 글이 처음 글). 시나리오 `materialproperties` 에 슬라이더 끌기 → `Editor.UndoCount` 가 1 늘었는지.
-
-### P0-2 에디터: 미리보기 패널의 문서 편집은 전역 스택에 기록되는데 Ctrl+Z 는 그 창의 스택으로 간다
-- 분류: 결함 · 확신: 확인(코드 경로 — 재현 필요)
-- 근거: `Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp:340` 이 포커스를 얻으면 `setFocusedCommandStack( _pCommandStack.get() )` 를 하고, `Source/Editor/Common/Input/EditorCommandGUI.cpp:125` 의 `commandUndo` 는 그 스택을 되돌린다. 문서 편집 기록은 `Source/Editor/Common/Workspace/EditorTransaction.cpp:316` 에서 `findSubsystem<CommandStack>()`(전역)으로 간다. 머티리얼 · 머티리얼 그래프 창에 포커스가 있는 동안 Ctrl+Z 는 비어 있는 창 스택을 되돌려 아무 일도 하지 않는다. 문서 패널의 되돌리기를 보는 시나리오는 `sequencercuts` 하나다.
-- 상용 엔진: 언리얼 에셋 편집기는 전역 트랜잭션 버퍼 하나, Godot 은 씬 · 리소스별 history 에 편집과 undo 가 같은 id 로 간다.
-- 제안: "이 문서의 기록이 갈 스택" 을 문서 패널이 하나만 답한다(`getDocumentCommandStack()`). `recordDocumentText` 가 스택을 인자로 받는다. 문서마다 스택이 되면 플레이 경계의 `parkHistory` 가 문서 기록을 버리는 E-3 도 함께 닫힌다.
-- 확인: 시나리오 `materialproperties` · `materialgraphpanel` 에 "프로퍼티 편집 → 그 창에 포커스 둔 채 `edit.undo` → 값 복귀".
 
 ### P0-3 에디터: 자동 저장 세션이 인스턴스와 모듈 리로드를 구분하지 않는다
 - 분류: 결함(데이터 손실) · 확신: 확인
@@ -60,26 +46,12 @@
 - 제안: 참조 쪽은 에셋 GUID 2 · 3 단계(NEXT integ2)가 닫는다. 문서 쪽은 `applyAssetMoves` 성공 때 (옛 id → 새 id) 목록을 한 번 방송하고 문서 패널 · 씬 소스 · 선택 · 포커스 경로가 받는다. dirty 문서가 참조자이면 계획 단계(`planAssetMoves`)에서 "먼저 저장" 으로 거절한다. 삭제는 열린 문서가 있으면 거절한다.
 - 확인: 시나리오 `assetmove` 에 "머티리얼 열기 → 편집 → 이름 바꾸기 → 저장 → 옛 경로 파일 없음 · 새 경로에 편집 반영" 과 "열린 씬 파일 이름 바꾸기 → Ctrl+S → 옛 파일 없음".
 
-### P0-6 세이브: 복원이 실패하면 씬은 이미 비워졌고, 간격 자동 저장이 그 위를 덮는다
-- 분류: 결함(부분 실패) · 확신: 확인(경로 — 실패를 일으키는 입력은 추정)
-- 근거: `Source/GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.cpp:306` 이 본문을 읽기 전에 `pObjectManager->clear()` 를 부른다. 그 뒤 오브젝트 하나를 못 읽거나 `batch.finish()`(`:367`)가 거짓이면 false 다. 부르는 쪽(`Source/GameFramework/Runtime/Foundation/Framework/Save/Autosave.cpp:277-281`, `Source/GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.cpp:571-593`)은 경고만 낸다. `AutosaveManager::setBlocked`(`Autosave.cpp:226`)는 프로덕션 호출처가 0 이라 간격 저장(Velmora `interval=300` · `slots=3`)이 깨진 씬을 15 분 안에 세 칸 모두에 쓴다. NEXT 의 G1 `slice` "복원이 되살리지 못한 `state.objects`" 와 같은 뿌리다.
-- 상용 엔진: 언리얼 `LoadGameFromSlot` 은 별도 `USaveGame` 객체로 풀고 월드는 성공 뒤에만 건드린다.
-- 제안: 복원을 두 단계로 나눈다 — 분리된 묶음에서 끝까지 읽고 검증한 뒤 교체. 실패하면 인스턴스가 저장 막기를 걸고 씬을 다시 연다. 막기는 씬 전환 · 연출 · 복원 실패가 거는 범위형(RAII) 까닭으로 만든다.
-- 확인: 단위 `GameStateSnapshotTest.FailedRestoreKeepsScene`, `AutosaveTest.FailedRestoreBlocksSaving`. 시나리오 — 깨진 슬롯을 `game.load` 한 뒤 `Save.Written` 이 늘지 않는지.
-
-### P0-11 오디오: Android · 웹 클라이언트는 오디오 백엔드가 없어 기동에서 `SW_FATAL`
-- 분류: 결함 · 확신: 확인(코드 경로 — 실행은 안 함)
-- 근거: `Source/Engine/Audio/IAudioService.cpp:74-83` — 등록된 백엔드가 없으면 `SW_FATAL( "No audio device backend is registered…" )` 이다. 등록은 `Source/Engine/Audio/Windows/XAudio2AudioBackend.cpp:459` 와 `Source/Engine/Audio/Linux/AlsaAudioBackend.cpp:257` 둘뿐이고, `cmake/Engine/UnbuiltSources.cmake:149-159` 가 `Windows/` · `Linux/` 폴더를 Android · Emscripten 에서 뺀다. 클라이언트는 `IAudioService.cpp:576` 에서 `create()` 를 부른다. [PlatformTargets](PlatformTargets.md) "남은 일" 에 오디오가 없다.
-- 상용 엔진: 언리얼 AudioMixer 는 플랫폼마다 백엔드(AAudio/OpenSL, 웹 AudioWorklet)가 있고 없으면 Null 장치다. 유니티 · Godot 도 Dummy 드라이버가 있다.
-- 제안: `Audio/Android`(AAudio 콜백) · `Audio/Web`(AudioWorklet + 링 버퍼)을 더한다. 그 전에는 CMake 구성 단계에서 "이 플랫폼은 오디오 백엔드 없음" 으로 실패시켜 기동 뒤 치명 오류를 빌드 오류로 옮긴다.
-- 확인: `py -3 -m Scripts web-check --game Empty` 와 `android-apk` 기동 로그. 단위 `AudioBackendRegistryTest.EveryClientPlatformRegistersExactlyOne`.
-
-### P0-13 오디오: ALSA 장치를 잃으면 오디오 스레드가 쉬지 않고 돌고, XAudio2 는 유실을 모른다
-- 분류: 결함 · 확신: 확인(ALSA · XAudio2 동작은 기억 기준)
-- 근거: `Source/Engine/Audio/Linux/AlsaAudioBackend.cpp:196-218` — `snd_pcm_recover` 가 지면 안쪽 루프만 `break` 하고 바깥 루프가 곧바로 `render` → `writei` 실패를 되풀이한다. 코어 하나를 다 쓰고 오디오 시계(끝남 · 박자 · 가상 보이스)가 실시간보다 빨리 흐른다. Windows 는 `Source/Engine/Audio/Windows/XAudio2AudioBackend.cpp:262` 의 `OnVoiceError` 가 비어 있고 `OnCriticalError` 등록이 없다. 콜백이 끊기면 렌더가 멈춰 재생 끝남을 기다리는 게임 로직이 영영 기다린다. 장치 없이 시작한 뒤 장치가 생겨도 다시 열지 않는다(`Source/Engine/Audio/IAudioService.cpp:312-316`).
-- 상용 엔진: 언리얼 AudioMixer 는 장치 유실 때 Null 장치로 넘겼다가 새 기본 장치로 스왑한다. 유니티는 `OnAudioConfigurationChanged` 다.
-- 제안: 백엔드 계약에 "출력이 죽었다" 상태를 넣는다(백엔드가 원자 플래그를 세우고 스트림 스레드는 끝난다). `IAudioService::update` 가 그 상태를 보고 오프라인 렌더로 넘기고 주기적으로 다시 연다.
-- 확인: 단위 — 쓰기가 늘 실패하는 가짜 백엔드로 `AudioServiceTest.OutputLossFallsBackToOfflineRender`(렌더한 프레임 ≤ 흐른 시간 × 48000).
+### P0-11 오디오: 웹 클라이언트에 오디오 장치 백엔드가 없다
+- 분류: 결함(남은 일) · 확신: 확인(코드 경로)
+- 근거: 장치 백엔드는 `Source/Engine/Audio/Windows/XAudio2AudioBackend.cpp` · `Linux/AlsaAudioBackend.cpp` · `Android/AAudioAudioBackend.cpp` 셋이다. 웹(Emscripten)에는 없어 예전에는 기동에서 `IAudioService::create` 가 `SW_FATAL` 로 섰다. 지금은 `Source/Engine/CMakeLists.txt` 가 오디오를 짓는 구성에서 `Audio/<플랫폼>/*AudioBackend.cpp` 가 정확히 하나가 아니면 구성 단계에서 멈춘다 — Web 클라이언트 구성은 백엔드가 생길 때까지 서지 않는다.
+- 상용 엔진: 유니티 WebGL 은 WebAudio, Godot 4 웹은 AudioWorklet 백엔드를 둔다(기억). 언리얼은 백엔드 없는 플랫폼을 패키징 대상으로 두지 않는다.
+- 제안: `Audio/Web`(AudioWorklet + 공유 메모리 링 버퍼, 사용자 몸짓 뒤 `AudioContext.resume`, 노드 오류 → `notifyOutputLost`).
+- 확인: Web-Shipping 구성이 서고 `py -3 -m Scripts web-check --game Empty` 기동 로그에 `AudioService.InitializedChannels`(device output).
 
 ## P1 — 조건부 결함과 확장 · 성능 병목
 
@@ -588,7 +560,7 @@
 - 분류: 구조 · 확신: 봉투 칸은 확인, 영향은 추정
 - 근거: `Source/GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.cpp:108-155` — 봉투는 매직 · 판 · 프로세스 토큰 · 콘텐츠 구성 글 · 오브젝트 · 상태뿐이다. 복원(`:301-306`)은 "지금 활성 씬" 을 비우고 채운다. 타이틀 씬이나 다른 맵에서 `restoreLatest` 를 부르면 그 씬 위에 다른 맵의 오브젝트가 선다.
 - 상용 엔진: 언리얼 게임은 세이브에 맵 이름을 적고 `OpenLevel` 뒤 적용한다(월드 파티션은 액터 GUID 로 셀별 상태).
-- 제안: 봉투 머리에 씬 자산 id(GUID 단계가 들어오면 그것)를 적고 복원은 "씬 요청 → 로드 완료 → 적용" 을 `GameSceneFlow` 가 한 흐름으로 한다(P0-6 의 두 단계 복원과 같은 묶음).
+- 제안: 봉투 머리에 씬 자산 id(GUID 단계가 들어오면 그것)를 적고 복원은 "씬 요청 → 로드 완료 → 적용" 을 `GameSceneFlow` 가 한 흐름으로 한다(두 단계 복원 — 검증 뒤 교체 — 위에 짓는다).
 - 확인: 시나리오 — 맵 A 에서 저장 → 타이틀에서 `game.load` → 활성 씬 경로와 오브젝트 수.
 
 ### 장르 키트 · 게임 샘플
@@ -620,15 +592,15 @@
 - 분류: 결함 · 확신: 확인
 - 근거: `Source/Editor/Panels/Scene/Model/HistoryViewModel.cpp:43-69` — `undo` · `redo` · `jumpTo` · `clear` 가 `pStack->undo()` 를 그리기 도중 바로 부른다. `edit.undo` 명령은 `EditorCommandRegistry.cpp:155-159` 에서 `isGatedByEditLock`(플레이 · 베이크 중 꺼짐)에 걸리고 다음 프레임 시작에 도는데 패널 단추는 둘 다 건너뛴다. `CommandStack::undo`(`:287-296`)는 진행 중 상호작용도 보지 않아 기즈모 끌기 중 Ctrl+Z 가 돌면 redo 가 잘리고 되돌린 편집이 기록 없이 되살아난다.
 - 상용 엔진: 언리얼 `UTransBuffer::CanUndo` 는 트랜잭션이 열려 있으면 거절하고 Undo History 창도 같은 `GEditor->UndoTransaction` 을 탄다.
-- 제안: 되돌리기 입구를 하나로 둔다. History 는 `edit.undo` · `edit.redo` · `edit.jumpTo` 를 큐에 넣기만 한다. 스택에 "상호작용 구간" 카운터(P0-1 의 구간 형식)를 두어 열려 있으면 거절한다.
+- 제안: 되돌리기 입구를 하나로 둔다. History 는 `edit.undo` · `edit.redo` · `edit.jumpTo` 를 큐에 넣기만 한다. 스택에 "상호작용 구간" 카운터(문서 편집의 `DocumentEditSpan` 과 같은 구간)를 두어 열려 있으면 거절한다.
 - 확인: 시나리오 `lightprobebake` 에 "베이크 중 `history.step.0` 클릭 → `Editor.UndoIndex` 그대로".
 
-#### E-3 플레이 경계에서 문서 편집 기록이 사라진다 — 문서와 씬이 전역 스택 하나를 쓴다
+#### E-3 플레이 경계에서 미리보기 없는 문서 패널의 편집 기록이 사라진다 — 그 패널은 씬과 전역 스택 하나를 쓴다
 - 분류: 결함(되돌리기 손실) · 확신: 확인
-- 근거: `Source/Editor/Common/Workspace/Play/EditorPlaySession.cpp:573`(`parkHistory`) · `:564`(`clear`) · `:587`(`unparkHistory` 는 지금 내역을 버린다). 씬 편집은 Stop 이 스냅샷으로 되돌리니 맞지만 문서 패널 편집도 같은 전역 스택에 들어간다(P0-2). 플레이 중 머티리얼을 고친 뒤 Stop 하면 문서는 dirty 인데 그 편집은 되돌릴 수 없다.
+- 근거: `Source/Editor/Common/Workspace/Play/EditorPlaySession.cpp:573`(`parkHistory`) · `:564`(`clear`) · `:587`(`unparkHistory` 는 지금 내역을 버린다). 문서 기록이 갈 스택은 `EditorDocumentPanel::getDocumentCommandStack` 하나가 답하고, 미리보기 패널(머티리얼 · 머티리얼 그래프 · 프리팹 …)은 자기 창 스택이라 플레이 경계를 넘는다. 미리보기가 없는 문서 패널(시퀀서 · 타일맵 · 대화 · 애니메이션 그래프 · UI 미리보기 …)은 기본 답인 전역 스택이라, 플레이 중 고친 뒤 Stop 하면 문서는 dirty 인데 그 편집은 되돌릴 수 없다.
 - 상용 엔진: 유니티는 플레이 중 에셋 편집과 그 Undo 가 플레이 종료 뒤에도 남는다. Godot 은 리소스마다 history 가 따로다.
-- 제안: P0-2 의 "문서마다 스택" 으로 가면 `parkHistory` 는 씬 스택만 맡는다.
-- 확인: 시나리오 `undosurvivesplay` 에 "플레이 중 머티리얼 프로퍼티 편집 → Stop → 그 창에서 undo → 값 복귀".
+- 제안: 문서 패널마다 스택을 두고(미리보기 패널의 창 스택을 기반으로 올린다) 포커스가 그 스택을 겨누게 한다 — `parkHistory` 는 씬 스택만 맡는다. 그때 `Editor.UndoCount` · History 패널이 보는 스택(전역 → 포커스)과 이를 보는 시나리오(`sequencercuts` · `gimmickgraph` · `uipreview*`)를 함께 옮긴다.
+- 확인: 시나리오 `undosurvivesplay` 에 "플레이 중 시퀀서 편집 → Stop → 그 창에서 undo → 값 복귀".
 
 #### E-4 그룹 기즈모가 부모 · 자식 동시 선택을 거르지 않는다 — 선택 순서에 따라 자식이 이중 변환된다
 - 분류: 결함 · 확신: 확인(코드 추적 — 재현 필요)
@@ -667,9 +639,9 @@
 
 #### E-9 문서 편집 알림마다 문서 전체를 직렬화해 비교한다
 - 분류: 성능 · 확신: 구조 확인, 측정 필요
-- 근거: `Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp:302-303` — `notifyDocumentEdited` 가 매번 `captureDocumentText()`(문서 전체 → 글)를 하고 기준 글과 통째로 비교한다. 끌기 중에는 프레임마다 돈다(P0-1). 타일맵(512×512 칸)이나 긴 시퀀스는 MB 단위 직렬화가 프레임마다 든다. 같은 모양이 키트 에디터 확장에 있다(`Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifierSession.cpp:316-319` 의 `isStackUnsaved()` 가 호출마다 스택을 JSON 으로 만들어 비교).
+- 근거: `Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp:302-303` — `notifyDocumentEdited` 가 매번 `captureDocumentText()`(문서 전체 → 글)를 하고 기준 글과 통째로 비교한다. 끌기 중에는 프레임마다 돈다(상호작용 구간을 쥔 동안에도 알림마다 직렬화해 기준 글과 비교한다). 타일맵(512×512 칸)이나 긴 시퀀스는 MB 단위 직렬화가 프레임마다 든다. 같은 모양이 키트 에디터 확장에 있다(`Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifierSession.cpp:316-319` 의 `isStackUnsaved()` 가 호출마다 스택을 JSON 으로 만들어 비교).
 - 상용 엔진: 언리얼은 바뀐 UObject 만 트랜잭션에 직렬화하고 dirty 는 깃발이다. Godot 은 프로퍼티 단위 do · undo 다.
-- 제안: P0-1 의 구간 형식으로 가면 직렬화는 구간 시작 · 끝 두 번이 된다. 큰 문서는 문서 모델이 "바뀐 범위" 를 내는 데이터 단계로 기록한다. 미저장 판정은 편집 개정 번호로 한다.
+- 제안: 구간(`DocumentEditSpan`)을 쥔 동안은 직렬화하지 않고 dirty 만 표시하면 직렬화는 구간 시작 · 끝 두 번이 된다. 큰 문서는 문서 모델이 "바뀐 범위" 를 내는 데이터 단계로 기록한다. 미저장 판정은 편집 개정 번호로 한다.
 - 확인: `-gv_editorPanelTimes` 로 `tilemaptools` 를 256² · 512² 맵에서 칠하는 프레임.
 
 #### E-10 뷰포트 피킹이 경계 구 레이 검사이고 전체 오브젝트를 훑는다
@@ -791,19 +763,14 @@
 
 한 줄이 한 묶음(커밋 하나에서 서넛)이다. 각 묶음은 "확인" 에 적은 단위 테스트를 먼저 써서 지금 지는 것을 본 뒤 고친다. 성능 묶음은 측정이 먼저다. 온라인 · 서버 · 보안 묶음은 `security-and-hardening`, 외부 API(Win32 · Vulkan · D3D · NDK · Emscripten)를 고치는 묶음은 context7 로 그 판의 문서를 먼저 대조한다.
 
-### P0 (11 묶음)
+### P0 (6 묶음)
 
-1. **에디터 되돌리기 구조** — 상호작용 구간 형식 + 문서마다 스택: P0-1 · P0-2, 함께 닫히는 E-2 · E-3 · E-9 · E-13. `editor/undocoverage` 에 문서 패널 전수 단계(E-16)를 먼저 더해 지는 것을 본다.
+1. **에디터 되돌리기 구조** — 문서마다 스택(미리보기 없는 문서 패널): E-3, 함께 닫히는 E-2 · E-9 · E-13. 상호작용 구간(`DocumentEditSpan`)과 문서 스택의 답(`getDocumentCommandStack`)은 들어갔다. `editor/undocoverage` 에 문서 패널 전수 단계(E-16)를 먼저 더해 지는 것을 본다.
 2. **자동 저장 세션** — 세션 폴더 · pid 잠금 · 리로드 이어 쓰기: P0-3, 복구 입구 통일과 dirty 문서 목록 E-1.
 3. **에셋 옮김 방송** — `applyAssetMoves` 의 (옛 id → 새 id) 알림과 열린 문서 · 씬 · 선택 갱신, dirty 참조자 거절: P0-4. 참조 쪽은 integ2 의 GUID 2 · 3 단계와 순서를 맞춘다.
-4. **세이브 안전** — 구간 실패를 로드 실패로, 두 단계 복원, 범위형 저장 막기, 봉투에 씬 id: P0-5 · P0-6 · G-7.
-5. **읽은 것을 커밋 조건으로** — 같은 묶음에서 읽은 것을 커밋 조건으로 자동으로 붙이는 연결 포장: O-1.
-6. **연결 ID 세대 핸들** — 슬롯 + 세대, 닫힌 슬롯의 재발급 시점: P0-8. 신뢰 송신 실패를 무시할 수 없게 N-3 을 같이.
-7. **Android 수명 · 키** — finish 요청과 닫힘 확정, 옮기지 못한 키는 소비하지 않음: P0-9 · P0-10. 가짜 `android_app` 단위 테스트로 데스크톱에서 고정한 뒤 실기기.
-8. **오디오 플랫폼과 장치 유실** — CMake 구성 오류(없는 백엔드) → AAudio · AudioWorklet 백엔드, "출력이 죽었다" 상태와 오프라인 렌더 넘김: P0-11 · P0-13.
-9. **시퀀서 갱신 구간** — 플레이어가 지난 구간을 값으로 돌려준다: P0-12.
-11. **Win32 Alt · 전체 화면 · 원시 입력** — `SC_KEYMENU` · `WM_SYSCHAR` 처리, `MakeWindowAssociation`, `RegisterRawInputDevices`: P0-15 · R-1 · P-1. 재현 시나리오 먼저.
-12. **POSIX 프로세스** — exec 실패 파이프, 공용 줄 분리기: P0-16 · P0-17.
+4. **세이브 씬 전환 뒤 적용** — 봉투 머리의 씬으로 옮긴 뒤 적용(`GameSceneFlow`), 교체에서 진 복원 뒤 씬 다시 열기: G-7 · P0-6 의 남은 몫.
+5. **환불과 지급의 상호 조건** — 같은 영수증 레코드를 서로의 조건으로: O-1.
+6. **웹 오디오 백엔드** — AudioWorklet + 링 버퍼: P0-11.
 
 ### P1 (29 묶음)
 
@@ -893,7 +860,7 @@
 
 - Animation — 읽음 — AnimGraph · Blend Space · 노티파이 · URO. S-5. 상태 기계 전이 · `Retarget/` · `Facial/` 은 안 읽음.
 - Asset — 읽음 — StreamableManager · DDC · Addressables. A-4 · A-7 · A-10 · A-11 · A-14 · A-19 · A-20.
-- Audio — 읽음 — AudioMixer · 보이스 가상화 · 장치 유실. P0-11 · P0-13, S-3 · S-10. `DSP/` · `Graph/` 는 안 읽음.
+- Audio — 읽음 — AudioMixer · 보이스 가상화 · 장치 유실. P0-11, S-3 · S-10. `DSP/` · `Graph/` 는 안 읽음.
 - Automation — 읽음 — Functional Test · Gauntlet. 이상 없음(시한 대소 `static_assert`).
 - Behavior — 읽음 — 조건 · 액션 컴파일. S-14.
 - Character — 훑음 — CharacterMovement. S-7 · S-8(컨트롤러는 Physics 쪽). `Fit/` · `PairedAnimation/` 은 안 읽음.
