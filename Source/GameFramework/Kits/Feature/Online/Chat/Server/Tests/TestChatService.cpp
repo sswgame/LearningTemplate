@@ -14,18 +14,20 @@
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 
 using namespace sw;
 
 namespace
 {
-    constexpr AccountID   kAlice   = 11;
-    constexpr AccountID   kBob     = 12;
-    constexpr AccountID   kCarol   = 13;
-    constexpr int64       kNowMs   = 1700000000000ll;
-    constexpr uint64      kServerA = 1;
-    constexpr uint64      kServerB = 2;
-    constexpr const utf8* kWorld   = "world.kr";
+    constexpr AccountID   kAlice     = 11;
+    constexpr AccountID   kBob       = 12;
+    constexpr AccountID   kCarol     = 13;
+    constexpr int64       kNowMs     = 1700000000000ll;
+    constexpr int64       kChatDayMs = 86400000ll; ///< 기록 만료 색인의 날짜 폭과 같다
+    constexpr uint64      kServerA   = 1;
+    constexpr uint64      kServerB   = 2;
+    constexpr const utf8* kWorld     = "world.kr";
 
     /** @brief 접속한 계정을 손으로 넣는 디렉터리입니다. */
     class FakeDirectory final : public IAccountDirectory
@@ -451,6 +453,25 @@ SW_TEST_CASE( ChatServiceTest, BlockedSenderIsSilentlyDropped )
     SW_EXPECT_TRUE( rig.takeDeliveries().empty() );
 }
 
+/** @brief [ChatServiceTest] 귓속말 기록은 새 글이 없어도 보존 기간이 지나면 지워진다(감사 O-9 — 쌍 채널은 다시 쓰이지 않는다) */
+SW_TEST_CASE( ChatServiceTest, WhisperHistoryExpiresWithoutNewMessages )
+{
+    MemoryServiceDatabase database;
+    ChatFixture           rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
+    SW_EXPECT_TRUE( rig.whisper( kAlice, kBob, "psst" )._result == ChatResult::Ok );
+    rig.flush();
+    const hashed_string historyTable{ "chat_history" };
+    SW_REQUIRE_EQUAL( 1, database.countRecords( historyTable ) );
+
+    ServiceRetentionRule   rule = ChatService::makeRetentionRule( 30 * kChatDayMs );
+    ServiceRetentionReport report;
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( database, rule, kNowMs + 29 * kChatDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, database.countRecords( historyTable ) ); // 아직 기간 안이다
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( database, rule, kNowMs + 31 * kChatDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, database.countRecords( historyTable ) );
+    SW_EXPECT_EQUAL( 0, database.countRecords( hashed_string( "chat_history_expiry" ) ) );
+}
+
 /** @brief [ChatServiceTest] 귓속말: 자신 · 0 은 Invalid, 상대가 이 서버에 있으면 그 사람에게만 가고 당사자가 기록을 읽는다. 서버가 하나인데 상대가 없으면 TargetOffline 이다 */
 SW_TEST_CASE( ChatServiceTest, WhisperOnOneServer )
 {
@@ -593,24 +614,28 @@ SW_TEST_CASE( ChatServiceTest, HistoryPagesNewestFirst )
     SW_EXPECT_TRUE( rig.history( kAlice, "Bad Channel" )._result.hasError( OnlineError::kInvalidRequest ) );
 }
 
-/** @brief [ChatServiceTest] 기록 정리: 정리 차례의 메시지가 나오면 보존 기간이 지난 기록을 지운다. 저장소가 실패하면 경고하고 버린다. 큐가 차면 오래된 것부터 버린다 */
+/** @brief [ChatServiceTest] 기록 정리: 보존 규칙이 기간이 지난 날짜의 기록만 지운다. 저장소가 실패하면 경고하고 버린다. 큐가 차면 오래된 것부터 버린다 */
 SW_TEST_CASE( ChatServiceTest, HistoryTrimsAndDropsWhenItMust )
 {
     SW_EXPECT_LOG( "ChatService.ChatServiceChatHistoryRecords" );
     SW_EXPECT_LOG( "ChatService.ChatServiceChatHistoryQueue" );
     MemoryServiceDatabase database;
     ChatServiceConfig     settings = ChatTestUtil::makeOpenSettings();
-    settings._historyTrimEvery     = 2;
-    settings._historyRetentionMs   = 1000;
     settings._maxQueuedHistory     = 2;
     ChatFixture rig( database, nullptr, kServerA, settings );
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
 
-    SW_EXPECT_TRUE( rig.send( kAlice, "old" )._result == ChatResult::Ok ); // 순번 1
+    SW_EXPECT_TRUE( rig.send( kAlice, "old" )._result == ChatResult::Ok );
     rig.flush();
-    const int64 laterMs = kNowMs + 2000;
-    SW_EXPECT_TRUE( rig.send( kAlice, "new", kWorld, laterMs )._result == ChatResult::Ok ); // 순번 2 — 정리 차례다
+    const int64 laterMs = kNowMs + 2 * kChatDayMs; // 다른 날짜다 - 색인 줄이 따로 있다
+    SW_EXPECT_TRUE( rig.send( kAlice, "new", kWorld, laterMs )._result == ChatResult::Ok );
     rig.flush( laterMs );
+    SW_EXPECT_EQUAL( 2, database.countRecords( hashed_string( "chat_history_expiry" ) ) );
+    ServiceRetentionRule   rule = ChatService::makeRetentionRule( 1000 );
+    ServiceRetentionReport report;
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( database, rule, ( kNowMs / kChatDayMs + 1 ) * kChatDayMs + 1000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._deletedCount );
+    SW_EXPECT_EQUAL( 1, database.countRecords( hashed_string( "chat_history_expiry" ) ) );
     const ChatCompletion trimmed = rig.history( kAlice );
     SW_REQUIRE_EQUAL( size_t( 1 ), trimmed._listHistory.size() );
     SW_EXPECT_EQUAL( string( "new" ), trimmed._listHistory[0]._text );

@@ -23,13 +23,42 @@ namespace sw
     {
         struct ChatServiceInternal
         {
-            static constexpr int32       kTrimBatchCount = 64; ///< 정리 한 번에 지우는 지난 기록 수이다
-            static constexpr const utf8* kWhisperPrefix  = "whisper.";
+            static constexpr const utf8* kWhisperPrefix = "whisper.";
+            static constexpr int64       kIndexDayMs    = constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond; ///< 만료 색인 줄 하나가 맡는 날짜 폭
 
             static const hashed_string& getHistoryTable()
             {
                 static const hashed_string s_table{ "chat_history" };
                 return s_table;
+            }
+
+            static const hashed_string& getHistoryIndexTable()
+            {
+                static const hashed_string s_table{ "chat_history_expiry" };
+                return s_table;
+            }
+
+            static int64 getDayEndMs( int64 sentMs ) { return ( MathUtil::max<int64>( 0, sentMs ) / kIndexDayMs + 1 ) * kIndexDayMs; }
+
+            /** @brief 채널 · 날짜의 만료 색인 키입니다. 시각은 날짜의 끝이라 그 줄이 기간을 넘기면 그 날짜의 기록이 모두 기간을 넘겼다. */
+            static string makeGroupIndexKey( string_view channelID, int64 sentMs )
+            {
+                string target{ channelID };
+                target.push_back( '/' );
+                return ServiceRetentionRule::makeIndexKey( getDayEndMs( sentMs ), target );
+            }
+
+            /** @brief 기록 키 `<채널>/<보낸 시각 16진>.<서버>.<순번>` 에서 보낸 시각을 읽습니다. */
+            [[nodiscard]] static bool readHistoryTimeMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                const size_t slash  = record._key.rfind( '/' );
+                const size_t width  = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                uint64       sentMs = 0;
+                if ( slash == string::npos || record._key.size() < slash + 1 + width ||
+                     ServiceKeyUtil::parseHex64( string_view( record._key ).substr( slash + 1, width ), sentMs ) == false )
+                    return false;
+                outTimeMs = static_cast<int64>( sentMs );
+                return true;
             }
 
             static string makeHistoryKey( string_view channelID, int64 sentMs, uint64 serverID, uint64 sequence )
@@ -89,8 +118,8 @@ namespace sw
                 return read;
             }
 
-            /** @brief 쌓인 기록을 한 트랜잭션으로 쓰고, 정리할 채널이 있으면 보존 기간이 지난 기록을 지웁니다. */
-            static ChatHistoryWriteResult writeHistory( IServiceStoreConnection& connection, const vector<ChatMessage>& listMessage, const vector<string>& listTrimChannel, int64 trimBeforeMs )
+            /** @brief 쌓인 기록과 아직 이 서버가 넣지 않은 만료 색인 줄을 한 트랜잭션으로 씁니다. 색인 줄은 조건 없이 덮어쓴다(서버 여럿이 같은 줄을 넣어도 된다). */
+            static ChatHistoryWriteResult writeHistory( IServiceStoreConnection& connection, const vector<ChatMessage>& listMessage, const vector<string>& listIndexKey )
             {
                 ChatHistoryWriteResult write;
                 ServiceTransaction     transaction;
@@ -104,12 +133,12 @@ namespace sw
                     }
                     transaction.put( ChatServiceInternal::getHistoryTable(), ChatServiceInternal::makeHistoryKey( message ), std::move( bytes ) );
                 }
+                for ( const string& indexKey : listIndexKey )
+                {
+                    transaction.put( ChatServiceInternal::getHistoryIndexTable(), indexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
+                }
                 const bool bCommitted = transaction.isEmpty() || connection.commit( transaction ) == ServiceStoreResult::Ok;
                 write._bCommitted     = bCommitted ? SW_TRUE : SW_FALSE;
-                for ( const string& channelID : listTrimChannel )
-                {
-                    trimChannel( connection, channelID, trimBeforeMs );
-                }
                 return write;
             }
 
@@ -178,26 +207,6 @@ namespace sw
                     return ChatResult::Ok;
                 return ChatServiceResult::fail( OnlineError::kUnavailable );
             }
-
-        private:
-            static void trimChannel( IServiceStoreConnection& connection, const string& channelID, int64 trimBeforeMs )
-            {
-                vector<ServiceRecord> listOld;
-                const string          prefix = channelID + "/";
-                if ( connection.listRecords( ChatServiceInternal::getHistoryTable(), prefix, "", ChatServiceInternal::kTrimBatchCount, false, listOld ) != ServiceStoreResult::Ok )
-                    return;
-                ServiceTransaction trim;
-                for ( const ServiceRecord& record : listOld )
-                {
-                    uint64 sentMs = 0;
-                    if ( ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size(), ServiceKeyUtil::kHexWidth ), sentMs ) == false ||
-                         static_cast<int64>( sentMs ) >= trimBeforeMs )
-                        break; // 키 순서가 시간 순서이므로 첫 새 기록에서 멈춘다
-                    trim.erase( ChatServiceInternal::getHistoryTable(), record._key, record._version );
-                }
-                if ( trim.isEmpty() == false )
-                    (void)connection.commit( trim ); // 정리는 다음 기회에 다시 해도 되므로 Conflict 와 Unavailable 은 버린다
-            }
         };
 
     } // namespace
@@ -222,6 +231,8 @@ namespace sw
         , _sequence{ 0 }
         , _reportSequence{ 0 }
         , _store{}
+        , _uniqueIndexedGroupKeys{}
+        , _indexedDayEndMs{ 0 }
         , _bHistoryWriting{ SW_FALSE }
     {
     }
@@ -670,28 +681,56 @@ namespace sw
         const bool bNothingToFlush = _store.hasStore() == false || _bHistoryWriting == SW_TRUE || _listHistoryQueue.empty();
         if ( bNothingToFlush )
             return;
-        const size_t        takeCount = MathUtil::min( _listHistoryQueue.size(), static_cast<size_t>( _settings._historyFlushMax ) );
+        const int64 dayEndMs = ChatServiceInternal::getDayEndMs( nowMs.count() );
+        if ( dayEndMs != _indexedDayEndMs )
+        {
+            _uniqueIndexedGroupKeys.clear(); // 지난 날짜의 줄은 이미 넣었다. 늦게 온 지난 날짜 기록은 줄을 다시 넣어도 된다(덮어쓴다)
+            _indexedDayEndMs = dayEndMs;
+        }
+        // 기록 하나는 쓰기 하나, 이 서버가 아직 넣지 않은 채널 · 날짜는 색인 줄 하나가 더 든다. 합이 트랜잭션 상한을 넘지 않게 자른다.
+        vector<string> listIndexKey;
+        size_t         takeCount = 0;
+        while ( takeCount < _listHistoryQueue.size() && takeCount < static_cast<size_t>( _settings._historyFlushMax ) )
+        {
+            const string indexKey  = ChatServiceInternal::makeGroupIndexKey( _listHistoryQueue[takeCount]._channelID, _listHistoryQueue[takeCount]._sentMs );
+            const bool   bNewGroup = _uniqueIndexedGroupKeys.count( indexKey ) == 0 && VectorUtil::contains( listIndexKey, indexKey ) == false;
+            if ( takeCount + 1 + listIndexKey.size() + ( bNewGroup ? 1 : 0 ) > static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
+                break;
+            if ( bNewGroup )
+                listIndexKey.push_back( indexKey );
+            ++takeCount;
+        }
         vector<ChatMessage> listMessage( _listHistoryQueue.begin(), _listHistoryQueue.begin() + static_cast<ptrdiff_t>( takeCount ) );
         _listHistoryQueue.erase( _listHistoryQueue.begin(), _listHistoryQueue.begin() + static_cast<ptrdiff_t>( takeCount ) );
-        vector<string> listTrimChannel;
-        for ( const ChatMessage& message : listMessage )
-        {
-            const bool bTrim = _settings._historyTrimEvery > 0 && message._sequence % static_cast<uint32>( _settings._historyTrimEvery ) == 0;
-            if ( bTrim && VectorUtil::contains( listTrimChannel, message._channelID ) == false )
-                listTrimChannel.push_back( message._channelID );
-        }
         _bHistoryWriting         = SW_TRUE;
         const int32 messageCount = static_cast<int32>( listMessage.size() );
-        _store.submit( [listMessage = std::move( listMessage ), listTrimChannel = std::move( listTrimChannel ), trimBeforeMs = nowMs.count() - _settings._historyRetentionMs](
-                           IServiceStoreConnection& connection )
-        { return ChatStoreRun::writeHistory( connection, listMessage, listTrimChannel, trimBeforeMs ); },
-                       [this, messageCount]( const ChatHistoryWriteResult& write, ServiceStoreCompletion completion )
-        { applyHistoryWrite( write._bCommitted == SW_TRUE, messageCount - write._rejectedCount, write._rejectedCount, completion ); } );
+        _store.submit( [listMessage = std::move( listMessage ), listIndexKey]( IServiceStoreConnection& connection )
+        { return ChatStoreRun::writeHistory( connection, listMessage, listIndexKey ); },
+                       [this, messageCount, listIndexKey]( const ChatHistoryWriteResult& write, ServiceStoreCompletion completion )
+        { applyHistoryWrite( write._bCommitted == SW_TRUE, messageCount - write._rejectedCount, write._rejectedCount, listIndexKey, completion ); } );
     }
 
-    void ChatService::applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, ServiceStoreCompletion completion )
+    ServiceRetentionRule ChatService::makeRetentionRule( int64 retentionMs )
+    {
+        ServiceRetentionRule rule;
+        rule._table       = ChatServiceInternal::getHistoryTable();
+        rule._indexTable  = ChatServiceInternal::getHistoryIndexTable();
+        rule._retentionMs = retentionMs;
+        rule._pfnReadTime = &ChatServiceInternal::readHistoryTimeMs;
+        return rule;
+    }
+
+    void ChatService::applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, const vector<string>& listIndexKey, ServiceStoreCompletion completion )
     {
         _bHistoryWriting = SW_FALSE;
+        if ( bCommitted )
+        {
+            // 커밋한 줄만 넣었다고 적는다 - 실패한 쓰기의 줄을 적으면 같은 날짜의 다음 기록이 색인 없이 남는다
+            for ( const string& indexKey : listIndexKey )
+            {
+                _uniqueIndexedGroupKeys.insert( indexKey );
+            }
+        }
         if ( bCommitted == false && completion.isCancelled() == false ) // 종료 때문에 취소된 쓰기는 경고하지 않는다(기록은 어느 쪽이든 버려진다)
             SW_LOG_WARNING_ID( "ChatService.ChatServiceChatHistoryRecords", "ChatService: %# chat history records were not stored (store unavailable) - they are dropped", messageCount );
         if ( rejectedCount > 0 )
