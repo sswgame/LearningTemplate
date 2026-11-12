@@ -58,7 +58,7 @@ namespace sw
     {
     }
 
-    uint32 CardBattleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 CardBattleCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 카드는 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<CardBattleCatalog>;

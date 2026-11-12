@@ -71,7 +71,7 @@ SW_TEST_CASE( XMLCatalogTableTest, DocumentOrderFollowsTheFile )
     const XMLNode              root = XMLCatalogTableTestUtil::parse( document, R"(<Root><Second/><Note/><First/></Root>)" );
     XMLCatalogTableTestCatalog catalog;
 
-    const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrElement );
+    const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( catalog, XMLCatalogRoot{ root }, "test", XMLCatalogTableTestUtil::kArrElement );
 
     SW_EXPECT_EQUAL( 2u, result._loadedCount );
     SW_EXPECT_TRUE( result.isClean() );
@@ -90,7 +90,7 @@ SW_TEST_CASE( XMLCatalogTableTest, TableOrderReadsEarlierRowsFirst )
     const XMLNode              root = XMLCatalogTableTestUtil::parse( document, R"(<Root><Second/><First/><Second/></Root>)" );
     XMLCatalogTableTestCatalog catalog;
 
-    const XMLCatalogReadResult result = XMLCatalogReadResult::readInTableOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrElement );
+    const XMLCatalogReadResult result = XMLCatalogReadResult::readInTableOrder( catalog, XMLCatalogRoot{ root }, "test", XMLCatalogTableTestUtil::kArrElement );
 
     SW_EXPECT_EQUAL( 3u, result._loadedCount );
     SW_REQUIRE_TRUE( catalog._listOrder.size() == 3 );
@@ -109,8 +109,8 @@ SW_TEST_CASE( XMLCatalogTableTest, UnknownElementIsAnError )
     const XMLNode              root = XMLCatalogTableTestUtil::parse( document, R"(<Root><First/><first/><Mystery/></Root>)" );
     XMLCatalogTableTestCatalog catalog;
 
-    const XMLCatalogReadResult documentResult = XMLCatalogReadResult::readInDocumentOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrElement );
-    const XMLCatalogReadResult tableResult    = XMLCatalogReadResult::readInTableOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrElement );
+    const XMLCatalogReadResult documentResult = XMLCatalogReadResult::readInDocumentOrder( catalog, XMLCatalogRoot{ root }, "test", XMLCatalogTableTestUtil::kArrElement );
+    const XMLCatalogReadResult tableResult    = XMLCatalogReadResult::readInTableOrder( catalog, XMLCatalogRoot{ root }, "test", XMLCatalogTableTestUtil::kArrElement );
 
     SW_EXPECT_EQUAL( 1u, documentResult._loadedCount );
     SW_EXPECT_EQUAL( 2u, documentResult._failedCount );
@@ -128,7 +128,7 @@ SW_TEST_CASE( XMLCatalogTableTest, FailedElementIsCountedAsFailed )
     const XMLNode              root = XMLCatalogTableTestUtil::parse( document, R"(<Root><Second bad="1"/></Root>)" );
     XMLCatalogTableTestCatalog catalog;
 
-    const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrElement );
+    const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( catalog, XMLCatalogRoot{ root }, "test", XMLCatalogTableTestUtil::kArrElement );
 
     SW_EXPECT_EQUAL( 0u, result._loadedCount );
     SW_EXPECT_EQUAL( 1u, result._failedCount );
@@ -144,10 +144,10 @@ SW_TEST_CASE( XMLCatalogTableTest, EmptyFileWarnsOnlyWhenRowsCount )
     const XMLNode              root = XMLCatalogTableTestUtil::parse( document, R"(<Root><Note/></Root>)" );
     XMLCatalogTableTestCatalog catalog;
 
-    const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrElement );
+    const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( catalog, XMLCatalogRoot{ root }, "test", XMLCatalogTableTestUtil::kArrElement );
     SW_EXPECT_EQUAL( 0u, result._loadedCount );
     SW_EXPECT_TRUE( result.isClean() );
 
-    const XMLCatalogReadResult uncounted = XMLCatalogReadResult::readInDocumentOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrUncounted );
+    const XMLCatalogReadResult uncounted = XMLCatalogReadResult::readInDocumentOrder( catalog, XMLCatalogRoot{ root }, "test", XMLCatalogTableTestUtil::kArrUncounted );
     SW_EXPECT_TRUE( uncounted.isClean() );
 }

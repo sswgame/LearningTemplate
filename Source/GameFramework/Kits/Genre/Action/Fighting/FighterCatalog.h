@@ -24,6 +24,7 @@
 
 namespace sw
 {
+    class XMLCatalogRoot;
     class XMLNode;
 
     /** @brief 기술을 낼 수 있는 자세입니다. 순서가 비트 번호입니다(`FighterMove::_postureMask`). */
@@ -152,8 +153,8 @@ namespace sw
         /** @brief 리소스 경로의 카탈로그를 읽습니다. 루트의 `moves` 가 가리키는 기술 카탈로그를 공유 캐시에서 받아 기반으로 씁니다. 종류의 로더(공유 캐시)만 부른다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 파일 루트 읽기입니다 — `moves` 의 기술 카탈로그를 받아 `loadRoot` 에 넘깁니다. 없거나 읽지 못하면 오류이고 0 입니다. */
-        uint32 loadFileRoot( const XMLNode& root, string_view sourceName );
-        uint32 loadRoot( const XMLNode& root, const MoveCatalog& moveCatalog, string_view sourceName );
+        uint32 loadFileRoot( const XMLCatalogRoot& root, string_view sourceName );
+        uint32 loadRoot( const XMLCatalogRoot& root, const MoveCatalog& moveCatalog, string_view sourceName );
     };
 
     /** @brief 캐릭터 카탈로그를 경로마다 한 벌 나눠 줍니다("FighterCatalog", 인스턴스화는 `FighterCatalog.cpp`). 제자리에서 다시 읽습니다(쥔 쪽은 id 로 찾는다). */

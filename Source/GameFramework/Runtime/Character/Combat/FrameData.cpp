@@ -75,7 +75,7 @@ namespace sw
     {
     }
 
-    uint32 MoveCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 MoveCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<MoveCatalog>;
         static constexpr Element kArrElement[] = {

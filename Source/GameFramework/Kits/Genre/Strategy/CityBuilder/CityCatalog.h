@@ -197,7 +197,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "CityCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadBuilding( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadHouseLevel( const XMLNode& node, string_view sourceName );
 

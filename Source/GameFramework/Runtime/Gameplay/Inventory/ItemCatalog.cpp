@@ -96,7 +96,7 @@ namespace sw
         return pDef != nullptr ? pDef->_maxStack : 1;
     }
 
-    uint32 ItemCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 ItemCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<ItemCatalog>;
         static constexpr Element kArrElement[] = {

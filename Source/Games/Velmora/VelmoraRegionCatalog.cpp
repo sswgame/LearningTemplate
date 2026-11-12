@@ -71,7 +71,7 @@ namespace sw
         { return region.contains( position ); } );
     }
 
-    uint32 VelmoraRegionCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 VelmoraRegionCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<VelmoraRegionCatalog>;
         static constexpr Element kArrElement[] = {

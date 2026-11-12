@@ -59,7 +59,7 @@ namespace sw
             Element::of<&RunMapElementReader::loadFloor>( "Floor" ).uncounted(),
         };
         RunMapElementReader reader{ settings };
-        bValid = XMLCatalogReadResult::readInDocumentOrder( reader, root, sourceName, kArrElement ).isClean();
+        bValid = XMLCatalogReadResult::readInDocumentOrder( reader, XMLCatalogRoot{ root }, sourceName, kArrElement ).isClean();
         if ( settings._listRule.empty() )
         {
             SW_LOG_ERROR_ID( "RunMap.RunMapNeedsLeastOne", "%#: <RunMap> needs at least one <Node kind=\"...\"/>", sourceName );

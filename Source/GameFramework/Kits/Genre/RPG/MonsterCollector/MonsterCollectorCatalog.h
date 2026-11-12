@@ -342,7 +342,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "MonsterCollectorCatalog"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadStatusImmunity( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadMove( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadSpecies( const XMLNode& node, string_view sourceName );

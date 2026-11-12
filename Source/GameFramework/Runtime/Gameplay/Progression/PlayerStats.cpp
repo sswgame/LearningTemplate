@@ -71,7 +71,7 @@ namespace sw
         return nullptr;
     }
 
-    uint32 StatCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 StatCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<StatCatalog>;
         static constexpr Element kArrElement[] = {

@@ -22,6 +22,7 @@ namespace sw
 
     class GameLocalStore;
     class SaveGate;
+    class XMLCatalogRoot;
     class XMLNode;
 
     /** @brief 자동 저장을 부른 까닭입니다. 슬롯 정보에 함께 적히며, 목록 UI 와 체크포인트 되돌리기가 이것으로 슬롯을 고릅니다. */
@@ -82,7 +83,7 @@ namespace sw
         string makeInfoSlotName( int32 slot ) const;
 
     private:
-        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLCatalogRoot& root, string_view sourceName );
     };
 } // namespace sw
 

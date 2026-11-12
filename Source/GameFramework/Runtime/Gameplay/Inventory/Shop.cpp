@@ -163,7 +163,7 @@ namespace sw
         return category.empty() == false && VectorUtil::contains( _listRefusedCategory, category );
     }
 
-    uint32 ShopCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 ShopCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<ShopCatalog>;
         static constexpr Element kArrElement[] = {

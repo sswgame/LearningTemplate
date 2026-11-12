@@ -107,7 +107,7 @@ namespace sw
     // RecipeCatalog
     // ------------------------------------------------------------------------------
 
-    uint32 RecipeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 RecipeCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<RecipeCatalog>;
         static constexpr Element kArrElement[] = {

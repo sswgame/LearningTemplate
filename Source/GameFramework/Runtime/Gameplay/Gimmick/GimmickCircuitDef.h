@@ -54,6 +54,7 @@ namespace sw
         bool _bInvert{ false }; ///< 적지 않으면 뒤집지 않는다
     };
 
+    class XMLCatalogRoot;
     class XMLNode;
 
     /** @brief 매개변수 하나입니다. 이름과 적힌 문자열을 그대로 담으며, 숫자, 벡터, 이름으로 해석하는 것은 노드 종류가 정합니다. */
@@ -136,7 +137,7 @@ namespace sw
          * @details 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<GimmickCircuitDef>::acquire` 로 한 벌을 쥐고 회로 실행 상태(`GimmickCircuit`)는 자기가 짓는다.
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        [[nodiscard]] bool loadRoot( const XMLNode& root );
+        [[nodiscard]] bool loadRoot( const XMLCatalogRoot& root );
 
     private:
         [[nodiscard]] bool loadNode( const XMLNode& element, string_view sourceName );

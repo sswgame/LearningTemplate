@@ -398,7 +398,7 @@ namespace sw
     // 카탈로그
     // ------------------------------------------------------------------------------
 
-    uint32 KartTrackCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 KartTrackCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 트랙을 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<KartTrackCatalog>;

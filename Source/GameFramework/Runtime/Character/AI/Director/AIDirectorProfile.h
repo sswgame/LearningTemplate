@@ -24,6 +24,7 @@
 
 namespace sw
 {
+    class XMLCatalogRoot;
     class XMLNode;
 
     /** @brief 긴장도 신호를 긴장도에 반영하는 방식입니다(파일에는 열거자 이름). */
@@ -283,7 +284,7 @@ namespace sw
     private:
         /** @brief 리소스 경로의 프로필을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<AIDirectorProfile>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool readIntensity( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool readPhase( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool readPool( const XMLNode& node, const ScheduleConditionSchema& vocabulary, string_view sourceName );

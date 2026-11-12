@@ -507,7 +507,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "CameraPresetCatalog"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadDefaultBlend( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadPreset( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadBlendRule( const XMLNode& node, string_view sourceName );

@@ -93,7 +93,6 @@ kRules: tuple[Rule, ...] = (
     Rule("cpp-shape", "모양", "선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 기반 하나", "합법 C++ 의 배치 규칙이다", "lint.CppShape:checkCppShape", exceptions="Config/Rules/Lint/CppShapeExceptions.json"),
     Rule("state-shape", "모양", "손으로 짝지은 writeState · readState( Archive& )", "스냅샷(ComponentStateStore)은 serializeState 만 받지만, Archive 는 바이트 그릇이라 그것을 받는 멤버 짝을 새로 짓는 것은 형식으로 막지 못한다", "lint.StateShape:checkStateShape"),
     Rule("byte-read", "모양", "파일에서 읽은 개수를 믿고 할당 · LittleEndianUtil 직접 읽기", "vector::resize 는 어떤 수든 받는다", "lint.ByteReadShape:checkByteReadShape", exceptions="Config/Rules/Lint/ByteReadRawFiles.json"),
-    Rule("catalog-root", "모양", "게임 데이터 루트의 원소를 손으로 고르기", "findChild 는 어디서든 부를 수 있다", "lint.CatalogRootShape:checkCatalogRootShape", exceptions="Config/Rules/Lint/CatalogRootLoopFiles.json"),
     Rule("common-shapes", "모양", "공통 기반을 두고 손으로 적은 모양(열거 이름 표 · 다시 읽기 대조 · id 를 버리는 입구 …)", "칸 이름 · switch 글자 · 부른 함수는 형식이 말하지 못한다", "lint.CommonShapes:checkCommonShapes", exceptions="Config/Rules/Lint/CommonShapeExceptions.json"),
     Rule("mutable-statics", "모양", "주인 객체 밖의 가변 정적 저장소(감춘 싱글턴)", "함수 정적 · 이름공간 범위 변수는 합법 C++ 이다", "lint.MutableStatics:checkMutableStatics", exceptions="Config/Rules/Lint/MutableStaticExceptions.json"),
     Rule("frame-intern", "모양", "틱 · 갱신 · 칠하기 함수 안의 리터럴 hashed_string", "프레임 밖에서는 정상 코드다", "lint.FrameIntern:checkFrameIntern", exceptions="Config/Rules/Lint/FrameInternExceptions.json"),

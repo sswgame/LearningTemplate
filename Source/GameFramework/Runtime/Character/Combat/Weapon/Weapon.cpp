@@ -72,7 +72,7 @@ namespace sw
     {
     }
 
-    uint32 WeaponCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 WeaponCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<WeaponCatalog>;
         static constexpr Element kArrElement[] = {

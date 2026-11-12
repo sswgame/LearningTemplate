@@ -93,7 +93,7 @@ namespace sw
         return hashed_string{};
     }
 
-    uint32 ElementChart::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 ElementChart::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         clear();
         // 규칙 · 상태는 선언한 속성만 가리키므로 속성을 먼저 다 읽는다.

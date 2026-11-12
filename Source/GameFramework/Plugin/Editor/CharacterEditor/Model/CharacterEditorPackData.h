@@ -14,6 +14,7 @@
 
 namespace sw
 {
+    class XMLCatalogRoot;
     class XMLNode;
 } // namespace sw
 
@@ -67,6 +68,6 @@ namespace sw::editor
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
 
     private:
-        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLCatalogRoot& root, string_view sourceName );
     };
 } // namespace sw::editor

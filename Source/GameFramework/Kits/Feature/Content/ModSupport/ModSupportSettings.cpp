@@ -43,7 +43,7 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&ModSupportSettings::readOverridable>( "Overridable" ).uncounted(), // 없으면 덮어쓰기를 받지 않는 정책이다(빈 목록이 맞다)
         };
-        if ( XMLCatalogReadResult::readInDocumentOrder( settings, root, sourceName, kArrElement ).isClean() == false )
+        if ( XMLCatalogReadResult::readInDocumentOrder( settings, XMLCatalogRoot{ root }, sourceName, kArrElement ).isClean() == false )
             return false;
         outSettings = std::move( settings );
         return true;

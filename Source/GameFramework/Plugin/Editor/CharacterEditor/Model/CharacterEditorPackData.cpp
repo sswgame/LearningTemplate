@@ -10,6 +10,7 @@
 #include "Engine/Serialization/XML/XMLFields.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogRoot.h"
 
 namespace sw::editor
 {
@@ -64,12 +65,12 @@ namespace sw::editor
         return false;
     }
 
-    bool CharacterEditorPackData::loadRoot( const XMLNode& root, string_view sourceName )
+    bool CharacterEditorPackData::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Internal = CharacterEditorPackDataInternal;
         bool bOk       = true;
-        bOk            = XMLFields::readProperties( root, *this, sourceName ) && bOk;
-        if ( root.findChild().isValid() )
+        bOk            = root.readProperties( *this, sourceName ) && bOk;
+        if ( root.getNodeForHandRead().findChild().isValid() ) // 손 읽기: 자식이 하나라도 있으면 틀린 파일이다(읽을 원소 표가 없다)
         {
             SW_LOG_ERROR_ID( "CharacterEditorPackData.TakesAttributesOnly", "%#: <%#> takes attributes only", sourceName, Internal::kRootName );
             bOk = false;

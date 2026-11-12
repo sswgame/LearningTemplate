@@ -28,11 +28,11 @@ namespace sw
         return 0.0f;
     }
 
-    uint32 WeatherCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 WeatherCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 적지 않은 칸은 초기값이다. 깨진 값 · 범위 밖 값은 오류다(자르지 않는다). 날씨는 그 원소를, 전환 시간은 표 전체를 넣지 않는다.
         WeatherCatalogRootParams rootParams{ _transitionTime };
-        if ( XMLFields::readProperties( root, rootParams, sourceName ) == false )
+        if ( root.readProperties( rootParams, sourceName ) == false )
             return 0;
         _transitionTime                        = rootParams._transition;
         using Element                          = XMLCatalogElement<WeatherCatalog>;

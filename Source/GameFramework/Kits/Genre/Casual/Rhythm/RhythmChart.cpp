@@ -182,11 +182,11 @@ namespace sw
         }
     }
 
-    bool RhythmChart::loadRoot( const XMLNode& root, string_view sourceName )
+    bool RhythmChart::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 원소가 하나라도 있으면 차트를 읽지 못한 것으로 본다(반쪽 차트를 치게 하지 않는다).
         RhythmChartRootDef rootDef;
-        bool               bValid = XMLFields::readProperties( root, rootDef, sourceName, { "baseBpm" } );
+        bool               bValid = root.readProperties( rootDef, sourceName, { "baseBpm" } );
         _title                    = rootDef._title;
         _artist                   = rootDef._artist;
         _level                    = rootDef._level;

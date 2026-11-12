@@ -181,7 +181,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "AreaGraph"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadArea( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadLink( const XMLNode& node, string_view sourceName );
         /** @brief 연결을 @p fromIndex 쪽에서 지나면 닿는 방을 반환합니다. 그 방향으로 지날 수 없으면 비어 있으며, 잠금은 보지 않습니다. */

@@ -119,11 +119,11 @@ namespace sw
         outMax                  = float2{ cellU * static_cast<float32>( column + 1 ) - insetU, cellV * static_cast<float32>( row + 1 ) - insetV };
     }
 
-    uint32 VoxelBlockCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 VoxelBlockCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         VoxelBlockCatalogRootDef rootDef;
-        if ( XMLFields::readProperties( root, rootDef, sourceName ) == false )
+        if ( root.readProperties( rootDef, sourceName ) == false )
             return 0;
         _atlasColumns                          = rootDef._atlasColumns;
         _atlasRows                             = rootDef._atlasRows;

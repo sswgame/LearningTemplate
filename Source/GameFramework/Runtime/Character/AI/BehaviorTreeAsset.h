@@ -129,7 +129,7 @@ namespace sw
          * @details 베이스(`XMLCatalog`)의 보호된 읽기를 가리는 자기 읽기라 공개하면 사본을 읽는 길이 다시 열린다 — 종류의 로더(공유 캐시)만 부른다.
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        uint32             loadRoot( const XMLNode& root, string_view sourceName );
+        uint32             loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         /** @brief 부모를 펼친 글을 읽습니다. 하위 파일은 @p source 에서 찾습니다. */
         [[nodiscard]] bool readFlatText( string_view flatText, string_view sourceName, IDataInheritanceSource& source );
 

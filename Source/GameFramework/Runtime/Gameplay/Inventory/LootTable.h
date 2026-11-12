@@ -128,7 +128,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "LootCatalog"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadTable( const XMLNode& node, string_view sourceName );
         void                         rollTable( const LootTableDef& table, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const;
         void                         giveEntry( const LootEntry& entry, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const;

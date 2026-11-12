@@ -8,7 +8,7 @@
  *          표는 `loadRoot` 안의 `static constexpr` 배열로 둔다. 멤버 함수 안이라 비공개 칸의 멤버 포인터를 적을 수 있고, 클래스 안의 정적 초기화는 완전한 클래스 문맥이 아니라 쓸 수 없다.
  *          코드 옆 표를 `_base` 합치기 규칙(`Content/engine/settings/datacataloginheritance.xml`)으로 대신하지 않는다 — 쿠킹이 게임 모듈을 올리기 전에 돌아 이 표를 볼 수 없다.
  * @code
- *     uint32 GhostCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+ *     uint32 GhostCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
  *     {
  *         using Element = XMLCatalogElement<GhostCatalog>;
  *         static constexpr Element kArrElement[] = {
@@ -34,6 +34,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogRoot.h"
 
 #include <type_traits>
 #include <utility>
@@ -55,10 +56,10 @@ namespace sw
         // 문서 순서는 원소끼리 서로 보지 않는 카탈로그, 표 순서는 뒤 줄이 앞 줄을 읽는 동안 찾아보는 카탈로그(줍는 것 → 능력)가 쓴다.
         /** @brief 자식 원소를 적힌 순서대로 읽습니다. 이름은 철자 그대로 비교합니다(`XMLNameCheck`). */
         template <typename TCatalog, size_t Count>
-        [[nodiscard]] static XMLCatalogReadResult readInDocumentOrder( TCatalog& catalog, const XMLNode& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
+        [[nodiscard]] static XMLCatalogReadResult readInDocumentOrder( TCatalog& catalog, const XMLCatalogRoot& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
         {
-            XMLCatalogReadResult result = checkNames( root, sourceName, arrElement );
-            for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
+            XMLCatalogReadResult result = checkNames( root._node, sourceName, arrElement );
+            for ( XMLNode node = root._node.findChild(); node; node = node.findNextSibling() )
             {
                 for ( const XMLCatalogElement<TCatalog>& element : arrElement )
                 {
@@ -69,23 +70,23 @@ namespace sw
                     }
                 }
             }
-            reportIfEmpty( root, sourceName, result, arrElement );
+            reportIfEmpty( root._node, sourceName, result, arrElement );
             return result;
         }
 
         /** @brief 표의 줄 순서대로, 같은 줄의 원소는 적힌 순서대로 읽습니다. 파일 안의 순서와 상관없이 앞 줄이 먼저 다 읽힙니다. */
         template <typename TCatalog, size_t Count>
-        [[nodiscard]] static XMLCatalogReadResult readInTableOrder( TCatalog& catalog, const XMLNode& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
+        [[nodiscard]] static XMLCatalogReadResult readInTableOrder( TCatalog& catalog, const XMLCatalogRoot& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
         {
-            XMLCatalogReadResult result = checkNames( root, sourceName, arrElement );
+            XMLCatalogReadResult result = checkNames( root._node, sourceName, arrElement );
             for ( const XMLCatalogElement<TCatalog>& element : arrElement )
             {
-                for ( XMLNode node = root.findChild( element._pName ); node; node = node.findNextSibling( element._pName ) )
+                for ( XMLNode node = root._node.findChild( element._pName ); node; node = node.findNextSibling( element._pName ) )
                 {
                     addResult( result, element, element._pRead( catalog, node, sourceName ) );
                 }
             }
-            reportIfEmpty( root, sourceName, result, arrElement );
+            reportIfEmpty( root._node, sourceName, result, arrElement );
             return result;
         }
 
