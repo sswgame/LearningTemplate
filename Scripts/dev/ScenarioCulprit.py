@@ -76,6 +76,16 @@ kScenarioName = re.compile(r'<Scenario\b[^>]*\bname="([^"]+)"')
 kPassedResults = frozenset({'Passed', 'Skipped'})
 
 
+def readBackendChainOrder(logText: str) -> list[str]:
+    """백엔드 체인 로그(`Scenario.<체인>.<백엔드>.log`)가 실제로 돈 단계 순서 — 시나리오를 백엔드에 나눠 주는 체인(`-scenario-backend-split`)은
+    백엔드마다 ctest 명령의 일부만 돈다. 로그의 `loaded from <경로>` 줄이 그 순서다(같은 경로가 다시 나오면 처음 것만)."""
+    listPath: list[str] = []
+    for match in re.finditer(r'loaded from (\S+\.scenario\.xml)', logText):
+        if match.group(1) not in listPath:
+            listPath.append(match.group(1))
+    return listPath
+
+
 def readScenarioName(path: str) -> str:
     """시나리오 리소스 id(`game/x/automation/y.scenario.xml`)의 `name` 속성. 없으면 멈춘다(체인 목록이 지금 Content 와 다르다)."""
     match = kScenarioName.search((REPO / 'Content' / path).read_text(encoding='utf-8'))
@@ -238,6 +248,8 @@ def selfCheck() -> int:
         assert findCulprit(stages, fails) == culprit, culprit
         assert len(calls) <= 1 + 4, len(calls)   # log2(10) 올림 + 처음 한 번
     assert findCulprit(stages, lambda prefix: False) is None
+    sampleLog = '\n'.join(['x loaded from engine/a.scenario.xml (3 step(s))', 'y loaded from engine/b.scenario.xml', 'z loaded from engine/a.scenario.xml'])
+    assert readBackendChainOrder(sampleLog) == ['engine/a.scenario.xml', 'engine/b.scenario.xml']
     assert minimizeStages(stages, lambda prefix: 's0' in prefix and 's4' in prefix and 's7' in prefix) == ['s0', 's4', 's7']
     assert stageFailedInReports([{'name': 'a', 'result': 'Passed'}], 'a') is False
     assert stageFailedInReports([{'name': 'a', 'result': 'Failed'}], 'a') is True
@@ -272,6 +284,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     logDir = buildDir / 'Testing' / 'Logs'
     command = AppArguments.findChainCommand(buildDir, options.chain)
     paths = AppArguments.readChainStages(command)
+    if any('scenario-backend-split' in part for part in command):
+        # 나눠 주는 체인은 백엔드마다 다른 부분만 돌았다 — 그 백엔드의 체인 로그가 실제 순서의 정본이다(없으면 체인을 먼저 돌린다, 짐작하지 않는다).
+        backendLog = logDir / f'Scenario.{options.chain}.{options.backend}.log'
+        if not backendLog.is_file():
+            parser.error(f'{backendLog} 가 없다 — 나눠 주는 체인은 그 백엔드로 체인을 한 번 돌려 실제 순서를 남긴 뒤 찾는다')
+        paths = readBackendChainOrder(backendLog.read_text(encoding='utf-8', errors='replace'))
     # 단계 이름은 시나리오 파일의 name 속성이 정본이다(로그 문구를 읽지 않는다 — 체인을 먼저 돌려 둘 필요도 없다).
     targetIndex, targetName = resolveTarget({index: readScenarioName(path) for index, path in enumerate(paths)}, options.stage)
     dropped = ('unattended',) if options.show else ()
