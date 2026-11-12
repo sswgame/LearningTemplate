@@ -59,7 +59,7 @@
 
 - 웹 실행: 확인 절차는 `py -3 -m Scripts web-check --game Empty` 하나다(묶기 · COOP/COEP 서버 · 헤드리스 브라우저 두 번 — WebGPU · 오류 없음 · 화면 PNG · IDBFS 영속). 아직 돌리지 않았다 — Web-Shipping 빌드(호스트 Ninja-Release 로 쿠킹, 단계 텍스처 16 계약이 처음 걸린다) 뒤 통합에서 돌린다. 입력 · 클립보드(paste 이벤트) 판정은 없다 — 배포 빌드에 시나리오 실행기가 없어 앱 반응을 읽을 길이 없다(웹 시나리오를 쿠킹하거나 반응을 페이지로 내보내는 길이 필요하다).
 - 웹 온라인: 스트림은 WebSocket 이다 — 클라이언트 `WebSocketStreamTransport`(Web), 서버는 같은 리슨에서 첫 바이트로 가르는 `WebSocketAcceptTransport`(온라인 서비스 리슨). 남은 것: `ws://` 만이라 https 페이지는 `wss://`(수락 쪽 TLS 종단)가 필요하다. 게임 세션(암호화 UDP)은 브라우저에 UDP 가 없어 아직 길이 없다(WebSocket · WebTransport 위 데이터그램 갈래).
-- 웹 오디오: 장치 백엔드가 없어 Web 클라이언트 구성이 CMake 에서 멈춘다(`Source/Engine/CMakeLists.txt` — 오디오를 짓는 구성은 `Audio/<플랫폼>/*AudioBackend.cpp` 가 정확히 하나). `Audio/Web`(AudioWorklet + 공유 메모리 링 버퍼, 사용자 몸짓 뒤 `AudioContext.resume`)을 더해야 Web-Shipping 이 다시 선다. Android 는 AAudio(`Audio/Android`)가 있고 실기기에서 장치 분리 → 다시 열기를 본다.
+- 웹 오디오: `Audio/Web/WebAudioBackend` — 믹서 스레드(pthread)가 렌더해 Wasm 공유 메모리의 SPSC 링(`Audio/CircularAudioBuffer`)에 넣고 AudioWorklet 처리기(`WebAudioBackend.js`)가 꺼낸다. 첫 사용자 몸짓에서 `AudioContext.resume`, 워클릿 오류 · 모듈 실패는 출력 유실(`notifyOutputLost`)로 오프라인 → 다시 열기. 아직 컴파일 · 실행하지 않았다 — `web-check` 가 워클릿이 링을 당기기 시작한 줄(`[WebAudio] output started`)을 판정한다. Android 는 AAudio(`Audio/Android`)가 있고 실기기에서 장치 분리 → 다시 열기를 본다.
 - Android 실기기: APK 기동 · 회전(pre-rotation 방향) · APK 팩 읽기(`AAssetDir_getNextFileName` 이 폴더 앞머리를 붙이는지) · 터치를 확인한다. 클립보드는 아직 OS 를 잇지 않는다(`AndroidClipboard.cpp` 의 `isAvailable` false — JNI `ClipboardManager` 는 Looper 스레드 제약을 실기기와 함께 본다).
 
 ## 입력(웹 · Android)
