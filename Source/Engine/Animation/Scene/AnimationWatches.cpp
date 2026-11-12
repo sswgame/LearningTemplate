@@ -5,6 +5,7 @@
  */
 #include "pch.h"
 
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -55,6 +56,18 @@ namespace sw
                 return true;
             }
 
+            /** @brief 씬의 애니메이터마다 블렌드 스페이스가 지금 샘플하는 표본 수를 더합니다. 부하 시나리오가 파라미터가 표본 위가 아니라 삼각형 안에 있는지 본다. */
+            [[nodiscard]] static bool readBlendSpaceActiveSamples( const GameObjectManager* pManager, float64& outValue )
+            {
+                if ( pManager == nullptr )
+                    return false;
+                uint32 active = 0;
+                pManager->forEachComponentOfType<SkeletalAnimatorComponent>( [&active]( const SkeletalAnimatorComponent* pAnimator )
+                { active += pAnimator->countActiveBlendSpaceSamples(); } );
+                outValue = static_cast<float64>( active );
+                return true;
+            }
+
             [[nodiscard]] static bool readEvaluatedBones( const GameObjectManager* pManager, float64& outValue )
             {
                 if ( pManager == nullptr )
@@ -78,4 +91,6 @@ namespace sw
                          &AnimationWatchsInternal::readPoseEvaluatedUnits );
     SW_AUTOMATION_WATCH( animationEvaluatedBones, "Animation.EvaluatedBones", "Bones the skeletalMeshes that built their own pose evaluated last frame (bone LOD skips the rest)",
                          &AnimationWatchsInternal::readEvaluatedBones );
+    SW_AUTOMATION_WATCH( animationBlendSpaceActiveSamples, "Animation.BlendSpaceActiveSamples", "Blend space samples the scene's animators sample now (a 2D triangulation uses at most three each)",
+                         &AnimationWatchsInternal::readBlendSpaceActiveSamples );
 } // namespace sw

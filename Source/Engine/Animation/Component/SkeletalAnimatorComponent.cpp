@@ -151,6 +151,25 @@ namespace sw
         _playLength = BlendSpace::computeBlendedLength( _listLength, _listWeight );
     }
 
+    uint32 SkeletalBlendSpaceState::countActiveSamples() const
+    {
+        uint32 active = 0;
+        for ( const float32 weight : _listWeight )
+        {
+            if ( weight > 0.0f )
+                ++active;
+        }
+        return active;
+    }
+
+    uint32 SkeletalAnimatorComponent::countActiveBlendSpaceSamples() const
+    {
+        uint32 active = 0;
+        for ( const unique_ptr<SkeletalBlendSpaceState>& state : _listBlendSpace )
+            active += state->countActiveSamples();
+        return active;
+    }
+
     float32 SkeletalBlendSpaceState::computeSampleTime( uint32 sampleIndex, float32 time ) const
     {
         if ( _playLength <= 0.0f )

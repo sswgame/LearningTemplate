@@ -87,6 +87,8 @@ namespace sw
         uint32               getSampleCount() const { return static_cast<uint32>( _listClip.size() ); }
         const AnimationClip& getSampleClip( uint32 sampleIndex ) const { return *_listClip[sampleIndex]; }
         float32              getSampleWeight( uint32 sampleIndex ) const { return _listWeight[sampleIndex]; }
+        /** @brief 가중치가 0 보다 커서 샘플하는 표본 수입니다(삼각분할 2D 는 많아야 셋). */
+        uint32 countActiveSamples() const;
         /** @brief 상태 시각 @p time(한 바퀴 위의 초)을 표본 클립의 시각으로 옮깁니다(같은 위상). */
         float32 computeSampleTime( uint32 sampleIndex, float32 time ) const;
 
@@ -249,6 +251,8 @@ namespace sw
         const AnimationParameterSet& getParameters() const { return _parameters; }
         /** @brief 그래프 플레이어(현재 상태, 재생)를 반환합니다. */
         const AnimationGraphPlayer& getGraphPlayer() const { return _graphPlayer; }
+        /** @brief 주 그래프의 블렌드 스페이스 상태들이 지금 샘플하는 표본 수의 합입니다(감시 값 `Animation.BlendSpaceActiveSamples`). */
+        uint32 countActiveBlendSpaceSamples() const;
         /** @brief 현재 상태 이름을 반환합니다. */
         const hashed_string& getCurrentStateName() const { return _graphPlayer.getCurrentStateName(); }
 
