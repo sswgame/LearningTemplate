@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Physics/Collision/CollisionLayers.h"
+#include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/Collision/SweepHit.h"
 
 using namespace sw;
@@ -184,4 +185,34 @@ SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
     SW_EXPECT_TRUE( hit._bHit );
     SW_EXPECT_FALSE( sw::SweepHit::sweepSphere( sw::float3{ -100.0f, -100.0f, -100.0f }, 0.5f, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_FALSE( hit._bHit );
+}
+
+/**
+ * @brief [PhysicsContactTrackerTest] 지운 바디가 같은 step 간격 안에서 다시 닿으면 끝과 시작을 함께 내고 쌍을 잊지 않는다(감사 S-13 — 예전에는 끝만 내고 잊어 다음 step 부터 접촉이 사라졌다)
+ */
+SW_TEST_CASE( PhysicsContactTrackerTest, ReenabledBodyGetsEndThenBegin )
+{
+    PhysicsContactTracker<PhysicsDimension3D> tracker;
+    const PhysicsContactBody                  bodyA{ PhysicsBodyHandle::fromPacked( 0x100000001ull ), 1 };
+    const PhysicsContactBody                  bodyB{ PhysicsBodyHandle::fromPacked( 0x100000002ull ), 2 };
+    vector<PhysicsContactEvent3D>             listEvent;
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::Begin );
+
+    const PhysicsBodyHandle removed[] = { bodyA._body };
+    tracker.removeBodies( span<const PhysicsBodyHandle>( removed ) );
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f ); // 같은 핸들이 다시 켜져 닿았다
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::End );
+    SW_EXPECT_TRUE( listEvent[1]._phase == PhysicsContactPhase::Begin );
+    SW_EXPECT_EQUAL( 1u, tracker.getActivePairCount() );
+
+    listEvent.clear();
+    tracker.finishStep( listEvent ); // 다음 step 은 이어서 닿아 있다
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::Stay );
 }

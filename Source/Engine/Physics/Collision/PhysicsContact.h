@@ -87,8 +87,16 @@ namespace sw
         /** @brief 셰이프 쌍 하나가 닿기 시작했습니다. @p normal 은 @p bodyA 에서 @p bodyB 쪽입니다. */
         void beginSubContact( const PhysicsContactBody& bodyA, const PhysicsContactBody& bodyB, const Vector& point, const Vector& normal, float32 impulse )
         {
-            const bool bSwap        = bodyB._body < bodyA._body;
-            PairState& state        = _mapPair[makeKey( bodyA._body, bodyB._body )];
+            const bool bSwap = bodyB._body < bodyA._body;
+            PairState& state = _mapPair[makeKey( bodyA._body, bodyB._body )];
+            if ( state._bBodyRemoved )
+            {
+                // 지운 바디가 같은 step 간격 안에서 다시 켜져 닿았다 — 옛 접촉은 끝내고 새로 시작한다. 지운 표시가 남으면 이 쌍을 끝내고 잊어
+                // 백엔드가 다시 알리지 않는 접촉을 영영 잃는다(감사 S-13).
+                state._bBodyRemoved    = false;
+                state._bRestarted      = state._bWasActive;
+                state._subContactCount = 0;
+            }
             state._first            = bSwap ? bodyB : bodyA;
             state._second           = bSwap ? bodyA : bodyB;
             state._point            = point;
@@ -151,7 +159,12 @@ namespace sw
             {
                 PairState& state   = iter->second;
                 const bool bActive = state._subContactCount > 0 && state._bBodyRemoved == false;
-                if ( state._bWasActive && bActive )
+                if ( state._bWasActive && bActive && state._bRestarted )
+                {
+                    outListEvent.push_back( makeEvent( state, PhysicsContactPhase::End ) );
+                    outListEvent.push_back( makeEvent( state, PhysicsContactPhase::Begin ) );
+                }
+                else if ( state._bWasActive && bActive )
                 {
                     outListEvent.push_back( makeEvent( state, PhysicsContactPhase::Stay ) );
                 }
@@ -176,6 +189,7 @@ namespace sw
                 }
                 state._bWasActive       = true;
                 state._bTouchedThisStep = false;
+                state._bRestarted       = false;
                 state._impulse          = 0.0f;
                 ++iter;
             }
@@ -216,6 +230,7 @@ namespace sw
             int32              _subContactCount{ 0 };
             bool               _bWasActive{ false };       ///< 지난 step 끝에 닿아 있었는지 나타낸다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool               _bTouchedThisStep{ false }; ///< 이번 step 에 새로 닿은 셰이프 쌍이 있었는지 나타낸다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool               _bRestarted{ false };       ///< 지운 바디가 같은 간격 안에서 다시 닿았다 — 끝과 시작을 함께 낸다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool               _bBodyRemoved{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
