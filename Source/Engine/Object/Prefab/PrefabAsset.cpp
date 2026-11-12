@@ -480,6 +480,38 @@ namespace sw
                     outListNode.push_back( std::move( node ) );
                 }
             }
+
+            /** @brief 스폰이 상태를 읽는 문맥입니다 — 글(`applyStateTo` · 중첩 노드)과 원형이 같은 문맥이어야 원형으로 읽은 결과가 글로 읽은 것과 같다. */
+            static ObjectLoadContext makeSpawnLoadContext()
+            {
+                ObjectLoadContext context{ SerializePurpose::Authoring };
+                context._bExternalParentAllowed = false; // 프리팹 루트 · 부품의 부모는 스폰 자리가 정한다
+                return context;
+            }
+
+            /**
+             * @brief 상태 하나를 씬 밖 오브젝트에 @p readState 로 읽고 바이너리로 써 @p outTemplate 에 둡니다. 읽거나 쓰지 못하면 false 입니다.
+             * @details 쓰기 문맥은 `setFromGameObject` 와 같다(저작 목적, 바깥 부모를 적지 않음 — 컴포넌트 핸들은 파일 형태 `{0, 키 해시}`). 모르는 타입은
+             *          `MissingComponent` 로 실리고 그 원문 · 맡은 참조 키도 PROPERTY 라 원형을 지나도 남는다(A-1). 다 쓰면 매니저를 비운다 — 다음 상태가
+             *          같은 이름이면 번호(`X_2`)를 받아 원형에 그 이름이 실린다.
+             */
+            template <typename ReadStateFunc>
+            [[nodiscard]] static bool bakeSpawnTemplate( GameObjectManager& scratch, const string& objectName, ReadStateFunc&& readState, vector<uint8>& outTemplate )
+            {
+                outTemplate.clear();
+                GameObject*       pTemp = scratch.createGameObject( hashed_string( objectName.empty() ? kRoot : objectName.c_str() ) );
+                ObjectSaveOptions options{ SerializePurpose::Authoring };
+                options._bOmitExternalParent = SW_TRUE;
+                const bool bBaked            = pTemp != nullptr && readState( pTemp ) && ObjectStateSerializer::saveToBinaryBuffer( pTemp, outTemplate, options );
+                scratch.clear();
+                return bBaked && outTemplate.empty() == false;
+            }
+
+            /** @brief 원형 @p spawnTemplate 를 @p pTarget 에 읽습니다. */
+            [[nodiscard]] static bool loadSpawnTemplate( GameObject* pTarget, const vector<uint8>& spawnTemplate )
+            {
+                return pTarget != nullptr && ObjectStateSerializer::loadFromBinaryBuffer( pTarget, spawnTemplate.data(), spawnTemplate.size(), makeSpawnLoadContext() ) != 0;
+            }
         };
 
         /**
@@ -1074,11 +1106,63 @@ namespace sw
         if ( pTarget == nullptr || _stateData.empty() )
             return false;
         // 프리팹 본문에 남은 다른 오브젝트로의 부착은 읽지 않는다(위 `setFromGameObject`). 오브젝트 안의 부착은 그대로 잇는다.
-        ObjectLoadContext context{ SerializePurpose::Authoring };
-        context._pIdentity              = pIdentity;
-        context._bExternalParentAllowed = false;
+        ObjectLoadContext context = PrefabAssetInternal::makeSpawnLoadContext();
+        context._pIdentity        = pIdentity;
         return ( _stateFormat == PrefabStateFormat::JSON ) ? ObjectStateSerializer::loadFromJSONString( pTarget, _stateData, context )
                                                            : ObjectStateSerializer::loadFromXMLString( pTarget, _stateData, context );
+    }
+
+    bool PrefabAsset::applySpawnTemplateTo( GameObject* pTarget ) const
+    {
+        if ( _spawnTemplate.empty() )
+        {
+            SW_LOG_ERROR_ID( "PrefabAsset.SpawnTemplateMissing", "Prefab '%#' has no spawn template - only prefabs loaded by PrefabCache can be spawned", _name );
+            return false;
+        }
+        return PrefabAssetInternal::loadSpawnTemplate( pTarget, _spawnTemplate );
+    }
+
+    bool PrefabAsset::applyNestedSpawnTemplateTo( GameObject* pTarget, const size_t nodeIndex ) const
+    {
+        if ( nodeIndex >= _listNestedSpawnTemplate.size() || _listNestedSpawnTemplate[nodeIndex].empty() )
+        {
+            SW_LOG_ERROR_ID( "PrefabAsset.NestedSpawnTemplateMissing", "Nested node %# of prefab '%#' has no spawn template - only flattened nodes of prefabs loaded by PrefabCache have one",
+                             nodeIndex, _name );
+            return false;
+        }
+        return PrefabAssetInternal::loadSpawnTemplate( pTarget, _listNestedSpawnTemplate[nodeIndex] );
+    }
+
+    bool PrefabAsset::buildSpawnTemplate()
+    {
+        _spawnTemplate.clear();
+        _listNestedSpawnTemplate.assign( _listNestedInstance.size(), {} );
+        const bool bHasState = StringUtil::trim( _stateData ).empty() == false;
+        if ( bHasState == false && hasResolvedNestedInstances() == false )
+            return true;
+
+        // 원형은 씬 밖에서 짓는다(`PrefabOverrides::makeBaseState` 와 같은 방법, 언리얼 CDO 처럼 월드에 들지 않는다). 매니저 하나를 상태마다 비워 쓴다.
+        GameObjectManager scratch;
+        if ( bHasState && PrefabAssetInternal::bakeSpawnTemplate( scratch, _name, [&]( GameObject* pTemp )
+        { return applyStateTo( pTemp ); }, _spawnTemplate ) == false )
+        {
+            SW_LOG_ERROR_ID( "PrefabAsset.SpawnTemplateNotBuilt", "Prefab '%#' state could not be read into a spawn template - the prefab is not loaded", _name );
+            return false;
+        }
+        for ( size_t index = 0; index < _listNestedInstance.size(); ++index )
+        {
+            const PrefabInstanceNode& node = _listNestedInstance[index];
+            if ( node.isResolved() == false )
+                continue;
+            const auto readNodeState = [&]( GameObject* pTemp )
+            { return ObjectStateSerializer::loadFromXMLString( pTemp, node._resolvedStateXML, PrefabAssetInternal::makeSpawnLoadContext() ); };
+            if ( PrefabAssetInternal::bakeSpawnTemplate( scratch, node._name, readNodeState, _listNestedSpawnTemplate[index] ) == false )
+            {
+                SW_LOG_ERROR_ID( "PrefabAsset.NestedSpawnTemplateNotBuilt", "Nested instance '%#' of prefab '%#' could not be read into a spawn template - the prefab is not loaded", node._name, _name );
+                return false;
+            }
+        }
+        return true;
     }
 
     string PrefabAsset::convertState( PrefabStateFormat targetFormat ) const
