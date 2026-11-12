@@ -26,7 +26,7 @@
 1. **세대 없는 번호 · 순번 · 경로 글을 정체로 쓴다.** 연결 슬롯 번호(P0-8), 컴포넌트 `이름#순번`(A-2), 복셀 블록 순서 번호(K-3), 재시작마다 1 부터인 파티 · 티켓 id(O-7), 열린 문서의 경로 글(P0-4), 32 비트 이름 해시(C-8).
 2. **같은 사실을 두 곳이 따로 안다.** 쓰는 쪽 · 읽는 쪽의 한도와 판(A-3 · A-5 · A-6), 개수는 CPU · 목록은 GPU(RN-1), 문서 기록은 전역 스택 · Ctrl+Z 는 창 스택(P0-2), 멱등 기록과 감사 내역이 한 레코드(P0-7), 캐시 기록과 서버 메모리 표(O-6 · O-7).
 3. **실패 · 잘림을 값으로 돌려주지 않거나 호출자가 버린다.** `(void)` 로 버린 신뢰 송신(N-3), 구간 읽기 실패 뒤 새 판(P0-5), exec 실패를 성공으로(P0-16), 잘린 포맷을 성공으로(C-10), 팩 마운트 실패 뒤 기동(A-4).
-4. **플랫폼 창이 "빠뜨려도 컴파일되는" 선택 훅을 가진다.** 포커스 전달 · 글 입력 · 닫기 완료 · 쉬기 · 수명 구독 · 오디오 백엔드(P0-9 ~ P0-11, P-3 ~ P-6).
+4. **플랫폼 창이 "빠뜨려도 컴파일되는" 선택 훅을 가진다.** 포커스 전달 · 글 입력 · 닫기 완료 · 쉬기 · 수명 구독 · 웹 오디오 백엔드(P0-9 ~ P0-11, P-3 ~ P-6).
 5. **플레이어 세이브가 핫 리로드용 엄격한 스냅샷 형식을 그대로 쓴다.** 판이 정확히 같아야 읽고, 개수 · 색인으로 짝짓고, 실패하면 조용히 새 판이다(P0-5 · P0-6 · A-6 · G-1).
 6. **상태 변화를 값이 아니라 호출 순서 규칙으로 다룬다.** 일시정지(P0-12), 오너 이동(P0-14), 배율 변경(S-4), 빨리 감기(K-2), 끌기 한 번(P0-1).
 
@@ -74,12 +74,12 @@
 - 제안: 멱등 기록과 감사 내역을 형식으로 나눈다. 지급 트랜잭션에 지우지 않는 `econ_receipt/<스토어>/<거래 id>` 를 "없어야 함" 조건으로 함께 넣는다. 분개 정리는 지우는 분개의 발행 · 소각 합을 자산별 이월 레코드에 같은 트랜잭션으로 더한다.
 - 확인: `TestEconomyReceipts` 에 "지급 → 시각 +401 일 → 보존 쓸기 → 같은 영수증 재제출"(지금은 Ok + 잔액 2 배). `TestLedger` 에 "발행 → 쓸기 → `computeReport().isBalanced()`".
 
-### P0-11 오디오: Android · 웹 클라이언트는 오디오 백엔드가 없어 기동에서 `SW_FATAL`
-- 분류: 결함 · 확신: 확인(코드 경로 — 실행은 안 함)
-- 근거: `Source/Engine/Audio/IAudioService.cpp:74-83` — 등록된 백엔드가 없으면 `SW_FATAL( "No audio device backend is registered…" )` 이다. 등록은 `Source/Engine/Audio/Windows/XAudio2AudioBackend.cpp:459` 와 `Source/Engine/Audio/Linux/AlsaAudioBackend.cpp:257` 둘뿐이고, `cmake/Engine/UnbuiltSources.cmake:149-159` 가 `Windows/` · `Linux/` 폴더를 Android · Emscripten 에서 뺀다. 클라이언트는 `IAudioService.cpp:576` 에서 `create()` 를 부른다. [PlatformTargets](PlatformTargets.md) "남은 일" 에 오디오가 없다.
-- 상용 엔진: 언리얼 AudioMixer 는 플랫폼마다 백엔드(AAudio/OpenSL, 웹 AudioWorklet)가 있고 없으면 Null 장치다. 유니티 · Godot 도 Dummy 드라이버가 있다.
-- 제안: `Audio/Android`(AAudio 콜백) · `Audio/Web`(AudioWorklet + 링 버퍼)을 더한다. 그 전에는 CMake 구성 단계에서 "이 플랫폼은 오디오 백엔드 없음" 으로 실패시켜 기동 뒤 치명 오류를 빌드 오류로 옮긴다.
-- 확인: `py -3 -m Scripts web-check --game Empty` 와 `android-apk` 기동 로그. 단위 `AudioBackendRegistryTest.EveryClientPlatformRegistersExactlyOne`.
+### P0-11 오디오: 웹 클라이언트에 오디오 장치 백엔드가 없다
+- 분류: 결함(남은 일) · 확신: 확인(코드 경로)
+- 근거: 장치 백엔드는 `Source/Engine/Audio/Windows/XAudio2AudioBackend.cpp` · `Linux/AlsaAudioBackend.cpp` · `Android/AAudioAudioBackend.cpp` 셋이다. 웹(Emscripten)에는 없어 예전에는 기동에서 `IAudioService::create` 가 `SW_FATAL` 로 섰다. 지금은 `Source/Engine/CMakeLists.txt` 가 오디오를 짓는 구성에서 `Audio/<플랫폼>/*AudioBackend.cpp` 가 정확히 하나가 아니면 구성 단계에서 멈춘다 — Web 클라이언트 구성은 백엔드가 생길 때까지 서지 않는다.
+- 상용 엔진: 유니티 WebGL 은 WebAudio, Godot 4 웹은 AudioWorklet 백엔드를 둔다(기억). 언리얼은 백엔드 없는 플랫폼을 패키징 대상으로 두지 않는다.
+- 제안: `Audio/Web`(AudioWorklet + 공유 메모리 링 버퍼, 사용자 몸짓 뒤 `AudioContext.resume`, 노드 오류 → `notifyOutputLost`).
+- 확인: Web-Shipping 구성이 서고 `py -3 -m Scripts web-check --game Empty` 기동 로그에 `AudioService.InitializedChannels`(device output).
 
 ### P0-14 타일맵: 충돌이 오브젝트 이동을 따라가지 않고, 타일 한 칸 편집에 맵 전체 바디를 다시 만든다
 - 분류: 결함 + 성능 · 확신: 확인

@@ -77,7 +77,7 @@ namespace sw
 
     unique_ptr<IAudioService> IAudioService::create()
     {
-        // 플랫폼 클라이언트 빌드는 백엔드 하나를 담는다 — 없거나 둘이면 빌드 구성의 결함이다(장치 없는 오디오로 몰래 바꾸지 않는다).
+        // 플랫폼 클라이언트 빌드는 백엔드 하나를 담는다 — 구성 단계가 먼저 막는다(Source/Engine/CMakeLists.txt). 여기 닿으면 링크가 등록자를 버린 것이다(장치 없는 오디오로 몰래 바꾸지 않는다).
         const AudioBackendRegistrar* pRegistrar = AudioBackendRegistrar::getHead();
         if ( pRegistrar == nullptr )
             SW_FATAL( "No audio device backend is registered in this build (%#) - a client build links Audio/Windows, Audio/Linux or Audio/Android", build::kTargetName );
