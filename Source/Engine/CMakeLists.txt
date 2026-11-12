@@ -64,7 +64,7 @@ if(NOT "Audio" IN_LIST SW_UNBUILT_ENGINE_FOLDERS)
 	list(LENGTH listAudioBackendSource audioBackendCount)
 	if(NOT audioBackendCount EQUAL 1)
 		message(FATAL_ERROR "[Engine] ${CMAKE_SYSTEM_NAME} ${SW_TARGET_TYPE} target builds ${audioBackendCount} audio device backends (need exactly one): ${listAudioBackendSource}\n"
-			"Add Source/Engine/Audio/<Platform>/<Name>AudioBackend.cpp for this platform (Windows XAudio2, Linux ALSA, Android AAudio exist; Web AudioWorklet is not written yet - docs/PlatformTargets.md).")
+			"Add Source/Engine/Audio/<Platform>/<Name>AudioBackend.cpp for this platform (Windows XAudio2, Linux ALSA, Android AAudio, Web AudioWorklet exist).")
 	endif()
 endif()
 

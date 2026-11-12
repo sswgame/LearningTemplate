@@ -68,7 +68,7 @@ namespace sw
         static constexpr utf8 kDefaultMixerPath[] = "engine/audio/default.audiomixer.xml";
 
         /**
-         * @brief 이 빌드가 담은 플랫폼 장치 백엔드(`AudioBackendRegistrar` 로 오른 것 — Windows XAudio2 · 리눅스 ALSA)를 만듭니다.
+         * @brief 이 빌드가 담은 플랫폼 장치 백엔드(`AudioBackendRegistrar` 로 오른 것 — Windows XAudio2 · 리눅스 ALSA · Android AAudio · 웹 AudioWorklet)를 만듭니다.
          * @details 등록된 백엔드가 없거나 둘 이상이면 기동을 멈춘다(장치 없는 오디오로 몰래 바꾸지 않는다). 장치를 열지 않을 쪽(전용 서버 · 테스트)은 `createNull` 을 부른다.
          */
         static unique_ptr<IAudioService> create();
