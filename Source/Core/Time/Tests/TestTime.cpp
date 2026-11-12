@@ -42,12 +42,12 @@ SW_TEST_CASE( TimeTest, TotalTimeKeepsMillisecondsAfterTenHours )
  */
 SW_TEST_CASE( TimeTest, ShaderTimeFoldKeepsMillisecondsAfterTenHours )
 {
-    constexpr sw::float64 kRollover = 3600.0;
-    constexpr sw::float64 kTenHours = 10.0 * 3600.0 + 12.25;
-    const sw::float32     before    = sw::TimeRolloverUtil::fold( kTenHours, kRollover );
-    const sw::float32     after     = sw::TimeRolloverUtil::fold( kTenHours + 0.001, kRollover );
-    const sw::float32     unfoldedA = static_cast<sw::float32>( kTenHours );
-    const sw::float32     unfoldedB = static_cast<sw::float32>( kTenHours + 0.001 );
+    constexpr float64 kRollover = 3600.0;
+    constexpr float64 kTenHours = 10.0 * 3600.0 + 12.25;
+    const float32     before    = sw::TimeRolloverUtil::fold( kTenHours, kRollover );
+    const float32     after     = sw::TimeRolloverUtil::fold( kTenHours + 0.001, kRollover );
+    const float32     unfoldedA = static_cast<float32>( kTenHours );
+    const float32     unfoldedB = static_cast<float32>( kTenHours + 0.001 );
     SW_EXPECT_NEAR( 12.25f, before, 1e-3f );
     SW_EXPECT_NEAR( 0.001f, after - before, 3e-4f );
     SW_EXPECT_TRUE_MSG( unfoldedB - unfoldedA == 0.0f || unfoldedB - unfoldedA > 0.002f, "the unfolded float32 must lose the millisecond (the defect this fold removes)" );
