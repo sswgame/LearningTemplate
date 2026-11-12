@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
 import sys
 import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass
@@ -31,7 +30,7 @@ from typing import Callable, Iterable
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common.Git import resolveGitExecutable, runGit  # noqa: E402
+from common.Git import runGit, runGitBytes  # noqa: E402
 from lint.FactCache import getIndexKeys, loadFacts  # noqa: E402
 from lint.LintScope import LintScope  # noqa: E402
 
@@ -331,12 +330,10 @@ def listIndexFiles(projectRoot: Path) -> list[str]:
 
 def readIndexBlobs(projectRoot: Path, listRelativePath: list[str]) -> dict[str, str]:
     """인덱스의 내용(`:경로`)을 한 프로세스(`git cat-file --batch`)로 읽습니다."""
-    gitExe = resolveGitExecutable() or "git"
     request = "".join(f":{path}\n" for path in listRelativePath).encode("utf-8")
-    completed = subprocess.run([gitExe, "cat-file", "--batch"], input=request, cwd=projectRoot, capture_output=True, check=False)
-    if completed.returncode != 0:
-        raise RuntimeError(f"git cat-file 실패: {completed.stderr.decode('utf-8', 'replace').strip()}")
-    output = completed.stdout
+    returnCode, output, errorText = runGitBytes(["cat-file", "--batch"], cwd=projectRoot, inputBytes=request, bHookRepository=True)   # 커밋하는 인덱스의 블롭
+    if returnCode != 0:
+        raise RuntimeError(f"git cat-file 실패: {errorText.strip()}")
     mapText: dict[str, str] = {}
     cursor = 0
     for path in listRelativePath:

@@ -20,7 +20,8 @@ CMake(`*.cmake` · `CMakeLists.txt`, ThirdParty 제외)도 같은 규칙이다 �
 사슬은 `else()` + `message(FATAL_ERROR …)` 로 끝나고, 부정(`NOT WIN32`)만으로 된 조건은 `return()` · `FATAL_ERROR` 만 거는 가드일 때만 쓴다.
 POSIX 계열은 `UNIX` · `CMAKE_HOST_UNIX` 로 이름을 적는다. 다른 변수가 섞인 조건(`WIN32 AND NOT SW_SHIPPING_BUILD`)은 기능 검사라 보지 않는다.
 
-스크립트(`Scripts/**.py`)는 호스트 OS 를 `common/HostPlatform.py` 의 표에서만 읽는다 — `sys.platform` · `os.name` · `platform.system()` 을
+스크립트(`Scripts/**.py`)는 git 을 `common/Git.py` 입구로만 띄운다(물려받은 저장소 환경 변수를 뺀다 — 직접 띄우기를 같은 스크립트 검사가 막는다).
+스크립트는 호스트 OS 를 `common/HostPlatform.py` 의 표에서만 읽는다 — `sys.platform` · `os.name` · `platform.system()` 을
 다른 곳에서 물으면 `else` 가 "Windows 아니면 Linux" 가 된다. 표는 모르는 호스트에서 들여올 때 멈춘다.
 
 `py -3 -m Scripts lint platform-chains [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
@@ -105,6 +106,9 @@ kCMakeGuardBody = re.compile(r"^\s*(?:return\(\)|message\(\s*FATAL_ERROR\b.*|#.*
 kCMakeFatal = re.compile(r"^\s*message\(\s*FATAL_ERROR\b")
 kPythonHostQuery = re.compile(r"\bsys\.platform\b|\bos\.name\b|\bplatform\.system\(\)")
 kPythonHostTable = "Scripts/common/HostPlatform.py"
+# git 을 자식 프로세스로 직접 띄우는 줄(리스트 인자 · 셸 글) — 입구 `common/Git.py`(runGit · runGitInHookRepository · runGitBytes)만 띄운다.
+kPythonDirectGit = re.compile(r"\b(?:subprocess\.(?:run|call|check_call|check_output|Popen)|Popen|shell)\s*\(\s*(?:\[\s*(?:[\"']git[\"']|gitExe\b|resolveGitExecutable\b)|f?[\"'][^\"']*\bgit\s)")
+kPythonGitEntrance = "Scripts/common/Git.py"
 
 
 def isCMakePlatformOnly(condition: str) -> bool:
@@ -150,10 +154,17 @@ def findCMakeProblemsInText(path: str, text: str) -> list[str]:
 
 def findPythonProblemsInText(path: str, text: str) -> list[str]:
     """스크립트 하나가 호스트 OS 를 표 밖에서 묻는 줄을 돌려준다."""
-    if path in (kPythonHostTable, "Scripts/lint/PlatformChains.py"):   # 표 자체와 이 린트(질의 낱말을 글로 든다)
+    if path == "Scripts/lint/PlatformChains.py":   # 이 린트(질의 낱말을 글로 든다)
         return []
-    return [f"{path}:{lineNumber}: 호스트 OS 를 직접 묻는다 — `common/HostPlatform.py`(isWindowsHost · kHost · executableName)를 쓴다"
-            for lineNumber, line in enumerate(text.split("\n"), 1) if kPythonHostQuery.search(line.split("#")[0])]
+    listProblem: list[str] = []
+    for lineNumber, line in enumerate(text.split("\n"), 1):
+        code = line.split("#")[0]
+        if path != kPythonHostTable and kPythonHostQuery.search(code):
+            listProblem.append(f"{path}:{lineNumber}: 호스트 OS 를 직접 묻는다 — `common/HostPlatform.py`(isWindowsHost · kHost · executableName)를 쓴다")
+        if path != kPythonGitEntrance and kPythonDirectGit.search(code):
+            listProblem.append(f"{path}:{lineNumber}: git 을 직접 띄운다 — `common/Git.py` 의 runGit(물려받은 GIT_DIR · GIT_INDEX_FILE 을 뺀다)을 쓴다. 커밋 훅이 넘긴"
+                               " 환경을 물려받으면 다른 저장소를 가리킨 명령이 훅의 저장소를 건드린다")
+    return listProblem
 
 
 def readBuildSources(projectRoot: Path, scope: LintScope) -> list[tuple[str, str]]:
@@ -209,6 +220,12 @@ def runSelfCheck() -> None:
     assert len(findBuildProblems([("cmake/a.cmake", "if(NOT WIN32)\n\tset(a 1)\nendif()\n")])) == 1, "CMake 부정 몸"
     assert len(findBuildProblems([("Scripts/a.py", 'x = sys.platform == "win32"\n')])) == 1, "스크립트 직접 질의"
     assert findBuildProblems([(kPythonHostTable, "platform.system()\n")]) == [], "호스트 표 자체"
+    assert len(findBuildProblems([("Scripts/a.py", "subprocess.run(['git', 'mv', a, b], cwd=root)\n")])) == 1, "git 직접 띄우기"
+    assert len(findBuildProblems([("Scripts/a.py", "x = subprocess.check_output([\"git\", \"rev-parse\"])\n")])) == 1, "git 직접 띄우기(큰따옴표)"
+    assert len(findBuildProblems([("Scripts/a.py", "shell(f'cd {CLONE} && git fetch -q')\n")])) == 1, "셸 글 안의 git"
+    assert len(findBuildProblems([("Scripts/a.py", "shell(f'git -C {CLONE} log')\n")])) == 1, "셸 글 git"
+    assert findBuildProblems([(kPythonGitEntrance, "subprocess.run([gitExe, 'status'])\n")]) == [], "입구 자체"
+    assert findBuildProblems([("Scripts/a.py", "runGit(['mv', a, b], cwd=root)\n")]) == [], "입구를 거친 git"
 
 
 def main(argv: Sequence[str] | None = None) -> int:

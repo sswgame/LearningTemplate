@@ -29,6 +29,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
+from common.Git import runGitOrRaise  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
 kRoots = ("Source", "Content", "Config", "docs", "Scripts", "Test", ".claude/skills")
@@ -121,7 +122,7 @@ def renameAll(root: Path, listPair: Sequence[dict], bDryRun: bool) -> int:
                 path.write_text(texts[path], encoding="utf-8", newline="\n")
         for path in findFilesNamed(root, old):
             target = path.with_name(path.name.replace(old, new, 1))
-            subprocess.run(["git", "mv", str(path), str(target)], cwd=root, check=True)
+            runGitOrRaise(["mv", str(path), str(target)], cwd=root)
             listFile = [target if item == path else item for item in listFile]
             texts[target] = texts.pop(path, target.read_text(encoding="utf-8"))
             print(f"    파일 {path.relative_to(root).as_posix()} → {target.name}")

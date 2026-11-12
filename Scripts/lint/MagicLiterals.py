@@ -40,7 +40,7 @@ from typing import Iterable, Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
-from common.Git import runGit  # noqa: E402
+from common.Git import runGitInHookRepository  # noqa: E402
 from lint.CppShape import stripCode  # noqa: E402
 from lint.Format import getModifiedCppFiles  # noqa: E402
 from lint.LintScope import LintScope, readText  # noqa: E402
@@ -262,7 +262,7 @@ def compareCounts(path: str, actual: dict[str, int], allowed: dict[str, int]) ->
 
 def readStagedRenames(projectRoot: Path) -> dict[str, str]:
     """staged 이름 바꾸기의 새 경로 → 옛 경로입니다(옮긴 파일은 옛 경로의 기준선을 이어받는다)."""
-    result = runGit(["diff", "--cached", "--name-status", "-M"], cwd=projectRoot)
+    result = runGitInHookRepository(["diff", "--cached", "--name-status", "-M"], cwd=projectRoot)
     if result.returnCode != 0:
         raise RuntimeError(f"git diff --cached --name-status 실패: {result.stderr.strip()}")
     mapOld: dict[str, str] = {}

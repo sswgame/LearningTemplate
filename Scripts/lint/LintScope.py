@@ -21,12 +21,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
-from common.Git import runGit
+from common.Git import runGitInHookRepository
 
 
 def runGitLines(projectRoot: Path, listArgument: list[str]) -> list[str]:
     """`-z` 로 찍은 git 경로 목록. 실패하면 멈춘다 — 빈 목록이면 커밋 훅이 검사 없이 통과한다."""
-    result = runGit([*listArgument, "-z"], cwd=projectRoot)
+    result = runGitInHookRepository([*listArgument, "-z"], cwd=projectRoot)   # 커밋하는 인덱스(`git commit -a` 의 임시 인덱스 포함)를 본다
     if result.returnCode != 0:
         raise RuntimeError(f"git {' '.join(listArgument)} 실패: {result.stderr.strip()}")
     return [path for path in result.stdout.split("\0") if path]
@@ -75,7 +75,7 @@ def makeWholeScope(projectRoot: Path) -> LintScope:
 
 def listMergeParents(projectRoot: Path) -> list[str]:
     """병합 중이면 들여오는 커밋들(`MERGE_HEAD` 의 줄 — 문어발 병합은 여럿), 아니면 빈 목록."""
-    result = runGit(["rev-parse", "--path-format=absolute", "--git-path", "MERGE_HEAD"], cwd=projectRoot)
+    result = runGitInHookRepository(["rev-parse", "--path-format=absolute", "--git-path", "MERGE_HEAD"], cwd=projectRoot)
     if result.returnCode != 0:
         raise RuntimeError(f"git rev-parse --git-path MERGE_HEAD 실패: {result.stderr.strip()}")
     mergeHead = Path(result.stdout.strip())
