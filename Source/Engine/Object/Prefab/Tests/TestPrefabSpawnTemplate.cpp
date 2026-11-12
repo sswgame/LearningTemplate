@@ -20,6 +20,7 @@
 #include "Engine/Object/GameObject/Serialization/Tests/HandleTestComponents.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 using namespace sw;
 

@@ -23,14 +23,13 @@ namespace sw
                 (void)io.check( MathUtil::isFinite( inoutValue ) );
             }
         };
-        using Internal = AbilitySaveStateInternal;
     } // namespace
 
     void SavedAttributeValue::serializeState( StateIO& io )
     {
         io.value( _attribute );
         (void)io.check( _attribute.empty() == false );
-        Internal::serializeFinite( io, _value );
+        AbilitySaveStateInternal::serializeFinite( io, _value );
     }
 
     void SavedAbilityModifier::serializeState( StateIO& io )
@@ -38,7 +37,7 @@ namespace sw
         io.value( _attribute );
         (void)io.check( _attribute.empty() == false );
         io.enumValue( _op, AttributeModOp::Override );
-        Internal::serializeFinite( io, _magnitude );
+        AbilitySaveStateInternal::serializeFinite( io, _magnitude );
     }
 
     void SavedAbilityEffect::serializeState( StateIO& io )
@@ -49,16 +48,16 @@ namespace sw
         io.value( _level );
         io.value( _stackCount );
         (void)io.check( _stackCount >= 1 );
-        Internal::serializeFinite( io, _duration );
-        Internal::serializeFinite( io, _remainingTime );
-        Internal::serializeFinite( io, _periodTimer );
-        Internal::serializeFinite( io, _startTime );
-        io.list( _listSetByCaller, Internal::kValueMinBytes, [&io]( SavedAttributeValue& value )
+        AbilitySaveStateInternal::serializeFinite( io, _duration );
+        AbilitySaveStateInternal::serializeFinite( io, _remainingTime );
+        AbilitySaveStateInternal::serializeFinite( io, _periodTimer );
+        AbilitySaveStateInternal::serializeFinite( io, _startTime );
+        io.list( _listSetByCaller, AbilitySaveStateInternal::kValueMinBytes, [&io]( SavedAttributeValue& value )
         { io.value( value ); } );
-        io.list( _listSourceAttribute, Internal::kValueMinBytes, [&io]( SavedAttributeValue& value )
+        io.list( _listSourceAttribute, AbilitySaveStateInternal::kValueMinBytes, [&io]( SavedAttributeValue& value )
         { io.value( value ); } );
         io.list( _listDynamicGrantedTag );
-        io.list( _listModifier, Internal::kModifierMinBytes, [&io]( SavedAbilityModifier& modifier )
+        io.list( _listModifier, AbilitySaveStateInternal::kModifierMinBytes, [&io]( SavedAbilityModifier& modifier )
         { io.value( modifier ); } );
     }
 
@@ -73,12 +72,12 @@ namespace sw
     void AbilitySaveState::serializeState( StateIO& io )
     {
         io.header( kStateTag, kStateVersion );
-        Internal::serializeFinite( io, _time );
-        io.list( _listBaseValue, Internal::kValueMinBytes, [&io]( SavedAttributeValue& value )
+        AbilitySaveStateInternal::serializeFinite( io, _time );
+        io.list( _listBaseValue, AbilitySaveStateInternal::kValueMinBytes, [&io]( SavedAttributeValue& value )
         { io.value( value ); } );
-        io.list( _listEffect, Internal::kEffectMinBytes, [&io]( SavedAbilityEffect& effect )
+        io.list( _listEffect, AbilitySaveStateInternal::kEffectMinBytes, [&io]( SavedAbilityEffect& effect )
         { io.value( effect ); } );
-        io.list( _listLooseTag, Internal::kTagMinBytes, [&io]( SavedAbilityTag& tag )
+        io.list( _listLooseTag, AbilitySaveStateInternal::kTagMinBytes, [&io]( SavedAbilityTag& tag )
         { io.value( tag ); } );
     }
 } // namespace sw

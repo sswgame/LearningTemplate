@@ -763,7 +763,16 @@ namespace sw
     // Base 가 선언한 구조체 칸 창구의 JSON 몸통이다(`NestedObjectCodec.h` — Base 가 이 형식을 include 하지 않게).
     string NestedObjectCodec::writeJSON( const void* pObject, const TypeInfo& typeInfo, const SerializeContext& context )
     {
-        return JSONSerializer::serialize( pObject, typeInfo, context );
+        JSONDocument doc;
+        JSONSerializer::writeObject( doc.makeObject(), pObject, typeInfo, context );
+        expected<string> text = JSONSerializerInternal::dumpDocument( doc, typeInfo, JSONDocument::kSingleLineIndent );
+        if ( text.has_value() )
+            return std::move( text ).value();
+        // 이 글은 다른 글 값(XML 속성 · 맵 키 · 표시 글) 안에 들어간다 — 그 쓰기 창구(`SerializerUtil::valueToText`)는 실패를 올릴 길이 없다.
+        // 잘못된 UTF-8 은 U+FFFD 로 바꿔 쓰고(JSONWriter 와 같은 규칙) 오류로 알린다 — 빈 글로 값을 지우지 않고, 조용히 넘기지도 않는다.
+        SW_LOG_ERROR_ID( "JSONSerializer.NestedObjectInvalidUTF8", "Nested %# written into a text value has invalid UTF-8 - replaced with U+FFFD: %# (%#)", typeInfo._name.c_str(),
+                         text.error().message(), text.error().detail() );
+        return doc.getRoot().describe();
     }
 
     bool NestedObjectCodec::readJSON( void* pObject, const TypeInfo& typeInfo, string_view jsonText, const SerializeContext& context )

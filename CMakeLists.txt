@@ -67,6 +67,11 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty")
 	add_subdirectory(ThirdParty)
 endif()
 
+# 교차 빌드는 호스트 빌드의 도구(ReflectionParser · 쿠킹하는 App)를 쓴다 — 쿠킹 타깃(AssetAndToolTargets)이 호스트 폴더(SW_HOST_BUILD_DIR)를 읽기 전에 정한다.
+# 예전에는 이 줄이 아래(Source/Core 뒤)에 있어 첫 구성에서 CookAssets 가 빈 경로(`cmake --build ""`)로 섰다 — 캐시가 생긴 두 번째 구성부터만 맞았다.
+if(CMAKE_CROSSCOMPILING)
+	include(cmake/Engine/HostTools.cmake)
+endif()
 include(cmake/Engine/AssetAndToolTargets.cmake)
 
 # ------------------------------------------------------------------------------
@@ -77,10 +82,8 @@ sw_resolveModuleManifests()
 
 # 순서: Core → ReflectionParser(Core 를 링크한다) → Engine(파서가 있어야 리플렉션 단계가 선다) → ModuleAPI → Editor → ModuleManager → App · Server → GameFramework/Games.
 add_subdirectory(Source/Core)
-if(CMAKE_CROSSCOMPILING)
-	include(cmake/Engine/HostTools.cmake) # 교차 빌드는 호스트 빌드의 도구를 쓴다
-else()
-	add_subdirectory(Source/Programs/ReflectionParser)
+if(NOT CMAKE_CROSSCOMPILING)
+	add_subdirectory(Source/Programs/ReflectionParser) # 교차 빌드는 위에서 호스트 빌드의 파서를 가져왔다(HostTools.cmake)
 endif()
 add_subdirectory(Source/Engine)
 add_subdirectory(Source/DevTools)

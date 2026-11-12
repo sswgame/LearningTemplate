@@ -75,7 +75,6 @@ namespace sw
                 float32       _value{ 0.0f };
             };
         };
-        using Internal = AbilityComponentSaveInternal;
     } // namespace
 } // namespace sw
 
@@ -126,10 +125,10 @@ namespace sw
             }
         }
 
-        vector<Internal::TagCount> listTagCount;
+        vector<AbilityComponentSaveInternal::TagCount> listTagCount;
         for ( const TagID& tag : _ownedTagCounts.getTags().getTags() )
         {
-            listTagCount.push_back( Internal::TagCount{ tag, _ownedTagCounts.getCount( tag ) } );
+            listTagCount.push_back( AbilityComponentSaveInternal::TagCount{ tag, _ownedTagCounts.getCount( tag ) } );
         }
 
         for ( const unique_ptr<ActiveGameplayEffect>& pActiveEffect : _activeEffects )
@@ -138,7 +137,7 @@ namespace sw
             if ( activeEffect._bPendingRemove == SW_TRUE )
                 continue;
             if ( activeEffect._bInhibited == SW_FALSE )
-                Internal::subtractTags( listTagCount, activeEffect._grantedTags ); // 다시 걸 때 붙는다
+                AbilityComponentSaveInternal::subtractTags( listTagCount, activeEffect._grantedTags ); // 다시 걸 때 붙는다
             const AbilityEffectSpec& spec = activeEffect._spec;
             if ( spec._pDef->_id.empty() )
             {
@@ -155,8 +154,8 @@ namespace sw
             saved._remainingTime = activeEffect._remainingTime;
             saved._periodTimer   = activeEffect._periodTimer;
             saved._startTime     = activeEffect._startTime;
-            Internal::appendSortedValues( spec._mapSetByCaller, saved._listSetByCaller );
-            Internal::appendSortedValues( spec._mapSourceAttribute, saved._listSourceAttribute );
+            AbilityComponentSaveInternal::appendSortedValues( spec._mapSetByCaller, saved._listSetByCaller );
+            AbilityComponentSaveInternal::appendSortedValues( spec._mapSourceAttribute, saved._listSourceAttribute );
             for ( const TagID& tag : spec._dynamicGrantedTags.getTags() )
             {
                 saved._listDynamicGrantedTag.push_back( string( tag.getString() ) );
@@ -172,9 +171,9 @@ namespace sw
         for ( const unique_ptr<AbilitySpec>& pSpec : _abilitySpecs )
         {
             if ( pSpec->_bPendingRemove == SW_FALSE && pSpec->_pAbility->isActive() )
-                Internal::subtractTags( listTagCount, pSpec->_pAbility->getConfig()._activationOwnedTags );
+                AbilityComponentSaveInternal::subtractTags( listTagCount, pSpec->_pAbility->getConfig()._activationOwnedTags );
         }
-        for ( const Internal::TagCount& entry : listTagCount )
+        for ( const AbilityComponentSaveInternal::TagCount& entry : listTagCount )
         {
             if ( entry._count > 0 )
                 outState._listLooseTag.push_back( SavedAbilityTag{ string( entry._tag.getString() ), entry._count } );
@@ -215,14 +214,14 @@ namespace sw
 
         // 2) 쓰기 — 실행 중 어빌리티를 끝내고(그 태그가 빠진다), 지금 이펙트를 뗀 뒤 태그 · base · 이펙트를 훅 없이 쓴다.
         cancelAllAbilities();
-        vector<Internal::PreviousValue> listPrevious;
+        vector<AbilityComponentSaveInternal::PreviousValue> listPrevious;
         for ( const unique_ptr<AttributeSet>& pAttributeSet : _listAttributeSet )
         {
             for ( const hashed_string& name : pAttributeSet->getAttributeNames() )
             {
                 const AttributeData* pData = pAttributeSet->findAttribute( name );
                 if ( pData != nullptr )
-                    listPrevious.push_back( Internal::PreviousValue{ pAttributeSet.get(), name, pData->_currentValue } );
+                    listPrevious.push_back( AbilityComponentSaveInternal::PreviousValue{ pAttributeSet.get(), name, pData->_currentValue } );
             }
         }
 
@@ -237,18 +236,18 @@ namespace sw
             }
 
             // 이제 가진 태그는 이펙트 밖 몫뿐이다 — 세이브의 개수로 맞춘다(세트의 태그도 세이브에 들어 있어 두 번 붙지 않는다).
-            vector<Internal::TagCount> listTarget;
+            vector<AbilityComponentSaveInternal::TagCount> listTarget;
             for ( const SavedAbilityTag& saved : state._listLooseTag )
             {
-                listTarget.push_back( Internal::TagCount{ TagID::request( saved._tag ), saved._count } );
+                listTarget.push_back( AbilityComponentSaveInternal::TagCount{ TagID::request( saved._tag ), saved._count } );
             }
             vector<TagID> listOwned = _ownedTagCounts.getTags().getTags(); // 고치는 동안 목록이 바뀌므로 사본으로 돈다
             for ( const TagID& tag : listOwned )
             {
-                if ( Internal::findTagCount( listTarget, tag ) == nullptr )
+                if ( AbilityComponentSaveInternal::findTagCount( listTarget, tag ) == nullptr )
                     _ownedTagCounts.updateCount( tag, -_ownedTagCounts.getCount( tag ) );
             }
-            for ( const Internal::TagCount& target : listTarget )
+            for ( const AbilityComponentSaveInternal::TagCount& target : listTarget )
             {
                 const int32 delta = target._count - _ownedTagCounts.getCount( target._tag );
                 if ( delta != 0 )
@@ -330,7 +329,7 @@ namespace sw
             }
         }
         // 알림은 값이 다 선 뒤에 낸다. 훅이 다시 쓰는 값(최대 체력이 줄어 체력을 다시 씀)은 이미 맞아 집계를 미뤄도 잃는 것이 없다.
-        for ( const Internal::PreviousValue& previous : listPrevious )
+        for ( const AbilityComponentSaveInternal::PreviousValue& previous : listPrevious )
         {
             const AttributeData* pData = previous._pSet->findAttribute( previous._attribute );
             if ( pData->_currentValue != previous._value )

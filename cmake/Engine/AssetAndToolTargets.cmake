@@ -60,6 +60,9 @@ if(CMAKE_CROSSCOMPILING)
 	endif()
 	# 굽는 App 은 호스트 빌드(SW_HOST_BUILD_DIR — HostTools.cmake)의 것이고, 굽기 앞에 그 빌드를 다시 짓는다 — 형식(EngineConfig 스키마 등)이 바뀐 소스로
 	# 낡은 App 이 돌면 설정 읽기부터 멈췄다. 게임 모듈 · 에디터 모듈(텍스처 변형 굽기)도 함께라 대상 하나가 아니라 빌드 전체를 짓는다.
+	if(NOT SW_HOST_BUILD_DIR)
+		message(FATAL_ERROR "[Cook] SW_HOST_BUILD_DIR is empty - include cmake/Engine/HostTools.cmake before this file (CMakeLists.txt)")
+	endif()
 	set(swHostCookApp "${SW_HOST_BUILD_DIR}/Bin/${swHostCookAppName}")
 	unset(swHostCookAppName)
 	sw_checkRHIBackendName("${SW_SHIPPING_RHI_BACKEND}")
