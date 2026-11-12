@@ -1147,11 +1147,6 @@ msgid "Save failed"
 msgstr "저장하지 못했습니다"
 
 #: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
-msgctxt "EdCommon.NotifySaveTitle"
-msgid "Save"
-msgstr "저장"
-
-#: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
 msgctxt "EdCommon.NotifySaved"
 msgid "Saved"
 msgstr "저장했습니다"
@@ -1160,11 +1155,6 @@ msgstr "저장했습니다"
 msgctxt "EdCommon.NotifySceneOpenFailed"
 msgid "Failed to open the scene"
 msgstr "씬을 열지 못했습니다"
-
-#: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
-msgctxt "EdCommon.NotifySceneReadOnly"
-msgid "The scene file is read-only. Check it out (lock it) in the Content Browser first."
-msgstr "씬 파일이 읽기 전용입니다. 먼저 콘텐츠 브라우저에서 Check Out(잠금)하십시오."
 
 #: Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp
 msgctxt "EdCommon.NotifySceneTitle"
