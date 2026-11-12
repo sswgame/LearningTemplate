@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include <thread>
 
@@ -86,6 +87,7 @@ namespace sw
         , _bCancelRequested{ false }
         , _priority{ AsyncIOPriority::Normal }
         , _memoryTag{ MemoryTag::Unknown }
+        , _doneSignal{}
     {
     }
 } // namespace sw
@@ -223,11 +225,29 @@ namespace sw
     {
         if ( _pRequest == nullptr )
             return true;
-        if ( isDone() )
-            return true;
-        if ( _pRequest->_pQueue == nullptr )
-            return false;
-        return _pRequest->_pQueue->waitRequest( *_pRequest, timeoutMs );
+        // 요청마다 제 신호에서 잠든다 — 큐의 잠금을 다투지 않고 다른 요청의 완료에 깨지 않는다(언리얼 `IAsyncReadRequest::WaitCompletion` 의 요청별 이벤트 자리).
+        // 핸들은 큐에 넣은 뒤(`push`)나 바로 끝낸 뒤(`completeDetached`)에만 나가므로, 끝나지 않은 요청은 언젠가 `Done` 을 적고 이 신호를 울린다(`runDelivery` · `completeDetached`).
+        FutexBroadcast& doneSignal = _pRequest->_doneSignal;
+        const Stopwatch stopwatch{};
+        while ( isDone() == false )
+        {
+            uint32 remainingMs{ 0 }; // 0 은 끝없이
+            if ( timeoutMs != 0 )
+            {
+                const int64 elapsedMs = stopwatch.getElapsedMilliseconds();
+                if ( elapsedMs >= static_cast<int64>( timeoutMs ) )
+                    return false;
+                remainingMs = static_cast<uint32>( static_cast<int64>( timeoutMs ) - elapsedMs );
+            }
+            const uint32 epoch = doneSignal.prepareWait();
+            if ( isDone() )
+            {
+                doneSignal.cancelWait();
+                return true;
+            }
+            doneSignal.commitWait( epoch, remainingMs );
+        }
+        return true;
     }
 } // namespace sw
 
@@ -235,7 +255,8 @@ namespace sw
 {
     AsyncFileIOQueue::AsyncFileIOQueue( const AsyncFileIOConfig& settings )
         : _mutex{}
-        , _cv{}
+        , _queueCv{}
+        , _idleCv{}
         , _arrQueue{}
         , _wakeDelegate{}
         , _pTaskManager{ settings._pTaskManager }
@@ -258,7 +279,7 @@ namespace sw
             _arrQueue[AsyncFileIOInternal::toQueueIndex( pRequest->_priority )].push_back( pRequest );
             ++_outstandingCount;
         }
-        _cv.notify_all();
+        _queueCv.notify_one(); // 요청 하나에 꺼낼 스레드 하나
         if ( _wakeDelegate->isBound() )
             _wakeDelegate.get()();
         return true;
@@ -278,6 +299,7 @@ namespace sw
         }
         request._doneStatus.store( static_cast<uint8>( status ), std::memory_order_release );
         request._state.store( static_cast<uint8>( AsyncReadState::Done ), std::memory_order_release );
+        request._doneSignal.notifyAll();
     }
 
     bool AsyncFileIOQueue::cancel( const shared_ptr<AsyncReadRequest>& pRequest )
@@ -352,7 +374,7 @@ namespace sw
             }
             if ( _bStopping )
                 return nullptr;
-            _cv.wait( lock );
+            _queueCv.wait( lock );
         }
     }
 
@@ -377,10 +399,11 @@ namespace sw
             return AsyncIOStatus::OutOfRange;
 
         // 버퍼는 요청한 쪽의 용도로 센다 — IO 스레드의 태그가 아니다.
+        // 0 으로 채우지 않는다 — 곧 전부 읽어 덮고, 다 읽지 못하면(`OutOfRange` · 실패) `finish` 가 버퍼를 비운다(언리얼 IoStore 도 초기화하지 않은 버퍼에 읽는다).
         const ScopedMemoryTag memoryTag{ request._memoryTag };
         try
         {
-            request._result._bytes.resize( static_cast<size_t>( request._size ) );
+            request._result._bytes.resizeForOverwrite( static_cast<size_t>( request._size ) );
         }
         catch ( const std::bad_alloc& )
         {
@@ -462,12 +485,18 @@ namespace sw
         }
         request._doneStatus.store( static_cast<uint8>( request._result._status ), std::memory_order_release );
         {
+            // `Done` 과 남은 수는 한 잠금 아래에서 바꾼다 — 요청이 끝난 것을 본 쪽은 남은 수에서도 빠진 것을 본다.
             ScopedLock<mutex> lock{ _mutex };
             request._state.store( static_cast<uint8>( AsyncReadState::Done ), std::memory_order_release );
             if ( _outstandingCount > 0 )
                 --_outstandingCount;
+            // `waitIdle` 은 0 이 될 때만 깨운다 — 완료마다 모두 깨우지 않는다. 잠금 안에서 알린다: 밖에서 알리면 그 사이 깨어난
+            // `waitIdle` 다음의 `shutdown` 이 큐를 지운 뒤에 조건 변수를 건드린다.
+            if ( _outstandingCount == 0 )
+                _idleCv.notify_all();
         }
-        _cv.notify_all();
+        // 그 요청의 대기자만 깨운다 — 큐의 잠금도, 다른 요청의 완료도 거치지 않는다. 요청은 `pRequest` 가 붙든다.
+        request._doneSignal.notifyAll();
     }
 
     void AsyncFileIOQueue::requestStop()
@@ -486,7 +515,7 @@ namespace sw
                 queue.clear();
             }
         }
-        _cv.notify_all();
+        _queueCv.notify_all(); // 멈춘다 — 기다리는 IO 스레드가 모두 나간다
         for ( const shared_ptr<AsyncReadRequest>& pRequest : listCanceled )
         {
             pRequest->_result._status = AsyncIOStatus::Canceled;
@@ -517,7 +546,7 @@ namespace sw
     void AsyncFileIOQueue::waitIdle() const
     {
         UniqueLock<mutex> lock{ _mutex };
-        _cv.wait( lock, [this]() SW_REQUIRES_LOCK( _mutex )
+        _idleCv.wait( lock, [this]() SW_REQUIRES_LOCK( _mutex )
         { return _outstandingCount == 0; } );
     }
 
@@ -527,21 +556,6 @@ namespace sw
             _pTaskManager->waitStage( _deliveryStage, "AsyncFileIO" );
         // 백엔드가 멈췄으니 남은 전달은 이미 끝났거나(그 자리 전달) 위에서 기다린 태스크다 — 여기서는 곧 돌아온다.
         waitIdle();
-    }
-
-    bool AsyncFileIOQueue::waitRequest( const AsyncReadRequest& request, uint32 timeoutMs ) const
-    {
-        UniqueLock<mutex> lock{ _mutex };
-        const auto        isDone = [&request]()
-        {
-            return request._state.load( std::memory_order_acquire ) == static_cast<uint8>( AsyncReadState::Done );
-        };
-        if ( timeoutMs == 0 )
-        {
-            _cv.wait( lock, isDone );
-            return true;
-        }
-        return _cv.wait_for( lock, std::chrono::milliseconds( timeoutMs ), isDone );
     }
 } // namespace sw
 
