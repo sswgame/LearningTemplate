@@ -179,3 +179,87 @@ SW_TEST_CASE( MailboxStoreLogicTest, ClaimedMailDeleteAndMissingRetention )
     SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getMailTable() ), 0 );
     SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getExpiryTable() ), 0 );
 }
+
+namespace
+{
+    /** @brief @p senderID 의 금 @p amount 를 맡겨 @p recipientID 에게 보냅니다(만료 때 돌려주기). 보낸 계정에는 먼저 같은 양을 발행합니다. */
+    string sendFromPlayer( MemoryServiceDatabase& database, uint64 senderID, uint64 recipientID, string_view idempotencyKey, int64 amount, int64 expiresMs )
+    {
+        LedgerTransferRequest grant;
+        grant._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( senderID ), "gold", amount } );
+        grant._journalKey = string( "test/grant." ) + string( idempotencyKey );
+        grant._reason     = "test.grant";
+        grant._timeMs     = kNowMs;
+        LedgerTransferResult grantResult;
+        SW_EXPECT_TRUE( Ledger::executeTransfer( database, grant, grantResult ) == LedgerResult::Ok );
+        ServiceMailMessage message;
+        message._listAttachment.push_back( ServiceMailAttachment{ "gold", amount } );
+        message._titleKey           = "mail.player";
+        message._idempotencyKey     = string( idempotencyKey );
+        message._fundingHolder      = LedgerHolder::makeAccount( senderID );
+        message._recipientAccountID = recipientID;
+        message._actorID            = senderID;
+        message._actorKind          = LedgerActorKind::Player;
+        message._createdMs          = kNowMs;
+        message._expiresMs          = expiresMs;
+        message._expiryAction       = ServiceMailExpiryAction::ReturnToSender;
+        ServiceTransaction transaction;
+        string             mailKey;
+        bool               bReplayed = false;
+        SW_EXPECT_TRUE( ServiceMail::stageSend( database, message, transaction, mailKey, bReplayed ) == LedgerResult::Ok );
+        SW_EXPECT_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok );
+        return mailKey;
+    }
+
+    size_t countRecords( MemoryServiceDatabase& database, const hashed_string& table )
+    {
+        vector<ServiceRecord> listRecord;
+        SW_EXPECT_TRUE( database.listRecords( table, "", "", 1000, false, listRecord ) == ServiceStoreResult::Ok );
+        return listRecord.size();
+    }
+} // namespace
+
+/**
+ * @brief [MailboxStoreLogicTest] 계정 삭제 → 우편함 키트에 그 계정의 레코드 0: 받은 우편 · 만료 색인 · 알림 · 보낸 기록이 모두 지워지고 맡긴 첨부는 소각된다(감사 P0-7)
+ * @details 변이: 만료 색인이나 알림을 빼면 그 표에 받은 계정이 든 우편 키가 남고, 맡김 소각을 빼면 맡김 잔액이 남아 진다.
+ */
+SW_TEST_CASE( MailboxStoreLogicTest, AccountDeletionErasesTheMailbox )
+{
+    MemoryServiceDatabase database;
+    (void)sendReward( database, "reward.kept", "gold", 10 );
+    (void)sendReward( database, "reward.expiring", "gold", 20, kNowMs + 5000 );
+    const string playerMail = sendFromPlayer( database, kStranger, kRecipient, "player.gift", 30, kNowMs + 5000 );
+
+    SW_REQUIRE_TRUE( MailboxStoreLogic::eraseAccount( database, kRecipient, kNowMs + 100 ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( size_t{ 0 }, countRecords( database, ServiceMail::getMailTable() ) );
+    SW_EXPECT_EQUAL( size_t{ 0 }, countRecords( database, ServiceMail::getSentTable() ) );
+    SW_EXPECT_EQUAL( size_t{ 0 }, countRecords( database, ServiceMail::getExpiryTable() ) );
+    SW_EXPECT_EQUAL( size_t{ 0 }, countRecords( database, ServiceMail::getNoticeTable() ) );
+    vector<LedgerBalance> listEscrow;
+    SW_REQUIRE_TRUE( Ledger::listBalances( database, ServiceMail::makeEscrowHolder( playerMail ), listEscrow ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listEscrow.empty() );
+    SW_EXPECT_EQUAL( int64( 0 ), readBalance( database, kStranger, "gold" ) );                                         // 받는 사람이 지워졌다 — 맡긴 것은 소각이지 반송이 아니다
+    SW_EXPECT_TRUE( MailboxStoreLogic::eraseAccount( database, kRecipient, kNowMs + 200 ) == ServiceStoreResult::Ok ); // 멱등
+}
+
+/**
+ * @brief [MailboxStoreLogicTest] 보낸 계정이 탈퇴로 지워진 우편의 만료는 돌려주지 않고 소각한다 — 돌려주기가 AccountDeleted 로 지면 만료 색인이 영영 남던 결함(감사 P0-7)
+ */
+SW_TEST_CASE( MailboxStoreLogicTest, ExpiryBurnsWhenTheSenderIsDeleted )
+{
+    MemoryServiceDatabase database;
+    const string          playerMail = sendFromPlayer( database, kStranger, kRecipient, "player.orphan", 30, kNowMs + 5000 );
+    ServiceTransaction    deletion;
+    Ledger::stageAccountDeletion( kStranger, kNowMs + 1, deletion );
+    SW_REQUIRE_TRUE( database.commit( deletion ) == ServiceStoreResult::Ok );
+
+    MailboxSweepStats stats;
+    MailboxStoreLogic::sweepExpired( database, kNowMs + 6000, 16, stats );
+    SW_EXPECT_EQUAL( 0, stats._failedCount );
+    SW_EXPECT_EQUAL( 0, stats._returnedCount );
+    SW_EXPECT_EQUAL( 1, stats._discardedCount );
+    SW_EXPECT_EQUAL( size_t{ 0 }, countRecords( database, ServiceMail::getExpiryTable() ) );
+    vector<LedgerBalance> listEscrow;
+    SW_REQUIRE_TRUE( Ledger::listBalances( database, ServiceMail::makeEscrowHolder( playerMail ), listEscrow ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listEscrow.empty() );
+}

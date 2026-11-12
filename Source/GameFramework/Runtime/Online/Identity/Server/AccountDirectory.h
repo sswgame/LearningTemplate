@@ -195,4 +195,17 @@ namespace sw
          */
         [[nodiscard]] virtual ServiceStoreResult afterDeleteAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs ) const = 0;
     };
+
+    /** @brief 상태 없는 저장 함수 하나 @p TErase 를 훅으로 감쌉니다. 키트가 멤버로 두고 `getAfterDeleteAccount` 가 그 주소를 반환합니다. */
+    template <ServiceStoreResult ( *TErase )( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs )>
+    class AfterDeleteAccountFunction final : public IAfterDeleteAccount
+    {
+    public:
+        AfterDeleteAccountFunction() = default;
+
+        [[nodiscard]] ServiceStoreResult afterDeleteAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs ) const override
+        {
+            return TErase( connection, accountID, nowMs );
+        }
+    };
 } // namespace sw

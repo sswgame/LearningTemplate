@@ -82,7 +82,14 @@ namespace sw
         static MailboxServiceResult claimAll( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, int64 claimedRetentionMs, const ILedgerPolicy* pPolicy,
                                               MailboxClaimReply& outReply );
         static MailboxServiceResult deleteMail( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey );
-        /** @brief 만료 인덱스를 시각 순서로 @p maxCount 개까지 처리합니다. */
+        /** @brief 만료 인덱스를 시각 순서로 @p maxCount 개까지 처리합니다. 돌려줄 보낸 계정이 탈퇴로 지워졌으면 첨부를 소각합니다. */
         static void sweepExpired( IServiceStoreConnection& connection, int64 nowMs, int32 maxCount, MailboxSweepStats& outStats );
+        /**
+         * @brief 탈퇴한 계정 @p accountID 의 우편 레코드를 모두 지웁니다(`IAfterDeleteAccount` — 키트 조립이 훅으로 내놓는다).
+         * @details 받은 우편(`mail_item`)과 그 만료 색인 · 알림, 보낸 기록(`mail_sent`), 캠페인 수령(`mail_campaign_claim`)이다. 받지 않은 맡긴 첨부는 소각한다
+         *          (분개 키는 만료와 같은 `mail.expire/<우편 토큰>` 이라 만료 정리와 겹쳐도 한 번만 움직인다). 우편마다 커밋하고 멱등이다.
+         * @return 다 지웠으면 Ok, 우편이 그사이 바뀌었으면 Conflict(다음 회차), 저장소 문제면 Unavailable 입니다.
+         */
+        [[nodiscard]] static ServiceStoreResult eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs );
     };
 } // namespace sw
