@@ -314,6 +314,7 @@ namespace sw
         , _settings{}
         , _pEndpoint{}
         , _nextSerial{ 1 }
+        , _idempotencyBodyBytes{ 0 }
     {
     }
 
@@ -331,6 +332,7 @@ namespace sw
         _mapSerialByRequest.clear();
         _mapInFlightCount.clear();
         _mapIdempotency.clear();
+        _idempotencyBodyBytes = 0;
         _listExpiry.clear();
         _pEndpoint.reset();
         _settings.reset();
@@ -524,7 +526,9 @@ namespace sw
             {
                 IdempotencyEntry& entry = _mapIdempotency[inFlight._scope];
                 entry._status           = status;
+                _idempotencyBodyBytes -= static_cast<int64>( entry._body.size() );
                 entry._body.assign( pBody, pBody + bodySize );
+                _idempotencyBodyBytes += static_cast<int64>( entry._body.size() );
                 entry._bInProgress       = SW_FALSE;
                 entry._bDone             = SW_TRUE;
                 entry._expireNanoseconds = MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( _settings->_idempotencyTTLSeconds );
@@ -564,16 +568,18 @@ namespace sw
 
     void NetRequestServer::purgeIdempotencyLocked( int64 now )
     {
-        const bool bOverCapacity = static_cast<int32>( _mapIdempotency.size() ) > _settings->_maxIdempotencyEntries;
-        while ( _listExpiry.empty() == false && ( _listExpiry.front().second <= now || bOverCapacity ) )
+        const auto isOverCapacity = [this]()
+        { return static_cast<int32>( _mapIdempotency.size() ) > _settings->_maxIdempotencyEntries || _idempotencyBodyBytes > _settings->_maxIdempotencyBytes; };
+        while ( _listExpiry.empty() == false && ( _listExpiry.front().second <= now || isOverCapacity() ) )
         {
             const auto found                  = _mapIdempotency.find( _listExpiry.front().first );
             const bool bExpiredEntryCompleted = found != _mapIdempotency.end() && found->second._bDone == SW_TRUE && found->second._expireNanoseconds == _listExpiry.front().second;
             if ( bExpiredEntryCompleted )
+            {
+                _idempotencyBodyBytes -= static_cast<int64>( found->second._body.size() );
                 _mapIdempotency.erase( found );
+            }
             _listExpiry.pop_front();
-            if ( bOverCapacity && static_cast<int32>( _mapIdempotency.size() ) <= _settings->_maxIdempotencyEntries )
-                break;
         }
     }
 } // namespace sw

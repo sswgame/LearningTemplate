@@ -127,7 +127,8 @@ namespace sw
     {
         int32   _maxInFlightPerConnection{ 64 }; ///< 진행 중인 요청이 이 수를 넘으면 Overloaded 로 응답한다.
         int32   _maxIdempotencyEntries{ 100000 };
-        float64 _idempotencyTTLSeconds{ 600.0 }; ///< 응답을 기억하는 시간. 재접속과 재시도 윈도우보다 길게 잡는다.
+        int64   _maxIdempotencyBytes{ 64ll * 1024 * 1024 }; ///< 기억한 응답 본문의 합. 넘으면 오래된 것부터 잊는다 — 개수만 세면 1 MiB 응답 10 만 개(100 GiB)를 600 초 들고 있을 수 있었다(감사 N-12)
+        float64 _idempotencyTTLSeconds{ 600.0 };            ///< 응답을 기억하는 시간. 재접속과 재시도 윈도우보다 길게 잡는다.
     };
 } // namespace sw
 
@@ -328,5 +329,6 @@ namespace sw
         OnceInit<NetRequestServerConfig>                          _settings;                     ///< initialize 가 한 번 정한다.
         OnceInit<StreamMessageEndpoint*>                          _pEndpoint;                    ///< initialize 가 한 번 정한다.
         uint32 _nextSerial                                        SW_GUARDED_BY( _mutex );
+        int64 _idempotencyBodyBytes                               SW_GUARDED_BY( _mutex ); ///< 끝난 기억의 응답 본문 바이트 합(`_maxIdempotencyBytes` 와 견준다)
     };
 } // namespace sw
