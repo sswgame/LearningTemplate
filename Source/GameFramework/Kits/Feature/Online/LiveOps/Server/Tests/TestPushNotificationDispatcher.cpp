@@ -7,7 +7,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Fake/FakePushProvider.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationDispatcher.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
@@ -292,11 +292,11 @@ SW_TEST_CASE( PushDispatcherTest, TopicClaimsExpireAfterWindow )
     const hashed_string claimTable{ "liveops_push" };
     SW_REQUIRE_EQUAL( 2, rig._database.countRecords( claimTable ) );
 
-    ServiceRetentionRule   rule = PushNotificationDispatcher::makeTopicClaimRetentionRule( 1000 );
-    ServiceRetentionReport report;
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs + 500, 100, 100, report ) == ServiceStoreResult::Ok );
+    ServiceTTLRule        rule = PushNotificationDispatcher::makeTopicClaimTTLRule( 1000 );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs + 500, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 2, rig._database.countRecords( claimTable ) );
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, report._deletedCount );
     SW_EXPECT_EQUAL( 1, rig._database.countRecords( claimTable ) );
 }

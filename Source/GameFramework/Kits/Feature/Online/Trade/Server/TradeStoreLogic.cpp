@@ -9,8 +9,8 @@
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeSessionRecord.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -30,7 +30,7 @@ namespace sw
                     return false;
                 const string sessionKey = ServiceKeyUtil::makeHex64( snapshot._tradeID );
                 if ( snapshot.isClosed() ) // 닫는 모든 경로가 이 함수를 지나므로 색인 줄을 빠뜨리는 경로가 없다
-                    inoutTransaction.put( TradeStoreLogic::getSessionExpiryTable(), ServiceRetentionRule::makeIndexKey( snapshot._updatedMs, sessionKey ), vector<uint8>{},
+                    inoutTransaction.put( TradeStoreLogic::getSessionExpiryTable(), ServiceTTLRule::makeTTLIndexKey( snapshot._updatedMs, sessionKey ), vector<uint8>{},
                                           ServiceRecord::kAnyVersion );
                 inoutTransaction.put( TradeStoreLogic::getSessionTable(), sessionKey, std::move( bytes ), expectedVersion );
                 return true;
@@ -136,13 +136,13 @@ namespace sw
         return s_table;
     }
 
-    ServiceRetentionRule TradeStoreLogic::makeRetentionRule( int64 retentionMs )
+    ServiceTTLRule TradeStoreLogic::makeTTLRule( int64 expireAfterMs )
     {
-        ServiceRetentionRule rule;
-        rule._table       = getSessionTable();
-        rule._indexTable  = getSessionExpiryTable();
-        rule._retentionMs = retentionMs;
-        rule._pfnReadTime = &TradeStoreLogicInternal::readClosedTimeMs;
+        ServiceTTLRule rule;
+        rule._table         = getSessionTable();
+        rule._ttlIndexTable = getSessionExpiryTable();
+        rule._expireAfterMs = expireAfterMs;
+        rule._pfnReadTime   = &TradeStoreLogicInternal::readClosedTimeMs;
         return rule;
     }
 

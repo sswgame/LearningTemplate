@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -10,15 +10,15 @@
 
 namespace sw
 {
-    ServiceStoreResult ServiceRetentionRule::sweep( IServiceStoreConnection& connection, ServiceRetentionRule& inoutRule, int64 nowMs, int32 maxScanCount, int32 maxDeleteCount,
-                                                    ServiceRetentionReport& outReport )
+    ServiceStoreResult ServiceTTLRule::sweep( IServiceStoreConnection& connection, ServiceTTLRule& inoutRule, int64 nowMs, int32 maxScanCount, int32 maxDeleteCount,
+                                              ServiceTTLSweepReport& outReport )
     {
-        outReport = ServiceRetentionReport{};
+        outReport = ServiceTTLSweepReport{};
         if ( inoutRule.isValid() == false )
             return ServiceStoreResult::Invalid;
-        const int64 cutoffMs = nowMs - inoutRule._retentionMs;
-        if ( inoutRule._indexTable.empty() == false )
-            return sweepIndex( connection, inoutRule, cutoffMs, maxScanCount, maxDeleteCount, outReport );
+        const int64 cutoffMs = nowMs - inoutRule._expireAfterMs;
+        if ( inoutRule._ttlIndexTable.empty() == false )
+            return sweepTTLIndex( connection, inoutRule, cutoffMs, maxScanCount, maxDeleteCount, outReport );
         while ( outReport._scannedCount < maxScanCount && outReport._deletedCount < maxDeleteCount )
         {
             const int32              pageSize = MathUtil::min( kPageSize, maxScanCount - outReport._scannedCount );
@@ -82,12 +82,12 @@ namespace sw
         return ServiceStoreResult::Ok;
     }
 
-    bool ServiceRetentionRule::isValid() const
+    bool ServiceTTLRule::isValid() const
     {
-        return _retentionMs > 0 && ( _pfnReadTime != nullptr || _indexTable.empty() == false );
+        return _expireAfterMs > 0 && ( _pfnReadTime != nullptr || _ttlIndexTable.empty() == false );
     }
 
-    string ServiceRetentionRule::makeIndexKey( int64 timeMs, string_view target )
+    string ServiceTTLRule::makeTTLIndexKey( int64 timeMs, string_view target )
     {
         string key;
         ServiceKeyUtil::appendHex64( key, static_cast<uint64>( timeMs < 0 ? 0 : timeMs ) );
@@ -96,7 +96,7 @@ namespace sw
         return key;
     }
 
-    bool ServiceRetentionRule::parseIndexKey( string_view indexKey, int64& outTimeMs, string_view& outTarget )
+    bool ServiceTTLRule::parseTTLIndexKey( string_view indexKey, int64& outTimeMs, string_view& outTarget )
     {
         const size_t width  = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
         uint64       timeMs = 0;
@@ -107,15 +107,15 @@ namespace sw
         return true;
     }
 
-    ServiceStoreResult ServiceRetentionRule::sweepIndex( IServiceStoreConnection& connection, const ServiceRetentionRule& rule, int64 cutoffMs, int32 maxScanCount,
-                                                         int32 maxDeleteCount, ServiceRetentionReport& outReport )
+    ServiceStoreResult ServiceTTLRule::sweepTTLIndex( IServiceStoreConnection& connection, const ServiceTTLRule& rule, int64 cutoffMs, int32 maxScanCount,
+                                                      int32 maxDeleteCount, ServiceTTLSweepReport& outReport )
     {
         string cursor; // 회차 안에서만 쓴다 - Conflict 로 남긴 줄을 이번 회차에 다시 보지 않으려는 것이다
         while ( outReport._scannedCount < maxScanCount && outReport._deletedCount < maxDeleteCount )
         {
             const int32              pageSize = MathUtil::min( kPageSize, maxScanCount - outReport._scannedCount );
             vector<ServiceRecord>    listEntry;
-            const ServiceStoreResult listed = connection.listRecords( rule._indexTable, "", cursor, pageSize, false, listEntry );
+            const ServiceStoreResult listed = connection.listRecords( rule._ttlIndexTable, "", cursor, pageSize, false, listEntry );
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             if ( listEntry.empty() )
@@ -129,7 +129,7 @@ namespace sw
                     return ServiceStoreResult::Ok;
                 int64       entryMs = 0;
                 string_view target;
-                const bool  bParsed = parseIndexKey( entry._key, entryMs, target );
+                const bool  bParsed = parseTTLIndexKey( entry._key, entryMs, target );
                 if ( bParsed && entryMs > cutoffMs )
                     return ServiceStoreResult::Ok; // 시각 순이다. 여기부터는 아직 기간 안이다
                 ++outReport._scannedCount;
@@ -139,14 +139,14 @@ namespace sw
                 {
                     // 색인 형식이 틀린 줄이다. 데이터가 아니라 색인이므로 지워도 잃는 것이 없고, 남기면 앞자리를 막는다
                     ServiceTransaction drop;
-                    drop.erase( rule._indexTable, entry._key, entry._version );
+                    drop.erase( rule._ttlIndexTable, entry._key, entry._version );
                     const ServiceStoreResult dropped = connection.commit( drop );
                     if ( dropped != ServiceStoreResult::Ok && dropped != ServiceStoreResult::Conflict )
                         return dropped;
                     continue;
                 }
                 bool                     bEntryDone = true;
-                const ServiceStoreResult expired    = expireIndexEntry( connection, rule, entry, target, cutoffMs, outReport, bEntryDone );
+                const ServiceStoreResult expired    = expireTTLIndexEntry( connection, rule, entry, target, cutoffMs, outReport, bEntryDone );
                 if ( expired != ServiceStoreResult::Ok && expired != ServiceStoreResult::Conflict )
                     return expired; // Conflict 는 다음 회차가 맨 앞에서 다시 본다
                 if ( expired == ServiceStoreResult::Ok && bEntryDone == false )
@@ -159,8 +159,8 @@ namespace sw
         return ServiceStoreResult::Ok;
     }
 
-    ServiceStoreResult ServiceRetentionRule::expireIndexEntry( IServiceStoreConnection& connection, const ServiceRetentionRule& rule, const ServiceRecord& entry,
-                                                               string_view target, int64 cutoffMs, ServiceRetentionReport& inoutReport, bool& outbEntryDone )
+    ServiceStoreResult ServiceTTLRule::expireTTLIndexEntry( IServiceStoreConnection& connection, const ServiceTTLRule& rule, const ServiceRecord& entry,
+                                                            string_view target, int64 cutoffMs, ServiceTTLSweepReport& inoutReport, bool& outbEntryDone )
     {
         vector<ServiceRecord> listTarget;
         bool                  bEntryDone = true; // 색인 줄도 지울지다
@@ -207,7 +207,7 @@ namespace sw
             listErased.push_back( &record );
         }
         if ( bEntryDone )
-            transaction.erase( rule._indexTable, entry._key, entry._version );
+            transaction.erase( rule._ttlIndexTable, entry._key, entry._version );
         if ( rule._pfnStageErase != nullptr && listErased.empty() == false )
         {
             const ServiceStoreResult staged = rule._pfnStageErase( connection, listErased, transaction );

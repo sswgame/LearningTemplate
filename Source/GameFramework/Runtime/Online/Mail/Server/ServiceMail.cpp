@@ -7,7 +7,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -168,7 +168,7 @@ namespace sw
         pending.put( getSentTable(), sentKey, vector<uint8>( reinterpret_cast<const uint8*>( mailKey.data() ), reinterpret_cast<const uint8*>( mailKey.data() ) + mailKey.size() ), ServiceRecord::kAbsentVersion );
         if ( message._expiresMs > 0 )
             pending.put( getExpiryTable(), makeExpiryKey( message._expiresMs, mailKey ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
-        pending.put( getNoticeTable(), makeExpiryKey( message._createdMs, mailKey ), // 키 모양(시각 16 진 + 우편 키)이 만료 색인과 같다
+        pending.put( getNoticeTable(), makeExpiryKey( message._createdMs, mailKey ), // 키 모양(시각 16 진 + 우편 키)이 TTL 색인과 같다
                      vector<uint8>( reinterpret_cast<const uint8*>( message._titleKey.data() ), reinterpret_cast<const uint8*>( message._titleKey.data() ) + message._titleKey.size() ),
                      ServiceRecord::kAbsentVersion );
 
@@ -226,7 +226,7 @@ namespace sw
 
     string ServiceMail::makeExpiryKey( int64 expiresMs, string_view mailKey )
     {
-        return ServiceRetentionRule::makeIndexKey( expiresMs, mailKey ); // 보존 규칙의 만료 색인과 같은 모양이다
+        return ServiceTTLRule::makeTTLIndexKey( expiresMs, mailKey ); // TTL 규칙의 TTL 색인과 같은 모양이다
     }
 
     bool ServiceMail::parseRecipient( string_view mailKey, uint64& outAccountID )

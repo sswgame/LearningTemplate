@@ -15,7 +15,7 @@
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 using namespace sw;
 
@@ -218,7 +218,7 @@ namespace
     };
 } // namespace
 
-/** @brief [LeaderboardServiceTest] 보존 규칙: 지난 기간 점수는 기간 끝(시즌은 정산 창 끝) 뒤에 지우고, 초기화 없는 보드의 점수는 남긴다(감사 O-9) */
+/** @brief [LeaderboardServiceTest] TTL 규칙: 지난 기간 점수는 기간 끝(시즌은 정산 창 끝) 뒤에 지우고, 초기화 없는 보드의 점수는 남긴다(감사 O-9) */
 SW_TEST_CASE( LeaderboardServiceTest, PastScoresExpireAfterPeriodAndSettlementWindow )
 {
     constexpr int64     kSettlementWindowMs = 7 * kDayMs;
@@ -237,21 +237,21 @@ SW_TEST_CASE( LeaderboardServiceTest, PastScoresExpireAfterPeriodAndSettlementWi
     SW_REQUIRE_EQUAL( 5, world._database.countRecords( scoreTable ) );
     SW_EXPECT_EQUAL( 4, world._database.countRecords( hashed_string( "lb_score_expiry" ) ) );
 
-    ServiceRetentionRule   scoreRule = LeaderboardService::makeScoreRetentionRule( 1000 );
-    ServiceRetentionReport report;
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( world._database, scoreRule, kSeasonEndMs + kDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    ServiceTTLRule        scoreRule = LeaderboardService::makeScoreTTLRule( 1000 );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, scoreRule, kSeasonEndMs + kDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 0, report._deletedCount ); // 정산 창 안이다 - 정산이 읽을 점수를 지우지 않는다
     SW_EXPECT_EQUAL( 1, rig.settle( "season", 1 )._succeededCount );
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( world._database, scoreRule, kNowMs + 2 * kDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, scoreRule, kNowMs + 2 * kDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 4, report._deletedCount );
     SW_EXPECT_EQUAL( 1, world._database.countRecords( scoreTable ) ); // 초기화 없는 보드다
 
-    const hashed_string  resultTable{ "lb_season_result" };
-    ServiceRetentionRule resultRule = LeaderboardService::makeSeasonResultRetentionRule( 1000 );
+    const hashed_string resultTable{ "lb_season_result" };
+    ServiceTTLRule      resultRule = LeaderboardService::makeSeasonResultTTLRule( 1000 );
     SW_REQUIRE_EQUAL( 2, world._database.countRecords( resultTable ) );
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( world._database, resultRule, kSeasonEndMs + kSettlementWindowMs + 500, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, resultRule, kSeasonEndMs + kSettlementWindowMs + 500, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 2, world._database.countRecords( resultTable ) ); // 창이 닫힌 뒤부터 잰다
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( world._database, resultRule, kSeasonEndMs + kSettlementWindowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, resultRule, kSeasonEndMs + kSettlementWindowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 0, world._database.countRecords( resultTable ) );
 }
 

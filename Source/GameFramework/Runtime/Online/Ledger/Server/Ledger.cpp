@@ -168,7 +168,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 지우는 분개들의 공급 합을 자산별 이월 레코드에 더하는 쓰기를 붙입니다(`ServiceRetentionStageFn`). 이월 레코드는 읽은 버전을 조건으로 쓴다. */
+            /** @brief 지우는 분개들의 공급 합을 자산별 이월 레코드에 더하는 쓰기를 붙입니다(`ServiceTTLStageFn`). 이월 레코드는 읽은 버전을 조건으로 쓴다. */
             static ServiceStoreResult stageJournalCarry( IServiceStoreConnection& connection, const vector<const ServiceRecord*>& listErased, ServiceTransaction& inoutTransaction )
             {
                 vector<LedgerSupplyStats> listSupply;
@@ -353,11 +353,11 @@ namespace sw
         return s_table;
     }
 
-    ServiceRetentionRule Ledger::makeJournalRetentionRule( int64 retentionMs )
+    ServiceTTLRule Ledger::makeJournalRetentionRule( int64 retentionMs )
     {
-        ServiceRetentionRule rule;
+        ServiceTTLRule rule;
         rule._table         = getJournalTable();
-        rule._retentionMs   = retentionMs;
+        rule._expireAfterMs = retentionMs;
         rule._pfnReadTime   = &LedgerInternal::readJournalTimeMs;
         rule._pfnStageErase = &LedgerInternal::stageJournalCarry;
         return rule;

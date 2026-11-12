@@ -627,7 +627,7 @@ namespace sw
                 const string       inviteKey = Internal::makePairKey( _request._targetID, guildID );
                 const int64        expiresMs = _request._nowMs.count() + GuildLimit::kInviteLifetimeMs;
                 transaction.put( Internal::getInviteTable(), inviteKey, Internal::encodeInvite( _request._accountID, expiresMs ) ); // 다시 보내면 덮어쓴다
-                transaction.put( Internal::getInviteExpiryTable(), ServiceRetentionRule::makeIndexKey( expiresMs, inviteKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+                transaction.put( Internal::getInviteExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, inviteKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
                 _serviceResult._invitedID = _request._targetID;
                 return connection.commit( transaction );
             }
@@ -1194,13 +1194,13 @@ namespace sw
         _pLedgerPolicy = nullptr;    // 이벤트 칸은 건 쪽이 구독을 놓아 비운다
     }
 
-    ServiceRetentionRule GuildService::makeInviteRetentionRule( int64 retentionMs )
+    ServiceTTLRule GuildService::makeInviteTTLRule( int64 expireAfterMs )
     {
-        ServiceRetentionRule rule;
-        rule._table       = GuildServiceInternal::getInviteTable();
-        rule._indexTable  = GuildServiceInternal::getInviteExpiryTable();
-        rule._retentionMs = retentionMs;
-        rule._pfnReadTime = &GuildServiceInternal::readInviteExpiryMs;
+        ServiceTTLRule rule;
+        rule._table         = GuildServiceInternal::getInviteTable();
+        rule._ttlIndexTable = GuildServiceInternal::getInviteExpiryTable();
+        rule._expireAfterMs = expireAfterMs;
+        rule._pfnReadTime   = &GuildServiceInternal::readInviteExpiryMs;
         return rule;
     }
 

@@ -487,11 +487,11 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemStaysSpentAfterTheJournalIsSwept )
     SW_REQUIRE_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
 
     // 401 일 뒤 운영과 같은 분개 쓸기 규칙 — 분개(감사 내역)는 지워지고 공급 합은 이월로 남는다
-    constexpr int64        kDayMs       = 24 * constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
-    constexpr int64        kRetentionMs = 401 * kDayMs;
-    ServiceRetentionRule   rule         = Ledger::makeJournalRetentionRule( kRetentionMs );
-    ServiceRetentionReport sweepReport;
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs + kRetentionMs, 1000, 1000, sweepReport ) == ServiceStoreResult::Ok );
+    constexpr int64       kDayMs       = 24 * constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
+    constexpr int64       kRetentionMs = 401 * kDayMs;
+    ServiceTTLRule        rule         = Ledger::makeJournalRetentionRule( kRetentionMs );
+    ServiceTTLSweepReport sweepReport;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs + kRetentionMs, 1000, 1000, sweepReport ) == ServiceStoreResult::Ok );
     SW_REQUIRE_TRUE( sweepReport._deletedCount > 0 );
     vector<ServiceRecord> listJournal;
     SW_REQUIRE_TRUE( rig._database.listRecords( Ledger::getJournalTable(), "", "", 1000, false, listJournal ) == ServiceStoreResult::Ok );

@@ -170,12 +170,12 @@ namespace sw
         return true;
     }
 
-    ServiceRetentionRule PushNotificationDispatcher::makeTopicClaimRetentionRule( int64 retentionMs )
+    ServiceTTLRule PushNotificationDispatcher::makeTopicClaimTTLRule( int64 expireAfterMs )
     {
-        ServiceRetentionRule rule;
-        rule._table       = PushNotificationDispatcherInternal::getTopicClaimTable();
-        rule._retentionMs = retentionMs;
-        rule._pfnReadTime = &PushNotificationDispatcherInternal::readClaimWindowEndMs;
+        ServiceTTLRule rule;
+        rule._table         = PushNotificationDispatcherInternal::getTopicClaimTable();
+        rule._expireAfterMs = expireAfterMs;
+        rule._pfnReadTime   = &PushNotificationDispatcherInternal::readClaimWindowEndMs;
         return rule;
     }
 

@@ -23,8 +23,8 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
-#include "GameFramework/Runtime/Online/Schedule/Server/ServiceRetentionJob.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Schedule/Server/ServiceTTLMonitor.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
@@ -70,40 +70,40 @@ namespace sw
             /** @brief 분개를 내역보다 하루 더 남긴다 — 내역이 가리키는 분개가 먼저 사라지지 않게 한다. */
             static constexpr int64 kJournalExtraDays = 1;
 
-            static ServiceRetentionRule makeRetentionRule( const hashed_string& table, int64 days, ServiceRetentionTimeFn pfnReadTime )
+            static ServiceTTLRule makeTTLRule( const hashed_string& table, int64 days, ServiceTTLTimeFn pfnReadTime )
             {
-                ServiceRetentionRule rule;
-                rule._table       = table;
-                rule._retentionMs = days * kDayMs;
-                rule._pfnReadTime = pfnReadTime;
+                ServiceTTLRule rule;
+                rule._table         = table;
+                rule._expireAfterMs = days * kDayMs;
+                rule._pfnReadTime   = pfnReadTime;
                 return rule;
             }
 
             /** @brief 설정의 보존 일수(0 이면 지우지 않음)로 쓸기 규칙을 만듭니다. */
-            static vector<ServiceRetentionRule> makeRetentionRules( const OnlineServerConfig& config )
+            static vector<ServiceTTLRule> makeTTLRules( const OnlineServerConfig& config )
             {
-                vector<ServiceRetentionRule> listRule;
+                vector<ServiceTTLRule> listRule;
                 if ( config._retentionAuditDays > 0 )
-                    listRule.push_back( makeRetentionRule( ServiceAuditLog::getTable(), config._retentionAuditDays, &ServiceAuditLog::readTimeMs ) );
+                    listRule.push_back( makeTTLRule( ServiceAuditLog::getTable(), config._retentionAuditDays, &ServiceAuditLog::readTimeMs ) );
                 if ( config._retentionLedgerDays > 0 )
                 {
-                    listRule.push_back( makeRetentionRule( Ledger::getHistoryTable(), config._retentionLedgerDays, &Ledger::readHistoryTimeMs ) );
+                    listRule.push_back( makeTTLRule( Ledger::getHistoryTable(), config._retentionLedgerDays, &Ledger::readHistoryTimeMs ) );
                     listRule.push_back( Ledger::makeJournalRetentionRule( ( config._retentionLedgerDays + kJournalExtraDays ) * kDayMs ) ); // 지우는 분개의 공급 합을 이월에 남긴다
                 }
                 if ( config._retentionReportDays > 0 )
                 {
-                    ServiceRetentionRule rule = makeRetentionRule( ServiceReportStore::getTable(), config._retentionReportDays, &ServiceReportStore::readClosedTimeMs );
-                    rule._keyPrefix           = "closed/";
+                    ServiceTTLRule rule = makeTTLRule( ServiceReportStore::getTable(), config._retentionReportDays, &ServiceReportStore::readClosedTimeMs );
+                    rule._keyPrefix     = "closed/";
                     listRule.push_back( std::move( rule ) );
                 }
                 if ( config._retentionMailSentDays > 0 ) // 우편 자체는 우편함 만료 정리가 지운다. 보낸 기록은 멱등 창이라 따로 둔다
-                    listRule.push_back( makeRetentionRule( ServiceMail::getSentTable(), config._retentionMailSentDays, &ServiceMail::readSentTimeMs ) );
+                    listRule.push_back( makeTTLRule( ServiceMail::getSentTable(), config._retentionMailSentDays, &ServiceMail::readSentTimeMs ) );
                 return listRule;
             }
 
-            static ServiceRetentionJobConfig makeRetentionSettings( const OnlineServerConfig& config )
+            static ServiceTTLMonitorConfig makeTTLMonitorConfig( const OnlineServerConfig& config )
             {
-                ServiceRetentionJobConfig settings;
+                ServiceTTLMonitorConfig settings;
                 settings._minuteOfDay = config._retentionMinuteOfDay;
                 return settings;
             }
@@ -240,7 +240,7 @@ namespace sw
         unique_ptr<IStreamTransport>        _ownedAdminTransport{};
         unique_ptr<ITLSContext>             _tlsContext{};
         ServiceScheduler                    _scheduler{};
-        ServiceRetentionJob                 _retention{};
+        ServiceTTLMonitor                   _retention{};
         RemoteConfig                        _remoteConfig{};
         OnlineServiceHost                   _host{};
         unique_ptr<EphemeralServerBus>      _bus{};
@@ -381,14 +381,14 @@ namespace sw
         }
         {
             // 기반 규칙 뒤에 키트가 `initialize` 에서 올린 자기 테이블 규칙을 붙인다 — 런타임은 키트 테이블을 모른다.
-            using Internal                        = OnlineServerRuntimeInternal;
-            vector<ServiceRetentionRule> listRule = Internal::makeRetentionRules( parts._config );
-            for ( ServiceRetentionRule& rule : parts._context._listRetentionRule )
+            using Internal                  = OnlineServerRuntimeInternal;
+            vector<ServiceTTLRule> listRule = Internal::makeTTLRules( parts._config );
+            for ( ServiceTTLRule& rule : parts._context._listTTLRule )
             {
                 listRule.push_back( std::move( rule ) );
             }
-            parts._context._listRetentionRule.clear();
-            if ( parts._retention.initialize( parts._store.get(), &parts._scheduler, std::move( listRule ), Internal::makeRetentionSettings( parts._config ) ) == false )
+            parts._context._listTTLRule.clear();
+            if ( parts._retention.initialize( parts._store.get(), &parts._scheduler, std::move( listRule ), Internal::makeTTLMonitorConfig( parts._config ) ) == false )
                 return unexpected( Error{ ErrorKind::ExternalFailure, "the retention sweep job could not be scheduled" } );
         }
         if ( expected<void> host = startHost( settings ); host.has_value() == false )

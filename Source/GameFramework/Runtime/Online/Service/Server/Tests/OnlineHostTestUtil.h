@@ -349,7 +349,7 @@ namespace sw::test
     };
 
     /**
-     * @brief 키트 응답의 보존 규칙(`OnlineServiceHost::respondReply` 가 `TReply::isRetryable` 로 정한다)을 재는 하니스입니다.
+     * @brief 키트 응답의 TTL 규칙(`OnlineServiceHost::respondReply` 가 `TReply::isRetryable` 로 정한다)을 재는 하니스입니다.
      * @details 같은 멱등 키로 보낸 요청이 서비스에 닿았는지를 `send` 가 돌려준다 — 다시 시도할 결과 뒤면 닿고(1), 끝난 결과 뒤면 서버가 기억한 답을 준다(0).
      *          선언 순서가 수명이다(가짜 서비스가 망보다 오래 산다).
      */

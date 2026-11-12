@@ -13,7 +13,7 @@
  *            첫 읽기 전의 말하기는 `_maxPendingSendPerMember` 개까지 대기시켰다가 읽기가 끝나면 처리한다.
  *          - 기록은 영속 테이블 `chat_history` 에 둔다. 키는 `<채널 id>/<보낸 시각 16진>.<서버 16진>.<순번 16진>` 이며 키 순서가 시간 순서이다.
  *            틱마다 쌓인 기록을 트랜잭션 하나로 쓰며 최선 노력이다. 실패하면 경고를 남기고 버린다.
- *            지우기는 보존 규칙(`makeRetentionRule`, 기간은 `ChatKitConfig::_historyRetentionDays`)이 한다. 기록을 쓰는 트랜잭션에 만료 색인 `chat_history_expiry` 의
+ *            지우기는 TTL 규칙(`makeTTLRule`, 기간은 `ChatKitConfig::_historyRetentionDays`)이 한다. 기록을 쓰는 트랜잭션에 TTL 색인 `chat_history_expiry` 의
  *            줄 `<날짜 끝 16진>/<채널 id>/`(채널 · 날짜마다 한 번)을 함께 넣고, 매일 쓸기가 기간이 지난 날짜의 채널만 범위 읽기로 지운다.
  *            새 글이 없는 채널(귓속말 쌍, 해산된 길드)도 색인 줄이 남아 있어 함께 지워진다(개인정보 보존 기간).
  *          - 신고(`reportMessage`)는 저장된 기록에서 그 메시지와 앞 메시지(`ChatLimit::kReportContextCount`)를 읽어 신고 레코드(`ServiceReportStore`)로 남긴다.
@@ -40,9 +40,9 @@
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
 #include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
@@ -160,8 +160,8 @@ namespace sw
         /** @brief 쌓인 기록을 저장소에 씁니다. */
         void update( UnixMilliseconds nowMs );
 
-        /** @brief 기록 테이블의 보존 규칙입니다(만료 색인 규칙). 키트 조립이 `IOnlineServerKit::addRetentionRule` 로 올립니다. */
-        static ServiceRetentionRule makeRetentionRule( int64 retentionMs );
+        /** @brief 기록 테이블의 TTL 규칙입니다(TTL 색인 규칙). 키트 조립이 `IOnlineServerKit::addTTLRule` 로 올립니다. */
+        static ServiceTTLRule makeTTLRule( int64 expireAfterMs );
 
         // 클라이언트 요청이다. 결과는 같은 요청 태그로 takeCompletions 에서 받는다
         void joinChannel( AccountID accountID, string_view channelID, UnixMilliseconds nowMs, uint64 requestTag );
@@ -256,7 +256,7 @@ namespace sw
         uint32                                   _sequence;
         uint32                                   _reportSequence;         ///< 신고 키의 고유 값(서버 id 와 섞는다)
         ServiceStoreTracker                      _store;                  ///< 저장소에 맡긴 일의 앞이다(기록 · 제재 · 신고)
-        unordered_set<string>                    _uniqueIndexedGroupKeys; ///< 이 서버가 커밋한 만료 색인 줄(채널 · 날짜마다 한 번). 날짜가 바뀌면 비운다
+        unordered_set<string>                    _uniqueIndexedGroupKeys; ///< 이 서버가 커밋한 TTL 색인 줄(채널 · 날짜마다 한 번). 날짜가 바뀌면 비운다
         int64                                    _indexedDayEndMs;        ///< `_uniqueIndexedGroupKeys` 가 담은 날짜의 끝
         uint8                                    _bHistoryWriting;
     };

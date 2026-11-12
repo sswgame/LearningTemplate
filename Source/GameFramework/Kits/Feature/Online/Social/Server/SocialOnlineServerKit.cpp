@@ -69,7 +69,7 @@ namespace sw
                     .and_then( [&]
                 { return exposeInterface<IAccountBlockList>( context, entry, _blockList ); } )
                     .and_then( [&]
-                { return addRetentionRule( context, entry, GuildService::makeInviteRetentionRule( kitConfig._expiredInviteRetentionDays * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond ) ); } );
+                { return addTTLRule( context, entry, GuildService::makeInviteTTLRule( kitConfig._expiredInviteRetentionDays * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond ) ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override

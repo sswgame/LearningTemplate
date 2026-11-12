@@ -18,7 +18,7 @@ namespace sw
     struct SW_GF_API ServiceReportStore
     {
         static const hashed_string& getTable(); ///< "service_report"
-        /** @brief 닫힌 신고(`closed/<만든 시각 16 진>/…`)의 만든 시각을 읽습니다(보존 기간 쓸기 `ServiceRetentionRule` 용). 열린 신고와 틀린 키는 false 입니다. */
+        /** @brief 닫힌 신고(`closed/<만든 시각 16 진>/…`)의 만든 시각을 읽습니다(보존 기간 쓸기 `ServiceTTLRule` 용). 열린 신고와 틀린 키는 false 입니다. */
         [[nodiscard]] static bool readClosedTimeMs( const ServiceRecord& record, int64& outTimeMs );
         /** @brief 열린 신고의 키를 만듭니다. @p uniqueID 는 같은 신고자가 같은 밀리초에 낸 신고를 가릅니다. */
         static string makeOpenKey( int64 createdMs, AccountID reporterID, uint64 uniqueID );

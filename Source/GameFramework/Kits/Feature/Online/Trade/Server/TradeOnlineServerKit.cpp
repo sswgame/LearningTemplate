@@ -66,8 +66,8 @@ namespace sw
                 _policy._maxLegsPerSide     = kitConfig._maxLegsPerSide;
                 if ( expected<void> result = registerServerService( context, entry, &_server ); result.has_value() == false )
                     return result;
-                return addRetentionRule( context, entry,
-                                         TradeStoreLogic::makeRetentionRule( kitConfig._closedRetentionDays * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond ) );
+                return addTTLRule( context, entry,
+                                   TradeStoreLogic::makeTTLRule( kitConfig._closedRetentionDays * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond ) );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override

@@ -6,7 +6,7 @@
  *          - 지우기는 받았거나 첨부가 없는 우편만 지울 수 있다. 첨부가 남은 우편을 지우면 재화가 사라지기 때문이다.
  *          - 받은 우편도 받은 뒤 보관 기간(`MailboxKitConfig::_claimedRetentionDays`)이 지나면 만료 정리가 지운다. PlayFab · 국내 MMO 우편함처럼 받은 우편을 서버가 영원히 들고 있지 않는다.
  *            목록은 만료된 우편을 숨기므로 받은 우편은 사라지는 그때 함께 보이지 않는다. 우편을 지워도 원장 분개(`mail.claim/<토큰>`)는 남아 같은 우편의 두 번째 수령은 우편이 없어 NotFound 이다.
- *            보낸 기록(`mail_sent`, 보내기 멱등)은 우편과 따로 보존 규칙(`OnlineServerConfig::_retentionMailSentDays`)이 지운다 — 우편을 지운 뒤에도 보내는 쪽의 재시도를 가려야 하기 때문이다.
+ *            보낸 기록(`mail_sent`, 보내기 멱등)은 우편과 따로 TTL 규칙(`OnlineServerConfig::_retentionMailSentDays`)이 지운다 — 우편을 지운 뒤에도 보내는 쪽의 재시도를 가려야 하기 때문이다.
  *          - 만료 정리는 만료 인덱스를 시각 순서로 처리한다. 발행한 재원은 지우기만 한다. 맡긴 첨부는 우편의 만료 처리를 따른다. 버림은 맡긴 것을 소각하고, 돌려줌은 보낸 계정에 돌려주며 상한을 무시한다.
  *            기본 처리는 우편을 넣을 때 정해진다(`ServiceMail::getDefaultExpiryAction`). 운영 우편과 보상 우편은 소멸이고, 플레이어 우편은 반환이며 보관 기간은 30일이다.
  *          - @p pPolicy 는 계정 상한이다. 게임이 CurrencyCatalog 를 넘기며, 기반 계층의 계약 ILedgerPolicy 라서 키트끼리 몰라도 된다.

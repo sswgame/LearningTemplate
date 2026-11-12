@@ -22,8 +22,8 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
@@ -49,7 +49,7 @@ namespace sw
          * @brief 분개 표의 보존 쓸기 규칙을 만듭니다. 지우는 분개의 발행 · 소각 합을 이월 레코드에 같은 트랜잭션으로 더합니다.
          * @details 분개를 끝까지 읽지 못하면 시각도 읽지 않은 것으로 보고 지우지 않는다 — 이월에 넣지 못하는 분개를 지우면 감사 균형이 깨진다.
          */
-        [[nodiscard]] static ServiceRetentionRule makeJournalRetentionRule( int64 retentionMs );
+        [[nodiscard]] static ServiceTTLRule makeJournalRetentionRule( int64 retentionMs );
         /** @brief 분개 @p entry 의 발행 · 소각 다리를 자산별로 @p inoutListSupply 에 더합니다. 이월과 감사(`LedgerAuditReport`)가 같은 셈을 씁니다. */
         static void addSupply( const LedgerJournalEntry& entry, vector<LedgerSupplyStats>& inoutListSupply );
         /** @brief 이월 레코드를 모두 읽어 @p inoutListSupply 에 더합니다. 읽지 못한 레코드는 @p outUnreadableCount 에 셉니다. */

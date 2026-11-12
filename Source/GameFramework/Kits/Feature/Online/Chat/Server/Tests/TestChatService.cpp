@@ -14,7 +14,7 @@
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 using namespace sw;
 
@@ -24,7 +24,7 @@ namespace
     constexpr AccountID   kBob       = 12;
     constexpr AccountID   kCarol     = 13;
     constexpr int64       kNowMs     = 1700000000000ll;
-    constexpr int64       kChatDayMs = 86400000ll; ///< 기록 만료 색인의 날짜 폭과 같다
+    constexpr int64       kChatDayMs = 86400000ll; ///< 기록 TTL 색인의 날짜 폭과 같다
     constexpr uint64      kServerA   = 1;
     constexpr uint64      kServerB   = 2;
     constexpr const utf8* kWorld     = "world.kr";
@@ -463,11 +463,11 @@ SW_TEST_CASE( ChatServiceTest, WhisperHistoryExpiresWithoutNewMessages )
     const hashed_string historyTable{ "chat_history" };
     SW_REQUIRE_EQUAL( 1, database.countRecords( historyTable ) );
 
-    ServiceRetentionRule   rule = ChatService::makeRetentionRule( 30 * kChatDayMs );
-    ServiceRetentionReport report;
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( database, rule, kNowMs + 29 * kChatDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    ServiceTTLRule        rule = ChatService::makeTTLRule( 30 * kChatDayMs );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, rule, kNowMs + 29 * kChatDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, database.countRecords( historyTable ) ); // 아직 기간 안이다
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( database, rule, kNowMs + 31 * kChatDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, rule, kNowMs + 31 * kChatDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 0, database.countRecords( historyTable ) );
     SW_EXPECT_EQUAL( 0, database.countRecords( hashed_string( "chat_history_expiry" ) ) );
 }
@@ -614,7 +614,7 @@ SW_TEST_CASE( ChatServiceTest, HistoryPagesNewestFirst )
     SW_EXPECT_TRUE( rig.history( kAlice, "Bad Channel" )._result.hasError( OnlineError::kInvalidRequest ) );
 }
 
-/** @brief [ChatServiceTest] 기록 정리: 보존 규칙이 기간이 지난 날짜의 기록만 지운다. 저장소가 실패하면 경고하고 버린다. 큐가 차면 오래된 것부터 버린다 */
+/** @brief [ChatServiceTest] 기록 정리: TTL 규칙이 기간이 지난 날짜의 기록만 지운다. 저장소가 실패하면 경고하고 버린다. 큐가 차면 오래된 것부터 버린다 */
 SW_TEST_CASE( ChatServiceTest, HistoryTrimsAndDropsWhenItMust )
 {
     SW_EXPECT_LOG( "ChatService.ChatServiceChatHistoryRecords" );
@@ -631,9 +631,9 @@ SW_TEST_CASE( ChatServiceTest, HistoryTrimsAndDropsWhenItMust )
     SW_EXPECT_TRUE( rig.send( kAlice, "new", kWorld, laterMs )._result == ChatResult::Ok );
     rig.flush( laterMs );
     SW_EXPECT_EQUAL( 2, database.countRecords( hashed_string( "chat_history_expiry" ) ) );
-    ServiceRetentionRule   rule = ChatService::makeRetentionRule( 1000 );
-    ServiceRetentionReport report;
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( database, rule, ( kNowMs / kChatDayMs + 1 ) * kChatDayMs + 1000, 100, 100, report ) == ServiceStoreResult::Ok );
+    ServiceTTLRule        rule = ChatService::makeTTLRule( 1000 );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, rule, ( kNowMs / kChatDayMs + 1 ) * kChatDayMs + 1000, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, report._deletedCount );
     SW_EXPECT_EQUAL( 1, database.countRecords( hashed_string( "chat_history_expiry" ) ) );
     const ChatCompletion trimmed = rig.history( kAlice );

@@ -1,13 +1,13 @@
-// ServiceSchedulerTest — 예약 작업: 회차 계산, 회차마다 서버 하나만 실행, 임대가 지나면 이어받기, 지나친 회차, 저장소 실패 뒤 다시 하기. ServiceRetentionTest — 보존 기간 쓸기와 그 예약 작업(메모리 저장소, nogpu).
+// ServiceSchedulerTest — 예약 작업: 회차 계산, 회차마다 서버 하나만 실행, 임대가 지나면 이어받기, 지나친 회차, 저장소 실패 뒤 다시 하기. ServiceTTLTest — 보존 기간 쓸기와 그 예약 작업(메모리 저장소, nogpu).
 #include "pch.h"
 
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Runtime/Online/Schedule/Server/ServiceRetentionJob.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Schedule/Server/ServiceTTLMonitor.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
@@ -81,11 +81,11 @@ namespace
         return true;
     }
 
-    struct RetentionFixture
+    struct TTLFixture
     {
         MemoryServiceDatabase _database;
-        hashed_string         _table{ "retention_test" };
-        hashed_string         _indexTable{ "retention_test_index" }; ///< 만료 색인 규칙용이다
+        hashed_string         _table{ "ttl_test" };
+        hashed_string         _ttlIndexTable{ "ttl_test_index" }; ///< TTL 색인 규칙용이다
 
         void put( string_view key, int64 timeMs )
         {
@@ -96,12 +96,12 @@ namespace
             SW_REQUIRE_TRUE( _database.commit( transaction ) == ServiceStoreResult::Ok );
         }
 
-        ServiceRetentionRule makeRule( int64 retentionMs = 1000 ) const
+        ServiceTTLRule makeRule( int64 expireAfterMs = 1000 ) const
         {
-            ServiceRetentionRule rule;
-            rule._table       = _table;
-            rule._retentionMs = retentionMs;
-            rule._pfnReadTime = &readLeadingTime;
+            ServiceTTLRule rule;
+            rule._table         = _table;
+            rule._expireAfterMs = expireAfterMs;
+            rule._pfnReadTime   = &readLeadingTime;
             return rule;
         }
 
@@ -110,18 +110,18 @@ namespace
         void putIndex( int64 timeMs, string_view target )
         {
             ServiceTransaction transaction;
-            transaction.put( _indexTable, ServiceRetentionRule::makeIndexKey( timeMs, target ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+            transaction.put( _ttlIndexTable, ServiceTTLRule::makeTTLIndexKey( timeMs, target ), vector<uint8>{}, ServiceRecord::kAnyVersion );
             SW_REQUIRE_TRUE( _database.commit( transaction ) == ServiceStoreResult::Ok );
         }
 
-        ServiceRetentionRule makeIndexRule( int64 retentionMs = 1000 ) const
+        ServiceTTLRule makeIndexRule( int64 expireAfterMs = 1000 ) const
         {
-            ServiceRetentionRule rule = makeRule( retentionMs );
-            rule._indexTable          = _indexTable;
+            ServiceTTLRule rule = makeRule( expireAfterMs );
+            rule._ttlIndexTable = _ttlIndexTable;
             return rule;
         }
 
-        int32 countIndex() const { return _database.countRecords( _indexTable ); }
+        int32 countIndex() const { return _database.countRecords( _ttlIndexTable ); }
     };
 } // namespace
 
@@ -300,10 +300,10 @@ SW_TEST_CASE( ServiceSchedulerTest, FailedRunIsFinished )
     SW_EXPECT_TRUE( rig._secondSink._listRun.empty() );
 }
 
-/** @brief [ServiceRetentionTest] 보존 기간이 지난 것만 지운다. 경계는 지난 것이고, 시각을 읽지 못하는 레코드는 남긴다 */
-SW_TEST_CASE( ServiceRetentionTest, DeletesOnlyExpired )
+/** @brief [ServiceTTLTest] 보존 기간이 지난 것만 지운다. 경계는 지난 것이고, 시각을 읽지 못하는 레코드는 남긴다 */
+SW_TEST_CASE( ServiceTTLTest, DeletesOnlyExpired )
 {
-    RetentionFixture rig;
+    TTLFixture rig;
     rig.put( "a.old", kNowMs - 2000 );
     rig.put( "b.edge", kNowMs - 1000 );
     rig.put( "c.new", kNowMs - 999 );
@@ -311,9 +311,9 @@ SW_TEST_CASE( ServiceRetentionTest, DeletesOnlyExpired )
     unreadable.put( rig._table, "d.bad", vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
     SW_REQUIRE_TRUE( rig._database.commit( unreadable ) == ServiceStoreResult::Ok );
 
-    ServiceRetentionRule   rule = rig.makeRule();
-    ServiceRetentionReport report;
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    ServiceTTLRule        rule = rig.makeRule();
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 2, report._deletedCount );
     SW_EXPECT_EQUAL( 4, report._scannedCount );
     SW_EXPECT_EQUAL( SW_TRUE, report._bWrapped );
@@ -321,60 +321,60 @@ SW_TEST_CASE( ServiceRetentionTest, DeletesOnlyExpired )
     SW_EXPECT_TRUE( rule._cursor.empty() );
 }
 
-/** @brief [ServiceRetentionTest] 상한에 닿으면 커서를 남겨 다음 회차가 이어서 지운다 */
-SW_TEST_CASE( ServiceRetentionTest, LimitsResumeFromCursor )
+/** @brief [ServiceTTLTest] 상한에 닿으면 커서를 남겨 다음 회차가 이어서 지운다 */
+SW_TEST_CASE( ServiceTTLTest, LimitsResumeFromCursor )
 {
-    RetentionFixture rig;
+    TTLFixture rig;
     for ( const utf8* pKey : { "a", "b", "c", "d" } )
     {
         rig.put( pKey, kNowMs - 2000 );
     }
-    ServiceRetentionRule   rule = rig.makeRule();
-    ServiceRetentionReport report;
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 2, report ) == ServiceStoreResult::Ok );
+    ServiceTTLRule        rule = rig.makeRule();
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 100, 2, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 2, report._deletedCount );
     SW_EXPECT_EQUAL( 2, rig.count() );
     SW_EXPECT_EQUAL( string( "b" ), rule._cursor );
 
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 1, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 1, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, report._scannedCount );
     SW_EXPECT_EQUAL( 1, rig.count() );
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 0, rig.count() );
 }
 
-/** @brief [ServiceRetentionTest] 쓰기가 실패하면 그 결과를 돌려주고 커서가 지나가지 않아 다음 회차가 같은 레코드를 지운다 */
-SW_TEST_CASE( ServiceRetentionTest, FailedCommitDoesNotSkipRecords )
+/** @brief [ServiceTTLTest] 쓰기가 실패하면 그 결과를 돌려주고 커서가 지나가지 않아 다음 회차가 같은 레코드를 지운다 */
+SW_TEST_CASE( ServiceTTLTest, FailedCommitDoesNotSkipRecords )
 {
-    RetentionFixture rig;
+    TTLFixture rig;
     rig.put( "a", kNowMs - 2000 );
-    ServiceRetentionRule   rule = rig.makeRule();
-    ServiceRetentionReport report;
+    ServiceTTLRule        rule = rig.makeRule();
+    ServiceTTLSweepReport report;
     rig._database.armFault( ServiceStoreFault::RejectCommit );
-    SW_EXPECT_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Unavailable );
+    SW_EXPECT_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Unavailable );
     SW_EXPECT_EQUAL( 1, rig.count() );
 
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, report._deletedCount );
     SW_EXPECT_EQUAL( 0, rig.count() );
 }
 
-/** @brief [ServiceRetentionTest] 시각 읽기나 기간이 없는 규칙은 거절한다 */
-SW_TEST_CASE( ServiceRetentionTest, InvalidRuleIsRefused )
+/** @brief [ServiceTTLTest] 시각 읽기나 기간이 없는 규칙은 거절한다 */
+SW_TEST_CASE( ServiceTTLTest, InvalidRuleIsRefused )
 {
-    RetentionFixture       rig;
-    ServiceRetentionRule   rule = rig.makeRule( 0 );
-    ServiceRetentionReport report;
-    SW_EXPECT_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Invalid );
+    TTLFixture            rig;
+    ServiceTTLRule        rule = rig.makeRule( 0 );
+    ServiceTTLSweepReport report;
+    SW_EXPECT_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Invalid );
     rule              = rig.makeRule();
     rule._pfnReadTime = nullptr;
-    SW_EXPECT_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Invalid );
+    SW_EXPECT_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Invalid );
 }
 
-/** @brief [ServiceRetentionTest] 만료 색인: 기간이 지난 줄까지만 읽고, 대상이 없거나 다시 써서 늦춰졌으면 색인 줄만 지운다 */
-SW_TEST_CASE( ServiceRetentionTest, IndexExpiresByRange )
+/** @brief [ServiceTTLTest] TTL 색인: 기간이 지난 줄까지만 읽고, 대상이 없거나 다시 써서 늦춰졌으면 색인 줄만 지운다 */
+SW_TEST_CASE( ServiceTTLTest, IndexExpiresByRange )
 {
-    RetentionFixture rig;
+    TTLFixture rig;
     rig.put( "a", kNowMs - 2000 );
     rig.putIndex( kNowMs - 2000, "a" );    // 지운다
     rig.putIndex( kNowMs - 1500, "gone" ); // 대상이 없다 - 색인 줄만 지운다
@@ -384,9 +384,9 @@ SW_TEST_CASE( ServiceRetentionTest, IndexExpiresByRange )
     rig.put( "c", kNowMs - 5000 );
     rig.putIndex( kNowMs - 500, "c" ); // 색인이 아직 기간 안이다 - 레코드가 오래됐어도 보지 않는다
 
-    ServiceRetentionRule   rule = rig.makeIndexRule();
-    ServiceRetentionReport report;
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    ServiceTTLRule        rule = rig.makeIndexRule();
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, report._deletedCount );
     SW_EXPECT_EQUAL( 3, report._scannedCount ); // 기간 안의 줄에서 멈춘다
     SW_EXPECT_EQUAL( 2, rig.count() );
@@ -394,10 +394,10 @@ SW_TEST_CASE( ServiceRetentionTest, IndexExpiresByRange )
     SW_EXPECT_TRUE( rule._cursor.empty() );
 }
 
-/** @brief [ServiceRetentionTest] 만료 색인의 접두어 묶음: 한 쪽보다 큰 묶음도 한 회차에 지우고, 기간 안의 레코드에서 멈춘 뒤 색인 줄을 지운다 */
-SW_TEST_CASE( ServiceRetentionTest, IndexGroupExpiresPrefix )
+/** @brief [ServiceTTLTest] TTL 색인의 접두어 묶음: 한 쪽보다 큰 묶음도 한 회차에 지우고, 기간 안의 레코드에서 멈춘 뒤 색인 줄을 지운다 */
+SW_TEST_CASE( ServiceTTLTest, IndexGroupExpiresPrefix )
 {
-    RetentionFixture rig;
+    TTLFixture rig;
     for ( int32 index = 0; index < 100; ++index )
     {
         rig.put( "ch/" + ServiceKeyUtil::makeHex64( static_cast<uint64>( index ) ), kNowMs - 5000 + index );
@@ -406,54 +406,54 @@ SW_TEST_CASE( ServiceRetentionTest, IndexGroupExpiresPrefix )
     rig.put( "other/a", kNowMs - 5000 );                               // 다른 묶음이다
     rig.putIndex( kNowMs - 2000, "ch/" );
 
-    ServiceRetentionRule   rule = rig.makeIndexRule();
-    ServiceRetentionReport report;
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 1000, report ) == ServiceStoreResult::Ok );
+    ServiceTTLRule        rule = rig.makeIndexRule();
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 100, 1000, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 100, report._deletedCount );
     SW_EXPECT_EQUAL( 2, rig.count() );
     SW_EXPECT_EQUAL( 0, rig.countIndex() );
 }
 
-/** @brief [ServiceRetentionTest] 만료 색인: 지우기 상한에 닿은 묶음은 색인 줄을 남겨 다음 회차가 이어서 지운다 */
-SW_TEST_CASE( ServiceRetentionTest, IndexGroupResumesAfterLimit )
+/** @brief [ServiceTTLTest] TTL 색인: 지우기 상한에 닿은 묶음은 색인 줄을 남겨 다음 회차가 이어서 지운다 */
+SW_TEST_CASE( ServiceTTLTest, IndexGroupResumesAfterLimit )
 {
-    RetentionFixture rig;
+    TTLFixture rig;
     for ( int32 index = 0; index < 100; ++index )
     {
         rig.put( "ch/" + ServiceKeyUtil::makeHex64( static_cast<uint64>( index ) ), kNowMs - 5000 );
     }
     rig.putIndex( kNowMs - 2000, "ch/" );
-    ServiceRetentionRule   rule = rig.makeIndexRule();
-    ServiceRetentionReport report;
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 10, report ) == ServiceStoreResult::Ok );
+    ServiceTTLRule        rule = rig.makeIndexRule();
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 100, 10, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 63, report._deletedCount ); // 한 쪽(쓰기 상한 - 색인 줄)을 지운 뒤 상한에 닿았다
     SW_EXPECT_EQUAL( 1, rig.countIndex() );
-    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 1000, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 100, 1000, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 0, rig.count() );
     SW_EXPECT_EQUAL( 0, rig.countIndex() );
 }
 
-/** @brief [ServiceRetentionTest] 예약 작업: 회차를 차지하면 쓸고 끝을 적는다. 회차 시각을 기준으로 지운다. 규칙이 없으면 등록하지 않고, 틀린 규칙은 거절한다 */
-SW_TEST_CASE( ServiceRetentionTest, JobSweepsOnSchedule )
+/** @brief [ServiceTTLTest] 예약 작업: 회차를 차지하면 쓸고 끝을 적는다. 회차 시각을 기준으로 지운다. 규칙이 없으면 등록하지 않고, 틀린 규칙은 거절한다 */
+SW_TEST_CASE( ServiceTTLTest, JobSweepsOnSchedule )
 {
-    SW_EXPECT_LOG( "ServiceRetentionJob.ServiceRetentionJobRuleTableNeeds" );
-    RetentionFixture   rig;
+    SW_EXPECT_LOG( "ServiceTTLMonitor.ServiceTTLMonitorRuleTableNeeds" );
+    TTLFixture         rig;
     MemoryServiceStore store( &rig._database );
     rig.put( "a", kDayStart - 2000 );
     rig.put( "b", kDayStart ); // 회차 시각 기준으로는 아직 남는다
 
     ServiceScheduler scheduler;
     scheduler.initialize( &store, 1 );
-    ServiceRetentionJobConfig settings;
+    ServiceTTLMonitorConfig settings;
     settings._minuteOfDay = 0;
 
-    ServiceRetentionJob empty;
+    ServiceTTLMonitor empty;
     SW_EXPECT_TRUE( empty.initialize( &store, &scheduler, {}, settings ) );
 
-    ServiceRetentionJob badRule;
+    ServiceTTLMonitor badRule;
     SW_EXPECT_FALSE( badRule.initialize( &store, &scheduler, { rig.makeRule( 0 ) }, settings ) );
 
-    ServiceRetentionJob job;
+    ServiceTTLMonitor job;
     SW_REQUIRE_TRUE( job.initialize( &store, &scheduler, { rig.makeRule() }, settings ) );
     scheduler.update( UnixMilliseconds{ kNowMs } );
     while ( store.pollCompletions() > 0 )

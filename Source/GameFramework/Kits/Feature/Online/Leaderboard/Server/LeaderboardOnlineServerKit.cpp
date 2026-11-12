@@ -51,9 +51,9 @@ namespace sw
                     .and_then( [&]
                 { return exposeInterface<IAccountStatSource>( context, entry, _service ); } )
                     .and_then( [&]
-                { return addRetentionRule( context, entry, LeaderboardService::makeScoreRetentionRule( kitConfig._pastScoreRetentionDays * kDayMs ) ); } )
+                { return addTTLRule( context, entry, LeaderboardService::makeScoreTTLRule( kitConfig._pastScoreRetentionDays * kDayMs ) ); } )
                     .and_then( [&]
-                { return addRetentionRule( context, entry, LeaderboardService::makeSeasonResultRetentionRule( kitConfig._seasonResultRetentionDays * kDayMs ) ); } );
+                { return addTTLRule( context, entry, LeaderboardService::makeSeasonResultTTLRule( kitConfig._seasonResultRetentionDays * kDayMs ) ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override

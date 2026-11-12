@@ -5,7 +5,7 @@
  *            길드는 `social_guild`, 멤버는 `social_guild_member`(`<길드>/<계정>`), 계정의 길드는 `social_account_guild` 에 둔다.
  *            이름은 `social_guild_name` 에 ASCII 소문자로 바꾼 바이트의 16진 문자열로 두므로 대소문자를 무시하고 유일하다.
  *            초대는 `social_guild_invite`(`<계정>/<길드>`, 7일)에, 순번은 `social_sequence/guild` 에 두며 순번은 만들기와 같은 트랜잭션에서 늘린다.
- *            초대를 쓰는 트랜잭션이 만료 색인 `social_guild_invite_expiry`(`<만료 16진>/<초대 키>`)를 함께 넣고, 보존 규칙(`makeInviteRetentionRule`,
+ *            초대를 쓰는 트랜잭션이 TTL 색인 `social_guild_invite_expiry`(`<만료 16진>/<초대 키>`)를 함께 넣고, TTL 규칙(`makeInviteTTLRule`,
  *            기간은 `SocialKitConfig::_expiredInviteRetentionDays`)이 만료 뒤 기간이 지난 초대를 지운다. 다시 보내 늦춰진 초대는 새 줄이 맡는다.
  *            초대는 수락 권한일 뿐 다른 합 · 멱등의 근거가 아니다 — 만료된 초대는 지우기 전에도 수락이 거절된다.
  *          - 한 계정은 한 길드에만 들어간다. 계정의 길드를 "없어야 함" 조건으로 쓰기 때문이다. 정원은 100명이다.
@@ -40,8 +40,8 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
@@ -186,8 +186,8 @@ namespace sw
 
         /** @brief 이름 규칙을 검사합니다. 1~24바이트이고, 올바른 UTF-8 이며, 제어 문자가 없고, 앞뒤 공백이 없어야 합니다. */
         static bool isValidName( string_view name );
-        /** @brief 만료된 길드 초대의 보존 규칙입니다(만료 색인 규칙). 키트 조립이 `IOnlineServerKit::addRetentionRule` 로 올립니다. */
-        static ServiceRetentionRule makeInviteRetentionRule( int64 retentionMs );
+        /** @brief 만료된 길드 초대의 TTL 규칙입니다(TTL 색인 규칙). 키트 조립이 `IOnlineServerKit::addTTLRule` 로 올립니다. */
+        static ServiceTTLRule makeInviteTTLRule( int64 expireAfterMs );
 
     private:
         /** @brief 저장소 일의 완료입니다. */
