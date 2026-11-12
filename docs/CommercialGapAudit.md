@@ -284,13 +284,6 @@
 
 ### 에셋 · 직렬화 · 리플렉션 · 오브젝트 · 씬
 
-#### A-1 MissingComponent 를 가리키던 컴포넌트 핸들이 로드에서 비워지고 다음 저장에서 사라진다
-- 분류: 결함(데이터 손실) · 확신: 확인
-- 근거: `Source/Engine/Object/GameObject/Serialization/ObjectStateSerializer.cpp:924-930` — 키 해시로 대상을 못 찾으면 경고 뒤 `ComponentHandle{}` 로 덮는다. `MissingComponent` 의 안정 키는 `MissingComponent#n`(`MissingComponent.cpp:16-24`)이라 원래 키로 찾을 수 없다. 부착 참조는 `keepUnresolvedAttach`(`:1049-1052`)로 남기는데 핸들만 규칙이 다르다. 모듈이 안 뜬 채 에디터가 저장하면 그 컴포넌트를 향한 참조가 없어진다.
-- 상용 엔진: 유니티 Missing Script 는 fileID 가 그대로라 참조가 남는다. 언리얼은 placeholder 와 import 경로를 보존한다.
-- 제안: 핸들이 풀지 못한 파일 형태(저장 id + 키)를 그대로 들고 다시 쓰게 해 부착과 같은 규칙으로 맞춘다(A-2 의 고정 id 와 함께).
-- 확인: 단위 `ObjectStateSerializerTest.HandleToMissingComponentSurvivesSaveRoundTrip`(XML · 바이너리).
-
 #### A-2 컴포넌트 · 중첩 프리팹 부품의 영속 정체성이 순번이다
 - 분류: 구조(잠재 데이터 오염) · 확신: 확인
 - 근거: `Source/Engine/Object/Component/ComponentStableKey.cpp:32-58` — 키가 `이름#같은 이름 중 몇 번째` 다. 프리팹 덮어쓰기(`PrefabOverrides.cpp:85-103`)와 세이브의 컴포넌트 핸들(`ObjectStateSerializer.cpp:346,453`)이 이 키를 쓰고, 중첩 부품 키는 노드 인덱스다(`PrefabAsset.cpp:499`). 앞 형제를 지우거나 끼우면 기존 씬 덮어쓰기와 쌓인 세이브의 참조가 경고 없이 다른 대상으로 간다.
