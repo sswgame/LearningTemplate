@@ -77,3 +77,18 @@ Pick by the shape of the work, not today's object count. APIs: `Source/Core/Task
 - **Workers read, the owner writes.** A body must not resize a container another body reads, take a lock the waiting caller may hold (the caller helps run tasks while waiting — `SceneAudio` releases its lock before its parallel step), or read a dirty transform (flush first when `hasDirtySceneTransforms()`).
 - **Say why it is safe.** Every parallel body comments what it reads, the one slot it writes, and where the shared write happens.
 - **Sleep only for real time** (frame pacing, a fence without an event, a process without an exit event, a backoff before retrying a locked file). A loop that sleeps while asking whether a task finished becomes a completion chain.
+
+## Thread and GPU resource ownership
+
+Each object has one owning thread; review a change by its ownership map (object → thread, renderer → owner, device caller), not only by names and include layers.
+
+- **GPU resources** are owned by the render side with one create path and one destroy path. The game-thread shape follows whether the data changes:
+  - changes after creation → **render proxy** (`Material` / `MaterialRenderProxy`, Unreal `FMaterialRenderProxy`);
+  - never changes (a change makes a new object) → **create once** (`Mesh`, terrain chunk, particle arrays, Unreal `FStaticMeshRenderData`);
+  - the render side swaps the handle (streaming) → **publish** an atomic handle · SRV (`Texture2D`, Unreal `FTextureReference`). Never cover two creators with a lock.
+- **Render work from another thread** goes through `RenderThread::executeAndWait`; device frame, `GPUScene` and proxy entry check the render-thread role (Debug). Render-side objects the render thread holds (device, main renderer, offscreen scene renderers) are handed over once in `RenderThread::attach` — no setters while running.
+- **Load workers** do construction, deserialization and engine bookkeeping only; component hooks (`onRegister`, `onPostLoad`) run on the game thread at the end of the batch (`GameObjectManager::beginDeferredRegistration`). Hook authors never think about threads.
+- **Offscreen scene renderers**: one renderer per scene (its own pass-constant ring and command lists), living as long as the scene (`OffscreenSceneRenderers`); main-renderer-only work is injected (`FrameRendererHost`). Only the PSO cache is shared.
+- **Frame packets carry full state only.** A packet may be dropped without drawing, so a one-shot diff or notification (glyph atlas upload `GlyphAtlasUpload::_sequence`, retired preview scene keys `_listPendingRetiredSceneKey`) is taken the moment the render thread receives the packet (head of `RenderThread::executePacket`). A new diff added to the packet is taken at the same place.
+- **Worker results and outside notifications** (job results, PSO builder, physics contacts, log listeners): a slot under a lock plus a generation number, with the lock contract in the type (`SW_GUARDED_BY`, clang `-Wthread-safety`). No async read that mutates an object through a raw `this` on a worker — workers produce bytes, the game thread owns the object.
+- **Scene registries** (`ComponentRegistry`, `CameraRegistry`, `TagIndex`): writes take the lock; a read window (`ComponentRegistry::View`) is valid only while nothing registers or unregisters.

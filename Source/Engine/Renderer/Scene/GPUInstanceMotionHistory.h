@@ -1,7 +1,7 @@
 /**
  * @file GPUInstanceMotionHistory.h
  * @brief 렌더 쪽이 소유하는 인스턴스 움직임 기록입니다. 지난번 그린 월드 행렬을 열쇠(`GPUInstance::_motionKey`)로 찾아 화면 속도의 지난 위치를 만듭니다.
- * @details 게임 스레드는 정체성(열쇠)만 싣고 기록은 렌더 쪽이 가진다 — 패킷은 그리지 않고 버려질 수 있어(StructureRefactor 8.3 "패킷에 실린 차분 · 알림")
+ * @details 게임 스레드는 정체성(열쇠)만 싣고 기록은 렌더 쪽이 가진다 — 패킷은 그리지 않고 버려질 수 있어(docs/agents/CppStyle.md "Thread and GPU resource ownership" 의 패킷 차분 · 알림)
  *          게임 스레드가 "지난 프레임 행렬" 을 싣으면 버려진 프레임 뒤에는 그 값이 실제로 그린 프레임의 것이 아니다. 렌더 쪽은 실제로 그린 프레임마다 한 번
  *          바꾸므로 지난 뷰-투영(`FrameViewTarget::_prevViewProj` — "지난번 이 뷰를 그린")과 같은 뜻이다.
  *          언리얼은 프리미티브 프록시가 PreviousLocalToWorld 를 들고 GPUScene 이 그것을 올리고, 유니티는 렌더러마다 지난 행렬을 엔진이 들고 있다 — 둘 다 렌더 쪽 기록이다.

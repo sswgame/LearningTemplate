@@ -106,22 +106,11 @@
 - AudioEngine 보이스 슬롯 → `AudioVoicePool`(언리얼 FMixerSourceManager).
 - 에디터 콘솔 명령은 기능의 명령 파일 옆에 둔다. `/Dev/` 폴더는 빌드 규칙에서 "배포가 짓지 않는 단위" 라는 뜻이다.
 - 짝 없는 cpp 는 스스로 등록하는 단위 · 플랫폼 구현 · 모듈 진입점만 둔다.
-- 패킷에 실린 차분 · 알림의 규칙은 9 절이다.
+- 패킷에 실린 차분 · 알림의 규칙은 9 절(정본 [CppStyle](agents/CppStyle.md))이다.
 
 ## 9. 스레드 소유 판단 기준
 
-7 · 8 절 점검은 글자(이름 겹침 · include 층 · 파일 크기)만 봐서 스레드 소유와 이름이 다른 같은 일을 놓쳤다. 점검에는 소유 지도(객체 → 스레드, 렌더러 → 소유자, 디바이스 호출자)와 일 지도(하는 일로 묶은 함수들)를 더한다.
-
-- **GPU 자원**(언리얼 · 유니티 · Godot 비교): 렌더 쪽이 소유하고 만들고 지우는 길은 하나다. 게임 스레드가 쥐는 모양은 데이터가 바뀌는지로 고른다.
-  - 생긴 뒤에도 값을 바꾼다 → **렌더 프록시**(`Material` / `MaterialRenderProxy` = 언리얼 `FMaterialRenderProxy`).
-  - 바꾸지 않는다(바뀌면 새 객체) → **한 번 만들기**(`Mesh` · 지형 청크 · 입자 배열 = 언리얼 `FStaticMeshRenderData`).
-  - 렌더 쪽이 핸들을 바꿔 끼운다(스트리밍) → **게시**(원자값 핸들 · SRV, `Texture2D` = 언리얼 `FTextureReference`). 잠금으로 두 생성자를 덮지 않는다.
-- **다른 스레드의 렌더 일**은 `RenderThread::executeAndWait`, 디바이스 프레임 · `GPUScene` · 프록시 진입은 렌더 스레드 역할을 확인한다(Debug). 렌더 스레드가 쥐는 렌더 쪽 객체(디바이스 · 주 렌더러 · 화면 밖 씬 렌더러)는 `RenderThread::attach` 에 한 번 — 도는 중의 세터는 없다.
-- **로드 스레드**(언리얼 비동기 로딩 · 유니티 Awake 와 같다): 워커는 생성 · 직렬화와 엔진 장부만, 컴포넌트 훅(`onRegister` · `onPostLoad`)은 게임 스레드에서 배치 끝에 돈다(`GameObjectManager::beginDeferredRegistration`). 훅을 쓰는 쪽이 스레드를 생각하지 않게 한다.
-- **화면 밖 씬 렌더러**(언리얼 `FSceneRenderer` · RDG): 씬마다 렌더러 하나(패스 상수 링 · 커맨드 리스트를 씬마다)를 유지한다 — 한 디바이스 프레임에 여러 씬을 그리므로 나눠 쓰면 뒤 실행이 앞 상수를 덮는다. 수명은 씬의 수명(`OffscreenSceneRenderers`), 주 렌더러만 하는 일은 주입(`FrameRendererHost`)으로 가른다. 함께 쓰는 것은 PSO 캐시다.
-- **패킷에 실린 차분 · 알림**(언리얼 폰트 캐시 갱신은 그리기와 따로 렌더 명령으로 간다): 프레임 패킷은 그리지 않고 버려질 수 있다. 패킷에는 그 프레임의 **전체 상태**만 싣고, 한 번뿐인 **차분 · 알림**은 렌더 스레드가 받는 즉시(`RenderThread::executePacket` 머리) 옮긴다 — 글리프 아틀라스 업로드(`GlyphAtlasUpload::_sequence`, 건너뛰면 `GlyphAtlas::requestFullUpload`), 사라진 미리보기 씬 키(`_listPendingRetiredSceneKey`). 새 차분을 패킷에 더할 때 같은 자리에서 받는다.
-- **워커 결과 · 바깥 알림**(잡 결과 · PSO 빌더 · 물리 접촉 · 로그 리스너): 잠금 아래 칸 + 세대 번호, 잠금 계약은 형식으로(`SW_GUARDED_BY`, clang `-Wthread-safety`). 워커가 날 `this` 로 객체를 고치는 비동기 읽기는 두지 않는다 — 워커는 바이트, 객체는 게임 스레드.
-- **씬 장부**(`ComponentRegistry` · `CameraRegistry` · `TagIndex`): 쓰기는 잠금, 읽기 창(`ComponentRegistry::View`)은 등록 · 해제가 없는 구간에만.
+규칙(GPU 자원의 프록시 · 한 번 만들기 · 게시, 렌더 스레드 일, 로드 워커, 화면 밖 씬 렌더러, 패킷에 실린 차분 · 알림, 워커 결과, 씬 장부)의 정본은 [CppStyle](agents/CppStyle.md) "Thread and GPU resource ownership" 이다. 7 · 8 절 같은 점검에는 글자 대조 말고 소유 지도(객체 → 스레드)와 일 지도(하는 일로 묶은 함수)를 더한다.
 
 ## 10. 메시 인덱스 버퍼
 

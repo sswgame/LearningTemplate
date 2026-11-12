@@ -32,7 +32,7 @@
 - **규칙 출처의 순서:** 문서 표 · 카탈로그 표(`datacataloginheritance.xml`) → 합치기 함수(`SW_DATA_INHERITANCE_MERGE`) → 손 형식 → 리플렉션 형식. 쿠킹은 Engine 코드만 보므로 게임 · 키트 형식은 표에만 있어도 되고, 표와 코드가 맞는지는 `ResourceComposerTest` 가 본다.
 - **프리팹:** `PrefabOverrides` 는 열쇠 모양이 달라 따로 두고, 문서 머리의 조건 · 층만 같은 길을 지난다.
 - **스켈레톤:** 공통 사슬(`DataInheritance::collectChain`) + 합치기 함수가 평평한 `<Skeleton>` 글을 낸다(뼈 비율은 곱하고 클립 규칙은 쌓는다). "부모 본 번호를 바꾸지 않는다" 는 합친 뒤 검증이다. 읽기와 쿠커가 같은 함수를 지나 쿠킹본에 `_base` 가 남지 않는다.
-- **리소스 입구:** 리소스 id 로 읽어야 조건 · 층 · 다시 읽기 기록 · 접속 대조를 받는다 — 리플렉션 파일 하나는 `ConfigManager::readComposedXMLDocument`, 루트를 손으로 읽는 형식은 `XMLReadUtil::parseResourceRoot`, 그 밖은 `XMLDocument::loadResource` · `loadResourceAs` · `parseResourceText`(테스트 `ResourceEntranceTest`). 글을 읽은 뒤 id 없이 글 입구로 넘기는 `loadFromAsset` · `loadFromFile` 은 린트(`common-shapes` 의 `assetEntrance`)가 막고, 예외는 `Config/Rules/Lint/CommonShapeExceptions.json` 에 까닭과 함께 있다(문화권 표 · 경로 교체 표처럼 문맥을 정하는 쪽). 팩 설정(`PackEngineSettings`)은 층 · 조건이 기대는 값을 정하는 쪽이라 그대로 읽는다.
+- **리소스 입구:** id 로 읽는 입구와 글 입구 금지 규칙은 [ExistingFacilities](agents/ExistingFacilities.md) "리소스 읽기 입구와 에셋 참조" 가 정본이다.
 
 #### 조건별 값
 
@@ -81,15 +81,10 @@ Godot 기능 태그처럼 태그 집합 하나에 묻되, 언리얼 Device Profi
 
 ### 4. 타입 있는 참조 `AssetRef<T>`
 
-언리얼 `TSoftObjectPtr<T>` · 유니티 `AssetReferenceT<T>` 자리다. 경로와 대상 종류를 품은 값이고 스스로 읽지 않는다(`_tree.acquire()` · `request()`).
+언리얼 `TSoftObjectPtr<T>` · 유니티 `AssetReferenceT<T>` 자리다. 경로와 대상 종류를 품은 값이고, 의존성 수집 · 미리 읽기(`PreloadSet`) · 쿠킹 입력 · 참조 색인 · 에디터 선택기가 모두 이 칸을 본다. 칸 규칙(종류 가르기 · 경로 칸 출처 · 쿠킹 도달성)의 정본은 [ExistingFacilities](agents/ExistingFacilities.md) "리소스 읽기 입구와 에셋 참조" 다.
 
-- 접미사가 대상 종류와 다르면 로드 오류다. 의존성 수집 · 미리 읽기(`PreloadSet`) · 쿠킹 입력 · 참조 색인 · 에디터 선택기가 모두 이 칸을 본다.
-- **이름 표는 없다:** 경로 칸은 리플렉션 선언에서만 온다. 파서가 `AssetReferenceFields.list` 를 쓰고 빌드가 `Config/Dev/AssetReferenceFields.generated.json` 으로 모은다(린트 · `move-asset` 이 빌드 없이 돌아 저장소에 둔다, 낡음은 `--check-asset-refs`). 칸마다 XML 속성 이름(`XMLFields::getAttributeName`)도 함께 낸다. `Config/Dev/AssetReferenceFields.json` 에는 도메인 · 확장자 · 임포트 폴더 · CMake 인자 규칙만 있다.
 - **값 모양:** `AssetRefBase`(경로 + `const AssetTypeDef*`)와 `AssetRef<T>`. 대상 종류를 값이 품으므로 `vector<AssetRef<T>>` · 중첩 구조체 · 덮어쓰기 패치가 같은 검사를 지난다.
-- `T` 는 칸이 만들어지는 곳에서 완전해야 한다(`unique_ptr<T>` 소멸자와 같은 규칙) — 대상 헤더를 읽을 수 없으면 생성자를 .cpp 로 옮기고 헤더는 앞선 선언만 둔다.
-- **종류를 가르는 셋:** 접미사, 경로 규칙(`AssetTypeDef::makeDataFile`), 내장 이름(`withBuiltinNames` — 메시 `Cube`). 셋 다 없는 종류는 `AssetRef<T>` 가 컴파일에서 막는다(`AssetTypeDef::canTellPath`). 모르는 내장 이름은 폴백 없이 오류다.
-- 전환하지 않는 칸은 `PROPERTY( AssetPath )` 로 두면 생성 목록에 든다(인턴 열쇠로 쓰는 칸, 종류가 여럿인 칸, 종류 정의가 없는 파일).
-- **쓰는 것만 담는 쿠킹:** 팩 쿠커는 뿌리에서 이 칸(`_base` 부모 포함)과 곁 파일(`SW_ASSET_COMPANION`)을 따라 닿는 파일만 담는다(`PackReachability`, 언리얼 "참조된 패키지만 쿠킹" 자리). 뿌리는 `Config/Engine/PackConfig.json` `_cookRules`(코드가 이름으로 읽는 항상 담기 묶음)와 게임 설정 `<RequiredData>`(`GameSettingsTest.CookRequiredDataPathsMatchTheKindRegistry`), 엔진 상수 곁의 `SW_ASSET_COOK_ROOT` 다. 닿는 참조가 없는 파일을 가리키면 쿠킹 오류다. 큰 카탈로그는 항목 단위로 고른다(`_listEntryCatalog` · `_listEntryIDField`). 스테이징 산출물은 원본이 쓰일 때만 담는다(`PackStagedSelection`). 그래서 칸 규칙(`AssetReferenceFields`)은 엔진(`Engine/Asset/Reference`)에 있다.
+- 쿠킹 도달성 계산과 칸 규칙(`AssetReferenceFields`)은 엔진(`Engine/Asset/Reference`)에 있다. 큰 카탈로그는 항목 단위로 고르고(`_listEntryCatalog` · `_listEntryIDField`), 스테이징 산출물은 원본이 쓰일 때만 담는다(`PackStagedSelection`).
 
 ### 5. 행동 어휘
 

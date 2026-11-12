@@ -19,14 +19,14 @@ Korean examples for these rules are in [docs/04_CodingGuidelines.md](docs/04_Cod
 | write a function that can fail or return "nothing" | [Errors](docs/agents/Errors.md) | `sw::expected` · `sw::optional` (one type), `sw::Error`, no `string& outError`, no `std::optional`, compared with Unreal `TValueOrError` · `TOptional` |
 | add or move a constant or tuning value | [Constants](docs/agents/Constants.md) | where a constant lives |
 | add a helper or a TU-private type | [Helpers](docs/agents/Helpers.md) | owner type first; ownerless → `Util` / `Internal`, one anonymous namespace per file |
-| write C++ bodies or code that runs in parallel | [CppStyle](docs/agents/CppStyle.md) | branches, loops, types, registration templates, no mutable statics (hidden singletons), parallel-safe code, which parallel or async tool (parallel for, stage, `whenAll`, own thread) |
+| write C++ bodies or code that runs in parallel | [CppStyle](docs/agents/CppStyle.md) | branches, loops, types, registration templates, no mutable statics (hidden singletons), parallel-safe code, thread and GPU resource ownership, which parallel or async tool (parallel for, stage, `whenAll`, own thread) |
 | write an `onTick`, or add per-frame work that looks at other objects or the whole scene | [TickPlacement](docs/agents/TickPlacement.md) | main tick vs sub-tick prerequisite vs tick batch vs frame system vs post-tick queue vs registry; the scene iteration key (`SceneIterationKey`) |
 | make code behave differently in Dev and Shipping (or Client and Server) | [BuildConfigSwitch](docs/agents/BuildConfigSwitch.md) | `build::kShipping` vs `#if` vs variant file |
 | change or review an editor panel, shared widget, theme token or editor input | [EditorUI](docs/agents/EditorUI.md) | MVVM split (View · ViewModel · ViewState), tokens, app-screen rules, UI capture, review checklist, context-menu and input rules |
 | write a render pipeline or render pass XML, or change what a pass reads from it | [RenderPipelineXml](docs/agents/RenderPipelineXml.md) | XML values are what runs; invalid combinations are load errors; compute and optional stages |
 | write a data file that inherits another (`_base`), or put a new data format on that structure | [DataInheritance](docs/agents/DataInheritance.md) | field and list merge rules, schema for a new format, cooking, prefab variants, saving without default values |
 | add a material graph node or change the graph compiler | [MaterialGraph](docs/agents/MaterialGraph.md) | node registration syntax, generated files, errors |
-| are about to write a helper for a common job, or call a C runtime / `std` facility | [ExistingFacilities](docs/agents/ExistingFacilities.md) | what Core and Engine already provide, and what not to call |
+| are about to write a helper for a common job, or call a C runtime / `std` facility | [ExistingFacilities](docs/agents/ExistingFacilities.md) | what Core and Engine already provide, and what not to call; resource entrances and `AssetRef<T>` field rules |
 
 ## Project architecture
 

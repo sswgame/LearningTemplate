@@ -83,6 +83,19 @@ Search here before writing a helper for a common job. If the job is missing, sea
 
 A new row names the header and the API.
 
+## 리소스 읽기 입구와 에셋 참조
+
+설계는 [ResourceStructure](../ResourceStructure.md) 2 · 4 절, 규칙은 여기가 정본이다.
+
+- **리소스는 id 로 읽는다.** 그래야 조건(`_when`) · 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조(리소스 해시)를 받는다. 리플렉션 파일 하나는 `ConfigManager::readComposedXMLDocument`, 루트를 손으로 읽는 형식은 `XMLReadUtil::parseResourceRoot`, 그 밖은 `XMLDocument::loadResource` · `loadResourceAs` · `parseResourceText`(테스트 `ResourceEntranceTest`).
+- 글을 읽은 뒤 id 없이 글 입구(`loadFromAsset` · `loadFromFile`)로 넘기지 않는다 — 린트 `common-shapes` 의 `assetEntrance` 가 막고, 예외는 문맥을 정하는 쪽(문화권 표 · 경로 교체 표)만 `Config/Rules/Lint/CommonShapeExceptions.json` 에 까닭과 함께. 팩 설정(`PackEngineSettings`)은 층 · 조건이 기대는 값을 정하므로 그대로 읽는다. 미리 보기 · 테스트는 `loadFromXMLText`(층을 얹지 않는다).
+- **다른 에셋을 가리키는 칸은 `AssetRef<T>`**(언리얼 `TSoftObjectPtr<T>`). 스스로 읽지 않는다(`acquire()` · `request()`). 접미사가 대상 종류와 다르면 로드 오류다.
+- 경로 칸은 리플렉션 선언에서만 온다 — 손으로 쓴 이름 표를 두지 않는다. 생성 목록은 `Config/Dev/AssetReferenceFields.generated.json`(낡음은 `--check-asset-refs`), `Config/Dev/AssetReferenceFields.json` 에는 도메인 · 확장자 · 임포트 폴더 규칙만.
+- `AssetRef<T>` 칸이 만들어지는 곳에서 `T` 는 완전해야 한다(`unique_ptr<T>` 소멸자와 같은 규칙) — 대상 헤더를 못 읽으면 생성자를 .cpp 로 옮긴다.
+- 종류는 접미사 · 경로 규칙(`AssetTypeDef::makeDataFile`) · 내장 이름(`withBuiltinNames`) 셋으로만 가른다. 셋 다 없는 종류는 `AssetRef<T>` 가 컴파일에서 막는다(`AssetTypeDef::canTellPath`). 모르는 내장 이름은 폴백 없이 오류다.
+- 종류가 하나로 정해지지 않는 칸(인턴 열쇠로 쓰는 칸, 종류가 여럿인 칸, 종류 정의가 없는 파일)은 `PROPERTY( AssetPath )` 로 두어 생성 목록에 넣는다.
+- **쿠킹은 닿는 것만 담는다**(`PackReachability`, 언리얼 "참조된 패키지만 쿠킹"): 뿌리(`PackConfig.json` `_cookRules`, 게임 설정 `<RequiredData>`, `SW_ASSET_COOK_ROOT`)에서 참조 칸 · `_base` · 곁 파일(`SW_ASSET_COMPANION`)을 따라간다. 코드가 경로를 조립해 읽는 파일은 뿌리나 곁 파일로 선언한다 — 닿지 않으면 배포에서 빠진다. 닿는 참조가 없는 파일을 가리키면 쿠킹 오류다.
+
 ## 리플렉션 스키마로 읽지 않고 손으로 두는 것
 
 데이터 파일의 칸은 `PROPERTY` 구조체 + `XMLFields` · `JSONFields::readProperties` 로 읽는다. 목록 칸(`vector<이름 · 태그 ID · 수 · 열거>`)은 속성 하나에 낱말을 잇고(구분자 `,;| \t`), 범위는 원소마다 본다. 아래만 손으로 둔다.
