@@ -90,7 +90,7 @@ namespace sw::editor
         bool hasUnsavedDocument() const;
         /**
          * @brief 이 창에 포커스가 오면 Ctrl+Z 가 갈 스택입니다. nullptr 이면 메인 스택이다(씬 뷰 · 계층 · 인스펙터 …). 문서 패널은 자기 문서의 스택을 답한다(감사 E-3).
-         * @details 패널 관리자가 그린 뒤 한 곳(`EditorPanelManager::applyFocusedCommandStack`)에서 포커스 창의 답을 건다 — 패널마다 걸고 풀지 않는다.
+         * @details 패널 관리자가 그린 뒤 한 곳(`EditorPanelManager::updateFocusedCommandStack`)에서 포커스 창의 답을 건다 — 패널마다 걸고 풀지 않는다.
          */
         virtual CommandStack* findPanelCommandStack() { return nullptr; }
         /** @brief 이 창에 포커스가 와도 Ctrl+Z 의 스택을 바꾸지 않으면 true 입니다. 지금 겨눈 스택을 보여 주는 창(History)만 true — 누르는 순간 메인으로 돌아가면 문서 기록을 볼 수 없다. */

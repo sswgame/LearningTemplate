@@ -44,7 +44,7 @@ namespace sw::editor
     {
         outApplied = false;
         // 페이지별 Save 단추는 패널 저장(`saveDocumentAndClearDirty`)을 지나지 않는다 — 같은 확인을 여기서도 한다.
-        if ( EditorContentWrite::refuseReadOnly( _absolutePath, EditorContentWriteKind::Save ) )
+        if ( EditorContentWrite::warnIfReadOnly( _absolutePath, EditorContentWriteKind::Save ) )
             return false;
         if ( _document.saveDocument() == false )
             return false;

@@ -17,17 +17,17 @@ SW_TEST_CASE( EditorContentWriteTest, ReadOnlyFileIsRefusedAndKept )
     const string path = test::makeScratchPath( "locked.material" );
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "kept" ) );
-    SW_EXPECT_FALSE( EditorContentWrite::refuseReadOnly( path, EditorContentWriteKind::Save ) );
+    SW_EXPECT_FALSE( EditorContentWrite::warnIfReadOnly( path, EditorContentWriteKind::Save ) );
 
     SW_REQUIRE_TRUE( FileUtil::setWritable( path, false ) );
-    SW_EXPECT_TRUE( EditorContentWrite::refuseReadOnly( path, EditorContentWriteKind::Save ) );
+    SW_EXPECT_TRUE( EditorContentWrite::warnIfReadOnly( path, EditorContentWriteKind::Save ) );
     SW_EXPECT_TRUE( FileUtil::isReadOnlyFile( path ) );
     string text;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
     SW_EXPECT_EQUAL( text, string( "kept" ) );
 
     SW_REQUIRE_TRUE( FileUtil::setWritable( path, true ) ); // 케이스 폴더 정리가 Windows 에서 읽기 전용 파일을 지우지 못한다
-    SW_EXPECT_FALSE( EditorContentWrite::refuseReadOnly( path, EditorContentWriteKind::Save ) );
+    SW_EXPECT_FALSE( EditorContentWrite::warnIfReadOnly( path, EditorContentWriteKind::Save ) );
 }
 
 /** @brief [EditorContentWriteTest] 폴더는 그 아래 모든 파일을 본다 — 깊은 곳의 읽기 전용 파일 하나가 폴더 전체를 막는다. 없는 자리(새로 만들 파일)는 막지 않는다 */

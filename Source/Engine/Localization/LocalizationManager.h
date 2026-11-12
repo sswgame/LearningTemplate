@@ -249,7 +249,7 @@ namespace sw
          * @details 실행 표는 해시로만 열려 충돌하면 나중 것이 조용히 이긴다. 그래서 들이기 **전에** 검사하고 지면 들이지 않는다.
          *          @p pIncomingProject 와 이름 · 경로가 같은 올린 프로젝트는 건너뛴다(그것을 바꿔 넣는 중이다). 쿠킹된 이진 표는 키 글이 없어 쿠킹 때 검사한다.
          */
-        [[nodiscard]] expected<void> checkKeyHashesLocked( const MountedProject* pIncomingProject, const TranslationTable* pIncomingLoose ) const SW_REQUIRES_LOCK( _mutex );
+        [[nodiscard]] expected<void> validateKeyHashesLocked( const MountedProject* pIncomingProject, const TranslationTable* pIncomingLoose ) const SW_REQUIRES_LOCK( _mutex );
         /** @brief 읽은 문서들로 실행 테이블을 다시 채웁니다(`_mutex` 를 잡은 상태에서 부릅니다). */
         void rebuildTablesLocked() SW_REQUIRES_LOCK( _mutex );
         /** @brief 조회 순서를 다시 계산합니다(`_mutex` 를 잡은 상태에서 부릅니다). */
@@ -275,7 +275,7 @@ namespace sw
         unordered_map<string, unique_ptr<StringTable>>                  _mapLanguageTable;
         map<string, LocalizationCultureStatistics> _mapCultureStatistic SW_GUARDED_BY( _mutex );
         vector<string> _listLookupCulture                               SW_GUARDED_BY( _mutex );
-        /// @brief 충돌 검사(`checkKeyHashesLocked`)의 키 해시입니다. 실행은 늘 `LocalizationKeyIndex::computeHash` 이고, 실제 64 비트 충돌은 만들 수 없어
+        /// @brief 충돌 검사(`validateKeyHashesLocked`)의 키 해시입니다. 실행은 늘 `LocalizationKeyIndex::computeHash` 이고, 실제 64 비트 충돌은 만들 수 없어
         ///        테스트(`LocalizationManagerTestAccess`)만 바꿔 검사가 지는 길을 지나간다. 실행 표의 해시는 이것과 상관없다.
         LocalizationKeyIndex::KeyHashFunction _pCheckKeyHash;
 

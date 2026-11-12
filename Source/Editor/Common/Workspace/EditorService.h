@@ -167,7 +167,7 @@ namespace sw::editor
      *        패널이 아닌 창(메뉴 · 팝업) · History 면 앞 포커스 패널이 걸어 둔 것, 없으면 엔진의 전역 `CommandStack`, 그것도 없으면 nullptr 입니다.
      */
     SW_EDITOR_API CommandStack* getFocusedCommandStack();
-    /** @brief 포커스된 툴 창의 Undo 스택을 등록합니다(nullptr 이면 해제합니다). 패널 관리자가 그린 뒤 포커스 창의 답으로 건다(`EditorPanelManager::applyFocusedCommandStack`). */
+    /** @brief 포커스된 툴 창의 Undo 스택을 등록합니다(nullptr 이면 해제합니다). 패널 관리자가 그린 뒤 포커스 창의 답으로 건다(`EditorPanelManager::updateFocusedCommandStack`). */
     SW_EDITOR_API void setFocusedCommandStack( CommandStack* pStack );
     /** @brief 등록된 스택이 @p pStack 이면 해제합니다(다른 창이 건 것은 그대로) — 스택이 사라지거나 그 창이 닫힐 때 부른다. */
     SW_EDITOR_API void releaseFocusedCommandStack( const CommandStack* pStack );

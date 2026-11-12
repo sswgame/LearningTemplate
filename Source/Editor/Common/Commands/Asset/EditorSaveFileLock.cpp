@@ -43,7 +43,7 @@ namespace sw::editor
                         (void)FileUtil::setWritable( path, true ); // 못 풀면 setWritable 이 경로와 이유를 남긴다
                 }
                 state._mapTextByPath.clear();
-                (void)FileUtil::removeFile( getLedgerPath() ); // 못 지우면 removeFile 이 알린다 — 다음 restoreLeftovers 가 이미 쓰기 가능한 파일을 다시 풀 뿐이다
+                (void)FileUtil::removeFile( getLedgerPath() ); // 못 지우면 removeFile 이 알린다 — 다음 releaseStaleLocks 가 이미 쓰기 가능한 파일을 다시 풀 뿐이다
             }
 
             static LockState& getState() { return getEditorState<LockState>(); }
@@ -53,7 +53,7 @@ namespace sw::editor
     expected<void> EditorSaveFileLock::lock( const vector<string>& listPath )
     {
         using Internal = EditorSaveFileLockInternal;
-        restoreLeftovers();
+        releaseStaleLocks();
         Internal::LockState& state = Internal::getState();
         Internal::releaseAll( state );
         // 장부를 먼저 적는다 — 잠근 뒤 프로세스가 죽어도 다음 실행이 무엇을 풀지 안다.
@@ -101,7 +101,7 @@ namespace sw::editor
         return changedPath;
     }
 
-    void EditorSaveFileLock::restoreLeftovers()
+    void EditorSaveFileLock::releaseStaleLocks()
     {
         const string ledgerPath = EditorSaveFileLockInternal::getLedgerPath();
         string       ledger;

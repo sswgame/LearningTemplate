@@ -172,7 +172,7 @@ namespace sw::editor
          * @brief 그린 뒤 Ctrl+Z 가 갈 스택을 포커스 창의 답(`IEditorPanel::findPanelCommandStack`)으로 겁니다. 포커스 창이 없거나 겨눈 스택을 보여 주는 창(History)이면 그대로 둔다.
          *        닫힌 패널의 스택을 겨누고 있으면 메인으로 돌린다 — 닫는 길마다 풀지 않아도 된다.
          */
-        void applyFocusedCommandStack();
+        void updateFocusedCommandStack();
         /** @brief `-gv_editorPanelTimes=N` 이 모은 패널별 시간을 큰 순서로 한 번 로그에 남깁니다(`EditorPanelTime|<id>|avg … us|max … us`). */
         void reportPanelTimes();
 

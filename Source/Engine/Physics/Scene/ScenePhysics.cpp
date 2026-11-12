@@ -285,7 +285,7 @@ namespace sw
         return _pScene2D.get();
     }
 
-    void ScenePhysics::addContactStayListener( Component& component, const ContactStayListener& listener )
+    void ScenePhysics::registerContactStayListener( Component& component, const ContactStayListener& listener )
     {
         const GameObject* pOwner = component.getOwner();
         if ( pOwner == nullptr || pOwner->getObjectID() == 0 )
@@ -312,7 +312,7 @@ namespace sw
             applyContactStayListener( pOwner->getObjectID(), true );
     }
 
-    void ScenePhysics::removeContactStayListener( Component& component )
+    void ScenePhysics::unregisterContactStayListener( Component& component )
     {
         const GameObject* pOwner = component.getOwner();
         if ( pOwner == nullptr )

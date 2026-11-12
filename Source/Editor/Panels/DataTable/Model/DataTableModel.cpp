@@ -269,7 +269,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "DataTablePanel.GameDataNotValidXML", "Game data table '%#' is not saved - the text is not valid XML: %#", fileName.c_str(), _gameDataDocument.getError().c_str() );
             return false;
         }
-        if ( EditorContentWrite::refuseReadOnly( _gameDataPath, EditorContentWriteKind::Save ) ) // Save File 단추는 패널 저장을 지나지 않는다 — 같은 확인을 여기서도
+        if ( EditorContentWrite::warnIfReadOnly( _gameDataPath, EditorContentWriteKind::Save ) ) // Save File 단추는 패널 저장을 지나지 않는다 — 같은 확인을 여기서도
             return false;
         if ( FileUtil::writeTextFile( _gameDataPath, _selectedGameDataRawText ) == false )
         {

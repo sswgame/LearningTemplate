@@ -718,11 +718,11 @@ namespace sw
                 writeLinesSpoolLocked( job );
                 if ( job._kind == TelemetrySpoolJobKind::Close )
                     closeCurrentFileSpoolLocked();
-                enforceCapsSpoolLocked( job._settings );
+                enforceLimitsSpoolLocked( job._settings );
             }
         }
         if ( job._kind != TelemetrySpoolJobKind::Purge )
-            uploadClosed( job );
+            uploadClosedFiles( job );
         {
             ScopedLock<mutex> spoolLock{ _spoolMutex };
             _completedJob = job._jobID;
@@ -745,7 +745,7 @@ namespace sw
         return root.describe(); // 이벤트 줄과 같은 규칙(U+FFFD)
     }
 
-    string TelemetryService::makeSpoolFilePathSpoolLocked( uint32 fileIndex ) const
+    string TelemetryService::makeFilePathSpoolLocked( uint32 fileIndex ) const
     {
         StringBuilder<constant::buffer::kMax256> name;
         name.appendFormat( "%#%#_%#%#", kSpoolFilePrefix, _context->_sessionID.c_str(), Fmt( fileIndex, Format().width( 4 ).zeroPad() ), kSpoolExtension );
@@ -778,7 +778,7 @@ namespace sw
             }
             if ( _currentFile.empty() )
             {
-                _currentFile       = makeSpoolFilePathSpoolLocked( _fileIndex );
+                _currentFile       = makeFilePathSpoolLocked( _fileIndex );
                 _currentFileBytes  = 0;
                 _currentFileEvents = 0;
                 chunk += makeContextLineSpoolLocked( job._schemaVersion );
@@ -809,7 +809,7 @@ namespace sw
         ++_fileIndex;
     }
 
-    void TelemetryService::enforceCapsSpoolLocked( const TelemetryPipelineConfig& settings )
+    void TelemetryService::enforceLimitsSpoolLocked( const TelemetryPipelineConfig& settings )
     {
         uint64 totalBytes = _currentFileBytes;
         for ( const string& path : _listClosedFile )
@@ -835,7 +835,7 @@ namespace sw
         }
     }
 
-    void TelemetryService::uploadClosed( const TelemetrySpoolJob& job )
+    void TelemetryService::uploadClosedFiles( const TelemetrySpoolJob& job )
     {
         for ( ;; )
         {

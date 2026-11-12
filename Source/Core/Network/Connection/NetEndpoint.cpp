@@ -104,7 +104,7 @@ namespace sw
         , _listSealed{}
         , _openedBytes{}
         , _listReceiveCrypt{}
-        , _listRetiredConnection{}
+        , _listClosedReceiveCrypt{}
         , _plainWriter{}
         , _credentials{}
         , _settings{}
@@ -241,7 +241,7 @@ namespace sw
             _bHasCredentials = pCredentials != nullptr && pCredentials->_tokenSize > 0 ? SW_TRUE : SW_FALSE;
             bStarted         = startConnect( serverAddress );
             listFinished.swap( _listFinished );
-            pWake = takeWakeTransport();
+            pWake = consumeWakeRequest();
         }
         deliverFinished( listFinished );
         wakeTransport( pWake );
@@ -274,7 +274,7 @@ namespace sw
             if ( startConnect( serverAddress ) == false )
                 finishConnect( NetDisconnectReason::Rejected );
             listFinished.swap( _listFinished );
-            pWake = takeWakeTransport();
+            pWake = consumeWakeRequest();
         }
         deliverFinished( listFinished );
         wakeTransport( pWake );
@@ -599,7 +599,7 @@ namespace sw
                 if ( slot._connectStartTime >= 0.0 )
                     slot._connectStartTime += stalledSeconds;
             }
-            _slotTable.touchAll(); // 기한을 시계에서 셈했으니 민 시계로 다시 센다
+            _slotTable.markAllDue(); // 기한을 시계에서 셈했으니 민 시계로 다시 센다
         }
 #endif
         _lastUpdateTime = nowSeconds;
@@ -672,7 +672,7 @@ namespace sw
             _bWakeRequested = SW_TRUE;
     }
 
-    INetTransport* NetEndpoint::takeWakeTransport()
+    INetTransport* NetEndpoint::consumeWakeRequest()
     {
         if ( _bWakeRequested == SW_FALSE )
             return nullptr;
@@ -718,7 +718,7 @@ namespace sw
             {
                 ScopedLock<mutex> lock{ _mutex };
                 updateDebugHold( nowSeconds );
-                wipeRetiredReceiveCrypt();
+                releaseClosedReceiveCrypt();
             }
             for ( int32 first = 0; first < receivedCount; first += kReceiveBatchSize )
             {
@@ -776,9 +776,9 @@ namespace sw
 
     void NetEndpoint::updateSlots( float64 nowSeconds )
     {
-        // 기한이 된 연결만 본다(감사 N-8). 기한은 다녀간 뒤 `computeNextDueTime` 이 정하고, 받은 패킷 · 넣은 메시지가 `touch` 로 앞당긴다.
+        // 기한이 된 연결만 본다(감사 N-8). 기한은 다녀간 뒤 `computeNextDueTime` 이 정하고, 받은 패킷 · 넣은 메시지가 `markDue` 로 앞당긴다.
         // 언리얼은 틱마다 모든 연결을 `TickFlush` 하고, 여기서는 보낼 시각 · 타임아웃이 된 것만 돈다 — 깨어날 때마다 정원 N 을 훑지 않는다.
-        _slotTable.collectDue( nowSeconds, _listDueSlot );
+        _slotTable.collectDueSlots( nowSeconds, _listDueSlot );
         _slotVisitCount += static_cast<uint64>( _listDueSlot.size() );
         for ( const int32 index : _listDueSlot )
         {
@@ -878,7 +878,7 @@ namespace sw
         }
         const optional<int32> slotIndex = _slotTable.findByAddress( from );
         if ( slotIndex.has_value() )
-            _slotTable.touch( *slotIndex ); // 받은 것이 확인 · 응답 · 상태를 바꿨을 수 있다 — 이번 갱신에서 그 슬롯을 본다
+            _slotTable.markDue( *slotIndex ); // 받은 것이 확인 · 응답 · 상태를 바꿨을 수 있다 — 이번 갱신에서 그 슬롯을 본다
         if ( isEncrypted() && ( type == PacketType::Payload || type == PacketType::Disconnect ) )
         {
             queueSealedPacket( nowSeconds, type, slotIndex, pData + NetEndpointInternal::kHeaderSize, size - NetEndpointInternal::kHeaderSize );
@@ -1227,31 +1227,31 @@ namespace sw
         receive.wipe(); // 슬롯에는 보내는 쪽만 남는다 — 다른 스레드가 슬롯을 닫아도 받는 키는 건드리지 않는다
     }
 
-    void NetEndpoint::wipeRetiredReceiveCrypt()
+    void NetEndpoint::releaseClosedReceiveCrypt()
     {
-        for ( const RetiredConnection& retired : _listRetiredConnection )
+        for ( const ClosedReceiveCryptEntry& closed : _listClosedReceiveCrypt )
         {
-            const size_t index = static_cast<size_t>( retired._slotIndex );
-            if ( index < _listReceiveCrypt.size() && _listReceiveCrypt[index]._connectionToken == retired._connectionToken )
+            const size_t index = static_cast<size_t>( closed._slotIndex );
+            if ( index < _listReceiveCrypt.size() && _listReceiveCrypt[index]._connectionToken == closed._connectionToken )
             {
                 _listReceiveCrypt[index]._context.wipe();
                 _listReceiveCrypt[index]._connectionToken = 0;
             }
         }
-        _listRetiredConnection.clear();
+        _listClosedReceiveCrypt.clear();
     }
 
-    void NetEndpoint::retireConnection( int32 slotIndex, const NetEndpointSlot& slot )
+    void NetEndpoint::addClosedReceiveCrypt( int32 slotIndex, const NetEndpointSlot& slot )
     {
         if ( slot._security != nullptr )
-            _listRetiredConnection.push_back( RetiredConnection{ slot.getConnectionToken(), slotIndex } );
+            _listClosedReceiveCrypt.push_back( ClosedReceiveCryptEntry{ slot.getConnectionToken(), slotIndex } );
     }
 
     void NetEndpoint::resetSlots( int32 slotCount )
     {
         for ( const NetLiveSlot& live : _slotTable.getLiveSlots() )
         {
-            retireConnection( live._slotIndex, _slotTable.get( live._slotIndex ) );
+            addClosedReceiveCrypt( live._slotIndex, _slotTable.get( live._slotIndex ) );
         }
         _slotTable.reset( slotCount );
     }
@@ -1273,7 +1273,7 @@ namespace sw
             }
         }
         const bool bWasVisible = slot._state == NetConnectionState::Connected || _bServer == SW_FALSE;
-        retireConnection( slotIndex, slot ); // 받는 키는 `update` 스레드가 지운다
+        addClosedReceiveCrypt( slotIndex, slot ); // 받는 키는 `update` 스레드가 지운다
         _slotTable.unbindAddress( slotIndex );
         _slotTable.close( slotIndex, bWasVisible ); // 보인 끊김은 게임 스레드가 사건을 꺼낼 때까지 번호를 다시 주지 않는다(`releaseDisconnectedSlots`)
         slot._bRemoteDebugHold = SW_FALSE;
@@ -1298,7 +1298,7 @@ namespace sw
         {
             ScopedLock<mutex> lock{ _mutex };
             bQueued = sendMessageLocked( connectionID, channel, pData, size, WindowFullPolicy::Close );
-            pWake   = takeWakeTransport();
+            pWake   = consumeWakeRequest();
         }
         wakeTransport( pWake );
         return bQueued;
@@ -1313,7 +1313,7 @@ namespace sw
         {
             ScopedLock<mutex> lock{ _mutex };
             bQueued = sendMessageLocked( connectionID, channel, pData, size, WindowFullPolicy::Report );
-            pWake   = takeWakeTransport();
+            pWake   = consumeWakeRequest();
         }
         wakeTransport( pWake );
         return bQueued;
@@ -1326,7 +1326,7 @@ namespace sw
         if ( bQueued )
         {
             _sentKindStats.add( pData, size );
-            _slotTable.touch( connectionID );                              // 보낼 것이 생겼다 — 다음 유지 시각을 기다리지 않는다
+            _slotTable.markDue( connectionID );                            // 보낼 것이 생겼다 — 다음 유지 시각을 기다리지 않는다
             requestWake( pSlot->_lastSendTime + _settings._sendInterval ); // 보내기 간격이 차는 때 — 자는 네트워크 스레드가 그때 깬다
             return true;
         }
@@ -1352,10 +1352,10 @@ namespace sw
             if ( bQueued )
             {
                 _sentKindStats.add( pData, size );
-                _slotTable.touch( connectionID );
+                _slotTable.markDue( connectionID );
                 requestWake( pSlot->_lastSendTime + _settings._sendInterval );
             }
-            pWake = takeWakeTransport();
+            pWake = consumeWakeRequest();
         }
         wakeTransport( pWake );
         return bQueued;
@@ -1383,7 +1383,7 @@ namespace sw
                 if ( index != exceptID && sendMessageLocked( index, channel, pData, size, WindowFullPolicy::Close ) )
                     ++sentCount;
             }
-            pWake = takeWakeTransport();
+            pWake = consumeWakeRequest();
         }
         wakeTransport( pWake ); // 연결 수만큼이 아니라 한 번
         return sentCount;

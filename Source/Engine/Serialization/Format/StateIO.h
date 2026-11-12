@@ -392,7 +392,7 @@ namespace sw
         /** @brief 바이트 @p inoutBytes 를 표 @p tag 의 판 @p fromVersion 에서 @p toVersion 까지 올립니다(판 올림 사슬). 실패하면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool upgradeBytes( uint32 tag, uint32 fromVersion, uint32 toVersion, vector<uint8>& inoutBytes );
         /** @brief 아카이브에서 나머지 바이트를 모두 읽어 @p outBytes 에 담습니다(남은 것이 없으면 빈다). */
-        static void takeRemainingBytes( Archive& archive, vector<uint8>& outBytes );
+        static void readRemainingBytes( Archive& archive, vector<uint8>& outBytes );
 
     private:
         Archive*            _pArchive;         ///< 지금 읽고 쓰는 아카이브 — 처음엔 받은 것, 판을 올리면 `_pUpgradedArchive`

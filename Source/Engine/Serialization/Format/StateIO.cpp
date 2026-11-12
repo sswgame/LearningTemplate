@@ -126,7 +126,7 @@ namespace sw
             return;
         // 옛 판 — 머리 뒤 바이트를 사슬로 올리고 그 바이트에서 이어 읽는다. 한 입구에서 두 번 올리는 일은 없다(안쪽 형식의 머리는 올린 바이트 안에서 다시 올린다).
         vector<uint8> bytes;
-        takeRemainingBytes( *_pArchive, bytes );
+        readRemainingBytes( *_pArchive, bytes );
         if ( check( upgradeBytes( tag, readVersion, version, bytes ) ) == false )
             return;
         unique_ptr<Archive> pUpgraded = make_unique<Archive>();
@@ -136,7 +136,7 @@ namespace sw
         _pArchive         = _pUpgradedArchive.get();
     }
 
-    void StateIO::takeRemainingBytes( Archive& archive, vector<uint8>& outBytes )
+    void StateIO::readRemainingBytes( Archive& archive, vector<uint8>& outBytes )
     {
         const uint64 remaining = archive.getRemainingBytes();
         outBytes.clear();
@@ -162,7 +162,7 @@ namespace sw
             return true;
         vector<uint8> bytes;
         Archive       body = inoutBody; // 실패하면 받은 본문을 그대로 둔다
-        takeRemainingBytes( body, bytes );
+        readRemainingBytes( body, bytes );
         if ( upgradeBytes( tag, fromVersion, toVersion, bytes ) == false )
             return false;
         Archive upgraded;

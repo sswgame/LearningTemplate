@@ -40,7 +40,7 @@ namespace sw
         static const hashed_string& getCampaignExpiryTable(); ///< "mail_campaign_expiry" — 캠페인의 TTL 색인(`<끝>/<id>`)
         static const hashed_string& getClaimExpiryTable();    ///< "mail_campaign_claim_expiry" — 수령 표식 묶음의 TTL 색인(`<끝>/<id>/`)
         /** @brief 캠페인 레코드의 끝 시각을 읽습니다(TTL 쓸기 · 백필). */
-        [[nodiscard]] static bool readEndMs( const ServiceRecord& record, int64& outTimeMs );
+        [[nodiscard]] static bool readEndTimeMs( const ServiceRecord& record, int64& outTimeMs );
         /** @brief 끝난 캠페인 레코드의 TTL 규칙입니다. 서비스가 주기마다 전부 읽는 표라 끝난 캠페인이 쌓이면 읽기도 커진다. */
         static ServiceTTLRule makeCampaignTTLRule( int64 expireAfterMs );
         /** @brief 끝난 캠페인의 수령 표식 묶음 TTL 규칙입니다(접두어 묶음 줄 하나가 그 캠페인의 표식 전부를 지운다). */

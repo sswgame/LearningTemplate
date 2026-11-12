@@ -60,12 +60,12 @@ namespace sw
         Component::onRegister( manager );
         manager.getComponentRegistry().add<ZoneContactComponent>( this );
         (void)ZoneSystem::findOrCreate( manager );
-        manager.getSubsystem<ScenePhysics>().addContactStayListener( *this, ContactStayListener{ &ZoneContactComponent::receiveCollisionStay, nullptr } );
+        manager.getSubsystem<ScenePhysics>().registerContactStayListener( *this, ContactStayListener{ &ZoneContactComponent::receiveCollisionStay, nullptr } );
     }
 
     void ZoneContactComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getSubsystem<ScenePhysics>().removeContactStayListener( *this );
+        manager.getSubsystem<ScenePhysics>().unregisterContactStayListener( *this );
         manager.getComponentRegistry().remove<ZoneContactComponent>( this );
         ZoneSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );

@@ -1010,7 +1010,7 @@ namespace sw
                     const auto keyIt    = _mapComponentKeyText.find( savedHandle.componentID() );
                     const bool bKeyText = keyIt != _mapComponentKeyText.end();
                     if ( bKeyText )
-                        pMissing->keepReferencedKey( keyIt->second );
+                        pMissing->addReferencedKey( keyIt->second );
                     SW_LOG_WARNING_ID( "Object.HandleKeptForMissingComponent", "Handle '%#' of '%#' keeps its reference to '%#' of '%#' - that object has a component of unknown type, saving writes the "
                                                                                "reference back unchanged",
                                        leafProperty._name.c_str(), entry._pObject->getName().c_str(), bKeyText ? keyIt->second.c_str() : "?", pTargetObject->getName().c_str() );
