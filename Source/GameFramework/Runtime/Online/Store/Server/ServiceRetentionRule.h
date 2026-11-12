@@ -7,10 +7,13 @@
  *          - 키 순서는 시각 순서가 아니므로(감사 기록은 대상이 앞이다) 커서로 테이블을 처음부터 끝까지 돌며 훑습니다. 한 번에 훑는 수와 지우는 수에 상한이 있어
  *            저장소를 오래 잡지 않고, 커서는 규칙에 남아 다음 회차가 이어서 훑습니다. 끝에 닿으면 커서를 비워 처음부터 다시 돕니다.
  *          - 지우는 쓰기는 읽은 버전을 조건으로 합니다. 그사이 바뀐 레코드는 Conflict 로 건너뛰고 다음 회차에 다시 봅니다.
+ *          - 지우는 레코드가 다른 레코드에 합을 남겨야 하면(원장 분개 → 자산별 이월) 규칙의 `_pfnStageErase` 가 같은 트랜잭션에 그 쓰기를 붙인다.
+ *            지우기와 이월이 함께 커밋되거나 함께 실패하므로, 지웠는데 합이 빠지는 틈이 없다.
  *          멱등 기록(`ServiceIdempotency`)은 키에 시각이 없어 이 쓸기가 지우지 못합니다. 저장소 구현의 만료 정리가 맡습니다.
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
@@ -24,14 +27,21 @@ namespace sw
     /** @brief 레코드에서 기록 시각(UTC 밀리초)을 읽습니다. 읽지 못하면 false 이고 그 레코드는 지우지 않습니다. */
     using ServiceRetentionTimeFn = bool ( * )( const ServiceRecord& record, int64& outTimeMs );
 
+    /**
+     * @brief 지울 레코드 @p listErased 와 같은 트랜잭션에 넣을 쓰기를 @p inoutTransaction 에 붙입니다. Ok 가 아니면 쓸기가 그 결과로 멈추고 아무것도 지우지 않습니다.
+     * @details 붙인 쓰기가 많아 트랜잭션 상한을 넘으면 쓸기가 지울 묶음을 반으로 나눠 다시 부른다. 레코드 하나와 그 쓰기는 상한 안이어야 한다.
+     */
+    using ServiceRetentionStageFn = ServiceStoreResult ( * )( IServiceStoreConnection& connection, const vector<const ServiceRecord*>& listErased, ServiceTransaction& inoutTransaction );
+
     /** @brief 테이블 하나의 보존 규칙입니다. */
     struct SW_GF_API ServiceRetentionRule
     {
-        hashed_string          _table{};
-        string                 _keyPrefix{}; ///< 비우면 테이블 전체. 값이 있으면 이 접두어의 레코드만 훑는다
-        int64                  _retentionMs{ 0 };
-        ServiceRetentionTimeFn _pfnReadTime{ nullptr };
-        string                 _cursor{}; ///< 다음 회차가 이어서 훑을 위치. 쓸기가 채운다
+        hashed_string           _table{};
+        string                  _keyPrefix{}; ///< 비우면 테이블 전체. 값이 있으면 이 접두어의 레코드만 훑는다
+        int64                   _retentionMs{ 0 };
+        ServiceRetentionTimeFn  _pfnReadTime{ nullptr };
+        ServiceRetentionStageFn _pfnStageErase{ nullptr }; ///< 비우면 지우기만 한다. 값이 있으면 지우는 트랜잭션에 이 쓰기를 함께 넣는다
+        string                  _cursor{};                 ///< 다음 회차가 이어서 훑을 위치. 쓸기가 채운다
 
         // 보존 기간 쓸기입니다. 저장소 스레드(`IServiceStoreJob::run` 안)에서 씁니다. */
         static constexpr int32 kPageSize = 64; ///< 한 트랜잭션의 쓰기 상한에 맞춘 한 쪽의 크기

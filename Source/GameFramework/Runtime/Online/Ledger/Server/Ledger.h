@@ -1,13 +1,16 @@
 /**
  * @file Ledger.h
- * @brief 원장을 정의합니다. 테이블 세 개(`ledger_balance`, `ledger_journal`, `ledger_history`) 위의 복식 이동입니다.
+ * @brief 원장을 정의합니다. 테이블 넷(`ledger_balance`, `ledger_journal`, `ledger_history`, `ledger_carry`) 위의 복식 이동입니다.
  * @details 모두 저장소 스레드(`IServiceStoreJob::run`)에서 도는 동기 함수이다.
  *          PlayFab Economy v2 의 거래 기록이나 Nakama 의 wallet_ledger(단식)와 달리 복식이며 분개 키로 멱등하다. 회계의 차변과 대변이 같다.
  *
  *          - 잔액: 계정과 맡김마다 (보유자, 자산) 레코드 하나를 둔다(키 `<보유자 키>/<자산>`). 0 이 되면 지운다. 발행과 소각에는 잔액이 없다.
  *          - 분개: 이동 한 건의 원본이다(다리, 사유, 주체, 시각, 이동 뒤 잔액, 키는 분개 키). "없어야 한다" 조건으로 넣으므로 분개 키가 멱등 키이다.
  *          - 내역 색인: 계정과 맡김마다 `<보유자 키>/<시각 16 진 16>/<분개 키>` 를 두며 값은 없다. 최근 것부터 읽는다.
- *          - 불변식: 자산마다 계정 잔액과 맡김 잔액의 합은 발행에서 나간 양에서 소각으로 들어간 양을 뺀 값과 같다.
+ *          - 이월: 보존 쓸기가 분개를 지울 때 그 분개의 발행 · 소각 합을 자산별 이월 레코드(키 `<자산>`)에 같은 트랜잭션으로 더한다.
+ *            분개는 감사 내역이라 지워지지만 공급 합은 남는다. 멱등 기록이 필요한 쪽(영수증 지급)은 분개가 아니라 자기 표에 지우지 않는 레코드를 둔다.
+ *            PlayFab 이 영수증 거래 id 를 거래 내역과 따로 타이틀 수명 동안 두는 자리다. 분개 쓸기 규칙은 `makeJournalRetentionRule` 하나로만 만든다.
+ *          - 불변식: 자산마다 계정 잔액과 맡김 잔액의 합은 이월과 남은 분개의 발행 합에서 소각 합을 뺀 값과 같다.
  *            맡김 잔액은 0 이상이고, 계정 잔액은 빚(환불 회수)일 때만 음수이다(`LedgerAuditReport`).
  *          - 잔액은 버전 조건으로 쓴다. 읽은 뒤 다른 이동이 끼면 커밋이 `Conflict` 이고, `executeTransfer` 가 다시 읽어 다시 한다.
  */
@@ -19,7 +22,19 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+
+namespace sw
+{
+    /** @brief 자산 하나의 공급 합입니다. 분개 하나 이상 또는 이월 레코드에서 셉니다. */
+    struct LedgerSupplyStats
+    {
+        string _assetID{};
+        int64  _issued{ 0 }; ///< 발행에서 나간 양의 합
+        int64  _burned{ 0 }; ///< 소각으로 들어간 양의 합
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -29,8 +44,16 @@ namespace sw
         static const hashed_string& getBalanceTable();
         static const hashed_string& getJournalTable();
         static const hashed_string& getHistoryTable();
-        /** @brief 분개 레코드에서 이동 시각을 읽습니다(보존 기간 쓸기 `ServiceRetentionRule` 용). 형식이 틀리면 false 입니다. */
-        [[nodiscard]] static bool readJournalTimeMs( const ServiceRecord& record, int64& outTimeMs );
+        static const hashed_string& getCarryTable(); ///< "ledger_carry" — 키 `<자산>`, 값 `[판][발행 합][소각 합]`. 지운 분개의 공급 합이며 지우지 않는다
+        /**
+         * @brief 분개 표의 보존 쓸기 규칙을 만듭니다. 지우는 분개의 발행 · 소각 합을 이월 레코드에 같은 트랜잭션으로 더합니다.
+         * @details 분개를 끝까지 읽지 못하면 시각도 읽지 않은 것으로 보고 지우지 않는다 — 이월에 넣지 못하는 분개를 지우면 감사 균형이 깨진다.
+         */
+        [[nodiscard]] static ServiceRetentionRule makeJournalRetentionRule( int64 retentionMs );
+        /** @brief 분개 @p entry 의 발행 · 소각 다리를 자산별로 @p inoutListSupply 에 더합니다. 이월과 감사(`LedgerAuditReport`)가 같은 셈을 씁니다. */
+        static void addSupply( const LedgerJournalEntry& entry, vector<LedgerSupplyStats>& inoutListSupply );
+        /** @brief 이월 레코드를 모두 읽어 @p inoutListSupply 에 더합니다. 읽지 못한 레코드는 @p outUnreadableCount 에 셉니다. */
+        [[nodiscard]] static ServiceStoreResult addCarriedSupply( IServiceStoreConnection& connection, vector<LedgerSupplyStats>& inoutListSupply, int32& outUnreadableCount );
         /**
          * @brief 내역 레코드의 키 `<보유자>/<시각 16 진 16>/<분개 키>` 에서 이동 시각을 읽습니다. 계정 · 발행 · 소각 · 맡김(에스크로) 보유자의 키를 읽고, 모르는 키는 false 입니다.
          * @details 맡김 키는 `esc/<도메인>/<토큰>` 이고 도메인(`[0-9a-z_]`)과 토큰(`[0-9a-z_.-]`)의 글자 규칙에 `/` 가 없어, 슬래시 셋째 뒤가 시각이다.

@@ -21,6 +21,7 @@ namespace sw
         struct LedgerInternal
         {
             static constexpr uint64 kJournalFormat = 1;
+            static constexpr uint64 kCarryFormat   = 1;
             static constexpr int32  kListPageSize  = 64;
             static constexpr int32  kTimeHexWidth  = 16;
 
@@ -132,6 +133,69 @@ namespace sw
                         pOutListHolderBalance->push_back( std::move( holderBalance ) );
                 }
                 return reader.hasOverflowed() == false;
+            }
+
+            /** @brief 분개 레코드에서 이동 시각을 읽습니다(분개 쓸기 규칙 용). 분개 전체를 읽지 못하면 false 라 지우지 않는다 — 이월에 넣지 못하는 분개다. */
+            static bool readJournalTimeMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                LedgerJournalEntry entry;
+                if ( decodeJournal( record._bytes, entry, nullptr ) == false )
+                    return false;
+                outTimeMs = entry._timeMs;
+                return true;
+            }
+
+            static vector<uint8> encodeCarry( const LedgerSupplyStats& supply )
+            {
+                BitWriter writer;
+                writer.writeVarUint( kCarryFormat );
+                writer.writeVarInt( supply._issued );
+                writer.writeVarInt( supply._burned );
+                return writer.releaseBytes();
+            }
+
+            [[nodiscard]] static bool decodeCarry( const vector<uint8>& bytes, LedgerSupplyStats& inoutSupply )
+            {
+                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+                if ( reader.readVarUint() != kCarryFormat )
+                    return false;
+                const int64 issued = reader.readVarInt();
+                const int64 burned = reader.readVarInt();
+                if ( reader.hasOverflowed() )
+                    return false;
+                inoutSupply._issued = issued;
+                inoutSupply._burned = burned;
+                return true;
+            }
+
+            /** @brief 지우는 분개들의 공급 합을 자산별 이월 레코드에 더하는 쓰기를 붙입니다(`ServiceRetentionStageFn`). 이월 레코드는 읽은 버전을 조건으로 쓴다. */
+            static ServiceStoreResult stageJournalCarry( IServiceStoreConnection& connection, const vector<const ServiceRecord*>& listErased, ServiceTransaction& inoutTransaction )
+            {
+                vector<LedgerSupplyStats> listSupply;
+                for ( const ServiceRecord* pRecord : listErased )
+                {
+                    LedgerJournalEntry entry;
+                    if ( decodeJournal( pRecord->_bytes, entry, nullptr ) == false )
+                        return ServiceStoreResult::Invalid; // 시각을 읽은 분개라 여기 오지 않는다
+                    Ledger::addSupply( entry, listSupply );
+                }
+                for ( const LedgerSupplyStats& supply : listSupply )
+                {
+                    ServiceRecord            carryRecord;
+                    const ServiceStoreResult read = connection.readRecord( Ledger::getCarryTable(), supply._assetID, carryRecord );
+                    if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
+                        return read;
+                    LedgerSupplyStats total{ supply._assetID };
+                    if ( read == ServiceStoreResult::Ok && decodeCarry( carryRecord._bytes, total ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "Ledger.LedgerCarryUnreadable", "Ledger carry '%#' is unreadable", supply._assetID.c_str() );
+                        return ServiceStoreResult::Invalid; // 깨진 이월에 더하면 합이 틀린다 - 지우지 않고 멈춘다
+                    }
+                    total._issued += supply._issued;
+                    total._burned += supply._burned;
+                    inoutTransaction.put( Ledger::getCarryTable(), supply._assetID, encodeCarry( total ), carryRecord._version );
+                }
+                return ServiceStoreResult::Ok;
             }
 
             static LedgerResult validate( const LedgerTransferRequest& request, optional<int32>& outFailedPostingIndex )
@@ -283,16 +347,71 @@ namespace sw
         return s_table;
     }
 
-    bool Ledger::readJournalTimeMs( const ServiceRecord& record, int64& outTimeMs )
+    const hashed_string& Ledger::getCarryTable()
     {
-        BitReader reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
-        if ( reader.readVarUint() != LedgerInternal::kJournalFormat )
-            return false;
-        const int64 timeMs = reader.readVarInt();
-        if ( reader.hasOverflowed() )
-            return false;
-        outTimeMs = timeMs;
-        return true;
+        static const hashed_string s_table{ "ledger_carry" };
+        return s_table;
+    }
+
+    ServiceRetentionRule Ledger::makeJournalRetentionRule( int64 retentionMs )
+    {
+        ServiceRetentionRule rule;
+        rule._table         = getJournalTable();
+        rule._retentionMs   = retentionMs;
+        rule._pfnReadTime   = &LedgerInternal::readJournalTimeMs;
+        rule._pfnStageErase = &LedgerInternal::stageJournalCarry;
+        return rule;
+    }
+
+    void Ledger::addSupply( const LedgerJournalEntry& entry, vector<LedgerSupplyStats>& inoutListSupply )
+    {
+        for ( const LedgerPosting& posting : entry._listPosting )
+        {
+            const bool bIssued = posting._from._kind == LedgerHolderKind::Mint;
+            const bool bBurned = posting._to._kind == LedgerHolderKind::Sink;
+            if ( bIssued == false && bBurned == false )
+                continue;
+            LedgerSupplyStats* pSupply = VectorUtil::findBy<&LedgerSupplyStats::_assetID>( inoutListSupply, posting._assetID );
+            if ( pSupply == nullptr )
+                pSupply = &inoutListSupply.emplace_back( LedgerSupplyStats{ posting._assetID } );
+            if ( bIssued )
+                pSupply->_issued += posting._amount;
+            if ( bBurned )
+                pSupply->_burned += posting._amount;
+        }
+    }
+
+    ServiceStoreResult Ledger::addCarriedSupply( IServiceStoreConnection& connection, vector<LedgerSupplyStats>& inoutListSupply, int32& outUnreadableCount )
+    {
+        outUnreadableCount = 0;
+        string cursor;
+        while ( true )
+        {
+            vector<ServiceRecord>    listRecord;
+            const ServiceStoreResult listed = connection.listRecords( getCarryTable(), "", cursor, LedgerInternal::kListPageSize, false, listRecord );
+            if ( listed != ServiceStoreResult::Ok )
+                return listed;
+            for ( const ServiceRecord& record : listRecord )
+            {
+                LedgerSupplyStats carried{ record._key };
+                if ( LedgerInternal::decodeCarry( record._bytes, carried ) == false )
+                {
+                    ++outUnreadableCount;
+                    continue;
+                }
+                LedgerSupplyStats* pSupply = VectorUtil::findBy<&LedgerSupplyStats::_assetID>( inoutListSupply, carried._assetID );
+                if ( pSupply == nullptr )
+                {
+                    inoutListSupply.push_back( std::move( carried ) );
+                    continue;
+                }
+                pSupply->_issued += carried._issued;
+                pSupply->_burned += carried._burned;
+            }
+            if ( static_cast<int32>( listRecord.size() ) < LedgerInternal::kListPageSize )
+                return ServiceStoreResult::Ok;
+            cursor = listRecord.back()._key;
+        }
     }
 
     bool Ledger::readHistoryTimeMs( const ServiceRecord& record, int64& outTimeMs )

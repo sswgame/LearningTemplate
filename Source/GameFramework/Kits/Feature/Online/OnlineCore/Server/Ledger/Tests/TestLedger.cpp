@@ -141,3 +141,48 @@ SW_TEST_CASE( LedgerTest, CapAndInvalidRequests )
                     sw::LedgerResult::Invalid );
     expectAuditBalanced( database );
 }
+
+/**
+ * @brief [LedgerTest] 보존 쓸기가 분개를 지워도 감사 균형이 맞는다 — 지운 분개의 발행 · 소각 합이 자산별 이월로 남고, 다음 쓸기는 이월에 더한다(감사 P0-7)
+ */
+SW_TEST_CASE( LedgerTest, AuditStaysBalancedAfterJournalSweep )
+{
+    constexpr int64           kRetentionMs = 1000;
+    sw::MemoryServiceDatabase database;
+    sw::LedgerTransferResult  result;
+    sw::LedgerTransferRequest grant = makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), 100, "test/grant.old" );
+    SW_REQUIRE_TRUE( move( database, grant, result ) == sw::LedgerResult::Ok );
+    SW_REQUIRE_TRUE( move( database, makeMove( sw::LedgerHolder::makeAccount( kAlice ), sw::LedgerHolder::makeSink(), 30, "test/burn.old" ), result ) ==
+                     sw::LedgerResult::Ok );
+
+    sw::ServiceRetentionRule   rule = sw::Ledger::makeJournalRetentionRule( kRetentionMs );
+    sw::ServiceRetentionReport sweepReport;
+    SW_REQUIRE_TRUE( sw::ServiceRetentionRule::sweep( database, rule, grant._timeMs + kRetentionMs, 100, 100, sweepReport ) == sw::ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 2, sweepReport._deletedCount );
+    sw::vector<sw::ServiceRecord> listJournal;
+    SW_REQUIRE_TRUE( database.listRecords( sw::Ledger::getJournalTable(), "", "", 100, false, listJournal ) == sw::ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listJournal.empty() );
+
+    sw::LedgerAuditReport report;
+    SW_REQUIRE_TRUE( sw::LedgerAuditReport::computeReport( database, report ) == sw::ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( report.isBalanced() );
+    const sw::LedgerAssetAudit* pGold = report.findAsset( kGold );
+    SW_REQUIRE_TRUE( pGold != nullptr );
+    SW_EXPECT_EQUAL( int64( 100 ), pGold->_issued );
+    SW_EXPECT_EQUAL( int64( 30 ), pGold->_burned );
+    SW_EXPECT_EQUAL( int64( 70 ), pGold->_held );
+
+    // 남은 분개 + 이월이 함께 맞고, 다음 쓸기는 이월에 더한다
+    sw::LedgerTransferRequest later = makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kBob ), 5, "test/grant.later" );
+    later._timeMs                   = grant._timeMs + kRetentionMs * 2;
+    SW_REQUIRE_TRUE( move( database, later, result ) == sw::LedgerResult::Ok );
+    expectAuditBalanced( database );
+    SW_REQUIRE_TRUE( sw::ServiceRetentionRule::sweep( database, rule, later._timeMs + kRetentionMs, 100, 100, sweepReport ) == sw::ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, sweepReport._deletedCount );
+    SW_REQUIRE_TRUE( sw::LedgerAuditReport::computeReport( database, report ) == sw::ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( report.isBalanced() );
+    SW_EXPECT_EQUAL( 0, report._journalCount );
+    pGold = report.findAsset( kGold );
+    SW_REQUIRE_TRUE( pGold != nullptr );
+    SW_EXPECT_EQUAL( int64( 105 ), pGold->_issued );
+}

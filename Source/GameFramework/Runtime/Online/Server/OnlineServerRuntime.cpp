@@ -87,7 +87,7 @@ namespace sw
                 if ( config._retentionLedgerDays > 0 )
                 {
                     listRule.push_back( makeRetentionRule( Ledger::getHistoryTable(), config._retentionLedgerDays, &Ledger::readHistoryTimeMs ) );
-                    listRule.push_back( makeRetentionRule( Ledger::getJournalTable(), config._retentionLedgerDays + kJournalExtraDays, &Ledger::readJournalTimeMs ) );
+                    listRule.push_back( Ledger::makeJournalRetentionRule( ( config._retentionLedgerDays + kJournalExtraDays ) * kDayMs ) ); // 지우는 분개의 공급 합을 이월에 남긴다
                 }
                 if ( config._retentionReportDays > 0 )
                 {

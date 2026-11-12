@@ -24,7 +24,7 @@
 항목 대부분이 아래 여섯 모양 가운데 하나다. 증상을 하나씩 고치지 말고 이 모양을 쓸 수 없게 형식을 바꾼다.
 
 1. **세대 없는 번호 · 순번 · 경로 글을 정체로 쓴다.** 연결 슬롯 번호(P0-8), 컴포넌트 `이름#순번`(A-2), 복셀 블록 순서 번호(K-3), 재시작마다 1 부터인 파티 · 티켓 id(O-7), 열린 문서의 경로 글(P0-4), 32 비트 이름 해시(C-8).
-2. **같은 사실을 두 곳이 따로 안다.** 쓰는 쪽 · 읽는 쪽의 한도와 판(A-3 · A-5 · A-6), 개수는 CPU · 목록은 GPU(RN-1), 문서 기록은 전역 스택 · Ctrl+Z 는 창 스택(P0-2), 멱등 기록과 감사 내역이 한 레코드(P0-7), 캐시 기록과 서버 메모리 표(O-6 · O-7).
+2. **같은 사실을 두 곳이 따로 안다.** 쓰는 쪽 · 읽는 쪽의 한도와 판(A-3 · A-5 · A-6), 개수는 CPU · 목록은 GPU(RN-1), 문서 기록은 전역 스택 · Ctrl+Z 는 창 스택(P0-2), 캐시 기록과 서버 메모리 표(O-6 · O-7).
 3. **실패 · 잘림을 값으로 돌려주지 않거나 호출자가 버린다.** `(void)` 로 버린 신뢰 송신(N-3), 구간 읽기 실패 뒤 새 판(P0-5), exec 실패를 성공으로(P0-16), 잘린 포맷을 성공으로(C-10), 팩 마운트 실패 뒤 기동(A-4).
 4. **플랫폼 창이 "빠뜨려도 컴파일되는" 선택 훅을 가진다.** 포커스 전달 · 글 입력 · 닫기 완료 · 쉬기 · 수명 구독 · 오디오 백엔드(P0-9 ~ P0-11, P-3 ~ P-6).
 5. **플레이어 세이브가 핫 리로드용 엄격한 스냅샷 형식을 그대로 쓴다.** 판이 정확히 같아야 읽고, 개수 · 색인으로 짝짓고, 실패하면 조용히 새 판이다(P0-5 · P0-6 · A-6 · G-1).
@@ -66,13 +66,6 @@
 - 상용 엔진: 언리얼 `LoadGameFromSlot` 은 별도 `USaveGame` 객체로 풀고 월드는 성공 뒤에만 건드린다.
 - 제안: 복원을 두 단계로 나눈다 — 분리된 묶음에서 끝까지 읽고 검증한 뒤 교체. 실패하면 인스턴스가 저장 막기를 걸고 씬을 다시 연다. 막기는 씬 전환 · 연출 · 복원 실패가 거는 범위형(RAII) 까닭으로 만든다.
 - 확인: 단위 `GameStateSnapshotTest.FailedRestoreKeepsScene`, `AutosaveTest.FailedRestoreBlocksSaving`. 시나리오 — 깨진 슬롯을 `game.load` 한 뒤 `Save.Written` 이 늘지 않는지.
-
-### P0-7 온라인: 분개 보존 정리가 영수증 지급의 유일한 중복 방지 기록을 지운다
-- 분류: 결함(이중 지급 — 운영 401 일째부터) · 확신: 확인(스토어가 옛 거래를 Valid 로 답한다는 부분만 기억 기준)
-- 근거: `Source/GameFramework/Runtime/Online/Server/OnlineServerRuntime.cpp:90` 이 `ledger_journal` 을 `_retentionLedgerDays + 1` 일 뒤 지우는 규칙을 만든다. 영수증 지급의 중복 방지는 분개 키 `iap.redeem/<스토어>/<거래 id>` 하나뿐이다(`Source/GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.cpp:436`, `:456`). "쓴 영수증" 표도 영수증 나이 제한도 없다. 401 일 지난 거래를 다시 내면 스토어는 Valid, 분개는 NotFound 라 다시 지급된다. 같은 뿌리로 `Source/GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.cpp:58-74` 의 균형 검사(발행 − 소각 = 보유)가 정리 시작 뒤 매일 어긋나 진짜 불균형 경보를 가린다.
-- 상용 서비스: PlayFab 은 영수증 거래 id 를 타이틀 수명 동안 유일 키로 둔다. 애플은 `transactionId` 영구 보관을 권고한다.
-- 제안: 멱등 기록과 감사 내역을 형식으로 나눈다. 지급 트랜잭션에 지우지 않는 `econ_receipt/<스토어>/<거래 id>` 를 "없어야 함" 조건으로 함께 넣는다. 분개 정리는 지우는 분개의 발행 · 소각 합을 자산별 이월 레코드에 같은 트랜잭션으로 더한다.
-- 확인: `TestEconomyReceipts` 에 "지급 → 시각 +401 일 → 보존 쓸기 → 같은 영수증 재제출"(지금은 Ok + 잔액 2 배). `TestLedger` 에 "발행 → 쓸기 → `computeReport().isBalanced()`".
 
 ### P0-11 오디오: Android · 웹 클라이언트는 오디오 백엔드가 없어 기동에서 `SW_FATAL`
 - 분류: 결함 · 확신: 확인(코드 경로 — 실행은 안 함)
@@ -811,7 +804,7 @@
 2. **자동 저장 세션** — 세션 폴더 · pid 잠금 · 리로드 이어 쓰기: P0-3, 복구 입구 통일과 dirty 문서 목록 E-1.
 3. **에셋 옮김 방송** — `applyAssetMoves` 의 (옛 id → 새 id) 알림과 열린 문서 · 씬 · 선택 갱신, dirty 참조자 거절: P0-4. 참조 쪽은 integ2 의 GUID 2 · 3 단계와 순서를 맞춘다.
 4. **세이브 안전** — 구간 실패를 로드 실패로, 두 단계 복원, 범위형 저장 막기, 봉투에 씬 id: P0-5 · P0-6 · G-7.
-5. **영수증 멱등 기록 분리** — `econ_receipt` + 분개 이월 레코드: P0-7. 같은 묶음에서 읽은 것을 커밋 조건으로 자동으로 붙이는 연결 포장 O-1.
+5. **읽은 것을 커밋 조건으로** — 같은 묶음에서 읽은 것을 커밋 조건으로 자동으로 붙이는 연결 포장: O-1.
 6. **연결 ID 세대 핸들** — 슬롯 + 세대, 닫힌 슬롯의 재발급 시점: P0-8. 신뢰 송신 실패를 무시할 수 없게 N-3 을 같이.
 7. **Android 수명 · 키** — finish 요청과 닫힘 확정, 옮기지 못한 키는 소비하지 않음: P0-9 · P0-10. 가짜 `android_app` 단위 테스트로 데스크톱에서 고정한 뒤 실기기.
 8. **오디오 플랫폼과 장치 유실** — CMake 구성 오류(없는 백엔드) → AAudio · AudioWorklet 백엔드, "출력이 죽었다" 상태와 오프라인 렌더 넘김: P0-11 · P0-13.
@@ -975,7 +968,7 @@
 ### GameFramework (4)
 
 - Client — 읽음(HUD · Marker · Ability) — 시뮬과 표현 분리. G-9. Flow 는 훑음.
-- Kits — 읽음(Feature/Online · Network · Storage · World · Content, Genre 여섯 갈래) — OnlineSubsystem · PlayFab · Lyra · 템플릿. P0-7 · P0-8, N-3 · N-5 · N-9 · N-13 · N-15, O-1 ~ O-18, K-3 ~ K-14. 장르 키트 가운데 MechArena · AsymmetricHorror · Metroidvania · ActionAdventure · ActionPlatformer · KartRacing · Rhythm · GhostHunt · SurvivalHorror · MonsterHuntRPG · CreatureLife · RestaurantSim · SideScrollConquest · TacticsSRPG 는 패턴 검색만 했다.
+- Kits — 읽음(Feature/Online · Network · Storage · World · Content, Genre 여섯 갈래) — OnlineSubsystem · PlayFab · Lyra · 템플릿. P0-8, N-3 · N-5 · N-9 · N-13 · N-15, O-1 ~ O-18, K-3 ~ K-14. 장르 키트 가운데 MechArena · AsymmetricHorror · Metroidvania · ActionAdventure · ActionPlatformer · KartRacing · Rhythm · GhostHunt · SurvivalHorror · MonsterHuntRPG · CreatureLife · RestaurantSim · SideScrollConquest · TacticsSRPG 는 패턴 검색만 했다.
 - Plugin — 읽음(Editor/MeshModifiers · CharacterEditor · GameplayTools/Ability) — 에셋 에디터 dirty · 트랜잭션. G-12, E-9. Modifiers(59 파일) · CameraPresets 는 훑음.
 - Runtime — 읽음(Gameplay · Foundation/Framework · World · Character 일부 · Online) — Gameplay Framework · GAS · SaveGame · Lyra. P0-5 · P0-6, G-1 ~ G-13, O-2 · O-9 · O-17. `ScheduleSystem` · BehaviorTree · Appearance · Vehicle · Movement 는 안 읽음.
 
