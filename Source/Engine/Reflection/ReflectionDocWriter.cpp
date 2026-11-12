@@ -205,7 +205,7 @@ namespace sw
         for ( const auto& [value, name] : listEntry )
         {
             StringBuilder<constant::buffer::kMax256> outPart;
-            outPart.appendFormat( "| `%#` | %# |\n", string( name.c_str() ), value );
+            outPart.appendFormat( "| `%#` | %# |\n", name, value );
             out += outPart.c_str();
         }
         out += "\n";

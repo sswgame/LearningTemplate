@@ -109,7 +109,7 @@ namespace sw::editor
                     for ( const auto& [val, nameHashed] : pEnumInfo->_mapValueToName )
                     {
                         const int32 val32     = static_cast<int32>( val );
-                        const utf8* name      = nameHashed.c_str();
+                        const utf8* name      = nameHashed.toString().data();
                         const bool  bSelected = ( val32 == currentVal );
                         if ( ImGui::Selectable( name, bSelected ) )
                         {

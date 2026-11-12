@@ -118,11 +118,21 @@ SW_TEST_CASE( StringTest, HashedString )
     SW_EXPECT_EQUAL( str1.getIndex(), str3.getIndex() );
     SW_EXPECT_TRUE( str1 != str4 );
 
-    // 빈 이름의 표시 글은 "None"(FName), 값으로 쓰는 글은 빈 글이다 — 경로 자리로 "None" 이 가면 'None' 파일을 찾는다
-    SW_EXPECT_EQUAL( sw::string_view( "None" ), defaultStr.view() );
-    SW_EXPECT_TRUE( defaultStr.viewOrEmpty().empty() );
-    SW_EXPECT_EQUAL( '\0', defaultStr.viewOrEmpty().data()[0] );
-    SW_EXPECT_EQUAL( sw::string_view( "TestKey" ), str1.viewOrEmpty() );
+    // 빈 이름의 글은 빈 글이고(경로 자리로 가도 'None' 파일을 찾지 않는다), 표시 글(`toString`)만 "None" 이다(FName 의 ToString)
+    SW_EXPECT_TRUE( defaultStr.view().empty() );
+    SW_EXPECT_EQUAL( '\0', defaultStr.c_str()[0] );
+    SW_EXPECT_EQUAL( sw::string_view( "None" ), defaultStr.toString() );
+    SW_EXPECT_EQUAL( '\0', defaultStr.toString().data()[4] );
+    SW_EXPECT_EQUAL( sw::string_view( "TestKey" ), str1.toString() );
+    // 읽기는 "None" 철자(대소문자 무시)를 빈 이름으로 되돌리고, 그 철자가 글로 새지 않는다
+    SW_EXPECT_TRUE( sw::hashed_string( "None" ).empty() );
+    SW_EXPECT_TRUE( sw::hashed_string( "nOnE" ).empty() );
+    SW_EXPECT_TRUE( sw::hashed_string( "nOnE" ).view().empty() );
+    SW_EXPECT_EQUAL( defaultStr.getHash(), sw::hashed_string( "None" ).getHash() );
+    // 로그 포매터는 이름을 표시 글로 쓴다
+    sw::fixed_string<64> formatted;
+    sw::formatstring( formatted.data(), formatted.capacity(), "[%#][%#]", defaultStr, str1 );
+    SW_EXPECT_EQUAL( sw::string_view( "[None][TestKey]" ), sw::string_view( formatted.c_str() ) );
 }
 
 /**

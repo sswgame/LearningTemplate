@@ -765,9 +765,9 @@ namespace sw
         {
             const int64 val = pEnumInfo->readValueFromMemory( pValPtr );
             if ( pEnumInfo->_bIsBitFlag )
-                ss.append( pEnumInfo->toStringFlags( val ).c_str() );
+                ss.append( pEnumInfo->toStringFlags( val ).toString() );
             else
-                ss.append( pEnumInfo->toString( val ).c_str() );
+                ss.append( pEnumInfo->toString( val ).toString() ); // 열거자 None 은 빈 이름이라 표시 글로 쓴다
             return;
         }
 

@@ -143,7 +143,7 @@ namespace sw
                     vector<string> listEntry;
                     for ( const auto& [name, value] : info._mapNameToValue )
                     {
-                        listEntry.push_back( string( name.view() ) + "=" + sw::to_string( value ) );
+                        listEntry.push_back( string( name.toString() ) + "=" + sw::to_string( value ) );
                     }
                     VectorUtil::sort( listEntry );
                     string text = "enum " + string( info._fullyQualifiedName.view() );

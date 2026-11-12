@@ -634,7 +634,7 @@ namespace sw
         vector<pair<int64, const utf8*>> listEntry;
         for ( const auto& [value, name] : pEnum->_mapValueToName )
         {
-            listEntry.emplace_back( value, name.c_str() );
+            listEntry.emplace_back( value, name.toString().data() ); // 열거자 None 은 빈 이름이라 표시 글로
         }
         VectorUtil::sort( listEntry, []( const auto& lhs, const auto& rhs )
         { return lhs.first < rhs.first; } );

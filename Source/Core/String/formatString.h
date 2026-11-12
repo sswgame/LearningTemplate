@@ -395,6 +395,21 @@ namespace sw
         template <typename T>
         static constexpr bool is_formatted_value_v = is_formatted_value<std::decay_t<T>>::value;
 
+        template <typename T, typename = void>
+        /** @brief 표시 글을 `string_view toString() const` 로 내는 형식(`hashed_string` — 빈 이름은 "None")이 아니면 false 입니다. */
+        struct has_display_text : std::false_type
+        {
+        };
+
+        template <typename T>
+        /** @brief `toString()` 이 `string_view` 를 돌려주면 true 입니다. */
+        struct has_display_text<T, std::enable_if_t<std::is_same_v<decltype( std::declval<const T&>().toString() ), string_view>>> : std::true_type
+        {
+        };
+
+        template <typename T>
+        static constexpr bool has_display_text_v = has_display_text<std::decay_t<T>>::value;
+
         /** @brief %# 위치와 그 위치에 쓸 Format 입니다. */
         struct PlaceholderMatch
         {
@@ -711,6 +726,12 @@ namespace sw
                 {
                     text = string_view{ value };
                 }
+                return pSpec != nullptr ? addPadding( pBuffer, pos, capacity, text, *pSpec ) : write( pBuffer, pos, capacity, text );
+            }
+            else if constexpr ( has_display_text_v<T> )
+            {
+                // 이름은 표시 글로 쓴다 — 빈 이름은 "None"(FName 의 ToString). `c_str()` 을 넘기면 빈 글이다.
+                const string_view text = value.toString();
                 return pSpec != nullptr ? addPadding( pBuffer, pos, capacity, text, *pSpec ) : write( pBuffer, pos, capacity, text );
             }
             else if constexpr ( is_formatted_value_v<T> )
