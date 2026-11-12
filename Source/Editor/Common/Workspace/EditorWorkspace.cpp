@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -162,16 +163,27 @@ namespace sw::editor
 
     void EditorWorkspace::notifyAssetsMoved( const vector<string>& listOldID, const vector<string>& listNewID )
     {
-        Scene* const pScene = editor::getActiveScene();
-        for ( size_t index = 0; index < listOldID.size() && index < listNewID.size(); ++index )
+        SW_ASSERT( listOldID.size() == listNewID.size() );
+        // 옛 id → 새 id 를 한 번 색인하고 받는 쪽마다 찾기만 한다(옮긴 수 × 받는 쪽 칸 수로 훑지 않는다 — 언리얼 리다이렉터 고치기도 옛 경로 → 새 경로 맵이다).
+        unordered_map<string, string> mapOldToNew;
+        mapOldToNew.reserve( listOldID.size() );
+        for ( size_t index = 0; index < listOldID.size(); ++index )
         {
-            if ( _focusedAssetPath == listOldID[index] )
-                _focusedAssetPath = listNewID[index];
-            if ( pScene != nullptr && pScene->getSourcePath() == listOldID[index] )
-                pScene->setSourcePath( listNewID[index] ); // 다음 저장(Ctrl+S)이 새 자리에 쓴다 — 옛 자리에 파일을 다시 만들지 않는다
+            mapOldToNew.insert_or_assign( listOldID[index], listNewID[index] );
+        }
+
+        const auto itFocused = mapOldToNew.find( _focusedAssetPath );
+        if ( itFocused != mapOldToNew.end() )
+            _focusedAssetPath = itFocused->second;
+        Scene* const pScene = editor::getActiveScene();
+        if ( pScene != nullptr )
+        {
+            const auto itScene = mapOldToNew.find( pScene->getSourcePath() );
+            if ( itScene != mapOldToNew.end() )
+                pScene->setSourcePath( itScene->second ); // 다음 저장(Ctrl+S)이 새 자리에 쓴다 — 옛 자리에 파일을 다시 만들지 않는다
         }
         if ( _pEditorSelection != nullptr )
-            _pEditorSelection->remapAssets( listOldID, listNewID ); // 고른 에셋 경로도 글이다 — 옛 id 로 남으면 인스펙터 · 명령이 없는 파일을 가리킨다
+            _pEditorSelection->remapAssets( mapOldToNew ); // 고른 에셋 경로도 글이다 — 옛 id 로 남으면 인스펙터 · 명령이 없는 파일을 가리킨다
         _assetsMoved.broadcast( listOldID, listNewID );
     }
 

@@ -1,9 +1,11 @@
 /**
  * @file TestEditorSelectionBatch.cpp
- * @brief 여러 개를 고르는 길(`EditorSelection::selectObjects`)이 알림을 한 번만 보내고, 순서 목록과 포함 색인이 함께 맞는지 미리보기 씬에 묶은 선택으로 봅니다.
+ * @brief 여러 개를 고르는 길(`EditorSelection::selectObjects` · `selectAssets`)이 알림을 한 번만 보내고, 순서 목록과 포함 색인이 함께 맞는지 미리보기 씬에 묶은 선택으로 봅니다.
  */
 #include "pch.h"
 
+#include "Core/Container/unordered_map.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -123,4 +125,82 @@ SW_TEST_CASE( EditorSelectionTest, RemoveAndToggleKeepIndexInSync )
 
     selection.clearObjectSelection();
     SW_EXPECT_FALSE( selection.hasObject( listObject[2] ) );
+}
+
+/**
+ * @brief [EditorSelectionTest] 에셋도 오브젝트와 같은 모양이다 — 한 번 대입에 알림 한 번, 겹친 · 빈 경로는 버리고, 빼기 · 뒤집기 뒤에도 색인이 목록과 맞는다
+ */
+SW_TEST_CASE( EditorSelectionTest, SelectAssetsKeepsIndexInSync )
+{
+    sw::Scene                   scene( "SelectionAssetProbe" );
+    sw::CommandStack            stack;
+    sw::editor::EditorSelection selection;
+    selection.bindPreviewScope( scene, stack );
+
+    sw::vector<sw::string> listPath;
+    for ( size_t index = 0; index < 64; ++index )
+    {
+        listPath.push_back( "Assets/Probe" + sw::to_string( static_cast<uint64>( index ) ) + ".xml" );
+    }
+    uint32 notifyCount             = 0;
+    selection.onSelectionChanged() = sw::Delegate<void()>( [&notifyCount]()
+    { ++notifyCount; } );
+
+    sw::vector<sw::string> listPicked = listPath;
+    listPicked.push_back( listPath[3] ); // 겹친 칸
+    listPicked.push_back( "" );          // 빈 칸은 버린다
+    selection.selectAssets( listPicked, sw::editor::SelectionMode::Replace );
+    SW_EXPECT_EQUAL( notifyCount, 1u );
+    SW_EXPECT_TRUE( selection.getSelectedAssets() == listPath );
+    SW_EXPECT_TRUE( selection.getPrimaryAsset() == listPath[0] );
+    SW_EXPECT_TRUE( selection.hasAsset( listPath[63] ) );
+
+    // 뒤집기: 0 은 빠지고 3 은 두 번 뒤집어 제자리, 뺐다 다시 넣은 칸은 원래 자리다
+    selection.selectAssets( { listPath[0], listPath[3], listPath[3] }, sw::editor::SelectionMode::Toggle );
+    SW_EXPECT_FALSE( selection.hasAsset( listPath[0] ) );
+    SW_EXPECT_TRUE( selection.hasAsset( listPath[3] ) );
+    SW_EXPECT_EQUAL( selection.getSelectedAssets().size(), size_t{ 63 } );
+    SW_EXPECT_TRUE( selection.getSelectedAssets()[2] == listPath[3] );
+
+    selection.selectAsset( listPath[1], sw::editor::SelectionMode::Remove );
+    SW_EXPECT_FALSE( selection.hasAsset( listPath[1] ) );
+    selection.selectAsset( listPath[5], sw::editor::SelectionMode::Replace );
+    SW_EXPECT_TRUE( selection.getSelectedAssets() == sw::vector<sw::string>{ listPath[5] } );
+    SW_EXPECT_FALSE( selection.hasAsset( listPath[3] ) );
+
+    selection.clearAssetSelection();
+    SW_EXPECT_FALSE( selection.hasAsset( listPath[5] ) );
+}
+
+/**
+ * @brief [EditorSelectionTest] 옮김 맵으로 고른 에셋 id 를 한 번에 바꾼다 — 이어 옮기기(A→B · B→C)를 잘못 겹쳐 보지 않고, 한 id 로 모이면 앞 칸 하나만 남는다(P0-4 옮김 방송)
+ */
+SW_TEST_CASE( EditorSelectionTest, RemapAssetsByMap )
+{
+    sw::Scene                   scene( "SelectionRemapProbe" );
+    sw::CommandStack            stack;
+    sw::editor::EditorSelection selection;
+    selection.bindPreviewScope( scene, stack );
+
+    selection.selectAssets( { "A", "B", "D", "E" }, sw::editor::SelectionMode::Replace );
+    uint32 notifyCount             = 0;
+    selection.onSelectionChanged() = sw::Delegate<void()>( [&notifyCount]()
+    { ++notifyCount; } );
+
+    sw::unordered_map<sw::string, sw::string> mapUnrelated;
+    mapUnrelated.insert_or_assign( sw::string( "X" ), sw::string( "Y" ) );
+    selection.remapAssets( mapUnrelated );
+    SW_EXPECT_EQUAL( notifyCount, 0u ); // 바뀐 것이 없으면 알리지 않는다
+
+    sw::unordered_map<sw::string, sw::string> mapMove;
+    mapMove.insert_or_assign( sw::string( "A" ), sw::string( "B" ) );
+    mapMove.insert_or_assign( sw::string( "B" ), sw::string( "C" ) );
+    mapMove.insert_or_assign( sw::string( "E" ), sw::string( "D" ) );
+    selection.remapAssets( mapMove );
+    SW_EXPECT_EQUAL( notifyCount, 1u );
+    SW_EXPECT_TRUE( ( selection.getSelectedAssets() == sw::vector<sw::string>{ "B", "C", "D" } ) );
+    SW_EXPECT_TRUE( selection.hasAsset( "B" ) );
+    SW_EXPECT_TRUE( selection.hasAsset( "C" ) );
+    SW_EXPECT_FALSE( selection.hasAsset( "A" ) );
+    SW_EXPECT_FALSE( selection.hasAsset( "E" ) );
 }

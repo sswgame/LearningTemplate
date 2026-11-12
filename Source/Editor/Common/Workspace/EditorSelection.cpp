@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
@@ -151,89 +152,86 @@ namespace sw::editor
 
     void EditorSelection::selectAsset( string_view assetPath, SelectionMode mode )
     {
-        switch ( mode )
-        {
-            case SelectionMode::Replace:
-            {
-                if ( _listSelectedAsset.size() == 1 && _listSelectedAsset.front() == assetPath )
-                    return;
-                _listSelectedAsset.clear();
-                if ( assetPath.empty() == false )
-                    _listSelectedAsset.emplace_back( assetPath );
-                break;
-            }
-            case SelectionMode::Add:
-            {
-                if ( assetPath.empty() == false && hasAsset( assetPath ) == false )
-                    _listSelectedAsset.emplace_back( assetPath );
-                break;
-            }
-            case SelectionMode::Remove:
-            {
-                VectorUtil::removeFirst( _listSelectedAsset, assetPath );
-                break;
-            }
-            case SelectionMode::Toggle:
-            {
-                if ( VectorUtil::removeFirst( _listSelectedAsset, assetPath ) == 0 && ( assetPath.empty() == false ) )
-                    _listSelectedAsset.emplace_back( assetPath );
-                break;
-            }
-        }
-
-        notifyChanged();
+        if ( mode == SelectionMode::Replace && _listSelectedAsset.size() == 1 && _listSelectedAsset.front() == assetPath )
+            return;
+        selectAssets( vector<string>{ string{ assetPath } }, mode );
     }
 
     void EditorSelection::selectAssets( const vector<string>& listAssetPath, SelectionMode mode )
     {
         if ( mode == SelectionMode::Replace )
+        {
             _listSelectedAsset.clear();
+            _uniqueSelectedAsset.clear();
+            _listSelectedAsset.reserve( listAssetPath.size() );
+            _uniqueSelectedAsset.reserve( listAssetPath.size() );
+        }
 
+        // `selectObjects` 와 같은 접기 — 뺀 경로는 색인에서 바로 지우고 목록은 끝에 한 번만 접는다. 같은 호출에서 다시 넣으면 원래 칸을 살린다.
+        unordered_set<string> uniqueRemoved;
         for ( const string& path : listAssetPath )
         {
             if ( path.empty() )
                 continue;
 
-            if ( mode == SelectionMode::Remove )
+            const bool bSelected = _uniqueSelectedAsset.contains( path );
+            const bool bRemove   = mode == SelectionMode::Remove || ( mode == SelectionMode::Toggle && bSelected );
+            if ( bRemove )
             {
-                VectorUtil::removeFirst( _listSelectedAsset, path );
+                if ( bSelected )
+                {
+                    _uniqueSelectedAsset.erase( path );
+                    uniqueRemoved.insert( path );
+                }
             }
-            else if ( mode == SelectionMode::Toggle )
+            else if ( bSelected == false )
             {
-                if ( VectorUtil::removeFirst( _listSelectedAsset, path ) == 0 )
+                _uniqueSelectedAsset.insert( path );
+                if ( uniqueRemoved.erase( path ) == 0 )
                     _listSelectedAsset.push_back( path );
             }
-            else if ( hasAsset( path ) == false )
-            {
-                _listSelectedAsset.push_back( path );
-            }
+        }
+        if ( uniqueRemoved.empty() == false )
+        {
+            VectorUtil::removeIf( _listSelectedAsset, [&uniqueRemoved]( const string& path )
+            { return uniqueRemoved.contains( path ); } );
         }
 
         notifyChanged();
     }
 
-    void EditorSelection::remapAssets( const vector<string>& listOldID, const vector<string>& listNewID )
+    void EditorSelection::remapAssets( const unordered_map<string, string>& mapOldToNew )
     {
-        SW_ASSERT( listOldID.size() == listNewID.size() );
-        bool bChanged = false;
+        if ( mapOldToNew.empty() || _listSelectedAsset.empty() )
+            return;
+
+        // 목록을 새 id 로 다시 쓰고 색인을 새로 만든다. 칸마다 색인을 고치면 A→B · B→C 처럼 이어 옮길 때 아직 안 바꾼 옛 B 와 겹쳐 보인다.
+        bool                  bChanged = false;
+        vector<string>        listRemapped;
+        unordered_set<string> uniqueRemapped;
+        listRemapped.reserve( _listSelectedAsset.size() );
+        uniqueRemapped.reserve( _listSelectedAsset.size() );
         for ( string& selectedAsset : _listSelectedAsset )
         {
-            for ( size_t index = 0; index < listOldID.size(); ++index )
+            const auto it = mapOldToNew.find( selectedAsset );
+            if ( it != mapOldToNew.end() )
             {
-                if ( selectedAsset != listOldID[index] )
-                    continue;
-                selectedAsset = listNewID[index];
+                selectedAsset = it->second;
                 bChanged      = true;
-                break;
             }
+            if ( uniqueRemapped.insert( selectedAsset ).second )
+                listRemapped.push_back( std::move( selectedAsset ) );
         }
+        // 위 반복이 칸을 옮겨 냈으므로 바뀐 것이 없어도 다시 담는다(그때는 원래와 같은 목록이다).
+        _listSelectedAsset   = std::move( listRemapped );
+        _uniqueSelectedAsset = std::move( uniqueRemapped );
         if ( bChanged )
             notifyChanged();
     }
 
     bool EditorSelection::hasAsset( string_view assetPath ) const
     {
-        return VectorUtil::contains( _listSelectedAsset, assetPath );
+        return _uniqueSelectedAsset.contains( assetPath );
     }
 
     string_view EditorSelection::getPrimaryAsset() const
@@ -258,6 +256,7 @@ namespace sw::editor
         if ( _listSelectedAsset.empty() == false )
         {
             _listSelectedAsset.clear();
+            _uniqueSelectedAsset.clear();
             notifyChanged();
         }
     }
@@ -270,6 +269,7 @@ namespace sw::editor
         _listSelectedObject.clear();
         _uniqueSelectedObject.clear();
         _listSelectedAsset.clear();
+        _uniqueSelectedAsset.clear();
 
         if ( bHadObjects || bHadAssets )
             notifyChanged();

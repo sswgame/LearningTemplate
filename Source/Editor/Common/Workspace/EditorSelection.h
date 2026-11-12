@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -95,13 +96,21 @@ namespace sw::editor
          */
         static vector<GameObject*> filterTopLevel( const vector<GameObject*>& listObject );
 
-        void                  selectAsset( string_view assetPath, SelectionMode mode = SelectionMode::Replace );
-        void                  selectAssets( const vector<string>& listAssetPath, SelectionMode mode = SelectionMode::Replace );
+        void selectAsset( string_view assetPath, SelectionMode mode = SelectionMode::Replace );
+        /**
+         * @brief 여러 에셋을 한 번에 고르고 알림은 한 번만 보냅니다. 여러 개를 고르는 길(되돌리기 복원 등)은 이것만 씁니다.
+         * @details `selectObjects` 와 같은 모양이다 — 포함 확인은 해시 색인, 뺀 것은 끝에 한 번 접는다(유니티 `Selection.objects = 배열` 처럼 한 번 대입).
+         */
+        void selectAssets( const vector<string>& listAssetPath, SelectionMode mode = SelectionMode::Replace );
+        /** @brief 선택 여부입니다. 해시 집합 조회라 행마다 불러도 된다(콘텐츠 브라우저 칸 그리기). */
         bool                  hasAsset( string_view assetPath ) const;
         string_view           getPrimaryAsset() const;
         const vector<string>& getSelectedAssets() const { return _listSelectedAsset; }
-        /** @brief 고른 에셋 중 @p listOldID[i] 를 @p listNewID[i] 로 바꿉니다(에셋 옮김 — `EditorWorkspace::notifyAssetsMoved`). 바뀐 것이 있을 때만 알린다. */
-        void remapAssets( const vector<string>& listOldID, const vector<string>& listNewID );
+        /**
+         * @brief 고른 에셋 id 를 @p mapOldToNew(옛 id → 새 id)로 한 번에 바꿉니다(에셋 옮김 — `EditorWorkspace::notifyAssetsMoved`). 바뀐 것이 있을 때만 알린다.
+         * @details 선택 수에 비례한다(옮긴 수 × 선택 수로 훑지 않는다). 두 id 가 한 새 id 로 모이면 앞 칸 하나만 남긴다.
+         */
+        void remapAssets( const unordered_map<string, string>& mapOldToNew );
 
         void              clearObjectSelection();
         void              clearAssetSelection();
@@ -139,7 +148,8 @@ namespace sw::editor
     private:
         vector<GameObjectHandle>        _listSelectedObject;   ///< 선택한 순서(주 선택은 맨 앞)
         unordered_set<GameObjectHandle> _uniqueSelectedObject; ///< `_listSelectedObject` 와 같은 원소의 색인. 포함 확인을 상수 시간에 한다(언리얼은 오브젝트 선택 플래그)
-        vector<string>                  _listSelectedAsset;
+        vector<string>                  _listSelectedAsset;    ///< 고른 순서(주 선택은 맨 앞)
+        unordered_set<string>           _uniqueSelectedAsset;  ///< `_listSelectedAsset` 와 같은 원소의 색인(오브젝트 선택과 같은 모양)
         Delegate<void()>                _onSelectionChanged;
         Scene*                          _pPreviewScene{ nullptr }; ///< 묶인 미리보기 씬(빌림). nullptr 이면 메인 선택이다
         CommandStack*                   _pPreviewStack{ nullptr }; ///< 묶인 창의 Undo 스택(빌림)
