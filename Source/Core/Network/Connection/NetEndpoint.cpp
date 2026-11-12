@@ -518,7 +518,7 @@ namespace sw
             _plainWriter.writeBits( _bDebugHold == SW_TRUE ? 1u : 0u, 1 ); // 디버거 대기 비트. 평문 첫 비트이므로 함께 봉인된다.
             const int32 maxBytes =
                 slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetEndpointInternal::kHeaderSize - NetPacketSealer::kSecureHeadSize - NetSecurityConstant::kAEADTagSize : 0;
-            slot._connection.writePacket( nowSeconds, _plainWriter, maxBytes, _settings._keepAliveInterval, _settings._maxUnreliableAgeSeconds );
+            slot._connection->writePacket( nowSeconds, _plainWriter, maxBytes, _settings._keepAliveInterval, _settings._maxUnreliableAgeSeconds );
             const int32 sentBytes = sendSealed( slot, PacketType::Payload, _plainWriter.getBytes().data(), _plainWriter.getByteCount() );
             slot._sendCredit -= static_cast<float64>( sentBytes );
             slot._lastSendTime = nowSeconds;
@@ -532,7 +532,7 @@ namespace sw
         writer.writeBits( _bDebugHold == SW_TRUE ? 1u : 0u, 1 ); // 디버거 대기 비트.
         // 대역폭 토큰을 다 썼으면 헤더(확인과 연결 유지)만 보내고, 메시지는 다음 전송으로 미룬다.
         const int32 maxBytes = slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetEndpointInternal::kHeaderSize : 0;
-        slot._connection.writePacket( nowSeconds, writer, maxBytes, _settings._keepAliveInterval, _settings._maxUnreliableAgeSeconds );
+        slot._connection->writePacket( nowSeconds, writer, maxBytes, _settings._keepAliveInterval, _settings._maxUnreliableAgeSeconds );
         sendFramed( slot._address, _protocolID );
         slot._sendCredit -= static_cast<float64>( writer.getByteCount() + NetEndpointInternal::kHeaderSize );
         slot._lastSendTime = nowSeconds;
@@ -754,14 +754,14 @@ namespace sw
                     // 메시지는 기다리고 확인할 것만 "보낼 것"으로 센다.
                     refillSendCredit( nowSeconds, slot );
                     const bool    bCanCarry     = slot._sendCredit > 0.0;
-                    const bool    bHasData      = bCanCarry ? slot._connection.hasDataToSend( nowSeconds ) : slot._connection.isAckPending();
+                    const bool    bHasData      = bCanCarry ? slot._connection->hasDataToSend( nowSeconds ) : slot._connection->isAckPending();
                     const float64 timeSinceSend = slot._lastSendTime < 0.0 ? 1.0e9 : nowSeconds - slot._lastSendTime;
                     const bool    bDue          = timeSinceSend >= _settings._sendInterval && ( timeSinceSend >= _settings._keepAliveInterval || bHasData );
                     if ( bDue == false )
                         break;
                     sendPayload( nowSeconds, slot );
                     // 토큰이 남고 실을 것이 더 있으면 같은 전송에서 더 보낸다. 큰 신뢰 메시지나 몰린 스냅샷의 전송 속도는 대역폭 상한이 정한다.
-                    for ( int32 packetCount = 1; packetCount < kMaxPacketsPerSend && slot._sendCredit > 0.0 && slot._connection.hasDataToSend( nowSeconds );
+                    for ( int32 packetCount = 1; packetCount < kMaxPacketsPerSend && slot._sendCredit > 0.0 && slot._connection->hasDataToSend( nowSeconds );
                           ++packetCount )
                     {
                         sendPayload( nowSeconds, slot );
@@ -787,7 +787,7 @@ namespace sw
             return MathUtil::min( slot._connectStartTime + _settings._connectTimeout, slot._lastSendTime + _settings._connectRetryInterval );
         // 한가한(보낼 것 · 확인할 것 · 확인을 기다리는 신뢰 메시지가 없는) 연결은 유지 간격, 아니면 보내기 간격마다 본다.
         // 신뢰 메시지의 재전송 시각과 토큰 충전은 시계로만 오므로, 그것이 남아 있는 동안은 보내기 간격마다 다시 묻는다.
-        const bool    bIdle     = slot._connection.hasDataToSend( nowSeconds ) == false && slot._connection.getPendingReliableCount() == 0;
+        const bool    bIdle     = slot._connection->hasDataToSend( nowSeconds ) == false && slot._connection->getPendingReliableCount() == 0;
         const float64 sendAt    = slot._lastSendTime + ( bIdle ? MathUtil::max( _settings._sendInterval, _settings._keepAliveInterval ) : _settings._sendInterval );
         const float64 timeoutAt = slot._lastReceiveTime + computeTimeoutSeconds( slot );
         return MathUtil::min( sendAt, timeoutAt );
@@ -864,12 +864,12 @@ namespace sw
             return;
         }
         const uint8 bRemoteDebugHold = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
-        if ( slot._connection.readPacket( nowSeconds, reader ) )
+        if ( slot._connection->readPacket( nowSeconds, reader ) )
         {
             slot._lastReceiveTime  = nowSeconds;
             slot._bRemoteDebugHold = bRemoteDebugHold;
         }
-        if ( slot._connection.hasReceiveOverflowed() )
+        if ( slot._connection->hasReceiveOverflowed() )
             closeSlot( *slotIndex, NetDisconnectReason::ReceiveOverflow, true );
     }
 
@@ -914,8 +914,7 @@ namespace sw
                 slot._state           = NetConnectionState::Connected;
                 slot._lastReceiveTime = packet._nowSeconds;
                 slot._lastSendTime    = -1.0;
-                slot._connection.reset();
-                slot._connection.setFlowIdentity( slot.getConnectionToken(), false ); // 트레이스 흐름 id(`NetFlowLog`)의 연결 신원
+                slot._connection->setFlowIdentity( slot.getConnectionToken(), false ); // 트레이스 흐름 id(`NetFlowLog`)의 연결 신원
                 _clientIndex = static_cast<int32>( packet._valueA );
                 pushEvent( NetEndpointEvent{ 0, NetDisconnectReason::None, NetEndpointEvent::Kind::Connected } );
                 return;
@@ -1035,8 +1034,7 @@ namespace sw
         _slotTable.open( freeIndex, NetConnectionState::Connected );
         slot._lastReceiveTime = packet._nowSeconds;
         slot._lastSendTime    = -1.0;
-        slot._connection.reset();
-        slot._connection.setFlowIdentity( slot.getConnectionToken(), true ); // 트레이스 흐름 id(`NetFlowLog`)의 연결 신원
+        slot._connection->setFlowIdentity( slot.getConnectionToken(), true ); // 트레이스 흐름 id(`NetFlowLog`)의 연결 신원
         slot._security = std::move( security );
         // 키 확인 태그는 서버에서 클라이언트로 가는 키로 빈 데이터를 봉인한 값이다. 수락을 다시 보낼 때도 같은 태그를 쓴다.
         if ( slot._security != nullptr )
@@ -1137,12 +1135,12 @@ namespace sw
         }
         BitReader   plainReader( _openedBytes.data() + sealed._plainOffset, sealed._plainSize );
         const uint8 bRemoteDebugHold = plainReader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
-        if ( slot._connection.readPacket( nowSeconds, plainReader ) )
+        if ( slot._connection->readPacket( nowSeconds, plainReader ) )
         {
             slot._lastReceiveTime  = nowSeconds;
             slot._bRemoteDebugHold = bRemoteDebugHold;
         }
-        if ( slot._connection.hasReceiveOverflowed() )
+        if ( slot._connection->hasReceiveOverflowed() )
             closeSlot( slotIndex, NetDisconnectReason::ReceiveOverflow, true );
     }
 
@@ -1210,7 +1208,6 @@ namespace sw
         _slotTable.unbindAddress( slotIndex );
         _slotTable.close( slotIndex, bWasVisible ); // 보인 끊김은 게임 스레드가 사건을 꺼낼 때까지 번호를 다시 주지 않는다(`releaseDisconnectedSlots`)
         slot._bRemoteDebugHold = SW_FALSE;
-        slot._connection.reset();
         if ( slot._security != nullptr )
         {
             slot._security->_keys.wipe();
@@ -1242,7 +1239,7 @@ namespace sw
     bool NetEndpoint::sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size, WindowFullPolicy policy )
     {
         NetEndpointSlot* pSlot   = _slotTable.findConnected( connectionID );
-        const bool       bQueued = pSlot != nullptr && pSlot->_connection.sendMessage( channel, pData, size );
+        const bool       bQueued = pSlot != nullptr && pSlot->_connection->sendMessage( channel, pData, size );
         if ( bQueued )
         {
             _sentKindStats.add( pData, size );
@@ -1250,7 +1247,7 @@ namespace sw
             return true;
         }
         const bool bReliable    = channel == NetChannelType::ReliableOrdered || channel == NetChannelType::ReliableUnordered;
-        const bool bCloseOnFull = pSlot != nullptr && bReliable && policy == WindowFullPolicy::Close && pSlot->_connection.isReliableWindowFull( size );
+        const bool bCloseOnFull = pSlot != nullptr && bReliable && policy == WindowFullPolicy::Close && pSlot->_connection->isReliableWindowFull( size );
         if ( bCloseOnFull )
         {
             SW_LOG_WARNING_ID( "Net.ReliableOverflow", "NetEndpoint: the reliable window of connection %# is full (the peer does not acknowledge) - closing it instead of dropping a reliable message",
@@ -1264,7 +1261,7 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         NetEndpointSlot*  pSlot   = _slotTable.findConnected( connectionID );
-        const bool        bQueued = pSlot != nullptr && pSlot->_connection.sendNotifiedMessage( pData, size, tag );
+        const bool        bQueued = pSlot != nullptr && pSlot->_connection->sendNotifiedMessage( pData, size, tag );
         if ( bQueued )
         {
             _sentKindStats.add( pData, size );
@@ -1308,7 +1305,7 @@ namespace sw
                 continue;
             for ( int32 channel = 0; channel < static_cast<int32>( NetChannelType::Count ); ++channel )
             {
-                if ( slot._connection.receiveMessage( static_cast<NetChannelType>( channel ), outBuffer ) )
+                if ( slot._connection->receiveMessage( static_cast<NetChannelType>( channel ), outBuffer ) )
                 {
                     outConnectionID = index;
                     outChannel      = static_cast<NetChannelType>( channel );
@@ -1387,7 +1384,7 @@ namespace sw
             if ( slot._state != NetConnectionState::Connected )
                 continue;
             const size_t firstNotice = outInbound._listDeliveryNotice.size();
-            slot._connection.pollDeliveryNotices( outInbound._listDeliveryNotice );
+            slot._connection->pollDeliveryNotices( outInbound._listDeliveryNotice );
             for ( size_t noticeIndex = firstNotice; noticeIndex < outInbound._listDeliveryNotice.size(); ++noticeIndex )
             {
                 outInbound._listDeliveryNotice[noticeIndex]._connectionID = index;
@@ -1396,7 +1393,7 @@ namespace sw
             {
                 // 메시지를 아레나 뒤에 바로 덧붙인다(중간 버퍼를 거치지 않는다).
                 int32 offset = static_cast<int32>( outInbound._bytes.size() );
-                while ( slot._connection.receiveMessageAppend( static_cast<NetChannelType>( channel ), outInbound._bytes ) )
+                while ( slot._connection->receiveMessageAppend( static_cast<NetChannelType>( channel ), outInbound._bytes ) )
                 {
                     const int32       end = static_cast<int32>( outInbound._bytes.size() );
                     NetInboundMessage message;
@@ -1474,7 +1471,7 @@ namespace sw
         const NetEndpointSlot* pSlot = _slotTable.findConnected( connectionID );
         if ( pSlot == nullptr )
             return false;
-        return pSlot->_sendCredit <= 0.0 || pSlot->_connection.getQueuedUnreliableCount() > 0;
+        return pSlot->_sendCredit <= 0.0 || pSlot->_connection->getQueuedUnreliableCount() > 0;
     }
 
     bool NetEndpoint::getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const
@@ -1483,8 +1480,8 @@ namespace sw
         const NetEndpointSlot* pSlot = _slotTable.findConnected( connectionID );
         if ( pSlot == nullptr )
             return false;
-        outStats                       = pSlot->_connection.getStats();
-        outStats._pendingReliableCount = pSlot->_connection.getPendingReliableCount();
+        outStats                       = pSlot->_connection->getStats();
+        outStats._pendingReliableCount = pSlot->_connection->getPendingReliableCount();
         return true;
     }
 
@@ -1498,7 +1495,7 @@ namespace sw
     {
         ScopedLock<mutex>      lock{ _mutex };
         const NetEndpointSlot* pSlot = _slotTable.findConnected( connectionID );
-        return pSlot != nullptr ? &pSlot->_connection : nullptr;
+        return pSlot != nullptr ? pSlot->_connection.get() : nullptr;
     }
 
     NetAddress NetEndpoint::getConnectionAddress( int32 connectionID ) const

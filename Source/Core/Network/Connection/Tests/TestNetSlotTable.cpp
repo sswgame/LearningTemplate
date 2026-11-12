@@ -154,3 +154,24 @@ SW_TEST_CASE( NetSlotTableTest, LiveListCollectsOnlyDueSlots )
     SW_REQUIRE_EQUAL( 1, static_cast<int32>( listDue.size() ) );
     SW_EXPECT_EQUAL( 5, listDue[0] );
 }
+
+SW_TEST_CASE( NetSlotTableTest, ConnectionObjectLivesOnlyWhileTheSlotIsOpen )
+{
+    // 연결 객체(약 75 KB)는 정원만큼 미리 잡지 않는다 — 열 때 만들고 닫을 때 놓는다(언리얼 · GameNetworkingSockets 처럼 연결마다).
+    NetSlotTable table;
+    table.reset( 256 );
+    for ( const NetEndpointSlot& slot : table )
+    {
+        SW_EXPECT_TRUE( slot._connection == nullptr );
+    }
+    table.open( 3, NetConnectionState::Connecting );
+    SW_REQUIRE_TRUE( table.get( 3 )._connection != nullptr );
+    SW_EXPECT_TRUE( table.get( 4 )._connection == nullptr );
+    SW_REQUIRE_TRUE( table.get( 3 )._connection->sendMessage( NetChannelType::ReliableOrdered, reinterpret_cast<const uint8*>( "ab" ), 2 ) );
+    table.close( 3, true );
+    SW_EXPECT_TRUE( table.get( 3 )._connection == nullptr ); // 받은 메시지 · 신뢰 창도 함께 버린다
+    table.release( 3 );
+    table.open( 3, NetConnectionState::Connected );
+    SW_REQUIRE_TRUE( table.get( 3 )._connection != nullptr );
+    SW_EXPECT_EQUAL( 0, table.get( 3 )._connection->getPendingReliableCount() ); // 새 연결은 옛 연결의 신뢰 창을 잇지 않는다
+}
