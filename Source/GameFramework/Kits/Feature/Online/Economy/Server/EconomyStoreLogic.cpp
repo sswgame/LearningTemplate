@@ -25,7 +25,7 @@ namespace sw
             enum class ReceiptState : uint8
             {
                 None = 0,      ///< 레코드가 없다 — 지급도 환불도 오지 않았다
-                Redeemed,      ///< 지급했다(계정 = 받은 계정)
+                Redeemed,      ///< 지급했다(받은 계정은 지급 분개의 다리에만 있다)
                 RefundedFirst, ///< 지급 전에 환불이 왔다 — 뒤에 온 지급을 막는다
                 Revoked,       ///< 지급 뒤 환불로 회수했다
                 Withdrawn,     ///< 청약철회로 돌려받았다
@@ -35,24 +35,28 @@ namespace sw
             /** @brief 읽은 영수증 상태와 그 버전입니다. 쓰기는 이 버전을 커밋 조건으로 건다. */
             struct ReceiptRecord
             {
-                uint64       _accountID{ 0 };
                 uint64       _version{ ServiceRecord::kAbsentVersion };
                 ReceiptState _state{ ReceiptState::None };
             };
 
-            static constexpr uint64 kReceiptRecordVersion = 1;
+            static constexpr uint64 kReceiptRecordVersion       = 2;
+            static constexpr uint64 kReceiptRecordVersionLegacy = 1; ///< 받은 계정을 담던 판 — 읽을 때 계정은 버리고, 다음 쓰기가 판 2 로 덮는다
 
             [[nodiscard]] static bool isRefunded( ReceiptState state )
             {
                 return state == ReceiptState::RefundedFirst || state == ReceiptState::Revoked || state == ReceiptState::Withdrawn;
             }
 
-            static vector<uint8> encodeReceipt( ReceiptState state, uint64 accountID )
+            /**
+             * @brief 영수증 상태 값 `[판][상태]` 를 만듭니다. 사람과 이어지는 값(계정 id)은 담지 않는다 — 이 레코드는 지우지 않으므로 탈퇴 뒤에도 남는다(감사 P0-7).
+             * @details 받은 계정은 지급 분개의 다리에 있고 분개는 보존 기간 뒤 지워진다. 청약철회 · 환불 회수는 분개를 읽으므로 이 값이 필요 없다.
+             *          PlayFab DeletePlayer · Steam 계정 삭제도 거래 기록은 회계 · 분쟁 근거로 남기되 개인과 떼어 두며, GDPR 17 조 3 항 (b) · (e) 의 보존 예외가 이 자리다.
+             */
+            static vector<uint8> encodeReceipt( ReceiptState state )
             {
                 BitWriter writer;
                 writer.writeVarUint( kReceiptRecordVersion );
                 writer.writeVarUint( static_cast<uint64>( state ) );
-                writer.writeVarUint( accountID ); // 청약철회는 이 계정만 한다. 운영 조회용이기도 하다
                 return writer.releaseBytes();
             }
 
@@ -67,17 +71,18 @@ namespace sw
                 if ( read != ServiceStoreResult::Ok )
                     return read;
                 BitReader    reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
-                const uint64 format    = reader.readVarUint();
-                const uint64 state     = reader.readVarUint();
-                const uint64 accountID = reader.readVarUint();
-                if ( reader.hasOverflowed() || format != kReceiptRecordVersion || state == 0 || state >= static_cast<uint64>( ReceiptState::Count ) )
+                const uint64 format = reader.readVarUint();
+                const uint64 state  = reader.readVarUint();
+                if ( format == kReceiptRecordVersionLegacy )
+                    (void)reader.readVarUint(); // 판 1 의 받은 계정 — 쓰지 않는다
+                const bool bKnownFormat = format == kReceiptRecordVersion || format == kReceiptRecordVersionLegacy;
+                if ( reader.hasOverflowed() || bKnownFormat == false || state == 0 || state >= static_cast<uint64>( ReceiptState::Count ) )
                 {
                     SW_LOG_ERROR_ID( "EconomyStoreLogic.ReceiptRecordUnreadable", "The receipt record '%#' is unreadable - grants, refunds and withdrawals of that transaction wait until the record is fixed", redeemKey );
                     return ServiceStoreResult::Invalid;
                 }
-                outRecord._accountID = accountID;
-                outRecord._version   = record._version;
-                outRecord._state     = static_cast<ReceiptState>( state );
+                outRecord._version = record._version;
+                outRecord._state   = static_cast<ReceiptState>( state );
                 return ServiceStoreResult::Ok;
             }
 
@@ -184,10 +189,10 @@ namespace sw
              *          분개가 보존 정리로 지워진 뒤의 다시 보내기는 AlreadyRedeemed 다(감사 P0-7).
              */
             [[nodiscard]] static EconomyServiceResult commitRedeem( IServiceStoreConnection& connection, const LedgerTransferRequest& request, const ReceiptValidationResult& receipt,
-                                                                    uint64 accountID, LedgerTransferResult& outServiceResult )
+                                                                    LedgerTransferResult& outServiceResult )
             {
                 const hashed_string& receiptTable = EconomyStoreLogic::getReceiptTable();
-                const vector<uint8>  redeemed     = encodeReceipt( ReceiptState::Redeemed, accountID );
+                const vector<uint8>  redeemed     = encodeReceipt( ReceiptState::Redeemed );
                 ReceiptDeliveryTask  task;
                 const bool           bDelivery   = EconomyStoreLogic::makeDeliveryTask( receipt, task );
                 const vector<uint8>  recordBytes = bDelivery ? encodeDelivery( task ) : vector<uint8>{};
@@ -410,6 +415,7 @@ namespace sw
             case LedgerResult::Conflict:
                 return EconomyServiceResult::fail( OnlineError::kBusy );
             case LedgerResult::Invalid:
+            case LedgerResult::AccountDeleted:
                 return EconomyServiceResult::fail( OnlineError::kInvalidRequest );
             case LedgerResult::Unavailable:
                 return EconomyServiceResult::fail( OnlineError::kUnavailable );
@@ -541,7 +547,7 @@ namespace sw
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetID, grant._amount } );
         }
         LedgerTransferResult       serviceResult;
-        const EconomyServiceResult result = EconomyStoreLogicInternal::commitRedeem( connection, request, receipt, input._accountID, serviceResult );
+        const EconomyServiceResult result = EconomyStoreLogicInternal::commitRedeem( connection, request, receipt, serviceResult );
         if ( result != EconomyResult::Ok )
             return EconomyStoreLogicInternal::finish( outReply, result );
         collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );
@@ -651,18 +657,18 @@ namespace sw
             if ( mark._state == Internal::ReceiptState::None )
             {
                 // 지급 전에 환불이 왔다. 상태만 남겨 뒤에 온 지급을 막는다 — 지급도 이 레코드를 "없어야 함" 으로 쓰므로 먼저 커밋한 쪽이 이기고 다른 쪽은 다시 읽는다
-                transaction.put( getReceiptTable(), redeemKey, Internal::encodeReceipt( Internal::ReceiptState::RefundedFirst, 0 ), ServiceRecord::kAbsentVersion );
+                transaction.put( getReceiptTable(), redeemKey, Internal::encodeReceipt( Internal::ReceiptState::RefundedFirst ), ServiceRecord::kAbsentVersion );
                 const ServiceStoreResult committed = connection.commit( transaction );
                 if ( committed == ServiceStoreResult::Conflict )
                     continue;
                 return committed == ServiceStoreResult::Ok ? EconomyResult::Ok : EconomyServiceResult::fail( OnlineError::kUnavailable );
             }
-            transaction.put( getReceiptTable(), redeemKey, Internal::encodeReceipt( Internal::ReceiptState::Revoked, mark._accountID ), mark._version );
+            transaction.put( getReceiptTable(), redeemKey, Internal::encodeReceipt( Internal::ReceiptState::Revoked ), mark._version );
             LedgerJournalEntry       redeem;
             const ServiceStoreResult found = Ledger::findJournal( connection, redeemKey, redeem );
             if ( found == ServiceStoreResult::NotFound )
             {
-                SW_LOG_ERROR_ID( "EconomyStoreLogic.RefundAfterJournalSwept", "The refund of '%#' came after its grant journal was swept - nothing is revoked from account %#, only the receipt is marked refunded", redeemKey, mark._accountID );
+                SW_LOG_ERROR_ID( "EconomyStoreLogic.RefundAfterJournalSwept", "The refund of '%#' came after its grant journal was swept - nothing is revoked, only the receipt is marked refunded", redeemKey );
                 const ServiceStoreResult committed = connection.commit( transaction );
                 if ( committed == ServiceStoreResult::Conflict )
                     continue;
@@ -698,7 +704,12 @@ namespace sw
                 const LedgerResult staged = Ledger::stageTransfer( connection, request, transaction, serviceResult );
                 if ( staged == LedgerResult::InsufficientFunds && recovery == EconomyRefundRecoveryMode::Unspent )
                     continue; // 잔액을 읽은 뒤 그사이 쓰였다 — 다시 읽어 남은 만큼으로 짠다
-                if ( staged != LedgerResult::Ok )
+                if ( staged == LedgerResult::AccountDeleted )
+                {
+                    // 받은 계정은 탈퇴로 지워졌고 잔액은 그때 소각됐다 — 거둘 이가 없으므로 상태만 바꾼다(실패한 붙이기는 트랜잭션에 아무것도 남기지 않는다)
+                    serviceResult = LedgerTransferResult{};
+                }
+                else if ( staged != LedgerResult::Ok )
                     return toEconomyResult( staged );
             }
             const ServiceStoreResult committed = connection.commit( transaction );
@@ -733,8 +744,8 @@ namespace sw
                 return Internal::finish( outReply, EconomyServiceResult::fail( OnlineError::kUnavailable ) );
             if ( Internal::isRefunded( mark._state ) )
                 return Internal::finish( outReply, EconomyResult::AlreadyRefunded );
-            if ( mark._state != Internal::ReceiptState::Redeemed || mark._accountID != input._accountID )
-                return Internal::finish( outReply, EconomyResult::NotPurchaser );
+            if ( mark._state != Internal::ReceiptState::Redeemed )
+                return Internal::finish( outReply, EconomyResult::NotPurchaser ); // 받은 계정은 아래에서 분개의 다리로 대조한다
             LedgerJournalEntry       redeem;
             const ServiceStoreResult found = Ledger::findJournal( connection, redeemKey, redeem );
             if ( found == ServiceStoreResult::NotFound )
@@ -769,7 +780,7 @@ namespace sw
             if ( request._listPosting.empty() )
                 return Internal::finish( outReply, EconomyResult::NothingToWithdraw );
             ServiceTransaction transaction;
-            transaction.put( getReceiptTable(), redeemKey, Internal::encodeReceipt( Internal::ReceiptState::Withdrawn, input._accountID ), mark._version ); // 그사이 온 환불과 같은 레코드를 다툰다
+            transaction.put( getReceiptTable(), redeemKey, Internal::encodeReceipt( Internal::ReceiptState::Withdrawn ), mark._version ); // 그사이 온 환불과 같은 레코드를 다툰다
             LedgerTransferResult serviceResult;
             const LedgerResult   staged = Ledger::stageTransfer( connection, request, transaction, serviceResult );
             if ( staged != LedgerResult::Ok )

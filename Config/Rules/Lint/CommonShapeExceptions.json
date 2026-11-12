@@ -67,5 +67,14 @@
         "Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp|path": "옮기거나 지우려고 고른 폴더 하나의 모든 파일이다 — 그 폴더를 통째로 다루니 남의 사본까지 읽기 전용을 본다",
         "Source/Editor/Common/Commands/Asset/EditorDataTableCommands.cpp|dataFolder": "데이터 표 폴더 하나(재귀 아님)다 — scratch 를 지나지 않는다",
         "Source/Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.cpp|sourceAbs": "사람이 옮기려고 고른 폴더 하나에 남은 파일이다 — 그 폴더를 통째로 다룬다"
+    },
+    "nameHashKey": {
+        "Source/Engine/Reflection/TypeRegistry.cpp": "기반 자신이다 — 해시 표는 NameHashIndex(find 로 종류 · 지운 이름을 먼저 본다)이고, tryFindNameHashClash 는 열거자 해시 충돌을 찾는 검사 표다",
+        "Source/Engine/Serialization/Format/BinarySerializer.cpp": "LogOnce 키(경고를 필드마다 한 번)다 — 겹치면 경고 한 줄이 빠질 뿐 데이터는 바뀌지 않는다",
+        "Source/Engine/Serialization/Serializer/SerializerUtil.cpp": "LogOnce 키(모르는 열거자 경고를 한 번)다 — 겹쳐도 데이터는 바뀌지 않는다",
+        "Source/GameFramework/Runtime/Online/Bus/ServerBus.cpp": "LogOnce 키(버린 메시지 경고를 한 번)다 — 겹쳐도 거절 수는 그대로 센다",
+        "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.cpp": "무작위 씨앗에 섞는 값이다(pickUnit) — 겹쳐도 같은 씨앗일 뿐 표가 아니다",
+        "Source/GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.cpp": "저장 상태의 노드 id 해시다 — 만들기(populateNodes)가 NameHashIndex 로 같은 해시의 두 id 를 거절해 회로 안에서는 하나로 정해진다",
+        "Source/Editor/Panels/Inspector/Model/PropertyGridModel.cpp": "인스펙터 행 높이 기억 키다 — 겹치면 한 행의 높이 추정이 섞일 뿐 데이터는 바뀌지 않는다"
     }
 }

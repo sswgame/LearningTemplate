@@ -117,6 +117,8 @@ namespace sw
      *            상태 쓰기가 실패하면 그 슬롯의 기록은 옛 내용(원자 쓰기로 남은 옛 상태)을 새 순번으로 가리킬 수 있다 - 읽기 실패와 같게 다음 저장이 덮는다.
      *          - 쓰기를 맡긴 저장 하나가 끝날 때까지(완료) 다음 저장은 기다린다. 저장 수 · 마지막 슬롯은 완료에서 바뀐다.
      *          - 되돌리기: `restoreLatest` 는 가장 새 슬롯을, `restoreCheckpoint` 는 가장 새 체크포인트 슬롯을 읽기를 맡기고, 끝나면 불러오기 델리게이트에 바이트를 넘긴다.
+     *            적용은 비동기일 수 있다 — 게임은 세이브가 찍은 씬으로 옮긴 뒤 적용하고(감사 G-7, 슬롯 불러오기와 같은 길) 끝을 완료 함수로 알린다. 체크포인트 표시는 그 끝에서 한다.
+     *            되돌리기 하나가 끝날 때까지(읽기 · 적용) 다음 되돌리기는 false 다.
      *          시작할 때(`initialize`) 슬롯 기록을 읽기를 맡겨 순번과 다음 슬롯을 잇는다. 다 읽을 때까지(`isScanning`) 저장 요청은 기다리고 되돌리기는 false 다.
      */
     class SW_GF_API AutosaveManager
@@ -124,8 +126,13 @@ namespace sw
     public:
         /** @brief 지금 상태를 바이트로 만듭니다. 성공하면 true 입니다. */
         using SaveDelegate = Delegate<bool( vector<uint8>& outBytes )>;
-        /** @brief 바이트의 상태로 되살립니다. 성공하면 true 입니다. */
-        using LoadDelegate = Delegate<bool( const vector<uint8>& bytes )>;
+        /** @brief 되살리기의 끝을 알립니다(성공이면 true). 불러오기 델리게이트가 받은 되살리기마다 한 번 부른다. */
+        using RestoreCompletedFunction = Delegate<void( bool bRestored )>;
+        /**
+         * @brief 슬롯 @p slot 의 바이트로 되살리기를 맡습니다(언리얼 `AsyncLoadGameFromSlot` 의 완료 델리게이트 · 유니티 `AsyncOperation.completed` 자리).
+         * @details 받았으면 true 이고 끝은 @p onCompleted 로 알린다 — 바로 적용했으면 안에서, 씬을 옮겨 적용하면 그 뒤에. 받지 않았으면 false 이고 @p onCompleted 를 부르지 않는다(실패로 친다).
+         */
+        using LoadDelegate = Delegate<bool( const string& slot, const vector<uint8>& bytes, const RestoreCompletedFunction& onCompleted )>;
 
         AutosaveManager();
 
@@ -154,7 +161,7 @@ namespace sw
         /** @brief 막기 문이 막혀 있으면 true 입니다 — 요청은 기다린다. 막기는 문(`SaveGate::block`)에 범위형으로 건다. */
         bool isBlocked() const;
 
-        /** @brief 가장 새 슬롯 읽기를 맡깁니다. 슬롯이 없거나 기록을 읽는 중이면 false 입니다. 읽은 바이트는 불러오기 델리게이트가 받고, 실패는 알립니다. */
+        /** @brief 가장 새 슬롯 읽기를 맡깁니다. 슬롯이 없거나 기록을 읽는 중이거나 앞 되돌리기가 끝나지 않았으면 false 입니다. 읽은 바이트는 불러오기 델리게이트가 받고, 실패는 알립니다. */
         [[nodiscard]] bool restoreLatest();
         /** @brief 가장 새 체크포인트 슬롯 읽기를 맡깁니다(없으면 false). 되살리면 그 체크포인트에 다시 서도 저장하지 않습니다. */
         [[nodiscard]] bool restoreCheckpoint();
@@ -166,6 +173,8 @@ namespace sw
         const AutosaveSlotInfo* findLatestSlot( AutosaveTrigger trigger ) const;
 
         bool hasPendingRequest() const { return _bPending == SW_TRUE; }
+        /** @brief 맡긴 되돌리기(슬롯 읽기 또는 게임의 적용)가 아직 끝나지 않았으면 true 입니다. */
+        bool isRestoring() const { return _restoreRequest.isActive() || _restoringSlot.empty() == false; }
         /** @brief 시작 때 맡긴 슬롯 기록 읽기가 아직 남았으면 true 입니다. */
         bool isScanning() const { return _scanPendingCount > 0; }
         /** @brief 맡긴 저장(상태 슬롯 쓰기)이 아직 끝나지 않았으면 true 입니다. */
@@ -183,11 +192,13 @@ namespace sw
         /** @brief 슬롯 기록 읽기를 모두 맡깁니다. */
         void scanSlots();
         /** @brief @p pSlot 의 상태 슬롯 읽기를 맡깁니다. */
-        [[nodiscard]] bool        submitRestore( const AutosaveSlotInfo* pSlot, bool bCheckpoint );
-        void                      onSlotWritten( const LocalStoreCompletion& completion );
-        void                      onInfoWritten( const LocalStoreCompletion& completion );
-        void                      onInfoRead( const LocalStoreCompletion& completion );
-        void                      onSlotRead( const LocalStoreCompletion& completion );
+        [[nodiscard]] bool submitRestore( const AutosaveSlotInfo* pSlot, bool bCheckpoint );
+        void               onSlotWritten( const LocalStoreCompletion& completion );
+        void               onInfoWritten( const LocalStoreCompletion& completion );
+        void               onInfoRead( const LocalStoreCompletion& completion );
+        void               onSlotRead( const LocalStoreCompletion& completion );
+        /** @brief 게임이 되살리기를 끝냈습니다(`RestoreCompletedFunction`). 성공한 체크포인트 되돌리기면 그 체크포인트를 지난 것으로 둡니다. */
+        void                      onRestoreCompleted( bool bRestored );
         [[nodiscard]] static bool writeSlotInfo( const AutosaveSlotInfo& info, vector<uint8>& outBytes );
         [[nodiscard]] static bool readSlotInfo( const vector<uint8>& bytes, AutosaveSlotInfo& outInfo );
         static int32              getTriggerPriority( AutosaveTrigger trigger );
@@ -203,6 +214,7 @@ namespace sw
         hashed_string            _pendingLabel;
         hashed_string            _lastCheckpointID;
         hashed_string            _restoringCheckpointID; ///< 읽기를 맡긴 체크포인트 되돌리기(비면 가장 새 슬롯 되돌리기)
+        string                   _restoringSlot;         ///< 게임이 적용 중인 되돌리기의 슬롯(비면 없음) — 완료가 비운다
         float64                  _playTime;
         float64                  _lastSaveTime; ///< 마지막 자동 저장의 플레이 시간(음수면 아직 없음)
         float32                  _intervalTimer;

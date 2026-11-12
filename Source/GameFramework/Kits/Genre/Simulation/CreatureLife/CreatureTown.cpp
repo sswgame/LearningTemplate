@@ -228,7 +228,7 @@ namespace sw
         TownCreature& creature      = _listCreature[static_cast<size_t>( creatureIndex )];
         if ( creature._lastGiftDay == getDay() )
             return CreatureInteractResult::AlreadyToday;
-        if ( inventory.removeItem( itemID, 1 ) == false )
+        if ( inventory.consumeItem( itemID, 1 ) == false )
             return CreatureInteractResult::MissingItem;
         creature._lastGiftDay              = getDay();
         const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( speciesID );
@@ -269,8 +269,8 @@ namespace sw
         const int32 progressedCount = _pQuestLog->notify( CreatureTownInternal::makeDeliverKind(), itemID, count );
         if ( progressedCount > 0 )
         {
-            if ( inventory.removeItem( itemID, count ) == false )
-                SW_LOG_WARNING_ID( "CreatureTown.InventoryLostBetweenHasItem", "inventory lost '%#' between hasItem and removeItem", itemID.c_str() );
+            if ( inventory.consumeItem( itemID, count ) == false )
+                SW_LOG_WARNING_ID( "CreatureTown.InventoryLostBetweenHasItem", "inventory lost '%#' between hasItem and consumeItem", itemID.c_str() );
         }
         collectCompletedRequests();
         return progressedCount;

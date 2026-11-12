@@ -21,6 +21,7 @@
 
 namespace sw
 {
+    enum class RHIBackend : uint32;
     enum class RHIDeviceLostPolicy : uint8;
     enum class WindowLifecycleEvent : uint8;
 
@@ -59,10 +60,11 @@ namespace sw
         [[nodiscard]] uint32        countPendingCaptureJobs( const GameObjectManager* pManager ) const override;
 
         /**
-         * @brief 장치 분실에 대한 답입니다. 잃지 않았으면 비고, 잃었으면 @p policy 가 고른 종료 코드입니다(`submitFrame` 이 프레임마다 묻는다).
-         * @details 브레드크럼 보고는 손실을 처음 본 백엔드가 이미 했다(`GPUBreadcrumbs::reportDeviceLost`) — 여기서는 루프를 끝낼지만 정한다.
+         * @brief 장치 분실에 대한 답입니다. 잃지 않았으면 비고, 잃었으면 지금 할 일(`Quit` 또는 `Recreate`)입니다(`submitFrame` 이 프레임마다 묻는다).
+         * @details 브레드크럼 보고는 손실을 처음 본 백엔드가 이미 했다(`GPUBreadcrumbs::reportDeviceLost`) — 여기서는 끝낼지 다시 만들지만 정한다.
+         *          `Recreate` 정책도 다시 만드는 길이 없는 배포 구성(백엔드 교체기는 `App/Dev/`)이나 다시 만들 수 없는 @p backend(`RHI::canRecreateAfterDeviceLost`)면 `Quit` 다.
          */
-        [[nodiscard]] static optional<ProcessExitCode> decideDeviceLostExit( const IRHIDevice& device, RHIDeviceLostPolicy policy );
+        [[nodiscard]] static optional<RHIDeviceLostPolicy> decideDeviceLostResponse( const IRHIDevice& device, RHIBackend backend, RHIDeviceLostPolicy policy );
 
     private:
         /**

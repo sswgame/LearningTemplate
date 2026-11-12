@@ -331,7 +331,7 @@ namespace sw
     }
 
     SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice [driverWaitMs]",
-                    "Remove the GPU device as a TDR would (DirectX 12; Vulkan marks it lost) to check that the engine then ends by _deviceLostPolicy (exit code DeviceLost) without hanging; with a wait, the render thread first blocks that long where the fence wait is",
+                    "Remove the GPU device as a TDR would (DirectX 12; Vulkan marks it lost) to check that the engine then answers by _deviceLostPolicy (Quit: exit code DeviceLost; Recreate: a new device) without hanging; with a wait, the render thread first blocks that long where the fence wait is",
                     &RHIBackendSwitcherInternal::runRemoveDevice );
     SW_AUTOMATION_STEP( swapBackend, AutomationBackendSteps::kSwapBackendKind, &RHIBackendSwitcherInternal::runSwapBackend, &AutomationBackendSteps::validateSwapBackend, AutomationStepOptions{}.withPrepare( &RHIBackendSwitcherInternal::prepareSwapBackend ).withWallBudget( AutomationBackendSteps::kSwapBackendWallSeconds ) );
     // 설명의 백엔드 목록은 쿠킹 표에서 만든다(줄 순서 = 열거값) — 손으로 적은 목록이 WebGPU 를 빠뜨렸다.

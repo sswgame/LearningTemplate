@@ -204,7 +204,7 @@ namespace sw
     public:
         static constexpr float32 kStepMinutes  = 1.0f;
         static constexpr uint32  kStateTag     = FourCCUtil::make( "RSIM" );
-        static constexpr uint32  kStateVersion = 1;
+        static constexpr uint32  kStateVersion = 2; ///< 2: 안쪽 시장(`ShopManager`)이 머리표와 되사기 목록을, 조리(`Crafter`)가 꺼낸 재료 조각을 싣는다
 
         RestaurantSimulation();
 

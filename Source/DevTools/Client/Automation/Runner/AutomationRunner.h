@@ -42,6 +42,7 @@ namespace sw
         string                           _clockHolderName;               ///< 시계를 붙잡은 조건의 이름(로그)
         string                           _waitingFor;                    ///< 지금 붙잡은 단계가 기다리는 것(`holdUntilReady` 의 까닭). 놓이면 비운다
         float64                          _exitDeadlineSeconds;           ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
+        int32                            _expectedExitCode;              ///< `ExpectExitWithin exitCode` — 엔진이 끝낼 때 요청했어야 할 종료 코드입니다(`QuitRequest`, 창 닫기는 0)
         float64                          _loadDeadlineSeconds;           ///< 부하 시나리오(`<Load>`)의 멈춤 그물 — 측정 창이 이때까지 끝내지 못하면 시간 초과다(단조 시계 초). 0 이면 부하 시나리오가 아니다.
         float64                          _wallStartSeconds;              ///< 시나리오를 읽기 시작한 단조 시계 초(벽시계 감시의 기준)
         const BusyClock*                 _pCompileBusy;                  ///< 셰이더 공급자의 바쁜 시계(`ShaderCache::getCompileBusyClock` — 셰이더 로드 · PSO 생성) — 그 시간은 벽시계 시한에 세지 않는다. 셰이더 캐시가 없는 호스트는 nullptr

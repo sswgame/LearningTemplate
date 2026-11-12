@@ -62,6 +62,7 @@ namespace sw
                         return AdminServiceResult::fail( OnlineError::kBusy );
                     case LedgerResult::JournalKeyReused:
                     case LedgerResult::Invalid:
+                    case LedgerResult::AccountDeleted:
                         return AdminServiceResult::fail( OnlineError::kInvalidRequest );
                     case LedgerResult::Unavailable:
                         return AdminServiceResult::fail( OnlineError::kUnavailable );

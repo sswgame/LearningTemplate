@@ -34,7 +34,14 @@ namespace sw
          */
         virtual CharacterState moveCharacter( PhysicsCharacterHandle character, const Vector& velocity, float32 deltaTime ) = 0;
         virtual void           setCharacterPosition( PhysicsCharacterHandle character, const Vector& position )             = 0;
-        virtual bool           getCharacterState( PhysicsCharacterHandle character, CharacterState& outState ) const        = 0;
+        /**
+         * @brief 캐릭터를 지우지 않고 캡슐 크기를 바꿉니다 — 자리 · 디딘 바닥 · 속 바디(`_bInnerBody`)의 핸들과 접촉이 이어집니다.
+         * @details 배율이 바뀐 컨트롤러가 쓴다(다시 만들면 속 바디의 쌍마다 끝 → 시작이 난다, 감사 S-4). 커진 캡슐이 벽에 묻혀도 바꾼다 — 다음 이동이 밀어낸다.
+         *          언리얼 `UCapsuleComponent::SetCapsuleSize`, 유니티 `CharacterController.radius` · `height`, Jolt `CharacterVirtual::SetShape` 자리다.
+         *          지을 수 없는 크기(0 이하)거나 없는 캐릭터면 오류를 남기고 false — 부르는 쪽이 캐릭터를 놓는다.
+         */
+        [[nodiscard]] virtual bool setCharacterSize( PhysicsCharacterHandle character, float32 radius, float32 halfHeight ) = 0;
+        virtual bool               getCharacterState( PhysicsCharacterHandle character, CharacterState& outState ) const    = 0;
     };
 
     using IPhysicsCharacterScene3D = IPhysicsCharacterScene<PhysicsDimension3D>;

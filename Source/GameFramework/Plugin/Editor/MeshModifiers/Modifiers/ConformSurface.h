@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Spatial/BVHTree3D.h"
 
@@ -80,22 +81,17 @@ namespace sw::editor
                 float3 b;
                 float3 c;
                 getTriangle( handle.index(), a, b, c );
-                float32 distance   = 0.0f;
-                float32 u          = 0.0f;
-                float32 v          = 0.0f;
-                bool    bFrontFace = false;
-                if ( CharacterGeometryUtil::intersectRayTriangle( origin, unitDirection, a, b, c, distance, u, v, bFrontFace ) == false )
+                RayTriangleHit triangleHit{};
+                if ( Ray::intersectTriangle( Ray{ origin, unitDirection }, a, b, c, bestDistance, triangleHit ) == false )
                     continue;
-                if ( distance > bestDistance )
-                    continue;
-                bestDistance       = distance;
+                bestDistance       = triangleHit._distance;
                 bFound             = true;
-                outHit._distance   = distance;
-                outHit._baryU      = u;
-                outHit._baryV      = v;
+                outHit._distance   = triangleHit._distance;
+                outHit._baryU      = triangleHit._baryU;
+                outHit._baryV      = triangleHit._baryV;
                 outHit._triangle   = handle.index();
                 outHit._normal     = CharacterGeometryUtil::makeUnitOr( ( b - a ).cross( c - a ), float3::UnitY );
-                outHit._bFrontFace = bFrontFace ? SW_TRUE : SW_FALSE;
+                outHit._bFrontFace = triangleHit._bFrontFace;
             }
             return bFound;
         }

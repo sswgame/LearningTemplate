@@ -30,6 +30,8 @@ namespace sw::editor
         const utf8* getPanelTitle() const override { return "History"; }
         /** @brief 히스토리 UI를 그립니다. */
         void drawContent() override;
+        /** @brief 눌러도 Ctrl+Z 의 스택을 바꾸지 않는다 — 앞에 포커스를 둔 창(문서 패널 · 씬)의 기록을 보여 주고 옮긴다(Godot History 독이 지금 편집 대상의 history 를 보이는 것과 같다). */
+        bool shouldKeepFocusedCommandStack() const override { return true; }
 
     private:
         HistoryViewModel _viewModel;

@@ -32,8 +32,8 @@ namespace sw::editor
     /**
      * @class EditorViewportRayPick
      * @brief 뷰포트 피킹 로직입니다. 경계는 컴포넌트가 선언하고(`SceneComponent::getWorldBounds`), 같은 거리에서 어느 종류가 이기는지는 이 클래스 안의 테이블이 정합니다.
-     * @details 경계 구는 거르기만 하고 답은 더 좁은 모양이 낸다 — 메시는 메시 공간 상자(OBB) 뒤에 CPU 삼각형, 그 밖은 선언한 월드 상자다(Godot 4 의
-     *          에디터 피킹과 같은 단계, 언리얼 히트 프록시 · 유니티 GPU 피킹 같은 id 버퍼는 다음 단계다). 경계가 없는 SceneComponent(빈 트랜스폼 · 빛 ·
+     * @details 경계 구는 거르기만 하고 답은 더 좁은 모양이 낸다 — 메시는 메시 공간 상자(OBB) 뒤에 화면과 같은 자세(스킨 · 모프 · VAT)의 삼각형,
+     *          그 밖은 선언한 월드 상자다(Godot 4 의 에디터 피킹 · 언리얼 스켈레탈 메시 라인 트레이스와 같은 단계). 경계가 없는 SceneComponent(빈 트랜스폼 · 빛 ·
      *          게임이 만든 컴포넌트)는 기본 반지름으로 검사한다. 주 컴포넌트(`getPrimarySceneComponent()`)만 보면 게임이 만든 컴포넌트를 클릭으로 집을 수 없다.
      *          ImGui 를 쓰지 않으므로 `Test/EditorTest` 가 실제 씬으로 검증한다.
      */

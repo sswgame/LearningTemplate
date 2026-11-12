@@ -73,6 +73,8 @@ namespace sw::editor
         /**
          * @brief 시나리오 실행(`-scenario`)이고 `-gv_editorStateDir` 를 주지 않았으면 이 프로세스의 상태 폴더(`Saved/Automation/EditorState/editor_p<pid>`)를 비웁니다(끝난 실행의 폴더도 거둔다).
          * @details 에디터 기동의 첫 단계가 부른다 — 그 뒤 상태 파일은 모두 이 폴더를 읽고 쓴다(`getEditorStateDirectory`).
+         *          비우기는 프로세스마다 한 번이다. 같은 프로세스에서 인스턴스를 다시 세우면(모듈 리로드 · 백엔드 교체) 앞선 인스턴스가 쓴 상태
+         *          (레이아웃 · 자동 저장 세션 폴더)를 잇는다 — 사용자의 Saved/Editor 가 리로드에 지워지지 않는 것과 같다. 한 번 비웠다는 표시는 호스트의 맡김 칸(`IModuleStateStore`)에 둔다.
          */
         static void prepareAutomationStateDirectory();
 

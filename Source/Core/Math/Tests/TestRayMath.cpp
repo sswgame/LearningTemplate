@@ -117,28 +117,32 @@ SW_TEST_CASE( RayMathTest, HorizontalPlaneHit )
  */
 SW_TEST_CASE( RayMathTest, TriangleBothSidesAndSharedEdge )
 {
-    const sw::float3 a{ -1.0f, -1.0f, 5.0f };
-    const sw::float3 b{ 1.0f, -1.0f, 5.0f };
-    const sw::float3 c{ 0.0f, 1.0f, 5.0f };
-    float32          distance = -1.0f;
-    SW_REQUIRE_TRUE( sw::Ray::intersectTriangle( makeRay( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f } ), a, b, c, 100.0f, distance ) );
-    SW_EXPECT_NEAR( 5.0, distance, kTolerance );
-    SW_REQUIRE_TRUE( sw::Ray::intersectTriangle( makeRay( sw::float3{ 0.0f, 0.0f, 10.0f }, sw::float3{ 0.0f, 0.0f, -1.0f } ), a, b, c, 100.0f, distance ) );
-    SW_EXPECT_NEAR( 5.0, distance, kTolerance ); // 뒷면
+    const sw::float3   a{ -1.0f, -1.0f, 5.0f };
+    const sw::float3   b{ 1.0f, -1.0f, 5.0f };
+    const sw::float3   c{ 0.0f, 1.0f, 5.0f };
+    sw::RayTriangleHit hit{};
+    SW_REQUIRE_TRUE( sw::Ray::intersectTriangle( makeRay( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f } ), a, b, c, 100.0f, hit ) );
+    SW_EXPECT_NEAR( 5.0, hit._distance, kTolerance );
+    SW_EXPECT_NEAR( 0.25, hit._baryU, kTolerance ); // (0, 0) 의 무게 — b 0.25 · c 0.5 · a 0.25
+    SW_EXPECT_NEAR( 0.5, hit._baryV, kTolerance );
+    const uint8 frontFromNear = hit._bFrontFace;
+    SW_REQUIRE_TRUE( sw::Ray::intersectTriangle( makeRay( sw::float3{ 0.0f, 0.0f, 10.0f }, sw::float3{ 0.0f, 0.0f, -1.0f } ), a, b, c, 100.0f, hit ) );
+    SW_EXPECT_NEAR( 5.0, hit._distance, kTolerance );   // 뒷면
+    SW_EXPECT_TRUE( frontFromNear != hit._bFrontFace ); // 반대쪽에서 보면 앞뒤가 바뀐다
 
     // 두 삼각형이 나누는 모서리(x = 0)를 정확히 지나도 한쪽은 맞는다
     const sw::float3 d{ 0.0f, -1.0f, 5.0f };
     const sw::Ray    edgeRay = makeRay( sw::float3{ 0.0f, -0.5f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f } );
-    const bool       bLeft   = sw::Ray::intersectTriangle( edgeRay, a, d, c, 100.0f, distance );
-    const bool       bRight  = sw::Ray::intersectTriangle( edgeRay, d, b, c, 100.0f, distance );
+    const bool       bLeft   = sw::Ray::intersectTriangle( edgeRay, a, d, c, 100.0f, hit );
+    const bool       bRight  = sw::Ray::intersectTriangle( edgeRay, d, b, c, 100.0f, hit );
     SW_EXPECT_TRUE( bLeft || bRight );
 
-    distance = -1.0f;
-    SW_EXPECT_FALSE( sw::Ray::intersectTriangle( makeRay( sw::float3{ 2.0f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f } ), a, b, c, 100.0f, distance ) );  // 비켜 간다
-    SW_EXPECT_FALSE( sw::Ray::intersectTriangle( makeRay( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 1.0f, 0.0f, 0.0f } ), a, b, c, 100.0f, distance ) );  // 나란하다
-    SW_EXPECT_FALSE( sw::Ray::intersectTriangle( makeRay( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, -1.0f } ), a, b, c, 100.0f, distance ) ); // 뒤
-    SW_EXPECT_FALSE( sw::Ray::intersectTriangle( makeRay( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f } ), a, b, c, 4.0f, distance ) );    // 최대 거리 밖
-    SW_EXPECT_EQUAL( -1.0f, distance );
+    hit._distance = -1.0f;
+    SW_EXPECT_FALSE( sw::Ray::intersectTriangle( makeRay( sw::float3{ 2.0f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f } ), a, b, c, 100.0f, hit ) );  // 비켜 간다
+    SW_EXPECT_FALSE( sw::Ray::intersectTriangle( makeRay( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 1.0f, 0.0f, 0.0f } ), a, b, c, 100.0f, hit ) );  // 나란하다
+    SW_EXPECT_FALSE( sw::Ray::intersectTriangle( makeRay( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, -1.0f } ), a, b, c, 100.0f, hit ) ); // 뒤
+    SW_EXPECT_FALSE( sw::Ray::intersectTriangle( makeRay( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f } ), a, b, c, 4.0f, hit ) );    // 최대 거리 밖
+    SW_EXPECT_EQUAL( -1.0f, hit._distance );
 }
 
 /**

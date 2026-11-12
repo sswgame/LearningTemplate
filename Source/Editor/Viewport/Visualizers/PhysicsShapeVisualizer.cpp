@@ -33,7 +33,8 @@ namespace sw::editor
                 float3     position{};
                 quaternion rotation{};
                 float3     scale{};
-                PhysicsComponent::readWorldPose( body, position, rotation, scale );
+                if ( PhysicsComponent::readWorldPose( body, position, rotation, scale ) == false )
+                    return; // 배율 0 — 물리도 짓지 않는 셰이프다
                 const float4 color = IPhysicsDebugRenderer::getBodyColor( static_cast<uint8>( body.getBodyType() ), body.isSleeping(), body.isTrigger() );
                 for ( const PhysicsShapeDesc3D& shape : body.getShapes() )
                 {
@@ -47,7 +48,8 @@ namespace sw::editor
                 float3     position{};
                 quaternion rotation{};
                 float3     scale{};
-                PhysicsComponent::readWorldPose( body, position, rotation, scale );
+                if ( PhysicsComponent::readWorldPose( body, position, rotation, scale ) == false )
+                    return; // 배율 0 — 물리도 짓지 않는 셰이프다
                 const float4  color = IPhysicsDebugRenderer::getBodyColor( static_cast<uint8>( body.getBodyType() ), body.isSleeping(), body.isTrigger() );
                 const float32 angle = PhysicsComponent::getAngle2D( rotation );
                 for ( const PhysicsShapeDesc2D& shape : body.getShapes() )

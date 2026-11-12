@@ -53,6 +53,23 @@ namespace sw
         uint32 _ticks{ 0 };
     };
 
+    /**
+     * @brief `SendInput` 의 인자입니다 — OS 입력 큐에 상대 마우스 이동을 넣는다(Win32 `SendInput` + `MOUSEEVENTF_MOVE`).
+     * @details 창 메시지(`PostWindowMessage`)와 달리 OS 입력 스택을 지나므로 원시 입력(WM_INPUT)도 난다 — 커서 잠금 중 시선이 원시 델타로 도는지 볼 때 쓴다.
+     */
+    REFLECT()
+    struct SW_API AutomationSendInputParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Relative mouse motion per event along X (mickeys)" )
+        int32 _dx{ 0 };
+        PROPERTY( Tooltip = "Relative mouse motion per event along Y (mickeys)" )
+        int32 _dy{ 0 };
+        PROPERTY( Min = 1, Max = 256, Tooltip = "Events sent in one step" )
+        uint32 _count{ 1 };
+    };
+
     /** @brief `ExpectCursorClip` 의 인자입니다. */
     REFLECT()
     struct SW_API AutomationCursorClipParams

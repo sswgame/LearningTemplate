@@ -252,7 +252,7 @@ namespace sw
          * @brief 포즈 구동(RBF 포즈 드라이버)입니다. 키는 `driver`(관절), `radius_degrees`(가우스 폭), `poses`(`[{ "name", "rotation", "morphs": [{ "morph", "weight" }],
          *        "bones": [{ "bone", "rotation", "translation" }] }]`)입니다.
          * @details 관절의 레퍼런스 기준 회전과 포즈마다의 회전 사이 각으로 가우스 핵을 구하고, 바인딩할 때 푼 보간 행렬(Φ⁻¹)로 포즈 가중치를 낸다.
-         *          포즈 위치에서는 그 포즈만 1 이다. 가중치만큼 보정 모프(`RigInstance::getMorphWeights`)와 보정 본(로컬 회전과 이동 덧셈)을 낸다.
+         *          포즈 위치에서는 그 포즈만 1 이다. `weight_threshold` 보다 작은 가중치는 0 으로 두고 그 포즈의 보정은 내지 않는다. 가중치만큼 보정 모프(`RigInstance::getMorphWeights`)와 보정 본(로컬 회전과 이동 덧셈)을 낸다.
          *          팔꿈치를 굽히면 팔뚝 근육을 보정하는 식이며, 언리얼의 Pose Driver 와 Maya 의 RBF 에 해당한다. 쉬는 포즈(출력 없음)도 데이터에 한 줄 넣는다.
          */
         class RigPoseDriverNode final : public RigNode
@@ -360,18 +360,19 @@ namespace sw
                     {
                         weight += _listInverseKernel[row * poseCount + column] * _listKernel[column];
                     }
-                    _listPoseWeight[row] = MathUtil::saturate( weight );
+                    const float32 saturated = MathUtil::saturate( weight );
+                    _listPoseWeight[row]    = saturated < _params._weightThreshold ? 0.0f : saturated;
                 }
                 for ( uint32 index = 0; index < poseCount; ++index )
                 {
                     const float32     weight     = _listPoseWeight[index];
                     const DriverPose& driverPose = _listPose[index];
+                    if ( weight <= 0.0f )
+                        continue;
                     for ( const RigMorphWeight& morph : driverPose._listMorph )
                     {
                         context._pInstance->addMorphWeight( morph._name, morph._weight * weight * context._nodeWeight );
                     }
-                    if ( weight <= 0.0f )
-                        continue;
                     for ( const CorrectiveBone& corrective : driverPose._listBone )
                     {
                         BoneTransform local = pose.getLocal( corrective._bone );

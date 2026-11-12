@@ -68,6 +68,16 @@ namespace sw
                 return bComputed;
             }
 
+            /** @brief 바이트를 지웁니다. volatile 로 써서 최적화가 "다시 읽지 않는 쓰기" 로 보고 지우지 못하게 한다(`NetSessionKeys::wipe` 와 같다). */
+            static void wipeBytes( void* pData, size_t size )
+            {
+                volatile uint8* pByte = static_cast<volatile uint8*>( pData );
+                for ( size_t index = 0; index < size; ++index )
+                {
+                    pByte[index] = 0;
+                }
+            }
+
             /** @brief 길이가 같은 두 바이트 열을 내용과 무관한 시간에 견줍니다(태그 비교가 첫 다른 바이트에서 멈추면 시간으로 한 바이트씩 맞춰 간다). */
             [[nodiscard]] static bool isEqualConstantTime( const uint8* pLeft, const uint8* pRight, int32 size )
             {
@@ -82,9 +92,15 @@ namespace sw
 
 namespace sw
 {
+    void NetReceiveCryptContext::wipe()
+    {
+        NetPacketSealerInternal::wipeBytes( _arrIv, sizeof( _arrIv ) );
+        _aead.reset();
+        _replayWindow.reset();
+    }
+
     NetPacketSealer::NetPacketSealer()
         : _listSealScratch{}
-        , _listOpenScratch{}
     {
     }
 
@@ -115,27 +131,30 @@ namespace sw
         return true;
     }
 
-    NetPacketSealer::OpenResult NetPacketSealer::open( NetSlotSecurity& security, uint32 protocolID, bool bServer, const uint8* pBody, int32 bodySize )
+    NetPacketSealer::OpenResult NetPacketSealer::open( NetReceiveCryptContext& receive, uint32 protocolID, const uint8* pBody, int32 bodySize, vector<uint8>& inoutPlainBytes )
     {
-        if ( bodySize < kSecureHeadSize + NetSecurityConstant::kAEADTagSize )
+        if ( bodySize < kSecureHeadSize + NetSecurityConstant::kAEADTagSize || receive._aead == nullptr )
             return OpenResult::Malformed;
         uint64 packetNumber = 0;
         for ( int32 index = 0; index < 8; ++index )
         {
             packetNumber = ( packetNumber << 8 ) | pBody[5 + index];
         }
-        if ( security._replayWindow.isAcceptable( packetNumber ) == false )
+        if ( receive._replayWindow.isAcceptable( packetNumber ) == false )
             return OpenResult::Replayed;
         uint8 arrAad[kAadSize]{};
         NetPacketSealerInternal::makePacketAad( protocolID, pBody, arrAad );
-        uint8                   arrNonce[NetSecurityConstant::kAEADNonceSize]{};
-        const NetDirectionKeys& keys = bServer ? security._keys._clientToServer : security._keys._serverToClient;
-        NetSessionKeys::makeNonce( keys._arrIv, packetNumber, arrNonce );
-        const int32 cipherSize = bodySize - kSecureHeadSize;
-        _listOpenScratch.resize( static_cast<size_t>( cipherSize - NetSecurityConstant::kAEADTagSize ) );
-        if ( security._receiveAEAD->open( arrNonce, arrAad, kAadSize, pBody + kSecureHeadSize, cipherSize, _listOpenScratch.data() ) == false )
+        uint8 arrNonce[NetSecurityConstant::kAEADNonceSize]{};
+        NetSessionKeys::makeNonce( receive._arrIv, packetNumber, arrNonce );
+        const int32  cipherSize = bodySize - kSecureHeadSize;
+        const size_t plainStart = inoutPlainBytes.size();
+        inoutPlainBytes.resize( plainStart + static_cast<size_t>( cipherSize - NetSecurityConstant::kAEADTagSize ) );
+        if ( receive._aead->open( arrNonce, arrAad, kAadSize, pBody + kSecureHeadSize, cipherSize, inoutPlainBytes.data() + plainStart ) == false )
+        {
+            inoutPlainBytes.resize( plainStart );
             return OpenResult::AuthenticationFailed;
-        security._replayWindow.markReceived( packetNumber ); // 복호가 성공한 뒤에만 표시한다. 먼저 표시하면 위조 패킷이 진짜 번호를 소모시킨다.
+        }
+        receive._replayWindow.markReceived( packetNumber ); // 복호가 성공한 뒤에만 표시한다. 먼저 표시하면 위조 패킷이 진짜 번호를 소모시킨다.
         return OpenResult::Opened;
     }
 
@@ -150,9 +169,10 @@ namespace sw
         outSecurity._keyPair.wipe(); // 서버는 수락을 다시 보낼 때 쓰도록 공개 키만 남긴다.
         if ( bKeys == false )
             return false;
-        outSecurity._sendAEAD    = provider.createAEAD( algorithm, outSecurity._keys._serverToClient._arrKey );
-        outSecurity._receiveAEAD = provider.createAEAD( algorithm, outSecurity._keys._clientToServer._arrKey );
-        return outSecurity._sendAEAD != nullptr && outSecurity._receiveAEAD != nullptr;
+        outSecurity._sendAEAD      = provider.createAEAD( algorithm, outSecurity._keys._serverToClient._arrKey );
+        outSecurity._receive._aead = provider.createAEAD( algorithm, outSecurity._keys._clientToServer._arrKey );
+        std::memcpy( outSecurity._receive._arrIv, outSecurity._keys._clientToServer._arrIv, sizeof( outSecurity._receive._arrIv ) );
+        return outSecurity._sendAEAD != nullptr && outSecurity._receive._aead != nullptr;
     }
 
     bool NetPacketSealer::deriveClientKeys( INetSecurityProvider& provider, NetAEADAlgorithm algorithm, const uint8* pServerPublicKey, const NetSessionSecret* pSecret,
@@ -164,9 +184,10 @@ namespace sw
         std::memset( arrShared, 0, sizeof( arrShared ) );
         if ( bKeys == false )
             return false;
-        inoutSecurity._sendAEAD    = provider.createAEAD( algorithm, inoutSecurity._keys._clientToServer._arrKey );
-        inoutSecurity._receiveAEAD = provider.createAEAD( algorithm, inoutSecurity._keys._serverToClient._arrKey );
-        return inoutSecurity._sendAEAD != nullptr && inoutSecurity._receiveAEAD != nullptr;
+        inoutSecurity._sendAEAD      = provider.createAEAD( algorithm, inoutSecurity._keys._clientToServer._arrKey );
+        inoutSecurity._receive._aead = provider.createAEAD( algorithm, inoutSecurity._keys._serverToClient._arrKey );
+        std::memcpy( inoutSecurity._receive._arrIv, inoutSecurity._keys._serverToClient._arrIv, sizeof( inoutSecurity._receive._arrIv ) );
+        return inoutSecurity._sendAEAD != nullptr && inoutSecurity._receive._aead != nullptr;
     }
 
     bool NetPacketSealer::sealKeyConfirmTag( NetSlotSecurity& security, uint32 serverIndex, uint64 serverSalt )
@@ -184,7 +205,7 @@ namespace sw
         uint8 arrAad[kKeyConfirmAadSize]{};
         NetSessionKeys::makeNonce( security._keys._serverToClient._arrIv, NetSessionKeys::kKeyConfirmPacketNumber, arrNonce );
         NetPacketSealerInternal::makeKeyConfirmAad( serverIndex, serverSalt, arrAad );
-        return security._receiveAEAD->open( arrNonce, arrAad, kKeyConfirmAadSize, pTag, NetSecurityConstant::kAEADTagSize, nullptr );
+        return security._receive._aead != nullptr && security._receive._aead->open( arrNonce, arrAad, kKeyConfirmAadSize, pTag, NetSecurityConstant::kAEADTagSize, nullptr );
     }
 
     bool NetPacketSealer::computeProofTag( INetSecurityProvider& provider, NetAEADAlgorithm algorithm, const NetSessionSecret& secret, uint64 clientSalt, uint64 serverSalt,

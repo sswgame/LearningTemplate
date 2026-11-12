@@ -28,7 +28,7 @@ namespace sw
 
     /**
      * @class CommandStack
-     * @brief 변경에 대한 Push, Undo, Redo 스택입니다. 메인 스택은 `EditorUndoHistory`(편집기 범위)가 소유해 범위에 노출하고, 미리보기 창은 자기 스택을 멤버로 든다.
+     * @brief 변경에 대한 Push, Undo, Redo 스택입니다. 메인 스택은 `EditorUndoHistory`(편집기 범위)가 소유해 범위에 노출하고, 문서 패널은 문서마다 자기 스택을 멤버로 든다(`EditorDocumentPanel::getDocumentCommandStack`).
      * @details 단계는 데이터다(`UndoStep` — 함수 이름 해시 + 인자 바이트). 그래서 편집기 모듈을 리로드해도 기록이 넘어간다. 언리얼의 `FTransaction`
      *          (오브젝트 상태를 직렬화해 기록)과 유니티의 `Undo` 와 같은 구조다. 패널 인스턴스에 묶인 코드 단계를 가진 명령은 맡길 때 버리고, 그 코드가 든
      *          코드 단계는 주인(`UndoStepOwner` — 패널)이 사라질 때 그 단계를 받은 스택에서 빠진다(스택이 주인의 사라짐을 구독한다).

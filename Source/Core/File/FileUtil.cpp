@@ -31,6 +31,8 @@ namespace sw
             atomic<FileUtil::WriteGate> _writeGate{ nullptr };
             /** @brief 새로 만드는 자리의 이름 규칙입니다(`FileUtil::setCreateRule`). 함수 포인터 하나라 상수 초기화된다. */
             atomic<FileUtil::WriteGate> _createRule{ nullptr };
+            /** @brief 읽기 전용이 "체크아웃 안 함" 인 자리의 규칙입니다(`FileUtil::setCheckoutRule`). 함수 포인터 하나라 상수 초기화된다. */
+            atomic<FileUtil::CheckoutRule> _checkoutRule{ nullptr };
         };
 
         struct FileUtilInternal
@@ -55,6 +57,16 @@ namespace sw
                     return true;
                 } ); // 폴더를 열지 못하면 항목이 없는 것과 같다 — 아래가 outName 이 비었는지로 가른다
                 return outName.empty() == false;
+            }
+
+            /** @brief @p path 에 체크아웃하지 않은 파일(`FileUtil::findNotOpenForEdit`)이 있으면 경로와 이유를 오류로 남기고 true 입니다 — 지우기 · 옮기기 · 덮는 복사의 입구가 부른다. */
+            [[nodiscard]] static bool refuseNotOpenForEdit( string_view path, const utf8* pAction )
+            {
+                const optional<string> lockedPath = FileUtil::findNotOpenForEdit( path );
+                if ( lockedPath.has_value() == false )
+                    return false;
+                SW_LOG_ERROR_ID( "File.NotOpenForEdit", "Refused to %# %# - '%#' is read-only (not checked out), check it out first", pAction, path, *lockedPath );
+                return true;
             }
 
             /** @brief 실패한 쓰기의 임시 파일을 지웁니다. 지우지 못하면 경고합니다 — 원본 옆에 `.tmp<pid>_<번호>` 가 남습니다. */
@@ -782,7 +794,38 @@ namespace sw
                 return false;
             }
         }
+        // 체크아웃하지 않은 파일(버전 관리 트리의 읽기 전용, 폴더면 그 아래)은 바꾸지 않는다 — FileUtil 의 쓰기 · 지우기 · 옮기기 입구와, 경로를 스스로 여는 서드파티 저장(DDS · SQLite)이 모두 이 함수를 지난다.
+        if ( FileUtilInternal::refuseNotOpenForEdit( path, "change" ) )
+            return false;
         return isCreateAllowed( path );
+    }
+
+    FileUtil::CheckoutRule FileUtil::setCheckoutRule( CheckoutRule rule )
+    {
+        return FileUtilInternal::s_writeCounters._checkoutRule.exchange( rule, std::memory_order_acq_rel );
+    }
+
+    optional<string> FileUtil::findNotOpenForEdit( string_view path )
+    {
+        const CheckoutRule             rule = FileUtilInternal::s_writeCounters._checkoutRule.load( std::memory_order_acquire );
+        PlatformFileSystem::FileStatus status;
+        if ( rule == nullptr || path.empty() || PlatformFileSystem::queryStatus( path, status ) == false )
+            return nullopt; // 없는 자리는 지우거나 옮길 것이 없다
+        if ( status._kind == PlatformFileSystem::FileKind::File )
+            return status._bReadOnly && rule( path ) ? optional<string>{ normalizeSeparators( path ) } : nullopt;
+        if ( status._kind != PlatformFileSystem::FileKind::Directory || status._bLink )
+            return nullopt; // 폴더 링크는 링크만 지운다(가리키는 폴더는 그대로다)
+        optional<string> found;
+        (void)forEachDirectoryEntry( path, true, [&found, rule]( const DirectoryEntry& entry )
+        {
+            if ( entry._bDirectory == false && isReadOnlyFile( entry._path ) && rule( entry._path ) )
+            {
+                found = normalizeSeparators( entry._path );
+                return false;
+            }
+            return true;
+        } ); // 폴더를 끝까지 읽지 못하면 본 데까지다 — 지우기 자체가 못 지운 항목을 알린다
+        return found;
     }
 
     bool FileUtil::isCreateAllowed( string_view path )

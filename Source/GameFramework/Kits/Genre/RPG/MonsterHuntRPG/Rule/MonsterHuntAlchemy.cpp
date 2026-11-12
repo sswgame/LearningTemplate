@@ -140,7 +140,7 @@ namespace sw
             return false;
         for ( const hashed_string& alcoholID : _pCatalog->getAlchemy()._listAlcohol )
         {
-            if ( inoutInventory.hasItem( alcoholID ) == false || inoutInventory.removeItem( alcoholID, 1 ) == false )
+            if ( inoutInventory.hasItem( alcoholID ) == false || inoutInventory.consumeItem( alcoholID, 1 ) == false )
                 continue;
             for ( const MonsterHuntAlchemyDef& def : _pCatalog->getAlchemyItems() )
             {

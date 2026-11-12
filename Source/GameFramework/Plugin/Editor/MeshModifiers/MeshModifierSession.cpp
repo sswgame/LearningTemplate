@@ -627,15 +627,23 @@ namespace sw::editor
         return pMesh != nullptr ? pMesh->getWorldMatrix() : float4x4{};
     }
 
-    bool MeshModifierSession::saveSidecar()
+    optional<string> MeshModifierSession::findSidecarPath() const
     {
         if ( hasTarget() == false )
-            return false;
+            return nullopt;
         // 곁 파일은 아직 없을 수 있다 — 메시 파일(상대 키면 읽기가 고른 그 파일) 곁에 쓴다.
         const auto meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
         if ( meshPath.has_value() == false )
-            return false; // 이유는 toDiskPath 가 남겼다
-        const string                 path      = MeshModifierStack::makeSidecarPath( meshPath->str() );
+            return nullopt; // 이유는 toDiskPath 가 남겼다
+        return MeshModifierStack::makeSidecarPath( meshPath->str() );
+    }
+
+    bool MeshModifierSession::saveSidecar()
+    {
+        const optional<string> sidecarPath = findSidecarPath();
+        if ( sidecarPath.has_value() == false )
+            return false;
+        const string&                path      = *sidecarPath;
         const optional<AbsolutePath> stackFile = FileUtil::requireAbsolutePath( path );
         if ( stackFile.has_value() == false || _stack.saveToFile( *stackFile ) == false )
         {

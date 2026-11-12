@@ -374,13 +374,6 @@
 
 ### GameFramework Runtime
 
-#### G-3 제작의 환불 · 취소와 상점 판매가 아이템 개체 상태를 버린다 — 내구도 공짜 수리
-- 분류: 결함(악용 경로) · 확신: 확인
-- 근거: `Source/GameFramework/Runtime/Gameplay/Inventory/Crafting.cpp:202-207`, `:235-246`(`cancel`) — 재료를 `Inventory::removeItem`(`Inventory.cpp:161-181`, id 로만)으로 빼고 `addItem`(`:116-127`, `slot._durability = pDef->_maxDurability`)으로 돌려준다. 닳은 장비가 재료인 레시피를 `enqueue` 했다가 `cancel` 하면 새것이 되고 꾸미기 · 뗀 부품은 사라진다. `ShopState::sell`(`Shop.cpp:330-331`)도 어느 개체를 파는지 고르지 못한다.
-- 상용 엔진: Lyra 는 `ULyraInventoryItemInstance` 를 개체로 옮긴다.
-- 제안: 꺼낸 것을 `InventorySlot` 묶음으로 받아 그대로 돌려주는 거래 형식(`InventoryTransaction`: take → commit/rollback). `Equipment::equipFromInventory` 가 이미 사본 복원을 쓴다.
-- 확인: 단위 `CraftingTest.CancelReturnsWornInputWithSameDurability`.
-
 ### 장르 키트 · 게임 샘플
 
 #### K-4 (보강) 키트 규칙 설정을 게임이 C++ 기본값으로 만든다(데이터 파일이 없다)

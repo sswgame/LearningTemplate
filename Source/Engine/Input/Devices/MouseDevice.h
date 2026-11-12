@@ -72,14 +72,27 @@ namespace sw
         float2 getRawDelta() const { return _rawDelta; }
         /**
          * @brief 이번 프레임의 이동량입니다. 원시 원천이 있으면 원시 델타(화면 경계에 막히지 않음)만 쓰고, 없으면 위치 차이입니다.
-         * @details 원시 원천은 값이 아니라 출처로 정한다 — 플랫폼이 원시 입력을 등록했거나(`setRawMotionSource`) 이번 프레임에 원시 이동
-         *          이벤트(`addRawDelta`)가 왔을 때다. 원시 원천 프레임의 합이 0 이어도 위치 차이로 넘어가지 않는다(언리얼 HighPrecisionMouseMode 와 같다).
+         * @details 원시 원천은 값이 아니라 출처로 정한다 — 플랫폼이 원시 입력을 등록했고(`setRawMotionSource`) 그 뒤 원시 이동 보고가 실제로
+         *          한 번이라도 왔거나, 이번 프레임에 원시 이동 이벤트(`addRawDelta`)가 왔을 때다. 원시 원천 프레임의 합이 0 이어도 위치 차이로 넘어가지 않는다
+         *          (언리얼 HighPrecisionMouseMode 와 같다). 등록만 하고 보고가 오지 않는 환경(원격 데스크톱 · 원격 제어 도구 · 터치가 흉내 낸 마우스는
+         *          WM_INPUT 없이 커서만 옮긴다)에서는 위치 차이를 쓴다 — 등록 성공만 믿으면 시선이 멈췄다(감사 P-1). SDL 도 원시 입력이 없으면
+         *          커서를 가운데로 되돌리는 상대 모드(`SDL_HINT_MOUSE_RELATIVE_MODE_WARP`)로 읽는다.
          *          스무딩과 InputMap 의 마우스 델타 바인딩이 같은 규칙으로 읽습니다.
          */
         float2 getMovementDelta() const;
-        /** @brief 플랫폼이 원시 마우스 입력을 받고 있는지 선언합니다(Win32 `RegisterRawInputDevices` 성공 · 해제). 켜진 동안 위치 차이를 이동으로 쓰지 않습니다. */
-        void setRawMotionSource( bool bActive ) { _bRawMotionSource = bActive ? SW_TRUE : SW_FALSE; }
+        /**
+         * @brief 플랫폼이 원시 마우스 입력을 등록했는지 선언합니다(Win32 `RegisterRawInputDevices` 성공 · 해제). 원시 보고를 기다리는 표시는 바꿀 때마다 지운다.
+         * @details 등록만으로는 원천이 되지 않는다 — 등록 뒤 첫 원시 이동 보고(`addRawDelta`)가 원천을 확정한다(`getMovementDelta`).
+         */
+        void setRawMotionSource( bool bActive )
+        {
+            _bRawMotionSource    = bActive ? SW_TRUE : SW_FALSE;
+            _bRawMotionConfirmed = SW_FALSE;
+        }
+        /** @brief 플랫폼이 원시 입력을 등록해 두었으면 true 입니다(보고가 왔는지와 무관 — `isRawMotionConfirmed`). */
         bool isRawMotionSource() const { return _bRawMotionSource == SW_TRUE; }
+        /** @brief 등록 뒤 원시 이동 보고가 왔으면 true 입니다. 이 동안 원시 델타만 이동으로 쓴다. */
+        bool isRawMotionConfirmed() const { return _bRawMotionSource == SW_TRUE && _bRawMotionConfirmed == SW_TRUE; }
         /** @brief 가속과 스무딩을 적용한 이번 프레임의 이동량입니다. 프레임당 한 번 갱신합니다(`onEventsDispatched`). */
         float2 getSmoothDelta() const { return _smoothDelta; }
 
@@ -185,5 +198,6 @@ namespace sw
         uint8         _bHasPosition        : 1; /**< 위치를 한 번이라도 받았는지 나타냅니다. 첫 위치는 기준점이 없어서 이동량을 내지 않습니다. */
         uint8         _bRawMotionSource    : 1; /**< 플랫폼이 원시 마우스 입력을 받고 있는지입니다(`setRawMotionSource`). 프레임이 바뀌어도 남는다. */
         uint8         _bRawMotionThisFrame : 1; /**< 이번 프레임에 원시 이동 이벤트(`addRawDelta`)가 왔는지입니다. 가상 입력 · 다른 플랫폼의 잠금 이동이 여기로 온다. */
+        uint8         _bRawMotionConfirmed : 1; /**< 등록(`setRawMotionSource`) 뒤 원시 이동 보고가 한 번이라도 왔는지입니다. 등록을 바꾸면 지운다. */
     };
 } // namespace sw

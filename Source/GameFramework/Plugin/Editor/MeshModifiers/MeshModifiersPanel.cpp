@@ -301,6 +301,14 @@ namespace sw::editor
         return pSession != nullptr && pSession->saveSidecar(); // 실패는 saveSidecar 가 알린다
     }
 
+    void MeshModifiersPanel::collectFilesToSave( vector<string>& outListPath ) const
+    {
+        const MeshModifierSession* pSession = findSubsystem<MeshModifierSession>();
+        const optional<string>     sidecar  = pSession != nullptr ? pSession->findSidecarPath() : nullopt;
+        if ( sidecar.has_value() )
+            outListPath.push_back( *sidecar );
+    }
+
     bool MeshModifiersPanel::canSaveDocument() const
     {
         const MeshModifierSession* pSession = findSubsystem<MeshModifierSession>();

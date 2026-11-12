@@ -12,6 +12,7 @@
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
@@ -100,7 +101,9 @@ namespace sw
     void GPUSkinPaletteCollector::collect( const AnimationSystem& animation, GPUSceneSnapshot& inoutSnapshot )
     {
         // 게임 시계는 스킨이 없는 씬에도 흐른다 — 머티리얼 시간 · 구름 · 자동 노출이 이 값을 읽는다. VAT 는 군중 시계 그대로다(인스턴스 시간 오프셋이 이 시계 기준이다).
-        inoutSnapshot._vertexAnimationTime = static_cast<float32>( animation.getCrowd().getClock() );
+        // 셰이더 칸은 float 다 — 주기로 접어 보낸다(감사 C-12). 인스턴스 오프셋도 같은 접힌 시계로 잰다(`AnimationCrowd::getShaderClock`).
+        inoutSnapshot._shaderTimeRolloverSeconds = engine::getSubsystem<EngineConfig>()._shaderTimeRolloverSeconds;
+        inoutSnapshot._vertexAnimationTime       = animation.getCrowd().getShaderClock( inoutSnapshot._shaderTimeRolloverSeconds );
         if ( animation.getSkeletalMeshCount() == 0 && inoutSnapshot._listSkinPalette.empty() )
             return;
         SW_PROFILE_SCOPE( "GT.GPUScene.build.skinPalettes" );

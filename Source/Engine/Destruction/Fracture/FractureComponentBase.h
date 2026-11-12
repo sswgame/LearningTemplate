@@ -256,12 +256,12 @@ namespace sw
     private:
         /** @brief 데이터, 테이블, 앵커로 상태를 시작합니다. */
         [[nodiscard]] bool initializeState( ScenePhysics& physics );
-        /** @brief 앵커 잎을 정합니다(모드와 볼륨). */
-        void computeAnchors( ScenePhysics& physics, vector<uint8>& outListAnchor ) const;
+        /** @brief 앵커 잎을 오브젝트 자세(@p position · @p rotation · @p scale)로 정합니다(모드와 볼륨). */
+        void computeAnchors( const float3& position, const quaternion& rotation, float32 scale, vector<uint8>& outListAnchor ) const;
         /** @brief 쌓인 사건을 적용하고, 바뀐 그룹의 바디와 렌더링을 고칩니다. */
         void processPendingEvents( ScenePhysics& physics );
-        /** @brief 오브젝트의 지금 자세(월드)를 읽습니다. */
-        void readObjectPose( float3& outPosition, quaternion& outRotation, float32& outScale ) const;
+        /** @brief 오브젝트의 지금 자세(월드)를 읽습니다. 크기는 축 배율 절댓값의 평균입니다. 배율 축이 0 이면 false 입니다(`PhysicsComponent::readWorldPose`). */
+        [[nodiscard]] bool readObjectPose( float3& outPosition, quaternion& outRotation, float32& outScale ) const;
         /**
          * @brief 잎마다 충돌 셰이프(볼록 껍질)의 점을 @p scale 로 만들고 셰이프는 비웁니다. 같은 배율로 이미 만들었으면 아무것도 하지 않습니다.
          * @details 껍질 셰이프 생성이 깨지는 프레임 비용의 대부분이고(200 조각 벽 약 11 ms) 상태를 시작할 때 모두 지으면 플레이 첫 프레임이

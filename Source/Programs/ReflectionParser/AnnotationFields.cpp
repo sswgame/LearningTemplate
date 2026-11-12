@@ -121,6 +121,30 @@ namespace sw
                 }
             }
 
+            /** @brief 쉼표 · 세미콜론으로 나눈 이름들을 @p outList 에 붙입니다. */
+            static void appendNameList( vector<string>& outList, const string_view value )
+            {
+                const string_splitter parts( value, { ",", ";" } );
+                for ( const string_view token : parts.getSplitList() )
+                {
+                    const string_view trimmed = StringUtil::trim( token );
+                    if ( trimmed.empty() == false )
+                        outList.emplace_back( trimmed );
+                }
+            }
+
+            /** @brief 지운 필드 이름입니다. `RemovedField = "_oldA, _oldB"`. */
+            static void appendRemovedField( ParsedTypeInfo& target, const string_view value )
+            {
+                appendNameList( target._listRemovedField, value );
+            }
+
+            /** @brief 지운 타입 이름입니다. `RemovedType = "sw::OldThing"`. */
+            static void appendRemovedType( ParsedTypeInfo& target, const string_view value )
+            {
+                appendNameList( target._listRemovedType, value );
+            }
+
             /** @brief `Key=Value, Key2` 를 커스텀 메타 쌍으로 붙입니다. 값이 없는 키는 "1" 입니다. */
             template <typename TParsed>
             static void appendCustomMeta( TParsed& target, const string_view value )

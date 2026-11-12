@@ -49,8 +49,12 @@ namespace sw
 
     public:
         // 물리 컴포넌트가 함께 쓰는 자세 · 셰이프 도우미입니다.
-        /** @brief 월드 행렬을 자리 · 회전 · 배율로 풉니다. */
-        static void readWorldPose( const SceneComponent& component, float3& outPosition, quaternion& outRotation, float3& outScale );
+        /**
+         * @brief 월드 행렬을 자리 · 회전 · 배율로 풉니다. 배율 축이 하나라도 0 이면 회전을 알 수 없어 오류를 남기고(오브젝트마다 한 번) false 이며 출력은 건드리지 않습니다.
+         * @details 0 배율을 1 로 바꿔 이어 가지 않는다(폴백 금지 — 그림은 점인데 물리는 원래 크기로 남는다). 크기 0 셰이프는 백엔드(Jolt · Box2D · PhysX)도 짓지 못한다.
+         *          부르는 쪽은 그 일(바디 · 관절 만들기, 자세 쓰기, 그리기)을 이번에 건너뛰고, 시뮬레이션 중인 바디는 놓는다 — 배율이 돌아오면 다시 만든다.
+         */
+        [[nodiscard]] static bool readWorldPose( const SceneComponent& component, float3& outPosition, quaternion& outRotation, float3& outScale );
         /**
          * @brief 자리 · 회전 · 배율을 월드 트랜스폼으로 씁니다. 부모가 없으면 행렬을 만들어 다시 풀지 않고 로컬 값에 바로 씁니다.
          * @details 배율은 부르는 쪽이 들고 있는 값이다(트랜스폼 변경 번호가 같으면 지난번에 읽은 배율 그대로). 쓴 값을 다시 읽어 비교하지 않는다 —

@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Editor/Common/Commands/Asset/EditorContentWrite.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -32,6 +33,8 @@ namespace sw::editor
 
     bool EditorGlobalVariableCommands::savePreset( const string& filePath, const string& presetName )
     {
+        if ( EditorContentWrite::refuseReadOnly( filePath, EditorContentWriteKind::Save ) ) // 프리셋 단추 · 패널 저장이 모두 지나는 쓰기 입구다
+            return false;
         GlobalVariableManager& gvm = editor::getSubsystem<GlobalVariableManager>();
 
         XMLDocument doc;

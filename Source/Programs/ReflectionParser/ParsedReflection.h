@@ -402,8 +402,10 @@ namespace sw
         string                       _displayName;
         string                       _tooltip;
         vector<string>               _listAlias;
-        string                       _validate; ///< `REFLECT( Validate = fn )` — 같은 타입의 `void fn( ValidationContext& )`
-        string                       _tickMode; ///< `REFLECT( TickMode = Batch|Task|Main )` 의 글. 비면 Batch(`DeclarationValidator::validateTickMode` 가 철자를 본다)
+        vector<string>               _listRemovedField; ///< `REFLECT( RemovedField = "_oldA, _oldB" )` — 지운 필드 이름(세이브의 해시 공간에 남는다)
+        vector<string>               _listRemovedType;  ///< `REFLECT( RemovedType = "sw::OldThing" )` — 지운 타입 이름(바이너리 태그의 타입 해시 공간에 남는다)
+        string                       _validate;         ///< `REFLECT( Validate = fn )` — 같은 타입의 `void fn( ValidationContext& )`
+        string                       _tickMode;         ///< `REFLECT( TickMode = Batch|Task|Main )` 의 글. 비면 Batch(`DeclarationValidator::validateTickMode` 가 철자를 본다)
         vector<pair<string, string>> _listCustomMeta;
         vector<ParsedPropertyInfo>   _listProperty;
         vector<ParsedFunctionInfo>   _listMethod;
@@ -434,6 +436,8 @@ namespace sw
             , _displayName{}
             , _tooltip{}
             , _listAlias{}
+            , _listRemovedField{}
+            , _listRemovedType{}
             , _validate{}
             , _tickMode{}
             , _listCustomMeta{}

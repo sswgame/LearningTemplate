@@ -193,6 +193,21 @@ namespace sw
             }
         }
 
+        /**
+         * @brief 바디 @p body 의 셰이프를 갈았습니다(`setBodyShape`) — 그 바디가 낀 쌍의 셰이프 쌍 수를 0 으로 돌리고 쌍은 남깁니다.
+         * @details 새 셰이프가 다음 step 에 다시 닿으면 쌍은 이어지고(끝 · 시작 없음), 닿지 않으면 그 `finishStep` 에서 끝난다. 백엔드는 옛 셰이프의 끝 알림을
+         *          버려야 한다(Box2D 는 셰이프 → 바디 표에서 먼저 뺀다). 셰이프 쌍 수를 백엔드가 스스로 맞추는 Jolt(바디 id 가 그대로라 옛 쌍의 제거와 새 쌍의
+         *          추가가 짝을 이룬다)는 부르지 않는다.
+         */
+        void resetSubContacts( PhysicsBodyHandle body )
+        {
+            for ( auto& [key, state] : _mapPair )
+            {
+                if ( state._first._body == body || state._second._body == body )
+                    state._subContactCount = 0;
+            }
+        }
+
         /** @brief 이번 step 의 이벤트를 @p outListEvent 끝에 붙입니다. 끝난 쌍은 잊습니다. */
         void finishStep( vector<Event>& outListEvent )
         {

@@ -9,6 +9,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
+#include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -1187,6 +1188,9 @@ namespace sw
                 break;
             purgedCount += purged == LoginResult::Ok ? 1 : 0;
         }
+        // 지운 계정의 잔액을 소각한다. 이번 회차에 지운 계정과 지난 회차에 다 태우지 못한 계정을 함께 본다
+        int32 burnedCount = 0;
+        (void)Ledger::burnDeletedAccounts( _connection, nowMs, maxCount, burnedCount ); // 저장소 문제면 소각 대기에 남아 다음 회차에 다시 본다
         return purgedCount;
     }
 
@@ -1235,6 +1239,8 @@ namespace sw
             transaction.erase( Internal::getAccountSessionTable(), accountKey );
             transaction.erase( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( ServiceKeyUtil::decodeVarID( linkRaw._bytes ) ) );
         }
+        // 원장 묘비와 소각 대기를 계정 지우기와 한 트랜잭션에 넣는다 — 탈퇴가 그사이 취소돼 이 커밋이 지면 잔액도 그대로다(Nakama DeleteAccount 의 지갑 · user_tombstone)
+        Ledger::stageAccountDeletion( accountID, nowMs, transaction );
         ServiceAuditEntry audit = Internal::makeAuditEntry( accountID, "account.delete", nowMs );
         audit._actor            = ServiceAuditLog::kSystemActor;
         ServiceAuditLog::stageEntry( transaction, audit, accountID, static_cast<uint64>( profile._deletionDueMs ) );

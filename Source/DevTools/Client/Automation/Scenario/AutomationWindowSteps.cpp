@@ -1,6 +1,6 @@
 /**
  * @file AutomationWindowSteps.cpp
- * @brief 자동화 시나리오의 창 단계를 구현합니다. 자기 창에 OS 창 메시지를 보내고(`PostWindowMessage`), OS 커서 클립(`ExpectCursorClip`)을 확인하고,
+ * @brief 자동화 시나리오의 창 단계를 구현합니다. 자기 창에 OS 창 메시지를 보내고(`PostWindowMessage`), OS 입력 큐에 마우스 이동을 넣고(`SendInput`), OS 커서 클립(`ExpectCursorClip`)을 확인하고,
  *        화면에 합성된 창 내용을 PNG 로 찍습니다(`CaptureWindow`). 전경은 단계가 아니라 시나리오 루트 속성(`requireForeground`)이고 실행기가 이 파일의
  *        `AutomationWindowUtil::bringToForeground` 로 가져온다.
  * @details 사람의 마우스나 포그라운드와 무관하게 같은 창 처리기를 탄다(바깥 스크립트의 `SendInput` 은 포그라운드 창에만 간다). 포커스 메시지(`KillFocus` · `SetFocus`)는
@@ -12,6 +12,7 @@
 
 #include "DevTools/Client/Automation/Scenario/AutomationWindowSteps.h"
 
+#include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -45,6 +46,17 @@ namespace sw
                 if ( StringUtil::endsWith( params._file, ".png", true ) )
                     return {};
                 return unexpected( Error{ ErrorKind::InvalidArgument, "file must end with .png", params._file } );
+            }
+
+            static expected<void> validateSendInput( const AutomationStep& step )
+            {
+                AutomationSendInputParams params;
+                const expected<void>      read = step.readProperties( params );
+                if ( read.has_value() == false )
+                    return read;
+                if ( params._dx != 0 || params._dy != 0 )
+                    return {};
+                return unexpected( Error{ ErrorKind::InvalidArgument, "dx or dy must be non-zero (a zero move sends no raw report)" } );
             }
 
             static expected<void> validateAppSuspend( const AutomationStep& step )
@@ -147,6 +159,38 @@ namespace sw
                     case AutomationWindowMessage::Close:
                         PostMessageW( hwnd, WM_CLOSE, 0, 0 );
                         break;
+                }
+                return true;
+            }
+
+            /**
+             * @brief OS 입력 큐에 상대 마우스 이동을 넣습니다(`SendInput` + `MOUSEEVENTF_MOVE`). 실제 마우스처럼 원시 입력(WM_INPUT)과 커서 이동이 함께 난다.
+             * @details `SendInput` 은 전경 창의 입력 큐로만 간다 — 이 창이 전경이 아니거나, 더 높은 무결성 창 · 잠긴 화면(UIPI)이 넣기를 막으면 볼 수 없는 것이라 건너뜀(13)이다.
+             */
+            static bool runSendInput( AutomationStepContext& runner, const AutomationStep& step )
+            {
+                const AutomationSendInputParams params = step.readValidatedProperties<AutomationSendInputParams>();
+                const HWND                      hwnd   = findWindowHandle();
+                if ( hwnd == nullptr || GetForegroundWindow() != hwnd )
+                {
+                    runner.endScenario( AutomationStepEnd::Skip, step.describe() + ": SendInput reaches only the foreground window and this window is not it" );
+                    return true;
+                }
+                vector<INPUT> listInput( params._count );
+                for ( INPUT& input : listInput )
+                {
+                    input.type       = INPUT_MOUSE;
+                    input.mi.dx      = static_cast<LONG>( params._dx );
+                    input.mi.dy      = static_cast<LONG>( params._dy );
+                    input.mi.dwFlags = MOUSEEVENTF_MOVE;
+                }
+                const UINT sentCount = SendInput( static_cast<UINT>( listInput.size() ), listInput.data(), sizeof( INPUT ) );
+                if ( sentCount != listInput.size() )
+                {
+                    StringBuilder<constant::buffer::kMax256> reason;
+                    reason.appendFormat( "%#: SendInput inserted %# of %# events (error %#) - the input is blocked here (UIPI or a locked desktop)", step.describe().c_str(),
+                                         static_cast<uint32>( sentCount ), static_cast<uint32>( listInput.size() ), static_cast<uint32>( GetLastError() ) );
+                    runner.endScenario( AutomationStepEnd::Skip, reason.view() );
                 }
                 return true;
             }
@@ -340,6 +384,7 @@ namespace sw
                     return runFocusMessage( runner, step, message == AutomationWindowMessage::SetFocus );
                 return runUnsupported( runner, step );
             }
+            static bool runSendInput( AutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
             static bool runClip( AutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
             static bool runCapture( AutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
 #else
@@ -362,6 +407,7 @@ namespace sw
 
     SW_AUTOMATION_STEP( windowAppSuspend, "SimulateAppSuspend", &AutomationWindowStepsInternal::runAppSuspend, &AutomationWindowStepsInternal::validateAppSuspend, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( windowMessage, "PostWindowMessage", &AutomationWindowStepsInternal::runMessage, &AutomationStep::validateProperties<AutomationWindowMessageParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( windowSendInput, "SendInput", &AutomationWindowStepsInternal::runSendInput, &AutomationWindowStepsInternal::validateSendInput, AutomationStepOptions{}.withDesktop() );
     SW_AUTOMATION_STEP( windowCursorClip, "ExpectCursorClip", &AutomationWindowStepsInternal::runClip, &AutomationStep::validateProperties<AutomationCursorClipParams>, AutomationStepOptions{}.withDesktop() );
     SW_AUTOMATION_STEP( windowCapture, "CaptureWindow", &AutomationWindowStepsInternal::runCapture, &AutomationWindowStepsInternal::validateCapture, AutomationStepOptions{}.withDesktop() );
 } // namespace sw

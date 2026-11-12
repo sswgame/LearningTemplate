@@ -1,6 +1,6 @@
 /**
  * @file Ledger.h
- * @brief 원장을 정의합니다. 테이블 넷(`ledger_balance`, `ledger_journal`, `ledger_history`, `ledger_carry`) 위의 복식 이동입니다.
+ * @brief 원장을 정의합니다. 테이블 여섯(`ledger_balance`, `ledger_journal`, `ledger_history`, `ledger_carry`, `ledger_tombstone`, `ledger_deletion_queue`) 위의 복식 이동입니다.
  * @details 모두 저장소 스레드(`IServiceStoreJob::run`)에서 도는 동기 함수이다.
  *          PlayFab Economy v2 의 거래 기록이나 Nakama 의 wallet_ledger(단식)와 달리 복식이며 분개 키로 멱등하다. 회계의 차변과 대변이 같다.
  *
@@ -10,6 +10,10 @@
  *          - 이월: 보존 쓸기가 분개를 지울 때 그 분개의 발행 · 소각 합을 자산별 이월 레코드(키 `<자산>`)에 같은 트랜잭션으로 더한다.
  *            분개는 감사 내역이라 지워지지만 공급 합은 남는다. 멱등 기록이 필요한 쪽(영수증 지급)은 분개가 아니라 자기 표에 지우지 않는 레코드를 둔다.
  *            PlayFab 이 영수증 거래 id 를 거래 내역과 따로 타이틀 수명 동안 두는 자리다. 분개 쓸기 규칙은 `makeJournalRetentionRule` 하나로만 만든다.
+ *          - 계정 삭제: 탈퇴 정리가 계정을 지우는 트랜잭션에 묘비(`ledger_tombstone`, 키 `acct/<16 진>`)와 소각 대기(`ledger_deletion_queue`)를 함께 넣는다(`stageAccountDeletion`).
+ *            묘비가 선 계정은 어떤 이동에도 들 수 없고(`AccountDeleted` — 묘비가 없어야 함을 커밋 조건으로 건다), 남은 잔액은 `burnDeletedAccounts` 가 소각 분개(사유
+ *            `account.delete`)로 Sink 에 보내고 빚은 Mint 에서 메워 0 으로 만든다. 잔액 레코드는 사라지고 공급 합은 분개 · 이월에 남아 감사 균형이 맞는다.
+ *            Nakama 의 DeleteAccount 가 남기는 user_tombstone, 회계의 잔액 소각 · 대손 상각과 같은 자리다. 묘비는 지우지 않는다(지우면 늦게 온 이동이 유령 잔액을 만든다).
  *          - 불변식: 자산마다 계정 잔액과 맡김 잔액의 합은 이월과 남은 분개의 발행 합에서 소각 합을 뺀 값과 같다.
  *            맡김 잔액은 0 이상이고, 계정 잔액은 빚(환불 회수)일 때만 음수이다(`LedgerAuditReport`).
  *          - 잔액은 버전 조건으로 쓴다. 읽은 뒤 다른 이동이 끼면 커밋이 `Conflict` 이고, `executeTransfer` 가 다시 읽어 다시 한다.
@@ -44,7 +48,21 @@ namespace sw
         static const hashed_string& getBalanceTable();
         static const hashed_string& getJournalTable();
         static const hashed_string& getHistoryTable();
-        static const hashed_string& getCarryTable(); ///< "ledger_carry" — 키 `<자산>`, 값 `[판][발행 합][소각 합]`. 지운 분개의 공급 합이며 지우지 않는다
+        static const hashed_string& getCarryTable();         ///< "ledger_carry" — 키 `<자산>`, 값 `[판][발행 합][소각 합]`. 지운 분개의 공급 합이며 지우지 않는다
+        static const hashed_string& getTombstoneTable();     ///< "ledger_tombstone" — 키 `acct/<16 진>`, 값 `[판][삭제 시각]`. 지운 계정이며 지우지 않는다
+        static const hashed_string& getDeletionQueueTable(); ///< "ledger_deletion_queue" — 키 `acct/<16 진>`, 값 없음. 잔액을 아직 다 소각하지 않은 지운 계정
+        /**
+         * @brief 계정 @p accountID 를 지우는 쓰기(묘비와 소각 대기)를 @p inoutTransaction 에 붙입니다. 탈퇴 정리가 계정 레코드를 지우는 트랜잭션에 넣습니다.
+         * @details 함께 커밋되므로 탈퇴가 취소돼 계정 커밋이 지면 묘비도 서지 않는다. 잔액은 커밋 뒤 `burnDeletedAccounts` 가 소각한다.
+         */
+        static void stageAccountDeletion( uint64 accountID, int64 timeMs, ServiceTransaction& inoutTransaction );
+        /**
+         * @brief 소각 대기의 계정을 @p maxCount 개까지 골라 남은 잔액을 모두 소각합니다. 다 소각한 계정은 대기에서 뺍니다.
+         * @details 분개 하나에 자산 `kMaxPostingCount` 개씩, 분개 키는 `acct.<16 진>/delete.<첫 자산>` 이다. 인스턴스 아이템은 상태 레코드(`item_state`)도 지운다.
+         *          커밋이 지면 다음 회차가 다시 읽어 남은 것만 소각하므로 두 번 소각하지 않는다.
+         * @return 저장소에 문제가 생기면 그 결과로 멈춥니다. 다 소각한 계정 수는 @p outBurnedCount 입니다.
+         */
+        [[nodiscard]] static ServiceStoreResult burnDeletedAccounts( IServiceStoreConnection& connection, int64 timeMs, int32 maxCount, int32& outBurnedCount );
         /**
          * @brief 분개 표의 보존 쓸기 규칙을 만듭니다. 지우는 분개의 발행 · 소각 합을 이월 레코드에 같은 트랜잭션으로 더합니다.
          * @details 분개를 끝까지 읽지 못하면 시각도 읽지 않은 것으로 보고 지우지 않는다 — 이월에 넣지 못하는 분개를 지우면 감사 균형이 깨진다.
@@ -63,7 +81,8 @@ namespace sw
         /**
          * @brief 이동을 @p inoutTransaction 에 붙입니다. 커밋은 하지 않으며, 자기 레코드와 한 트랜잭션에 넣는 쪽(거래, 우편 수령, 구매 한도)이 씁니다.
          * @details 분개 키가 이미 있으면 붙이지 않고 `Ok` 와 `_bReplayed` 를 반환한다. 내용이 다르면 `JournalKeyReused` 이다. 실패하면 아무것도 붙이지 않는다.
-         *          붙이는 쓰기 수는 바뀐 잔액 수에 분개 1 과 계정, 맡김 보유자 수를 더한 값이다.
+         *          붙이는 쓰기 수는 바뀐 잔액 수에 분개 1 과 계정, 맡김 보유자 수(내역)와 계정 보유자 수(묘비가 없어야 한다는 조건)를 더한 값이다.
+         *          다리의 계정에 묘비가 서 있으면(탈퇴로 지움) `AccountDeleted` 이다.
          *          부르는 쪽 쓰기와 합쳐 `ServiceTransaction::kMaxWriteCount` 를 넘으면 `Invalid` 이다.
          *          커밋이 `Conflict` 나 `Unavailable` 이면 `resolveConflict` 로 가린다.
          */

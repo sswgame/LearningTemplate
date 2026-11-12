@@ -11,8 +11,12 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/Ray.h"
 
+#include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Animation/Scene/AnimationCrowd.h"
+#include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
+#include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -110,12 +114,79 @@ namespace sw::editor
             }
 
             /**
-             * @brief 메시 하나를 메시 공간에서 판정합니다: 메시 상자(월드에서는 회전한 OBB) → CPU 삼각형. 맞으면 월드 거리를 씁니다.
-             * @details 레이를 월드 역행렬로 옮겨 판정하고 로컬 거리를 로컬 걸음 길이로 나눠 월드 거리로 돌린다(비균등 스케일도 맞다).
-             *          GPU 가 정점을 바꾸는 메시(스킨 · VAT)는 CPU 사본이 레스트 자세라 상자가 답이다 — shortcut: 움직이는 자세는 상자까지만,
-             *          id 버퍼 피킹(언리얼 히트 프록시 · 유니티 `HandleUtility.PickGameObject` 의 GPU 패스)이 들어오면 픽셀 정확해진다.
+             * @brief 화면에 그려진 자세의 메시 공간 정점 위치를 채웁니다 — GPU 가 그리는 것과 같은 식이다.
+             * @details 정점 애니메이션(VAT)이 걸린 메시는 군중 시계 + 인스턴스 시각 오프셋의 프레임(`MeshVertexAnimation::samplePosition`, 셰이더와 같은 보간),
+             *          스킨 유닛은 모프 가중치([0, 1] 로 묶는다)를 레스트에 더한 뒤 스킨 팔레트로 스키닝한다(`Mesh::skinVertex` — 듀얼 쿼터니언 방식은 선형 근사).
+             *          둘 다 아니면 레스트 정점 그대로다. 언리얼 스켈레탈 메시의 라인 트레이스(스키닝된 정점)와 같은 자리다.
+             * @return VAT 표의 정점 수가 메시와 다르면(쿠킹 결함) 오류를 남기고 false 입니다.
              */
-            static bool hitTestMeshTriangles( const MeshComponent& mesh, const Ray& ray, float32 maxDistance, float32& outDistance )
+            static bool collectPosedPositions( const MeshComponent& component, const Mesh& mesh, float64 vertexAnimationClock, vector<float3>& outListPosition )
+            {
+                const vector<RHIVertex>& listRest = mesh.getVertices();
+                outListPosition.resize( listRest.size() );
+                const MeshVertexAnimation* pAnimation = mesh.findVertexAnimation();
+                if ( pAnimation != nullptr && pAnimation->isEmpty() == false )
+                {
+                    if ( pAnimation->_vertexCount != static_cast<uint32>( listRest.size() ) )
+                    {
+                        SW_LOG_ERROR_ID( "EditorViewportRayPick.VertexAnimationMismatch", "Vertex animation has %# vertices but the mesh has %# - not picked", pAnimation->_vertexCount,
+                                         listRest.size() );
+                        return false;
+                    }
+                    const float32 time = static_cast<float32>( vertexAnimationClock ) + component.getVertexAnimationPhase(); // 스냅샷 `_vertexAnimationTime` 과 같은 시계
+                    for ( uint32 vertex = 0; vertex < pAnimation->_vertexCount; ++vertex )
+                    {
+                        outListPosition[vertex] = pAnimation->samplePosition( time, vertex );
+                    }
+                    return true;
+                }
+                const SkeletalMeshComponent* pUnit = castTo<SkeletalMeshComponent>( &component );
+                if ( pUnit == nullptr || mesh.hasSkin() == false )
+                {
+                    for ( size_t vertex = 0; vertex < listRest.size(); ++vertex )
+                    {
+                        const float32* pPosition = listRest[vertex]._arrPosition;
+                        outListPosition[vertex]  = float3{ pPosition[0], pPosition[1], pPosition[2] };
+                    }
+                    return true;
+                }
+                vector<RHIVertex>              listPosed       = listRest;
+                const vector<float32>&         listWeight      = pUnit->getMorphWeights();
+                const vector<MeshMorphTarget>& listMorphTarget = mesh.getMorphTargets();
+                const size_t                   morphCount      = MathUtil::min( listWeight.size(), listMorphTarget.size() );
+                for ( size_t target = 0; target < morphCount; ++target )
+                {
+                    const float32 weight = MathUtil::saturate( listWeight[target] );
+                    if ( weight <= 0.0f )
+                        continue;
+                    for ( const MeshMorphDelta& delta : listMorphTarget[target]._listDelta )
+                    {
+                        if ( delta._vertexIndex >= listPosed.size() )
+                            continue;
+                        float32* pPosition = listPosed[delta._vertexIndex]._arrPosition;
+                        pPosition[0] += delta._position._x * weight;
+                        pPosition[1] += delta._position._y * weight;
+                        pPosition[2] += delta._position._z * weight;
+                    }
+                }
+                const vector<float4x4>&       listPalette = pUnit->getSkinPalette();
+                const vector<MeshSkinVertex>& listSkin    = mesh.getSkinVertices();
+                for ( size_t vertex = 0; vertex < listPosed.size(); ++vertex )
+                {
+                    if ( listPalette.empty() == false )
+                        Mesh::skinVertex( listPalette, listSkin[vertex], listPosed[vertex] );
+                    const float32* pPosition = listPosed[vertex]._arrPosition;
+                    outListPosition[vertex]  = float3{ pPosition[0], pPosition[1], pPosition[2] };
+                }
+                return true;
+            }
+
+            /**
+             * @brief 메시 하나를 메시 공간에서 판정합니다: 메시 상자(월드에서는 회전한 OBB) → 화면과 같은 자세의 삼각형. 맞으면 월드 거리를 씁니다.
+             * @details 레이를 월드 역행렬로 옮겨 판정하고 로컬 거리를 로컬 걸음 길이로 나눠 월드 거리로 돌린다(비균등 스케일도 맞다).
+             *          상자는 자세를 담는 것이다 — 정적 메시는 메시 경계, VAT 는 모든 프레임의 경계(`MeshVertexAnimation::_boundsCenter`)이고, 스킨 유닛은 레스트 상자가 자세를 담지 못해 상자 단계를 건너뛴다.
+             */
+            static bool hitTestMeshTriangles( const MeshComponent& mesh, const Ray& ray, float32 maxDistance, float64 vertexAnimationClock, float32& outDistance )
             {
                 const float4x4 inverseWorld = mesh.getWorldMatrix().invert();
                 const float3   localStep    = float3::transformVector( ray._direction, inverseWorld ); // 월드 1 m 가 메시 공간에서 이만큼이다
@@ -127,36 +198,45 @@ namespace sw::editor
                 localRay._direction    = localStep * ( 1.0f / stepLength );
                 const float32 localMax = maxDistance * stepLength;
 
-                // 상자는 `MeshComponent::getWorldBox` 와 같은 것이다(메시가 없으면 단위 상자).
-                const Mesh*  pMesh     = mesh.getMesh().get();
-                const bool   bHasMesh  = pMesh != nullptr && pMesh->getVertexCount() > 0;
-                const float3 boxMin    = bHasMesh ? pMesh->getLocalBoundsMin() : float3{ -kUnitBoxHalf, -kUnitBoxHalf, -kUnitBoxHalf };
-                const float3 boxMax    = bHasMesh ? pMesh->getLocalBoundsMax() : float3{ kUnitBoxHalf, kUnitBoxHalf, kUnitBoxHalf };
-                float32      boxLocalT = 0.0f;
-                if ( Ray::intersectAABB( localRay, boxMin, boxMax, localMax, boxLocalT ) == false )
-                    return false;
-
-                const bool bTrianglesMatchScreen = bHasMesh && pMesh->getIndexCount() > 0 && pMesh->hasSkin() == false && pMesh->findVertexAnimation() == nullptr;
-                if ( bTrianglesMatchScreen == false )
+                const Mesh* pMesh    = mesh.getMesh().get();
+                const bool  bHasMesh = pMesh != nullptr && pMesh->getVertexCount() > 0 && pMesh->getIndexCount() > 0;
+                if ( bHasMesh == false )
                 {
+                    // 메시를 읽는 중이면 그리는 것이 없다 — 상자는 `MeshComponent::getWorldBox` 의 단위 상자다(선택 · 프레이밍이 같은 크기를 본다).
+                    float32      boxLocalT = 0.0f;
+                    const float3 unitMin{ -kUnitBoxHalf, -kUnitBoxHalf, -kUnitBoxHalf };
+                    const float3 unitMax{ kUnitBoxHalf, kUnitBoxHalf, kUnitBoxHalf };
+                    if ( Ray::intersectAABB( localRay, unitMin, unitMax, localMax, boxLocalT ) == false )
+                        return false;
                     outDistance = boxLocalT / stepLength;
                     return true;
                 }
+                const MeshVertexAnimation*   pAnimation = pMesh->findVertexAnimation();
+                const bool                   bAnimated  = pAnimation != nullptr && pAnimation->isEmpty() == false;
+                const SkeletalMeshComponent* pUnit      = castTo<SkeletalMeshComponent>( &mesh );
+                const bool                   bSkinned   = bAnimated == false && pUnit != nullptr && pMesh->hasSkin();
+                if ( bSkinned == false )
+                {
+                    const float3 boxMin    = bAnimated ? pAnimation->_boundsCenter - pAnimation->_boundsHalfExtent : pMesh->getLocalBoundsMin();
+                    const float3 boxMax    = bAnimated ? pAnimation->_boundsCenter + pAnimation->_boundsHalfExtent : pMesh->getLocalBoundsMax();
+                    float32      boxLocalT = 0.0f;
+                    if ( Ray::intersectAABB( localRay, boxMin, boxMax, localMax, boxLocalT ) == false )
+                        return false;
+                }
 
-                const vector<RHIVertex>& listVertex = pMesh->getVertices();
-                const vector<uint32>&    listIndex  = pMesh->getIndices();
-                const uint32             indexCount = static_cast<uint32>( listIndex.size() );
-                float32                  bestLocal  = localMax;
-                bool                     bHit       = false;
+                vector<float3> listPosition;
+                if ( collectPosedPositions( mesh, *pMesh, vertexAnimationClock, listPosition ) == false )
+                    return false;
+                const vector<uint32>& listIndex  = pMesh->getIndices();
+                const uint32          indexCount = static_cast<uint32>( listIndex.size() );
+                float32               bestLocal  = localMax;
+                bool                  bHit       = false;
                 for ( uint32 index = 0; index + 2 < indexCount; index += 3 )
                 {
-                    const float32* pA = listVertex[listIndex[index]]._arrPosition;
-                    const float32* pB = listVertex[listIndex[index + 1]]._arrPosition;
-                    const float32* pC = listVertex[listIndex[index + 2]]._arrPosition;
-                    float32        t  = 0.0f;
-                    if ( Ray::intersectTriangle( localRay, float3{ pA[0], pA[1], pA[2] }, float3{ pB[0], pB[1], pB[2] }, float3{ pC[0], pC[1], pC[2] }, bestLocal, t ) )
+                    RayTriangleHit hit{};
+                    if ( Ray::intersectTriangle( localRay, listPosition[listIndex[index]], listPosition[listIndex[index + 1]], listPosition[listIndex[index + 2]], bestLocal, hit ) )
                     {
-                        bestLocal = t;
+                        bestLocal = hit._distance;
                         bHit      = true;
                     }
                 }
@@ -172,7 +252,7 @@ namespace sw::editor
              *          큰 구가 안쪽의 작은 물체를 가린다(감사 E-10). Godot 4 의 에디터 피킹도 AABB 뒤에 메시 삼각형 레이다.
              */
             static bool hitTestDeclared( const SceneComponent& scene, const PickOrderRow* pRow, const float3& center, float32 radius, const Ray& ray, float32 maxDistance,
-                                         float32& outDistance )
+                                         float64 vertexAnimationClock, float32& outDistance )
             {
                 const float32 padding = ( pRow != nullptr ) ? pRow->_pickPadding : 0.0f;
                 float32       sphereT = 0.0f;
@@ -184,7 +264,7 @@ namespace sw::editor
                 {
                     const MeshComponent* pMesh = castTo<MeshComponent>( &scene );
                     SW_ASSERT( pMesh != nullptr ); // 삼각형 줄은 메시 종류에만 둔다
-                    return pMesh != nullptr && hitTestMeshTriangles( *pMesh, ray, maxDistance, outDistance );
+                    return pMesh != nullptr && hitTestMeshTriangles( *pMesh, ray, maxDistance, vertexAnimationClock, outDistance );
                 }
 
                 AABB       box{};
@@ -202,7 +282,7 @@ namespace sw::editor
              *          기본 반지름은 경계가 없는 컴포넌트(빈 트랜스폼 · 빛 · 게임이 만든 컴포넌트)를 집게 하는 곳이다. 경계를 선언한 컴포넌트에는 쓰지 않는다 —
              *          쓰면 기둥 피벗 둘레의 빈 곳을 눌러도 기둥이 집힌다.
              */
-            static void hitTestObject( GameObject* pObj, const Ray& ray, bool b2DMode, EditorPickResult& ioBest )
+            static void hitTestObject( GameObject* pObj, const Ray& ray, bool b2DMode, float64 vertexAnimationClock, EditorPickResult& ioBest )
             {
                 if ( pObj == nullptr || pObj->isActive() == false )
                     return;
@@ -236,7 +316,7 @@ namespace sw::editor
                         continue;
                     const PickOrderRow* pRow  = findOrderRow( pScene );
                     const uint32        order = ( pRow != nullptr ) ? ( b2DMode ? pRow->_order2D : pRow->_order3D ) : kOrderRowCount;
-                    if ( hitTestDeclared( *pScene, pRow, center, radius, ray, bestDistance, hitT ) == false )
+                    if ( hitTestDeclared( *pScene, pRow, center, radius, ray, bestDistance, vertexAnimationClock, hitT ) == false )
                         continue;
                     const bool bWins = hitT < bestDistance || ( pBestComp != nullptr && hitT == bestDistance && order < bestOrder );
                     if ( bWins )
@@ -272,7 +352,8 @@ namespace sw::editor
             return false;
 
         EditorPickResult best{};
-        best._distance = MathUtil::kMaxFloat;
+        best._distance                     = MathUtil::kMaxFloat;
+        const float64 vertexAnimationClock = pManager->getSubsystem<AnimationSystem>().getCrowd().getClock(); // VAT 가 그리는 프레임의 시계(`GPUSkinPaletteCollector::collect`)
 
         pManager->forEachGameObject( [&]( GameObject* pObj )
         {
@@ -281,7 +362,7 @@ namespace sw::editor
             const CameraComponent* pCamera = pObj != nullptr ? pObj->getComponent<CameraComponent>() : nullptr;
             if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport )
                 return;
-            EditorViewportRayPickInternal::hitTestObject( pObj, ray, b2DMode, best );
+            EditorViewportRayPickInternal::hitTestObject( pObj, ray, b2DMode, vertexAnimationClock, best );
         } );
 
         if ( best._pObject == nullptr )

@@ -277,7 +277,11 @@ namespace sw
         float32 _withinSeconds{ AutomationTimeLimits::kDefaultExitWithinSeconds };
     };
 
-    /** @brief `ExpectExitWithin` 의 인자입니다. */
+    /**
+     * @brief `ExpectExitWithin` 의 인자입니다.
+     * @details `exitCode` 는 엔진이 스스로 끝낼 때 요청한 종료 코드(`QuitRequest`, `Config/Engine/ProcessExitCodes.json` 의 수)다 — 장치 분실 정책이 `DeviceLost`(18)로
+     *          끝내는지 같은, "정해진 코드로 끝난다" 를 시나리오가 판정한다. 맞으면 시나리오는 통과(0)로 끝난다. 창 닫기로 끝나는 보통의 경우는 0 이다.
+     */
     REFLECT()
     struct SW_API AutomationExpectExitWithinParams
     {
@@ -285,6 +289,8 @@ namespace sw
 
         PROPERTY( Min = 0 )
         float32 _seconds{ AutomationTimeLimits::kDefaultExitWithinSeconds };
+        PROPERTY( Min = 0, Max = 255 )
+        int32 _exitCode{ 0 };
     };
 
     /** @brief `Fail` · `Skip` 의 인자입니다. */

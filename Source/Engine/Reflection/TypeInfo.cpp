@@ -128,6 +128,7 @@ namespace sw
         , _listProperty{}
         , _listMethod{}
         , _listEvent{}
+        , _listRemovedField{}
         , _metadata{}
         , _listPropertyWithBase{}
         , _mapNameToPropertyWithBase{}
@@ -269,6 +270,7 @@ namespace sw
         _listProperty       = other._listProperty;
         _listMethod         = other._listMethod;
         _listEvent          = other._listEvent;
+        _listRemovedField   = other._listRemovedField;
         _metadata           = other._metadata;
         _typeID             = other._typeID;
         _bAbstract          = other._bAbstract;
@@ -297,6 +299,7 @@ namespace sw
         _listProperty       = std::move( other._listProperty );
         _listMethod         = std::move( other._listMethod );
         _listEvent          = std::move( other._listEvent );
+        _listRemovedField   = std::move( other._listRemovedField );
         _metadata           = std::move( other._metadata );
         _typeID             = other._typeID;
         _bAbstract          = other._bAbstract;

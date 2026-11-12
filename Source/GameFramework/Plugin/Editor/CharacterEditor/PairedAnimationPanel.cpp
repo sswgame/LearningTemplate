@@ -187,7 +187,7 @@ namespace sw::editor
         _listSlot.resize( _model.getContent()._listRole.size() );
         _listFiredNotify.clear();
         _previousScrubTime = 0.0f;
-        resetPreviewEdits();
+        resetDocumentHistory();
         _status = "Loaded";
         _editError.clear();
         return ToolAssetLoadResult::Loaded;

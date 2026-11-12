@@ -33,7 +33,18 @@ namespace sw
         const float32 normalizedTime = lengthA > 0.0f ? time / lengthA : 0.0f;
         const float32 timeB          = normalizedTime * _pInputB->getPlayLength();
         const float32 weight         = MathUtil::saturate( params._pParameter->getFloat( _weightParameter ) );
-        _scratchPose                 = inoutPose;
+        // 무게가 한쪽에 다 있으면 다른 입력은 샘플하지 않는다(언리얼 TwoWayBlend 의 관련 무게 생략과 같다) — 0 인 입력까지 늘 평가하지 않게.
+        if ( weight <= 0.0f )
+        {
+            params._pSampler->samplePose( *_pInputA, time, inoutPose );
+            return true;
+        }
+        if ( weight >= 1.0f )
+        {
+            params._pSampler->samplePose( *_pInputB, timeB, inoutPose );
+            return true;
+        }
+        _scratchPose = inoutPose;
         params._pSampler->samplePose( *_pInputA, time, inoutPose );
         params._pSampler->samplePose( *_pInputB, timeB, _scratchPose );
         Pose::blend( inoutPose, _scratchPose, weight, inoutPose );

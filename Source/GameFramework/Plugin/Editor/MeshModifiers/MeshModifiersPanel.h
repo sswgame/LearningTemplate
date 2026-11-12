@@ -47,7 +47,9 @@ namespace sw::editor
         void             drawContent() override;
         /** @brief 스택을 사이드카 문서에 씁니다(닫기 · 종료 확인의 Save). */
         [[nodiscard]] bool saveDocument() override;
-        bool               canSaveDocument() const override;
+        /** @brief 세션의 사이드카 문서 하나입니다(`MeshModifierSession::findSidecarPath`). */
+        void collectFilesToSave( vector<string>& outListPath ) const override;
+        bool canSaveDocument() const override;
         /** @brief 스택은 패널 밖의 세션(`MeshModifierSession`)에 살아 있어 창을 닫아도 잃지 않는다 — 닫기는 묻지 않고, 종료 확인만 미저장 스택을 묻는다. */
         bool shouldAskBeforeClose() const override { return false; }
 

@@ -2,14 +2,11 @@
 
 #include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 
-#include "Core/Path/AbsolutePath.h"
+#include "Core/Container/vector.h"
 
 #include "Editor/Common/Commands/Asset/EditorContentWrite.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorService.h"
-
-#include "Engine/Content/AssetPaths.h"
 
 #include <imgui.h>
 
@@ -19,12 +16,12 @@ namespace sw::editor
     {
         if ( canSaveDocument() == false )
             return false;
-        const string_view assetID = getDocumentAssetPath();
-        if ( assetID.empty() == false )
+        // 저장이 쓸 파일을 패널이 내놓고 여기서 하나씩 본다 — 문서 하나가 여러 파일을 쓰거나(데이터 테이블) 연 경로가 없는 문서(프로젝트 설정)도 같은 확인을 지난다.
+        vector<string> listPath;
+        collectFilesToSave( listPath );
+        for ( const string& path : listPath )
         {
-            // 쓰기와 같은 해석으로 푼 자리를 본다(R7). 풀지 못하면 저장 자신이 이유를 남기고 진다.
-            const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
-            if ( diskPath.has_value() && EditorContentWrite::refuseReadOnly( diskPath->str(), EditorContentWriteKind::Save ) )
+            if ( EditorContentWrite::refuseReadOnly( path, EditorContentWriteKind::Save ) )
                 return false;
         }
         if ( saveDocument() == false )

@@ -1518,7 +1518,7 @@ static float3 MeshDeform::closestOnTriangle( float3 pos, float3 a, float3 b, flo
     return result;
 }
 
-/** 반직선과 삼각형(양면)의 교차 — `CharacterGeometryUtil::intersectRayTriangle`(Möller-Trumbore, 무게중심 여유 1e-5). 맞으면 true 와 거리 */
+/** 반직선과 삼각형(양면)의 교차 — `Ray::intersectTriangle`(Möller-Trumbore, 무게중심 여유 1e-5). 맞으면 true 와 거리 */
 static bool MeshDeform::intersectRayTriangle( float3 origin, float3 direction, float3 a, float3 b, float3 c, out float outDistance )
 {
     const float  slack       = 1.0e-5f;

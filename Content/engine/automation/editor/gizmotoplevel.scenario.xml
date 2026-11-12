@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 그룹 기즈모는 선택의 최상위 집합만 옮긴다(감사 E-4, 유니티 Selection.GetTransforms( SelectionMode.TopLevel ) · 언리얼과 같다).
+  TestKeyLight 를 TestParent 아래로 옮긴 뒤 자식 → Ctrl+부모 순으로 고르고 씬 뷰 기즈모 가운데(sceneView.gizmoCenter, 화면 평면 이동)를 끈다.
+  부모는 움직이고(Editor.ObjectPositionX 가 달라진다) 자식의 로컬 위치는 그대로다 — 자식은 부모를 따라 한 번만 움직인다. 예전에는 자식이 먼저 골라져 있으면
+  자식을 놓은 뒤 부모가 한 번 더 끌어 자식 로컬 위치가 바뀌었다. 끌기 하나가 되돌리기 하나이고, 되돌리면 부모가 제자리로 온다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/gizmotoplevel.scenario.xml -unattended
+-->
+<Scenario name="editor.gizmotoplevel" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<EditorWaitSettled/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<!-- 자식을 먼저 고르고 부모 아래로 옮긴다 — 선택은 자식 하나로 남는다 -->
+	<Variable name="gv_editorWatchObject" value="TestKeyLight"/>
+	<EditorClick mark="hierarchy.row.TestKeyLight"/>
+	<EditorWaitSettled/>
+	<EditorDrag mark="hierarchy.row.TestKeyLight" toMark="hierarchy.row.TestParent"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.ObjectDepth" equals="1" timeoutFrames="180"/>
+	<Expect watch="Editor.SelectedNames" is="TestKeyLight"/>
+	<!-- Ctrl+부모: 선택 순서가 자식 → 부모다(결함이 나던 순서) -->
+	<EditorClick mark="hierarchy.row.TestParent" mods="ctrl"/>
+	<WaitUntil watch="Editor.SelectedNames" is="TestKeyLight,TestParent" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<!-- 씬 뷰가 고른 것을 비추게 한다(F) — 기즈모 가운데가 캔버스 안에 온다 -->
+	<DevCommand line="panel.focus scene_view"/>
+	<EditorWaitSettled/>
+	<EditorKey key="F"/>
+	<EditorWaitSettled/>
+	<Remember watch="Editor.ObjectPositionX" as="childLocalX"/>
+	<Variable name="gv_editorWatchObject" value="TestParent"/>
+	<Remember watch="Editor.ObjectPositionX" as="parentX"/>
+	<Remember watch="Editor.UndoIndex" as="undoBeforeDrag"/>
+	<EditorDrag mark="sceneView.gizmoCenter" dx="60" dy="0"/>
+	<EditorWaitSettled/>
+	<!-- 효과: 부모가 움직였고 끌기 하나가 되돌리기 하나다 -->
+	<WaitUntil watch="Editor.ObjectPositionX" differsFrom="parentX" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.UndoIndex" differsFrom="undoBeforeDrag" timeoutFrames="60"/>
+	<!-- 자식은 부모를 따라 한 번만 움직였다 — 로컬 위치가 그대로다 -->
+	<Variable name="gv_editorWatchObject" value="TestKeyLight"/>
+	<Expect watch="Editor.ObjectPositionX" sameAs="childLocalX"/>
+	<Expect watch="Editor.ObjectDepth" equals="1"/>
+	<!-- 되돌리면 부모가 제자리다 -->
+	<DevCommand line="editor edit.undo"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorWatchObject" value="TestParent"/>
+	<WaitUntil watch="Editor.ObjectPositionX" sameAs="parentX" timeoutFrames="60"/>
+	<Expect watch="Editor.UndoIndex" sameAs="undoBeforeDrag"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

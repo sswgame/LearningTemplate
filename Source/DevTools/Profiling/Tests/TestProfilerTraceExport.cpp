@@ -1,10 +1,13 @@
 // ProfilerTraceExport — Trace Event JSON 의 형식 · 이름 · 마이크로초 단위 · 머리말, 되읽기, 여러 프로세스 합치기, 표식 · 네트워크 흐름.
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/Profiling/ProfilerTraceExport.h"
 
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #if !defined( SW_SHIPPING )
@@ -451,6 +454,30 @@ SW_TEST_CASE( ProfilerTraceExportTest, NetFlowsAreWrittenAsBoundFlowEvents )
     SW_EXPECT_TRUE( bFoundFinish );
 
     SW_EXPECT_TRUE( sw::ProfilerTraceExport::parseTraceJSON( json ).has_value() );
+}
+
+/**
+ * @brief [ProfilerTraceExportTest] 종료 저장은 프레임을 한 번도 돌지 않은 프로세스도 기동 사건을 저장한다
+ * @details 멀티 프로세스 재생의 클라이언트가 접속 직후 멈추면 프레임 표시가 둘이 안 돼 저장하지 못했다(editor.netplay 흔들림).
+ *          시작이 기동을, 끝이 종료를 표시해 구간이 늘 있다.
+ */
+SW_TEST_CASE( ProfilerTraceExportTest, ExitCaptureSavesWithoutAnyFrame )
+{
+    const sw::unique_ptr<sw::FrameProfiler> pProfiler = sw::make_unique<sw::FrameProfiler>(); // 칸이 많아 힙에 둔다
+    const sw::string                        path      = sw::test::makeScratchPath( "exit.trace.json" );
+    sw::ProfilerTraceExport::startExitCapture( *pProfiler, path );
+    const uint64 beginNanos = static_cast<uint64>( sw::MonotonicClock::nowNanoseconds() );
+    pProfiler->getTimeline().recordEvent( 0, beginNanos, beginNanos + 1, 0 ); // 기동 중 사건 하나 — beginFrame 은 부르지 않는다
+    sw::ProfilerTraceExport::finishExitCapture( *pProfiler, path, "Client1" );
+    pProfiler->getTimeline().setRecording( false ); // 네트워크 흐름 기록자를 돌려 놓는다
+
+    sw::string json;
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( path, json ) );
+    const sw::expected<sw::ProfilerLoadedTrace> parsed = sw::ProfilerTraceExport::parseTraceJSON( json );
+    SW_REQUIRE_TRUE( parsed.has_value() );
+    SW_EXPECT_EQUAL( sw::string( "Client1" ), parsed->_meta._processName );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), parsed->_listThread.size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), parsed->_listThread[0]._listEvent.size() );
 }
 
 #endif // !SW_SHIPPING

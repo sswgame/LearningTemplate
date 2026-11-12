@@ -13,7 +13,9 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -776,8 +778,12 @@ namespace sw
                     if ( getMesh() != vertexMesh )
                         setMesh( std::move( vertexMesh ) );
                     // 들어갈 때 한 번 — VAT 시계 + 오프셋 = 이 유닛의 클립 시각. 그 뒤로 둘이 같은 dt 로 흘러 다시 적지 않는다(인스턴스를 다시 올리지 않는다).
+                    // 오프셋은 셰이더가 받는 접힌 시계로 잰다(감사 C-12) — 접지 않은 시계로 재면 오프셋이 실행 시간만큼 커져 float 정밀도를 잃는다.
                     if ( bEntering )
-                        setVertexAnimationPhase( static_cast<float32>( static_cast<float64>( request._time ) - crowd.getClock() ) );
+                    {
+                        const float32 shaderClock = crowd.getShaderClock( engine::getSubsystem<EngineConfig>()._shaderTimeRolloverSeconds );
+                        setVertexAnimationPhase( request._time - shaderClock );
+                    }
                     _frameContext._bPoseNeeded = SW_FALSE;
                     _bInterpolateFrame         = SW_FALSE;
                     return;

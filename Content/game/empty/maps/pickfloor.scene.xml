@@ -1,0 +1,70 @@
+<Scene formatVersion="2" name="PickFloor">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.2,3.2"
+					                 _localRotation="0.35877067,3.1415927,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Floor">
+			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="8,1,8"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _boundsRadius="0.1"
+					               _gpuSpinSeed="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="SmallCube">
+			<GameObject _schemaVersion="0" _name="SmallCube" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.5,0.5,0.5"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID=""
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="KeyLight">
+			<GameObject _schemaVersion="0" _name="KeyLight" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,4,0"
+					                           _localRotation="1.102345,-2.191046,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.82,0.62"
+					                           _intensity="1.35"
+					                           _ambient="0.28"
+					                           _shadowExtent="2.2222223"
+					                           _shadowDistance="2"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

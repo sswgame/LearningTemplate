@@ -341,6 +341,31 @@ namespace sw
         vector<InventorySlot> listPiece;
         if ( inventory.takeItem( itemID, count, listPiece ) == false )
             return ShopResult::NotOwned;
+        settleSale( shopID, itemID, count, total, std::move( listPiece ), wallet, pOutReceived );
+        return ShopResult::Ok;
+    }
+
+    ShopResult ShopManager::sell( const hashed_string& shopID, int32 slot, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutReceived )
+    {
+        const bool bNoSlotItem = slot < 0 || slot >= inventory.getSlotCount() || inventory.getSlot( slot ).isEmpty();
+        if ( bNoSlotItem )
+            return ShopResult::NotOwned;
+        const hashed_string itemID = inventory.getSlot( slot )._itemID;
+        const ShopResult    result = evaluateSell( shopID, itemID, count, inventory );
+        if ( result != ShopResult::Ok )
+            return result;
+        if ( inventory.getSlot( slot )._count < count )
+            return ShopResult::NotOwned;
+        const int64           total = computeSellTotal( shopID, itemID, count );
+        vector<InventorySlot> listPiece;
+        listPiece.push_back( inventory.takeFromSlot( slot, count ) );
+        settleSale( shopID, itemID, count, total, std::move( listPiece ), wallet, pOutReceived );
+        return ShopResult::Ok;
+    }
+
+    void ShopManager::settleSale( const hashed_string& shopID, const hashed_string& itemID, int32 count, int64 total, vector<InventorySlot>&& listPiece, Wallet& wallet,
+                                  int64* pOutReceived )
+    {
         const ShopDef* pShop    = _pShopCatalog->find( shopID );
         ShopState*     pRuntime = findRuntime( shopID );
         wallet.add( pShop->_currency, total );
@@ -366,7 +391,6 @@ namespace sw
             factor          = MathUtil::max( pShop->_minSellFactor, factor - pShop->_saturation * static_cast<float32>( count ) );
         }
         _eventBuffer.push( ShopEvent{ shopID, itemID, total, count, ShopEvent::Kind::Sold } );
-        return ShopResult::Ok;
     }
 
     ShopResult ShopManager::buyBack( const hashed_string& shopID, int32 buybackIndex, Wallet& wallet, Inventory& inventory, int64* pOutPaid )
@@ -396,7 +420,7 @@ namespace sw
             return ShopResult::NotEnoughMoney;
         }
         const int64 paid = entry._price;
-        _eventBuffer.push( ShopEvent{ shopID, entry._itemID, paid, ShopInternal::countPieces( entry._listPiece ), ShopEvent::Kind::Bought } );
+        _eventBuffer.push( ShopEvent{ shopID, entry._itemID, paid, ShopInternal::countPieces( entry._listPiece ), ShopEvent::Kind::BoughtBack } );
         pRuntime->_listBuyback.erase( pRuntime->_listBuyback.begin() + static_cast<std::ptrdiff_t>( buybackIndex ) );
         if ( pOutPaid != nullptr )
             *pOutPaid = paid;

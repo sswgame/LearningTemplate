@@ -268,12 +268,20 @@ namespace sw
         [[nodiscard]] bool resolveSaveSlot( string_view slot, string& outSlot ) const;
         /** @brief 세이브 쓰기 완료입니다 - `SaveGameSavedEvent` 를 냅니다. */
         void onSaveSlotWritten( const LocalStoreCompletion& completion );
-        /** @brief 세이브 읽기 완료입니다 - 복원하고 `SaveGameLoadedEvent` 를 냅니다. */
+        /** @brief 세이브 읽기 완료입니다 - 형식을 확인하고 `applySaveSlot` 에 넘깁니다. */
         void onSaveSlotRead( const LocalStoreCompletion& completion );
+        /** @brief 세이브 적용의 끝을 받습니다(성공이면 true) — 자동 저장 되돌리기의 완료(`AutosaveManager::RestoreCompletedFunction`)가 여기 온다. */
+        using SaveAppliedFunction = Delegate<void( bool bRestored )>;
+        /**
+         * @brief 읽은 세이브 바이트를 적용합니다 — 슬롯 불러오기와 자동 저장 되돌리기가 함께 지나는 한 길(감사 G-7).
+         * @details 봉투 머리의 씬 정체가 활성 씬이면 바로 복원하고, 다른 씬이면 `GameSceneFlow::requestSceneThen` 으로 그 씬을 연 뒤 복원한다. 끝에 `SaveGameLoadedEvent` 를 내고 @p onApplied 를 부른다.
+         *          앞의 세이브가 씬을 옮기는 중이면 적용하지 않고 실패로 끝낸다.
+         */
+        void applySaveSlot( const string& slot, const vector<uint8>& bytes, const SaveAppliedFunction& onApplied );
         /** @brief 찍은 씬이 열린 뒤입니다(`GameSceneFlow::requestSceneThen`) — 기다리던 세이브를 적용하고 `SaveGameLoadedEvent` 를 냅니다. @p pScene 이 nullptr 이면 실패로 알린다. */
         void onSaveSceneLoaded( Scene* pScene );
-        /** @brief 성공한 읽기 수를 세고 `SaveGameLoadedEvent` 를 냅니다. */
-        void publishSlotLoaded( const string& slot, bool bLoaded );
+        /** @brief 성공한 읽기 수를 세고 `SaveGameLoadedEvent` 를 낸 뒤 @p onApplied 가 묶였으면 부릅니다. */
+        void publishSlotLoaded( const string& slot, bool bLoaded, const SaveAppliedFunction& onApplied );
         /** @brief 교체에서 진 복원 뒤 활성 씬을 그 리소스에서 다시 엽니다. 리소스가 없거나 요청이 실패하면 알리고 막기는 남는다. */
         void reopenBrokenScene();
         /** @brief 깨진 씬이 다시 열린 뒤입니다 — 섰으면 깨진 복원의 세이브 막기를 풉니다. */
@@ -331,8 +339,9 @@ namespace sw
         /** @brief 찍은 씬이 열리기를 기다리는 세이브 하나입니다(`onSaveSlotRead` → `onSaveSceneLoaded`). */
         struct PendingSlotRestore
         {
-            string        _slot;  ///< 읽은 슬롯 이름
-            vector<uint8> _bytes; ///< 읽은 봉투 바이트
+            string              _slot;      ///< 읽은 슬롯 이름
+            vector<uint8>       _bytes;     ///< 읽은 봉투 바이트
+            SaveAppliedFunction _onApplied; ///< 적용의 끝을 받을 함수(자동 저장 되돌리기 — 슬롯 불러오기는 묶지 않는다)
         };
         optional<PendingSlotRestore> _pendingSlotRestore; ///< 씬을 옮기는 중인 세이브(없으면 없음) — 하나만 둔다, 겹친 불러오기는 거절한다
         /**

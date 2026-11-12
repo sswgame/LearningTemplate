@@ -4,6 +4,7 @@
 
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Commands/Asset/EditorSaveFileLock.h"
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
@@ -13,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Console/DevCommandRegistry.h"
 
 #include <imgui.h>
@@ -149,6 +151,63 @@ namespace sw::editor
                 return true;
             }
 
+            /**
+             * @brief 문서 패널이 저장할 파일(`IEditorDocumentPanel::collectFilesToSave`)의 글을 붙잡고 모두 읽기 전용으로 둡니다 — 버전 관리가 잠그지 않은 파일(git LFS lockable)을 흉내 낸다.
+             * @details 패널이 내놓는 목록을 그대로 잠그므로 여러 파일을 쓰는 패널 · 연 경로가 없는 상태 문서도 같은 명령이다. 목록이 비면 확인할 것이 없어 실패다.
+             *          잠금은 `EditorSaveFileLock` 가 쥐어 시나리오가 `panel.unlockSaveFiles` 전에 끊겨도(실패 · 시간 초과 · 창 닫힘 · 체인 다음 단계) 쓰기를 되돌린다.
+             */
+            static bool runPanelLockSaveFiles( const vector<string>& listArgument, string& outReply )
+            {
+                const IEditorDocumentPanel* pDocument = findDocumentPanel( listArgument, outReply );
+                if ( pDocument == nullptr )
+                    return false;
+                vector<string> listPath;
+                pDocument->collectFilesToSave( listPath );
+                if ( listPath.empty() )
+                {
+                    outReply = "'" + listArgument[0] + "' has no file to save - open or edit its document first";
+                    return false;
+                }
+                if ( const expected<void> locked = EditorSaveFileLock::lock( listPath ); locked.has_value() == false )
+                {
+                    outReply = AutomationStep::describeReason( locked.error() );
+                    return false;
+                }
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "locked %# file(s) of %#", listPath.size(), listArgument[0] );
+                outReply = string( replyBuilder.view() );
+                return true;
+            }
+
+            /** @brief 문서 패널 저장이 거절되면(`saveDocumentAndClearDirty` 가 false) 성공입니다 — 잠근 파일 앞에서 쓰지 않고 알렸는지 본다(알림 · 로그는 시나리오가 따로 본다). */
+            static bool runPanelExpectSaveRefused( const vector<string>& listArgument, string& outReply )
+            {
+                IEditorDocumentPanel* pDocument = findDocumentPanel( listArgument, outReply );
+                if ( pDocument == nullptr )
+                    return false;
+                if ( pDocument->saveDocumentAndClearDirty() )
+                {
+                    outReply = "the document of '" + listArgument[0] + "' was saved over locked files";
+                    return false;
+                }
+                outReply = "the save of " + listArgument[0] + " was refused";
+                return true;
+            }
+
+            /** @brief `panel.lockSaveFiles` 로 잠근 파일의 쓰기를 다시 허락하고, 글이 그대로인지(없던 파일은 여전히 없는지) 견줍니다. 하나라도 바뀌었으면 실패입니다. */
+            static bool runPanelUnlockSaveFiles( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                if ( const optional<string> changedPath = EditorSaveFileLock::unlock(); changedPath.has_value() )
+                {
+                    outReply = "'" + *changedPath + "' changed while it was locked";
+                    return false;
+                }
+                outReply = "unlocked and unchanged";
+                return true;
+            }
+
             static bool runPanelClose( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext* pContext          = editor::findSubsystem<EditorContext>();
@@ -199,6 +258,13 @@ namespace sw::editor
     SW_DEV_COMMAND( PanelClose, "panel.close", "panel.close <panelID>", "Close a panel", &EditorUIDevCommandsInternal::runPanelClose );
     SW_DEV_COMMAND( PanelSaveDocument, "panel.saveDocument", "panel.saveDocument <panelID>", "Save the document of a document panel whether or not it has unsaved edits (save round trips)",
                     &EditorUIDevCommandsInternal::runPanelSaveDocument );
+    SW_DEV_COMMAND( PanelLockSaveFiles, "panel.lockSaveFiles", "panel.lockSaveFiles <panelID>",
+                    "Remember the text of every file a document panel would save and make them read-only, like files not checked out (undo with panel.unlockSaveFiles)",
+                    &EditorUIDevCommandsInternal::runPanelLockSaveFiles );
+    SW_DEV_COMMAND( PanelExpectSaveRefused, "panel.expectSaveRefused", "panel.expectSaveRefused <panelID>",
+                    "Fail unless saving the document of a document panel is refused (its files are locked)", &EditorUIDevCommandsInternal::runPanelExpectSaveRefused );
+    SW_DEV_COMMAND( PanelUnlockSaveFiles, "panel.unlockSaveFiles", "panel.unlockSaveFiles",
+                    "Make the files panel.lockSaveFiles locked writable again and fail if any of them changed while locked", &EditorUIDevCommandsInternal::runPanelUnlockSaveFiles );
     SW_DEV_COMMAND( PanelReloadDocument, "panel.reloadDocument", "panel.reloadDocument <panelID>", "Read the document of a document panel again from disk, dropping unsaved edits (save round trips)",
                     &EditorUIDevCommandsInternal::runPanelReloadDocument );
     SW_DEV_COMMAND( PanelResetOptional, "panel.resetOptional", "panel.resetOptional",
