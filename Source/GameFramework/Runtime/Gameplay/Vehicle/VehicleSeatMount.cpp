@@ -66,10 +66,7 @@ namespace sw
                 const CharacterControllerComponent* pController = rider.getComponent<CharacterControllerComponent>();
                 if ( pScene == nullptr || pController == nullptr )
                     return true;
-                PhysicsShapeDesc3D capsule;
-                capsule._type       = PhysicsShapeType3D::Capsule;
-                capsule._radius     = pController->getRadius();
-                capsule._halfHeight = pController->getHalfHeight();
+                const PhysicsShapeDesc3D  capsule = pController->getScaledCapsule();
                 const float3              center{ feet._x, feet._y + kGroundClearance + capsule._radius + capsule._halfHeight, feet._z };
                 PhysicsQueryFilter        filter;
                 vector<PhysicsBodyHandle> listBody;

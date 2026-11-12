@@ -120,14 +120,19 @@ namespace sw
         /** @brief 상태 해시에 트랜스폼과 속도 · 접지를 접습니다. */
         void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
 
-        float32 getRadius() const { return _radius; }
-        void    setRadius( float32 radius );
-        float32 getHalfHeight() const { return _halfHeight; }
-        void    setHalfHeight( float32 halfHeight );
-        float32 getStepHeight() const { return _stepHeight; }
-        void    setStepHeight( float32 stepHeight );
-        float32 getMaxSlopeAngle() const { return _maxSlopeAngle; }
-        void    setMaxSlopeAngle( float32 angle );
+        /**
+         * @brief 월드 배율(마지막 물리 프레임에 읽은 값)을 굽은 충돌 캡슐입니다 — 백엔드 캐릭터가 이 크기로 지어진다. 반지름은 XZ 중 큰 축, 높이는 Y 다.
+         * @details 캡슐 크기로 질의 · 판정하는 코드는 속성(`getRadius` · `getHalfHeight`)이 아니라 이것을 읽는다(언리얼 `GetScaledCapsuleRadius` 와 같은 나눔).
+         */
+        PhysicsShapeDesc3D getScaledCapsule() const;
+        float32            getRadius() const { return _radius; }
+        void               setRadius( float32 radius );
+        float32            getHalfHeight() const { return _halfHeight; }
+        void               setHalfHeight( float32 halfHeight );
+        float32            getStepHeight() const { return _stepHeight; }
+        void               setStepHeight( float32 stepHeight );
+        float32            getMaxSlopeAngle() const { return _maxSlopeAngle; }
+        void               setMaxSlopeAngle( float32 angle );
 
     protected:
         void beginPhysicsFrame( ScenePhysics& physics ) override;

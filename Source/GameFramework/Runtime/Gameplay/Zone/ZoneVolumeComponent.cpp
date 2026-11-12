@@ -28,7 +28,8 @@ namespace sw
             /** @brief 캐릭터 키(m)입니다 — 캡슐의 전체 높이. */
             static float32 computeCharacterHeight( const CharacterControllerComponent& controller )
             {
-                return 2.0f * ( controller.getHalfHeight() + controller.getRadius() );
+                const PhysicsShapeDesc3D capsule = controller.getScaledCapsule();
+                return 2.0f * ( capsule._halfHeight + capsule._radius );
             }
         };
     } // namespace

@@ -124,7 +124,10 @@ namespace sw
     {
         const GameObject* const                   pOwner      = getOwner();
         const CharacterControllerComponent* const pController = pOwner != nullptr ? pOwner->getComponent<CharacterControllerComponent>() : nullptr;
-        return pController != nullptr ? 2.0f * ( pController->getHalfHeight() + pController->getRadius() ) : _bodyHeight;
+        if ( pController == nullptr )
+            return _bodyHeight;
+        const PhysicsShapeDesc3D capsule = pController->getScaledCapsule();
+        return 2.0f * ( capsule._halfHeight + capsule._radius );
     }
 
     void ZoneContactComponent::addContact( vector<ContactRecord>& inoutList, const SurfaceKindTable& table, const ContactRecord& contact )
@@ -230,7 +233,7 @@ namespace sw
             {
                 CharacterRayHit hit;
                 SurfaceSample   touched;
-                if ( CharacterRayHit::raycast3D( manager, waist, direction, pController->getRadius() + _touchDistance, Internal::kAllLayers, pOwner->getObjectID(), hit ) == false ||
+                if ( CharacterRayHit::raycast3D( manager, waist, direction, pController->getScaledCapsule()._radius + _touchDistance, Internal::kAllLayers, pOwner->getObjectID(), hit ) == false ||
                      SurfaceSample::resolveHit( manager, pTable, hit, touched ) == false )
                     continue;
                 ContactRecord contact;
