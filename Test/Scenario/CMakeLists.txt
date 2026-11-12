@@ -23,6 +23,7 @@ endif()
 list(LENGTH SW_RHI_BACKEND_NAMES swScenarioBackendCount) # `-scenario-backends=all` 이 띄우는 자식 수
 
 set(swScenarioRoot "${CMAKE_SOURCE_DIR}/Content")
+sw_addSourceTreeRoot("${swScenarioRoot}/engine/automation") # 시나리오 폴더만 뿌리로 훑는다(`Content/` 전체는 에셋 — cmake/Engine/SourceTree.cmake)
 # 시나리오의 `<Launch>` 를 명령줄 인자(`-이름=값` 목록)로 읽는다.
 function(sw_readScenarioLaunch scenarioPath out)
 	file(STRINGS "${swScenarioRoot}/${scenarioPath}" listLaunchLine REGEX "^[ 	]*<Launch ")
@@ -89,7 +90,7 @@ function(sw_addLoadScenario loadPath)
 	set_tests_properties(${loadTestName} PROPERTIES LABELS load TIMEOUT ${loadTimeout} RUN_SERIAL TRUE SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
 endfunction()
 
-file(GLOB listEngineLoadScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${swScenarioRoot}/engine/automation/load/*.scenario.xml")
+sw_globSourceTree(listEngineLoadScenario RELATIVE "${swScenarioRoot}" "${swScenarioRoot}/engine/automation/load/*.scenario.xml")
 foreach(loadPath IN LISTS listEngineLoadScenario)
 	sw_addLoadScenario("${loadPath}")
 endforeach()
@@ -115,13 +116,14 @@ foreach(game IN LISTS listBuiltGame)
 		set(gameArgument "-game=${game}")
 	endif()
 	set(automationDir "${swScenarioRoot}/${gamePackRoot}/automation")
+	sw_addSourceTreeRoot("${automationDir}")
 
 	# 게임 체인 — 활성 게임의 체인에는 엔진 시나리오도 든다(엔진 시나리오는 게임 하나로 한 번 돈다).
 	set(listChainGlob "${automationDir}/*.scenario.xml")
 	if(game STREQUAL SW_ACTIVE_GAME)
 		list(APPEND listChainGlob "${swScenarioRoot}/engine/automation/*.scenario.xml")
 	endif()
-	file(GLOB listScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS ${listChainGlob})
+	sw_globSourceTree(listScenario RELATIVE "${swScenarioRoot}" ${listChainGlob})
 	# GPU 가 무거운 체인은 백엔드를 차례로 돌린다 — 넷을 함께 돌려도 빨라지지 않고(Shooter3D 225 초 대 차례로 227 초) 프레임만 7 → 100 ms 로 느려져
 	# 시한(crowd 150 초)에 닿고 골든이 흔들렸다(2026-11-02 측정, NEXT 6.2). 다른 체인은 함께 도는 편이 기동을 겹쳐 빠르다.
 	set(swChainSlot "")
@@ -131,12 +133,12 @@ foreach(game IN LISTS listBuiltGame)
 	sw_addScenarioChain(Scenario.${pack} 300 ${swChainSlot} SCENARIOS ${listScenario} ARGS ${gameArgument})
 
 	# 쇼케이스 — 쇼케이스 씬 하나를 정해진 시각에 찍는 시나리오. 게임 체인과 같은 길(백엔드 넷)이되 제 씬 · 제 골든(`showcase/golden/`)을 두는 묶음이라 따로 항목이 된다.
-	file(GLOB listShowcaseScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${automationDir}/showcase/*.scenario.xml")
+	sw_globSourceTree(listShowcaseScenario RELATIVE "${swScenarioRoot}" "${automationDir}/showcase/*.scenario.xml")
 	sw_addScenarioChain(Scenario.${pack}.showcase 300 SCENARIOS ${listShowcaseScenario} ARGS ${gameArgument})
 
 	# 데스크톱 시나리오 — OS 전역 상태(커서 클립 · 전경)를 쓰거나 프로세스를 끝내므로 체인에 넣지 못하고(백엔드 넷이 동시에 돈다)
 	# 하나씩 기본 백엔드 한 프로세스로 혼자 돈다(RUN_SERIAL — 다른 항목의 창이 전경을 빼앗지 않게). 언리얼 Gauntlet 이 데스크톱 테스트를 따로 도는 것과 같다.
-	file(GLOB listDesktopScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${automationDir}/desktop/*.scenario.xml")
+	sw_globSourceTree(listDesktopScenario RELATIVE "${swScenarioRoot}" "${automationDir}/desktop/*.scenario.xml")
 	foreach(desktopPath IN LISTS listDesktopScenario)
 		get_filename_component(desktopName "${desktopPath}" NAME)
 		string(REGEX REPLACE "\\.scenario\\.xml$" "" desktopName "${desktopName}")
@@ -148,14 +150,14 @@ foreach(game IN LISTS listBuiltGame)
 		set_tests_properties(${desktopTestName} PROPERTIES LABELS hostgpu TIMEOUT 300 RUN_SERIAL TRUE SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
 	endforeach()
 
-	file(GLOB listGameLoadScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${automationDir}/load/*.scenario.xml")
+	sw_globSourceTree(listGameLoadScenario RELATIVE "${swScenarioRoot}" "${automationDir}/load/*.scenario.xml")
 	foreach(loadPath IN LISTS listGameLoadScenario)
 		sw_addLoadScenario("${loadPath}" ${gameArgument})
 	endforeach()
 
 	# 두 번 기동 쌍 — `sequence/<묶음>.1` · `.2`. 빈 폴더의 사용자 설정 파일로 .1 을 돌려 남기고 같은 파일로 .2 를 띄워 남았는지 본다
 	# (편집기 상태 쌍과 같은 실행기 — 프로세스를 다시 띄우는 것 자체가 검사 대상이다). 설정 파일을 같이 쓰므로 기본 백엔드 하나다.
-	file(GLOB listSequenceFirst RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${automationDir}/sequence/*.1.scenario.xml")
+	sw_globSourceTree(listSequenceFirst RELATIVE "${swScenarioRoot}" "${automationDir}/sequence/*.1.scenario.xml")
 	foreach(firstPath IN LISTS listSequenceFirst)
 		string(REGEX REPLACE "\\.1\\.scenario\\.xml$" "" pairPath "${firstPath}")
 		get_filename_component(pairName "${pairPath}" NAME)
@@ -171,7 +173,7 @@ foreach(game IN LISTS listBuiltGame)
 
 	# 게임의 편집기 시나리오 — 그 게임의 데이터를 편집기로 다루는 흐름이라 그 게임을 싣는 편집기 체인(`Scenario.<팩>.editor`)으로 돈다. 플래그는 엔진 편집기 체인(아래)과 같다.
 	if(TARGET EditorModule)
-		file(GLOB listGameEditorScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${automationDir}/editor/*.scenario.xml")
+		sw_globSourceTree(listGameEditorScenario RELATIVE "${swScenarioRoot}" "${automationDir}/editor/*.scenario.xml")
 		sw_addScenarioChain(Scenario.${pack}.editor 120 SCENARIOS ${listGameEditorScenario} ARGS ${gameArgument} -EnableEditor -scenario-backend-split)
 	endif()
 endforeach()
@@ -181,11 +183,11 @@ endforeach()
 # 동시에 돌고(`-scenario-backends=all`) 저마다 제 백엔드 골든(씬 · 게임 뷰)과 견준다 — 편집기 상태 폴더가 프로세스마다라 자식끼리 겹치지 않는다.
 # 그린 화소를 판정하지 않는 시나리오(UI 로직 · 문턱 없는 캡처)는 백엔드를 돌아가며 하나에서만 돈다(`-scenario-backend-split`) — 전부 네 번 돌면 백엔드당 약 1000 초였다.
 if(TARGET EditorModule)
-	file(GLOB listEditorScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${swScenarioRoot}/engine/automation/editor/*.scenario.xml")
+	sw_globSourceTree(listEditorScenario RELATIVE "${swScenarioRoot}" "${swScenarioRoot}/engine/automation/editor/*.scenario.xml")
 	sw_addScenarioChain(Scenario.editor 120 SCENARIOS ${listEditorScenario} ARGS -EnableEditor -scenario-backend-split)
 	# 저장된 상태 쌍(`statedir/<묶음>.1` · `.2`) — 끄고 다시 켜면 상태가 돌아오는지가 검사 대상이라 프로세스를 다시 띄우는 것 자체가 필요하다.
 	# 빈 상태 폴더로 .1 을, 같은 폴더로 .2 를 잇는다(언리얼이 설정 저장을 에디터 재시작으로 보는 것과 같다). 상태 폴더를 같이 쓰므로 기본 백엔드 하나다.
-	file(GLOB listStateDirFirst RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${swScenarioRoot}/engine/automation/editor/statedir/*.1.scenario.xml")
+	sw_globSourceTree(listStateDirFirst RELATIVE "${swScenarioRoot}" "${swScenarioRoot}/engine/automation/editor/statedir/*.1.scenario.xml")
 	foreach(firstPath IN LISTS listStateDirFirst)
 		string(REGEX REPLACE "\\.1\\.scenario\\.xml$" "" pairPath "${firstPath}")
 		get_filename_component(pairName "${pairPath}" NAME)

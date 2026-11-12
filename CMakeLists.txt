@@ -136,3 +136,6 @@ sw_writeUnbuiltSourceList()
 
 # 모든 타깃이 선 뒤 — `Source/` 아래 폴더를 include 경로로 준 타깃이 있으면 구성을 세운다(접두 없는 include 가 층 게이트를 비껴가는 길).
 sw_verifySourceIncludeRoots()
+
+# 뿌리(`Source/` · `Test/` · 시나리오 폴더) 아래를 sw_globSourceTree 밖에서 빌드마다 훑는 글롭이 있으면 빌드가 멈춘다(생성된 VerifyGlobs.cmake 를 본다).
+sw_checkConfigureGlobs()
