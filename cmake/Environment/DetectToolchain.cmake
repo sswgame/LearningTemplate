@@ -24,8 +24,11 @@ endif()
 
 # Environment.py 실행 (설정 파일 변경 및 도구 경로 갱신을 항상 정확하게 반영).
 # 필수다 — 실패하면 아래가 낡은 toolchain_config.json 이나 빈 값으로 지나가 다른 컴파일러를 집는다.
+# 같은 프로세스가 아래 2) 의 ToolchainVars.cmake 도 쓴다(`--cmake-vars` — 파이썬을 한 번 덜 띄운다).
+set(SW_GENERATED_TOOLCHAIN_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ToolchainVars.cmake")
 sw_executePythonScript(
 	"${SW_SCRIPT_SETUP_ENVIRONMENT}"
+	ARGS --cmake-vars "${SW_GENERATED_TOOLCHAIN_VARS}"
 	REQUIRED
 )
 
@@ -37,11 +40,7 @@ sw_executePythonScript(
 # 다른 철자(상수 · 리터럴)로 적게 된다.
 # 키는 Environment 가 늘 모두 쓴다. 값이 빈 것은 "이 호스트에 그 도구가 없다" 이다(리눅스의 Windows SDK 등) —
 # 그래서 아래는 `if(X AND EXISTS ...)` 로 묻는다. 파일 자체가 없으면 구성을 세운다.
-set(SW_GENERATED_TOOLCHAIN_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ToolchainVars.cmake")
-sw_executePythonScript("Scripts/generate/ToolchainCMake.py"
-	ARGS "${SW_GENERATED_TOOLCHAIN_VARS}"
-	REQUIRED
-)
+# 생성기는 `Scripts/generate/ToolchainCMake.py`(위 1) 의 Environment 가 부른다).
 include("${SW_GENERATED_TOOLCHAIN_VARS}")
 
 if(NOT SW_TOOLCHAIN_CONFIG_FOUND)
