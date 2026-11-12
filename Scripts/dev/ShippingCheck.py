@@ -200,12 +200,15 @@ def checkNoTestVariables(projectRoot: Path) -> SmokeResult:
     """배포 실행 파일(App · Server)에 테스트용 전역 변수 이름이 남지 않았는지 본다."""
     listName = collectTestVariableNames(projectRoot)
     listLeft: list[str] = []
+    # 이름 모두를 한 정규식(긴 이름 먼저)으로 실행 파일을 한 번만 훑는다 — 이름마다 실행 파일 전체를 훑으면 이름 수 × 실행 파일 크기다.
+    # 하나라도 남았는지(통과 · 실패)는 이름마다 찾던 것과 같다. 다른 이름을 품은 긴 이름이 남으면 긴 이름만 적힌다.
+    namePattern = re.compile(b"|".join(re.escape(name.encode("ascii")) for name in sorted(listName, key=len, reverse=True))) if listName else None
     for preset, stem in (("Ninja-Shipping", "App"), ("Ninja-Shipping-Client", "App"), ("Ninja-Shipping-Server", "Server")):
         executable = findBinDir(projectRoot, preset) / f"{stem}{kExecutableSuffix}"
         if executable.is_file() is False:
             return SmokeResult("NoTestVariables", executable, False, f"{executable} is missing")
-        data = executable.read_bytes()
-        listLeft += [f"{stem}:{name}" for name in listName if name.encode("ascii") in data]
+        if namePattern is not None:
+            listLeft += [f"{stem}:{name}" for name in sorted({match.decode("ascii") for match in namePattern.findall(executable.read_bytes())})]
     reason = f"{len(listName)} test variable names checked" if not listLeft else f"left in the shipping binaries: {', '.join(listLeft[:20])}"
     return SmokeResult("NoTestVariables", findBinDir(projectRoot, "Ninja-Shipping"), not listLeft, reason)
 
