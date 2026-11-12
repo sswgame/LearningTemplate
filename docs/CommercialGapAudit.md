@@ -106,13 +106,6 @@
 - 제안: 실패하면 들어올 때 크기로 `outListIndex` 를 되돌린다. 다리 후보에 모서리 원뿔 검사를 더하고 귀 후보를 오목 꼭짓점 목록으로 좁힌다.
 - 확인: 바깥 사각형 + 구멍 둘(같은 바깥 꼭짓점을 고르는 배치)로 `triangulate` 가 true 이고 넓이 합이 맞는지. 테스트는 구멍 1 개까지만 있다.
 
-#### C-3 태스크 대기가 두 종류다 — 합류로 잠든 워커는 새 일에 깨지 않고, 퓨처 대기는 돕지 않는다
-- 분류: 결함(잠재 교착) / 구조 · 확신: 메커니즘 확인, 실제 교착 경로는 추정
-- 근거: `Source/Core/Task/TaskManager.cpp:1069-1115`(`parkOnJoin`)는 워커를 자기 워드에서 기한 없이 재운다. 이 워커는 유휴 마스크에 없고 `wakeSleepingWorkers`(`:1381-1410`)는 유휴 마스크의 워커만 깨운다. 모든 워커가 합류 대기로 잠든 뒤 워커가 아닌 스레드가 넣은 일은 큐에 남는다 — 그 합류가 그 일에 의존하면 교착이다. 워커 1 개 구성(코어 3 개 이하, `:255-259`)에서 닿기 쉽다. `Source/Core/Task/TaskFuture.h:48-58` 과 `Source/Core/File/AsyncFileIO.cpp:532-545` 의 대기는 조건 변수로 막기만 한다.
-- 상용 엔진: UE Tasks 의 기다리는 워커는 유휴 워커와 같은 대기 큐에 등록돼 새 일에 깨어난다. 유니티 `JobHandle.Complete` 는 의존 사슬을 당겨 실행한다.
-- 제안: 합류 대기 워커도 마스크에 올린다(깬 워커는 합류를 다시 확인한 뒤 돕는다). `TaskFuture::wait` · `AsyncReadHandle::wait` 는 풀 워커에서 부르면 돕는 대기로 가거나 Debug 단언으로 막는다.
-- 확인: 단위 테스트 — 워커 1 개. 워커 태스크가 스테이지를 기다려 잠든 뒤 다른 스레드가 그 스테이지의 태스크를 제출해 시한 안에 끝나는지.
-
 #### C-5 `SpinLock` 이 백오프 없는 순수 스핀인데 그 안에서 힙 할당 · 맵 삽입 · 사용자 생성자가 돈다
 - 분류: 성능 · 확신: 코드 확인, 영향은 측정 필요
 - 근거: `Source/Core/Concurrency/SpinLock.h:39-48` 은 `cpuPause` 만 도는 TTAS 다. 구간 안: `Source/Core/Event/EventDispatcher.h:117-145`(아레나 할당 · 이벤트 복사 · `unordered_map::emplace`), `Source/Core/Task/TaskNode.h:247-268`(`make_unique<vector>` · `push_back`), `Source/Core/Memory/LifetimeScope.h:146-159`(`T` 생성자). 쥔 스레드가 선점되면 기다리는 쪽 전부가 퀀텀 동안 코어를 태운다(Android big.LITTLE 에서 커진다).
@@ -207,13 +200,6 @@
 - 상용 서비스: KDF 를 DB 연결과 분리된 연산 풀에서 돌리고 동시 해시 수를 세마포어로 묶는다(OWASP Password Storage).
 - 제안: 로그인을 "읽기(저장소) → 해시(상한 있는 연산 풀, 넘치면 `kBusy`) → 커밋(저장소)" 세 단계로 나눈다. 저장소 풀에 대기 상한을 둔다.
 - 확인: 부하 봇 `login_storm` 을 `_bLightPasswordHash` 없이 돌리며 `service_store_pending_peak` 와 다른 키트의 저장소 지연을 본다(O-12).
-
-#### O-5 리더보드 합산(Sum) 쓰기에 영속 멱등 기록이 없다
-- 분류: 결함(이중 반영) · 확신: 확인
-- 근거: `Source/GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.cpp:262-295` `writeValue` 는 읽고 더한 뒤 버전 조건으로 쓰는 것이 전부다. 커밋이 Unavailable(적용 여부 모름)이면 같은 키의 재시도가 `oldValue + value` 를 다시 더한다. 프로토콜 주석(`LeaderboardProtocol.h:185`)은 "다시 보내도 두 번 들어가지 않는다" 고 약속한다. 멱등 키 필수 메서드 45 개 중 누적 값인데 받침이 없는 것은 이것과 서버 쪽 `changeStat( Sum )` 뿐이다.
-- 상용 서비스: PlayFab `UpdatePlayerStatistics` 는 Version 으로, Nakama 는 저장소 유일 키로 재시도를 가린다.
-- 제안: Sum · Latest 쓰기에 `ServiceIdempotency::addReply` 를 같은 트랜잭션에 넣는다. `changeStat` 은 멱등 키를 필수 인자로 받는다.
-- 확인: 메모리 저장소에 "커밋 적용 뒤 Unavailable" 결함을 걸고 같은 키로 다시 제출해 합이 한 번만 느는지.
 
 #### O-6 매치 명단이 "최대 한 번" 버스로만 게임 서버에 가고, 받는 쪽 버퍼는 읽는 곳이 없다
 - 분류: 결함 + 구조 · 확신: 확인
@@ -621,13 +607,6 @@
 
 ### 장르 키트 · 게임 샘플
 
-#### K-2 FrontierTown 빨리 감기가 시계만 밀고 도시 · RTS 는 1 배속이다
-- 분류: 결함 · 확신: 확인
-- 근거: `Source/Games/FrontierTown/FrontierCityGameModeComponent.cpp:131-139` — `setTimeScale( _fastTimeScale )` 로 공유 시계만 8 배가 되고 `_city.update( deltaTime )` 은 배율 없는 프레임 시간을 받는다. 달 결산(`settleMonth`, `CitySimulation.cpp:990-1021`)은 `DayChanged` 마다 불리므로 빨리 감는 동안 결산만 8 배 잦아지고 생산 · 일꾼은 1 배속이다. NileCity 는 둘 다 곱하고(`NileGameModeComponent.cpp:182-183`) MeadowVillage 는 시계 알림으로만 돌아 맞다.
-- 상용 엔진: 유니티 `Time.timeScale`, 언리얼 `WorldSettings.TimeDilation` 은 한 배율이 모든 시뮬레이션 델타에 들어간다.
-- 제안: 키트 `update` 가 게임이 고른 `float32` 대신 판 상태의 시뮬레이션 시간(`SessionStateComponent` 가 내는 배율 적용 델타)을 받게 한다. 배속 · 일시정지 조립은 Runtime 의 `GameSpeedControl` 하나로 올린다(K-10).
-- 확인: 같은 게임 시간(5 일)을 1 배 · 8 배로 돌려 `City.Population` · 지갑이 같은지 보는 시나리오.
-
 #### K-3 복셀 세이브가 블록 id 가 아니라 카탈로그 순서 번호(uint8)를 적는다
 - 분류: 결함(세이브 호환) · 확신: 확인
 - 근거: `Source/GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.cpp:135-194` — 런 길이로 `VoxelBlockIndex` 를 그대로 쓰고 읽을 때는 `block <= blockLimit` 만 본다. 번호는 "읽은 순서"(`Catalog/VoxelBlock.h:25, 77`)다. `blocks.xml` 중간에 블록을 넣으면 옛 세이브가 오류 없이 다른 블록으로 읽힌다. 같은 저장소의 `RTSWorld` · `CitySimulation` · `FarmField` 는 카탈로그 id 로 적는다.
@@ -729,7 +708,6 @@
 
 - **C-16 (보강) 원자적 쓰기가 fsync 를 하지 않는다** (결함 · 내구성 — 코드 확인) — `Source/Core/File/FileUtil.cpp:96-121` 은 `fflush` · `fclose` 뒤 바로 이름을 바꾼다. 세이브는 알려진 한도(`FileLocalSlotStorage.h:5`)지만 같은 길로 쓰는 장치 키 파일(`LocalDeviceKeyProvider.cpp:122-137`)에는 봉투가 없어 깨진 채 남으면 그 사용자는 지울 때까지 저장 · 읽기가 모두 IOError 다. 상용: 콘솔 세이브 API · SQLite 는 fsync 한다. 제안: `writeAtomically` 에 내구성 등급(`Durable` | `Fast`)을 필수 인자로 받고 세이브는 한 세대 전 파일을 남긴다. 확인: 0 바이트 · 쓰레기 키 파일을 두고 기동해 복구되는지.
 - **C-17 유한 자원이 차면 멈추지 않고 계속한다** (구조 — 주석에 적힌 한도) — 도우미 슬롯 8 개를 넘으면 마지막 슬롯을 나눠 써 깨우기가 엉뚱한 스레드로 간다(`Source/Core/Task/TaskManager.h:315-316`). 이름 풀 1,048,576 을 넘으면 `SW_LOG_ASSERT` 뒤 `None` 을 돌려줘 모든 새 이름이 서로 같아진다(`Source/Core/Name/hashed_string.h:697-701`). 상용: FName 은 넘치면 치명 오류다. 제안: 둘 다 치명 오류로 멈추고 75 % 에서 경고한다. 확인: 작은 상한으로 지은 단위 테스트.
-- **C-18 경로 포함 판정이 `..` 를 풀지 않는다** (구조 — 확인) — `FileUtil::tryMakePathUnderRoot` · `isPathAtOrUnderRoot`(`Source/Core/File/FileUtil.cpp:626-648`)는 글자 접두 비교이고 `AbsolutePath` 도 정규화하지 않는다. 지금 호출자는 에디터 · 쿠커지만 모드 · 서버 경로가 들어오는 날 탈출 경로가 된다. 상용: `FPaths::CollapseRelativeDirectories` 뒤 비교. 제안: 포함 판정 입구가 정규화한 `AbsolutePath` 만 받는다. 확인: `"root/../x"` 가 거절되는 단위 테스트.
 - **C-19 IO · 로그의 실패 경로** (결함 · 작음 — 확인) — IOCP 포트 실패 뒤 IO 스레드가 끝나도 큐는 요청을 계속 받아 영영 끝나지 않는다(`Source/Core/File/Windows/WindowsAsyncFileIOBackend.cpp:113-117`). `flushForCrash` 가 막히는 장치 잠금을 잡는다(`Source/Core/Log/Sink/AsyncLogSink.cpp:262-265`). 큐가 가득 찬 줄은 큐에 든 줄보다 먼저 나간다(`:444-449`). 제안: 백엔드 실패를 큐 상태로 올려 새 요청을 즉시 실패시키고 크래시 flush 는 `try_lock` 으로 한다. 확인: 가짜 백엔드 단위 테스트.
 - **C-20 구독의 약한 역참조** (결함 — 추정) — `Subscription::reset`(`Source/Core/Delegate/Subscription.h:208-223`)은 출처 포인터를 읽은 뒤 잠금을 잡는다. 다른 스레드가 그 사이 출처를 소멸시키면 해제 뒤 사용이다. `LockedMulticastDelegate` 머리말("약 2 초 뒤 경고하고 돌아온다")과 코드(끝까지 기다림, `:153-172`)도 어긋난다. 제안: 같은 스레드 규칙을 `ThreadOwners` 표지로 형식에 올린다. 확인: TSan 구성 단위 테스트.
 - **C-21 다시 열어 확인하지 않은 후보** (미확인) — `SlotHandleTable` 세대 31 비트 + LIFO 재사용, `DynamicBitset` 범위 밖 쓰기 뒤 계속, Base64 `=` 개수 무제한, `MathUtil::wrapAngle` 이 무한대에서 끝나지 않음, `SpatialHashGrid2D` 셀 크기 조용한 대체, `BitReader::readVarUint` 넘친 비트 버림, `PositionWelder` NaN 캐스트, Windows `fromSearchPath` 가 작업 폴더를 PATH 보다 먼저 뒤짐, POSIX `Process` 소멸자의 좀비, Windows 크래시 필터의 로더 락 · 힙 사용. 고치기 전에 줄을 다시 읽는다.
