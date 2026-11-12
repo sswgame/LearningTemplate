@@ -543,7 +543,8 @@ SW_TEST_CASE( FileTest, CheckedInReadOnlyFileIsNotRemovedOrMoved )
     SW_EXPECT_FALSE( sw::FileUtil::removeDirectory( controlled ) );
     SW_EXPECT_FALSE( sw::FileUtil::renamePath( locked, controlled + "/moved.txt" ) );
     SW_EXPECT_FALSE( sw::FileUtil::copyFile( loose, locked ) );
-    SW_EXPECT_TRUE( sw::FileUtil::removeFile( loose ) ); // 규칙 밖의 읽기 전용(속성이 따라온 사본)은 정리가 지운다
+    SW_EXPECT_FALSE( sw::FileUtil::isWriteAllowed( locked ) ); // 경로를 스스로 여는 서드파티 저장(DDS · SQLite)이 쓰기 전에 묻는 입구다
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( loose ) );       // 규칙 밖의 읽기 전용(속성이 따라온 사본)은 정리가 지운다
     (void)sw::FileUtil::setCheckoutRule( previousRule );
 
     sw::string text;

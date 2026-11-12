@@ -65,6 +65,12 @@ namespace sw::editor
          * @details 두 기반이 각각 정한다(순수 가상) — 옮기기 · 삭제 계획(`IEditorPanelService::collectOpenDocuments`)이 연 문서를 묻는 길이다(감사 P0-4).
          */
         [[nodiscard]] virtual string_view getDocumentAssetPath() const = 0;
+        /**
+         * @brief 지금 `saveDocument` 가 쓸 파일(디스크 절대 경로)을 @p outListPath 에 더합니다. `saveDocumentAndClearDirty` 가 쓰기 전에 하나씩 읽기 전용을 확인하고, 거절 시나리오(`panel.lockSaveFiles`)가 같은 목록을 잠근다.
+         * @details 두 기반이 정한다(순수 가상) — 에셋 문서(`EditorDocumentPanel`)는 연 파일이 기본이고 다른 파일을 쓰는 패널이 재정의하며, 상태 문서(`EditorStateDocumentPanel`)는 패널마다 반드시 적는다.
+         *          빠뜨리면 그 파일은 확인 없이 Core 원자적 쓰기에서 알림 없이 진다. 유니티 `AssetModificationProcessor.OnWillSaveAssets( paths )` 가 저장할 경로 목록으로 체크아웃을 묻는 자리다.
+         */
+        virtual void collectFilesToSave( vector<string>& outListPath ) const = 0;
         /** @brief 닫기 확인(Save / Don't Save / Cancel)을 기다리는 중이면 true 입니다. */
         bool isCloseConfirmPending() const { return _bConfirmClose; }
         /**
@@ -109,12 +115,6 @@ namespace sw::editor
         void clearDocumentDirty() { _bDocumentDirty = SW_FALSE; }
         /** @brief 문서를 디스크에 씁니다. 성공하면 true 입니다. */
         [[nodiscard]] virtual bool saveDocument() = 0;
-        /**
-         * @brief 지금 `saveDocument` 가 쓸 파일(디스크 절대 경로)을 @p outListPath 에 더합니다. `saveDocumentAndClearDirty` 가 쓰기 전에 하나씩 읽기 전용을 확인한다.
-         * @details 두 기반이 정한다(순수 가상) — 에셋 문서(`EditorDocumentPanel`)는 연 파일이 기본이고 다른 파일을 쓰는 패널이 재정의하며, 상태 문서(`EditorStateDocumentPanel`)는 패널마다 반드시 적는다.
-         *          빠뜨리면 그 파일은 확인 없이 Core 원자적 쓰기에서 알림 없이 진다. 유니티 `AssetModificationProcessor.OnWillSaveAssets( paths )` 가 저장할 경로 목록으로 체크아웃을 묻는 자리다.
-         */
-        virtual void collectFilesToSave( vector<string>& outListPath ) const = 0;
         /**
          * @brief 지금 저장해도 되면 true 입니다. false 이면 `saveDocumentAndClearDirty` 가 `saveDocument` 를 호출하지 않고 false 를 반환합니다.
          * @details 문서를 읽지 못한 패널(깨졌거나 새 형식)은 이전 문서의 데이터를 가지고 있다. 그대로 쓰면 읽지 못한 파일을 이전 문서로 덮어쓴다.

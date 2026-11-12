@@ -270,7 +270,7 @@ namespace sw
          */
         static void setCreateRule( WriteGate rule );
         /**
-         * @brief 게이트가 @p path 를 바꾸는 것을 허락하는지, 새 자리면 이름 규칙(`setCreateRule`)에 맞는지 봅니다. 거절하면 경로와 이유를 오류로 남기고 false 입니다.
+         * @brief 게이트가 @p path 를 바꾸는 것을 허락하는지, 체크아웃하지 않은 파일이 아닌지(`findNotOpenForEdit`, 폴더면 그 아래), 새 자리면 이름 규칙(`setCreateRule`)에 맞는지 봅니다. 거절하면 경로와 이유를 오류로 남기고 false 입니다.
          *        둘 다 없으면 true. 파일을 바꾸는 모든 입구가 부릅니다.
          */
         [[nodiscard]] static bool isWriteAllowed( string_view path );
@@ -289,7 +289,8 @@ namespace sw
         static CheckoutRule setCheckoutRule( CheckoutRule rule );
         /**
          * @brief @p path(파일, 폴더면 그 아래 모든 파일)에서 체크아웃 규칙 안의 읽기 전용 파일을 처음 만난 경로입니다. 규칙이 없거나 그런 파일이 없으면 빈 값입니다.
-         * @details 파일을 지우거나 옮기거나 덮는 입구(`removeFile` · `tryRemoveFile` · `removeDirectory` · `renamePath` · `copyFile` 의 대상 · `moveToRecycleBin`)가 모두 이 답으로 거절한다 —
+         * @details `isWriteAllowed` 가 이 답으로 거절하므로, 그것을 지나는 모든 입구(쓰기 · `removeFile` · `tryRemoveFile` · `removeDirectory` · `renamePath` · `copyFile` 의 대상 · `moveToRecycleBin`)와
+         *          경로를 스스로 여는 서드파티 저장(DDS 저장 · SQLite — 쓰기 전에 `isWriteAllowed` 를 직접 부른다)이 같은 확인을 지난다 —
          *          POSIX 는 폴더 권한만으로 읽기 전용 파일을 지우고 옮기며, Windows 지우기(`removeEntry`)는 정리를 위해 속성을 풀고 지워 잠금이 뚫렸다.
          *          유니티 `AssetDatabase.IsOpenForEdit` 의 반대 질의이고, 언리얼 `IFileManager::Delete` 가 `EvenReadOnly` 없이 읽기 전용을 지우지 않는 자리다.
          */
