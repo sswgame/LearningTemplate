@@ -218,6 +218,68 @@ SW_TEST_CASE( SpinLockTest, ProtectsACounterUnderContention )
     SW_EXPECT_EQUAL( kThreadCount * kAddCount, counter );
 }
 
+// 쥔 채 오래 머물면 기다리는 쪽은 스핀 예산(`SpinLock::kSpinLimit`)을 넘겨 잠든다. 풀 때 잠든 대기자가 차례로 모두 깨어나야 한다 —
+// 깨어난 쪽이 "잠든 대기자 있음" 상태를 이어받지 않으면 나머지가 영영 잠들어 이 테스트가 끝나지 않는다.
+SW_TEST_CASE( SpinLockTest, SleepingWaitersAllWakeAfterALongHold )
+{
+    constexpr int32 kWaiterCount = 8;
+    SpinLock        lock;
+    atomic<int32>   acquiredCount{ 0 };
+    SW_REQUIRE_TRUE( SpinLockTestUtil::tryLock( lock ) );
+    {
+        vector<thread> listThread;
+        for ( int32 index = 0; index < kWaiterCount; ++index )
+        {
+            listThread.emplace_back( [&lock, &acquiredCount]
+            {
+                ScopedLock<SpinLock> guard{ lock };
+                acquiredCount.fetch_add( 1, std::memory_order_relaxed );
+            } );
+        }
+        ThreadUtil::sleepForMilliseconds( 30 ); // 스핀 예산(약 2 us)을 한참 넘겨 대기자가 잠들게 한다
+        SW_EXPECT_EQUAL( 0, acquiredCount.load( std::memory_order_relaxed ) );
+        SW_EXPECT_TRUE( lock.isLocked() );
+        SpinLockTestUtil::unlock( lock );
+    }
+    SW_EXPECT_EQUAL( kWaiterCount, acquiredCount.load( std::memory_order_relaxed ) );
+    SW_EXPECT_FALSE( lock.isLocked() );
+}
+
+// 감사 C-5 의 모양: 코어보다 스레드가 많고 구간 안에서 힙 할당(벡터 성장)과 양보가 돈다. 상호 배제가 깨지지 않고 넣은 수가 모두 남아야 한다.
+SW_TEST_CASE( SpinLockTest, OversubscribedSectionsWithHeapAllocationStayExclusive )
+{
+    const uint32    processorCount = thread::getUsableProcessorCount();
+    const int32     threadCount    = static_cast<int32>( processorCount * 4 < 8 ? 8 : processorCount * 4 );
+    constexpr int32 kAddCount      = 2000;
+    constexpr int32 kYieldEvery    = 64;
+    SpinLock        lock;
+    vector<int32>   listValue;
+    atomic<int32>   insideCount{ 0 };
+    atomic<int32>   overlapCount{ 0 };
+    {
+        vector<thread> listThread;
+        for ( int32 index = 0; index < threadCount; ++index )
+        {
+            listThread.emplace_back( [&lock, &listValue, &insideCount, &overlapCount, index]
+            {
+                for ( int32 add = 0; add < kAddCount; ++add )
+                {
+                    ScopedLock<SpinLock> guard{ lock };
+                    if ( insideCount.fetch_add( 1, std::memory_order_relaxed ) != 0 )
+                        overlapCount.fetch_add( 1, std::memory_order_relaxed );
+                    listValue.push_back( index );
+                    if ( add % kYieldEvery == 0 )
+                        ThreadUtil::yield(); // 쥔 채 양보해 다른 스레드가 스핀 예산을 넘기고 잠드는 길을 탄다
+                    insideCount.fetch_sub( 1, std::memory_order_relaxed );
+                }
+            } );
+        }
+    }
+    SW_EXPECT_EQUAL( 0, overlapCount.load( std::memory_order_relaxed ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( threadCount ) * kAddCount, listValue.size() );
+    SW_EXPECT_FALSE( lock.isLocked() );
+}
+
 SW_TEST_CASE( ScopedLockTest, UniqueLockFollowsLockAndUnlock )
 {
     SpinLock lock;
