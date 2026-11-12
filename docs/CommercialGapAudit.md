@@ -546,13 +546,6 @@
 - 제안: 문서 패널마다 스택을 두고(미리보기 패널의 창 스택을 기반으로 올린다) 포커스가 그 스택을 겨누게 한다 — `parkHistory` 는 씬 스택만 맡는다. 그때 `Editor.UndoCount` · History 패널이 보는 스택(전역 → 포커스)과 이를 보는 시나리오(`sequencercuts` · `gimmickgraph` · `uipreview*`)를 함께 옮긴다.
 - 확인: 시나리오 `undosurvivesplay` 에 "플레이 중 시퀀서 편집 → Stop → 그 창에서 undo → 값 복귀".
 
-#### E-4 그룹 기즈모가 부모 · 자식 동시 선택을 거르지 않는다 — 선택 순서에 따라 자식이 이중 변환된다
-- 분류: 결함 · 확신: 확인(코드 추적 — 재현 필요)
-- 근거: `Source/Editor/Viewport/EditorViewportGizmo.cpp:110-119` — 기즈모 대상은 씬 컴포넌트만 걸러 낸 선택 전체다. `:284-294` — 선택 순서대로 `setWorldTransform( _listRelativeWorld[i] * groupWorld )` 를 한다. 자식이 부모보다 먼저 선택돼 있으면 자식을 놓은 뒤 부모가 움직이며 자식을 한 번 더 끈다. 삭제는 `EditorSceneCommands::filterTopLevel` 을 쓰는데 기즈모는 쓰지 않는다.
-- 상용 엔진: 유니티 `Selection.GetTransforms( SelectionMode.TopLevel )`. 언리얼은 부모가 선택된 액터를 이동에서 뺀다.
-- 제안: "변환 대상 = 최상위 선택" 을 선택 모델의 조회 하나(`EditorSelection::getTopLevelObjects`)로 두고 기즈모 · 정렬 · 스냅 · 삭제 · 복제가 같은 것을 쓴다.
-- 확인: 시나리오 `flowselection` 에 "자식 → 부모 순으로 고르고 그룹 이동 → 자식 로컬 변환이 그대로".
-
 #### E-5 선택 · 다중 조작이 오브젝트 수의 제곱이다
 - 분류: 성능 · 확신: 구조 확인, 시간은 측정 필요 — NEXT "Hierarchy 큐브 8000" 측정의 보강
 - 근거: `Source/Editor/Common/Workspace/EditorSelection.cpp:26` — `selectObject` 한 번이 `pruneInvalid()`(선택 전체 핸들 풀기) + 선형 `contains`(`:97`) + `notifyChanged` 다. `HierarchyViewModel.cpp:394`(Select All)와 `:361`(Shift 범위)이 이것을 행마다 부른다. `EditorSceneCommands.cpp:225-244` 의 `filterTopLevel` 은 오브젝트 × 조상 × 선택 전체이고 `:294` 삭제가 오브젝트마다 `selectObject( Remove )` 를 한다. 8000 큐브면 Select All 한 번에 핸들 풀기 약 3200 만 회다.
