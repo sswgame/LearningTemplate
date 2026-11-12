@@ -82,6 +82,17 @@ namespace sw
                 return pScene != nullptr ? pScene->getSourcePath() : string{};
             }
 
+            /** @brief 감시 값 `Save.Blocked` 입니다 — 세이브 막기 문이 들렸으면 1(씬 로드 · 깨진 복원 · 연출). */
+            [[nodiscard]] static bool readSaveBlocked( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                GameInstance* const pInstance = GameInstance::findRunningInstance();
+                if ( pInstance == nullptr )
+                    return false;
+                outValue = pInstance->getSaveGate().isBlocked() ? 1.0 : 0.0;
+                return true;
+            }
+
             template <bool bWritten>
             [[nodiscard]] static bool readSlotCount( const GameObjectManager* pManager, float64& outValue )
             {
@@ -703,5 +714,7 @@ namespace sw
                     &GameInstanceInternal::runSlotCommand<false> );
 
     SW_AUTOMATION_WATCH( saveWritten, "Save.Written", "Game state save slots written successfully by the running game", &GameInstanceInternal::readSlotCount<true> );
+    // 막기는 씬 로드(워커)와 세이브 읽기(저장소)의 끝을 따르므로 벽시계 감시 값이다.
+    SW_AUTOMATION_WALL_WATCH( saveBlocked, "Save.Blocked", "1 while the running game's save gate refuses saving (scene loading, broken restore, cutscene)", &GameInstanceInternal::readSaveBlocked );
     SW_AUTOMATION_WATCH( saveLoaded, "Save.Loaded", "Game state save slots read and restored successfully by the running game", &GameInstanceInternal::readSlotCount<false> );
 } // namespace sw

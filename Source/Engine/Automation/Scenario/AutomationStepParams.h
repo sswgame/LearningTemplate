@@ -111,6 +111,16 @@ namespace sw
         uint32 _timeoutFrames{ 600 };
     };
 
+    /** @brief `ExpectActiveScene` 의 인자입니다 — 활성 씬이 온 리소스 경로. */
+    REFLECT()
+    struct SW_API AutomationExpectActiveSceneParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( AssetPath, Required )
+        string _path{};
+    };
+
     /** @brief `RecordStateHash` · `ExpectStateHash` 의 인자입니다 — 같은 `key` 로 앞에서 잰 활성 씬 상태 해시를 뒤에서 견준다. */
     REFLECT()
     struct SW_API AutomationStateHashStepParams

@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
 
 #include "Core/Encoding/FourCCUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
@@ -20,6 +21,10 @@
 
 namespace sw
 {
+    // 결함 주입: 교체 단계(검증을 지난 뒤 활성 씬을 비운 자리)의 실패를 흉내 낸다 — 같은 바이트 · 같은 코드라 실제로는 드물어, 깨진 복원 뒤 세이브 막기 · 씬 다시 열기를
+    // 시나리오(game/empty/automation/savetravel)가 밟을 다른 길이 없다(언리얼도 저장 실패 흉내를 개발 콘솔 변수로 둔다). 테스트용이라 Shipping 에서는 상수 거짓이다.
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_saveRestoreBreakReplace, false, "Fail the replace step of every snapshot restore after the scene is cleared (fault injection for the broken-restore path)" );
+
     namespace
     {
         struct StateEnvelopeInternal
@@ -288,7 +293,7 @@ namespace sw
         if ( bytesScene.empty() == false )
         {
             pLiveManager->clear();
-            if ( deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, *pLiveManager, listComponentIDRemap ) == false )
+            if ( gv_saveRestoreBreakReplace || deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, *pLiveManager, listComponentIDRemap ) == false )
             {
                 _pComponentStateStore->clear();
                 return broken;

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  세이브 불러오기가 찍은 씬으로 옮긴 뒤 적용한다(감사 G-7) · 교체에서 진 복원 뒤 세이브를 막고 그 씬을 다시 연다(감사 P0-6).
+  1) 맵 A(rendertest3d)에서 저장 → 다른 씬(fogshowcase — 타이틀 자리)으로 옮김 → game.load: 머리의 씬 정체로 A 를 다시 열고 적용한다(활성 씬 경로 · 오브젝트 수).
+  2) 결함 주입(gv_saveRestoreBreakReplace)으로 교체 단계를 지게 한 game.load: 세이브가 막혀 Save.Written 이 늘지 않고, A 를 다시 연 뒤에는 저장이 다시 된다.
+  실행: ctest -R Scenario.game.empty.savetravel
+-->
+<Scenario name="game.empty.savetravel" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
+	<Wait frames="2"/>
+	<Remember watch="Scene.ObjectCount" as="savedCount"/>
+	<DevCommand line="game.save savetravel/a"/>
+	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
+
+	<!-- 다른 씬에서 불러온다 — 그 씬 위에 섞지 않고 A 로 옮긴 뒤 적용한다 -->
+	<LoadScene path="game/empty/maps/fogshowcase.scene.xml" timeoutFrames="600"/>
+	<DevCommand line="game.load savetravel/a"/>
+	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/empty/maps/rendertest3d.scene.xml"/>
+	<Expect watch="Scene.ObjectCount" sameAs="savedCount"/>
+	<WaitUntil watch="Save.Blocked" equals="0" timeoutWallSeconds="30"/>
+
+	<!-- 교체에서 진 복원: 일부만 선 씬을 쓰지 않는다(막기) → 씬을 다시 열면 풀린다 -->
+	<Remember watch="Save.Written" as="writtenBeforeBroken"/>
+	<Variable name="gv_saveRestoreBreakReplace" value="true"/>
+	<DevCommand line="game.load savetravel/a"/>
+	<WaitUntil watch="Save.Blocked" equals="1" timeoutWallSeconds="10"/>
+	<Variable name="gv_saveRestoreBreakReplace" value="false"/>
+	<DevCommand line="game.save savetravel/b"/>
+	<Wait frames="2"/>
+	<Expect watch="Save.Written" sameAs="writtenBeforeBroken"/>
+	<ExpectLog id="GameInstance.RestoreBrokeScene" count="1"/>
+	<ExpectLog id="GameInstance.SaveBlocked" count="1"/>
+	<WaitUntil watch="Save.Blocked" equals="0" timeoutWallSeconds="60"/>
+	<ExpectLog id="GameInstance.BrokenSceneReopened" contains="game/empty/maps/rendertest3d.scene.xml" count="1"/>
+	<ExpectActiveScene path="game/empty/maps/rendertest3d.scene.xml"/>
+	<DevCommand line="game.save savetravel/b"/>
+	<WaitUntil watch="Save.Written" differsFrom="writtenBeforeBroken" timeoutWallSeconds="10"/>
+	<Pass/>
+</Scenario>

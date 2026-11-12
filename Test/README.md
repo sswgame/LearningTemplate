@@ -141,7 +141,7 @@ SW_TEST_CASE( LogTest, ConsoleReachesStdout, ._timeoutSeconds = 90 )            
 - 사건 세기: `<ExpectLog id="영역.사건">` 만 쓴다 — 세려는 줄은 소스에서 `SW_LOG_INFO_ID` · `SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID` 로 쓴다. `contains` 는 그 id 줄의 값(경로 · 수)을 좁힐 때만 붙인다(문장으로 세면 문구를 고칠 때 단언이 낡는다). 개발 명령의 답은 `DevCommand.Reply` 줄이다.
 - 에디터 콘솔은 지금 단계가 `<ExpectLog>` 로 선언한 줄을 단위 테스트의 `SW_EXPECT_LOG` 처럼 흐리게 보인다 — 세션(`AutomationSession`)이 든 로그 판정 `AutomationLogPolicy` 한 벌을 게이트 · 재생기 · 콘솔이 나눠 들고, 읽기 규칙(`<AllowLog>` 허용 · `<ExpectLog>` 선언 · `count="0"` 은 선언 아님)은 `AutomationLogPolicy::prepare` 한 곳이다. `<AllowLog>` 줄은 경고색 그대로다(언리얼 `AddExpectedError` 도 기대 오류만 따로 표시).
 - 산출물(사진 · 보고)은 `Saved/Automation/<시나리오>/<프로세스>/` 에 쓴다. 무인 실행은 사용자 설정 파일을 읽지도 쓰지도 않고 사양 자동 프리셋을 쓰지 않는다.
-- 씬 · 연출 단계: `<LoadScene path="…" timeoutFrames="600"/>`(씬을 열고 설 때까지 붙잡는다), `<PlaySequence object="이름"/>` · `<WaitSequence object="이름"/>`(그 오브젝트의 시퀀서 재생 · 끝 기다림).
+- 씬 · 연출 단계: `<LoadScene path="…" timeoutFrames="600"/>`(씬을 열고 설 때까지 붙잡는다), `<ExpectActiveScene path="…"/>`(활성 씬이 그 리소스에서 왔는지 — 세이브 불러오기의 씬 옮김), `<PlaySequence object="이름"/>` · `<WaitSequence object="이름"/>`(그 오브젝트의 시퀀서 재생 · 끝 기다림).
 - 벤치마크: `<BeginFrameStats/>` … `<EndFrameStats file="bench.json"/>` 사이의 벽시계 프레임 시간을 요약해 산출물 폴더에 쓴다(평균 · p95 · p99 · fps). 예: `game.empty.benchmark`.
 - **재생**(테스트가 아니라 게임 · 콘솔에서): `ScenarioPlayback::play( 경로, 선택 )` 또는 콘솔 `scenario.play <경로> [loop] [demo] [fixed]` · `scenario.stop`. 판정이 끝나도 프로세스를 끝내지 않고, 반복(어트랙트) · 사람이 손대면 멈춤(데모) · 고정 프레임 시간(벤치마크)을 고른다. 끝은 델리게이트로 알린다. 재생은 테스트 세션(`AutomationSession` — 체인 · 판정 · 종료 코드)과 나뉜 객체 `ScenarioPlayer` 가 하고(언리얼 Level Sequence Player 와 Automation 세션의 나눔), 같은 실행기 · 단계를 쓴다.
   시퀀서 항목 종류 `Scenario`(`_scenario="….scenario.xml"`)는 시작 프레임을 지날 때 이 창구로 시나리오를 부른다 — 연출 안에 게임 행동 · 입력을 끼우는 자리(언리얼 시퀀서 이벤트 트랙).
