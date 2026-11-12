@@ -21,7 +21,7 @@ namespace sw::editor
         float2 _min{};
         float2 _max{};
         uint32 _itemID{ 0 };
-        uint32 _windowID{ 0 };         ///< 위젯을 그린 ImGui 창. 누를 점의 최상위 창이 이 창(또는 그 조상 · 이 위젯이 담은 자식 창)이 아니면 가려진 것이다(`EditorSelfTestInput::hitTestMark`)
+        uint32 _windowID{ 0 };         ///< 위젯을 그린 ImGui 창. 누를 점의 최상위 창이 이 창(또는 그 조상 · 이 위젯이 담은 자식 창)이 아니면 가려진 것이다(`EditorSelfTestInput::aimAtMark`)
         uint32 _viewportID{ 0 };       ///< 위젯이 그려진 뷰포트. 떠 있는 창(자기 플랫폼 창)이면 마우스를 옮길 때 그 뷰포트를 "커서 아래" 로 알린다
         uint32 _frame{ 0 };            ///< 기록한 ImGui 프레임 번호. 지난 프레임에 그려지지 않은 위젯을 누르지 않게 한다
         uint32 _stableStartFrame{ 0 }; ///< 사각형 · 뷰포트 · 잘림이 지금 값으로 이어서 그려진 첫 프레임(그 사이 빠진 프레임이 있으면 다시 센다)
@@ -71,10 +71,11 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 레이블의 누를 점에 포인터를 두었을 때 그 점의 입력을 받는 쪽입니다(`EditorSelfTestInput::hitTestMark`). */
+    /** @brief 레이블의 누를 점에 포인터를 두었을 때 그 점의 입력을 받는 쪽입니다(`EditorSelfTestInput::aimAtMark` · `pressAtMark`). */
     enum class EditorMarkHit : uint8
     {
-        Pending,   ///< 아직 판정할 표본이 없다(레이블이 없거나, 포인터가 그 점에 닿은 프레임의 표본이 아직 없다)
+        Missing,   ///< 레이블이 지난 프레임에 그려지지 않았다
+        Pending,   ///< 아직 판정할 표본이 없다(포인터가 그 점에 닿은 프레임이 아직 끝나지 않았다) — 다음 프레임에 다시 묻는다
         Reachable, ///< 그 점의 최상위 창이 레이블 주인이다 — 누르면 레이블이 받는다
         Covered,   ///< 다른 창(오버레이 툴바 · 팝업 · 모달)이 그 점을 덮어 누르면 그쪽이 받는다
     };
@@ -104,23 +105,28 @@ namespace sw::editor
          * @return 없는 이름이면 false 입니다.
          */
         [[nodiscard]] static bool findKeyByName( string_view name, int32& outImguiKey );
-        /** @brief 레이블의 @p anchor 위치(0..1, 가운데가 (0.5, 0.5))로 마우스를 옮깁니다. 레이블이 없으면 false 입니다. */
-        [[nodiscard]] static bool moveMouseToMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
         /**
-         * @brief 레이블의 가운데에 커서를 붙잡아 둡니다. `releaseMouseHold` 가 호출될 때까지 프레임마다 그 위치를 다시 넣습니다. 버튼을 누른 채 여러 프레임을 두는
-         *        단계(`EditorClick state="down"`, 뷰포트 비행)에서 플랫폼이 넣는 실제 커서가 호버를 풀지 않게 하기 위해서입니다. 레이블이 없으면 false 입니다.
-         */
-        [[nodiscard]] static bool holdMouseAtMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
-        /** @brief ImGui 가 본 포인터가 지금 레이블의 @p anchor 자리에 있으면 true 입니다. 레이블이 없으면 false 입니다. */
-        [[nodiscard]] static bool isMouseAtMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
-        /**
-         * @brief 포인터가 레이블의 @p anchor 자리에 있던 프레임에 그 점의 최상위 창(ImGui `HoveredWindow`)이 레이블 주인인지 봅니다. 가려졌으면 @p outCoverName 에 덮은 창 이름을 넣습니다.
-         * @details 잘림 검사(`_bClipped`)는 창 밖으로 잘린 것만 잡는다 — 같은 창 위의 오버레이(씬 뷰 하단 툴바 자식 창) · 팝업에 가려지면 누름이 그쪽으로 가 단계는 성공하고 뒤 기대만 엉뚱하게 졌다.
-         *          주인은 레이블을 그린 창, 그 조상(제목 표시줄 · 도크 탭 · 열린 메뉴 머리), 레이블 사각형 안에 든 자식 창(목록 상자처럼 레이블이 담은 내용)이다.
+         * @brief 레이블 위에 포인터를 두는 입구입니다 — 레이블의 @p anchor 위치(0..1, 가운데가 (0.5, 0.5))에 커서를 붙잡고(`releaseMouseHold` 까지 프레임마다 다시 넣는다)
+         *        그 점에 누가 닿는지 판정합니다. 가려졌으면 @p outCoverName 에 덮은 창 이름을 넣습니다.
+         * @details 레이블을 누르거나 호버하는 모든 길(시나리오 `EditorClick` · `EditorDrag` · `EditorHover`, 자체 테스트)이 이 입구와 `pressAtMark` 만 거친다 — 레이블 좌표로
+         *          포인터를 옮기는 다른 공개 함수는 없다. 판정은 포인터가 그 점에 있던 프레임의 최상위 창(ImGui `HoveredWindow`)이 레이블 주인인지다: 레이블을 그린 창,
+         *          그 조상(제목 표시줄 · 도크 탭 · 열린 메뉴 머리), 레이블 사각형 안에 든 자식 창(목록 상자처럼 레이블이 담은 내용). 잘림 검사(`_bClipped`)는 창 밖으로
+         *          잘린 것만 잡아, 같은 창 위의 오버레이(씬 뷰 하단 툴바 자식 창) · 팝업에 가려지면 누름이 그쪽으로 가고 단계는 성공했다.
          *          언리얼 Automation Driver 의 hit-test 확인 · Playwright actionability 의 "receives events"(elementFromPoint) 와 같은 자리다.
+         *          붙잡기는 플랫폼이 다음 프레임에 넣는 실제 커서가 호버를 풀지 않게 한다(누른 채 두는 `EditorClick state="Down"` · 뷰포트 비행).
+         * @return `Pending` 이면 다음 프레임에 다시 부른다. `Reachable` 일 때만 누른다(`pressAtMark` 도 같은 판정을 다시 본다).
          */
-        [[nodiscard]] static EditorMarkHit hitTestMark( string_view key, const float2& anchor, string& outCoverName );
-        static void                        releaseMouseHold();
+        [[nodiscard]] static EditorMarkHit aimAtMark( string_view key, const float2& anchor, string& outCoverName );
+        /**
+         * @brief 레이블을 누르는 입구입니다 — `aimAtMark` 와 같은 판정이 `Reachable` 일 때만 그 점으로 옮기고 @p button 을 누르는 이벤트를 넣습니다. 아니면 아무것도 넣지 않고 판정을 돌려줍니다.
+         * @details 붙잡기는 건드리지 않는다 — 누른 채 둘 단계는 붙잡은 채로, 한 번 누르고 놓을 단계는 먼저 `releaseMouseHold` 하고 부른다. 수정자 키는 이 앞에 넣는다.
+         */
+        [[nodiscard]] static EditorMarkHit pressAtMark( string_view key, const float2& anchor, int32 button, string& outCoverName );
+        /** @brief 레이블의 @p anchor 위치로 옮겨 @p button 을 놓는 이벤트를 넣습니다. 레이블이 사라졌으면(누름이 팝업을 닫았다) 그 자리에서 놓고 false 입니다 — 그래도 놓아야 버튼이 눌린 채 남지 않는다. */
+        static bool releaseAtMark( string_view key, const float2& anchor, int32 button );
+        /** @brief 붙잡기를 풀고 포인터를 화면 밖으로 치웁니다 — 테스트가 끝날 때 다음 테스트의 호버를 흐리지 않게 한다. */
+        static void parkMouse();
+        static void releaseMouseHold();
         /** @brief 앞 단계가 넣은 이벤트가 아직 ImGui 에 다 들어가지 않았으면 true 입니다. 입력 단계는 앞 입력이 다 들어간 뒤에 자리를 본다. */
         [[nodiscard]] static bool hasPendingEvents();
         /**

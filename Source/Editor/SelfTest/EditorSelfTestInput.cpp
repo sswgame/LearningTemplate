@@ -67,7 +67,7 @@ namespace sw::editor
                 }
             };
 
-            /** @brief 한 프레임의 포인터 자리와 그 점의 최상위 창입니다(`hitTestMark` 의 재료). 그 프레임이 끝난 뒤, 다음 입력을 넣기 전에 뜬다. */
+            /** @brief 한 프레임의 포인터 자리와 그 점의 최상위 창입니다(`evaluateMarkHit` 의 재료). 그 프레임이 끝난 뒤, 다음 입력을 넣기 전에 뜬다. */
             struct HitSample
             {
                 float2 _mousePos{};
@@ -281,6 +281,52 @@ namespace sw::editor
                 }
                 return false;
             }
+
+            /** @brief 테스트가 끝난 포인터를 두는 화면 밖 자리입니다(`parkMouse`). */
+            static constexpr float32 kParkedMouseCoordinate = -10000.0f;
+
+            /** @brief 레이블의 @p anchor 위치(0..1)입니다. */
+            static float2 computeAimPoint( const EditorSelfTestMark& mark, const float2& anchor )
+            {
+                return float2{ mark._min._x + ( mark._max._x - mark._min._x ) * anchor._x, mark._min._y + ( mark._max._y - mark._min._y ) * anchor._y };
+            }
+
+            /** @brief 두 점이 같은 픽셀이면 true 입니다. ImGui 는 마우스 좌표를 정수로 내린다. */
+            static bool isSamePixel( const float2& lhs, const float2& rhs )
+            {
+                constexpr float32 kAimTolerance = 1.0f;
+                return fabsf( lhs._x - rhs._x ) <= kAimTolerance && fabsf( lhs._y - rhs._y ) <= kAimTolerance;
+            }
+
+            /**
+             * @brief 포인터가 @p mark 의 @p anchor 자리에 있던 프레임에 그 점의 최상위 창이 레이블 주인인지 판정합니다(`EditorSelfTestInput::aimAtMark` 의 판정).
+             * @details 지금 포인터(이번 프레임)와 표본(바로 앞 프레임이 끝난 뒤) 둘 다 그 점이어야 판정한다 — 표본의 창은 그 포인터로 정한 것이다.
+             */
+            static EditorMarkHit evaluateMarkHit( const State& state, const EditorSelfTestMark& mark, const float2& anchor, string& outCoverName )
+            {
+                const HitSample& sample = state._hitSample;
+                const float2     target = computeAimPoint( mark, anchor );
+                const ImVec2     mouse  = ImGui::GetIO().MousePos;
+                const bool       bFresh = sample._bValid != SW_FALSE && sample._frame + 1 >= static_cast<uint32>( ImGui::GetFrameCount() );
+                const bool       bAimed = isSamePixel( float2{ mouse.x, mouse.y }, target ) && isSamePixel( sample._mousePos, target );
+                if ( bFresh == false || bAimed == false )
+                    return EditorMarkHit::Pending;
+                if ( sample._bMouseDown != SW_FALSE )
+                    return EditorMarkHit::Reachable; // 누른 동안은 ImGui 가 호버 창을 누른 곳에 묶는다 — 이 점의 창을 말하지 않는다(누른 채 다른 버튼을 누르는 단계)
+                const ImGuiWindow* pMarkWindow = ImGui::FindWindowByID( mark._windowID );
+                const ImGuiWindow* pHit        = sample._hoveredWindowID != 0 ? ImGui::FindWindowByID( sample._hoveredWindowID ) : nullptr;
+                if ( pMarkWindow == nullptr )
+                    return EditorMarkHit::Pending; // 레이블을 그린 창이 없어졌다 — 다음 기록을 기다린다
+                if ( pHit == nullptr )
+                {
+                    outCoverName = "(no window takes input there - a modal popup blocks it)";
+                    return EditorMarkHit::Covered;
+                }
+                if ( isMarkOwner( *pHit, *pMarkWindow, mark ) )
+                    return EditorMarkHit::Reachable;
+                outCoverName = pHit->Name != nullptr ? pHit->Name : "?";
+                return EditorMarkHit::Covered;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -463,70 +509,48 @@ namespace sw::editor
         return false;
     }
 
-    bool EditorSelfTestInput::moveMouseToMark( string_view key, const float2& anchor )
+    EditorMarkHit EditorSelfTestInput::aimAtMark( string_view key, const float2& anchor, string& outCoverName )
     {
+        using Internal = EditorSelfTestInputInternal;
         EditorSelfTestMark mark;
-        if ( EditorSelfTestMarks::find( key, mark ) == false )
-            return false;
-        moveMouse( float2{ mark._min._x + ( mark._max._x - mark._min._x ) * anchor._x, mark._min._y + ( mark._max._y - mark._min._y ) * anchor._y }, mark._viewportID );
-        return true;
-    }
-
-    bool EditorSelfTestInput::isMouseAtMark( string_view key, const float2& anchor )
-    {
-        EditorSelfTestMark mark;
-        if ( EditorSelfTestMarks::find( key, mark ) == false )
-            return false;
-        constexpr float32 kAimTolerance = 1.0f; ///< 픽셀. ImGui 는 마우스 좌표를 정수로 내린다
-        const ImVec2      mouse         = ImGui::GetIO().MousePos;
-        const float32     targetX       = mark._min._x + ( mark._max._x - mark._min._x ) * anchor._x;
-        const float32     targetY       = mark._min._y + ( mark._max._y - mark._min._y ) * anchor._y;
-        return fabsf( mouse.x - targetX ) <= kAimTolerance && fabsf( mouse.y - targetY ) <= kAimTolerance;
-    }
-
-    EditorMarkHit EditorSelfTestInput::hitTestMark( string_view key, const float2& anchor, string& outCoverName )
-    {
-        EditorSelfTestMark                        mark;
-        const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
+        Internal::State*   pState = Internal::findState();
         if ( pState == nullptr || EditorSelfTestMarks::find( key, mark ) == false )
-            return EditorMarkHit::Pending;
-        const EditorSelfTestInputInternal::HitSample& sample        = pState->_hitSample;
-        constexpr float32                             kAimTolerance = 1.0f; ///< 픽셀. ImGui 는 마우스 좌표를 정수로 내린다
-        const float32                                 targetX       = mark._min._x + ( mark._max._x - mark._min._x ) * anchor._x;
-        const float32                                 targetY       = mark._min._y + ( mark._max._y - mark._min._y ) * anchor._y;
-        const bool                                    bFresh        = sample._bValid != SW_FALSE && sample._frame + 1 >= static_cast<uint32>( ImGui::GetFrameCount() );
-        if ( bFresh == false || fabsf( sample._mousePos._x - targetX ) > kAimTolerance || fabsf( sample._mousePos._y - targetY ) > kAimTolerance )
-            return EditorMarkHit::Pending;
-        if ( sample._bMouseDown != SW_FALSE )
-            return EditorMarkHit::Reachable; // 누른 동안은 ImGui 가 호버 창을 누른 곳에 묶는다 — 이 점의 창을 말하지 않는다(누른 채 다른 버튼을 누르는 단계)
-        const ImGuiWindow* pMarkWindow = ImGui::FindWindowByID( mark._windowID );
-        const ImGuiWindow* pHit        = sample._hoveredWindowID != 0 ? ImGui::FindWindowByID( sample._hoveredWindowID ) : nullptr;
-        if ( pMarkWindow == nullptr )
-            return EditorMarkHit::Pending; // 레이블을 그린 창이 없어졌다 — 다음 기록을 기다린다
-        if ( pHit == nullptr )
-        {
-            outCoverName = "(no window takes input there - a modal popup blocks it)";
-            return EditorMarkHit::Covered;
-        }
-        if ( EditorSelfTestInputInternal::isMarkOwner( *pHit, *pMarkWindow, mark ) )
-            return EditorMarkHit::Reachable;
-        outCoverName = pHit->Name != nullptr ? pHit->Name : "?";
-        return EditorMarkHit::Covered;
+            return EditorMarkHit::Missing;
+        pState->_heldMousePosition   = Internal::computeAimPoint( mark, anchor );
+        pState->_heldMouseViewportID = mark._viewportID;
+        pState->_bHoldMouse          = true;
+        return Internal::evaluateMarkHit( *pState, mark, anchor, outCoverName );
     }
 
-    bool EditorSelfTestInput::holdMouseAtMark( string_view key, const float2& anchor )
+    EditorMarkHit EditorSelfTestInput::pressAtMark( string_view key, const float2& anchor, int32 button, string& outCoverName )
+    {
+        using Internal = EditorSelfTestInputInternal;
+        EditorSelfTestMark     mark;
+        const Internal::State* pState = Internal::findState();
+        if ( pState == nullptr || EditorSelfTestMarks::find( key, mark ) == false )
+            return EditorMarkHit::Missing;
+        const EditorMarkHit hit = Internal::evaluateMarkHit( *pState, mark, anchor, outCoverName );
+        if ( hit != EditorMarkHit::Reachable )
+            return hit;
+        moveMouse( Internal::computeAimPoint( mark, anchor ), mark._viewportID );
+        setMouseButton( button, true );
+        return hit;
+    }
+
+    bool EditorSelfTestInput::releaseAtMark( string_view key, const float2& anchor, int32 button )
     {
         EditorSelfTestMark mark;
-        if ( EditorSelfTestMarks::find( key, mark ) == false )
-            return false;
-        EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
-        if ( pState == nullptr )
-            return false;
-        EditorSelfTestInputInternal::State& state = *pState;
-        state._heldMousePosition                  = float2{ mark._min._x + ( mark._max._x - mark._min._x ) * anchor._x, mark._min._y + ( mark._max._y - mark._min._y ) * anchor._y };
-        state._heldMouseViewportID                = mark._viewportID;
-        state._bHoldMouse                         = true;
-        return true;
+        const bool         bDrawn = EditorSelfTestMarks::find( key, mark );
+        if ( bDrawn )
+            moveMouse( EditorSelfTestInputInternal::computeAimPoint( mark, anchor ), mark._viewportID );
+        setMouseButton( button, false );
+        return bDrawn;
+    }
+
+    void EditorSelfTestInput::parkMouse()
+    {
+        releaseMouseHold();
+        moveMouse( float2{ EditorSelfTestInputInternal::kParkedMouseCoordinate, EditorSelfTestInputInternal::kParkedMouseCoordinate } );
     }
 
     bool EditorSelfTestInput::hasPendingEvents()

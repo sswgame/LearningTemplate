@@ -37,7 +37,6 @@
 #include "Editor/Panels/Scene/SceneViewPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/Model/EditorGridLevel.h"
 #include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
@@ -322,6 +321,7 @@ namespace sw::editor
                     : _objectID{ 0 }
                     , _pressAt{}
                     , _viewportID{ 0 }
+                    , _aimSteps{ 0 }
                     , _startPosition{}
                     , _bWasOver{ SW_FALSE }
                     , _bWasUsing{ SW_FALSE }
@@ -330,7 +330,7 @@ namespace sw::editor
 
                 void finishGizmo( GameObjectManager* pManager ) const
                 {
-                    EditorSelfTestInput::moveMouse( float2{ -10000.0f, -10000.0f } );
+                    EditorSelfTestInput::parkMouse();
                     EditorContext& editorContext = editor::getSubsystem<EditorContext>();
                     editorContext.getSubsystem<EditorWorkspace>().clearSelection();
                     GameObject* pObj = pManager != nullptr ? pManager->findGameObjectByID( _objectID ) : nullptr;
@@ -339,14 +339,16 @@ namespace sw::editor
                 }
                 static EditorSelfTestStep runGizmoMovesTheSelection( EditorSelfTestContext& context )
                 {
-                    constexpr float32  kDragPixel     = 60.0f;
-                    constexpr uint32   kDragStepCount = 4;
-                    GameObjectManager* pManager       = editor::getActiveObjectManager();
-                    Scene*             pScene         = editor::getActiveScene();
+                    constexpr float32     kDragPixel       = 60.0f;
+                    constexpr uint32      kDragStepCount   = 4;
+                    constexpr uint32      kMaxAimSteps     = 60; ///< 기즈모 가운데 조준을 기다리는 프레임 상한(보통 두세 프레임)
+                    constexpr const utf8* kGizmoCenterMark = "sceneView.gizmoCenter";
+                    GameObjectManager*    pManager         = editor::getActiveObjectManager();
+                    Scene*                pScene           = editor::getActiveScene();
                     if ( openSceneView( context ) == nullptr || context.expect( pManager != nullptr && pScene != nullptr, "no active scene" ) == false )
                         return EditorSelfTestStep::Done;
                     GizmoProbe&      probe     = context.getTestState<GizmoProbe>();
-                    const uint32     stepIndex = context.getStepIndex();
+                    const uint32     stepIndex = context.getStepIndex() - probe._aimSteps; // 조준하는 동안 같은 단계에 머문다
                     CameraComponent* pCamera   = EditorCamera::find( pScene );
                     if ( context.expect( pCamera != nullptr, "no editor camera" ) == false )
                         return EditorSelfTestStep::Done;
@@ -373,33 +375,37 @@ namespace sw::editor
                     // 아래부터는 프레임마다 한 걸음인 입력(옮기기 · 누르기 · 끌기 · 놓기)이다 — 프레임 자체가 시험 내용이다.
                     if ( stepIndex == 1 )
                     {
-                        // 오브젝트 원점을 화면 좌표로 변환한다. 기즈모 가운데 사각형(화면 평면 이동)이 거기 있다.
-                        EditorSelfTestMark canvas{};
-                        if ( context.expect( EditorSelfTestMarks::find( "sceneView.canvas", canvas ), "the scene view canvas left no mark" ) == false )
+                        // 기즈모 가운데 사각형(화면 평면 이동)에 포인터를 둔다 — 시나리오 · 다른 자체 테스트와 같은 입구(`aimAtMark`)라 툴바 오버레이가 덮으면 누르지 않고 실패한다.
+                        string              coverName;
+                        const EditorMarkHit hit = EditorSelfTestInput::aimAtMark( kGizmoCenterMark, float2{ 0.5f, 0.5f }, coverName );
+                        if ( hit == EditorMarkHit::Pending && probe._aimSteps < kMaxAimSteps )
+                        {
+                            ++probe._aimSteps; // 같은 단계에 머문다(단계 번호에서 뺀다)
+                            return EditorSelfTestStep::Continue;
+                        }
+                        EditorSelfTestMark center{};
+                        const bool         bAimed = hit == EditorMarkHit::Reachable && EditorSelfTestMarks::find( kGizmoCenterMark, center );
+                        const string       what   = hit == EditorMarkHit::Covered ? "the gizmo center is covered by window '" + coverName + "'" : string{ "the gizmo center was not drawn or never settled under the pointer" };
+                        if ( context.expect( bAimed, what.c_str() ) == false )
                         {
                             probe.finishGizmo( pManager );
                             return EditorSelfTestStep::Done;
                         }
-                        const float2   canvasPos{ canvas._min._x, canvas._min._y };
-                        const float2   canvasSize{ canvas._max._x - canvas._min._x, canvas._max._y - canvas._min._y };
-                        const float4x4 viewProj = pCamera->getViewProjectionMatrix( canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f ) );
-                        ImVec2         screen{};
-                        if ( context.expect( EditorViewportProjectionUtil::projectPoint( viewProj, probe._startPosition, canvasPos, canvasSize, screen ),
-                                             "the probe object is behind the camera" ) == false )
-                        {
-                            probe.finishGizmo( pManager );
-                            return EditorSelfTestStep::Done;
-                        }
-                        probe._pressAt    = float2{ screen.x, screen.y };
-                        probe._viewportID = canvas._viewportID;
-                        EditorSelfTestInput::moveMouse( probe._pressAt, probe._viewportID );
+                        probe._pressAt    = float2{ ( center._min._x + center._max._x ) * 0.5f, ( center._min._y + center._max._y ) * 0.5f };
+                        probe._viewportID = center._viewportID;
                         return EditorSelfTestStep::Continue;
                     }
                     if ( stepIndex == 2 )
                     {
                         probe._bWasOver = ImGuizmo::IsOver() ? SW_TRUE : SW_FALSE;
-                        EditorSelfTestInput::moveMouse( probe._pressAt, probe._viewportID );
-                        EditorSelfTestInput::setMouseButton( ImGuiMouseButton_Left, true );
+                        EditorSelfTestInput::releaseMouseHold(); // 아래 누름 · 끌기 이동이 포인터를 이어받는다
+                        string coverName;
+                        if ( context.expect( EditorSelfTestInput::pressAtMark( kGizmoCenterMark, float2{ 0.5f, 0.5f }, ImGuiMouseButton_Left, coverName ) == EditorMarkHit::Reachable,
+                                             "the gizmo center stopped being pressable between aiming and pressing" ) == false )
+                        {
+                            probe.finishGizmo( pManager );
+                            return EditorSelfTestStep::Done;
+                        }
                         return EditorSelfTestStep::Continue;
                     }
                     probe._bWasUsing = ( probe._bWasUsing || ImGuizmo::IsUsing() ) ? SW_TRUE : SW_FALSE;
@@ -429,6 +435,7 @@ namespace sw::editor
                 uint64 _objectID;
                 float2 _pressAt;
                 uint32 _viewportID; ///< 씬 뷰 캔버스의 뷰포트. 마우스를 움직일 때마다 함께 알린다. 플랫폼이 실제 커서의 뷰포트를 넣기 때문이다
+                uint32 _aimSteps;   ///< 기즈모 가운데 조준에 쓴 프레임 수 — 단계 번호에서 빼 같은 단계에 머문다
                 float3 _startPosition;
                 uint8  _bWasOver  : 1;
                 uint8  _bWasUsing : 1;
