@@ -160,8 +160,8 @@ namespace sw
         float32 _recoveryPerDay{ 0.1f }; ///< 하루마다 시세가 1 로 돌아오는 양
         PROPERTY( Min = 0 )
         int32 _restockDays{ 1 }; ///< 재입고 주기(일). 0 이면 재입고하지 않는다
-        PROPERTY( Min = 0 )
-        int32 _buybackLimit{ 0 }; ///< 되사기 목록에 남기는 판매 수(넘치면 오래된 것부터 버린다). 0 이면 판 아이템은 사라진다
+        PROPERTY( Min = 0, Required )
+        int32 _buybackLimit{ 0 }; ///< 되사기 목록에 남기는 판매 수(넘치면 오래된 것부터 버린다). 필수 — 0 이면 판 아이템은 사라진다(WoW 상인은 12)
 
         const ShopStockDef* findStock( const hashed_string& itemID ) const;
         bool                isRefusedCategory( const hashed_string& category ) const;
@@ -225,8 +225,9 @@ namespace sw
     {
         enum class Kind : uint8
         {
-            Bought = 0, ///< 손님이 샀다(되사기 포함)
+            Bought = 0, ///< 손님이 샀다
             Sold,       ///< 손님이 팔았다
+            BoughtBack, ///< 손님이 판 것을 되샀다(`buyBack`, WoW `BuybackItem`)
             Restocked   ///< 재입고(아이템마다 하나씩)
         };
         hashed_string _shopID{};
@@ -301,6 +302,11 @@ namespace sw
         /** @brief 팝니다. @p pOutReceived 가 있으면 실제로 받은 금액을 기록합니다. 성공했을 때만 기록합니다. 가게의 `_buybackLimit` 가 있으면 판 조각을 개체 상태째 되사기 목록에 남깁니다. */
         ShopResult sell( const hashed_string& shopID, const hashed_string& itemID, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutReceived = nullptr );
         /**
+         * @brief 인벤토리 슬롯 @p slot 에서 @p count 개를 팝니다. 같은 id 가 여럿일 때 어느 개체(닳은 칼)를 팔지 손님이 고른다. 나머지는 id 판 `sell` 과 같습니다.
+         * @details 슬롯이 비었거나 범위 밖이거나 그 슬롯에 @p count 개가 없으면 `NotOwned` 이다(Lyra 는 아이템 인스턴스를 고르고, 이 인벤토리의 인스턴스는 슬롯이다 — `Inventory::takeFromSlot`).
+         */
+        ShopResult sell( const hashed_string& shopID, int32 slot, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutReceived = nullptr );
+        /**
          * @brief 되사기 목록의 @p buybackIndex 번째 판매를 팔 때 받은 돈으로 되삽니다. 조각은 내구도 · 꾸미기 · 뗀 부품째 돌아옵니다. @p pOutPaid 는 성공했을 때만 기록합니다.
          * @details 없는 번호는 `InvalidCount`, 돈이 모자라면 `NotEnoughMoney`, 조각이 다 들어가지 않으면 `NoRoom` 이며 그때는 아무것도 바뀌지 않는다. 시세 · 재고는 되돌리지 않는다.
          */
@@ -331,8 +337,10 @@ namespace sw
     private:
         ShopState*                    findRuntime( const hashed_string& shopID );
         [[nodiscard]] optional<int32> findStockIndex( const ShopDef& shop, const hashed_string& itemID ) const;
-        int32                         computeBasePrice( const ShopStockDef& stock ) const;
-        bool                          isRefused( const ShopDef& shop, const ShopState& runtime, const hashed_string& itemID ) const;
+        /** @brief 꺼낸 조각의 값을 치르고 되사기 목록 · 시세 · 이벤트를 남깁니다. 두 `sell` 의 뒷부분입니다. */
+        void  settleSale( const hashed_string& shopID, const hashed_string& itemID, int32 count, int64 total, vector<InventorySlot>&& listPiece, Wallet& wallet, int64* pOutReceived );
+        int32 computeBasePrice( const ShopStockDef& stock ) const;
+        bool  isRefused( const ShopDef& shop, const ShopState& runtime, const hashed_string& itemID ) const;
 
     private:
         vector<ShopState>      _listRuntime;

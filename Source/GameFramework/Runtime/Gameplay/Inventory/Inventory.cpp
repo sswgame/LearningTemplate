@@ -158,7 +158,7 @@ namespace sw
         return false;
     }
 
-    bool Inventory::removeItem( const hashed_string& itemID, int32 count )
+    bool Inventory::consumeItem( const hashed_string& itemID, int32 count )
     {
         vector<InventorySlot> listTaken;
         return takeItem( itemID, count, listTaken );

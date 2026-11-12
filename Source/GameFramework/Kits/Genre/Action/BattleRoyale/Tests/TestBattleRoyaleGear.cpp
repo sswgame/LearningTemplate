@@ -186,7 +186,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, BackpackControlsCarryLimit )
     SW_EXPECT_EQUAL( kBag, loadout.getBackpackID() );
     SW_EXPECT_EQUAL( 3, inventory.getItemCount( kRock ) );
 
-    SW_REQUIRE_TRUE( inventory.removeItem( kRock, 2 ) ); // 15
+    SW_REQUIRE_TRUE( inventory.consumeItem( kRock, 2 ) ); // 15
     SW_EXPECT_TRUE( loadout.tryEquipBackpack( sw::hashed_string{}, inventory ) );
     SW_EXPECT_TRUE( loadout.getBackpackID().empty() );
 }
