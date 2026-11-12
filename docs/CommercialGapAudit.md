@@ -138,13 +138,6 @@
 - 제안: id 는 캐시 INCR 이나 난수 128 비트로 낸다. `leaveQueue` 는 로컬 티켓이 없으면 파티 기록의 티켓을 푼다.
 - 확인: 같은 가짜 캐시로 `PartyLobbyService` 를 두 번 `initialize` 해 두 번째 `createParty`. `TestMatchQueueService` 에 "A 에서 티켓 → A 버림 → B 에서 leave → join".
 
-#### O-8 받은(Claimed) 우편이 영원히 남고 만료 뒤에는 보이지 않아 지울 수도 없다
-- 분류: 결함(무한 성장) · 확신: 확인
-- 근거: `Source/GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.cpp:324-327` 수령이 만료 색인을 지운다. `:413` 정리는 만료 색인만 훑어 그 우편을 다시 만나지 못하고, `:248-249` 목록은 만료된 우편을 숨겨 사용자가 Delete 도 못 한다.
-- 상용 서비스: PlayFab · MMO 우편함은 받은 우편도 보관 기간 뒤 서버가 지운다.
-- 제안: 수령 때 색인을 지우지 않고 "받은 뒤 N 일" 로 다시 건다. 정리의 Claimed 가지가 우편과 `mail_sent` 를 함께 지운다.
-- 확인: `SweepRemovesExpiredMail` 옆에 "수령 → 만료 뒤 sweep → `countRecords( mail_item ) == 0`"(지금은 1).
-
 #### O-9 키트 테이블은 보존 규칙에 들어갈 길이 없고, 채팅 기록 정리는 일부 채널에만 돈다
 - 분류: 구조 + 결함 · 확신: 확인
 - 근거: `Source/GameFramework/Runtime/Online/Server/OnlineServerRuntime.cpp:82-99` `makeRetentionRules` 는 감사 · 원장 내역 · 분개 · 닫힌 신고 넷만 안다. `Source/GameFramework/Kits/Feature/Online/Chat/Server/ChatService.cpp:679`(`_sequence % _historyTrimEvery`, 서비스 전체 카운터)와 `:109-112`(그 채널만 정리) — 귓속말 쌍 채널, 해산된 길드 채널은 새 글이 없으면 30 일 보존을 넘겨 영구히 남는다(개인정보 문제). 닫힌 `trade_session`, 지난 기간 `lb_score`, `mail_sent`, 만료된 `guild_invite`, `liveops_push` 도 지우는 코드가 없다. 보존 쓸기는 키 순 전수 훑기이고 커서가 프로세스 메모리다.
