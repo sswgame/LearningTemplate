@@ -448,13 +448,6 @@
 - 제안: 구간(`DocumentEditSpan`)을 쥔 동안은 직렬화하지 않고 dirty 만 표시하면 직렬화는 구간 시작 · 끝 두 번이 된다. 큰 문서는 문서 모델이 "바뀐 범위" 를 내는 데이터 단계로 기록한다. 미저장 판정은 편집 개정 번호로 한다.
 - 확인: `-gv_editorPanelTimes` 로 `tilemaptools` 를 256² · 512² 맵에서 칠하는 프레임.
 
-#### E-10 뷰포트 피킹이 경계 구 레이 검사이고 전체 오브젝트를 훑는다
-- 분류: 결함(정밀도) + 성능 · 확신: 확인
-- 근거: `Source/Editor/Viewport/Model/EditorViewportRayPick.cpp:135-136` — 후보는 `getWorldBounds( center, radius )` 의 구 하나이고 가장 가까운 구 진입점이 이긴다. 길고 얇은 물체는 실루엣 밖을 눌러도 잡히고 큰 구가 안쪽의 작은 물체를 가린다. `:165` — `forEachGameObject` 로 전체를 훑는다(주석 "8000 개이면 Debug 약 20 ms"). 마키(`EditorViewportPicker.cpp:140-143`)는 피벗 한 점의 투영만 본다.
-- 상용 엔진: 언리얼은 히트 프록시(ID 버퍼, 픽셀 정확), 유니티는 GPU 피킹 패스, Godot 4 는 AABB 뒤에 메시 삼각형 레이다.
-- 제안: 렌더 쪽에 오브젝트 id 타깃을 두고 클릭 때 1 픽셀 읽기로 고른다. 그 전 단계로는 구 → OBB(`GameObject::getWorldBox`) → 메시 삼각형 순으로 좁힌다.
-- 확인: 시나리오 `viewportpick` 에 "긴 기둥 옆 빈 곳 클릭 → 선택 없음" 과 "큰 바닥 위 작은 큐브 → 큐브".
-
 ## P2 — 개선과 작은 결함
 
 한 줄에 근거 · 상용 엔진 · 제안 · 확인을 함께 적는다.
