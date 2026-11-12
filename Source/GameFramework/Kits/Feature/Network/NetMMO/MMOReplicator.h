@@ -76,7 +76,8 @@ namespace sw
         float3        _position{};
         uint32        _entityID{ 0 };
         uint32        _typeID{ 0 };
-        float32       _importance{ 1.0f }; ///< 보스와 다른 플레이어는 크게 잡는다
+        float32       _importance{ 1.0f };          ///< 보스와 다른 플레이어는 크게 잡는다
+        uint8         _bAlwaysRelevant{ SW_FALSE }; ///< 반경 밖에서도 보일 후보. 서버 복제기가 `setEntity` 때 항상 보임 집합에 모으고 정책(`IInterestPolicy::isAlwaysRelevant`)이 관찰자마다 거른다. 와이어에는 싣지 않는다
     };
 } // namespace sw
 
@@ -85,7 +86,7 @@ namespace sw
     /**
      * @class IInterestPolicy
      * @brief 관찰자가 어떤 엔티티를 얼마나 원하는지 정하는 정책입니다. 게임마다 교체합니다.
-     * @details 예를 들어 파티원은 항상 보이게 하고, 길드전 지역은 반경을 넓힐 수 있다.
+     * @details 예를 들어 파티원은 항상 보임 후보로 표시하고 같은 파티의 관찰자에게만 보이게 할 수 있다.
      * @warning 복제기에 `setTaskManager` 를 주면 이 함수들이 **여러 스레드에서 동시에** 불린다. 상태를 바꾸지 말고 읽기만 해야 한다.
      */
     class SW_KIT_API IInterestPolicy
@@ -98,17 +99,16 @@ namespace sw
         IInterestPolicy& operator=( const IInterestPolicy& ) = default;
 
         /**
-         * @brief 반경 밖에서도 항상 보이는 엔티티가 있을 수 있으면 true 를 반환합니다.
-         * @details 기본값은 false 이다. false 이면 새로 보임 단계가 엔티티 전체를 훑지 않으므로 관찰자 수 × 엔티티 수만큼의 비용을 아낀다.
-         *          `isAlwaysRelevant` 를 바꾼 정책은 true 를 반환해야 한다.
+         * @brief 항상 보임 후보(`MMOEntity::_bAlwaysRelevant`)가 이 관찰자에게 반경과 상관없이 보여야 하면 true 를 반환합니다.
+         * @details 복제기는 후보만 모아 둔 집합(등록 · 해제 때 갱신)에 대해서만 부른다 — 관찰자마다 월드 전체를 훑지 않는다.
+         *          기본값은 모든 관찰자에게 true 이다(언리얼 Replication Graph 의 AlwaysRelevant 노드처럼 전역 목록을 그대로 준다).
+         *          파티원처럼 관찰자마다 다른 정책은 후보로 표시한 뒤 여기서 연결별로 거른다.
          */
-        virtual bool hasAlwaysRelevant() const { return false; }
-        /** @brief 반경과 상관없이 항상 보여야 하면 true 를 반환합니다. 파티원이나 추적 중인 퀘스트 대상이 해당합니다. `hasAlwaysRelevant` 가 true 일 때만 호출합니다. */
         virtual bool isAlwaysRelevant( int32 connectionID, const MMOEntity& entity ) const
         {
             (void)connectionID;
             (void)entity;
-            return false;
+            return true;
         }
         /** @brief 한 틱에 쌓을 우선도를 반환합니다. 기본값은 중요도 / (1 + 거리 / 10) 입니다. */
         virtual float32 computePriority( int32 connectionID, const MMOEntity& entity, float32 distance ) const
@@ -261,6 +261,7 @@ namespace sw
 
     private:
         unordered_map<uint32, MMOEntity>    _mapEntity;
+        unordered_set<uint32>               _setAlwaysRelevant; ///< `_bAlwaysRelevant` 인 엔티티 id. `setEntity` · `removeEntity` 가 갱신하고, 관찰자마다 이것만 정책에 묻는다(월드 전체를 훑지 않는다)
         vector<Observer>                    _listObserver;
         NetInterestGrid                     _interest;          ///< 엔티티 위치(XZ 평면의 점)와 두 반경. 칸은 `initialize` 가 받은 월드 격자의 셀 크기, 키는 `NetInterestGrid::makeKey`
         vector<float3>                      _listScratchSource; ///< `feedStreamingSources` 가 틱마다 다시 쓴다
