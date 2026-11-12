@@ -3,7 +3,6 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
 
 #include "Core/Encoding/FourCCUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
@@ -18,13 +17,10 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/SnapshotFaultHook.h"
 
 namespace sw
 {
-    // 결함 주입: 교체 단계(검증을 지난 뒤 활성 씬을 비운 자리)의 실패를 흉내 낸다 — 같은 바이트 · 같은 코드라 실제로는 드물어, 깨진 복원 뒤 세이브 막기 · 씬 다시 열기를
-    // 시나리오(game/empty/automation/savetravel)가 밟을 다른 길이 없다(언리얼도 저장 실패 흉내를 개발 콘솔 변수로 둔다). 테스트용이라 Shipping 에서는 상수 거짓이다.
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_saveRestoreBreakReplace, false, "Fail the replace step of every snapshot restore after the scene is cleared (fault injection for the broken-restore path)" );
-
     namespace
     {
         struct StateEnvelopeInternal
@@ -119,6 +115,15 @@ namespace sw
             {
                 SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 return pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
+            }
+            /**
+             * @brief 개발 구성의 결함 주입이 교체 단계를 지게 하라는지 봅니다(`ISnapshotFaultHook` — 배포는 창구가 없어 늘 false).
+             * @details 깨진 복원 뒤 세이브 막기 · 씬 다시 열기를 시나리오가 밟는 길이다. 런타임은 창구만 묻고 테스트 변수는 개발 소스(`Save/Dev/`)가 든다.
+             */
+            static bool shouldBreakReplace()
+            {
+                const ISnapshotFaultHook* const pFaultHook = ISnapshotFaultHook::find();
+                return pFaultHook != nullptr && pFaultHook->shouldBreakReplace();
             }
             /** @brief 활성 씬의 리소스 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면(씬 없는 스냅샷) 빈 글입니다. */
             static string findActiveSceneID()
@@ -293,7 +298,7 @@ namespace sw
         if ( bytesScene.empty() == false )
         {
             pLiveManager->clear();
-            if ( gv_saveRestoreBreakReplace || deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, *pLiveManager, listComponentIDRemap ) == false )
+            if ( GameStateSnapshotInternal::shouldBreakReplace() || deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, *pLiveManager, listComponentIDRemap ) == false )
             {
                 _pComponentStateStore->clear();
                 return broken;
