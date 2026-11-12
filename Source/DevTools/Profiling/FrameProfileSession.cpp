@@ -70,6 +70,7 @@ namespace sw
         , _bReported{ SW_FALSE }
         , _bWarmedUp{ SW_FALSE }
         , _bAllocationTrackingStarted{ SW_FALSE }
+        , _bExitOnCompletion{ SW_TRUE }
     {
     }
 
@@ -110,7 +111,7 @@ namespace sw
         if ( advance() == false )
             return kEngineFrameRunning;
         reportEngineTables( activeSceneID );
-        return ProcessExitCode::Passed;
+        return _bExitOnCompletion == SW_TRUE ? ProcessExitCode::Passed : kEngineFrameRunning;
     }
 
     bool FrameProfileSession::advance()

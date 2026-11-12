@@ -23,6 +23,7 @@
 #include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 #include "DevTools/Client/Automation/Scenario/AutomationStepValidation.h"
 #include "DevTools/Client/Automation/Scenario/AutomationWindowSteps.h"
+#include "DevTools/Profiling/FrameProfileSession.h"
 
 #include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
@@ -522,12 +523,17 @@ namespace sw
             const bool bScenarioClockRuns = _result == AutomationResult::Running && _run._bFinishWaiting == false && _run._holdFrameCount == 0;
             if ( bScenarioClockRuns )
                 ++_run._frameIndex;
-            // 창 닫기를 기다리는 동안은 프레임 시한을 보지 않는다(벽시계 시한이 본다). 부하 시나리오는 측정 창이 끝내므로 벽시계 그물만 본다.
+            // 창 닫기를 기다리는 동안은 프레임 시한을 보지 않는다(벽시계 시한이 본다). 부하 시나리오는 측정 창이 끝을 정하므로(아래) 벽시계 그물만 본다.
             const bool bFrameTimeoutReached = _result == AutomationResult::Running && _run._exitDeadlineSeconds <= 0.0 && _run._loadDeadlineSeconds <= 0.0 &&
                                               _run._frameIndex > _scenario.getTimeoutFrames();
             if ( bFrameTimeoutReached )
                 finish( AutomationResult::TimedOut, "timeoutFrames reached without <Pass/>" );
-            const bool bLoadDeadlineExceeded = _result == AutomationResult::Running && _run._loadDeadlineSeconds > 0.0 &&
+            // 부하 시나리오의 끝 — 측정 창이 닫혔고(보고를 냈다) 단계가 다 돌았다. 어느 쪽이 먼저 끝나도 된다(창이 먼저면 남은 대기는 제 시한이 묶는다).
+            const FrameProfileSession* const pProfileSession = _run._loadDeadlineSeconds > 0.0 ? engine::findSubsystem<FrameProfileSession>() : nullptr;
+            const bool                       bLoadMeasured   = pProfileSession != nullptr && pProfileSession->isCompleted();
+            if ( _result == AutomationResult::Running && bLoadMeasured && _run._nextStepIndex >= listStep.size() )
+                finish( AutomationResult::Passed, "the <Load> measurement window closed and every step ran" );
+            const bool bLoadDeadlineExceeded = _result == AutomationResult::Running && _run._loadDeadlineSeconds > 0.0 && bLoadMeasured == false &&
                                                _run._loadDeadlineSeconds < static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
             if ( bLoadDeadlineExceeded )
                 finish( AutomationResult::TimedOut, "the <Load> measurement window did not close in time (was -gv_profileFrames also given?)" );
@@ -547,7 +553,15 @@ namespace sw
         const AutomationLoad& load = _scenario.getTestOptions()._load;
         if ( load._bDeclared == false )
             return;
-        // 측정 창은 시나리오가 시작한 프레임부터다(로딩을 빼고 측정한다). 끝은 측정 보고가 낸 종료 요청이다(`FrameProfileSession` 이 늦게 건 목표를 읽는다).
+        // 측정 창은 시나리오가 시작한 프레임부터다(로딩을 빼고 측정한다 — `FrameProfileSession` 이 늦게 건 목표를 읽는다). 끝은 실행기가 정한다: 측정 창(벽시계)과
+        // 판정 단계(시뮬레이션 시계)가 둘 다 끝나야 통과다. 예전에는 측정 보고가 종료를 요청해, 부하에 느려진 실행은 판정이 돌기 전에 창이 닫혀 졌다.
+        FrameProfileSession* const pProfileSession = engine::findSubsystem<FrameProfileSession>();
+        if ( pProfileSession == nullptr )
+        {
+            finish( AutomationResult::LoadError, "<Load> needs the frame profile session (DevTools host did not register it)" );
+            return;
+        }
+        pProfileSession->setExitOnCompletion( false );
         const int32 seconds = static_cast<int32>( MathUtil::ceil( load._durationSeconds ) );
         if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( "gv_profileSeconds", to_string( seconds ) ) == false )
         {
@@ -815,11 +829,6 @@ namespace sw
                     finish( AutomationResult::Passed, "the window closed within ExpectExitWithin" );
                 else
                     finish( AutomationResult::Failed, "the window closed after the ExpectExitWithin deadline" );
-            }
-            else if ( _run._loadDeadlineSeconds > 0.0 && _run._nextStepIndex >= _scenario.getSteps().size() )
-            {
-                // 부하 시나리오의 정상 끝 — 측정 창이 닫혀 엔진이 종료를 요청했다(보고가 남았는지는 실행기가 출력으로 본다).
-                finish( AutomationResult::Passed, "the <Load> measurement window closed" );
             }
             else
             {

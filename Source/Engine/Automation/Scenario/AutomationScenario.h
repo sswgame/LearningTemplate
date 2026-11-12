@@ -158,7 +158,7 @@ namespace sw
         vector<AutomationAttribute>     _listAllowedLog{};     ///< 루트 아래 `<AllowLog id reason>`(여럿 가능) — 이 시나리오에서 나와도 되는 로그 id(`_name`)와 사유(`_value`). 사유는 필수다
         vector<AutomationAttribute>     _listLaunchVariable{}; ///< 루트 아래 `<Launch variable value>`(여럿 가능). 첫 씬 · 렌더 파이프라인처럼 시작한 뒤에는 바꿀 수 없는 기동 때 값
         vector<string>                  _listRequiredModule{}; ///< 루트 `requiresModule="A,B"` — 이 모듈이 모두 켜진 빌드에서만 돈다. 하나라도 없으면 건너뜀이다(언리얼에서 끈 플러그인의 테스트가 없는 것과 같다)
-        AutomationLoad                  _load{};               ///< 부하 선언(`<Load>`). 부하 시나리오는 `<Pass/>` 를 두지 않고 측정 창이 끝내며 `timeoutFrames` 를 보지 않는다
+        AutomationLoad                  _load{};               ///< 부하 선언(`<Load>`). 부하 시나리오는 `<Pass/>` 를 두지 않고 측정 창과 단계가 둘 다 끝나면 끝나며 `timeoutFrames` 를 보지 않는다
         /** @brief 에디터를 켠 실행(`-EnableEditor`)에서 도는 시나리오입니다(루트 `editor="true"`). 테스트(`AppScenarioTest`)가 인자를 고른다. `engine/automation/editor/` 의 시나리오는 폴더가 이미 에디터 실행이라 적지 않는다. */
         bool _bRequiresEditor{ false }; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         /**
