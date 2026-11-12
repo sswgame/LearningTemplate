@@ -587,6 +587,11 @@
             "_why": "게임 서비스 찾기의 뿌리 — game::findSubsystem 이 범위를 찾는 자리 자체다(엔진 쪽 s_pSubsystems 와 같은 자리). GameFramework.dll 정적이라 게임 · 키트 이미지보다 오래 산다."
         },
         {
+            "_path": "Source/GameFramework/Runtime/Foundation/Framework/Save/Dev/SnapshotFaultLaunchHook.cpp",
+            "_name": "s_snapshotFaultLaunchHook",
+            "_why": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(GameSettingsLaunchOverride 와 같은 자리, 언리얼 compiled-in 등록 항목)."
+        },
+        {
             "_path": "Source/GameFramework/Runtime/Foundation/GameData/Dev/GameSettingsLaunchOverride.cpp",
             "_name": "s_gameSettingsLaunchOverride",
             "_why": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리)."
