@@ -35,13 +35,31 @@ namespace sw
 
     struct PhysicsSettings;
 
+    struct CollisionInfo;
+    struct OverlapInfo;
+
     class BoxCollider2DComponent;
+    class Component;
+    class GameObject;
     class GameObjectManager;
     class IPhysicsDebugRenderer;
     class PhysicsComponent;
     class PhysicsSystem;
     class RigidBody2DComponent;
     class RigidBodyComponent;
+
+    /**
+     * @struct ContactStayListener
+     * @brief 접촉 · 겹침 유지(Stay)를 받는 함수 둘입니다. `ScenePhysics::addContactStayListener` 로 올린 컴포넌트만 유지를 받습니다(감사 S-1).
+     * @details 유지는 닿은 쌍마다 스텝마다 나와 거의 아무도 듣지 않는데 비싸다 — 언리얼 `bNotifyRigidBodyCollision` · Godot `contact_monitor` 처럼 켠 쪽만 만든다.
+     *          `Component` 의 가상 함수로 두지 않아 올리지 않고 재정의만 해서 조용히 못 받는 모양을 쓸 수 없다. 인터페이스 기반이 아니라 함수인 까닭은
+     *          REFLECT 타입이 두 번째 기반을 가질 수 없어서다. 시작 · 끝은 지금처럼 `Component::onCollision*` · `onOverlap*` 이다.
+     */
+    struct ContactStayListener
+    {
+        void ( *_pOnCollisionStay )( Component& self, const CollisionInfo& collision ){ nullptr }; ///< 막는 접촉이 스텝 하나 이어졌다(유니티 `OnCollisionStay`). 안 들으면 nullptr
+        void ( *_pOnOverlapStay )( Component& self, const OverlapInfo& overlap ){ nullptr };       ///< 겹친 채로 스텝 하나가 지났다(유니티 `OnTriggerStay`, 쓸어 낸 겹침은 없다). 안 들으면 nullptr
+    };
 
     /**
      * @brief 연속 콜라이더가 한 프레임에 쓸고 지나간 상대 하나입니다(`BoxCollider2DComponent` 의 연속 판정).
@@ -168,6 +186,17 @@ namespace sw
          */
         void collectContactLog( vector<PhysicsContactLogEntry>& outListEntry ) const;
 
+        /**
+         * @brief @p component 의 오브젝트에 오는 유지 이벤트를 @p listener 의 함수로 받게 올립니다(보통 `onRegister`). 오브젝트가 없거나, 함수가 둘 다 없거나, 이미 올렸으면 오류입니다.
+         * @details 오브젝트의 첫 듣는 쪽이면 물리 씬에 그 오브젝트 id 를 듣는 사용자 값으로 건다(`IPhysicsScene::setContactStayListener`) — 그 오브젝트가 낀 쌍만
+         *          유지를 만든다. 나눠 줄 때는 켜진 컴포넌트에만 준다(시작 · 끝과 같은 규칙).
+         */
+        void addContactStayListener( Component& component, const ContactStayListener& listener );
+        /** @brief 올린 듣는 쪽을 내립니다(`onUnregister`). 오브젝트의 마지막이면 물리 씬의 듣기도 끈다. 올리지 않았으면 아무것도 하지 않습니다. */
+        void removeContactStayListener( Component& component );
+        /** @brief 오브젝트 @p objectID 에 올린 유지 듣는 쪽 수입니다(테스트 · 진단). */
+        uint32 getContactStayListenerCount( uint64 objectID ) const;
+
         /** @brief 물리 컴포넌트를 단계 목록에 넣습니다(`PhysicsComponent::onRegister`). */
         void registerComponent( PhysicsComponent* pComponent );
         /** @brief 물리 컴포넌트를 뺍니다. */
@@ -222,6 +251,9 @@ namespace sw
         void deliverEvent( GameObjectManager& manager, uint64 selfUserData, uint64 otherUserData, PhysicsBodyHandle selfBody, PhysicsBodyHandle otherBody,
                            const float3& point, const float3& normal, float32 impulse, PhysicsContactPhase phase, bool bSelfTrigger, bool bOtherTrigger,
                            bool bOverlap, bool bIs2D, float32 hitFraction );
+        /** @brief 유지 하나를 그 오브젝트에 올린 듣는 쪽(`addContactStayListener`)에만 줍니다. 오브젝트가 켜졌는지는 부른 쪽이 봤다. */
+        void deliverStay( uint64 selfUserData, GameObject* pOther, PhysicsBodyHandle selfBody, PhysicsBodyHandle otherBody, const float3& point, const float3& normal,
+                          float32 impulse, bool bSelfTrigger, bool bOtherTrigger, bool bOverlap, bool bIs2D );
         /**
          * @brief 이번 프레임에 움직인 2D 콜라이더를 모으고, 그 가운데 연속 콜라이더가 지나친 것을 쓸어 냅니다(`BoxCollider2DComponent::sweepPassedBodies`).
          * @details 모든 콜라이더의 `beginPhysicsFrame` 뒤에 돈다 — 콜라이더 하나의 `beginPhysicsFrame` 안에서 쓸면 상대가 아직 지난 자리인지 이번 자리인지가
@@ -246,6 +278,15 @@ namespace sw
         void readMovedBodies( const vector<uint32>& listPoseSlot, const IPhysicsBodyScene<TDimension>& scene, PoseReadBuffer<TDimension>& buffer );
         /** @brief `queuePoseWrite` 로 모은 쓰기를 적용합니다(그 머리말의 순서). */
         void applyPoseWrites();
+
+        /** @brief 유지 듣는 쪽 하나입니다(`addContactStayListener`) — 켜짐 · 파괴 대기는 컴포넌트로 본다. */
+        struct ContactStayListenerEntry
+        {
+            Component*          _pComponent{ nullptr };
+            ContactStayListener _listener{};
+        };
+        /** @brief 지금 있는 물리 씬에 오브젝트 @p objectID 의 유지 듣기를 겁니다. */
+        void applyContactStayListener( uint64 objectID, bool bListen );
 
         /** @brief 프레임 끝 월드 자세 쓰기 하나입니다(`queuePoseWrite`). */
         struct PoseWrite
@@ -307,6 +348,9 @@ namespace sw
         vector<PhysicsContactEvent3D>                                     _listDispatchEvent3D;                ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
         vector<PhysicsContactEvent2D>                                     _listDispatchEvent2D;                ///< 위와 같다
         vector<SweptOverlap2D>                                            _listDispatchSwept;                  ///< 위와 같다
+        unordered_map<uint64, vector<ContactStayListenerEntry>>           _mapStayListener;                    ///< 오브젝트 id → 유지 듣는 쪽(`addContactStayListener`)
+        vector<Component*>                                                _listDeliverTarget;                  ///< `deliverEvent` 가 도는 컴포넌트 사본(재사용 — 처리가 붙이고 뗀다)
+        vector<ContactStayListenerEntry>                                  _listStayTarget;                     ///< 유지를 나눠 주는 동안의 듣는 쪽 사본(재사용)
         PhysicsContactLogEntry                                            _arrContactLog[kContactLogCapacity]; ///< 시작 · 끝 접촉 고리(진단 — `collectContactLog`)
         uint64                                                            _contactLogCount;                    ///< 기록한 누계(다음 칸은 `% kContactLogCapacity`)
         uint64                                                            _stepCount;

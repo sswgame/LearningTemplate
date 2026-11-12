@@ -197,6 +197,8 @@ SW_TEST_CASE( TileMapCollisionTest, SetTileKeepsUnrelatedContacts )
     PhysicsBodyDesc2D crateDesc;
     crateDesc._type     = PhysicsBodyType::Dynamic;
     crateDesc._position = rig.toWorld( 48.5f, -0.55f ); // 벽 윗면(y = -1) 바로 위
+    crateDesc._userData = 0xC0A7Eull;                   // 유지는 opt-in 이다(감사 S-1) — 상자의 사용자 값이 듣는다
+    rig._pScene->setContactStayListener( crateDesc._userData, true );
     PhysicsShapeDesc2D crateShape;
     crateShape._type        = PhysicsShapeType2D::Box;
     crateShape._halfExtents = float2{ 0.4f, 0.4f };

@@ -46,6 +46,7 @@ namespace sw
 
         void                                 step( float32 fixedDeltaTime ) override;
         const vector<PhysicsContactEvent2D>& getContactEvents() const override { return _listContactEvent; }
+        void                                 setContactStayListener( uint64 userData, bool bListen ) override { _contactTracker.setStayListener( userData, bListen ); }
         void                                 setGravity( const float2& gravity ) override;
         float2                               getGravity() const override;
         void                                 setLayerCollision( const CollisionLayers& layers ) override;

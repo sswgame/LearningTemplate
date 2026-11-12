@@ -361,6 +361,7 @@ namespace sw
         // 스텝 앞에 깨어 있던 바디와 뒤에 깨어 있는 바디를 함께 든다(`getMovedBodies`) — 이 스텝에 잠든 바디도 마지막으로 조금 움직였다.
         _listMovedBody.clear();
         appendActiveBodies();
+        _contactTracker.refreshStayPairs(); // 잡 스레드가 이 스텝 동안 `isStayReported` 를 읽는다 — 바뀐 듣기를 먼저 적용한다
         if ( fixedDeltaTime > 0.0f )
         {
             const JPH::EPhysicsUpdateError error = _system.Update( fixedDeltaTime, 1, &_tempAllocator, _pJobSystem );
@@ -1167,9 +1168,15 @@ namespace sw
             ioSettings.mCombinedRestitution = JoltPhysicsSceneInternal::combineRestitution( pMaterialA->getRestitution(), pMaterialB->getRestitution() );
         }
 
+        const PhysicsBodyHandle handleA = PhysicsBodyHandle::fromPacked( bodyA.GetUserData() );
+        const PhysicsBodyHandle handleB = PhysicsBodyHandle::fromPacked( bodyB.GetUserData() );
+        // 유지 값은 유지를 내는 쌍만 쓴다 — 나머지는 충격량 어림과 전역 잠금을 건너뛴다(감사 S-1). 추적기는 step 사이에만 쓰여 잡 스레드가 함께 읽어도 된다.
+        if ( kind == 1 && _contactTracker.isStayReported( handleA, handleB ) == false )
+            return;
+
         ContactReport report;
-        report._bodyA._body     = PhysicsBodyHandle::fromPacked( bodyA.GetUserData() );
-        report._bodyB._body     = PhysicsBodyHandle::fromPacked( bodyB.GetUserData() );
+        report._bodyA._body     = handleA;
+        report._bodyB._body     = handleB;
         report._bodyA._bTrigger = bodyA.IsSensor();
         report._bodyB._bTrigger = bodyB.IsSensor();
         report._point           = JoltUtil::toEngine( manifold.GetWorldSpaceContactPointOn1( 0 ) );
