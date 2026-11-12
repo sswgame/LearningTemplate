@@ -28,7 +28,8 @@ Scripts/lint/CommonShapes.py
    손 걷기마다 고리 방지를 따로 두다 하나가 빠져 고리 사슬에서 끝나지 않았다(필드 이름 해시 검사, 단위 실행이 시한에 멈췄다).
 12. 에디터 자동화 포인터 손 옮기기: `EditorSelfTestInput::moveMouse(` 는 레이블 판정을 건너뛴다 — 레이블을 누르고 호버하는 길은
    `EditorSelfTestInput::aimAtMark` · `pressAtMark`(가림 판정)만 지난다. 손 옮기기로 레이블 좌표를 누르면 오버레이 툴바 · 팝업이 덮어도 단계가 성공했다
-   (editor.gizmotoplevel). 입구로 누른 뒤의 끌기 경로(중간 · 끝 점)만 예외 표에 까닭과 함께 둔다.
+   (editor.gizmotoplevel). 입구로 누른 뒤의 끌기 경로(중간 · 끝 점)만 예외 표에 `경로|함수` 와 까닭으로 둔다 — 파일 단위로 두면 예외 파일 안의 새 함수가
+   빠져나갔다. 입구 파일(`EditorSelfTestInput.cpp`)은 이름 없이 부르는 `moveMouse(` 도 본다(정의 줄은 보지 않는다).
 
 예외는 `Config/Rules/Lint/CommonShapeExceptions.json` 에 까닭과 함께 적는다. 낡은 예외(더는 없는 자리)도 위반이다.
 `py -3 -m Scripts lint common-shapes [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
@@ -73,6 +74,12 @@ kEditorScanPattern = re.compile(r"\bFileUtil::collect(?:Files|Folders)\(\s*([^,]
 # 첨자는 getHash() 로 끝나는 안쪽만(`list[ i ]._id.getHash()` 의 앞 첨자는 아니다), 호출은 첫 인자 안의 getHash() 만 본다.
 kNameHashKeyPattern = re.compile(r"\[\s*[^\[\]\n]*\bgetHash\(\s*\)\s*\]|\b(?:emplace|try_emplace|insert|insert_or_assign|find|count|contains|tryClaim)\(\s*[^;\n]*?\bgetHash\(\s*\)|\b\w*(?:[Kk]ey|_id)\s*=\s*[^;=\n]*\bgetHash\(\s*\)")
 kEditorPointerMovePattern = re.compile(r"\bEditorSelfTestInput::moveMouse\(")
+kEditorPointerBarePattern = re.compile(r"(?<![\w.>:])moveMouse\(")
+kEditorPointerBaseFile = "Source/Editor/SelfTest/EditorSelfTestInput.cpp"
+kEditorPointerDefinitionPattern = re.compile(r"[ \t]*void\s+(?:EditorSelfTestInput::)?moveMouse\(")
+# 함수 정의 머리(반환 형식 · 이름 · 인자 · 여는 중괄호). 제어문은 이름에서 뺀다.
+kFunctionHeadPattern = re.compile(r"^[ \t]*(?:template\s*<[^>]*>\s*)?(?:\[\[nodiscard\]\]\s*)?(?:(?:static|inline|virtual|constexpr)\s+)*[\w:<>,*&]+[\s*&]+([\w:~]+)\s*\([^;{}]*\)\s*(?:const\s*)?(?:(?:override|final|noexcept)\s*)*\{", re.M)
+kControlWords = frozenset({"if", "for", "while", "switch", "catch", "return", "else"})
 kTypeChainWalkPattern = re.compile(r"\b(\w+)\s*=\s*\1->getParentType\(\s*\)")
 kAssetCarrierPattern = re.compile(r"withAsset\(|parseResourceText\(|parseResourceRoot\(|loadResource\w*\(|loadFromAsset\(")
 
@@ -118,6 +125,32 @@ def findIdDroppingEntrances(code: str) -> list[str]:
     return listEntrance
 
 
+def findEnclosingFunction(code: str, index: int) -> str:
+    """@p index 를 담은 가장 안쪽 함수 정의의 이름(적힌 대로 — `형식::함수`)이다. 없으면 `?`."""
+    name = "?"
+    for match in kFunctionHeadPattern.finditer(code, 0, index):
+        if match.group(1) in kControlWords:
+            continue
+        openIndex = match.end() - 1
+        if openIndex < index < findClosingBrace(code, openIndex):
+            name = match.group(1)
+    return name
+
+
+def findPointerMoves(path: str, code: str) -> list[str]:
+    """레이블 판정을 건너뛰는 포인터 손 옮기기를 담은 함수 이름들이다(`editorPointerMove`)."""
+    listMatch = list(kEditorPointerMovePattern.finditer(code))
+    if path == kEditorPointerBaseFile:
+        listMatch += list(kEditorPointerBarePattern.finditer(code))
+    listFunction: set[str] = set()
+    for match in listMatch:
+        lineStart = code.rfind("\n", 0, match.start()) + 1
+        if kEditorPointerDefinitionPattern.match(code, lineStart):
+            continue
+        listFunction.add(findEnclosingFunction(code, match.start()))
+    return sorted(listFunction)
+
+
 def collectViolations(path: str, text: str) -> list[tuple[str, str, str]]:
     """글 하나의 (규칙, 예외 열쇠, 설명) 들을 돌려준다."""
     code = kCommentPattern.sub("", text)
@@ -143,8 +176,8 @@ def collectViolations(path: str, text: str) -> list[tuple[str, str, str]]:
         listViolation.append(("assetEntrance", f"{path}|{entrance}", f"id 를 버리는 리소스 입구({entrance}) — ResourceContext::withAsset · parseResourceText · parseResourceRoot"))
     if kEngineChildPattern.search(code):
         listViolation.append(("engineChildCommand", path, "ProcessCommand::at 손 명령 — 엔진 자식은 EngineChildProcess::makeCommand"))
-    if kEditorPointerMovePattern.search(code):
-        listViolation.append(("editorPointerMove", path, "EditorSelfTestInput::moveMouse 손 옮기기 — 레이블은 aimAtMark · pressAtMark(가림 판정)로 누른다"))
+    for function in findPointerMoves(path, code):
+        listViolation.append(("editorPointerMove", f"{path}|{function}", f"moveMouse 손 옮기기({function}) — 레이블은 EditorSelfTestInput::aimAtMark · pressAtMark(가림 판정)로 누른다"))
     if kTypeChainWalkPattern.search(code):
         listViolation.append(("typeChainWalk", path, "부모 사슬 손 걷기 — TypeInfo::getTypeChain(고리 · 상한을 한 곳에서 막는다)"))
     if kNameHashKeyPattern.search(code):
@@ -216,7 +249,10 @@ def runSelfCheck() -> None:
     assert collectViolations("Source/Editor/a.cpp", "(void)EditorContentScan::collectFiles( root, root, \"\", listFile, true );") == []
     assert [v[0] for v in collectViolations("Source/A/a.cpp", "for ( const TypeInfo* p = &t; p != nullptr; p = p->getParentType() ) {}")] == ["typeChainWalk"]
     assert collectViolations("Source/A/a.cpp", "for ( const TypeInfo* p : t.getTypeChain() ) {}") == []
-    assert [v[0] for v in collectViolations("Source/Editor/a.cpp", "EditorSelfTestInput::moveMouse( float2{ mark._min._x, mark._min._y } );")] == ["editorPointerMove"]
+    pointerMove = "static bool runDrag( Runner& runner )\n{\n    if ( x )\n    {\n        EditorSelfTestInput::moveMouse( float2{ 1.0f, 2.0f } );\n    }\n    return true;\n}"
+    assert [v[1] for v in collectViolations("Source/Editor/a.cpp", pointerMove)] == ["Source/Editor/a.cpp|runDrag"], "열쇠는 담은 함수다(제어문이 아니다)"
+    base = "int x;\n    void EditorSelfTestInput::moveMouse( const float2& p )\n{\n}\n\nvoid EditorSelfTestInput::parkMouse()\n{\n    moveMouse( p );\n}"
+    assert [v[1] for v in collectViolations(kEditorPointerBaseFile, base)] == [kEditorPointerBaseFile + "|EditorSelfTestInput::parkMouse"], "입구 파일은 이름 없는 호출도 보고 정의 줄은 보지 않는다"
     assert collectViolations("Source/Editor/a.cpp", "(void)EditorSelfTestInput::pressAtMark( pKey, anchor, 0, cover );") == [], "입구는 걸리지 않는다"
     assert [v[0] for v in collectViolations("Source/A/a.cpp", "_mapByHash[name.getHash()] = value;")] == ["nameHashKey"]
     assert [v[0] for v in collectViolations("Source/A/a.cpp", "map.emplace( name.getHash(), value );")] == ["nameHashKey"]
