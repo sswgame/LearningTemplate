@@ -162,16 +162,18 @@ namespace sw
     void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildDeposit> call, const OnlineCallContext& context, const GuildAssetRequest& request )
     {
         GuildRequest guildRequest;
-        guildRequest._assetID = request._assetID;
-        guildRequest._amount  = request._amount;
+        guildRequest._assetID     = request._assetID;
+        guildRequest._amount      = request._amount;
+        guildRequest._depositorID = request._depositorID; // 비어 있지 않으면 길드 로직이 Invalid 로 끝낸다
         submitGuild( call._callID, context, GuildOperation::Deposit, guildRequest );
     }
 
     void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildWithdraw> call, const OnlineCallContext& context, const GuildAssetRequest& request )
     {
         GuildRequest guildRequest;
-        guildRequest._assetID = request._assetID;
-        guildRequest._amount  = request._amount;
+        guildRequest._assetID     = request._assetID;
+        guildRequest._amount      = request._amount;
+        guildRequest._depositorID = request._depositorID;
         submitGuild( call._callID, context, GuildOperation::Withdraw, guildRequest );
     }
 
@@ -217,12 +219,29 @@ namespace sw
         submitGuild( call._callID, context, GuildOperation::Reject, guildRequest );
     }
 
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildGrantWithdrawal> call, const OnlineCallContext& context, const GuildWithdrawalGrantRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._targetID = request._otherID;
+        guildRequest._assetID  = request._assetID;
+        guildRequest._amount   = request._amount;
+        submitGuild( call._callID, context, GuildOperation::GrantWithdrawal, guildRequest );
+    }
+
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildRevokeWithdrawal> call, const OnlineCallContext& context, const GuildWithdrawalGrantRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._targetID = request._otherID;
+        guildRequest._assetID  = request._assetID;
+        submitGuild( call._callID, context, GuildOperation::RevokeWithdrawal, guildRequest );
+    }
+
     void SocialServer::submitGuild( uint64 callID, const OnlineCallContext& context, GuildOperation operation, GuildRequest& inoutRequest )
     {
         inoutRequest._accountID = context._accountID;
         inoutRequest._nowMs     = context._nowMs;
         inoutRequest._operation = operation;
-        if ( context._idempotencyKey.isValid() ) // 창고 이동의 분개 키이다. 없으면 길드 로직이 Invalid 로 끝낸다
+        if ( context._idempotencyKey.isValid() ) // 창고 이동 · 허용 · 몫을 돌려주는 떠나기와 내보내기의 분개 키이다. 필요한데 없으면 길드 로직이 Invalid 로 끝낸다
             inoutRequest._journalKey = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( context._accountID ), context._idempotencyKey._high,
                                                                               context._idempotencyKey._low );
         _pGuildService->submit( inoutRequest, callID );
