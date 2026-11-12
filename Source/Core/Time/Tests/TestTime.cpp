@@ -4,6 +4,7 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/ExponentialBackoff.h"
 #include "Core/Time/GameTimer.h"
+#include "Core/Time/TimeRollover.h"
 
 // ------------------------------------------------------------------------------
 // 1) Core_Time — GameTimer·스코프 타이머
@@ -33,6 +34,25 @@ SW_TEST_CASE( TimeTest, TotalTimeKeepsMillisecondsAfterTenHours )
     clock.advanceMilliseconds( 1 );
     timer.updateTimer();
     SW_EXPECT_NEAR( 0.001, timer.getTotalTime() - before, 1e-6 );
+}
+
+/**
+ * @brief [TimeTest] 셰이더로 보내는 시간은 주기로 접혀 열 시간 뒤에도 1 ms 차이가 float32 에 남는다(감사 C-12 — 접지 않으면 한 눈금이 3.9 ms)
+ * @details 접힌 값은 [0, 주기) 이고 주기를 넘으면 0 부터 다시 센다(Godot `time_rollover_secs` 와 같다). 음수 시간도 같은 범위로 접는다.
+ */
+SW_TEST_CASE( TimeTest, ShaderTimeFoldKeepsMillisecondsAfterTenHours )
+{
+    constexpr sw::float64 kRollover = 3600.0;
+    constexpr sw::float64 kTenHours = 10.0 * 3600.0 + 12.25;
+    const sw::float32     before    = sw::TimeRolloverUtil::fold( kTenHours, kRollover );
+    const sw::float32     after     = sw::TimeRolloverUtil::fold( kTenHours + 0.001, kRollover );
+    const sw::float32     unfoldedA = static_cast<sw::float32>( kTenHours );
+    const sw::float32     unfoldedB = static_cast<sw::float32>( kTenHours + 0.001 );
+    SW_EXPECT_NEAR( 12.25f, before, 1e-3f );
+    SW_EXPECT_NEAR( 0.001f, after - before, 3e-4f );
+    SW_EXPECT_TRUE_MSG( unfoldedB - unfoldedA == 0.0f || unfoldedB - unfoldedA > 0.002f, "the unfolded float32 must lose the millisecond (the defect this fold removes)" );
+    SW_EXPECT_NEAR( 0.5f, sw::TimeRolloverUtil::fold( kRollover + 0.5, kRollover ), 1e-4f );
+    SW_EXPECT_NEAR( 3599.0f, sw::TimeRolloverUtil::fold( -1.0, kRollover ), 1e-3f );
 }
 
 /**

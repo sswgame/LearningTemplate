@@ -1,6 +1,6 @@
 /**
  * @file SceneWatches.cpp
- * @brief 씬의 자동화 감시 값입니다(`Scene.*`). 감시 값 레지스트리(`Engine/Automation/Watch`)가 Scene 보다 아래라 씬이 자기 감시 값을 등록합니다 — 실행기가 대신 정의하지 않습니다.
+ * @brief 씬의 자동화 감시 값입니다(`Scene.*` — 오브젝트 수 · 전환 중 · 트랜스폼 해시 · 게임 카메라 요). 감시 값 레지스트리(`Engine/Automation/Watch`)가 Scene 보다 아래라 씬이 자기 감시 값을 등록합니다 — 실행기가 대신 정의하지 않습니다.
  * @details 감시 값과 결정성 진단 스위치(`gv_automationHashDump`)만 든 개발 장치라 DevTools 에 둔다 — 배포 구성은 이 파일을 짓지 않는다(`SW_DEV_ONLY_SOURCE_PATTERNS`).
  */
 #include "pch.h"
@@ -12,9 +12,11 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
@@ -52,6 +54,23 @@ namespace sw
         }
 
         /**
+         * @brief 감시 값 `Scene.CameraYaw` 입니다. 활성 씬의 게임 카메라가 보는 방향의 요(도, 월드 +Z 가 0, +X 쪽이 양수)입니다.
+         * @details 마우스 시선 시나리오(커서 잠금 중 원시 입력)가 시선이 실제로 돌았는지 본다 — 입력 수만으로는 게임 카메라에 닿았는지 모른다. 카메라가 없으면 읽지 못한다.
+         */
+        [[nodiscard]] bool readSceneCameraYaw( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            if ( engine::areEngineServicesBound() == false )
+                return false;
+            const Scene*           pScene  = engine::getSubsystem<SceneManager>().getActiveScene();
+            const CameraComponent* pCamera = pScene != nullptr ? pScene->getActiveGameCamera() : nullptr;
+            if ( pCamera == nullptr )
+                return false;
+            const float3 forward = pCamera->getCameraForward();
+            outValue             = static_cast<float64>( MathUtil::toDegree( MathUtil::atan2( forward._x, forward._z ) ) );
+            return true;
+        }
+
+        /**
          * @brief 감시 값 `Scene.TransformHash` 입니다. 활성 씬 오브젝트마다 (이름, 1 mm 로 자른 월드 위치)를 해시해 더한 32 비트 값입니다.
          * @details 오브젝트 순서 · id 와 무관하다(합). 같은 시나리오를 같은 고정 틱으로 돌리면 백엔드와 상관없이 같아야 한다 — 게임 상태는 CPU 에서만 정해진다.
          *          32 비트라 `float64` 에 정확히 담기고 `equals` · `<Record>` 로 비교할 수 있다.
@@ -79,6 +98,7 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_WATCH( sceneObjectCount, "Scene.ObjectCount", "Objects in the active scene", &readSceneObjectCount );
+    SW_AUTOMATION_WATCH( sceneCameraYaw, "Scene.CameraYaw", "Yaw (degrees) the active scene's game camera looks along (world +Z is 0, toward +X is positive)", &readSceneCameraYaw );
     SW_AUTOMATION_WALL_WATCH( sceneTransitioning, "Scene.Transitioning", "1 while an asynchronous scene load or transition is in flight", &readSceneTransitioning );
     SW_AUTOMATION_WATCH( sceneTransformHash, "Scene.TransformHash", "Order-independent hash of every object's name and world position (1 mm) - equal across backends",
                          &readSceneTransformHash );

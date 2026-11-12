@@ -29,6 +29,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
@@ -56,6 +57,7 @@ namespace sw
         , _currentStepKind{}
         , _clockHolderName{}
         , _exitDeadlineSeconds{ 0.0 }
+        , _expectedExitCode{ 0 }
         , _loadDeadlineSeconds{ 0.0 }
         , _wallStartSeconds{ 0.0 }
         , _pCompileBusy{ nullptr }
@@ -810,8 +812,16 @@ namespace sw
         {
             if ( _run._exitDeadlineSeconds > 0.0 )
             {
-                const float64 nowSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
-                if ( nowSeconds <= _run._exitDeadlineSeconds )
+                const float64      nowSeconds   = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
+                const QuitRequest* pQuitRequest = engine::findSubsystem<QuitRequest>();
+                const int32        quitExitCode = pQuitRequest != nullptr && pQuitRequest->isRequested() ? static_cast<int32>( pQuitRequest->getExitCode() ) : 0;
+                if ( quitExitCode != _run._expectedExitCode )
+                {
+                    StringBuilder<constant::buffer::kMax256> failure;
+                    failure.appendFormat( "the engine ended with exit code %#, not the ExpectExitWithin exitCode %#", quitExitCode, _run._expectedExitCode );
+                    finish( AutomationResult::Failed, failure.view() );
+                }
+                else if ( nowSeconds <= _run._exitDeadlineSeconds )
                     finish( AutomationResult::Passed, "the window closed within ExpectExitWithin" );
                 else
                     finish( AutomationResult::Failed, "the window closed after the ExpectExitWithin deadline" );

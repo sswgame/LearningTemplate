@@ -531,7 +531,10 @@ namespace sw
             // 종료 시한도 멈춘 루프를 잡는 그물이다(통과는 창이 닫힌 사건) — 다른 벽시계 시한처럼 기계 배율로 늘린다.
             runner._run._exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + AutomationRunner::scaleWallSeconds( seconds );
             if ( bClose == false )
+            {
+                runner._run._expectedExitCode = step.readValidatedProperties<AutomationExpectExitWithinParams>()._exitCode;
                 return true;
+            }
             MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
             IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
             if ( pWindow == nullptr )

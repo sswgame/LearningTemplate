@@ -434,10 +434,12 @@ namespace sw
         /// @brief GPU 회전을 요청한 인스턴스 수입니다. 0이면 애니메이션 디스패치를 건너뜁니다.
         uint32 _spinInstanceCount{ 0 };
         /**
-         * @brief 정점 애니메이션(VAT) 시계(초)입니다. 게임 스레드의 군중 시계(`AnimationCrowd::getClock`)를 그대로 옮긴 값으로, 인스턴스 시간 오프셋과 더하면 CPU 가
-         *        본 클립 시각과 같습니다. 패스마다 PassCB `g_SwVertexAnimationTime` 으로 전달됩니다.
+         * @brief 정점 애니메이션(VAT) 시계(초)입니다. 게임 스레드의 군중 시계(`AnimationCrowd::getClock`)를 `_shaderTimeRolloverSeconds` 주기로 접은 값으로,
+         *        인스턴스 시간 오프셋(같은 주기로 접은 시계 기준 — `AnimationCrowd::getShaderClock`)과 더하면 CPU 가 본 클립 시각과 같습니다. 패스마다 PassCB `g_SwVertexAnimationTime` 으로 전달됩니다.
          */
         float32 _vertexAnimationTime{ 0.0f };
+        /** @brief 셰이더로 보내는 시간을 접는 주기(초, `EngineConfig::_shaderTimeRolloverSeconds`)입니다. 렌더러 시계(`FrameRenderState::getAnimationTime`)도 이 값으로 접는다. */
+        float64 _shaderTimeRolloverSeconds{ 0.0 };
         /**
          * @brief 정적 그림자 세대입니다. 정적 메시가 움직이거나 바뀌거나 더해지거나 빠질 때 오른다(`GPUSceneBuilder::updateStaticShadowGeneration`).
          * @details 그림자 캐시(`ShadowCachePolicy`)가 이 값이 바뀌면 캐시 층을 다시 그린다 — 언리얼이 정적 프리미티브의 등록 · 이동으로 캐시한 그림자 맵을 버리는 것과 같은 자리다.

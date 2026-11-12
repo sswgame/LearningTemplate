@@ -182,6 +182,7 @@ namespace sw
          *          에서, 유니티 Input System 은 늘 Raw Input 을 쓴다. 대상 창은 nullptr(키보드 포커스를 따른다)이다 — `RIDEV_REMOVE` 는
          *          대상 창이 있으면 실패하고, 포커스 밖 창은 어차피 받지 않는다. 레거시 메시지(`RIDEV_NOLEGACY`)는 끄지 않는다(버튼 · 위치가 그 길이다).
          *          등록이 실패하면 오류를 남기고 원천을 켜지 않는다 — 장치가 원시 원천 없이 위치 차이를 쓰는 것이 그 상태의 뜻이다.
+         *          등록이 성공해도 원천은 첫 원시 보고가 와야 확정된다(`MouseDevice::getMovementDelta`) — 보고 없이 커서만 옮기는 환경(원격 제어 · 터치)에서 시선이 멈추지 않게.
          */
         void setRawMouseInputInternal( MouseDevice& mouse, bool bEnable, optional<int2>& inoutLastAbsolute )
         {
@@ -261,7 +262,10 @@ namespace sw
                         const RAWMOUSE& mouse  = rawInput.data.mouse;
                         const float2    motion = Win32RawMouseUtil::readMotion( mouse, Win32RawMouseUtil::getAbsoluteArea( mouse ), _lastRawMouseAbsolute );
                         if ( motion._x != 0.0f || motion._y != 0.0f )
+                        {
+                            ++_rawMouseEventCount;
                             postRawEvent( RawInputEvent::makeMouseRawDelta( motion._x, motion._y ) );
+                        }
                     }
                 }
                 break;

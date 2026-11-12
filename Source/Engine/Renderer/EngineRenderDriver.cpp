@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/EngineRenderDriver.h"
 
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -91,7 +92,7 @@ namespace sw
         _deviceLostPolicy = engine::getSubsystem<EngineConfig>()._deviceLostPolicy;
         if ( _deviceLostPolicy == RHIDeviceLostPolicy::None )
         {
-            SW_LOG_ERROR_ID( "Render.DeviceLostPolicyMissing", "EngineConfig _deviceLostPolicy is not set - add it to Config/Engine/EngineConfig.json (Quit)" );
+            SW_LOG_ERROR_ID( "Render.DeviceLostPolicyMissing", "EngineConfig _deviceLostPolicy is not set - add it to Config/Engine/EngineConfig.json (Quit or Recreate)" );
             engine::getSubsystem<QuitRequest>().request( ProcessExitCode::InitializationFailed );
         }
         // 스왑체인은 주 창 크기를 따른다 — RHI 가 섰으면 주 창도 있다(RHI 가 만들어 넘긴 창이거나 호스트가 먼저 넘긴 창).
@@ -148,18 +149,15 @@ namespace sw
         return CaptureReadiness::countPendingJobs( pManager );
     }
 
-    optional<ProcessExitCode> EngineRenderDriver::decideDeviceLostExit( const IRHIDevice& device, const RHIDeviceLostPolicy policy )
+    optional<RHIDeviceLostPolicy> EngineRenderDriver::decideDeviceLostResponse( const IRHIDevice& device, const RHIBackend backend, const RHIDeviceLostPolicy policy )
     {
         if ( device.isDeviceLost() == false )
             return {};
-        switch ( policy )
-        {
-            case RHIDeviceLostPolicy::Quit:
-                return ProcessExitCode::DeviceLost;
-            case RHIDeviceLostPolicy::None:
-                break;
-        }
-        return ProcessExitCode::InitializationFailed; // 정책이 없으면 기동이 이미 이 코드로 끝내기를 요청했다(`onStartupFinished`)
+        // 다시 만드는 길(모듈 내리기 → 장치 → 모듈 세우기)은 개발 구성의 백엔드 교체기 하나다 — 배포는 언리얼처럼 끝낸다.
+        const bool bHostRecreates = build::kShipping == false;
+        if ( policy == RHIDeviceLostPolicy::Recreate && bHostRecreates && RHI::canRecreateAfterDeviceLost( backend ) )
+            return RHIDeviceLostPolicy::Recreate;
+        return RHIDeviceLostPolicy::Quit; // `None` 이면 기동이 이미 InitializationFailed 로 끝내기를 요청했다(`onStartupFinished`) — 처음 요청의 코드가 이긴다
     }
 
     bool EngineRenderDriver::rebindSceneAfterDeviceRecreate( string* pOutTiming )
@@ -225,17 +223,27 @@ namespace sw
         // 장치를 잃었으면 검은 화면으로 계속 돌지 않는다 — 렌더 스레드가 잃은 프레임을 Present 한 다음 게임 스레드 프레임에서 정책대로 끝낸다.
         if ( _pRHI != nullptr && _pRHI->hasDevice() && _bDeviceLostHandled == SW_FALSE )
         {
-            const optional<ProcessExitCode> deviceLostExit = decideDeviceLostExit( _pRHI->getDevice(), _deviceLostPolicy );
-            if ( deviceLostExit.has_value() )
+            const optional<RHIDeviceLostPolicy> response = decideDeviceLostResponse( _pRHI->getDevice(), _pRHI->getCommittedBackend(), _deviceLostPolicy );
+            if ( response.has_value() )
             {
                 _bDeviceLostHandled = SW_TRUE;
-                SW_LOG_ERROR_ID( "Render.DeviceLostQuit", "The %# device was lost - quitting with exit code %# (EngineConfig _deviceLostPolicy)", RHI::getBackendTypeName( _pRHI->getCommittedBackend() ),
-                                 static_cast<int32>( *deviceLostExit ) );
-                engine::getSubsystem<QuitRequest>().request( *deviceLostExit );
+                if ( *response == RHIDeviceLostPolicy::Recreate )
+                {
+                    // 백엔드 교체와 같은 프레임 끝의 길로 다시 만든다 — 성공하면 `applyPendingBackendChange` 가 처리 표시를 내린다.
+                    SW_LOG_WARNING_ID( "Render.DeviceLostRecreate", "The %# device was lost - recreating it at the end of the frame (EngineConfig _deviceLostPolicy)",
+                                       RHI::getBackendTypeName( _pRHI->getCommittedBackend() ) );
+                    _pRHI->scheduleDeviceRecreate();
+                }
+                else
+                {
+                    SW_LOG_ERROR_ID( "Render.DeviceLostQuit", "The %# device was lost - quitting with exit code %# (EngineConfig _deviceLostPolicy)", RHI::getBackendTypeName( _pRHI->getCommittedBackend() ),
+                                     static_cast<int32>( ProcessExitCode::DeviceLost ) );
+                    engine::getSubsystem<QuitRequest>().request( ProcessExitCode::DeviceLost );
+                }
             }
         }
         if ( _bDeviceLostHandled != SW_FALSE )
-            return; // 잃은 장치에 패킷을 더 내지 않는다 — 루프는 이 프레임 뒤 끝난다
+            return; // 잃은 장치에 패킷을 더 내지 않는다 — 루프는 이 프레임 뒤 끝나거나 장치를 다시 만든다
 
         if ( _pRHI != nullptr && _pRHI->hasDevice() )
         {
@@ -285,9 +293,10 @@ namespace sw
         if ( _pRHI == nullptr )
             return false;
 
-        const RHIBackend requested = _pRHI->consumePendingBackendChange();
-        const RHIBackend previous  = _pRHI->getCommittedBackend();
-        if ( requested == previous )
+        const bool       bRecreateLost = _pRHI->isDeviceRecreatePending(); // 잃은 장치를 같은 백엔드로 다시 만든다(`RHIDeviceLostPolicy::Recreate`)
+        const RHIBackend requested     = _pRHI->consumePendingBackendChange();
+        const RHIBackend previous      = _pRHI->getCommittedBackend();
+        if ( requested == previous && bRecreateLost == false )
             return true;
 
         SW_LOG_INFO_ID( "Engine.SoftRecreatingRHI", "Soft-recreating RHI: %# → %#",
@@ -316,16 +325,24 @@ namespace sw
             if ( _pRHI->recreateDevice( previous ) == false )
             {
                 SW_LOG_ERROR_ID( "Engine.FailedRestorePreviousRHI", "Failed to restore previous RHI backend — device is gone." );
+                if ( bRecreateLost )
+                    engine::getSubsystem<QuitRequest>().request( ProcessExitCode::DeviceLost ); // 잃은 장치를 되살리지 못했다 — 장치 없이 돌지 않는다
                 return false;
             }
+            _bDeviceLostHandled = SW_FALSE;         // 되돌린 장치는 새 장치다
             (void)rebindSceneAfterDeviceRecreate(); // 되돌린 장치에 장면을 다시 묶는다 — 이 경로는 이미 실패로 답한다
             return false;
         }
 
+        _bDeviceLostHandled               = SW_FALSE; // 새 장치다 — 다시 잃으면 정책을 다시 묻는다
         const uint64 recreateMicroseconds = swapWatch.getElapsedMicroseconds();
         string       rebindTiming;
         if ( rebindSceneAfterDeviceRecreate( &rebindTiming ) == false )
+        {
+            if ( bRecreateLost )
+                engine::getSubsystem<QuitRequest>().request( ProcessExitCode::DeviceLost ); // 다시 만든 장치에 장면을 묶지 못했다 — 검은 화면으로 돌지 않는다
             return false;
+        }
         SW_LOG_INFO_ID( "Engine.BackendSwapTookMs", "Backend swap took %#ms (shut down %#ms, device %#ms, %#)", swapWatch.getElapsedMicroseconds() / 1000, shutdownMicroseconds / 1000,
                         ( recreateMicroseconds - shutdownMicroseconds ) / 1000, rebindTiming.c_str() );
         // 교체 뒤 디바이스에 매인 설정이 새 디바이스를 따르는지 한 줄로 남긴다.
