@@ -72,10 +72,28 @@ def makeWholeScope(projectRoot: Path) -> LintScope:
     return LintScope(listRepoFiles(projectRoot), (), True)
 
 
+def listMergeParents(projectRoot: Path) -> list[str]:
+    """병합 중이면 들여오는 커밋들(`MERGE_HEAD` 의 줄 — 문어발 병합은 여럿), 아니면 빈 목록."""
+    result = runGit(["rev-parse", "--path-format=absolute", "--git-path", "MERGE_HEAD"], cwd=projectRoot)
+    if result.returnCode != 0:
+        raise RuntimeError(f"git rev-parse --git-path MERGE_HEAD 실패: {result.stderr.strip()}")
+    mergeHead = Path(result.stdout.strip())
+    return mergeHead.read_text(encoding="utf-8").split() if mergeHead.is_file() else []
+
+
 def makeStagedScope(projectRoot: Path) -> LintScope:
-    """스테이지된 변경. 옮기기는 지우기 + 더하기로 본다(`--no-renames`) — 옮기며 고친 파일도 검사에서 빠지지 않는다."""
+    """
+    스테이지된 변경. 옮기기는 지우기 + 더하기로 본다(`--no-renames`) — 옮기며 고친 파일도 검사에서 빠지지 않는다.
+
+    병합 중이면 스테이지 내용이 **모든 부모와 다른** 파일(손으로 푼 충돌 · 병합하며 고친 파일)만 본다 — 한쪽 부모와 같은 파일은 그 브랜치의 커밋에서
+    이미 린트를 지났다. 두 브랜치가 따로는 맞고 합치면 어긋나는 의미 충돌(한쪽이 지운 이름을 다른 쪽이 새로 쓴다)은 묶음 검증 첫 단계 `lint --all` 이 본다.
+    """
     listChanged = runGitLines(projectRoot, ["diff", "--cached", "--name-only", "--no-renames", "--diff-filter=ACM"])
     listRemoved = runGitLines(projectRoot, ["diff", "--cached", "--name-only", "--no-renames", "--diff-filter=D"])
+    for parent in listMergeParents(projectRoot):
+        setDiffer = set(runGitLines(projectRoot, ["diff", "--cached", "--name-only", "--no-renames", parent]))
+        listChanged = [path for path in listChanged if path in setDiffer]
+        listRemoved = [path for path in listRemoved if path in setDiffer]
     return LintScope(tuple(sorted(path for path in listChanged if (projectRoot / path).is_file())), tuple(sorted(listRemoved)), False)
 
 
