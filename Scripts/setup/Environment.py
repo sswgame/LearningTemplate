@@ -106,6 +106,7 @@ class EngineConfig:
     windows_sdk_version: str
     dxc_dll_path: str
     dxil_dll_path: str
+    dxc_search_key: str
     msvc_tools_dir: str
     vcpkg_root: str
     ninja_path: str
@@ -155,7 +156,7 @@ class EnvironmentSetupManager:
         elif not isWindowsHost():
             sdkDirectory, sdkVersion = "", ""
 
-        foundDxc, foundDxil = findDxcDlls(sdkDirectory, sdkVersion, self.project_root)
+        foundDxc, foundDxil, self.dxc_search_key = findDxcDlls(sdkDirectory, sdkVersion, self.project_root, self.existing_config)
         msvcPath = getOrFindCached(self.existing_config, kKeyMsvcToolsDir, findMsvcPath)
         return sdkDirectory, sdkVersion, foundDxc, foundDxil, msvcPath
 
@@ -201,6 +202,7 @@ class EnvironmentSetupManager:
             windows_sdk_version=sdkVersion,
             dxc_dll_path=dxcPath,
             dxil_dll_path=dxilPath,
+            dxc_search_key=self.dxc_search_key,
             msvc_tools_dir=msvcPath,
             vcpkg_root=vcpkgPath,
             ninja_path=ninjaPath,

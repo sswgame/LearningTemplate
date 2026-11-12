@@ -23,7 +23,7 @@ from typing import Any
 from common.FileCollect import findFirstExistingFileInBinDirs, findFirstExistingFileRecursive, findFirstValidRoot, platformSearchRoots, selectLatestVersion
 from common.Paths import normalizePath, platformKey, sharedLibraryNames
 from common.HostPlatform import isWindowsHost
-from common.ProjectConstants import kKeyNinjaDownloadUrls, kKeyNinjaSearchRoots, kKeyNinjaToolsSubdir, kKeyVcpkgInstalledRel
+from common.ProjectConstants import kKeyDxcDllPath, kKeyDxcSearchKey, kKeyDxilDllPath, kKeyNinjaDownloadUrls, kKeyNinjaSearchRoots, kKeyNinjaToolsSubdir, kKeyVcpkgInstalledRel
 from common.RunProcess import runProcess
 from common.ToolDownload import ensureCachedDownload, extractZipSafe, resolveToolsSubdir, toolsCacheDir
 from common.ToolchainConfig import loadSearchPaths, recordEnginePath
@@ -165,33 +165,44 @@ def findHostLibraryInternal(names: list[str], vcpkgDirs: list[Path], searchRoots
     return ""
 
 
-def findDxcDlls(sdkDir: str, sdkVer: str, projectRoot: Path) -> tuple[str, str]:
+def findDxcDlls(sdkDir: str, sdkVer: str, projectRoot: Path, existing: dict[str, Any]) -> tuple[str, str, str]:
     """
     DirectX Shader Compiler (dxcompiler)와 dxil 라이브러리 경로를 찾습니다.
     (우선순위: vcpkg_installed -> VULKAN_SDK -> Windows SDK -> PATH 순)
+
+    SDK 폴더 재귀 탐색이 비싸다 — configure 마다 Windows SDK · Vulkan SDK 를 통째로 훑었다. 그래서 탐색 입력(`VULKAN_SDK` · SDK 경로 · 판)을
+    열쇠로 `existing`(지난 toolchain_config.json)의 결과를 다시 쓴다: 열쇠가 같으면 지난 경로가 있으면 그대로, 지난번 못 찾았으면 SDK 를 다시 훑지 않는다.
+    vcpkg bin 과 PATH 는 싸서 늘 본다(vcpkg 에 새로 깔린 DXC 가 앞선다). 다시 찾으려면 `Environment.py --force`.
 
     Args:
         sdkDir: Windows SDK 디렉터리 경로
         sdkVer: Windows SDK 버전
         projectRoot: 프로젝트 최상위 경로
+        existing: 지난 toolchain_config.json 내용(없으면 빈 dict)
 
     Returns:
-        (dxcompiler 경로, dxil 경로) 튜플
+        (dxcompiler 경로, dxil 경로, 탐색 열쇠) 튜플
     """
-    dxcNames = sharedLibraryNames("dxcompiler")
-    dxilNames = sharedLibraryNames("dxil")
-
     vcpkgDirs = findVcpkgInstalledDirsInternal(projectRoot)
     searchRoots: list[Path] = []
 
-    if vulkanSdk := os.environ.get("VULKAN_SDK"):
+    vulkanSdk = os.environ.get("VULKAN_SDK", "")
+    if vulkanSdk:
         searchRoots.append(Path(vulkanSdk))
     if isWindowsHost() and sdkDir and sdkVer:
         searchRoots.append(Path(sdkDir))
+    searchKey = "|".join((vulkanSdk, sdkDir, sdkVer) if isWindowsHost() else (vulkanSdk,))
+    bSameSearch = existing.get(kKeyDxcSearchKey) == searchKey
 
-    dxcPath = findHostLibraryInternal(dxcNames, vcpkgDirs, searchRoots)
-    dxilPath = findHostLibraryInternal(dxilNames, vcpkgDirs, searchRoots)
-    return dxcPath, dxilPath
+    def findOne(names: list[str], cacheKey: str) -> str:
+        if vcpkgDirs and (found := findFirstExistingFileInBinDirs(vcpkgDirs, names)):
+            return normalizePath(found)
+        cachedPath = existing.get(cacheKey, "")
+        if bSameSearch and cachedPath and Path(cachedPath).is_file():
+            return cachedPath
+        return findHostLibraryInternal(names, [], [] if bSameSearch else searchRoots)
+
+    return findOne(sharedLibraryNames("dxcompiler"), kKeyDxcDllPath), findOne(sharedLibraryNames("dxil"), kKeyDxilDllPath), searchKey
 
 
 @lru_cache(maxsize=1)
