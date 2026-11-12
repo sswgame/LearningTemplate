@@ -65,6 +65,8 @@ namespace sw
                         return MailboxResult::CapExceeded;
                     case LedgerResult::Conflict:
                         return MailboxServiceResult::fail( OnlineError::kBusy );
+                    case LedgerResult::AccountDeleted:
+                        return MailboxServiceResult::fail( OnlineError::kInvalidRequest ); // 탈퇴한 계정에는 다시 해도 갈 수 없다
                     case LedgerResult::InsufficientFunds:
                     case LedgerResult::JournalKeyReused:
                     case LedgerResult::Invalid:

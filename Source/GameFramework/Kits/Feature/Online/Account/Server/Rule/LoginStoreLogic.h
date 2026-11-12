@@ -104,7 +104,8 @@ namespace sw
         LoginServiceResult cancelDeletion( const LoginSessionToken& token, int64 nowMs );
         /**
          * @brief 예약 시각이 지난 계정을 @p maxCount 개까지 지웁니다. 이름, 프로필, 게스트, 외부 연결, 세션을 지웁니다.
-         * @details 원장과 감사 기록은 남긴다. 거기에는 계정 id 만 있고 개인정보는 없다.
+         * @details 원장에는 묘비를 세우고(`Ledger::stageAccountDeletion`, 계정 지우기와 한 트랜잭션) 남은 잔액은 소각 분개로 0 으로 만든다(`Ledger::burnDeletedAccounts`).
+         *          분개 · 감사 기록은 회계 · 분쟁 근거라 보존 기간까지 남긴다. 거기에는 계정 id 만 있고 개인정보는 없다(GDPR 17 조 3 항 (b) · (e) 의 보존 예외).
          * @return 지운 계정 수입니다. 저장소에 문제가 생기면 그 지점에서 멈춥니다.
          */
         int32 purgeDueDeletions( int64 nowMs, int32 maxCount );

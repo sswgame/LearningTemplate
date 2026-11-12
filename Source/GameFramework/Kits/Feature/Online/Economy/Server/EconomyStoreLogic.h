@@ -84,9 +84,10 @@ namespace sw
         static const hashed_string& getPurchaseCountTable(); ///< "econ_purchase" — 키 `<계정 16 진>/<상품 id>`
         static const hashed_string& getRefundCursorTable();  ///< "econ_refund_cursor" — 키는 스토어 이름, 값은 환불 조회의 기준 시각(가변 정수)
         /**
-         * @brief 영수증 상태 표입니다(키 = 지급 분개 키 `rcpt.<스토어>/<거래 id>`, 값 `[판 번호][상태][계정]`). 보존 정리가 지우지 않는다.
+         * @brief 영수증 상태 표입니다(키 = 지급 분개 키 `rcpt.<스토어>/<거래 id>`, 값 `[판 번호][상태]`). 보존 정리가 지우지 않는다.
          * @details 거래 하나의 상태(지급 · 지급 전 환불 · 환불 회수 · 청약철회)가 레코드 하나라서 지급과 환불 · 철회가 서로 이 레코드의 버전을 커밋 조건으로 건다 —
          *          어느 쪽이 먼저 커밋해도 다른 쪽은 Conflict 로 다시 읽으므로 "환불된 구매의 지급" 이 통과하지 않는다(감사 O-1). 분개는 감사 내역이라 지워지고 이 레코드가 멱등 기록이다(감사 P0-7).
+         *          지우지 않는 레코드라 받은 계정은 담지 않는다 — 탈퇴한 사람과 이어지지 않는다(받은 계정은 보존 기간이 있는 지급 분개에만 있다).
          */
         static const hashed_string& getReceiptTable();
         static const hashed_string& getDeliveryTable(); ///< "econ_delivery" — 스토어에 아직 알리지 못한 지급. 키는 지급 분개 키, 값은 `[판 번호][스토어][알림 키][기한]`
@@ -117,6 +118,7 @@ namespace sw
          *          지급 전에 환불이 먼저 오면 상태만 "지급 전 환불" 로 남기고, 뒤에 온 지급은 ReceiptRefunded 로 거절된다. 청약철회한 거래면 이미 돌려받았으므로 상태만 본다.
          *          지급 뒤면 지급 분개(`rcpt.<스토어>` 범위, 거래 id 토큰)의 다리를 거꾸로 소각으로 보내며, 양은 @p recovery 가 정한다(`Debt` 는 모두 · 빚 허용, `Unspent` 는 남은 잔액 안에서).
          *          지급 분개가 보존 정리로 지워졌으면 지급 내용을 모르므로 회수하지 않고 상태만 바꾸며 오류 로그를 남긴다.
+         *          받은 계정이 탈퇴로 지워졌으면(`LedgerResult::AccountDeleted` — 잔액은 탈퇴 때 소각됐다) 회수하지 않고 상태만 바꾼다.
          */
         static EconomyServiceResult revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotification& notice,
                                                   EconomyRefundRecoveryMode recovery, int64 nowMs, vector<EconomyBalanceChange>& outListChange );
