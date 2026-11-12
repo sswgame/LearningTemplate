@@ -574,21 +574,30 @@ namespace sw
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_REPORT, options._reportPath );
         options._executablePath          = FileUtil::getExecutablePath();
         options._listPassThroughArgument = AutomationPerBackend::filterPassThroughArguments( commandLine.getOriginalArguments() );
-        (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT, options._bSplitScenarios );
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT_OFFSET, options._splitOffset );
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SLOTS, options._slotCount );
+        expected<AutomationBackendSplit> split = AutomationBackendSplit::None;
+        string                           splitText;
+        if ( commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT, splitText ) )
+            split = AutomationPerBackend::parseBackendSplit( splitText );
+        if ( split.has_value() )
+            options._split = *split;
         const expected<vector<string>> listBackend = AutomationPerBackend::parseBackendList( backends );
         if ( listBackend.has_value() )
             options._listBackend = *listBackend;
-        if ( options._scenarioPath.empty() || listBackend.has_value() == false )
+        if ( options._scenarioPath.empty() || listBackend.has_value() == false || split.has_value() == false )
         {
             if ( options._scenarioPath.empty() )
             {
                 SW_LOG_ERROR_ID( "AutomationSession.BackendsOptionInvalid", "%#", "-scenario-backends needs -scenario=<path>" );
             }
-            else
+            else if ( listBackend.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "AutomationSession.BackendsOptionInvalid", "%#: %#", listBackend.error().message(), listBackend.error().detail() );
+            }
+            else
+            {
+                SW_LOG_ERROR_ID( "AutomationSession.BackendsOptionInvalid", "%#: %#", split.error().message(), split.error().detail() );
             }
             inoutState._bFailed         = SW_TRUE;
             inoutState._failureExitCode = getAutomationExitStatus( AutomationResult::LoadError );

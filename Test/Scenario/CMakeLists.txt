@@ -39,7 +39,7 @@ endfunction()
 # 체인 항목 하나 — 시나리오 모두를 백엔드마다 한 프로세스로. 모듈 리로드(이름 `*modulereload`)는 코드 이미지를 갈아 끼우므로 맨 뒤에 둔다 — 그 단계가 무엇을 남겨도 다른 단계에 닿지 않는다.
 # 첫 단계의 `<Launch>` 는 명령줄로 준다(게임이 기동하며 그 값을 읽는다). 다음 단계의 값은 세션이 단계를 시작할 때 건다. ARGS 는 App 에 더 줄 인자(`-game=` · `-EnableEditor` …)다.
 function(sw_addScenarioChain testName stageSeconds)
-	cmake_parse_arguments(PARSE_ARGV 2 arg "" "SLOTS" "SCENARIOS;ARGS")
+	cmake_parse_arguments(PARSE_ARGV 2 arg "" "SLOTS;SPLIT" "SCENARIOS;ARGS")
 	set(listScenario ${arg_SCENARIOS})
 	if(NOT listScenario)
 		return()
@@ -60,10 +60,19 @@ function(sw_addScenarioChain testName stageSeconds)
 		set(slotCount ${arg_SLOTS})
 		set(listSlotArgument -scenario-backend-slots=${arg_SLOTS})
 	endif()
+	# SPLIT: 시나리오를 백엔드에 나눠 주는 방식(`-scenario-backend-split`). 그림 · 골든 · 기록 대조의 정본은 Release(모든 게임 · 네 백엔드)다 — Debug 는 Release 가 못 잡는
+	# 단언(`SW_ASSERT` 는 Debug 에만 있다) · 검사를 시나리오마다 한 번 지나면 되므로 모든 시나리오를 백엔드에 하나씩 나눈다(`all`, 날마다 배정이 돌아 나흘이면 모든 조합).
+	# 같은 체인을 두 구성에서 네 백엔드로 다 돌던 것이 묶음 검증 Debug ctest 29 분의 대부분이었다(2026-11-13).
+	set(listSplitArgument "")
+	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+		set(listSplitArgument -scenario-backend-split=all)
+	elseif(arg_SPLIT)
+		set(listSplitArgument -scenario-backend-split=${arg_SPLIT})
+	endif()
 	math(EXPR waveCount "(${swScenarioBackendCount} + ${slotCount} - 1) / ${slotCount}")
 	math(EXPR chainTimeout "${stageSeconds} * ${stageCount} * ${waveCount}")
 	add_test(NAME ${testName}
-		COMMAND $<TARGET_FILE:App> ${arg_ARGS} -scenario=${scenarioList} -scenario-keep-going -scenario-backends=all ${listSlotArgument} -unattended
+		COMMAND $<TARGET_FILE:App> ${arg_ARGS} -scenario=${scenarioList} -scenario-keep-going -scenario-backends=all ${listSplitArgument} ${listSlotArgument} -unattended
 			-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${testName}.log ${listLaunchArgument}
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(${testName} PROPERTIES LABELS hostgpu TIMEOUT ${chainTimeout} SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped} PROCESSORS ${slotCount})
@@ -172,17 +181,17 @@ foreach(game IN LISTS listBuiltGame)
 	# 게임의 편집기 시나리오 — 그 게임의 데이터를 편집기로 다루는 흐름이라 그 게임을 싣는 편집기 체인(`Scenario.<팩>.editor`)으로 돈다. 플래그는 엔진 편집기 체인(아래)과 같다.
 	if(TARGET EditorModule)
 		file(GLOB listGameEditorScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${automationDir}/editor/*.scenario.xml")
-		sw_addScenarioChain(Scenario.${pack}.editor 120 SCENARIOS ${listGameEditorScenario} ARGS ${gameArgument} -EnableEditor -scenario-backend-split)
+		sw_addScenarioChain(Scenario.${pack}.editor 120 SPLIT independent SCENARIOS ${listGameEditorScenario} ARGS ${gameArgument} -EnableEditor)
 	endif()
 endforeach()
 
 # 엔진 편집기 시나리오 — `Content/engine/automation/editor/` 바로 아래 `*.scenario.xml` 을 편집기를 켠 체인 하나(`Scenario.editor`, 활성 게임)로 돌린다. 하위 폴더 `statedir/`
 # (두 프로세스가 같은 상태 폴더를 이어 쓰는 쌍)는 아래에서 쌍마다 항목 하나로 돈다. 게임 체인처럼 백엔드마다 자식 App 하나가
 # 동시에 돌고(`-scenario-backends=all`) 저마다 제 백엔드 골든(씬 · 게임 뷰)과 견준다 — 편집기 상태 폴더가 프로세스마다라 자식끼리 겹치지 않는다.
-# 그린 화소를 판정하지 않는 시나리오(UI 로직 · 문턱 없는 캡처)는 백엔드를 돌아가며 하나에서만 돈다(`-scenario-backend-split`) — 전부 네 번 돌면 백엔드당 약 1000 초였다.
+# 그린 화소를 판정하지 않는 시나리오(UI 로직 · 문턱 없는 캡처)는 백엔드를 돌아가며 하나에서만 돈다(`-scenario-backend-split=independent`, Debug 는 `all`) — 전부 네 번 돌면 백엔드당 약 1000 초였다.
 if(TARGET EditorModule)
 	file(GLOB listEditorScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${swScenarioRoot}/engine/automation/editor/*.scenario.xml")
-	sw_addScenarioChain(Scenario.editor 120 SCENARIOS ${listEditorScenario} ARGS -EnableEditor -scenario-backend-split)
+	sw_addScenarioChain(Scenario.editor 120 SPLIT independent SCENARIOS ${listEditorScenario} ARGS -EnableEditor)
 	# 저장된 상태 쌍(`statedir/<묶음>.1` · `.2`) — 끄고 다시 켜면 상태가 돌아오는지가 검사 대상이라 프로세스를 다시 띄우는 것 자체가 필요하다.
 	# 빈 상태 폴더로 .1 을, 같은 폴더로 .2 를 잇는다(언리얼이 설정 저장을 에디터 재시작으로 보는 것과 같다). 상태 폴더를 같이 쓰므로 기본 백엔드 하나다.
 	file(GLOB listStateDirFirst RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${swScenarioRoot}/engine/automation/editor/statedir/*.1.scenario.xml")
@@ -200,3 +209,6 @@ endif()
 # 모든 시나리오가 임포트한 산출물을 요구한다(Test/CMakeLists.txt 의 `Import.*`).
 get_property(swAllScenarioTest DIRECTORY PROPERTY TESTS)
 set_tests_properties(${swAllScenarioTest} PROPERTIES FIXTURES_REQUIRED ImportedAssets)
+if(swCpuHeavyTest)
+	set_tests_properties(${swAllScenarioTest} PROPERTIES DEPENDS ${swCpuHeavyTest}) # 시간 판정이 있는 시나리오는 CPU 를 다 쓰는 항목 뒤에 돈다(Test/CMakeLists.txt 의 swCpuHeavyTest)
+endif()

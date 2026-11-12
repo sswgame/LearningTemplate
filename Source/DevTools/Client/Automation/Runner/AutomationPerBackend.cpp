@@ -263,6 +263,15 @@ namespace sw
         return listBackend;
     }
 
+    expected<AutomationBackendSplit> AutomationPerBackend::parseBackendSplit( string_view text )
+    {
+        if ( text == "independent" )
+            return AutomationBackendSplit::Independent;
+        if ( text == "all" )
+            return AutomationBackendSplit::All;
+        return unexpected( Error{ ErrorKind::InvalidArgument, "-scenario-backend-split takes independent | all", text } );
+    }
+
     vector<string> AutomationPerBackend::filterPassThroughArguments( const vector<string>& listOriginalArgument )
     {
         using Internal                                   = AutomationPerBackendInternal;
@@ -291,14 +300,15 @@ namespace sw
         {
             AutomationScenario scenario;
             const bool         bLoaded     = scenario.loadFromPath( AssetID{ path } ).has_value();
-            const bool         bPerBackend = std::any_of( scenario.getSteps().begin(), scenario.getSteps().end(), &Internal::isEvaluatedPerBackend );
+            const bool         bPerBackend = options._split == AutomationBackendSplit::Independent &&
+                                     std::any_of( scenario.getSteps().begin(), scenario.getSteps().end(), &Internal::isEvaluatedPerBackend );
+            const bool bSplit = options._split != AutomationBackendSplit::None && bLoaded && bPerBackend == false;
             for ( size_t i = 0; i < listScenarioList.size(); ++i )
             {
-                const bool bThisBackend = options._bSplitScenarios == false || bLoaded == false || bPerBackend || i == nextBackend % listScenarioList.size();
-                if ( bThisBackend )
+                if ( bSplit == false || i == nextBackend % listScenarioList.size() )
                     listScenarioList[i] += ( listScenarioList[i].empty() ? "" : "," ) + path;
             }
-            if ( options._bSplitScenarios && bLoaded && bPerBackend == false )
+            if ( bSplit )
                 ++nextBackend;
         }
         return listScenarioList;
@@ -373,12 +383,12 @@ namespace sw
         } );
         // 나눌 때 배정의 시작점 — 주지 않았으면 UTC 날짜(일)로 정해 날마다 한 칸씩 돌린다. 백엔드와 무관하다고 본 시나리오도 나흘이면 모든 백엔드를 거친다.
         AutomationPerBackendOptions assignOptions = options;
-        if ( options._bSplitScenarios && assignOptions._splitOffset < 0 )
+        if ( options._split != AutomationBackendSplit::None && assignOptions._splitOffset < 0 )
         {
             constexpr int64 kSecondsPerDay = 24 * 60 * 60;
             assignOptions._splitOffset     = static_cast<int32>( ( WallClock::nowUnixMilliseconds().toSeconds() / kSecondsPerDay ) % static_cast<int64>( MathUtil::max<size_t>( 1, options._listBackend.size() ) ) );
         }
-        if ( options._bSplitScenarios )
+        if ( options._split != AutomationBackendSplit::None )
             SW_LOG_INFO_ID( "ScenarioPerBackend.PerBackendSplitOffset", "[Scenario] per-backend: split offset %# (rerun the same assignment with -scenario-backend-split-offset=%#)", assignOptions._splitOffset, assignOptions._splitOffset );
         const vector<string>                listScenarioList = assignScenarios( assignOptions );
         vector<unique_ptr<Internal::Child>> listChild;
