@@ -26,6 +26,7 @@ namespace
         {
         }
         int64 getBalanceCap( string_view /*assetID*/ ) const override { return _cap; }
+        bool  isTransferable( string_view /*assetID*/ ) const override { return true; }
 
     private:
         int64 _cap;

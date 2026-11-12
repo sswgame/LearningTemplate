@@ -87,6 +87,8 @@ namespace sw
         const vector<CurrencyDef>& getCurrencies() const { return _listCurrency; }
         /** @brief @p assetID 의 계정 잔액 상한입니다. 정의가 없거나 0이면 0(원장 상한만 적용)입니다. */
         int64 getBalanceCap( string_view assetID ) const;
+        /** @brief 계정 사이로 옮겨져도 되는 자산이면 true 입니다. 유료 재화(`_bPaid`)는 아니다 — 맡긴 당사자가 허용한 권한 안에서만 옮긴다(감사 O-10). */
+        bool isTransferable( string_view assetID ) const;
         /** @brief 원장에 넘기는 상한 정책입니다(`getBalanceCap` 으로 넘긴다). 이 카탈로그와 수명이 같습니다. 키트 범위에 거는 쪽은 비 const 판을 쓴다(`bind` 가 const 를 떼지 않는다). */
         ILedgerPolicy&       getLedgerPolicy() { return _ledgerPolicy; }
         const ILedgerPolicy& getLedgerPolicy() const { return _ledgerPolicy; }
@@ -102,6 +104,7 @@ namespace sw
             }
 
             int64 getBalanceCap( string_view assetID ) const override { return _catalog.getBalanceCap( assetID ); }
+            bool  isTransferable( string_view assetID ) const override { return _catalog.isTransferable( assetID ); }
 
         private:
             const CurrencyCatalog& _catalog;

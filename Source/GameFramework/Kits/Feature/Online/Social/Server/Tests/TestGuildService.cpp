@@ -85,12 +85,12 @@ namespace
             return runRequest( request )._result;
         }
 
-        GuildCompletion transfer( GuildOperation operation, AccountID accountID, int64 amount, string_view journalKey )
+        GuildCompletion transfer( GuildOperation operation, AccountID accountID, int64 amount, string_view journalKey, string_view assetID = "cur.gold" )
         {
             GuildRequest request;
             request._operation  = operation;
             request._accountID  = accountID;
-            request._assetID    = "cur.gold";
+            request._assetID    = string( assetID );
             request._amount     = amount;
             request._journalKey = string( journalKey );
             request._nowMs      = UnixMilliseconds{ kNowMs };
@@ -543,4 +543,27 @@ SW_TEST_CASE( GuildServiceTest, StoreFailuresChangeNothing )
     SW_EXPECT_TRUE( rig.run( GuildOperation::Get, kMember )._result.hasError( OnlineError::kUnavailable ) );
 
     SW_EXPECT_TRUE( rig.run( GuildOperation::Leave, kMember )._result == SocialResult::Ok );
+}
+
+/**
+ * @brief [GuildServiceTest] 이전 불가 자산(유료 재화)은 창고에 들지 않는다 — 공용 창고에 섞이면 다른 임원이 꺼내 계정 사이로 옮겨진다(감사 O-10, 사용자 결정: 맡긴 당사자가 허용한 권한 안에서만)
+ */
+SW_TEST_CASE( GuildServiceTest, NonTransferableAssetStaysOutOfStorage )
+{
+    /** @brief "cur.gem" 만 이전 불가인 정책입니다. */
+    class PaidGemPolicy final : public ILedgerPolicy
+    {
+    public:
+        int64 getBalanceCap( string_view /*assetID*/ ) const override { return 0; }
+        bool  isTransferable( string_view assetID ) const override { return assetID != "cur.gem"; }
+    };
+    PaidGemPolicy policy;
+    GuildFixture  rig;
+    rig._service.setLedgerPolicy( &policy );
+    (void)rig.makeGuild();
+    rig.grant( kMember, 100 );
+
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 10, "test/gem.1", "cur.gem" )._result == SocialResult::NotAllowed );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 1, "test/gem.2", "cur.gem" )._result == SocialResult::NotAllowed );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 10, "test/gold.1" )._result == SocialResult::Ok ); // 이전 가능 자산은 그대로
 }

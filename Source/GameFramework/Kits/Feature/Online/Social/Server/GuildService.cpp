@@ -730,6 +730,11 @@ namespace sw
                                     LedgerUtil::isValidJournalKey( _request._journalKey );
                 if ( bValid == false )
                     return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
+                // 이전 불가 자산(유료 재화)은 창고에 들이지 않는다 — 공용 창고에 섞이면 다른 임원이 꺼내 계정 사이로 옮겨진다. 맡긴 당사자가 허용한 권한 안에서만
+                // 옮기는 것이 결정이고(사용자 2026-11-12, 감사 O-10), 허용 부여 · 맡긴 사람별 보유자는 다음 단계다(DesignBacklog) — 그 전의 허용은 "없음" 이다.
+                // 정책이 없으면(화폐 카탈로그 없이 조립한 서버) 유료 재화도 없다.
+                if ( _pLedgerPolicy != nullptr && _pLedgerPolicy->isTransferable( _request._assetID ) == false )
+                    return fail( SocialResult::NotAllowed );
                 const LedgerHolder storage = Internal::makeStorageHolder( guildID );
                 const LedgerHolder account = LedgerHolder::makeAccount( _request._accountID );
 
