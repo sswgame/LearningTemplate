@@ -4,7 +4,7 @@
  * @details 프로필은 물리 재질(= 표면 종류, `SurfaceKindDef::_zoneProfile`)에 붙는다 — 지형 레이어 · 아무 메시든 콜라이더 재질이 프로필을 부르고, 그 메시에는 전용 컴포넌트가 없다
  *          (언리얼 Physical Material · 유니티 PhysicMaterial 자리, 기억). 이 컴포넌트는 받는 쪽(캐릭터 · NPC · 탈것 · 상자)에 두고, 종류마다 `ZoneTracker` 하나로 볼륨과 같은 처리 길을 지난다.
  *          출처는 `surface:<종류>` 이다. 위치 값: `zoneDepth01` 는 1(표면에 가장자리가 없다), `immersion` 은 물 깊이 ÷ 키, `impactSpeed` 는 부딪힌 속도, `contactNormal` 은 접촉 법선의 위쪽 성분.
- *          캐릭터는 발 아래 질의(같은 오브젝트의 `GroundSurfaceComponent` 가 있으면 그 표본)와 허리 높이 수평 네 방향 광선으로, 강체는 발 아래 질의와 접촉 사건(`onCollisionBegin` · 올린 유지 `ScenePhysics::addContactStayListener`)으로 안다.
+ *          캐릭터는 발 아래 질의(같은 오브젝트의 `GroundSurfaceComponent` 가 있으면 그 표본)와 허리 높이 수평 네 방향 광선으로, 강체는 발 아래 질의와 접촉 사건(`onCollisionBegin` · 올린 유지 `ScenePhysics::registerContactStayListener`)으로 안다.
  *          이펙트의 이동 제약(`MovementConstraint` — 감속 · 속박)을 같은 오브젝트의 캐릭터 컨트롤러 이동 계수로 넘긴다 — 폰 이동기가 없는 캐릭터(시연의 걷는 해골 · 스크립트 NPC)도 같은 계약이다.
  *          갱신은 지역 프레임 시스템(`ZoneSystem`)이 틱 뒤 게임 스레드에서 한 번에 한다 — 컴포넌트는 칸 · 접촉 기록과 등록만 든다.
  */

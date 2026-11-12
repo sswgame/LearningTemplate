@@ -43,7 +43,7 @@ namespace sw::editor
         const utf8*     getPanelTitle() const override;
         EditorDockSlot  getDefaultDockSlot() const override { return EditorDockSlot::Center; }
         EditorAssetType getDocumentKind() const override { return _kind; }
-        /** @brief 이 문서의 되돌리기 스택이다 — 창에 포커스가 오면 Ctrl+Z 가 이리 간다(`EditorPanelManager::applyFocusedCommandStack`). */
+        /** @brief 이 문서의 되돌리기 스택이다 — 창에 포커스가 오면 Ctrl+Z 가 이리 간다(`EditorPanelManager::updateFocusedCommandStack`). */
         CommandStack* findPanelCommandStack() override { return _pDocumentStack.get(); }
 
     private:

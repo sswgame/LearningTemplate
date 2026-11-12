@@ -813,7 +813,7 @@ namespace sw
                 pBody->setLocalPosition( position );
                 pBody->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
                 _listBenchExtra.push_back( pBody->getHandle() );
-                if ( gv_stressTestCharacterBlend != 0 && spreadBlendParameters( *pSpawned, index ) == false )
+                if ( gv_stressTestCharacterBlend != 0 && randomizeBlendParameters( *pSpawned, index ) == false )
                     return;
                 continue;
             }
@@ -851,7 +851,7 @@ namespace sw
                         prefabPath.empty() ? string_view( _settings._knightMesh ) : prefabPath );
     }
 
-    bool StressTestScene::spreadBlendParameters( GameObject& character, uint32 characterIndex ) const
+    bool StressTestScene::randomizeBlendParameters( GameObject& character, uint32 characterIndex ) const
     {
         SkeletalAnimatorComponent* pAnimator = character.getComponent<SkeletalAnimatorComponent>();
         if ( pAnimator == nullptr || _settings._characterBlendParameterX.empty() || _settings._characterBlendParameterY.empty() )

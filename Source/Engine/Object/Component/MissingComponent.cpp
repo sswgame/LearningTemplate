@@ -24,7 +24,7 @@ namespace sw
             _originalBytes.assign( element._pBytes, element._pBytes + element._byteCount );
     }
 
-    void MissingComponent::keepReferencedKey( string_view key )
+    void MissingComponent::addReferencedKey( string_view key )
     {
         for ( const string& kept : _listReferencedKey )
         {

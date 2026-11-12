@@ -52,7 +52,7 @@ namespace sw
             uint32 expected = kStateFree;
             if ( _state.compare_exchange_strong( expected, kStateLocked, std::memory_order_acquire, std::memory_order_relaxed ) )
                 return;
-            lockContended();
+            lockSlow();
         }
 
         /** @brief 락을 한 번만 시도합니다. 얻으면 true 입니다. */
@@ -78,7 +78,7 @@ namespace sw
 
     private:
         /** @brief 다툼이 있을 때의 경로입니다. 풀리기를 짧게 기다렸다가, 그래도 쥔 쪽이 있으면 "잠든 대기자 있음" 으로 바꾸고 잠듭니다. */
-        void lockContended() SW_NO_THREAD_SAFETY_ANALYSIS
+        void lockSlow() SW_NO_THREAD_SAFETY_ANALYSIS
         {
             for ( uint32 spin = 0; spin < kSpinLimit; ++spin )
             {

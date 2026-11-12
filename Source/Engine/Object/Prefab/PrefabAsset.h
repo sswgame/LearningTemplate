@@ -202,13 +202,13 @@ namespace sw
         bool hasResolvedNestedInstances() const;
 
     private:
-        friend class PrefabCache; // 스폰 원형은 캐시만 짓는다(`buildSpawnTemplate`) — 자산을 const 로 내주기 직전이라 지은 뒤 상태가 바뀌지 않는다
+        friend class PrefabCache; // 스폰 원형은 캐시만 짓는다(`createSpawnTemplate`) — 자산을 const 로 내주기 직전이라 지은 뒤 상태가 바뀌지 않는다
 
         /**
          * @brief 스폰 원형을 짓습니다 — 루트 상태와 펼친 중첩 노드의 상태 글을 노드마다 한 번 읽어 바이너리로 둡니다. 상태를 읽지 못하면 오류를 남기고 false 입니다.
          * @details 저작본 노드(원본 경로 + 오버라이드)는 짓지 않는다. 원본을 고치면 다음 스폰부터 퍼져야 해서(`PrefabCache::reload`) 스폰 때 원본과 합친다.
          */
-        [[nodiscard]] bool buildSpawnTemplate();
+        [[nodiscard]] bool createSpawnTemplate();
 
         /**
          * @brief XML 원본 읽기 입구 둘(`loadFromXMLFile` · `loadFromDiskFile`)이 읽은 문서를 풉니다.
@@ -239,7 +239,7 @@ namespace sw
         string                     _variantOverrideXML; ///< 변형 파일이 적은 다른 점(`getVariantOverrides`)
         vector<PrefabInstanceNode> _listNestedInstance;
         vector<PrefabPartOverride> _listVariantPart;         ///< 변형 사슬이 물려받은 부품에 덮어쓴 것(`getVariantPartOverrides`)
-        vector<uint8>              _spawnTemplate;           ///< 루트 상태의 스폰 원형(`buildSpawnTemplate`). 캐시 밖 자산과 상태가 빈 자산은 비어 있다
+        vector<uint8>              _spawnTemplate;           ///< 루트 상태의 스폰 원형(`createSpawnTemplate`). 캐시 밖 자산과 상태가 빈 자산은 비어 있다
         vector<vector<uint8>>      _listNestedSpawnTemplate; ///< 중첩 노드마다의 스폰 원형(`_listNestedInstance` 와 같은 순서). 펼친 노드만 찬다
         PrefabStateFormat          _stateFormat;
         // `_bValid` 라는 이름은 이 저장소에서 **두 가지**다. 여기와 `RenderFramePacket` 은

@@ -32,7 +32,7 @@ namespace sw
                 ServiceRecord            campaignRecord;
                 const ServiceStoreResult read  = connection.readRecord( ServiceMailCampaign::getCampaignTable(), campaignKey, campaignRecord );
                 int64                    endMs = 0;
-                if ( read == ServiceStoreResult::Ok && ServiceMailCampaign::readEndMs( campaignRecord, endMs ) == false )
+                if ( read == ServiceStoreResult::Ok && ServiceMailCampaign::readEndTimeMs( campaignRecord, endMs ) == false )
                     return false; // 읽지 못하는 캠페인의 표식은 남긴다
                 if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
                     return false; // 저장소 문제면 줄을 만들지 않는다 - 다음 판이 아니라 이 레코드만 건너뛴다
@@ -69,7 +69,7 @@ namespace sw
         return s_table;
     }
 
-    bool ServiceMailCampaign::readEndMs( const ServiceRecord& record, int64& outTimeMs )
+    bool ServiceMailCampaign::readEndTimeMs( const ServiceRecord& record, int64& outTimeMs )
     {
         ServiceMailCampaign campaign;
         if ( decode( record._bytes, campaign ) == false )
@@ -84,8 +84,8 @@ namespace sw
         rule._table           = getCampaignTable();
         rule._ttlIndexTable   = getCampaignExpiryTable();
         rule._expireAfterMs   = expireAfterMs;
-        rule._pfnReadTime     = &readEndMs;
-        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readEndMs>();
+        rule._pfnReadTime     = &readEndTimeMs;
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readEndTimeMs>();
         rule._backfillVersion = 1;
         return rule;
     }

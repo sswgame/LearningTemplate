@@ -35,7 +35,7 @@ namespace sw::editor
         static void requestExit();
         /** @brief 활성 씬 세대가 바뀌면 dirty 와 프리팹 맵을 동기화합니다. */
         static void syncAfterSceneGenerationChange();
-        /** @brief 활성 씬을 그 소스(리소스 id)에 저장합니다. 버전 관리가 읽기 전용으로 둔 파일이면 알리고 쓰지 않습니다(`EditorContentWrite::refuseReadOnly`). */
+        /** @brief 활성 씬을 그 소스(리소스 id)에 저장합니다. 버전 관리가 읽기 전용으로 둔 파일이면 알리고 쓰지 않습니다(`EditorContentWrite::warnIfReadOnly`). */
         [[nodiscard]] static bool saveActiveScene();
         /** @brief 활성 씬을 디스크 경로 @p absPath 에 저장하고 소스로 삼습니다(다른 이름 저장 - 리소스 트리 · 붙인 디스크 도메인 밖이면 거절). */
         [[nodiscard]] static bool saveActiveSceneAs( const AbsolutePath& absPath );

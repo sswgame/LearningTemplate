@@ -61,7 +61,7 @@ namespace sw
     /** @brief 살아 있는(Connecting · Connected) 슬롯 하나와 갱신이 그 슬롯을 다시 볼 시각입니다. */
     struct NetLiveSlot
     {
-        float64 _dueTime{ 0.0 }; ///< 이 시각이 되면 `NetEndpoint::updateSlots` 가 본다. 음의 무한대면 다음 갱신에서 바로 본다(`touch`).
+        float64 _dueTime{ 0.0 }; ///< 이 시각이 되면 `NetEndpoint::updateSlots` 가 본다. 음의 무한대면 다음 갱신에서 바로 본다(`markDue`).
         int32   _slotIndex{ 0 };
     };
 } // namespace sw
@@ -94,15 +94,15 @@ namespace sw
         /** @brief 닫힌 뒤 붙잡아 둔 슬롯을 빈 슬롯으로 돌립니다. 붙잡지 않았거나 이미 놓았으면 아무것도 하지 않습니다. */
         void release( int32 slotIndex );
         /** @brief 이 슬롯을 다음 갱신에서 보게 합니다(받은 패킷 · 넣은 메시지가 보낼 것을 만들었다). 살아 있지 않으면 아무것도 하지 않습니다. */
-        void touch( int32 slotIndex );
+        void markDue( int32 slotIndex );
         /** @brief 살아 있는 슬롯 모두를 다음 갱신에서 보게 합니다(시계를 민 뒤처럼 기한이 모두 바뀌었을 때). */
-        void touchAll();
+        void markAllDue();
         /** @brief 살아 있는 슬롯 @p slotIndex 를 다시 볼 시각을 정합니다. 살아 있지 않으면 단언입니다. */
         void setDueTime( int32 slotIndex, float64 dueTime );
         /** @brief 살아 있는 슬롯 가운데 가장 이른 기한입니다. 살아 있는 슬롯이 없으면 양의 무한대입니다(`NetEndpoint` 가 다음 갱신 시각을 정한다). */
         float64 getNextDueTime() const;
         /** @brief 기한(@p nowSeconds 이하)이 된 살아 있는 슬롯 번호를 @p outListSlot 에 비운 뒤 번호 순으로 담습니다. */
-        void collectDue( float64 nowSeconds, vector<int32>& outListSlot ) const;
+        void collectDueSlots( float64 nowSeconds, vector<int32>& outListSlot ) const;
         /** @brief 살아 있는 슬롯 목록(번호 순)입니다. 받은 메시지 꺼내기 · 보내기처럼 연결된 것만 도는 쪽이 씁니다. */
         const vector<NetLiveSlot>& getLiveSlots() const { return _listLiveSlot; }
 

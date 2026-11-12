@@ -239,7 +239,7 @@ namespace sw::editor
         collectLocalizationFiles( inoutSheet, listPath );
         for ( const string& path : listPath )
         {
-            if ( EditorContentWrite::refuseReadOnly( path, EditorContentWriteKind::Save ) )
+            if ( EditorContentWrite::warnIfReadOnly( path, EditorContentWriteKind::Save ) )
                 return false;
         }
         // 디스크의 지금 내용 위에 고친 줄만 적용한다. 그래야 수집기가 적은 출처, 번역가 메모, 검토 표시가 유지된다.

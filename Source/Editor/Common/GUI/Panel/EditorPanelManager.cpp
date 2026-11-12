@@ -250,10 +250,10 @@ namespace sw::editor
         }
         if ( bTimed && ++_panelTimeFrameCount >= static_cast<uint32>( gv_editorPanelTimes ) )
             reportPanelTimes();
-        applyFocusedCommandStack();
+        updateFocusedCommandStack();
     }
 
-    void EditorPanelManager::applyFocusedCommandStack()
+    void EditorPanelManager::updateFocusedCommandStack()
     {
         IEditorPanel* pFocused = nullptr;
         for ( const EditorPanelEntry& entry : _listPanel )

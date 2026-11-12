@@ -303,10 +303,10 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 지우기 전 확인 둘이다 — 열린 문서(`refuseOpenDocumentDelete`)와 읽기 전용(`EditorContentWrite::refuseReadOnly`, 저장 · 옮기기와 같은 확인). 거절하면 이유를 알리고 true 입니다. */
+            /** @brief 지우기 전 확인 둘이다 — 열린 문서(`refuseOpenDocumentDelete`)와 읽기 전용(`EditorContentWrite::warnIfReadOnly`, 저장 · 옮기기와 같은 확인). 거절하면 이유를 알리고 true 입니다. */
             [[nodiscard]] static bool refuseDelete( string_view absolutePath )
             {
-                return refuseOpenDocumentDelete( absolutePath ) || EditorContentWrite::refuseReadOnly( absolutePath, EditorContentWriteKind::Delete );
+                return refuseOpenDocumentDelete( absolutePath ) || EditorContentWrite::warnIfReadOnly( absolutePath, EditorContentWriteKind::Delete );
             }
 
             /**

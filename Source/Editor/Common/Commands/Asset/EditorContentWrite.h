@@ -33,6 +33,6 @@ namespace sw::editor
          * @brief @p absolutePath 에 읽기 전용 파일이 있으면 알림 · 경고 로그를 남기고 true 입니다(부르는 쪽은 아무것도 쓰지 않고 실패한다).
          * @details 쓰기 실패 로그만으로는 "먼저 잠가야 한다" 는 사실이 드러나지 않는다 — 그래서 실패 대신 이유를 알린다.
          */
-        [[nodiscard]] static bool refuseReadOnly( string_view absolutePath, EditorContentWriteKind kind );
+        [[nodiscard]] static bool warnIfReadOnly( string_view absolutePath, EditorContentWriteKind kind );
     };
 } // namespace sw::editor

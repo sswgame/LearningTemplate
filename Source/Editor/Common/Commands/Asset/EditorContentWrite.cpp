@@ -33,7 +33,7 @@ namespace sw::editor
         return nullopt;
     }
 
-    bool EditorContentWrite::refuseReadOnly( string_view absolutePath, const EditorContentWriteKind kind )
+    bool EditorContentWrite::warnIfReadOnly( string_view absolutePath, const EditorContentWriteKind kind )
     {
         const optional<string> readOnlyPath = findReadOnlyAtOrUnder( absolutePath );
         if ( readOnlyPath.has_value() == false )

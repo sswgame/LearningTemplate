@@ -130,7 +130,7 @@ namespace sw
          */
         void spawnCharacterParts( GameObjectManager& objects, uint32 characterIndex, SkeletalMeshComponent* pBody );
         /** @brief `-gv_stressTestCharacterBlend=1`: 프리팹 캐릭터 @p character 의 2D 블렌드 파라미터 둘을 인덱스 해시로 벤치 데이터 범위 안에 정합니다. 애니메이터나 이름이 없으면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool spreadBlendParameters( GameObject& character, uint32 characterIndex ) const;
+        [[nodiscard]] bool randomizeBlendParameters( GameObject& character, uint32 characterIndex ) const;
         /** @brief `-gv_stressTestCombat=1`: 전투 연출(KayKit 스켈레톤 적, 칼, 강체 바닥, 연출 컴포넌트)을 스폰합니다. */
         void spawnCombat();
         /** @brief `-gv_stressTestRagdolls=N`: 래그돌을 가진 스켈레톤 N 명을 격자로 세웁니다. */

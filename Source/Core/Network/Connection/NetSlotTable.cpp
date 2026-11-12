@@ -77,14 +77,14 @@ namespace sw
         _listFreeSlot.insert( freeIter, slotIndex );
     }
 
-    void NetSlotTable::touch( int32 slotIndex )
+    void NetSlotTable::markDue( int32 slotIndex )
     {
         const optional<size_t> livePosition = findLive( slotIndex );
         if ( livePosition.has_value() )
             _listLiveSlot[*livePosition]._dueTime = std::numeric_limits<float64>::lowest();
     }
 
-    void NetSlotTable::touchAll()
+    void NetSlotTable::markAllDue()
     {
         for ( NetLiveSlot& live : _listLiveSlot )
         {
@@ -109,7 +109,7 @@ namespace sw
         return nextDueTime;
     }
 
-    void NetSlotTable::collectDue( float64 nowSeconds, vector<int32>& outListSlot ) const
+    void NetSlotTable::collectDueSlots( float64 nowSeconds, vector<int32>& outListSlot ) const
     {
         outListSlot.clear();
         for ( const NetLiveSlot& live : _listLiveSlot )

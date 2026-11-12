@@ -349,7 +349,7 @@ namespace sw
         if ( validateNestedInstances( *asset, cacheKey ) == false )
             return nullptr;
         // 스폰 원형은 const 로 내주기 전에 여기서 한 번 짓는다 — 스폰은 상태 글을 다시 파싱하지 않는다(감사 A-15).
-        if ( asset->buildSpawnTemplate() == false )
+        if ( asset->createSpawnTemplate() == false )
             return nullptr;
 
         UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };

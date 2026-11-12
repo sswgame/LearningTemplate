@@ -82,7 +82,7 @@ SW_TEST_CASE( ContactStayListenerTest, OnlyListeningObjectGetsStay )
     SW_REQUIRE_NOT_NULL( pHeard );
     SW_REQUIRE_NOT_NULL( pQuiet );
     ScenePhysics& physics = manager.getSubsystem<ScenePhysics>();
-    physics.addContactStayListener( *pHeard, ContactStayListener{ &Internal::countCollisionStay, nullptr } ); // 씬을 만들기 전에 올려도 씬이 받는다
+    physics.registerContactStayListener( *pHeard, ContactStayListener{ &Internal::countCollisionStay, nullptr } ); // 씬을 만들기 전에 올려도 씬이 받는다
     SW_EXPECT_EQUAL( 1u, physics.getContactStayListenerCount( pHeard->getOwner()->getObjectID() ) );
     manager.beginPlay();
 
@@ -99,7 +99,7 @@ SW_TEST_CASE( ContactStayListenerTest, OnlyListeningObjectGetsStay )
     SW_EXPECT_EQUAL( 0u, quietStay );                             // 듣지 않는 쌍은 유지를 만들지 않는다
     SW_EXPECT_EQUAL( heardStay, Internal::s_collisionStayCount ); // 듣는 쪽은 쌍마다 한 번 받는다(바닥은 듣지 않는다)
 
-    physics.removeContactStayListener( *pHeard );
+    physics.unregisterContactStayListener( *pHeard );
     SW_EXPECT_EQUAL( 0u, physics.getContactStayListenerCount( pHeard->getOwner()->getObjectID() ) );
     const uint32 receivedBefore = Internal::s_collisionStayCount;
     uint32       staleStay      = 0;

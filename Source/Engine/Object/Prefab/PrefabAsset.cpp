@@ -1133,7 +1133,7 @@ namespace sw
         return PrefabAssetInternal::loadSpawnTemplate( pTarget, _listNestedSpawnTemplate[nodeIndex] );
     }
 
-    bool PrefabAsset::buildSpawnTemplate()
+    bool PrefabAsset::createSpawnTemplate()
     {
         _spawnTemplate.clear();
         _listNestedSpawnTemplate.assign( _listNestedInstance.size(), {} );

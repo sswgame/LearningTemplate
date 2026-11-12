@@ -110,7 +110,7 @@ SW_TEST_CASE( NetSlotTableTest, FreeListHandsOutLowestAndHoldsClosedSlotsUntilRe
     SW_EXPECT_TRUE( table.getLiveSlots().empty() );
 }
 
-// 살아 있는 목록은 번호 순이고, 기한이 된 슬롯만 모은다. 연 슬롯과 `touch` 한 슬롯은 다음 갱신에서 바로 본다.
+// 살아 있는 목록은 번호 순이고, 기한이 된 슬롯만 모은다. 연 슬롯과 `markDue` 한 슬롯은 다음 갱신에서 바로 본다.
 SW_TEST_CASE( NetSlotTableTest, LiveListCollectsOnlyDueSlots )
 {
     NetSlotTable table;
@@ -125,34 +125,34 @@ SW_TEST_CASE( NetSlotTableTest, LiveListCollectsOnlyDueSlots )
     SW_EXPECT_EQUAL( 5, listLive[2]._slotIndex );
 
     vector<int32> listDue;
-    table.collectDue( 0.0, listDue );
+    table.collectDueSlots( 0.0, listDue );
     SW_EXPECT_EQUAL( 3, static_cast<int32>( listDue.size() ) ); // 막 연 슬롯은 모두 기한이다
 
     table.setDueTime( 1, 2.0 );
     table.setDueTime( 3, 1.0 );
     table.setDueTime( 5, 3.0 );
-    table.collectDue( 0.5, listDue );
+    table.collectDueSlots( 0.5, listDue );
     SW_EXPECT_TRUE( listDue.empty() );
-    table.collectDue( 2.0, listDue );
+    table.collectDueSlots( 2.0, listDue );
     SW_REQUIRE_EQUAL( 2, static_cast<int32>( listDue.size() ) );
     SW_EXPECT_EQUAL( 1, listDue[0] );
     SW_EXPECT_EQUAL( 3, listDue[1] );
 
-    table.touch( 5 ); // 받은 패킷 · 넣은 메시지
-    table.touch( 6 ); // 살아 있지 않은 슬롯은 그대로 둔다
-    table.collectDue( 0.5, listDue );
+    table.markDue( 5 ); // 받은 패킷 · 넣은 메시지
+    table.markDue( 6 ); // 살아 있지 않은 슬롯은 그대로 둔다
+    table.collectDueSlots( 0.5, listDue );
     SW_REQUIRE_EQUAL( 1, static_cast<int32>( listDue.size() ) );
     SW_EXPECT_EQUAL( 5, listDue[0] );
 
     table.close( 3, false );
-    table.collectDue( 10.0, listDue );
+    table.collectDueSlots( 10.0, listDue );
     SW_REQUIRE_EQUAL( 2, static_cast<int32>( listDue.size() ) );
     SW_EXPECT_EQUAL( 1, listDue[0] );
     SW_EXPECT_EQUAL( 5, listDue[1] );
 
-    table.touchAll();
+    table.markAllDue();
     table.setDueTime( 1, 4.0 );
-    table.collectDue( 0.0, listDue );
+    table.collectDueSlots( 0.0, listDue );
     SW_REQUIRE_EQUAL( 1, static_cast<int32>( listDue.size() ) );
     SW_EXPECT_EQUAL( 5, listDue[0] );
 }
@@ -192,7 +192,7 @@ SW_TEST_CASE( NetSlotTableTest, NextDueTimeIsTheEarliestLiveDeadline )
     SW_EXPECT_EQUAL( 3.0, table.getNextDueTime() );
     table.close( 2, false );
     SW_EXPECT_EQUAL( 5.0, table.getNextDueTime() ); // 닫힌 슬롯의 기한은 빠진다
-    table.touch( 0 );
+    table.markDue( 0 );
     SW_EXPECT_TRUE( table.getNextDueTime() == std::numeric_limits<float64>::lowest() );
 }
 

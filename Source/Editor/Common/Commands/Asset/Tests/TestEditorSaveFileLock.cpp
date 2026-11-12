@@ -63,7 +63,7 @@ SW_TEST_CASE( EditorSaveFileLockTest, UnlockReportsAChangedFile )
     SW_EXPECT_EQUAL( EditorSaveFileLock::getLockedCount(), 0u );
 }
 
-/** @brief [EditorSaveFileLockTest] 장부에 남은 잠금(소멸자가 돌지 못한 죽은 프로세스의 몫)은 restoreLeftovers 가 푼다 */
+/** @brief [EditorSaveFileLockTest] 장부에 남은 잠금(소멸자가 돌지 못한 죽은 프로세스의 몫)은 releaseStaleLocks 가 푼다 */
 SW_TEST_CASE( EditorSaveFileLockTest, LedgerLeftoversAreRestored )
 {
     EditorStateStore store;
@@ -73,7 +73,7 @@ SW_TEST_CASE( EditorSaveFileLockTest, LedgerLeftoversAreRestored )
 
     const string path = makeLockTarget( "leftover.xml", "kept" );
     SW_REQUIRE_TRUE( EditorSaveFileLock::lock( { path } ).has_value() );
-    EditorSaveFileLock::restoreLeftovers(); // 같은 장부를 다음 실행이 읽은 것과 같다
+    EditorSaveFileLock::releaseStaleLocks(); // 같은 장부를 다음 실행이 읽은 것과 같다
     SW_EXPECT_FALSE( FileUtil::isReadOnlyFile( path ) );
     SW_EXPECT_FALSE( EditorSaveFileLock::unlock().has_value() );
 }

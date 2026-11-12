@@ -245,12 +245,12 @@ namespace sw
         void   processSpoolJob( TelemetrySpoolJob& job, bool bStopping );
         void   writeLinesSpoolLocked( const TelemetrySpoolJob& job ) SW_REQUIRES_LOCK( _spoolMutex );
         string makeContextLineSpoolLocked( int32 schemaVersion ) const SW_REQUIRES_LOCK( _spoolMutex );
-        string makeSpoolFilePathSpoolLocked( uint32 fileIndex ) const SW_REQUIRES_LOCK( _spoolMutex );
+        string makeFilePathSpoolLocked( uint32 fileIndex ) const SW_REQUIRES_LOCK( _spoolMutex );
         void   closeCurrentFileSpoolLocked() SW_REQUIRES_LOCK( _spoolMutex );
-        void   enforceCapsSpoolLocked( const TelemetryPipelineConfig& settings ) SW_REQUIRES_LOCK( _spoolMutex );
+        void   enforceLimitsSpoolLocked( const TelemetryPipelineConfig& settings ) SW_REQUIRES_LOCK( _spoolMutex );
         void   purgeSpoolLocked() SW_REQUIRES_LOCK( _spoolMutex );
         /** @brief 닫힌 파일을 오래된 것부터 올립니다. 파일 읽기 · 보내기 동안은 스풀 잠금을 놓는다. */
-        void uploadClosed( const TelemetrySpoolJob& job ) SW_EXCLUDES_LOCK( _spoolMutex );
+        void uploadClosedFiles( const TelemetrySpoolJob& job ) SW_EXCLUDES_LOCK( _spoolMutex );
         void onSettingEvent( const UserSettingEvent& event );
         void refreshConsentFromSetting();
 

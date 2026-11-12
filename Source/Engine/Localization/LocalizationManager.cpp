@@ -263,7 +263,7 @@ namespace sw
         string newLanguage;
         {
             UniqueLock<shared_mutex> lock{ _mutex };
-            if ( const expected<void> checked = checkKeyHashesLocked( &mounted, nullptr ); checked.has_value() == false )
+            if ( const expected<void> checked = validateKeyHashesLocked( &mounted, nullptr ); checked.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "LocalizationManager.KeyHashCollision", "Localization project '%#' is not mounted: %# (%#)", projectPath, checked.error().message(), checked.error().detail() );
                 return false;
@@ -371,7 +371,7 @@ namespace sw
         string newLanguage;
         {
             UniqueLock<shared_mutex> lock{ _mutex };
-            if ( const expected<void> checked = checkKeyHashesLocked( nullptr, &table ); checked.has_value() == false )
+            if ( const expected<void> checked = validateKeyHashesLocked( nullptr, &table ); checked.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "LocalizationManager.KeyHashCollision", "Translation XML for '%#' is not loaded: %# (%#)", languageCode, checked.error().message(), checked.error().detail() );
                 return false;
@@ -399,7 +399,7 @@ namespace sw
         TranslationTable incoming;
         incoming.getOrAddEntry( key.view() );
         UniqueLock<shared_mutex> lock{ _mutex };
-        if ( const expected<void> checked = checkKeyHashesLocked( nullptr, &incoming ); checked.has_value() == false )
+        if ( const expected<void> checked = validateKeyHashesLocked( nullptr, &incoming ); checked.has_value() == false )
         {
             SW_LOG_ERROR_ID( "LocalizationManager.KeyHashCollision", "Localized string '%#' is not set: %# (%#)", key.c_str(), checked.error().message(), checked.error().detail() );
             return;
@@ -557,7 +557,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 실행 테이블 다시 채우기
     // ------------------------------------------------------------------------------
-    expected<void> LocalizationManager::checkKeyHashesLocked( const MountedProject* pIncomingProject, const TranslationTable* pIncomingLoose ) const
+    expected<void> LocalizationManager::validateKeyHashesLocked( const MountedProject* pIncomingProject, const TranslationTable* pIncomingLoose ) const
     {
         LocalizationKeyIndex index{ _pCheckKeyHash };
         const auto           addTable = [&index]( const TranslationTable& table ) -> expected<void>
@@ -1024,7 +1024,7 @@ namespace sw
         string language;
         {
             UniqueLock<shared_mutex> lock{ _mutex };
-            if ( const expected<void> checked = checkKeyHashesLocked( &reloaded, nullptr ); checked.has_value() == false )
+            if ( const expected<void> checked = validateKeyHashesLocked( &reloaded, nullptr ); checked.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "LocalizationManager.KeyHashCollision", "Localization project '%#' is not reloaded - keeping the previous text: %# (%#)", projectPath.c_str(), checked.error().message(),
                                  checked.error().detail() );
