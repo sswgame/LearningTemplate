@@ -17,7 +17,7 @@
 
 | Thing | Form |
 | --- | --- |
-| Public functions | `camelCase` |
+| Public functions | `camelCase` — PEP 8 의 snake_case 가 아니다: C++ · Python · JSON 이 한 이름 체계를 나눈다(PEP 8 도 프로젝트 안 일관성을 앞세운다). 섞인 snake_case 는 `naming-words` 가 막는다(표준 라이브러리 덮어쓰기 `log_message` 는 `_keep`) |
 | Private helpers | `camelCaseInternal` |
 | Module constants | `kPascalCase` or `_kPascalCase` |
 | Module / file names | `PascalCase.py` |

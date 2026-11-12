@@ -15,9 +15,15 @@ Scripts/lint/NamingWords.py
 - term — 금지 명사(`_bannedTerms`)는 모든 식별자(함수 · 형식 · 멤버 · 지역)의 **모든 단어**에서 본다. 표준 합성어(`WorkArea` — Win32 `SPI_GETWORKAREA`)는 `_keepTerms`.
 - predicate — `bool` 을 돌려주는 함수의 첫 단어가 3인칭 동사(끝이 s)면 `_predicateWords`(언리얼 `Is · Has · Can · Should · Uses · Needs · Requires · Supports …`)여야 한다.
 - lookup — 끝 단어가 `For` · `Of` 인 함수는 조회 동사(`_lookupWords` — get · find · compute …)로 시작해야 한다(`materialGroupFor` 는 "찾거나 만든다" 를 숨겼다).
+- word — 모든 선언 이름(형식 · 열거자 · 별칭 · 함수 · 멤버 · 상수 · 변수 · 매크로)과 `Source` 의 파일 · 폴더 이름, 스크립트(`Scripts` · `.claude/hooks` ·
+  `.claude/skills` · `cmake` 의 함수 · 클래스 · 상수 · CLI 명령 · 규칙 id · CMake 함수 · 옵션 · 파일 · 폴더 이름)의 **모든 낱말**이 낱말 표
+  (`_words` 의 a 업계 · b 게임)에 있어야 한다. 앞 규칙들은 함수 첫 단어 · 형식 끝 단어만 허용 표로 봐서, 멤버 · 파일 이름 · 이름 가운데의 조어
+  (`SceneWalkKey` · `aimAtMark` · `parkHistory`)가 들어왔다(2026-11-13). 문맥에 따라 맞기도 틀리기도 한 낱말은 `_scopedWords` 가 쓸 경로를 정한다
+  (게임의 walk 는 맞고 엔진의 walk 는 순회다). 바깥 철자(`PFN_` · `VK_` · ImGui 깃발)는 `_externalPatterns`, 받아 온 스킬은 `_externalPaths` 가 뺀다.
+  파이썬 함수의 snake_case 도 여기서 막는다(저장소 규칙은 camelCase — docs/agents/NamingScripts.md). 전수 집계는 `py -3 -m Scripts naming-census`.
 - 이름 하나씩의 예외는 `_keep`, 전수 개명한 옛 이름은 `_bannedNames`(주석 · 문자열 밖 코드만 본다).
 
-verb · term · predicate · lookup 은 기준선(`Config/Rules/Lint/NamingBaseline.json`)을 둔다 — 지금 있는 이름만 적혀 있고 **줄기만 한다**:
+verb · term · predicate · lookup · word 는 기준선(`Config/Rules/Lint/NamingBaseline.json`)을 둔다 — 지금 있는 이름만 적혀 있고 **줄기만 한다**:
 새 위반은 실패, 고쳐 사라진 이름이 기준선에 남아도 실패(`--lower-baseline` 으로 뺀다). 영역별 이전이 기준선을 0 으로 줄인다.
 
 `py -3 -m Scripts lint naming-words [--self-check | --write-baseline | --lower-baseline]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
@@ -36,11 +42,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from lint.LintScope import LintScope, makeWholeScope, readTexts  # noqa: E402
+from lint.LintScope import LintScope, isUnder, makeWholeScope, readTexts  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/NamingWords.json"
 kBaselinePath = "Config/Rules/Lint/NamingBaseline.json"
-kRatchetRules = ("verb", "term", "predicate", "lookup")
+kRatchetRules = ("verb", "term", "predicate", "lookup", "word")
 kExtensions = (".h", ".cpp", ".inl")
 kComment = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
 kString = re.compile(r'R"\((?:.|\n)*?\)"|"(?:[^"\\\n]|\\.)*"')
@@ -66,6 +72,107 @@ def splitWords(name: str, bFunction: bool = False) -> list[str]:
     if len(words) > 1 and words[0] in prefixes:
         words = words[1:]
     return words
+
+
+# 선언 모으기 — 낱말 표(`_words`)와 전수 집계(`py -3 -m Scripts naming-census`)가 같은 것을 본다. 쓰는 자리(호출 · 참조)가 아니라 선언만 본다:
+# 우리가 짓지 않은 바깥 이름(Win32 · Vulkan · ImGui)은 쓰기만 하므로 대부분 빠지고, 바깥 가상 함수를 덮어쓰는 자리는 `_externalPatterns` 가 가린다.
+kNotName = {"return", "else", "new", "delete", "throw", "case", "goto", "co_return", "co_yield", "co_await", "and", "or", "not", "typename", "class", "struct",
+            "enum", "union", "using", "namespace", "operator", "sizeof", "if", "while", "for", "switch", "do", "catch", "decltype", "alignof", "alignas", "static_assert",
+            "public", "private", "protected", "const", "constexpr", "override", "final", "noexcept", "volatile", "default", "mutable", "static", "inline", "virtual",
+            "explicit", "friend", "template", "typedef", "extern", "auto", "void", "defined", "this", "nullptr", "true", "false", "requires", "export", "import"}
+kTypeDeclaration = re.compile(r"\b(?:class|struct|union|enum(?:\s+class|\s+struct)?)\s+(?:(?:SW_\w+|alignas\s*\([^)]*\)|\[\[[^\]]*\]\])\s+)*([A-Za-z_]\w*)")
+kEnumBody = re.compile(r"\benum\b[^;{()]*\{([^}]*)\}")
+kAliasDeclaration = re.compile(r"\busing\s+([A-Za-z_]\w*)\s*=|\btypedef\b[^;{}]*?\b([A-Za-z_]\w*)\s*(?:\[[^\]]*\])?\s*;")
+kMacroDeclaration = re.compile(r"^[ \t]*#[ \t]*define[ \t]+([A-Za-z_]\w*)", re.M)
+kFunctionDeclaration = re.compile(r"\b([A-Za-z_]\w*)[\s\*&>]+((?:[A-Za-z_]\w*::)*)~?([A-Za-z_]\w*)\s*\(")
+kVariableDeclaration = re.compile(r"\b([A-Za-z_]\w*)[\s\*&>]+([A-Za-z_]\w*)\s*(?=[;=\{\[,\)]|:(?!:))")
+kMacroName = re.compile(r"[A-Z0-9_]+")
+kLetters = re.compile(r"[A-Za-z]+")
+kSnakeCase = re.compile(r"[a-z0-9]_[a-z]")
+kParameterPrefixes = ("out", "inout", "outb", "inoutb", "arr", "list", "map", "set")
+kDeclarationKinds = ("type", "enumerator", "alias", "function", "member", "constant", "variable", "macro", "command", "file", "folder")
+
+
+def classifyVariable(name: str) -> str:
+    if name.startswith(("_", "m_", "s_")) or re.match(r"m[A-Z]", name):
+        return "member"
+    if re.match(r"k[A-Z]", name):
+        return "constant"
+    return "variable"
+
+
+def collectDeclarations(code: str) -> list[tuple[str, str]]:
+    """주석 · 문자열을 뺀 코드의 (종류, 이름) — 형식 · 열거자 · 별칭 · 함수 · 멤버 · 상수 · 변수(지역 · 인자 · 전역) · 매크로.
+    shortcut: 정규식이라 `Type value( args )` 직접 초기화는 함수로 센다 — 낱말 검사는 종류와 무관해 판정이 바뀌지 않는다, 종류별 수가 중요해지면 clang 색인으로 바꾼다."""
+    listDeclaration: list[tuple[str, str]] = []
+    for match in kTypeDeclaration.finditer(code):
+        if match.group(1) not in kNotName:
+            listDeclaration.append(("type", match.group(1)))
+    for match in kEnumBody.finditer(code):
+        for item in match.group(1).split(","):
+            found = re.match(r"\s*([A-Za-z_]\w*)", item)
+            if found:
+                listDeclaration.append(("enumerator", found.group(1)))
+    for match in kAliasDeclaration.finditer(code):
+        name = match.group(1) or match.group(2)
+        if name not in kNotName:
+            listDeclaration.append(("alias", name))
+    for match in kMacroDeclaration.finditer(code):
+        listDeclaration.append(("macro", match.group(1)))
+    for match in kFunctionDeclaration.finditer(code):
+        before, name = match.group(1), match.group(3)
+        if before not in kNotName - {"const", "constexpr", "static", "inline", "virtual", "explicit", "friend", "auto", "void", "extern"} \
+                and name not in kNotName and kMacroName.fullmatch(name) is None:
+            listDeclaration.append(("function", name))
+    for match in kVariableDeclaration.finditer(code):
+        before, name = match.group(1), match.group(2)
+        if before not in kNotName - {"const", "constexpr", "static", "inline", "auto", "mutable", "volatile", "extern"} and name not in kNotName \
+                and kMacroName.fullmatch(name) is None:
+            listDeclaration.append((classifyVariable(name), name))
+    return listDeclaration
+
+
+def collectPathNames(relative: str, rootDepth: int = 1) -> list[tuple[str, str]]:
+    """경로의 (file, 파일 줄기) 와 (folder, 폴더 이름)들 — 뿌리 마디(`Source` · `Scripts` · `.claude/hooks` …, @p rootDepth 개)는 뺀다."""
+    parts = relative.split("/")[rootDepth:]
+    return [("folder", part) for part in parts[:-1]] + [("file", parts[-1].split(".")[0])] if parts else []
+
+
+# 스크립트 · 빌드 이름 — Python(Scripts · 훅 · 스킬 스크립트) · 셸 · CMake. 저장소 규칙(docs/agents/NamingScripts.md: 모듈 PascalCase · 함수 camelCase ·
+# CMake sw_camelCase · SW_ 옵션)은 그대로 두고 낱말만 본다. CLI 하위 명령(`Subcommand("…"`)과 린트 규칙 id(`Rule("…"`)도 이름이다.
+kScriptRoots = ("Scripts", ".claude/hooks", ".claude/skills", "cmake")
+kScriptExtensions = (".py", ".sh", ".cmake")
+kPythonFunction = re.compile(r"^[ \t]*def[ \t]+([A-Za-z_]\w*)", re.M)
+kPythonClass = re.compile(r"^[ \t]*class[ \t]+([A-Za-z_]\w*)", re.M)
+kPythonConstant = re.compile(r"^(_?k[A-Z]\w*)[ \t]*[:=]", re.M)
+kCommandName = re.compile(r"\b(?:Subcommand|Rule)\(\s*\"([a-z][a-z0-9-]*)\"")
+kShellFunction = re.compile(r"^[ \t]*(?:function[ \t]+)?([A-Za-z_]\w*)[ \t]*\(\)", re.M)
+kCMakeFunction = re.compile(r"\b(?:function|macro)\s*\(\s*([A-Za-z_]\w*)", re.I)
+kCMakeOption = re.compile(r"\boption\s*\(\s*([A-Za-z_]\w*)", re.I)
+
+
+def collectScriptDeclarations(path: str, text: str) -> list[tuple[str, str]]:
+    """스크립트 파일 하나의 (종류, 이름) — 함수 · 클래스 · 모듈 상수 · CLI 명령(파이썬), 함수(셸), 함수 · 매크로 · 옵션(CMake)."""
+    if path.endswith(".py"):
+        return ([("function", name) for name in kPythonFunction.findall(text) if not name.startswith("__")] + [("type", name) for name in kPythonClass.findall(text)]
+                + [("constant", name) for name in kPythonConstant.findall(text)] + [("command", name) for name in kCommandName.findall(text)])
+    if path.endswith(".sh"):
+        return [("function", name) for name in kShellFunction.findall(text)]
+    return [("function", name) for name in kCMakeFunction.findall(text)] + [("macro", name) for name in kCMakeOption.findall(text)]
+
+
+def splitLowerWords(name: str, kind: str) -> list[str]:
+    """낱말 표의 열쇠 — `splitWords` 의 낱말을 숫자에서 다시 가르고(`Vector3D` → vector · d) 소문자로, 숫자만인 마디와 한 글자는 뺀다."""
+    words: list[str] = []
+    for word in splitWords(name, bFunction=kind == "function"):
+        words.extend(piece.lower() for piece in kLetters.findall(word) if len(piece) > 1)
+    while kind != "function" and len(words) > 1 and words[0] in kParameterPrefixes:   # 출력 인자 머리(`outbChanged` · `inoutListCrumb`)
+        words = words[1:]
+    return words
+
+
+def isExternalName(name: str, patterns: Sequence[re.Pattern]) -> bool:
+    return any(pattern.match(name) for pattern in patterns)
 
 
 def isThirdPersonVerb(word: str) -> bool:
@@ -175,6 +282,19 @@ def readSources(projectRoot: Path, scope: LintScope) -> list[tuple[str, str]]:
     return readTexts(projectRoot, scope.select(("Source",), kExtensions))
 
 
+def collectSourceNames(projectRoot: Path, scope: LintScope) -> list[tuple[str, str, str]]:
+    """범위 안의 (종류, 이름, 파일) — `Source` 의 C++ 선언과 모든 파일의 파일 · 폴더 이름, 스크립트 뿌리(`kScriptRoots`)의 선언과 스크립트 파일 · 폴더 이름."""
+    listName = [(kind, name, path) for path, text in readSources(projectRoot, scope) for kind, name in collectDeclarations(stripCode(text))]
+    for path in scope.select(("Source",)):
+        listName.extend((kind, name, path) for kind, name in collectPathNames(path))
+    listScript = scope.select(kScriptRoots, kScriptExtensions) + [path for path in scope.select(kScriptRoots) if path.endswith("CMakeLists.txt")]
+    for path, text in readTexts(projectRoot, listScript):
+        listName.extend((kind, name, path) for kind, name in collectScriptDeclarations(path, text))
+        depth = 2 if path.startswith(".claude/") else 1
+        listName.extend((kind, name, path) for kind, name in collectPathNames(path, depth) if name != "CMakeLists")
+    return listName
+
+
 def readTable(projectRoot: Path) -> dict:
     return json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))
 
@@ -193,8 +313,49 @@ def writeBaseline(projectRoot: Path, baseline: dict[str, list[str]]) -> None:
     (projectRoot / kBaselinePath).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
+def classifyWords(listName: Iterable[tuple[str, str, str]], table: dict) -> dict[str, str]:
+    """word 규칙 — 선언 이름 · 파일 · 폴더 이름의 **모든 낱말**이 낱말 표(`_words` 의 a 업계 · b 게임)에 있는가. 이름 → 경로 · 안내.
+    `_scopedWords` 의 낱말은 그 경로 아래에서만 받는다(게임의 walk 는 맞고 엔진의 walk 는 순회다). 표준 합성어(`_keepTerms`) · 바깥 이름(`_externalPatterns`) · `_keep` 은 뺀다."""
+    words = table["_words"]
+    known = set(words["a"]) | set(words["b"])
+    scoped = table["_scopedWords"]
+    externals = [re.compile(pattern) for pattern in table["_externalPatterns"]]
+    keepTerms = [re.compile(re.escape(term), re.I) for term in table.get("_keepTerms", [])]
+    keep = table["_keep"]
+    externalPaths = table["_externalPaths"]
+    found: dict[str, str] = {}
+    for kind, name, path in listName:
+        if name in keep or name in found or isExternalName(name, externals) or isUnder(path, externalPaths):
+            continue
+        if kind == "function" and path.endswith(".py") and kSnakeCase.search(name.lstrip("_")):
+            found[name] = f"{path}: 파이썬 함수 '{name}' 가 snake_case 다 — 저장소 규칙은 camelCase(docs/agents/NamingScripts.md, C++ 와 한 이름 체계). 표준 라이브러리 덮어쓰기(log_message)는 _keep"
+            continue
+        stripped = name
+        for term in keepTerms:
+            stripped = term.sub("_", stripped)
+        for word in splitLowerWords(stripped, kind):
+            if word in known:
+                continue
+            if word in scoped:
+                if isUnder(path, scoped[word]["paths"]):
+                    continue
+                found[name] = f"{path}: '{name}' 의 낱말 '{word}' 는 {' · '.join(scoped[word]['paths'])} 에서만 쓴다 — {scoped[word]['hint']}"
+            else:
+                found[name] = (f"{path}: '{name}' 의 낱말 '{word}' 가 낱말 표에 없다 — 언리얼 · 유니티 · Godot · 일반 용어와 대조한 뒤 {kConfigPath} 의 "
+                               f"_words(a 업계 · b 게임)에 올리거나 업계 낱말로 바꾼다")
+            break
+    return found
+
+
+def collectViolations(projectRoot: Path, scope: LintScope) -> tuple[list[str], dict[str, dict[str, str]]]:
+    table = readTable(projectRoot)
+    listProblem, ratchet = classifyNames(readSources(projectRoot, scope), table)
+    ratchet["word"] = classifyWords(collectSourceNames(projectRoot, scope), table)
+    return listProblem, ratchet
+
+
 def checkNamingWords(projectRoot: Path, scope: LintScope) -> list[str]:
-    listProblem, ratchet = classifyNames(readSources(projectRoot, scope), readTable(projectRoot))
+    listProblem, ratchet = collectViolations(projectRoot, scope)
     return listProblem + compareBaseline(ratchet, readBaseline(projectRoot), scope.bWholeRepo)
 
 
@@ -221,6 +382,22 @@ def runSelfCheck() -> None:
     assert classifyNames([("a.h", "// CombatHealth\nconst char* s = \"CombatHealth\";")], tableNames)[0] == [], "주석 · 문자열의 옛 이름은 본다고 하지 않는다"
     assert len(classifyNames([("a.h", "CombatHealth health; int getCombatHealthRatio();")], tableNames)[0]) == 1, "통째 이름만 막는다"
 
+    code = stripCode("#define SW_SCENE_WATCH 1\nenum class Mode { Idle, Walk };\nusing Alias = int;\nstruct SceneWalkKey {};\n"
+                     "void hoverMark( int outbChanged, const Foo& inoutListCrumb ) { float _walkSpeed = 1; const int kMaxCount = 2; }")
+    declared = set(collectDeclarations(code))
+    for item in (("macro", "SW_SCENE_WATCH"), ("enumerator", "Walk"), ("alias", "Alias"), ("type", "SceneWalkKey"), ("function", "hoverMark"),
+                 ("variable", "outbChanged"), ("variable", "inoutListCrumb"), ("member", "_walkSpeed"), ("constant", "kMaxCount")):
+        assert item in declared, (item, declared)
+    assert splitLowerWords("outbChanged", "variable") == ["changed"] and splitLowerWords("inoutListCrumb", "variable") == ["crumb"]
+    assert splitLowerWords("D3D12Vector3D", "type") == ["vector"] and splitLowerWords("setAxisTags", "function") == ["set", "axis", "tags"]
+    assert collectPathNames("Source/Games/Walk/WalkPath.h") == [("folder", "Games"), ("folder", "Walk"), ("file", "WalkPath")]
+    tableWords = {"_words": {"a": ["scene", "key", "speed", "area", "mark", "hover", "rc", "at"], "b": ["ghost"]}, "_keep": {},
+                  "_scopedWords": {"walk": {"paths": ["Source/Games"], "hint": "순회는 iterate"}}, "_externalPatterns": [r"^PFN_"], "_externalPaths": [".claude/skills/ponytail"], "_keepTerms": ["WorkArea"]}
+    found = classifyWords([("type", "SceneWalkKey", "Source/Engine/a.h"), ("member", "_walkSpeed", "Source/Games/b.h"), ("member", "_ghostKey", "Source/a.h"),
+                           ("variable", "rcWorkArea", "Source/a.h"), ("alias", "PFN_vkWeirdo", "Source/a.h"), ("function", "aimAtMark", "Source/a.h"),
+                           ("folder", "Walk", "Source/Games/Walk/x.h")], tableWords)
+    assert set(found) == {"SceneWalkKey", "aimAtMark"} and "iterate" in found["SceneWalkKey"] and "'aim'" in found["aimAtMark"], found
+
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="이름을 업계 용어 표와 대조한다")
@@ -234,7 +411,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return ExitCode.Passed
     projectRoot = getProjectRoot()
     if arguments.write_baseline or arguments.lower_baseline:
-        _, ratchet = classifyNames(readSources(projectRoot, makeWholeScope(projectRoot)), readTable(projectRoot))
+        _, ratchet = collectViolations(projectRoot, makeWholeScope(projectRoot))
         current = {rule: list(ratchet[rule]) for rule in kRatchetRules}
         if arguments.lower_baseline:
             old = readBaseline(projectRoot)
