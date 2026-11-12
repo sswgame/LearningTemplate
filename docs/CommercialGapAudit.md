@@ -94,13 +94,6 @@
 - 제안: `GameNetSession` 이 `MetricRegistry` 를 받아 샤드 라벨로 등록한다. 사유별 끊김 카운터를 `NetDisconnectReason` 열거에서 생성한다. 로그의 주소는 가림 형식을 거친다.
 - 확인: `OpsHTTPEndpointTest` 에 `/metrics` 본문이 `net_connections` · `net_rejected_packets_total` 을 담는지.
 
-#### N-9 MMO 관찰자마다 "항상 보이는" 정책을 월드 전체 엔티티에 대해 매 틱 묻는다
-- 분류: 성능 · 확신: 복잡도 확인, 영향은 측정 필요
-- 근거: `Source/GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.cpp:309-316` — `hasAlwaysRelevant()` 면 관찰자마다 `_mapEntity` 전체에 `isAlwaysRelevant( connectionID, entity )` 를 부른다. 관찰자 2000 × 엔티티 5 만이면 틱당 1 억 호출이다.
-- 상용 엔진: 언리얼 ReplicationGraph 는 AlwaysRelevant 노드가 미리 만든 목록을 그대로 준다.
-- 제안: 정책 API 를 "판정 함수" 에서 "목록 제공"(`collectAlwaysRelevant( connectionID, out )` + 전역 목록 캐시와 변경 판)으로 바꾼다.
-- 확인: `TestMMOReplicatorParallel` 에 always 정책 + 엔티티 5 만 사례의 `update` 시간.
-
 ### 온라인 서비스 · 저장소
 
 #### O-3 비밀번호 해시(Argon2id)가 저장소 워커(DB 연결) 스레드에서 돌고 저장소 대기열에 상한이 없다
