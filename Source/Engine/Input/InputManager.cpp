@@ -85,6 +85,7 @@ namespace sw
         , _listFramePress{}
         , _frameLookDelta{}
         , _lastPlatformPointer{ 0, 0 }
+        , _lastRawMouseAbsolute{ nullopt }
         , _pfnNowMicroseconds{ &MonotonicClock::nowMicroseconds }
         , _frameEndMicroseconds{ 0 }
         , _pVirtualInput{ nullptr }
@@ -431,8 +432,7 @@ namespace sw
         {
             recordFramePress( rawEvent );
             dispatchRawEvent( rawEvent );
-            const bool bLookMotion = rawEvent._type == RawInputEventType::MouseMove || rawEvent._type == RawInputEventType::MouseRawDelta;
-            if ( bLookMotion )
+            if ( rawEvent._type == RawInputEventType::MouseRawDelta )
                 _frameLookDelta += rawEvent._payload._mouseData._rawDelta;
         }
 
@@ -547,10 +547,7 @@ namespace sw
             case RawInputEventType::MouseMove:
             {
                 if ( _pMouse != nullptr )
-                {
                     _pMouse->setPosition( rawEvent._payload._mouseData._x, rawEvent._payload._mouseData._y );
-                    _pMouse->addRawDelta( rawEvent._payload._mouseData._rawDelta._x, rawEvent._payload._mouseData._rawDelta._y );
-                }
                 setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
                 break;
             }
