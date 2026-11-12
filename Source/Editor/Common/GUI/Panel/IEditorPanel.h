@@ -71,6 +71,8 @@ namespace sw::editor
         virtual EditorAssetType getDocumentKind() const { return EditorAssetType{}; }
         /** @brief 마지막 draw 에서 이 패널 창에 포커스가 있었으면 true 입니다. */
         bool isWindowFocused() const { return _bWindowFocused; }
+        /** @brief 이 패널 창의 ImGui 창 id 입니다(그린 적이 없으면 0). Ctrl+Z 가 처리하는 순간의 포커스 창과 맞춘다(`IEditorPanelService::collectPanelCommandStacks`). */
+        uint32 getWindowID() const { return _windowID; }
         /** @brief 마지막 draw 에서 내용 영역에 글자 줄(`GetTextLineHeightWithSpacing`)이 몇 줄 들어갔는지입니다. 기본 배치의 크기 점검(감시 값 `Editor.PanelContentLines`)이 읽습니다. */
         float32 getContentLineCount() const { return _contentLineCount; }
         /** @brief 마지막 draw 에서 내용 영역에 숫자 "0" 이 몇 칸 들어갔는지입니다(감시 값 `Editor.PanelContentColumns`). */
@@ -142,6 +144,7 @@ namespace sw::editor
             , _bClosedWhileDrawing{ SW_FALSE }
             , _contentLineCount{ 0.0f }
             , _contentColumnCount{ 0.0f }
+            , _windowID{ 0 }
         {
         }
 
@@ -205,5 +208,6 @@ namespace sw::editor
         uint8   _bClosedWhileDrawing : 1; ///< 이번 `draw()` 안에서 닫혔다
         float32 _contentLineCount;        ///< 마지막으로 그린 draw 의 내용 영역 높이 / 글자 줄 높이
         float32 _contentColumnCount;      ///< 마지막으로 그린 draw 의 내용 영역 폭 / 숫자 "0" 너비
+        uint32  _windowID;                ///< 이 패널 창의 ImGui 창 id(`getWindowID`)
     };
 } // namespace sw::editor

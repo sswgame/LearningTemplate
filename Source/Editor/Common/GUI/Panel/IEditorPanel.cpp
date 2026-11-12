@@ -34,7 +34,8 @@ namespace sw::editor
             panelFlags |= EditorPanelFlags::UnsavedDocument;
 
         const bool bVisible = EditorChrome::beginPanel( getPanelTitle(), getOpenFlagAddress(), panelFlags );
-        absorbCloseButton(); // 접힌 창과 숨은 탭의 X 도 같은 확인을 거친다
+        _windowID           = EditorChrome::getCurrentWindowID(); // 접힌 창도 창은 있다 — 포커스 창과 맞출 id
+        absorbCloseButton();                                      // 접힌 창과 숨은 탭의 X 도 같은 확인을 거친다
         if ( bVisible )
         {
             _bWindowFocused     = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );

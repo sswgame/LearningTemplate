@@ -255,8 +255,7 @@ namespace sw::editor
 
     void EditorPanelManager::applyFocusedCommandStack()
     {
-        const CommandStack* const pRegistered = getFocusedCommandStack();
-        IEditorPanel*             pFocused    = nullptr;
+        IEditorPanel* pFocused = nullptr;
         for ( const EditorPanelEntry& entry : _listPanel )
         {
             IEditorPanel* const pPanel = entry._pInstance.get();
@@ -264,8 +263,7 @@ namespace sw::editor
                 continue;
             if ( pPanel->isOpen() == false )
             {
-                if ( pRegistered != nullptr && pPanel->findPanelCommandStack() == pRegistered )
-                    setFocusedCommandStack( nullptr ); // 닫힌 문서의 스택 — 보이지 않는 문서를 되돌리지 않는다
+                releaseFocusedCommandStack( pPanel->findPanelCommandStack() ); // 닫힌 문서의 스택 — 보이지 않는 문서를 되돌리지 않는다
                 continue;
             }
             if ( pFocused == nullptr && pPanel->isWindowFocused() )

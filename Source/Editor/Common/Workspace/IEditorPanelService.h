@@ -10,8 +10,24 @@
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorPanelID.h"
 
+namespace sw
+{
+    class CommandStack;
+} // namespace sw
+
 namespace sw::editor
 {
+    /**
+     * @brief 열린 패널 창 하나가 Ctrl+Z 에 답하는 스택입니다(`IEditorPanelService::collectPanelCommandStacks`).
+     * @details Ctrl+Z 를 처리하는 순간 키보드 포커스 창을 이 줄들과 맞춰 스택을 고른다(`chooseFocusedCommandStack`) — 미리 걸어 둔 스택은 한 프레임 늦는다.
+     */
+    struct EditorPanelCommandStack
+    {
+        uint32        _windowID{ 0 };              ///< 패널 창의 ImGui 창 id(`IEditorPanel::getWindowID`)
+        CommandStack* _pStack{ nullptr };          ///< 그 창이 답한 스택(`IEditorPanel::findPanelCommandStack`). nullptr 이면 메인 스택
+        bool          _bKeepFocusedStack{ false }; ///< NOLINT(sw-bool-flag): 집합체다 — 이 창은 겨눈 스택을 바꾸지 않는다(History, `shouldKeepFocusedCommandStack`)
+    };
+
     /**
      * @brief 에셋 파일 하나를 연 문서입니다 — 리소스 id 와 미저장 여부(`IEditorPanelService::collectOpenDocuments`, 활성 씬은 부른 쪽이 더한다).
      * @details 옮기기 · 삭제 계획이 본다(감사 P0-4): 미저장 문서가 옮기는 에셋을 적었으면 디스크에서 고친 참조를 다음 저장이 옛 id 로 덮고, 연 문서를 지우면 다음 저장이 파일을 되살린다.
@@ -50,5 +66,28 @@ namespace sw::editor
         virtual uint32 countDirtyDocuments() const = 0;
         /** @brief 에셋 파일을 연 문서 패널마다 한 줄을 @p outList 끝에 더합니다(연 경로가 없는 상태 문서 · 아직 연 문서가 없는 패널은 빠진다). */
         virtual void collectOpenDocuments( vector<EditorOpenDocument>& outList ) const = 0;
+        /** @brief 지금 키보드 포커스가 있는 창의 id(@p outFocusedWindowID, 없으면 0)와 열린 패널마다 그 창이 답하는 스택(@p outList, 비우고 채운다)입니다. */
+        virtual void collectPanelCommandStacks( uint32& outFocusedWindowID, vector<EditorPanelCommandStack>& outList ) const = 0;
+
+        /**
+         * @brief Ctrl+Z 가 갈 스택을 고릅니다. 포커스 창(@p focusedWindowID)이 패널이면 그 답(메인이면 @p pMain), 패널이 아니거나(메뉴 · 팝업) 겨눈 스택을 지키는 창(History)이면
+         *        앞서 포커스였던 패널이 걸어 둔 것(@p pRegistered, `setFocusedCommandStack`), 그것도 없으면 @p pMain 입니다.
+         * @details 처리하는 순간의 포커스로 고른다 — 포커스를 옮긴 바로 그 프레임의 Ctrl+Z 도 새 창의 스택으로 간다. 메뉴의 Edit > Undo 는 메뉴가 포커스라 앞 창의 것이다.
+         */
+        static CommandStack* chooseFocusedCommandStack( uint32 focusedWindowID, const vector<EditorPanelCommandStack>& listPanel, CommandStack* pRegistered, CommandStack* pMain )
+        {
+            if ( focusedWindowID != 0 )
+            {
+                for ( const EditorPanelCommandStack& panel : listPanel )
+                {
+                    if ( panel._windowID != focusedWindowID )
+                        continue;
+                    if ( panel._bKeepFocusedStack )
+                        break;
+                    return panel._pStack != nullptr ? panel._pStack : pMain;
+                }
+            }
+            return pRegistered != nullptr ? pRegistered : pMain;
+        }
     };
 } // namespace sw::editor
