@@ -9,7 +9,10 @@
 
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
+#include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -116,4 +119,45 @@ SW_TEST_CASE( EditorViewportRayPickTest, BoundlessObjectUsesFallbackRadius )
     SW_REQUIRE_TRUE( sw::editor::EditorViewportRayPick::pick( &manager, Internal::makeRay( sw::float3{ 3.2f, 0.0f, -10.0f }, sw::float3{ 3.2f, 0.0f, 0.0f } ), false, result ) );
     SW_EXPECT_TRUE( result._pObject == pEmpty );
     SW_EXPECT_FALSE( sw::editor::EditorViewportRayPick::pick( &manager, Internal::makeRay( sw::float3{ 3.5f, 0.0f, -10.0f }, sw::float3{ 3.5f, 0.0f, 0.0f } ), false, result ) );
+}
+
+/**
+ * @brief [EditorViewportRayPickTest] 정점 애니메이션(VAT) 메시는 레스트가 아니라 표가 그리는 자리로 집힌다 — 표의 한 프레임이 큐브를 X 로 5 m 옮겼으면 옮긴 자리를 누를 때 집고 레스트 자리는 빈 곳이다
+ */
+SW_TEST_CASE( EditorViewportRayPickTest, VertexAnimatedMeshPicksDrawnPose )
+{
+    using Internal = EditorViewportRayPickTestInternal;
+
+    sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createPrimitive( "Cube" );
+    SW_REQUIRE_NOT_NULL( mesh.get() );
+    const uint32           vertexCount = mesh->getVertexCount();
+    sw::vector<sw::float3> listPosition;
+    sw::vector<sw::float3> listNormal;
+    for ( const sw::RHIVertex& vertex : mesh->getVertices() )
+    {
+        listPosition.push_back( sw::float3{ vertex._arrPosition[0] + 5.0f, vertex._arrPosition[1], vertex._arrPosition[2] } );
+        listNormal.push_back( sw::float3{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] } );
+    }
+    auto animation          = sw::make_shared<sw::MeshVertexAnimation>();
+    animation->_frameCount  = 1;
+    animation->_vertexCount = vertexCount;
+    animation->_duration    = 1.0f;
+    SW_REQUIRE_TRUE( animation->quantize( listPosition, listNormal ) );
+    mesh->setVertexAnimation( animation );
+
+    sw::GameObjectManager manager;
+    sw::GameObject*       pCrowd = manager.createGameObject( sw::hashed_string( "VertexAnimated" ) );
+    SW_REQUIRE_NOT_NULL( pCrowd );
+    sw::MeshComponent* pMesh = pCrowd->addComponent<sw::MeshComponent>();
+    SW_REQUIRE_NOT_NULL( pMesh );
+    pMesh->setMesh( mesh );
+    pMesh->setBoundsRadius( 6.0f ); // 컬링 구가 그리는 자리를 덮는다(VAT 메시는 데이터가 반지름을 적는다)
+    manager.mergePendingAdds();
+    manager.flushSceneTransforms();
+
+    sw::editor::EditorPickResult result{};
+    SW_REQUIRE_TRUE( sw::editor::EditorViewportRayPick::pick( &manager, Internal::makeRay( sw::float3{ 5.0f, 0.0f, -10.0f }, sw::float3{ 5.0f, 0.0f, 0.0f } ), false, result ) );
+    SW_EXPECT_TRUE( result._pObject == pCrowd );
+    SW_EXPECT_NEAR( 9.5f, result._distance, 1e-2f );
+    SW_EXPECT_FALSE( sw::editor::EditorViewportRayPick::pick( &manager, Internal::makeRay( sw::float3{ 0.0f, 0.0f, -10.0f }, sw::float3{ 0.0f, 0.0f, 0.0f } ), false, result ) );
 }
