@@ -109,15 +109,18 @@ namespace sw
          * @brief 고정 배치형(B) 코덱 테이블입니다(`Engine/Serialization/Fixed/FixedLayout.h`). 코드젠이 모든 `REFLECT` 타입에 채우고, 적격이 아니면
          *        이유만 든 테이블입니다. 코드젠을 거치지 않은 타입(내장 스칼라)은 nullptr 입니다. 모듈 코드를 가리키므로 `clearContent` 가 비웁니다.
          */
-        const FixedCodec*                _pFixedCodec;
-        hashed_string                    _name;
-        hashed_string                    _fullyQualifiedName;
-        hashed_string                    _parentFQN;
-        hashed_string                    _moduleName;
-        vector<PropertyInfo>             _listProperty;
-        vector<FunctionInfo>             _listMethod;
-        vector<EventInfo>                _listEvent; ///< 이 타입이 선언한 이벤트다. 기반 타입의 이벤트는 `findEventInHierarchy` 가 따라 올라가며 찾는다
-        ReflectMetadataBox<TypeMetadata> _metadata;  ///< `REFLECT()` 에 적은 메타데이터(`ReflectionMetadata.h`)
+        const FixedCodec*    _pFixedCodec;
+        hashed_string        _name;
+        hashed_string        _fullyQualifiedName;
+        hashed_string        _parentFQN;
+        hashed_string        _moduleName;
+        vector<PropertyInfo> _listProperty;
+        vector<FunctionInfo> _listMethod;
+        vector<EventInfo>    _listEvent; ///< 이 타입이 선언한 이벤트다. 기반 타입의 이벤트는 `findEventInHierarchy` 가 따라 올라가며 찾는다
+        /// @brief `REFLECT( RemovedField = … )` 로 적은 지운 필드 이름입니다. 옛 세이브에는 이 이름의 해시가 남아 있어 새 필드가 그 이름 · 해시를 쓰면 등록이 오류를 남긴다
+        ///        (`TypeRegistry::reportFieldNameHashClashes`, 언리얼 CoreRedirects 의 지운 프로퍼티 기록과 같은 자리).
+        vector<hashed_string>            _listRemovedField;
+        ReflectMetadataBox<TypeMetadata> _metadata; ///< `REFLECT()` 에 적은 메타데이터(`ReflectionMetadata.h`)
         /**
          * @brief 상속 병합 목록입니다 — 기반부터, 파생이 같은 이름을 제자리에서 덮는다. 원소는 선언한 타입의 `_listProperty` 를 가리킨다(`PropertyListView`).
          * @details `TypeRegistry` 가 등록 · 해제 때 **그 타입과 자손만** 다시 짓는다(`rebuildDerivedCaches`). 조회는 읽기만 한다 — `mutable` 지연 캐시가
