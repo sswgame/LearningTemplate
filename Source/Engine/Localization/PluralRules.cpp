@@ -292,17 +292,18 @@ namespace sw
     PluralOperands PluralOperands::makeDecimal( float64 value, uint32 visibleFractionCount )
     {
         PluralOperands operands;
-        const float64  absoluteValue   = value < 0.0 ? -value : value;
-        operands._absoluteValue        = absoluteValue;
-        operands._integerDigits        = static_cast<int64>( absoluteValue );
-        operands._visibleFractionCount = visibleFractionCount;
-        float64 scale                  = 1.0;
+        float64        scale = 1.0;
         for ( uint32 digit = 0; digit < visibleFractionCount; ++digit )
         {
             scale *= PluralRulesInternal::kDecimalBase;
         }
-        const float64 fraction   = ( absoluteValue - static_cast<float64>( operands._integerDigits ) ) * scale;
-        operands._fractionDigits = static_cast<int64>( fraction + PluralRulesInternal::kRoundingHalf );
+        // 화면에 보이는 자릿수로 먼저 반올림한다 — 정수부를 반올림 전 값에서 버림하면 1.999 가 "2" 로 보이는데 범주는 1 의 것(one)이었다(감사 A-18, ICU 는 서식한 결과로 고른다).
+        const float64 scaled           = MathUtil::floor( ( value < 0.0 ? -value : value ) * scale + PluralRulesInternal::kRoundingHalf );
+        const float64 absoluteValue    = scaled / scale;
+        operands._absoluteValue        = absoluteValue;
+        operands._integerDigits        = static_cast<int64>( absoluteValue );
+        operands._visibleFractionCount = visibleFractionCount;
+        operands._fractionDigits       = static_cast<int64>( scaled - static_cast<float64>( operands._integerDigits ) * scale + PluralRulesInternal::kRoundingHalf );
         return operands;
     }
 

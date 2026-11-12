@@ -192,7 +192,9 @@ SW_TEST_CASE( CultureDataTest, PluralRuleTextSelectsTheCldrCategory )
     SW_EXPECT_EQUAL( sw::string( "one" ), sw::string( plural( "he", Operands::makeDecimal( 0.5, 1 ) ) ) );
     SW_EXPECT_EQUAL( sw::string( "two" ), sw::string( plural( "he", Operands::makeInteger( 2 ) ) ) );
     SW_EXPECT_EQUAL( sw::string( "one" ), sw::string( plural( "fa", Operands::makeDecimal( 1.0, 1 ) ) ) );
-    SW_EXPECT_EQUAL( sw::string( "other" ), sw::string( plural( "en", Operands::makeDecimal( 1.0, 1 ) ) ) ); // v = 1 이라 one 이 아니다
+    SW_EXPECT_EQUAL( sw::string( "other" ), sw::string( plural( "en", Operands::makeDecimal( 1.0, 1 ) ) ) );   // v = 1 이라 one 이 아니다
+    SW_EXPECT_EQUAL( sw::string( "other" ), sw::string( plural( "en", Operands::makeDecimal( 1.999, 0 ) ) ) ); // 보이는 "2" 의 범주다 — 반올림 전 정수부(1)로 고르면 one 이었다(감사 A-18)
+    SW_EXPECT_EQUAL( sw::string( "one" ), sw::string( plural( "en", Operands::makeDecimal( 0.6, 0 ) ) ) );     // 보이는 "1"
     SW_EXPECT_EQUAL( sw::string( "other" ), sw::string( plural( "ko", Operands::makeInteger( 1 ) ) ) );
     // CLDR plurals.xml 과 대조해 더한 범주 — 스페인어 · 프랑스어의 백만 단위(un millón de, un million de)는 many 다.
     SW_EXPECT_EQUAL( sw::string( "many" ), sw::string( plural( "es", Operands::makeInteger( 2000000 ) ) ) );
