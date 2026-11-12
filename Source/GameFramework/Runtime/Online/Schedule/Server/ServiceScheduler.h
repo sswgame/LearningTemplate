@@ -18,6 +18,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
@@ -82,6 +83,8 @@ namespace sw
         ServiceScheduler& operator=( const ServiceScheduler& ) = delete;
 
         void initialize( IServiceStore* pStore, uint64 serverID );
+        /** @brief 차지 레코드의 TTL(밀리초)을 알립니다. 0 이면 지우지 않는다. 이보다 긴 구간 작업(`Window`)은 등록을 거절한다 — 구간 안에서 레코드가 지워지면 다시 돈다. */
+        void setRunTTLMs( int64 runTTLMs ) { _runTTLMs = runTTLMs; }
         void shutdown();
 
         /** @brief 작업을 등록합니다. 일정이 틀리면(작업 id 문자, 시각 범위, 임대) 경고를 남기고 등록하지 않습니다. 등록했으면 true 입니다. */
@@ -98,6 +101,11 @@ namespace sw
         static int64                computeLatestOccurrence( const ScheduleDef& definition, int64 nowMs );
         static bool                 isValidDefinition( const ScheduleDef& definition );
         static const hashed_string& getTable(); ///< "service_schedule"
+        /**
+         * @brief 차지 레코드의 TTL 규칙입니다(TTL 색인 `service_schedule_expiry` + 옛 레코드 백필). 회차마다 하나씩 쌓이는 표다 — 1 분 간격 작업이면 해에 50 만 줄이다.
+         * @details 지난 회차는 다시 차지하지 않으므로(가장 늦은 회차만 본다) 기간이 지난 레코드는 멱등의 근거가 아니다. 구간 작업은 `setRunTTLMs` 가 막는다.
+         */
+        static ServiceTTLRule makeRunTTLRule( int64 expireAfterMs );
 
     private:
         /** @brief 차지 일의 결과입니다. */
@@ -137,6 +145,7 @@ namespace sw
         vector<Job>         _listJob;
         uint64              _serverID;
         UnixMilliseconds    _lastTickMs;
-        ServiceStoreTracker _store; ///< 저장소에 맡긴 일의 앞이다
+        int64               _runTTLMs; ///< 차지 레코드의 TTL. 구간 작업의 길이를 막는다
+        ServiceStoreTracker _store;    ///< 저장소에 맡긴 일의 앞이다
     };
 } // namespace sw

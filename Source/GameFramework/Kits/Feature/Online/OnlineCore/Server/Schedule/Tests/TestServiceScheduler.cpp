@@ -302,6 +302,43 @@ SW_TEST_CASE( ServiceSchedulerTest, FailedRunIsFinished )
     SW_EXPECT_TRUE( rig._secondSink._listRun.empty() );
 }
 
+/** @brief [ServiceSchedulerTest] TTL: 회차마다 쌓이는 차지 레코드를 끝난 뒤 기간이 지나면 지운다. 레코드보다 긴 구간 작업은 등록을 거절한다(감사 O-9) */
+SW_TEST_CASE( ServiceSchedulerTest, RunRecordsExpireAndLongWindowsAreRefused )
+{
+    SW_EXPECT_LOG( "ServiceScheduler.WindowOutlivesRunRecord" );
+    SchedulerFixture rig;
+    rig.tickBoth( kNowMs );
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() + rig._secondSink._listRun.size() );
+    ServiceScheduler&  winner = rig._firstSink._listRun.empty() ? rig._second : rig._first;
+    const ScheduledRun run    = rig._firstSink._listRun.empty() ? rig._secondSink._listRun[0] : rig._firstSink._listRun[0];
+    winner.update( UnixMilliseconds{ kNowMs + 10 } );
+    winner.completeRun( run, true );
+    rig.pump();
+    SW_REQUIRE_EQUAL( 1, rig._database.countRecords( ServiceScheduler::getTable() ) );
+
+    ServiceTTLRule        rule = ServiceScheduler::makeRunTTLRule( 1000 );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs + 500, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, rig._database.countRecords( ServiceScheduler::getTable() ) ); // 아직 기간 안이다
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( ServiceScheduler::getTable() ) );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( hashed_string( "service_schedule_expiry" ) ) ); // 차지 줄 · 끝 줄 둘 다 지웠다
+
+    ServiceScheduler guarded;
+    guarded.initialize( &rig._store, 3 );
+    guarded.setRunTTLMs( 1000 );
+    ScheduleDef window;
+    window._jobID         = "window.job";
+    window._kind          = ScheduleKind::Window;
+    window._windowStartMs = kNowMs;
+    window._windowEndMs   = kNowMs + 1000;
+    RunSink sink;
+    SW_EXPECT_FALSE( guarded.registerJob( window, ScheduledJobFunction::create<&RunSink::onRun>( &sink ) ) );
+    window._windowEndMs = kNowMs + 999;
+    SW_EXPECT_TRUE( guarded.registerJob( window, ScheduledJobFunction::create<&RunSink::onRun>( &sink ) ) );
+    guarded.shutdown();
+}
+
 /** @brief [ServiceTTLTest] 보존 기간이 지난 것만 지운다. 경계는 지난 것이고, 시각을 읽지 못하는 레코드는 남긴다 */
 SW_TEST_CASE( ServiceTTLTest, DeletesOnlyExpired )
 {

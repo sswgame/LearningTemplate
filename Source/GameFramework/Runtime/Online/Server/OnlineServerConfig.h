@@ -146,6 +146,9 @@ namespace sw
          *         우편 보관(30 일) + 받은 우편 보관(우편함 `_claimedRetentionDays`)보다 길게 둔다. */
         PROPERTY( Required )
         ServiceTTLConfig _mailSentTTL{};
+        /** @brief 예약 작업 차지 레코드(`service_schedule`)의 TTL 입니다. 기간 0 이면 지우지 않습니다. 가장 긴 구간 작업(시즌 정산 7 일)보다 길어야 합니다(짧으면 그 작업 등록이 진다). */
+        PROPERTY( Required )
+        ServiceTTLConfig _scheduleRunTTL{};
         /**
          * @brief TTL 색인 백필의 순차 배포 창(시간)입니다. 새 색인 판을 처음 본 뒤 이 시간 안에 끝난 백필 바퀴는 처음부터 다시 돈다.
          * @details 옛 판 서버가 모두 내려갈 때까지(배포가 끝날 때까지) 걸리는 시간보다 길게 둔다 — 창이 지난 뒤 시작한 마지막 바퀴가 옛 판이 색인 줄 없이 쓴 레코드를 줍는다.

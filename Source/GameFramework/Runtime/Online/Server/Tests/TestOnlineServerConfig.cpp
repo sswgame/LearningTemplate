@@ -43,6 +43,7 @@ SW_TEST_CASE( OnlineServerConfigTest, SettingsObjectFillsTheKitConfig )
 "_ledgerRetention": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
 "_closedReportTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
 "_mailSentTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
+"_scheduleRunTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
 "_listKit": [ { "_name": "testkit", "_settings": { "_port": 7777, "_bDebug": true, "_listMode": [ "duel", "squad" ] } } ] })",
                                                                          "inline" ) );
     const sw::OnlineServerConfig* pConfig = manager.getConfig<sw::OnlineServerConfig>();

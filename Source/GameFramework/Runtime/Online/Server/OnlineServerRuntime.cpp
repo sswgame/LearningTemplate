@@ -87,6 +87,7 @@ namespace sw
                 addBaseRule( listRule, ServiceReportStore::makeClosedTTLRule( config._closedReportTTL.getExpireAfterMs() ), config._closedReportTTL );
                 // 우편 자체는 우편함 만료 정리가 지운다. 보낸 기록은 멱등 창이라 따로 둔다
                 addBaseRule( listRule, ServiceMail::makeSentTTLRule( config._mailSentTTL.getExpireAfterMs() ), config._mailSentTTL );
+                addBaseRule( listRule, ServiceScheduler::makeRunTTLRule( config._scheduleRunTTL.getExpireAfterMs() ), config._scheduleRunTTL );
                 return listRule;
             }
 
@@ -460,7 +461,8 @@ namespace sw
         const uint64 serverID = static_cast<uint64>( parts._config._serverID );
         parts._bus            = make_unique<EphemeralServerBus>( nullptr, serverID ); // 라우터는 호스트가 연 뒤에 묶는다
         parts._busFront       = make_unique<ServerBus>( *parts._bus );
-        parts._scheduler.initialize( parts._store.get(), serverID ); // 보존 쓸기는 키트가 규칙을 올린 뒤 `initialize` 가 등록한다
+        parts._scheduler.initialize( parts._store.get(), serverID );
+        parts._scheduler.setRunTTLMs( parts._config._scheduleRunTTL.getExpireAfterMs() ); // 키트가 구간 작업을 등록하기 전이다 // 보존 쓸기는 키트가 규칙을 올린 뒤 `initialize` 가 등록한다
         parts._remoteConfig.requestReload( *parts._store );
         parts._nextRemoteConfigReloadMs = nowMs + Internal::kRemoteConfigReloadMs;
 

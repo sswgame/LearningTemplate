@@ -6,6 +6,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -66,6 +67,31 @@ namespace sw
                 return reader.hasOverflowed() == false;
             }
 
+            static const hashed_string& getExpiryTable()
+            {
+                static const hashed_string s_table{ "service_schedule_expiry" };
+                return s_table;
+            }
+
+            /** @brief 차지 레코드의 기준 시각입니다 — 시작과 끝 중 늦은 쪽(끝나지 않은 레코드는 시작). */
+            static int64 computeRunTimeMs( const RunRecord& record ) { return record._endMs > record._startMs ? record._endMs : record._startMs; }
+
+            /** @brief 차지 레코드를 쓰고 그 기준 시각의 TTL 색인 줄을 함께 넣습니다. 차지 · 끝 쓰기가 모두 이 함수를 지난다 — 끝을 적으면 늦은 줄이 하나 더 생긴다. */
+            static void stageRun( ServiceTransaction& inoutTransaction, string_view key, const RunRecord& record, uint64 expectedVersion )
+            {
+                inoutTransaction.put( ServiceScheduler::getTable(), key, encode( record ), expectedVersion );
+                inoutTransaction.put( getExpiryTable(), ServiceTTLRule::makeTTLIndexKey( computeRunTimeMs( record ), key ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+            }
+
+            [[nodiscard]] static bool readRunTimeMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                RunRecord run;
+                if ( decode( record._bytes, run ) == false )
+                    return false;
+                outTimeMs = computeRunTimeMs( run );
+                return true;
+            }
+
             static int64 floorDivide( int64 value, int64 divisor )
             {
                 const int64 quotient = value / divisor;
@@ -111,7 +137,7 @@ namespace sw
         claim._serverID = serverID;
         claim._startMs  = nowMs;
         ServiceTransaction transaction;
-        transaction.put( getTable(), key, ServiceSchedulerInternal::encode( claim ), expectedVersion );
+        ServiceSchedulerInternal::stageRun( transaction, key, claim, expectedVersion );
         ServiceCommitInfo        info;
         const ServiceStoreResult commitResult = connection.commit( transaction, &info );
         if ( commitResult == ServiceStoreResult::Ok )
@@ -136,7 +162,7 @@ namespace sw
         finished._endMs    = nowMs;
         finished._state    = bSucceeded ? ServiceSchedulerInternal::kStateSucceeded : ServiceSchedulerInternal::kStateFailed;
         ServiceTransaction transaction;
-        transaction.put( getTable(), ServiceSchedulerInternal::makeKey( run._jobID, run._occurrenceMs.count() ), ServiceSchedulerInternal::encode( finished ), run._runToken );
+        ServiceSchedulerInternal::stageRun( transaction, ServiceSchedulerInternal::makeKey( run._jobID, run._occurrenceMs.count() ), finished, run._runToken );
         return connection.commit( transaction );
     }
 } // namespace sw
@@ -147,6 +173,7 @@ namespace sw
         : _listJob{}
         , _serverID{ 0 }
         , _lastTickMs{ 0 }
+        , _runTTLMs{ 0 }
         , _store{}
     {
     }
@@ -169,11 +196,30 @@ namespace sw
         _store.bindStore( nullptr );
     }
 
+    ServiceTTLRule ServiceScheduler::makeRunTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule;
+        rule._table           = getTable();
+        rule._ttlIndexTable   = ServiceSchedulerInternal::getExpiryTable();
+        rule._expireAfterMs   = expireAfterMs;
+        rule._pfnReadTime     = &ServiceSchedulerInternal::readRunTimeMs;
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&ServiceSchedulerInternal::readRunTimeMs>();
+        rule._backfillVersion = 1;
+        return rule;
+    }
+
     bool ServiceScheduler::registerJob( const ScheduleDef& definition, const ScheduledJobFunction& function )
     {
         if ( function.isBound() == false || isValidDefinition( definition ) == false )
         {
             SW_LOG_WARNING_ID( "ServiceScheduler.IgnoredScheduledJobInvalid", "Ignored scheduled job '%#' — invalid schedule or no handler", definition._jobID );
+            return false;
+        }
+        const bool bWindowOutlivesRecord = definition._kind == ScheduleKind::Window && _runTTLMs > 0 && definition._windowEndMs - definition._windowStartMs >= _runTTLMs;
+        if ( bWindowOutlivesRecord )
+        {
+            // 구간이 열린 채 차지 레코드가 TTL 로 지워지면 같은 구간을 다시 돈다 - 구간은 레코드 수명보다 짧아야 한다
+            SW_LOG_ERROR_ID( "ServiceScheduler.WindowOutlivesRunRecord", "Scheduled job '%#' has a window longer than the run record TTL (%# ms) - raise _scheduleRunTTL", definition._jobID, _runTTLMs );
             return false;
         }
         Job& job        = _listJob.emplace_back();
