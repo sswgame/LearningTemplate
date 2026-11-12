@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.LintScope import LintScope, listRepoFiles, makeWholeScope, readTexts as readSourceTexts  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/RequiredNameFieldExceptions.json"
 kPropertyHead = re.compile(r"^[ \t]*PROPERTY\s*\(", re.M)
@@ -149,7 +150,7 @@ def findConstructorInitials(kept: str, code: str, className: str) -> dict[str, l
     return result
 
 
-def findProblems(mapHeader: dict[str, str], mapSource: dict[str, str], config: dict) -> list[str]:
+def findProblems(mapHeader: dict[str, str], mapSource: dict[str, str], config: dict, bWholeRepo: bool = True) -> list[str]:
     """mapHeader · mapSource: 경로 → 글(`.cpp` 는 헤더와 같은 폴더의 것만 본다)."""
     setType = set(config["_types"])
     tuplePrefix = tuple(config["_typePrefixes"])
@@ -178,24 +179,22 @@ def findProblems(mapHeader: dict[str, str], mapSource: dict[str, str], config: d
             setSeen.add(key)
             if key not in exceptions:
                 listProblem.append(f"{headerPath}:{line}: {className}::{name} = {literal.group(0)} — 데이터에 있어야 할 이름이면 기본값을 지우고 PROPERTY( Required ) + 데이터 파일에, 엔진 상수면 예외 표({kConfigPath})에 까닭과 함께")
-    for key in exceptions:
+    for key in exceptions if bWholeRepo else ():   # 낡은 예외는 저장소 전체를 봐야 안다
         if key not in setSeen:
             listProblem.append(f"{kConfigPath}: '{key}' 는 더 이상 위반이 아니다 — 표에서 지운다")
     return listProblem
 
 
-def readTexts(projectRoot: Path) -> tuple[dict[str, str], dict[str, str]]:
+def readTexts(projectRoot: Path, scope: LintScope) -> tuple[dict[str, str], dict[str, str]]:
+    """scope 의 파일이 있던 폴더(지운 파일 포함 — .cpp 를 지우면 헤더 칸의 생성자 초기값이 사라진다)의 헤더 · 본문. 헤더 칸의 판정은 같은 폴더까지만 본다(`findProblems`)."""
+    def isTarget(path: str) -> bool:
+        return path.startswith("Source/") and path.endswith((".h", ".cpp", ".inl")) and "Tests" not in path.split("/") and not path.endswith(".generated.h")
+
+    setFolder = {path.rpartition("/")[0] for path in (*scope.listFile, *scope.listRemoved) if isTarget(path)}
     mapHeader: dict[str, str] = {}
     mapSource: dict[str, str] = {}
-    for path in (projectRoot / "Source").rglob("*"):
-        if path.suffix not in (".h", ".cpp", ".inl") or "Tests" in path.parts or path.name.endswith(".generated.h"):
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
-            continue
-        relative = path.relative_to(projectRoot).as_posix()
-        if path.suffix == ".h":
+    for relative, text in readSourceTexts(projectRoot, [path for path in listRepoFiles(projectRoot) if isTarget(path) and path.rpartition("/")[0] in setFolder]):
+        if relative.endswith(".h"):
             if "PROPERTY" in text:
                 mapHeader[relative] = text
         else:
@@ -203,10 +202,10 @@ def readTexts(projectRoot: Path) -> tuple[dict[str, str], dict[str, str]]:
     return mapHeader, mapSource
 
 
-def checkRequiredNameFields(projectRoot: Path) -> list[str]:
+def checkRequiredNameFields(projectRoot: Path, scope: LintScope) -> list[str]:
     config = json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))
-    mapHeader, mapSource = readTexts(projectRoot)
-    return findProblems(mapHeader, mapSource, config)
+    mapHeader, mapSource = readTexts(projectRoot, scope)
+    return findProblems(mapHeader, mapSource, config, scope.bWholeRepo)
 
 
 def runSelfCheck() -> None:
@@ -240,7 +239,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runSelfCheck()
         print("[RequiredNameFields] self-check OK")
         return ExitCode.Passed
-    listProblem = checkRequiredNameFields(getProjectRoot())
+    listProblem = checkRequiredNameFields(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[RequiredNameFields] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")

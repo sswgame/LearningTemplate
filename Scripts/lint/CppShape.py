@@ -49,6 +49,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
+from lint.LintScope import LintScope, makeFileScope, makeWholeScope  # noqa: E402
 from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 
@@ -508,11 +509,11 @@ def checkStaticOwner(code: str, relative: str, exceptions: dict[str, str]) -> li
             continue
         counts: dict[str, int] = {}
         for signature in statics:
-            for owner in set(re.findall(r"\b([A-Z]\w*)\b", signature)) & owners - {name}:
+            for owner in sorted(set(re.findall(r"\b([A-Z]\w*)\b", signature)) & owners - {name}):
                 counts[owner] = counts.get(owner, 0) + 1
         if not counts:
             continue
-        owner, count = max(counts.items(), key=lambda item: item[1])
+        owner, count = max(sorted(counts.items()), key=lambda item: item[1])   # 같은 수면 이름 순 첫 것 — 집합 순서(해시)로 메시지가 실행마다 바뀌었다
         if count * 2 >= len(statics):
             problems.append((line, f"`{name}` 는 static 함수만 들고 그 함수 대부분({count}/{len(statics)})이 같은 헤더의 `{owner}` 를 다룬다 — `{owner}` 의 (static) 멤버로 합친다"
                                    f"(Helpers.md 주인 우선). 주인이 정말 없으면 {kExceptionsPath} 의 staticOwner 에 까닭과 함께 적는다"))
@@ -754,9 +755,13 @@ def inspectListedFile(projectRoot: Path, file: str) -> list[str]:
     return inspectFile(path, relative) if isTarget(relative) and path.exists() else []
 
 
-def checkCppShape(projectRoot: Path, listFile: Sequence[str]) -> list[str]:
-    """@p listFile 가운데 Source 의 C++ 파일을 보고 어긋남을 `경로:줄: 설명` 으로 돌려준다. 파일마다 정규식이 오래 돌아 프로세스로 나눈다."""
-    return flatMapInProcesses(functools.partial(inspectListedFile, projectRoot), listFile)
+def checkCppShape(projectRoot: Path, scope: LintScope) -> list[str]:
+    """scope 가운데 Source 의 C++ 파일을 보고 어긋남을 `경로:줄: 설명` 으로 돌려준다. 파일마다 정규식이 오래 돌아 프로세스로 나눈다.
+    저장소 전체일 때만 더는 없는 예외 자리를 센다(바뀐 파일만 보고 "쓰이지 않는다" 고 말할 수 없다)."""
+    listViolation = flatMapInProcesses(functools.partial(inspectListedFile, projectRoot), scope.listAbsolute(projectRoot, (".h", ".cpp")))
+    if scope.bWholeRepo:
+        listViolation += findStaleMultipleBaseExceptions(projectRoot) + findStaleStateMutatorExceptions(projectRoot)
+    return listViolation
 
 
 def runSelfCheck() -> int:
@@ -800,14 +805,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.self_check:
         return runSelfCheck()
     projectRoot = Path(__file__).resolve().parents[2]
-    if args.files:
-        listFile = args.files
-    else:
-        listFile = [str(path) for path in (projectRoot / "Source").rglob("*") if path.suffix in (".h", ".cpp")]
-    listViolation = checkCppShape(projectRoot, listFile)
-    if not args.files:
-        listViolation += findStaleMultipleBaseExceptions(projectRoot)
-        listViolation += findStaleStateMutatorExceptions(projectRoot)
+    listViolation = checkCppShape(projectRoot, makeFileScope(projectRoot, args.files) if args.files else makeWholeScope(projectRoot))
     if args.summary:
         counts: dict[str, int] = {}
         for line in listViolation:

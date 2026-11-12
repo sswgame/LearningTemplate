@@ -25,12 +25,13 @@ import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import Callable, Mapping, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.LintScope import LintScope, listRepoFiles, makeWholeScope  # noqa: E402
 
 kExtensions = (".h", ".hpp", ".inl", ".cpp", ".c", ".xxx")
 kSourceExtensions = (".cpp", ".c")
@@ -86,11 +87,12 @@ def makeEditorTier(table: dict) -> Callable[[str, bool], int | None]:
     return lambda relative, isIncluder: mapTier.get(getEditorLayerName(relative))
 
 
-def findProblems(module: LayerModule, mapSource: dict[str, str]) -> list[str]:
-    """`mapSource` 는 `Source/<root>` 기준 경로 → 글이다."""
+def findProblems(module: LayerModule, mapSource: Mapping[str, str], listCheck: Sequence[str] | None = None) -> list[str]:
+    """`mapSource` 는 `Source/<root>` 기준 경로 → 글이다. `listCheck`(없으면 모두)의 파일만 보고, 거쳐 가는 prelude 헤더는 `mapSource` 에서 찾는다."""
     head = module._root + "/"
     listProblem: list[str] = []
-    for relative, text in sorted(mapSource.items()):
+    for relative in sorted(mapSource) if listCheck is None else listCheck:
+        text = mapSource[relative]
         tier = module._findTier(relative, True)
         if tier is None:
             continue
@@ -128,16 +130,31 @@ def listModules(projectRoot: Path) -> list[LayerModule]:
     ]
 
 
-def readSources(projectRoot: Path, root: str) -> dict[str, str]:
-    moduleDir = projectRoot / "Source" / root
-    return {path.relative_to(moduleDir).as_posix(): path.read_text(encoding="utf-8", errors="replace")
-            for path in sorted(moduleDir.rglob("*")) if path.suffix in kExtensions and path.is_file()}
+class ModuleTexts(dict):
+    """`Source/<root>` 기준 경로 → 글. 처음 찾을 때 읽는다 — 커밋 훅은 바뀐 파일과 그것이 거쳐 가는 prelude 헤더만 읽는다."""
+
+    def __init__(self, moduleDir: Path, setRelative: set[str]) -> None:
+        super().__init__()
+        self._moduleDir = moduleDir
+        self._setRelative = setRelative
+
+    def __contains__(self, relative: object) -> bool:
+        return relative in self._setRelative
+
+    def __missing__(self, relative: str) -> str:
+        text = (self._moduleDir / relative).read_text(encoding="utf-8", errors="replace")
+        self[relative] = text
+        return text
 
 
-def checkLayerIncludes(projectRoot: Path) -> list[str]:
+def checkLayerIncludes(projectRoot: Path, scope: LintScope) -> list[str]:
     listProblem: list[str] = []
     for module in listModules(projectRoot):
-        listProblem.extend(findProblems(module, readSources(projectRoot, module._root)))
+        head = f"Source/{module._root}/"
+        mapSource = ModuleTexts(projectRoot / "Source" / module._root,
+                                {path[len(head):] for path in listRepoFiles(projectRoot) if path.startswith(head) and path.endswith(kExtensions)})
+        listCheck = sorted(path[len(head):] for path in scope.select((head,), kExtensions))
+        listProblem.extend(findProblems(module, mapSource, listCheck))
     return listProblem
 
 
@@ -177,7 +194,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runSelfCheck()
         print("[layer-includes] self-check OK")
         return ExitCode.Passed
-    listProblem = checkLayerIncludes(getProjectRoot())
+    listProblem = checkLayerIncludes(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[layer-includes] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")

@@ -39,6 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.ExitCode import ExitCode  # noqa: E402
 from lint.CppShape import findParamListEnd, kBodyOpen, matchBrace, stripCode  # noqa: E402
 from lint.Format import getModifiedCppFiles  # noqa: E402
+from lint.LintScope import LintScope  # noqa: E402
 from lint.MagicLiterals import isSourceFile, listSourceFiles, readStagedRenames  # noqa: E402
 
 
@@ -148,15 +149,17 @@ def findProblems(actual: dict[str, dict[str, int]], baseline: dict[str, dict[str
     return listProblem
 
 
-def checkResultTypes(projectRoot: Path, listFileArgument: Sequence[str]) -> list[str]:
-    """커밋 훅: staged C++ 파일의 래칫 검사입니다."""
-    listFile = [Path(path) for path in listFileArgument]
-    listSource = [path for path in listFile if isSourceFile(path.relative_to(projectRoot).as_posix())]
-    if not listSource:
-        return []
-    actual = countFiles(projectRoot, listSource)
-    return findProblems(actual, readBaseline(projectRoot), [path.relative_to(projectRoot).as_posix() for path in listSource], readStagedRenames(projectRoot),
-                        readCoreExemptions(projectRoot))
+def checkResultTypes(projectRoot: Path, scope: LintScope) -> list[str]:
+    """scope 의 C++ 파일의 래칫 검사입니다. 없는 파일의 기준선은 저장소 전체일 때만 센다."""
+    listRelative = [relative for relative in scope.select() if isSourceFile(relative)]
+    listProblem: list[str] = []
+    if listRelative:
+        actual = countFiles(projectRoot, [projectRoot / relative for relative in listRelative])
+        listProblem = findProblems(actual, readBaseline(projectRoot), listRelative, readStagedRenames(projectRoot), readCoreExemptions(projectRoot))
+    if scope.bWholeRepo:
+        setExisting = set(scope.listFile)
+        listProblem += [f"{path}: 없는 파일의 기준선 — `--ratchet` 으로 지운다" for path in sorted(readBaseline(projectRoot)) if path not in setExisting]
+    return listProblem
 
 
 def lowerBaseline(baseline: dict[str, dict[str, int]], actual: dict[str, dict[str, int]], listExisting: set[str]) -> dict[str, dict[str, int]]:

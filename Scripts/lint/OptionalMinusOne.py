@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.LintScope import LintScope, listRepoFiles, makeWholeScope, readTexts  # noqa: E402
 from lint.NamePathArguments import blankCommentsAndStrings  # noqa: E402
 
 kInt = r"(?:const\s+)?(?:sw::)?(?:u?int(?:8|16|32|64)|size_t|usize|isize|int)"
@@ -159,19 +160,16 @@ def findProblems(mapSource: dict[str, str]) -> list[str]:
     return sorted(mapByLine.values())
 
 
-def readSources(projectRoot: Path) -> dict[str, str]:
-    mapSource: dict[str, str] = {}
-    for pattern in ("*.cpp", "*.h", "*.inl"):
-        for path in (projectRoot / "Source").rglob(pattern):
-            try:
-                mapSource[path.relative_to(projectRoot).as_posix()] = path.read_text(encoding="utf-8")
-            except (UnicodeDecodeError, OSError):
-                continue
-    return mapSource
+def readSources(projectRoot: Path, scope: LintScope) -> dict[str, str]:
+    """scope 의 파일과 짝(같은 이름의 .h · .cpp · .inl) — 판정은 짝 안에서만 한다(`findProblems`)."""
+    kSuffixes = (".cpp", ".h", ".inl")
+    setStem = {path.rsplit(".", 1)[0] for path in scope.select(("Source",), kSuffixes)}
+    listPath = [path for path in listRepoFiles(projectRoot) if path.startswith("Source/") and path.endswith(kSuffixes) and path.rsplit(".", 1)[0] in setStem]
+    return dict(readTexts(projectRoot, listPath))
 
 
-def checkOptionalMinusOne(projectRoot: Path) -> list[str]:
-    return findProblems(readSources(projectRoot))
+def checkOptionalMinusOne(projectRoot: Path, scope: LintScope) -> list[str]:
+    return findProblems(readSources(projectRoot, scope))
 
 
 def runSelfCheck() -> None:
@@ -202,7 +200,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runSelfCheck()
         print("[OptionalMinusOne] self-check OK")
         return ExitCode.Passed
-    listProblem = checkOptionalMinusOne(getProjectRoot())
+    listProblem = checkOptionalMinusOne(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[OptionalMinusOne] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")

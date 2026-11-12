@@ -39,6 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.LintScope import LintScope, makeWholeScope, readTexts  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/PlatformChains.json"
 kExtensions = (".h", ".cpp", ".inl")
@@ -91,17 +92,8 @@ def findProblems(listSource: Iterable[tuple[str, str]], table: dict) -> list[str
     return listProblem
 
 
-def readSources(projectRoot: Path) -> list[tuple[str, str]]:
-    listSource: list[tuple[str, str]] = []
-    for path in (projectRoot / "Source").rglob("*"):
-        if path.suffix in kExtensions:
-            try:
-                text = path.read_text(encoding="utf-8")
-            except (UnicodeDecodeError, OSError):
-                continue
-            if "SW_PLATFORM_" in text:
-                listSource.append((path.relative_to(projectRoot).as_posix(), text))
-    return listSource
+def readSources(projectRoot: Path, scope: LintScope) -> list[tuple[str, str]]:
+    return [(path, text) for path, text in readTexts(projectRoot, scope.select(("Source",), kExtensions)) if "SW_PLATFORM_" in text]
 
 
 # 여러 줄에 걸친 `if(` 도 사슬의 짝을 맞추려고 여는 줄만 본다 — 닫는 괄호가 없는 조건은 플랫폼 검사로 읽히지 않아 건너뛴다.
@@ -164,19 +156,13 @@ def findPythonProblemsInText(path: str, text: str) -> list[str]:
             for lineNumber, line in enumerate(text.split("\n"), 1) if kPythonHostQuery.search(line.split("#")[0])]
 
 
-def readBuildSources(projectRoot: Path) -> list[tuple[str, str]]:
-    """CMake · 스크립트 글(ThirdParty · build 밖)."""
-    listSource: list[tuple[str, str]] = []
-    listPath = [projectRoot / "CMakeLists.txt", *(projectRoot / "cmake").rglob("*.cmake"),
-                *(projectRoot / "Source").rglob("CMakeLists.txt"), *(projectRoot / "Scripts").rglob("*.py")]
-    for path in listPath:
-        if not path.is_file() or "__pycache__" in path.parts:
-            continue
-        try:
-            listSource.append((path.relative_to(projectRoot).as_posix(), path.read_text(encoding="utf-8")))
-        except (UnicodeDecodeError, OSError):
-            continue
-    return listSource
+def readBuildSources(projectRoot: Path, scope: LintScope) -> list[tuple[str, str]]:
+    """CMake · 스크립트 글(뿌리 CMakeLists.txt, cmake/*.cmake, Source 의 CMakeLists.txt, Scripts/*.py)."""
+    listPath = [path for path in scope.listFile
+                if path == "CMakeLists.txt" or (path.startswith("cmake/") and path.endswith(".cmake"))
+                or (path.startswith("Source/") and path.endswith("/CMakeLists.txt"))
+                or (path.startswith("Scripts/") and path.endswith(".py") and "/__pycache__/" not in path)]
+    return readTexts(projectRoot, listPath)
 
 
 def findBuildProblems(listSource: Iterable[tuple[str, str]]) -> list[str]:
@@ -189,9 +175,9 @@ def findBuildProblems(listSource: Iterable[tuple[str, str]]) -> list[str]:
     return listProblem
 
 
-def checkPlatformChains(projectRoot: Path) -> list[str]:
+def checkPlatformChains(projectRoot: Path, scope: LintScope) -> list[str]:
     table = json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))
-    return findProblems(readSources(projectRoot), table) + findBuildProblems(readBuildSources(projectRoot))
+    return findProblems(readSources(projectRoot, scope), table) + findBuildProblems(readBuildSources(projectRoot, scope))
 
 
 def runSelfCheck() -> None:
@@ -233,7 +219,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runSelfCheck()
         print("[PlatformChains] self-check OK")
         return ExitCode.Passed
-    listProblem = checkPlatformChains(getProjectRoot())
+    listProblem = checkPlatformChains(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[PlatformChains] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")

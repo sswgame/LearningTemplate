@@ -27,6 +27,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.FactCache import loadFacts  # noqa: E402
+from lint.LintScope import LintScope, listRepoFiles, makeWholeScope  # noqa: E402
 from generate.TargetLayers import readServerUnbuiltFolders  # noqa: E402 — 짓지 않는 엔진 폴더의 정본은 BuildLayout.cmake 한 곳이다
 
 kTablePath = "Config/Engine/ClientOnlyTypes.generated.json"
@@ -39,14 +41,12 @@ def isClientOnlySource(relativePath: str, listUnbuiltFolder: list[str]) -> bool:
 
 
 def collectTypeNames(projectRoot: Path) -> list[str]:
+    """클라이언트 전용 헤더의 리플렉션 형식 이름 — 내용이 바뀐 헤더만 다시 읽는다(`lint/FactCache.py`, 못 읽는 글은 include-order 가 막는다)."""
     listUnbuiltFolder = readServerUnbuiltFolders(projectRoot)
-    setName: set[str] = set()
-    for path in (projectRoot / "Source").rglob("*.h"):
-        relativePath = path.relative_to(projectRoot).as_posix()
-        if "/Tests/" in relativePath or not isClientOnlySource(relativePath, listUnbuiltFolder):
-            continue
-        setName.update(kReflectedType.findall(path.read_text(encoding="utf-8")))
-    return sorted(setName)
+    listPath = [path for path in listRepoFiles(projectRoot)
+                if path.startswith("Source/") and path.endswith(".h") and "/Tests/" not in path and isClientOnlySource(path, listUnbuiltFolder)]
+    mapFact = loadFacts(projectRoot, "client-only-types", [__file__], listPath, lambda _, text: kReflectedType.findall(text))
+    return sorted({name for listName in mapFact.values() for name in listName})
 
 
 def makeTableText(listName: list[str]) -> str:
@@ -57,8 +57,10 @@ def makeTableText(listName: list[str]) -> str:
     return json.dumps(table, ensure_ascii=False, indent=4) + "\n"
 
 
-def checkClientOnlyTypes(projectRoot: Path) -> list[str]:
-    """표가 소스와 같으면 빈 목록입니다(커밋 훅)."""
+def checkClientOnlyTypes(projectRoot: Path, scope: LintScope) -> list[str]:
+    """표가 소스와 같으면 빈 목록입니다. 표는 저장소 전체로 짓고(색인), 커밋 훅은 헤더가 바뀌었을 때만 돈다."""
+    if not scope.bWholeRepo and not scope.touches(("Source",), (".h",)):
+        return []
     tablePath = projectRoot / kTablePath
     expected = makeTableText(collectTypeNames(projectRoot))
     actual = tablePath.read_text(encoding="utf-8") if tablePath.is_file() else ""
@@ -73,7 +75,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     arguments = parser.parse_args(argv)
     projectRoot = getProjectRoot()
     if arguments.check:
-        listProblem = checkClientOnlyTypes(projectRoot)
+        listProblem = checkClientOnlyTypes(projectRoot, makeWholeScope(projectRoot))
         for problem in listProblem:
             print(f"  - {problem}")
         print(f"[ClientOnlyTypes] {'FAIL' if listProblem else 'OK'}")

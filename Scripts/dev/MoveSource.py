@@ -17,9 +17,11 @@ rename-symbol: 낱말 경계로 바꾼다(부분 일치 없음). 새 이름이 �
 from __future__ import annotations
 
 import argparse
+import io
 import re
 import sys
 import time
+import tokenize
 from pathlib import Path
 
 from common.ExitCode import ExitCode
@@ -34,6 +36,9 @@ kBareInclude = re.compile(r'^(\s*#\s*include\s*")([^"/]+)(")', re.M)
 
 # 규칙 문서는 "쓰지 말 것" 예로 옛 이름을 일부러 든다 — 이름 바꾸기가 그 예까지 바꾸면 규칙이 거꾸로 된다.
 kNeverRewrite = ("docs/agents/", "docs/04_CodingGuidelines.md")
+# 이름 바꾸기만 건너뛰는 곳: 린트의 금지 · 옛 이름 표(데이터)는 옛 이름을 일부러 적는다. 파일 옮기기(경로 표)는 그대로 고친다.
+# 스크립트의 시험 글은 폴더가 아니라 형식으로 지킨다 — Python 은 코드 토큰만 바꾼다(`rewritePythonCode`).
+kNeverRename = ("Config/Rules/Lint/",)
 
 # C 계열 소스의 주석 · 문자열 · 문자 리터럴. rename-symbol 은 문자열 안을 기본으로 건너뛴다 — 문자열은 파일 매직("OggS") · JSON 키 · 내보내기
 # 기호 · 데이터 이름처럼 바깥이 정한 철자가 많아, 약어 일괄 변경(1dafbae0c9)이 그 안까지 바꿔 .ogg 디코드 · 구매 응답 · 머티리얼 깃발을 깨뜨렸다.
@@ -65,6 +70,36 @@ def rewriteOutsideStrings(text: str, rewrite) -> tuple[str, int]:
     return "".join(listPart), skippedCount
 
 
+def rewritePythonCode(text: str, rewrite) -> tuple[str, int]:
+    """
+    Python 글에서 코드의 이름 토큰에만 @p rewrite 를 적용한다(문자열 · f-문자열의 글 부분 · 주석은 그대로). 건너뛴 것 가운데 바뀌었을 것의 수를 함께 돌려준다.
+    스크립트의 문자열은 시험 글(`--self-check` 사례) · 바깥 철자라, 금지 명사 이전(1692df1e3a)이 NamingWords 시험 글 `hasPendingWork` 를 바꿔 자체 시험이 늘 졌다.
+    """
+    listLineStart = [0]
+    for line in text.splitlines(keepends=True):
+        listLineStart.append(listLineStart[-1] + len(line))
+    kLiteral = {tokenize.STRING, tokenize.COMMENT} | ({tokenize.FSTRING_MIDDLE} if hasattr(tokenize, "FSTRING_MIDDLE") else set())
+    listPart: list[str] = []
+    skippedCount = 0
+    position = 0
+    for token in tokenize.generate_tokens(io.StringIO(text).readline):
+        if token.type != tokenize.NAME and token.type not in kLiteral:
+            continue
+        start = listLineStart[token.start[0] - 1] + token.start[1]
+        end = listLineStart[token.end[0] - 1] + token.end[1]
+        original = text[start:end]
+        if token.type == tokenize.NAME:
+            replaced = rewrite(original)
+        else:
+            skippedCount += rewrite(original) != original
+            replaced = original
+        listPart.append(text[position:start])
+        listPart.append(replaced)
+        position = end
+    listPart.append(text[position:])
+    return "".join(listPart), skippedCount
+
+
 def checkRewriteOutsideStrings() -> None:
     """문자열 건너뛰기의 자체 확인 — 코드 · 주석은 바뀌고 일반 · 원시 문자열과 주석 속 따옴표는 지킨다."""
     rename = lambda part: re.sub(r"\bOgg\b", "OGG", part)  # noqa: E731
@@ -72,6 +107,10 @@ def checkRewriteOutsideStrings() -> None:
     rewritten, skippedCount = rewriteOutsideStrings(text, rename)
     assert rewritten == 'OGG a; // OGG "x\nf( "Ogg", R"(Ogg)", \'"\' ); /* OGG */ OGG b;', rewritten
     assert skippedCount == 2, skippedCount
+    python = "def runOgg():  # Ogg\n    return f\"Ogg {Ogg}\" + 'Ogg' + Ogg\n"
+    rewritten, skippedCount = rewritePythonCode(python, rename)
+    assert rewritten == "def runOgg():  # Ogg\n    return f\"Ogg {OGG}\" + 'Ogg' + OGG\n", rewritten   # 이름 토큰만 — 문자열 · 주석의 시험 글은 지킨다
+    assert skippedCount == 3, skippedCount
 
 
 def listTrackedText(root: Path) -> list[Path]:
@@ -80,6 +119,11 @@ def listTrackedText(root: Path) -> list[Path]:
         raise RuntimeError(f"git ls-files 실패: {result.stderr.strip()}")
     return [root / line for line in result.stdout.splitlines()
             if Path(line).suffix.lower() in kTextSuffix and not line.startswith(kNeverRewrite) and (root / line).is_file()]
+
+
+def listRenameFiles(root: Path) -> list[Path]:
+    """이름 바꾸기가 고칠 파일 — `kNeverRename`(린트 자체 시험 · 금지 이름 표) 밖."""
+    return [path for path in listTrackedText(root) if not path.relative_to(root).as_posix().startswith(kNeverRename)]
 
 
 def readText(path: Path) -> str:
@@ -258,9 +302,10 @@ def mainRename(argv: list[str]) -> int:
     listSkipped: list[str] = []
 
     def rewriteFile(path: Path, text: str, rewrite) -> str:
-        if args.include_strings or path.suffix.lower() not in kCLikeSuffix:
+        suffix = path.suffix.lower()
+        if args.include_strings or (suffix not in kCLikeSuffix and suffix != ".py"):
             return rewrite(text)
-        rewritten, skippedCount = rewriteOutsideStrings(text, rewrite)
+        rewritten, skippedCount = (rewritePythonCode if suffix == ".py" else rewriteOutsideStrings)(text, rewrite)
         if skippedCount:
             listSkipped.append(f"{path.relative_to(root).as_posix()}({skippedCount})")
         return rewritten
@@ -280,7 +325,7 @@ def mainRename(argv: list[str]) -> int:
 
         changedCount = 0
         listChanged: list[Path] = []
-        for path in listTrackedText(root):
+        for path in listRenameFiles(root):
             text = readText(path)
             rewritten = rewriteFile(path, text, rewriteRegex)
             if rewritten != text:
@@ -291,7 +336,7 @@ def mainRename(argv: list[str]) -> int:
         print(f"[rename-symbol] {changedCount} 파일" + (" (dry-run)" if args.dry_run else ""))
         reportSkipped()
         return ExitCode.Passed if args.dry_run else formatChanged(root, listChanged)
-    listFile = [path for path in listTrackedText(root) if path.suffix.lower() in kCppSuffix | {".xxx", ".natvis", ".txt", ".cmake"}]
+    listFile = [path for path in listRenameFiles(root) if path.suffix.lower() in kCppSuffix | {".xxx", ".natvis", ".txt", ".cmake"}]
     mapText = {path: readText(path) for path in listFile}
     bClash = False
     for old, new in listPair:

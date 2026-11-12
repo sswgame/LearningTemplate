@@ -26,6 +26,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.FactCache import loadFacts  # noqa: E402
+from lint.LintScope import LintScope, listRepoFiles, makeWholeScope  # noqa: E402
 
 kExtensions = (".hlsl", ".hlsli")
 kCommentPattern = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
@@ -89,9 +91,11 @@ def findFirstKill(body: str, setKill: set[str]) -> int:
 
 
 def findProblems(listSource: Iterable[tuple[str, str]]) -> list[str]:
-    listFunction: list[tuple[str, str, str]] = []
-    for path, text in listSource:
-        listFunction.extend(collectFunctions(path, text))
+    return findProblemsInFunctions([function for path, text in listSource for function in collectFunctions(path, text)])
+
+
+def findProblemsInFunctions(listFunction: list[tuple[str, str, str]]) -> list[str]:
+    """(경로, 이름, 몸) 목록 — 버리기 · 미분을 부르는 함수 닫힘은 파일을 건너므로 셰이더 전체를 넘긴다."""
     setDerivative = closeOver(listFunction, kDerivativePattern)
     setKill = closeOver(listFunction, kKillPattern)
     listProblem: list[str] = []
@@ -109,20 +113,18 @@ def findProblems(listSource: Iterable[tuple[str, str]]) -> list[str]:
     return listProblem
 
 
-def readSources(projectRoot: Path) -> list[tuple[str, str]]:
-    listSource: list[tuple[str, str]] = []
-    for root in (projectRoot / "Content", projectRoot / "Source"):
-        for path in root.rglob("*"):
-            if path.suffix in kExtensions and "ThirdParty" not in path.parts:
-                try:
-                    listSource.append((path.relative_to(projectRoot).as_posix(), path.read_text(encoding="utf-8")))
-                except (UnicodeDecodeError, OSError):
-                    continue
-    return listSource
+def readFunctions(projectRoot: Path) -> list[tuple[str, str, str]]:
+    """Content · Source 의 셰이더 함수 전체 — 내용이 바뀐 파일만 다시 읽는다(`FactCache`)."""
+    listPath = [path for path in listRepoFiles(projectRoot)
+                if path.startswith(("Content/", "Source/")) and path.endswith(kExtensions) and "ThirdParty" not in path.split("/")]
+    mapFact = loadFacts(projectRoot, "shader-kill-order", [__file__], listPath, lambda path, text: [[name, body] for _, name, body in collectFunctions(path, text)])
+    return [(path, name, body) for path, listFunction in mapFact.items() for name, body in listFunction]
 
 
-def checkShaderKillOrder(projectRoot: Path) -> list[str]:
-    return findProblems(readSources(projectRoot))
+def checkShaderKillOrder(projectRoot: Path, scope: LintScope) -> list[str]:
+    if not scope.bWholeRepo and not scope.touches(("Content", "Source"), kExtensions):
+        return []
+    return findProblemsInFunctions(readFunctions(projectRoot))
 
 
 def runSelfCheck() -> None:
@@ -147,7 +149,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runSelfCheck()
         print("[ShaderKillOrder] self-check OK")
         return ExitCode.Passed
-    listProblem = checkShaderKillOrder(getProjectRoot())
+    listProblem = checkShaderKillOrder(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[ShaderKillOrder] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")

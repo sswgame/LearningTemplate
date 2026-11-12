@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.LintScope import LintScope, makeWholeScope, readTexts  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/NamePathArguments.json"
 kCommentOrString = re.compile(r"//[^\n]*|/\*.*?\*/|\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'", re.S)
@@ -87,24 +88,16 @@ def findProblems(listSource: Iterable[tuple[str, str]], config: dict) -> list[st
     return listProblem
 
 
-def readSources(projectRoot: Path) -> list[tuple[str, str]]:
-    listSource: list[tuple[str, str]] = []
-    for path in (projectRoot / "Source").rglob("*"):
-        if path.suffix not in (".cpp", ".h", ".inl"):
-            continue
-        try:
-            listSource.append((path.relative_to(projectRoot).as_posix(), path.read_text(encoding="utf-8")))
-        except (UnicodeDecodeError, OSError):
-            continue
-    return listSource
+def readSources(projectRoot: Path, scope: LintScope) -> list[tuple[str, str]]:
+    return readTexts(projectRoot, scope.select(("Source",), (".cpp", ".h", ".inl")))
 
 
 def readConfig(projectRoot: Path) -> dict:
     return json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))
 
 
-def checkNamePathArguments(projectRoot: Path) -> list[str]:
-    return findProblems(readSources(projectRoot), readConfig(projectRoot))
+def checkNamePathArguments(projectRoot: Path, scope: LintScope) -> list[str]:
+    return findProblems(readSources(projectRoot, scope), readConfig(projectRoot))
 
 
 def runSelfCheck() -> None:
@@ -127,7 +120,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runSelfCheck()
         print("[NamePathArguments] self-check OK")
         return ExitCode.Passed
-    listProblem = checkNamePathArguments(getProjectRoot())
+    listProblem = checkNamePathArguments(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[NamePathArguments] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")

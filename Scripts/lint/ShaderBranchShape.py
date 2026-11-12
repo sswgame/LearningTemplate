@@ -26,7 +26,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from lint.ShaderKillOrder import kCommentPattern, kPreprocessorPattern, readSources  # noqa: E402
+from lint.LintScope import LintScope, makeWholeScope, readTexts  # noqa: E402
+from lint.ShaderKillOrder import kCommentPattern, kExtensions, kPreprocessorPattern  # noqa: E402
 
 kIfPattern = re.compile(r"\bif\s*\(")
 kElsePattern = re.compile(r"\s*else\b")
@@ -129,8 +130,8 @@ def findProblems(listSource: Iterable[tuple[str, str]]) -> list[str]:
     return listProblem
 
 
-def checkShaderBranchShape(projectRoot: Path) -> list[str]:
-    return findProblems(readSources(projectRoot))
+def checkShaderBranchShape(projectRoot: Path, scope: LintScope) -> list[str]:
+    return findProblems(readTexts(projectRoot, scope.select(("Content", "Source"), kExtensions, ("ThirdParty",))))
 
 
 def runSelfCheck() -> None:
@@ -157,7 +158,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runSelfCheck()
         print("[ShaderBranchShape] self-check OK")
         return ExitCode.Passed
-    listProblem = checkShaderBranchShape(getProjectRoot())
+    listProblem = checkShaderBranchShape(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[ShaderBranchShape] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")

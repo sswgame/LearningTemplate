@@ -17,6 +17,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from lint.LintScope import LintScope, makeWholeScope
+
 kPattern = re.compile(
     r'ImGui::(InputInt|InputInt2|InputInt3|InputInt4|InputFloat|InputFloat2|InputFloat3|InputFloat4|InputDouble|InputText|InputTextMultiline|InputTextWithHint|InputScalar|'
     r'DragFloat|DragFloat2|DragFloat3|DragFloat4|DragInt|DragInt2|DragInt3|DragInt4|DragScalar|SliderFloat|SliderFloat2|SliderFloat3|SliderFloat4|SliderInt|'
@@ -29,10 +31,10 @@ def isEditorFile(relative: str) -> bool:
     return relative.startswith(kEditorRoots) or "/Editor/" in relative and relative.startswith("Source/GameFramework/Kits/")
 
 
-def checkEditorWidgetLabels(projectRoot: Path, listFile: list[str]) -> list[str]:
-    """@p listFile 가운데 에디터 C++ 파일이 ImGui 입력 위젯에 보이는 이름표를 주면 그 줄을 돌려준다."""
+def checkEditorWidgetLabels(projectRoot: Path, scope: LintScope) -> list[str]:
+    """scope 가운데 에디터 C++ 파일이 ImGui 입력 위젯에 보이는 이름표를 주면 그 줄을 돌려준다."""
     listViolation: list[str] = []
-    for file in listFile:
+    for file in scope.listAbsolute(projectRoot, (".cpp",)):
         path = Path(file).resolve()
         try:
             relative = path.relative_to(projectRoot).as_posix()
@@ -51,8 +53,7 @@ def checkEditorWidgetLabels(projectRoot: Path, listFile: list[str]) -> list[str]
 
 def main(argv: list[str] | None = None) -> int:  # noqa: ARG001 — `lint editor-widget-labels` 가 인자 목록을 넘긴다
     projectRoot = Path(__file__).resolve().parents[2]
-    listFile = [str(path) for root in ("Source/Editor", "Source/GameFramework") for path in (projectRoot / root).rglob("*.cpp")]
-    listViolation = checkEditorWidgetLabels(projectRoot, listFile)
+    listViolation = checkEditorWidgetLabels(projectRoot, makeWholeScope(projectRoot))
     for line in listViolation:
         print(line)
     print(f"[EditorWidgetLabels] {len(listViolation)} violation(s)")
