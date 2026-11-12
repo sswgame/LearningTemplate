@@ -50,13 +50,6 @@
 - 제안: 실패하면 들어올 때 크기로 `outListIndex` 를 되돌린다. 다리 후보에 모서리 원뿔 검사를 더하고 귀 후보를 오목 꼭짓점 목록으로 좁힌다.
 - 확인: 바깥 사각형 + 구멍 둘(같은 바깥 꼭짓점을 고르는 배치)로 `triangulate` 가 true 이고 넓이 합이 맞는지. 테스트는 구멍 1 개까지만 있다.
 
-#### C-5 `SpinLock` 이 백오프 없는 순수 스핀인데 그 안에서 힙 할당 · 맵 삽입 · 사용자 생성자가 돈다
-- 분류: 성능 · 확신: 코드 확인, 영향은 측정 필요
-- 근거: `Source/Core/Concurrency/SpinLock.h:39-48` 은 `cpuPause` 만 도는 TTAS 다. 구간 안: `Source/Core/Event/EventDispatcher.h:117-145`(아레나 할당 · 이벤트 복사 · `unordered_map::emplace`), `Source/Core/Task/TaskNode.h:247-268`(`make_unique<vector>` · `push_back`), `Source/Core/Memory/LifetimeScope.h:146-159`(`T` 생성자). 쥔 스레드가 선점되면 기다리는 쪽 전부가 퀀텀 동안 코어를 태운다(Android big.LITTLE 에서 커진다).
-- 상용 엔진: 언리얼은 `UE::FMutex`(짧게 스핀한 뒤 주소 대기로 잠드는 1 바이트 잠금)로 옮겼다.
-- 제안: `SpinLock` 을 "N 번 스핀 뒤 `Futex` 로 잠드는" 적응형으로 바꾼다(형식 하나로 40 여 사용처가 함께 고쳐진다). 할당은 잠금 밖으로 뺀다.
-- 확인: 코어 수보다 스레드가 많은 구성에서 생산자 8 개가 문자열 이벤트를 `push` 하는 벤치, Tracy 잠금 구간.
-
 #### C-6 출하 빌드의 전역 할당기가 CRT `malloc` 그대로다
 - 분류: 성능 / 구조 · 확신: 코드 확인, 병목 여부는 측정 필요
 - 근거: `Source/Core/Memory/Memory.cpp:224-234`(`::malloc`) · `:148-158`. 스레드 캐시 · 크기 등급 할당기가 없고 `LinearAllocator` · `PoolAllocator` 사용처는 13 파일이다. NEXT 의 "메모리 풀은 측정 뒤" 결정과 같은 줄에 선다 — 이 항목은 그 측정의 대상과 방법이다.
