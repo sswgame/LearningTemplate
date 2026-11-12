@@ -439,13 +439,6 @@
 
 ### 장르 키트 · 게임 샘플
 
-#### K-3 복셀 세이브가 블록 id 가 아니라 카탈로그 순서 번호(uint8)를 적는다
-- 분류: 결함(세이브 호환) · 확신: 확인
-- 근거: `Source/GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.cpp:135-194` — 런 길이로 `VoxelBlockIndex` 를 그대로 쓰고 읽을 때는 `block <= blockLimit` 만 본다. 번호는 "읽은 순서"(`Catalog/VoxelBlock.h:25, 77`)다. `blocks.xml` 중간에 블록을 넣으면 옛 세이브가 오류 없이 다른 블록으로 읽힌다. 같은 저장소의 `RTSWorld` · `CitySimulation` · `FarmField` 는 카탈로그 id 로 적는다.
-- 상용 엔진: 마인크래프트 1.13+ 는 청크마다 이름 팔레트와 팔레트 번호를 쓴다.
-- 제안: 세이브 머리에 팔레트(이 세이브의 번호 → 블록 id)를 한 번 쓰고 읽을 때 지금 카탈로그 번호로 다시 매긴다. 블록 256 종 상한도 같은 자리에서 넓힌다.
-- 확인: `VoxelWorldTest.SaveSurvivesCatalogReorder`.
-
 #### K-4 (보강) 키트 규칙 설정을 게임이 C++ 기본값으로 만든다(데이터 파일이 없다)
 - 분류: 구조 · 확신: 확인 — DesignBacklog "데이터 구동 구조 후보 판별" 5 번의 구체 근거
 - 근거: `RTSSettings{}`(`Source/Games/StarSkirmish/SkirmishMatch.cpp:64`, `FrontierSkirmishGameModeComponent.cpp:84`), `CitySettings{}`(`FrontierCityGameModeComponent.cpp:75`), `CreatureTownSettings{}`(`MeadowTownGameModeComponent.cpp:160`), `SRPGSettings{}` · `PlatformerSettings{}`(Empty KitDemo), `CoasterPhysicsParams{}`(`ParkGameModeComponent.cpp:296-297`). 구조체는 `PROPERTY( Min · Max )` 까지 갖췄는데 값을 줄 데이터 길이 없다. `ThemeParkSettings`(`ThemePark.h:126`)는 리플렉션도 범위 검사도 없고 `_noArrivalEntryFee` · `_arrivalRatingScale` 이 분모다(`ThemePark.cpp:301-302`). 게임 쪽 리터럴: 슈터 적 체력 곡선(`ShooterGameModeComponent.cpp:428-431`), 복셀 광석 확률(`VoxelGameModeComponent.cpp:229-241`).
