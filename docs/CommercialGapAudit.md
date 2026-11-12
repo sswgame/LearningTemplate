@@ -412,13 +412,6 @@
 - 제안: 네 값을 `PhysicsSettings`(데이터)로 옮기고 없으면 로드 오류로 둔다. 할당자는 폴백형으로 바꾸되 폴백이 일어난 스텝을 카운터 · 경고로 올린다.
 - 확인: 단위 `PhysicsScene3DTest.LargeActivePileDoesNotAbort`(작은 할당자 설정으로 재현), 감시 값 `Physics.TempAllocator.peakBytes`.
 
-#### S-3 오디오 클립 캐시에 퇴출이 없다
-- 분류: 구조(누수 모양) · 확신: 확인
-- 근거: `Source/Engine/Audio/AudioClip.cpp:363-369` 가 맵에 더하기만 하고, 지우는 길은 `clear()`(`:266-270`) 하나인데 호출처가 없다. 한 번 재생한 소리의 float PCM 이 프로세스 끝까지 남는다. `Config/Engine/MemoryBudget.json` 의 Audio 256 MB 는 넘어도 줄일 길이 없다.
-- 상용 엔진: 언리얼은 Sound Wave 로딩 방식(Retain · Prime · LoadOnDemand)과 스트림 캐시 한도, 유니티는 클립별 Load Type 과 `UnloadUnusedAssets`.
-- 제안: 캐시 엔트리를 참조 수(이벤트 라이브러리 · 재생 중 보이스)로 잡고 0 이 된 것을 예산 기준 LRU 로 퇴출한다.
-- 확인: 단위 `AudioClipCacheTest.EvictsUnreferencedClipsOverBudget`, 감시 값 `Audio.ClipCache.bytes`.
-
 #### S-5 2D 블렌드 스페이스가 역거리 가중이라 표본 전부가 늘 켜진다
 - 분류: 성능 + 품질 · 확신: 확인
 - 근거: `Source/Engine/Animation/Graph/BlendSpace.cpp:46-81` — 표본 위에 정확히 있지 않으면 모든 표본의 가중치가 0 보다 크다. `Source/Engine/Animation/Component/SkeletalAnimatorComponent.cpp:1321-1332` 는 가중치가 0 보다 크면 샘플하므로 표본 N 개의 클립을 평가마다 전부 샘플 · 블렌드한다. 알림 기본 모드가 `All`(`AnimationGraphAsset.h:99`)이라 표본 전부가 알림을 낸다. 두 축의 단위를 정규화하지 않아 한 축이 거리를 지배한다.
