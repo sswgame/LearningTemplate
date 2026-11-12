@@ -1,6 +1,6 @@
 /**
  * @file TestRHIBackendSupport.cpp
- * @brief 네 백엔드가 함께 쓰는 보조 자료구조(`RHI/Backend`) 테스트 — 해제 큐의 지연과 펜스, 핸들 표의 세대 무효화, 셰이더 요청 해석, 상수 버퍼 링 거울, 추적 상태 전이입니다.
+ * @brief 네 백엔드가 함께 쓰는 보조 자료구조(`RHI/Backend`) 테스트 — 해제 큐의 지연과 펜스, bindless 등록표의 주인별 해제, 핸들 표의 세대 무효화, 셰이더 요청 해석, 상수 버퍼 링 거울, 추적 상태 전이입니다.
  */
 #include "pch.h"
 
@@ -9,6 +9,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
@@ -98,9 +99,9 @@ SW_TEST_CASE( RHIReleaseQueueTest, ConcurrentTicksRunEachCallbackOnce )
  */
 SW_TEST_CASE( RHIBindlessRegistryTest, DefersReuseAndRejectsDoubleRelease )
 {
-    RHIBindlessRegistry<uint64> registry( 2 );
-    const RHIDescriptorIndex    first  = registry.allocate( 11 );
-    const RHIDescriptorIndex    second = registry.allocate( 22 );
+    RHIBindlessRegistry<RHIBufferHandle, RHIBindlessBufferOwnerOf> registry( 2 );
+    const RHIDescriptorIndex                                       first  = registry.allocate( 11 );
+    const RHIDescriptorIndex                                       second = registry.allocate( 22 );
     SW_EXPECT_EQUAL( 0u, first );
     SW_EXPECT_EQUAL( 1u, second );
     SW_EXPECT_EQUAL( kInvalidDescriptorIndex, registry.allocate( 33 ) ); // 상한
@@ -121,12 +122,101 @@ SW_TEST_CASE( RHIBindlessRegistryTest, DefersReuseAndRejectsDoubleRelease )
     SW_EXPECT_EQUAL( second, registry.allocate( 55 ) );
 
     uint32 releasedCount{ 0 };
-    registry.releaseIf( RHIBindlessReuse::Immediately, []( uint64 value )
-    { return value == 55; },
-                        [&releasedCount]( RHIDescriptorIndex )
+    registry.releaseBuffer( RHIBindlessReuse::Immediately, 55, [&releasedCount]( RHIDescriptorIndex )
     { ++releasedCount; } );
     SW_EXPECT_EQUAL( 1u, releasedCount );
     SW_EXPECT_FALSE( registry.isLive( second ) );
+}
+
+namespace
+{
+    /** @brief 버퍼 · 텍스처 어느 쪽이든 주인으로 드는 칸(DX12 · GL 의 SRV/UAV 기록과 같은 모양)입니다. */
+    struct TestBindlessRecord
+    {
+        RHIBufferHandle  _buffer{ 0 };
+        RHITextureHandle _texture{ 0 };
+
+        bool             operator==( const TestBindlessRecord& other ) const { return _buffer == other._buffer && _texture == other._texture; }
+        RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _buffer, _texture }; }
+    };
+} // namespace
+
+/**
+ * @brief [RHIBindlessRegistryTest] 자원을 부수면 그 자원의 번호만 놓는다 — 같은 값의 다른 종류 핸들 · 낱개 해제 뒤의 번호 · 펜스 대기 칸을 건드리지 않는다
+ */
+SW_TEST_CASE( RHIBindlessRegistryTest, ReleasesOnlyOwnerIndices )
+{
+    RHIBindlessRegistry<TestBindlessRecord> registry;
+    const RHIDescriptorIndex                bufferA  = registry.allocate( TestBindlessRecord{ 7, 0 } );
+    const RHIDescriptorIndex                textureA = registry.allocate( TestBindlessRecord{ 0, 7 } ); // 버퍼 7 과 값이 같은 텍스처 7
+    const RHIDescriptorIndex                bufferB  = registry.allocate( TestBindlessRecord{ 7, 0 } );
+    const RHIDescriptorIndex                bufferC  = registry.allocate( TestBindlessRecord{ 7, 0 } );
+    SW_EXPECT_EQUAL( 3u, registry.getBufferIndexCount( 7 ) );
+    SW_EXPECT_EQUAL( 1u, registry.getTextureIndexCount( 7 ) );
+
+    // 낱개 해제(unregister)는 주인 목록에서도 빠진다 — 뒤의 파괴가 같은 번호를 두 번 놓지 않는다.
+    SW_EXPECT_TRUE( registry.release( bufferB, RHIBindlessReuse::AfterFence ) );
+    SW_EXPECT_EQUAL( 2u, registry.getBufferIndexCount( 7 ) );
+
+    vector<RHIDescriptorIndex> listReleased;
+    registry.releaseBuffer( RHIBindlessReuse::AfterFence, 7, [&listReleased]( RHIDescriptorIndex index )
+    { listReleased.push_back( index ); } );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listReleased.size() );
+    SW_EXPECT_TRUE( ( listReleased[0] == bufferA && listReleased[1] == bufferC ) || ( listReleased[0] == bufferC && listReleased[1] == bufferA ) );
+    SW_EXPECT_FALSE( registry.isLive( bufferA ) );
+    SW_EXPECT_FALSE( registry.isLive( bufferC ) );
+    SW_EXPECT_TRUE( registry.isLive( textureA ) );
+    SW_EXPECT_EQUAL( 0u, registry.getBufferIndexCount( 7 ) );
+
+    // 두 번째 파괴 · 모르는 주인 · 빈 핸들은 아무것도 놓지 않는다.
+    uint32     extraCount{ 0 };
+    const auto countExtra = [&extraCount]( RHIDescriptorIndex )
+    { ++extraCount; };
+    registry.releaseBuffer( RHIBindlessReuse::AfterFence, 7, countExtra );
+    registry.releaseBuffer( RHIBindlessReuse::AfterFence, 99, countExtra );
+    registry.releaseTexture( RHIBindlessReuse::AfterFence, 0, countExtra );
+    SW_EXPECT_EQUAL( 0u, extraCount );
+
+    // 펜스 뒤 번호를 다시 낸 새 자원은 옛 주인의 목록에 남지 않는다.
+    registry.finishRelease( bufferA );
+    const RHIDescriptorIndex reused = registry.allocate( TestBindlessRecord{ 8, 0 } );
+    SW_EXPECT_EQUAL( bufferA, reused );
+    registry.releaseBuffer( RHIBindlessReuse::AfterFence, 7, countExtra );
+    SW_EXPECT_EQUAL( 0u, extraCount );
+    SW_EXPECT_TRUE( registry.isLive( reused ) );
+
+    registry.releaseTexture( RHIBindlessReuse::Immediately, 7, countExtra );
+    SW_EXPECT_EQUAL( 1u, extraCount );
+    SW_EXPECT_FALSE( registry.isLive( textureA ) );
+
+    registry.clear();
+    SW_EXPECT_EQUAL( 0u, registry.getBufferIndexCount( 8 ) );
+}
+
+/**
+ * @brief [RHIBindlessRegistryTest] 번호 3 만 개가 산 표에서 자원 1 만 개를 부숴도 칸 전체를 훑지 않는다(감사 R-5 — 레벨 언로드 히치)
+ * @details 상한은 넉넉하게 둔다 — 예전 술어 순회는 1 만 × 3 만 = 3 억 비교라 Debug 에서 수 초였고, 주인 목록은 놓는 번호 수만큼만 돈다.
+ */
+SW_TEST_CASE( RHIBindlessRegistryTest, DestroyDoesNotScanWholeTable )
+{
+    constexpr uint32 kOwnerCount         = 10000;
+    constexpr uint32 kIndexPerOwner      = 3;
+    constexpr int64  kBudgetMilliseconds = constant::time::kMillisecondsPerSecond; // 1 초
+
+    RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> registry;
+    for ( uint32 index = 0; index < kOwnerCount * kIndexPerOwner; ++index )
+        SW_EXPECT_NOT_EQUAL( kInvalidDescriptorIndex, registry.allocate( static_cast<RHITextureHandle>( index % kOwnerCount + 1 ) ) );
+
+    uint32          releasedCount{ 0 };
+    const Stopwatch stopwatch;
+    for ( uint32 owner = 1; owner <= kOwnerCount; ++owner )
+    {
+        registry.releaseTexture( RHIBindlessReuse::Immediately, owner, [&releasedCount]( RHIDescriptorIndex )
+        { ++releasedCount; } );
+    }
+    const int64 elapsed = stopwatch.getElapsedMilliseconds();
+    SW_EXPECT_EQUAL( kOwnerCount * kIndexPerOwner, releasedCount );
+    SW_EXPECT_TRUE( elapsed < kBudgetMilliseconds );
 }
 
 /**

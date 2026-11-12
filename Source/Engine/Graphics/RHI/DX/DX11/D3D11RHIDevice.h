@@ -599,18 +599,20 @@ namespace sw
         RHIFrameFenceRing                   _frameFenceRing;         ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
         uint64                              _lastTimestampFrequency; ///< 마지막으로 읽은 disjoint 의 주파수(틱/초)
 
-        /// @brief UAV 번호 하나입니다 — 뷰와 그 원본 버퍼(텍스처 UAV 면 0 — SRV/UAV 해저드를 풀 때 본다).
+        /// @brief UAV 번호 하나입니다 — 뷰와 그 원본(버퍼 UAV 면 버퍼 — SRV/UAV 해저드를 풀 때 본다, 텍스처 UAV 면 텍스처 — 텍스처를 부술 때 번호를 놓는다).
         struct UAVEntry
         {
             Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> _uav{};
             RHIBufferHandle                                   _sourceBuffer{ 0 };
+            RHITextureHandle                                  _sourceTexture{ 0 };
 
-            bool operator==( const UAVEntry& other ) const { return _uav.Get() == other._uav.Get() && _sourceBuffer == other._sourceBuffer; }
+            bool             operator==( const UAVEntry& other ) const { return _uav.Get() == other._uav.Get() && _sourceBuffer == other._sourceBuffer && _sourceTexture == other._sourceTexture; }
+            RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _sourceBuffer, _sourceTexture }; }
         };
         /// @brief 세 번호 공간(`RHIBindlessRegistry`, `_bindlessMutex` 아래). DX11 은 번호를 기록 때 뷰로 풀므로 비운 번호는 바로 다시 쓴다(`RHIBindlessReuse::Immediately`).
-        RHIBindlessRegistry<RHIBufferHandle>  _bufferRegistry;
-        RHIBindlessRegistry<RHITextureHandle> _textureRegistry;
-        RHIBindlessRegistry<UAVEntry>         _uavRegistry;
+        RHIBindlessRegistry<RHIBufferHandle, RHIBindlessBufferOwnerOf>   _bufferRegistry;
+        RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> _textureRegistry;
+        RHIBindlessRegistry<UAVEntry>                                    _uavRegistry;
 
         RHIHandleTable<D3D11PipelineStateRecord> _pipelineStates;
         RHIRenderPassRegistry                    _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.

@@ -380,11 +380,9 @@ namespace sw
         {
             // 이 버퍼의 번호를 모두 놓는다(다섯 백엔드 같은 계약 — `IRHIResourceFactory::registerBindlessTexture`). 예전에는 값만 지우고 번호를 돌려받지 않아 칸이 샜다.
             UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-            const auto               isThis = [buffer]( const OpenGLRHIDevice::BindlessResourceRecord& record )
-            { return record._buffer == buffer; };
-            const auto ignore = []( RHIDescriptorIndex ) {};
-            _pDevice->_bufferRegistry.releaseIf( RHIBindlessReuse::Immediately, isThis, ignore );
-            _pDevice->_uavRegistry.releaseIf( RHIBindlessReuse::Immediately, isThis, ignore );
+            const auto               ignore = []( RHIDescriptorIndex ) {};
+            _pDevice->_bufferRegistry.releaseBuffer( RHIBindlessReuse::Immediately, buffer, ignore );
+            _pDevice->_uavRegistry.releaseBuffer( RHIBindlessReuse::Immediately, buffer, ignore );
         }
 
         // 추적기는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
@@ -866,12 +864,8 @@ namespace sw
         {
             UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
             const auto               ignore = []( RHIDescriptorIndex ) {};
-            _pDevice->_textureRegistry.releaseIf( RHIBindlessReuse::Immediately, [texture]( const OpenGLRHIDevice::BindlessTextureRecord& record )
-            { return record._texture == texture; },
-                                                  ignore );
-            _pDevice->_uavRegistry.releaseIf( RHIBindlessReuse::Immediately, [texture]( const OpenGLRHIDevice::BindlessResourceRecord& record )
-            { return record._texture == texture; },
-                                              ignore );
+            _pDevice->_textureRegistry.releaseTexture( RHIBindlessReuse::Immediately, texture, ignore );
+            _pDevice->_uavRegistry.releaseTexture( RHIBindlessReuse::Immediately, texture, ignore );
         }
 
         RHIMemoryTracker* pTracker  = &_pDevice->getMemoryTracker();

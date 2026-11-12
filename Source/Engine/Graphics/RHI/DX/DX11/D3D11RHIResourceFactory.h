@@ -54,8 +54,8 @@ namespace sw
     private:
         /** @brief 내용을 채워 바인드 용도 하나(정점 또는 인덱스)의 기본 버퍼를 만듭니다. 정점 버퍼와 인덱스 버퍼가 같은 경로를 씁니다. */
         RHIBufferHandle createFilledBuffer( const void* pData, uint32 sizeBytes, uint32 bindFlags );
-        /** @brief UAV 를 레지스트리에 넣고 인덱스를 반환합니다. 반납된 슬롯을 먼저 씁니다. 버퍼 UAV 와 텍스처 UAV 가 같은 경로를 씁니다. */
-        RHIDescriptorIndex registerUAVView( ID3D11UnorderedAccessView* pUAV, RHIBufferHandle sourceBuffer );
+        /** @brief UAV 를 레지스트리에 넣고 인덱스를 반환합니다. 반납된 슬롯을 먼저 씁니다. 버퍼 UAV 와 텍스처 UAV 가 같은 경로를 씁니다. @p owner 는 원본 자원입니다(부술 때 이 번호를 놓는다). */
+        RHIDescriptorIndex registerUAVView( ID3D11UnorderedAccessView* pUAV, const RHIBindlessOwner& owner );
 
     private:
         D3D11RHIDevice* _pDevice;

@@ -97,6 +97,8 @@ namespace sw
         uint8  _bTexture{ SW_FALSE }; ///< 참이면 텍스처, 거짓이면 버퍼
 
         bool operator==( const WebGPUBindlessEntry& other ) const { return _handle == other._handle && _bTexture == other._bTexture; }
+        /** @brief 자원을 부술 때 이 칸을 찾는 주인입니다(`RHIBindlessRegistry::releaseBuffer` · `releaseTexture`). */
+        RHIBindlessOwner getBindlessOwner() const { return _bTexture != SW_FALSE ? RHIBindlessOwner{ 0, _handle } : RHIBindlessOwner{ _handle, 0 }; }
     };
 
     /** @brief 번호 공간 하나(텍스처 SRV · 버퍼 · UAV)의 표입니다. 기록 때 번호를 자원으로 풀므로 비운 번호는 바로 다시 쓴다(`RHIBindlessReuse::Immediately`). */

@@ -280,6 +280,8 @@ namespace sw
                 return _buffer == other._buffer && _texture == other._texture;
             }
             bool operator!=( const BindlessResourceRecord& other ) const { return ( *this == other ) == false; }
+            /** @brief 자원을 부술 때 이 칸을 찾는 주인입니다(`RHIBindlessRegistry::releaseBuffer` · `releaseTexture`). */
+            RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _buffer, _texture }; }
         };
 
         /// @brief GLuint 텍스처와 타깃, 포맷입니다.
@@ -351,6 +353,8 @@ namespace sw
             /** @brief `RHIBindlessRegistry` 가 "이 칸이 비었는가" 를 묻는 데 씁니다. */
             bool operator==( const BindlessTextureRecord& other ) const { return _texture == other._texture; }
             bool operator!=( const BindlessTextureRecord& other ) const { return ( *this == other ) == false; }
+            /** @brief 텍스처를 부술 때 이 칸을 찾는 주인입니다. */
+            RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ 0, _texture }; }
         };
 
         /** @brief 번호가 가리키는 버퍼 · UAV · 텍스처를 공유 잠금 아래에서 읽습니다(빈 칸이면 빈 값). */

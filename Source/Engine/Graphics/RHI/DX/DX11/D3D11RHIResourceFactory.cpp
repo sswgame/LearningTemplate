@@ -266,12 +266,8 @@ namespace sw
 
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         const auto               ignore = []( RHIDescriptorIndex ) {};
-        _pDevice->_bufferRegistry.releaseIf( RHIBindlessReuse::Immediately, [buffer]( RHIBufferHandle entry )
-        { return entry == buffer; },
-                                             ignore );
-        _pDevice->_uavRegistry.releaseIf( RHIBindlessReuse::Immediately, [buffer]( const D3D11RHIDevice::UAVEntry& entry )
-        { return entry._sourceBuffer == buffer; },
-                                          ignore );
+        _pDevice->_bufferRegistry.releaseBuffer( RHIBindlessReuse::Immediately, buffer, ignore );
+        _pDevice->_uavRegistry.releaseBuffer( RHIBindlessReuse::Immediately, buffer, ignore );
 
         // 추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라). SRV 도 버퍼와 함께 그때 놓인다.
         _pDevice->_releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Buffer>( owned, _pDevice->getMemoryTracker(), buffer, _pDevice->_frameFenceRing.getRecordingSerial() );
@@ -756,9 +752,10 @@ namespace sw
 
         {
             UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-            _pDevice->_textureRegistry.releaseIf( RHIBindlessReuse::Immediately, [texture]( RHITextureHandle entry )
-            { return entry == texture; },
-                                                  []( RHIDescriptorIndex ) {} );
+            // 텍스처 UAV 번호도 함께 놓는다 — 예전 술어는 SRV 표만 봐서 텍스처 UAV 번호가 부순 텍스처의 뷰를 쥔 채 남았다.
+            const auto ignore = []( RHIDescriptorIndex ) {};
+            _pDevice->_textureRegistry.releaseTexture( RHIBindlessReuse::Immediately, texture, ignore );
+            _pDevice->_uavRegistry.releaseTexture( RHIBindlessReuse::Immediately, texture, ignore );
         }
 
         D3D11RHIDevice::TextureRecord owned;
@@ -860,7 +857,7 @@ namespace sw
         if ( isHrSuccess( _pDevice->_device->CreateUnorderedAccessView( pResource, &uavDesc, uav.GetAddressOf() ), "CreateUnorderedAccessView" ) == false )
             return kInvalidDescriptorIndex;
 
-        return registerUAVView( uav.Get(), buffer );
+        return registerUAVView( uav.Get(), RHIBindlessOwner{ buffer, 0 } );
     }
 
     RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
@@ -877,15 +874,16 @@ namespace sw
         if ( isHrSuccess( _pDevice->_device->CreateUnorderedAccessView( pRecord->_texture.Get(), nullptr, uav.GetAddressOf() ), "CreateUnorderedAccessView" ) == false )
             return kInvalidDescriptorIndex;
 
-        return registerUAVView( uav.Get(), RHIBufferHandle{ 0 } );
+        return registerUAVView( uav.Get(), RHIBindlessOwner{ 0, texture } );
     }
 
-    RHIDescriptorIndex D3D11RHIResourceFactory::registerUAVView( ID3D11UnorderedAccessView* pUAV, RHIBufferHandle sourceBuffer )
+    RHIDescriptorIndex D3D11RHIResourceFactory::registerUAVView( ID3D11UnorderedAccessView* pUAV, const RHIBindlessOwner& owner )
     {
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         D3D11RHIDevice::UAVEntry entry{};
-        entry._uav          = pUAV;
-        entry._sourceBuffer = sourceBuffer;
+        entry._uav           = pUAV;
+        entry._sourceBuffer  = owner._buffer;
+        entry._sourceTexture = owner._texture;
         return _pDevice->_uavRegistry.allocate( entry );
     }
 
