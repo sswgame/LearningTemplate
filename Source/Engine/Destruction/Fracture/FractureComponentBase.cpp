@@ -776,7 +776,7 @@ namespace sw
             _bStateReady = SW_FALSE;
         if ( _bFractureMissing == SW_TRUE && bDataStale == false )
             return;
-        if ( _bStateReady == SW_FALSE && initializeState( physics ) == false )
+        if ( _bStateReady == SW_FALSE && initializeState() == false )
             return;
         processPendingEvents( physics );
         applyDriveTargets();
@@ -873,7 +873,7 @@ namespace sw
 
     // --- 상태 -------------------------------------------------------------------------------------------------------------------
 
-    bool FractureComponentBase::initializeState( ScenePhysics& physics )
+    bool FractureComponentBase::initializeState()
     {
         SW_PROFILE_SCOPE( "GT.Scene.tick.physics.fractureState" );
         _profileReload.markSeen(); // 데이터를 받지 못해도 세대를 적는다 — 세대가 바뀔 때까지 다시 묻지 않는다

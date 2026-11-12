@@ -41,6 +41,7 @@ SW_TEST_CASE( AssetPinSetTest, EvictsLeastRecentlyUsed )
  */
 SW_TEST_CASE( AssetPinSetTest, RejectsAndRemoves )
 {
+    SW_EXPECT_LOG( "AssetPinSet.AssetBytesLargerPin" ); // 예산보다 큰 것을 거절하는 경고가 이 테스트가 보려는 동작이다
     sw::AssetPinSet pins{ 20 };
     SW_EXPECT_FALSE( pins.add( "game/empty.mesh", nullptr, 1 ) );
     SW_EXPECT_FALSE( pins.add( "game/huge.mesh", makePin(), 21 ) );

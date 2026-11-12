@@ -255,7 +255,7 @@ namespace sw
 
     private:
         /** @brief 데이터, 테이블, 앵커로 상태를 시작합니다. */
-        [[nodiscard]] bool initializeState( ScenePhysics& physics );
+        [[nodiscard]] bool initializeState();
         /** @brief 앵커 잎을 오브젝트 자세(@p position · @p rotation · @p scale)로 정합니다(모드와 볼륨). */
         void computeAnchors( const float3& position, const quaternion& rotation, float32 scale, vector<uint8>& outListAnchor ) const;
         /** @brief 쌓인 사건을 적용하고, 바뀐 그룹의 바디와 렌더링을 고칩니다. */

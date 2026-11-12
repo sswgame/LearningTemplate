@@ -384,6 +384,7 @@ SW_TEST_CASE( AIDirectorStateTest, StateRoundTripsAndContinuesTheSameWay )
 
 SW_TEST_CASE( AIDirectorStateTest, BadBytesLeaveTheDirectorAlone )
 {
+    SW_EXPECT_LOG( "StateIO.HeaderTagMismatch" ); // 표가 다른 바이트를 거절하는 것이 이 테스트가 보려는 동작이다
     DirectorRig rig;
     rig.run( 1.0f );
     const vector<uint8> listSaved = DirectorRig::save( rig._director );

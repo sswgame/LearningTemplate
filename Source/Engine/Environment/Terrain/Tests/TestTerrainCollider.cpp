@@ -50,6 +50,19 @@ namespace
             }
             return count;
         }
+
+        /** @brief 이번 프레임 바디 @p body 의 시작 수 − 끝 수입니다. 안착하는 동안 몇 번 튀든 합이 1 이면 닿아 있다. */
+        static int32 countNetTouch( const ScenePhysics& physics, PhysicsBodyHandle body )
+        {
+            int32 net = 0;
+            for ( const PhysicsContactEvent3D& event : physics.getFrameEvents3D() )
+            {
+                if ( event._bodyA != body && event._bodyB != body )
+                    continue;
+                net += event._phase == PhysicsContactPhase::Begin ? 1 : ( event._phase == PhysicsContactPhase::End ? -1 : 0 );
+            }
+            return net;
+        }
     };
 } // namespace
 
@@ -89,13 +102,13 @@ SW_TEST_CASE( TerrainColliderTest, HeightEditKeepsContact )
 
     const ScenePhysics& physics = manager.getSubsystem<ScenePhysics>();
     manager.beginPlay();
-    uint32 edges = 0;
+    int32 touching = 0;
     for ( uint32 frame = 0; frame < 60; ++frame )
     {
         manager.update( Internal::kFrame );
-        edges += Internal::countEdges( physics, pCrate->getBodyHandle() );
+        touching += Internal::countNetTouch( physics, pCrate->getBodyHandle() );
     }
-    SW_REQUIRE_EQUAL( 1u, edges ); // 지형에 닿았다(시작 하나)
+    SW_REQUIRE_EQUAL( 1, touching ); // 지형에 닿아 있다(안착 중 튄 횟수는 물리 엔진 몫이라 세지 않는다 — 이 테스트가 보는 것은 아래 편집 뒤의 끝 → 시작이다)
     SW_REQUIRE_EQUAL( 1u, pCollider->getBodyCount() );
     const uint32 buildCount = pCollider->getChunkBuildCount();
 
