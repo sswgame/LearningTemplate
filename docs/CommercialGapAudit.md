@@ -233,7 +233,7 @@
 - 분류: 결함(정책 우회) · 확신: 확인
 - 근거: `Source/GameFramework/Kits/Feature/Online/Social/Server/GuildService.cpp:729-737` 의 검사는 자산 id 형식 · 금액 범위 · 분개 키뿐이다. 거래는 `TradeStateMachine.cpp:26-27` 에서 `isTradable` 로 막는다. `ILedgerPolicy` 는 잔액 상한만 안다(`Source/GameFramework/Runtime/Online/Ledger/LedgerTypes.h:129-140`). 멤버가 유료 재화 · 귀속 아이템을 맡기고 임원이 꺼내면 금지된 이전이 된다.
 - 상용 서비스: PlayFab Economy v2 · Steam Inventory 는 "이전 가능" 을 아이템 정의의 속성으로 두고 모든 통로가 같은 것을 본다.
-- 제안: `ILedgerPolicy::isTransferable( assetID )` 를 원장 계층에 두고 "계정 → 다른 보유자" 다리를 가진 이동이면 `stageTransfer` 가 본다. 유료 재화의 계정 간 이전 허용 여부는 법 · 약관 사안이라 사용자 확인이 필요하다.
+- 제안: `ILedgerPolicy::isTransferable( assetID )` 를 원장 계층에 두고 "계정 → 다른 보유자" 다리를 가진 이동이면 `stageTransfer` 가 본다. 사용자 결정(2026-11-12): 맡긴 당사자가 허용한 권한 안에서만 이전한다 — 설계는 DesignBacklog "길드 창고의 이전 불가 자산".
 - 확인: `TestGuildService` 에 "거래 접두어 밖 자산 Deposit → 다른 임원 Withdraw" 가 거절되는지.
 
 #### O-11 접속 상태 변화 한 건마다 이 서버의 전 계정 × 관계 목록을 훑는다
