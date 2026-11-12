@@ -2,6 +2,7 @@
 
 #include "Engine/Physics/Component/PhysicsComponent.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -131,16 +132,24 @@ namespace sw
 
 namespace sw
 {
-    void PhysicsComponent::readWorldPose( const SceneComponent& component, float3& outPosition, quaternion& outRotation, float3& outScale )
+    bool PhysicsComponent::readWorldPose( const SceneComponent& component, float3& outPosition, quaternion& outRotation, float3& outScale )
     {
-        const float4x4 world = component.getWorldMatrix();
-        if ( world.decompose( outScale, outRotation, outPosition ) == false )
+        float3     position{};
+        quaternion rotation{};
+        float3     scale{};
+        if ( component.getWorldMatrix().decompose( scale, rotation, position ) == false )
         {
-            outPosition = world.getTranslation();
-            outRotation = quaternion{};
-            outScale    = float3{ 1.0f, 1.0f, 1.0f };
+            const GameObject*   pOwner = component.getOwner();
+            const hashed_string name   = pOwner != nullptr ? pOwner->getName() : hashed_string{};
+            SW_LOG_ERROR_ONCE_FOR_ID( "PhysicsComponent.ZeroWorldScale", std::string_view( name.c_str(), name.size() ),
+                                      "'%#' has a zero world scale axis (%#, %#, %#) - physics skips it until the scale is non-zero", name.c_str(), scale._x, scale._y,
+                                      scale._z );
+            return false;
         }
-        outRotation.normalize();
+        outPosition = position;
+        outRotation = rotation.normalize();
+        outScale    = scale;
+        return true;
     }
 
     void PhysicsComponent::writeWorldPose( SceneComponent& component, const float3& position, const quaternion& rotation, const float3& scale )

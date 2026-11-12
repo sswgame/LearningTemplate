@@ -122,8 +122,8 @@ namespace sw
     private:
         /** @brief 강체 칸의 페이지 안 자리입니다. */
         uint32 getPoseIndex() const;
-        /** @brief 트랜스폼에서 월드 자세를 읽어 `_world*` 에 두고, 2D 자리 · 각을 돌려줍니다. */
-        void readWorldPose2D( float2& outPosition, float32& outAngle );
+        /** @brief 트랜스폼에서 월드 자세를 읽어 `_world*` 에 두고, 2D 자리 · 각을 돌려줍니다. 배율 축이 0 이면 false 입니다(`PhysicsComponent::readWorldPose`). */
+        [[nodiscard]] bool readWorldPose2D( float2& outPosition, float32& outAngle );
         /** @brief 지금 속성 · 자세로 바디를 만듭니다. */
         void createBody( ScenePhysics& physics, IPhysicsBodyScene2D& scene, const float2& position, float32 angle, const float3& scale );
         /**

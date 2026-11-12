@@ -269,7 +269,8 @@ namespace sw
         float3     position{};
         quaternion rotation{};
         float3     scale{};
-        PhysicsComponent::readWorldPose( *this, position, rotation, scale );
+        if ( PhysicsComponent::readWorldPose( *this, position, rotation, scale ) == false )
+            return; // 배율 0 — 셰이프를 지을 수 없다(`readWorldPose` 가 알렸다)
         outListBody.push_back( makeBodyDesc( physics, position, rotation, scale ) );
     }
 
@@ -331,7 +332,8 @@ namespace sw
         SW_ASSERT( body.isValid() == false || pScene->isBodyValid( body ) );
         if ( body.isValid() == false )
         {
-            PhysicsComponent::readWorldPose( *this, position, rotation, _worldScale );
+            if ( PhysicsComponent::readWorldPose( *this, position, rotation, _worldScale ) == false )
+                return; // 배율 0 — 바디를 만들지 않는다(`readWorldPose` 가 알렸다). 배율이 돌아오면 이 길로 만든다
             createBody( physics, *pScene, position, rotation, _worldScale );
             (void)consumeTeleport();
             return;
@@ -345,8 +347,11 @@ namespace sw
 
         const bool bTeleported = consumeTeleport();
         const bool bMoved      = bTeleported || bTransformChanged;
-        if ( bMoved )
-            PhysicsComponent::readWorldPose( *this, position, rotation, _worldScale );
+        if ( bMoved && PhysicsComponent::readWorldPose( *this, position, rotation, _worldScale ) == false )
+        {
+            releasePhysics( physics ); // 배율 0 — 셰이프를 지을 수 없어 시뮬레이션에서 뺀다. 배율이 돌아오면 다시 만든다
+            return;
+        }
         if ( isShapeScaleStale( _worldScale ) )
         {
             body = applyScaledShape( physics, *pScene );

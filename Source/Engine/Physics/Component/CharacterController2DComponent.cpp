@@ -112,7 +112,11 @@ namespace sw
         const bool bUnchanged = bCreate == false && bTransformChanged == false && bTeleported == false && isShapeScaleStale( _worldScale ) == false;
         if ( bUnchanged )
             return;
-        PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
+        if ( PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale ) == false )
+        {
+            releasePhysics( physics ); // 배율 0 — 캡슐을 지을 수 없다(`readWorldPose` 가 알렸다). 배율이 돌아오면 다시 만든다
+            return;
+        }
         const float2 position{ _worldPosition._x, _worldPosition._y };
         // 캡슐은 지을 때 배율을 굽는다 — 배율이 바뀌면 지금 자리에서 다시 짓고 세로 속도 · 이동 상태는 잇는다.
         const bool bRescale = bCreate == false && isShapeScaleStale( _worldScale );
@@ -192,8 +196,8 @@ namespace sw
             return;
         const float2 position = float2::lerp( _previousPosition, _state._position, alpha );
         // Z · 회전 · 배율은 트랜스폼의 것이다. 이 프레임 시작 뒤에 누가 옮겼을 때만 다시 읽는다.
-        if ( consumeTransformChange() )
-            PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
+        if ( consumeTransformChange() && PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale ) == false )
+            return; // 배율 0 — 트랜스폼을 덮어쓰지 않는다(다음 프레임 시작 훅이 캐릭터를 놓는다)
         // 강체와 같이 모아 한 번에 쓴다 — 적용 · 변경 번호 맞추기는 `ScenePhysics::queuePoseWrite` 가 한다.
         physics.queuePoseWrite( *this, float3{ position._x, position._y, _worldPosition._z }, _worldRotation, _worldScale );
     }

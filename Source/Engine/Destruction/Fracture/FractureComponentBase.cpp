@@ -636,17 +636,19 @@ namespace sw
         _eventLog._seed = _seed;
     }
 
-    void FractureComponentBase::readObjectPose( float3& outPosition, quaternion& outRotation, float32& outScale ) const
+    bool FractureComponentBase::readObjectPose( float3& outPosition, quaternion& outRotation, float32& outScale ) const
     {
         const GameObject*     pOwner = getOwner();
         const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pScene == nullptr )
             pScene = this;
-        float3 scale{ 1.0f, 1.0f, 1.0f };
-        PhysicsComponent::readWorldPose( *pScene, outPosition, outRotation, scale );
-        outScale = uses2DPhysics() ? ( scale._x + scale._y ) * 0.5f : ( scale._x + scale._y + scale._z ) / 3.0f;
-        if ( outScale <= 0.0f )
-            outScale = 1.0f;
+        float3 scale{};
+        if ( PhysicsComponent::readWorldPose( *pScene, outPosition, outRotation, scale ) == false )
+            return false;
+        // 크기는 절댓값의 평균이다 — 거울(X 음수)을 그대로 더하면 2D 에서 0 이 된다(예전에는 그것을 1 로 덮었다).
+        const float3 absScale{ MathUtil::abs( scale._x ), MathUtil::abs( scale._y ), MathUtil::abs( scale._z ) };
+        outScale = uses2DPhysics() ? ( absScale._x + absScale._y ) * 0.5f : ( absScale._x + absScale._y + absScale._z ) / 3.0f;
+        return true;
     }
 
     // --- 피해 받기 -------------------------------------------------------------------------------------------------------------
@@ -890,8 +892,13 @@ namespace sw
             _bFractureMissing = SW_TRUE;
             return false;
         }
+        float3     position{};
+        quaternion rotation{};
+        float32    scale = 0.0f;
+        if ( readObjectPose( position, rotation, scale ) == false )
+            return false; // 배율 0 — 조각 크기를 정할 수 없다(`readWorldPose` 가 알렸다). 배율이 돌아오면 다시 세운다
         vector<uint8> listAnchor;
-        computeAnchors( physics, listAnchor );
+        computeAnchors( position, rotation, scale, listAnchor );
         _state.initialize( _asset->_graph, *_pProfile, listAnchor );
         _listPiecePose.assign( _asset->getPieceCount(), BoneTransform{} );
         for ( uint32 leaf = 0; leaf < _asset->getPieceCount(); ++leaf )
@@ -901,23 +908,14 @@ namespace sw
         _listLeafStaticBody.assign( _asset->getPieceCount(), PhysicsBodyHandle{} );
         _eventLog._seed = _seed;
         _bStateReady    = SW_TRUE;
-        float3     position{};
-        quaternion rotation{};
-        float32    scale = 1.0f;
-        readObjectPose( position, rotation, scale );
         _leafShapeScale = 0.0f;
         prepareLeafPoints( scale );
         return true;
     }
 
-    void FractureComponentBase::computeAnchors( ScenePhysics& physics, vector<uint8>& outListAnchor ) const
+    void FractureComponentBase::computeAnchors( const float3& position, const quaternion& rotation, float32 scale, vector<uint8>& outListAnchor ) const
     {
-        (void)physics;
         const FractureAsset& asset = *_asset;
-        float3               position{};
-        quaternion           rotation{};
-        float32              scale = 1.0f;
-        readObjectPose( position, rotation, scale );
         // World 모드의 "정적 월드에 닿았나" 는 물리 질의라 여기서 잎마다 묻는다. 판정은 FractureAnchorUtil 이 모은다.
         vector<uint8> listWorldContact;
         if ( _anchorMode == FractureAnchorMode::World && _physics != nullptr )
@@ -973,8 +971,9 @@ namespace sw
             // 온전하다. 오브젝트의 현재 자세(움직이는 상자일 수 있다)로 옮긴다.
             float3     position{};
             quaternion rotation{};
-            float32    scale = 1.0f;
-            readObjectPose( position, rotation, scale );
+            float32    scale = 0.0f;
+            if ( readObjectPose( position, rotation, scale ) == false )
+                return; // 배율 0 — 메시 공간으로 옮길 수 없다(`readWorldPose` 가 알렸다)
             DestructionDamageEvent event = pending._event;
             event._position              = float3::transform( pending._worldPoint - position, FractureComponentBaseInternal::invert( rotation ) ) / scale;
             event._direction             = float3::transform( pending._worldDirection, FractureComponentBaseInternal::invert( rotation ) );
@@ -1102,7 +1101,8 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || _physics == nullptr )
             return;
-        readObjectPose( _objectPosition, _objectRotation, _objectScale );
+        if ( readObjectPose( _objectPosition, _objectRotation, _objectScale ) == false )
+            return; // 배율 0 — 조각 자리를 정할 수 없다(`readWorldPose` 가 알렸다)
 
         // 오브젝트의 온전한 메시와 강체를 넘겨받는다. 메시는 숨기고, 바디는 새 조각 바디와 겹치지 않게 지금 끄며, 컴포넌트도 끈다.
         for ( Component* pComp : pOwner->getComponents() )
@@ -1579,8 +1579,9 @@ namespace sw
     {
         float3     position{};
         quaternion rotation{};
-        float32    scale = 1.0f;
-        readObjectPose( position, rotation, scale );
+        float32    scale = 0.0f;
+        if ( readObjectPose( position, rotation, scale ) == false )
+            return false;
         if ( _asset == nullptr )
             return float3::getDistance( position, worldCenter ) <= radius;
         const float3  center      = ( _asset->_boundsMin + _asset->_boundsMax ) * 0.5f;

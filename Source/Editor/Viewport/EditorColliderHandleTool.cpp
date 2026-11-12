@@ -75,7 +75,12 @@ namespace sw::editor
                 float3     position{};
                 quaternion rotation{};
                 float3     scale{};
-                PhysicsComponent::readWorldPose( *pBody, position, rotation, scale );
+                if ( PhysicsComponent::readWorldPose( *pBody, position, rotation, scale ) == false )
+                {
+                    if ( _bDragging )
+                        endDrag( false ); // 배율 0 — 잡을 셰이프가 없다
+                    return;
+                }
 
                 if ( _bDragging )
                 {

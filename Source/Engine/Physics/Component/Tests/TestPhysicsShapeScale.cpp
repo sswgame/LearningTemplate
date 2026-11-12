@@ -284,3 +284,31 @@ SW_TEST_CASE( PhysicsShapeScaleTest, RigidBody2DRescaleKeepsContact )
     manager.update( Internal::kFrame );
     SW_EXPECT_EQUAL( 1u, Internal::countPhase( physics.getFrameEvents2D(), crate, PhysicsContactPhase::End ) );
 }
+
+/**
+ * @brief [PhysicsShapeScaleTest] 배율 축이 0 이면 바디를 만들지 않고 오류를 남긴다(예전에는 배율 1 로 덮어 그림과 다른 크기로 시뮬레이션했다) — 돌아오면 만든다
+ * @details 시뮬레이션 중에 0 이 되면 바디를 놓는다. 오류는 오브젝트마다 한 번이다(`PhysicsComponent::readWorldPose`).
+ */
+SW_TEST_CASE( PhysicsShapeScaleTest, ZeroScaleSkipsBody )
+{
+    using Internal = TestPhysicsShapeScaleInternal;
+    SW_EXPECT_LOG( "PhysicsComponent.ZeroWorldScale" );
+    GameObjectManager  manager;
+    PhysicsShapeDesc3D box;
+    box._type                  = PhysicsShapeType3D::Box;
+    box._halfExtents           = float3{ 0.5f, 0.5f, 0.5f };
+    RigidBodyComponent* pCrate = Internal::addBody<RigidBodyComponent>( manager, "Flat", box, PhysicsBodyType::Static, float3{ 0.0f, 0.0f, 0.0f } );
+    SW_REQUIRE_NOT_NULL( pCrate );
+    pCrate->setLocalScale( float3{ 1.0f, 0.0f, 1.0f } );
+    manager.beginPlay();
+    manager.update( Internal::kFrame );
+    SW_EXPECT_FALSE( pCrate->getBodyHandle().isValid() );
+
+    pCrate->setLocalScale( float3{ 1.0f, 1.0f, 1.0f } );
+    manager.update( Internal::kFrame );
+    SW_EXPECT_TRUE( pCrate->getBodyHandle().isValid() );
+
+    pCrate->setLocalScale( float3{ 0.0f, 1.0f, 1.0f } ); // 시뮬레이션 중에 0 — 바디를 놓는다
+    manager.update( Internal::kFrame );
+    SW_EXPECT_FALSE( pCrate->getBodyHandle().isValid() );
+}
