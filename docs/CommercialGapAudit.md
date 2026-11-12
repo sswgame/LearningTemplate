@@ -525,13 +525,6 @@
 - 제안: 문서 패널마다 스택을 두고(미리보기 패널의 창 스택을 기반으로 올린다) 포커스가 그 스택을 겨누게 한다 — `parkHistory` 는 씬 스택만 맡는다. 그때 `Editor.UndoCount` · History 패널이 보는 스택(전역 → 포커스)과 이를 보는 시나리오(`sequencercuts` · `gimmickgraph` · `uipreview*`)를 함께 옮긴다.
 - 확인: 시나리오 `undosurvivesplay` 에 "플레이 중 시퀀서 편집 → Stop → 그 창에서 undo → 값 복귀".
 
-#### E-5 선택 · 다중 조작이 오브젝트 수의 제곱이다
-- 분류: 성능 · 확신: 구조 확인, 시간은 측정 필요 — NEXT "Hierarchy 큐브 8000" 측정의 보강
-- 근거: `Source/Editor/Common/Workspace/EditorSelection.cpp:26` — `selectObject` 한 번이 `pruneInvalid()`(선택 전체 핸들 풀기) + 선형 `contains`(`:97`) + `notifyChanged` 다. `HierarchyViewModel.cpp:394`(Select All)와 `:361`(Shift 범위)이 이것을 행마다 부른다. `EditorSceneCommands.cpp:225-244` 의 `filterTopLevel` 은 오브젝트 × 조상 × 선택 전체이고 `:294` 삭제가 오브젝트마다 `selectObject( Remove )` 를 한다. 8000 큐브면 Select All 한 번에 핸들 풀기 약 3200 만 회다.
-- 상용 엔진: 언리얼 `USelection` 은 `BeginBatchSelectOperation` 으로 알림 한 번이고 선택 여부는 오브젝트 플래그다. 유니티 `Selection.objects = 배열` 은 한 번 대입이다.
-- 제안: 선택을 "순서 vector + id 해시 집합" 으로 두고 여러 개를 고르는 길은 `selectObjects( 목록, mode )` 하나만 연다.
-- 확인: Tracy `GT.Editor.step.*` 로 Select All · Shift 범위 · Delete, 단위 `EditorSelectionTest.SelectManyNotifiesOnce`.
-
 #### E-6 형제 순서 한 줄을 옮기면 형제 전부가 스냅샷 · 기록 · 씬 파일 변경이 된다
 - 분류: 성능 + 구조(팀 병합) · 확신: 확인
 - 근거: `Source/Editor/Common/Commands/Scene/EditorSiblingOrder.cpp:40-52` — `renumber` 가 번호가 바뀐 형제마다 편집 전 전체 XML 스냅샷 → `setSiblingIndex` → `commitModify` 를 한다. 루트 8000 개 씬에서 맨 아래를 맨 위로 끌면 오브젝트 직렬화 16000 회가 되돌리기 한 단계에 들어가고, 저장한 씬 파일은 8000 오브젝트의 번호 줄이 모두 바뀐다(두 사람이 같은 씬을 고치면 충돌). 번호는 `uint16` 이다(`:22`).
