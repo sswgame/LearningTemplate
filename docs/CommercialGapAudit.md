@@ -402,13 +402,6 @@
 
 ### GameFramework Runtime
 
-#### G-1 어빌리티 런타임 상태가 세이브에 없고, 준비된 저장 도구는 호출처 0 에 복원 순서 결함
-- 분류: 결함(저장/복원 비대칭) · 확신: 확인
-- 근거: `Source/GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h:73-74` 가 "런타임 상태는 `SavedAttributeFile` 로 담는다" 고 적었지만 `AbilityAttributeSave.cpp` 의 `captureBaseValues` · `applyBaseValues` 는 호출처가 없다. 로드하면 체력 · 마나가 기본값으로 차고 디버프 · 쿨다운 · `State.Dead` 가 사라진다(저장 → 불러오기로 회복). 도구를 써도 틀린다 — `applyBaseValues`(`:29-39`)가 Health → MaxHealth 순으로 쓰는데 `clampCombatValue`(`CombatAttributeSet.cpp:171-178`)가 Health 를 그 순간의 MaxHealth(기본 100)로 자른다(180/200 → 100/200).
-- 상용 엔진: GAS 는 게임이 직접 담는다(이펙트는 남은 시간으로 다시 건다).
-- 제안: AbilityComponent 를 프레임워크가 스냅샷 대상으로 정적 등록하고 `serializeState` 로 base 값 · 걸린 이펙트(정의 id · 남은 시간 · 스택) · 태그를 싣는다. 복원은 훅을 끈 채 base 를 모두 쓴 뒤 한 번에 클램프한다.
-- 확인: 단위 `AbilitySystemTest.SaveRoundTripKeepsHealthAboveDefaultMax` · `SaveRoundTripKeepsCooldownAndDot`.
-
 #### G-3 제작의 환불 · 취소와 상점 판매가 아이템 개체 상태를 버린다 — 내구도 공짜 수리
 - 분류: 결함(악용 경로) · 확신: 확인
 - 근거: `Source/GameFramework/Runtime/Gameplay/Inventory/Crafting.cpp:202-207`, `:235-246`(`cancel`) — 재료를 `Inventory::removeItem`(`Inventory.cpp:161-181`, id 로만)으로 빼고 `addItem`(`:116-127`, `slot._durability = pDef->_maxDurability`)으로 돌려준다. 닳은 장비가 재료인 레시피를 `enqueue` 했다가 `cancel` 하면 새것이 되고 꾸미기 · 뗀 부품은 사라진다. `ShopState::sell`(`Shop.cpp:330-331`)도 어느 개체를 파는지 고르지 못한다.
