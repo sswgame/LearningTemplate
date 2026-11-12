@@ -48,8 +48,8 @@ SW_TEST_CASE( AssetPinSetTest, RejectsAndRemoves )
 
     SW_REQUIRE_TRUE( pins.add( "game/x/a.mesh", makePin(), 5 ) );
     SW_REQUIRE_TRUE( pins.add( "game/x/b.mesh", makePin(), 7 ) );
-    SW_EXPECT_TRUE( pins.contains( "game\x\a.mesh" ) );
-    SW_EXPECT_TRUE( pins.remove( "game\x\a.mesh" ) );
+    SW_EXPECT_TRUE( pins.contains( "game\\x\\a.mesh" ) );
+    SW_EXPECT_TRUE( pins.remove( "game\\x\\a.mesh" ) );
     SW_EXPECT_FALSE( pins.remove( "game/x/a.mesh" ) );
     SW_EXPECT_EQUAL( uint64( 7 ), pins.getPinnedBytes() );
 

@@ -32,7 +32,6 @@ namespace sw::editor
                 return tag.size() == presentationTag.size() || tag[presentationTag.size()] == '.';
             }
         };
-        using Internal = AbilityCatalogEditModelInternal;
     } // namespace
 
     AbilityCatalogReference::AbilityCatalogReference()
@@ -66,7 +65,7 @@ namespace sw::editor
 
     const utf8* AbilityCatalogEditModel::getElementName( AbilityEntryKind kind )
     {
-        return kind == AbilityEntryKind::Count ? "" : Internal::kArrElementName[static_cast<size_t>( kind )];
+        return kind == AbilityEntryKind::Count ? "" : AbilityCatalogEditModelInternal::kArrElementName[static_cast<size_t>( kind )];
     }
 
     void AbilityCatalogEditModel::rebuild()
@@ -89,10 +88,10 @@ namespace sw::editor
             const CatalogXMLElement& row = parsed.getElement( element );
             for ( uint32 kindIndex = 0; kindIndex < static_cast<uint32>( AbilityEntryKind::Count ); ++kindIndex )
             {
-                if ( row._name != Internal::kArrElementName[kindIndex] )
+                if ( row._name != AbilityCatalogEditModelInternal::kArrElementName[kindIndex] )
                     continue;
                 const AbilityEntryKind kind  = static_cast<AbilityEntryKind>( kindIndex );
-                const string*          pName = Internal::findAttribute( row, Internal::getNameAttribute( kind ) );
+                const string*          pName = AbilityCatalogEditModelInternal::findAttribute( row, AbilityCatalogEditModelInternal::getNameAttribute( kind ) );
                 _listEntry.push_back( AbilityCatalogEntry{ pName != nullptr ? *pName : string{}, element, kind } );
             }
         }
@@ -143,7 +142,7 @@ namespace sw::editor
             const AbilityCatalogEntry& entry = _listEntry[static_cast<size_t>( entryIndex )];
             const CatalogXMLElement&   row   = parsed.getElement( entry._element );
             // `_base` 는 같은 종류의 부모 항목이다(항목 상속).
-            if ( Internal::findAttribute( row, DataInheritance::kBaseAttribute ) != nullptr )
+            if ( AbilityCatalogEditModelInternal::findAttribute( row, DataInheritance::kBaseAttribute ) != nullptr )
                 addReference( entryIndex, entry._element, DataInheritance::kBaseAttribute, "base", entry._kind, true );
             if ( entry._kind == AbilityEntryKind::Ability )
             {
@@ -164,8 +163,8 @@ namespace sw::editor
                 else if ( entry._kind == AbilityEntryKind::Ability && childElement._name == "Param" )
                 {
                     // 클래스가 이름으로 읽는 값이다 — 이펙트 id 와 같을 때만 연결로 둔다(문제로 세지 않는다).
-                    const string* pText = Internal::findAttribute( childElement, "text" );
-                    const string* pName = Internal::findAttribute( childElement, "name" );
+                    const string* pText = AbilityCatalogEditModelInternal::findAttribute( childElement, "text" );
+                    const string* pName = AbilityCatalogEditModelInternal::findAttribute( childElement, "name" );
                     if ( pText != nullptr && findEntry( AbilityEntryKind::Effect, *pText ).has_value() )
                     {
                         StringBuilder<constant::buffer::kMax256> textBuilder;
@@ -185,7 +184,7 @@ namespace sw::editor
                     for ( int32 candidate = 0; candidate < static_cast<int32>( _listEntry.size() ); ++candidate )
                     {
                         const AbilityCatalogEntry& presentation = _listEntry[static_cast<size_t>( candidate )];
-                        const bool                 bMatches     = presentation._kind == AbilityEntryKind::Presentation && Internal::isTagOrDescendant( cue._targetID, presentation._id );
+                        const bool                 bMatches     = presentation._kind == AbilityEntryKind::Presentation && AbilityCatalogEditModelInternal::isTagOrDescendant( cue._targetID, presentation._id );
                         if ( bMatches && presentation._id.size() > bestLength )
                         {
                             bestLength  = presentation._id.size();
@@ -217,7 +216,7 @@ namespace sw::editor
             if ( entry._id.empty() )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "%# has no %#", getElementName( entry._kind ), Internal::getNameAttribute( entry._kind ) );
+                textBuilder.appendFormat( "%# has no %#", getElementName( entry._kind ), AbilityCatalogEditModelInternal::getNameAttribute( entry._kind ) );
                 _listIssue.push_back( AbilityCatalogIssue{ string( textBuilder.view() ), entryIndex } );
                 continue;
             }
