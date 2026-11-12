@@ -81,6 +81,7 @@ namespace sw
 
         PhysicsContactTracker()
             : _mapPair{}
+            , _listRestartEnd{}
         {
         }
 
@@ -155,13 +156,14 @@ namespace sw
         void finishStep( vector<Event>& outListEvent )
         {
             const size_t firstNew = outListEvent.size();
+            _listRestartEnd.clear();
             for ( typename PairMap::iterator iter = _mapPair.begin(); iter != _mapPair.end(); )
             {
                 PairState& state   = iter->second;
                 const bool bActive = state._subContactCount > 0 && state._bBodyRemoved == false;
                 if ( state._bWasActive && bActive && state._bRestarted )
                 {
-                    outListEvent.push_back( makeEvent( state, PhysicsContactPhase::End ) );
+                    _listRestartEnd.push_back( makeEvent( state, PhysicsContactPhase::End ) ); // 옛 생애의 끝 — 아래 정렬 묶음 앞에 둔다
                     outListEvent.push_back( makeEvent( state, PhysicsContactPhase::Begin ) );
                 }
                 else if ( state._bWasActive && bActive )
@@ -194,6 +196,9 @@ namespace sw
                 ++iter;
             }
             std::sort( outListEvent.begin() + static_cast<std::ptrdiff_t>( firstNew ), outListEvent.end(), &isEarlierEvent );
+            // 재시작한 쌍의 끝은 이번 step 의 어떤 이벤트보다 앞선다 — 정렬(쌍 · 단계 순)에 넣으면 같은 쌍의 새 시작 뒤로 간다.
+            std::sort( _listRestartEnd.begin(), _listRestartEnd.end(), &isEarlierEvent );
+            outListEvent.insert( outListEvent.begin() + static_cast<std::ptrdiff_t>( firstNew ), _listRestartEnd.begin(), _listRestartEnd.end() );
         }
 
         /** @brief 모든 쌍을 잊습니다(끝 이벤트 없이). */
@@ -270,6 +275,7 @@ namespace sw
             return static_cast<uint8>( lhs._phase ) < static_cast<uint8>( rhs._phase );
         }
 
-        PairMap _mapPair;
+        PairMap       _mapPair;
+        vector<Event> _listRestartEnd; ///< `finishStep` 스크래치 — 재시작한 쌍의 옛 끝(용량을 다시 쓴다)
     };
 } // namespace sw
