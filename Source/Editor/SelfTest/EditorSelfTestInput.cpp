@@ -632,7 +632,7 @@ namespace sw::editor
             state._hitSample = EditorSelfTestInputInternal::HitSample{
                 float2{ imguiIO.MousePos.x, imguiIO.MousePos.y },
                 imguiContext.HoveredWindow != nullptr ? imguiContext.HoveredWindow->ID : 0u, frame,
-                bMouseDown ? SW_TRUE : SW_FALSE, ImGui::IsMousePosValid() ? SW_TRUE : SW_FALSE
+                static_cast<uint8>( bMouseDown ), static_cast<uint8>( ImGui::IsMousePosValid() )
             };
 
             // 바로 앞 프레임의 배치다 — 그 프레임이 열릴 때 찍은 번호를 붙인다. 그다음 이번에 여는 프레임에 지금 번호를 찍는다.
