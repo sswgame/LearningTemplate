@@ -1,15 +1,18 @@
 #include "pch.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include <cstring>
 
-// StateIOTest — 상태 구간: 기대한 표 · 버전의 구간만 읽히고(다른 버전은 거절), 표로 갈라 읽는 쪽은 아무 구간이나 받는다.
+// StateIOTest — 상태 구간: 기대한 표의 구간만 읽히고(옛 판은 판 올림 사슬로 올리고, 단계가 없거나 새 판이면 거절), 표로 갈라 읽는 쪽은 아무 구간이나 받는다.
+// 머리(`header`)의 판 올림: 옛 판 바이트 → 단계를 차례로 → 새 판 값, 바깥 형식의 남은 칸은 그대로(감사 A-6).
 // 누적기: 음수와 터무니없는 값을 거절한다(1e30 은 빼도 줄지 않아 소비 고리가 끝나지 않는다)(nogpu).
 
 /**
@@ -91,8 +94,9 @@ SW_TEST_CASE( StateIOTest, ExpectedSectionRejectsOtherVersionOrTag )
     SW_EXPECT_EQUAL( 42, value );
     SW_EXPECT_EQUAL( size_t{ 0 }, same.getRemainingBytes() );
 
-    sw::Archive oldVersion( written.getData(), written.getSize() );
-    SW_EXPECT_FALSE( sw::StateIO::readExpectedSection( oldVersion, kTag, 1, body ) );
+    SW_EXPECT_LOG( "FormatUpgrade.NewerThanSupported" );
+    sw::Archive readAsOld( written.getData(), written.getSize() );
+    SW_EXPECT_FALSE( sw::StateIO::readExpectedSection( readAsOld, kTag, 1, body ) ); // 새 판을 옛 판으로 읽지 않는다
     sw::Archive otherTag( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( sw::StateIO::readExpectedSection( otherTag, kTag + 1, 2, body ) );
 
@@ -241,10 +245,11 @@ SW_TEST_CASE( StateIOTest, SectionChecksTagVersionAndConsumption )
         SW_EXPECT_EQUAL( 42, value );
     }
     {
+        SW_EXPECT_LOG( "FormatUpgrade.StepMissing" );
         sw::Archive reading( outer.getData(), outer.getSize() );
         sw::StateIO io( reading );
         io.section( kTag, 2, []( sw::StateIO& ) {} );
-        SW_EXPECT_FALSE( io.isOk() ); // 다른 판
+        SW_EXPECT_FALSE( io.isOk() ); // 다른 판 — 올릴 단계가 없다
     }
     {
         sw::Archive reading( outer.getData(), outer.getSize() );
@@ -252,4 +257,148 @@ SW_TEST_CASE( StateIOTest, SectionChecksTagVersionAndConsumption )
         io.section( kTag, 1, []( sw::StateIO& ) {} );
         SW_EXPECT_FALSE( io.isOk() ); // 읽지 않은 본문이 남았다
     }
+}
+
+namespace sw
+{
+    namespace
+    {
+        /**
+         * @brief 판 올림을 시험하는 상태입니다. 판 1: 체력 int16, 판 2: 체력 int32, 판 3: 체력 int32 + 속도 float32.
+         * @details 판 0 에서 올리는 단계는 일부러 없다(빠진 단계는 거절).
+         */
+        struct StateUpgradeTestState
+        {
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "TUPG" );
+            static constexpr uint32 kStateVersion = 3;
+
+            SW_DECLARE_STATE_IO();
+
+            int32   _health{ 0 };
+            float32 _speed{ 0.0f };
+        };
+
+        void StateUpgradeTestState::serializeState( StateIO& io )
+        {
+            io.header( kStateTag, kStateVersion );
+            io.value( _health );
+            io.value( _speed );
+        }
+
+        /** @brief 머리 없는 바깥 형식입니다 — 안쪽 상태가 올라가도 뒤 칸(`_tail`)이 그대로 읽혀야 한다. */
+        struct StateUpgradeTestOuterState
+        {
+            SW_DECLARE_STATE_IO();
+
+            StateUpgradeTestState _child{};
+            int32                 _tail{ 0 };
+        };
+
+        void StateUpgradeTestOuterState::serializeState( StateIO& io )
+        {
+            io.value( _child );
+            io.value( _tail );
+        }
+
+        struct StateUpgradeTestSteps
+        {
+            /** @brief 판 1 → 2: 체력을 int16 에서 int32 로 넓힌다. */
+            static bool convertHealthToInt32( Archive& inOldBody, Archive& outNewBody )
+            {
+                int16 health = 0;
+                inOldBody >> health;
+                outNewBody << static_cast<int32>( health );
+                return inOldBody.isOk();
+            }
+            /** @brief 판 2 → 3: 새 칸 속도를 데이터 규칙(1.5)으로 채운다. */
+            static bool addSpeed( Archive& inOldBody, Archive& outNewBody )
+            {
+                int32 health = 0;
+                inOldBody >> health;
+                outNewBody << health << 1.5f;
+                return inOldBody.isOk();
+            }
+        };
+    } // namespace
+
+    SW_STATE_FORMAT_UPGRADE( stateUpgradeTest1, "TUPG", 1, 2, &StateUpgradeTestSteps::convertHealthToInt32 );
+    SW_STATE_FORMAT_UPGRADE( stateUpgradeTest2, "TUPG", 2, 3, &StateUpgradeTestSteps::addSpeed );
+} // namespace sw
+
+/**
+ * @brief [StateIOTest] 옛 판(1) 바이트를 머리가 단계 1 → 2 → 3 으로 올려 읽는다 — 값이 맞고, 머리 없는 바깥 형식의 뒤 칸도 그대로 읽히며 아카이브는 끝까지 소비된다(감사 A-6)
+ */
+SW_TEST_CASE( StateIOTest, HeaderUpgradesOldVersionThroughTheChain )
+{
+    sw::Archive written;
+    sw::StateIO::writeHeader( written, sw::StateUpgradeTestState::kStateTag, 1 );
+    written << int16{ 7 };
+    written << int32{ 99 }; // 바깥 형식의 뒤 칸
+
+    sw::Archive                    reading( written.getData(), written.getSize() );
+    sw::StateUpgradeTestOuterState restored;
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    SW_EXPECT_EQUAL( 7, restored._child._health );
+    SW_EXPECT_NEAR( 1.5f, restored._child._speed, 1.0e-6f );
+    SW_EXPECT_EQUAL( 99, restored._tail );
+    SW_EXPECT_EQUAL( size_t{ 0 }, reading.getRemainingBytes() );
+    SW_EXPECT_TRUE( reading.isOk() );
+
+    // 올려 읽은 상태는 새 판으로 쓴다
+    sw::Archive rewritten;
+    restored.writeState( rewritten );
+    sw::Archive                    again( rewritten.getData(), rewritten.getSize() );
+    sw::StateUpgradeTestOuterState reread;
+    SW_REQUIRE_TRUE( reread.readState( again ) );
+    SW_EXPECT_EQUAL( 7, reread._child._health );
+    SW_EXPECT_EQUAL( 99, reread._tail );
+}
+
+/**
+ * @brief [StateIOTest] 단계가 없는 판(0)과 새 판(4)은 거절하고 상태는 그대로다 — 옛 판을 그대로 읽는 폴백은 없다
+ */
+SW_TEST_CASE( StateIOTest, HeaderRefusesVersionWithoutChain )
+{
+    const auto readVersion = []( uint32 version, sw::StateUpgradeTestState& inoutState )
+    {
+        sw::Archive forged;
+        sw::StateIO::writeHeader( forged, sw::StateUpgradeTestState::kStateTag, version );
+        forged << int32{ 3 } << 2.0f;
+        sw::Archive reading( forged.getData(), forged.getSize() );
+        return inoutState.readState( reading );
+    };
+    sw::StateUpgradeTestState state;
+    state._health = 11;
+    SW_EXPECT_LOG( "FormatUpgrade.StepMissing" );
+    SW_EXPECT_FALSE( readVersion( 0, state ) );
+    SW_EXPECT_LOG( "FormatUpgrade.NewerThanSupported" );
+    SW_EXPECT_FALSE( readVersion( 4, state ) );
+    SW_EXPECT_EQUAL( 11, state._health );
+    SW_EXPECT_TRUE( readVersion( 3, state ) );
+    SW_EXPECT_EQUAL( 3, state._health );
+}
+
+/**
+ * @brief [StateIOTest] 자리가 정해진 옛 판 구간(`section` · `readExpectedSection`)도 같은 사슬로 올려 본문을 읽는다
+ */
+SW_TEST_CASE( StateIOTest, SectionUpgradesOldVersionThroughTheChain )
+{
+    sw::Archive body;
+    body << int16{ 21 };
+    sw::Archive outer;
+    sw::StateIO::writeSection( outer, sw::StateUpgradeTestState::kStateTag, 1, body );
+
+    sw::Archive reading( outer.getData(), outer.getSize() );
+    sw::StateIO io( reading );
+    int32       health = 0;
+    float32     speed  = 0.0f;
+    io.section( sw::StateUpgradeTestState::kStateTag, sw::StateUpgradeTestState::kStateVersion, [&health, &speed]( sw::StateIO& bodyIO )
+    {
+        bodyIO.value( health );
+        bodyIO.value( speed );
+    } );
+    SW_EXPECT_TRUE( io.isOk() );
+    SW_EXPECT_EQUAL( 21, health );
+    SW_EXPECT_NEAR( 1.5f, speed, 1.0e-6f );
+    SW_EXPECT_EQUAL( size_t{ 0 }, reading.getRemainingBytes() );
 }

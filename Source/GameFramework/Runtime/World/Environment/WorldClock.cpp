@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
@@ -19,7 +20,30 @@ namespace sw
                 return value >= edge1 ? 1.0f : 0.0f;
             return MathUtil::smoothstep( edge0, edge1, value );
         }
+
+        struct WorldClockInternal
+        {
+            /**
+             * @brief 판 1 → 2: 머리표가 없고 하루 안 시각이 float32 이던 본문을 머리표(CLOK 2) + float64 본문으로 다시 씁니다.
+             * @details 판 1 은 머리표가 없어 세션 상태 구간(구간 머리 CLOK 1)에만 알아볼 수 있게 남았다 — 이 단계는 그 구간 본문을 받는다(`StateIO::upgradeSectionBody`).
+             */
+            [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
+            {
+                int32   day         = 0;
+                float32 secondOfDay = 0.0f;
+                float32 timeScale   = 0.0f;
+                uint8   bPaused     = SW_FALSE;
+                inOldBody >> day >> secondOfDay >> timeScale >> bPaused;
+                if ( inOldBody.isError() )
+                    return false;
+                StateIO::writeHeader( outNewBody, WorldClock::kStateTag, 2 );
+                outNewBody << day << static_cast<float64>( secondOfDay ) << timeScale << bPaused;
+                return true;
+            }
+        };
     } // namespace
+
+    SW_STATE_FORMAT_UPGRADE( worldClock1To2, "CLOK", 1, 2, &WorldClockInternal::upgradeStateFrom1 );
 
     WorldClock::WorldClock()
         : _settings{}
@@ -210,7 +234,7 @@ namespace sw
 
     void WorldClock::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion ); // 판 1(float32 시각 · 머리표 없음)은 거절한다
+        io.header( kStateTag, kStateVersion ); // 판 1(float32 시각 · 머리표 없음)은 구간 판 올림(WorldClockInternal::upgradeStateFrom1)이 올려 온다
         io.value( _day );
         io.value( _secondOfDay );
         io.value( _timeScale );
