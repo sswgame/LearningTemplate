@@ -270,7 +270,7 @@ namespace sw
          */
         static void setCreateRule( WriteGate rule );
         /**
-         * @brief 게이트가 @p path 를 바꾸는 것을 허락하는지, 새 자리면 이름 규칙(`setCreateRule`)에 맞는지 봅니다. 거절하면 경로와 이유를 오류로 남기고 false 입니다.
+         * @brief 게이트가 @p path 를 바꾸는 것을 허락하는지, 체크아웃하지 않은 파일이 아닌지(`findNotOpenForEdit`, 폴더면 그 아래), 새 자리면 이름 규칙(`setCreateRule`)에 맞는지 봅니다. 거절하면 경로와 이유를 오류로 남기고 false 입니다.
          *        둘 다 없으면 true. 파일을 바꾸는 모든 입구가 부릅니다.
          */
         [[nodiscard]] static bool isWriteAllowed( string_view path );
@@ -279,6 +279,22 @@ namespace sw
          * @details `isWriteAllowed` 와 폴더를 만드는 `ensureDirectoryExists` 가 부른다 — 파일이든 폴더든 새로 생기는 이름은 같은 규칙을 지난다.
          */
         [[nodiscard]] static bool isCreateAllowed( string_view path );
+        /**
+         * @brief 이 자리의 읽기 전용 파일이 "체크아웃하지 않음"(버전 관리 잠금 — git LFS lockable 은 잠그기 전까지 읽기 전용)을 뜻하면 true 를 돌려주는 규칙입니다.
+         * @details 버전 관리 트리(리소스 트리)를 아는 엔진의 `AssetPaths` 가 건다(Core 는 그 뿌리를 모른다 — `setCreateRule` 과 같은 자리). 규칙 밖의 읽기 전용(복사로 속성이 따라온 사본 ·
+         *          git 개체 · 작업 폴더)은 잠금이 아니라 정리가 지워야 하는 파일이다 — 그래서 지우기를 모든 읽기 전용에서 막지 않고 규칙 안에서만 막는다.
+         */
+        using CheckoutRule = bool ( * )( string_view path );
+        /** @brief 체크아웃 규칙을 걸고 앞 규칙을 돌려줍니다(테스트가 되돌린다). nullptr 이면 규칙이 없고 지우기 · 옮기기는 읽기 전용을 보지 않습니다. */
+        static CheckoutRule setCheckoutRule( CheckoutRule rule );
+        /**
+         * @brief @p path(파일, 폴더면 그 아래 모든 파일)에서 체크아웃 규칙 안의 읽기 전용 파일을 처음 만난 경로입니다. 규칙이 없거나 그런 파일이 없으면 빈 값입니다.
+         * @details `isWriteAllowed` 가 이 답으로 거절하므로, 그것을 지나는 모든 입구(쓰기 · `removeFile` · `tryRemoveFile` · `removeDirectory` · `renamePath` · `copyFile` 의 대상 · `moveToRecycleBin`)와
+         *          경로를 스스로 여는 서드파티 저장(DDS 저장 · SQLite — 쓰기 전에 `isWriteAllowed` 를 직접 부른다)이 같은 확인을 지난다 —
+         *          POSIX 는 폴더 권한만으로 읽기 전용 파일을 지우고 옮기며, Windows 지우기(`removeEntry`)는 정리를 위해 속성을 풀고 지워 잠금이 뚫렸다.
+         *          유니티 `AssetDatabase.IsOpenForEdit` 의 반대 질의이고, 언리얼 `IFileManager::Delete` 가 `EvenReadOnly` 없이 읽기 전용을 지우지 않는 자리다.
+         */
+        [[nodiscard]] static optional<string> findNotOpenForEdit( string_view path );
         /** @brief 파일을 복사합니다(대상이 있으면 덮어씁니다). 실패하면 로그를 남기고 false 입니다. */
         [[nodiscard]] static bool copyFile( string_view source, string_view destination );
         /** @brief 파일을 삭제합니다. 없었거나 삭제했으면 true 이고, 지우지 못했으면 경로와 이유를 알리고 false 입니다. */
@@ -383,7 +399,7 @@ namespace sw
          * @brief 디렉터리에서 확장자 필터에 맞는 파일을 모읍니다.
          * @details 실제 파일 시스템을 훑어 얻은 경로라 **대소문자를 그대로 돌려줍니다**(구분자만 `/` 로 바꿉니다). 그대로 열 수
          *          있는 경로여야 하기 때문입니다. 대소문자를 구분하는 파일 시스템에서는 소문자로 바꾼 경로가 곧 "파일 없음" 입니다.
-         *          맵 키가 필요하면 받는 쪽에서 normalizePath 하십시오.
+         *          맵 키가 필요하면 받는 쪽에서 normalizePath 하십시오. 더한 항목은 바이트 순으로 정렬한다 — 훑는 순서는 OS 마다 달라 첫 일치를 고르는 쪽(Quick Open)이 갈렸다.
          * @return 폴더가 없으면 알리지 않고 false(없으면 빈 목록이 맞는지는 부른 쪽이 정한다 — 맞으면 `(void)` 와 이유), 순회가 도중에 멈췄으면 경로를 알리고
          *         false(목록은 모은 데까지 — 부분 목록을 전부로 믿으면 지울 것 · 구울 것을 빠뜨린다)입니다.
          * @param stopToken 협조 중단 신호입니다(`StopSource::getToken`). 올라가면 알리지 않고 멈추고 false 를 돌려줍니다 — 부른 쪽이 신호를 다시 읽고 목록을 버린다. 기본값(묶이지 않은 토큰)이면 끝까지 훑는다.

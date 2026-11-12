@@ -22,6 +22,7 @@ namespace sw
         {
             static constexpr uint64      kJournalFormat       = 1;
             static constexpr uint64      kCarryFormat         = 1;
+            static constexpr uint64      kTombstoneFormat     = 1;
             static constexpr int32       kListPageSize        = 64;
             static constexpr int32       kTimeHexWidth        = 16;
             static constexpr string_view kLegacyMintHolderKey = "sys/mint"; ///< 예전 판이 발행 다리에 넣던 내역 줄의 보유자 키
@@ -363,6 +364,199 @@ namespace sw
                 return finish( outResult, LedgerResult::Ok );
             }
 
+            /** @brief 묘비를 읽을지입니다. 지운 계정의 잔액 소각만 건너뛴다. */
+            enum class TombstoneRule : uint8
+            {
+                Refuse = 0, ///< 묘비가 선 계정의 다리는 `AccountDeleted`
+                Skip        ///< 지운 계정의 소각(`burnDeletedAccounts`)
+            };
+
+            /** @brief 계정 보유자마다 묘비가 없는지 읽고, 없어야 함을 @p inoutTransaction 의 조건으로 겁니다. 묘비가 있으면 `AccountDeleted` 입니다. */
+            [[nodiscard]] static LedgerResult stageAliveAccounts( IServiceStoreConnection& connection, const vector<Delta>& listDelta, ServiceTransaction& inoutTransaction )
+            {
+                const string* pLastHolderKey = nullptr;
+                for ( const Delta& delta : listDelta )
+                {
+                    const bool bSkip = delta._holder._kind != LedgerHolderKind::Account || ( pLastHolderKey != nullptr && *pLastHolderKey == delta._holderKey );
+                    if ( bSkip )
+                        continue;
+                    pLastHolderKey = &delta._holderKey;
+                    ServiceRecord            tombstone;
+                    const ServiceStoreResult read = connection.readRecord( Ledger::getTombstoneTable(), delta._holderKey, tombstone );
+                    if ( read == ServiceStoreResult::Ok )
+                        return LedgerResult::AccountDeleted;
+                    if ( read != ServiceStoreResult::NotFound )
+                        return LedgerResult::Unavailable;
+                    inoutTransaction.requireVersion( Ledger::getTombstoneTable(), delta._holderKey, ServiceRecord::kAbsentVersion ); // 읽은 뒤 선 묘비에 잔액을 만들지 않는다
+                }
+                return LedgerResult::Ok;
+            }
+
+            /**
+             * @brief 이동을 붙입니다(`Ledger::stageTransfer` 의 몸통). 계정 다리마다 묘비를 읽어 있으면 `AccountDeleted` 이고, 없어야 함을 커밋 조건으로 건다.
+             * @details 지운 계정의 잔액을 소각하는 이동(`burnDeletedAccounts`)만 묘비를 건너뛴다 — 공개 함수로는 그 길을 열 수 없다.
+             */
+            [[nodiscard]] static LedgerResult stageTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, TombstoneRule tombstoneRule,
+                                                             ServiceTransaction& inoutTransaction, LedgerTransferResult& outResult )
+            {
+                outResult                    = LedgerTransferResult{};
+                outResult._journalKey        = request._journalKey;
+                outResult._timeMs            = request._timeMs;
+                const LedgerResult validated = validate( request, outResult._failedPostingIndex );
+                if ( validated != LedgerResult::Ok )
+                    return finish( outResult, validated );
+
+                ServiceRecord            journalRecord;
+                const ServiceStoreResult journalRead = connection.readRecord( Ledger::getJournalTable(), request._journalKey, journalRecord );
+                if ( journalRead == ServiceStoreResult::Ok )
+                    return replayJournal( journalRecord._bytes, request, outResult );
+                if ( journalRead != ServiceStoreResult::NotFound )
+                    return finish( outResult, LedgerResult::Unavailable );
+
+                vector<Delta> listDelta;
+                collectDeltas( request, listDelta );
+
+                ServiceTransaction pending;
+                if ( tombstoneRule == TombstoneRule::Refuse )
+                {
+                    const LedgerResult alive = stageAliveAccounts( connection, listDelta, pending );
+                    if ( alive != LedgerResult::Ok )
+                        return finish( outResult, alive );
+                }
+                for ( const Delta& delta : listDelta )
+                {
+                    const string             balanceKey = makeBalanceKey( delta._holderKey, delta._assetID );
+                    ServiceRecord            balanceRecord;
+                    const ServiceStoreResult balanceRead = connection.readRecord( Ledger::getBalanceTable(), balanceKey, balanceRecord );
+                    if ( balanceRead != ServiceStoreResult::Ok && balanceRead != ServiceStoreResult::NotFound )
+                        return finish( outResult, LedgerResult::Unavailable );
+                    int64 currentAmount = 0;
+                    if ( balanceRead == ServiceStoreResult::Ok && Ledger::decodeBalanceRecord( balanceRecord._bytes, currentAmount ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "Ledger.LedgerBalanceUnreadable", "Ledger balance '%#' is unreadable", balanceKey.c_str() );
+                        return finish( outResult, LedgerResult::Unavailable );
+                    }
+                    const int64 nextAmount = currentAmount + delta._delta;
+                    if ( isAmountAllowed( request, delta, nextAmount ) == false )
+                    {
+                        outResult._failedPostingIndex = delta._firstDebitIndex;
+                        return finish( outResult, LedgerResult::InsufficientFunds );
+                    }
+                    const bool bIncrease = delta._delta > 0;
+                    if ( bIncrease && nextAmount > computeCap( request, delta._holder, delta._assetID ) )
+                    {
+                        outResult._failedPostingIndex = delta._firstCreditIndex;
+                        return finish( outResult, LedgerResult::CapExceeded );
+                    }
+                    if ( delta._delta != 0 )
+                    {
+                        if ( nextAmount == 0 )
+                            pending.erase( Ledger::getBalanceTable(), balanceKey, balanceRecord._version );
+                        else
+                            pending.put( Ledger::getBalanceTable(), balanceKey, encodeBalance( nextAmount ), balanceRecord._version );
+                    }
+                    LedgerTransferResult::HolderBalance& holderBalance = outResult._listHolderBalance.emplace_back();
+                    holderBalance._holder                              = delta._holder;
+                    holderBalance._balance._assetID                    = delta._assetID;
+                    holderBalance._balance._amount                     = nextAmount;
+                    holderBalance._balance._version                    = balanceRecord._version;
+                }
+
+                const uint64 contentHash = computeContentHash( request );
+                pending.put( Ledger::getJournalTable(), request._journalKey, encodeJournal( request, contentHash, outResult._listHolderBalance ),
+                             ServiceRecord::kAbsentVersion );
+                // 소각 분개(`burnAccount`)도 이 길을 지나 같은 TTL 색인 줄을 넣는다 - 기간 뒤 분개 쓸기가 이월 · 내역과 함께 지운다
+                pending.put( getJournalExpiryTable(), ServiceTTLRule::makeTTLIndexKey( request._timeMs, request._journalKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+                const string* pLastHolderKey = nullptr;
+                for ( const Delta& delta : listDelta )
+                {
+                    const bool bSameHolder = pLastHolderKey != nullptr && *pLastHolderKey == delta._holderKey;
+                    if ( bSameHolder )
+                        continue;
+                    pending.put( Ledger::getHistoryTable(), makeHistoryKey( delta._holderKey, request._timeMs, request._journalKey ), vector<uint8>{},
+                                 ServiceRecord::kAbsentVersion );
+                    pLastHolderKey = &delta._holderKey;
+                }
+
+                const size_t totalWriteCount = inoutTransaction.getWrites().size() + pending.getWrites().size();
+                if ( totalWriteCount > static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
+                {
+                    outResult._listHolderBalance.clear();
+                    return finish( outResult, LedgerResult::Invalid );
+                }
+                Ledger::appendWrites( pending, inoutTransaction );
+                return finish( outResult, LedgerResult::Ok );
+            }
+
+            /** @brief 묘비 · 소각 대기 키 `acct/<16 진>` 에서 계정 id 를 읽습니다. */
+            [[nodiscard]] static bool parseAccountKey( string_view key, uint64& outAccountID )
+            {
+                constexpr string_view kPrefix = "acct/";
+                return StringUtil::startsWith( key, kPrefix ) && ServiceKeyUtil::parseHex64( key.substr( kPrefix.size() ), outAccountID ) && outAccountID != 0;
+            }
+
+            /**
+             * @brief 지운 계정 하나의 잔액을 모두 소각하고 소각 대기에서 뺍니다. 잔액은 Sink 로, 빚은 Mint 에서 메워 0 으로 만든다(대손 상각).
+             * @return 다 소각했으면 Ok, 충돌이 이어지면 Conflict(다음 회차), 분개 키가 이미 다른 소각에 쓰였으면 Invalid, 저장소 문제면 그 결과입니다.
+             */
+            [[nodiscard]] static ServiceStoreResult burnAccount( IServiceStoreConnection& connection, uint64 accountID, int64 timeMs )
+            {
+                const LedgerHolder account       = LedgerHolder::makeAccount( accountID );
+                int32              conflictCount = 0;
+                while ( true )
+                {
+                    vector<LedgerBalance>    listBalance;
+                    const ServiceStoreResult listed = Ledger::listBalances( connection, account, listBalance );
+                    if ( listed != ServiceStoreResult::Ok )
+                        return listed;
+                    if ( listBalance.empty() )
+                    {
+                        ServiceTransaction done;
+                        done.erase( Ledger::getDeletionQueueTable(), account.makeKey() );
+                        return connection.commit( done );
+                    }
+                    LedgerTransferRequest request;
+                    request._journalKey = LedgerJournalKey::makeAccountScope( accountID );
+                    request._journalKey += "/delete.";
+                    request._journalKey += listBalance.front()._assetID;
+                    request._reason    = "account.delete";
+                    request._timeMs    = timeMs;
+                    request._actorKind = LedgerActorKind::System;
+                    ServiceTransaction transaction;
+                    const size_t       burnCount = std::min( listBalance.size(), static_cast<size_t>( LedgerConstant::kMaxPostingCount ) );
+                    for ( size_t balanceIndex = 0; balanceIndex < burnCount; ++balanceIndex )
+                    {
+                        const LedgerBalance& balance = listBalance[balanceIndex];
+                        if ( balance._amount > 0 )
+                            request._listPosting.push_back( LedgerPosting{ account, LedgerHolder::makeSink(), balance._assetID, balance._amount } );
+                        else
+                            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, balance._assetID, -balance._amount } ); // 빚은 메워 없앤다 — 거둘 사람이 없다
+                        if ( LedgerItemInstance::isInstanceAssetID( balance._assetID ) )
+                            transaction.erase( LedgerItemInstance::getStateTable(), balance._assetID ); // 소각한 아이템의 상태도 함께 지운다(`stageDestroy` 와 같다)
+                    }
+                    LedgerTransferResult result;
+                    const LedgerResult   staged = stageTransfer( connection, request, TombstoneRule::Skip, transaction, result );
+                    if ( staged == LedgerResult::Unavailable )
+                        return ServiceStoreResult::Unavailable;
+                    if ( staged != LedgerResult::Ok || result._bReplayed == SW_TRUE )
+                    {
+                        SW_LOG_ERROR_ID( "Ledger.AccountBurnRefused", "Burning the balances of deleted account %# was refused (journal '%#') - the account stays in the deletion queue", accountID,
+                                         request._journalKey.c_str() );
+                        return ServiceStoreResult::Invalid;
+                    }
+                    const ServiceStoreResult committed = connection.commit( transaction );
+                    if ( committed == ServiceStoreResult::Ok )
+                    {
+                        conflictCount = 0;
+                        continue;
+                    }
+                    if ( committed != ServiceStoreResult::Conflict )
+                        return committed; // 늦게 닿은 커밋이면 다음 회차가 다시 읽어 남은 것만 소각한다
+                    if ( ++conflictCount >= LedgerConstant::kMaxRetryCount )
+                        return ServiceStoreResult::Conflict;
+                }
+            }
+
             static void applyCommitVersion( LedgerTransferResult& inoutResult, uint64 commitVersion )
             {
                 for ( LedgerTransferResult::HolderBalance& holderBalance : inoutResult._listHolderBalance )
@@ -392,6 +586,53 @@ namespace sw
     {
         static const hashed_string s_table{ "ledger_carry" };
         return s_table;
+    }
+
+    const hashed_string& Ledger::getTombstoneTable()
+    {
+        static const hashed_string s_table{ "ledger_tombstone" };
+        return s_table;
+    }
+
+    const hashed_string& Ledger::getDeletionQueueTable()
+    {
+        static const hashed_string s_table{ "ledger_deletion_queue" };
+        return s_table;
+    }
+
+    void Ledger::stageAccountDeletion( uint64 accountID, int64 timeMs, ServiceTransaction& inoutTransaction )
+    {
+        const string key = LedgerHolder::makeAccount( accountID ).makeKey();
+        BitWriter    writer;
+        writer.writeVarUint( LedgerInternal::kTombstoneFormat );
+        writer.writeVarInt( timeMs );
+        inoutTransaction.put( getTombstoneTable(), key, writer.releaseBytes() );
+        inoutTransaction.put( getDeletionQueueTable(), key, vector<uint8>{} );
+    }
+
+    ServiceStoreResult Ledger::burnDeletedAccounts( IServiceStoreConnection& connection, int64 timeMs, int32 maxCount, int32& outBurnedCount )
+    {
+        outBurnedCount = 0;
+        if ( maxCount <= 0 )
+            return ServiceStoreResult::Ok;
+        vector<ServiceRecord>    listQueued;
+        const ServiceStoreResult listed = connection.listRecords( getDeletionQueueTable(), "", "", maxCount, false, listQueued );
+        if ( listed != ServiceStoreResult::Ok )
+            return listed;
+        for ( const ServiceRecord& queued : listQueued )
+        {
+            uint64 accountID = 0;
+            if ( LedgerInternal::parseAccountKey( queued._key, accountID ) == false )
+            {
+                SW_LOG_WARNING_ID( "Ledger.DeletionQueueKeyMalformed", "Ledger deletion queue key '%#' is malformed", queued._key.c_str() );
+                continue;
+            }
+            const ServiceStoreResult burned = LedgerInternal::burnAccount( connection, accountID, timeMs );
+            if ( burned == ServiceStoreResult::Unavailable )
+                return burned;
+            outBurnedCount += burned == ServiceStoreResult::Ok ? 1 : 0; // 충돌 · 거절은 대기에 남아 다음 회차가 다시 본다
+        }
+        return ServiceStoreResult::Ok;
     }
 
     ServiceTTLRule Ledger::makeJournalTTLRule( int64 retentionMs )
@@ -466,86 +707,7 @@ namespace sw
     LedgerResult Ledger::stageTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, ServiceTransaction& inoutTransaction,
                                         LedgerTransferResult& outResult )
     {
-        outResult                    = LedgerTransferResult{};
-        outResult._journalKey        = request._journalKey;
-        outResult._timeMs            = request._timeMs;
-        const LedgerResult validated = LedgerInternal::validate( request, outResult._failedPostingIndex );
-        if ( validated != LedgerResult::Ok )
-            return LedgerInternal::finish( outResult, validated );
-
-        ServiceRecord            journalRecord;
-        const ServiceStoreResult journalRead = connection.readRecord( getJournalTable(), request._journalKey, journalRecord );
-        if ( journalRead == ServiceStoreResult::Ok )
-            return LedgerInternal::replayJournal( journalRecord._bytes, request, outResult );
-        if ( journalRead != ServiceStoreResult::NotFound )
-            return LedgerInternal::finish( outResult, LedgerResult::Unavailable );
-
-        vector<LedgerInternal::Delta> listDelta;
-        LedgerInternal::collectDeltas( request, listDelta );
-
-        ServiceTransaction pending;
-        for ( const LedgerInternal::Delta& delta : listDelta )
-        {
-            const string             balanceKey = LedgerInternal::makeBalanceKey( delta._holderKey, delta._assetID );
-            ServiceRecord            balanceRecord;
-            const ServiceStoreResult balanceRead = connection.readRecord( getBalanceTable(), balanceKey, balanceRecord );
-            if ( balanceRead != ServiceStoreResult::Ok && balanceRead != ServiceStoreResult::NotFound )
-                return LedgerInternal::finish( outResult, LedgerResult::Unavailable );
-            int64 currentAmount = 0;
-            if ( balanceRead == ServiceStoreResult::Ok && decodeBalanceRecord( balanceRecord._bytes, currentAmount ) == false )
-            {
-                SW_LOG_ERROR_ID( "Ledger.LedgerBalanceUnreadable", "Ledger balance '%#' is unreadable", balanceKey.c_str() );
-                return LedgerInternal::finish( outResult, LedgerResult::Unavailable );
-            }
-            const int64 nextAmount = currentAmount + delta._delta;
-            if ( LedgerInternal::isAmountAllowed( request, delta, nextAmount ) == false )
-            {
-                outResult._failedPostingIndex = delta._firstDebitIndex;
-                return LedgerInternal::finish( outResult, LedgerResult::InsufficientFunds );
-            }
-            const bool bIncrease = delta._delta > 0;
-            if ( bIncrease && nextAmount > LedgerInternal::computeCap( request, delta._holder, delta._assetID ) )
-            {
-                outResult._failedPostingIndex = delta._firstCreditIndex;
-                return LedgerInternal::finish( outResult, LedgerResult::CapExceeded );
-            }
-            if ( delta._delta != 0 )
-            {
-                if ( nextAmount == 0 )
-                    pending.erase( getBalanceTable(), balanceKey, balanceRecord._version );
-                else
-                    pending.put( getBalanceTable(), balanceKey, LedgerInternal::encodeBalance( nextAmount ), balanceRecord._version );
-            }
-            LedgerTransferResult::HolderBalance& holderBalance = outResult._listHolderBalance.emplace_back();
-            holderBalance._holder                              = delta._holder;
-            holderBalance._balance._assetID                    = delta._assetID;
-            holderBalance._balance._amount                     = nextAmount;
-            holderBalance._balance._version                    = balanceRecord._version;
-        }
-
-        const uint64 contentHash = LedgerInternal::computeContentHash( request );
-        pending.put( getJournalTable(), request._journalKey, LedgerInternal::encodeJournal( request, contentHash, outResult._listHolderBalance ),
-                     ServiceRecord::kAbsentVersion );
-        pending.put( LedgerInternal::getJournalExpiryTable(), ServiceTTLRule::makeTTLIndexKey( request._timeMs, request._journalKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
-        const string* pLastHolderKey = nullptr;
-        for ( const LedgerInternal::Delta& delta : listDelta )
-        {
-            const bool bSameHolder = pLastHolderKey != nullptr && *pLastHolderKey == delta._holderKey;
-            if ( bSameHolder )
-                continue;
-            pending.put( getHistoryTable(), LedgerInternal::makeHistoryKey( delta._holderKey, request._timeMs, request._journalKey ), vector<uint8>{},
-                         ServiceRecord::kAbsentVersion );
-            pLastHolderKey = &delta._holderKey;
-        }
-
-        const size_t totalWriteCount = inoutTransaction.getWrites().size() + pending.getWrites().size();
-        if ( totalWriteCount > static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
-        {
-            outResult._listHolderBalance.clear();
-            return LedgerInternal::finish( outResult, LedgerResult::Invalid );
-        }
-        appendWrites( pending, inoutTransaction );
-        return LedgerInternal::finish( outResult, LedgerResult::Ok );
+        return LedgerInternal::stageTransfer( connection, request, LedgerInternal::TombstoneRule::Refuse, inoutTransaction, outResult );
     }
 
     LedgerResult Ledger::resolveConflict( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferResult& outResult )

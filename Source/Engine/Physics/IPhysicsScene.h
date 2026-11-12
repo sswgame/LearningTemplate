@@ -94,9 +94,15 @@ namespace sw
          */
         virtual void step( float32 fixedDeltaTime ) = 0;
         /** @brief 마지막 `step` 이 낸 접촉과 트리거 이벤트를 반환합니다(결정적 순서, `PhysicsContactTracker`). 다음 `step` 까지 그대로입니다. */
-        virtual const vector<ContactEvent>& getContactEvents() const            = 0;
-        virtual void                        setGravity( const Vector& gravity ) = 0;
-        virtual Vector                      getGravity() const                  = 0;
+        virtual const vector<ContactEvent>& getContactEvents() const = 0;
+        /**
+         * @brief 사용자 값 @p userData 를 실은 바디가 낀 쌍이 유지 이벤트를 낼지 정합니다. 처음에는 아무도 듣지 않아 유지가 나오지 않습니다(시작 · 끝은 늘 나온다).
+         * @details 언리얼 `bNotifyRigidBodyCollision` · Godot `contact_monitor` 처럼 켠 쪽만 알린다 — 듣지 않는 쌍은 유지 값(충격량 어림)도 구하지 않는다(감사 S-1).
+         *          바디가 아니라 사용자 값에 걸어 같은 값으로 다시 지은 바디도 따라간다. step 사이에 부릅니다.
+         */
+        virtual void   setContactStayListener( uint64 userData, bool bListen ) = 0;
+        virtual void   setGravity( const Vector& gravity )                     = 0;
+        virtual Vector getGravity() const                                      = 0;
         /** @brief 레이어끼리의 충돌 행렬을 바꿉니다(`PhysicsSettings::makeCollisionLayers`). 이미 있는 바디에도 다음 스텝부터 적용됩니다. */
         virtual void setLayerCollision( const CollisionLayers& layers ) = 0;
         /** @brief 지금 쓰는 레이어 충돌 행렬입니다(`setLayerCollision` 이 마지막으로 준 것, 처음에는 설정 표의 것). */

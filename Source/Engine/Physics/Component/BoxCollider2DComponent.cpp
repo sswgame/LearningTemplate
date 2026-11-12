@@ -250,12 +250,29 @@ namespace sw
         // 이번 프레임의 출발점 — 시작한 자리 또는 지난 프레임의 중심이다. 순간이동했거나 출발점이 없으면 제자리다(쓸지 않고, 움직인 상대로도 보지 않는다).
         // 쓸기는 여기서 하지 않는다 — 모든 콜라이더가 이번 자리로 옮겨진 뒤 씬 물리가 부른다(`ScenePhysics::sweepContinuousColliders2D`).
         _frameFromCenter = ( _bSweepOriginValid && bTeleported == false ) ? _sweepOrigin : center;
-        // 크기 · 레이어 · 트리거가 바뀌면 다시 만든다 — 세터는 표시를 남기지 않으므로 매 프레임 바디를 만든 값과 비교한다.
-        const bool bShapeChanged = _body.isValid() && ( _bodyHalfExtent != halfExtents || _bodyLayer != _colliderType || _bBodyTrigger != _bTrigger );
-        if ( bRebuild || bShapeChanged )
+        // 레이어 · 트리거가 바뀌면 다시 만든다 — 세터는 표시를 남기지 않으므로 매 프레임 바디를 만든 값과 비교한다. 크기(상자 값 · 트랜스폼 배율)만 바뀌면
+        // 바디는 두고 셰이프만 간다 — 다시 만들면 겹쳐 있던 쌍마다 끝 → 시작이 난다(감사 S-4, 강체 `applyScaledShape` 와 같다).
+        const bool bKindChanged = _body.isValid() && ( _bodyLayer != _colliderType || _bBodyTrigger != _bTrigger );
+        const bool bSizeChanged = _body.isValid() && _bodyHalfExtent != halfExtents;
+        if ( bRebuild || bKindChanged )
         {
             releasePhysics( physics );
             createBody( physics, center, halfExtents );
+        }
+        else if ( bSizeChanged )
+        {
+            const PhysicsShapeDesc2D box = BoxCollider2DComponentInternal::makeBox( halfExtents );
+            if ( pScene->setBodyShape( _body, span<const PhysicsShapeDesc2D>{ &box, 1 }, hashed_string{}, 0.0f ) == false )
+            {
+                releasePhysics( physics );
+                return;
+            }
+            _bodyHalfExtent = halfExtents;
+            if ( _bodyCenter != center )
+            {
+                pScene->setBodyTransform( _body, center, 0.0f );
+                _bodyCenter = center;
+            }
         }
         else if ( _body.isValid() == false )
         {

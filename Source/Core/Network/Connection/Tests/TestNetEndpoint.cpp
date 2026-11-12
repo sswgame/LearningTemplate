@@ -11,6 +11,8 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include <limits>
+
 // 엔드포인트 — 핸드셰이크(도전 · 가득 참 · 다른 프로토콜 · 다른 와이어 판), 나쁜 망(지연 · 흔들림 · 손실 · 중복 · 깨짐)에서의 신뢰 순서, 끊기 · 타임아웃,
 // 디버거 대기, 잃은 수락, 만료된 도전, 한가할 때의 유지 패킷, 많은 연결, 64 KB 조각, 끊김 뒤 조각 버림, 보내기 상한과 포화.
 
@@ -903,4 +905,40 @@ SW_TEST_CASE( NetEndpointTest, FullReliableWindowClosesInsteadOfDroppingMessages
     SW_REQUIRE_TRUE( listEvent.empty() == false );
     SW_EXPECT_TRUE( listEvent.back()._kind == NetEndpointEvent::Kind::Disconnected );
     SW_EXPECT_TRUE( listEvent.back()._reason == NetDisconnectReason::ReliableOverflow );
+}
+
+SW_TEST_CASE( NetEndpointTest, NextDueTimeTakesEarliestOfRetryTimeoutAndSendInterval )
+{
+    // 네트워크 스레드는 고정 주기가 아니라 이 기한까지만 잔다 — 시계 없이 순수 함수로 본다(감사 N-8).
+    const NetEndpointConfig settings; // 보내기 1/30 · 유지 0.25 · 연결 제한 5 · 재요청 0.2
+    NetSlotTable            table;
+    table.reset( 1 );
+    table.open( 0, NetConnectionState::Connecting );
+    NetEndpointSlot& slot = table.get( 0 );
+
+    slot._lastSendTime = -1.0; // 아직 보낸 적이 없다 — 바로
+    SW_EXPECT_EQUAL( 10.0, NetEndpoint::computeNextDueTime( 10.0, slot, settings, 5.0 ) );
+    slot._connectStartTime = 10.0;
+    slot._lastSendTime     = 10.1; // 재요청이 연결 제한보다 이르다
+    SW_EXPECT_NEAR( 10.3, NetEndpoint::computeNextDueTime( 10.1, slot, settings, 5.0 ), 1.0e-9 );
+    slot._connectStartTime = 5.2; // 연결 제한이 재요청보다 이르다
+    SW_EXPECT_NEAR( 10.2, NetEndpoint::computeNextDueTime( 10.1, slot, settings, 5.0 ), 1.0e-9 );
+
+    slot._state           = NetConnectionState::Connected;
+    slot._lastSendTime    = 10.0;
+    slot._lastReceiveTime = 10.0;
+    SW_EXPECT_NEAR( 10.25, NetEndpoint::computeNextDueTime( 10.0, slot, settings, 5.0 ), 1.0e-9 ); // 한가하면 유지(하트비트) 간격
+    SW_EXPECT_NEAR( 10.1, NetEndpoint::computeNextDueTime( 10.0, slot, settings, 0.1 ), 1.0e-9 );  // 타임아웃이 더 이르다
+    SW_REQUIRE_TRUE( slot._connection->sendMessage( NetChannelType::ReliableOrdered, NetTestUtil::makeMessage( 1 ).data(), 4 ) );
+    SW_EXPECT_NEAR( 10.0 + 1.0 / 30.0, NetEndpoint::computeNextDueTime( 10.0, slot, settings, 5.0 ), 1.0e-9 ); // 보낼 것 · 재전송이 있으면 보내기 간격
+}
+
+SW_TEST_CASE( NetEndpointTest, WaitSecondsRunToTheNextUpdateWithinTheCap )
+{
+    SW_EXPECT_NEAR( 0.05, NetEndpoint::computeWaitSeconds( 10.0, 10.05, 0.1 ), 1.0e-9 );
+    SW_EXPECT_EQUAL( 0.1, NetEndpoint::computeWaitSeconds( 10.0, 10.25, 0.1 ) );                                    // 상한
+    SW_EXPECT_EQUAL( 0.0, NetEndpoint::computeWaitSeconds( 10.0, 9.0, 0.1 ) );                                      // 지난 기한은 바로
+    SW_EXPECT_EQUAL( 0.0, NetEndpoint::computeWaitSeconds( 10.0, std::numeric_limits<float64>::lowest(), 0.1 ) );   // 막 앞당긴 기한
+    SW_EXPECT_EQUAL( 0.1, NetEndpoint::computeWaitSeconds( 10.0, std::numeric_limits<float64>::infinity(), 0.1 ) ); // 연결 없음
+    SW_EXPECT_EQUAL( 0.0, NetEndpoint::computeWaitSeconds( 10.0, 11.0, -1.0 ) );                                    // 틀린 상한은 0
 }

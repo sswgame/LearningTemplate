@@ -381,16 +381,13 @@ namespace sw
         virtual void onOverlapBegin( const OverlapInfo& overlap ) { (void)overlap; }
         /** @brief 겹침이 끝났을 때 불립니다(떨어짐, 꺼짐, 사라짐). 상대가 이미 사라졌으면 `OverlapInfo::_pOther` 는 nullptr 입니다. */
         virtual void onOverlapEnd( const OverlapInfo& overlap ) { (void)overlap; }
-        /** @brief 트리거와 겹친 채로 물리 스텝 하나가 지났을 때 불립니다(유니티의 `OnTriggerStay`). 물리 스텝의 겹침(트리거 · 2D 콜라이더)이 발생시키고, 연속 콜라이더가 쓸어 낸 겹침은 발생시키지 않습니다. */
-        virtual void onOverlapStay( const OverlapInfo& overlap ) { (void)overlap; }
+        // 유지(Stay)는 여기 없다 — 듣는 쪽이 `ScenePhysics::addContactStayListener` 로 opt-in 한다(`ContactStayListener`, 감사 S-1).
         /**
          * @brief 이 오브젝트의 강체가 다른 바디와 막는 접촉을 시작했을 때 불립니다(유니티의 `OnCollisionEnter`, 언리얼의 `OnComponentHit`).
          * @details 물리 스텝이 끝나고 보간한 위치를 기록한 뒤 게임 스레드에서 켜진 컴포넌트마다 불린다. 스폰, 파괴, 구조 변경을 해도 된다.
          *          한 프레임에 스텝이 여러 개이면 스텝 순서대로 온다.
          */
         virtual void onCollisionBegin( const CollisionInfo& collision ) { (void)collision; }
-        /** @brief 막는 접촉이 물리 스텝 하나 동안 이어졌을 때 불립니다(유니티의 `OnCollisionStay`). */
-        virtual void onCollisionStay( const CollisionInfo& collision ) { (void)collision; }
         /** @brief 막는 접촉이 끝났을 때 불립니다(떨어짐, 바디 사라짐). */
         virtual void onCollisionEnd( const CollisionInfo& collision ) { (void)collision; }
         /**

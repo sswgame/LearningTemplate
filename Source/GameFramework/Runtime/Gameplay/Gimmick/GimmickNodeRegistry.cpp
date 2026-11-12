@@ -713,6 +713,11 @@ namespace sw
         const bool bInvalidKind  = bTooManyPorts || bTooManySlots || kind._pStep == nullptr;
         if ( bInvalidKind )
             return false;
+        if ( const expected<void> assigned = _kindHashIndex.assign( kind._name.view(), kind._name.getHash() ); assigned.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "Gimmick.NodeKindHashClash", "Gimmick node kind names '%#' share a 32-bit name hash - circuit states record the kind by that hash; rename one", assigned.error().detail() );
+            return false;
+        }
         return _registry.addLogged( kind._name, kind, "Gimmick node kind" );
     }
 

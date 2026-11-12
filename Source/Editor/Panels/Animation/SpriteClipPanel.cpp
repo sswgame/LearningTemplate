@@ -536,6 +536,11 @@ namespace sw::editor
         return true;
     }
 
+    void SpriteClipPanel::collectFilesToSave( vector<string>& outListPath ) const
+    {
+        appendFileToSave( SpriteClipModel::computeClipPath( getLoadedAssetPath() ), outListPath );
+    }
+
     string SpriteClipPanel::captureDocumentText() const
     {
         return _model.captureText();

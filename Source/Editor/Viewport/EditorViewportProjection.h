@@ -15,6 +15,7 @@ struct ImVec2;
 
 namespace sw
 {
+    struct AABB;
     struct float2;
     struct float3;
     struct float4x4;
@@ -63,5 +64,13 @@ namespace sw::editor
         static bool projectSegment( const float4x4& viewProj, const float3& worldA, const float3& worldB,
                                     const float2& canvasPos, const float2& canvasSize, ImVec2& outScreenA,
                                     ImVec2& outScreenB );
+
+        /**
+         * @brief 월드 상자가 화면에서 차지하는 사각형을 구합니다. 열두 모서리를 `projectSegment` 로 **근평면에서 잘라** 옮긴 끝점들을 감쌉니다.
+         * @details 꼭짓점만 투영하면 카메라 뒤로 넘어간 꼭짓점을 버려 카메라를 품거나 걸친 큰 물체의 사각형이 작게 잡힌다(상자 선택이 놓친다).
+         *          근평면이 자른 단면의 꼭짓점은 모두 상자 모서리 위에 있으므로 모서리를 잘라 모으면 화면 자국을 빠짐없이 덮는다(언리얼 박스 선택의 프러스텀 판정과 같은 결과).
+         * @return 상자 전체가 카메라 뒤면 false 입니다.
+         */
+        static bool projectBoxRect( const float4x4& viewProj, const AABB& box, const float2& canvasPos, const float2& canvasSize, float2& outMin, float2& outMax );
     };
 } // namespace sw::editor

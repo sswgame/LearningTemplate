@@ -119,7 +119,8 @@ namespace sw
         JournalKeyReused,  ///< 같은 분개 키에 다른 내용이다. 다시 쓴 멱등 키이거나 이미 쓰인 영수증이다
         Conflict,          ///< 버전 충돌이 재시도 상한을 넘었다. 부르는 쪽이 같은 키로 다시 한다
         Invalid,           ///< 규칙 위반(레그 수, 금액, 같은 보유자끼리, 시스템끼리, 글자 규칙, 쓰기 상한)
-        Unavailable        ///< 저장소 오류로 적용됐는지 모른다(같은 키로 다시 하면 판명된다)
+        Unavailable,       ///< 저장소 오류로 적용됐는지 모른다(같은 키로 다시 하면 판명된다)
+        AccountDeleted     ///< 다리의 계정이 탈퇴로 지워졌다(묘비 `ledger_tombstone`). 받을 이도 거둘 잔액도 없다
     };
 } // namespace sw
 

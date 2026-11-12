@@ -416,7 +416,7 @@
     "Source/Engine/Behavior/ConditionExpr.cpp": {"minus-one": 1, "float": 2},
     "Source/Engine/Behavior/GameplayContext.h": {"hex": 1},
     "Source/Engine/Character/CharacterDataReader.cpp": {"float": 1},
-    "Source/Engine/Character/Fit/CharacterGeometry.cpp": {"minus-one": 1, "float": 2},
+    "Source/Engine/Character/Fit/CharacterGeometry.cpp": {"minus-one": 1, "float": 1},
     "Source/Engine/Character/Fit/CharacterMeshUtil.cpp": {"integer": 1},
     "Source/Engine/Character/Fit/FitOperator.cpp": {"float": 1},
     "Source/Engine/Character/Fit/FitSolver.cpp": {"float": 1, "integer": 7},

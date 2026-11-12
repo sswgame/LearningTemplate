@@ -68,10 +68,13 @@ namespace sw
         int32 addItem( const hashed_string& itemID, int32 count );
         /** @brief 슬롯 하나(내구도 포함)를 통째로 넣습니다. 모두 들어갔으면 true 입니다. */
         [[nodiscard]] bool addStack( const InventorySlot& stack );
-        /** @brief @p count 개가 모두 있으면 뺍니다. 뒤쪽 슬롯부터 뺍니다. */
-        [[nodiscard]] bool removeItem( const hashed_string& itemID, int32 count );
         /**
-         * @brief `removeItem` 과 같이 빼되, 뺀 것을 슬롯 조각(내구도 · 꾸미기 · 뗀 부품째)으로 @p outListTaken 에 덧붙입니다. 모자라면 아무것도 빼지 않고 false 입니다.
+         * @brief @p count 개가 모두 있으면 소비(파괴)합니다. 뒤쪽 슬롯부터 빼고 개체 상태는 버립니다. 모자라면 아무것도 빼지 않고 false 입니다.
+         * @details 탄약 · 열쇠 · 재료 · 씨앗처럼 사라지는 쓰임에만 쓴다. 옮기거나 되돌릴 수 있는 거래(판매 · 제작 대기열 · 상자)는 `takeItem` 조각을 `addStack` 으로 돌려준다 — id 로 다시 넣으면 닳은 장비가 새것이 된다(Lyra `ConsumeItemsByDefinition`).
+         */
+        [[nodiscard]] bool consumeItem( const hashed_string& itemID, int32 count );
+        /**
+         * @brief `consumeItem` 과 같이 빼되, 뺀 것을 슬롯 조각(내구도 · 꾸미기 · 뗀 부품째)으로 @p outListTaken 에 덧붙입니다. 모자라면 아무것도 빼지 않고 false 입니다.
          * @details 되돌릴 수 있는 거래(제작 대기열의 취소)는 이 조각을 `addStack` 으로 그대로 돌려준다 — id 로 다시 넣으면 닳은 장비가 새것이 된다(Lyra 는 아이템 인스턴스를 옮긴다).
          */
         [[nodiscard]] bool takeItem( const hashed_string& itemID, int32 count, vector<InventorySlot>& outListTaken );

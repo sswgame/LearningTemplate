@@ -44,6 +44,8 @@ namespace sw::editor
         void drawDocumentContent() override;
         /** @brief 고친 현지화 표와 열린 게임 데이터 표를 저장합니다(`DataTableModel::saveDocument`). */
         [[nodiscard]] bool saveDocument() override;
+        /** @brief 연 문서가 아니라 모델이 쓸 파일들이다(현지화 표 · 게임 데이터 파일 — `DataTableModel::collectFilesToSave`). */
+        void collectFilesToSave( vector<string>& outListPath ) const override;
         /**
          * @brief 현지화 표의 레코드 수와 지난 그리기에서 검색을 지난 행 수입니다. 표를 아직 읽지 않았으면 false 입니다
          *        (감시 값 `Editor.DataTableRecordCount` · `Editor.DataTableVisibleRecordCount`).

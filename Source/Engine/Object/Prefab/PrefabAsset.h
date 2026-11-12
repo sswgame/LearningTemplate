@@ -174,6 +174,14 @@ namespace sw
          * @param pIdentity 있으면 다시 만드는 컴포넌트가 그 id 를 되찾습니다(되돌리기에서 인스턴스의 컴포넌트를 가리키던 핸들이 이어집니다).
          */
         [[nodiscard]] bool applyStateTo( GameObject* pTarget, const ObjectIdentity* pIdentity = nullptr ) const;
+        /**
+         * @brief 스폰 원형(이진 본문)으로 루트 상태를 오브젝트에 읽어 넣습니다. 캐시(`PrefabCache`)가 로드에서 원형을 지은 자산만 되고, 아니면 오류와 함께 false 입니다.
+         * @details 스폰마다 상태 글(XML · JSON)을 파싱하지 않는다 — 언리얼이 아키타입에서 프로퍼티를 복사하고 Godot PackedScene 이 색인 + Variant 배열을 쓰는 자리다.
+         *          원형은 로드 때 상태 글을 씬 밖 오브젝트에 한 번 읽어 바이너리로 쓴 것이고, 읽는 문맥은 `applyStateTo` 와 같다(저작 목적, 바깥 부모 없음).
+         */
+        [[nodiscard]] bool applySpawnTemplateTo( GameObject* pTarget ) const;
+        /** @brief 펼친 중첩 노드 @p nodeIndex 의 스폰 원형으로 읽습니다. 원형이 없는 노드(저작본 노드, 캐시 밖 자산)면 오류와 함께 false 입니다. */
+        [[nodiscard]] bool applyNestedSpawnTemplateTo( GameObject* pTarget, size_t nodeIndex ) const;
         /** @brief 로드에 성공했으면 true 입니다. */
         bool isValid() const { return _bValid == SW_TRUE; }
         /**
@@ -194,6 +202,14 @@ namespace sw
         bool hasResolvedNestedInstances() const;
 
     private:
+        friend class PrefabCache; // 스폰 원형은 캐시만 짓는다(`buildSpawnTemplate`) — 자산을 const 로 내주기 직전이라 지은 뒤 상태가 바뀌지 않는다
+
+        /**
+         * @brief 스폰 원형을 짓습니다 — 루트 상태와 펼친 중첩 노드의 상태 글을 노드마다 한 번 읽어 바이너리로 둡니다. 상태를 읽지 못하면 오류를 남기고 false 입니다.
+         * @details 저작본 노드(원본 경로 + 오버라이드)는 짓지 않는다. 원본을 고치면 다음 스폰부터 퍼져야 해서(`PrefabCache::reload`) 스폰 때 원본과 합친다.
+         */
+        [[nodiscard]] bool buildSpawnTemplate();
+
         /**
          * @brief XML 원본 읽기 입구 둘(`loadFromXMLFile` · `loadFromDiskFile`)이 읽은 문서를 풉니다.
          * @details 리소스 id 와 디스크 경로는 입구가 형식으로 갈라 읽는다 — 안쪽이 열거형으로 고르면 같은 `string_view` 가 어느 쪽으로도 흘러간다.
@@ -222,7 +238,9 @@ namespace sw
         string                     _basePath;           ///< 변형의 부모 프리팹 경로(`getBasePath`)
         string                     _variantOverrideXML; ///< 변형 파일이 적은 다른 점(`getVariantOverrides`)
         vector<PrefabInstanceNode> _listNestedInstance;
-        vector<PrefabPartOverride> _listVariantPart; ///< 변형 사슬이 물려받은 부품에 덮어쓴 것(`getVariantPartOverrides`)
+        vector<PrefabPartOverride> _listVariantPart;         ///< 변형 사슬이 물려받은 부품에 덮어쓴 것(`getVariantPartOverrides`)
+        vector<uint8>              _spawnTemplate;           ///< 루트 상태의 스폰 원형(`buildSpawnTemplate`). 캐시 밖 자산과 상태가 빈 자산은 비어 있다
+        vector<vector<uint8>>      _listNestedSpawnTemplate; ///< 중첩 노드마다의 스폰 원형(`_listNestedInstance` 와 같은 순서). 펼친 노드만 찬다
         PrefabStateFormat          _stateFormat;
         // `_bValid` 라는 이름은 이 저장소에서 **두 가지**다. 여기와 `RenderFramePacket` 은
         // `uint8 : 1` 비트필드이고, `EditorWorkspace` 와 `SceneDocument` 는 진짜 `bool` 이다.

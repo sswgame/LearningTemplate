@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -59,16 +60,22 @@ namespace sw
     public:
         /** @brief 방향은 @p archive 의 모드가 정합니다(`Archive::isReadMode`). */
         explicit StateIO( Archive& archive )
-            : _archive( archive )
+            : _pArchive( &archive )
+            , _pSourceArchive( &archive )
+            , _pUpgradedArchive{}
             , _bReading{ static_cast<uint8>( archive.isReadMode() ? SW_TRUE : SW_FALSE ) }
         {
         }
+        /** @brief 판을 올려 읽었으면(`header`) 올린 바이트의 오류와 남은 바이트를 원래 아카이브에 돌려줍니다 — 부르는 쪽의 `getRemainingBytes` · `isOk` 검사가 그대로 맞는다. */
+        ~StateIO();
+        StateIO( const StateIO& )            = delete;
+        StateIO& operator=( const StateIO& ) = delete;
 
         bool isReading() const { return _bReading == SW_TRUE; }
         bool isWriting() const { return _bReading == SW_FALSE; }
-        bool isOk() const { return _archive.isOk(); }
-        /** @brief 코덱이 따로 있는 칸(넷 코덱 바이트, 리플렉션 직렬화)이 아카이브를 직접 볼 때 씁니다. */
-        Archive& getArchive() { return _archive; }
+        bool isOk() const { return _pArchive->isOk(); }
+        /** @brief 코덱이 따로 있는 칸(넷 코덱 바이트, 리플렉션 직렬화)이 아카이브를 직접 볼 때 씁니다. `header` 가 판을 올리면 올린 바이트로 바뀌므로 `header` 뒤에 받습니다. */
+        Archive& getArchive() { return *_pArchive; }
 
         /** @brief 칸 하나를 씁니다 · 읽습니다. `serializeState` 가 있는 형식은 그것을 부르고, 나머지는 `Archive` 연산자가 받는 형식이어야 합니다. 열거는 `enumValue` 나 `valueAs` 로 저장 폭을 적습니다. */
         template <typename T>
@@ -85,11 +92,11 @@ namespace sw
             }
             else if ( isReading() )
             {
-                _archive >> inoutValue;
+                *_pArchive >> inoutValue;
             }
             else
             {
-                _archive << static_cast<const T&>( inoutValue );
+                *_pArchive << static_cast<const T&>( inoutValue );
             }
         }
         /** @brief 이름입니다. 길이가 붙은 글자로 놓입니다. */
@@ -110,7 +117,7 @@ namespace sw
         {
             if ( isReading() )
             {
-                (void)readAtomic( inoutValue, _archive ); // 실패는 아카이브 오류에 남는다
+                (void)readAtomic( inoutValue, *_pArchive ); // 실패는 아카이브 오류에 남는다
                 return;
             }
             inoutValue.serializeState( *this );
@@ -157,15 +164,20 @@ namespace sw
             check( stored == expected );
         }
 
-        /** @brief 형식 표(4 글자 태그)와 판입니다. 읽을 때 같지 않으면 거절합니다. */
+        /**
+         * @brief 형식 표(4 글자 태그)와 판입니다. 읽을 때 표가 다르면 거절합니다.
+         * @details 읽은 판이 @p version 보다 옛것이면 판 올림 사슬(`SW_STATE_FORMAT_UPGRADE` — 표마다 n → n+1 단계)로 머리 뒤 바이트를 올린 뒤 이어 읽습니다.
+         *          단계가 빠졌거나 실패하거나 새 판(내리기)이면 오류를 남기고 거절합니다(옛 판을 그대로 읽는 폴백은 없다). 올린 바이트는 이 입구가 들고,
+         *          그 뒤의 칸(바깥 형식의 남은 칸 포함 — 단계가 그대로 옮긴다)은 거기서 읽힌다. 언리얼 `FCustomVersion` 의 판 분기를 등록된 순수 함수 사슬로 둔 자리다.
+         */
         void header( uint32 tag, uint32 version );
 
         /** @brief 읽는 중이고 @p bCondition 이 거짓이면 거절합니다. 지금까지 맞으면 true 입니다. 쓰는 중에는 늘 true 입니다. */
         bool check( bool bCondition );
         /** @brief 읽을 때 남은 바이트가 없어야 합니다. 상태 하나가 아카이브 하나를 차지하는 최상위 형식이 끝에 부릅니다. */
-        void end() { check( _archive.getRemainingBytes() == 0 ); }
+        void end() { check( _pArchive->getRemainingBytes() == 0 ); }
         /** @brief 지금 읽기 · 쓰기를 실패로 남깁니다. */
-        void fail() { _archive.setError(); }
+        void fail() { _pArchive->setError(); }
 
         /** @brief 개수 하나입니다. 읽을 때 원소마다 적어도 @p minBytesPerElement 바이트라 남은 바이트로 담을 수 없는 개수를 거절합니다. @p inoutCount 는 쓸 값을 넣어 부릅니다. */
         void count( uint32 minBytesPerElement, uint32& inoutCount );
@@ -256,20 +268,24 @@ namespace sw
             if ( isReading() )
             {
                 Archive sectionBody;
-                if ( readExpectedSection( _archive, tag, version, sectionBody ) == false )
+                if ( readExpectedSection( *_pArchive, tag, version, sectionBody ) == false )
                 {
                     fail();
                     return;
                 }
-                StateIO bodyIO( sectionBody );
-                body( bodyIO );
-                check( bodyIO.isOk() && sectionBody.getRemainingBytes() == 0 );
+                bool bBodyRead = false;
+                {
+                    StateIO bodyIO( sectionBody );
+                    body( bodyIO );
+                    bBodyRead = bodyIO.isOk();
+                } // 판을 올려 읽었으면 남은 바이트가 이때 본문에 돌아온다
+                check( bBodyRead && sectionBody.isOk() && sectionBody.getRemainingBytes() == 0 );
                 return;
             }
             Archive sectionBody;
             StateIO bodyIO( sectionBody );
             body( bodyIO );
-            writeSection( _archive, tag, version, sectionBody );
+            writeSection( *_pArchive, tag, version, sectionBody );
         }
 
         /** @brief @p object 의 `serializeState` 로 씁니다. `serializeState` 는 쓸 때 값을 바꾸지 않으므로 const 를 벗겨도 안전합니다(언리얼 `Serialize` 도 const 가 아닌 함수 하나다). */
@@ -319,11 +335,17 @@ namespace sw
          */
         [[nodiscard]] static bool readSection( Archive& archive, uint32& outTag, uint32& outVersion, Archive& outBody );
         /**
-         * @brief 표가 @p tag 이고 버전이 @p version 인 구간 하나를 읽어 본문을 @p outBody 로 자릅니다. 다른 표 · 버전이면 false 입니다.
+         * @brief 표가 @p tag 이고 버전이 @p version 인 구간 하나를 읽어 본문을 @p outBody 로 자릅니다. 다른 표이거나 올릴 수 없는 판이면 false 입니다.
          * @details 자리가 정해진 구간(디렉터가 든 키트 상태)은 이것으로 읽는다 — 표와 버전을 부르는 쪽이 따로 견주면 하나를 빼먹는다(버전을 안 봐 옛 판을 새 판으로 읽었다).
-         *          표로 갈라 읽는 쪽(`SessionStateComponent`)만 `readSection` 을 쓴다.
+         *          옛 판 구간은 `upgradeSectionBody` 로 올린 본문(@p outBody 가 소유)을 돌려준다. 표로 갈라 읽는 쪽(`SessionStateComponent`)만 `readSection` 을 쓴다.
          */
         [[nodiscard]] static bool readExpectedSection( Archive& archive, uint32 tag, uint32 version, Archive& outBody );
+        /**
+         * @brief 표 @p tag 의 판 @p fromVersion 구간 본문 @p inoutBody 를 판 @p toVersion 까지 올립니다(`SW_STATE_FORMAT_UPGRADE` 사슬 — `header` 와 같은 표). 같은 판이면 그대로 true 입니다.
+         * @details 올리면 @p inoutBody 는 올린 바이트를 소유한 읽기 아카이브가 된다. 단계가 빠졌거나 실패하면 오류를 남기고 false 이며 @p inoutBody 는 그대로다.
+         *          구간에 실린 상태의 단계는 구간 머리 뒤 바이트(그 상태가 쓴 바이트 전부 — 안쪽 머리가 있으면 그것까지)를 받는다.
+         */
+        [[nodiscard]] static bool upgradeSectionBody( uint32 tag, uint32 fromVersion, uint32 toVersion, Archive& inoutBody );
 
         static void               writeName( Archive& outArchive, const hashed_string& name );
         [[nodiscard]] static bool readName( Archive& archive, hashed_string& outName );
@@ -355,9 +377,16 @@ namespace sw
         /** @brief 난수 상태입니다. 0 은 있을 수 없는 상태라 거절합니다. */
         void valueRandom( DeterministicRandom32& inoutRandom );
 
+        /** @brief 바이트 @p inoutBytes 를 표 @p tag 의 판 @p fromVersion 에서 @p toVersion 까지 올립니다(판 올림 사슬). 실패하면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool upgradeBytes( uint32 tag, uint32 fromVersion, uint32 toVersion, vector<uint8>& inoutBytes );
+        /** @brief 아카이브에서 나머지 바이트를 모두 읽어 @p outBytes 에 담습니다(남은 것이 없으면 빈다). */
+        static void takeRemainingBytes( Archive& archive, vector<uint8>& outBytes );
+
     private:
-        Archive& _archive;
-        uint8    _bReading : 1;
+        Archive*            _pArchive;         ///< 지금 읽고 쓰는 아카이브 — 처음엔 받은 것, 판을 올리면 `_pUpgradedArchive`
+        Archive*            _pSourceArchive;   ///< 받은 아카이브(빌림)
+        unique_ptr<Archive> _pUpgradedArchive; ///< `header` 가 올린 바이트(올리지 않았으면 nullptr)
+        uint8               _bReading : 1;
     };
 } // namespace sw
 

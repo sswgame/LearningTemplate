@@ -187,3 +187,72 @@ SW_TEST_CASE( LedgerTest, AuditStaysBalancedAfterJournalSweep )
     SW_REQUIRE_TRUE( pGold != nullptr );
     SW_EXPECT_EQUAL( int64( 105 ), pGold->_issued );
 }
+
+/**
+ * @brief [LedgerTest] 계정 삭제: 묘비가 선 계정은 어떤 이동에도 들 수 없고, 남은 잔액(자산 20 개 — 분개 둘로 나뉜다)과 빚은 소각 분개로 0 이 되며 감사 균형이 맞는다(감사 P0-7)
+ * @details 변이: 소각을 빼면 잔액 레코드가 남고, 묘비 검사를 빼면 지운 계정에 다시 잔액이 생기고, 빚을 메우지 않으면 음수 잔액이 남아 진다.
+ */
+SW_TEST_CASE( LedgerTest, DeletedAccountIsBurnedAndStaysBalanced )
+{
+    sw::MemoryServiceDatabase database;
+    sw::LedgerTransferResult  result;
+    constexpr int32           kAssetCount = 20;
+    for ( int32 assetIndex = 0; assetIndex < kAssetCount; ++assetIndex )
+    {
+        sw::string assetID = "a";
+        assetID.push_back( static_cast<utf8>( '0' + assetIndex / 10 ) );
+        assetID.push_back( static_cast<utf8>( '0' + assetIndex % 10 ) );
+        sw::string journalKey = "test/grant.";
+        journalKey += assetID;
+        sw::LedgerTransferRequest grant = makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), 10, journalKey );
+        grant._listPosting[0]._assetID  = assetID;
+        SW_REQUIRE_TRUE( move( database, grant, result ) == sw::LedgerResult::Ok );
+    }
+    sw::LedgerTransferRequest debt = makeMove( sw::LedgerHolder::makeAccount( kAlice ), sw::LedgerHolder::makeSink(), 7, "test/refund.debt" );
+    debt._bAllowDebt               = SW_TRUE;
+    SW_REQUIRE_TRUE( move( database, debt, result ) == sw::LedgerResult::Ok );
+    SW_REQUIRE_EQUAL( int64( -7 ), readGold( database, kAlice ) );
+    SW_REQUIRE_TRUE( move( database, makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kBob ), 5, "test/grant.bob" ), result ) == sw::LedgerResult::Ok );
+
+    sw::ServiceTransaction deletion;
+    sw::Ledger::stageAccountDeletion( kAlice, 1700000001000ll, deletion );
+    SW_REQUIRE_TRUE( database.commit( deletion ) == sw::ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( move( database, makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), 1, "test/grant.late" ), result ) ==
+                    sw::LedgerResult::AccountDeleted );
+    SW_EXPECT_TRUE( move( database, makeMove( sw::LedgerHolder::makeAccount( kBob ), sw::LedgerHolder::makeAccount( kAlice ), 1, "test/gift.late" ), result ) ==
+                    sw::LedgerResult::AccountDeleted );
+
+    int32 burnedCount = 0;
+    SW_REQUIRE_TRUE( sw::Ledger::burnDeletedAccounts( database, 1700000002000ll, 8, burnedCount ) == sw::ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, burnedCount );
+    sw::vector<sw::LedgerBalance> listBalance;
+    SW_REQUIRE_TRUE( sw::Ledger::listBalances( database, sw::LedgerHolder::makeAccount( kAlice ), listBalance ) == sw::ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listBalance.empty() );
+    sw::vector<sw::ServiceRecord> listQueued;
+    SW_REQUIRE_TRUE( database.listRecords( sw::Ledger::getDeletionQueueTable(), "", "", 10, false, listQueued ) == sw::ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listQueued.empty() );
+    SW_EXPECT_EQUAL( int64( 5 ), readGold( database, kBob ) );
+    expectAuditBalanced( database );
+    sw::LedgerAuditReport report;
+    SW_REQUIRE_TRUE( sw::LedgerAuditReport::computeReport( database, report ) == sw::ServiceStoreResult::Ok );
+    const sw::LedgerAssetAudit* pGold = report.findAsset( kGold );
+    SW_REQUIRE_TRUE( pGold != nullptr );
+    SW_EXPECT_EQUAL( int64( 5 ), pGold->_held ); // 빚은 메워졌고 Bob 만 남는다
+
+    // 묘비는 남는다 — 소각 뒤에도 지운 계정에는 잔액이 생기지 않고, 다시 돌려도 할 일이 없다
+    SW_EXPECT_TRUE( move( database, makeMove( sw::LedgerHolder::makeMint(), sw::LedgerHolder::makeAccount( kAlice ), 1, "test/grant.later" ), result ) ==
+                    sw::LedgerResult::AccountDeleted );
+    SW_REQUIRE_TRUE( sw::Ledger::burnDeletedAccounts( database, 1700000003000ll, 8, burnedCount ) == sw::ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, burnedCount );
+    expectAuditBalanced( database );
+
+    // 소각 분개도 TTL 색인 줄을 넣는다 — 기간 뒤 분개 쓸기가 소각 분개까지 지우고(이월에 공급 합, 내역도 함께) 묘비는 남긴다
+    sw::ServiceTTLRule        rule = sw::Ledger::makeJournalTTLRule( 1000 );
+    sw::ServiceTTLSweepReport sweepReport;
+    SW_REQUIRE_TRUE( sw::ServiceTTLRule::sweep( database, rule, 1700000010000ll, 1000, 1000, sweepReport ) == sw::ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, database.countRecords( sw::Ledger::getJournalTable() ) );
+    SW_EXPECT_EQUAL( 0, database.countRecords( sw::Ledger::getHistoryTable() ) );
+    SW_EXPECT_EQUAL( 1, database.countRecords( sw::Ledger::getTombstoneTable() ) );
+    SW_EXPECT_EQUAL( int64( 5 ), readGold( database, kBob ) );
+    expectAuditBalanced( database );
+}

@@ -273,7 +273,8 @@ namespace sw
                     float3     position{};
                     quaternion rotation{};
                     float3     scale{};
-                    PhysicsComponent::readWorldPose( *pBody, position, rotation, scale );
+                    if ( PhysicsComponent::readWorldPose( *pBody, position, rotation, scale ) == false )
+                        return; // 배율 0 — 물리도 짓지 않는 바디다
                     const float4x4 world = float4x4::makeTrs( position, rotation, float3{ 1.0f, 1.0f, 1.0f } );
                     for ( const PhysicsShapeDesc3D& shape : pBody->getShapes() )
                     {

@@ -12,7 +12,7 @@
 | run 2 | 같은 프로필로 다시 띄워 `check.html?probe=read` — 앱이 IDBFS 를 붙인 뒤 표지를 읽어 run 1 의 값과 대조한다(새 세션에 영속 폴더가 살아 있다) |
 
 판정(모두 지나야 통과): `navigator.gpu` 가 있다, 오류 줄(printErr · 창 오류 · 처리 안 된 거부)이 없다, 앱이 확인 시간 안에 끝나거나 멈추지 않았다, 화면 PNG 를 받았다,
-run 2 가 run 1 의 표지를 읽었다. 로그 · 화면은 `<묶음>/check/` 에 남는다(`run1.log` · `run2.log` · `screen.png`).
+오디오 워클릿이 링에서 샘플을 꺼내기 시작했다(`kAudioStartedLine` — 브라우저는 자동 재생 정책을 끄고 띄운다), run 2 가 run 1 의 표지를 읽었다. 로그 · 화면은 `<묶음>/check/` 에 남는다(`run1.log` · `run2.log` · `screen.png`).
 보지 않는 것: 입력 — 합성 이벤트를 넣어도 앱의 반응을 페이지에서 읽을 길이 없다(배포 빌드에는 시나리오 실행기가 없다). 입력 판정은 쿠킹한 웹 시나리오가 생길 때 더한다.
 shortcut: 브라우저는 헤드리스(--headless=new --enable-unsafe-webgpu)로 띄운다, 헤드리스 WebGPU 가 그 기계에서 어댑터를 못 받으면 `--headed` 로 창을 띄운다.
 
@@ -53,6 +53,8 @@ kDefaultSeconds = 20
 kProbePath = "/persistent/.swwebcheck"
 #: 브라우저가 페이지를 열고 보고를 마칠 때까지의 여유(확인 시간 위에 더한다) — 묶음 내려받기 · wasm 컴파일 · IDBFS 읽기.
 kLoadAllowanceSeconds = 60
+#: 웹 오디오 백엔드(Engine/Audio/Web/WebAudioBackend.js)가 워클릿이 처음 샘플을 꺼냈을 때 Module.print 로 내는 줄의 앞머리 — 믹서 스레드 → 링 → 워클릿이 흐른다는 판정이다.
+kAudioStartedLine = "O [WebAudio] output started"
 kStopTimeoutSeconds = 10
 #: 확인 페이지의 보고 스크립트. `probe` 쿼리가 run 1(write) · run 2(read)를 가른다. Module.FS 는 Web.cmake 의 EXPORTED_RUNTIME_METHODS 가 내보낸다.
 kReporterScript = """<script>
@@ -153,7 +155,8 @@ def runBrowser(browser: str, profileDir: Path, url: str, bHeaded: bool, timeoutS
     """브라우저 하나를 띄워 `done` 보고(또는 시한)까지 기다린 뒤 그 프로세스(PID)를 끝냅니다."""
     report = RunReport()
     CheckRequestHandler.report = report
-    command = [browser, f"--user-data-dir={profileDir}", "--no-first-run", "--no-default-browser-check", "--enable-unsafe-webgpu"]
+    # 자동 재생 정책을 끈다 — 사용자 몸짓 없이도 AudioContext 가 돌아야 오디오 판정을 할 수 있다.
+    command = [browser, f"--user-data-dir={profileDir}", "--no-first-run", "--no-default-browser-check", "--enable-unsafe-webgpu", "--autoplay-policy=no-user-gesture-required"]
     if bHeaded is False:
         command.append("--headless=new")
     process = subprocess.Popen([*command, url])
@@ -173,6 +176,8 @@ def judgeRun(name: str, report: RunReport) -> list[str]:
         listFailure.append(f"{name}: navigator.gpu is missing ({report.gpu or 'no report'})")
     if report.exit:
         listFailure.append(f"{name}: the app ended during the check ({report.exit})")
+    if any(line.startswith(kAudioStartedLine) for line in report.listLine) is False:
+        listFailure.append(f"{name}: the audio worklet never pulled samples from the mixer ring ('{kAudioStartedLine[2:]}' missing)")
     listFailure.extend(f"{name}: {line[2:]}" for line in report.listLine if line.startswith("E "))
     return listFailure
 

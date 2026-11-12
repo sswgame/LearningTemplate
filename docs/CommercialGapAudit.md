@@ -64,13 +64,6 @@
 - 제안: 문자열 변수를 잠금 안에서 사본을 돌려주는 접근자 형식(`GlobalString::get()`)으로 바꿔 직접 참조가 컴파일되지 않게 한다. 렌더 스레드가 읽는 변수는 프레임 스냅샷으로 옮기는 길 하나만 둔다.
 - 확인: TSan(Linux Debug)에서 한 스레드가 `gv_renderPipeline` 을 반복해 바꾸는 시나리오.
 
-#### C-8 32 비트 이름 해시가 밖으로 나가는 키인데 현지화 표에 충돌 검사가 없다
-- 분류: 결함(잠재 데이터 오류) · 확신: 코드 확인, 확률은 계산
-- 근거: `Source/Core/Name/hashed_string.h:13` 이 "바이너리 필드 이름 · 열거자 · 지역화 테이블이 이 값을 저장" 한다고 적는다(uint32, 대소문자 무시 FNV-1a). `Source/Engine/Localization/StringTable.cpp:83-88` 은 `_mapTable[keyHash] = pStored` 로 나중 것이 이긴다. 생일 문제로 키 3 만 개에 약 10 %, 10 만 개에 약 69 % 다. 열거자 쪽(`Source/Engine/Reflection/TypeRegistry.cpp:55`)은 충돌을 보지만 타입 이름 표(`:188,203`)는 보지 않는다.
-- 상용 엔진: 언리얼 `FTextKey` 는 해시로 버킷만 고르고 키 글을 비교한다.
-- 제안: 밖으로 나가는 키 해시를 64 비트로 올리고(`computeStringHash64` 가 이미 있다), 표를 지을 때 "같은 해시, 다른 키" 를 오류로 멈춘다(쿠킹 · 로드 양쪽).
-- 확인: 단위 테스트 — 32 비트 해시가 같은 두 키를 `LocalizationManager` 에 넣어 오류가 나는지.
-
 #### C-9 컨테이너가 std 와 같은 이름 · API 인데 복잡도가 다르다
 - 분류: 성능 · 확신: 코드 확인, 배수는 측정 필요
 - 근거: ① `Source/Core/Container/vector.h:977-988` — 범위 `insert` 가 원소마다 `insert( pos, *it )` 을 부른다(`ByteStream.h:54` · `Archive.cpp:112` 의 바이트 붙이기가 이 경로다). ② `Source/Core/Container/deque.h:14` — `std::deque` 래퍼라 MSVC 에서 `sizeof( T ) > 8` 이면 원소마다 힙 할당 하나다(`AsyncFileIOQueue` · `NetTransport` 가 쓴다 — MSVC 헤더 값은 다시 열지 않았다). ③ `Source/Core/Container/unordered_map.h:645` — `reserve` 가 버킷만 잡는다. ④ `Source/Core/Container/map.h:30` — 정렬 벡터라 대량 구축이 O(n²) 다.
@@ -298,13 +291,6 @@
 - 제안: 쿠킹이 셀마다 구간을 쓰고 런타임은 셀 색인만 든다. 셀 로드는 워커에서 파싱 · 인스턴스화하고 등록은 `pumpHeldRegistration` 예산을 쓴다. 셀을 내릴 때는 `SaveGame` 표시가 있는 상태를 셀 키로 보관한다(G-7 과 같은 줄기).
 - 확인: `load/` 에 셀 400 × 오브젝트 2000, `GT.Scene.service.SceneStreamingSubsystem` 최대 프레임 시간.
 
-#### A-15 프리팹 스폰이 인스턴스마다 XML 텍스트를 파싱한다
-- 분류: 성능 · 확신: 구조 확인(통합 단계에서 다시 읽지 않음), 비용은 측정 필요
-- 근거: `Source/Engine/Object/Prefab/PrefabAsset.cpp:1017,1021` — 쿠킹본(`.prefab.bin`)이 상태를 XML 문자열로 싣고 `:1065-1066` 의 `applyStateTo` 가 스폰마다 `loadFromXMLString` 으로 파싱한다. 중첩 저작본은 스폰마다 XML 을 합친 뒤 파싱한다(`PrefabCache.cpp:504,580`).
-- 상용 엔진: 언리얼은 아키타입에서 프로퍼티를 복사하고 유니티 `Instantiate` 는 오브젝트 그래프를 복제한다. Godot PackedScene 은 색인 + Variant 배열이다.
-- 제안: 쿠킹이 상태를 `BinarySerializer` 본문으로 굽거나, 캐시가 프리팹마다 원형 오브젝트를 한 번 짓고 리플렉션 복사로 인스턴스를 만든다.
-- 확인: `load/` 에 프리팹 하나를 1000 번 스폰하는 시나리오, Tracy `PrefabCache::spawn`.
-
 #### A-16 쿠킹된 이진 번역 표가 어디서도 쓰이지 않는다
 - 분류: 성능 · 구조 · 확신: 사용처 없음 확인(통합 단계에서 다시 읽지 않음)
 - 근거: `Source/Engine/Localization/LocalizationManager.cpp:418,449,461` — `loadBinaryTable` · `cookBinaryTable` 의 호출이 Localization 폴더와 테스트 밖에 없다. 배포 팩은 저작 XML 을 담고 `readProject`(`:174-250`)가 모든 문화권 XML 을 읽으며 `rebuildTablesLocked`(`:541-636`)는 마운트마다 모든 프로젝트 × 문화권을 다시 채운다.
@@ -314,26 +300,12 @@
 
 ### 물리 · 캐릭터 · 애니메이션 · 내비 · 오디오
 
-#### S-1 접촉 이벤트에 opt-in 이 없어, 거의 아무도 듣지 않는 Stay 를 매 스텝 만들고 배달한다
-- 분류: 성능 · 확신: 구조 확인, 크기는 측정 필요
-- 근거: `onCollisionStay` · `onOverlapStay` 를 재정의한 헤더는 `Source` 전체에서 1 개인데 네 경로가 모든 쌍에 대해 돈다. `Source/Engine/Physics/Collision/PhysicsContact.h:154-157`(잠든 더미 포함 매 스텝 Stay), `Source/Engine/Physics/Jolt/JoltPhysicsScene.cpp:1158-1193`(모든 매니폴드에서 `EstimateCollisionResponse` + 전역 `_reportMutex` — Jolt 잡 스레드 전부가 만난다), `Source/Engine/Physics/Box2D/Box2DPhysicsScene.cpp:1121-1125` → `:1026-1051`(Stay 쌍마다 A 바디의 접촉 전부를 복사 — 바닥 바디면 스텝당 K²), `Source/Engine/Physics/Scene/ScenePhysics.cpp:714-723`(배달마다 `vector<Component*>` 새 할당).
-- 상용 엔진: 언리얼은 `bNotifyRigidBodyCollision` · `GenerateOverlapEvents` 를 켠 바디만, PhysX 는 쌍 플래그, 유니티는 `OnCollisionStay` 를 구현한 스크립트가 있을 때만 낸다.
-- 제안: `PhysicsHooksOf<T>`(재정의 여부를 컴파일에서 판정)와 같은 방식으로 "이 오브젝트가 듣는 단계 비트" 를 바디 사용자 값 옆에 둔다. 백엔드는 그 비트가 있는 쌍만 보고한다(Jolt 는 스레드별 버퍼로 락 제거).
-- 확인: `PhysicsBenchTest` 에 "잠든 상자 2000 개 + 바닥" 3D · 2D 사례, 카운터 `Physics.ContactEvents.stay` · `delivered`.
-
 #### S-2 Jolt 임시 할당자가 고정 16 MB 이고 넘치면 `std::abort()` — 한도는 C++ 상수
 - 분류: 결함(잠재 크래시) + 구조 · 확신: 확인(설치 헤더로 확인)
 - 근거: `Source/Engine/Physics/Jolt/JoltPhysicsScene.h:352` 가 `JPH::TempAllocatorImpl` 이고 `JoltPhysicsScene.cpp:42-45` 에 `kMaxBodyCount 65536 · kMaxBodyPairCount 65536 · kMaxContactCount 32768 · 16 MB` 가 하드코딩이다. Jolt 5.6.0 `Jolt/Core/TempAllocator.h:68-72` 는 넘치면 `Trace` 뒤 `std::abort()` 라 엔진 로그 · 크래시 처리기를 타지 않는다. 같은 할당자를 스텝 · 캐릭터 `ExtendedUpdate`(`:1590`) · 소프트 바디(`:299`)가 함께 쓰고, 미리보기 씬마다 16 MB 를 또 잡는다.
 - 상용 엔진: Jolt 는 `TempAllocatorImplWithMallocFallback` 을 제공한다(같은 헤더 `:168`). Chaos · PhysX 는 스크래치가 모자라면 힙으로 넘긴다.
 - 제안: 네 값을 `PhysicsSettings`(데이터)로 옮기고 없으면 로드 오류로 둔다. 할당자는 폴백형으로 바꾸되 폴백이 일어난 스텝을 카운터 · 경고로 올린다.
 - 확인: 단위 `PhysicsScene3DTest.LargeActivePileDoesNotAbort`(작은 할당자 설정으로 재현), 감시 값 `Physics.TempAllocator.peakBytes`.
-
-#### S-5 2D 블렌드 스페이스가 역거리 가중이라 표본 전부가 늘 켜진다
-- 분류: 성능 + 품질 · 확신: 확인
-- 근거: `Source/Engine/Animation/Graph/BlendSpace.cpp:46-81` — 표본 위에 정확히 있지 않으면 모든 표본의 가중치가 0 보다 크다. `Source/Engine/Animation/Component/SkeletalAnimatorComponent.cpp:1321-1332` 는 가중치가 0 보다 크면 샘플하므로 표본 N 개의 클립을 평가마다 전부 샘플 · 블렌드한다. 알림 기본 모드가 `All`(`AnimationGraphAsset.h:99`)이라 표본 전부가 알림을 낸다. 두 축의 단위를 정규화하지 않아 한 축이 거리를 지배한다.
-- 상용 엔진: 언리얼 Blend Space 는 들로네 삼각분할(표본 많아야 3 개)이고 축마다 정규화한다. Godot `AnimationNodeBlendSpace2D` 도 삼각형이다.
-- 제안: 그래프 에셋을 읽을 때 삼각분할을 구워 두고 런타임은 무게중심 좌표 3 개만 낸다. 축 범위는 에셋 값으로 정규화한다.
-- 확인: 단위 `BlendSpaceTest.TwoAxisActivatesAtMostThreeSamples`. 측정 — 9 표본 이동 블렌드 캐릭터 500 의 `GT.Animation` BasePose 구간.
 
 #### S-6 내비메시가 32 비트 폴리 참조(22 비트)에 묶이고 에이전트 종류당 한 장이다
 - 분류: 구조(확장 한도) · 확신: 확인(헤더 확인)
@@ -402,20 +374,6 @@
 
 ### GameFramework Runtime
 
-#### G-1 어빌리티 런타임 상태가 세이브에 없고, 준비된 저장 도구는 호출처 0 에 복원 순서 결함
-- 분류: 결함(저장/복원 비대칭) · 확신: 확인
-- 근거: `Source/GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h:73-74` 가 "런타임 상태는 `SavedAttributeFile` 로 담는다" 고 적었지만 `AbilityAttributeSave.cpp` 의 `captureBaseValues` · `applyBaseValues` 는 호출처가 없다. 로드하면 체력 · 마나가 기본값으로 차고 디버프 · 쿨다운 · `State.Dead` 가 사라진다(저장 → 불러오기로 회복). 도구를 써도 틀린다 — `applyBaseValues`(`:29-39`)가 Health → MaxHealth 순으로 쓰는데 `clampCombatValue`(`CombatAttributeSet.cpp:171-178`)가 Health 를 그 순간의 MaxHealth(기본 100)로 자른다(180/200 → 100/200).
-- 상용 엔진: GAS 는 게임이 직접 담는다(이펙트는 남은 시간으로 다시 건다).
-- 제안: AbilityComponent 를 프레임워크가 스냅샷 대상으로 정적 등록하고 `serializeState` 로 base 값 · 걸린 이펙트(정의 id · 남은 시간 · 스택) · 태그를 싣는다. 복원은 훅을 끈 채 base 를 모두 쓴 뒤 한 번에 클램프한다.
-- 확인: 단위 `AbilitySystemTest.SaveRoundTripKeepsHealthAboveDefaultMax` · `SaveRoundTripKeepsCooldownAndDot`.
-
-#### G-3 제작의 환불 · 취소와 상점 판매가 아이템 개체 상태를 버린다 — 내구도 공짜 수리
-- 분류: 결함(악용 경로) · 확신: 확인
-- 근거: `Source/GameFramework/Runtime/Gameplay/Inventory/Crafting.cpp:202-207`, `:235-246`(`cancel`) — 재료를 `Inventory::removeItem`(`Inventory.cpp:161-181`, id 로만)으로 빼고 `addItem`(`:116-127`, `slot._durability = pDef->_maxDurability`)으로 돌려준다. 닳은 장비가 재료인 레시피를 `enqueue` 했다가 `cancel` 하면 새것이 되고 꾸미기 · 뗀 부품은 사라진다. `ShopState::sell`(`Shop.cpp:330-331`)도 어느 개체를 파는지 고르지 못한다.
-- 상용 엔진: Lyra 는 `ULyraInventoryItemInstance` 를 개체로 옮긴다.
-- 제안: 꺼낸 것을 `InventorySlot` 묶음으로 받아 그대로 돌려주는 거래 형식(`InventoryTransaction`: take → commit/rollback). `Equipment::equipFromInventory` 가 이미 사본 복원을 쓴다.
-- 확인: 단위 `CraftingTest.CancelReturnsWornInputWithSameDurability`.
-
 ### 장르 키트 · 게임 샘플
 
 #### K-4 (보강) 키트 규칙 설정을 게임이 C++ 기본값으로 만든다(데이터 파일이 없다)
@@ -475,20 +433,6 @@
 - 상용 엔진: 언리얼은 바뀐 UObject 만 트랜잭션에 직렬화하고 dirty 는 깃발이다. Godot 은 프로퍼티 단위 do · undo 다.
 - 제안: 구간(`DocumentEditSpan`)을 쥔 동안은 직렬화하지 않고 dirty 만 표시하면 직렬화는 구간 시작 · 끝 두 번이 된다. 큰 문서는 문서 모델이 "바뀐 범위" 를 내는 데이터 단계로 기록한다. 미저장 판정은 편집 개정 번호로 한다.
 - 확인: `-gv_editorPanelTimes` 로 `tilemaptools` 를 256² · 512² 맵에서 칠하는 프레임.
-
-#### E-10 뷰포트 피킹이 경계 구 레이 검사이고 전체 오브젝트를 훑는다
-- 분류: 결함(정밀도) + 성능 · 확신: 확인
-- 근거: `Source/Editor/Viewport/Model/EditorViewportRayPick.cpp:135-136` — 후보는 `getWorldBounds( center, radius )` 의 구 하나이고 가장 가까운 구 진입점이 이긴다. 길고 얇은 물체는 실루엣 밖을 눌러도 잡히고 큰 구가 안쪽의 작은 물체를 가린다. `:165` — `forEachGameObject` 로 전체를 훑는다(주석 "8000 개이면 Debug 약 20 ms"). 마키(`EditorViewportPicker.cpp:140-143`)는 피벗 한 점의 투영만 본다.
-- 상용 엔진: 언리얼은 히트 프록시(ID 버퍼, 픽셀 정확), 유니티는 GPU 피킹 패스, Godot 4 는 AABB 뒤에 메시 삼각형 레이다.
-- 제안: 렌더 쪽에 오브젝트 id 타깃을 두고 클릭 때 1 픽셀 읽기로 고른다. 그 전 단계로는 구 → OBB(`GameObject::getWorldBox`) → 메시 삼각형 순으로 좁힌다.
-- 확인: 시나리오 `viewportpick` 에 "긴 기둥 옆 빈 곳 클릭 → 선택 없음" 과 "큰 바닥 위 작은 큐브 → 큐브".
-
-#### E-11 읽기 전용 · 잠금 확인이 씬 저장에만 있다
-- 분류: 구조 + 결함 · 확신: 호출 위치는 확인, 플랫폼별 결과는 추정
-- 근거: `Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp:244-268` — `reportReadOnlyTarget` 은 씬 저장 두 곳에서만 부른다. 문서 패널의 `saveDocument` 들은 묻지 않고 `FileUtil::writeTextFile`(임시 파일 → 바꿔 끼우기)로 간다. POSIX 는 `std::rename`(`Source/Core/File/PlatformFileUtil.cpp:315`)이 읽기 전용 대상도 바꿔 끼워 잠금 규약(LFS lockable = 읽기 전용)이 조용히 뚫린다(추정). Windows 는 실패해 20 ms × 10 회를 UI 스레드에서 잔다.
-- 상용 엔진: 언리얼은 저장 전 `PromptForCheckoutAndSave` 가 모든 패키지에 같은 길이다.
-- 제안: "에디터가 콘텐츠 파일을 쓰는 입구" 하나(`EditorContentWrite::write( assetID, text )`)를 두어 읽기 전용 · 남의 잠금 · 쓰기 게이트를 거기서 본다.
-- 확인: 단위(스크래치 파일을 읽기 전용으로) — 문서 저장이 false + 알림이고 파일 내용 · 속성이 그대로인지 Windows · Linux 둘 다.
 
 ## P2 — 개선과 작은 결함
 

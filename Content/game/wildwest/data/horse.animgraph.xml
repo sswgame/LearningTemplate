@@ -8,7 +8,7 @@
 <AnimationGraphAsset>
 	<nodes>
 		<node id="1" name="Gait" x="40.0" y="40.0" loop="true">
-			<blend_space x="Gait">
+			<blend_space x="Gait" min_x="0" max_x="4">
 				<samples>
 					<sample clip="armature_idle" x="0" />
 					<sample clip="armature_walk" x="1" />

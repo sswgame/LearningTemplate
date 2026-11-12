@@ -102,6 +102,11 @@ namespace sw::editor
         return bSaved;
     }
 
+    void DataTablePanel::collectFilesToSave( vector<string>& outListPath ) const
+    {
+        _model.collectFilesToSave( outListPath );
+    }
+
     bool DataTablePanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return FileUtil::hasExtension( assetPath, ".xml" );

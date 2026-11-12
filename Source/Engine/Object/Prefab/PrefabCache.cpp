@@ -26,6 +26,7 @@
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Object/Prefab/PrefabPathStack.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -80,6 +81,13 @@ namespace sw
                 }
                 if ( pChildRoot->attachToComponent( pTarget ) == false )
                     SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabInstanceCould", "Nested prefab instance '%#' could not be attached to '%#'", pChild->getName().c_str(), pParent->getName().c_str() );
+            }
+
+            /** @brief 부품 @p partPath 에 덮어쓴 것이 하나라도 있으면 true 입니다. */
+            static bool hasPartOverride( const vector<PrefabPartOverride>& listPartOverride, const string& partPath )
+            {
+                return VectorUtil::containsIf( listPartOverride, [&]( const PrefabPartOverride& part )
+                { return part._partPath == partPath; } );
             }
 
             /** @brief @p listPartOverride 가운데 경로가 @p partPath 인 것을 문서 순서대로 @p inoutStateXML 에 얹습니다. 얹지 못하면 false 입니다. */
@@ -340,6 +348,9 @@ namespace sw
         // 중첩 인스턴스가 순환하면 로드 오류다(캐시에 넣지 않는다). 원본은 여기서 재귀로 로드되어 캐시에 든다.
         if ( validateNestedInstances( *asset, cacheKey ) == false )
             return nullptr;
+        // 스폰 원형은 const 로 내주기 전에 여기서 한 번 짓는다 — 스폰은 상태 글을 다시 파싱하지 않는다(감사 A-15).
+        if ( asset->buildSpawnTemplate() == false )
+            return nullptr;
 
         UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };
         const auto               cacheIt = _mapCache.find( cacheKey );
@@ -398,6 +409,7 @@ namespace sw
     GameObject* PrefabCache::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName )
     {
         SW_MEMORY_SCOPE( Scene );
+        SW_PROFILE_SCOPE( "GT.Prefab.spawn" );
         // 이 함수는 나머지 포인터를 모두 검사한다(`pAsset` · `pGameObject` · `pInstanceName`).
         // 활성 씬이 없을 때 `getObjectManager()` 는 nullptr 를 반환한다.
         if ( pGameObjectManager == nullptr )
@@ -462,7 +474,7 @@ namespace sw
     {
         if ( StringUtil::trim( asset.getStateData() ).empty() == false )
         {
-            if ( asset.applyStateTo( pGameObject ) == false )
+            if ( asset.applySpawnTemplateTo( pGameObject ) == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.ObjectStateApplyFailedSpawn", "ObjectState apply failed for '%#' — spawn aborted", instanceName );
                 return false;
@@ -558,16 +570,21 @@ namespace sw
                 }
             }
 
-            string                        state;
-            shared_ptr<const PrefabAsset> pSource;
-            if ( makeNestedInstanceState( node, state, pSource ) == false )
-                continue;
             const string partKey  = node.makePartKey( index );
             const string partPath = PrefabPartOverride::joinPath( rootPath, partKey );
-            if ( PrefabCacheInternal::applyPartOverrides( listPartOverride, partPath, state ) == false )
+            // 덮어쓴 것이 없는 펼친 노드는 로드 때 지은 원형으로 읽는다(스폰마다 글을 파싱하지 않는다). 덮어쓴 것이 있거나 저작본 노드면 글을 합쳐 읽는다.
+            const bool                    bUseTemplate = node.isResolved() && PrefabCacheInternal::hasPartOverride( listPartOverride, partPath ) == false;
+            string                        state;
+            shared_ptr<const PrefabAsset> pSource;
+            if ( bUseTemplate == false )
             {
-                SW_LOG_WARNING_ID( "PrefabAsset.OverridesNestedPrefabPart", "Overrides of nested prefab part '%#' (%#) could not be applied - it is skipped", partPath, node._prefabPath );
-                continue;
+                if ( makeNestedInstanceState( node, state, pSource ) == false )
+                    continue;
+                if ( PrefabCacheInternal::applyPartOverrides( listPartOverride, partPath, state ) == false )
+                {
+                    SW_LOG_WARNING_ID( "PrefabAsset.OverridesNestedPrefabPart", "Overrides of nested prefab part '%#' (%#) could not be applied - it is skipped", partPath, node._prefabPath );
+                    continue;
+                }
             }
 
             const string& sourceName = pSource != nullptr ? pSource->getName() : node._name;
@@ -577,7 +594,8 @@ namespace sw
                 continue;
             ObjectLoadContext context{ SerializePurpose::Authoring };
             context._bExternalParentAllowed = false; // 부모는 노드의 자리가 정한다(아래에서 붙인다)
-            if ( ObjectStateSerializer::loadFromXMLString( pPart, state, context ) == false )
+            const bool bStateRead           = bUseTemplate ? asset.applyNestedSpawnTemplateTo( pPart, index ) : ObjectStateSerializer::loadFromXMLString( pPart, state, context );
+            if ( bStateRead == false )
             {
                 SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabInstanceState", "Nested prefab instance '%#' (%#) state could not be applied - it is skipped", node._name, node._prefabPath );
                 pManager->destroyGameObject( pPart );

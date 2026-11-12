@@ -88,8 +88,10 @@ namespace sw
     /**
      * @struct AnimationGraphBlendSpaceDef
      * @brief 블렌드 스페이스 상태의 데이터입니다(XML 노드의 "blend_space"). 축 파라미터 이름과 표본(클립 이름, 위치)을 가집니다.
-     * @details XML 형식은 `<blend_space x="Speed" y="Direction" notify="HighestWeight"><samples><sample clip="Idle" x="0" y="0" />…</samples></blend_space>` 이다. "y" 를 적지 않으면 1D 다.
-     *          표본이 없거나, 클립 이름이나 "x" 파라미터가 비거나, "notify" 표기를 모르면 로드 오류다.
+     * @details XML 형식은 `<blend_space x="Speed" y="Direction" min_x="0" max_x="6" min_y="-180" max_y="180" notify="HighestWeight"><samples><sample clip="Idle" x="0" y="0" />…</samples></blend_space>` 이다.
+     *          "y" 를 적지 않으면 1D 다. 축 범위는 x 는 필수, 2D 면 y 도 필수다.
+     *          표본이 없거나, 클립 이름이나 "x" 파라미터가 비거나, "notify" 표기를 모르거나, 축 범위가 비거나, 표본이 범위 밖이거나 겹치거나,
+     *          2D 표본이 넓이를 이루지 못하면 로드 오류다.
      */
     struct AnimationGraphBlendSpaceDef
     {

@@ -342,6 +342,32 @@ SW_TEST_CASE( FileTest, DirectoryWalkCollectsFilesAndFolders )
 }
 
 /**
+ * @brief [FileTest] 모은 파일 · 폴더는 바이트 순이다 — 훑는 순서(NTFS 이름 순, ext4 해시 순)에 기대지 않는다.
+ * @details 정렬하지 않으면 Linux 에서 `scratch/…` 사본이 `engine/…` 원본보다 먼저 나와 Quick Open 이 사본을 골랐다(editor.sequencerkeys).
+ */
+SW_TEST_CASE( FileTest, CollectedPathsAreSortedOnEveryPlatform )
+{
+    const sw::string rootDir = sw::test::makeScratchPath( "sw_walk_sorted" );
+    for ( const char* pFolder : { "scratch", "engine", "common", "game", "editor" } )
+    {
+        const sw::string folder = sw::FileUtil::joinPath( rootDir, pFolder );
+        SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( folder ) );
+        SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "same.txt" ), "a" ) );
+    }
+
+    sw::vector<sw::string> listFile{ "keep-first" }; // 부른 쪽이 넣어 둔 항목은 건드리지 않는다
+    SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rootDir, ".txt", listFile, true ) );
+    SW_REQUIRE_EQUAL( size_t( 6 ), listFile.size() );
+    SW_EXPECT_TRUE( listFile[0] == "keep-first" );
+    SW_EXPECT_TRUE( std::is_sorted( listFile.begin() + 1, listFile.end() ) );
+
+    sw::vector<sw::string> listFolder;
+    SW_EXPECT_TRUE( sw::FileUtil::collectFolders( rootDir, listFolder, true ) );
+    SW_EXPECT_EQUAL( size_t( 5 ), listFolder.size() );
+    SW_EXPECT_TRUE( std::is_sorted( listFolder.begin(), listFolder.end() ) );
+}
+
+/**
  * @brief [FileTest] 쓰기는 원자적이다: 다 쓴 뒤 바꿔 끼우고, 같은 폴더에 임시 파일을 남기지 않는다.
  * @details 원본을 "wb" 로 열어 그 자리에 쓰면 도중에 실패할 때 원본이 빈 파일로 남는다.
  */
@@ -468,6 +494,65 @@ SW_TEST_CASE( FileTest, ReadOnlyFileIsReported )
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( root + "/missing.txt" ) );
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( root ) );
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( root ) );
+}
+
+/**
+ * @brief [FileTest] 원자적 쓰기는 읽기 전용 파일을 바꿔 끼우지 않는다 — false 이고 내용 · 속성이 그대로다(POSIX `rename` 은 대상 권한을 보지 않아 잠금이 뚫렸다)
+ */
+SW_TEST_CASE( FileTest, WriteRefusesAReadOnlyFile )
+{
+    SW_EXPECT_LOG( "File.WriteReadOnly" );
+    const sw::string filePath = sw::test::makeScratchPath( "locked.txt" );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( filePath, "kept" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( filePath, false ) );
+
+    SW_EXPECT_FALSE( sw::FileUtil::writeTextFile( filePath, "overwritten" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isReadOnlyFile( filePath ) );
+    sw::string text;
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( filePath, text ) );
+    SW_EXPECT_EQUAL( text, sw::string( "kept" ) );
+
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( filePath, true ) ); // 케이스 폴더 정리가 Windows 에서 읽기 전용 파일을 지우지 못한다
+    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath, "overwritten" ) );
+}
+
+/**
+ * @brief [FileTest] 체크아웃 규칙 안의 읽기 전용 파일은 지우기 · 옮기기 · 덮는 복사가 모두 거절하고 남긴다 — 폴더는 그 아래 파일 하나로 막힌다. 규칙 밖의 읽기 전용은 정리가 지운다
+ * @details POSIX 는 폴더 권한만으로, Windows 지우기는 속성을 풀고 지워 잠금(git LFS lockable)이 뚫렸다. 규칙은 케이스 동안만 바꾸고 앞 규칙으로 되돌린다.
+ */
+SW_TEST_CASE( FileTest, CheckedInReadOnlyFileIsNotRemovedOrMoved )
+{
+    SW_EXPECT_LOG( "File.NotOpenForEdit" );
+    const sw::string controlled = sw::test::makeScratchPath( "controlled" );
+    const sw::string locked     = controlled + "/deep/locked.txt";
+    const sw::string loose      = sw::test::makeScratchPath( "loose_copy.txt" );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( locked ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( loose ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( locked, "kept" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( loose, "copy" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( locked, false ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( loose, false ) );
+
+    const sw::FileUtil::CheckoutRule previousRule = sw::FileUtil::setCheckoutRule( []( sw::string_view path )
+    { return path.find( "/controlled/" ) != sw::string_view::npos; } );
+    const sw::optional<sw::string>   found        = sw::FileUtil::findNotOpenForEdit( controlled );
+    SW_EXPECT_TRUE( found.has_value() && *found == sw::FileUtil::normalizeSeparators( locked ) );
+    SW_EXPECT_FALSE( sw::FileUtil::removeFile( locked ) );
+    SW_EXPECT_FALSE( sw::FileUtil::tryRemoveFile( locked ) );
+    SW_EXPECT_FALSE( sw::FileUtil::removeDirectory( controlled ) );
+    SW_EXPECT_FALSE( sw::FileUtil::renamePath( locked, controlled + "/moved.txt" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::copyFile( loose, locked ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isWriteAllowed( locked ) ); // 경로를 스스로 여는 서드파티 저장(DDS · SQLite)이 쓰기 전에 묻는 입구다
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( loose ) );       // 규칙 밖의 읽기 전용(속성이 따라온 사본)은 정리가 지운다
+    (void)sw::FileUtil::setCheckoutRule( previousRule );
+
+    sw::string text;
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( locked, text ) );
+    SW_EXPECT_EQUAL( text, sw::string( "kept" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isReadOnlyFile( locked ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( controlled + "/moved.txt" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( locked, true ) ); // 케이스 폴더 정리는 규칙과 무관하게 지운다 — 다른 케이스와 같게 둔다
 }
 
 /**

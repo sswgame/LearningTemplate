@@ -267,6 +267,14 @@ namespace sw::editor
         return bSaved;
     }
 
+    void CharacterEditorModel::collectFilesToSave( vector<string>& outListAssetID ) const
+    {
+        if ( _sockets.isDirty() )
+            outListAssetID.push_back( string( _paths._socketPath.c_str() ) );
+        if ( _pose.isDirty() )
+            outListAssetID.push_back( string( _paths._refPosePath.c_str() ) );
+    }
+
     void CharacterEditorModel::revert()
     {
         if ( _sockets.isDirty() && _sockets.revertToSaved() == false )

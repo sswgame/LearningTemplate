@@ -196,6 +196,7 @@ SW_TEST_CASE( PhysicsContactTrackerTest, ReenabledBodyGetsEndThenBegin )
     const PhysicsContactBody                  bodyA{ PhysicsBodyHandle::fromPacked( 0x100000001ull ), 1 };
     const PhysicsContactBody                  bodyB{ PhysicsBodyHandle::fromPacked( 0x100000002ull ), 2 };
     vector<PhysicsContactEvent3D>             listEvent;
+    tracker.setStayListener( bodyA._userData, true ); // 끝의 유지까지 본다(유지는 opt-in — 감사 S-1)
     tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
     tracker.finishStep( listEvent );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
@@ -215,4 +216,86 @@ SW_TEST_CASE( PhysicsContactTrackerTest, ReenabledBodyGetsEndThenBegin )
     tracker.finishStep( listEvent ); // 다음 step 은 이어서 닿아 있다
     SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
     SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::Stay );
+}
+
+/**
+ * @brief [PhysicsContactTrackerTest] 셰이프를 간 바디(`resetSubContacts`)는 새 셰이프가 다시 닿으면 쌍이 이어지고(끝 · 시작 없음), 닿지 않으면 끝난다(감사 S-4)
+ * @details 옛 셰이프 쌍 둘이 닿아 있다가 셰이프를 간다 — 백엔드는 옛 셰이프의 끝 알림을 버리고 새 셰이프의 시작만 넣는다.
+ */
+SW_TEST_CASE( PhysicsContactTrackerTest, ReshapedBodyKeepsTouchingPair )
+{
+    PhysicsContactTracker<PhysicsDimension2D> tracker;
+    const PhysicsContactBody                  bodyA{ PhysicsBodyHandle::fromPacked( 0x100000001ull ), 1 };
+    const PhysicsContactBody                  bodyB{ PhysicsBodyHandle::fromPacked( 0x100000002ull ), 2 };
+    vector<PhysicsContactEvent2D>             listEvent;
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f ); // 셰이프 쌍 둘
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+
+    tracker.resetSubContacts( bodyB._body );
+    tracker.beginSubContact( bodyB, bodyA, {}, {}, 0.0f ); // 새 셰이프 하나가 다시 닿았다
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_EXPECT_EQUAL( size_t{ 0 }, listEvent.size() ); // 유지는 듣지 않으니 아무것도 없다
+    SW_EXPECT_EQUAL( 1u, tracker.getActivePairCount() );
+
+    tracker.endSubContact( bodyA._body, bodyB._body ); // 새 셰이프 쌍의 끝 하나로 끝난다(옛 쌍 수가 남지 않았다)
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::End );
+
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    tracker.resetSubContacts( bodyA._body ); // 셰이프를 갈았는데 새 셰이프가 닿지 않는다
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::End );
+    SW_EXPECT_EQUAL( 0u, tracker.getActivePairCount() );
+}
+
+/**
+ * @brief [PhysicsContactTrackerTest] 유지는 듣는 사용자 값이 낀 쌍만 낸다 — 이미 닿은 쌍도 듣기를 켜고 끄면 다음 step 부터 따른다(감사 S-1)
+ * @details A-B(A 가 듣는다)와 C-D(아무도 듣지 않는다)가 함께 닿아 있다. 시작 · 끝은 듣기와 상관없이 늘 나온다.
+ */
+SW_TEST_CASE( PhysicsContactTrackerTest, StayOnlyForListeners )
+{
+    PhysicsContactTracker<PhysicsDimension3D> tracker;
+    const PhysicsContactBody                  bodyA{ PhysicsBodyHandle::fromPacked( 0x100000001ull ), 1 };
+    const PhysicsContactBody                  bodyB{ PhysicsBodyHandle::fromPacked( 0x100000002ull ), 2 };
+    const PhysicsContactBody                  bodyC{ PhysicsBodyHandle::fromPacked( 0x100000003ull ), 3 };
+    const PhysicsContactBody                  bodyD{ PhysicsBodyHandle::fromPacked( 0x100000004ull ), 4 };
+    vector<PhysicsContactEvent3D>             listEvent;
+    tracker.setStayListener( bodyA._userData, true );
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
+    tracker.beginSubContact( bodyC, bodyD, {}, {}, 0.0f );
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listEvent.size() ); // 시작은 둘 다
+    SW_EXPECT_TRUE( tracker.isStayReported( bodyB._body, bodyA._body ) );
+    SW_EXPECT_FALSE( tracker.isStayReported( bodyC._body, bodyD._body ) );
+
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::Stay );
+    SW_EXPECT_TRUE( listEvent[0]._bodyA == bodyA._body );
+
+    tracker.setStayListener( bodyD._userData, true ); // 닿아 있는 C-D 가 듣기 시작한다
+    tracker.setStayListener( bodyA._userData, false );
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::Stay );
+    SW_EXPECT_TRUE( listEvent[0]._bodyA == bodyC._body );
+    SW_EXPECT_FALSE( tracker.isStayReported( bodyA._body, bodyB._body ) );
+
+    tracker.endSubContact( bodyA._body, bodyB._body ); // 듣지 않는 쌍도 끝은 낸다
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::End );
+    SW_EXPECT_TRUE( listEvent[1]._phase == PhysicsContactPhase::Stay );
 }

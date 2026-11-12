@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Commands/Asset/EditorContentWrite.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -222,9 +223,25 @@ namespace sw::editor
         return bAllRead;
     }
 
+    void EditorDataTableCommands::collectLocalizationFiles( const LocalizationSheet& sheet, vector<string>& outListPath )
+    {
+        for ( const string& tablePath : sheet._listTablePath )
+            outListPath.push_back( tablePath );
+        for ( const string& culture : sheet._listCulture )
+            outListPath.push_back( LocalizationProject::makeTranslationPath( sheet._projectPath, culture ) );
+    }
+
     bool EditorDataTableCommands::saveLocalizationProject( LocalizationSheet& inoutSheet )
     {
         using Internal = EditorDataTableCommandsInternal;
+        // 표 하나라도 잠그지 않았으면(읽기 전용) 아무것도 쓰지 않는다 — 반만 쓴 프로젝트를 남기지 않고, 패널 저장 · 표 단추가 같은 확인을 지난다.
+        vector<string> listPath;
+        collectLocalizationFiles( inoutSheet, listPath );
+        for ( const string& path : listPath )
+        {
+            if ( EditorContentWrite::refuseReadOnly( path, EditorContentWriteKind::Save ) )
+                return false;
+        }
         // 디스크의 지금 내용 위에 고친 줄만 적용한다. 그래야 수집기가 적은 출처, 번역가 메모, 검토 표시가 유지된다.
         vector<SourceStringTable> listTable;
         if ( Internal::readSourceTables( inoutSheet, listTable ) == false )

@@ -47,6 +47,8 @@ namespace sw::editor
          * @details 현지화 표는 고친 것이 있을 때만 쓴다(실행 중인 게임이 다시 읽는다). 열린 게임 데이터 파일은 dirty 와 무관하게 쓴다 — 언제 저장할지는 문서 패널이 정한다(저장 왕복).
          */
         [[nodiscard]] bool saveDocument();
+        /** @brief `saveDocument` 가 쓸 파일입니다 — 고친 현지화 프로젝트의 표들과 열린 게임 데이터 파일(디스크 경로). */
+        void collectFilesToSave( vector<string>& outListPath ) const;
         /** @brief 고친 현지화 표를 디스크의 내용으로 되돌립니다. 게임 데이터 파일은 패널이 다시 엽니다(`openGameDataFile`). */
         void revertLocalization();
         bool isLocalizationDirty() const { return _bLocalizationDirty; }

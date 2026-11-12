@@ -9,6 +9,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Workspace/EditorSelection.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -203,4 +204,27 @@ SW_TEST_CASE( EditorSelectionTest, RemapAssetsByMap )
     SW_EXPECT_TRUE( selection.hasAsset( "C" ) );
     SW_EXPECT_FALSE( selection.hasAsset( "A" ) );
     SW_EXPECT_FALSE( selection.hasAsset( "E" ) );
+}
+
+/**
+ * @brief [EditorSelectionTest] 옮김 방송이 미리보기 창의 선택이 든 에셋 id 도 고친다 — 창마다 선택이 따로라 메인 선택만 고치면 창의 인스펙터가 없는 파일을 가리켰다(감사 P0-4)
+ * @details 미리보기 선택은 묶을 때 에디터 범위의 목록에 오른다(`bindPreviewScope` → `registerPreviewSelection`) — 에디터 안에서 도는 단위 테스트라 그 목록이 있다.
+ */
+SW_TEST_CASE( EditorSelectionTest, AssetMoveRemapsPreviewSelection )
+{
+    sw::Scene                   scene( "SelectionMoveProbe" );
+    sw::CommandStack            stack;
+    sw::editor::EditorSelection selection;
+    selection.bindPreviewScope( scene, stack );
+    selection.selectAssets( { "scratch/p04/old.material", "scratch/p04/keep.material" }, sw::editor::SelectionMode::Replace );
+
+    sw::editor::EditorWorkspace       workspace{ nullptr };
+    sw::editor::EditorAssetMoveNotice notice;
+    notice._listOldID = { "scratch/p04/old.material" };
+    notice._listNewID = { "scratch/p04/new.material" };
+    workspace.notifyAssetsMoved( notice );
+
+    SW_EXPECT_TRUE( ( selection.getSelectedAssets() == sw::vector<sw::string>{ "scratch/p04/new.material", "scratch/p04/keep.material" } ) );
+    SW_EXPECT_FALSE( selection.hasAsset( "scratch/p04/old.material" ) );
+    selection.unbindPreviewScope();
 }

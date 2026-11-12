@@ -36,7 +36,11 @@ namespace sw
         int32 _maxLod{ -1 };
     };
 
-    /** @brief `<blend_space>` 입니다. `y` 를 적지 않으면 1D 다. */
+    /**
+     * @brief `<blend_space>` 입니다. `y` 를 적지 않으면 1D 다.
+     * @details 축 범위(`min_x` · `max_x`, 2D 면 `min_y` · `max_y`)는 언리얼 BlendParameter Min/Max · Godot min_space/max_space 처럼 에셋이 정한다.
+     *          파라미터를 이 범위로 가두고 삼각분할을 이 범위로 정규화한다. x 범위는 필수, y 범위는 2D 에서 최댓값 > 최솟값이어야 한다(`AnimationGraphAsset`).
+     */
     REFLECT()
     struct SW_API AnimationGraphBlendSpaceParams
     {
@@ -46,6 +50,14 @@ namespace sw
         hashed_string _x{};
         PROPERTY()
         hashed_string _y{};
+        PROPERTY( Required, Name = "min_x" )
+        float32 _minX{ 0.0f };
+        PROPERTY( Required, Name = "max_x" )
+        float32 _maxX{ 0.0f };
+        PROPERTY( Name = "min_y" )
+        float32 _minY{ 0.0f };
+        PROPERTY( Name = "max_y" )
+        float32 _maxY{ 0.0f };
         PROPERTY()
         AnimationBlendSpaceNotifyMode _notify{ AnimationBlendSpaceNotifyMode::All };
     };

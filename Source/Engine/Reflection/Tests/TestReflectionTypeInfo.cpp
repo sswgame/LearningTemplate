@@ -1607,3 +1607,140 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ShortNameCollisionIsReported )
     SW_REQUIRE_NOT_NULL( pByShortName );
     SW_EXPECT_TRUE( pByShortName->_fullyQualifiedName == sw::hashed_string( ( "swtest::right::TwinType" + factory._suffix ).c_str() ) );
 }
+
+namespace
+{
+    // 대소문자 무시 FNV-1a 32 비트가 같은 이름 쌍이다(생일 탐색으로 찾았다). 바이너리 태그는 타입 · 필드를 이 해시로 싣는다.
+    constexpr const utf8* kHashTwinA = "ui.key1022789";
+    constexpr const utf8* kHashTwinB = "ui.key1239192";
+} // namespace
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 32 비트 이름 해시가 같은 두 타입 이름은 등록이 오류를 남기고 해시 표에는 먼저 든 이름만 둔다(타입 찾기는 둘 다 된다)
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, TypeNameHashClashIsReported )
+{
+    SW_REQUIRE_EQUAL( sw::hashed_string::computeHash( kHashTwinA ), sw::hashed_string::computeHash( kHashTwinB ) );
+    const sw::test::ScopedTestModule scopedModule( "TestWireNameClash" );
+    sw::TypeRegistry&                registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    sw::TypeInfo                     first;
+    first._fullyQualifiedName  = sw::hashed_string( kHashTwinA );
+    first._moduleName          = sw::hashed_string( "TestWireNameClash" );
+    sw::TypeInfo second        = first;
+    second._fullyQualifiedName = sw::hashed_string( kHashTwinB );
+
+    registry.registerClass( first );
+    SW_EXPECT_LOG( "Reflection.TypeNameHashClash" );
+    registry.registerClass( second );
+
+    SW_EXPECT_TRUE( registry.findWireTypeNameByHash( sw::hashed_string::computeHash( kHashTwinA ) ) == sw::hashed_string( kHashTwinA ) );
+    SW_EXPECT_NOT_NULL( registry.findType( sw::hashed_string( kHashTwinA ) ) );
+    SW_EXPECT_NOT_NULL( registry.findType( sw::hashed_string( kHashTwinB ) ) );
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 한 타입 안의 두 필드 이름이 32 비트 해시가 같으면 등록이 오류를 남긴다 — 바이너리 세이브가 두 필드를 가리지 못한다
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, FieldNameHashClashIsReported )
+{
+    const sw::test::ScopedTestModule scopedModule( "TestFieldNameClash" );
+    sw::TypeRegistry&                registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    sw::TypeInfo                     info;
+    info._name               = sw::hashed_string( "FieldClashType" );
+    info._fullyQualifiedName = sw::hashed_string( "swtest::FieldClashType" );
+    info._moduleName         = sw::hashed_string( "TestFieldNameClash" );
+    info._size               = 8;
+    info._listProperty       = {
+        sw::PropertyInfo{sw::hashed_string( kHashTwinA ), sw::hashed_string( "int32" ), 0},
+        sw::PropertyInfo{sw::hashed_string( kHashTwinB ), sw::hashed_string( "int32" ), 4},
+    };
+    SW_EXPECT_LOG( "Reflection.FieldNameHashClash" );
+    registry.registerClass( info );
+    SW_EXPECT_NOT_NULL( registry.findType( sw::hashed_string( "swtest::FieldClashType" ) ) );
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 지운 필드 이름(`RemovedField`)을 새 필드가 다시 쓰거나 그 32 비트 해시를 쓰면 등록이 오류를 남긴다 — 옛 세이브의 값이 새 필드로 읽히지 않게
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, RemovedFieldNameReuseIsReported )
+{
+    const sw::test::ScopedTestModule scopedModule( "TestRemovedField" );
+    sw::TypeRegistry&                registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    // 대소문자 무시 FNV-1a 32 비트가 같은 쌍이다(생일 탐색으로 찾았다).
+    SW_REQUIRE_EQUAL( sw::hashed_string::computeHash( "fd.key361848" ), sw::hashed_string::computeHash( "fd.key1029844" ) );
+
+    sw::TypeInfo clean;
+    clean._name               = sw::hashed_string( "RemovedFieldClean" );
+    clean._fullyQualifiedName = sw::hashed_string( "swtest::RemovedFieldClean" );
+    clean._moduleName         = sw::hashed_string( "TestRemovedField" );
+    clean._size               = 4;
+    clean._listProperty       = {
+        sw::PropertyInfo{ sw::hashed_string( "_current" ), sw::hashed_string( "int32" ), 0 }
+    };
+    clean._listRemovedField = { sw::hashed_string( "_gone" ) };
+    registry.registerClass( clean ); // 겹치지 않으면 조용하다
+
+    sw::TypeInfo reused          = clean;
+    reused._name                 = sw::hashed_string( "RemovedFieldReused" );
+    reused._fullyQualifiedName   = sw::hashed_string( "swtest::RemovedFieldReused" );
+    reused._listRemovedField     = { sw::hashed_string( "_current" ) }; // 같은 철자를 다시 쓴다
+    sw::TypeInfo hashTwin        = clean;
+    hashTwin._name               = sw::hashed_string( "RemovedFieldHashTwin" );
+    hashTwin._fullyQualifiedName = sw::hashed_string( "swtest::RemovedFieldHashTwin" );
+    hashTwin._listProperty       = {
+        sw::PropertyInfo{ sw::hashed_string( "fd.key361848" ), sw::hashed_string( "int32" ), 0 }
+    };
+    hashTwin._listRemovedField = { sw::hashed_string( "fd.key1029844" ) }; // 해시가 같다
+    SW_EXPECT_LOG( "Reflection.FieldNameHashClash" );
+    registry.registerClass( reused );
+    registry.registerClass( hashTwin );
+    SW_EXPECT_NOT_NULL( registry.findType( sw::hashed_string( "swtest::RemovedFieldHashTwin" ) ) );
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 지운 타입 이름(`RemovedType`)은 해시 표에 빈 이름으로 남고, 새 타입이 그 이름 · 해시를 쓰면 등록이 오류를 남긴다
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, RetiredTypeNameReuseIsReported )
+{
+    const sw::test::ScopedTestModule scopedModule( "TestRetiredType" );
+    sw::TypeRegistry&                registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    constexpr const utf8*            kRetired = "swtest::retired.k80468";
+    constexpr const utf8*            kTwin    = "swtest::retired.k1250800"; // 대소문자 무시 FNV-1a 32 비트가 같다
+    SW_REQUIRE_EQUAL( sw::hashed_string::computeHash( kRetired ), sw::hashed_string::computeHash( kTwin ) );
+
+    registry.registerRetiredTypeName( kRetired ); // 지운 이름은 프로세스 끝까지 남는다 — 다시 돌아도 같은 이름이라 조용하다
+    SW_EXPECT_TRUE( registry.findWireTypeNameByHash( sw::hashed_string::computeHash( kRetired ) ).empty() );
+
+    sw::TypeInfo reused;
+    reused._fullyQualifiedName = sw::hashed_string( kRetired );
+    reused._moduleName         = sw::hashed_string( "TestRetiredType" );
+    sw::TypeInfo twin          = reused;
+    twin._fullyQualifiedName   = sw::hashed_string( kTwin );
+    SW_EXPECT_LOG( "Reflection.TypeNameHashClash" );
+    registry.registerClass( reused );
+    registry.registerClass( twin );
+    SW_EXPECT_TRUE( registry.findWireTypeNameByHash( sw::hashed_string::computeHash( kRetired ) ).empty() ); // 옛 태그를 새 타입으로 옮기지 않는다
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 클래스와 enum 이 같은 짧은 이름을 쓰면 나중 등록이 조용히 이기지 않고 오류다 — 바이너리 태그는 어느 쪽인지 적지 않는다
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, ClassAndEnumWithTheSameNameAreAClash )
+{
+    const sw::test::ScopedTestModule scopedModule( "TestKindClash" );
+    sw::TypeRegistry&                registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    sw::TypeInfo                     type;
+    type._name               = sw::hashed_string( "KindClashTwin" );
+    type._fullyQualifiedName = sw::hashed_string( "swtest::left::KindClashTwin" );
+    type._moduleName         = sw::hashed_string( "TestKindClash" );
+    registry.registerClass( type );
+
+    sw::EnumInfo enumInfo;
+    enumInfo._name               = sw::hashed_string( "KindClashTwin" );
+    enumInfo._fullyQualifiedName = sw::hashed_string( "swtest::right::KindClashTwin" );
+    enumInfo._moduleName         = sw::hashed_string( "TestKindClash" );
+    enumInfo._size               = 1;
+    SW_EXPECT_LOG( "Reflection.TypeNameHashClash" );
+    registry.registerEnum( enumInfo );
+    SW_EXPECT_TRUE( registry.findWireTypeNameByHash( sw::hashed_string::computeHash( "KindClashTwin" ) ) == sw::hashed_string( "KindClashTwin" ) ); // 먼저 든 클래스를 지킨다
+}

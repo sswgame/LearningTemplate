@@ -239,6 +239,22 @@ SW_TEST_CASE( GimmickCircuitTest, InvertedWireFlipsTheSignal )
     SW_EXPECT_FALSE( circuit.getOutput( 1, 0 ) );
 }
 
+/**
+ * @brief [GimmickCircuitTest] 32 비트 이름 해시가 같은 두 노드 종류는 등록이 오류를 남기고 뒤의 것을 거절한다 — 회로 상태가 종류를 그 해시로 적는다
+ */
+SW_TEST_CASE( GimmickCircuitTest, NodeKindNamesSharingAHashAreRefused )
+{
+    GimmickNodeRegistry registry;
+    GimmickNodeKind     kind;
+    kind._name  = hashed_string( "ui.key1022789" );
+    kind._pStep = &GimmickTestKinds::stepNothing;
+    SW_REQUIRE_TRUE( registry.registerKind( kind ) );
+    kind._name = hashed_string( "ui.key1239192" );
+    SW_EXPECT_LOG( "Gimmick.NodeKindHashClash" );
+    SW_EXPECT_FALSE( registry.registerKind( kind ) );
+    SW_EXPECT_NULL( registry.findKind( hashed_string( "ui.key1239192" ) ) );
+}
+
 SW_TEST_CASE( GimmickCircuitTest, BrokenDefinitionsNameTheProblem )
 {
     {
@@ -250,6 +266,13 @@ SW_TEST_CASE( GimmickCircuitTest, BrokenDefinitionsNameTheProblem )
         GimmickFixture rig;
         (void)rig._def.addNode( hashed_string( "s" ), hashed_string( "Sensor" ) );
         rig.expectRefused( "duplicate node id" );
+    }
+    {
+        // 대소문자 무시 FNV-1a 32 비트가 같은 두 id 다 — 저장 상태가 노드를 그 해시로 짝지으니 만들기가 거절한다.
+        GimmickFixture rig;
+        (void)rig._def.addNode( hashed_string( "ui.key1022789" ), hashed_string( "Sensor" ) );
+        (void)rig._def.addNode( hashed_string( "ui.key1239192" ), hashed_string( "Sensor" ) );
+        rig.expectRefused( "share a 32-bit name hash" );
     }
     {
         GimmickFixture rig;

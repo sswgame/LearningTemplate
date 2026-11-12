@@ -84,6 +84,7 @@ namespace sw
         , _mapLanguageTable{}
         , _mapCultureStatistic{}
         , _listLookupCulture{}
+        , _pCheckKeyHash{ &LocalizationKeyIndex::computeHash }
         , _missingMutex{}
         , _uniqueMissingKey{}
         , _textRevision{ 0 }
@@ -262,7 +263,12 @@ namespace sw
         string newLanguage;
         {
             UniqueLock<shared_mutex> lock{ _mutex };
-            bool                     bReplaced{ false };
+            if ( const expected<void> checked = checkKeyHashesLocked( &mounted, nullptr ); checked.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "LocalizationManager.KeyHashCollision", "Localization project '%#' is not mounted: %# (%#)", projectPath, checked.error().message(), checked.error().detail() );
+                return false;
+            }
+            bool bReplaced{ false };
             for ( MountedProject& existing : _listProject )
             {
                 if ( existing._project._name == mounted._project._name )
@@ -365,8 +371,13 @@ namespace sw
         string newLanguage;
         {
             UniqueLock<shared_mutex> lock{ _mutex };
-            const string             code  = normalizeLanguageCode( languageCode );
-            TranslationTable&        loose = _mapLooseTable[code];
+            if ( const expected<void> checked = checkKeyHashesLocked( nullptr, &table ); checked.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "LocalizationManager.KeyHashCollision", "Translation XML for '%#' is not loaded: %# (%#)", languageCode, checked.error().message(), checked.error().detail() );
+                return false;
+            }
+            const string      code  = normalizeLanguageCode( languageCode );
+            TranslationTable& loose = _mapLooseTable[code];
             loose.setCulture( code );
             for ( const auto& [key, entry] : table.getEntries() )
             {
@@ -385,13 +396,20 @@ namespace sw
 
     void LocalizationManager::setString( string_view languageCode, const hashed_string& key, string_view value )
     {
+        TranslationTable incoming;
+        incoming.getOrAddEntry( key.view() );
         UniqueLock<shared_mutex> lock{ _mutex };
-        const string             code  = normalizeLanguageCode( languageCode );
-        TranslationTable&        loose = _mapLooseTable[code];
+        if ( const expected<void> checked = checkKeyHashesLocked( nullptr, &incoming ); checked.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "LocalizationManager.KeyHashCollision", "Localized string '%#' is not set: %# (%#)", key.c_str(), checked.error().message(), checked.error().detail() );
+            return;
+        }
+        const string      code  = normalizeLanguageCode( languageCode );
+        TranslationTable& loose = _mapLooseTable[code];
         loose.setCulture( code );
         TranslationEntry& entry = loose.getOrAddEntry( key.c_str() );
         entry._text             = string( value );
-        getOrCreateTableLocked( code ).setStringByHash( key.getHash(), value );
+        getOrCreateTableLocked( code ).setStringByHash( LocalizationKeyIndex::computeHash( key.view() ), value );
         if ( _currentLanguage.empty() )
         {
             _currentLanguage = code;
@@ -470,7 +488,11 @@ namespace sw
             {
                 for ( const auto& [key, entry] : project._mapSource )
                 {
-                    table.setText( key, entry._source );
+                    if ( const expected<void> added = table.setText( key, entry._source ); added.has_value() == false )
+                    {
+                        SW_LOG_ERROR_ID( "LocalizationManager.CookKeyHashCollision", "Binary localization table '%#' is not cooked: %# (%#)", code.c_str(), added.error().message(), added.error().detail() );
+                        return false;
+                    }
                 }
             }
             for ( const TranslationTable& translation : project._listTranslation )
@@ -481,8 +503,13 @@ namespace sw
                 {
                     const auto                   sourceIt = project._mapSource.find( key );
                     const SourceTextEntry* const pSource  = sourceIt != project._mapSource.end() ? &sourceIt->second : nullptr;
-                    if ( translation.computeState( key, pSource ) == TranslationState::Current )
-                        table.setText( key, entry._text );
+                    if ( translation.computeState( key, pSource ) != TranslationState::Current )
+                        continue;
+                    if ( const expected<void> added = table.setText( key, entry._text ); added.has_value() == false )
+                    {
+                        SW_LOG_ERROR_ID( "LocalizationManager.CookKeyHashCollision", "Binary localization table '%#' is not cooked: %# (%#)", code.c_str(), added.error().message(), added.error().detail() );
+                        return false;
+                    }
                 }
             }
         }
@@ -530,6 +557,56 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 실행 테이블 다시 채우기
     // ------------------------------------------------------------------------------
+    expected<void> LocalizationManager::checkKeyHashesLocked( const MountedProject* pIncomingProject, const TranslationTable* pIncomingLoose ) const
+    {
+        LocalizationKeyIndex index{ _pCheckKeyHash };
+        const auto           addTable = [&index]( const TranslationTable& table ) -> expected<void>
+        {
+            for ( const auto& [key, entry] : table.getEntries() )
+            {
+                if ( const expected<uint64> added = index.add( key ); added.has_value() == false )
+                    return unexpected( added.error() );
+            }
+            return {};
+        };
+        const auto addProject = [&index, &addTable]( const MountedProject& project ) -> expected<void>
+        {
+            for ( const auto& [key, entry] : project._mapSource )
+            {
+                if ( const expected<uint64> added = index.add( key ); added.has_value() == false )
+                    return unexpected( added.error() );
+            }
+            for ( const TranslationTable& translation : project._listTranslation )
+            {
+                if ( const expected<void> added = addTable( translation ); added.has_value() == false )
+                    return added;
+            }
+            return {};
+        };
+
+        for ( const MountedProject& project : _listProject )
+        {
+            const bool bReplaced = pIncomingProject != nullptr && ( project._project._name == pIncomingProject->_project._name || project._projectPath == pIncomingProject->_projectPath );
+            if ( bReplaced )
+                continue;
+            if ( const expected<void> added = addProject( project ); added.has_value() == false )
+                return added;
+        }
+        if ( pIncomingProject != nullptr )
+        {
+            if ( const expected<void> added = addProject( *pIncomingProject ); added.has_value() == false )
+                return added;
+        }
+        for ( const auto& [code, loose] : _mapLooseTable )
+        {
+            if ( const expected<void> added = addTable( loose ); added.has_value() == false )
+                return added;
+        }
+        if ( pIncomingLoose != nullptr )
+            return addTable( *pIncomingLoose );
+        return {};
+    }
+
     StringTable& LocalizationManager::getOrCreateTableLocked( const string& code )
     {
         unique_ptr<StringTable>& pTable = _mapLanguageTable[code];
@@ -552,7 +629,7 @@ namespace sw
             StringTable& sourceTable = getOrCreateTableLocked( project._project._sourceCulture );
             for ( const auto& [key, entry] : project._mapSource )
             {
-                sourceTable.setStringByHash( hashed_string::computeHash( key ), entry._source );
+                sourceTable.setStringByHash( LocalizationKeyIndex::computeHash( key ), entry._source );
             }
 
             for ( const TranslationTable& translation : project._listTranslation )
@@ -567,7 +644,7 @@ namespace sw
                     {
                         case TranslationState::Current:
                         {
-                            table.setStringByHash( hashed_string::computeHash( key ), entry._text );
+                            table.setStringByHash( LocalizationKeyIndex::computeHash( key ), entry._text );
                             ++statistics._currentCount;
                             break;
                         }
@@ -609,7 +686,7 @@ namespace sw
             {
                 for ( const auto& [key, entry] : project._mapSource )
                 {
-                    pseudoTable.setStringByHash( hashed_string::computeHash( key ), PseudoLocalizer::transform( entry._source, pCulture->_pseudoMode ) );
+                    pseudoTable.setStringByHash( LocalizationKeyIndex::computeHash( key ), PseudoLocalizer::transform( entry._source, pCulture->_pseudoMode ) );
                 }
             }
         }
@@ -630,7 +707,7 @@ namespace sw
             StringTable& table = getOrCreateTableLocked( code );
             for ( const auto& [key, entry] : loose.getEntries() )
             {
-                table.setStringByHash( hashed_string::computeHash( key ), entry._text );
+                table.setStringByHash( LocalizationKeyIndex::computeHash( key ), entry._text );
             }
         }
     }
@@ -797,15 +874,15 @@ namespace sw
 
     const utf8* LocalizationManager::findString( const hashed_string& key ) const
     {
-        // intern 된 키는 해시를 이미 가지고 있다. 다시 계산하지 않는다.
-        return findByHash( key.getHash() );
+        // 실행 표의 해시는 64 비트(`LocalizationKeyIndex`)라 intern 된 32 비트 해시를 쓰지 못하고 여기서 구한다.
+        return findByHash( LocalizationKeyIndex::computeHash( key.view() ) );
     }
 
     const utf8* LocalizationManager::findStringByText( string_view keyText ) const
     {
         if ( keyText.empty() )
             return nullptr;
-        return findByHash( hashed_string::computeHash( keyText ) );
+        return findByHash( LocalizationKeyIndex::computeHash( keyText ) );
     }
 
     const utf8* LocalizationManager::findByHash( uint64 keyHash ) const
@@ -833,7 +910,7 @@ namespace sw
 
     bool LocalizationManager::hasString( const hashed_string& key ) const
     {
-        return findByHash( key.getHash() ) != nullptr;
+        return findByHash( LocalizationKeyIndex::computeHash( key.view() ) ) != nullptr;
     }
 
     const StringTable* LocalizationManager::getLanguageTable( string_view languageCode ) const
@@ -947,6 +1024,12 @@ namespace sw
         string language;
         {
             UniqueLock<shared_mutex> lock{ _mutex };
+            if ( const expected<void> checked = checkKeyHashesLocked( &reloaded, nullptr ); checked.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "LocalizationManager.KeyHashCollision", "Localization project '%#' is not reloaded - keeping the previous text: %# (%#)", projectPath.c_str(), checked.error().message(),
+                                 checked.error().detail() );
+                return ReloadResult::Failed;
+            }
             for ( MountedProject& project : _listProject )
             {
                 if ( project._projectPath == projectPath )

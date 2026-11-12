@@ -118,6 +118,8 @@ namespace sw::editor
         bool isDirty() const { return _sockets.isDirty() || _pose.isDirty(); }
         /** @brief 미저장인 소켓 · 포즈 파일을 씁니다. 하나라도 못 쓰면 false 이고 까닭은 상태 줄에 남습니다. */
         [[nodiscard]] bool saveFiles( float64 nowSeconds );
+        /** @brief `saveFiles` 가 쓸 리소스 id 입니다(미저장인 소켓 · 포즈 파일). */
+        void collectFilesToSave( vector<string>& outListAssetID ) const;
         /** @brief 두 모델을 마지막으로 읽거나 저장한 상태로 돌립니다. 외형 선택은 파일 문서가 아니라 건드리지 않습니다. */
         void revert();
         /** @brief 소켓 표를 비웁니다("New"). */

@@ -3,6 +3,7 @@
 #include "Editor/Viewport/EditorViewportPicker.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/Ray.h"
@@ -50,6 +51,29 @@ namespace sw::editor
                 if ( ( modifierMask & ModifierKey::Shift ) != 0 )
                     return SelectionMode::Add;
                 return SelectionMode::Replace;
+            }
+
+            /**
+             * @brief 마키 사각형이 오브젝트에 걸치는지 봅니다. 크기를 선언한 오브젝트(`GameObject::getWorldBox`)는 상자의 화면 사각형(근평면에서 자른 모서리, `projectBoxRect`)이 마키와 겹치면,
+             *        크기가 없으면 피벗이 마키 안이면 걸친 것입니다.
+             * @details 피벗 한 점만 보면 큰 물체를 반쯤 덮어도 고르지 못한다(감사 E-10). 언리얼 박스 선택의 기본(걸치면 고름)과 유니티 `HandleUtility.PickRectObjects` 가 같다.
+             */
+            static bool isTouchedByMarquee( const GameObject& object, const SceneComponent& root, const float4x4& viewProj, const float2& canvasPos, const float2& canvasSize,
+                                            const float2& minPos, const float2& maxPos )
+            {
+                AABB box{};
+                if ( object.getWorldBox( box ) == false )
+                {
+                    ImVec2 screenPt{};
+                    if ( EditorViewportProjectionUtil::projectPoint( viewProj, root.getWorldPosition(), canvasPos, canvasSize, screenPt ) == false )
+                        return false;
+                    return minPos._x <= screenPt.x && screenPt.x <= maxPos._x && minPos._y <= screenPt.y && screenPt.y <= maxPos._y;
+                }
+                float2 screenMin{};
+                float2 screenMax{};
+                if ( EditorViewportProjectionUtil::projectBoxRect( viewProj, box, canvasPos, canvasSize, screenMin, screenMax ) == false )
+                    return false;
+                return screenMin._x <= maxPos._x && minPos._x <= screenMax._x && screenMin._y <= maxPos._y && minPos._y <= screenMax._y;
             }
         };
     } // namespace
@@ -136,10 +160,7 @@ namespace sw::editor
             const bool            bSkipped = pObj == pEditorCamera || pRoot == nullptr || pObj->isRenderHidden() || workspace.isObjectLocked( pObj->getObjectID() );
             if ( bSkipped )
                 return;
-            ImVec2 screenPt{};
-            if ( EditorViewportProjectionUtil::projectPoint( viewProj, pRoot->getWorldPosition(), canvasPos, canvasSize, screenPt ) == false )
-                return;
-            if ( minPos._x <= screenPt.x && screenPt.x <= maxPos._x && minPos._y <= screenPt.y && screenPt.y <= maxPos._y )
+            if ( EditorViewportPickerInternal::isTouchedByMarquee( *pObj, *pRoot, viewProj, canvasPos, canvasSize, minPos, maxPos ) )
                 listInside.push_back( pObj );
         } );
         if ( listInside.empty() == false )

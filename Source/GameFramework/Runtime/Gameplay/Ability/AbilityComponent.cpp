@@ -20,7 +20,8 @@
  * @file AbilityComponent.cpp
  * @brief 어빌리티 컴포넌트의 수명 · 시간 진행 · 태그 차단 · 모듈 언로드를 구현합니다.
  * @details 책임마다 파일이 나뉜다(언리얼 GAS 가 `FGameplayAbilitySpecContainer` · `FActiveGameplayEffectsContainer` · `UAttributeSet` 을 가르는 나눔).
- *          어빌리티 스펙 컨테이너는 `AbilityComponentAbilities.cpp`, 어트리뷰트는 `AbilityComponentAttributes.cpp`, 게임플레이 이펙트는 `AbilityComponentEffects.cpp` 다.
+ *          어빌리티 스펙 컨테이너는 `AbilityComponentAbilities.cpp`, 어트리뷰트는 `AbilityComponentAttributes.cpp`, 게임플레이 이펙트는 `AbilityComponentEffects.cpp`,
+ *          상태 저장 · 복원은 `AbilityComponentSave.cpp` 다.
  */
 
 namespace sw
@@ -67,6 +68,8 @@ namespace sw
         , _pExecutingContext{ nullptr }
         , _bHasPendingRemoval{ SW_FALSE }
         , _bRefreshingOngoingTags{ SW_FALSE }
+        , _bRestoringState{ SW_FALSE }
+        , _pendingStateBytes{}
         , _abilitySetID{}
         , _healthAttribute{ CombatAttributes::health() } // 프레임워크 공용 어트리뷰트 세트의 이름(엔진 상수) — 다른 세트를 쓰는 데이터가 덮는다
         , _maxHealthAttribute{ CombatAttributes::maxHealth() }
@@ -100,6 +103,7 @@ namespace sw
         Component::onBeginPlay();
         if ( _abilitySetID.empty() == false )
             (void)grantAbilitySet( _abilitySetID ); // 실패는 안에서 알린다
+        (void)applyPendingState();                  // 세트가 어트리뷰트 · 시작 이펙트를 만든 뒤에 덮는다. 없으면 새 판이다
         notifyHealthChanged( true );
     }
 
@@ -234,6 +238,9 @@ namespace sw
 
     void AbilityComponent::onOwnedTagChanged( TagID tag, int32 newCount )
     {
+        // 불러온 태그는 새로 생긴 일이 아니다 — 태그로 발동하는 어빌리티를 다시 쏘지 않고, 걸린 동안의 조건은 적용 끝에 한 번 본다(`applySaveState`).
+        if ( _bRestoringState == SW_TRUE )
+            return;
         refreshOngoingTagRequirements();
         if ( newCount <= 0 )
             return;

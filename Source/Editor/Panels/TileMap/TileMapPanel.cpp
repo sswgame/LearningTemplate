@@ -547,6 +547,11 @@ namespace sw::editor
         return true;
     }
 
+    void TileMapPanel::collectFilesToSave( vector<string>& outListPath ) const
+    {
+        appendFileToSave( _document.getPath(), outListPath );
+    }
+
     void TileMapPanel::drawTilePalette()
     {
         const TileSetAsset&      tileSet   = _document.getTileSet();

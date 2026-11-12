@@ -9,6 +9,7 @@
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Name/NameHashIndex.h"
 #include "Core/Registry/RegistrationChain.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Task/TaskTypes.h"
@@ -100,6 +101,12 @@ namespace sw
         void registerTypeAlias( const utf8* pAliasName, const utf8* pCanonicalName );
         /** @brief 별칭(이름을 바꾸기 전의 이름)을 이미 등록된 canonical EnumInfo 에 연결합니다. */
         void registerEnumAlias( const utf8* pAliasName, const utf8* pCanonicalName );
+        /**
+         * @brief 지운 타입 이름(`REFLECT( RemovedType = … )`)을 등록합니다. 그 이름의 32 비트 해시는 옛 세이브의 타입 태그에 남아 있어 비워 두지 않는다.
+         * @details 새 타입 · enum 이 그 이름이나 해시를 쓰면 등록이 `Reflection.TypeNameHashClash` 오류를 남기고 들이지 않는다. 해시로 찾으면 빈 이름이라
+         *          옛 태그를 새 타입으로 잘못 옮기지 않는다. 언리얼 CoreRedirects 의 지운 클래스 기록과 같은 자리다(그쪽은 ini 데이터, 여기는 뒤를 이은 타입의 선언).
+         */
+        void registerRetiredTypeName( const utf8* pRetiredName );
 
         // ------------------------------------------------------------------------------
         // 4) 조회: 이름, FQN, 해시로 찾고 별칭도 찾는다
@@ -120,11 +127,6 @@ namespace sw
          * @details 모듈이 언로드되면 nullptr 를 반환하지만 객체는 남는다(묘비). 같은 FQN 이 다시 로드되면 그 객체에 덮어쓴다.
          */
         const EnumInfo* findEnum( const hashed_string& nameOrFqn ) const;
-        /**
-         * @brief 이름, FQN, 별칭의 **해시**로 EnumInfo 를 찾습니다. 바이너리 태그에 기록된 타입 해시가 enum 일 때 씁니다(`findWireTypeName`).
-         * @details 해시로 찾는 테이블이 없어 이름을 전부 훑는다. 타입이 바뀐 필드를 읽는 드문 경우에만 부른다.
-         */
-        const EnumInfo* findEnumByNameHash( uint32 nameHash ) const;
 
         /**
          * @brief 이 타입이 **실제로 무엇으로 등록됐는지** 사람이 읽을 수 있는 텍스트로 반환합니다(진단용).
@@ -220,8 +222,11 @@ namespace sw
 
         /** @brief 별칭까지 따라가 canonical `_name` 을 반환합니다. 미등록이면 입력을 그대로 반환합니다. */
         hashed_string canonicalTypeName( const hashed_string& nameOrFqn ) const;
-        /** @brief 맵 키 해시가 일치하는 항목의 canonical `_name` 을 반환합니다. */
-        hashed_string canonicalTypeNameByHash( uint32 nameHash ) const;
+        /**
+         * @brief 바이너리 태그에 기록된 타입 해시(이름 · FQN · 별칭의 32 비트 해시)의 이름입니다. 타입이면 canonical `_name`, enum 이면 FQN, 모르면 빈 이름입니다.
+         * @details 타입과 enum 은 한 해시 공간이다(태그는 어느 쪽인지 적지 않는다). 등록이 같은 해시의 다른 이름을 거절하므로 답은 하나다.
+         */
+        hashed_string findWireTypeNameByHash( uint32 nameHash ) const;
 
         /** @brief nameOrFqn 이 canonicalName 과 같은 등록 타입인지 검사합니다(별칭 포함). */
         bool isType( const hashed_string& nameOrFqn, const hashed_string& canonicalName ) const;
@@ -301,6 +306,20 @@ namespace sw
         TaskValue invokeMethod( void* pInstance, const hashed_string& classFqn, const hashed_string& methodName, const TaskArgs& args = {} ) const;
 
     private:
+        /** @brief 타입 해시 표 항목의 종류입니다. 같은 이름이 종류가 다른 대상을 가리키면(클래스와 enum, 지운 이름의 재사용) 조용한 승자 없이 충돌이다. */
+        enum class WireTypeKind : uint8
+        {
+            Class,
+            Enum,
+            Retired,
+        };
+        /** @brief 타입 해시 표의 값입니다. */
+        struct WireTypeEntry
+        {
+            hashed_string _name; ///< 해시로 찾았을 때의 이름(클래스는 canonical `_name`, enum 은 FQN, 지운 이름은 빈 이름)
+            WireTypeKind  _kind{ WireTypeKind::Class };
+        };
+
         /**
          * @brief 개발 전용 생성 단위가 올린 에디터 메타데이터(`TypeEditorMetadataSource`)를 @p info 와 그 프로퍼티 · 이벤트 · 메서드에 붙입니다. 잠금 안에서 부른다.
          * @details 줄이 없으면(배포 구성 · 적은 것 없음) 아무것도 하지 않아 포인터가 빈 채다. 묶음은 이 레지스트리가 든다 — 다시 등록하면 새 묶음을 만들고 옛 묶음은
@@ -322,6 +341,15 @@ namespace sw
         void clearAffectedLocked( const vector<TypeInfo*>& listType ) SW_REQUIRES_LOCK( _mutex );
         /** @brief @p listType 의 파생 캐시를 다시 짓습니다(**잠금 밖**, 단일 스레드 — 부모를 찾으려고 레지스트리를 다시 잠근다). */
         void rebuildAffected( const vector<TypeInfo*>& listType ) const SW_EXCLUDES_LOCK( _mutex );
+        /**
+         * @brief 타입 · enum 이름 하나를 해시 표(`_wireTypeNameIndex`)에 넣습니다(잠금 안). 같은 해시에 다른 이름이 있으면 넣지 않고 처음 충돌을 @p inoutClash 에 적습니다.
+         * @details 로그는 잠금 밖에서 남긴다(`reportWireTypeNameClash`) — 리스너가 레지스트리를 다시 물어도 멈추지 않게.
+         */
+        void assignWireTypeNameLocked( const hashed_string& name, const hashed_string& wireName, WireTypeKind kind, string& inoutClash ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 해시 표 충돌을 오류로 남깁니다(**잠금 밖**). 비어 있으면 아무것도 하지 않습니다. */
+        static void reportWireTypeNameClash( string_view clash );
+        /** @brief @p listType 마다 상속 포함 필드 이름 · 옛 이름의 32 비트 해시가 겹치는지 보고 겹치면 오류를 남깁니다(**잠금 밖**, 상속 목록을 지은 뒤). */
+        static void reportFieldNameHashClashes( const vector<TypeInfo*>& listType );
 
         /** @brief 템플릿 enum 의 EnumInfo 입니다. 찾는 규칙은 `findEnumByTypeFqn` 입니다. */
         template <typename E>
@@ -349,8 +377,15 @@ namespace sw
          */
         unordered_map<hashed_string, unique_ptr<EnumInfo>> _mapFqnToEnum SW_GUARDED_BY( _mutex );
         /** @brief FQN, 짧은 이름, 별칭에서 `_mapFqnToEnum` 의 객체로 가는 맵입니다. 모듈을 해제하면 여기서만 지웁니다. */
-        unordered_map<hashed_string, EnumInfo*> _mapNameToEnum       SW_GUARDED_BY( _mutex );
-        unordered_map<uint32, hashed_string> _mapHashToCanonicalName SW_GUARDED_BY( _mutex );
+        unordered_map<hashed_string, EnumInfo*> _mapNameToEnum SW_GUARDED_BY( _mutex );
+        /**
+         * @brief 타입 · enum 이름(FQN · 짧은 이름 · 별칭)의 32 비트 해시 → 이름 표입니다(`findWireTypeNameByHash`). 바이너리 태그가 이 해시를 싣는다.
+         * @details 공용 충돌 검사 색인이라 같은 해시의 다른 이름은 들지 않고 등록이 오류를 남긴다(`Reflection.TypeNameHashClash`) — 예전 표는 나중 것이 조용히 이겼다.
+         *          언리얼은 태그에 FName(이름 풀 번호 + 글)을, Godot 은 StringName 을 실어 충돌이 없다. 여기는 4 바이트 해시를 싣는 대신 등록에서 충돌을 막는다.
+         */
+        NameHashIndex<uint32, WireTypeEntry> _wireTypeNameIndex SW_GUARDED_BY( _mutex );
+        /** @brief 지운 타입 이름입니다(`registerRetiredTypeName`). 모듈을 내려 해시 표를 다시 지을 때도 다시 넣는다 — 지운 이름은 모듈과 상관없이 남는다. */
+        vector<hashed_string> _listRetiredTypeName SW_GUARDED_BY( _mutex );
         /** @brief 타입 FQN 마다 붙인 에디터 메타데이터 묶음입니다(`attachEditorMetadata`). 배포 구성은 비어 있다. */
         unordered_map<hashed_string, unique_ptr<TypeEditorMetadataSet>> _mapTypeEditorMetadata SW_GUARDED_BY( _mutex );
         /** @brief 열거형 FQN 마다 붙인 에디터 메타데이터입니다. */

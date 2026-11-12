@@ -692,6 +692,11 @@
 				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdCommon.ContentReadOnly" source="{path} is read-only - Check Out (lock) it in the Content Browser first">
+			<origins>
+				<item>Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdCommon.CurveEditorHint" source="Click a key to edit it. Right-click to add a key. F fits the view.">
 			<origins>
 				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
@@ -737,6 +742,12 @@
 		<entry key="EdCommon.DeleteLayout" source="Delete this saved layout.">
 			<origins>
 				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.DeleteRefusedTitle" source="Delete refused">
+			<origins>
+				<item>Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp</item>
+				<item>Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.DocumentOpen"
@@ -918,6 +929,11 @@
 		<entry key="EdCommon.LiveCodingSucceededTitle" source="Live Coding Succeeded">
 			<origins>
 				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.MoveRefusedTitle" source="Move refused">
+			<origins>
+				<item>Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NetMode"
@@ -1114,23 +1130,12 @@
 				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdCommon.NotifySaveTitle" source="Save">
-			<origins>
-				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdCommon.NotifySaved" source="Saved">
 			<origins>
 				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifySceneOpenFailed" source="Failed to open the scene">
-			<origins>
-				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdCommon.NotifySceneReadOnly"
-		       source="The scene file is read-only. Check it out (lock it) in the Content Browser first.">
 			<origins>
 				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
 			</origins>
@@ -1173,6 +1178,11 @@
 		<entry key="EdCommon.NotifyStopPlayFirst" source="Stop play before opening or creating a scene">
 			<origins>
 				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.OpenDocumentNotDeleted" source="{path} is open - close it first">
+			<origins>
+				<item>Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.OverlayCollapse" source="Collapse">
@@ -1383,6 +1393,11 @@
 		       source="Save the current dock layout and panel visibility under this name (Saved/Editor/Layouts; letters, digits, spaces, _ and - only).">
 			<origins>
 				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.SaveRefusedTitle" source="Save refused">
+			<origins>
+				<item>Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ScaleSnap" source="Scale snap: scaling jumps in steps of the value on the right.">

@@ -60,10 +60,12 @@ namespace sw
         Component::onRegister( manager );
         manager.getComponentRegistry().add<ZoneContactComponent>( this );
         (void)ZoneSystem::findOrCreate( manager );
+        manager.getSubsystem<ScenePhysics>().addContactStayListener( *this, ContactStayListener{ &ZoneContactComponent::receiveCollisionStay, nullptr } );
     }
 
     void ZoneContactComponent::onUnregister( GameObjectManager& manager )
     {
+        manager.getSubsystem<ScenePhysics>().removeContactStayListener( *this );
         manager.getComponentRegistry().remove<ZoneContactComponent>( this );
         ZoneSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
@@ -88,10 +90,9 @@ namespace sw
         recordCollision( collision );
     }
 
-    void ZoneContactComponent::onCollisionStay( const CollisionInfo& collision )
+    void ZoneContactComponent::receiveCollisionStay( Component& self, const CollisionInfo& collision )
     {
-        Component::onCollisionStay( collision );
-        recordCollision( collision );
+        static_cast<ZoneContactComponent&>( self ).recordCollision( collision );
     }
 
     void ZoneContactComponent::recordCollision( const CollisionInfo& collision )

@@ -75,7 +75,9 @@ namespace sw::editor
         EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 101.0f, 47.0f ); }
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
-        bool               canSaveDocument() const override { return isDocumentLoadFailed() == false && _document.isDirty(); }
+        /** @brief 연 캐릭터가 아니라 미저장인 소켓 · 포즈 파일에 쓴다(`CharacterEditorModel::collectFilesToSave`). */
+        void collectFilesToSave( vector<string>& outListPath ) const override;
+        bool canSaveDocument() const override { return isDocumentLoadFailed() == false && _document.isDirty(); }
         /** @brief 미리보기 몸 오브젝트입니다. 외형 데이터를 읽기 전이거나 씬이 없으면 무효입니다(자동화 · 테스트). */
         GameObjectHandle getPreviewBody() const { return _previewBody; }
 

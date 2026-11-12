@@ -92,6 +92,9 @@ namespace sw
         , _listDispatchEvent3D{}
         , _listDispatchEvent2D{}
         , _listDispatchSwept{}
+        , _mapStayListener{}
+        , _listDeliverTarget{}
+        , _listStayTarget{}
         , _arrContactLog{}
         , _contactLogCount{ 0 }
         , _stepCount{ 0 }
@@ -230,6 +233,13 @@ namespace sw
             const PhysicsSystem* pSystem = findInitializedPhysicsSystem();
             if ( pSystem != nullptr )
                 _pScene3D = pSystem->createScene3D();
+            if ( _pScene3D != nullptr )
+            {
+                for ( const auto& [objectID, listListener] : _mapStayListener )
+                {
+                    _pScene3D->setContactStayListener( objectID, true ); // 씬보다 먼저 올린 듣는 쪽
+                }
+            }
         }
         return _pScene3D.get();
     }
@@ -264,8 +274,80 @@ namespace sw
             const PhysicsSystem* pSystem = findInitializedPhysicsSystem();
             if ( pSystem != nullptr )
                 _pScene2D = pSystem->createScene2D();
+            if ( _pScene2D != nullptr )
+            {
+                for ( const auto& [objectID, listListener] : _mapStayListener )
+                {
+                    _pScene2D->setContactStayListener( objectID, true ); // 씬보다 먼저 올린 듣는 쪽
+                }
+            }
         }
         return _pScene2D.get();
+    }
+
+    void ScenePhysics::addContactStayListener( Component& component, const ContactStayListener& listener )
+    {
+        const GameObject* pOwner = component.getOwner();
+        if ( pOwner == nullptr || pOwner->getObjectID() == 0 )
+        {
+            SW_LOG_ERROR_ID( "ScenePhysics.StayListenerWithoutObject", "A contact stay listener has no owner object - it would never receive Stay" );
+            return;
+        }
+        if ( listener._pOnCollisionStay == nullptr && listener._pOnOverlapStay == nullptr )
+        {
+            SW_LOG_ERROR_ID( "ScenePhysics.StayListenerWithoutFunction", "'%#': a contact stay listener has neither a collision nor an overlap function", pOwner->getName().c_str() );
+            return;
+        }
+        vector<ContactStayListenerEntry>& listListener = _mapStayListener[pOwner->getObjectID()];
+        for ( const ContactStayListenerEntry& entry : listListener )
+        {
+            if ( entry._pComponent == &component )
+            {
+                SW_LOG_ERROR_ID( "ScenePhysics.StayListenerTwice", "'%#': the same component added a contact stay listener twice", pOwner->getName().c_str() );
+                return;
+            }
+        }
+        listListener.push_back( ContactStayListenerEntry{ &component, listener } );
+        if ( listListener.size() == 1 )
+            applyContactStayListener( pOwner->getObjectID(), true );
+    }
+
+    void ScenePhysics::removeContactStayListener( Component& component )
+    {
+        const GameObject* pOwner = component.getOwner();
+        if ( pOwner == nullptr )
+            return;
+        auto iter = _mapStayListener.find( pOwner->getObjectID() );
+        if ( iter == _mapStayListener.end() )
+            return;
+        vector<ContactStayListenerEntry>& listListener = iter->second;
+        for ( size_t index = 0; index < listListener.size(); ++index )
+        {
+            if ( listListener[index]._pComponent != &component )
+                continue;
+            listListener.erase( listListener.begin() + static_cast<std::ptrdiff_t>( index ) );
+            break;
+        }
+        if ( listListener.empty() == false )
+            return;
+        const uint64 objectID = iter->first;
+        applyContactStayListener( objectID, false );
+        _mapStayListener.erase( objectID );
+    }
+
+    uint32 ScenePhysics::getContactStayListenerCount( uint64 objectID ) const
+    {
+        auto iter = _mapStayListener.find( objectID );
+        return iter != _mapStayListener.end() ? static_cast<uint32>( iter->second.size() ) : 0u;
+    }
+
+    void ScenePhysics::applyContactStayListener( uint64 objectID, bool bListen )
+    {
+        // 씬은 처음 쓸 때 만든다 — 없으면 만들 때 `_mapStayListener` 를 다시 건다(`getScene3D` · `getScene2D`).
+        if ( _pScene3D != nullptr )
+            _pScene3D->setContactStayListener( objectID, bListen );
+        if ( _pScene2D != nullptr )
+            _pScene2D->setContactStayListener( objectID, bListen );
     }
 
     void ScenePhysics::registerComponent( PhysicsComponent* pComponent )
@@ -719,8 +801,14 @@ namespace sw
         if ( pSelf == nullptr || pSelf->isActiveInHierarchy() == false )
             return;
         GameObject* pOther = otherUserData != 0 ? manager.findGameObjectByID( otherUserData ) : nullptr;
-        // 처리가 컴포넌트를 붙이고 뗄 수 있으므로 목록을 베껴 돈다.
-        const vector<Component*> listTarget( pSelf->getComponents().begin(), pSelf->getComponents().end() );
+        if ( phase == PhysicsContactPhase::Stay )
+        {
+            deliverStay( selfUserData, pOther, selfBody, otherBody, point, normal, impulse, bSelfTrigger, bOtherTrigger, bOverlap, bIs2D );
+            return;
+        }
+        // 처리가 컴포넌트를 붙이고 뗄 수 있으므로 목록을 베껴 돈다(멤버에 — 이벤트마다 새로 할당하지 않는다, 이 함수는 다시 들어오지 않는다).
+        _listDeliverTarget.assign( pSelf->getComponents().begin(), pSelf->getComponents().end() );
+        const vector<Component*>& listTarget = _listDeliverTarget;
         if ( bOverlap )
         {
             OverlapInfo overlap;
@@ -742,15 +830,14 @@ namespace sw
                         pComponent->onOverlapBegin( overlap );
                         break;
                     }
-                    case PhysicsContactPhase::Stay:
-                    {
-                        pComponent->onOverlapStay( overlap );
-                        break;
-                    }
                     case PhysicsContactPhase::End:
                     {
                         pComponent->onOverlapEnd( overlap );
                         break;
+                    }
+                    case PhysicsContactPhase::Stay:
+                    {
+                        break; // 유지는 위에서 `deliverStay` 로 갔다
                     }
                 }
             }
@@ -776,17 +863,50 @@ namespace sw
                     pComponent->onCollisionBegin( collision );
                     break;
                 }
-                case PhysicsContactPhase::Stay:
-                {
-                    pComponent->onCollisionStay( collision );
-                    break;
-                }
                 case PhysicsContactPhase::End:
                 {
                     pComponent->onCollisionEnd( collision );
                     break;
                 }
+                case PhysicsContactPhase::Stay:
+                {
+                    break; // 유지는 위에서 `deliverStay` 로 갔다
+                }
             }
+        }
+    }
+
+    void ScenePhysics::deliverStay( uint64 selfUserData, GameObject* pOther, PhysicsBodyHandle selfBody, PhysicsBodyHandle otherBody, const float3& point,
+                                    const float3& normal, float32 impulse, bool bSelfTrigger, bool bOtherTrigger, bool bOverlap, bool bIs2D )
+    {
+        // 유지는 올린 듣는 쪽만 받는다 — 쌍의 다른 쪽이 들어서 나온 유지면 이 쪽은 없다(감사 S-1).
+        auto iter = _mapStayListener.find( selfUserData );
+        if ( iter == _mapStayListener.end() )
+            return;
+        _listStayTarget = iter->second; // 처리가 듣는 쪽을 올리고 내릴 수 있다
+        OverlapInfo overlap;
+        overlap._pOther        = pOther;
+        overlap._selfBody      = selfBody;
+        overlap._otherBody     = otherBody;
+        overlap._bSelfTrigger  = bSelfTrigger ? SW_TRUE : SW_FALSE;
+        overlap._bOtherTrigger = bOtherTrigger ? SW_TRUE : SW_FALSE;
+        CollisionInfo collision;
+        collision._pOther    = pOther;
+        collision._selfBody  = selfBody;
+        collision._otherBody = otherBody;
+        collision._point     = point;
+        collision._normal    = normal;
+        collision._impulse   = impulse;
+        collision._bIs2D     = bIs2D;
+        for ( const ContactStayListenerEntry& entry : _listStayTarget )
+        {
+            const bool bInactive = entry._pComponent->isPendingDestroy() || entry._pComponent->isSelfActive() == false;
+            if ( bInactive )
+                continue;
+            if ( bOverlap && entry._listener._pOnOverlapStay != nullptr )
+                entry._listener._pOnOverlapStay( *entry._pComponent, overlap );
+            else if ( bOverlap == false && entry._listener._pOnCollisionStay != nullptr )
+                entry._listener._pOnCollisionStay( *entry._pComponent, collision );
         }
     }
 

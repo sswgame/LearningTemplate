@@ -4,6 +4,7 @@
 #include "pch.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
@@ -500,6 +501,53 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemStaysSpentAfterTheJournalIsSwept )
     SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::AlreadyRedeemed );
     SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
     LedgerAuditReport audit;
+    SW_REQUIRE_TRUE( LedgerAuditReport::computeReport( rig._database, audit ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( audit.isBalanced() );
+}
+
+/**
+ * @brief [EconomyReceiptsTest] 구매 → 계정 삭제 → 감사 균형이 맞고 영수증에 계정 id 가 없다. 뒤에 온 환불은 회수 없이 상태만 바꾼다(감사 P0-7)
+ * @details 계정 삭제는 탈퇴 정리(`LoginStoreLogic::purgeAccount`)와 같은 원장 길이다 — 계정 지우기 트랜잭션의 묘비 · 소각 대기, 그 뒤 소각.
+ *          변이: 소각을 빼면 지운 계정의 잔액 레코드가 남고, 영수증에 계정을 다시 담으면 값이 `[판][상태]` 와 달라지고,
+ *          환불의 AccountDeleted 처리를 빼면 환불이 InvalidRequest 로 져 영수증이 환불로 바뀌지 않는다.
+ */
+SW_TEST_CASE( EconomyReceiptsTest, AccountDeletionKeepsAuditBalancedAndReceiptAnonymous )
+{
+    ReceiptFixture rig;
+    SW_REQUIRE_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
+    SW_REQUIRE_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
+
+    ServiceTransaction deletion;
+    Ledger::stageAccountDeletion( kBuyer, kNowMs + 1, deletion );
+    SW_REQUIRE_TRUE( rig._database.commit( deletion ) == ServiceStoreResult::Ok );
+    int32 burnedCount = 0;
+    SW_REQUIRE_TRUE( Ledger::burnDeletedAccounts( rig._database, kNowMs + 2, 8, burnedCount ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, burnedCount );
+    vector<LedgerBalance> listBalance;
+    SW_REQUIRE_TRUE( Ledger::listBalances( rig._database, LedgerHolder::makeAccount( kBuyer ), listBalance ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listBalance.empty() );
+    LedgerAuditReport audit;
+    SW_REQUIRE_TRUE( LedgerAuditReport::computeReport( rig._database, audit ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( audit.isBalanced() );
+
+    // 영수증은 남지만(다시 내면 AlreadyRedeemed) 값은 [판][상태] 뿐이다
+    vector<ServiceRecord> listMark;
+    SW_REQUIRE_TRUE( rig._database.listRecords( EconomyStoreLogic::getReceiptTable(), "", "", 10, false, listMark ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listMark.size() );
+    BitWriter expected;
+    expected.writeVarUint( 2 ); // 판
+    expected.writeVarUint( 1 ); // Redeemed
+    SW_EXPECT_TRUE( listMark[0]._bytes == expected.getBytes() );
+    SW_EXPECT_TRUE( rig.redeem( kOther )._result == EconomyResult::AlreadyRedeemed );
+
+    // 지운 계정의 환불: 거둘 이가 없어 회수하지 않고 영수증만 환불로 바꾼다 — 지운 계정에 빚 레코드가 생기지 않는다
+    vector<EconomyBalanceChange> listChange;
+    SW_EXPECT_TRUE( rig.refund( "tx1", &listChange ) == EconomyResult::Ok );
+    SW_EXPECT_TRUE( listChange.empty() );
+    listBalance.clear();
+    SW_REQUIRE_TRUE( Ledger::listBalances( rig._database, LedgerHolder::makeAccount( kBuyer ), listBalance ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listBalance.empty() );
+    SW_EXPECT_TRUE( rig.refund() == EconomyResult::AlreadyRefunded );
     SW_REQUIRE_TRUE( LedgerAuditReport::computeReport( rig._database, audit ) == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( audit.isBalanced() );
 }

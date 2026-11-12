@@ -10,6 +10,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/ViewportToolbarSettings.h"
 
@@ -32,6 +33,9 @@ namespace sw::editor
     {
         struct EditorViewportGizmoInternal
         {
+            /// 가운데 마크의 반폭(글자 크기 비율) — ImGuizmo 의 가운데 사각형(화면 평면 이동)보다 작게, 누른 자리가 축 손잡이에 닿지 않는다
+            static constexpr float32 kCenterMarkHalfFontRatio = 0.25f;
+
             /** @brief 이번 프레임의 기즈모 조작(이동 · 회전 · 크기), 좌표계, 스냅 값입니다. 워크스페이스 · 툴바 설정에서 한 번 만듭니다. */
             struct GizmoSetup
             {
@@ -91,7 +95,7 @@ namespace sw::editor
     }
 
     void EditorViewportGizmo::draw( EditorSelection& selection, const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize,
-                                    const ViewportToolbarSettings& settings )
+                                    const ViewportToolbarSettings& settings, const utf8* pCenterMark )
     {
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         if ( EditorPlaySession::areSceneEditsAllowed() == false )
@@ -126,6 +130,8 @@ namespace sw::editor
 
         _lastDrawFrame   = ImGui::GetFrameCount();
         _lastObjectCount = static_cast<uint32>( listGizmo.size() );
+        if ( pCenterMark != nullptr && EditorSelfTestMarks::isEnabled() )
+            recordCenterMark( pCenterMark, listGizmo, pView, pProj, canvasPos, canvasSize );
         ImGuizmo::SetDrawlist();
         ImGuizmo::SetRect( canvasPos._x, canvasPos._y, canvasSize._x, canvasSize._y );
         // beginFrame 이 프레임마다 끈다. 캔버스가 이번 프레임에 그려졌고 편집이 허용될 때(위에서 걸렀다)만 켠다. 꺼 둔 상태이면 그리기만 하고 조작을 받지 않는다.
@@ -239,6 +245,25 @@ namespace sw::editor
             _pTarget->recordModify( obj, before, EditorTransaction::captureSnapshot( &obj ), "Gizmo Transform" );
         else
             EditorSceneCommands::commitModify( transaction, &obj, before, "Gizmo Transform" );
+    }
+
+    void EditorViewportGizmo::recordCenterMark( const utf8* pMark, const vector<GameObject*>& listGizmo, const float32* pView, const float32* pProj, const float2& canvasPos,
+                                                const float2& canvasSize )
+    {
+        float3 center{};
+        for ( const GameObject* pObj : listGizmo )
+        {
+            center = center + pObj->getPrimarySceneComponent()->getWorldPosition(); // 부른 쪽이 씬 컴포넌트가 있는 것만 넘긴다
+        }
+        const float32 invCount = 1.0f / static_cast<float32>( listGizmo.size() );
+        center                 = float3{ center._x * invCount, center._y * invCount, center._z * invCount };
+        float4x4 viewProjection{};
+        EditorViewportProjectionUtil::loadViewProjection( pView, pProj, viewProjection );
+        ImVec2 screen{};
+        if ( EditorViewportProjectionUtil::projectPoint( viewProjection, center, canvasPos, canvasSize, screen ) == false )
+            return;
+        const float32 half = ImGui::GetFontSize() * EditorViewportGizmoInternal::kCenterMarkHalfFontRatio;
+        EditorSelfTestMarks::recordRect( pMark, float2{ screen.x - half, screen.y - half }, float2{ screen.x + half, screen.y + half } );
     }
 
     void EditorViewportGizmo::manipulateGroup( const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode, const vector<GameObject*>& listGizmo,

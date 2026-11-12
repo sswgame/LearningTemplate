@@ -21,6 +21,9 @@ Scripts/lint/CommonShapes.py
 9. 에디터의 리소스 트리 손 훑기: 에디터 코드(`/Editor/` 아래)의 `FileUtil::collectFiles(` · `collectFolders(` 는 `EditorContentScan` 이 맡는다 —
    다른 프로세스의 시나리오 사본을 뺀다. 빠지면 Quick Open 이 남의 사본을 집고 임포터가 남의 사본에 임포트했다. 리소스 트리 밖(Saved · Config · 소스) 폴더는
    예외 표에 `경로|첫 인자` 와 까닭으로 둔다. 쿠커 · 팩(`AssetPaths::collectContentFiles`)은 에디터 밖이라 보지 않는다(scratch 전체를 뺀다).
+10. 이름 해시를 손으로 키로 쓰는 표: `hashed_string::getHash()`(32 비트) 결과를 맵 첨자 · `emplace` · `insert…` · `find` · `count` · `contains` · `tryClaim` 의
+   키로 넘기거나 `…key` · `…Key` · `…_id` 변수에 넣는 모양. 같은 해시의 두 이름을 가리지 못해 나중 것이 조용히 이긴다(감사 C-8) — 저장 · 조회 키는
+   `NameHashIndex`(공용 충돌 검사 색인)로 넣는다. 섞기 · 씨앗 · `LogOnce` 처럼 겹쳐도 데이터가 바뀌지 않는 자리는 예외 표에 까닭과 함께 둔다.
 
 예외는 `Config/Rules/Lint/CommonShapeExceptions.json` 에 까닭과 함께 적는다. 낡은 예외(더는 없는 자리)도 위반이다.
 `py -3 -m Scripts lint common-shapes [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.
@@ -61,6 +64,8 @@ kAssetEntrancePattern = re.compile(r"^[ \t]*(?:\[\[nodiscard\]\]\s*)?(?:static\s
 kReadTextAssetPattern = re.compile(r"\bAssetIO::readTextAsset\(\s*(\w+)?")
 kEngineChildPattern = re.compile(r"\bProcessCommand::at\(")
 kEditorScanPattern = re.compile(r"\bFileUtil::collect(?:Files|Folders)\(\s*([^,]+?)\s*,")
+# 첨자는 getHash() 로 끝나는 안쪽만(`list[ i ]._id.getHash()` 의 앞 첨자는 아니다), 호출은 첫 인자 안의 getHash() 만 본다.
+kNameHashKeyPattern = re.compile(r"\[\s*[^\[\]\n]*\bgetHash\(\s*\)\s*\]|\b(?:emplace|try_emplace|insert|insert_or_assign|find|count|contains|tryClaim)\(\s*[^;\n]*?\bgetHash\(\s*\)|\b\w*(?:[Kk]ey|_id)\s*=\s*[^;=\n]*\bgetHash\(\s*\)")
 kAssetCarrierPattern = re.compile(r"withAsset\(|parseResourceText\(|parseResourceRoot\(|loadResource\w*\(|loadFromAsset\(")
 
 
@@ -130,6 +135,8 @@ def collectViolations(path: str, text: str) -> list[tuple[str, str, str]]:
         listViolation.append(("assetEntrance", f"{path}|{entrance}", f"id 를 버리는 리소스 입구({entrance}) — ResourceContext::withAsset · parseResourceText · parseResourceRoot"))
     if kEngineChildPattern.search(code):
         listViolation.append(("engineChildCommand", path, "ProcessCommand::at 손 명령 — 엔진 자식은 EngineChildProcess::makeCommand"))
+    if kNameHashKeyPattern.search(code):
+        listViolation.append(("nameHashKey", path, "getHash() 를 손으로 키로 쓴다 — 저장 · 조회 키는 NameHashIndex(같은 해시의 다른 이름을 거절)"))
     if "/Editor/" in path:
         for argument in sorted(set(match.group(1) for match in kEditorScanPattern.finditer(code))):
             listViolation.append(("editorContentScan", f"{path}|{argument}", f"FileUtil 손 훑기({argument}) — 리소스 트리는 EditorContentScan"))
@@ -202,6 +209,11 @@ def runSelfCheck() -> None:
     assert [v[1] for v in collectViolations("Source/Editor/a.cpp", scan)] == ["Source/Editor/a.cpp|resourceRoot"]
     assert collectViolations("Source/Engine/a.cpp", scan) == [], "에디터 밖(쿠커 · 엔진)은 보지 않는다"
     assert collectViolations("Source/Editor/a.cpp", "(void)EditorContentScan::collectFiles( root, root, \"\", listFile, true );") == []
+    assert [v[0] for v in collectViolations("Source/A/a.cpp", "_mapByHash[name.getHash()] = value;")] == ["nameHashKey"]
+    assert [v[0] for v in collectViolations("Source/A/a.cpp", "map.emplace( name.getHash(), value );")] == ["nameHashKey"]
+    assert [v[0] for v in collectViolations("Source/A/a.cpp", "const uint64 key = name.getHash();")] == ["nameHashKey"]
+    assert collectViolations("Source/A/a.cpp", "if ( list[ index ]._id.getHash() == other ) {}") == [], "앞 첨자는 키가 아니다"
+    assert collectViolations("Source/A/a.cpp", "(void)index.assign( name.view(), name.getHash() );") == [], "공용 색인으로 넣는 것은 걸리지 않는다"
 
 
 def main(argv: Sequence[str] | None = None) -> int:

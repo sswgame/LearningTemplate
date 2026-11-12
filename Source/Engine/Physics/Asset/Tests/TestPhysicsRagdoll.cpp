@@ -99,6 +99,7 @@ namespace
         PhysicsBodyHandle                createBody( const BodyDesc& ) override { return PhysicsBodyHandle{}; }
         void                             createBodies( span<const BodyDesc>, vector<PhysicsBodyHandle>& ) override {}
         void                             destroyBody( PhysicsBodyHandle ) override {}
+        bool                             setBodyShape( PhysicsBodyHandle, span<const ShapeDesc>, const hashed_string&, float32 ) override { return true; }
         bool                             isBodyValid( PhysicsBodyHandle ) const override { return true; }
         uint32                           getBodyCount() const override { return static_cast<uint32>( _listState.size() ); }
         void                             setBodyEnabled( PhysicsBodyHandle, bool ) override {}

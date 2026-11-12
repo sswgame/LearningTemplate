@@ -13,6 +13,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/LockedMulticastDelegate.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -63,6 +64,8 @@ namespace sw
      */
     class SW_API LocalizationManager : public ISubsystem
     {
+        friend struct LocalizationManagerTestAccess;
+
     public:
         /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
         static constexpr const utf8* kSubsystemName = "Localization";
@@ -128,7 +131,7 @@ namespace sw
 
         /** @brief 번역 테이블 XML(`TranslationTable` 형식)을 낱개 테이블로 로드합니다. 원문 확인 없이 프로젝트 위에 덮어씁니다(테스트와 도구). */
         [[nodiscard]] bool loadLanguageXML( string_view languageCode, string_view xmlText );
-        /** @brief 낱개 테이블에 문자열 하나를 넣습니다. */
+        /** @brief 낱개 테이블에 문자열 하나를 넣습니다. 키가 다른 키와 64 비트 해시가 같으면 오류를 남기고 넣지 않습니다. */
         void setString( string_view languageCode, const hashed_string& key, string_view value );
         /** @brief 그 언어의 낱개 테이블과 이진 표를 언로드합니다(프로젝트의 텍스트는 남습니다). */
         void unloadLanguage( string_view languageCode );
@@ -142,7 +145,7 @@ namespace sw
         [[nodiscard]] bool loadBinaryTableResource( const AssetID& assetID );
         /**
          * @brief 로드한 프로젝트에서 그 문화권의 화면에 나오는 글(낡은 번역 · 검토 번역 제외)을 이진 번역 표 바이트로 베이크합니다(쿠킹 단계가 부른다).
-         * @return 그 문화권의 글이 하나도 없으면 false 입니다.
+         * @return 그 문화권의 글이 하나도 없거나, 두 키의 해시가 같으면(오류 로그) false 입니다.
          */
         [[nodiscard]] bool cookBinaryTable( string_view languageCode, vector<uint8>& outBytes ) const;
 
@@ -241,6 +244,12 @@ namespace sw
 
         /** @brief 프로젝트 파일 세트를 읽어 @p outProject 를 채웁니다. 프로젝트나 원문 테이블을 읽지 못하면 false 입니다. */
         [[nodiscard]] static bool readProject( const AssetID& assetID, MountedProject& outProject );
+        /**
+         * @brief 올린 프로젝트 · 낱개 표에 들어올 것을 더한 키 전체에서 "같은 64 비트 해시, 다른 키" 를 찾습니다(`_mutex` 를 잡은 상태에서 부릅니다).
+         * @details 실행 표는 해시로만 열려 충돌하면 나중 것이 조용히 이긴다. 그래서 들이기 **전에** 검사하고 지면 들이지 않는다.
+         *          @p pIncomingProject 와 이름 · 경로가 같은 올린 프로젝트는 건너뛴다(그것을 바꿔 넣는 중이다). 쿠킹된 이진 표는 키 글이 없어 쿠킹 때 검사한다.
+         */
+        [[nodiscard]] expected<void> checkKeyHashesLocked( const MountedProject* pIncomingProject, const TranslationTable* pIncomingLoose ) const SW_REQUIRES_LOCK( _mutex );
         /** @brief 읽은 문서들로 실행 테이블을 다시 채웁니다(`_mutex` 를 잡은 상태에서 부릅니다). */
         void rebuildTablesLocked() SW_REQUIRES_LOCK( _mutex );
         /** @brief 조회 순서를 다시 계산합니다(`_mutex` 를 잡은 상태에서 부릅니다). */
@@ -266,6 +275,9 @@ namespace sw
         unordered_map<string, unique_ptr<StringTable>>                  _mapLanguageTable;
         map<string, LocalizationCultureStatistics> _mapCultureStatistic SW_GUARDED_BY( _mutex );
         vector<string> _listLookupCulture                               SW_GUARDED_BY( _mutex );
+        /// @brief 충돌 검사(`checkKeyHashesLocked`)의 키 해시입니다. 실행은 늘 `LocalizationKeyIndex::computeHash` 이고, 실제 64 비트 충돌은 만들 수 없어
+        ///        테스트(`LocalizationManagerTestAccess`)만 바꿔 검사가 지는 길을 지나간다. 실행 표의 해시는 이것과 상관없다.
+        LocalizationKeyIndex::KeyHashFunction _pCheckKeyHash;
 
         mutable mutex                         _missingMutex;
         mutable set<string> _uniqueMissingKey SW_GUARDED_BY( _missingMutex );

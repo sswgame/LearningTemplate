@@ -31,6 +31,8 @@ namespace sw
             atomic<FileUtil::WriteGate> _writeGate{ nullptr };
             /** @brief 새로 만드는 자리의 이름 규칙입니다(`FileUtil::setCreateRule`). 함수 포인터 하나라 상수 초기화된다. */
             atomic<FileUtil::WriteGate> _createRule{ nullptr };
+            /** @brief 읽기 전용이 "체크아웃 안 함" 인 자리의 규칙입니다(`FileUtil::setCheckoutRule`). 함수 포인터 하나라 상수 초기화된다. */
+            atomic<FileUtil::CheckoutRule> _checkoutRule{ nullptr };
         };
 
         struct FileUtilInternal
@@ -57,6 +59,16 @@ namespace sw
                 return outName.empty() == false;
             }
 
+            /** @brief @p path 에 체크아웃하지 않은 파일(`FileUtil::findNotOpenForEdit`)이 있으면 경로와 이유를 오류로 남기고 true 입니다 — 지우기 · 옮기기 · 덮는 복사의 입구가 부른다. */
+            [[nodiscard]] static bool refuseNotOpenForEdit( string_view path, const utf8* pAction )
+            {
+                const optional<string> lockedPath = FileUtil::findNotOpenForEdit( path );
+                if ( lockedPath.has_value() == false )
+                    return false;
+                SW_LOG_ERROR_ID( "File.NotOpenForEdit", "Refused to %# %# - '%#' is read-only (not checked out), check it out first", pAction, path, *lockedPath );
+                return true;
+            }
+
             /** @brief 실패한 쓰기의 임시 파일을 지웁니다. 지우지 못하면 경고합니다 — 원본 옆에 `.tmp<pid>_<번호>` 가 남습니다. */
             static void discardTempFile( const string& tempPath )
             {
@@ -76,6 +88,13 @@ namespace sw
                 const string filePath = FileUtil::normalizeSeparators( fileName );
                 if ( FileUtil::isWriteAllowed( filePath ) == false )
                     return false;
+                // 읽기 전용 대상은 어느 플랫폼에서도 바꿔 끼우지 않는다 — POSIX `rename` 은 대상 권한을 보지 않아 버전 관리 잠금(git LFS lockable)이 조용히 뚫리고,
+                // Windows 는 바꿔 끼우기가 져 아래 재시도(20 ms × 10)를 헛되이 잔다. 언리얼 `IFileManager::Move` 도 읽기 전용 대상은 덮지 않는다(EvenIfReadOnly 를 따로 받는다).
+                if ( FileUtil::isReadOnlyFile( filePath ) )
+                {
+                    SW_LOG_ERROR_ID( "File.WriteReadOnly", "Refused to replace the read-only file %# - make it writable (check it out) first", filePath.c_str() );
+                    return false;
+                }
                 const uint64 processID = static_cast<uint64>( Process::getCurrentProcessID() );
                 // 같은 폴더에 둔다. 다른 볼륨(시스템 임시 폴더)이면 이름 바꾸기가 원자적이지 않고 복사가 된다.
                 StringBuilder<constant::file::kMaxPathSize> tempPathBuilder;
@@ -741,7 +760,38 @@ namespace sw
                 return false;
             }
         }
+        // 체크아웃하지 않은 파일(버전 관리 트리의 읽기 전용, 폴더면 그 아래)은 바꾸지 않는다 — FileUtil 의 쓰기 · 지우기 · 옮기기 입구와, 경로를 스스로 여는 서드파티 저장(DDS · SQLite)이 모두 이 함수를 지난다.
+        if ( FileUtilInternal::refuseNotOpenForEdit( path, "change" ) )
+            return false;
         return isCreateAllowed( path );
+    }
+
+    FileUtil::CheckoutRule FileUtil::setCheckoutRule( CheckoutRule rule )
+    {
+        return FileUtilInternal::s_writeCounters._checkoutRule.exchange( rule, std::memory_order_acq_rel );
+    }
+
+    optional<string> FileUtil::findNotOpenForEdit( string_view path )
+    {
+        const CheckoutRule             rule = FileUtilInternal::s_writeCounters._checkoutRule.load( std::memory_order_acquire );
+        PlatformFileSystem::FileStatus status;
+        if ( rule == nullptr || path.empty() || PlatformFileSystem::queryStatus( path, status ) == false )
+            return nullopt; // 없는 자리는 지우거나 옮길 것이 없다
+        if ( status._kind == PlatformFileSystem::FileKind::File )
+            return status._bReadOnly && rule( path ) ? optional<string>{ normalizeSeparators( path ) } : nullopt;
+        if ( status._kind != PlatformFileSystem::FileKind::Directory || status._bLink )
+            return nullopt; // 폴더 링크는 링크만 지운다(가리키는 폴더는 그대로다)
+        optional<string> found;
+        (void)forEachDirectoryEntry( path, true, [&found, rule]( const DirectoryEntry& entry )
+        {
+            if ( entry._bDirectory == false && isReadOnlyFile( entry._path ) && rule( entry._path ) )
+            {
+                found = normalizeSeparators( entry._path );
+                return false;
+            }
+            return true;
+        } ); // 폴더를 끝까지 읽지 못하면 본 데까지다 — 지우기 자체가 못 지운 항목을 알린다
+        return found;
     }
 
     bool FileUtil::isCreateAllowed( string_view path )
@@ -949,9 +999,10 @@ namespace sw
         if ( isDirectory( directory ) == false )
             return false;
 
-        const bool bHasFilter = filterExtension.empty() == false;
-        const bool bWalked    = forEachDirectoryEntry( directory, bRecursive, [&outListFilePath, filterExtension, bHasFilter, stopToken]( const DirectoryEntry& entry )
-           {
+        const size_t firstIndex = outListFilePath.size();
+        const bool   bHasFilter = filterExtension.empty() == false;
+        const bool   bWalked    = forEachDirectoryEntry( directory, bRecursive, [&outListFilePath, filterExtension, bHasFilter, stopToken]( const DirectoryEntry& entry )
+             {
             if ( stopToken.isStopRequested() )
                 return false;
             if ( entry._bDirectory || ( bHasFilter && hasExtension( entry._path, filterExtension ) == false ) )
@@ -959,7 +1010,9 @@ namespace sw
             outListFilePath.push_back( string( entry._path ) );
             return true;
         } );
-        const bool bStopped   = stopToken.isStopRequested();
+        // 훑는 순서는 OS 마다 다르다(NTFS 는 이름 순, ext4 readdir 은 해시 순) — 같은 트리가 같은 목록이 되게 바이트 순으로 정렬한다
+        std::sort( outListFilePath.begin() + static_cast<ptrdiff_t>( firstIndex ), outListFilePath.end() );
+        const bool bStopped = stopToken.isStopRequested();
         if ( bWalked == false && bStopped == false )
             SW_LOG_WARNING_ID( "FileUtil.CollectingFilesUnderStopped", "Collecting files under '%#' stopped partway - the list is incomplete", directory );
         return bWalked;
@@ -970,12 +1023,15 @@ namespace sw
         if ( isDirectory( directory ) == false )
             return false;
 
-        const bool bWalked = forEachDirectoryEntry( directory, bRecursive, [&outListFolder]( const DirectoryEntry& entry )
-        {
+        const size_t firstIndex = outListFolder.size();
+        const bool   bWalked    = forEachDirectoryEntry( directory, bRecursive, [&outListFolder]( const DirectoryEntry& entry )
+             {
             if ( entry._bDirectory )
                 outListFolder.push_back( string( entry._path ) );
             return true;
         } );
+        // collectFiles 와 같은 이유로 정렬한다. 바이트 순이라 부모 폴더가 늘 그 아래 폴더보다 앞선다(앞머리가 같으면 짧은 쪽이 앞)
+        std::sort( outListFolder.begin() + static_cast<ptrdiff_t>( firstIndex ), outListFolder.end() );
         if ( bWalked == false )
             SW_LOG_WARNING_ID( "FileUtil.CollectingFoldersUnderStopped", "Collecting folders under '%#' stopped partway - the list is incomplete", directory );
         return bWalked;

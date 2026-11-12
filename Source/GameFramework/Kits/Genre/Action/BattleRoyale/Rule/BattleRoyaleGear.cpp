@@ -86,7 +86,7 @@ namespace sw
             const int32 takeNow = MathUtil::min( MathUtil::min( needed, room ), inoutInventory.getItemCount( def._ammoID ) );
             if ( takeNow > 0 )
             {
-                if ( inoutInventory.removeItem( def._ammoID, takeNow ) == false )
+                if ( inoutInventory.consumeItem( def._ammoID, takeNow ) == false )
                     return false;
                 inoutWeapon.addReserveAmmo( takeNow );
             }

@@ -6,6 +6,11 @@
  *          step 마다 유지를 낸다(유니티의 Enter, Stay, Exit). 한 step 안에 닿았다 떨어진 쌍은 시작과 끝을 둘 다 낸다. 바디를 지우면
  *          그 바디의 쌍이 다음 이벤트 배치에서 끝난다(백엔드가 알리지 않아도 그렇다).
  *
+ *          유지는 opt-in 이다(감사 S-1). 사용자 값 하나가 유지를 듣겠다고 올려야(`setStayListener`) 그 사용자 값이 낀 쌍만 유지를 낸다 — 언리얼
+ *          `bNotifyRigidBodyCollision` · Godot `contact_monitor` 처럼 켠 바디만 알리고, 유니티처럼 듣는 쪽이 없으면 만들지 않는다. 바디가 아니라
+ *          사용자 값(엔진은 오브젝트 id)에 거는 까닭은 바디를 다시 지어도(배율 · 타일 청크) 듣기가 따라가게 하려는 것이다. 백엔드는 유지 쌍의 값
+ *          (Jolt 유지 충격량 어림 · Box2D 쌍 충격량)을 `isStayReported` 가 참인 쌍만 구한다 — 그래서 듣지 않는 쌍의 끝 점은 시작 때 점이다.
+ *
  *          이벤트 순서는 결정적이다. 바디 쌍(작은 핸들이 A) 순이고, 한 쌍 안에서는 시작, 유지, 끝 순이다. 해시 테이블을 도는 순서에 의존하지 않는다.
  *          추적기는 잠그지 않는다. 여러 스레드에서 오는 백엔드 알림은 백엔드가 모아 두었다가 step 뒤에 한 스레드에서 넣는다.
  */
@@ -82,7 +87,42 @@ namespace sw
         PhysicsContactTracker()
             : _mapPair{}
             , _listRestartEnd{}
+            , _setStayUserData{}
+            , _bStayDirty{ SW_FALSE }
         {
+        }
+
+        /**
+         * @brief 사용자 값 @p userData 가 낀 쌍의 유지를 낼지 정합니다(파일 머리말 — 유지는 opt-in). 이미 닿아 있는 쌍에도 다음 `refreshStayPairs` 부터 적용됩니다.
+         * @note step 사이에만 부릅니다. 백엔드 잡 스레드가 step 동안 `isStayReported` 를 읽는다.
+         */
+        void setStayListener( uint64 userData, bool bListen )
+        {
+            const bool bChanged = bListen ? _setStayUserData.insert( userData ).second : _setStayUserData.erase( userData ) > 0;
+            if ( bChanged )
+                _bStayDirty = SW_TRUE;
+        }
+
+        /** @brief `setStayListener` 가 바꾼 듣기를 닿아 있는 쌍에 다시 적용합니다. 바뀐 것이 없으면 아무것도 하지 않습니다. step 앞(백엔드)과 `finishStep` 이 부릅니다. */
+        void refreshStayPairs()
+        {
+            if ( _bStayDirty == SW_FALSE )
+                return;
+            _bStayDirty = SW_FALSE;
+            for ( auto& [key, state] : _mapPair )
+            {
+                state._bReportStay = isStayListener( state._first ) || isStayListener( state._second );
+            }
+        }
+
+        /**
+         * @brief 바디 쌍이 유지를 내는지 반환합니다. 모르는 쌍이면 false 입니다.
+         * @note 백엔드 잡 스레드가 step 동안 함께 읽는다(Jolt `OnContactPersisted`) — 쓰기는 step 사이(`flush` · `finishStep` · `refreshStayPairs`)에만 난다.
+         */
+        bool isStayReported( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB ) const
+        {
+            typename PairMap::const_iterator iter = _mapPair.find( makeKey( bodyA, bodyB ) );
+            return iter != _mapPair.end() && iter->second._bReportStay;
         }
 
         /** @brief 셰이프 쌍 하나가 닿기 시작했습니다. @p normal 은 @p bodyA 에서 @p bodyB 쪽입니다. */
@@ -104,6 +144,7 @@ namespace sw
             state._normal           = bSwap ? -normal : normal;
             state._impulse          = state._impulse > impulse ? state._impulse : impulse;
             state._bTouchedThisStep = true;
+            state._bReportStay      = isStayListener( state._first ) || isStayListener( state._second );
             ++state._subContactCount;
         }
 
@@ -152,11 +193,27 @@ namespace sw
             }
         }
 
+        /**
+         * @brief 바디 @p body 의 셰이프를 갈았습니다(`setBodyShape`) — 그 바디가 낀 쌍의 셰이프 쌍 수를 0 으로 돌리고 쌍은 남깁니다.
+         * @details 새 셰이프가 다음 step 에 다시 닿으면 쌍은 이어지고(끝 · 시작 없음), 닿지 않으면 그 `finishStep` 에서 끝난다. 백엔드는 옛 셰이프의 끝 알림을
+         *          버려야 한다(Box2D 는 셰이프 → 바디 표에서 먼저 뺀다). 셰이프 쌍 수를 백엔드가 스스로 맞추는 Jolt(바디 id 가 그대로라 옛 쌍의 제거와 새 쌍의
+         *          추가가 짝을 이룬다)는 부르지 않는다.
+         */
+        void resetSubContacts( PhysicsBodyHandle body )
+        {
+            for ( auto& [key, state] : _mapPair )
+            {
+                if ( state._first._body == body || state._second._body == body )
+                    state._subContactCount = 0;
+            }
+        }
+
         /** @brief 이번 step 의 이벤트를 @p outListEvent 끝에 붙입니다. 끝난 쌍은 잊습니다. */
         void finishStep( vector<Event>& outListEvent )
         {
             const size_t firstNew = outListEvent.size();
             _listRestartEnd.clear();
+            refreshStayPairs();
             for ( typename PairMap::iterator iter = _mapPair.begin(); iter != _mapPair.end(); )
             {
                 PairState& state   = iter->second;
@@ -168,7 +225,8 @@ namespace sw
                 }
                 else if ( state._bWasActive && bActive )
                 {
-                    outListEvent.push_back( makeEvent( state, PhysicsContactPhase::Stay ) );
+                    if ( state._bReportStay )
+                        outListEvent.push_back( makeEvent( state, PhysicsContactPhase::Stay ) );
                 }
                 else if ( state._bWasActive == false && bActive )
                 {
@@ -236,6 +294,7 @@ namespace sw
             bool               _bWasActive{ false };       ///< 지난 step 끝에 닿아 있었는지 나타낸다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool               _bTouchedThisStep{ false }; ///< 이번 step 에 새로 닿은 셰이프 쌍이 있었는지 나타낸다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool               _bRestarted{ false };       ///< 지운 바디가 같은 간격 안에서 다시 닿았다 — 끝과 시작을 함께 낸다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool               _bReportStay{ false };      ///< 어느 쪽 사용자 값이 유지를 듣는다(`setStayListener`). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool               _bBodyRemoved{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
@@ -246,6 +305,8 @@ namespace sw
             const bool bSwap = bodyB < bodyA;
             return PairKey{ bSwap ? bodyB.packed() : bodyA.packed(), bSwap ? bodyA.packed() : bodyB.packed() };
         }
+
+        bool isStayListener( const PhysicsContactBody& body ) const { return _setStayUserData.contains( body._userData ); }
 
         static Event makeEvent( const PairState& state, PhysicsContactPhase phase )
         {
@@ -275,7 +336,10 @@ namespace sw
             return static_cast<uint8>( lhs._phase ) < static_cast<uint8>( rhs._phase );
         }
 
-        PairMap       _mapPair;
-        vector<Event> _listRestartEnd; ///< `finishStep` 스크래치 — 재시작한 쌍의 옛 끝(용량을 다시 쓴다)
+    private:
+        PairMap               _mapPair;
+        vector<Event>         _listRestartEnd;  ///< `finishStep` 스크래치 — 재시작한 쌍의 옛 끝(용량을 다시 쓴다)
+        unordered_set<uint64> _setStayUserData; ///< 유지를 듣는 사용자 값(`setStayListener`)
+        uint8                 _bStayDirty : 1;  ///< 듣기가 바뀌어 닿은 쌍에 다시 적용해야 한다(`refreshStayPairs`)
     };
 } // namespace sw
