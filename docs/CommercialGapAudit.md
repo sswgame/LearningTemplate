@@ -314,13 +314,6 @@
 
 ### 물리 · 캐릭터 · 애니메이션 · 내비 · 오디오
 
-#### S-1 접촉 이벤트에 opt-in 이 없어, 거의 아무도 듣지 않는 Stay 를 매 스텝 만들고 배달한다
-- 분류: 성능 · 확신: 구조 확인, 크기는 측정 필요
-- 근거: `onCollisionStay` · `onOverlapStay` 를 재정의한 헤더는 `Source` 전체에서 1 개인데 네 경로가 모든 쌍에 대해 돈다. `Source/Engine/Physics/Collision/PhysicsContact.h:154-157`(잠든 더미 포함 매 스텝 Stay), `Source/Engine/Physics/Jolt/JoltPhysicsScene.cpp:1158-1193`(모든 매니폴드에서 `EstimateCollisionResponse` + 전역 `_reportMutex` — Jolt 잡 스레드 전부가 만난다), `Source/Engine/Physics/Box2D/Box2DPhysicsScene.cpp:1121-1125` → `:1026-1051`(Stay 쌍마다 A 바디의 접촉 전부를 복사 — 바닥 바디면 스텝당 K²), `Source/Engine/Physics/Scene/ScenePhysics.cpp:714-723`(배달마다 `vector<Component*>` 새 할당).
-- 상용 엔진: 언리얼은 `bNotifyRigidBodyCollision` · `GenerateOverlapEvents` 를 켠 바디만, PhysX 는 쌍 플래그, 유니티는 `OnCollisionStay` 를 구현한 스크립트가 있을 때만 낸다.
-- 제안: `PhysicsHooksOf<T>`(재정의 여부를 컴파일에서 판정)와 같은 방식으로 "이 오브젝트가 듣는 단계 비트" 를 바디 사용자 값 옆에 둔다. 백엔드는 그 비트가 있는 쌍만 보고한다(Jolt 는 스레드별 버퍼로 락 제거).
-- 확인: `PhysicsBenchTest` 에 "잠든 상자 2000 개 + 바닥" 3D · 2D 사례, 카운터 `Physics.ContactEvents.stay` · `delivered`.
-
 #### S-2 Jolt 임시 할당자가 고정 16 MB 이고 넘치면 `std::abort()` — 한도는 C++ 상수
 - 분류: 결함(잠재 크래시) + 구조 · 확신: 확인(설치 헤더로 확인)
 - 근거: `Source/Engine/Physics/Jolt/JoltPhysicsScene.h:352` 가 `JPH::TempAllocatorImpl` 이고 `JoltPhysicsScene.cpp:42-45` 에 `kMaxBodyCount 65536 · kMaxBodyPairCount 65536 · kMaxContactCount 32768 · 16 MB` 가 하드코딩이다. Jolt 5.6.0 `Jolt/Core/TempAllocator.h:68-72` 는 넘치면 `Trace` 뒤 `std::abort()` 라 엔진 로그 · 크래시 처리기를 타지 않는다. 같은 할당자를 스텝 · 캐릭터 `ExtendedUpdate`(`:1590`) · 소프트 바디(`:299`)가 함께 쓰고, 미리보기 씬마다 16 MB 를 또 잡는다.
