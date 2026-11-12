@@ -316,7 +316,8 @@ namespace sw
         , _lastFitResult{}
         , _fitResultRevision{ 0 }
         , _assembleCount{ 0 }
-        , _seenFitReloadStamp{ 0 }
+        , _fitTablesReload{}
+        , _fitPartReload{}
         , _bodyPart{ constant::invalid_index::kInt32 }
         , _bPartsVisible{ true }
         , _bAssembleScheduled{ SW_FALSE }
@@ -1550,9 +1551,10 @@ namespace sw
             job._listFit.push_back( fit );
             job._listLoadPartIndex.push_back( load._partIndex );
         }
-        _seenFitReloadStamp = computeFitReloadStamp();
+        _fitTablesReload.markSeen();
+        _fitPartReload.markSeen();
         // 같은 차림이면 이미 베이크한 것을 나눈다 — 키는 메시에 들어가는 해석(메시 해시) · 부품 · 원본 내용 · 데이터 판이다.
-        job._bakeKey = HashUtil::combine( job._resolved._meshHash, _seenFitReloadStamp );
+        job._bakeKey = HashUtil::combine( job._resolved._meshHash, _fitTablesReload.getSeenCount() + _fitPartReload.getSeenCount() );
         for ( const MeshAssemblyLoad& load : _listMeshAssemblyLoad )
         {
             job._bakeKey = HashUtil::combine( HashUtil::combine( job._bakeKey, load._partIndex ), load._sourceContentID.getKey() ); // 키는 토큰 주소 — 캐시 항목이 토큰을 들어 겹치지 않는다
@@ -1724,7 +1726,7 @@ namespace sw
             return true;
         if ( _listMeshAssemblyLoad.empty() )
             return false;
-        if ( _seenFitReloadStamp != computeFitReloadStamp() )
+        if ( _fitTablesReload.isStale() || _fitPartReload.isStale() )
             return true;
         for ( const MeshAssemblyLoad& load : _listMeshAssemblyLoad )
         {
@@ -1747,11 +1749,6 @@ namespace sw
             return pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;
         }
         return nullptr;
-    }
-
-    uint32 CharacterAppearanceComponent::computeFitReloadStamp()
-    {
-        return SharedAssetCache<FitTables>::getReloadCount() + SharedAssetCache<FitPartDef>::getReloadCount();
     }
 
     void CharacterAppearanceComponent::registerSocketTask( SkeletalMeshComponent& body )

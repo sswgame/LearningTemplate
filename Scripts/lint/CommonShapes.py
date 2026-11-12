@@ -7,7 +7,6 @@ Scripts/lint/CommonShapes.py
 **왜 형식이 아니라 린트인가.** 여섯 다 합법인 C++ 이다 — 칸 이름 · switch 의 글자 · 어떤 함수를 불렀는가는 형식이 말하지 못한다.
 
 1. 철자 같은 열거 이름 표: 모든 case 가 열거자 철자 글을 돌려주는 switch. `ENUM()` + `getEnumName` 이 맡는다(`Core` 는 리플렉션 아래 층이라 보지 않는다).
-2. 다시 읽기 횟수 손 대조: `_seen…ReloadCount` 칸 · `getReloadCount` 호출. `AssetReloadWatch` 가 맡는다.
 3. 첫 컴포넌트 손 찾기: `if ( pFound == nullptr ) pFound = …` 람다. `AutomationComponentWatch::findFirst` 가 맡는다.
 4. 스키마만 읽는 한 줄 검사 함수: `AutomationStep::validateProperties<TParams>` 가 맡는다.
 5. 캔버스 지우기 손 구간: `ed::BeginDelete`. `EditorNodeGraph::collectRemovals` 가 맡는다.
@@ -56,8 +55,6 @@ kSwitchPattern = re.compile(r"\bswitch\s*\([^\n]*\)\s*\{")
 kCasePattern = re.compile(r"\bcase\s+([\w:]+)\s*:\s*(?:\{\s*)?return\s+\"([^\"]*)\"")
 kAnyCasePattern = re.compile(r"\bcase\s+[\w:]+\s*:")
 kDefaultNullPattern = re.compile(r"\bdefault\s*:\s*return\s+nullptr")
-kSeenCountPattern = re.compile(r"\b_seen\w*ReloadCount\b")
-kReloadCallPattern = re.compile(r"::getReloadCount\(\s*\)")
 kFirstComponentPattern = re.compile(r"forEachComponentOfType<[^>]*>\([^\n]*\n\s*\{\s*\n\s*if \( pFound == nullptr \)\s*\n\s*pFound = ")
 kOneLineValidatorPattern = re.compile(r"expected<void>\s+(?:\w+::)?\w+\(\s*const AutomationStep& step\s*\)\s*\{\s*\w+ params;\s*return step\.readProperties\( params \);\s*\}")
 kCanvasDeletePattern = re.compile(r"\bed::BeginDelete\(")
@@ -111,10 +108,6 @@ def collectViolations(path: str, text: str) -> list[tuple[str, str, str]]:
     if not path.startswith("Source/Core/"):
         for enumName in findSameSpellingSwitches(code):
             listViolation.append(("enumNameSwitch", f"{path}|{enumName}", f"철자 같은 열거 이름 표({enumName}) — ENUM() + getEnumName"))
-    if kSeenCountPattern.search(code):
-        listViolation.append(("reloadCount", path, "_seen…ReloadCount 칸 — AssetReloadWatch"))
-    if kReloadCallPattern.search(code):
-        listViolation.append(("reloadCount", path, "getReloadCount 손 호출 — AssetReloadWatch"))
     if kFirstComponentPattern.search(code):
         listViolation.append(("firstComponent", path, "첫 컴포넌트 손 찾기 — AutomationComponentWatch::findFirst"))
     if kOneLineValidatorPattern.search(code):

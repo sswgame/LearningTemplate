@@ -6,11 +6,6 @@
         "Source/Engine/Animation/Rig/RigConstraintNodes.cpp|Mode": ".cpp 안 열거라 리플렉션이 보지 못한다. 글은 노드 종류 이름이다",
         "Source/DevTools/AssetReload/ReloadTracker.cpp|ReloadSource": "DevTools 는 리플렉션 코드젠을 하지 않는 모듈이라 ENUM() 을 달 수 없다(개발 명령 표의 글이다)"
     },
-    "reloadCount": {
-        "Source/Engine/Asset/Cache/AssetReloadWatch.h": "기반 자신이다",
-        "Source/Engine/Asset/Cache/SharedAssetCacheDefinition.h": "횟수를 내는 쪽이다",
-        "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.cpp": "두 캐시 횟수의 합을 굽기 키에 넣는다(computeFitReloadStamp) — 낡음 판정만이 아니다"
-    },
     "firstComponent": {
         "Source/Engine/Automation/Watch/AutomationComponentWatch.h": "기반 자신이다"
     },

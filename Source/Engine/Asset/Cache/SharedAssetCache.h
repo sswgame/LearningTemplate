@@ -55,6 +55,8 @@ namespace sw
     class SharedAssetLoadOperation;
     template <typename AssetType>
     class SharedAssetTable;
+    template <typename TAsset>
+    class AssetReloadWatch;
 } // namespace sw
 
 namespace sw
@@ -108,8 +110,6 @@ namespace sw
          * @details 제자리로 바꾸는지 표에서 떼어 내는지는 종류의 `kReloadMode` 가 정합니다.
          */
         [[nodiscard]] static bool reloadShared( string_view path );
-        /** @brief 이 표에서 다시 읽은(또는 떼어 낸) 횟수입니다. 쓰는 쪽은 값이 바뀌면 자기가 지은 것을 다시 짓습니다. */
-        static uint32 getReloadCount();
 
         const utf8* getAssetKindName() const override;
         /** @brief 그 경로의 에셋을 누가 쥐고 있는지 반환합니다. */
@@ -125,6 +125,10 @@ namespace sw
 
     private:
         friend class SharedAssetLoadOperation<AssetType>;
+        friend class AssetReloadWatch<AssetType>; // 횟수는 감시만 읽는다 — 쓰는 쪽이 "본 횟수" 칸과 대조를 손으로 적지 않게 한다
+
+        /** @brief 이 표에서 다시 읽은(또는 떼어 낸) 횟수입니다. 쓰는 쪽은 `AssetReloadWatch` 로 보고 값이 바뀌면 자기가 지은 것을 다시 짓습니다. */
+        static uint32 getReloadCount();
 
         /** @brief 레지스트리에 오른 이 종류 캐시의 표입니다(정적 창구 · 로드 작업이 쓴다). 없으면 멈춘다. */
         static SharedAssetTable<AssetType>& getTable();
