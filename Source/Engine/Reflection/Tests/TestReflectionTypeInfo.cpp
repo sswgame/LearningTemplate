@@ -1607,3 +1607,54 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ShortNameCollisionIsReported )
     SW_REQUIRE_NOT_NULL( pByShortName );
     SW_EXPECT_TRUE( pByShortName->_fullyQualifiedName == sw::hashed_string( ( "swtest::right::TwinType" + factory._suffix ).c_str() ) );
 }
+
+namespace
+{
+    // 대소문자 무시 FNV-1a 32 비트가 같은 이름 쌍이다(생일 탐색으로 찾았다). 바이너리 태그는 타입 · 필드를 이 해시로 싣는다.
+    constexpr const utf8* kHashTwinA = "ui.key1022789";
+    constexpr const utf8* kHashTwinB = "ui.key1239192";
+} // namespace
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 32 비트 이름 해시가 같은 두 타입 이름은 등록이 오류를 남기고 해시 표에는 먼저 든 이름만 둔다(타입 찾기는 둘 다 된다)
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, TypeNameHashClashIsReported )
+{
+    SW_REQUIRE_EQUAL( sw::hashed_string::computeHash( kHashTwinA ), sw::hashed_string::computeHash( kHashTwinB ) );
+    const sw::test::ScopedTestModule scopedModule( "TestWireNameClash" );
+    sw::TypeRegistry&                registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    sw::TypeInfo                     first;
+    first._fullyQualifiedName  = sw::hashed_string( kHashTwinA );
+    first._moduleName          = sw::hashed_string( "TestWireNameClash" );
+    sw::TypeInfo second        = first;
+    second._fullyQualifiedName = sw::hashed_string( kHashTwinB );
+
+    registry.registerClass( first );
+    SW_EXPECT_LOG( "Reflection.TypeNameHashClash" );
+    registry.registerClass( second );
+
+    SW_EXPECT_TRUE( registry.findWireTypeNameByHash( sw::hashed_string::computeHash( kHashTwinA ) ) == sw::hashed_string( kHashTwinA ) );
+    SW_EXPECT_NOT_NULL( registry.findType( sw::hashed_string( kHashTwinA ) ) );
+    SW_EXPECT_NOT_NULL( registry.findType( sw::hashed_string( kHashTwinB ) ) );
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 한 타입 안의 두 필드 이름이 32 비트 해시가 같으면 등록이 오류를 남긴다 — 바이너리 세이브가 두 필드를 가리지 못한다
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, FieldNameHashClashIsReported )
+{
+    const sw::test::ScopedTestModule scopedModule( "TestFieldNameClash" );
+    sw::TypeRegistry&                registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    sw::TypeInfo                     info;
+    info._name               = sw::hashed_string( "FieldClashType" );
+    info._fullyQualifiedName = sw::hashed_string( "swtest::FieldClashType" );
+    info._moduleName         = sw::hashed_string( "TestFieldNameClash" );
+    info._size               = 8;
+    info._listProperty       = {
+        sw::PropertyInfo{sw::hashed_string( kHashTwinA ), sw::hashed_string( "int32" ), 0},
+        sw::PropertyInfo{sw::hashed_string( kHashTwinB ), sw::hashed_string( "int32" ), 4},
+    };
+    SW_EXPECT_LOG( "Reflection.FieldNameHashClash" );
+    registry.registerClass( info );
+    SW_EXPECT_NOT_NULL( registry.findType( sw::hashed_string( "swtest::FieldClashType" ) ) );
+}

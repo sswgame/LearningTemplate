@@ -73,14 +73,14 @@ namespace sw
     uint64 SkinLayerBakeBinding::computeStackKey( vector_reference<const ResolvedSkinLayer> listLayer, vector_reference<const uint32> listSmearRevision, string_view basePath, uint32 resolution, uint64 ownerKey )
     {
         using Internal = SkinLayerBakeInternal;
-        uint64 key     = HashUtil::combine( hashed_string( basePath ).getHash(), static_cast<uint64>( resolution ) );
+        uint64 key     = HashUtil::combine( HashUtil::computeStringHash64( basePath ), static_cast<uint64>( resolution ) ); // 경로 · 마스크는 64 비트 해시 — 32 비트 이름 해시면 다른 굽기가 같은 키를 쓴다
         bool   bSmear  = false;
         for ( size_t index = 0; index < listLayer.size(); ++index )
         {
             const ResolvedSkinLayer& layer = listLayer[index];
             SkinLayerValue           value = layer._value;
             value.quantize(); // 전송 정밀도 안의 차이는 같은 굽기다
-            key                        = HashUtil::combine( key, layer._mask.getHash() );
+            key                        = HashUtil::combine( key, HashUtil::computeStringHash64( layer._mask.view() ) );
             key                        = Internal::combineFloat4( key, value._color );
             key                        = Internal::combineFloat4( key, float4{ value._offset._x, value._offset._y, value._scale._x, value._scale._y } );
             key                        = Internal::combineFloat4( key, float4{ value._opacity, value._rotationDegrees, static_cast<float32>( value._bMirror ), static_cast<float32>( layer._bPlaceable ) } );

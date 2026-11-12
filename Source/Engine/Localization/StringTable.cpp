@@ -45,29 +45,23 @@ namespace sw
         return HashUtil::computeStringHash64( key );
     }
 
-    expected<uint64> LocalizationKeyIndex::add( string_view key )
+    LocalizationKeyIndex::LocalizationKeyIndex( KeyHashFunction pKeyHash )
+        : _pKeyHash{ pKeyHash }
+        , _index{}
     {
-        return addWithHash( key, computeHash( key ) );
     }
 
-    expected<uint64> LocalizationKeyIndex::addWithHash( string_view key, uint64 keyHash )
+    expected<uint64> LocalizationKeyIndex::add( string_view key )
     {
-        const auto it = _mapKeyByHash.find( keyHash );
-        if ( it == _mapKeyByHash.end() )
-        {
-            _mapKeyByHash.emplace( keyHash, string( key ) );
-            return keyHash;
-        }
-        if ( StringUtil::equals( it->second, key, true ) )
-            return keyHash;
-        string detail;
-        detail.append( it->second ).append( " / " ).append( key );
-        return unexpected( Error{ ErrorKind::AlreadyExists, "localization keys share a hash", detail } );
+        const uint64 keyHash = _pKeyHash( key );
+        if ( expected<void> assigned = _index.assign( key, keyHash ); assigned.has_value() == false )
+            return unexpected( assigned.error() );
+        return keyHash;
     }
 
     void LocalizationKeyIndex::clear()
     {
-        _mapKeyByHash.clear();
+        _index.clear();
     }
 } // namespace sw
 

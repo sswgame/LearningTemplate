@@ -8,6 +8,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/MemoryBlock.h"
+#include "Core/Name/NameHashIndex.h"
 #include "Core/Name/hashed_string.h"
 
 namespace sw
@@ -52,17 +53,21 @@ namespace sw
     class SW_API LocalizationKeyIndex
     {
     public:
+        /** @brief 키 해시 함수입니다. 실행은 늘 `computeHash` 이고, 테스트만 충돌을 일부러 만들려고 다른 것을 넣는다. */
+        using KeyHashFunction = uint64 ( * )( string_view key );
+
         /** @brief 키의 해시입니다. 실행 표 · `.locres` 가 모두 이 값으로 연다. */
         [[nodiscard]] static uint64 computeHash( string_view key );
 
+        explicit LocalizationKeyIndex( KeyHashFunction pKeyHash = &computeHash );
+
         /** @brief @p key 를 넣고 해시를 돌려줍니다. 같은 해시에 다른 키가 이미 있으면 `AlreadyExists` 오류이고 아무것도 바꾸지 않습니다. */
         [[nodiscard]] expected<uint64> add( string_view key );
-        /** @brief @p keyHash 로 넣습니다. 테스트가 충돌을 일부러 만들 때와 `add` 가 쓴다. */
-        [[nodiscard]] expected<uint64> addWithHash( string_view key, uint64 keyHash );
         void                           clear();
 
     private:
-        unordered_map<uint64, string> _mapKeyByHash; ///< 해시 → 처음 들어온 키 철자
+        KeyHashFunction       _pKeyHash;
+        NameHashIndex<uint64> _index; ///< 공용 충돌 검사 색인(해시 → 처음 든 키 철자)
     };
 
     /**

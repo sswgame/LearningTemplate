@@ -674,7 +674,7 @@ namespace sw
         // 칸에 옮겨 그리는 PSO — 전체 화면 블릿 셰이더(쿠킹되는 Present 기본 셰이더)를 아틀라스 포맷으로. 머티리얼 변형 저장소의 키 공간을 빌려 저장소가 소유한다
         // (입자 PSO 와 같은 방식 — 디바이스를 바꾸면 저장소가 비고 여기서 다시 만든다).
         const string& shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderFullscreenBlit.get();
-        const uint64  psoKey     = RenderPSOCache::materialPSOKey( 0, HashUtil::combine( hashed_string( shaderPath ).getHash(), FourCCUtil::make( "CKAT" ) ), RenderViewMode::Lit, false,
+        const uint64  psoKey     = RenderPSOCache::materialPSOKey( 0, HashUtil::combine( HashUtil::computeStringHash64( shaderPath, false ), FourCCUtil::make( "CKAT" ) ), RenderViewMode::Lit, false,
                                                                    RHIMeshVertexFormat::Packed );
         if ( _pCache->hasMaterialPSO( psoKey ) == false )
         {
@@ -696,7 +696,7 @@ namespace sw
             return 0;
         // 쿠키 아틀라스 PSO 와 같은 길 — 머티리얼 변형 저장소의 키 공간을 빌려 저장소가 소유한다(디바이스를 바꾸면 저장소가 비고 여기서 다시 만든다).
         const string& shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderLayerBake.get();
-        const uint64  psoKey     = RenderPSOCache::materialPSOKey( 0, HashUtil::combine( hashed_string( shaderPath ).getHash(), FourCCUtil::make( "LBAK" ) + static_cast<uint32>( targetFormat ) ),
+        const uint64  psoKey     = RenderPSOCache::materialPSOKey( 0, HashUtil::combine( HashUtil::computeStringHash64( shaderPath, false ), FourCCUtil::make( "LBAK" ) + static_cast<uint32>( targetFormat ) ),
                                                                    RenderViewMode::Lit, false, RHIMeshVertexFormat::Packed );
         if ( _pCache->hasMaterialPSO( psoKey ) == false )
         {
@@ -1156,7 +1156,7 @@ namespace sw
 
         // 머티리얼 변형 캐시의 키 공간을 빌린다 — 퍼뮤테이션 해시 자리에 입자 셰이더 경로와 태그를 섞어 머티리얼 퍼뮤테이션과 겹치지 않게 한다.
         const string& shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderParticle.get();
-        const uint64  shaderHash = HashUtil::combine( hashed_string( shaderPath ).getHash(), FourCCUtil::make( "VFXP" ) );
+        const uint64  shaderHash = HashUtil::combine( HashUtil::computeStringHash64( shaderPath, false ), FourCCUtil::make( "VFXP" ) );
         _particlePSOKey          = RenderPSOCache::materialPSOKey( transparentPSO, shaderHash, RenderViewMode::Lit, false, RHIMeshVertexFormat::Packed );
         if ( _pCache->hasMaterialPSO( _particlePSOKey ) )
             return;

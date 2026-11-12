@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Name/NameHashIndex.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/Subsystem/ISubsystem.h"
@@ -146,7 +147,7 @@ namespace sw
     class SW_GF_API GimmickNodeRegistry
     {
     public:
-        /** @brief 종류를 추가합니다. 이름이 이미 있거나, 포트가 32 개를 넘거나, 상태 슬롯이 `GimmickNodeState::kMaxSlotCount` 를 넘으면 false 입니다. */
+        /** @brief 종류를 추가합니다. 이름이 이미 있거나, 이름의 32 비트 해시가 다른 종류와 같거나(오류 로그), 포트가 32 개를 넘거나, 상태 슬롯이 `GimmickNodeState::kMaxSlotCount` 를 넘으면 false 입니다. */
         [[nodiscard]] bool registerKind( const GimmickNodeKind& kind );
         /** @brief 이름에 해당하는 종류입니다. 없으면 nullptr 입니다. */
         const GimmickNodeKind*         findKind( const hashed_string& name ) const;
@@ -157,6 +158,8 @@ namespace sw
 
     private:
         NameRegistry<GimmickNodeKind> _registry{};
+        /// @brief 종류 이름의 32 비트 해시 색인입니다. 회로 상태가 종류를 그 해시로 적어(`GimmickNodeState::_kind`) 같은 해시의 두 종류를 가리지 못한다 — 공용 충돌 검사 색인으로 등록에서 막는다.
+        NameHashIndex<uint32> _kindHashIndex{};
     };
 } // namespace sw
 

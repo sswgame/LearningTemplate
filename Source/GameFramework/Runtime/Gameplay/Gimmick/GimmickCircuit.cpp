@@ -6,6 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Name/NameHashIndex.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
@@ -121,6 +122,8 @@ namespace sw
         using Internal                            = GimmickCircuitInternal;
         const vector<GimmickNodeDef>& listNodeDef = def.getNodes();
         _listNode.resize( listNodeDef.size() );
+        // 저장 상태는 노드를 id 의 32 비트 해시로 짝짓는다(`loadState`) — 같은 해시의 두 id 를 공용 충돌 검사 색인으로 막는다.
+        NameHashIndex<uint32> nodeIDIndex;
         for ( size_t nodeIndex = 0; nodeIndex < listNodeDef.size(); ++nodeIndex )
         {
             const GimmickNodeDef& nodeDef = listNodeDef[nodeIndex];
@@ -136,6 +139,8 @@ namespace sw
                 if ( listNodeDef[otherIndex]._id == nodeDef._id )
                     outListError.push_back( def.describeNode( nodeDef ) + ": duplicate node id" );
             }
+            if ( const expected<void> assigned = nodeIDIndex.assign( nodeDef._id.view(), nodeDef._id.getHash() ); assigned.has_value() == false )
+                outListError.push_back( def.describeNode( nodeDef ) + ": node ids share a 32-bit name hash (" + string( assigned.error().detail() ) + ") - saved states match nodes by it; rename one" );
             node._pKind = registry.findKind( nodeDef._kind );
             if ( node._pKind == nullptr )
             {
