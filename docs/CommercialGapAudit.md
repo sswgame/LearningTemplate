@@ -92,13 +92,6 @@
 - 제안: 손 목록을 Core Math 티어 통째 `-ffp-contract=off` 로 바꾼다(비용은 재서 정한다). 표시된 TU 에서 libm 초월 함수를 막는 린트를 더한다.
 - 확인: `DeterministicMathTest` 처럼 기록 비트를 고정하는 케이스를 `quaternion::operator*` · `slerp` · `ValueNoise::sampleFractal` 에 더해 Debug · Release · Linux 에서 돌린다.
 
-#### C-15 파일 읽기 큐가 조건 변수 하나를 세 용도로 쓰고 통째 읽기 버퍼를 0 으로 채운다
-- 분류: 성능 · 확신: 코드 확인, 영향은 측정 필요
-- 근거: `Source/Core/File/AsyncFileIO.cpp:261`(push) · `:470`(완료)이 `_cv.notify_all()` 이고 같은 `_cv` 를 `waitPop`(`:355`) · `waitIdle`(`:520`) · `waitRequest`(`:541`)가 함께 쓴다. `:383` 의 `_bytes.resize( size )` 는 읽기 전에 버퍼 전체를 0 으로 채운다. 요청마다 `make_shared` + 경로 `string` + `deque` 노드 + 완료 태스크 노드가 든다.
-- 상용 엔진: 언리얼 `FAsyncFileHandle` · IoStore 는 요청 풀과 초기화하지 않은 버퍼를 쓰고 완료를 배치로 전달한다.
-- 제안: 큐 대기와 요청별 완료 대기를 다른 신호로 가른다(요청별 대기는 요청의 원자 상태에 `Futex`). 버퍼는 초기화 없는 할당 입구 하나로 받는다. 요청 객체는 풀에서 꺼낸다.
-- 확인: 작은 파일 5000 개를 한꺼번에 읽는 시나리오에서 Tracy 로 `_mutex` 대기와 `resize` 시간, `-gv_assetLoadReport=1`.
-
 ### 네트워크 · 텔레메트리
 
 #### N-6 텔레메트리 업로드가 게임 스레드에서, 서비스 잠금을 쥔 채 블로킹 HTTP 로 나간다
