@@ -43,7 +43,7 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.Git import runGit  # noqa: E402
 from lint.CppShape import stripCode  # noqa: E402
 from lint.Format import getModifiedCppFiles  # noqa: E402
-from lint.LintScope import LintScope  # noqa: E402
+from lint.LintScope import LintScope, readText  # noqa: E402
 from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 
@@ -202,7 +202,10 @@ def inspectText(text: str, relative: str) -> list[LiteralRow]:
 
 def inspectFile(projectRoot: Path, file: Path) -> list[LiteralRow]:
     """파일 하나를 봅니다(프로세스로 넘기므로 모듈 최상위에 둔다)."""
-    return inspectText(file.read_text(encoding="utf-8", errors="ignore"), file.relative_to(projectRoot).as_posix())
+    text = readText(file, errors="ignore")
+    if text is None:
+        raise FileNotFoundError(file)   # scope 의 파일은 있다 — 예전 read_text 처럼 멈춘다
+    return inspectText(text, file.relative_to(projectRoot).as_posix())
 
 
 def isSourceFile(relative: str) -> bool:

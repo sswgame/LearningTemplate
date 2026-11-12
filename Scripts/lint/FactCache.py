@@ -21,7 +21,7 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 
-from lint.LintScope import runGitLines
+from lint.LintScope import readBytes, readText, runGitLines
 from lint.ModuleImports import kScriptsDir, listImportedModuleFiles
 
 kCacheFolder = "Saved/Lint"
@@ -38,26 +38,26 @@ def getIndexKeys(projectRoot: Path) -> dict[str, str]:
 
 
 @functools.cache
-def getWorkingTreeKeys(projectRoot: Path) -> dict[str, str]:
-    """작업 트리의 경로 → 내용 키. 인덱스와 같은 파일은 블롭 id, 다르거나 새 파일은 읽어서 낸 sha1(작업 트리에서 지운 파일은 없다)."""
-    mapKey = dict(getIndexKeys(projectRoot))
-    setDirty = set(runGitLines(projectRoot, ["diff", "--name-only"])) | set(runGitLines(projectRoot, ["ls-files", "--others", "--exclude-standard"]))
-    for path in setDirty:
-        try:
-            mapKey[path] = "w" + hashlib.sha1((projectRoot / path).read_bytes()).hexdigest()
-        except OSError:
-            mapKey.pop(path, None)
-    return mapKey
+def getDirtyFiles(projectRoot: Path) -> frozenset[str]:
+    """작업 트리가 인덱스와 다른 파일과 새 파일 — 이 파일만 내용을 읽어 키를 낸다."""
+    return frozenset(runGitLines(projectRoot, ["diff", "--name-only"])) | frozenset(runGitLines(projectRoot, ["ls-files", "--others", "--exclude-standard"]))
+
+
+@functools.cache
+def getWorkingTreeKey(projectRoot: Path, relative: str) -> str | None:
+    """작업 트리 파일의 내용 키(없으면 None). 인덱스와 같은 파일은 블롭 id, 다르거나 새 파일은 읽어서 낸 sha1 — 물은 파일만 읽는다(새 파일이 많아도 모두 읽지 않는다)."""
+    if relative not in getDirtyFiles(projectRoot):
+        return getIndexKeys(projectRoot).get(relative)
+    try:
+        data = readBytes(projectRoot / relative)
+    except OSError:
+        return None
+    return None if data is None else "w" + hashlib.sha1(data).hexdigest()
 
 
 def readWorkingTree(projectRoot: Path, listRelative: list[str], errors: str) -> dict[str, str | None]:
-    mapText: dict[str, str | None] = {}
-    for relative in listRelative:
-        try:
-            mapText[relative] = (projectRoot / relative).read_text(encoding="utf-8", errors=errors)
-        except (UnicodeDecodeError, OSError):
-            mapText[relative] = None   # 규칙이 저장소를 걸을 때처럼 건너뛴다
-    return mapText
+    """못 읽는 파일은 None — 규칙이 저장소를 걸을 때처럼 건너뛴다."""
+    return {relative: readText(projectRoot / relative, errors) for relative in listRelative}
 
 
 def computeVersion(listVersionFile: Iterable[str]) -> str:
@@ -84,7 +84,8 @@ def loadFacts(projectRoot: Path, name: str, listVersionFile: Sequence[str], list
 
     `listVersionFile` 은 뽑는 법을 정하는 파일(부르는 규칙 모듈 `__file__`, 뽑기가 읽는 표) — 하나라도 바뀌면 다시 뽑는다. 기본은 작업 트리 내용이고, 인덱스 내용을 보려면 `mapKey` · `readTexts` 를 함께 넘긴다.
     """
-    keys = mapKey if mapKey is not None else getWorkingTreeKeys(projectRoot)
+    listRelative = list(listRelative)
+    keys = mapKey if mapKey is not None else {relative: key for relative in listRelative if (key := getWorkingTreeKey(projectRoot, relative)) is not None}
     read = readTexts if readTexts is not None else functools.partial(readWorkingTree, projectRoot, errors=errors)
     cachePath = projectRoot / kCacheFolder / f"{name}.facts.json"
     version = computeVersion(listVersionFile)
@@ -96,7 +97,6 @@ def loadFacts(projectRoot: Path, name: str, listVersionFile: Sequence[str], list
     except (OSError, ValueError, KeyError):
         cached = {}
 
-    listRelative = list(listRelative)
     listStale = [relative for relative in listRelative if relative not in keys or cached.get(relative, [None])[0] != keys[relative]]
     stored: dict[str, list[Any]] = {relative: cached[relative] for relative in listRelative if relative not in listStale}
     if listStale:

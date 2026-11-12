@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from lint.LintScope import LintScope, makeWholeScope  # noqa: E402
+from lint.LintScope import LintScope, makeWholeScope, readText  # noqa: E402
 
 kExtensions = (".h", ".cpp", ".inl")
 # 함수 정적을 매크로 본문에 둘 수 있는 곳(세 틀의 정의 매크로)
@@ -233,10 +233,11 @@ def checkMutableStatics(projectRoot: Path, scope: LintScope) -> list[str]:
     table, listProblem = loadExceptions(projectRoot)
     used: set[tuple[str, str]] = set()
     for relPath in iterSources(projectRoot, scope):
-        path = projectRoot / relPath
         if "/Tests/" in relPath or relPath.startswith("Source/Core/Testing/"):
             continue  # 테스트 고정물은 프로세스 수명 상태를 흉내 낸다 — 엔진 범위가 아니다
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = readText(projectRoot / relPath, errors="replace")
+        if text is None:
+            raise FileNotFoundError(projectRoot / relPath)   # scope 의 파일은 있다 — 예전 read_text 처럼 멈춘다
         for line, where, name, statement in findMutableStatics(text):
             if (relPath, name) in table:
                 used.add((relPath, name))
@@ -253,7 +254,7 @@ def checkMutableStatics(projectRoot: Path, scope: LintScope) -> list[str]:
     return listProblem
 
 
-def selfCheck() -> bool:
+def runSelfCheck() -> bool:
     def statics(code: str) -> list[str]:
         return [s for _, where, _, s in findMutableStatics(code) if where == "function"]
 
@@ -297,7 +298,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--self-check", action="store_true")
     args = parser.parse_args(argv)
     if args.self_check:
-        return ExitCode.Passed if selfCheck() else ExitCode.Violation
+        return ExitCode.Passed if runSelfCheck() else ExitCode.Violation
     listProblem = checkMutableStatics(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for line in listProblem:
         print(f"  - {line}")

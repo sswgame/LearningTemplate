@@ -25,7 +25,7 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from lint.CppShape import isTarget, stripCode  # noqa: E402
-from lint.LintScope import LintScope, makeFileScope, makeWholeScope  # noqa: E402
+from lint.LintScope import LintScope, makeFileScope, makeWholeScope, readText  # noqa: E402
 
 kEntryFile = "Source/Engine/Serialization/Format/StateIO.h"
 kSignature = re.compile(r"\b(?:(\w+)\s*::\s*)?(writeState|readState)\s*\(\s*(?:sw::|::sw::)?Archive\s*&[^)]*\)\s*(?:const\s*)?(?:override\s*)?(?:=\s*0\s*)?([;{])")
@@ -57,13 +57,13 @@ def checkStateShape(projectRoot: Path, scope: LintScope) -> list[str]:
             relative = path.relative_to(projectRoot).as_posix()
         except ValueError:
             continue
-        if not isTarget(relative) or "/Tests/" in relative or relative == kEntryFile or not path.exists():
-            continue
-        listViolation.extend(inspectText(path.read_text(encoding="utf-8", errors="replace"), relative))
+        text = readText(path, errors="replace") if isTarget(relative) and "/Tests/" not in relative and relative != kEntryFile else None
+        if text is not None:
+            listViolation.extend(inspectText(text, relative))
     return listViolation
 
 
-def selfCheck() -> None:
+def runSelfCheck() -> None:
     """규칙이 잡을 것을 잡고 거른 것을 놓아 주는지 봅니다."""
     assert len(inspectText("void A::writeState( Archive& outArchive ) const\n{\n}\n", "a.cpp")) == 1
     assert len(inspectText("bool A::readState( sw::Archive& archive )\n{\n}\n", "a.cpp")) == 1
@@ -84,7 +84,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
     if args.self_check:
-        selfCheck()
+        runSelfCheck()
         print("[StateShape] self-check OK")
         return 0
     projectRoot = Path(__file__).resolve().parents[2]

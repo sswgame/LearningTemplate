@@ -33,7 +33,7 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.FileCollect import collectRepositoryFiles, resolveFileArguments  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.ProjectConstants import kCppAllExtensions, kCppSourceExtensions, kGeneratedRelDirs, kLintTargetBaseDirNames, kLintTargetRelDirs, kNotOurDirNames  # noqa: E402
-from lint.LintScope import LintScope, listRepoFiles  # noqa: E402
+from lint.LintScope import LintScope, listRepoFiles, readBytes  # noqa: E402
 from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 kCheckTag = "CheckIncludeOrder"
@@ -345,9 +345,10 @@ def inspectFileInternal(headerMaps: tuple, repositoryRoot: Path, path: Path) -> 
     """파일 하나의 위반(읽을 수 없으면 `!` 로 시작하는 한 줄). 훑는 사이에 지워진 파일은 건너뛴다."""
     relative = path.resolve().relative_to(repositoryRoot).as_posix()
     try:
-        rawText = path.read_bytes().decode("utf-8")
-    except FileNotFoundError:
-        return []
+        data = readBytes(path)
+        if data is None:
+            return []
+        rawText = data.decode("utf-8")
     except (OSError, UnicodeDecodeError) as exception:
         return [f"!{relative}: 읽기 실패: {exception}"]
     return inspectText(rawText, relative, headerMaps)[0]

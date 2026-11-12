@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from lint.LintScope import LintScope, makeWholeScope  # noqa: E402
+from lint.LintScope import LintScope, makeWholeScope, readText  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/Acronyms.json"
 kExtensions = (".h", ".cpp", ".inl")
@@ -69,10 +69,10 @@ def checkAcronyms(projectRoot: Path, scope: LintScope) -> list[str]:
             if name not in seen and name not in keep and findBadWords(name, acronyms):
                 seen.add(name)
                 listProblem.append(f"{relative}: 경로 낱말 '{name}' 의 약어는 모두 대문자({', '.join(findBadWords(name, acronyms))}) — NamingCpp Acronyms")
-        path = projectRoot / relative
-        if not path.is_file():
+        text = readText(projectRoot / relative, errors="ignore")
+        if text is None:
             continue
-        code = kLiteralOrComment.sub(" ", path.read_text(encoding="utf-8", errors="ignore"))
+        code = kLiteralOrComment.sub(" ", text)
         for match in kIdentifier.finditer(code):
             name = match.group(0)
             if name in seen or name in keep:

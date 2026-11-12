@@ -29,7 +29,7 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from lint.CppShape import isTarget, stripCode  # noqa: E402
-from lint.LintScope import LintScope, makeFileScope, makeWholeScope  # noqa: E402
+from lint.LintScope import LintScope, makeFileScope, makeWholeScope, readText  # noqa: E402
 from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 
@@ -93,9 +93,8 @@ def inspectListedFile(projectRoot: Path, setRawFile: frozenset[str], file: str) 
         relative = path.relative_to(projectRoot).as_posix()
     except ValueError:
         return []
-    if not isTarget(relative) or "/Tests/" in relative or not path.exists():
-        return []
-    return inspectText(path.read_text(encoding="utf-8", errors="replace"), relative, setRawFile)
+    text = readText(path, errors="replace") if isTarget(relative) and "/Tests/" not in relative else None
+    return [] if text is None else inspectText(text, relative, setRawFile)
 
 
 def loadRawFiles(projectRoot: Path) -> frozenset[str]:
@@ -110,7 +109,7 @@ def checkByteReadShape(projectRoot: Path, scope: LintScope) -> list[str]:
     return flatMapInProcesses(functools.partial(inspectListedFile, projectRoot, loadRawFiles(projectRoot)), listFile)
 
 
-def selfCheck() -> None:
+def runSelfCheck() -> None:
     """규칙이 잡을 것을 잡고 거른 것을 놓아 주는지 봅니다."""
     kNone: frozenset[str] = frozenset()
     bad = "bool A::read( Archive& archive )\n{\n    uint32 count = 0;\n    archive >> count;\n    _list.resize( count );\n}\n"
@@ -139,7 +138,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
     if args.self_check:
-        selfCheck()
+        runSelfCheck()
         print("[ByteReadShape] self-check OK")
         return 0
     projectRoot = Path(__file__).resolve().parents[2]

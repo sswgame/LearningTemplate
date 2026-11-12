@@ -31,7 +31,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from lint.LintScope import LintScope, listRepoFiles, makeWholeScope, readTexts as readSourceTexts  # noqa: E402
+from lint.FactCache import loadFacts  # noqa: E402
+from lint.LintScope import LintScope, listRepoFiles, makeWholeScope  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/RequiredNameFieldExceptions.json"
 kPropertyHead = re.compile(r"^[ \t]*PROPERTY\s*\(", re.M)
@@ -150,17 +151,30 @@ def findConstructorInitials(kept: str, code: str, className: str) -> dict[str, l
     return result
 
 
-def findProblems(mapHeader: dict[str, str], mapSource: dict[str, str], config: dict, bWholeRepo: bool = True) -> list[str]:
-    """mapHeader · mapSource: 경로 → 글(`.cpp` 는 헤더와 같은 폴더의 것만 본다)."""
-    setType = set(config["_types"])
-    tuplePrefix = tuple(config["_typePrefixes"])
+kConstructorHead = re.compile(r"\b(\w+)::\1\s*\(")
+
+
+def isTarget(path: str) -> bool:
+    return path.startswith("Source/") and path.endswith((".h", ".cpp", ".inl")) and "Tests" not in path.split("/") and not path.endswith(".generated.h")
+
+
+def extractFacts(path: str, text: str, config: dict) -> dict:
+    """파일 하나의 사실 — 헤더는 이름 계열 PROPERTY 칸(타입, 칸, 헤더 초기값, 줄), 본문(`.cpp` · `.inl`)은 생성자마다 칸 → 초기값 글."""
+    kept, code = blankCode(text)
+    if path.endswith(".h"):
+        bProperty = "PROPERTY" in text
+        return {"fields": [list(field) for field in findFields(kept, code, set(config["_types"]), tuple(config["_typePrefixes"]))] if bProperty else []}
+    mapConstructor = {className: findConstructorInitials(kept, code, className) for className in dict.fromkeys(kConstructorHead.findall(code))}
+    return {"constructors": {className: initials for className, initials in mapConstructor.items() if initials}}
+
+
+def judgeFacts(mapFact: dict[str, dict], config: dict, bWholeRepo: bool = True) -> list[str]:
+    """mapFact: 경로 → `extractFacts`(경로 순). 헤더 칸의 생성자 초기값은 같은 폴더의 본문에서만 찾는다."""
     exceptions: dict[str, str] = config["_exceptions"]
-    mapBlank = {path: blankCode(text) for path, text in mapSource.items()}
     listProblem: list[str] = []
     setSeen: set[str] = set()
-    for headerPath, text in mapHeader.items():
-        kept, code = blankCode(text)
-        listField = findFields(kept, code, setType, tuplePrefix)
+    for headerPath, fact in mapFact.items():
+        listField = fact.get("fields")
         if not listField:
             continue
         folder = headerPath.rpartition("/")[0]
@@ -168,9 +182,9 @@ def findProblems(mapHeader: dict[str, str], mapSource: dict[str, str], config: d
         for className, name, initial, line in listField:
             if className not in mapInitial:
                 mapInitial[className] = {}
-                for sourcePath, (sourceKept, sourceCode) in mapBlank.items():
-                    if sourcePath.rpartition("/")[0] == folder and className and f"{className}::{className}" in sourceCode:
-                        for member, listText in findConstructorInitials(sourceKept, sourceCode, className).items():
+                for sourcePath, sourceFact in mapFact.items():
+                    if className and sourcePath.rpartition("/")[0] == folder and className in sourceFact.get("constructors", {}):
+                        for member, listText in sourceFact["constructors"][className].items():
                             mapInitial[className].setdefault(member, []).extend(listText)
             literal = kLiteral.search(initial) or next((found for found in map(kLiteral.search, mapInitial[className].get(name, [])) if found), None)
             if not literal:
@@ -185,27 +199,25 @@ def findProblems(mapHeader: dict[str, str], mapSource: dict[str, str], config: d
     return listProblem
 
 
-def readTexts(projectRoot: Path, scope: LintScope) -> tuple[dict[str, str], dict[str, str]]:
-    """scope 의 파일이 있던 폴더(지운 파일 포함 — .cpp 를 지우면 헤더 칸의 생성자 초기값이 사라진다)의 헤더 · 본문. 헤더 칸의 판정은 같은 폴더까지만 본다(`findProblems`)."""
-    def isTarget(path: str) -> bool:
-        return path.startswith("Source/") and path.endswith((".h", ".cpp", ".inl")) and "Tests" not in path.split("/") and not path.endswith(".generated.h")
-
-    setFolder = {path.rpartition("/")[0] for path in (*scope.listFile, *scope.listRemoved) if isTarget(path)}
-    mapHeader: dict[str, str] = {}
-    mapSource: dict[str, str] = {}
-    for relative, text in readSourceTexts(projectRoot, [path for path in listRepoFiles(projectRoot) if isTarget(path) and path.rpartition("/")[0] in setFolder]):
-        if relative.endswith(".h"):
-            if "PROPERTY" in text:
-                mapHeader[relative] = text
-        else:
-            mapSource[relative] = text
-    return mapHeader, mapSource
+def findProblems(mapHeader: dict[str, str], mapSource: dict[str, str], config: dict, bWholeRepo: bool = True) -> list[str]:
+    """mapHeader · mapSource: 경로 → 글(`.cpp` 는 헤더와 같은 폴더의 것만 본다) — 자체 검사의 입구."""
+    mapText = {**mapHeader, **mapSource}
+    return judgeFacts({path: extractFacts(path, mapText[path], config) for path in sorted(mapText)}, config, bWholeRepo)
 
 
 def checkRequiredNameFields(projectRoot: Path, scope: LintScope) -> list[str]:
+    """
+    scope 의 파일이 있던 폴더(지운 파일 포함 — .cpp 를 지우면 헤더 칸의 생성자 초기값이 사라진다)의 헤더 · 본문을 본다. 파일마다의 사실(칸 · 생성자 초기값)은
+    내용 해시 색인(`FactCache`)에 두어, 스테이지 파일 하나에 그 폴더를 다시 읽지 않는다.
+    """
     config = json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))
-    mapHeader, mapSource = readTexts(projectRoot, scope)
-    return findProblems(mapHeader, mapSource, config, scope.bWholeRepo)
+    setFolder = {path.rpartition("/")[0] for path in (*scope.listFile, *scope.listRemoved) if isTarget(path)}
+    if not setFolder:
+        return []
+    listPath = [path for path in listRepoFiles(projectRoot) if isTarget(path)]
+    mapFact = loadFacts(projectRoot, "required-name-fields", [__file__, str(projectRoot / kConfigPath)], listPath,
+                        lambda path, text: extractFacts(path, text, config), errors="strict")
+    return judgeFacts({path: fact for path, fact in mapFact.items() if path.rpartition("/")[0] in setFolder}, config, scope.bWholeRepo)
 
 
 def runSelfCheck() -> None:

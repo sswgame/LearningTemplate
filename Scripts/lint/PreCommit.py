@@ -13,26 +13,33 @@ Scripts/lint/PreCommit.py
 커밋 훅은 저장소 크기에 비례하지 않는다: 규칙은 스테이지된 파일만 보고, 여러 파일을 보는 규칙은 내용 해시 색인(`FactCache`)을 바뀐 파일만
 다시 계산해 쓴다. 규칙의 표 · 예외 · 모듈(그 규칙만 쓰는 도우미 포함)이 스테이지에 있으면 그 규칙만 저장소 전체를 보고(`Rule.listOwnInputs`),
 여러 규칙이 함께 쓰는 도우미만 바뀌었으면 그것을 쓰는 규칙의 자체 검사를 돈다(`Rule.listInputs`). `--all` 은 모든 규칙의 자체 검사도 돈다.
+이 모양은 시간이 아니라 연 파일 수로 지킨다(`checkReadBound` — 린트 코드가 바뀐 커밋과 `--all` 이 돈다): 파일 하나를 스테이지하면 모든 규칙을 통틀어
+그 파일을 한 번만 연다. 규칙은 파일 글을 `LintScope.readText` · `readTexts` 나 `FactCache` 로만 얻는다.
 **통과한 것은 찍지 않는다.** 통과는 한 줄, 실패만 상세를 찍는다. 고치는 것은 `py -3 -m Scripts format` · `format-includes` 다.
 """
 
 from __future__ import annotations
 
+import builtins
 import contextlib
 import importlib
 import io
+import os
 import sys
+import tempfile
 from pathlib import Path
-from typing import Sequence
+from typing import Callable, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ProjectConstants import kCppAllExtensions, kLintTargetRelDirs, kNotOurDirNames, kShaderSourceExtensions  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
+from common.Git import runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from lint.Format import runClangFormatBatch  # noqa: E402
-from lint.LintScope import LintScope, makeStagedScope, makeWholeScope  # noqa: E402
+from lint.LintScope import LintScope, makeStagedScope, makeWholeScope, readBytesInternal  # noqa: E402
+from lint.ModuleImports import listImportedModuleFiles  # noqa: E402
 from lint.Rules import Rule, formatTable, kRuleById, kRules  # noqa: E402
 
 kCppSuffixes = tuple(sorted(kCppAllExtensions))
@@ -61,6 +68,104 @@ def selectRuleScope(rule: Rule, projectRoot: Path, scope: LintScope) -> LintScop
     if scope.bWholeRepo or not scope.touches(roots=rule.listOwnInputs()):
         return scope
     return makeWholeScope(projectRoot)
+
+
+#: 읽기 한도를 볼 스테이지 파일의 갈래(뿌리, 접미사) — 갈래마다 저장소의 첫 파일 하나를 스테이지된 것처럼 넘긴다.
+kProbeKinds = (("Source/Engine/", ".cpp"), ("Source/Engine/", ".h"), ("Source/Editor/", ".cpp"), ("Source/Editor/", ".h"),
+               ("Source/", "CMakeLists.txt"), ("Content/", ".xml"), ("Content/", ".hlsl"), ("Scripts/", ".py"))
+
+
+def listProbeFiles(projectRoot: Path) -> list[str]:
+    listRepo = makeWholeScope(projectRoot).listFile
+    return [next(path for path in listRepo if path.startswith(root) and path.endswith(suffix)) for root, suffix in kProbeKinds]
+
+
+def checkReadBound(projectRoot: Path) -> list[str]:
+    """
+    커밋 훅이 저장소 크기에 비례하지 않는다는 것을 형식으로 지킨다(시간을 재지 않는다): 파일 하나를 스테이지한 범위로 **모든 규칙을 차례로** 돌 때
+    연 파일이 그 파일 한 번뿐이어야 한다. 사실 캐시(`FactCache`)를 먼저 데우므로 캐시 미스는 0 이다 — 넘으면 어떤 규칙이 스테이지 밖 파일을 읽거나
+    (색인 없이 저장소 · 폴더 · 짝을 읽는다) 같은 파일을 따로 읽은 것이다(`LintScope.readBytes` 를 거치지 않았다).
+
+    세지 않는 것: 규칙의 표(`Config/Rules/`, `Rule.listTables`), 규칙 코드(Scripts 모듈 — 사실 캐시의 판), `Saved/`(캐시), `.git/`.
+    shortcut: `io.open` · `open` 만 센다 — git 으로 읽는 블롭(`git cat-file`)은 세지 않는다, 그런 규칙이 늘면 git 호출도 센다.
+    """
+    setCode = {path for rule in kRules for path in listImportedModuleFiles(rule.getModuleName())}
+    resolvedRoot = projectRoot.resolve()
+    listProbe = listProbeFiles(projectRoot)
+    for rule in kRules:
+        runRule(rule, projectRoot, LintScope(tuple(listProbe), (), False))   # 사실 캐시 데우기
+    listProblem: list[str] = []
+    originalOpen = io.open
+    for probe in listProbe:
+        readBytesInternal.cache_clear()
+        listOpened: list[tuple[str, str]] = []
+        current = [""]
+
+        def countingOpen(file, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003 — io.open 과 같은 인자
+            try:
+                relative = Path(file).resolve().relative_to(resolvedRoot).as_posix() if isinstance(file, (str, Path)) else ""
+            except ValueError:
+                relative = ""
+            if relative and relative not in setCode and not relative.startswith(("Config/Rules/", "Saved/", ".git/")):
+                listOpened.append((current[0], relative))
+            return originalOpen(file, *args, **kwargs)
+
+        io.open = builtins.open = countingOpen   # Path.read_text · read_bytes 는 io.open, 맨 open 은 builtins.open 을 부른다
+        try:
+            for rule in kRules:
+                current[0] = rule.id
+                runRule(rule, projectRoot, LintScope((probe,), (), False))
+        finally:
+            io.open = builtins.open = originalOpen
+        for index, (ruleID, relative) in enumerate(listOpened):
+            rule = kRuleById[ruleID]
+            if any(relative == table or relative.startswith(table.rstrip("/") + "/") for table in rule.listTables()):
+                continue
+            if relative != probe:
+                listProblem.append(f"{ruleID}: 스테이지 '{probe}' 하나에 스테이지 밖 '{relative}' 를 읽는다 — 여러 파일을 보는 판정은 `FactCache` 색인으로")
+            elif any(other == relative for _, other in listOpened[:index]):
+                listProblem.append(f"{ruleID}: 스테이지 '{probe}' 를 다른 규칙과 따로 다시 읽는다 — `LintScope.readText` · `readTexts` 로")
+    return listProblem
+
+
+def checkMergeScope() -> list[str]:
+    """병합 중 범위(`makeStagedScope`) — 임시 저장소에서 양쪽이 고친 파일 · 한쪽만 고친 파일 · 한쪽이 지운 파일 · 새 파일을 섞어 병합하고, 손으로 푼 충돌만 남는지 본다."""
+    def git(root: Path, *listArgument: str) -> None:
+        result = runGit(["-c", "user.name=lint", "-c", "user.email=lint@localhost", "-c", "core.autocrlf=false", *listArgument], cwd=root)
+        if result.returnCode != 0 and listArgument[0] != "merge":   # 충돌 난 병합은 0 이 아니다
+            raise RuntimeError(f"git {' '.join(listArgument)}: {result.stderr.strip()}")
+
+    # 커밋 훅 안에서는 git 이 GIT_DIR · GIT_INDEX_FILE 을 넘겨 준다 — 그대로 두면 임시 저장소의 git 이 이 저장소를 건드린다(core.bare 를 켰다).
+    mapSaved = {name: os.environ.pop(name) for name in list(os.environ) if name.startswith("GIT_")}
+    try:
+        return checkMergeScopeInternal(git)
+    finally:
+        os.environ.update(mapSaved)
+
+
+def checkMergeScopeInternal(git: Callable[..., None]) -> list[str]:
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        git(root, "init", "-q", "-b", "main")
+        for name in ("a", "b", "c"):
+            (root / f"{name}.txt").write_text(f"{name}\n", encoding="utf-8")
+        git(root, "add", ".")
+        git(root, "commit", "-qm", "base")
+        git(root, "checkout", "-qb", "side")
+        (root / "b.txt").write_text("b side\n", encoding="utf-8")
+        (root / "c.txt").write_text("c side\n", encoding="utf-8")
+        (root / "n.txt").write_text("n\n", encoding="utf-8")
+        git(root, "add", ".")
+        git(root, "commit", "-qm", "side")
+        git(root, "checkout", "-q", "main")
+        (root / "c.txt").write_text("c main\n", encoding="utf-8")
+        git(root, "rm", "-q", "a.txt")
+        git(root, "commit", "-qam", "main")
+        git(root, "merge", "-q", "side")
+        (root / "c.txt").write_text("c merged\n", encoding="utf-8")
+        git(root, "add", "c.txt")
+        scope = makeStagedScope(root)
+    return [] if (scope.listFile, scope.listRemoved) == (("c.txt",), ()) else [f"병합 범위가 손으로 푼 c.txt 하나가 아니다: {scope.listFile} · 지움 {scope.listRemoved}"]
 
 
 def runSelfCheck(rule: Rule) -> str | None:
@@ -99,7 +204,16 @@ def runLint(projectRoot: Path, scope: LintScope) -> int:
             for line in listProblem:
                 print(f"  - {line}")
 
-    listFormat = [projectRoot / path for path in selectFormatFiles(scope)]
+    # 린트 코드(규칙 · 도우미 · 이 파일)가 바뀌면 커밋 훅의 모양(스테이지 비례 읽기 · 병합 범위)을 다시 본다 — 시간을 재지 않고 연 파일을 센다.
+    if scope.bWholeRepo or scope.touches(roots=("Scripts/lint/", *sorted({path for rule in kRules for path in rule.listInputs() if path.startswith("Scripts/")}))):
+        listShape = checkReadBound(projectRoot) + checkMergeScope()
+        if listShape:
+            hasErrors = True
+            print(f"[lint-shape] FAIL — 커밋 훅이 스테이지 수에 비례하지 않는다 {len(listShape)}건")
+            for line in listShape:
+                print(f"  - {line}")
+
+    listFormat =[projectRoot / path for path in selectFormatFiles(scope)]
     if listFormat and runClangFormatBatch(listFormat, checkOnly=True, cwd=projectRoot) != 0:
         hasErrors = True
         print("[format] FAIL — 'py -3 -m Scripts format' 으로 고친 뒤 다시 git add 한다.")

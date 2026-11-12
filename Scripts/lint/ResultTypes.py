@@ -39,7 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.ExitCode import ExitCode  # noqa: E402
 from lint.CppShape import findParamListEnd, kBodyOpen, matchBrace, stripCode  # noqa: E402
 from lint.Format import getModifiedCppFiles  # noqa: E402
-from lint.LintScope import LintScope  # noqa: E402
+from lint.LintScope import LintScope, readText  # noqa: E402
 from lint.MagicLiterals import isSourceFile, listSourceFiles, readStagedRenames  # noqa: E402
 
 
@@ -100,7 +100,10 @@ def countText(text: str) -> dict[str, int]:
 def countFiles(projectRoot: Path, listFile: Iterable[Path]) -> dict[str, dict[str, int]]:
     result: dict[str, dict[str, int]] = {}
     for file in listFile:
-        counts = countText(file.read_text(encoding="utf-8", errors="ignore"))
+        text = readText(file, errors="ignore")
+        if text is None:
+            raise FileNotFoundError(file)   # scope 의 파일은 있다 — 예전 read_text 처럼 멈춘다
+        counts = countText(text)
         if counts:
             result[file.relative_to(projectRoot).as_posix()] = counts
     return result
