@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantSimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
@@ -151,7 +152,8 @@ namespace
                 outArchive << batch._count;
                 outArchive << batch._daysLeft;
             }
-            // 조리(`Crafter`): 배운 레시피 수, 작업 수
+            // 조리(`Crafter`): 머리표, 배운 레시피 수, 작업 수
+            sw::StateIO::writeHeader( outArchive, sw::Crafter::kStateTag, sw::Crafter::kStateVersion );
             outArchive << static_cast<uint32>( 0 );
             outArchive << static_cast<uint32>( 0 );
             market.writeState( outArchive );
