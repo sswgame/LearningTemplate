@@ -203,13 +203,6 @@
 - 제안: 스왑체인 생성 한 입구(DX11 · DX12 공용 헬퍼)에서 창 연결을 끈다. 전체 화면은 테두리 없는 창 하나로만 제공한다. P0-15 와 같은 묶음이다(Alt 처리).
 - 확인: DX11 · DX12, vsync 끔 상태에서 Alt+Enter → `D3D12.PresentFailedHr…` 로그 여부.
 
-#### R-2 장치 분실이 RHI 밖으로 나가지 않는다 — 잃은 뒤에도 조용히 계속 돈다
-- 분류: 구조 · 확신: 확인
-- 근거: `isDeviceLost` 는 백엔드 비공개 멤버뿐이고(`D3D12RHIDevice.h:757`, `D3D11RHIDevice.h:172`) `IRHIDevice.h` 에 분실 질의 · 통보가 없다. `Engine` · `Renderer` 어디도 분실을 보지 않는다. `D3D12RHIDevice.cpp:1838` 주석이 "디바이스 제거는 자동 복구가 없어서 … 매 프레임 여기로 들어온다" 고 적는다. 게임 루프는 검은 화면으로 계속 돈다. `RHI::recreateDevice` 는 있지만 분실과 이어져 있지 않다.
-- 상용 엔진: 언리얼은 `GetDeviceRemovedReason` → DRED 덤프 → 크래시 리포트 후 종료한다. 유니티는 DX11 분실 시 자원을 다시 만든다. Godot 4 는 치명 오류로 종료한다.
-- 제안: `IRHIDevice` 에 분실 상태 한 입구를 두고 `EngineRenderDriver` 가 Config 정책 값으로 "브레드크럼 보고 뒤 종료" 또는 "`recreateDevice` 로 다시 세움" 을 고른다(값이 없으면 오류). 백엔드 넷의 플래그는 `RHITransferSerials::isLost` 하나로 모은다.
-- 확인: 개발 명령 `rhi.removeDevice` 로 시나리오 — 분실 뒤 N 프레임 안에 종료 코드(또는 재생성 후 골든 일치).
-
 #### R-3 정적 메시 버퍼가 CPU 가시 메모리에 산다 (DX12 UPLOAD 힙 · Vulkan HOST_VISIBLE)
 - 분류: 성능 · 구조 · 확신: 확인(비용 크기는 측정 필요)
 - 근거: `Source/Engine/Graphics/RHI/DX/DX12/D3D12RHIResourceFactory.cpp:726-729 · 765-786` — `createVertexBuffer` · `createIndexBuffer` 가 `D3D12_HEAP_TYPE_UPLOAD` 다. Vulkan 은 `Source/Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.cpp:695` 에서 모든 버퍼(정점 · 인덱스 · 구조 · 간접 인자 · 상수)를 `HOST_VISIBLE | HOST_COHERENT` 의 첫 일치 형식으로 잡는다. 외장 GPU 에서 정점 페치 · 컴퓨트 스토리지 버퍼까지 시스템 RAM 힙이 된다. `findMemoryType`(`:601`)은 부를 때마다 `vkGetPhysicalDeviceMemoryProperties` 를 다시 묻는다.
@@ -535,13 +528,6 @@
 - 제안: 꺼낸 것을 `InventorySlot` 묶음으로 받아 그대로 돌려주는 거래 형식(`InventoryTransaction`: take → commit/rollback). `Equipment::equipFromInventory` 가 이미 사본 복원을 쓴다.
 - 확인: 단위 `CraftingTest.CancelReturnsWornInputWithSameDurability`.
 
-#### G-7 세이브 봉투에 씬(레벨) 정체가 없다
-- 분류: 구조 · 확신: 봉투 칸은 확인, 영향은 추정
-- 근거: `Source/GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.cpp:108-155` — 봉투는 매직 · 판 · 프로세스 토큰 · 콘텐츠 구성 글 · 오브젝트 · 상태뿐이다. 복원(`:301-306`)은 "지금 활성 씬" 을 비우고 채운다. 타이틀 씬이나 다른 맵에서 `restoreLatest` 를 부르면 그 씬 위에 다른 맵의 오브젝트가 선다.
-- 상용 엔진: 언리얼 게임은 세이브에 맵 이름을 적고 `OpenLevel` 뒤 적용한다(월드 파티션은 액터 GUID 로 셀별 상태).
-- 제안: 봉투 머리에 씬 자산 id(GUID 단계가 들어오면 그것)를 적고 복원은 "씬 요청 → 로드 완료 → 적용" 을 `GameSceneFlow` 가 한 흐름으로 한다(두 단계 복원 — 검증 뒤 교체 — 위에 짓는다).
-- 확인: 시나리오 — 맵 A 에서 저장 → 타이틀에서 `game.load` → 활성 씬 경로와 오브젝트 수.
-
 ### 장르 키트 · 게임 샘플
 
 #### K-3 복셀 세이브가 블록 id 가 아니라 카탈로그 순서 번호(uint8)를 적는다
@@ -747,7 +733,7 @@
 1. **에디터 되돌리기 구조** — 문서마다 스택(미리보기 없는 문서 패널): E-3, 함께 닫히는 E-2 · E-9 · E-13. 상호작용 구간(`DocumentEditSpan`)과 문서 스택의 답(`getDocumentCommandStack`)은 들어갔다. `editor/undocoverage` 에 문서 패널 전수 단계(E-16)를 먼저 더해 지는 것을 본다.
 2. **복구 입구** — 복구 입구 통일과 새 씬 · 문서 패널의 자동 저장: E-1(세션 폴더 · pid 잠금 · 리로드 이어 쓰기 P0-3 은 들어갔다).
 3. **에셋 옮김 방송** — `applyAssetMoves` 의 (옛 id → 새 id) 알림과 열린 문서 · 씬 · 선택 갱신, dirty 참조자 거절: P0-4. 참조 쪽은 integ2 의 GUID 2 · 3 단계와 순서를 맞춘다.
-4. **세이브 씬 전환 뒤 적용** — 봉투 머리의 씬으로 옮긴 뒤 적용(`GameSceneFlow`), 교체에서 진 복원 뒤 씬 다시 열기: G-7 · P0-6 의 남은 몫.
+4. **자동 저장 되돌리기의 씬 이동** — `restoreLatest` · `restoreCheckpoint` 도 찍은 씬으로 옮긴 뒤 적용(불러오기 델리게이트 비동기화). 슬롯 불러오기는 들어갔다(G-7 · P0-6).
 5. **읽은 것을 커밋 조건으로** — 일 안에서 읽은 것을 커밋 조건으로 자동으로 붙이는 연결 포장과 Admin · Mailbox · Guild 저장 로직 점검(경제 키트의 지급 · 환불 · 철회는 영수증 레코드 하나로 묶였다 — O-1).
 6. **웹 오디오 백엔드** — AudioWorklet + 링 버퍼: P0-11.
 
