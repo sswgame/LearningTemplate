@@ -161,6 +161,7 @@ namespace sw
         // IPhysicsScene3D
         void                                 step( float32 fixedDeltaTime ) override;
         const vector<PhysicsContactEvent3D>& getContactEvents() const override { return _listContactEvent; }
+        void                                 setContactStayListener( uint64 userData, bool bListen ) override { _contactTracker.setStayListener( userData, bListen ); }
         void                                 setGravity( const float3& gravity ) override;
         float3                               getGravity() const override;
         void                                 setLayerCollision( const CollisionLayers& layers ) override;
