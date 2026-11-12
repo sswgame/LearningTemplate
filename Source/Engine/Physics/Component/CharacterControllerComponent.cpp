@@ -286,11 +286,18 @@ namespace sw
             releasePhysics( physics ); // 배율 0 — 캡슐을 지을 수 없다(`readWorldPose` 가 알렸다). 배율이 돌아오면 다시 만든다
             return;
         }
-        // 캡슐은 지을 때 배율을 굽는다 — 배율이 바뀌면 지금 자리에서 다시 짓고 세로 속도 · 이동 상태는 잇는다(강체 `rebuildScaledBody` 와 같다).
-        const bool bRescale = bCreate == false && isShapeScaleStale( _worldScale );
-        if ( bRescale )
-            releasePhysics( physics );
-        if ( bCreate || bRescale )
+        // 캡슐은 지을 때 배율을 굽는다 — 배율이 바뀌면 캐릭터는 두고 크기만 간다(속 바디의 접촉 · 세로 속도가 이어진다 — 강체 `applyScaledShape` 와 같다, 감사 S-4).
+        if ( bCreate == false && isShapeScaleStale( _worldScale ) )
+        {
+            const PhysicsShapeDesc3D capsule = getScaledCapsule();
+            if ( pScene->setCharacterSize( _character, capsule._radius, capsule._halfHeight ) == false )
+            {
+                releasePhysics( physics );
+                return;
+            }
+            markShapeScale( _worldScale );
+        }
+        if ( bCreate )
         {
             const PhysicsShapeDesc3D capsule = getScaledCapsule();
             PhysicsCharacterDesc3D   desc;
@@ -305,11 +312,8 @@ namespace sw
             desc._bInnerBody    = _bInnerBody;
             _character          = pScene->createCharacter( desc );
             markShapeScale( _worldScale );
-            if ( bCreate )
-            {
-                _state         = PhysicsCharacterState3D{};
-                _verticalSpeed = 0.0f;
-            }
+            _state            = PhysicsCharacterState3D{};
+            _verticalSpeed    = 0.0f;
             _state._position  = position;
             _previousPosition = position;
             return;

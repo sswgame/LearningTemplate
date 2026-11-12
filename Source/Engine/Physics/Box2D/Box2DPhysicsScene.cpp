@@ -1334,6 +1334,25 @@ namespace sw
         return PhysicsCharacterHandle::fromSlot( _characters.insert( std::move( record ) ) );
     }
 
+    bool Box2DPhysicsScene::setCharacterSize( PhysicsCharacterHandle character, float32 radius, float32 halfHeight )
+    {
+        CharacterRecord* pRecord = _characters.get( character.getSlot() );
+        if ( pRecord == nullptr )
+        {
+            SW_LOG_ERROR_ID( "Box2DPhysicsScene.SetCharacterSizeStaleCharacter", "setCharacterSize: the character handle is stale" );
+            return false;
+        }
+        if ( radius <= 0.0f || halfHeight < 0.0f )
+        {
+            SW_LOG_ERROR_ID( "Box2DPhysicsScene.SetCharacterSizeInvalid", "setCharacterSize: radius %# and half height %# do not make a capsule", radius, halfHeight );
+            return false;
+        }
+        // 무버는 바디가 없다 — 이동마다 캡슐을 서술자로 새로 만들므로(`makeMoverCapsule`) 서술자만 고치면 다음 이동부터 새 크기다.
+        pRecord->_desc._radius     = radius;
+        pRecord->_desc._halfHeight = halfHeight;
+        return true;
+    }
+
     void Box2DPhysicsScene::destroyCharacter( PhysicsCharacterHandle character )
     {
         _characters.erase( character.getSlot() );

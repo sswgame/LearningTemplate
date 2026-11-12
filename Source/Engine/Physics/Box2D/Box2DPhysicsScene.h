@@ -107,6 +107,7 @@ namespace sw
         void                    destroyCharacter( PhysicsCharacterHandle character ) override;
         PhysicsCharacterState2D moveCharacter( PhysicsCharacterHandle character, const float2& velocity, float32 deltaTime ) override;
         void                    setCharacterPosition( PhysicsCharacterHandle character, const float2& position ) override;
+        bool                    setCharacterSize( PhysicsCharacterHandle character, float32 radius, float32 halfHeight ) override;
         bool                    getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState2D& outState ) const override;
 
         bool   raycast( const float2& origin, const float2& direction, float32 maxDistance, const PhysicsQueryFilter& filter, PhysicsCastHit2D& outHit ) const override;

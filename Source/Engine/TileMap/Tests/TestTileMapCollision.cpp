@@ -1,4 +1,4 @@
-// TileMapCollisionTest — 타일맵 충돌(감사 P0-14): 청크마다 정적 바디 하나, 칠한 칸의 청크만 다시 만들기, 오너 변환 따라가기. 디바이스 없음(nogpu).
+// TileMapCollisionTest — 타일맵 충돌(감사 P0-14 · S-4): 청크마다 정적 바디 하나, 칠한 칸 · 배율은 그 바디의 셰이프만 고치기, 오너 변환 따라가기. 디바이스 없음(nogpu).
 // 유니티 TilemapCollider2D(바뀐 타일만 늦게 반영) · Godot TileMapLayer(사분면 바디가 노드 변환을 따른다)와 같은 계약을 본다.
 #include "pch.h"
 
@@ -149,8 +149,8 @@ SW_TEST_CASE( TileMapCollisionTest, BodiesFollowOwnerTransform )
 }
 
 /**
- * @brief [TileMapCollisionTest] 칸 하나를 칠하면 그 청크의 바디만 다음 틱에 한 번 다시 만들고, 다른 청크의 바디는 핸들까지 그대로다
- * @details 맵 64 × 1(청크 32 칸 둘) 벽 한 줄. 청크 0 의 칸 둘을 같은 프레임에 지우면 청크 0 만 새 핸들이고 병합 사각형은 셋이다.
+ * @brief [TileMapCollisionTest] 칸 하나를 칠하면 그 청크의 셰이프만 다음 틱에 한 번 고치고, 바디는 핸들까지 그대로다(셰이프만 간다 — 감사 S-4)
+ * @details 맵 64 × 1(청크 32 칸 둘) 벽 한 줄. 청크 0 의 칸 둘을 같은 프레임에 지우면 청크 0 의 셰이프만 바뀌고 병합 사각형은 셋이다.
  */
 SW_TEST_CASE( TileMapCollisionTest, SetTileRebuildsOnlyItsChunk )
 {
@@ -169,9 +169,8 @@ SW_TEST_CASE( TileMapCollisionTest, SetTileRebuildsOnlyItsChunk )
     rig.update( 1 );
 
     const PhysicsBodyHandle newChunk0 = rig._pTiles->getChunkBodies()[0];
-    SW_EXPECT_TRUE( newChunk0 != oldChunk0 );
+    SW_EXPECT_TRUE( newChunk0 == oldChunk0 ); // 다시 만들지 않고 셰이프만 갈았다
     SW_EXPECT_TRUE( rig._pScene->isBodyValid( newChunk0 ) );
-    SW_EXPECT_FALSE( rig._pScene->isBodyValid( oldChunk0 ) );
     SW_EXPECT_TRUE( oldChunk1 == rig._pTiles->getChunkBodies()[1] );
     SW_EXPECT_TRUE( rig._pScene->isBodyValid( oldChunk1 ) );
     SW_EXPECT_EQUAL( bodyCount, rig._pScene->getBodyCount() );
@@ -231,8 +230,57 @@ SW_TEST_CASE( TileMapCollisionTest, SetTileKeepsUnrelatedContacts )
             stayCount += event._phase == PhysicsContactPhase::Stay ? 1u : 0u;
         }
     }
-    SW_EXPECT_TRUE( rig._pTiles->getChunkBodies()[0] != chunk0 ); // 칠한 청크는 다시 만들었다
+    SW_EXPECT_TRUE( rig._pTiles->getChunkBodies()[0] == chunk0 ); // 칠한 청크도 셰이프만 갈았다
     SW_EXPECT_TRUE( rig._pTiles->getChunkBodies()[1] == chunk1 );
     SW_EXPECT_FALSE( bFalseEdge );
     SW_EXPECT_TRUE( stayCount > 0 );
+}
+
+/**
+ * @brief [TileMapCollisionTest] 오너 배율을 바꾸면 청크 바디는 그대로 셰이프만 새 배율을 따르고, 맵 위에 놓인 상자의 접촉은 끝 → 시작을 내지 않는다(감사 S-4)
+ * @details 맵 8 × 1 벽 한 줄(윗면 y = 0). 상자를 위에 얹어 유지가 나올 때까지 돌린 뒤 가로만 2 배로 키운다 — 윗면 높이는 그대로다.
+ */
+SW_TEST_CASE( TileMapCollisionTest, RescaleKeepsBodiesAndContacts )
+{
+    using Internal = TestTileMapCollisionInternal;
+    Internal::Rig rig( 8, 1, { 0 } );
+    SW_REQUIRE_NOT_NULL( rig._pScene );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, rig._pTiles->getChunkBodies().size() );
+    const PhysicsBodyHandle chunk = rig._pTiles->getChunkBodies()[0];
+
+    PhysicsBodyDesc2D crateDesc;
+    crateDesc._type     = PhysicsBodyType::Dynamic;
+    crateDesc._position = rig.toWorld( 2.5f, 0.45f );
+    crateDesc._userData = 0xC0A7Eull;
+    rig._pScene->setContactStayListener( crateDesc._userData, true );
+    PhysicsShapeDesc2D crateShape;
+    crateShape._type        = PhysicsShapeType2D::Box;
+    crateShape._halfExtents = float2{ 0.4f, 0.4f };
+    crateDesc._listShape.push_back( crateShape );
+    const PhysicsBodyHandle crate = rig._pScene->createBody( crateDesc );
+    SW_REQUIRE_TRUE( rig._pScene->isBodyValid( crate ) );
+    bool bResting = false;
+    for ( uint32 frame = 0; frame < 120 && bResting == false; ++frame )
+    {
+        rig.update( 1 );
+        for ( const PhysicsContactEvent2D& event : rig._manager.getSubsystem<ScenePhysics>().getFrameEvents2D() )
+        {
+            bResting = bResting || ( Internal::isBetween( event, crate, chunk ) && event._phase == PhysicsContactPhase::Stay );
+        }
+    }
+    SW_REQUIRE_TRUE( bResting );
+
+    rig._pRoot->setLocalScale( float3{ 2.0f, 1.0f, 1.0f } );
+    bool bFalseEdge = false;
+    for ( uint32 frame = 0; frame < 3; ++frame )
+    {
+        rig.update( 1 );
+        for ( const PhysicsContactEvent2D& event : rig._manager.getSubsystem<ScenePhysics>().getFrameEvents2D() )
+        {
+            bFalseEdge = bFalseEdge || ( Internal::isBetween( event, crate, chunk ) && event._phase != PhysicsContactPhase::Stay );
+        }
+    }
+    SW_EXPECT_TRUE( chunk == rig._pTiles->getChunkBodies()[0] );
+    SW_EXPECT_FALSE( bFalseEdge );
+    SW_EXPECT_TRUE( Internal::contains( rig.overlapAt( rig.toWorld( 7.5f, -0.5f ) ), chunk ) ); // 새 배율의 끝 칸(월드 x = 15)
 }

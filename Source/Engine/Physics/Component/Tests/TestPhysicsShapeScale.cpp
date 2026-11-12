@@ -11,6 +11,8 @@
 #include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
+#include "Engine/Physics/Component/CharacterController2DComponent.h"
+#include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
@@ -311,4 +313,34 @@ SW_TEST_CASE( PhysicsShapeScaleTest, ZeroScaleSkipsBody )
     pCrate->setLocalScale( float3{ 0.0f, 1.0f, 1.0f } ); // 시뮬레이션 중에 0 — 바디를 놓는다
     manager.update( Internal::kFrame );
     SW_EXPECT_FALSE( pCrate->getBodyHandle().isValid() );
+}
+
+/**
+ * @brief [PhysicsShapeScaleTest] 시작한 캐릭터 컨트롤러(2D · 3D)의 배율을 바꿔도 캐릭터를 다시 만들지 않는다(핸들 그대로 — `setCharacterSize`, 감사 S-4)
+ * @details 다시 만들면 3D 속 바디의 접촉 쌍마다 끝 → 시작이 났다. 크기만 가면 캐릭터 · 속 바디 핸들이 그대로다.
+ */
+SW_TEST_CASE( PhysicsShapeScaleTest, CharacterRescaleKeepsCharacter )
+{
+    using Internal = TestPhysicsShapeScaleInternal;
+    GameObjectManager manager;
+    GameObject*       pWalker   = manager.createGameObject( hashed_string( "Walker" ) );
+    GameObject*       pWalker2D = manager.createGameObject( hashed_string( "Walker2D" ) );
+    SW_REQUIRE_NOT_NULL( pWalker );
+    SW_REQUIRE_NOT_NULL( pWalker2D );
+    CharacterControllerComponent*   pCharacter   = pWalker->addComponent<CharacterControllerComponent>();
+    CharacterController2DComponent* pCharacter2D = pWalker2D->addComponent<CharacterController2DComponent>();
+    SW_REQUIRE_NOT_NULL( pCharacter );
+    SW_REQUIRE_NOT_NULL( pCharacter2D );
+    manager.beginPlay();
+    manager.update( Internal::kFrame );
+    const PhysicsCharacterHandle character   = pCharacter->getCharacterHandle();
+    const PhysicsCharacterHandle character2D = pCharacter2D->getCharacterHandle();
+    SW_REQUIRE_TRUE( character.isValid() );
+    SW_REQUIRE_TRUE( character2D.isValid() );
+
+    pCharacter->setLocalScale( float3{ 2.0f, 2.0f, 2.0f } );
+    pCharacter2D->setLocalScale( float3{ 2.0f, 2.0f, 1.0f } );
+    manager.update( Internal::kFrame );
+    SW_EXPECT_TRUE( character == pCharacter->getCharacterHandle() );
+    SW_EXPECT_TRUE( character2D == pCharacter2D->getCharacterHandle() );
 }

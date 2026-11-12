@@ -118,11 +118,18 @@ namespace sw
             return;
         }
         const float2 position{ _worldPosition._x, _worldPosition._y };
-        // 캡슐은 지을 때 배율을 굽는다 — 배율이 바뀌면 지금 자리에서 다시 짓고 세로 속도 · 이동 상태는 잇는다.
-        const bool bRescale = bCreate == false && isShapeScaleStale( _worldScale );
-        if ( bRescale )
-            releasePhysics( physics );
-        if ( bCreate || bRescale )
+        // 캡슐은 지을 때 배율을 굽는다 — 배율이 바뀌면 캐릭터는 두고 크기만 간다(이동 상태 · 세로 속도가 이어진다 — 3D 컨트롤러와 같다).
+        if ( bCreate == false && isShapeScaleStale( _worldScale ) )
+        {
+            const PhysicsShapeDesc2D capsule = getScaledCapsule();
+            if ( pScene->setCharacterSize( _character, capsule._radius, capsule._halfHeight ) == false )
+            {
+                releasePhysics( physics );
+                return;
+            }
+            markShapeScale( _worldScale );
+        }
+        if ( bCreate )
         {
             const PhysicsShapeDesc2D capsule = getScaledCapsule();
             PhysicsCharacterDesc2D   desc;
@@ -134,11 +141,8 @@ namespace sw
             desc._layer         = physics.resolveLayer( _layer );
             _character          = pScene->createCharacter( desc );
             markShapeScale( _worldScale );
-            if ( bCreate )
-            {
-                _state         = PhysicsCharacterState2D{};
-                _verticalSpeed = 0.0f;
-            }
+            _state            = PhysicsCharacterState2D{};
+            _verticalSpeed    = 0.0f;
             _state._position  = position;
             _previousPosition = position;
             return;
