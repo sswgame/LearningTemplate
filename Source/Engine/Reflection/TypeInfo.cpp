@@ -202,24 +202,16 @@ namespace sw
         }
 
         // 사슬을 모아 기반부터 단계마다 **자기 선언 목록**을 접는다. 같은 타입이 사슬에 두 번 나오면 순환이다 — 자기 것만 둔다.
-        const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
-        const uint32    chainLength = collectTypeChain( arrChain );
-        bool            bLoop       = false;
-        for ( uint32 outer = 0; outer < chainLength && bLoop == false; ++outer )
-        {
-            for ( uint32 inner = outer + 1; inner < chainLength && bLoop == false; ++inner )
-            {
-                bLoop = arrChain[outer] == arrChain[inner];
-            }
-        }
+        const TypeChain chain = getTypeChain();
+        const bool      bLoop = chain.isLoop();
         if ( bLoop )
             SW_LOG_ERROR_ID( "Reflection.ParentChainLoop", "Reflection parent chain loops at '%#' - returning own properties only.", _fullyQualifiedName.c_str() );
-        const uint32 depth = bLoop ? 1 : chainLength;
+        const uint32 depth = bLoop ? 1 : chain.size();
 
         unordered_map<hashed_string, uint32> mapNameToIndex;
         for ( uint32 level = depth; level > 0; --level )
         {
-            for ( const PropertyInfo& prop : arrChain[level - 1]->_listProperty )
+            for ( const PropertyInfo& prop : chain[level - 1]->_listProperty )
             {
                 const auto [iter, bInserted] = mapNameToIndex.emplace( prop._name, static_cast<uint32>( _listPropertyWithBase.size() ) );
                 if ( bInserted )
@@ -419,8 +411,7 @@ namespace sw
         // **순환에서 멈춘다.** 걸음 수를 세는 것이 방문 목록보다 싸고(할당 없음), 체인은 보통 다섯을
         // 넘지 않는다. 부모가 미등록이어도 `_parentFQN` 이 같으면 파생으로 본다. 모듈이 아직 로드되지
         // 않은 동안 이름으로 묻는 쪽(직렬화)이 그것에 기댄다.
-        const TypeInfo* pCurrent = this;
-        for ( uint32 depth = 0; depth < constant::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
+        for ( const TypeInfo* pCurrent : getTypeChain() )
         {
             if ( pCurrent->_fullyQualifiedName == targetFqn || pCurrent->_name == targetFqn )
                 return true;
@@ -428,7 +419,6 @@ namespace sw
                 return false;
             if ( pCurrent->_parentFQN == targetFqn )
                 return true;
-            pCurrent = pCurrent->getParentType();
         }
         return false;
     }
@@ -459,12 +449,10 @@ namespace sw
         }
 
         // 테이블이 없는 쪽(이름 없음, 순환, 테이블보다 깊은 체인)은 부모 포인터를 따라간다.
-        const TypeInfo* pCurrent = this;
-        for ( uint32 depth = 0; depth < constant::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
+        for ( const TypeInfo* pCurrent : getTypeChain() )
         {
             if ( pCurrent == pTarget || TypeInfoInternal::isSameTypeName( *pCurrent, *pTarget ) )
                 return true;
-            pCurrent = pCurrent->getParentType();
         }
         return false;
     }
@@ -496,19 +484,20 @@ namespace sw
         // 부모가 나중에 등록되면 registerClass 가 테이블을 모두 비우므로 그때 다시 이어진다.
         uint32          arrChain[kDepth];
         uint32          chainCount = 0;
-        const TypeInfo* pCurrent   = this;
-        while ( pCurrent != nullptr )
+        const TypeChain chain      = getTypeChain();
+        // 고리 · 상한에서 끝난 사슬은 표를 만들지 않는다(예전에는 고리가 표 깊이에서 걸렸다 — 같은 결과다).
+        bool bTableable = chain.isLoop() == false && chain._bCapped == SW_FALSE;
+        for ( uint32 level = 0; level < chain.size() && bTableable; ++level )
         {
-            const uint32 nameIndex = TypeInfoInternal::canonicalNameIndex( *pCurrent );
-            if ( chainCount == kDepth || nameIndex == kNone )
-            {
-                _castHeader._ancestorDepth.store( constant::reflection::kAncestorDepthNone, std::memory_order_release );
-                return false;
-            }
-            arrChain[chainCount++] = nameIndex;
-            if ( pCurrent->_parentFQN.empty() )
-                break;
-            pCurrent = pCurrent->getParentType();
+            const uint32 nameIndex = TypeInfoInternal::canonicalNameIndex( *chain[level] );
+            bTableable             = chainCount < kDepth && nameIndex != kNone;
+            if ( bTableable )
+                arrChain[chainCount++] = nameIndex;
+        }
+        if ( bTableable == false )
+        {
+            _castHeader._ancestorDepth.store( constant::reflection::kAncestorDepthNone, std::memory_order_release );
+            return false;
         }
 
         // 루트가 0 번 슬롯이 되도록 뒤집어 적고, 깊이는 마지막에 publish 한다. 깊이를 본 쪽은 슬롯이 다 채워진 뒤에 보게 된다.
@@ -520,27 +509,37 @@ namespace sw
         return true;
     }
 
-    uint32 TypeInfo::collectTypeChain( const TypeInfo* ( &outArrType )[constant::reflection::kMaxParentChainDepth] ) const
+    TypeChain TypeInfo::getTypeChain() const
     {
-        uint32          depth    = 0;
+        // 부모 사슬을 손으로 따라가는 유일한 자리다. 고리 · 상한을 여기서만 막는다.
+        TypeChain       chain;
         const TypeInfo* pCurrent = this;
-        while ( pCurrent != nullptr && depth < constant::reflection::kMaxParentChainDepth )
+        while ( pCurrent != nullptr )
         {
-            outArrType[depth++] = pCurrent;
+            for ( uint32 seen = 0; seen < chain._count && chain._bLoop == SW_FALSE; ++seen )
+            {
+                chain._bLoop = chain._arrType[seen] == pCurrent ? SW_TRUE : SW_FALSE;
+            }
+            if ( chain._bLoop != SW_FALSE )
+                break;
+            if ( chain._count == constant::reflection::kMaxParentChainDepth )
+            {
+                chain._bCapped = SW_TRUE;
+                break;
+            }
+            chain._arrType[chain._count++] = pCurrent;
             if ( pCurrent->_parentFQN.empty() )
                 break;
             pCurrent = pCurrent->getParentType();
         }
-        return depth;
+        return chain;
     }
 
     const EventInfo* TypeInfo::findEventInHierarchy( const hashed_string& eventName ) const
     {
-        const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
-        const uint32    depth = collectTypeChain( arrChain );
-        for ( uint32 level = 0; level < depth; ++level )
+        for ( const TypeInfo* pLevel : getTypeChain() )
         {
-            const EventInfo* pEvent = arrChain[level]->findEvent( eventName );
+            const EventInfo* pEvent = pLevel->findEvent( eventName );
             if ( pEvent != nullptr )
                 return pEvent;
         }
@@ -549,11 +548,9 @@ namespace sw
 
     const FunctionInfo* TypeInfo::findMethodInHierarchy( const hashed_string& methodName ) const
     {
-        const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
-        const uint32    depth = collectTypeChain( arrChain );
-        for ( uint32 level = 0; level < depth; ++level )
+        for ( const TypeInfo* pLevel : getTypeChain() )
         {
-            const FunctionInfo* pMethod = arrChain[level]->findMethod( methodName );
+            const FunctionInfo* pMethod = pLevel->findMethod( methodName );
             if ( pMethod != nullptr )
                 return pMethod;
         }

@@ -507,7 +507,7 @@ namespace sw
             }
             // 지운 필드 이름(`REFLECT( RemovedField = … )`, 사슬의 모든 타입)은 옛 세이브에 그 해시로 남아 있다. 지금 이름 · 옛 이름이 그 이름을 다시 쓰거나 해시가 같으면
             // 옛 값이 새 필드로 읽힌다 — 같은 철자도 충돌이다(언리얼 CoreRedirects 의 지운 프로퍼티와 같은 자리). 형식 판을 올리지 않고 이 틈을 닫는다.
-            for ( const TypeInfo* pDeclaring = pType; pDeclaring != nullptr && clash.empty(); pDeclaring = pDeclaring->getParentType() )
+            for ( const TypeInfo* pDeclaring : pType->getTypeChain() )
             {
                 for ( const hashed_string& removed : pDeclaring->_listRemovedField )
                 {

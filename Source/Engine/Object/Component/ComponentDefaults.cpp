@@ -55,43 +55,12 @@ namespace sw
              */
             static void collectTypeChain( const TypeInfo& typeInfo, vector<const TypeInfo*>& outListType )
             {
+                // 사슬 걷기(고리 · 상한)는 `TypeInfo::getTypeChain` 한 곳이다. 루트 → 파생 순서로 뒤집어 담는다.
                 outListType.clear();
-
-                const TypeInfo* pCursor = &typeInfo;
-                while ( pCursor != nullptr )
+                const TypeChain chain = typeInfo.getTypeChain();
+                for ( uint32 level = chain.size(); level > 0; --level )
                 {
-                    outListType.push_back( pCursor );
-
-                    const hashed_string parentName = pCursor->_parentFQN;
-                    if ( parentName.empty() )
-                        break;
-
-                    const TypeInfo* pParent = engine::getSubsystem<TypeRegistry>().findType( parentName );
-                    if ( pParent == nullptr || pParent == pCursor )
-                        break;
-
-                    // 순환 방지. 이미 담은 타입이면 멈춘다.
-                    bool bAlready = false;
-                    for ( const TypeInfo* pCollected : outListType )
-                    {
-                        if ( pCollected == pParent )
-                        {
-                            bAlready = true;
-                            break;
-                        }
-                    }
-                    if ( bAlready )
-                        break;
-
-                    pCursor = pParent;
-                }
-
-                // 루트 → 파생 순서로 뒤집는다.
-                for ( size_t head = 0, tail = outListType.size(); head + 1 < tail; ++head, --tail )
-                {
-                    const TypeInfo* pTemp = outListType[head];
-                    outListType[head]     = outListType[tail - 1];
-                    outListType[tail - 1] = pTemp;
+                    outListType.push_back( chain[level - 1] );
                 }
             }
 

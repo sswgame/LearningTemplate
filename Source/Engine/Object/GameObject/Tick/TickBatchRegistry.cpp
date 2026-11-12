@@ -42,7 +42,7 @@ namespace sw
         ScopedLock<mutex>     lock{ _mutex };
         const vector<Entry*>& listEntry = _listEntry.getItems();
         // 정확한 타입의 줄이 함수와 레인을, 없으면 가장 가까운 조상의 줄이 레인만 준다.
-        for ( const TypeInfo* pCursor = pType; pCursor != nullptr; pCursor = pCursor->getParentType() )
+        for ( const TypeInfo* pCursor : pType != nullptr ? pType->getTypeChain() : TypeChain{} )
         {
             for ( size_t index = listEntry.size(); index > 0; --index )
             {

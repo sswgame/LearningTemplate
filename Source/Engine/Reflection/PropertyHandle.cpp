@@ -14,11 +14,9 @@ namespace sw
 {
     PropertyHandle PropertyHandle::of( const TypeInfo& type, const PropertyInfo& property )
     {
-        const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
-        const uint32    chainLength = type.collectTypeChain( arrChain );
-        for ( uint32 level = 0; level < chainLength; ++level )
+        for ( const TypeInfo* pLevel : type.getTypeChain() )
         {
-            const TypeInfo&             declaring = *arrChain[level];
+            const TypeInfo&             declaring = *pLevel;
             const vector<PropertyInfo>& list      = declaring._listProperty;
             if ( list.empty() == false && &property >= list.data() && &property < list.data() + list.size() )
                 return PropertyHandle{ &declaring, static_cast<uint32>( &property - list.data() ), declaring._contentGeneration };
