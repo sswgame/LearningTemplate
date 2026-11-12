@@ -15,6 +15,14 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<EditorWaitSettled/>
+	<!-- 씬 뷰가 부모를 비추게 한다(부모 하나만 골라 F) — 기즈모 가운데(최상위 집합 = 부모)가 캔버스 한가운데 온다.
+	     둘을 고른 채 F 하면 두 점의 가운데를 비춰 부모 피벗이 캔버스 아래 가장자리(오버레이 툴바 밑)에 깔려 끌기가 툴바를 눌렀다. -->
+	<EditorClick mark="hierarchy.row.TestParent"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus scene_view"/>
+	<EditorWaitSettled/>
+	<EditorKey key="F"/>
+	<EditorWaitSettled/>
 	<!-- 자식을 먼저 고르고 부모 아래로 옮긴다 — 선택은 자식 하나로 남는다 -->
 	<Variable name="gv_editorWatchObject" value="TestKeyLight"/>
 	<EditorClick mark="hierarchy.row.TestKeyLight"/>
@@ -26,11 +34,6 @@
 	<!-- Ctrl+부모: 선택 순서가 자식 → 부모다(결함이 나던 순서) -->
 	<EditorClick mark="hierarchy.row.TestParent" mods="ctrl"/>
 	<WaitUntil watch="Editor.SelectedNames" is="TestKeyLight,TestParent" timeoutFrames="60"/>
-	<EditorWaitSettled/>
-	<!-- 씬 뷰가 고른 것을 비추게 한다(F) — 기즈모 가운데가 캔버스 안에 온다 -->
-	<DevCommand line="panel.focus scene_view"/>
-	<EditorWaitSettled/>
-	<EditorKey key="F"/>
 	<EditorWaitSettled/>
 	<Remember watch="Editor.ObjectPositionX" as="childLocalX"/>
 	<Variable name="gv_editorWatchObject" value="TestParent"/>
