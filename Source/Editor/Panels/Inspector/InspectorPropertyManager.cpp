@@ -55,6 +55,9 @@ namespace sw::editor
 
     namespace
     {
+        /** @brief 속성 값 칸의 숨은 id 입니다. 이름표는 행 앞 열(`drawPropertyRowLabel`)에 있다. */
+        constexpr EditorWidgetID kValueWidgetID = "##value";
+
         /** @brief 애셋 경로 필드에서 이번 프레임에 일어난 일을 나타냅니다. */
         enum class AssetFieldAction : uint8
         {
@@ -269,10 +272,10 @@ namespace sw::editor
         }
 
         /** @brief Enter 로 확정하는 입력란입니다. 키 입력마다 인턴하지 않으려는 용도입니다. 확정했으면 true 입니다. */
-        bool drawNameInput( const utf8* pID, hashed_string& value )
+        bool drawNameInput( EditorWidgetID id, hashed_string& value )
         {
             fixed_string<constant::buffer::kMax256> buf{ value.c_str() };
-            if ( ImGui::InputText( pID, buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) == false )
+            if ( EditorWidgets::inputText( id, buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) == false )
                 return false;
             value = hashed_string( buf.c_str() );
             return true;
@@ -282,15 +285,15 @@ namespace sw::editor
 
         /** @brief 행렬: 행 네 개를 한 그룹으로 둡니다. 되돌리기 추적이 마지막 항목(그룹)을 봅니다. */
         template <typename T>
-        bool drawMatrixWidget( const utf8* pLabel, T& value )
+        bool drawMatrixWidget( EditorWidgetID id, T& value )
         {
             bool bChanged = false;
-            ImGui::PushID( pLabel );
+            ImGui::PushID( id.c_str() );
             ImGui::BeginGroup();
             for ( int32 rowIndex = 0; rowIndex < 4; ++rowIndex )
             {
                 ImGui::PushID( rowIndex );
-                bChanged |= ImGui::DragFloat4( "##row", value.data() + rowIndex * 4, 0.01f );
+                bChanged |= EditorWidgets::dragFloat4( "##row", value.data() + rowIndex * 4, 0.01f );
                 ImGui::PopID();
             }
             ImGui::EndGroup();
@@ -300,10 +303,10 @@ namespace sw::editor
 
         /** @brief 회전: 오일러 각(도)으로 편집하고 바뀐 프레임에만 쿼터니언으로 되씁니다. */
         template <typename T>
-        bool drawRotationWidget( const utf8* pLabel, T& value )
+        bool drawRotationWidget( EditorWidgetID id, T& value )
         {
             float3 degrees = value.getEulerAngles() * MathUtil::kRadianToDegree;
-            if ( ImGui::DragFloat3( pLabel, &degrees._x, 0.5f, 0.0f, 0.0f, "%.1f deg" ) == false )
+            if ( EditorWidgets::dragFloat3( id, &degrees._x, 0.5f, 0.0f, 0.0f, "%.1f deg" ) == false )
                 return false;
             value = quaternion::makeFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
             return true;
@@ -311,12 +314,12 @@ namespace sw::editor
 
         /** @brief 핸들(오브젝트 · 컴포넌트 · 슬롯): 핸들 종류마다 담긴 숫자를 그대로 입력란으로 보입니다. */
         template <typename T>
-        bool drawHandleWidget( const utf8* pLabel, T& value )
+        bool drawHandleWidget( EditorWidgetID id, T& value )
         {
             if constexpr ( std::is_same_v<T, GameObjectHandle> )
             {
                 uint64 objectID = value.objectID();
-                if ( ImGui::InputScalar( pLabel, ImGuiDataType_U64, &objectID ) == false )
+                if ( EditorWidgets::inputScalar( id, ImGuiDataType_U64, &objectID ) == false )
                     return false;
                 value = GameObjectHandle::make( objectID );
                 return true;
@@ -324,7 +327,7 @@ namespace sw::editor
             else if constexpr ( std::is_same_v<T, ComponentHandle> )
             {
                 uint64 arrID[2] = { value.objectID(), value.componentID() };
-                if ( ImGui::InputScalarN( pLabel, ImGuiDataType_U64, arrID, 2 ) == false )
+                if ( EditorWidgets::inputScalarN( id, ImGuiDataType_U64, arrID, 2 ) == false )
                     return false;
                 value = ComponentHandle::makeOwned( arrID[0], arrID[1] );
                 return true;
@@ -333,7 +336,7 @@ namespace sw::editor
             {
                 static_assert( std::is_same_v<T, SlotHandle>, "Handle widget: unknown handle type" );
                 uint32 arrPart[2] = { value.index(), value.generation() };
-                if ( ImGui::InputScalarN( pLabel, ImGuiDataType_U32, arrPart, 2 ) == false )
+                if ( EditorWidgets::inputScalarN( id, ImGuiDataType_U32, arrPart, 2 ) == false )
                     return false;
                 value = SlotHandle::make( arrPart[0], arrPart[1] );
                 return true;
@@ -345,12 +348,12 @@ namespace sw::editor
          * @details 범위(`kRangeMin` · `kRangeMax`)로 제한하므로 위젯이 `fromFloats` 의 자르기 · 무한대에 닿지 않는다.
          */
         template <typename T>
-        bool drawPackedWidget( const utf8* pLabel, T& value )
+        bool drawPackedWidget( EditorWidgetID id, T& value )
         {
             using Traits        = PackedValueTraits<T>;
             PackedFloats floats = Traits::toFloats( value );
-            if ( ImGui::DragScalarN( pLabel, ImGuiDataType_Float, floats._arrValue, static_cast<int32>( Traits::kComponentCount ), Traits::kDragSpeed, &Traits::kRangeMin,
-                                     &Traits::kRangeMax, "%.4f" ) == false )
+            if ( EditorWidgets::dragScalarN( id, ImGuiDataType_Float, floats._arrValue, static_cast<int32>( Traits::kComponentCount ), Traits::kDragSpeed, &Traits::kRangeMin,
+                                             &Traits::kRangeMax, "%.4f" ) == false )
                 return false;
             value = Traits::fromFloats( floats );
             return true;
@@ -358,10 +361,10 @@ namespace sw::editor
 
         /** @brief 방향: 저장된 좌표 (u, v) 가 아니라 방향으로 편집합니다. 영벡터를 만들면 +z 로 갑니다(`OctahedralNormal::fromNormal`). */
         template <typename T>
-        bool drawDirectionWidget( const utf8* pLabel, T& value )
+        bool drawDirectionWidget( EditorWidgetID id, T& value )
         {
             float3 direction = value.toNormal();
-            if ( ImGui::DragFloat3( pLabel, &direction._x, 0.01f ) == false )
+            if ( EditorWidgets::dragFloat3( id, &direction._x, 0.01f ) == false )
                 return false;
             value = OctahedralNormal::fromNormal( direction );
             return true;
@@ -369,10 +372,10 @@ namespace sw::editor
 
         /** @brief 태그: Enter 로 확정하는 글 입력란입니다. 빈 글은 빈 태그입니다. */
         template <typename T>
-        bool drawTagWidget( const utf8* pLabel, T& value )
+        bool drawTagWidget( EditorWidgetID id, T& value )
         {
             fixed_string<constant::buffer::kMax256> buf{ value.isValid() ? value.getString() : "" };
-            if ( ImGui::InputText( pLabel, buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) == false )
+            if ( EditorWidgets::inputText( id, buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) == false )
                 return false;
             value = buf.empty() ? TagID{} : TagID::request( buf.c_str() );
             return true;
@@ -385,63 +388,63 @@ namespace sw::editor
          * @return 값이 바뀌었으면 true 입니다.
          */
         template <typename T>
-        bool drawValueWidget( const utf8* pLabel, T& value )
+        bool drawValueWidget( EditorWidgetID id, T& value )
         {
             constexpr InspectorValueWidget kWidget = InspectorWidgetFor<T>::kWidget;
             if constexpr ( kWidget == InspectorValueWidget::Number )
-                return ImGui::DragScalar( pLabel, getNumberDataType<T>(), &value, std::is_integral_v<T> ? 1.0f : 0.01f, nullptr, nullptr, getNumberFormat<T>() );
+                return EditorWidgets::dragScalar( id, getNumberDataType<T>(), &value, std::is_integral_v<T> ? 1.0f : 0.01f, nullptr, nullptr, getNumberFormat<T>() );
             else if constexpr ( kWidget == InspectorValueWidget::Checkbox )
             {
                 if constexpr ( std::is_same_v<T, bool> )
-                    return ImGui::Checkbox( pLabel, &value );
+                    return ImGui::Checkbox( id.c_str(), &value );
                 else
                 {
                     bool bValue = value.load( std::memory_order_relaxed );
-                    if ( ImGui::Checkbox( pLabel, &bValue ) == false )
+                    if ( ImGui::Checkbox( id.c_str(), &bValue ) == false )
                         return false;
                     value.store( bValue, std::memory_order_relaxed );
                     return true;
                 }
             }
             else if constexpr ( kWidget == InspectorValueWidget::Text )
-                return EditorWidgets::drawTextField( pLabel, value );
+                return EditorWidgets::drawTextField( id.c_str(), value );
             else if constexpr ( kWidget == InspectorValueWidget::Name )
-                return drawNameInput( pLabel, value );
+                return drawNameInput( id, value );
             else if constexpr ( kWidget == InspectorValueWidget::Vector2 )
-                return ImGui::DragFloat2( pLabel, &value._x, 0.1f );
+                return EditorWidgets::dragFloat2( id, &value._x, 0.1f );
             else if constexpr ( kWidget == InspectorValueWidget::Vector3 )
-                return ImGui::DragFloat3( pLabel, &value._x, 0.1f );
+                return EditorWidgets::dragFloat3( id, &value._x, 0.1f );
             else if constexpr ( kWidget == InspectorValueWidget::Vector4 )
-                return ImGui::DragFloat4( pLabel, &value._x, 0.01f );
+                return EditorWidgets::dragFloat4( id, &value._x, 0.01f );
             else if constexpr ( kWidget == InspectorValueWidget::Matrix )
-                return drawMatrixWidget( pLabel, value );
+                return drawMatrixWidget( id, value );
             else if constexpr ( kWidget == InspectorValueWidget::Rotation )
-                return drawRotationWidget( pLabel, value );
+                return drawRotationWidget( id, value );
             else if constexpr ( kWidget == InspectorValueWidget::Handle )
-                return drawHandleWidget( pLabel, value );
+                return drawHandleWidget( id, value );
             else if constexpr ( kWidget == InspectorValueWidget::Packed )
-                return drawPackedWidget( pLabel, value );
+                return drawPackedWidget( id, value );
             else if constexpr ( kWidget == InspectorValueWidget::Direction )
-                return drawDirectionWidget( pLabel, value );
+                return drawDirectionWidget( id, value );
             else
             {
                 static_assert( kWidget == InspectorValueWidget::Tag, "drawValueWidget: no widget for this InspectorValueWidget" );
-                return drawTagWidget( pLabel, value );
+                return drawTagWidget( id, value );
             }
         }
 
         /** @brief CallInEditor 인자 입력란 하나를 그 C++ 타입의 위젯으로 그립니다. `ReflectBuiltins.xxx` 항목마다 하나씩 있습니다. */
         template <typename T>
-        bool drawMethodArgument( const utf8* pLabel, TaskValue& value )
+        bool drawMethodArgument( EditorWidgetID id, TaskValue& value )
         {
             T edited = value.getValue<T>();
-            if ( drawValueWidget( pLabel, edited ) == false )
+            if ( drawValueWidget( id, edited ) == false )
                 return false;
             value = TaskValue{ std::move( edited ) };
             return true;
         }
 
-        using DrawMethodArgFn = bool ( * )( const utf8* pLabel, TaskValue& value );
+        using DrawMethodArgFn = bool ( * )( EditorWidgetID id, TaskValue& value );
 
         /** @brief 인자 위젯 테이블입니다. 순서는 `InspectorBuiltinValue` 테이블과 같습니다. 같은 파일을 같은 순서로 include 합니다. */
         const DrawMethodArgFn kArrDrawMethodArg[] = {
@@ -490,9 +493,9 @@ namespace sw::editor
                 T    widgetValue = kIsInteger ? *pValue : static_cast<T>( static_cast<float64>( *pValue ) * scale );
                 bool bChanged    = false;
                 if ( range._bSlider )
-                    bChanged = ImGui::SliderScalar( _pLabel, getNumberDataType<T>(), &widgetValue, pMin, pMax, pFormat );
+                    bChanged = EditorWidgets::sliderScalar( kValueWidgetID, getNumberDataType<T>(), &widgetValue, pMin, pMax, pFormat );
                 else
-                    bChanged = ImGui::DragScalar( _pLabel, getNumberDataType<T>(), &widgetValue, dragSpeed, pMin, pMax, pFormat );
+                    bChanged = EditorWidgets::dragScalar( kValueWidgetID, getNumberDataType<T>(), &widgetValue, dragSpeed, pMin, pMax, pFormat );
                 showTooltipIfHovered( row );
                 InspectorPropertyUndo::trackRowEdit( row );
                 if ( bChanged )
@@ -523,7 +526,7 @@ namespace sw::editor
                     return true;
                 }
                 T          edited   = *pValue;
-                const bool bChanged = drawValueWidget( _pLabel, edited );
+                const bool bChanged = drawValueWidget( kValueWidgetID, edited );
                 showTooltipIfHovered( row );
                 // atomic<bool> 은 다른 스레드가 쓰는 값이므로 되돌리기 기록에 넣지 않는다.
                 if constexpr ( std::is_same_v<T, bool> )
@@ -550,7 +553,7 @@ namespace sw::editor
                     return true;
                 }
                 T          edited   = *pValue;
-                const bool bChanged = drawValueWidget( _pLabel, edited );
+                const bool bChanged = drawValueWidget( kValueWidgetID, edited );
                 showTooltipIfHovered( row );
                 InspectorPropertyUndo::trackRowEdit( row );
                 if ( bChanged )
@@ -612,7 +615,7 @@ namespace sw::editor
                 const bool bColored = state == InspectorHandleState::Missing || state == InspectorHandleState::WrongType;
                 if ( bColored )
                     EditorThemeUtil::pushTextColor( state == InspectorHandleState::Missing ? SW_THEME_COLOR( "Signal", "Warning" ) : SW_THEME_COLOR( "Signal", "Error" ) );
-                const bool bOpen = ImGui::BeginCombo( pLabel, preview.c_str() );
+                const bool bOpen = EditorWidgets::beginCombo( pLabel, preview.c_str() );
                 if ( bColored )
                     EditorThemeUtil::popTextColor();
                 if ( bOpen == false )
@@ -707,11 +710,11 @@ namespace sw::editor
                     string                 droppedPath;
                     const AssetFieldAction action = drawAssetPathField(
                         [&edited, &bChanged]( const utf8* pID )
-                    { bChanged = drawNameInput( pID, edited ); }, row, model, pValue->view(), droppedPath );
+                    { bChanged = drawNameInput( EditorWidgetID::fromRuntime( pID ), edited ); }, row, model, pValue->view(), droppedPath );
                     bApplied = applyAssetFieldAction( action, row, model, droppedPath );
                 }
                 else
-                    bChanged = drawNameInput( _pLabel, edited );
+                    bChanged = drawNameInput( kValueWidgetID, edited );
                 showTooltipIfHovered( row );
                 // 인턴 인덱스 하나이므로 되돌리기는 스냅샷 한 번이다. 인턴된 문자열은 해제되지 않으므로 이전 인덱스는 언제나 유효하다.
                 InspectorPropertyUndo::trackRowEdit( row );
@@ -774,7 +777,7 @@ namespace sw::editor
                 float3 edited   = *pValue;
                 bool   bChanged = false;
                 if ( row._bColor != SW_FALSE )
-                    bChanged = ImGui::ColorEdit3( _pLabel, &edited._x, getColorFlags( row ) );
+                    bChanged = EditorWidgets::colorEdit3( kValueWidgetID, &edited._x, getColorFlags( row ) );
                 else if ( row._scale != 1.0f )
                 {
                     float3 shown = edited * row._scale;
@@ -806,7 +809,7 @@ namespace sw::editor
                     return true;
                 }
                 float2     edited   = *pValue;
-                const bool bChanged = ImGui::DragFloat2( _pLabel, &edited._x, 0.1f );
+                const bool bChanged = EditorWidgets::dragFloat2( kValueWidgetID, &edited._x, 0.1f );
                 showTooltipIfHovered( row );
                 InspectorPropertyUndo::trackRowEdit( row );
                 if ( bChanged )
@@ -829,7 +832,7 @@ namespace sw::editor
                     return true;
                 }
                 float4     edited   = *pValue;
-                const bool bChanged = row._bColor != SW_FALSE ? ImGui::ColorEdit4( _pLabel, &edited._x, getColorFlags( row ) ) : ImGui::DragFloat4( _pLabel, &edited._x, 0.01f );
+                const bool bChanged = row._bColor != SW_FALSE ? EditorWidgets::colorEdit4( kValueWidgetID, &edited._x, getColorFlags( row ) ) : EditorWidgets::dragFloat4( kValueWidgetID, &edited._x, 0.01f );
                 showTooltipIfHovered( row );
                 InspectorPropertyUndo::trackRowEdit( row );
                 if ( bChanged )
@@ -945,7 +948,10 @@ namespace sw::editor
             return false;
         }
         if ( parameter._handleTargetTypeName.empty() )
-            return kArrDrawMethodArg[slot._builtinIndex]( pLabel, slot._value );
+        {
+            EditorWidgets::drawPropertyRowLabel( pLabel ); // 인자 이름은 칸 앞에 — 칸에 보이는 이름표를 주면 오른쪽에 붙는다
+            return kArrDrawMethodArg[slot._builtinIndex]( "##arg", slot._value );
+        }
 
         // 타입 핸들 인자 — 프로퍼티와 같은 선택기다. 칸의 값은 타입 없는 핸들이고(`_typeName` 이 `ComponentHandle`), 호출 썽크가 대상 타입을 다시 확인한다.
         const ComponentHandle* pCurrent = slot._value.getStoredSize() == sizeof( ComponentHandle ) ? slot._value.getPtr<ComponentHandle>() : nullptr;

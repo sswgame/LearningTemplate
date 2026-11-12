@@ -330,7 +330,7 @@ namespace sw::editor
 
         // 끄는 동안에도 적용한다 — 시간 막대를 옮기면 뷰포트가 따라온다(언리얼 Sequencer · 유니티 Timeline 의 스크럽).
         ImGui::SetNextItemWidth( -1.0f );
-        if ( ImGui::SliderInt( "##ScrubFrame", &_currentFrame, _document._asset._frameMin, _document._asset._frameMax, "Frame %d" ) )
+        if ( EditorWidgets::sliderInt( "##ScrubFrame", &_currentFrame, _document._asset._frameMin, _document._asset._frameMax, "Frame %d" ) )
         {
             if ( _previewPlayer->isPlaying() )
                 _previewPlayer->seekToFrame( _currentFrame );
@@ -668,7 +668,7 @@ namespace sw::editor
         const int32 lastFirst  = _document._asset._frameMax - _document.getViewFrameSpan();
         int32       scroll     = firstFrame;
         ImGui::SetNextItemWidth( -1.0f );
-        if ( ImGui::SliderInt( "##viewScroll", &scroll, _document._asset._frameMin, MathUtil::max( lastFirst, _document._asset._frameMin ), SW_LOCKEY( "EditorSequencer", "ViewRangeFormat" ) ) )
+        if ( EditorWidgets::sliderInt( "##viewScroll", &scroll, _document._asset._frameMin, MathUtil::max( lastFirst, _document._asset._frameMin ), SW_LOCKEY( "EditorSequencer", "ViewRangeFormat" ) ) )
             _document.setViewFirstFrame( scroll );
         EditorSelfTestMarks::record( "sequencer.viewScroll" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "ViewScrollTip" ) );
@@ -1098,7 +1098,7 @@ namespace sw::editor
             EditorWidgets::drawPropertyRowLabel( track.getChannelName( channelIndex ) );
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - EditorChrome::measureSmallButton( pCurve ) - ImGui::GetStyle().ItemSpacing.x );
             const float32 speed = bRotation ? InspectorPropertyLayout::kAngleDragSpeed : 0.05f;
-            if ( ImGui::DragFloat( "##value", &value, speed, 0.0f, 0.0f, bRotation ? "%.2f deg" : "%.3f" ) )
+            if ( EditorWidgets::dragFloat( "##value", &value, speed, 0.0f, 0.0f, bRotation ? "%.2f deg" : "%.3f" ) )
             {
                 (void)SequenceModel::setChannelDisplayValue( track, channelIndex, frame, value );
                 previewCurrentFrame();

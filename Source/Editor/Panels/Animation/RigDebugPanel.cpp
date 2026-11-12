@@ -75,7 +75,7 @@ namespace sw::editor
             ImGui::TableNextColumn();
             float32 weight = node._weight;
             ImGui::SetNextItemWidth( -1.0f );
-            if ( ImGui::SliderFloat( "##weight", &weight, 0.0f, 1.0f, "%.2f" ) )
+            if ( EditorWidgets::sliderFloat( "##weight", &weight, 0.0f, 1.0f, "%.2f" ) )
                 _viewModel.setNodeWeight( nodeIndex, weight );
             if ( ImGui::IsItemActivated() )
                 _weightBeforeEdit = node._weight;

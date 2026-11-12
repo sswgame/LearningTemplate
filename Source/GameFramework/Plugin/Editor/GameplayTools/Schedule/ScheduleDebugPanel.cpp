@@ -68,8 +68,9 @@ namespace sw::editor
         if ( _model.getSystemCount() > 1 )
         {
             int32 systemIndex = _model.getSystemIndex();
+            EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdSchedule", "SystemIndex" ) ); // 이름표는 칸 앞에(칸에 주면 오른쪽에 붙는다)
             EditorChrome::setNextItemWidthColumns( 16.0f );
-            if ( ImGui::InputInt( SW_LOCKEY( "EdSchedule", "SystemIndex" ), &systemIndex ) )
+            if ( EditorWidgets::inputInt( "##SystemIndex", &systemIndex ) )
                 pSystem = _model.selectSystem( systemIndex );
         }
         const ScheduleSystem& system = *pSystem;
@@ -120,7 +121,7 @@ namespace sw::editor
         ImGui::SetNextItemWidth( -1.0f );
         int32        previewMinute = _model.getPreviewMinute();
         const string clockText     = ScheduleTimelineRows::formatClock( previewMinute );
-        if ( ImGui::SliderInt( "##SchedulePreviewMinute", &previewMinute, 0, kScheduleMinutesPerDay - 1, clockText.c_str() ) )
+        if ( EditorWidgets::sliderInt( "##SchedulePreviewMinute", &previewMinute, 0, kScheduleMinutesPerDay - 1, clockText.c_str() ) )
             _model.setPreviewMinute( previewMinute );
         ImGui::TextDisabled( "%s %s (day %d)", SW_LOCKEY( "EdSchedule", "GameTime" ), ScheduleTimelineRows::formatClock( nowMinute ).c_str(), system.getDay() );
 

@@ -484,7 +484,7 @@ namespace sw::editor
             const Color& accent          = SW_THEME_COLOR( "Base", "Accent" );
             float32      arrAccentRaw[4] = { accent._r, accent._g, accent._b, accent._a };
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "AccentColor" ) );
-            if ( ImGui::ColorEdit4( "##AccentColor", arrAccentRaw, ImGuiColorEditFlags_NoAlpha ) )
+            if ( EditorWidgets::colorEdit4( "##AccentColor", arrAccentRaw, ImGuiColorEditFlags_NoAlpha ) )
                 setAccentColor( Color{ arrAccentRaw[0], arrAccentRaw[1], arrAccentRaw[2], arrAccentRaw[3] } );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeAccentColor" ) );
 
@@ -520,13 +520,13 @@ namespace sw::editor
             float32 tabRadius       = SW_THEME_METRIC( "Radius", "Tab" );
             bool    bMetricsChanged = false;
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "WindowRounding" ) );
-            bMetricsChanged |= ImGui::SliderFloat( "##WindowRounding", &windowRadius, 0.0f, 12.0f, "%.0f px" );
+            bMetricsChanged |= EditorWidgets::sliderFloat( "##WindowRounding", &windowRadius, 0.0f, 12.0f, "%.0f px" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeWindowRounding" ) );
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "FrameRounding" ) );
-            bMetricsChanged |= ImGui::SliderFloat( "##FrameRounding", &frameRadius, 0.0f, 8.0f, "%.0f px" );
+            bMetricsChanged |= EditorWidgets::sliderFloat( "##FrameRounding", &frameRadius, 0.0f, 8.0f, "%.0f px" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeFrameRounding" ) );
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "TabRounding" ) );
-            bMetricsChanged |= ImGui::SliderFloat( "##TabRounding", &tabRadius, 0.0f, 8.0f, "%.0f px" );
+            bMetricsChanged |= EditorWidgets::sliderFloat( "##TabRounding", &tabRadius, 0.0f, 8.0f, "%.0f px" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeTabRounding" ) );
 
             if ( bMetricsChanged )

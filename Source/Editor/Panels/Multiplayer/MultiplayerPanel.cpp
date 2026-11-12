@@ -55,7 +55,7 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldMediumEm" ) );
         const MultiplayerProcessRow& target = _viewState._listProcess[static_cast<size_t>( _targetProcessIndex )];
-        if ( ImGui::BeginCombo( "##MultiplayerTarget", target._label.c_str() ) )
+        if ( EditorWidgets::beginCombo( "##MultiplayerTarget", target._label.c_str() ) )
         {
             for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )
             {

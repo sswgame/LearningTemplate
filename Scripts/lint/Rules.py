@@ -101,7 +101,6 @@ kRules: tuple[Rule, ...] = (
     Rule("disk-path-case", "모양", "경로 포함 · 같음 판정(isPathAtOrUnderRoot · startsWithPathComponent …)에 소문자로 접은 글(normalizePath · toLower)을 넘김", "normalizePath 의 결과는 맵 키 · id 로도 쓰는 string 이고 판정은 string_view 를 받는다 — 출처를 형식이 가르지 못한다", "lint.DiskPathCase:checkDiskPathCase", exceptions="Config/Rules/Lint/DiskPathCase.json"),
     Rule("optional-minus-one", "모양", "optional · expected 자리(반환 · 대입 · 초기값 · 기본 인자 · 인자)에 리터럴 -1 을 값으로", "표지 상수는 형식(InvalidIndex)이 막지만 리터럴 -1 은 정수라 optional<int32> 의 값으로 합법이다", "lint.OptionalMinusOne:checkOptionalMinusOne"),
     Rule("required-name-fields", "모양", "이름 · 경로 PROPERTY 칸(뼈 · 소켓 · 액션 · 태그 …)의 C++ 문자열 기본값 — 데이터가 안 적으면 맞지 않는 이름이 조용히 쓰인다(Required 또는 예외)", "리터럴 초기값은 합법 C++ 이고, 그 값이 형식뿐인 빈 값인지 데이터가 덮을 기본값인지 형식이 말하지 못한다(이름 전용 형식은 생성기 설계 W-R3 와 겹친다)", "lint.RequiredNameFields:checkRequiredNameFields", exceptions="Config/Rules/Lint/RequiredNameFieldExceptions.json"),
-    Rule("editor-widget-labels", "모양", "칸 오른쪽에 붙는 ImGui 입력 위젯 이름표", "이름표는 문자열 내용이다", "lint.EditorWidgetLabels:checkEditorWidgetLabels"),
     # --- 이름 -------------------------------------------------------------------------------------------------------------
     Rule("naming-words", "이름", "표에 없는 함수 앞 단어 · 형식 끝 단어 · 금지 이름", "업계 용어인지는 형식이 말하지 못한다", "lint.NamingWords:checkNamingWords", exceptions="Config/Rules/Lint/NamingWords.json", inputs=("Config/Rules/Lint/NamingBaseline.json",)),
     Rule("acronyms", "이름", "식별자 · 파일 · 폴더의 약어 표기(모두 대문자)", "이름은 형식이 막지 못한다", "lint.Acronyms:checkAcronyms", exceptions="Config/Rules/Lint/Acronyms.json"),

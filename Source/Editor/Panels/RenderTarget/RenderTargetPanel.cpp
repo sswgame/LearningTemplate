@@ -71,7 +71,7 @@ namespace sw::editor
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "Zoom" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         // 0 = 창에 맞춤. 원본 해상도로 보고 싶을 때만 배율을 준다(1:1 픽셀 검사).
-        ImGui::SliderFloat( "##Zoom", &_previewZoom, 0.0f, 2.0f, _previewZoom <= 0.0f ? "fit" : "%.2fx" );
+        EditorWidgets::sliderFloat( "##Zoom", &_previewZoom, 0.0f, 2.0f, _previewZoom <= 0.0f ? "fit" : "%.2fx" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "ZoomTip" ) );
 
         // 채널 · 깊이 · 픽셀 값은 CPU 로 읽은 스냅샷이다. 다시 읽기는 GPU 를 기다리므로 누를 때(또는 Auto 간격)만 한다.
@@ -150,7 +150,7 @@ namespace sw::editor
                 EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "NearFar" ) );
                 EditorChrome::setNextItemWidthColumns( 24.0f );
                 float32 arrPlane[2]{ settings._nearPlane, settings._farPlane };
-                if ( ImGui::DragFloat2( "##NearFar", arrPlane, 0.1f, 0.001f, 100000.0f, "%.3f" ) )
+                if ( EditorWidgets::dragFloat2( "##NearFar", arrPlane, 0.1f, 0.001f, 100000.0f, "%.3f" ) )
                     _viewModel.setDepthPlanes( arrPlane[0], arrPlane[1] );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "NearFarTip" ) );
             }

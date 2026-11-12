@@ -8,6 +8,7 @@
 #include "pch.h"
 
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
@@ -31,7 +32,7 @@ namespace sw::editor
                 if ( bWarn )
                     EditorThemeUtil::pushTextColor( SW_THEME_COLOR( "Signal", "Warning" ) );
                 // 씬 오브젝트 목록은 길다(기본 높이는 8 줄이라 이름 순으로 뒤에 있는 오브젝트가 스크롤 아래로 가려져 눌 수 없다) — 큰 높이로 연다.
-                const bool bOpen = ImGui::BeginCombo( "##sceneObjectReference", _choices._preview.c_str(), ImGuiComboFlags_HeightLarge );
+                const bool bOpen = EditorWidgets::beginCombo( "##sceneObjectReference", _choices._preview.c_str(), ImGuiComboFlags_HeightLarge );
                 if ( bWarn )
                     EditorThemeUtil::popTextColor();
                 if ( bOpen == false )

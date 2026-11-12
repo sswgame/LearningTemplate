@@ -717,19 +717,19 @@ namespace sw::editor
                     static_assert( static_cast<size_t>( IM_ARRAYSIZE( s_arrModeName ) ) == static_cast<size_t>( TerrainBrushMode::Count ), "Terrain brush mode names follow TerrainBrushMode" );
                     int32 mode = static_cast<int32>( _settings._mode );
                     EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Mode" ) );
-                    if ( ImGui::Combo( "##Mode", &mode, s_arrModeName, IM_ARRAYSIZE( s_arrModeName ) ) )
+                    if ( EditorWidgets::combo( "##Mode", &mode, s_arrModeName, IM_ARRAYSIZE( s_arrModeName ) ) )
                         _settings._mode = static_cast<TerrainBrushMode>( mode );
                     EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Radius" ) );
-                    ImGui::SliderFloat( "##Radius", &_settings._radius, 0.5f, 64.0f, "%.1f m" );
+                    EditorWidgets::sliderFloat( "##Radius", &_settings._radius, 0.5f, 64.0f, "%.1f m" );
                     EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Strength" ) );
-                    ImGui::SliderFloat( "##Strength", &_settings._strength, 0.05f, 60.0f, "%.2f /s", ImGuiSliderFlags_Logarithmic );
+                    EditorWidgets::sliderFloat( "##Strength", &_settings._strength, 0.05f, 60.0f, "%.2f /s", ImGuiSliderFlags_Logarithmic );
                     EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Falloff" ) );
-                    ImGui::SliderFloat( "##Falloff", &_settings._falloff, 0.0f, 1.0f, "%.2f" );
+                    EditorWidgets::sliderFloat( "##Falloff", &_settings._falloff, 0.0f, 1.0f, "%.2f" );
                     if ( _settings._mode == TerrainBrushMode::PaintLayer )
                     {
                         int32 layer = static_cast<int32>( _settings._layerIndex );
                         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Layer" ) );
-                        if ( ImGui::SliderInt( "##Layer", &layer, 0, static_cast<int32>( TerrainBrushToolInternal::kLayerCount ) - 1 ) )
+                        if ( EditorWidgets::sliderInt( "##Layer", &layer, 0, static_cast<int32>( TerrainBrushToolInternal::kLayerCount ) - 1 ) )
                             _settings._layerIndex = static_cast<uint32>( layer );
                     }
                     drawResizeControls();

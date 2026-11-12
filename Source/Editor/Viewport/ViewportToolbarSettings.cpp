@@ -39,7 +39,7 @@ namespace sw::editor
              * @details 켜기 단추는 그 조작(이동 · 회전 · 크기)의 아이콘이다 — 언리얼 뷰포트 툴바의 스냅 묶음(아이콘 + 값)과 같다. 예전 글 단추("Grid Snap" · "Rot Snap")는
              *          크기 스냅을 더하자 기본 배치(1600 폭)에서 막대가 캔버스 밖으로 잘렸다.
              */
-            static void drawSnapToggleCombo( const utf8* pToggleID, const utf8* pIcon, const utf8* pComboID, bool& bEnabled, float32& value,
+            static void drawSnapToggleCombo( const utf8* pToggleID, const utf8* pIcon, EditorWidgetID comboID, bool& bEnabled, float32& value,
                                              const float32* arrValue, const utf8* const* arrLabel, int32 valueCount,
                                              int32 fallbackIndex, bool bVertical, const utf8* pToggleTooltip,
                                              const utf8* pValueTooltip, const utf8* pToggleMark )
@@ -67,7 +67,7 @@ namespace sw::editor
                     }
                 }
 
-                if ( ImGui::Combo( pComboID, &currentIndex, arrLabel, valueCount ) )
+                if ( EditorWidgets::combo( comboID, &currentIndex, arrLabel, valueCount ) )
                 {
                     if ( 0 <= currentIndex && currentIndex < valueCount )
                         value = arrValue[currentIndex];
@@ -153,7 +153,7 @@ namespace sw::editor
 
             ImGui::BeginDisabled( pRenderer == nullptr );
             EditorChrome::setNextItemWidthColumns( 13.0f );
-            const bool bOpen = ImGui::BeginCombo( "##ViewMode", getViewModeDisplayName( currentMode ) );
+            const bool bOpen = EditorWidgets::beginCombo( "##ViewMode", getViewModeDisplayName( currentMode ) );
             EditorSelfTestMarks::record( "viewport.viewMode" ); // 시나리오가 콤보를 열고 항목(`viewport.viewMode.<이름>`)을 누른다
             if ( bOpen )
             {
@@ -187,7 +187,7 @@ namespace sw::editor
 
         nextItem( bVertical );
         EditorChrome::setNextItemWidthColumns( 9.0f );
-        ImGui::SliderFloat( "##CamSpeed", &settings._cameraSpeed, 0.5f, 20.0f, "%.1f" );
+        EditorWidgets::sliderFloat( "##CamSpeed", &settings._cameraSpeed, 0.5f, 20.0f, "%.1f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "CameraSpeed" ) );
     }
 

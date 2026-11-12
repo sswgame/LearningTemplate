@@ -10,7 +10,13 @@
 
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/Widgets/EditorWidgetID.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
+
+#include <cstddef>
+
+struct ImVec2;
+struct ImGuiInputTextCallbackData;
 
 namespace sw
 {
@@ -199,6 +205,55 @@ namespace sw::editor
          * @details `ImGui::BeginCombo( "Name###id" )` 는 이름표를 오른쪽에 붙여 다음 칸의 이름처럼 읽혔다(Packaging "Client [v] Target Empty [v]"). id 는 @p pLabel 전체에서 뽑는다.
          */
         [[nodiscard]] static bool beginCombo( const utf8* pLabel, const utf8* pPreview, int32 flags = 0 );
+
+        // ------------------------------------------------------------------------------
+        // ImGui 입력 위젯 — 에디터가 부르는 유일한 길이다(`EditorInputBan.h` 가 ImGui 의 것을 막는다). id 는 숨은 id 형식이라 이름표를 오른쪽에 둘 수 없다.
+        // 이름표는 앞에 따로 그린다(`drawPropertyRowLabel` · `drawInlineLabel`). 인자 · 기본값은 ImGui 1.92 의 같은 이름 함수와 같다(플래그는 `ImGui*Flags_` 값).
+        // ------------------------------------------------------------------------------
+        static constexpr int32 kImGuiDefaultPopupHeight = -1;  ///< 콤보가 펼치는 높이 — ImGui 기본(항목 8 개)
+        static constexpr int32 kImGuiDefaultIntStepFast = 100; ///< `inputInt` 의 Ctrl 단계 — ImGui 기본
+
+        using InputTextCallback = int ( * )( ImGuiInputTextCallbackData* pData );
+        using ComboItemGetter   = const utf8* (*)( void* pUserData, int32 index );
+
+        static bool inputInt( EditorWidgetID id, int32* pValue, int32 step = 1, int32 stepFast = kImGuiDefaultIntStepFast, int32 flags = 0 );
+        static bool inputInt2( EditorWidgetID id, int32* arrValue, int32 flags = 0 );
+        static bool inputFloat( EditorWidgetID id, float32* pValue, float32 step = 0.0f, float32 stepFast = 0.0f, const utf8* pFormat = "%.3f", int32 flags = 0 );
+        static bool inputFloat2( EditorWidgetID id, float32* arrValue, const utf8* pFormat = "%.3f", int32 flags = 0 );
+        static bool inputFloat4( EditorWidgetID id, float32* arrValue, const utf8* pFormat = "%.3f", int32 flags = 0 );
+        static bool inputScalar( EditorWidgetID id, int32 dataType, void* pData, const void* pStep = nullptr, const void* pStepFast = nullptr, const utf8* pFormat = nullptr,
+                                 int32 flags = 0 );
+        static bool inputScalarN( EditorWidgetID id, int32 dataType, void* pData, int32 components, const void* pStep = nullptr, const void* pStepFast = nullptr,
+                                  const utf8* pFormat = nullptr, int32 flags = 0 );
+        static bool inputText( EditorWidgetID id, utf8* pBuffer, size_t bufferSize, int32 flags = 0, InputTextCallback pfnCallback = nullptr, void* pUserData = nullptr );
+        static bool inputTextMultiline( EditorWidgetID id, utf8* pBuffer, size_t bufferSize, const ImVec2& size, int32 flags = 0, InputTextCallback pfnCallback = nullptr,
+                                        void* pUserData = nullptr );
+        static bool inputTextWithHint( EditorWidgetID id, const utf8* pHint, utf8* pBuffer, size_t bufferSize, int32 flags = 0, InputTextCallback pfnCallback = nullptr,
+                                       void* pUserData = nullptr );
+        static bool dragFloat( EditorWidgetID id, float32* pValue, float32 speed = 1.0f, float32 minValue = 0.0f, float32 maxValue = 0.0f, const utf8* pFormat = "%.3f",
+                               int32 flags = 0 );
+        static bool dragFloat2( EditorWidgetID id, float32* arrValue, float32 speed = 1.0f, float32 minValue = 0.0f, float32 maxValue = 0.0f, const utf8* pFormat = "%.3f",
+                                int32 flags = 0 );
+        static bool dragFloat3( EditorWidgetID id, float32* arrValue, float32 speed = 1.0f, float32 minValue = 0.0f, float32 maxValue = 0.0f, const utf8* pFormat = "%.3f",
+                                int32 flags = 0 );
+        static bool dragFloat4( EditorWidgetID id, float32* arrValue, float32 speed = 1.0f, float32 minValue = 0.0f, float32 maxValue = 0.0f, const utf8* pFormat = "%.3f",
+                                int32 flags = 0 );
+        static bool dragInt( EditorWidgetID id, int32* pValue, float32 speed = 1.0f, int32 minValue = 0, int32 maxValue = 0, const utf8* pFormat = "%d", int32 flags = 0 );
+        static bool dragScalar( EditorWidgetID id, int32 dataType, void* pData, float32 speed = 1.0f, const void* pMin = nullptr, const void* pMax = nullptr,
+                                const utf8* pFormat = nullptr, int32 flags = 0 );
+        static bool dragScalarN( EditorWidgetID id, int32 dataType, void* pData, int32 components, float32 speed = 1.0f, const void* pMin = nullptr, const void* pMax = nullptr,
+                                 const utf8* pFormat = nullptr, int32 flags = 0 );
+        static bool sliderFloat( EditorWidgetID id, float32* pValue, float32 minValue, float32 maxValue, const utf8* pFormat = "%.3f", int32 flags = 0 );
+        static bool sliderInt( EditorWidgetID id, int32* pValue, int32 minValue, int32 maxValue, const utf8* pFormat = "%d", int32 flags = 0 );
+        static bool sliderScalar( EditorWidgetID id, int32 dataType, void* pData, const void* pMin, const void* pMax, const utf8* pFormat = nullptr, int32 flags = 0 );
+        static bool vSliderFloat( EditorWidgetID id, const ImVec2& size, float32* pValue, float32 minValue, float32 maxValue, const utf8* pFormat = "%.3f", int32 flags = 0 );
+        static bool combo( EditorWidgetID id, int32* pCurrent, const utf8* const* arrItem, int32 itemCount, int32 popupMaxHeightInItems = kImGuiDefaultPopupHeight );
+        static bool combo( EditorWidgetID id, int32* pCurrent, const utf8* pItemsSeparatedByZeros, int32 popupMaxHeightInItems = kImGuiDefaultPopupHeight );
+        static bool combo( EditorWidgetID id, int32* pCurrent, ComboItemGetter pfnGetter, void* pUserData, int32 itemCount, int32 popupMaxHeightInItems = kImGuiDefaultPopupHeight );
+        static bool colorEdit3( EditorWidgetID id, float32* arrColor, int32 flags = 0 );
+        static bool colorEdit4( EditorWidgetID id, float32* arrColor, int32 flags = 0 );
+        /** @brief 목록 상자를 엽니다. 열렸으면 true 이고 `ImGui::EndListBox()` 로 닫습니다. */
+        [[nodiscard]] static bool beginListBox( EditorWidgetID id, const ImVec2& size );
 
         /** @brief 힌트 글 입력 칸 하나의 결과입니다. */
         struct HintFieldResult

@@ -618,7 +618,7 @@ namespace sw::editor
 
         // 고르기 목록은 등록에서 온다 — 동작을 더하면 코드 한 줄로 여기에 나타난다.
         const string_view currentName = GameActionCall::getCallName( node._actionCommand );
-        if ( ImGui::BeginCombo( "##dialogue.action", _pActionEntry != nullptr ? _pActionEntry->_pName : "(pick an action)" ) )
+        if ( EditorWidgets::beginCombo( "##dialogue.action", _pActionEntry != nullptr ? _pActionEntry->_pName : "(pick an action)" ) )
         {
             _listActionName.clear();
             ActionRegistry::collectNames( _listActionName );
@@ -690,7 +690,7 @@ namespace sw::editor
             {
                 fixed_string<constant::buffer::kMax512> textBuf{ node._text.c_str() };
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "Text" ) ); // 폭 전체 칸이라 이름표는 위에
-                if ( ImGui::InputTextMultiline( "##Text", textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
+                if ( EditorWidgets::inputTextMultiline( "##Text", textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
                     node._text = textBuf.c_str();
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     notifyDocumentEdited( "Edit Dialogue Node" );

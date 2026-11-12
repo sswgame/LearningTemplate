@@ -206,7 +206,7 @@ namespace sw::editor
                 if ( key.has_value() == false )
                     break;
                 int32 number = settings.getIntValue( *key );
-                if ( ImGui::SliderInt( "##value", &number, static_cast<int32>( def._minValue ), static_cast<int32>( def._maxValue ) ) )
+                if ( EditorWidgets::sliderInt( "##value", &number, static_cast<int32>( def._minValue ), static_cast<int32>( def._maxValue ) ) )
                     (void)settings.setPendingIntValue( def._id, number );
                 break;
             }
@@ -216,7 +216,7 @@ namespace sw::editor
                 if ( key.has_value() == false )
                     break;
                 float32 number = settings.getFloatValue( *key );
-                if ( ImGui::SliderFloat( "##value", &number, static_cast<float32>( def._minValue ), static_cast<float32>( def._maxValue ), "%.2f" ) )
+                if ( EditorWidgets::sliderFloat( "##value", &number, static_cast<float32>( def._minValue ), static_cast<float32>( def._maxValue ), "%.2f" ) )
                     (void)settings.setPendingFloatValue( def._id, number );
                 break;
             }
@@ -231,7 +231,7 @@ namespace sw::editor
                     if ( option._value == value )
                         pPreview = UserSettingsPanelInternal::resolveText( option._textKey, option._value );
                 }
-                if ( ImGui::BeginCombo( "##value", pPreview ) )
+                if ( EditorWidgets::beginCombo( "##value", pPreview ) )
                 {
                     for ( const UserSettingOption& option : listOption )
                     {

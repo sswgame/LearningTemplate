@@ -481,7 +481,7 @@ endfunction()
 #
 # 그 헤더가 ImGui 입력 · 팝업 · 끌어 놓기 함수(imgui_internal.h 의 다른 겹 포함)를 [[deprecated]] 로 다시 선언한다(`docs/agents/EditorUI.md` 입력 절).
 # ImGui 를 직접 읽는 어댑터 두 파일은 imgui.h 앞에서 SW_EDITOR_INPUT_ADAPTER 를 정의해 금지를 받지 않는다 — 유니티 묶음에 들면 같은 묶음의
-# 다른 파일까지(또는 그 반대로) 정의가 번지므로 묶음에서 뺀다. 옵션 SW_EDITOR_INPUT_BAN(Source/Editor/CMakeLists.txt, 기본 ON)이 꺼져 있으면 아무것도 하지 않는다.
+# 다른 파일까지(또는 그 반대로) 정의가 번지므로 묶음에서 뺀다. 입력 위젯 절은 감싼 함수를 정의하는 EditorWidgets.cpp 만 SW_EDITOR_WIDGET_ADAPTER 로 받지 않는다(같은 까닭으로 묶음에서 뺀다). 옵션 SW_EDITOR_INPUT_BAN(Source/Editor/CMakeLists.txt, 기본 ON)이 꺼져 있으면 아무것도 하지 않는다.
 # ------------------------------------------------------------------------------
 function(sw_applyEditorInputBan TARGET_NAME)
 	if(NOT SW_EDITOR_INPUT_BAN)
@@ -496,7 +496,7 @@ function(sw_applyEditorInputBan TARGET_NAME)
 	endif()
 	get_target_property(listSource ${TARGET_NAME} SOURCES)
 	foreach(source IN LISTS listSource)
-		if(source MATCHES "Common/Input/EditorInputGUI\\.cpp$|Common/Backend/ImGuiKeyForward\\.cpp$")
+		if(source MATCHES "Common/Input/EditorInputGUI\\.cpp$|Common/Backend/ImGuiKeyForward\\.cpp$|Common/Widgets/EditorWidgets\\.cpp$")
 			set_source_files_properties(${source} TARGET_DIRECTORY ${TARGET_NAME} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 		endif()
 	endforeach()

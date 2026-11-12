@@ -102,7 +102,7 @@ namespace sw::editor
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Preset" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldMediumEm" ) );
-        if ( ImGui::BeginCombo( "##NetPlayPreset", selectedName.empty() ? "(none)" : selectedName.c_str() ) )
+        if ( EditorWidgets::beginCombo( "##NetPlayPreset", selectedName.empty() ? "(none)" : selectedName.c_str() ) )
         {
             string pickedName;
             for ( const string& presetName : state._listPresetName )
@@ -118,7 +118,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Preset" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldComboEm" ) );
-        ImGui::InputTextWithHint( "##NetPlayPresetName", SW_LOCKEY( "EditorMultiplayer", "PresetNameHint" ), _presetName.data(), _presetName.capacity() );
+        EditorWidgets::inputTextWithHint( "##NetPlayPresetName", SW_LOCKEY( "EditorMultiplayer", "PresetNameHint" ), _presetName.data(), _presetName.capacity() );
         ImGui::SameLine();
         const string saveName = _presetName.empty() ? selectedName : string( _presetName.c_str() );
         ImGui::BeginDisabled( saveName.empty() );
@@ -145,12 +145,12 @@ namespace sw::editor
         const float32 fieldWidth = ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldNumberEm" );
         EditorChrome::sameLineIfFits( fieldWidth * 2.0f + ImGui::CalcTextSize( "x" ).x + ImGui::GetStyle().ItemSpacing.x * 2.0f );
         ImGui::SetNextItemWidth( fieldWidth );
-        bChanged |= ImGui::InputInt( "##WindowWidth", &settings._windowWidth, 0, 0 );
+        bChanged |= EditorWidgets::inputInt( "##WindowWidth", &settings._windowWidth, 0, 0 );
         ImGui::SameLine();
         ImGui::TextUnformatted( "x" );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( fieldWidth );
-        bChanged |= ImGui::InputInt( "##WindowHeight", &settings._windowHeight, 0, 0 );
+        bChanged |= EditorWidgets::inputInt( "##WindowHeight", &settings._windowHeight, 0, 0 );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "WindowSize" ) );
         // 단추가 붙은 칸은 `measureStepperInput` 폭 — 숫자 칸 폭만 주면 숫자가 몇 픽셀로 눌려 ':' 만 보였다(uiaudit 31). 이름표로 무엇을 세는지 밝힌다.
         const utf8* const pColumns     = SW_LOCKEY( "EditorMultiplayer", "WindowColumnsLabel" );
@@ -161,7 +161,7 @@ namespace sw::editor
         ImGui::TextUnformatted( pColumns );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( stepperWidth );
-        bChanged |= ImGui::InputInt( "##WindowColumns", &settings._windowColumnCount, 1, 1 );
+        bChanged |= EditorWidgets::inputInt( "##WindowColumns", &settings._windowColumnCount, 1, 1 );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "WindowColumns" ) );
         // 범위 밖 값(입력 · 프리셋)은 그리는 프레임마다 맞춘다 — 맞춘 값도 구성으로 돌려준다.
         const int32 width   = MathUtil::clamp( settings._windowWidth, MultiplayerSessionTabInternal::kMinWindowSide, MultiplayerSessionTabInternal::kMaxWindowSide );
@@ -190,7 +190,7 @@ namespace sw::editor
         if ( ( _clientArguments == settings._clientArguments.c_str() ) == false )
             _clientArguments = settings._clientArguments.c_str();
         ImGui::SetNextItemWidth( -1.0f );
-        if ( ImGui::InputTextWithHint( "##ClientArguments", SW_LOCKEY( "EditorMultiplayer", "ClientArgumentsHint" ), _clientArguments.data(), _clientArguments.capacity() ) )
+        if ( EditorWidgets::inputTextWithHint( "##ClientArguments", SW_LOCKEY( "EditorMultiplayer", "ClientArgumentsHint" ), _clientArguments.data(), _clientArguments.capacity() ) )
         {
             settings._clientArguments = _clientArguments.c_str();
             bChanged                  = true;
@@ -222,7 +222,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "PauseServer" ) );
             ImGui::SameLine();
             ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldTinyEm" ) );
-            ImGui::InputInt( "##StepTicks", &_stepTickCount, 0, 0 );
+            EditorWidgets::inputInt( "##StepTicks", &_stepTickCount, 0, 0 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "StepTickCount" ) );
             _stepTickCount = MathUtil::clamp( _stepTickCount, 1, MultiplayerSessionTabInternal::kMaxStepTickCount );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "StepForward" ), SW_LOCKEY( "EdButton", "Step" ), "Step" ) ) );
@@ -297,7 +297,7 @@ namespace sw::editor
         if ( _logSource >= processCount )
             _logSource = -1;
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldMediumEm" ) );
-        if ( ImGui::BeginCombo( "##LogSource", _logSource < 0 ? "All processes" : state._listProcess[static_cast<size_t>( _logSource )]._label.c_str() ) )
+        if ( EditorWidgets::beginCombo( "##LogSource", _logSource < 0 ? "All processes" : state._listProcess[static_cast<size_t>( _logSource )]._label.c_str() ) )
         {
             if ( ImGui::Selectable( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "AllProcesses" ), "All processes" ), _logSource < 0 ) )
                 _logSource = -1;

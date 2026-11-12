@@ -43,7 +43,7 @@ A panel is split so that the ImGui frame can later leave the game (main) thread 
   - status line at the panel foot: `drawPanelStatus`; counts `drawCountLabel`;
   - context menus: commands for a target through `EditorInputGUI::drawContextMenu` (R1 – R9 below); clamped names `drawClampedLabel`; widths in text columns `EditorChrome::setNextItemWidthColumns`.
   - labels go left: `drawTextField` · `drawTextFieldMultiline` (with `pHint` placeholder) and `beginCombo` move a visible `"Name###id"` label in front of the field; never `ImGui::BeginCombo` with a visible label.
-  Lint `EditorWidgetLabels` bans ImGui's right-hand labels on inputs and combos (string literal or `makeStableLabel`). A row label longer than the label column is cut with an ellipsis and shown whole on hover.
+  Enforced by type: editor code cannot call ImGui input widgets (`EditorInputBan.h` widget section); it calls `EditorWidgets::inputInt` · `dragFloat` · `sliderFloat` · `combo` · `beginCombo` …, which take an `EditorWidgetID` — a `##` literal checked by a consteval constructor, or `EditorWidgetID::fromRuntime` for built ids — so no label can land on the right. A row label longer than the label column is cut with an ellipsis and shown whole on hover.
 
 ## App-screen rules for the editor
 

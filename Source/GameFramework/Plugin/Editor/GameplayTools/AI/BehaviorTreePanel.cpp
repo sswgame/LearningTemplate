@@ -232,7 +232,7 @@ namespace sw::editor
             const bool bEditable = getLoadedAssetPath().empty() == false && isDocumentLoadFailed() == false;
             if ( bEditable )
             {
-                if ( ImGui::BeginCombo( "##behaviorTree.add", "Add node..." ) )
+                if ( EditorWidgets::beginCombo( "##behaviorTree.add", "Add node..." ) )
                 {
                     for ( uint32 index = 0; index < BehaviorTreePanelInternal::kNodeTypeCount; ++index )
                     {
@@ -661,7 +661,7 @@ namespace sw::editor
         if ( pTask != nullptr )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Task" ) );
-            if ( ImGui::BeginCombo( "##behaviorTree.task", pTask->_task.empty() ? "(pick a task)" : pTask->_task.c_str() ) )
+            if ( EditorWidgets::beginCombo( "##behaviorTree.task", pTask->_task.empty() ? "(pick a task)" : pTask->_task.c_str() ) )
             {
                 _listTaskName.clear();
                 ActionRegistry::collectNames( _listTaskName );

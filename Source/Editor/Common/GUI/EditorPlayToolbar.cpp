@@ -196,7 +196,7 @@ namespace sw::editor
 
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldTinyEm" ) );
-                ImGui::InputInt( "##StepFrameCount", &getState()._stepFrameCount, 0, 0 );
+                EditorWidgets::inputInt( "##StepFrameCount", &getState()._stepFrameCount, 0, 0 );
                 getState()._stepFrameCount = MathUtil::clamp( getState()._stepFrameCount, 1, static_cast<int32>( EditorPlaySession::kMaxStepFrameCount ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStepFrameCount" ) );
                 ImGui::SameLine();
@@ -226,7 +226,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 float32 timeScale = editor::getSubsystem<GameTimeScale>().get();
                 ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldShortEm" ) );
-                if ( ImGui::DragFloat( "##TimeScale", &timeScale, 0.01f, GameTimeScale::kMinScale, GameTimeScale::kMaxScale, "x%.2f" ) )
+                if ( EditorWidgets::dragFloat( "##TimeScale", &timeScale, 0.01f, GameTimeScale::kMinScale, GameTimeScale::kMaxScale, "x%.2f" ) )
                     editor::getSubsystem<GameTimeScale>().set( timeScale );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayTimeScale" ) );
                 // 되돌리기는 보이는 메뉴 항목이다(예전에는 오른쪽 클릭이 말없이 x1 로 되돌렸다 — 숨은 동작).
