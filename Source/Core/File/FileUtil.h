@@ -347,6 +347,7 @@ namespace sw
         /**
          * @brief 디렉터리를 훑으며 항목마다 @p visit 를 부릅니다. 들어갈 수 없는 하위 폴더는 건너뜁니다. 예외를 던지지 않습니다.
          * @details 순회가 도중에 멈추면(폴더가 순회 중에 지워짐 등) 경고하고 거기까지로 끝납니다. 항목 경로는 버퍼 하나를 다시 써서 넘깁니다.
+         *          순서는 플랫폼과 무관하다 — 폴더마다 이름의 바이트 순이고, 폴더를 만나면 그 안을 먼저 걷는다(부모가 자식보다 앞). OS 순서(NTFS 이름 순, ext4 해시 순)는 쓰지 않는다.
          * @return 디렉터리를 열지 못했거나 순회가 도중에 멈췄으면 false 입니다(콜백이 멈춘 것은 실패가 아닙니다).
          */
         [[nodiscard]] static bool forEachDirectoryEntry( string_view directory, bool bRecursive, DirectoryEntryVisitFn visit, void* pContext );
@@ -383,7 +384,7 @@ namespace sw
          * @brief 디렉터리에서 확장자 필터에 맞는 파일을 모읍니다.
          * @details 실제 파일 시스템을 훑어 얻은 경로라 **대소문자를 그대로 돌려줍니다**(구분자만 `/` 로 바꿉니다). 그대로 열 수
          *          있는 경로여야 하기 때문입니다. 대소문자를 구분하는 파일 시스템에서는 소문자로 바꾼 경로가 곧 "파일 없음" 입니다.
-         *          맵 키가 필요하면 받는 쪽에서 normalizePath 하십시오. 더한 항목은 바이트 순으로 정렬한다 — 훑는 순서는 OS 마다 달라 첫 일치를 고르는 쪽(Quick Open)이 갈렸다.
+         *          맵 키가 필요하면 받는 쪽에서 normalizePath 하십시오. 순서는 `forEachDirectoryEntry` 와 같다(폴더마다 이름의 바이트 순, 폴더를 만나면 그 안을 먼저).
          * @return 폴더가 없으면 알리지 않고 false(없으면 빈 목록이 맞는지는 부른 쪽이 정한다 — 맞으면 `(void)` 와 이유), 순회가 도중에 멈췄으면 경로를 알리고
          *         false(목록은 모은 데까지 — 부분 목록을 전부로 믿으면 지울 것 · 구울 것을 빠뜨린다)입니다.
          * @param stopToken 협조 중단 신호입니다(`StopSource::getToken`). 올라가면 알리지 않고 멈추고 false 를 돌려줍니다 — 부른 쪽이 신호를 다시 읽고 목록을 버린다. 기본값(묶이지 않은 토큰)이면 끝까지 훑는다.

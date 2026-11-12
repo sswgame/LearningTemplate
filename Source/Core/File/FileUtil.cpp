@@ -299,6 +299,42 @@ namespace sw
                 return removedCount;
             }
 
+            /** @brief 폴더 바로 아래 항목 하나입니다(`walkSorted` 가 이름 순으로 줄 세운다). */
+            struct WalkChild
+            {
+                string _name;
+                uint8  _bDirectory{ 0 };
+                uint8  _bLink{ 0 };
+            };
+
+            static bool collectWalkChild( void* pContext, string_view name, bool bDirectory, bool bLink )
+            {
+                static_cast<vector<WalkChild>*>( pContext )->push_back( WalkChild{ string{ name }, static_cast<uint8>( bDirectory ? 1 : 0 ), static_cast<uint8>( bLink ? 1 : 0 ) } );
+                return true;
+            }
+
+            static bool walkChild( void* pContext, string_view name, bool bDirectory, bool bLink );
+
+            /**
+             * @brief 폴더 하나의 항목을 이름의 바이트 순으로 걷습니다. OS 가 주는 순서(NTFS 이름 순, ext4 해시 순)에 기대면 같은 트리가 플랫폼마다 다른 목록이 되어
+             *        첫 일치를 고르는 쪽(Quick Open)이 갈렸다 — 훑는 모든 길이 이 한 곳을 지나 순서를 정한다(언리얼 `IterateDirectory` 는 순서를 정하지 않아 부른 쪽이 정렬한다).
+             * @return 폴더를 열 수 있었으면 true(콜백이 멈춘 것도 포함)입니다.
+             */
+            static bool walkSorted( WalkContext& walk )
+            {
+                vector<WalkChild> listChild;
+                // 도중에 멈춘 폴더도 모은 데까지 걷는다(부분 목록과 false — 전과 같은 계약이다)
+                const bool bOpened = PlatformFileSystem::forEachChild( walk._directory, collectWalkChild, &listChild );
+                std::sort( listChild.begin(), listChild.end(), []( const WalkChild& lhs, const WalkChild& rhs )
+                { return lhs._name < rhs._name; } );
+                for ( const WalkChild& child : listChild )
+                {
+                    if ( walkChild( &walk, child._name, child._bDirectory != 0, child._bLink != 0 ) == false )
+                        break;
+                }
+                return bOpened;
+            }
+
             static bool walkChild( void* pContext, string_view name, bool bDirectory, bool bLink )
             {
                 WalkContext& walk = *static_cast<WalkContext*>( pContext );
@@ -320,7 +356,7 @@ namespace sw
                     child._visit      = walk._visit;
                     child._pContext   = walk._pContext;
                     // 들어갈 수 없는 하위 폴더는 멈추지 않고 건너뛴다(권한 없음).
-                    (void)PlatformFileSystem::forEachChild( path, walkChild, &child );
+                    (void)walkSorted( child );
                     if ( child._bStopped )
                     {
                         walk._bStopped = SW_TRUE;
@@ -956,10 +992,9 @@ namespace sw
         if ( isDirectory( directory ) == false )
             return false;
 
-        const size_t firstIndex = outListFilePath.size();
-        const bool   bHasFilter = filterExtension.empty() == false;
-        const bool   bWalked    = forEachDirectoryEntry( directory, bRecursive, [&outListFilePath, filterExtension, bHasFilter, stopToken]( const DirectoryEntry& entry )
-             {
+        const bool bHasFilter = filterExtension.empty() == false;
+        const bool bWalked    = forEachDirectoryEntry( directory, bRecursive, [&outListFilePath, filterExtension, bHasFilter, stopToken]( const DirectoryEntry& entry )
+           {
             if ( stopToken.isStopRequested() )
                 return false;
             if ( entry._bDirectory || ( bHasFilter && hasExtension( entry._path, filterExtension ) == false ) )
@@ -967,9 +1002,7 @@ namespace sw
             outListFilePath.push_back( string( entry._path ) );
             return true;
         } );
-        // 훑는 순서는 OS 마다 다르다(NTFS 는 이름 순, ext4 readdir 은 해시 순) — 같은 트리가 같은 목록이 되게 바이트 순으로 정렬한다
-        std::sort( outListFilePath.begin() + static_cast<ptrdiff_t>( firstIndex ), outListFilePath.end() );
-        const bool bStopped = stopToken.isStopRequested();
+        const bool bStopped   = stopToken.isStopRequested();
         if ( bWalked == false && bStopped == false )
             SW_LOG_WARNING_ID( "FileUtil.CollectingFilesUnderStopped", "Collecting files under '%#' stopped partway - the list is incomplete", directory );
         return bWalked;
@@ -980,15 +1013,12 @@ namespace sw
         if ( isDirectory( directory ) == false )
             return false;
 
-        const size_t firstIndex = outListFolder.size();
-        const bool   bWalked    = forEachDirectoryEntry( directory, bRecursive, [&outListFolder]( const DirectoryEntry& entry )
-             {
+        const bool bWalked = forEachDirectoryEntry( directory, bRecursive, [&outListFolder]( const DirectoryEntry& entry )
+        {
             if ( entry._bDirectory )
                 outListFolder.push_back( string( entry._path ) );
             return true;
         } );
-        // collectFiles 와 같은 이유로 정렬한다. 바이트 순이라 부모 폴더가 늘 그 아래 폴더보다 앞선다(앞머리가 같으면 짧은 쪽이 앞)
-        std::sort( outListFolder.begin() + static_cast<ptrdiff_t>( firstIndex ), outListFolder.end() );
         if ( bWalked == false )
             SW_LOG_WARNING_ID( "FileUtil.CollectingFoldersUnderStopped", "Collecting folders under '%#' stopped partway - the list is incomplete", directory );
         return bWalked;
@@ -1351,6 +1381,6 @@ namespace sw
         walk._bRecursive = bRecursive;
         walk._visit      = visit;
         walk._pContext   = pContext;
-        return PlatformFileSystem::forEachChild( walk._directory, FileUtilInternal::walkChild, &walk );
+        return FileUtilInternal::walkSorted( walk );
     }
 } // namespace sw
