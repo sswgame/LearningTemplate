@@ -19,6 +19,7 @@
         {
             "_name": "chat",
             "_settings": {
+                "_historyRetentionDays": 30,
                 "_bannedWordsFile": "Config/Server/chat_banned_words.txt",
                 "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt"
             }
@@ -34,6 +35,8 @@
         {
             "_name": "leaderboard",
             "_settings": {
+                "_pastScoreRetentionDays": 30,
+                "_seasonResultRetentionDays": 365,
                 "_catalog": "game/shooter3d/data/shooter3d.leaderboards.xml"
             }
         },

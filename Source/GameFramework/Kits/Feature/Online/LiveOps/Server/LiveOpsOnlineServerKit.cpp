@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Network/DevOnlineExtension.h"
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsDevOptions.h"
@@ -83,7 +84,9 @@ namespace sw
                                                .and_then( [&]
                 { return exposeInterface<IOfflinePushSender>( context, entry, _offlinePush ); } )
                                                .and_then( [&]
-                { return exposeInterface<ILiveEventControl>( context, entry, _service ); } );
+                { return exposeInterface<ILiveEventControl>( context, entry, _service ); } )
+                                               .and_then( [&]
+                { return addRetentionRule( context, entry, PushNotificationDispatcher::makeTopicClaimRetentionRule( kitConfig._pushClaimRetentionDays * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond ) ); } );
                 if ( assembled.has_value() == false )
                     shutdown(); // 초기화에 실패한 키트는 shutdown 을 받지 않는다 — 만든 제공자를 여기서 내린다
                 return assembled;

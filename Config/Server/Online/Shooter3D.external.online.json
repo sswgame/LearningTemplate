@@ -12,6 +12,7 @@
         {
             "_name": "chat",
             "_settings": {
+                "_historyRetentionDays": 30,
                 "_bannedWordsFile": "Config/Server/chat_banned_words.txt",
                 "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt"
             }
@@ -29,6 +30,7 @@
         {
             "_name": "liveops",
             "_settings": {
+                "_pushClaimRetentionDays": 30,
                 "_pushProvidersFile": "Config/Server/Online/Providers/Shooter3D.push.json",
                 "_pushTrustFile": "Config/Server/Online/ca-bundle.pem"
             }

@@ -28,7 +28,7 @@ namespace sw
         {
             static constexpr uint8       kFormatVersion        = 1;
             static constexpr int32       kRebuildBatch         = 256;
-            static constexpr int32       kPlayersPerCommit     = 12;  ///< 사람마다 쓰기가 다섯이다. 결과, 우편, 보낸 기록, 만료 인덱스, 새 우편 알림이며 트랜잭션 상한 64 안에 들어간다
+            static constexpr int32       kPlayersPerCommit     = 10;  ///< 사람마다 쓰기가 여섯이다. 결과, 결과 만료 색인, 우편, 보낸 기록, 우편 만료 색인, 새 우편 알림이며 트랜잭션 상한 64 안에 들어간다
             static constexpr int32       kPlayersPerPage       = 600; ///< 정산 저장소 일 하나가 쓰는 사람 수(커밋 50 번). 페이지 사이에 다른 요청이 저장소 워커를 쓴다
             static constexpr int64       kDayMs                = 86400000;
             static constexpr int64       kWeekMs               = 604800000;
@@ -49,6 +49,61 @@ namespace sw
             {
                 static const hashed_string s_table{ "lb_season_result" };
                 return s_table;
+            }
+
+            static const hashed_string& getSeasonResultExpiryTable()
+            {
+                static const hashed_string s_table{ "lb_season_result_expiry" };
+                return s_table;
+            }
+
+            static const hashed_string& getScoreExpiryTable()
+            {
+                static const hashed_string s_table{ "lb_score_expiry" };
+                return s_table;
+            }
+
+            /**
+             * @brief 기간 @p periodID 의 점수가 더 쓰이지 않게 되는 시각입니다(만료 색인의 기준 시각). 0 이면 지우지 않습니다.
+             * @details 일간 · 주간은 다음 초기화(기간 id 가 기간 시작 시각이다), 시즌은 시즌 끝 + 정산 창이다 — 정산이 점수를 모두 읽은 뒤에야 지운다.
+             */
+            static int64 computeScoreExpiryBaseMs( const LeaderboardDef& definition, uint64 periodID )
+            {
+                switch ( definition._reset )
+                {
+                    case LeaderboardReset::Daily:
+                    {
+                        return static_cast<int64>( periodID ) + kDayMs;
+                    }
+                    case LeaderboardReset::Weekly:
+                    {
+                        return static_cast<int64>( periodID ) + kWeekMs;
+                    }
+                    case LeaderboardReset::Season:
+                    {
+                        for ( const LeaderboardSeason& season : definition._listSeason )
+                        {
+                            if ( season._seasonID == periodID )
+                                return season._endMs + kSettlementWindowMs;
+                        }
+                        return 0;
+                    }
+                    default:
+                    {
+                        return 0; // 초기화 없는 보드의 점수는 지우지 않는다
+                    }
+                }
+            }
+
+            /** @brief 점수 값의 갱신 시각을 읽습니다(보존 쓸기). 기간 끝보다 늦을 수 없으므로 색인 줄이 기간을 넘기면 레코드도 넘긴다. */
+            [[nodiscard]] static bool readScoreTimeMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                BitReader reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
+                if ( reader.readBits( 8 ) != kFormatVersion )
+                    return false;
+                (void)reader.readVarInt(); // 점수는 건너뛴다. 넘쳤는지는 아래 hasOverflowed 가 본다
+                outTimeMs = reader.readVarInt();
+                return reader.hasOverflowed() == false;
             }
 
             /** @brief 시즌 id 를 16진 8자리 문자열로 만듭니다. 작업 id 와 우편 멱등 키를 64바이트 안에 두려는 것입니다. */
@@ -237,7 +292,8 @@ namespace sw
         UnixMilliseconds  _nowMs{ 0 };
         LeaderboardUpdate _update{ LeaderboardUpdate::Best };
         LeaderboardOrder  _order{ LeaderboardOrder::Descending };
-        NetIdempotencyKey _idempotencyKey{}; ///< Sum · Latest 쓰기의 멱등 기록 키. 비면(서버 안의 파생 쓰기) 기록하지 않는다
+        NetIdempotencyKey _idempotencyKey{};  ///< Sum · Latest 쓰기의 멱등 기록 키. 비면(서버 안의 파생 쓰기) 기록하지 않는다
+        int64             _expiryBaseMs{ 0 }; ///< 0 이 아니면 레코드를 처음 만들 때 이 시각의 만료 색인 줄(`lb_score_expiry`)을 함께 넣는다
     };
 
     namespace
@@ -309,6 +365,9 @@ namespace sw
                     }
                     ServiceTransaction transaction;
                     transaction.put( input._table, input._key, Internal::encodeScore( write._finalValue, input._nowMs.count(), input._displayName ), record._version );
+                    if ( readResult == ServiceStoreResult::NotFound && input._expiryBaseMs > 0 ) // 계정 · 기간마다 한 번이다(같은 줄을 여럿이 쓰지 않는다)
+                        transaction.put( Internal::getScoreExpiryTable(), ServiceRetentionRule::makeIndexKey( input._expiryBaseMs, input._key ), vector<uint8>{},
+                                         ServiceRecord::kAnyVersion );
                     if ( bRecorded )
                     {
                         vector<uint8> listReply( sizeof( int64 ) );
@@ -548,6 +607,8 @@ namespace sw
                 if ( read != ServiceStoreResult::NotFound )
                     return false;
                 inoutTransaction.put( Internal::getSeasonResultTable(), key, Internal::encodeScore( row._score, rank, string_view{} ), ServiceRecord::kAbsentVersion );
+                inoutTransaction.put( Internal::getSeasonResultExpiryTable(), ServiceRetentionRule::makeIndexKey( season._endMs + Internal::kSettlementWindowMs, key ),
+                                      vector<uint8>{}, ServiceRecord::kAnyVersion ); // 정산 창이 닫힌 뒤부터 잰다 - 창 안에서는 이 결과가 다시 돌기의 멱등이다
                 const LeaderboardRewardTier* pTier = findTier( season, rank );
                 if ( pTier == nullptr )
                     return true;
@@ -743,7 +804,27 @@ namespace sw
         input._update         = pBoard->_update;
         input._order          = pBoard->_order;
         input._idempotencyKey = idempotencyKey;
+        input._expiryBaseMs   = LeaderboardServiceInternal::computeScoreExpiryBaseMs( *pBoard, periodID );
         submitWrite( input, pBoard->_boardID, accountID, periodID, requestTag, LeaderboardOperation::Submit );
+    }
+
+    ServiceRetentionRule LeaderboardService::makeScoreRetentionRule( int64 retentionMs )
+    {
+        ServiceRetentionRule rule;
+        rule._table       = LeaderboardServiceInternal::getScoreTable();
+        rule._indexTable  = LeaderboardServiceInternal::getScoreExpiryTable();
+        rule._retentionMs = retentionMs;
+        rule._pfnReadTime = &LeaderboardServiceInternal::readScoreTimeMs;
+        return rule;
+    }
+
+    ServiceRetentionRule LeaderboardService::makeSeasonResultRetentionRule( int64 retentionMs )
+    {
+        ServiceRetentionRule rule;
+        rule._table       = LeaderboardServiceInternal::getSeasonResultTable();
+        rule._indexTable  = LeaderboardServiceInternal::getSeasonResultExpiryTable();
+        rule._retentionMs = retentionMs; // 시각 읽기를 두지 않는다 - 결과는 한 번 쓰고 바꾸지 않으므로 색인의 시각을 믿는다
+        return rule;
     }
 
     void LeaderboardService::submitWrite( const LeaderboardWriteInput& input, const string& boardID, AccountID accountID, uint64 periodID, uint64 requestTag,

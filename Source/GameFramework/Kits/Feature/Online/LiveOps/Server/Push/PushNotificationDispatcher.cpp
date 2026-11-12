@@ -31,6 +31,19 @@ namespace sw
                 return s_table;
             }
 
+            /** @brief 토픽 알림 표 키 `<…>/<창 끝 16진>/<16진 꼬리>` 에서 창 끝을 읽습니다(보존 쓸기). 모양이 다르면 false 이고 지우지 않습니다. */
+            [[nodiscard]] static bool readClaimWindowEndMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                const size_t  width       = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                const string& key         = record._key;
+                uint64        windowEndMs = 0;
+                if ( key.size() < 2 * width + 3 || key[key.size() - width - 1] != '/' || key[key.size() - 2 * width - 2] != '/' ||
+                     ServiceKeyUtil::parseHex64( string_view( key ).substr( key.size() - 2 * width - 1, width ), windowEndMs ) == false )
+                    return false;
+                outTimeMs = static_cast<int64>( windowEndMs );
+                return true;
+            }
+
             /** @brief 계정의 기기 레코드를 모두 읽습니다. 한도보다 하나 더 읽어서 넘친 것도 보이게 합니다. */
             static ServiceStoreResult listDevices( IServiceStoreConnection& connection, AccountID accountID, vector<ServiceRecord>& outListRecord )
             {
@@ -155,6 +168,15 @@ namespace sw
         }
         _listProvider.push_back( pProvider );
         return true;
+    }
+
+    ServiceRetentionRule PushNotificationDispatcher::makeTopicClaimRetentionRule( int64 retentionMs )
+    {
+        ServiceRetentionRule rule;
+        rule._table       = PushNotificationDispatcherInternal::getTopicClaimTable();
+        rule._retentionMs = retentionMs;
+        rule._pfnReadTime = &PushNotificationDispatcherInternal::readClaimWindowEndMs;
+        return rule;
     }
 
     string PushNotificationDispatcher::makeAccountPrefix( AccountID accountID )
