@@ -353,7 +353,8 @@ namespace sw
             return false;
 
         // 원형은 씬 밖에서 짓는다(언리얼 CDO 처럼 월드에 들지 않는다). 매니저마다 엔진 · 모듈의 팩토리가 등록되므로 게임 컴포넌트도 지어진다.
-        GameObjectManager scratch;
+        // 비동기 씬 로드(워커)도 부른다 — 씬 밖 매니저(TransientTag)라 컴포넌트 훅을 부르지 않는다(감사 A-15).
+        GameObjectManager scratch( GameObjectManager::TransientTag{} );
         const string&     prefabName = prefab.getName();
         GameObject*       pBase      = scratch.createGameObject( hashed_string( prefabName.empty() ? PrefabOverridesInternal::kBaseName : prefabName.c_str() ) );
         if ( pBase == nullptr )
