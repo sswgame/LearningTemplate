@@ -107,8 +107,9 @@ namespace sw::editor
             _pTarget = &selection;
         }
         _bHovered = SW_FALSE;
+        // 최상위 집합만 옮긴다. 자식은 부모를 따라 움직이므로, 자식을 따로 놓으면 선택 순서에 따라 부모가 한 번 더 끈다(유니티 `SelectionMode.TopLevel` · 언리얼과 같다).
         vector<GameObject*> listSelected;
-        selection.getSelectedObjects( listSelected );
+        selection.getTopLevelObjects( listSelected );
         vector<GameObject*> listGizmo;
         listGizmo.reserve( listSelected.size() );
         for ( GameObject* pRaw : listSelected )

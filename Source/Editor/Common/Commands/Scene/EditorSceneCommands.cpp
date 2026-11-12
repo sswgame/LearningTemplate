@@ -47,20 +47,6 @@ namespace sw::editor
                 }
                 outListObject.push_back( pObj );
             }
-
-            /** @brief @p pObj 의 조상이 @p listObject 안에 있으면 true 입니다. 그 조상의 서브트리를 복사할 때 이미 함께 복사됩니다. */
-            static bool hasSelectedAncestor( const GameObject* pObj, const vector<GameObject*>& listObject )
-            {
-                for ( const GameObject* pParent = pObj->getParent(); pParent != nullptr; pParent = pParent->getParent() )
-                {
-                    for ( const GameObject* pSelected : listObject )
-                    {
-                        if ( pSelected == pParent )
-                            return true;
-                    }
-                }
-                return false;
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -207,7 +193,7 @@ namespace sw::editor
         if ( EditorPlaySession::refuseSceneEdit( "Destroy GameObjects" ) || pManager == nullptr )
             return 0;
         // 고른 조상이 있으면 건너뛴다. 조상을 지우면 자식도 지워지므로, 먼저 지운 자식을 다시 지우지 않는다.
-        const vector<GameObject*> listRoot = filterTopLevel( listObject );
+        const vector<GameObject*> listRoot = EditorSelection::filterTopLevel( listObject );
         if ( listRoot.empty() )
             return 0;
 
@@ -220,27 +206,6 @@ namespace sw::editor
         }
         EditorTransaction::endTransaction();
         return destroyedCount;
-    }
-
-    vector<GameObject*> EditorSceneCommands::filterTopLevel( const vector<GameObject*>& listObject )
-    {
-        vector<GameObject*> listRoot;
-        for ( GameObject* pObj : listObject )
-        {
-            if ( pObj == nullptr )
-                continue;
-            bool bAncestorPicked = false;
-            for ( const GameObject* pParent = pObj->getParent(); pParent != nullptr && bAncestorPicked == false; pParent = pParent->getParent() )
-            {
-                for ( const GameObject* pOther : listObject )
-                {
-                    bAncestorPicked = bAncestorPicked || pOther == pParent;
-                }
-            }
-            if ( bAncestorPicked == false )
-                listRoot.push_back( pObj );
-        }
-        return listRoot;
     }
 
     void EditorSceneCommands::collectRootsInOrder( GameObjectManager& manager, vector<GameObject*>& outListRoot )
@@ -258,11 +223,13 @@ namespace sw::editor
     void EditorSceneCommands::duplicateObjects( EditorTransaction& transaction, GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated )
     {
         outListCreated.clear();
-        const bool bNothingToDuplicate = EditorPlaySession::refuseSceneEdit( "Duplicate GameObjects" ) || pManager == nullptr || listObject.empty();
+        // 고른 조상이 있으면 건너뛴다. 조상의 복제가 서브트리째 자식을 복제하므로, 자식을 따로 또 복제하면 사본이 둘이 된다.
+        const vector<GameObject*> listRoot            = EditorSelection::filterTopLevel( listObject );
+        const bool                bNothingToDuplicate = EditorPlaySession::refuseSceneEdit( "Duplicate GameObjects" ) || pManager == nullptr || listRoot.empty();
         if ( bNothingToDuplicate )
             return;
-        EditorTransaction::beginTransaction( listObject.size() == 1 ? string( "Duplicate GameObject" ) : "Duplicate " + to_string( listObject.size() ) + " GameObjects" );
-        for ( GameObject* pSource : listObject )
+        EditorTransaction::beginTransaction( listRoot.size() == 1 ? string( "Duplicate GameObject" ) : "Duplicate " + to_string( listRoot.size() ) + " GameObjects" );
+        for ( GameObject* pSource : listRoot )
         {
             GameObject* pCopy = duplicate( transaction, pManager, pSource );
             if ( pCopy != nullptr )
@@ -617,10 +584,8 @@ namespace sw::editor
         vector<ObjectCopyEntry> listCopied;
         EditorContext*          pContext = editor::findSubsystem<EditorContext>();
         uint32                  rootCount{ 0 };
-        for ( GameObject* pRoot : listObject )
+        for ( GameObject* pRoot : EditorSelection::filterTopLevel( listObject ) ) // 선택한 것 안의 자손은 조상의 서브트리로 한 번만 복사한다
         {
-            if ( pRoot == nullptr || EditorSceneCommandsInternal::hasSelectedAncestor( pRoot, listObject ) )
-                continue;
             vector<GameObject*> listSubtree;
             EditorSceneCommandsInternal::collectSubtreeChildFirst( pRoot, listSubtree );
             VectorUtil::reverse( listSubtree ); // 부모부터 둔다. 붙여 넣을 때 자식이 먼저 만든 부모에 붙는다
