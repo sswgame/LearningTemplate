@@ -20,6 +20,8 @@ namespace sw
         , _listRemovedEntry{}
         , _listLayer{}
         , _listChange{}
+        , _pJobLayer{ nullptr }
+        , _jobLayerCount{ 0 }
         , _jobStage{}
         , _nextSequence{ 0 }
         , _appliedChangeCount{ 0 }
@@ -47,6 +49,8 @@ namespace sw
             if ( _listLayer[layerIndex]._pDesc == &layer )
                 return layerIndex;
         }
+        // 새 층은 벡터를 키운다(재할당) — 넘긴 일이 층 배열을 쓰는 동안 키우지 않도록 먼저 기다린다. 층은 처음 쓰일 때 한 번 생겨 드물다.
+        waitBackBufferRebuild();
         Layer added; // 기본 초기화 — `{}` 집합 초기화는 explicit 기본 생성자의 격자 칸을 복사 목록 초기화한다
         added._pDesc = &layer;
         _listLayer.push_back( std::move( added ) );
@@ -305,6 +309,9 @@ namespace sw
             layer._arrBuiltCell[back] = layer._cellSize;
         }
         _bJobLaunched = SW_TRUE;
+        // 넘긴 일은 이 배열만 본다 — 일이 도는 동안 층 벡터의 구조는 바뀌지 않고(새 층은 `findOrAddLayer` 가 일을 기다린 뒤 더한다), 일은 층마다 뒤 버퍼 칸만 쓴다.
+        _pJobLayer     = _listLayer.data();
+        _jobLayerCount = static_cast<uint32>( _listLayer.size() );
         if ( engine::areEngineServicesBound() == false )
         {
             rebuildBackBuffer(); // 워커가 없으면(테스트 · 도구) 지금 맞춘다 — 앞뒤를 바꾸는 것은 그래도 `completeFrameJob` 이다
@@ -320,14 +327,16 @@ namespace sw
     void SceneSpatialGrid::rebuildBackBuffer()
     {
         const uint8 back = static_cast<uint8>( 1u - _frontIndex );
-        for ( Layer& layer : _listLayer )
+        for ( uint32 layerIndex = 0; layerIndex < _jobLayerCount; ++layerIndex )
         {
+            Layer& layer = _pJobLayer[layerIndex];
             if ( layer._bRebuildBack == SW_TRUE )
                 layer._arrGrid[back] = SpatialHashGrid2D{ layer._cellSize };
         }
         for ( const Change& change : _listChange )
         {
-            SpatialHashGrid2D& grid = _listLayer[change._layerIndex]._arrGrid[back];
+            SW_ASSERT( change._layerIndex < _jobLayerCount );
+            SpatialHashGrid2D& grid = _pJobLayer[change._layerIndex]._arrGrid[back];
             if ( change._bRemove == SW_TRUE )
                 grid.remove( change._handle );
             else

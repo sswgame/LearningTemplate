@@ -157,7 +157,9 @@ namespace sw
         vector<uint32>  _listFreeEntry;
         vector<uint32>  _listRemovedEntry; ///< 앞 버퍼에서 뺐고 뒤 버퍼에서 빼기를 기다리는 칸(넘긴 일이 끝나면 비운다)
         vector<Layer>   _listLayer;
-        vector<Change>  _listChange; ///< 이번에 넘긴 일의 몫
+        vector<Change>  _listChange;    ///< 이번에 넘긴 일의 몫
+        Layer*          _pJobLayer;     ///< 넘긴 일이 보는 층 배열(일을 띄울 때 잡는다 — 일이 도는 동안 층 벡터는 자라지 않는다)
+        uint32          _jobLayerCount; ///< 위 배열의 수
         TaskStageHandle _jobStage;
         uint64          _nextSequence;
         uint64          _appliedChangeCount;
