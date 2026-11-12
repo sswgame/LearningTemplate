@@ -413,16 +413,11 @@ namespace sw
             }
 
             const uint32 assigned = _pHelperSlotPool->_count.fetch_add( 1, std::memory_order_relaxed );
+            // 넘치면 멈춘다 — 마지막 슬롯을 나눠 쓰면 스크래치 벡터가 겹치고(힙 손상) 깨우기가 엉뚱한 스레드로 간다(감사 C-17). 끝나는 스레드가 슬롯을
+            // 돌려주므로(`ThreadTaskState` 소멸) 동시에 살아 있는 비워커 스레드가 이만큼일 때만 닿는다.
             if ( assigned >= kMaxHelperThreadCount )
-            {
-                // 넘치면 마지막 슬롯을 나눠 쓴다. 스크래치가 겹칠 수 있으므로 로그로 알린다. 끝나는 스레드가 슬롯을 돌려주므로(`ThreadTaskState` 소멸) 동시에 살아 있는
-                // 비워커 스레드가 이만큼일 때만 닿는다.
-                SW_LOG_ERROR_ID( "Task.HelperSlotsExhausted", "More than %# non-worker threads execute tasks at once — scratch slots collide (raise kMaxHelperThreadCount)",
-                                 kMaxHelperThreadCount );
-                t_threadState._helperScratchSlot = static_cast<int32>( kMaxHelperThreadCount - 1 );
-            }
-            else
-                t_threadState._helperScratchSlot = static_cast<int32>( assigned );
+                SW_FATAL( "More than %# non-worker threads execute tasks at once - scratch slots would collide (raise kMaxHelperThreadCount)", kMaxHelperThreadCount );
+            t_threadState._helperScratchSlot = static_cast<int32>( assigned );
         }
         return getWorkerCount() + static_cast<uint32>( t_threadState._helperScratchSlot );
     }
