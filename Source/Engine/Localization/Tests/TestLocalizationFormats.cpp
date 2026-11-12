@@ -436,9 +436,9 @@ SW_TEST_CASE( LocalizationBinaryTableTest, RoundTripAndCorruption )
 {
     sw::LocalizationBinaryTable table;
     table.setCulture( "ko" );
-    table.setText( "Menu.Start", "시작" );
-    table.setText( "Menu.Quit", "종료" );
-    table.setText( "Menu.Empty", "" );
+    SW_REQUIRE_TRUE( table.setText( "Menu.Start", "시작" ) );
+    SW_REQUIRE_TRUE( table.setText( "Menu.Quit", "종료" ) );
+    SW_REQUIRE_TRUE( table.setText( "Menu.Empty", "" ) );
 
     sw::vector<uint8> bytes;
     table.toBytes( bytes );
@@ -450,8 +450,8 @@ SW_TEST_CASE( LocalizationBinaryTableTest, RoundTripAndCorruption )
     SW_REQUIRE_TRUE( loaded.parse( bytes.data(), bytes.size() ) );
     SW_EXPECT_EQUAL( sw::string( "ko" ), loaded.getCulture() );
     SW_REQUIRE_EQUAL( size_t( 3 ), loaded.getTexts().size() );
-    const auto startIt = loaded.getTexts().find( sw::hashed_string::computeHash( "Menu.Start" ) );
-    const auto emptyIt = loaded.getTexts().find( sw::hashed_string::computeHash( "Menu.Empty" ) );
+    const auto startIt = loaded.getTexts().find( sw::LocalizationKeyIndex::computeHash( "Menu.Start" ) );
+    const auto emptyIt = loaded.getTexts().find( sw::LocalizationKeyIndex::computeHash( "Menu.Empty" ) );
     SW_REQUIRE_TRUE( startIt != loaded.getTexts().end() && emptyIt != loaded.getTexts().end() );
     SW_EXPECT_EQUAL( sw::string( "시작" ), startIt->second );
     SW_EXPECT_TRUE( emptyIt->second.empty() );
@@ -516,4 +516,68 @@ SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringF
 
     runtime.unloadLanguage( "ko" );
     SW_EXPECT_NULL( runtime.findStringByText( "ui.start" ) );
+}
+
+/**
+ * @brief [LocalizationBinaryTableTest] 32 비트 이름 해시가 같은 두 키를 쿠킹해도 서로 덮지 않고, 매니저가 둘을 따로 낸다(감사 C-8)
+ */
+SW_TEST_CASE( LocalizationBinaryTableTest, KeysSharingThe32BitHashStayDistinct )
+{
+    // 대소문자 무시 FNV-1a 32 비트가 같은 쌍이다(생일 탐색으로 찾았다) — 예전 실행 표는 나중 것이 이겼다.
+    constexpr const utf8* kKeyA = "ui.key1022789";
+    constexpr const utf8* kKeyB = "ui.key1239192";
+    SW_REQUIRE_EQUAL( sw::hashed_string::computeHash( kKeyA ), sw::hashed_string::computeHash( kKeyB ) );
+    SW_REQUIRE_TRUE( sw::LocalizationKeyIndex::computeHash( kKeyA ) != sw::LocalizationKeyIndex::computeHash( kKeyB ) );
+
+    sw::LocalizationBinaryTable table;
+    table.setCulture( "ko" );
+    SW_REQUIRE_TRUE( table.setText( kKeyA, "가" ) );
+    SW_REQUIRE_TRUE( table.setText( kKeyB, "나" ) );
+    SW_EXPECT_EQUAL( size_t( 2 ), table.getTexts().size() );
+
+    sw::vector<uint8> bytes;
+    table.toBytes( bytes );
+    sw::LocalizationManager runtime;
+    SW_REQUIRE_TRUE( runtime.loadBinaryTable( bytes.data(), bytes.size() ) );
+    SW_REQUIRE_TRUE( runtime.setCurrentLanguage( "ko" ) );
+    SW_REQUIRE_NOT_NULL( runtime.findStringByText( kKeyA ) );
+    SW_REQUIRE_NOT_NULL( runtime.findStringByText( kKeyB ) );
+    SW_EXPECT_EQUAL( sw::string( "가" ), sw::string( runtime.findStringByText( kKeyA ) ) );
+    SW_EXPECT_EQUAL( sw::string( "나" ), sw::string( runtime.findStringByText( kKeyB ) ) );
+
+    // 낱개 표(키 글이 있는 읽기 길)도 둘을 따로 받는다 — 충돌 검사가 32 비트 쌍을 거절하지 않는다.
+    sw::LocalizationManager loose;
+    loose.setString( "en", sw::hashed_string( kKeyA ), "A" );
+    loose.setString( "en", sw::hashed_string( kKeyB ), "B" );
+    SW_REQUIRE_TRUE( loose.setCurrentLanguage( "en" ) );
+    SW_REQUIRE_NOT_NULL( loose.findString( sw::hashed_string( kKeyA ) ) );
+    SW_REQUIRE_NOT_NULL( loose.findString( sw::hashed_string( kKeyB ) ) );
+    SW_EXPECT_EQUAL( sw::string( "A" ), sw::string( loose.findString( sw::hashed_string( kKeyA ) ) ) );
+    SW_EXPECT_EQUAL( sw::string( "B" ), sw::string( loose.findString( sw::hashed_string( kKeyB ) ) ) );
+}
+
+/**
+ * @brief [LocalizationKeyIndexTest] 같은 해시에 다른 키가 오면 오류이고 먼저 든 키를 지킨다 — 대소문자만 다른 철자는 같은 키다
+ */
+SW_TEST_CASE( LocalizationKeyIndexTest, SameHashDifferentKeyIsAnError )
+{
+    sw::LocalizationKeyIndex index;
+    constexpr uint64         kForgedHash = 0x1234u; // 64 비트 충돌은 찾을 수 없으니 해시를 일부러 같게 넣는다
+    SW_REQUIRE_TRUE( index.addWithHash( "Menu.Start", kForgedHash ) );
+    SW_EXPECT_TRUE( index.addWithHash( "Menu.Start", kForgedHash ) );
+    SW_EXPECT_TRUE( index.addWithHash( "menu.start", kForgedHash ) );
+
+    const sw::expected<uint64> collided = index.addWithHash( "Menu.Quit", kForgedHash );
+    SW_REQUIRE_FALSE( collided );
+    SW_EXPECT_TRUE( collided.error().kind() == sw::ErrorKind::AlreadyExists );
+    SW_EXPECT_TRUE( collided.error().detail().find( "Menu.Start" ) != sw::string_view::npos );
+    SW_EXPECT_TRUE( collided.error().detail().find( "Menu.Quit" ) != sw::string_view::npos );
+    // 진 뒤에도 먼저 든 키가 그대로라 같은 해시의 다른 키는 계속 진다.
+    SW_EXPECT_FALSE( index.addWithHash( "Menu.Quit", kForgedHash ) );
+
+    const sw::expected<uint64> added = index.add( "Menu.Quit" );
+    SW_REQUIRE_TRUE( added );
+    SW_EXPECT_EQUAL( sw::LocalizationKeyIndex::computeHash( "Menu.Quit" ), *added );
+    index.clear();
+    SW_EXPECT_TRUE( index.addWithHash( "Menu.Quit", kForgedHash ) );
 }

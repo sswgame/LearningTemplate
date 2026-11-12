@@ -40,6 +40,39 @@ namespace sw
 
 namespace sw
 {
+    uint64 LocalizationKeyIndex::computeHash( string_view key )
+    {
+        return HashUtil::computeStringHash64( key );
+    }
+
+    expected<uint64> LocalizationKeyIndex::add( string_view key )
+    {
+        return addWithHash( key, computeHash( key ) );
+    }
+
+    expected<uint64> LocalizationKeyIndex::addWithHash( string_view key, uint64 keyHash )
+    {
+        const auto it = _mapKeyByHash.find( keyHash );
+        if ( it == _mapKeyByHash.end() )
+        {
+            _mapKeyByHash.emplace( keyHash, string( key ) );
+            return keyHash;
+        }
+        if ( StringUtil::equals( it->second, key, true ) )
+            return keyHash;
+        string detail;
+        detail.append( it->second ).append( " / " ).append( key );
+        return unexpected( Error{ ErrorKind::AlreadyExists, "localization keys share a hash", detail } );
+    }
+
+    void LocalizationKeyIndex::clear()
+    {
+        _mapKeyByHash.clear();
+    }
+} // namespace sw
+
+namespace sw
+{
     StringTable::StringTable( LocalizedTextArena& arena )
         : _arena{ arena }
         , _mutex{}
@@ -49,14 +82,14 @@ namespace sw
 
     const utf8* StringTable::findString( const hashed_string& key ) const
     {
-        return findByHash( key.getHash() );
+        return findByHash( LocalizationKeyIndex::computeHash( key.view() ) );
     }
 
     const utf8* StringTable::findStringByText( string_view keyText ) const
     {
         if ( keyText.empty() )
             return nullptr;
-        return findByHash( hashed_string::computeHash( keyText ) );
+        return findByHash( LocalizationKeyIndex::computeHash( keyText ) );
     }
 
     const utf8* StringTable::findByHash( uint64 keyHash ) const
@@ -72,12 +105,12 @@ namespace sw
     bool StringTable::contains( const hashed_string& key ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _mutex };
-        return _mapTable.find( key.getHash() ) != _mapTable.end();
+        return _mapTable.find( LocalizationKeyIndex::computeHash( key.view() ) ) != _mapTable.end();
     }
 
     void StringTable::setString( const hashed_string& key, const string& value )
     {
-        setStringByHash( key.getHash(), value );
+        setStringByHash( LocalizationKeyIndex::computeHash( key.view() ), value );
     }
 
     void StringTable::setStringByHash( uint64 keyHash, string_view value )
