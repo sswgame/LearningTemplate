@@ -158,6 +158,11 @@ add_test(NAME Scripts.AssetReferenceFieldList
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/Tests/TestAssetReferenceFieldList.py")
 set_tests_properties(Scripts.AssetReferenceFieldList PROPERTIES LABELS nogpu TIMEOUT 120)
 
+# 빌드 지문 생성기(ABI 스탬프 · 쿠커 코드 지문)의 파일 지문 캐시 — 캐시가 있든 없든 같은 지문, 바뀐 파일만 다시 읽기, 지운 파일 줄 정리.
+add_test(NAME Scripts.FileDigestCache
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/Tests/TestFileDigestCache.py")
+set_tests_properties(Scripts.FileDigestCache PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 배포 패키지의 모드 스테이징 — 묶은 모드만 담고, 형식이 틀린 id · 묶지 않은 모드는 실패다(Scripts/package/Pack.py --mods).
 add_test(NAME Scripts.PackMods
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/Tests/TestPackMods.py")

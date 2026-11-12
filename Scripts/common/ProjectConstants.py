@@ -112,9 +112,6 @@ kKeyLibclangDllPath = "libclang_dll_path"
 kKeyWindowsSdkDir = "windows_sdk_dir"
 kKeyWindowsSdkVersion = "windows_sdk_version"
 kKeyMsvcToolsDir = "msvc_tools_dir"
-kKeyDxcDllPath = "dxc_dll_path"
-kKeyDxilDllPath = "dxil_dll_path"
-kKeyDxcSearchKey = "dxc_search_key"   # DXC 를 찾은 입력(VULKAN_SDK · Windows SDK 경로 · 판) — 같으면 SDK 폴더를 다시 훑지 않는다
 kKeyVcpkgRoot = "vcpkg_root"
 kKeyNinjaPath = "ninja_path"
 
@@ -138,7 +135,6 @@ kKeyVcpkgSearchRoots = "vcpkg_search_roots"
 kKeyVcpkgGitUrl = "vcpkg_git_url"
 kKeyVcpkgGitCommit = "vcpkg_git_commit"
 kKeyVcpkgAutoBootstrap = "vcpkg_auto_bootstrap"
-kKeyVcpkgInstalledRel = "vcpkg_installed_rel"
 
 # Environment Variables
 kEnvSwLlvmAutoBootstrap = "SW_LLVM_AUTO_BOOTSTRAP"

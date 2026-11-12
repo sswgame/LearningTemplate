@@ -28,7 +28,6 @@
     "vcpkg_git_commit": "",
     "vcpkg_auto_bootstrap": true,
     "vcpkg_search_roots": [],
-    "vcpkg_installed_rel": "build/vcpkg_installed",
     "clang_format_version": "20.1.8",
     "llvm_version": "20.1.8",
     "ninja_version": "1.12.1",

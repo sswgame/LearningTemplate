@@ -204,28 +204,6 @@ def findFirstExistingFileRecursive(searchDirs: list[Path], fileNames: list[str])
     return ""
 
 
-def findFirstExistingFileInBinDirs(searchDirs: list[Path], fileNames: list[str]) -> str:
-    """
-    vcpkg 설치 폴더의 bin 및 debug/bin 디렉터리를 우선적으로 탐색하여 일치하는 실행 파일/DLL 경로를 반환합니다.
-    """
-    for directory in searchDirs:
-        if not directory.is_dir():
-            continue
-        try:
-            tripletRoots = [path for path in directory.iterdir() if path.is_dir()]
-        except (OSError, PermissionError):
-            tripletRoots = []
-        for root in [directory, *tripletRoots]:
-            for sub in ("bin", "debug/bin"):
-                folder = root / sub
-                if not folder.is_dir():
-                    continue
-                for fileName in fileNames:
-                    if (candidate := folder / fileName).is_file():
-                        return str(candidate)
-    return findFirstExistingFileRecursive(searchDirs, fileNames)
-
-
 def iterSearchRootTemplates(templates: Iterable[str],
                             *,
                             extras: dict[str, str] | None = None,
