@@ -3,6 +3,7 @@
 #include "Editor/Viewport/EditorViewportPicker.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/Ray.h"
@@ -40,6 +41,7 @@ namespace sw::editor
         {
             static constexpr float64 kSlowHoverPickSeconds  = 0.002; ///< 이보다 오래 걸린 호버 피킹은 비싸다고 판단한다
             static constexpr float64 kSlowHoverPickInterval = 0.1;   ///< 비싸면 이만큼 간격을 둔다(초)
+            static constexpr uint32  kBoxCornerCount        = 8;     ///< 상자 모서리 수(비트 0 · 1 · 2 가 X · Y · Z 의 최소 · 최대)
 
             /** @brief 누를 때의 수정 키로 고르는 방식을 정합니다. Ctrl 넣고 빼기 · Shift 더하기(언리얼 뷰포트 · 아웃라이너와 같다). */
             static SelectionMode readSelectionMode()
@@ -50,6 +52,39 @@ namespace sw::editor
                 if ( ( modifierMask & ModifierKey::Shift ) != 0 )
                     return SelectionMode::Add;
                 return SelectionMode::Replace;
+            }
+
+            /**
+             * @brief 마키 사각형이 오브젝트에 걸치는지 봅니다. 크기를 선언한 오브젝트(`GameObject::getWorldBox`)는 상자 여덟 모서리의 화면 사각형이 마키와 겹치면, 크기가 없으면 피벗이 마키 안이면 걸친 것입니다.
+             * @details 피벗 한 점만 보면 큰 물체를 반쯤 덮어도 고르지 못한다(감사 E-10). 언리얼 박스 선택의 기본(걸치면 고름)과 유니티 `HandleUtility.PickRectObjects` 가 같다.
+             *          shortcut: 카메라 뒤 모서리는 빼고 앞 모서리만으로 사각형을 만든다 — 카메라를 품은 큰 물체는 화면 사각형이 작게 잡힌다. id 버퍼 피킹이 들어오면 사각형 안 픽셀 id 로 바꾼다.
+             */
+            static bool isTouchedByMarquee( const GameObject& object, const SceneComponent& root, const float4x4& viewProj, const float2& canvasPos, const float2& canvasSize,
+                                            const float2& minPos, const float2& maxPos )
+            {
+                AABB box{};
+                if ( object.getWorldBox( box ) == false )
+                {
+                    ImVec2 screenPt{};
+                    if ( EditorViewportProjectionUtil::projectPoint( viewProj, root.getWorldPosition(), canvasPos, canvasSize, screenPt ) == false )
+                        return false;
+                    return minPos._x <= screenPt.x && screenPt.x <= maxPos._x && minPos._y <= screenPt.y && screenPt.y <= maxPos._y;
+                }
+                float2 screenMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat };
+                float2 screenMax{ -MathUtil::kMaxFloat, -MathUtil::kMaxFloat };
+                bool   bAnyCorner = false;
+                for ( uint32 corner = 0; corner < kBoxCornerCount; ++corner )
+                {
+                    const float3 point{ ( corner & 1u ) != 0 ? box._max._x : box._min._x, ( corner & 2u ) != 0 ? box._max._y : box._min._y,
+                                        ( corner & 4u ) != 0 ? box._max._z : box._min._z };
+                    ImVec2 screenPt{};
+                    if ( EditorViewportProjectionUtil::projectPoint( viewProj, point, canvasPos, canvasSize, screenPt ) == false )
+                        continue;
+                    screenMin  = float2{ MathUtil::min( screenMin._x, screenPt.x ), MathUtil::min( screenMin._y, screenPt.y ) };
+                    screenMax  = float2{ MathUtil::max( screenMax._x, screenPt.x ), MathUtil::max( screenMax._y, screenPt.y ) };
+                    bAnyCorner = true;
+                }
+                return bAnyCorner && screenMin._x <= maxPos._x && minPos._x <= screenMax._x && screenMin._y <= maxPos._y && minPos._y <= screenMax._y;
             }
         };
     } // namespace
@@ -136,10 +171,7 @@ namespace sw::editor
             const bool            bSkipped = pObj == pEditorCamera || pRoot == nullptr || pObj->isRenderHidden() || workspace.isObjectLocked( pObj->getObjectID() );
             if ( bSkipped )
                 return;
-            ImVec2 screenPt{};
-            if ( EditorViewportProjectionUtil::projectPoint( viewProj, pRoot->getWorldPosition(), canvasPos, canvasSize, screenPt ) == false )
-                return;
-            if ( minPos._x <= screenPt.x && screenPt.x <= maxPos._x && minPos._y <= screenPt.y && screenPt.y <= maxPos._y )
+            if ( EditorViewportPickerInternal::isTouchedByMarquee( *pObj, *pRoot, viewProj, canvasPos, canvasSize, minPos, maxPos ) )
                 listInside.push_back( pObj );
         } );
         if ( listInside.empty() == false )
