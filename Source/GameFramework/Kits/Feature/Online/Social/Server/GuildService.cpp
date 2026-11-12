@@ -7,6 +7,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
@@ -30,6 +31,15 @@ namespace sw
             static constexpr const utf8* kDepositReason      = "guild.deposit";
             static constexpr const utf8* kWithdrawReason     = "guild.withdraw";
             static constexpr const utf8* kRefundReason       = "guild.refund"; ///< 떠나거나 내보내진 멤버에게 그의 몫을 돌려준다
+            static constexpr int32       kGrantPageSize      = 128;            ///< 길드의 허용 전체를 훑을 때(떠나는 멤버가 받은 허용 지우기) 한 번에 읽는 수이다
+
+            /** @brief 허용 부여 · 회수의 멱등 기록 범위(`guild/<계정 16진>`)입니다. 회수가 허용 기록을 지워도 이 기록은 남아 늦게 다시 온 부여를 가린다. */
+            static string makeGrantScope( AccountID accountID )
+            {
+                string scope{ "guild/" };
+                ServiceKeyUtil::appendHex64( scope, accountID );
+                return scope;
+            }
 
             /** @brief 길드 창고 보유자(`esc/guild/<길드 16진>`)입니다. 이전 가능 자산의 공용 창고입니다. */
             static LedgerHolder makeStorageHolder( uint64 guildID ) { return LedgerHolder::makeEscrow( kStorageDomain, ServiceKeyUtil::makeHex64( guildID ) ); }
@@ -57,23 +67,22 @@ namespace sw
                 return key;
             }
 
-            /** @brief 꺼내기 허용입니다. 남은 한도와 그 허용을 만든 요청의 분개 키(다시 온 부여가 쓴 만큼 줄어든 한도를 되돌리지 않게)입니다. */
-            static vector<uint8> encodeGrant( int64 remaining, string_view grantKey )
+            /** @brief 꺼내기 허용의 남은 한도입니다. 부여 · 회수의 재전송은 멱등 기록(`ServiceIdempotency`)이 가리므로 기록에는 한도만 둡니다. */
+            static vector<uint8> encodeGrant( int64 remaining )
             {
                 BitWriter writer;
                 writer.writeBits( kFormatVersion, 8 );
                 writer.writeVarInt( remaining );
-                ServiceKeyUtil::writeString( writer, grantKey );
                 return writer.getBytes();
             }
 
-            [[nodiscard]] static bool decodeGrant( const vector<uint8>& bytes, int64& outRemaining, string& outGrantKey )
+            [[nodiscard]] static bool decodeGrant( const vector<uint8>& bytes, int64& outRemaining )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
                 if ( reader.readBits( 8 ) != kFormatVersion )
                     return false;
                 outRemaining = reader.readVarInt();
-                return ServiceKeyUtil::readString( reader, LedgerConstant::kMaxJournalKeySize, outGrantKey ) && reader.hasOverflowed() == false && 0 <= outRemaining;
+                return reader.hasOverflowed() == false && 0 <= outRemaining;
             }
 
             static const hashed_string& getGuildTable()
@@ -621,7 +630,7 @@ namespace sw
                     return fail( SocialResult::NotAllowed ); // 길드장을 넘기고 떠난다
                 ServiceTransaction       transaction;
                 const ServiceStoreResult staged = selfMember._role == GuildRole::Master ? stageDissolution( connection, guildID, transaction )
-                                                                                        : stageShareRefund( connection, guildID, _request._accountID, transaction );
+                                                                                        : stageMemberExit( connection, guildID, _request._accountID, transaction );
                 if ( staged != ServiceStoreResult::Ok )
                     return staged;
                 transaction.erase( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord._version );
@@ -676,6 +685,45 @@ namespace sw
                     inoutTransaction.erase( Internal::getGrantTable(), record._key, record._version );
                 }
                 return ServiceStoreResult::Ok;
+            }
+
+            /**
+             * @brief 떠나거나 내보내지는 @p accountID 의 창고 정리를 @p inoutTransaction 에 붙입니다. 그가 받은 꺼내기 허용을 모두 지우고, 맡긴 몫이 있으면 돌려줍니다.
+             * @details 받은 허용을 남기면 다시 들어올 때 맡긴 사람이 모르는 사이 권한이 살아난다 — 멤버 자격과 함께 끝낸다.
+             */
+            ServiceStoreResult stageMemberExit( IServiceStoreConnection& connection, uint64 guildID, AccountID accountID, ServiceTransaction& inoutTransaction )
+            {
+                const ServiceStoreResult removed = stageReceivedGrantRemoval( connection, guildID, accountID, inoutTransaction );
+                return removed == ServiceStoreResult::Ok ? stageShareRefund( connection, guildID, accountID, inoutTransaction ) : removed;
+            }
+
+            /**
+             * @brief 길드에서 @p granteeID 가 받은 꺼내기 허용(`<길드>/<맡긴 사람>/<받는 계정>/<자산>` 중 받는 계정이 그인 것)을 모두 지우는 쓰기를 붙입니다.
+             * @details 키가 맡긴 사람 순이라 길드의 허용 전체를 쪽으로 훑는다. 허용 수는 멤버 수 × `kMaxStorageGrant` 를 넘지 않는다(맡긴 사람은 떠날 때 자기가 준 허용을 지운다).
+             */
+            ServiceStoreResult stageReceivedGrantRemoval( IServiceStoreConnection& connection, uint64 guildID, AccountID granteeID, ServiceTransaction& inoutTransaction )
+            {
+                using Internal          = GuildServiceInternal;
+                constexpr size_t kWidth = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                const string     prefix = ServiceKeyUtil::makeHex64( guildID ) + "/";
+                string           cursor;
+                while ( true )
+                {
+                    vector<ServiceRecord> listGrantRecord;
+                    if ( connection.listRecords( Internal::getGrantTable(), prefix, cursor, Internal::kGrantPageSize, false, listGrantRecord ) != ServiceStoreResult::Ok )
+                        return ServiceStoreResult::Unavailable;
+                    for ( const ServiceRecord& record : listGrantRecord )
+                    {
+                        const string_view rest      = string_view( record._key ).substr( prefix.size() ); // <맡긴 사람>/<받는 계정>/<자산>
+                        AccountID         grantee   = kInvalidAccountID;
+                        const bool        bReceived = rest.size() > kWidth * 2 + 1 && ServiceKeyUtil::parseHex64( rest.substr( kWidth + 1, kWidth ), grantee ) && grantee == granteeID;
+                        if ( bReceived )
+                            inoutTransaction.erase( Internal::getGrantTable(), record._key, record._version );
+                    }
+                    if ( static_cast<int32>( listGrantRecord.size() ) < Internal::kGrantPageSize )
+                        return ServiceStoreResult::Ok;
+                    cursor = listGrantRecord.back()._key;
+                }
             }
 
             /**
@@ -845,7 +893,7 @@ namespace sw
                     const ServiceStoreResult targetRead    = readAccountGuild( connection, _request._targetID, targetGuildID, targetGuildRecord );
                     if ( targetRead == ServiceStoreResult::Unavailable )
                         return ServiceStoreResult::Unavailable;
-                    const ServiceStoreResult refunded = stageShareRefund( connection, guildID, _request._targetID, transaction );
+                    const ServiceStoreResult refunded = stageMemberExit( connection, guildID, _request._targetID, transaction );
                     if ( refunded != ServiceStoreResult::Ok )
                         return refunded;
                     --inoutInfo._memberCount;
@@ -985,14 +1033,13 @@ namespace sw
                 {
                     ServiceRecord            grantRecord;
                     int64                    remaining = 0;
-                    string                   grantKey;
                     const string             recordKey = Internal::makeGrantKey( guildID, _request._depositorID, _request._accountID, _request._assetID );
                     const ServiceStoreResult read      = connection.readRecord( Internal::getGrantTable(), recordKey, grantRecord );
                     if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
                         return ServiceStoreResult::Unavailable;
-                    bAllowed = read == ServiceStoreResult::Ok && Internal::decodeGrant( grantRecord._bytes, remaining, grantKey ) && _request._amount <= remaining;
+                    bAllowed = read == ServiceStoreResult::Ok && Internal::decodeGrant( grantRecord._bytes, remaining ) && _request._amount <= remaining;
                     if ( bAllowed )
-                        inoutTransaction.put( Internal::getGrantTable(), recordKey, Internal::encodeGrant( remaining - _request._amount, grantKey ), grantRecord._version );
+                        inoutTransaction.put( Internal::getGrantTable(), recordKey, Internal::encodeGrant( remaining - _request._amount ), grantRecord._version );
                 }
                 if ( bAllowed )
                     return ServiceStoreResult::Ok;
@@ -1007,19 +1054,27 @@ namespace sw
              * @brief 맡긴 사람이 자기 몫의 꺼내기 허용을 주거나(받는 계정 · 자산 · 한도, 한도는 덮어쓴다) 거둡니다. 맡긴 사람 본인만 하므로 키의 맡긴 사람은 요청한 계정입니다.
              * @details 허용은 이전 불가 자산에만 뜻이 있다(공용 창고는 임원 권한이 정한다). 받는 계정은 지금 멤버여야 한다.
              *          WoW 길드 은행의 출금 한도처럼 한도는 쌓지 않고 덮어쓰며, 꺼낼 때 쓴 만큼 줄어든다.
-             *          다시 온 같은 부여(기록의 분개 키가 같다)는 쓴 만큼 줄어든 한도를 되돌리지 않는다. 회수는 기록을 지우므로 이미 없으면 그대로 Ok 이다.
+             *          부여 · 회수는 멱등 기록(`ServiceIdempotency`, 지우지 않는다)을 같은 트랜잭션에 남긴다 — 같은 키의 재전송은 상태를 바꾸지 않고 Ok 만 돌려주므로,
+             *          쓴 만큼 줄어든 한도가 되돌아가거나 회수 뒤 늦게 다시 온 부여가 허용을 되살리지 않는다(Stripe Idempotency-Key 와 같다).
              */
             ServiceStoreResult runStorageGrant( IServiceStoreConnection& connection, uint64 guildID, const ServiceRecord& selfMemberRecord )
             {
                 using Internal    = GuildServiceInternal;
                 const bool bGrant = _request._operation == GuildOperation::GrantWithdrawal;
-                const bool bValid = LedgerUtil::isValidAssetID( _request._assetID ) && LedgerUtil::isValidJournalKey( _request._journalKey ) &&
-                                    _request._targetID != kInvalidAccountID && _request._targetID != _request._accountID &&
-                                    ( bGrant == false || ( _request._amount > 0 && _request._amount <= LedgerConstant::kMaxAmount ) );
+                const bool bValid = LedgerUtil::isValidAssetID( _request._assetID ) && _request._idempotencyKey.isValid() && _request._targetID != kInvalidAccountID &&
+                                    _request._targetID != _request._accountID && ( bGrant == false || ( _request._amount > 0 && _request._amount <= LedgerConstant::kMaxAmount ) );
                 if ( bValid == false )
                     return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
                 if ( _pLedgerPolicy == nullptr || _pLedgerPolicy->isTransferable( _request._assetID ) )
                     return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) ); // 공용 창고 자산에는 맡긴 사람별 허용이 없다
+                const string             scope = Internal::makeGrantScope( _request._accountID );
+                const NetIdempotencyKey& key   = _request._idempotencyKey;
+                vector<uint8>            listReply;
+                const ServiceStoreResult found = ServiceIdempotency::findReply( connection, scope, key._high, key._low, listReply );
+                if ( found == ServiceStoreResult::Ok )
+                    return ServiceStoreResult::Ok; // 이미 적용한 요청이다 — 기록은 성공만 남는다
+                if ( found != ServiceStoreResult::NotFound )
+                    return ServiceStoreResult::Unavailable;
                 ServiceRecord            grantRecord;
                 const string             recordKey = Internal::makeGrantKey( guildID, _request._accountID, _request._targetID, _request._assetID );
                 const ServiceStoreResult grantRead = connection.readRecord( Internal::getGrantTable(), recordKey, grantRecord );
@@ -1028,17 +1083,13 @@ namespace sw
                 const bool         bExists = grantRead == ServiceStoreResult::Ok;
                 ServiceTransaction transaction;
                 transaction.requireVersion( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord._version );
+                ServiceIdempotency::addReply( transaction, scope, key._high, key._low, vector<uint8>{ static_cast<uint8>( SocialResult::Ok ) } );
                 if ( bGrant == false )
                 {
-                    if ( bExists == false )
-                        return ServiceStoreResult::Ok;
-                    transaction.erase( Internal::getGrantTable(), recordKey, grantRecord._version );
-                    return connection.commit( transaction );
+                    if ( bExists ) // 이미 없어도 기록은 남긴다 — 회수의 재전송도 같은 답이다
+                        transaction.erase( Internal::getGrantTable(), recordKey, grantRecord._version );
+                    return commitGrant( connection, transaction, scope );
                 }
-                int64  remaining = 0;
-                string grantKey;
-                if ( bExists && Internal::decodeGrant( grantRecord._bytes, remaining, grantKey ) && grantKey == _request._journalKey )
-                    return ServiceStoreResult::Ok;
                 ServiceRecord targetMemberRecord;
                 GuildMember   targetMember;
                 const string  targetMemberKey = Internal::makePairKey( guildID, _request._targetID );
@@ -1056,9 +1107,19 @@ namespace sw
                         return fail( SocialResult::StorageLimit ); // 쓰지 않는 허용을 거둔 뒤에 준다
                 }
                 transaction.requireVersion( Internal::getMemberTable(), targetMemberKey, targetMemberRecord._version ); // 그사이 내보내지면 다시 읽는다
-                transaction.put( Internal::getGrantTable(), recordKey, Internal::encodeGrant( _request._amount, _request._journalKey ),
-                                 bExists ? grantRecord._version : ServiceRecord::kAbsentVersion );
-                return connection.commit( transaction );
+                transaction.put( Internal::getGrantTable(), recordKey, Internal::encodeGrant( _request._amount ), bExists ? grantRecord._version : ServiceRecord::kAbsentVersion );
+                return commitGrant( connection, transaction, scope );
+            }
+
+            /** @brief 허용 부여 · 회수를 커밋합니다. 적용됐는지 모르는 실패(Unavailable)는 멱등 기록이 있으면 적용된 것으로 봅니다. */
+            ServiceStoreResult commitGrant( IServiceStoreConnection& connection, const ServiceTransaction& transaction, string_view scope )
+            {
+                const ServiceStoreResult committed = connection.commit( transaction );
+                if ( committed != ServiceStoreResult::Unavailable )
+                    return committed; // 같은 키가 그사이 다른 서버에서 커밋됐으면 Conflict 로 다시 읽어 기록을 찾는다
+                vector<uint8> listReply;
+                const bool    bApplied = ServiceIdempotency::findReply( connection, scope, _request._idempotencyKey._high, _request._idempotencyKey._low, listReply ) == ServiceStoreResult::Ok;
+                return bApplied ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
             }
 
             /** @brief 성공한 뒤 멤버 목록을 읽습니다. 조회이면 정보로, 변경이면 알림 대상으로 씁니다. 창고 요청(이동 · 목록 · 허용)은 멤버 정보가 바뀌지 않으므로 읽지 않습니다. */

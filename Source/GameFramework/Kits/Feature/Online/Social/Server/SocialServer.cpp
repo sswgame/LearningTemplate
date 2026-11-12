@@ -238,10 +238,11 @@ namespace sw
 
     void SocialServer::submitGuild( uint64 callID, const OnlineCallContext& context, GuildOperation operation, GuildRequest& inoutRequest )
     {
-        inoutRequest._accountID = context._accountID;
-        inoutRequest._nowMs     = context._nowMs;
-        inoutRequest._operation = operation;
-        if ( context._idempotencyKey.isValid() ) // 창고 이동 · 허용 · 몫을 돌려주는 떠나기와 내보내기의 분개 키이다. 필요한데 없으면 길드 로직이 Invalid 로 끝낸다
+        inoutRequest._accountID      = context._accountID;
+        inoutRequest._nowMs          = context._nowMs;
+        inoutRequest._operation      = operation;
+        inoutRequest._idempotencyKey = context._idempotencyKey; // 허용 부여 · 회수의 멱등 기록 키이다
+        if ( context._idempotencyKey.isValid() )                // 창고 이동 · 허용 · 몫을 돌려주는 떠나기와 내보내기의 분개 키이다. 필요한데 없으면 길드 로직이 Invalid 로 끝낸다
             inoutRequest._journalKey = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( context._accountID ), context._idempotencyKey._high,
                                                                               context._idempotencyKey._low );
         _pGuildService->submit( inoutRequest, callID );

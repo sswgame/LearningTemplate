@@ -109,17 +109,17 @@ namespace
             return runRequest( request );
         }
 
-        /** @brief 꺼내기 허용을 주거나(GrantWithdrawal) 거둡니다(RevokeWithdrawal). */
-        SocialServiceResult setGrant( GuildOperation operation, AccountID accountID, AccountID targetID, int64 amount, string_view journalKey, string_view assetID = "cur.gem" )
+        /** @brief 꺼내기 허용을 주거나(GrantWithdrawal) 거둡니다(RevokeWithdrawal). @p keyLow 는 멱등 키(하위 64 비트)이며 0 이면 키가 없습니다. */
+        SocialServiceResult setGrant( GuildOperation operation, AccountID accountID, AccountID targetID, int64 amount, uint64 keyLow, string_view assetID = "cur.gem" )
         {
             GuildRequest request;
-            request._operation  = operation;
-            request._accountID  = accountID;
-            request._targetID   = targetID;
-            request._assetID    = string( assetID );
-            request._amount     = amount;
-            request._journalKey = string( journalKey );
-            request._nowMs      = UnixMilliseconds{ kNowMs };
+            request._operation      = operation;
+            request._accountID      = accountID;
+            request._targetID       = targetID;
+            request._assetID        = string( assetID );
+            request._amount         = amount;
+            request._idempotencyKey = NetIdempotencyKey{ 0, keyLow };
+            request._nowMs          = UnixMilliseconds{ kNowMs };
             return runRequest( request )._result;
         }
 
@@ -610,30 +610,30 @@ SW_TEST_CASE( GuildServiceTest, NonTransferableShareNeedsDepositorGrant )
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kMaster, 5, "test/gem.wd3", "cur.gem", kMember )._result == SocialResult::NotAllowed );
 
     // 허용의 규칙: 맡긴 사람이 지금 멤버에게만, 이전 불가 자산에만, 자기 자신은 아니다
-    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOutside, 10, "test/grant.out" ) == SocialResult::NotFound );
-    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, "test/grant.gold", "cur.gold" ).hasError( OnlineError::kInvalidRequest ) );
-    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kMember, 10, "test/grant.self" ).hasError( OnlineError::kInvalidRequest ) );
-    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, "" ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOutside, 10, 101 ) == SocialResult::NotFound );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, 102, "cur.gold" ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kMember, 10, 103 ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, 0 ).hasError( OnlineError::kInvalidRequest ) );
 
     // 한도 10 안에서 꺼낸다. 다시 온 같은 부여는 쓴 만큼 줄어든 한도를 되돌리지 않는다
-    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, "test/grant.1" ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, 1 ) == SocialResult::Ok );
     const GuildCompletion withdrawn = rig.transfer( GuildOperation::Withdraw, kOfficer, 6, "test/gem.wd4", "cur.gem", kMember );
     SW_EXPECT_TRUE( withdrawn._result == SocialResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), withdrawn._listStorage.size() );
     SW_EXPECT_EQUAL( int64( 24 ), withdrawn._listStorage[0]._amount );
     SW_EXPECT_EQUAL( kMember, withdrawn._listStorage[0]._depositorID );
     SW_EXPECT_EQUAL( int64( 6 ), rig.getBalanceOf( kOfficer, "cur.gem" ) );
-    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, "test/grant.1" ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, 1 ) == SocialResult::Ok );
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 5, "test/gem.wd5", "cur.gem", kMember )._result == SocialResult::NotAllowed ); // 남은 한도 4
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 4, "test/gem.wd6", "cur.gem", kMember )._result == SocialResult::Ok );
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 4, "test/gem.wd6", "cur.gem", kMember )._result == SocialResult::Ok ); // 한도를 다 쓴 뒤 다시 온 같은 요청
     SW_EXPECT_EQUAL( int64( 10 ), rig.getBalanceOf( kOfficer, "cur.gem" ) );
 
     // 새 허용을 거두면 다시 못 꺼낸다. 다시 온 회수도 Ok 이다
-    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, "test/grant.2" ) == SocialResult::Ok );
-    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::RevokeWithdrawal, kOfficer, kMember, 0, "test/revoke.0" ) == SocialResult::Ok ); // 남이 준 허용은 거둘 수 없다 — 키의 맡긴 사람이 요청한 계정이라 지울 것이 없다
-    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::RevokeWithdrawal, kMember, kOfficer, 0, "test/revoke.1" ) == SocialResult::Ok );
-    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::RevokeWithdrawal, kMember, kOfficer, 0, "test/revoke.1" ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, 2 ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::RevokeWithdrawal, kOfficer, kMember, 0, 10 ) == SocialResult::Ok ); // 남이 준 허용은 거둘 수 없다 — 키의 맡긴 사람이 요청한 계정이라 지울 것이 없다
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::RevokeWithdrawal, kMember, kOfficer, 0, 11 ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::RevokeWithdrawal, kMember, kOfficer, 0, 11 ) == SocialResult::Ok );
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 1, "test/gem.wd7", "cur.gem", kMember )._result == SocialResult::NotAllowed );
 
     // 맡긴 본인은 허용 없이 꺼낸다(멤버 역할이어도)
@@ -681,7 +681,7 @@ SW_TEST_CASE( GuildServiceTest, DepositorShareReturnsOnLeaveAndKick )
     rig.grant( kOfficer, 20, "cur.gem" );
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 7, "test/gem.dep1", "cur.gem" )._result == SocialResult::Ok );
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kOfficer, 9, "test/gem.dep2", "cur.gem" )._result == SocialResult::Ok );
-    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kOfficer, kMaster, 5, "test/grant.1" ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kOfficer, kMaster, 5, 1 ) == SocialResult::Ok );
 
     SW_EXPECT_TRUE( rig.run( GuildOperation::Leave, kMember )._result.hasError( OnlineError::kInvalidRequest ) ); // 돌려주는 이동의 분개 키가 없다
     SW_EXPECT_TRUE( rig.runKeyed( GuildOperation::Leave, kMember, kInvalidAccountID, "test/leave.1" ) == SocialResult::Ok );
@@ -691,4 +691,37 @@ SW_TEST_CASE( GuildServiceTest, DepositorShareReturnsOnLeaveAndKick )
     SW_EXPECT_EQUAL( int64( 20 ), rig.getBalanceOf( kOfficer, "cur.gem" ) );
     SW_EXPECT_TRUE( rig.run( GuildOperation::ListStorage, kMaster )._listStorage.empty() );
     SW_EXPECT_TRUE( rig.runKeyed( GuildOperation::Leave, kMaster, kInvalidAccountID, "test/leave.2" ) == SocialResult::Ok ); // 남은 몫 · 허용이 없어 해산된다
+}
+
+/** @brief [GuildServiceTest] 허용을 받은 멤버가 떠나면 받은 허용이 같은 트랜잭션에서 지워진다 — 다시 들어와도 맡긴 사람이 모르는 사이 권한이 살아나지 않는다 */
+SW_TEST_CASE( GuildServiceTest, ReceivedGrantEndsWithMembership )
+{
+    PaidGemPolicy policy;
+    GuildFixture  rig;
+    rig._service.setLedgerPolicy( &policy );
+    const uint64 guildID = rig.makeGuild();
+    rig.grant( kMember, 20, "cur.gem" );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 10, "test/gem.dep", "cur.gem" )._result == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 5, 1 ) == SocialResult::Ok );
+
+    SW_EXPECT_TRUE( rig.runKeyed( GuildOperation::Leave, kOfficer, kInvalidAccountID, "test/leave.1" ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::Invite, kMaster, kOfficer )._result == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::Accept, kOfficer, kInvalidAccountID, "", guildID )._result == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 1, "test/gem.wd", "cur.gem", kMember )._result == SocialResult::NotAllowed );
+}
+
+/** @brief [GuildServiceTest] 회수 뒤 늦게 다시 온 같은 부여(같은 멱등 키)는 처음 결과만 돌려주고 허용을 되살리지 않는다 — 부여 · 회수의 키는 지우지 않는 멱등 기록에 남는다 */
+SW_TEST_CASE( GuildServiceTest, LateGrantReplayAfterRevokeChangesNothing )
+{
+    PaidGemPolicy policy;
+    GuildFixture  rig;
+    rig._service.setLedgerPolicy( &policy );
+    (void)rig.makeGuild();
+    rig.grant( kMember, 20, "cur.gem" );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 10, "test/gem.dep", "cur.gem" )._result == SocialResult::Ok );
+
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 5, 1 ) == SocialResult::Ok ); // 키 A
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::RevokeWithdrawal, kMember, kOfficer, 0, 2 ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 5, 1 ) == SocialResult::Ok ); // 키 A 재전송
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 1, "test/gem.wd", "cur.gem", kMember )._result == SocialResult::NotAllowed );
 }
