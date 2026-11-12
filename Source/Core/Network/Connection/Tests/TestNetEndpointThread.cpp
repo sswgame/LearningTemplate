@@ -221,6 +221,89 @@ SW_TEST_CASE( NetEndpointThreadTest, GameThreadsSendAndReceiveConcurrently )
     }
 }
 
+// 감사 N-8 — 살아 있는 목록 · 빈 슬롯 목록을 네트워크 스레드(열기 · 타임아웃 · 끊김 처리), 보내는 스레드(보내기 · 방송 · 창 넘침 닫기), 꺼내는 스레드(슬롯 놓기)가
+// 함께 바꾼다. 연결이 끊기고 다시 붙는 동안 보내고 꺼내도 단언 없이 끝나고, 끝에는 정원만큼 다시 연결돼 번호가 겹치지 않아야 한다.
+SW_TEST_CASE( NetEndpointThreadTest, ConnectionsChurnWhileGameThreadsSendAndPoll )
+{
+    constexpr int32   kClientCount = 4;
+    constexpr int32   kChurnRound  = 6;
+    NetEndpointConfig settings;
+    settings._maxConnections = kClientCount; // 붙잡힌 슬롯을 놓아야 다시 붙는다 — 놓기 길도 경쟁에 든다
+    settings._sendInterval   = 1.0 / 120.0;
+    settings._debugHold      = NetDebugHold::Off;
+    test::LoopbackCluster cluster( 5u );
+    SW_REQUIRE_TRUE( NetEndpointThreadTestInternal::startThreadedCluster( cluster, kClientCount, settings ) );
+    for ( int32 index = 0; index < kClientCount; ++index )
+    {
+        SW_REQUIRE_TRUE( cluster.getClient( index ).connectAsync( NetAddress::makeLoopback( 4000 ) ).waitFor( NetEndpointThreadTestInternal::kFutureWaitMilli ) );
+    }
+    NetEndpoint& server = cluster.getServer();
+    SW_REQUIRE_TRUE( test::waitUntil( [&server]()
+    { return server.getConnectedCount() == kClientCount; } ) );
+
+    atomic<bool> bStop{ false };
+    // 보내는 스레드 — 연결된 번호마다 신뢰 · 비신뢰를 넣고 방송한다(닫힌 번호면 거절될 뿐이다).
+    sw::thread sender( [&server, &bStop]()
+    {
+        vector<int32> listConnection;
+        int32         sequence = 0;
+        while ( bStop.load() == false )
+        {
+            server.collectConnected( listConnection );
+            for ( const int32 connectionID : listConnection )
+            {
+                (void)server.trySendMessage( connectionID, NetChannelType::ReliableOrdered, NetEndpointThreadTestInternal::makeTaggedMessage( connectionID, sequence ) );
+                (void)server.sendMessage( connectionID, NetChannelType::Unreliable, NetEndpointThreadTestInternal::makeTaggedMessage( connectionID, sequence ) );
+            }
+            const vector<uint8> message = NetEndpointThreadTestInternal::makeTaggedMessage( -1, sequence );
+            (void)server.broadcast( NetChannelType::Unreliable, message.data(), static_cast<int32>( message.size() ) );
+            ++sequence;
+            ThreadUtil::sleepForMilliseconds( 1 ); // 클라이언트는 꺼내지 않는다 — 받은 큐 상한(1 MiB)에 닿지 않을 만큼만
+        }
+    } );
+    // 꺼내는 스레드 — 끊김 사건을 꺼내 슬롯을 놓는다(`pollInbound`).
+    atomic<int32> disconnectedCount{ 0 };
+    sw::thread    poller( [&server, &bStop, &disconnectedCount]()
+    {
+        NetInbound inbound;
+        while ( bStop.load() == false )
+        {
+            server.pollInbound( inbound );
+            for ( const NetEndpointEvent& event : inbound._listEvent )
+            {
+                disconnectedCount.fetch_add( event._kind == NetEndpointEvent::Kind::Disconnected ? 1 : 0 );
+            }
+            ThreadUtil::sleepForMicroseconds( 100 );
+        }
+    } );
+
+    // 이 스레드는 클라이언트를 끊었다 다시 붙인다 — 서버 네트워크 스레드가 끊김을 받아 슬롯을 닫고, 놓인 슬롯을 다시 연다.
+    bool bAllReconnected = true;
+    for ( int32 round = 0; round < kChurnRound; ++round )
+    {
+        NetEndpoint& client = cluster.getClient( round % kClientCount );
+        client.disconnect( 0 );
+        const TaskFuture<NetConnectResult> future = client.connectAsync( NetAddress::makeLoopback( 4000 ) );
+        bAllReconnected                           = bAllReconnected && future.waitFor( NetEndpointThreadTestInternal::kFutureWaitMilli ) && future.get().isConnected();
+    }
+    const bool bFull = test::waitUntil( [&server]()
+    { return server.getConnectedCount() == kClientCount; } );
+    bStop.store( true );
+    sender.join();
+    poller.join();
+
+    SW_EXPECT_TRUE( bAllReconnected );
+    SW_EXPECT_TRUE( bFull );
+    SW_EXPECT_EQUAL( kChurnRound, disconnectedCount.load() );
+    vector<int32> listConnection;
+    server.collectConnected( listConnection );
+    SW_REQUIRE_EQUAL( kClientCount, static_cast<int32>( listConnection.size() ) );
+    for ( int32 index = 0; index < kClientCount; ++index )
+    {
+        SW_EXPECT_EQUAL( index, listConnection[static_cast<size_t>( index )] ); // 번호 순 · 겹침 없음 · 정원 안
+    }
+}
+
 SW_TEST_CASE( NetEndpointThreadTest, ConnectAsyncReportsEveryFailure )
 {
     NetEndpointConfig settings;

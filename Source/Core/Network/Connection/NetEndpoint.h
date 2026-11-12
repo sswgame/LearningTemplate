@@ -30,6 +30,7 @@
  *          **스레드**: 공개 함수는 모두 잠금 하나로 보호하므로 어느 스레드에서나 부를 수 있다.
  *          게임 스레드가 보내고, 작업 스레드가 꺼내고, 네트워크 스레드가 `update` 한다.
  *          `update` 는 소켓 받기와 보내기를 **잠금 밖에서** 묶어 처리하고 잠금 안에서는 패킷 처리만 하므로, 시스템 호출이 보내는 쪽 스레드를 막지 않는다.
+ *          받은 패킷은 일괄 받기 크기(`kReceiveBatchSize`)씩 잠금을 따로 잡아 처리하고, 슬롯 갱신은 기한이 된 연결만 본다(`NetSlotTable` 의 살아 있는 목록, 감사 N-8).
  *          `update` 를 부르는 스레드는 한 번에 하나여야 한다. 보통 `NetEndpointThread` 가 맡아 게임 프레임과 상관없이 받기, 확인, 재전송, 연결 유지를 돌린다.
  *          그래서 로딩이나 프레임 멈춤 중에도 연결이 끊기지 않는다.
  *          멤버의 소유: `_listReceived` · `_flushBatch` · `_listDeliver` 는 `update` 스레드 전용(잠금 밖, `_updateThread` 역할), 나머지는 모두 `_mutex` 아래다(선언의 `SW_GUARDED_BY` · `SW_REQUIRES_LOCK` · `SW_EXCLUDES_LOCK` 을 clang `-Wthread-safety` 가 본다).
@@ -352,6 +353,8 @@ namespace sw
         uint64 getAuthenticationFailureCount() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 재전송 방지 윈도우가 버린 패킷 수입니다. */
         uint64 getReplayRejectedCount() const SW_EXCLUDES_LOCK( _mutex );
+        /** @brief `update` 가 지금까지 들여다본 슬롯 수의 합입니다(기한이 된 연결만 보는지 확인하는 진단과 테스트용, 감사 N-8). */
+        uint64 getSlotVisitCount() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 이 엔드포인트의 프로토콜 ID(`NetProtocol::makeProtocolID( 게임 ID, 와이어 버전 )`)입니다. */
         uint32 getProtocolID() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 연결마다의 보내기 상한(초당 바이트, `NetEndpointConfig::_maxBytesPerSecond`)입니다. 키트가 틱 예산을 계산할 때 씁니다(`NetSendBudget::computeTickBudget`). */
@@ -432,8 +435,15 @@ namespace sw
         void handleConnectRequest( const ControlPacket& packet ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 서버가 챌린지 응답을 확인하고 슬롯을 할당해 수락합니다. 이미 연결된 주소의 같은 응답이면 수락만 다시 보냅니다. */
         void handleChallengeResponse( const ControlPacket& packet, BitReader& reader ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 기한이 된 살아 있는 슬롯만 돌며 타임아웃 · 재요청 · 보내기를 하고 다음 기한을 정합니다(`NetSlotTable::collectDue`). */
         void updateSlots( float64 nowSeconds ) SW_REQUIRES_LOCK( _mutex );
-        void sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB ) SW_REQUIRES_LOCK( _mutex );
+        /**
+         * @brief 막 다녀간 살아 있는 슬롯을 다시 볼 시각입니다 — 타임아웃 · 연결 재요청 · 보낼 간격 중 이른 것.
+         * @details 한가하면 유지 간격, 보낼 것 · 확인을 기다리는 신뢰 메시지가 있으면 보내기 간격이다. 받은 패킷 · 넣은 메시지는 `NetSlotTable::touch` 로 앞당기므로,
+         *          그 밖의 길로 보낼 것이 생겨도 늦는 것은 유지 간격까지다.
+         */
+        float64 computeNextDueTime( float64 nowSeconds, const NetEndpointSlot& slot ) const SW_REQUIRES_LOCK( _mutex );
+        void    sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 연결 요청을 거절합니다. 이유, 이 엔드포인트의 프로토콜 ID, 요청에 든 클라이언트 솔트(위조 거절을 걸러 내는 값)를 싣습니다. */
         void sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 클라이언트가 챌린지 응답을 보냅니다. 암호화 방식이면 공개 키를, 토큰 결속이면 토큰과 증명 태그를 함께 싣습니다. */
@@ -501,11 +511,13 @@ namespace sw
         vector<DeferredWarning> _listDeferredWarning  SW_GUARDED_BY( _mutex );        ///< 잠금 안(`handlePacket`)에서 모은 경고. `update` 가 잠금을 놓은 뒤 쓴다.
         NetEndpointConfig _settings                   SW_GUARDED_BY( _mutex );
         NetMessageKindStatsTable _sentKindStats       SW_GUARDED_BY( _mutex ); ///< `sendMessageLocked` 가 큐에 넣은 메시지마다 더한다.
+        vector<int32> _listDueSlot                    SW_GUARDED_BY( _mutex ); ///< `updateSlots` 가 이번에 볼 슬롯 번호(버퍼를 다시 쓴다).
         INetTransport* _pTransport                    SW_GUARDED_BY( _mutex );
         uint64 _rejectedPacketCount                   SW_GUARDED_BY( _mutex );
         uint64 _authenticationFailureCount            SW_GUARDED_BY( _mutex );
         uint64 _replayRejectedCount                   SW_GUARDED_BY( _mutex );
         uint64 _mismatchLogCount                      SW_GUARDED_BY( _mutex );
+        uint64 _slotVisitCount                        SW_GUARDED_BY( _mutex ); ///< `updateSlots` 가 들여다본 슬롯 수의 합(`getSlotVisitCount`).
         float64 _lastUpdateTime                       SW_GUARDED_BY( _mutex ); ///< 지난 `update` 의 시각. 음수면 아직 호출한 적이 없다(가상 시계가 멈춘 시간을 측정할 때 쓴다).
         float64 _nextDebuggerPollTime                 SW_GUARDED_BY( _mutex ); ///< 디버거가 붙었는지 다시 확인할 시각.
         uint32 _protocolID                            SW_GUARDED_BY( _mutex );

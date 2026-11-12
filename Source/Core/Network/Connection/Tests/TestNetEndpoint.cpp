@@ -602,6 +602,62 @@ SW_TEST_CASE( NetEndpointTest, IdleConnectionsSendKeepAlivesInsteadOfEveryInterv
     SW_EXPECT_EQUAL( 777, NetTestUtil::readMessageValue( buffer ) );
 }
 
+// 감사 N-8 — 깨어날 때마다 정원(여기서는 256) 전 슬롯을 훑지 않는다. 한가한 연결은 유지 간격 · 받은 패킷 때만 들여다본다.
+SW_TEST_CASE( NetEndpointTest, UpdateVisitsOnlyDueConnectionsNotEverySlot )
+{
+    constexpr int32   kClientCount  = 8;
+    constexpr int32   kUpdateCount  = 600;
+    constexpr float64 kUpdateSecond = 1.0 / 600.0; // 받을 것이 올 때마다 깨는 네트워크 스레드처럼 잦게 돈다
+    NetEndpointConfig settings;
+    settings._maxConnections = 256;
+    settings._debugHold      = NetDebugHold::Off;
+    LoopbackNetwork network;
+    NetEndpoint     server;
+    server.initialize( network.createEndpoint( 4000 ), settings );
+    SW_REQUIRE_TRUE( server.listen() );
+    NetEndpoint arrClient[kClientCount];
+    for ( int32 index = 0; index < kClientCount; ++index )
+    {
+        arrClient[index].initialize( network.createEndpoint( static_cast<uint16>( 6000 + index ) ), settings );
+        SW_REQUIRE_TRUE( arrClient[index].connect( NetAddress::makeLoopback( 4000 ) ) );
+    }
+    float64    time      = 0.0;
+    const auto runSteady = [&]( int32 updateCount )
+    {
+        for ( int32 step = 0; step < updateCount; ++step )
+        {
+            time += kUpdateSecond;
+            server.update( time );
+            for ( NetEndpoint& client : arrClient )
+            {
+                client.update( time );
+            }
+        }
+    };
+    runSteady( 300 );
+    SW_REQUIRE_EQUAL( kClientCount, server.getConnectedCount() );
+
+    const uint64 visitBefore = server.getSlotVisitCount();
+    runSteady( kUpdateCount );
+    const uint64 visited = server.getSlotVisitCount() - visitBefore;
+    // 전 슬롯 훑기는 256 × 600, 살아 있는 연결만 매번 훑어도 8 × 600 = 4800 이다. 한가한 연결은 유지 간격(0.25 초)과 받은 유지 패킷 때만 본다.
+    SW_EXPECT_TRUE_MSG( visited > 0 && visited < static_cast<uint64>( kClientCount * kUpdateCount / 4 ), "idle connections are visited only when due" );
+    SW_EXPECT_EQUAL( kClientCount, server.getConnectedCount() ); // 기한 큐가 유지 패킷 · 타임아웃을 놓치지 않는다
+
+    // 보낼 것이 생기면 다음 유지 시각을 기다리지 않는다 — 넣은 메시지가 그 연결을 바로 기한으로 만든다.
+    SW_REQUIRE_TRUE( server.sendMessage( 3, NetChannelType::ReliableOrdered, NetTestUtil::makeMessage( 33 ) ) );
+    runSteady( 40 ); // 보내기 간격(1/30 초)이 지나기를 기다릴 수 있다 — 유지 간격(0.25 초)보다 짧다
+    int32          connectionID = -1;
+    NetChannelType channel      = NetChannelType::Unreliable;
+    vector<uint8>  buffer;
+    bool           bArrived = false;
+    for ( NetEndpoint& client : arrClient )
+    {
+        bArrived = bArrived || ( client.receiveMessage( connectionID, channel, buffer ) && NetTestUtil::readMessageValue( buffer ) == 33 );
+    }
+    SW_EXPECT_TRUE( bArrived );
+}
+
 SW_TEST_CASE( NetEndpointTest, ServerTellsManyClientsApartByAddress )
 {
     constexpr int32   kClientCount = 40;
