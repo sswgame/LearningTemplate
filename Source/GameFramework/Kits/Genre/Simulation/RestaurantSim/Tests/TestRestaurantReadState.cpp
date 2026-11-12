@@ -457,6 +457,7 @@ SW_TEST_CASE( RestaurantReadStateTestShop, ShopStateRefusesNegativePrices )
     const auto readForged = []( float32 sellFactor, float32 buyModifier, float32 sellModifier, int32 daysSinceRestock )
     {
         sw::Archive written;
+        sw::StateIO::writeHeader( written, sw::ShopManager::kStateTag, sw::ShopManager::kStateVersion );
         written << static_cast<uint32>( 1 );
         sw::StateIO::writeName( written, "market" );
         written << static_cast<uint32>( 0 ); // 재고
@@ -467,6 +468,7 @@ SW_TEST_CASE( RestaurantReadStateTestShop, ShopStateRefusesNegativePrices )
         written << buyModifier;
         written << sellModifier;
         written << daysSinceRestock;
+        written << static_cast<uint32>( 0 ); // 되사기
         sw::ShopManager state;
         state.initialize( nullptr, nullptr );
         sw::Archive reading( written.getData(), written.getSize() );

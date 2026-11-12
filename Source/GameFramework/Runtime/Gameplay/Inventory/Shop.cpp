@@ -34,6 +34,16 @@ namespace sw
                 }
                 return nullopt;
             }
+
+            static int32 countPieces( const vector<InventorySlot>& listPiece )
+            {
+                int32 count = 0;
+                for ( const InventorySlot& piece : listPiece )
+                {
+                    count += piece._count;
+                }
+                return count;
+            }
         };
     } // namespace
 } // namespace sw
@@ -327,12 +337,20 @@ namespace sw
         const ShopResult result = evaluateSell( shopID, itemID, count, inventory );
         if ( result != ShopResult::Ok )
             return result;
-        const int64 total = computeSellTotal( shopID, itemID, count );
-        if ( inventory.removeItem( itemID, count ) == false )
+        const int64           total = computeSellTotal( shopID, itemID, count );
+        vector<InventorySlot> listPiece;
+        if ( inventory.takeItem( itemID, count, listPiece ) == false )
             return ShopResult::NotOwned;
         const ShopDef* pShop    = _pShopCatalog->find( shopID );
         ShopState*     pRuntime = findRuntime( shopID );
         wallet.add( pShop->_currency, total );
+        if ( pShop->_buybackLimit > 0 )
+        {
+            pRuntime->_listBuyback.push_back( ShopBuybackEntry{ std::move( listPiece ), itemID, total } );
+            const size_t limit = static_cast<size_t>( pShop->_buybackLimit );
+            if ( pRuntime->_listBuyback.size() > limit )
+                pRuntime->_listBuyback.erase( pRuntime->_listBuyback.begin(), pRuntime->_listBuyback.end() - static_cast<std::ptrdiff_t>( limit ) );
+        }
         if ( pOutReceived != nullptr )
             *pOutReceived = total;
         if ( pShop->_saturation > 0.0f )
@@ -348,6 +366,40 @@ namespace sw
             factor          = MathUtil::max( pShop->_minSellFactor, factor - pShop->_saturation * static_cast<float32>( count ) );
         }
         _eventBuffer.push( ShopEvent{ shopID, itemID, total, count, ShopEvent::Kind::Sold } );
+        return ShopResult::Ok;
+    }
+
+    ShopResult ShopManager::buyBack( const hashed_string& shopID, int32 buybackIndex, Wallet& wallet, Inventory& inventory, int64* pOutPaid )
+    {
+        const ShopDef* pShop    = _pShopCatalog != nullptr ? _pShopCatalog->find( shopID ) : nullptr;
+        ShopState*     pRuntime = findRuntime( shopID );
+        if ( pShop == nullptr || pRuntime == nullptr )
+            return ShopResult::UnknownShop;
+        if ( buybackIndex < 0 || buybackIndex >= static_cast<int32>( pRuntime->_listBuyback.size() ) )
+            return ShopResult::InvalidCount;
+        const ShopBuybackEntry& entry = pRuntime->_listBuyback[static_cast<size_t>( buybackIndex )];
+        if ( wallet.canAfford( pShop->_currency, entry._price ) == false )
+            return ShopResult::NotEnoughMoney;
+        // 조각마다 `addStack` 은 그 조각만 원자적이다 — 하나라도 안 들어가면 넣기 전 인벤토리로 되돌린다
+        const Inventory before = inventory;
+        for ( const InventorySlot& piece : entry._listPiece )
+        {
+            if ( inventory.addStack( piece ) == false )
+            {
+                inventory = before;
+                return ShopResult::NoRoom;
+            }
+        }
+        if ( wallet.trySpend( pShop->_currency, entry._price ) == false )
+        {
+            inventory = before;
+            return ShopResult::NotEnoughMoney;
+        }
+        const int64 paid = entry._price;
+        _eventBuffer.push( ShopEvent{ shopID, entry._itemID, paid, ShopInternal::countPieces( entry._listPiece ), ShopEvent::Kind::Bought } );
+        pRuntime->_listBuyback.erase( pRuntime->_listBuyback.begin() + static_cast<std::ptrdiff_t>( buybackIndex ) );
+        if ( pOutPaid != nullptr )
+            *pOutPaid = paid;
         return ShopResult::Ok;
     }
 
@@ -521,10 +573,31 @@ namespace sw
             io.value( shop._daysSinceRestock );
             // `setPriceModifier` 가 음수 배율을 거절한다 — 상태 바이트도 같다. 음수 값은 팔 때 돈을 내게 하고 살 때 돈을 준다.
             io.check( 0.0f <= shop._buyModifier && 0.0f <= shop._sellModifier && 0 <= shop._daysSinceRestock );
+            // 되사기 판매마다 이름(4) + 돈(8) + 조각 수(4), 조각마다 슬롯 하나 — 제작 대기열의 꺼낸 재료와 같은 슬롯 형식
+            io.list( shop._listBuyback, uint32( sizeof( uint32 ) + sizeof( int64 ) + sizeof( uint32 ) ), [&]( ShopBuybackEntry& entry )
+            {
+                io.value( entry._itemID );
+                io.value( entry._price );
+                uint32 pieceCount = static_cast<uint32>( entry._listPiece.size() );
+                io.count( Inventory::kSlotStateMinBytes, pieceCount );
+                if ( io.check( entry._itemID.empty() == false && 0 <= entry._price && 0 < pieceCount ) == false )
+                    return;
+                if ( io.isReading() )
+                {
+                    entry._listPiece.assign( pieceCount, InventorySlot{} );
+                }
+                for ( InventorySlot& piece : entry._listPiece )
+                {
+                    Inventory::serializeSlot( io, piece );
+                    if ( io.isOk() == false )
+                        return;
+                }
+            } );
         };
+        io.header( kStateTag, kStateVersion );
         uint32 shopCount = static_cast<uint32>( _listRuntime.size() );
-        // 가게마다 이름(4) + 개수 세 개(12) + 배율 두 개(8) + 날짜(4) 이상
-        io.count( 28, shopCount );
+        // 가게마다 이름(4) + 개수 네 개(16) + 배율 두 개(8) + 날짜(4) 이상
+        io.count( 32, shopCount );
         if ( io.isOk() == false )
             return;
         if ( io.isWriting() )
