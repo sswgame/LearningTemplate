@@ -165,7 +165,7 @@ namespace sw::editor
     {
         if ( previewKind.empty() )
             return nullptr;
-        for ( const TypeInfo* pType = &type; pType != nullptr; pType = pType->getParentType() )
+        for ( const TypeInfo* pType : type.getTypeChain() )
         {
             for ( const FunctionInfo& method : pType->_listMethod )
             {

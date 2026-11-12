@@ -93,7 +93,8 @@ namespace sw::editor
             /** @brief 컴포넌트에 맞는 테이블 줄입니다. 타입 사슬을 파생에서 기반으로 오르며 가장 가까운 줄을 고릅니다(스프라이트는 메시이기도 하다). */
             static const PickOrderRow* findOrderRow( const Component* pComp )
             {
-                for ( const TypeInfo* pType = pComp->getTypeInfo(); pType != nullptr; pType = pType->getParentType() )
+                const TypeInfo* const pCompType = pComp->getTypeInfo();
+                for ( const TypeInfo* pType : pCompType != nullptr ? pCompType->getTypeChain() : TypeChain{} )
                 {
                     for ( const PickOrderRow& row : _s_arrOrder )
                     {

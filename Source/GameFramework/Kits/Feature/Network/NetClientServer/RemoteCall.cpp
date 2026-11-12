@@ -151,12 +151,10 @@ namespace sw
 
     bool RemoteCallTargets::validateRemoteCallContract( const TypeInfo& type, FunctionNetRole role )
     {
-        bool            bValid = true;
-        const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
-        const uint32    depth = type.collectTypeChain( arrChain );
-        for ( uint32 level = 0; level < depth; ++level )
+        bool bValid = true;
+        for ( const TypeInfo* pLevel : type.getTypeChain() )
         {
-            for ( const FunctionInfo& function : arrChain[level]->_listMethod )
+            for ( const FunctionInfo& function : pLevel->_listMethod )
             {
                 const bool bClientRole = role != FunctionNetRole::Server && function._metadata->_netRole == FunctionNetRole::Multicast;
                 if ( function._metadata->_netRole != role && bClientRole == false )
