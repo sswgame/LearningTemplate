@@ -17,6 +17,10 @@
             "type": "command",
             "command": "cd \"$CLAUDE_PROJECT_DIR\" && o=graphify-out && t=$(git rev-parse HEAD:Source) && if { [ \"$t\" != \"$(cat $o/.built_tree 2>/dev/null)\" ] || [ -n \"$(git status --porcelain -- Source)\" ]; } && mkdir $o/.lock 2>/dev/null; then GRAPHIFY_OUT=\"$PWD/graphify-out\" graphify update Source >/dev/null 2>&1 && echo \"$t\" > $o/.built_tree; rmdir $o/.lock; fi; true",
             "async": true
+          },
+          {
+            "type": "command",
+            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/ReplyGuard.py\""
           }
         ]
       }
@@ -28,6 +32,15 @@
           {
             "type": "command",
             "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/ToolGate.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/AgentBrief.py\""
           }
         ]
       }
