@@ -161,13 +161,6 @@
 - 제안: RHI 공용 "버퍼 페이지 + 구간" 형식(`RHIBufferSlice{ buffer, offset, size }`)을 두고 상수 버퍼는 구간으로만 나간다. 메모리는 D3D12MA / VMA 를 vcpkg overlay 로 들이거나 `SpanAllocator` 를 재사용한다. 그 전이라도 `vkAllocateMemory` 수를 세어 한도 근처에서 오류로 멈춘다.
 - 확인: 머티리얼 인스턴스 5000 개 시나리오에서 `RHIMemoryKind::Buffer` 바이트와 Vulkan 할당 수.
 
-#### R-5 버퍼 · 텍스처를 부술 때마다 bindless 등록표 전체를 훑는다
-- 분류: 성능 · 확신: 확인(히치 크기는 측정 필요)
-- 근거: `Source/Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h:171` 의 `releaseIf` 는 칸 전체 선형 순회다. 다섯 백엔드의 파괴 경로가 SRV · UAV 표를 각각 훑는다(`D3D12RHIResourceFactory.cpp:820-821 · 1144-1145`, `VulkanRHIResourceFactory.cpp:424-428` 등). DX12 는 그동안 `_bindlessMutex` 를 배타로 쥐고, 렌더 스레드의 `updateConstantBuffer` 가 같은 락을 공유로 잡는다. 레벨 언로드로 1 만 개를 부수면 1 만 × 수만 칸 비교가 락 아래에서 돈다.
-- 상용 엔진: 언리얼은 자원(뷰)이 자기 bindless 핸들을 들고 해제 때 그 번호만 돌려준다(`FRHIDescriptorHandle`).
-- 제안: 텍스처 · 버퍼 레코드(`RHIHandleTable` 칸)에 "내게 발급된 번호" 작은 인라인 목록을 두고 파괴는 그 목록만 놓는다.
-- 확인: 단위 `RHIBackendSupportTest` 에 "등록 3 만 + 파괴 1 만" 시간 상한, 씬 전환 시나리오의 Tracy `destroyBuffer`.
-
 #### R-6 텍스처 스트리밍이 "나중에 올리기" 뿐이고, 전역 세대 하나가 모든 머티리얼을 다시 돌린다
 - 분류: 성능 · 구조 · 확신: 확인(측정 필요)
 - 근거: `Source/Engine/Graphics/Texture/TextureCache.cpp:229-232` — 대기 줄이 텍스처마다 `DDSImageData` 전체를 쥐고 프레임당 제출은 2(`TextureCache.h:58`, C++ 상수)라 500 장이 오면 250 프레임 동안 전부 RAM 에 남는다. `:551-680` — 화면 크기는 줄 순서만 정하고 결국 모두 전체 밉으로 올라가며 내리는 길이 없다(`Source/Engine/Visual/TextureStreamingSystem.cpp:30-75`, `Config/Engine/MemoryBudget.json` 의 Texture 1024 MB 를 스트리머가 읽지 않는다). 승급마다 전역 `_reloadGeneration` 을 올려(`:579`) 모든 `Material::refreshTextureBindings`(`Source/Engine/Graphics/Material/Material.cpp:237-275`)와 `MaterialInstance`(`MaterialInstance.cpp:344-349`)가 다시 패킹 · 재업로드한다.
