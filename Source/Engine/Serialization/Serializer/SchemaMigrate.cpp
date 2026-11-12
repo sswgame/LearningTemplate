@@ -334,13 +334,7 @@ namespace sw
 
     hashed_string findWireTypeName( uint32 wireTypeHash )
     {
-        const TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
-        hashed_string       typeName = registry.canonicalTypeNameByHash( wireTypeHash );
-        if ( typeName.empty() == false )
-            return typeName;
-        const EnumInfo* pEnumInfo = registry.findEnumByNameHash( wireTypeHash );
-        typeName                  = ( pEnumInfo != nullptr ) ? pEnumInfo->_fullyQualifiedName : hashed_string{};
-        return typeName;
+        return engine::getSubsystem<TypeRegistry>().findWireTypeNameByHash( wireTypeHash );
     }
 
     FieldReadResult tryCoerceBinaryPayload( MutableValueAddress value, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,

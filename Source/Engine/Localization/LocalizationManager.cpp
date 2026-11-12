@@ -84,6 +84,7 @@ namespace sw
         , _mapLanguageTable{}
         , _mapCultureStatistic{}
         , _listLookupCulture{}
+        , _pCheckKeyHash{ &LocalizationKeyIndex::computeHash }
         , _missingMutex{}
         , _uniqueMissingKey{}
         , _textRevision{ 0 }
@@ -558,7 +559,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     expected<void> LocalizationManager::checkKeyHashesLocked( const MountedProject* pIncomingProject, const TranslationTable* pIncomingLoose ) const
     {
-        LocalizationKeyIndex index;
+        LocalizationKeyIndex index{ _pCheckKeyHash };
         const auto           addTable = [&index]( const TranslationTable& table ) -> expected<void>
         {
             for ( const auto& [key, entry] : table.getEntries() )

@@ -169,7 +169,7 @@ namespace sw
 
     /**
      * @brief 바이너리 태그의 기록 타입 해시를 이름으로 바꿔 반환합니다. 등록된 타입(원본 이름) 또는 enum(FQN)이며, 모르면 빈 이름입니다.
-     * @details 타입 테이블(`canonicalTypeNameByHash`)은 enum 을 모르므로 enum 은 여기서 찾는다. 기록 타입을 몰라 크기로 짐작하면 열거자 이름
+     * @details 타입과 enum 이 한 해시 표(`TypeRegistry::findWireTypeNameByHash`)에 있다. 기록 타입을 몰라 크기로 짐작하면 열거자 이름
      *          해시(4 바이트)가 int32 나 float32 로 그대로 읽힌다.
      */
     SW_API hashed_string findWireTypeName( uint32 wireTypeHash );

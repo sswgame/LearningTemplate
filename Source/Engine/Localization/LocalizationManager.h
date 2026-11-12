@@ -64,6 +64,8 @@ namespace sw
      */
     class SW_API LocalizationManager : public ISubsystem
     {
+        friend struct LocalizationManagerTestAccess;
+
     public:
         /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
         static constexpr const utf8* kSubsystemName = "Localization";
@@ -273,6 +275,9 @@ namespace sw
         unordered_map<string, unique_ptr<StringTable>>                  _mapLanguageTable;
         map<string, LocalizationCultureStatistics> _mapCultureStatistic SW_GUARDED_BY( _mutex );
         vector<string> _listLookupCulture                               SW_GUARDED_BY( _mutex );
+        /// @brief 충돌 검사(`checkKeyHashesLocked`)의 키 해시입니다. 실행은 늘 `LocalizationKeyIndex::computeHash` 이고, 실제 64 비트 충돌은 만들 수 없어
+        ///        테스트(`LocalizationManagerTestAccess`)만 바꿔 검사가 지는 길을 지나간다. 실행 표의 해시는 이것과 상관없다.
+        LocalizationKeyIndex::KeyHashFunction _pCheckKeyHash;
 
         mutable mutex                         _missingMutex;
         mutable set<string> _uniqueMissingKey SW_GUARDED_BY( _missingMutex );

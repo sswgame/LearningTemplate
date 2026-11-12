@@ -556,28 +556,75 @@ SW_TEST_CASE( LocalizationBinaryTableTest, KeysSharingThe32BitHashStayDistinct )
     SW_EXPECT_EQUAL( sw::string( "B" ), sw::string( loose.findString( sw::hashed_string( kKeyB ) ) ) );
 }
 
+namespace sw
+{
+    /** @brief 매니저의 충돌 검사 해시를 바꾸는 테스트 창구입니다(`LocalizationManager` 의 friend). 실제 64 비트 충돌은 찾을 수 없어 검사가 지는 길을 이것으로 지나간다. */
+    struct LocalizationManagerTestAccess
+    {
+        static void setCheckKeyHash( LocalizationManager& manager, LocalizationKeyIndex::KeyHashFunction pKeyHash ) { manager._pCheckKeyHash = pKeyHash; }
+    };
+} // namespace sw
+
+namespace
+{
+    /** @brief 모든 키를 같은 해시로 보내는 위조 해시입니다(충돌을 일부러 만든다). */
+    uint64 forgeSameKeyHash( sw::string_view )
+    {
+        return 0x1234u;
+    }
+} // namespace
+
 /**
  * @brief [LocalizationKeyIndexTest] 같은 해시에 다른 키가 오면 오류이고 먼저 든 키를 지킨다 — 대소문자만 다른 철자는 같은 키다
  */
 SW_TEST_CASE( LocalizationKeyIndexTest, SameHashDifferentKeyIsAnError )
 {
-    sw::LocalizationKeyIndex index;
-    constexpr uint64         kForgedHash = 0x1234u; // 64 비트 충돌은 찾을 수 없으니 해시를 일부러 같게 넣는다
-    SW_REQUIRE_TRUE( index.addWithHash( "Menu.Start", kForgedHash ) );
-    SW_EXPECT_TRUE( index.addWithHash( "Menu.Start", kForgedHash ) );
-    SW_EXPECT_TRUE( index.addWithHash( "menu.start", kForgedHash ) );
+    sw::LocalizationKeyIndex forged{ &forgeSameKeyHash };
+    SW_REQUIRE_TRUE( forged.add( "Menu.Start" ) );
+    SW_EXPECT_TRUE( forged.add( "Menu.Start" ) );
+    SW_EXPECT_TRUE( forged.add( "menu.start" ) );
 
-    const sw::expected<uint64> collided = index.addWithHash( "Menu.Quit", kForgedHash );
+    const sw::expected<uint64> collided = forged.add( "Menu.Quit" );
     SW_REQUIRE_FALSE( collided );
     SW_EXPECT_TRUE( collided.error().kind() == sw::ErrorKind::AlreadyExists );
     SW_EXPECT_TRUE( collided.error().detail().find( "Menu.Start" ) != sw::string_view::npos );
     SW_EXPECT_TRUE( collided.error().detail().find( "Menu.Quit" ) != sw::string_view::npos );
     // 진 뒤에도 먼저 든 키가 그대로라 같은 해시의 다른 키는 계속 진다.
-    SW_EXPECT_FALSE( index.addWithHash( "Menu.Quit", kForgedHash ) );
+    SW_EXPECT_FALSE( forged.add( "Menu.Quit" ) );
+    forged.clear();
+    SW_EXPECT_TRUE( forged.add( "Menu.Quit" ) );
 
-    const sw::expected<uint64> added = index.add( "Menu.Quit" );
+    sw::LocalizationKeyIndex   real;
+    const sw::expected<uint64> added = real.add( "Menu.Quit" );
     SW_REQUIRE_TRUE( added );
     SW_EXPECT_EQUAL( sw::LocalizationKeyIndex::computeHash( "Menu.Quit" ), *added );
-    index.clear();
-    SW_EXPECT_TRUE( index.addWithHash( "Menu.Quit", kForgedHash ) );
+}
+
+/**
+ * @brief [LocalizationKeyIndexTest] 매니저가 해시가 겹치는 키를 들이지 않는다 — 프로젝트 올리기 · 낱개 XML · 낱개 글이 모두 오류를 남기고 기존 글을 지킨다
+ */
+SW_TEST_CASE( LocalizationKeyIndexTest, ManagerRefusesCollidingKeys )
+{
+    using sw::test::LocalizationTestUtil;
+    const sw::test::ScopedScratchDomain domain;
+    const sw::string                    folder  = domain.getFolder();
+    const sw::string                    project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" );
+    LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
+
+    sw::LocalizationManager manager;
+    sw::LocalizationManagerTestAccess::setCheckKeyHash( manager, &forgeSameKeyHash );
+    SW_EXPECT_LOG( "LocalizationManager.KeyHashCollision" );
+    SW_EXPECT_FALSE( manager.mountProject( sw::test::ScopedScratchDomain::toID( project ), sw::LocalizationScope::Game ) );
+    SW_EXPECT_TRUE( manager.getMountedProjectNames().empty() );
+
+    manager.setString( "en", sw::hashed_string( "ui.start" ), "Start" );
+    manager.setString( "en", sw::hashed_string( "ui.quit" ), "Quit" ); // 위조 해시로 앞 키와 겹친다 — 넣지 않는다
+    SW_REQUIRE_TRUE( manager.setCurrentLanguage( "en" ) );
+    SW_REQUIRE_NOT_NULL( manager.findString( sw::hashed_string( "ui.start" ) ) );
+    SW_EXPECT_EQUAL( sw::string( "Start" ), sw::string( manager.findString( sw::hashed_string( "ui.start" ) ) ) );
+    SW_EXPECT_NULL( manager.findString( sw::hashed_string( "ui.quit" ) ) );
+
+    const sw::string xml = R"(<TranslationTable culture="en"><entries><entry key="ui.other" text="Other" /></entries></TranslationTable>)";
+    SW_EXPECT_FALSE( manager.loadLanguageXML( "en", xml ) );
+    SW_EXPECT_NULL( manager.findString( sw::hashed_string( "ui.other" ) ) );
 }

@@ -185,7 +185,8 @@ namespace sw
         {
             _mapFqnToClassType.emplace( canonicalKey, make_unique<TypeInfo>( std::move( stored ) ) );
         }
-        _mapHashToCanonicalName.insert_or_assign( canonicalKey.getHash(), canonicalName );
+        string wireNameClash;
+        assignWireTypeNameLocked( canonicalKey, canonicalName, wireNameClash );
         const TypeInfo* const pRegistered = _mapFqnToClassType.find( canonicalKey )->second.get();
         hashed_string         shadowedFqn;
         if ( shortName.empty() == false && shortName != canonicalKey )
@@ -200,7 +201,7 @@ namespace sw
                     shadowedFqn = previousIt->second;
             }
             _mapAliasToFqn.insert_or_assign( shortName, canonicalKey );
-            _mapHashToCanonicalName.insert_or_assign( shortName.getHash(), canonicalName );
+            assignWireTypeNameLocked( shortName, canonicalName, wireNameClash );
         }
         // 테이블이 바뀌었으니 세대를 올린다. 기록해 둔 빈 결과(`TypeLookupCache` 의 미등록, 찾지 못한 부모)를 다음 조회가 다시 찾는다.
         // 그 세대가 이 내용의 세대다 — 다시 등록하면 오래 든 프로퍼티 참조(`PropertyHandle`)가 낡는다.
@@ -223,10 +224,29 @@ namespace sw
         // 로그는 잠금 밖에서 남긴다. 리스너가 레지스트리를 다시 물어도 멈추지 않게 하려는 것이다.
         lock.unlock();
         rebuildAffected( listAffected );
+        reportWireTypeNameClash( wireNameClash );
         if ( shadowedFqn.empty() == false )
             SW_LOG_WARNING_ID( "Reflection.TypeShortNameCollision", "Reflected type name '%#' now means %# and no longer %# - short names must be unique (scenes, prefabs and "
                                                                     "addComponentByName look types up by them)",
                                shortName.c_str(), canonicalKey.c_str(), shadowedFqn.c_str() );
+    }
+
+    void TypeRegistry::assignWireTypeNameLocked( const hashed_string& name, const hashed_string& wireName, string& inoutClash )
+    {
+        if ( name.empty() )
+            return;
+        const expected<void> assigned = _wireTypeNameIndex.assign( name.view(), name.getHash(), wireName );
+        if ( assigned.has_value() == false && inoutClash.empty() )
+            inoutClash = string( assigned.error().detail() );
+    }
+
+    void TypeRegistry::reportWireTypeNameClash( string_view clash )
+    {
+        if ( clash.empty() )
+            return;
+        SW_LOG_ERROR_ID( "Reflection.TypeNameHashClash", "Reflected type or enum names '%#' share a 32-bit name hash - binary tags record that hash, so the later name is not registered "
+                                                         "for it and its saved fields cannot be converted; rename one",
+                         clash );
     }
 
     void TypeRegistry::registerEnum( const EnumInfo& info )
@@ -245,6 +265,8 @@ namespace sw
             *pOwned = std::move( stored );
         EnumInfo* pEnumInfo = pOwned.get();
         _mapNameToEnum.insert_or_assign( pEnumInfo->_fullyQualifiedName, pEnumInfo );
+        string wireNameClash;
+        assignWireTypeNameLocked( pEnumInfo->_fullyQualifiedName, pEnumInfo->_fullyQualifiedName, wireNameClash );
         hashed_string shadowedFqn;
         if ( pEnumInfo->_name.empty() == false && pEnumInfo->_name != pEnumInfo->_fullyQualifiedName )
         {
@@ -253,6 +275,7 @@ namespace sw
             if ( previousIt != _mapNameToEnum.end() && previousIt->second != pEnumInfo )
                 shadowedFqn = previousIt->second->_fullyQualifiedName;
             _mapNameToEnum.insert_or_assign( pEnumInfo->_name, pEnumInfo );
+            assignWireTypeNameLocked( pEnumInfo->_name, pEnumInfo->_fullyQualifiedName, wireNameClash );
         }
         // 이름의 답이 없음에서 이 열거형으로 바뀔 수 있다. 미등록을 기록해 둔 열거형 캐시(`EnumNameCache`)가 다시 찾게 한다.
         s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
@@ -265,6 +288,7 @@ namespace sw
         const string  enumName( pEnumInfo->_fullyQualifiedName.c_str() );
 
         lock.unlock();
+        reportWireTypeNameClash( wireNameClash );
         if ( shadowedFqn.empty() == false )
             SW_LOG_WARNING_ID( "Reflection.EnumShortNameCollision", "Reflected enum name '%#' now means %# and no longer %# - short names must be unique",
                                pEnumInfo->_name.c_str(), pEnumInfo->_fullyQualifiedName.c_str(), shadowedFqn.c_str() );
@@ -428,6 +452,40 @@ namespace sw
         for ( TypeInfo* pType : listType )
         {
             pType->computeDerivedFlags();
+        }
+        reportFieldNameHashClashes( listType );
+    }
+
+    void TypeRegistry::reportFieldNameHashClashes( const vector<TypeInfo*>& listType )
+    {
+        // 바이너리는 필드를 이름의 32 비트 해시로 싣고 상속 포함 목록에서 그 해시로 찾는다(`findPropertyIndexByNameHash`). 같은 해시의 두 이름은 저장된 값이
+        // 어느 필드로 읽힐지 정하지 못한다 — 공용 충돌 검사 색인으로 등록 때 오류로 바꾼다. 옛 이름(별칭)도 같은 해시 공간이다.
+        for ( const TypeInfo* pType : listType )
+        {
+            NameHashIndex<uint32> index;
+            string                clash;
+            const auto            assignName = [&index, &clash]( const hashed_string& name )
+            {
+                if ( name.empty() || clash.empty() == false )
+                    return;
+                if ( const expected<void> assigned = index.assign( name.view(), name.getHash() ); assigned.has_value() == false )
+                    clash = string( assigned.error().detail() );
+            };
+            const PropertyListView listProp = pType->getPropertiesWithBase();
+            for ( const PropertyInfo& prop : listProp )
+            {
+                assignName( prop._name );
+            }
+            for ( const PropertyInfo& prop : listProp )
+            {
+                for ( const hashed_string& alias : prop._listAlias )
+                {
+                    assignName( alias );
+                }
+            }
+            if ( clash.empty() == false )
+                SW_LOG_ERROR_ID( "Reflection.FieldNameHashClash", "%#: field names '%#' share a 32-bit name hash - binary saves record fields by that hash and cannot tell them apart; rename one",
+                                 pType->_fullyQualifiedName.c_str(), clash.c_str() );
         }
     }
 
@@ -648,13 +706,15 @@ namespace sw
                 ++it;
         }
 
-        _mapHashToCanonicalName.clear();
+        // 남은 이름으로 해시 표를 다시 짓는다(지운 이름의 해시가 비어 다른 이름이 쓸 수 있다).
+        _wireTypeNameIndex.clear();
+        string wireNameClash;
         for ( const auto& [fqn, pInfo] : _mapFqnToClassType )
         {
             if ( pInfo->isAlive() == false )
                 continue;
             const hashed_string canonicalName = pInfo->_name.empty() == false ? pInfo->_name : pInfo->_fullyQualifiedName;
-            _mapHashToCanonicalName.insert_or_assign( fqn.getHash(), canonicalName );
+            assignWireTypeNameLocked( fqn, canonicalName, wireNameClash );
         }
         for ( const auto& [alias, fqn] : _mapAliasToFqn )
         {
@@ -663,7 +723,11 @@ namespace sw
                 continue;
             const TypeInfo&     info          = *typeIt->second;
             const hashed_string canonicalName = info._name.empty() == false ? info._name : info._fullyQualifiedName;
-            _mapHashToCanonicalName.insert_or_assign( alias.getHash(), canonicalName );
+            assignWireTypeNameLocked( alias, canonicalName, wireNameClash );
+        }
+        for ( const auto& [name, pEnumInfo] : _mapNameToEnum )
+        {
+            assignWireTypeNameLocked( name, pEnumInfo->_fullyQualifiedName, wireNameClash );
         }
         // 자손의 부모 포인터는 **해제된 부모**를 가리킨다. 비워서 이름으로 다시 찾게 한다(해제된 타입은 `findType` 이 nullptr 라 사슬은 거기서 끝난다).
         // 상속 목록은 내려가는 모듈의 프로퍼티를 가리킨다 — 모듈이 아직 살아 있는 지금 버린다(`clearContent` 와 같은 이유).
@@ -671,6 +735,7 @@ namespace sw
         s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
         lock.unlock();
         rebuildAffected( listAffected );
+        reportWireTypeNameClash( wireNameClash );
     }
 
     void TypeRegistry::registerTypeAlias( const utf8* pAliasName, const utf8* pCanonicalName )
@@ -703,7 +768,8 @@ namespace sw
         const hashed_string aliasHash{ pAliasName };
 
         _mapAliasToFqn.insert_or_assign( aliasHash, canonicalKey );
-        _mapHashToCanonicalName.insert_or_assign( aliasHash.getHash(), canonicalName );
+        string wireNameClash;
+        assignWireTypeNameLocked( aliasHash, canonicalName, wireNameClash );
         // 별칭이 생기면 같은 이름의 답이 nullptr 에서 타입으로 바뀔 수 있다.
         s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
 
@@ -712,7 +778,7 @@ namespace sw
         {
             const hashed_string qualifiedHash{ qualified.c_str() };
             _mapAliasToFqn.insert_or_assign( qualifiedHash, canonicalKey );
-            _mapHashToCanonicalName.insert_or_assign( qualifiedHash.getHash(), canonicalName );
+            assignWireTypeNameLocked( qualifiedHash, canonicalName, wireNameClash );
         }
 
         // 옛 이름을 부모로 적은 타입이 이제 이 타입에 이어진다 — 그 자손을 다시 짓는다(배치 안이면 배치 끝이).
@@ -728,6 +794,7 @@ namespace sw
         }
         lock.unlock();
         rebuildAffected( listAffected );
+        reportWireTypeNameClash( wireNameClash );
     }
 
     void TypeRegistry::registerEnumAlias( const utf8* pAliasName, const utf8* pCanonicalName )
@@ -743,14 +810,23 @@ namespace sw
             return;
 
         // 별칭은 같은 객체를 가리킨다(복사본이면 다시 등록된 열거자를 못 본다).
-        EnumInfo* const pEnumInfo = it->second;
-        _mapNameToEnum.insert_or_assign( hashed_string( pAliasName ), pEnumInfo );
+        EnumInfo* const     pEnumInfo = it->second;
+        const hashed_string aliasName{ pAliasName };
+        string              wireNameClash;
+        _mapNameToEnum.insert_or_assign( aliasName, pEnumInfo );
+        assignWireTypeNameLocked( aliasName, pEnumInfo->_fullyQualifiedName, wireNameClash );
 
         const string qualified = ReflectionInternal::qualifyAliasWithNamespace( pAliasName, pCanonicalName );
         if ( qualified.empty() == false )
-            _mapNameToEnum.insert_or_assign( hashed_string( qualified.c_str() ), pEnumInfo );
+        {
+            const hashed_string qualifiedName{ qualified.c_str() };
+            _mapNameToEnum.insert_or_assign( qualifiedName, pEnumInfo );
+            assignWireTypeNameLocked( qualifiedName, pEnumInfo->_fullyQualifiedName, wireNameClash );
+        }
         // 별칭이 생기면 같은 이름의 답이 nullptr 에서 열거형으로 바뀔 수 있다(타입 별칭과 같은 규칙).
         s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
+        lock.unlock();
+        reportWireTypeNameClash( wireNameClash );
     }
 
     const TypeInfo* TypeRegistry::findType( const hashed_string& nameOrFqn ) const
@@ -816,24 +892,11 @@ namespace sw
         return findEnum( hashed_string( leaf.data(), static_cast<uint32>( leaf.size() ) ) );
     }
 
-    const EnumInfo* TypeRegistry::findEnumByNameHash( const uint32 nameHash ) const
-    {
-        if ( nameHash == 0 )
-            return nullptr;
-        ScopedSharedLock<shared_mutex> lock{ _mutex };
-        for ( const auto& [name, pEnumInfo] : _mapNameToEnum )
-        {
-            if ( name.getHash() == nameHash )
-                return pEnumInfo;
-        }
-        return nullptr;
-    }
-
-    hashed_string TypeRegistry::canonicalTypeNameByHash( const uint32 nameHash ) const
+    hashed_string TypeRegistry::findWireTypeNameByHash( const uint32 nameHash ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _mutex };
-        auto                           it = _mapHashToCanonicalName.find( nameHash );
-        return it != _mapHashToCanonicalName.end() ? it->second : hashed_string{};
+        const hashed_string* const     pName = _wireTypeNameIndex.find( nameHash );
+        return pName != nullptr ? *pName : hashed_string{};
     }
 
     const utf8* TypeRegistry::enumToString( const hashed_string& enumName, int64 value ) const
