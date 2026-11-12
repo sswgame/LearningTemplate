@@ -12,6 +12,9 @@
 	<EditorWaitSettled/>
 	<DevCommand line="editor scene.new"/>
 	<EditorWaitSettled/>
+	<!-- History 는 포커스를 받아도 겨눈 스택을 바꾸지 않는다 — 계층(메인 스택)에 포커스를 둔 뒤 연다 -->
+	<DevCommand line="panel.focus hierarchy"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="hierarchy.create"/>
 	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="60"/>
 	<EditorWaitSettled/>

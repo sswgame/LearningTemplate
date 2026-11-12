@@ -158,6 +158,10 @@ namespace sw::editor
         static bool beginPanel( const utf8* pTitle, bool* pOpen, EditorPanelFlags flags = EditorPanelFlags::None );
         /** @brief beginPanel()과 짝을 이룹니다. */
         static void endPanel();
+        /** @brief 지금 그리는 창(`beginPanel` 과 `endPanel` 사이)의 ImGui 창 id 입니다. */
+        static uint32 getCurrentWindowID();
+        /** @brief 키보드 포커스가 있는 창의 뿌리 창 id 입니다(패널 안 자식 창이면 그 패널 창). 포커스 창이 없으면 0 이고, 메뉴 · 팝업이 포커스면 그 창이라 어느 패널과도 맞지 않는다. */
+        static uint32 findFocusedRootWindowID();
         /** @brief 다음 패널의 FirstUseEver 크기와 위치를 정합니다. 크기는 `resolveTextExtent` 로 정하고, 위치는 주 뷰포트 가운데입니다. 칸 또는 줄이 0 이하이면 아무것도 하지 않습니다. */
         static void setNextPanelSize( const EditorTextExtent& extent );
         /**

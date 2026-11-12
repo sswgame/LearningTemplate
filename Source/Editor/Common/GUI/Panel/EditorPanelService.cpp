@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
@@ -95,6 +96,19 @@ namespace sw::editor
             if ( pDocument == nullptr || pDocument->getDocumentAssetPath().empty() )
                 continue;
             outList.push_back( EditorOpenDocument{ string{ pDocument->getDocumentAssetPath() }, pDocument->isDocumentDirty() } );
+        }
+    }
+
+    void EditorPanelService::collectPanelCommandStacks( uint32& outFocusedWindowID, vector<EditorPanelCommandStack>& outList ) const
+    {
+        outFocusedWindowID = EditorChrome::findFocusedRootWindowID();
+        outList.clear();
+        for ( const EditorPanelEntry& entry : _panelManager.getPanels() )
+        {
+            IEditorPanel* const pPanel = entry._pInstance.get();
+            if ( pPanel == nullptr || pPanel->isOpen() == false )
+                continue;
+            outList.push_back( EditorPanelCommandStack{ pPanel->getWindowID(), pPanel->findPanelCommandStack(), pPanel->shouldKeepFocusedCommandStack() } );
         }
     }
 } // namespace sw::editor

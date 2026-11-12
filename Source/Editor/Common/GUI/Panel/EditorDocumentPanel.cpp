@@ -232,8 +232,7 @@ namespace sw::editor
     EditorDocumentPanel::~EditorDocumentPanel()
     {
         *_pUndoTarget = nullptr;
-        if ( getFocusedCommandStack() == _pDocumentStack.get() )
-            setFocusedCommandStack( nullptr ); // 사라질 스택을 Ctrl+Z 가 겨누지 않게
+        releaseFocusedCommandStack( _pDocumentStack.get() ); // 사라질 스택을 Ctrl+Z 가 겨누지 않게
     }
 
     optional<AbsolutePath> EditorDocumentPanel::getDocumentDiskPath() const

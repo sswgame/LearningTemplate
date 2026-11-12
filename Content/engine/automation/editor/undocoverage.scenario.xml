@@ -17,6 +17,9 @@
 	<EditorWaitSettled/>
 	<DevCommand line="layout.reset"/>
 	<EditorWaitSettled/>
+	<!-- 되돌리기 감시 값은 포커스 창의 스택이다 — 씬 뷰에 두어 메인(씬) 스택을 읽는다(배치를 되돌린 뒤 문서 창이 포커스일 수 있다) -->
+	<DevCommand line="panel.focus scene_view"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.UndoCount" equals="0" timeoutFrames="600"/>
 	<DevCommand line="select.type MeshComponent"/>
 	<WaitUntil watch="Editor.SelectionCount" atLeast="1" timeoutFrames="30"/>

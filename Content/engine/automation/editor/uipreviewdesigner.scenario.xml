@@ -28,6 +28,9 @@
 	<EditorClick mark="uipreview.widget.Window"/>
 	<WaitUntil watch="Editor.UIPreviewSlotEditable" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UIPreviewPaletteCount" atLeast="10"/>
+	<!-- 되돌리기 감시 값 · edit.undo 는 포커스 창(UI 미리보기 문서)의 스택이다 -->
+	<DevCommand line="panel.focus ui_preview"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
 	<Remember watch="Editor.UIPreviewSlotEditCount" as="slotEdits"/>
 	<EditorWaitSettled/>
@@ -71,6 +74,8 @@
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="2" timeoutFrames="180"/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="1" timeoutFrames="60"/>
+	<DevCommand line="panel.focus ui_preview"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.delete"/>

@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — Play 전의 편집 내역이 Stop 뒤에도 남아 되돌릴 수 있다(panel-audit D4). 저장 안 된 씬이라 Play 를 누르면 확인 상자가 뜬다.
+  ② 플레이 중 고친 문서(시퀀서 컷 더하기)의 기록은 그 문서의 스택이라 Stop 이 버리지 않는다 — 시퀀서에 포커스를 두고 Ctrl+Z 하면 컷이 빠진다(감사 E-3).
   실행: App -EnableEditor -scenario=engine/automation/editor/undosurvivesplay.scenario.xml -unattended
 -->
-<Scenario name="editor.undosurvivesplay" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.undosurvivesplay" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<EditorWaitSettled/>
 	<DevCommand line="editor scene.new"/>
@@ -25,5 +28,37 @@
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="0" timeoutFrames="60"/>
 	<EditorExpectObject name="GameObject" count="0"/>
+	<!-- ② 시퀀스를 열고 바인딩을 고른 뒤 Play -->
+	<EditorWaitSettled/>
+	<EditorKey key="Ctrl+P"/>
+	<EditorWaitSettled/>
+	<EditorText value="sequencerkeys.seq.xml"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Enter"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.SequencerBindingCount" equals="1" timeoutFrames="120"/>
+	<Expect watch="Editor.SequencerCutCount" equals="0"/>
+	<EditorClick mark="sequencer.binding.0"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="toolbar.play"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="toolbar.playAnyway"/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
+	<EditorWaitSettled/>
+	<!-- 플레이 중 문서 편집 -->
+	<EditorClick mark="sequencer.addCut"/>
+	<WaitUntil watch="Editor.SequencerCutCount" equals="1" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="toolbar.stop"/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
+	<Expect watch="Editor.SequencerCutCount" equals="1"/>
+	<!-- 그 창에서 되돌리면 컷이 빠진다 — 예전에는 메인 스택에 쌓여 Stop 의 내역 복원이 버렸다 -->
+	<DevCommand line="panel.focus sequencer"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.UndoIndex" atLeast="1"/>
+	<EditorKey key="Ctrl+Z"/>
+	<WaitUntil watch="Editor.SequencerCutCount" equals="0" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

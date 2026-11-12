@@ -91,6 +91,9 @@
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001" timeoutFrames="60"/>
 	<Expect watch="Editor.UIPreviewDirty" equals="1"/>
+	<!-- 되돌리기 감시 값 · edit.undo 는 포커스 창(UI 미리보기 문서)의 스택이다 -->
+	<DevCommand line="panel.focus ui_preview"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<EditorWaitSettled/>
 	<DevCommand line="editor edit.undo"/>
