@@ -263,6 +263,7 @@ namespace sw
             return false;
         outPosition = float2{ _worldPosition._x, _worldPosition._y };
         outAngle    = PhysicsComponent::getAngle2D( _worldRotation );
+        return true;
     }
 
     void RigidBody2DComponent::beginPhysicsFrame( ScenePhysics& physics )

@@ -833,8 +833,17 @@ namespace sw
             return false;
         // 바디 id 가 그대로라 접촉 쌍도 그대로다 — Jolt 는 옛 셰이프 쌍의 제거와 새 쌍의 추가를 같은 step 에 짝지어 알리고(같은 서브 셰이프 쌍이면 유지),
         // 추적기는 바디 쌍의 셰이프 쌍 수가 0 이 되지 않는 한 끝 · 시작을 내지 않는다.
-        const JPH::EActivation activation = pRecord->_type == PhysicsBodyType::Static ? JPH::EActivation::DontActivate : JPH::EActivation::Activate;
-        _system.GetBodyInterface().SetShape( pRecord->_bodyID, pShape.GetPtr(), false, activation );
+        const bool             bStatic    = pRecord->_type == PhysicsBodyType::Static;
+        const JPH::EActivation activation = bStatic ? JPH::EActivation::DontActivate : JPH::EActivation::Activate;
+        JPH::BodyInterface&    bodies     = _system.GetBodyInterface();
+        JPH::AABox             bounds     = bStatic ? bodies.GetTransformedShape( pRecord->_bodyID ).GetWorldSpaceBounds() : JPH::AABox{};
+        bodies.SetShape( pRecord->_bodyID, pShape.GetPtr(), false, activation );
+        if ( bStatic )
+        {
+            // 정적 바디의 셰이프가 바뀌면 그 위에서 자던 바디가 받침을 잃거나 묻힌다 — Jolt 는 깨우지 않으므로 옛 · 새 경계 안 바디를 깨운다(`setBodyTransform` 과 같다).
+            bounds.Encapsulate( bodies.GetTransformedShape( pRecord->_bodyID ).GetWorldSpaceBounds() );
+            bodies.ActivateBodiesInAABox( bounds, JPH::BroadPhaseLayerFilter{}, JPH::ObjectLayerFilter{} );
+        }
         {
             // `SetShape` 의 질량 갱신은 셰이프 질량만 쓴다 — 만들 때와 같이 지정 질량 · 메시 상자 질량을 맞춘다. 움직임 정보가 없는 정적 바디는 질량이 없다.
             const JPH::BodyLockWrite lock{ _system.GetBodyLockInterface(), pRecord->_bodyID };
@@ -1300,13 +1309,30 @@ namespace sw
                 }
                 default:
                 {
-                    _contactTracker.endSubContact( report._bodyA._body, report._bodyB._body );
+                    // Jolt 는 바디가 잠들면 그 접촉마다 제거를 알린다(`ContactListener::OnContactAdded` 설명) — 떨어진 것이 아니니 끝내지 않고 쉬게 둔다.
+                    if ( isPairAsleep( report._bodyA._body, report._bodyB._body ) )
+                        _contactTracker.suspendSubContact( report._bodyA._body, report._bodyB._body );
+                    else
+                        _contactTracker.endSubContact( report._bodyA._body, report._bodyB._body );
                     break;
                 }
             }
         }
         _listContactReport.clear();
+        _contactTracker.resumeSubContacts( [this]( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB )
+        { return isPairAsleep( bodyA, bodyB ); } );
         _contactTracker.finishStep( _listContactEvent );
+    }
+
+    bool JoltPhysicsScene::isPairAsleep( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB ) const
+    {
+        // 잠든 섬은 정적이 아닌 바디가 모두 잔다 — 두 바디 다 활성이 아니면(정적은 늘 활성이 아니다) 그 쌍은 잠들어 있다.
+        const BodyRecord* pRecordA = findBody( bodyA );
+        const BodyRecord* pRecordB = findBody( bodyB );
+        if ( pRecordA == nullptr || pRecordB == nullptr )
+            return false;
+        const JPH::BodyInterface& bodies = _system.GetBodyInterface();
+        return bodies.IsActive( pRecordA->_bodyID ) == false && bodies.IsActive( pRecordB->_bodyID ) == false;
     }
 
     PhysicsVehicleHandle JoltPhysicsScene::createWheeledVehicle( PhysicsBodyHandle chassis, const PhysicsWheeledVehicleDesc& desc )
