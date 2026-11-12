@@ -96,12 +96,13 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct AudioOutputConfig
-     * @brief 오디오 출력 장치를 잃었거나 없이 시작했을 때 기본 장치를 다시 열어 보는 간격입니다(`IAudioService` 의 백오프 — 지터를 섞어 두 배씩 상한까지).
-     * @details 헤드폰을 다시 꽂으면 곧 붙고(첫 간격), 장치가 없는 기계는 상한마다 한 번만 본다. 언리얼 AudioMixer 의 장치 스왑 재시도 · 유니티 `OnAudioConfigurationChanged` 자리다.
+     * @struct AudioConfig
+     * @brief 오디오 서비스(`IAudioService::initialize`)가 읽는 설정입니다 — 출력 장치 다시 열기 간격과 클립 캐시 예산.
+     * @details 다시 열기는 장치를 잃었거나 없이 시작했을 때 기본 장치를 다시 열어 보는 백오프다(지터를 섞어 두 배씩 상한까지). 헤드폰을 다시 꽂으면 곧 붙고(첫 간격),
+     *          장치가 없는 기계는 상한마다 한 번만 본다. 언리얼 AudioMixer 의 장치 스왑 재시도 · 유니티 `OnAudioConfigurationChanged` 자리다.
      */
     REFLECT()
-    struct SW_API AudioOutputConfig
+    struct SW_API AudioConfig
     {
         REFLECT_BODY();
 
@@ -110,6 +111,13 @@ namespace sw
 
         PROPERTY( Min = 1, Units = ms )
         uint32 _reopenMaxDelayMs{}; ///< 다시 열기 간격의 상한(ms) — `_reopenFirstDelayMs` 보다 작으면 오디오 초기화가 실패한다
+
+        /**
+         * @brief 디코드한 클립 캐시(`AudioClipCache`)의 예산(MB)입니다. 넘으면 재생 중이 아닌 클립을 가장 오래 안 쓴 것부터 뺀다.
+         * @details 메모리 태그 예산(`MemoryBudget.json` 의 Audio)보다 작게 둔다 — 그 나머지가 스트리밍 디코더 · 믹서 몫이다. 언리얼 `Max Cache Size` · 유니티 `UnloadUnusedAssets` 자리다.
+         */
+        PROPERTY( Min = 1, Units = MB )
+        uint32 _clipCacheMegabytes{};
     };
 } // namespace sw
 
@@ -187,7 +195,7 @@ namespace sw
         TextureFormatSettings _textureFormats{}; ///< 대상별 텍스처 압축 형식 목록
 
         PROPERTY()
-        AudioOutputConfig _audioOutput{}; ///< 오디오 출력 장치 다시 열기 간격
+        AudioConfig _audio{}; ///< 오디오 출력 장치 다시 열기 간격 · 클립 캐시 예산
 
         PROPERTY()
         RHIDeviceLostPolicy _deviceLostPolicy{ RHIDeviceLostPolicy::None }; ///< 렌더 장치를 잃었을 때 할 일(`None` 이면 기동이 오류로 멈춘다)

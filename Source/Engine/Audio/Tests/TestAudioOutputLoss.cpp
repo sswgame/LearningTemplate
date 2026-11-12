@@ -36,12 +36,13 @@ namespace
         }
     };
 
-    /** @brief 엔진 설정 파일과 같은 다시 열기 간격입니다(첫 1 초, 상한 30 초 — `Config/Engine/EngineConfig.json`). */
-    sw::AudioOutputConfig makeOutputConfig()
+    /** @brief 엔진 설정 파일과 같은 다시 열기 간격 · 캐시 예산입니다(첫 1 초, 상한 30 초, 192 MB — `Config/Engine/EngineConfig.json`). */
+    sw::AudioConfig makeOutputConfig()
     {
-        sw::AudioOutputConfig config;
+        sw::AudioConfig config;
         config._reopenFirstDelayMs = 1000;
         config._reopenMaxDelayMs   = 30000;
+        config._clipCacheMegabytes = 192;
         return config;
     }
 } // namespace
@@ -86,9 +87,9 @@ SW_TEST_CASE( AudioServiceTest, OutputLossFallsBackToOfflineRender )
 /** @brief [AudioServiceTest] 다시 열기 상한이 첫 간격보다 작으면 초기화가 실패한다 — 코드 기본값으로 대신하지 않는다. */
 SW_TEST_CASE( AudioServiceTest, InvalidReopenDelayFailsInitialize )
 {
-    FakeOutputBackend     service;
-    sw::AudioOutputConfig config = makeOutputConfig();
-    config._reopenMaxDelayMs     = config._reopenFirstDelayMs - 1;
+    FakeOutputBackend service;
+    sw::AudioConfig   config = makeOutputConfig();
+    config._reopenMaxDelayMs = config._reopenFirstDelayMs - 1;
     SW_EXPECT_LOG( "AudioService.InvalidReopenDelay" );
     SW_EXPECT_FALSE( service.initialize( config ) );
     SW_EXPECT_EQUAL( 0, service._openCount );

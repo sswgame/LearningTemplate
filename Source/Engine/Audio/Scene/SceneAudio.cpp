@@ -84,6 +84,16 @@ namespace sw
                 outValue = static_cast<float64>( pEngine->getStats()._instanceCount );
                 return true;
             }
+
+            /** @brief 감시 값 `Audio.ClipCacheBytes` 입니다. 클립 캐시에 든 디코드 바이트의 합입니다(예산은 `EngineConfig::_audio._clipCacheMegabytes`). */
+            [[nodiscard]] static bool readClipCacheBytes( const GameObjectManager* pManager, float64& outValue )
+            {
+                const AudioEngine* pEngine = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioEngine() : nullptr;
+                if ( pEngine == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pEngine->getClipStore().getCachedBytes() );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -95,6 +105,8 @@ namespace sw
                                false );
     // 오디오 스레드가 명령을 옮겨야 값이 바뀐다 — 벽시계 시한으로 기다린다.
     SW_AUTOMATION_WALL_WATCH( audioInstanceCount, "Audio.InstanceCount", "Sound event instances alive in the audio engine", &SceneAudioInternal::readInstanceCount );
+    // 디코드 결과는 워커가 넣는다 — 같은 까닭으로 벽시계 시한이다.
+    SW_AUTOMATION_WALL_WATCH( audioClipCacheBytes, "Audio.ClipCacheBytes", "Decoded bytes held by the audio clip cache", &SceneAudioInternal::readClipCacheBytes );
 } // namespace sw
 
 namespace sw

@@ -73,6 +73,8 @@ namespace sw
         [[nodiscard]] static bool convertPCM( const AudioPCM& pcm, AudioClipData& outClip );
         /** @brief 채널을 평균해 모노 샘플로 바꿉니다(립싱크 분석에 씁니다). 스트리밍 클립은 샘플이 없어 빈 결과입니다. */
         void copyMonoSamples( vector<float32>& outListSample ) const;
+        /** @brief 이 클립이 메모리에 든 바이트입니다(푼 샘플 · 스트리밍 압축 바이트 · 그래프 소스 샘플). 캐시 예산이 센다. */
+        size_t getByteCount() const;
     };
 } // namespace sw
 
@@ -86,6 +88,9 @@ namespace sw
      * @brief 경로별로 디코드한 클립을 보관하는 캐시입니다. 모든 함수는 어느 스레드에서 호출해도 됩니다.
      * @details 요청(`requestClip`)은 엔진 태스크가 있으면 워커에서 디코드하고, 없으면(테스트, 헤드리스) 호출한 자리에서 바로 디코드한다.
      *          같은 경로를 두 번 요청해도 디코드는 한 번이다. 클립은 `shared_ptr<const>` 라서 재생 중인 보이스가 참조하는 클립은 `clear` 뒤에도 살아 있다.
+     *          퇴출: 결과를 넣을 때 든 바이트가 예산(`setBudgetBytes`, 설정 `EngineConfig::_audio._clipCacheMegabytes`)을 넘으면, 캐시 말고는 아무도 잡지 않은
+     *          (재생 중인 보이스가 없는) 클립을 가장 오래 안 쓴 것부터 뺀다. 뺀 경로는 다음 요청이 다시 디코드한다. 모두 재생 중이면 예산을 넘긴 채 둔다(소리를 끊지 않는다).
+     *          언리얼 오디오 스트림 캐시의 LRU 한도 · 유니티 `UnloadUnusedAssets`(참조 없는 것만 내린다) 자리다.
      * @note 워커 디코드 태스크는 이 캐시를 가리킨다 — 소멸자가 띄운 태스크가 모두 끝날 때까지 기다린다(기다리는 동안 다른 태스크를 돕는다).
      */
     class SW_API AudioClipCache
@@ -143,6 +148,11 @@ namespace sw
         /** @brief 캐시를 비웁니다. 디코드 중인 요청의 결과는 도착하면 다시 들어갑니다. */
         void clear();
 
+        /** @brief 캐시 예산(바이트)을 정하고 바로 맞춥니다. `IAudioService::initialize` 가 설정 값으로 부른다 — 정하기 전(0)에는 퇴출하지 않는다. */
+        void setBudgetBytes( uint64 budgetBytes );
+        /** @brief 지금 캐시에 든 클립 바이트의 합입니다(감시 값 `Audio.ClipCacheBytes`). 재생 중이라 못 뺀 클립 때문에 예산보다 클 수 있다. */
+        uint64 getCachedBytes() const;
+
     private:
         /** @brief 바이트를 읽어 디코드합니다(리소스 → 파일 → 대체 디코더 순). 소리 그래프 파일이면 `decodeGraph` 로 넘깁니다. */
         shared_ptr<const AudioClipData> decodeClip( const hashed_string& path ) const;
@@ -150,20 +160,27 @@ namespace sw
         shared_ptr<const AudioClipData> decodeGraph( const hashed_string& path ) const;
         /** @brief 워커 태스크 본문입니다. 인자는 경로(문자열) 하나입니다. */
         void decodeClipTask( const TaskArgs& args );
-        /** @brief 디코드 결과를 캐시에 적습니다. */
+        /** @brief 디코드 결과를 캐시에 적고 예산을 맞춥니다(방금 넣은 경로는 빼지 않는다). */
         void storeResult( const hashed_string& path, shared_ptr<const AudioClipData> pClip );
+        /** @brief 예산을 넘으면 아무도 잡지 않은 클립을 가장 오래 안 쓴 것부터 뺍니다. @p keepPath 는 빼지 않습니다. */
+        void evictOverBudgetLocked( const hashed_string& keepPath ) SW_REQUIRES_LOCK( _mutex );
 
     private:
         /** @brief 캐시 엔트리 하나입니다. */
         struct Entry
         {
             shared_ptr<const AudioClipData> _pClip{};
+            uint64                          _byteCount{ 0 };                    ///< `_pClip->getByteCount()` 를 넣을 때 적어 둔다
+            mutable uint64                  _lastUse{ 0 };                      ///< 마지막으로 찾거나 넣은 때의 `_useClock` 이다(찾기는 const 라 mutable)
             AssetLoadState                  _status{ AssetLoadState::Loading }; ///< 엔트리는 요청(`requestClip`)이나 결과(`storeResult`)가 만든다
         };
 
         unordered_map<hashed_string, Entry, hashed_string::HashFunc> _mapPathToEntry SW_GUARDED_BY( _mutex ); /**< 경로에서 엔트리로 가는 맵입니다. */
         AudioFallbackDecodeFunction                                                  _pFallbackDecoder;       /**< 대체 디코더입니다(없으면 nullptr). */
         float32                                                                      _streamMinSeconds;       /**< 이보다 긴 소리는 스트리밍합니다. */
+        uint64 _budgetBytes                                                          SW_GUARDED_BY( _mutex ); /**< 캐시 예산(바이트)입니다. 0 이면 아직 정하지 않았다. */
+        uint64 _cachedBytes                                                          SW_GUARDED_BY( _mutex ); /**< 든 클립 바이트의 합입니다. */
+        mutable uint64 _useClock                                                     SW_GUARDED_BY( _mutex ); /**< 찾기 · 넣기마다 하나씩 오르는 LRU 시계입니다. */
         mutable mutex                                                                _mutex;                  /**< `_mapPathToEntry` 를 지킵니다. */
         bool _bSubmittedDecode                                                       SW_GUARDED_BY( _mutex ); /**< 워커 디코드를 띄운 적이 있으면 true - 소멸자가 에셋 로드 단계를 기다린다(`AssetManager::waitLoadTasks`). */
     };
