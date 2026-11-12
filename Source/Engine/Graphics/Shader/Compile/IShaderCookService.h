@@ -17,6 +17,13 @@ namespace sw
 {
     enum class ShaderTargetFormat : uint8;
 
+    /** @enum ShaderCookScope @brief 모은 쿠킹 요청 중 무엇을 굽는가입니다. */
+    enum class ShaderCookScope : uint8
+    {
+        All,    ///< 요청 모두(배포 · 팩 쿠킹)
+        Sample, ///< 표본 규칙(`ShaderCookDriver::kSampleRuleFile`)이 고른 요청만 — 빈 스테이징에만 쓴다(`-cook-shaders-sample`, 테스트 ShaderCache.RebuildFromEmpty)
+    };
+
     /** @class IShaderCookService @brief 셰이더 쿠킹을 맡는 쪽입니다. 헤드리스 작업 스레드에서 부릅니다. */
     class SW_API IShaderCookService
     {
@@ -24,10 +31,10 @@ namespace sw
         virtual ~IShaderCookService() = default;
 
         /**
-         * @brief 셰이더를 @p cookedDir 에 @p format 바이너리로만 굽습니다(바뀐 것만). 모두 깨끗하면 true 입니다. 비면 쿠커가 오류로 멈춘다.
+         * @brief 셰이더를 @p cookedDir 에 @p format 바이너리로만 굽습니다(바뀐 것만, @p scope 가 Sample 이면 표본만). 모두 깨끗하면 true 입니다. 비면 쿠커가 오류로 멈춘다.
          * @details 팩은 형식 하나만 담는다(`cookPackStage`) — 네 형식을 다 구우면 팩에 들지 않는 셋에 쿠킹 시간을 쓴다(교차 쿠킹이 3 시간 걸렸다). 스탬프는 형식 폴더마다 따로다.
          */
-        [[nodiscard]] virtual bool cookAllShaders( string_view cookedDir, ShaderTargetFormat format ) = 0;
+        [[nodiscard]] virtual bool cookAllShaders( string_view cookedDir, ShaderTargetFormat format, ShaderCookScope scope ) = 0;
         /** @brief @p cookedDir 의 @p format 셰이더 바이너리가 소스와 맞는지 보고 문제를 오류로 남깁니다. 맞으면 true 입니다. */
         [[nodiscard]] virtual bool verifyCookedShaders( string_view cookedDir, ShaderTargetFormat format ) = 0;
         /**

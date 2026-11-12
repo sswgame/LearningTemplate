@@ -57,6 +57,8 @@ SW_REGISTER_ARGUMENT( LANGUAGE, "", false, "lang" )
 
 // 셰이더를 모든 백엔드의 바이너리로 쿠킹하고 끝낸다(헤드리스). 쓸 폴더는 `-cooked-dir=<폴더>` 다(`<폴더>/<도메인>/shaders/bin/<백엔드>` — 팩이 거기서 담는다). 개발 실행은 굽지 않아도 돈다(쓰일 때 컴파일)
 SW_REGISTER_ARGUMENT( COOK_SHADERS, false, false, "cook-shaders" )
+// `--cook-shaders` 와 함께: 표본 규칙(`Config/Dev/ShaderCookSample.json` 의 축 — 소스 · 진입점 · 스테이지 · 퍼뮤테이션 define)의 값마다 한 번 덮는 요청만 굽는다. 빈 쿠킹 폴더에만 굽는다(채워졌으면 실패)
+SW_REGISTER_ARGUMENT( COOK_SHADERS_SAMPLE, false, false, "cook-shaders-sample" )
 
 // 씬과 프리팹을 바이너리(SCN1, PFB2)로 쿠킹하고 끝낸다(VAT · 내비메시 포함). 쓸 폴더는 `-cooked-dir=<폴더>` 다
 SW_REGISTER_ARGUMENT( COOK_SCENES, false, false, "cook-scenes" )

@@ -16,9 +16,9 @@ namespace sw
         class ShaderCookService final : public IShaderCookService
         {
         public:
-            bool cookAllShaders( string_view cookedDir, ShaderTargetFormat format ) override
+            bool cookAllShaders( string_view cookedDir, ShaderTargetFormat format, ShaderCookScope scope ) override
             {
-                const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders( cookedDir, {}, format );
+                const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders( cookedDir, {}, format, false, scope );
                 ShaderCookStamp::invalidateSharedHeaderCache();
                 return summary.isClean();
             }
