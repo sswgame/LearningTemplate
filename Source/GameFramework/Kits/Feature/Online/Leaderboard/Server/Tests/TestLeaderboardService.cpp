@@ -258,6 +258,7 @@ SW_TEST_CASE( LeaderboardServiceTest, PastScoresExpireAfterPeriodAndSettlementWi
 /** @brief [LeaderboardServiceTest] 색인보다 먼저 쓴 점수 · 시즌 결과도 백필이 보드 정의의 사본으로 줄을 채워 지운다(감사 O-9). 초기화 없는 보드의 점수는 남는다 */
 SW_TEST_CASE( LeaderboardServiceTest, LegacyScoresAreBackfilledFromTheBoardCatalog )
 {
+    constexpr int64     kSettlementWindowMs = 7 * kDayMs; // 서비스의 정산 창과 같다(LeaderboardService.cpp)
     LeaderboardWorld    world;
     LeaderboardFixture& rig = world._rig;
     rig.addBoard( "daily", LeaderboardOrder::Descending, LeaderboardUpdate::Best, LeaderboardReset::Daily );

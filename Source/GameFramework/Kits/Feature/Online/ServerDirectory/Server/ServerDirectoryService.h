@@ -84,10 +84,6 @@ namespace sw
     /** @brief 서버 간 버스 주제입니다. 다른 모듈이 값으로 읽으므로 내보내는 클래스 밖에 둡니다. */
     struct ServerDirectoryBus
     {
-        /** @brief 끝난 공지(`sd_notice`)의 TTL 규칙입니다(커서 규칙, 끝이 없는 공지는 남긴다). */
-        static ServiceTTLRule makeNoticeTTLRule( int64 expireAfterMs );
-        /** @brief 끝난 점검 창(`sd_maintenance`)의 TTL 규칙입니다(커서 규칙, 끝이 없는 점검은 남긴다). */
-        static ServiceTTLRule                                   makeMaintenanceTTLRule( int64 expireAfterMs );
         static constexpr ServerBusTopic<ServerDirectoryChanged> kChangedTopic{ "sd.changed" }; ///< 점검이나 공지를 바꿨다는 알림이다. 받는 서버가 다시 읽는다
     };
 } // namespace sw
@@ -108,6 +104,10 @@ namespace sw
         ServerDirectoryService& operator=( const ServerDirectoryService& ) = delete;
 
         void initialize( const ServerDirectoryDependencies& dependencies, const ServerDirectoryServiceConfig& settings );
+        /** @brief 끝난 공지(`sd_notice`)의 TTL 규칙입니다(커서 규칙, 끝이 없는 공지는 남긴다). */
+        static ServiceTTLRule makeNoticeTTLRule( int64 expireAfterMs );
+        /** @brief 끝난 점검 창(`sd_maintenance`)의 TTL 규칙입니다(커서 규칙, 끝이 없는 점검은 남긴다). */
+        static ServiceTTLRule makeMaintenanceTTLRule( int64 expireAfterMs );
         /** @brief 서버 목록 읽기를 멈추고 기다리던 캐시 요청을 취소합니다. 맡긴 저장소 작업은 저장소의 `shutdown` 과 `pollCompletions` 가 회수하므로 이 객체는 그때까지 살아 있어야 합니다. */
         void shutdown();
 
