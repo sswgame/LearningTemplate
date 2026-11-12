@@ -169,7 +169,9 @@ def sync_clone():
     """클론을 refs/linux-verify 로 옮긴다. 옮기지 못하면 옛 빌드를 돌리지 않고 멈춘다."""
     # WSL 안에서 바로 부르면 이 체크아웃이 곧 원본이다(워크트리는 Windows 에서 불러야 공통 git 폴더를 안다 — run_in_wsl).
     source = os.environ.get(GIT_SOURCE_ENV) or WSL_REPO
-    shell(f'cd {CLONE} && git fetch -q {source} refs/linux-verify && git reset -q --hard FETCH_HEAD', check=True)
+    # reset 은 추적 안 된 파일을 남긴다 — 커밋하지 않은 옛 기록 골든(.linux.ppm)이 남아 판정 기준이 됐다(geometrystage 가 옛 마젠타 판과 견줘 졌다).
+    # 무시 목록 밖의 추적 안 된 파일을 지워 클론을 커밋 그대로 둔다(임포트 결과 · 빌드는 무시 목록이라 남는다). 기록한 골든은 build 전에 goldens 로 옮긴다.
+    shell(f'cd {CLONE} && git fetch -q {source} refs/linux-verify && git reset -q --hard FETCH_HEAD && git clean -fdq', check=True)
     print('클론:', shell(f'git -C {CLONE} log -1 --format=%h', capture_output=True, text=True).stdout.strip())
 
 
