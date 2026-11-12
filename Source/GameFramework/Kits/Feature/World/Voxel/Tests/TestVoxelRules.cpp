@@ -201,11 +201,16 @@ SW_TEST_CASE( VoxelWorldTest, ForgedStateLeavesTheWorldAlone )
     VoxelFixture        rig;
     const vector<uint8> listSaved = VoxelFixture::save( rig._world );
 
-    // 청크 수가 다르다
+    // 청크 수가 줄었다(감사 A-6): 밖의 청크가 공기면 같은 청크 좌표로 읽고, 블록이 남으면 버리지 않고 거절한다
     VoxelFixture target;
     VoxelWorld   other;
     SW_REQUIRE_TRUE( other.initialize( 1, 1, &target._catalog ) );
-    Archive wrongSize( listSaved.data(), listSaved.size() );
+    Archive emptyOutside( listSaved.data(), listSaved.size() );
+    SW_EXPECT_TRUE( other.readState( emptyOutside ) );
+    VoxelFixture outside;
+    SW_REQUIRE_TRUE( outside._world.setBlock( 20, 9, 20, outside._stone ) ); // 청크 (1, 1)
+    const vector<uint8> listOutside = VoxelFixture::save( outside._world );
+    Archive             wrongSize( listOutside.data(), listOutside.size() );
     SW_EXPECT_FALSE( other.readState( wrongSize ) );
 
     SW_REQUIRE_TRUE( target._world.setBlock( 1, 1, 1, target._stone ) );
@@ -217,7 +222,8 @@ SW_TEST_CASE( VoxelWorldTest, ForgedStateLeavesTheWorldAlone )
     Archive badBlock( listBadBlock.data(), listBadBlock.size() );
     SW_EXPECT_FALSE( target._world.readState( badBlock ) );
 
-    // 옛 판(1) — 머리의 판 칸(태그 uint32 뒤)을 1 로 되돌린다
+    // 옛 판(1) — 머리의 판 칸(태그 uint32 뒤)을 1 로 되돌린다. 판 1 은 머리표가 없던 판이라 올리는 단계가 없다
+    SW_EXPECT_LOG( "FormatUpgrade.StepMissing" );
     vector<uint8> listOldVersion     = listSaved;
     listOldVersion[sizeof( uint32 )] = 1;
     Archive oldVersion( listOldVersion.data(), listOldVersion.size() );
@@ -526,6 +532,7 @@ SW_TEST_CASE( VoxelHotbarTest, StateRoundTripsAndRefusesBadCounts )
     Archive badSelect( listBadSelect.data(), listBadSelect.size() );
     SW_EXPECT_FALSE( target.readState( badSelect ) );
 
+    SW_EXPECT_LOG( "FormatUpgrade.StepMissing" ); // 판 1 은 머리표가 없던 판이라 올리는 단계가 없다
     vector<uint8> listOldVersion     = listSaved;
     listOldVersion[sizeof( uint32 )] = 1; // 머리의 판 칸(태그 uint32 뒤)
     Archive oldVersion( listOldVersion.data(), listOldVersion.size() );

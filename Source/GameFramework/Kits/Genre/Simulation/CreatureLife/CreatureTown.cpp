@@ -711,15 +711,17 @@ namespace sw
 
     void CreatureTown::serializeState( StateIO& io )
     {
-        io.expect( _topology._width );
-        io.expect( _topology._height );
+        // 마을 크기는 설정이 정한다 — 저장된 크기로 읽어 같은 좌표에 옮긴다. 줄어 밖에 놓인 물건 · 서식지가 남으면 거절하고, 늘어난 칸은 비어 있다(감사 A-6).
+        const GridTopology savedTopology = _topology.serializeSize( io );
         if ( io.isOk() == false )
             return;
-        const int32 tileCount = _topology._width * _topology._height;
-        for ( hashed_string& object : _listObject )
-        {
-            io.value( object );
-        }
+        const int32 tileCount = savedTopology.getCellCount();
+        // 칸마다 물건 이름(4)
+        _topology.serializeCells(
+            io, savedTopology, _listObject, sizeof( uint32 ), []( StateIO& tileIO, hashed_string& object )
+        { tileIO.value( object ); },
+            []( const hashed_string& object )
+        { return object.empty(); } );
         // 서식지마다 이름(4) + 위치(8) + 번호(4) + 회전(4) + 셀 수(4) 이상
         io.list( _listHabitat, 24, [&]( HabitatInstance& habitat )
         {
@@ -730,7 +732,12 @@ namespace sw
             io.list( habitat._listTile, 4, [&]( int32& tileIndex )
             {
                 io.value( tileIndex );
-                io.check( 0 <= tileIndex && tileIndex < tileCount );
+                if ( io.isWriting() || io.check( 0 <= tileIndex && tileIndex < tileCount ) == false )
+                    return;
+                // 저장된 크기의 셀 번호 → 좌표 → 지금 셀 번호. 줄어든 마을 밖이면 서식지를 버리지 않고 거절한다.
+                const int2 cell = savedTopology.toCell( tileIndex );
+                if ( io.check( _topology.isInside( cell ) ) )
+                    tileIndex = _topology.toIndex( cell );
             } );
             // 서식지는 적어도 한 셀을 차지하고 번호는 1 부터이다(`matchesAt`, `_nextHabitatID`). 회전은 해시와 맞춤에 그대로 쓴다.
             io.check( habitat._listTile.empty() == false && 0 < habitat._id && 0 <= habitat._rotation && habitat._rotation < CreatureTownInternal::kRotationCount );

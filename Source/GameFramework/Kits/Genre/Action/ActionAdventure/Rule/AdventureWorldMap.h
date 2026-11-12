@@ -124,7 +124,8 @@ namespace sw
         const vector<AdventureLandmarkDef>& getLandmarks() const { return _catalog.getAll(); }
 
     private:
-        static constexpr const utf8* kXMLRootName = "AdventureWorld"; ///< 루트 원소(`XMLCatalog`)
+        static constexpr const utf8* kXMLRootName           = "AdventureWorld"; ///< 루트 원소(`XMLCatalog`)
+        static constexpr uint32      kLandmarkStateMinBytes = 6;                ///< 표지 하나의 상태 최소 바이트 — 이름(4) + 깨움(1) + 마침(1)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         [[nodiscard]] bool           loadLandmark( const XMLNode& node, AdventureLandmarkKind kind, string_view sourceName );
         [[nodiscard]] bool           loadTower( const XMLNode& node, string_view sourceName );

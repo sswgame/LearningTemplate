@@ -24,8 +24,8 @@ namespace sw
         struct WorldClockInternal
         {
             /**
-             * @brief 판 1 → 2: 머리표가 없고 하루 안 시각이 float32 이던 본문을 머리표(CLOK 2) + float64 본문으로 다시 씁니다.
-             * @details 판 1 은 머리표가 없어 세션 상태 구간(구간 머리 CLOK 1)에만 알아볼 수 있게 남았다 — 이 단계는 그 구간 본문을 받는다(`StateIO::upgradeSectionBody`).
+             * @brief 판 1 → 2: 하루 안 시각이 float32 이던 칸을 float64 칸으로 다시 씁니다(머리 뒤 칸 — 머리는 `StateIO::header` 가 읽고 쓴다).
+             * @details 판 1 은 머리표가 없었다(`kStateHeaderlessVersion`) — 세션 상태 구간이든 바깥 형식(나일 시티) 안이든 머리가 그 바이트를 판 1 로 알아보고 이 단계로 올린다.
              */
             [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
             {
@@ -36,7 +36,6 @@ namespace sw
                 inOldBody >> day >> secondOfDay >> timeScale >> bPaused;
                 if ( inOldBody.isError() )
                     return false;
-                StateIO::writeHeader( outNewBody, WorldClock::kStateTag, 2 );
                 outNewBody << day << static_cast<float64>( secondOfDay ) << timeScale << bPaused;
                 return true;
             }
@@ -234,7 +233,7 @@ namespace sw
 
     void WorldClock::serializeState( StateIO& io )
     {
-        io.header( kStateTag, kStateVersion ); // 판 1(float32 시각 · 머리표 없음)은 구간 판 올림(WorldClockInternal::upgradeStateFrom1)이 올려 온다
+        io.header( kStateTag, kStateVersion, kStateHeaderlessVersion ); // 판 1(float32 시각 · 머리표 없음)도 머리가 알아보고 올린다(WorldClockInternal::upgradeStateFrom1)
         io.value( _day );
         io.value( _secondOfDay );
         io.value( _timeScale );

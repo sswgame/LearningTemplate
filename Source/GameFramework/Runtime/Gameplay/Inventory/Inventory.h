@@ -48,12 +48,14 @@ namespace sw
      * @brief 정한 수의 슬롯에 아이템을 담습니다. 아이템 정의(겹침, 무게, 내구도)는 카탈로그에서 읽습니다. 카탈로그는 소유하지 않고 참조만 하므로 인벤토리보다 오래 살아 있어야 합니다.
      * @details 넣기는 같은 아이템이 있는 슬롯부터 채우고, 그다음 빈 슬롯으로 넘어간다. 무게 한도(0 이면 없음)를 넘는 만큼은 들어가지 않는다.
      *          빼기는 모두 있을 때만 뺀다. 제작이나 거래가 반쯤 실패한 상태로 남지 않게 하기 위해서다. 상태가 바뀔 때마다 `getRevision` 이 늘어나므로 화면 갱신에 쓴다.
+     *          넘침 목록(`getOverflow`): 슬롯 수를 줄인 패치 뒤의 세이브처럼 담을 자리가 없는 아이템을 버리지 않고 든다. 세이브에 실리고, 자리가 나면 `moveOverflowToSlots` 가
+     *          빈 슬롯으로 돌려받으며, UI 는 `takeOverflow` 로 꺼내 간다 — 게임들이 넘친 보상을 우편함 · 보관함(Destiny Postmaster, WoW 우편)으로 보내는 자리다.
      */
     class SW_GF_API Inventory
     {
     public:
         static constexpr uint32 kStateTag     = FourCCUtil::make( "INVT" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2; ///< 2: 넘침 목록이 실리고 슬롯 수는 저장된 수로 읽어 맞춘다(판 1 은 `SW_STATE_FORMAT_UPGRADE` 가 올린다)
 
         Inventory();
 
@@ -88,7 +90,15 @@ namespace sw
         void sortSlots();
         /** @brief 슬롯의 내구도를 깎습니다. 0 이 되어 부서졌으면 true 이고, 그 슬롯은 비워집니다. */
         bool reduceSlotDurability( int32 slot, float32 amount );
+        /** @brief 슬롯과 넘침 목록을 비웁니다. */
         void clear();
+
+        /** @brief 담을 자리가 없어 넘친 아이템입니다(세이브에 실린다). */
+        const vector<InventorySlot>& getOverflow() const { return _listOverflow; }
+        /** @brief 넘침 목록의 아이템을 빈 슬롯으로 돌려받습니다(인스턴스 상태째, 앞에서부터). 돌려받은 수를 반환합니다. */
+        int32 moveOverflowToSlots();
+        /** @brief 넘침 목록의 @p index 번째를 꺼냅니다(UI 가 바닥에 떨어뜨리거나 보관함으로 옮긴다). 없는 번호면 빈 슬롯입니다. */
+        InventorySlot takeOverflow( int32 index );
 
         int32 getItemCount( const hashed_string& itemID ) const;
         bool  hasItem( const hashed_string& itemID, int32 count = 1 ) const { return getItemCount( itemID ) >= count; }
@@ -109,7 +119,8 @@ namespace sw
 
         /**
          * @brief 최대 무게와 슬롯별 아이템, 개수, 내구도, 외형 피해, 꾸미기 값, 떨어진 부품을 씁니다. 카탈로그는 `initialize` 가 받은 것이므로 저장하지 않습니다.
-         *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 슬롯 수가 지금과 다르거나 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
+         *        넘침 목록과 저장한 슬롯 수도 싣습니다. 읽을 때는 저장된 슬롯 수로 읽어 지금 슬롯 수에 맞춥니다 — 늘었으면 새 슬롯은 비고, 줄었으면 밖의 아이템을
+         *        빈 슬롯에 옮기고 남는 것은 넘침 목록으로 받습니다(잃지 않는다, 감사 A-6). 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
          */
         SW_DECLARE_STATE_IO();
         /** @brief 슬롯 하나의 상태(이름 · 개수 · 내구도 · 피해 · 꾸미기 · 뗀 부품)입니다. 인벤토리와 제작 대기열의 꺼낸 재료가 같은 형식을 쓴다. 읽다 깨지면 io 가 거절 상태다. */
@@ -118,12 +129,15 @@ namespace sw
         static constexpr uint32 kSlotStateMinBytes = 24;
 
     private:
-        bool    isValidSlot( int32 slot ) const { return slot >= 0 && slot < static_cast<int32>( _listSlot.size() ); }
+        bool isValidSlot( int32 slot ) const { return slot >= 0 && slot < static_cast<int32>( _listSlot.size() ); }
+        /** @brief @p stack 을 첫 빈 슬롯에 그대로 둡니다. 빈 슬롯이 없으면 false 입니다. */
+        bool    placeInEmptySlot( const InventorySlot& stack );
         int32   computeWeightRoom( const hashed_string& itemID, int32 count ) const;
         float32 getItemWeight( const hashed_string& itemID ) const;
 
     private:
         vector<InventorySlot> _listSlot;
+        vector<InventorySlot> _listOverflow; ///< 담을 자리가 없어 넘친 아이템(`getOverflow`)
         const ItemCatalog*    _pCatalog;
         float32               _maxWeight;
         uint32                _revision;

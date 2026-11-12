@@ -399,9 +399,10 @@ SW_TEST_CASE_F( RestaurantReadStateTest, RefusesBrokenLinks )
     orderRemaining._listOrder[0]._remaining = -1.0f;
     SW_EXPECT_FALSE( read( orderRemaining ) );
 
+    // 카탈로그에 없는 요리의 메뉴 항목은 빠진 요리의 설정이다 — 버리고 읽는다(감사 A-6, 메뉴는 요리 id 로 짝짓는다)
     RestaurantForged menuUnknown;
     menuUnknown._listMenu[1]._dishID = "stone";
-    SW_EXPECT_FALSE( read( menuUnknown ) );
+    SW_EXPECT_TRUE( read( menuUnknown ) );
 
     RestaurantForged menuRepeated;
     menuRepeated._listMenu[1]._dishID = "ramen";

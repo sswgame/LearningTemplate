@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
@@ -135,8 +136,13 @@ namespace sw
     void VoxelWorld::serializeState( StateIO& io )
     {
         io.header( kStateTag, kStateVersion ); // 판 1(머리표 없음 · 카탈로그 순서 번호)은 거절한다
-        io.expect( _chunkCountX );
-        io.expect( _chunkCountZ );
+        // 청크 수(월드 크기)는 설정이 정한다 — 저장된 수로 읽어 같은 청크 좌표에 옮긴다. 줄어 밖에 블록이 남은 청크가 있으면 거절하고, 늘어난 청크는 지금 그대로다(감사 A-6).
+        int32 savedCountX = _chunkCountX;
+        int32 savedCountZ = _chunkCountZ;
+        io.value( savedCountX );
+        io.value( savedCountZ );
+        if ( io.check( 0 <= savedCountX && 0 <= savedCountZ ) == false )
+            return;
         // 팔레트: 이 세이브의 번호 i(1 부터) → 블록 id. 마인크래프트 1.13+ 의 이름 팔레트와 같은 까닭으로, 카탈로그 순서가 바뀌어도 블록은 id 로 다시 짝지어진다.
         // 마인크래프트는 청크마다 쓰인 블록만 싣지만 여기는 세이브 하나에 카탈로그 전체를 한 번 싣는다 — 블록이 255 종 이하라 몇 KB 를 넘지 않는다.
         vector<hashed_string> listPaletteID;
@@ -188,7 +194,11 @@ namespace sw
         {
             listRemap.push_back( _pCatalog->findBlockIndex( blockID ) );
         }
-        vector<VoxelChunk> listChunk( _listChunk.size() ); // 사본 대신 새 목록에 읽는다 — 옛 청크는 어차피 버린다
+        // 청크마다 적어도 닫는 구간(번호 2 + 길이 4) 하나다 — 남은 바이트로 담을 수 없는 청크 수를 거절한다.
+        const uint64 savedChunkCount = static_cast<uint64>( savedCountX ) * static_cast<uint64>( savedCountZ );
+        if ( io.check( savedChunkCount * ( sizeof( uint16 ) + sizeof( uint32 ) ) <= io.getArchive().getRemainingBytes() ) == false )
+            return;
+        vector<VoxelChunk> listChunk( static_cast<size_t>( savedChunkCount ) ); // 사본 대신 새 목록에 읽는다 — 옛 청크는 어차피 버린다
         for ( VoxelChunk& chunk : listChunk )
         {
             chunk._listBlock.reserve( static_cast<size_t>( kVoxelChunkVolume ) );
@@ -209,12 +219,30 @@ namespace sw
             if ( io.check( chunk._listBlock.size() == static_cast<size_t>( kVoxelChunkVolume ) ) == false )
                 return;
         }
-        for ( size_t chunkIndex = 0; chunkIndex < listChunk.size(); ++chunkIndex )
+        // 저장된 청크 좌표 → 지금 청크. 저장에 없는(늘어난) 청크는 지금 그대로다.
+        vector<VoxelChunk> listFitted = _listChunk;
+        for ( int32 chunkZ = 0; chunkZ < savedCountZ; ++chunkZ )
         {
-            listChunk[chunkIndex]._revision = _listChunk[chunkIndex]._revision + 1; // 이미 만든 메시가 오래된 것이 된다
-            listChunk[chunkIndex]._bDirty   = SW_TRUE;
+            for ( int32 chunkX = 0; chunkX < savedCountX; ++chunkX )
+            {
+                VoxelChunk& saved = listChunk[static_cast<size_t>( chunkZ * savedCountX + chunkX )];
+                if ( chunkX < _chunkCountX && chunkZ < _chunkCountZ )
+                {
+                    listFitted[static_cast<size_t>( chunkZ * _chunkCountX + chunkX )]._listBlock = std::move( saved._listBlock );
+                    continue;
+                }
+                const bool bAllAir = VectorUtil::allOf( saved._listBlock, []( const VoxelBlockIndex block )
+                { return block == kVoxelAirBlock; } );
+                if ( io.check( bAllAir ) == false )
+                    return; // 줄어든 월드 밖에 블록이 남았다 — 버리지 않는다
+            }
         }
-        _listChunk = std::move( listChunk );
+        for ( VoxelChunk& chunk : listFitted )
+        {
+            ++chunk._revision; // 이미 만든 메시가 오래된 것이 된다
+            chunk._bDirty = SW_TRUE;
+        }
+        _listChunk = std::move( listFitted );
     }
 
     void VoxelWorld::markAllChunksDirty()

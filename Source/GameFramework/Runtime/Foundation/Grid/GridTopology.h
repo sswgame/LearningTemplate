@@ -8,6 +8,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Serialization/Format/StateIO.h"
+
 namespace sw
 {
     /**
@@ -50,6 +52,64 @@ namespace sw
         constexpr int32 toIndex( const int2& cell ) const { return toIndex( cell._x, cell._y ); }
         constexpr int2  toCell( int32 index ) const { return int2{ index % _width, index / _width }; }
         constexpr int32 getCellCount() const { return _width * _height; }
+
+        /**
+         * @brief 격자 크기(너비 · 높이)를 쓰고 읽습니다. 읽으면 저장된 크기를 돌려주고(음수는 거절), 쓰면 이 크기를 돌려줍니다. 셀은 `serializeCells` 가 그 크기로 읽는다.
+         * @details 격자 크기는 설정(땅 · 밭 크기)이 정한다 — `expect` 로 같은 크기만 받지 않고 저장된 크기를 읽어 맞춘다(감사 A-6). 바이트는 예전 `expect` 두 칸과 같다.
+         */
+        GridTopology serializeSize( StateIO& io ) const
+        {
+            int32 savedWidth  = _width;
+            int32 savedHeight = _height;
+            io.value( savedWidth );
+            io.value( savedHeight );
+            io.check( 0 <= savedWidth && 0 <= savedHeight );
+            GridTopology saved;
+            saved._width  = savedWidth;
+            saved._height = savedHeight;
+            return saved;
+        }
+
+        /**
+         * @brief 이 격자의 셀 상태 @p inoutListCell(셀 번호 순, 셀 수만큼)을 행 우선으로 쓰고 읽습니다. 셀마다 @p cell( io, 셀 ) 을 부릅니다. 읽을 때 셀은 저장된 크기 @p saved(`serializeSize`)다.
+         * @details 같은 좌표에 옮긴다 — 커졌으면 새 셀은 지금 값 그대로이고, 줄어 밖에 남은 셀에 내용이 있으면(@p isEmpty 가 거짓) 거절한다(그 내용을 조용히 버리지 않는다).
+         *          셀마다 적어도 @p minBytesPerCell 바이트라 남은 바이트로 담을 수 없는 크기를 거절한다.
+         */
+        template <typename TCell, typename TCellFunc, typename TEmptyFunc>
+        void serializeCells( StateIO& io, const GridTopology& saved, vector<TCell>& inoutListCell, uint32 minBytesPerCell, TCellFunc&& cell, TEmptyFunc&& isEmpty ) const
+        {
+            if ( io.isOk() == false )
+                return;
+            const int32 savedWidth  = saved._width;
+            const int32 savedHeight = saved._height;
+            if ( io.isWriting() )
+            {
+                for ( TCell& entry : inoutListCell )
+                {
+                    cell( io, entry );
+                }
+                return;
+            }
+            const uint64 savedCount = static_cast<uint64>( savedWidth > 0 ? savedWidth : 0 ) * static_cast<uint64>( savedHeight > 0 ? savedHeight : 0 );
+            if ( io.check( savedCount * minBytesPerCell <= io.getArchive().getRemainingBytes() ) == false )
+                return;
+            vector<TCell> listFitted = inoutListCell; // 저장에 없는(늘어난) 셀은 지금 값(설정이 막 만든 셀 — 지형 같은 지도 값) 그대로다
+            for ( int32 y = 0; y < savedHeight; ++y )
+            {
+                for ( int32 x = 0; x < savedWidth; ++x )
+                {
+                    TCell saved{};
+                    cell( io, saved );
+                    if ( io.isOk() == false )
+                        return;
+                    if ( isInside( x, y ) )
+                        listFitted[static_cast<size_t>( toIndex( x, y ) )] = std::move( saved );
+                    else if ( io.check( isEmpty( saved ) ) == false )
+                        return; // 줄어든 격자 밖에 내용이 남았다
+                }
+            }
+            inoutListCell = std::move( listFitted );
+        }
     };
 } // namespace sw
 
