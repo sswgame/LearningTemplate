@@ -50,6 +50,7 @@ namespace
     {
     public:
         int64 getBalanceCap( sw::string_view assetID ) const override { return assetID == kGold ? 50 : sw::LedgerConstant::kMaxBalance; }
+        bool  isTransferable( sw::string_view /*assetID*/ ) const override { return true; }
     };
 } // namespace
 
