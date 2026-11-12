@@ -24,68 +24,60 @@ namespace sw::editor
 {
     void EditorSelection::selectObject( GameObject* pObj, SelectionMode mode )
     {
-        pruneInvalid();
-
-        const GameObjectHandle handle = ( pObj != nullptr ) ? pObj->getHandle() : GameObjectHandle{};
-        switch ( mode )
+        if ( mode == SelectionMode::Replace )
         {
-            case SelectionMode::Replace:
-            {
-                if ( _listSelectedObject.size() == 1 && _listSelectedObject.front() == handle )
-                    return;
-                _listSelectedObject.clear();
-                if ( handle.isValid() )
-                    _listSelectedObject.push_back( handle );
-                break;
-            }
-            case SelectionMode::Add:
-            {
-                if ( handle.isValid() && hasObject( pObj ) == false )
-                    _listSelectedObject.push_back( handle );
-                break;
-            }
-            case SelectionMode::Remove:
-            {
-                VectorUtil::removeFirst( _listSelectedObject, handle );
-                break;
-            }
-            case SelectionMode::Toggle:
-            {
-                if ( VectorUtil::removeFirst( _listSelectedObject, handle ) == 0 && ( handle.isValid() ) )
-                    _listSelectedObject.push_back( handle );
-                break;
-            }
+            pruneInvalid();
+            if ( pObj != nullptr && _listSelectedObject.size() == 1 && _listSelectedObject.front() == pObj->getHandle() )
+                return;
         }
-
-        notifyChanged();
+        selectObjects( vector<GameObject*>{ pObj }, mode );
     }
 
     void EditorSelection::selectObjects( const vector<GameObject*>& listObj, SelectionMode mode )
     {
-        pruneInvalid();
+        // 빼기만 하는 고르기는 사라진 핸들과 상관없으므로 선택 전체를 풀지 않는다 — 되돌리기 · 삭제가 오브젝트마다 빼기를 부른다.
+        if ( mode != SelectionMode::Remove )
+            pruneInvalid();
 
         if ( mode == SelectionMode::Replace )
+        {
             _listSelectedObject.clear();
+            _uniqueSelectedObject.clear();
+            _listSelectedObject.reserve( listObj.size() );
+            _uniqueSelectedObject.reserve( listObj.size() );
+        }
 
-        for ( GameObject* pObj : listObj )
+        // 뺀 핸들은 색인에서 바로 지우고 목록은 끝에 한 번만 접는다(빼기마다 목록을 훑으면 제곱이다). 같은 호출에서 다시 넣으면 목록의 원래 칸을 살린다.
+        unordered_set<GameObjectHandle> uniqueRemoved;
+        for ( const GameObject* pObj : listObj )
         {
             if ( pObj == nullptr )
                 continue;
-
             const GameObjectHandle handle = pObj->getHandle();
-            if ( mode == SelectionMode::Remove )
+            if ( handle.isValid() == false )
+                continue;
+
+            const bool bSelected = _uniqueSelectedObject.contains( handle );
+            const bool bRemove   = mode == SelectionMode::Remove || ( mode == SelectionMode::Toggle && bSelected );
+            if ( bRemove )
             {
-                VectorUtil::removeFirst( _listSelectedObject, handle );
+                if ( bSelected )
+                {
+                    _uniqueSelectedObject.erase( handle );
+                    uniqueRemoved.insert( handle );
+                }
             }
-            else if ( mode == SelectionMode::Toggle )
+            else if ( bSelected == false )
             {
-                if ( VectorUtil::removeFirst( _listSelectedObject, handle ) == 0 )
+                _uniqueSelectedObject.insert( handle );
+                if ( uniqueRemoved.erase( handle ) == 0 )
                     _listSelectedObject.push_back( handle );
             }
-            else if ( hasObject( pObj ) == false )
-            {
-                _listSelectedObject.push_back( handle );
-            }
+        }
+        if ( uniqueRemoved.empty() == false )
+        {
+            VectorUtil::removeIf( _listSelectedObject, [&uniqueRemoved]( GameObjectHandle handle )
+            { return uniqueRemoved.contains( handle ); } );
         }
 
         notifyChanged();
@@ -95,7 +87,7 @@ namespace sw::editor
     {
         if ( pObj == nullptr )
             return false;
-        return VectorUtil::contains( _listSelectedObject, pObj->getHandle() );
+        return _uniqueSelectedObject.contains( pObj->getHandle() );
     }
 
     GameObject* EditorSelection::getPrimaryObject() const
@@ -256,6 +248,7 @@ namespace sw::editor
         if ( _listSelectedObject.empty() == false )
         {
             _listSelectedObject.clear();
+            _uniqueSelectedObject.clear();
             notifyChanged();
         }
     }
@@ -275,6 +268,7 @@ namespace sw::editor
         const bool bHadAssets  = _listSelectedAsset.empty() == false;
 
         _listSelectedObject.clear();
+        _uniqueSelectedObject.clear();
         _listSelectedAsset.clear();
 
         if ( bHadObjects || bHadAssets )
@@ -284,7 +278,12 @@ namespace sw::editor
     void EditorSelection::pruneInvalid()
     {
         const size_t removeCount = VectorUtil::removeIf( _listSelectedObject, [this]( GameObjectHandle handle )
-        { return findObject( handle ) == nullptr; } );
+        {
+            if ( findObject( handle ) != nullptr )
+                return false;
+            _uniqueSelectedObject.erase( handle );
+            return true;
+        } );
         if ( removeCount > 0 )
             notifyChanged();
     }
@@ -298,6 +297,7 @@ namespace sw::editor
     void EditorSelection::bindPreviewScope( Scene& scene, CommandStack& stack )
     {
         _listSelectedObject.clear();
+        _uniqueSelectedObject.clear();
         _pPreviewScene = &scene;
         _pPreviewStack = &stack;
         editor::registerPreviewSelection( *this );
@@ -309,6 +309,7 @@ namespace sw::editor
             editor::setFocusedSelection( nullptr );
         editor::unregisterPreviewSelection( *this );
         _listSelectedObject.clear();
+        _uniqueSelectedObject.clear();
         _pPreviewScene = nullptr;
         _pPreviewStack = nullptr;
     }

@@ -350,17 +350,18 @@ namespace sw::editor
             return;
         }
 
-        const size_t first = MathUtil::min( anchorIndex, clickIndex );
-        const size_t last  = MathUtil::max( anchorIndex, clickIndex );
-        if ( bCtrl == false )
-            editor::getMainSceneSelection().clearObjectSelection();
+        const size_t        first = MathUtil::min( anchorIndex, clickIndex );
+        const size_t        last  = MathUtil::max( anchorIndex, clickIndex );
+        vector<GameObject*> listRange;
+        listRange.reserve( last - first + 1 );
         for ( size_t rowIndex = first; rowIndex <= last; ++rowIndex )
         {
             GameObject* pRow = pManager->findGameObjectByID( listRow[rowIndex] );
             if ( pRow != nullptr )
-                workspace.selectGameObject( pRow, SelectionMode::Add );
+                listRange.push_back( pRow );
         }
-        workspace.selectGameObject( pObj, SelectionMode::Add ); // 누른 행이 주 선택이다
+        // 범위를 한 번에 고른다(알림 한 번). Ctrl 이 없으면 앞 선택을 바꾼다.
+        workspace.selectGameObjects( listRange, bCtrl ? SelectionMode::Add : SelectionMode::Replace );
     }
 
     void HierarchyViewModel::selectComponent( uint64 objectID, uint64 componentID )
@@ -384,15 +385,16 @@ namespace sw::editor
         GameObjectManager* pManager = editor::getActiveObjectManager();
         if ( pManager == nullptr )
             return;
-        EditorSelection& editorSelection = editor::getMainSceneSelection();
-        editorSelection.clearObjectSelection();
         _rowModel.collectObjectRowIDs( _listRowIDScratch );
+        vector<GameObject*> listRow;
+        listRow.reserve( _listRowIDScratch.size() );
         for ( const uint64 rowID : _listRowIDScratch )
         {
             GameObject* pRow = pManager->findGameObjectByID( rowID );
             if ( pRow != nullptr )
-                editorSelection.selectObject( pRow, SelectionMode::Add );
+                listRow.push_back( pRow );
         }
+        editor::getMainSceneSelection().selectObjects( listRow, SelectionMode::Replace ); // 한 번 대입이다 — 행마다 고르면 제곱이다
     }
 
     void HierarchyViewModel::selectStep( bool bUp )
