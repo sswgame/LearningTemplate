@@ -37,7 +37,7 @@ SW_TEST_CASE( EditorAutosaveSessionTest, OtherSessionEndKeepsLiveSessionCopies )
 {
     using Session         = sw::editor::EditorAutosaveSession;
     using Internal        = EditorAutosaveSessionTestInternal;
-    const sw::string root = sw::makeScratchPath( "Autosave" );
+    const sw::string root = sw::test::makeScratchPath( "Autosave" );
 
     const Session          sessionA{ sw::Process::getCurrentProcessID(), 1 };
     sw::vector<sw::string> listAdoptedFolder;
@@ -61,7 +61,7 @@ SW_TEST_CASE( EditorAutosaveSessionTest, DeadSessionIsAdoptedAndRemovedWithAdopt
 {
     using Session         = sw::editor::EditorAutosaveSession;
     using Internal        = EditorAutosaveSessionTestInternal;
-    const sw::string root = sw::makeScratchPath( "Autosave" );
+    const sw::string root = sw::test::makeScratchPath( "Autosave" );
 
     const Session          deadSession{ Internal::kDeadPID, 3 };
     sw::vector<sw::string> listAdoptedFolder;
