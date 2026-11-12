@@ -513,10 +513,21 @@ namespace sw
         return {};
     }
 
+    bool AssetPaths::isUnderSourceControl( string_view diskPath )
+    {
+        string relative;
+        if ( FileUtil::tryMakePathUnderRoot( ProcessRoots::get()._content.str(), diskPath, relative ) == false )
+            return false; // 리소스 트리 밖(Saved · 빌드 · 임시 폴더)의 읽기 전용은 잠금이 아니다
+        const string_view relativeView{ relative };
+        return relativeView != kScratchDomain && StringUtil::startsWith( relativeView, string( kScratchDomain ) + "/" ) == false;
+    }
+
     bool AssetPaths::initialize()
     {
         // 리소스 트리에 새로 생기는 이름은 소문자 — 쓰기 경로 하나가 막는다(입구마다 접는 것을 잊어도 대문자 파일이 생기지 않는다). 함수가 상태 없이 루트를 읽어 다시 걸어도 같다.
         FileUtil::setCreateRule( &AssetPaths::checkLowercaseResourceName );
+        // 리소스 트리의 읽기 전용 파일은 체크아웃하지 않은 파일이다 — 지우기 · 옮기기 · 덮는 복사가 모두 Core 입구에서 거절된다(임포트 정리 · 옮기기 · 삭제가 따로 묻지 않는다).
+        (void)FileUtil::setCheckoutRule( &AssetPaths::isUnderSourceControl );
         // `_bInitialized` 는 "시작했다" 가 아니라 **"성공했다"** 를 뜻한다 — 루트를 못 찾아 false 로 나가면 다음 호출이 다시 찾는다.
         // 예전에는 프로세스 정적이라 `call_once` 로 막았다. 이제 부르는 쪽은 이 객체의 소유자 하나(기동의 직렬 구간)라 겹치지 않는다.
         if ( _pState->_bInitialized )

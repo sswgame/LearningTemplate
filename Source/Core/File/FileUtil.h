@@ -279,6 +279,21 @@ namespace sw
          * @details `isWriteAllowed` 와 폴더를 만드는 `ensureDirectoryExists` 가 부른다 — 파일이든 폴더든 새로 생기는 이름은 같은 규칙을 지난다.
          */
         [[nodiscard]] static bool isCreateAllowed( string_view path );
+        /**
+         * @brief 이 자리의 읽기 전용 파일이 "체크아웃하지 않음"(버전 관리 잠금 — git LFS lockable 은 잠그기 전까지 읽기 전용)을 뜻하면 true 를 돌려주는 규칙입니다.
+         * @details 버전 관리 트리(리소스 트리)를 아는 엔진의 `AssetPaths` 가 건다(Core 는 그 뿌리를 모른다 — `setCreateRule` 과 같은 자리). 규칙 밖의 읽기 전용(복사로 속성이 따라온 사본 ·
+         *          git 개체 · 작업 폴더)은 잠금이 아니라 정리가 지워야 하는 파일이다 — 그래서 지우기를 모든 읽기 전용에서 막지 않고 규칙 안에서만 막는다.
+         */
+        using CheckoutRule = bool ( * )( string_view path );
+        /** @brief 체크아웃 규칙을 걸고 앞 규칙을 돌려줍니다(테스트가 되돌린다). nullptr 이면 규칙이 없고 지우기 · 옮기기는 읽기 전용을 보지 않습니다. */
+        static CheckoutRule setCheckoutRule( CheckoutRule rule );
+        /**
+         * @brief @p path(파일, 폴더면 그 아래 모든 파일)에서 체크아웃 규칙 안의 읽기 전용 파일을 처음 만난 경로입니다. 규칙이 없거나 그런 파일이 없으면 빈 값입니다.
+         * @details 파일을 지우거나 옮기거나 덮는 입구(`removeFile` · `tryRemoveFile` · `removeDirectory` · `renamePath` · `copyFile` 의 대상 · `moveToRecycleBin`)가 모두 이 답으로 거절한다 —
+         *          POSIX 는 폴더 권한만으로 읽기 전용 파일을 지우고 옮기며, Windows 지우기(`removeEntry`)는 정리를 위해 속성을 풀고 지워 잠금이 뚫렸다.
+         *          유니티 `AssetDatabase.IsOpenForEdit` 의 반대 질의이고, 언리얼 `IFileManager::Delete` 가 `EvenReadOnly` 없이 읽기 전용을 지우지 않는 자리다.
+         */
+        [[nodiscard]] static optional<string> findNotOpenForEdit( string_view path );
         /** @brief 파일을 복사합니다(대상이 있으면 덮어씁니다). 실패하면 로그를 남기고 false 입니다. */
         [[nodiscard]] static bool copyFile( string_view source, string_view destination );
         /** @brief 파일을 삭제합니다. 없었거나 삭제했으면 true 이고, 지우지 못했으면 경로와 이유를 알리고 false 입니다. */

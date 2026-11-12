@@ -492,6 +492,43 @@ SW_TEST_CASE( FileTest, WriteRefusesAReadOnlyFile )
 }
 
 /**
+ * @brief [FileTest] 체크아웃 규칙 안의 읽기 전용 파일은 지우기 · 옮기기 · 덮는 복사가 모두 거절하고 남긴다 — 폴더는 그 아래 파일 하나로 막힌다. 규칙 밖의 읽기 전용은 정리가 지운다
+ * @details POSIX 는 폴더 권한만으로, Windows 지우기는 속성을 풀고 지워 잠금(git LFS lockable)이 뚫렸다. 규칙은 케이스 동안만 바꾸고 앞 규칙으로 되돌린다.
+ */
+SW_TEST_CASE( FileTest, CheckedInReadOnlyFileIsNotRemovedOrMoved )
+{
+    SW_EXPECT_LOG( "File.NotOpenForEdit" );
+    const sw::string controlled = sw::test::makeScratchPath( "controlled" );
+    const sw::string locked     = controlled + "/deep/locked.txt";
+    const sw::string loose      = sw::test::makeScratchPath( "loose_copy.txt" );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( locked ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( loose ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( locked, "kept" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( loose, "copy" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( locked, false ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( loose, false ) );
+
+    const sw::FileUtil::CheckoutRule previousRule = sw::FileUtil::setCheckoutRule( []( sw::string_view path )
+    { return path.find( "/controlled/" ) != sw::string_view::npos; } );
+    const sw::optional<sw::string>   found        = sw::FileUtil::findNotOpenForEdit( controlled );
+    SW_EXPECT_TRUE( found.has_value() && *found == sw::FileUtil::normalizeSeparators( locked ) );
+    SW_EXPECT_FALSE( sw::FileUtil::removeFile( locked ) );
+    SW_EXPECT_FALSE( sw::FileUtil::tryRemoveFile( locked ) );
+    SW_EXPECT_FALSE( sw::FileUtil::removeDirectory( controlled ) );
+    SW_EXPECT_FALSE( sw::FileUtil::renamePath( locked, controlled + "/moved.txt" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::copyFile( loose, locked ) );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( loose ) ); // 규칙 밖의 읽기 전용(속성이 따라온 사본)은 정리가 지운다
+    (void)sw::FileUtil::setCheckoutRule( previousRule );
+
+    sw::string text;
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( locked, text ) );
+    SW_EXPECT_EQUAL( text, sw::string( "kept" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isReadOnlyFile( locked ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( controlled + "/moved.txt" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( locked, true ) ); // 케이스 폴더 정리는 규칙과 무관하게 지운다 — 다른 케이스와 같게 둔다
+}
+
+/**
  * @brief [FileTest] 순회 콜백은 루트로 시작하는 `/` 경로와 디렉터리 여부를 주고, false 를 돌려주면 멈춘다
  */
 SW_TEST_CASE( FileTest, DirectoryVisitorReportsEntriesAndStops )
