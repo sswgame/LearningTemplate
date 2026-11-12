@@ -147,7 +147,13 @@ namespace sw
         void      pop_back();
         void      resize( size_type count );
         void      resize( size_type count, const value_type& value );
-        void      swap( vector& other ) noexcept;
+        /**
+         * @brief 크기를 @p count 로 바꾸되 늘어난 원소를 초기화하지 않습니다. 부르는 쪽이 곧 전부 덮어쓰는 버퍼(파일 읽기 · 복사 대상)에만 씁니다.
+         * @details `resize` 는 늘어난 구간을 0 으로 채운다 — 큰 파일 버퍼는 읽기 전에 한 번 더 메모리를 훑는다. 언리얼 `TArray::SetNumUninitialized` ·
+         *          C++20 `make_unique_for_overwrite` 와 같은 자리다. 초기화가 필요 없는 타입(바이트 · 수)에만 열린다.
+         */
+        void resizeForOverwrite( size_type count );
+        void swap( vector& other ) noexcept;
 
         // ------------------------------------------------------------------------------
         // 4) 비교 연산자
@@ -1125,6 +1131,17 @@ namespace sw
                 reserveInternal( MathUtil::max( count, _capacity * 2 ) );
             valueInitializeRangeInternal( _size, count );
         }
+        _size = count;
+    }
+
+    template <typename T, typename Allocator>
+    inline void vector<T, Allocator>::resizeForOverwrite( size_type count )
+    {
+        static_assert( std::is_trivially_default_constructible_v<T> && std::is_trivially_destructible_v<T>, "resizeForOverwrite: 초기화 · 소멸이 필요 없는 타입만 됩니다" );
+        SW_SCOPED_RACE_WRITE();
+        // `resize` 와 같은 이유로 두 배 이상 늘린다. 줄일 때 소멸할 것도 없다.
+        if ( count > _capacity )
+            reserveInternal( MathUtil::max( count, _capacity * 2 ) );
         _size = count;
     }
 

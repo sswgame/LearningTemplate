@@ -377,10 +377,11 @@ namespace sw
             return AsyncIOStatus::OutOfRange;
 
         // 버퍼는 요청한 쪽의 용도로 센다 — IO 스레드의 태그가 아니다.
+        // 0 으로 채우지 않는다 — 곧 전부 읽어 덮고, 다 읽지 못하면(`OutOfRange` · 실패) `finish` 가 버퍼를 비운다(언리얼 IoStore 도 초기화하지 않은 버퍼에 읽는다).
         const ScopedMemoryTag memoryTag{ request._memoryTag };
         try
         {
-            request._result._bytes.resize( static_cast<size_t>( request._size ) );
+            request._result._bytes.resizeForOverwrite( static_cast<size_t>( request._size ) );
         }
         catch ( const std::bad_alloc& )
         {

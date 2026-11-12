@@ -690,3 +690,32 @@ SW_TEST_CASE( VectorTest, DestroyAndValueInitializeMatchPerElementLoop )
         SW_EXPECT_TRUE( pValue == nullptr );
     }
 }
+
+/**
+ * @brief [VectorTest] resizeForOverwrite 는 크기만 바꾸고 이미 든 값은 그대로 둔다.
+ * @details 늘어난 구간의 값은 정하지 않는다(읽지 않는다). 앞 원소가 재할당을 지나도 남는지, 줄이기 · 같은 크기도 본다.
+ */
+SW_TEST_CASE( VectorTest, ResizeForOverwriteKeepsExistingValues )
+{
+    sw::vector<uint8> bytes{};
+    bytes.resizeForOverwrite( 4 );
+    SW_REQUIRE_EQUAL( bytes.size(), size_t{ 4 } );
+    for ( uint8 index = 0; index < 4; ++index )
+    {
+        bytes[index] = static_cast<uint8>( index + 10 );
+    }
+
+    bytes.resizeForOverwrite( 4096 ); // 재할당을 지난다
+    SW_REQUIRE_EQUAL( bytes.size(), size_t{ 4096 } );
+    SW_EXPECT_TRUE( bytes.capacity() >= size_t{ 4096 } );
+    for ( uint8 index = 0; index < 4; ++index )
+    {
+        SW_EXPECT_EQUAL( bytes[index], static_cast<uint8>( index + 10 ) );
+    }
+
+    const size_t capacity = bytes.capacity();
+    bytes.resizeForOverwrite( 2 );
+    SW_EXPECT_EQUAL( bytes.size(), size_t{ 2 } );
+    SW_EXPECT_EQUAL( bytes.capacity(), capacity );
+    SW_EXPECT_EQUAL( bytes[1], uint8{ 11 } );
+}
