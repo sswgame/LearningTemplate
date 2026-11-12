@@ -33,7 +33,7 @@ endif()
 # ------------------------------------------------------------------------------
 # 2) ReflectionParser 실행 파일 — Engine.dll 과 순환하지 않게 Core 만 링크한다
 # ------------------------------------------------------------------------------
-file(GLOB_RECURSE PARSER_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+sw_globSourceTree(PARSER_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 
 sw_addExecutable(ReflectionParser ${PARSER_SOURCES})
 

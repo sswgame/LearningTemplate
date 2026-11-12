@@ -18,7 +18,7 @@ function(sw_defineEngineABIStamp)
 	if(TARGET SwEngineABIStamp)
 		return()
 	endif()
-	file(GLOB_RECURSE swEngineABIHeaders CONFIGURE_DEPENDS
+	sw_globSourceTree(swEngineABIHeaders RECURSE
 		"${CMAKE_SOURCE_DIR}/Source/Core/*.h"
 		"${CMAKE_SOURCE_DIR}/Source/Core/*.hpp"
 		"${CMAKE_SOURCE_DIR}/Source/Core/*.inl"

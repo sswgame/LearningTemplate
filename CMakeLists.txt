@@ -39,6 +39,7 @@ sw_vcpkgWriteManifestStamp()
 # ------------------------------------------------------------------------------
 # BuildLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 타깃 규칙(UnbuiltSources · ModuleTargets)보다 먼저다.
 # RuntimeDependencies 는 BuildLayout 의 sw_queueRuntimeCopy 를 쓴다. 나머지는 함수만 정의한다(파일마다 맡는 일은 cmake/README.md).
+include(cmake/Engine/SourceTree.cmake) # `Source/` 를 한 번 훑은 목록 — 소스 목록은 모두 여기서 거른다(Web.cmake 가 먼저 쓴다)
 include(cmake/Modules/LoadCompileFlags.cmake)
 include(cmake/Engine/BuildLayout.cmake)
 include(cmake/Engine/UnbuiltSources.cmake)

@@ -30,7 +30,7 @@ target_link_options(sw_platform_web INTERFACE
 )
 # 브라우저 쪽 JS 는 C++ 소스(EM_JS · EM_ASM)가 아니라 기능 옆의 `Web/*.js` Emscripten 라이브러리(addToLibrary)에 둔다 — C++ 포맷터가 매크로 본문의
 # `=>` · `!==` 를 띄워 브라우저 JS 가 문법 오류로 멈췄다(clang-format 의 WhitespaceSensitiveMacros 는 이 모양을 지키지 못한다). 모두 링크에 넘기고 바뀌면 다시 링크한다.
-file(GLOB_RECURSE swWebJSLibraries CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Source/*.js")
+sw_globSourceTree(swWebJSLibraries RECURSE "${CMAKE_SOURCE_DIR}/Source/*.js")
 list(FILTER swWebJSLibraries INCLUDE REGEX "/Web/[^/]+\\.js$")
 foreach(swWebJSLibrary IN LISTS swWebJSLibraries)
 	target_link_options(sw_platform_web INTERFACE "--js-library=${swWebJSLibrary}")

@@ -11,7 +11,7 @@ if(swSkipGameFramework)
 	return()
 endif()
 
-file(GLOB_RECURSE listGameFrameworkSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+sw_globSourceTree(listGameFrameworkSource RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 list(FILTER listGameFrameworkSource EXCLUDE REGEX "Kits/")
 # 에디터 확장(Plugin/Editor/)은 따로 짓는 모듈이다(GF_EditorPlugin_<이름>) - GameFramework DLL(배포본 포함)에 섞지 않는다.
 list(FILTER listGameFrameworkSource EXCLUDE REGEX "Plugin/")

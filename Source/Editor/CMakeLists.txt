@@ -9,7 +9,7 @@
 #    핫 리로드는 키트와 같은 경로(섀도 복사 + 지연 로드 결속)다.
 #    유니티 빌드: TU 내부 도우미는 모두 익명 네임스페이스의 *Internal 구조체로 묶여 있다
 # ------------------------------------------------------------------------------
-file(GLOB_RECURSE listEditorSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+sw_globSourceTree(listEditorSource RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 set(listEditorAllSource ${listEditorSource})
 
 # 에디터 폴더는 층이고 아래 층은 위 층의 헤더를 include 하지 못한다. 층과 티어의 표는 `Config/Rules/Layers/EditorLayers.toml` 이고
@@ -27,7 +27,7 @@ set(listEditorModelLayer Common/Asset Common/Commands Common/Config Common/Local
 # 폴더(Common/Backend/Platform)는 폴더째 모아 새 플랫폼 백엔드가 저절로 따라오고(못 지으면 링크 오류로 드러난다), 폴더로 가를 수 없는 최상위 두 파일만 이름을 적는다 -
 # 같은 폴더의 EditorUICapture · DrawSnapshotHandoff 는 엔진 밖 의존을 끌어 EditorUITest 가 받을 수 없고, 이 둘을 가르는 선언이 달리 없다. 이 둘이 이 목록의 유일한 손 입력이며,
 # 없어지면 구성이 멈춘다. `Render/` 는 RHI 디바이스가 필요해 뺀다.
-file(GLOB listEditorUITestSource CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Common/Backend/Platform/*.cpp")
+sw_globSourceTree(listEditorUITestSource "${CMAKE_CURRENT_SOURCE_DIR}/Common/Backend/Platform/*.cpp")
 list(APPEND listEditorUITestSource
 	"${CMAKE_CURRENT_SOURCE_DIR}/Common/Backend/ImGuiOSInputFilter.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Common/Backend/ImGuiKeyForward.cpp")
@@ -42,16 +42,16 @@ set_property(GLOBAL PROPERTY SW_EDITOR_UI_TEST_SOURCES "${listEditorUITestSource
 function(sw_globEditorLayer LAYER OUT)
 	if(LAYER STREQUAL "<root>")
 		set(layerPrefix "")
-		set(globMode GLOB)
+		set(globMode "")
 	elseif(LAYER STREQUAL "Common")
 		set(layerPrefix "Common/")
-		set(globMode GLOB)
+		set(globMode "")
 	else()
 		set(layerPrefix "${LAYER}/")
-		set(globMode GLOB_RECURSE)
+		set(globMode RECURSE)
 	endif()
-	file(${globMode} layerSource CONFIGURE_DEPENDS "${layerPrefix}*.cpp" "${layerPrefix}*.c" "${layerPrefix}*.h" "${layerPrefix}*.hpp")
-	file(${globMode} layerHeader RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS "${layerPrefix}*.h" "${layerPrefix}*.hpp" "${layerPrefix}*.inl")
+	sw_globSourceTree(layerSource ${globMode} "${layerPrefix}*.cpp" "${layerPrefix}*.c" "${layerPrefix}*.h" "${layerPrefix}*.hpp")
+	sw_globSourceTree(layerHeader ${globMode} RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${layerPrefix}*.h" "${layerPrefix}*.hpp" "${layerPrefix}*.inl")
 	set(${OUT}Source ${layerSource} PARENT_SCOPE)
 	set(${OUT}Header ${layerHeader} PARENT_SCOPE)
 endfunction()
@@ -338,7 +338,7 @@ foreach(pattern IN LISTS SW_EDITOR_PANEL_VIEW_BAN_REGEX)
 	list(APPEND listPanelViewBanGlob "${CMAKE_SOURCE_DIR}/Source/${CMAKE_MATCH_1}/*.h" "${CMAKE_SOURCE_DIR}/Source/${CMAKE_MATCH_1}/*.hpp" "${CMAKE_SOURCE_DIR}/Source/${CMAKE_MATCH_1}/*.inl")
 endforeach()
 list(REMOVE_DUPLICATES listPanelViewBanGlob)
-file(GLOB_RECURSE listPanelViewBanCandidate RELATIVE "${CMAKE_SOURCE_DIR}/Source" CONFIGURE_DEPENDS ${listPanelViewBanGlob})
+sw_globSourceTree(listPanelViewBanCandidate RECURSE RELATIVE "${CMAKE_SOURCE_DIR}/Source" ${listPanelViewBanGlob})
 set(listPanelViewStub "")
 foreach(header IN LISTS listPanelViewBanCandidate)
 	if(header IN_LIST SW_EDITOR_PANEL_VIEW_ALLOWED_HEADERS)

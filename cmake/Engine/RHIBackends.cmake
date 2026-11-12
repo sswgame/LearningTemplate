@@ -14,7 +14,7 @@ endif()
 
 # 백엔드 NAME(RHIBackend 열거자 — DirectX12 …)의 장치 소스.
 function(sw_getRHIBackendSources NAME OUT_VAR)
-	file(GLOB_RECURSE listSource CONFIGURE_DEPENDS
+	sw_globSourceTree(listSource RECURSE
 		"${CMAKE_SOURCE_DIR}/Source/Engine/Graphics/RHI/${SW_RHI_BACKEND_${NAME}_SOURCE_FOLDER}/*.cpp")
 	list(FILTER listSource EXCLUDE REGEX "/Module/") # 모듈 엔트리는 RHI_* MODULE 이 짓는다 — 배포 정적 링크는 `sw_getRHIBackendEntrySource` 로 따로 넣는다
 	set(${OUT_VAR} ${listSource} PARENT_SCOPE)

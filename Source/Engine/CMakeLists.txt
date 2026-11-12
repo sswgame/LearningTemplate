@@ -25,7 +25,7 @@ set(coreExclude
 	"Physics/Jolt/[^/]+\\.cpp$"   # EngineJolt_objects 가 짓는다(아래 9))
 )
 
-file(GLOB_RECURSE ENGINE_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+sw_globSourceTree(ENGINE_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 
 foreach(exPattern IN LISTS coreExclude)
 	list(FILTER ENGINE_SOURCES EXCLUDE REGEX "${exPattern}")
@@ -129,7 +129,7 @@ set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Module/EngineABIStamp.c
 )
 
 # 쿠커 코드 지문 — 쿠킹 재사용 판단의 입력을 소스 내용에서 산출한다(`Engine/Content/CookCodeFingerprint.h`). 엔진 소스 어디가 바뀌어도 돌지만 결과가 같으면 파일을 다시 쓰지 않는다.
-file(GLOB_RECURSE swCookCodeInputs CONFIGURE_DEPENDS
+sw_globSourceTree(swCookCodeInputs RECURSE
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.h"
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.hpp"
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.cpp"
@@ -308,7 +308,7 @@ sw_markDeterministicSources(Engine
 )
 # 물리(Jolt · Box2D 감싸개, 강체 · 천 · 래그돌 컴포넌트)도 같다 — 시뮬레이션에 넣는 값이 구성마다 끝 비트가 달라지면 천 · 래그돌이 갈린다
 # (cloth 쇼케이스가 Debug 와 Release 에서 2 % 달랐다). Jolt 자체는 결정적 빌드다(`ThirdParty/joltphysics/vcpkg-port`). 폴더째라 새 파일도 든다.
-file(GLOB_RECURSE swDeterministicPhysicsSources RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Physics/*.cpp")
+sw_globSourceTree(swDeterministicPhysicsSources RECURSE RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/Physics/*.cpp")
 list(FILTER swDeterministicPhysicsSources EXCLUDE REGEX "/Tests/")
 # 부력 부피(Environment/Water/BuoyancyVolumeComponent — 물 기능이 자기 컴포넌트를 들게 Physics 에서 옮겼다)도 물리에 넣는 값이라 같은 표시를 건다.
 sw_markDeterministicSources(Engine ${swDeterministicPhysicsSources} Environment/Water/BuoyancyVolumeComponent.cpp)
@@ -333,7 +333,7 @@ sw_addReflectBuiltinsGen(Engine)
 # 옵션만 더한다. 그래서 이 블록은 Engine 설정이 모두 끝난 뒤(파일 끝)에 둔다 — 이 뒤에 Engine 에 더한 설정은 Jolt 소스에 가지 않는다.
 # 유니티 묶음에는 넣지 않는다. 코드젠 산출물(`FlagOps.gen.h` 등)을 읽으므로 Engine 이 기다리는 대상을 같이 기다린다.
 # ------------------------------------------------------------------------------
-file(GLOB swJoltBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Physics/Jolt/*.cpp")
+sw_globSourceTree(swJoltBackendSources "${CMAKE_CURRENT_SOURCE_DIR}/Physics/Jolt/*.cpp")
 add_library(EngineJolt_objects OBJECT ${swJoltBackendSources})
 set_target_properties(EngineJolt_objects PROPERTIES
 	POSITION_INDEPENDENT_CODE ON

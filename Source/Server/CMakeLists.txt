@@ -3,7 +3,7 @@
 # @brief 전용 서버 실행 파일(Server) — 창 · GPU 없이 게임 모듈을 고정 틱으로 돌린다. Game · Server 타깃에서 짓는다(Client 타깃은 짓지 않는다).
 # ==============================================================================
 
-file(GLOB_RECURSE SERVER_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+sw_globSourceTree(SERVER_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 
 if(SW_TARGET_TYPE STREQUAL "Client")
 	sw_declareUnbuiltSources(${SERVER_SOURCES})
