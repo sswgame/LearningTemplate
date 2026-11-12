@@ -51,13 +51,15 @@ namespace sw
         if ( side == DestructionNetSide::Client )
         {
             // 피해를 내는 기믹은 서버의 게임플레이다 — 클라이언트는 사건만 받는다.
-            vector<GameObject*> listObject;
-            manager.getAllGameObjects( listObject );
-            for ( GameObject* pObject : listObject )
+            // 끄기가 등록을 바꿀 수 있어 먼저 모은다.
+            vector<ExplosiveBarrelComponent*> listBarrel;
+            for ( ExplosiveBarrelComponent* pBarrel : manager.getComponentRegistry().getAll<ExplosiveBarrelComponent>() )
             {
-                ExplosiveBarrelComponent* pBarrel = pObject->getComponent<ExplosiveBarrelComponent>();
-                if ( pBarrel != nullptr )
-                    pBarrel->setActive( false );
+                listBarrel.push_back( pBarrel );
+            }
+            for ( ExplosiveBarrelComponent* pBarrel : listBarrel )
+            {
+                pBarrel->setActive( false );
             }
         }
 

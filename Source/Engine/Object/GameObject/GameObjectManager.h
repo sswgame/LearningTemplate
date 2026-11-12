@@ -154,6 +154,13 @@ namespace sw
 
         /** @brief 이름으로 GameObject 를 찾습니다. */
         GameObject* findGameObjectByName( hashed_string name ) const;
+        /**
+         * @brief 밑 이름이 @p baseName 인 살아 있는 오브젝트(`Tree` · `Tree_2` …, 대소문자 무시)를 @p outListGameObject 에 채웁니다(먼저 비운다, 순서는 약속하지 않는다).
+         * @details 저장소의 밑 이름 색인을 찾는 좁은 질의라 열쇠(`SceneWalkKey`) 없이 부른다 — 비용은 그 이름의 오브젝트 수다.
+         */
+        void findGameObjectsByBaseName( string_view baseName, vector<GameObject*>& outListGameObject ) const;
+        /** @brief @p name 의 밑 이름입니다(`Tree_3` → `Tree`, `Tree_03` · `Tree_` 는 그대로). 오브젝트 저장소가 번호를 붙이는 규칙과 같다. */
+        static string_view computeBaseName( string_view name );
 
         /** @brief 오브젝트 ID 로 GameObject 를 찾습니다. 락이 없습니다(칸이 그 id 를 들고 있으면). */
         GameObject* findGameObjectByID( uint64 objectID ) const;
@@ -545,6 +552,8 @@ namespace sw
          * @return 지운 컴포넌트 수입니다.
          */
         uint32 destroyComponentsOfModule( string_view moduleName );
+        /** @brief 씬의 모든 컴포넌트에 `Component::onModuleUnloading( moduleName )` 을 알립니다 — 남의 모듈 타입 객체를 든 컴포넌트가 먼저 놓는다(`destroyComponentsOfModule` 앞, 틱 밖). */
+        void notifyModuleUnloading( string_view moduleName );
 
         /**
          * @brief 타입 이름(짧은 이름 · FQN · 옛 이름 별칭, `이름#번호` 꼬리는 무시)으로 컴포넌트를 만들어 붙입니다. 에디터 · 직렬화 전용이고, 게임은 addComponent<T> 를 씁니다.

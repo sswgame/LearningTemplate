@@ -34,26 +34,6 @@ namespace sw
             {
                 return clock.getDay() * kScheduleMinutesPerDay + clock.getHourInt() * static_cast<int32>( constant::time::kSecondsPerMinute ) + clock.getMinute();
             }
-
-            /** @brief @p objectName 이 장애물 이름 @p baseName 이거나 저장소가 번호를 붙인 같은 이름(`Tree_3`)이면 true 입니다. */
-            static bool matchesObstacleName( string_view objectName, string_view baseName )
-            {
-                const bool bSamePrefix =
-                    baseName.empty() == false && objectName.size() >= baseName.size() && StringUtil::equals( objectName.substr( 0, baseName.size() ), baseName, true );
-                if ( bSamePrefix == false )
-                    return false;
-                if ( objectName.size() == baseName.size() )
-                    return true;
-                const bool bNumbered = objectName.size() > baseName.size() + 1 && objectName[baseName.size()] == '_';
-                if ( bNumbered == false )
-                    return false;
-                for ( size_t index = baseName.size() + 1; index < objectName.size(); ++index )
-                {
-                    if ( objectName[index] < '0' || objectName[index] > '9' )
-                        return false;
-                }
-                return true;
-            }
         };
     } // namespace
 } // namespace sw
@@ -104,32 +84,32 @@ namespace sw
         const GameObjectManager* pManager     = getOwner()->getManager();
         const int32              radiusCells  = static_cast<int32>( MathUtil::ceil( _navObstacleRadius / _navCellSize ) );
         uint32                   blockedCount = 0;
-        pManager->forEachGameObject( [&]( GameObject* pObject )
+        vector<GameObject*>      listObstacle;
+        for ( const string_view obstacleName : listObstacleName )
         {
-            const SceneComponent* pScene     = pObject->getPrimarySceneComponent();
-            bool                  bObstacle  = false;
-            const string_view     objectName = pObject->getName().c_str();
-            for ( const string_view obstacleName : listObstacleName )
+            // 장애물 이름이거나 저장소가 번호를 붙인 같은 이름(`Tree_3`)인 오브젝트 — 밑 이름 색인이라 씬을 돌지 않는다.
+            pManager->findGameObjectsByBaseName( obstacleName, listObstacle );
+            for ( const GameObject* pObject : listObstacle )
             {
-                bObstacle = bObstacle || FarmVillageGameModeComponentInternal::matchesObstacleName( objectName, obstacleName );
-            }
-            if ( bObstacle == false || pScene == nullptr )
-                return;
-            const float3 position = pScene->getWorldPosition();
-            const int2   center   = _navGrid.computeCell( position );
-            for ( int32 offsetY = -radiusCells; offsetY <= radiusCells; ++offsetY )
-            {
-                for ( int32 offsetX = -radiusCells; offsetX <= radiusCells; ++offsetX )
+                const SceneComponent* pScene = pObject->getPrimarySceneComponent();
+                if ( pScene == nullptr )
+                    continue;
+                const float3 position = pScene->getWorldPosition();
+                const int2   center   = _navGrid.computeCell( position );
+                for ( int32 offsetY = -radiusCells; offsetY <= radiusCells; ++offsetY )
                 {
-                    const int2 cell{ center._x + offsetX, center._y + offsetY };
-                    if ( _navGrid.isInside( cell ) && float3::getHorizontalDistance( _navGrid.computeCellCenter( cell ), position ) <= _navObstacleRadius )
+                    for ( int32 offsetX = -radiusCells; offsetX <= radiusCells; ++offsetX )
                     {
-                        _navGrid.setBlocked( cell._x, cell._y, true );
-                        ++blockedCount;
+                        const int2 cell{ center._x + offsetX, center._y + offsetY };
+                        if ( _navGrid.isInside( cell ) && float3::getHorizontalDistance( _navGrid.computeCellCenter( cell ), position ) <= _navObstacleRadius )
+                        {
+                            _navGrid.setBlocked( cell._x, cell._y, true );
+                            ++blockedCount;
+                        }
                     }
                 }
             }
-        } );
+        }
         SW_LOG_INFO_ID( "FarmVillageGameMode.NavGridXM", "[Village] nav grid %#x%# (%# m cells), %# cell(s) blocked by obstacles", _navWidth, _navHeight, _navCellSize, blockedCount );
         return true;
     }

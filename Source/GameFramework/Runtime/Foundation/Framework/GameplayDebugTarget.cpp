@@ -93,9 +93,11 @@ namespace sw
         GameObjectHandle    found;
         string              listID;
         uint32              matchCount = 0;
-        for ( const GameObject* pObject : manager.getAllGameObjects() )
+        vector<GameObject*> listSameBase;
+        manager.findGameObjectsByBaseName( GameObjectManager::computeBaseName( argument ), listSameBase ); // 밑 이름 색인 — 씬을 돌지 않는다
+        for ( const GameObject* pObject : listSameBase )
         {
-            if ( pObject == nullptr || ( pObject->getName() == name ) == false )
+            if ( ( pObject->getName() == name ) == false )
                 continue;
             ++matchCount;
             found = GameObjectHandle::make( pObject->getObjectID() );

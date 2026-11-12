@@ -361,6 +361,12 @@ namespace sw
         return listAllGameObject;
     }
 
+    void GameObjectManager::notifyModuleUnloading( string_view moduleName )
+    {
+        forEachComponent( [moduleName]( Component* pComponent )
+        { pComponent->onModuleUnloading( moduleName ); } );
+    }
+
     uint32 GameObjectManager::destroyComponentsOfModule( string_view moduleName )
     {
         if ( _structuralChangeBuffer.isFrozen() == false )
@@ -381,6 +387,16 @@ namespace sw
     void GameObjectManager::notifyNameChanged( GameObject* pObj, hashed_string oldName, hashed_string newName )
     {
         _pState->_store.notifyNameChanged( pObj, oldName, newName );
+    }
+
+    void GameObjectManager::findGameObjectsByBaseName( string_view baseName, vector<GameObject*>& outListGameObject ) const
+    {
+        _pState->_store.findGameObjectsByBaseName( hashed_string( baseName.data(), static_cast<uint32>( baseName.size() ) ), outListGameObject );
+    }
+
+    string_view GameObjectManager::computeBaseName( string_view name )
+    {
+        return GameObjectStore::computeBaseName( name );
     }
 
     GameObject* GameObjectManager::findGameObjectByName( hashed_string name ) const

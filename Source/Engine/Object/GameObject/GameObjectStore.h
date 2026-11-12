@@ -128,6 +128,13 @@ namespace sw
 
         /** @brief 살아 있는 오브젝트를 outList 에 채웁니다(부르는 쪽 버퍼 재사용). */
         void getAllGameObjects( vector<GameObject*>& outListGameObject ) const;
+        /**
+         * @brief 밑 이름이 @p baseName 인 살아 있는 오브젝트(`Tree` · `Tree_2` · `Tree_7` …)를 @p outListGameObject 에 채웁니다(먼저 비운다, 순서는 약속하지 않는다).
+         * @details 밑 이름 색인(`_mapBaseNameToObject`)을 찾으므로 비용은 그 밑의 오브젝트 수다 — 씬을 돌지 않는다(틱에서도 부를 수 있는 좁은 질의).
+         */
+        void findGameObjectsByBaseName( hashed_string baseName, vector<GameObject*>& outListGameObject ) const;
+        /** @brief @p name 의 밑 이름입니다. 끝이 `_` + 0 으로 시작하지 않는 숫자면 그것을 뗀다(`Tree_3` → `Tree`, `Tree_03` · `Tree_` 는 그대로). */
+        static string_view computeBaseName( string_view name );
         /** @brief 병합된 오브젝트가 하나라도 있으면 true 입니다. 틱이 컴포넌트 단계를 건너뛸지 판단할 때 씁니다(게임 스레드). */
         bool hasMergedObjects() const { return _listGameObject.empty() == false; }
 
@@ -346,6 +353,10 @@ namespace sw
          *          때문이다. 대신 파괴 쪽은 맵 항목이 **자기 것**일 때만 지운다.
          */
         bool isNameTakenUnlocked( hashed_string name ) const;
+        /** @brief 잠금 안에서 @p pObj 를 이름 @p name 의 밑 이름 색인에 올립니다. */
+        void addBaseNameUnlocked( hashed_string name, GameObject* pObj ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 잠금 안에서 @p pObj 를 이름 @p name 의 밑 이름 색인에서 뺍니다. 없으면 할 일이 없습니다. */
+        void removeBaseNameUnlocked( hashed_string name, GameObject* pObj ) SW_REQUIRES_LOCK( _mutex );
 
     private:
         GameObjectManager*                             _pManager;                ///< 만든 오브젝트의 소유 매니저(`GameObject::_pOwnerManager`)
@@ -357,10 +368,11 @@ namespace sw
         unordered_map<hashed_string, unique_ptr<ComponentPoolEntry>> _mapComponentPool SW_GUARDED_BY( _mutex ); ///< 키는 타입 FQN(`getOrCreateComponentPoolEntry` 설명 참고)
         vector<ComponentPoolEntry*> _listComponentPoolEntry                            SW_GUARDED_BY( _mutex ); ///< 항목을 처음 나온 순서로 둔다. 순회(`forEachComponentOfType`)가 이 목록을 돈다
 
-        vector<GameObject*>                           _listGameObject;
-        unordered_map<hashed_string, NameEntry>       _mapNameToObject;
-        unordered_map<hashed_string, NameSuffixState> _mapNameSuffix;      ///< 밑 이름마다 번호 상태다. 중복 이름을 만드는 비용이 O(1) 이다(언리얼의 MakeUniqueObjectName 에 해당)
-        uint32                                        _nameFallbackSerial; ///< 번호 붙인 이름이 1024 번 겹쳤을 때의 `_x<번호>` 뒷번호(저장소 잠금 안에서만 올린다 — 이름은 이 저장소 안에서만 겹치지 않으면 된다)
+        vector<GameObject*>                               _listGameObject;
+        unordered_map<hashed_string, NameEntry>           _mapNameToObject;
+        unordered_map<hashed_string, NameSuffixState>     _mapNameSuffix;       ///< 밑 이름마다 번호 상태다. 중복 이름을 만드는 비용이 O(1) 이다(언리얼의 MakeUniqueObjectName 에 해당)
+        unordered_map<hashed_string, vector<GameObject*>> _mapBaseNameToObject; ///< 밑 이름(`computeBaseName`)마다 그 이름을 가진 오브젝트(삭제 대기 포함 — 찾기가 거른다). 이름으로 고르는 질의가 씬을 돌지 않게 한다
+        uint32                                            _nameFallbackSerial;  ///< 번호 붙인 이름이 1024 번 겹쳤을 때의 `_x<번호>` 뒷번호(저장소 잠금 안에서만 올린다 — 이름은 이 저장소 안에서만 겹치지 않으면 된다)
         /**
          * @brief id → 오브젝트 맵입니다. **슬롯 테이블의 슬롯을 다른 살아 있는 오브젝트가 쓰는 id 만** 보관합니다(보통 비어 있습니다).
          * @details 모든 오브젝트를 넣지 않는다. 테이블과 같은 정보를 두 번 보관하게 되고, 스폰마다 노드 할당 하나와 파괴마다 해제 하나가 붙는다.

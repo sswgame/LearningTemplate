@@ -46,6 +46,7 @@ namespace sw
         , _listGameObject{}
         , _mapNameToObject{}
         , _mapNameSuffix{}
+        , _mapBaseNameToObject{}
         , _nameFallbackSerial{ 0 }
         , _mapIDToObject{}
         , _objectSlotTable{}
@@ -117,6 +118,7 @@ namespace sw
 
         nameEntry._pObject = pObj;
         _mapNameToObject.insert_or_assign( uniqueName, nameEntry );
+        addBaseNameUnlocked( uniqueName, pObj );
         if ( _objectSlotTable.tryStore( objectID, pObj ) == false )
         {
             _mapIDToObject.insert_or_assign( objectID, pObj );
@@ -159,6 +161,7 @@ namespace sw
             releaseNameSuffixUnlocked( oldIt->second );
             _mapNameToObject.erase( oldIt );
         }
+        removeBaseNameUnlocked( oldName, pObj );
 
         NameEntry           nameEntry{};
         const hashed_string uniqueName = makeUniqueNameUnlocked( newName, nameEntry );
@@ -166,6 +169,56 @@ namespace sw
             pObj->_name = uniqueName;
         nameEntry._pObject = pObj;
         _mapNameToObject.insert_or_assign( uniqueName, nameEntry );
+        addBaseNameUnlocked( uniqueName, pObj );
+    }
+
+    void GameObjectStore::findGameObjectsByBaseName( hashed_string baseName, vector<GameObject*>& outListGameObject ) const
+    {
+        outListGameObject.clear();
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
+        const auto                     it = _mapBaseNameToObject.find( baseName );
+        if ( it == _mapBaseNameToObject.end() )
+            return;
+        for ( GameObject* pObj : it->second )
+        {
+            if ( pObj->isPendingDestroy() == false )
+                outListGameObject.push_back( pObj );
+        }
+    }
+
+    string_view GameObjectStore::computeBaseName( string_view name )
+    {
+        const size_t underscore = name.rfind( '_' );
+        const bool   bHasNumber = underscore != string_view::npos && underscore + 1 < name.size() && name[underscore + 1] != '0';
+        if ( bHasNumber == false )
+            return name;
+        for ( size_t index = underscore + 1; index < name.size(); ++index )
+        {
+            if ( name[index] < '0' || name[index] > '9' )
+                return name;
+        }
+        return name.substr( 0, underscore );
+    }
+
+    void GameObjectStore::addBaseNameUnlocked( hashed_string name, GameObject* pObj )
+    {
+        const string_view   text{ name.c_str() };
+        const string_view   base = computeBaseName( text );
+        const hashed_string key  = base.size() == text.size() ? name : hashed_string( base.data(), static_cast<uint32>( base.size() ) );
+        _mapBaseNameToObject[key].push_back( pObj );
+    }
+
+    void GameObjectStore::removeBaseNameUnlocked( hashed_string name, GameObject* pObj )
+    {
+        const string_view   text{ name.c_str() };
+        const string_view   base = computeBaseName( text );
+        const hashed_string key  = base.size() == text.size() ? name : hashed_string( base.data(), static_cast<uint32>( base.size() ) );
+        const auto          it   = _mapBaseNameToObject.find( key );
+        if ( it == _mapBaseNameToObject.end() )
+            return;
+        (void)VectorUtil::removeSingleSwap( it->second, pObj ); // 없으면 이미 빠진 것이다
+        if ( it->second.empty() )
+            _mapBaseNameToObject.erase( it );
     }
 
     GameObject* GameObjectStore::findGameObjectByName( hashed_string name ) const
@@ -490,6 +543,7 @@ namespace sw
                         releaseNameSuffixUnlocked( nameIt->second );
                         _mapNameToObject.erase( nameIt );
                     }
+                    removeBaseNameUnlocked( pObj->getName(), pObj );
                     if ( _objectSlotTable.tryRemove( pObj->getObjectID(), pObj ) == false )
                     {
                         _mapIDToObject.erase( pObj->getObjectID() );
@@ -546,6 +600,7 @@ namespace sw
             _listPendingAdd.clear();
             _mapNameToObject.clear();
             _mapNameSuffix.clear();
+            _mapBaseNameToObject.clear();
             _mapIDToObject.clear();
             _overflowObjectCount.store( 0, std::memory_order_release );
             _objectSlotTable.clear();

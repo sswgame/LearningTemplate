@@ -17,31 +17,10 @@ namespace sw
     {
         struct AutomationWatchInternal
         {
-            /** @brief 이름의 밑입니다. 끝이 `_` + 0 으로 시작하지 않는 숫자면 그것을 뗀다(`Tree_3` → `Tree`, `Tree_03` · `Tree_` 는 그대로). */
-            static string_view computeBaseName( string_view name )
-            {
-                const size_t underscore = name.rfind( '_' );
-                const bool   bHasNumber = underscore != string_view::npos && underscore + 1 < name.size() && name[underscore + 1] != '0';
-                if ( bHasNumber == false )
-                    return name;
-                for ( size_t index = underscore + 1; index < name.size(); ++index )
-                {
-                    if ( name[index] < '0' || name[index] > '9' )
-                        return name;
-                }
-                return name.substr( 0, underscore );
-            }
-
             /** @brief 밑이 @p baseName 인 살아 있는 오브젝트를 만든 순서(id 오름차순)로 모읍니다. 이름은 오브젝트 저장소처럼 대소문자를 가리지 않는다. */
             static void collectByBaseName( const GameObjectManager& manager, string_view baseName, vector<GameObject*>& outListObject )
             {
-                outListObject.clear();
-                manager.forEachGameObject( [baseName, &outListObject]( GameObject* pObject )
-                {
-                    const bool bSameBase = pObject->isPendingDestroy() == false && StringUtil::equals( computeBaseName( pObject->getName().c_str() ), baseName, true );
-                    if ( bSameBase )
-                        outListObject.push_back( pObject );
-                } );
+                manager.findGameObjectsByBaseName( baseName, outListObject ); // 밑 이름 색인 — 씬을 돌지 않는다
                 VectorUtil::sort( outListObject, []( const GameObject* pLhs, const GameObject* pRhs )
                 { return pLhs->getObjectID() < pRhs->getObjectID(); } );
             }
@@ -150,7 +129,7 @@ namespace sw
         if ( pObject == nullptr )
             return unexpected( Error{ ErrorKind::NotFound, "no object named", target } );
         // 번호를 적지 않은 이름인데 같은 밑의 오브젝트가 여럿이면 어느 것을 뜻했는지 모른다.
-        if ( Internal::computeBaseName( target ).size() == target.size() )
+        if ( GameObjectManager::computeBaseName( target ).size() == target.size() )
         {
             Internal::collectByBaseName( *pManager, target, listObject );
             if ( listObject.size() > 1 )

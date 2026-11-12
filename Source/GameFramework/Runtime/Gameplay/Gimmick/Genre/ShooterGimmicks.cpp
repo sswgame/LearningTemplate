@@ -436,4 +436,16 @@ namespace sw
         if ( isDestroyed() && bFracture == false )
             GenreGimmickUtil::setBodyActive( *pOwner, false, this );
     }
+
+    void ExplosiveBarrelComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<ExplosiveBarrelComponent>( this );
+    }
+
+    void ExplosiveBarrelComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<ExplosiveBarrelComponent>( this );
+        Component::onUnregister( manager );
+    }
 } // namespace sw
