@@ -33,6 +33,11 @@ namespace sw
          */
         [[nodiscard]] static bool intersectCapsule( const Ray& ray, const float3& segmentStart, const float3& segmentEnd, float32 radius, float32 maxDistance,
                                                     float32& outDistance );
+        /**
+         * @brief 광선이 삼각형(양면)과 만나는 앞쪽 거리를 구합니다. 에디터 클릭 고르기가 메시 삼각형에 씁니다.
+         * @details Möller-Trumbore 다. 두 삼각형이 나누는 모서리를 정확히 지나는 광선이 부동소수 오차로 양쪽 다 빗나가지 않게 무게중심 경계에 작은 여유를 둔다.
+         */
+        [[nodiscard]] static bool intersectTriangle( const Ray& ray, const float3& a, const float3& b, const float3& c, float32 maxDistance, float32& outDistance );
         /** @brief 광선이 평면(y 가 @p height)과 만나는 앞쪽 거리를 구합니다. 바닥 클릭과 탄착에 씁니다. */
         [[nodiscard]] static bool intersectHorizontalPlane( const Ray& ray, float32 height, float32 maxDistance, float32& outDistance );
     };
