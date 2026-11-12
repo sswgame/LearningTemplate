@@ -32,6 +32,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/EconomyProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
@@ -74,6 +75,7 @@ namespace sw
         IAccountPresence*            _pPresence{ nullptr };                                                                                     ///< 다른 서버에 붙은 계정에 잔액 변경 알림을 중계한다. 서버가 하나면 null 이다
         const IAccountExternalLinks* _pExternalLinks{ nullptr };                                                                                ///< 영수증 구매자를 외부 로그인으로 묶는 제공자(`ReceiptBuyerBinding::LinkedLogin`)가 있으면 필수다. 없으면 기동 실패다
         uint8                        _bAcceptSandboxReceipts{ SW_FALSE };
+        EconomyRefundRecoveryMode    _refundRecovery{ EconomyRefundRecoveryMode::Count }; ///< 지급 뒤 온 환불의 회수 정책(키트 설정 `_refundRecovery`). 정하지 않으면 기동 실패다
     };
 } // namespace sw
 

@@ -20,6 +20,7 @@
             "_settings": {
                 "_currencyCatalog": "game/shooter3d/data/shooter3d.currencies.xml",
                 "_offerCatalog": "game/shooter3d/data/shooter3d.offers.xml",
+                "_refundRecovery": "Debt",
                 "_receiptProvidersFile": "Config/Server/Online/Providers/Shooter3D.receipts.json",
                 "_receiptTrustFile": "Config/Server/Online/ca-bundle.pem"
             }

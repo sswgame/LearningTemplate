@@ -365,6 +365,7 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
         resultBuilder.appendFormat( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "economy", "_settings": {
             "_currencyCatalog": "%#/e2e.currencies.xml",
             "_offerCatalog": "%#/e2e.offers.xml",
+            "_refundRecovery": "Debt",
             "_receiptProvidersFile": "%#"%# } } ] })",
                                     test::ScopedScratchDomain::kDomain, test::ScopedScratchDomain::kDomain, providersFile, trustOption );
         return string( resultBuilder.view() );
