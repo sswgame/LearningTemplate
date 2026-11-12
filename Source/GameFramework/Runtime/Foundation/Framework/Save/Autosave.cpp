@@ -20,6 +20,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/SaveGate.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 
 #include <algorithm>
@@ -101,8 +102,8 @@ namespace sw
         , _onSave{}
         , _onLoad{}
         , _pStore{ nullptr }
+        , _pSaveGate{ nullptr }
         , _listSlot{}
-        , _listBlockReason{}
         , _savingSlot{}
         , _pendingLabel{}
         , _lastCheckpointID{}
@@ -123,7 +124,7 @@ namespace sw
     {
     }
 
-    bool AutosaveManager::initialize( const AutosaveSettings& settings, GameLocalStore& store, const SaveDelegate& onSave, const LoadDelegate& onLoad )
+    bool AutosaveManager::initialize( const AutosaveSettings& settings, GameLocalStore& store, const SaveGate& saveGate, const SaveDelegate& onSave, const LoadDelegate& onLoad )
     {
         const bool bRangesValid = SerializerUtil::isWithinDeclaredRanges( *AutosaveSettings::StaticType(), ObjectAddress{ &settings } ); // AutosaveSettings 의 PROPERTY( Min · Max )
         // 가장 긴 이름(마지막 슬롯의 기록)이 규칙을 지키면 모든 슬롯 이름이 지킨다.
@@ -134,11 +135,11 @@ namespace sw
                              settings._slotCount, settings._interval, settings._minimumGap, settings.makeInfoSlotName( 0 ).c_str() );
             return false;
         }
-        _settings = settings;
-        _pStore   = &store;
-        _onSave   = onSave;
-        _onLoad   = onLoad;
-        _listBlockReason.clear();
+        _settings              = settings;
+        _pStore                = &store;
+        _pSaveGate             = &saveGate;
+        _onSave                = onSave;
+        _onLoad                = onLoad;
         _pendingLabel          = hashed_string{};
         _lastCheckpointID      = hashed_string{};
         _restoringCheckpointID = hashed_string{};
@@ -211,6 +212,12 @@ namespace sw
     {
         if ( _settings._bOnQuit == SW_FALSE || _bSaving == SW_TRUE || isScanning() || isSaving() )
             return false;
+        // 종료는 기다릴 수 없다 — 막혀 있으면(씬 전환 · 연출 · 깨진 복원) 쓰지 않고 마지막 좋은 슬롯을 남긴다.
+        if ( isBlocked() )
+        {
+            SW_LOG_INFO_ID( "Autosave.QuitSaveSkippedBlocked", "Quit autosave skipped - saving is blocked ('%#'), the latest slot is kept", _pSaveGate->findBlockReason()->c_str() );
+            return false;
+        }
         _bPending = SW_FALSE;
         return performSave( AutosaveTrigger::Quit, hashed_string{} );
     }
@@ -223,26 +230,9 @@ namespace sw
         return performSave( trigger, label );
     }
 
-    void AutosaveManager::setBlocked( const hashed_string& reason )
+    bool AutosaveManager::isBlocked() const
     {
-        for ( const hashed_string& existing : _listBlockReason )
-        {
-            if ( existing == reason )
-                return;
-        }
-        _listBlockReason.push_back( reason );
-    }
-
-    void AutosaveManager::clearBlocked( const hashed_string& reason )
-    {
-        for ( size_t index = 0; index < _listBlockReason.size(); ++index )
-        {
-            if ( _listBlockReason[index] == reason )
-            {
-                _listBlockReason.erase( _listBlockReason.begin() + static_cast<ptrdiff_t>( index ) );
-                return;
-            }
-        }
+        return _pSaveGate != nullptr && _pSaveGate->isBlocked(); // 초기화 전에는 저장할 델리게이트도 없다
     }
 
     bool AutosaveManager::restoreLatest()

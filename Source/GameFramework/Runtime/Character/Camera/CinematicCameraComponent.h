@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Animation/Graph/BlendCurve.h"
@@ -34,6 +35,7 @@ namespace sw
      *          - 대기 뷰: 로컬 플레이어의 카메라 매니저에 "곧 볼 시점" 을 등록한다. 듣는 쪽은 그 매니저의 대기 뷰 설명에 있다.
      *          - 흔들림: 대상 카메라의 디렉터(없으면 카메라 매니저)에 구간 길이만큼의 충격을 더한다.
      *          섞을 디렉터나 매니저가 없는 카메라는 끊어 바꾼다.
+     *          시네마틱 시작부터 끝까지 게임 인스턴스의 세이브 막기 문(`SaveGate`)에 막기를 든다 — 시퀀서가 움직인 위치 · 외형이 세이브에 박히지 않게 한다.
      */
     REFLECT( Category = "Camera", DisplayName = "Cinematic Camera",
              Tooltip = "Routes the sequence player's camera signals (cut presets, game and cinematic blends, pending views, shakes) to camera directors and managers" )
@@ -82,5 +84,6 @@ namespace sw
 
         GameObjectHandle _currentCutCamera;   ///< 지금 화면을 덮는 컷 카메라
         Subscription     _signalSubscription; ///< 시퀀스 플레이어의 카메라 신호 구독
+        Subscription     _saveBlock;          ///< 시네마틱 동안 든 세이브 막기(끝 · 플레이 끝에서 놓는다)
     };
 } // namespace sw

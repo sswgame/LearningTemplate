@@ -18,6 +18,7 @@ namespace sw
     struct GameSettings;
 
     class ILoadingScreen;
+    class SaveGate;
     class Scene;
     class ScreenTransitionManager;
     class Widget;
@@ -35,8 +36,11 @@ namespace sw
     public:
         static constexpr const utf8* kSubsystemName = "GameSceneFlow";
 
-        /** @brief @p settings 는 게임 인스턴스의 gamesettings 이고 이 서브시스템보다 오래 산다. 화면 전환 · 로딩 화면은 같은 게임 범위의 형제다(먼저 선다). 로딩 화면은 없을 수 있다(전용 서버 — `IGameInstanceClientHook` 이 없다). */
-        GameSceneFlow( const GameSettings& settings, ScreenTransitionManager& screenTransition, ILoadingScreen* pLoadingScreen );
+        /**
+         * @brief @p settings 는 게임 인스턴스의 gamesettings 이고 이 서브시스템보다 오래 산다. 화면 전환 · 로딩 화면은 같은 게임 범위의 형제다(먼저 선다). 로딩 화면은 없을 수 있다(전용 서버 — `IGameInstanceClientHook` 이 없다).
+         * @param saveGate 게임 인스턴스의 세이브 막기 문(빌림 — 이 범위보다 먼저 서고 늦게 진다). 맡긴 씬 로드마다 막기를 든다.
+         */
+        GameSceneFlow( const GameSettings& settings, ScreenTransitionManager& screenTransition, ILoadingScreen* pLoadingScreen, SaveGate& saveGate );
         ~GameSceneFlow() override;
 
         GameSceneFlow( const GameSceneFlow& )            = delete;
@@ -97,6 +101,7 @@ namespace sw
         {
             string             _scenePath;
             TaskFuture<Scene*> _future;
+            Subscription       _saveBlock; ///< 로드가 끝날 때까지 세이브를 막는다 — 반쯤 선 씬 · 옛 씬을 새 씬 이름으로 쓰지 않게 한다(목록에서 빠지면 풀린다)
         };
 
         /**
@@ -113,6 +118,7 @@ namespace sw
         const GameSettings&      _settings;                       ///< 게임 인스턴스의 gamesettings(빌림 — 인스턴스가 이 범위보다 오래 든다)
         ScreenTransitionManager& _screenTransition;               ///< 같은 게임 범위의 화면 전환(빌림)
         ILoadingScreen*          _pLoadingScreen;                 ///< 같은 게임 범위의 로딩 화면(빌림, 없으면 nullptr — 전용 서버)
+        SaveGate&                _saveGate;                       ///< 게임 인스턴스의 세이브 막기 문(빌림)
         vector<PendingSceneLoad> _listPendingSceneLoad;           ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
         Subscription             _sceneLoadRequestedSubscription; ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
         Subscription             _returnToTitleRegistration;      ///< UI 전역 명령 ReturnToTitle 의 등록 구독(`holdSessionCommand` 가 받는다)

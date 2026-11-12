@@ -1,4 +1,4 @@
-// GameStateSnapshotTest — 상태 스냅샷 봉투: 왕복, 머리(SWST) · 판이 다른 버퍼, 잘린 버퍼, 실패한 읽기가 실어 둔 상태를 남기지 않는 것, 머리의 콘텐츠 구성(켠 모드) · 씬 정체(nogpu, 씬 테스트만 지역 씬 매니저).
+// GameStateSnapshotTest — 상태 스냅샷 봉투: 왕복, 머리(SWST) · 판이 다른 버퍼, 잘린 버퍼, 실패한 읽기가 실어 둔 상태를 남기지 않고 씬을 건드리지 않는 것, 머리의 콘텐츠 구성(켠 모드) · 씬 정체(nogpu, 씬 테스트만 지역 씬 매니저).
 #include "pch.h"
 
 #include "Core/Subsystem/SubsystemScope.h"
@@ -178,4 +178,38 @@ SW_TEST_CASE( GameStateSnapshotTest, RestoreInAnotherSceneDoesNotMix )
     SW_EXPECT_EQUAL( 1u, countObjects( *pSceneB ) );
     SW_EXPECT_NOT_NULL( pSceneB->findGameObjectByName( hashed_string( "Marker" ) ) );
     SW_EXPECT_TRUE( snapshot.getComponentStateStore().isEmpty() );
+}
+
+/**
+ * @brief [GameStateSnapshotTest] 진 복원은 씬을 건드리지 않는다 — 끝이 잘린 봉투는 씬 섹션이 온전해도 활성 씬을 비우기 전에 거절된다(감사 P0-6)
+ * @details 예전에는 씬 오브젝트를 먼저 풀고(활성 씬을 비우고) 뒤 섹션을 읽다 졌다. 지금은 섹션을 모두 읽고 분리된 매니저 · 사본에 풀어 본 뒤에만 교체한다.
+ */
+SW_TEST_CASE( GameStateSnapshotTest, FailedRestoreKeepsScene )
+{
+    SubsystemScope scope;
+    SceneManager&  sceneManager = scope.emplaceSubsystem<SceneManager>();
+    SW_REQUIRE_TRUE( sceneManager.initializeSubsystem() == SubsystemInitResult::Succeeded );
+    const game::ScopedGameScope scoped{ scope };
+    GameStateSnapshot           snapshot;
+
+    GameObjectManager* pScene = openSceneWithOneObject( sceneManager, "scenes/a.scene" );
+    SW_REQUIRE_NOT_NULL( pScene );
+    const vector<uint8> save = captureEmptyEnvelope( snapshot );
+    SW_REQUIRE_TRUE( save.size() > 16 );
+    SW_REQUIRE_NOT_NULL( pScene->createGameObject( hashed_string( "AfterSave" ) ) ); // 찍은 뒤에 선 오브젝트 — 복원이 씬을 갈았다면 사라진다
+
+    // 마지막 섹션(컴포넌트 상태)의 끝이 잘린 봉투 — 앞의 씬 섹션은 온전하다.
+    const expected<void, SnapshotRestoreFailure> result = snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, save.data(), static_cast<uint32>( save.size() - 1 ) );
+    SW_REQUIRE_TRUE( result.has_value() == false );
+    SW_EXPECT_TRUE( result.error() == SnapshotRestoreFailure::Rejected );
+    SW_EXPECT_EQUAL( 2u, countObjects( *pScene ) );
+    SW_EXPECT_NOT_NULL( pScene->findGameObjectByName( hashed_string( "Marker" ) ) );
+    SW_EXPECT_NOT_NULL( pScene->findGameObjectByName( hashed_string( "AfterSave" ) ) );
+    SW_EXPECT_TRUE( snapshot.getComponentStateStore().isEmpty() );
+
+    // 온전한 봉투는 지금처럼 교체한다 — 찍은 뒤에 선 오브젝트가 사라진다.
+    SW_EXPECT_TRUE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, save.data(), static_cast<uint32>( save.size() ) ) );
+    snapshot.endRestore();
+    SW_EXPECT_EQUAL( 1u, countObjects( *pScene ) );
+    SW_EXPECT_NULL( pScene->findGameObjectByName( hashed_string( "AfterSave" ) ) );
 }

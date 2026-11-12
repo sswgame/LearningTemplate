@@ -27,7 +27,7 @@
 2. **같은 사실을 두 곳이 따로 안다.** 쓰는 쪽 · 읽는 쪽의 한도와 판(A-3 · A-5 · A-6), 개수는 CPU · 목록은 GPU(RN-1), 문서 기록은 전역 스택 · Ctrl+Z 는 창 스택(P0-2), 멱등 기록과 감사 내역이 한 레코드(P0-7), 캐시 기록과 서버 메모리 표(O-6 · O-7).
 3. **실패 · 잘림을 값으로 돌려주지 않거나 호출자가 버린다.** `(void)` 로 버린 신뢰 송신(N-3), 구간 읽기 실패 뒤 새 판(P0-5), exec 실패를 성공으로(P0-16), 잘린 포맷을 성공으로(C-10), 팩 마운트 실패 뒤 기동(A-4).
 4. **플랫폼 창이 "빠뜨려도 컴파일되는" 선택 훅을 가진다.** 포커스 전달 · 글 입력 · 닫기 완료 · 쉬기 · 수명 구독 · 오디오 백엔드(P0-9 ~ P0-11, P-3 ~ P-6).
-5. **플레이어 세이브가 핫 리로드용 엄격한 스냅샷 형식을 그대로 쓴다.** 판이 정확히 같아야 읽고, 개수 · 색인으로 짝짓고, 실패하면 조용히 새 판이다(P0-5 · P0-6 · A-6 · G-1).
+5. **플레이어 세이브가 핫 리로드용 엄격한 스냅샷 형식을 그대로 쓴다.** 판이 정확히 같아야 읽고, 개수 · 색인으로 짝짓고, 실패하면 조용히 새 판이다(P0-5 · A-6 · G-1).
 6. **상태 변화를 값이 아니라 호출 순서 규칙으로 다룬다.** 일시정지(P0-12), 오너 이동(P0-14), 배율 변경(S-4), 장치 유실(P0-13), 빨리 감기(K-2), 끌기 한 번(P0-1).
 
 ## P0 — 확인된 오동작
@@ -59,13 +59,6 @@
 - 상용 엔진: 언리얼은 이름을 바꿀 때 로드된 참조자를 메모리에서 고치고 dirty 로 표시한다. 유니티 · Godot 4.4 는 GUID · UID 가 정체다.
 - 제안: 참조 쪽은 에셋 GUID 2 · 3 단계(NEXT integ2)가 닫는다. 문서 쪽은 `applyAssetMoves` 성공 때 (옛 id → 새 id) 목록을 한 번 방송하고 문서 패널 · 씬 소스 · 선택 · 포커스 경로가 받는다. dirty 문서가 참조자이면 계획 단계(`planAssetMoves`)에서 "먼저 저장" 으로 거절한다. 삭제는 열린 문서가 있으면 거절한다.
 - 확인: 시나리오 `assetmove` 에 "머티리얼 열기 → 편집 → 이름 바꾸기 → 저장 → 옛 경로 파일 없음 · 새 경로에 편집 반영" 과 "열린 씬 파일 이름 바꾸기 → Ctrl+S → 옛 파일 없음".
-
-### P0-6 세이브: 복원이 실패하면 씬은 이미 비워졌고, 간격 자동 저장이 그 위를 덮는다
-- 분류: 결함(부분 실패) · 확신: 확인(경로 — 실패를 일으키는 입력은 추정)
-- 근거: `Source/GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.cpp:306` 이 본문을 읽기 전에 `pObjectManager->clear()` 를 부른다. 그 뒤 오브젝트 하나를 못 읽거나 `batch.finish()`(`:367`)가 거짓이면 false 다. 부르는 쪽(`Source/GameFramework/Runtime/Foundation/Framework/Save/Autosave.cpp:277-281`, `Source/GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.cpp:571-593`)은 경고만 낸다. `AutosaveManager::setBlocked`(`Autosave.cpp:226`)는 프로덕션 호출처가 0 이라 간격 저장(Velmora `interval=300` · `slots=3`)이 깨진 씬을 15 분 안에 세 칸 모두에 쓴다. NEXT 의 G1 `slice` "복원이 되살리지 못한 `state.objects`" 와 같은 뿌리다.
-- 상용 엔진: 언리얼 `LoadGameFromSlot` 은 별도 `USaveGame` 객체로 풀고 월드는 성공 뒤에만 건드린다.
-- 제안: 복원을 두 단계로 나눈다 — 분리된 묶음에서 끝까지 읽고 검증한 뒤 교체. 실패하면 인스턴스가 저장 막기를 걸고 씬을 다시 연다. 막기는 씬 전환 · 연출 · 복원 실패가 거는 범위형(RAII) 까닭으로 만든다.
-- 확인: 단위 `GameStateSnapshotTest.FailedRestoreKeepsScene`, `AutosaveTest.FailedRestoreBlocksSaving`. 시나리오 — 깨진 슬롯을 `game.load` 한 뒤 `Save.Written` 이 늘지 않는지.
 
 ### P0-7 온라인: 분개 보존 정리가 영수증 지급의 유일한 중복 방지 기록을 지운다
 - 분류: 결함(이중 지급 — 운영 401 일째부터) · 확신: 확인(스토어가 옛 거래를 Valid 로 답한다는 부분만 기억 기준)
@@ -602,7 +595,7 @@
 - 분류: 구조 · 확신: 봉투 칸은 확인, 영향은 추정
 - 근거: `Source/GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.cpp:108-155` — 봉투는 매직 · 판 · 프로세스 토큰 · 콘텐츠 구성 글 · 오브젝트 · 상태뿐이다. 복원(`:301-306`)은 "지금 활성 씬" 을 비우고 채운다. 타이틀 씬이나 다른 맵에서 `restoreLatest` 를 부르면 그 씬 위에 다른 맵의 오브젝트가 선다.
 - 상용 엔진: 언리얼 게임은 세이브에 맵 이름을 적고 `OpenLevel` 뒤 적용한다(월드 파티션은 액터 GUID 로 셀별 상태).
-- 제안: 봉투 머리에 씬 자산 id(GUID 단계가 들어오면 그것)를 적고 복원은 "씬 요청 → 로드 완료 → 적용" 을 `GameSceneFlow` 가 한 흐름으로 한다(P0-6 의 두 단계 복원과 같은 묶음).
+- 제안: 봉투 머리에 씬 자산 id(GUID 단계가 들어오면 그것)를 적고 복원은 "씬 요청 → 로드 완료 → 적용" 을 `GameSceneFlow` 가 한 흐름으로 한다(두 단계 복원 — 검증 뒤 교체 — 위에 짓는다).
 - 확인: 시나리오 — 맵 A 에서 저장 → 타이틀에서 `game.load` → 활성 씬 경로와 오브젝트 수.
 
 ### 장르 키트 · 게임 샘플
@@ -810,7 +803,7 @@
 1. **에디터 되돌리기 구조** — 상호작용 구간 형식 + 문서마다 스택: P0-1 · P0-2, 함께 닫히는 E-2 · E-3 · E-9 · E-13. `editor/undocoverage` 에 문서 패널 전수 단계(E-16)를 먼저 더해 지는 것을 본다.
 2. **자동 저장 세션** — 세션 폴더 · pid 잠금 · 리로드 이어 쓰기: P0-3, 복구 입구 통일과 dirty 문서 목록 E-1.
 3. **에셋 옮김 방송** — `applyAssetMoves` 의 (옛 id → 새 id) 알림과 열린 문서 · 씬 · 선택 갱신, dirty 참조자 거절: P0-4. 참조 쪽은 integ2 의 GUID 2 · 3 단계와 순서를 맞춘다.
-4. **세이브 안전** — 구간 실패를 로드 실패로, 두 단계 복원, 범위형 저장 막기, 봉투에 씬 id: P0-5 · P0-6 · G-7.
+4. **세이브 안전** — 구간 실패를 로드 실패로, 봉투에 씬 id: P0-5 · G-7.
 5. **영수증 멱등 기록 분리** — `econ_receipt` + 분개 이월 레코드: P0-7. 같은 묶음에서 읽은 것을 커밋 조건으로 자동으로 붙이는 연결 포장 O-1.
 6. **연결 ID 세대 핸들** — 슬롯 + 세대, 닫힌 슬롯의 재발급 시점: P0-8. 신뢰 송신 실패를 무시할 수 없게 N-3 을 같이.
 7. **Android 수명 · 키** — finish 요청과 닫힘 확정, 옮기지 못한 키는 소비하지 않음: P0-9 · P0-10. 가짜 `android_app` 단위 테스트로 데스크톱에서 고정한 뒤 실기기.
@@ -977,7 +970,7 @@
 - Client — 읽음(HUD · Marker · Ability) — 시뮬과 표현 분리. G-9. Flow 는 훑음.
 - Kits — 읽음(Feature/Online · Network · Storage · World · Content, Genre 여섯 갈래) — OnlineSubsystem · PlayFab · Lyra · 템플릿. P0-7 · P0-8, N-3 · N-5 · N-9 · N-13 · N-15, O-1 ~ O-18, K-3 ~ K-14. 장르 키트 가운데 MechArena · AsymmetricHorror · Metroidvania · ActionAdventure · ActionPlatformer · KartRacing · Rhythm · GhostHunt · SurvivalHorror · MonsterHuntRPG · CreatureLife · RestaurantSim · SideScrollConquest · TacticsSRPG 는 패턴 검색만 했다.
 - Plugin — 읽음(Editor/MeshModifiers · CharacterEditor · GameplayTools/Ability) — 에셋 에디터 dirty · 트랜잭션. G-12, E-9. Modifiers(59 파일) · CameraPresets 는 훑음.
-- Runtime — 읽음(Gameplay · Foundation/Framework · World · Character 일부 · Online) — Gameplay Framework · GAS · SaveGame · Lyra. P0-5 · P0-6, G-1 ~ G-13, O-2 · O-9 · O-17. `ScheduleSystem` · BehaviorTree · Appearance · Vehicle · Movement 는 안 읽음.
+- Runtime — 읽음(Gameplay · Foundation/Framework · World · Character 일부 · Online) — Gameplay Framework · GAS · SaveGame · Lyra. P0-5, G-1 ~ G-13, O-2 · O-9 · O-17. `ScheduleSystem` · BehaviorTree · Appearance · Vehicle · Movement 는 안 읽음.
 
 ### Games (14)
 

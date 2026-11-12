@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
@@ -21,6 +22,13 @@
 namespace sw
 {
     struct TypeInfo;
+
+    /** @brief 봉투 읽기(`GameStateSnapshot::readEnvelope`)가 진 까닭입니다 — 부르는 쪽은 씬이 그대로인지에 따라 세이브를 막을지 정한다. */
+    enum class SnapshotRestoreFailure : uint8
+    {
+        Rejected,   ///< 검증에서 졌다 — 씬 · 상태 인스턴스는 건드리지 않았다
+        SceneBroken ///< 검증을 지난 뒤 교체에서 졌다 — 씬은 비워졌고 일부만 섰다(세이브를 막는다)
+    };
 
     /**
      * @class GameStateSnapshot
@@ -92,10 +100,15 @@ namespace sw
         [[nodiscard]] bool writeEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, const void* pStateInstance, vector<uint8>& outBytes );
         /**
          * @brief 읽기: 같은 목적으로 쓴 봉투를 읽어 씬 오브젝트 · 리플렉션 상태 · 컴포넌트 상태를 되살리고, 올린 타입마다 실어 둔 상태를 돌려줍니다.
-         * @details 성공하면 부르는 쪽은 읽기 훅을 부르고 `endRestore` 로 저장소를 비운다. 실패하면 false 이고 훅을 부르지 않는다.
-         *          머리의 씬 정체(찍을 때 활성 씬의 리소스 id)가 지금 활성 씬과 다르면 씬을 건드리지 않고 false 다 — 그 씬을 연 뒤에 읽는다.
+         * @details 두 단계다. 1) 검증 — 봉투를 끝까지 읽고 씬은 분리된 오브젝트 매니저에, 리플렉션 상태는 새로 만든 사본에 풀어 본다. 지금 씬과 @p pStateInstance 는 건드리지 않는다.
+         *          2) 교체 — 검증을 지난 봉투만 활성 씬을 비우고 채운다. 언리얼 `LoadGameFromSlot` 이 별도 `USaveGame` 으로 풀고 월드는 성공 뒤에만 건드리는 나눔이다.
+         *          성공하면 부르는 쪽은 읽기 훅을 부르고 `endRestore` 로 저장소를 비운다. 실패하면 훅을 부르지 않고, 까닭이 `Rejected`(아무것도 바꾸지 않았다)인지
+         *          `SceneBroken`(교체 중에 졌다 — 세이브를 막아야 한다)인지 돌려준다.
+         *          머리의 씬 정체(찍을 때 활성 씬의 리소스 id)가 지금 활성 씬과 다르면 `Rejected` 다 — 그 씬을 연 뒤에 읽는다.
+         *          리플렉션 상태가 있으면 그 타입은 기본 생성할 수 있어야 한다(검증 사본) — 아니면 `Rejected` 다.
          */
-        [[nodiscard]] bool readEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, void* pStateInstance, const void* pInBuffer, uint32 size );
+        [[nodiscard]] expected<void, SnapshotRestoreFailure> readEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, void* pStateInstance, const void* pInBuffer,
+                                                                           uint32 size );
         /** @brief 읽기 끝: 읽기 훅이 넘겨받은 뒤 저장소를 비웁니다. */
         void endRestore();
 
@@ -148,10 +161,11 @@ namespace sw
          */
         [[nodiscard]] static bool serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes );
         /**
-         * @brief 바이너리 데이터로부터 씬 GameObject 들을 복원합니다. @p format 은 id 가 실렸는지, 복원할지를 알려 줍니다.
+         * @brief 바이너리 데이터로부터 씬 GameObject 들을 @p manager 에 만듭니다. @p format 은 id 가 실렸는지, 복원할지를 알려 줍니다.
+         * @details @p manager 를 비우지 않는다 — 검증은 분리된 매니저에, 교체는 부르는 쪽이 비운 활성 매니저에 푼다. 하나라도 못 읽으면 false 다.
          * @param outListRemap id 를 복원하지 않을 때(`WithIdentity`) 저장된 컴포넌트 id → 다시 만든 컴포넌트 id 표를 채웁니다(`ComponentStateStore::remapComponentIDs`).
          */
-        [[nodiscard]] static bool deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format,
+        [[nodiscard]] static bool deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format, GameObjectManager& manager,
                                                            vector<ComponentStateStore::SavedComponentID>& outListRemap );
         /** @brief 올린 타입마다 실어 둔 상태를 돌려줍니다(읽기 훅 앞). */
         void restoreStatefulComponents();
