@@ -284,6 +284,10 @@ namespace sw
                 advantage       = peerAdvantage;
             }
         }
+        // 상대가 보낸 정수는 프레임 창 안이어야 한다 — 그대로 빼고 나누면 int32 가 넘치고(UB) 다른 참가자를 한없이 기다리게 할 수 있다(감사 N-15, GGPO 는 창 안으로 자른다)
+        const bool bOutsideFrameWindow = remoteFrame > _frame + kFrameWindow || advantage < -kFrameWindow || advantage > kFrameWindow;
+        if ( bOutsideFrameWindow )
+            return NetHandleResult::Malformed;
         // 입력 묶음이 손상됐으면 하나도 넣지 않는다. 창 밖이거나 이미 받은 프레임은 버퍼가 버린다.
         NetInputReceiveBuffer& buffer = _listReceive[static_cast<size_t>( player )];
         if ( body.hasOverflowed() || buffer.read( body, &_listNewFrameScratch ) == false )
