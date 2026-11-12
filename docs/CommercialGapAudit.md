@@ -714,7 +714,6 @@
 ### 네트워크
 
 - **N-11 손실 · RTT 에 반응하는 송신률 조절과 재전송 백오프가 없다** (구조 — 확인) — `Source/Core/Network/Connection/NetEndpoint.cpp:534-544` 토큰 버킷은 설정값 고정, `NetConnection.cpp:376-379` 재전송 간격은 횟수와 무관하다. 상용: ENet(Godot)은 RTT 분산 기반 스로틀, 유니티 Transport 는 RTT 기반 재전송 + 창. 제안: 연결별 송신 상한을 손실률 · RTT 로 조절하고 재전송 간격은 SRTT + 4·RTTVAR. 확인: `NetEmulation` 손실 20 % 에서 `_resentMessageCount`.
-- **N-12 NetRequestServer 의 멱등 기억에 바이트 상한이 없다** (결함 · 자원 — 확인) — `Source/Core/Network/Message/NetRequest.cpp:525-533` 이 응답 본문(1 MiB 까지)을 600 초 동안 개수(10 만)로만 제한해 둔다. 같은 키 대기자는 `_maxInFlightPerConnection` 을 우회한다(`:439-444`). 상용: 바이트 예산 LRU. 제안: 총 바이트 예산과 주체별 항목 상한. 확인: `NetRequestTest.IdempotencyStoreHonoursByteBudget`.
 - **N-13 RemoteCall 에 연결별 호출률 제한이 없고 인자가 글로 오간다** (구조 — 확인) — `Source/GameFramework/Kits/Feature/Network/NetClientServer/RemoteCall.cpp:281-343`. 상용: 언리얼 RPC DoS Detection + NetFieldExport 인덱스. 제안: 함수 메타데이터에 초당 상한(기본값은 Config), 접속 때 함수표 해시로 인덱스 합의. 확인: `TestRemoteCall` 에 상한 초과 사례.
 - **N-14 주소 형식과 소켓이 IPv4 전용이다** (구조 — 확인) — `Source/Core/Network/NetTypes.h:158-161`, `Transport/PlatformSocketUtil.cpp:75,275`. 상용: 언리얼 `FInternetAddr` · 유니티 Transport · ENet 은 v4/v6 을 받는다. 제안: 요구 여부를 [PlatformTargets](PlatformTargets.md) 에 한 줄로 정하고 `NetAddress` 를 주소군 + 16 바이트로 넓힌다. 확인: `TestNetTransport` 에 `::1` 루프백.
 
@@ -753,7 +752,6 @@
 
 ### 에셋 · 직렬화 · 오브젝트
 
-- **A-18 실수 복수형 인자의 범주가 화면 숫자와 어긋난다** (결함 · 표시 문구 한정 — 확인) — `Source/Engine/Localization/TextFormatter.cpp:438-441` 이 범주를 반올림 전 값으로 내고 `PluralRules.cpp:297` 이 버림한다(1.999 → "2 item"). 상용: ICU 는 서식한 결과에서 피연산자를 낸다. 제안: `formatDecimal` 이 글과 피연산자를 함께 돌려준다. 확인: `TextFormatterTest.PluralCategoryFollowsTheShownNumber`.
 - **A-19 비동기 로딩의 취소 · 우선순위가 요청자 단위가 아니고 프리로드가 같은 바이트를 두 번 읽는다** (구조 · 성능 — 확인) — `Source/Engine/Asset/AssetStreamingQueue.cpp:388-457` 의 `cancelRequest( 경로 )` 가 모든 대기자를 실패로 돌리고 합류 때 우선순위를 올리지 않는다. `PreloadSet.cpp:58-64` 는 읽고 버린 뒤 `pinAsset` 이 다시 읽는다. 상용: 언리얼 `FStreamableHandle`. 제안: 요청이 요청자 토큰을 돌려준다. 확인: `AssetStreamingQueueTest.CancelLeavesOtherRequesters`.
 - **A-20 (보강) 공유 캐시 키가 요청 글 그대로라 같은 에셋이 두 벌 오를 수 있다** (구조 — 경로 확인) — `Source/Engine/Asset/Cache/SharedAssetTable.h:145`. 옛 id 와 새 id, 대소문자만 다른 글이 각각 칸을 만든다. 제안: GUID 2 단계에서 캐시 키를 "풀린 정체성" 으로. 확인: `SharedAssetCacheTest.RedirectedAndCanonicalIdsShareOneEntry`.
 - **A-21 수명 불변식이 주석에만 있는 세 자리** (결함 — 잠재, 지금 트리거 없음) — `GameObjectStore::clear()` 중 해체 콜백의 생성(`GameObjectStore.cpp:524-571`), 삭제 대기 오브젝트의 즉시 `removeComponent` 뒤 틱 파도의 포인터(`GameObject.cpp:763-806`), `PrimitiveRegistry` 대기자 순회 중 제거(`PrimitiveRegistry.cpp:152-169`). 제안: 순회 중 구조 변경을 `StructuralChangeBuffer` 로만 받게 단언. 확인: ASan 단위 테스트 셋.
