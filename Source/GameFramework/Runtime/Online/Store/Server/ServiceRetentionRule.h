@@ -10,6 +10,16 @@
  *          - 지우는 레코드가 다른 레코드에 합을 남겨야 하면(원장 분개 → 자산별 이월) 규칙의 `_pfnStageErase` 가 같은 트랜잭션에 그 쓰기를 붙인다.
  *            지우기와 이월이 함께 커밋되거나 함께 실패하므로, 지웠는데 합이 빠지는 틈이 없다.
  *          멱등 기록(`ServiceIdempotency`)은 키에 시각이 없어 이 쓸기가 지우지 못합니다. 저장소 구현의 만료 정리가 맡습니다.
+ *
+ *          만료 색인(`_indexTable`)을 둔 규칙은 전수 훑기 대신 범위 읽기로 끝난다. 색인 키는 `<기준 시각 16 진>/<대상>`(`makeIndexKey`)이라 키 순서가 시각 순서이고,
+ *          쓸기는 색인을 앞에서부터 기준 시각이 기간을 넘긴 줄까지만 읽는다(커서를 남기지 않는다 — 지운 줄은 사라지고 남은 줄이 맨 앞이다).
+ *          - 대상이 키 하나면 그 레코드를 읽어, 시각 읽기가 기간이 지났다고 하면 레코드와 색인 줄을 함께 지운다. 레코드가 없으면 색인 줄만 지운다.
+ *            레코드의 시각이 그사이 늦춰졌거나(다시 쓴 쪽이 새 색인 줄을 넣었다) 읽지 못하면 레코드는 남기고 낡은 색인 줄만 지운다.
+ *            시각 읽기가 비었으면 색인의 시각을 믿는다 — 한 번 쓰고 바꾸지 않는 레코드에만 쓴다.
+ *          - 대상이 `/` 로 끝나면 접두어 묶음이다(채팅 채널 하나). 그 접두어 아래를 앞에서부터 읽어 기간이 지난 레코드를 지우고, 지나지 않은 레코드를 만나거나
+ *            끝에 닿으면 색인 줄도 지운다. 접두어 아래는 키 순서가 시각 순서여야 한다.
+ *          키트는 자기 레코드를 쓰는 트랜잭션에 색인 줄을 함께 넣고, 규칙은 키트 조립이 내놓는다(`IOnlineServerKit::addRetentionRule`).
+ *          Nakama 의 채널 메시지 TTL 색인, PlayFab 의 보존 기간 정책과 같은 자리다 — 둘 다 테이블 주인이 기간을 정하고 저장소가 시각 순으로 지운다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -37,9 +47,10 @@ namespace sw
     struct SW_GF_API ServiceRetentionRule
     {
         hashed_string           _table{};
-        string                  _keyPrefix{}; ///< 비우면 테이블 전체. 값이 있으면 이 접두어의 레코드만 훑는다
+        hashed_string           _indexTable{}; ///< 비우면 `_table` 을 커서로 훑는다. 값이 있으면 이 만료 색인을 시각 순으로 범위 읽기한다
+        string                  _keyPrefix{};  ///< 비우면 테이블 전체. 값이 있으면 이 접두어의 레코드만 훑는다(색인 규칙은 쓰지 않는다)
         int64                   _retentionMs{ 0 };
-        ServiceRetentionTimeFn  _pfnReadTime{ nullptr };
+        ServiceRetentionTimeFn  _pfnReadTime{ nullptr };   ///< 색인 규칙은 비워도 된다(색인의 시각을 믿는다). 커서 규칙은 필수다
         ServiceRetentionStageFn _pfnStageErase{ nullptr }; ///< 비우면 지우기만 한다. 값이 있으면 지우는 트랜잭션에 이 쓰기를 함께 넣는다
         string                  _cursor{};                 ///< 다음 회차가 이어서 훑을 위치. 쓸기가 채운다
 
@@ -54,6 +65,21 @@ namespace sw
          */
         [[nodiscard]] static ServiceStoreResult sweep( IServiceStoreConnection& connection, ServiceRetentionRule& inoutRule, int64 nowMs, int32 maxScanCount, int32 maxDeleteCount,
                                                        ServiceRetentionReport& outReport );
+
+        /** @brief 규칙이 쓸 수 있는 모양인지입니다. 기간이 양수이고, 커서 규칙이면 시각 읽기가 있어야 합니다. */
+        bool isValid() const;
+
+        /** @brief 만료 색인 키 `<기준 시각 16 진>/<대상>` 을 만듭니다. 대상이 `/` 로 끝나면 접두어 묶음입니다. 음수 시각은 0 으로 둡니다. */
+        static string makeIndexKey( int64 timeMs, string_view target );
+        /** @brief 만료 색인 키를 기준 시각과 대상으로 나눕니다. 형식이 틀리면 false 입니다. */
+        [[nodiscard]] static bool parseIndexKey( string_view indexKey, int64& outTimeMs, string_view& outTarget );
+
+    private:
+        [[nodiscard]] static ServiceStoreResult sweepIndex( IServiceStoreConnection& connection, const ServiceRetentionRule& rule, int64 cutoffMs, int32 maxScanCount,
+                                                            int32 maxDeleteCount, ServiceRetentionReport& outReport );
+        /** @brief 색인 줄 하나가 가리키는 대상을 지우는 트랜잭션을 짜 커밋합니다. 지운 레코드 수를 @p inoutReport 에 더하고, 묶음이 남았으면 @p outbEntryDone 이 false 입니다. */
+        [[nodiscard]] static ServiceStoreResult expireIndexEntry( IServiceStoreConnection& connection, const ServiceRetentionRule& rule, const ServiceRecord& entry,
+                                                                  string_view target, int64 cutoffMs, ServiceRetentionReport& inoutReport, bool& outbEntryDone );
     };
 } // namespace sw
 

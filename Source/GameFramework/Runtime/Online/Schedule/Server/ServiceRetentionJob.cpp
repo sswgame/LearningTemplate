@@ -60,9 +60,9 @@ namespace sw
             return true;
         for ( const ServiceRetentionRule& rule : listRule )
         {
-            if ( rule._pfnReadTime == nullptr || rule._retentionMs <= 0 )
+            if ( rule.isValid() == false )
             {
-                SW_LOG_ERROR_ID( "ServiceRetentionJob.ServiceRetentionJobRuleTableNeeds", "ServiceRetentionJob: the rule of table '%#' needs a time reader and a positive retention", rule._table.c_str() );
+                SW_LOG_ERROR_ID( "ServiceRetentionJob.ServiceRetentionJobRuleTableNeeds", "ServiceRetentionJob: the rule of table '%#' needs a positive retention and a time reader or an expiry index", rule._table.c_str() );
                 return false;
             }
         }

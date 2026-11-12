@@ -379,6 +379,18 @@ namespace sw
             if ( &node != &baseNode )
                 parts._listKit.push_back( static_cast<OnlineServerKitNode*>( &node ) );
         }
+        {
+            // 기반 규칙 뒤에 키트가 `initialize` 에서 올린 자기 테이블 규칙을 붙인다 — 런타임은 키트 테이블을 모른다.
+            using Internal                        = OnlineServerRuntimeInternal;
+            vector<ServiceRetentionRule> listRule = Internal::makeRetentionRules( parts._config );
+            for ( ServiceRetentionRule& rule : parts._context._listRetentionRule )
+            {
+                listRule.push_back( std::move( rule ) );
+            }
+            parts._context._listRetentionRule.clear();
+            if ( parts._retention.initialize( parts._store.get(), &parts._scheduler, std::move( listRule ), Internal::makeRetentionSettings( parts._config ) ) == false )
+                return unexpected( Error{ ErrorKind::ExternalFailure, "the retention sweep job could not be scheduled" } );
+        }
         if ( expected<void> host = startHost( settings ); host.has_value() == false )
             return host;
         for ( OnlineServerKitNode* pKit : parts._listKit )
@@ -461,9 +473,7 @@ namespace sw
         const uint64 serverID = static_cast<uint64>( parts._config._serverID );
         parts._bus            = make_unique<EphemeralServerBus>( nullptr, serverID ); // 라우터는 호스트가 연 뒤에 묶는다
         parts._busFront       = make_unique<ServerBus>( *parts._bus );
-        parts._scheduler.initialize( parts._store.get(), serverID );
-        if ( parts._retention.initialize( parts._store.get(), &parts._scheduler, Internal::makeRetentionRules( parts._config ), Internal::makeRetentionSettings( parts._config ) ) == false )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "the retention sweep job could not be scheduled" } );
+        parts._scheduler.initialize( parts._store.get(), serverID ); // 보존 쓸기는 키트가 규칙을 올린 뒤 `initialize` 가 등록한다
         parts._remoteConfig.requestReload( *parts._store );
         parts._nextRemoteConfigReloadMs = nowMs + Internal::kRemoteConfigReloadMs;
 

@@ -26,6 +26,23 @@ namespace sw
         return unexpected( Error{ ErrorKind::AlreadyExists, "the method range of the kit is already taken", entry._name } );
     }
 
+    expected<void> IOnlineServerKit::addRetentionRule( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, ServiceRetentionRule rule )
+    {
+        if ( rule._table.empty() || rule.isValid() == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the retention rule needs a table, a positive retention and a time reader or an expiry index", entry._name } );
+        for ( const ServiceRetentionRule& other : context._listRetentionRule )
+        {
+            if ( other._table == rule._table && other._keyPrefix == rule._keyPrefix )
+            {
+                Error error{ ErrorKind::AlreadyExists, "the retention rule of the table is already registered", entry._name };
+                error.appendDetail( " (" ).appendDetail( rule._table.viewOrEmpty() ).appendDetail( ")" );
+                return unexpected( error );
+            }
+        }
+        context._listRetentionRule.push_back( std::move( rule ) );
+        return {};
+    }
+
     void OnlineServerKitRegistry::registerFactory( OnlineServerKitFactory* pFactory )
     {
         if ( pFactory == nullptr || pFactory->_pCreate == nullptr )
