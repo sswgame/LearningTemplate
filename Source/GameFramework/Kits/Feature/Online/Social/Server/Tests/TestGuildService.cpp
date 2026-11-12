@@ -230,12 +230,15 @@ SW_TEST_CASE( GuildServiceTest, ExpiredInvitesAreSwept )
 {
     GuildFixture rig;
     (void)rig.makeGuild();
-    SW_REQUIRE_TRUE( rig.run( GuildOperation::Invite, kOfficer, kOutside )._result == SocialResult::Ok );
-    SW_REQUIRE_TRUE( rig.run( GuildOperation::Invite, kOfficer, kOutside, "", 0, kNowMs + 1000 )._result == SocialResult::Ok ); // 다시 보내 만료가 늦춰졌다
     const hashed_string inviteTable{ "social_guild_invite" };
     const hashed_string expiryTable{ "social_guild_invite_expiry" };
-    SW_REQUIRE_EQUAL( 1, rig._database.countRecords( inviteTable ) );
+    // makeGuild 의 초대 둘은 수락돼 초대는 지워졌지만 색인 줄은 남는다(TTL 색인은 줄을 따로 지우지 않고 쓸기가 원본 없는 줄을 지운다)
+    SW_REQUIRE_EQUAL( 0, rig._database.countRecords( inviteTable ) );
     SW_REQUIRE_EQUAL( 2, rig._database.countRecords( expiryTable ) );
+    SW_REQUIRE_TRUE( rig.run( GuildOperation::Invite, kOfficer, kOutside )._result == SocialResult::Ok );
+    SW_REQUIRE_TRUE( rig.run( GuildOperation::Invite, kOfficer, kOutside, "", 0, kNowMs + 1000 )._result == SocialResult::Ok ); // 다시 보내 만료가 늦춰졌다
+    SW_REQUIRE_EQUAL( 1, rig._database.countRecords( inviteTable ) );
+    SW_REQUIRE_EQUAL( 4, rig._database.countRecords( expiryTable ) );
 
     ServiceTTLRule        rule = GuildService::makeInviteTTLRule( 1000 );
     ServiceTTLSweepReport report;
@@ -243,7 +246,7 @@ SW_TEST_CASE( GuildServiceTest, ExpiredInvitesAreSwept )
     SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, firstExpiryMs + 1500, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 0, report._deletedCount );
     SW_EXPECT_EQUAL( 1, rig._database.countRecords( inviteTable ) );
-    SW_EXPECT_EQUAL( 1, rig._database.countRecords( expiryTable ) ); // 낡은 줄만 지웠다
+    SW_EXPECT_EQUAL( 1, rig._database.countRecords( expiryTable ) ); // 낡은 줄(수락된 초대 둘 · 다시 보내기 전 줄)만 지웠다
     SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, firstExpiryMs + 3000, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, report._deletedCount );
     SW_EXPECT_EQUAL( 0, rig._database.countRecords( inviteTable ) );
