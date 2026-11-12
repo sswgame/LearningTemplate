@@ -348,7 +348,7 @@ namespace sw
     RHITransferSubmit D3D12RHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         ID3D12Resource* pTexture                  = _pDevice->resolveTexture( texture );
-        const bool      bTextureUploadUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr || _pDevice->isDeviceLost();
+        const bool      bTextureUploadUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr || _pDevice->pollDeviceLost();
         if ( bTextureUploadUnavailable )
         {
             // 장치를 잃었으면 진입에서 Rejected 다(계약 2) — Accepted 를 주고 폴링에서야 Failed 가 되면 호출자가 잃은 장치에 올린 줄 알고 기다린다.
@@ -458,7 +458,7 @@ namespace sw
     RHITransferSubmit D3D12RHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         ID3D12Resource* pTexture                        = _pDevice->resolveTexture( texture );
-        const bool      bTextureRegionUploadUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr || _pDevice->isDeviceLost();
+        const bool      bTextureRegionUploadUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr || _pDevice->pollDeviceLost();
         if ( bTextureRegionUploadUnavailable )
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureRegionUploadTextureDeviceNot", "submitTextureRegionUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
@@ -624,7 +624,7 @@ namespace sw
     RHITransferSubmit D3D12RHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
         ID3D12Resource* pTexture                    = _pDevice->resolveTexture( texture );
-        const bool      bTextureReadbackUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr || _pDevice->isDeviceLost();
+        const bool      bTextureReadbackUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr || _pDevice->pollDeviceLost();
         if ( bTextureReadbackUnavailable )
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureReadbackTextureDeviceNot", "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );

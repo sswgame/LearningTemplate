@@ -32,6 +32,7 @@ namespace sw
     class IRHISwapChain;
     class IRHITimestampProvider;
     class RHIMemoryTracker;
+    class RHITransferSerials;
     class BindlessIndexReportLog;
     enum class ShaderTargetFormat : uint8;
 
@@ -212,6 +213,13 @@ namespace sw
          * @details 실제 TDR 은 되풀이하면 어댑터가 망가지므로, 제거 뒤의 대기 · 종료 경로가 멈추지 않는지는 이것으로 확인한다. 어느 스레드에서 불러도 된다.
          */
         virtual bool debugRemoveDevice() { return false; }
+        /**
+         * @brief 장치를 잃었으면(TDR · 드라이버 재시작 · `debugRemoveDevice`) true 입니다. 어느 스레드에서나 읽습니다. 엔진 쪽(`EngineRenderDriver`)이 프레임마다 보고 Config 정책대로 답한다.
+         * @details 저장소는 백엔드의 `RHITransferSerials` 손실 표시 하나다(`getTransferSerials`) — 백엔드가 자기 플래그를 따로 두면 한쪽만 표시돼 엔진이 놓친다.
+         *          손실을 처음 본 자리(Present · 펜스 · 큐 결과)가 표시하고 브레드크럼을 보고한다. 이 질의는 드라이버에 묻지 않고 그 표시만 읽는다.
+         *          언리얼 `GIsGPUCrashed` · Godot 의 장치 손실 치명 오류와 같은 자리다(기억에 의존한 비교).
+         */
+        [[nodiscard]] bool isDeviceLost() const;
         /**
          * @brief 장치를 잃은 뒤 GPU 가 마지막으로 닿은 브레드크럼 id 들을 읽습니다(`IRHICommandList::writeBreadcrumb` 가 남긴 값). DX12 는 [시작 칸, 끝 칸] 둘, Vulkan 은 파이프라인 단계마다 하나씩이다. 끝 표지는 `GPUBreadcrumbs::kEndMarkerBit` 을 가진다(푸는 일은 `GPUBreadcrumbs::parse`).
          * @param pOutID   id 를 받을 배열입니다. 0 이 아닌 값만 채운다.
@@ -594,6 +602,8 @@ namespace sw
         void refreshGPUMemoryBudget();
 
     protected:
+        /** @brief 이 장치의 전송 시리얼입니다. 장치 손실 표시의 유일한 저장소라 `isDeviceLost` 가 읽는다(백엔드는 멤버 하나를 돌려준다). */
+        [[nodiscard]] virtual const RHITransferSerials& getTransferSerials() const = 0;
         /** @brief 백엔드의 실제 GPU 대기와 해제 큐 비우기입니다. `waitIdle` 이 렌더 스레드를 먼저 비운 뒤, `shutdown` 이 2단계로 부릅니다. */
         virtual void waitIdleInternal() = 0;
         /**

@@ -8,10 +8,12 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
@@ -55,6 +57,8 @@ namespace sw
         , _pFontService{ nullptr }
         , _mainWindowResizeSubscription{}
         , _mainWindowLifecycleSubscription{}
+        , _deviceLostPolicy{ RHIDeviceLostPolicy::None }
+        , _bDeviceLostHandled{ SW_FALSE }
     {
     }
 
@@ -83,6 +87,13 @@ namespace sw
         _pSceneManager  = locateSubsystem<SceneManager>( &_startupScope );
         _pUISystem      = locateSubsystem<UISystem>( &_startupScope );
         _pFontService   = locateSubsystem<FontService>( &_startupScope );
+        // 장치 분실 정책은 짐작하지 않는다 — 값이 없으면 기동을 오류로 끝낸다(폴백 없음).
+        _deviceLostPolicy = engine::getSubsystem<EngineConfig>()._deviceLostPolicy;
+        if ( _deviceLostPolicy == RHIDeviceLostPolicy::None )
+        {
+            SW_LOG_ERROR_ID( "Render.DeviceLostPolicyMissing", "EngineConfig _deviceLostPolicy is not set - add it to Config/Engine/EngineConfig.json (Quit)" );
+            engine::getSubsystem<QuitRequest>().request( ProcessExitCode::InitializationFailed );
+        }
         // 스왑체인은 주 창 크기를 따른다 — RHI 가 섰으면 주 창도 있다(RHI 가 만들어 넘긴 창이거나 호스트가 먼저 넘긴 창).
         const MainWindowSubsystem* const pMainWindow = _pRHI != nullptr ? engine::findSubsystem<MainWindowSubsystem>() : nullptr;
         if ( pMainWindow != nullptr && pMainWindow->getWindow() != nullptr )
@@ -135,6 +146,20 @@ namespace sw
     uint32 EngineRenderDriver::countPendingCaptureJobs( const GameObjectManager* pManager ) const
     {
         return CaptureReadiness::countPendingJobs( pManager );
+    }
+
+    optional<ProcessExitCode> EngineRenderDriver::decideDeviceLostExit( const IRHIDevice& device, const RHIDeviceLostPolicy policy )
+    {
+        if ( device.isDeviceLost() == false )
+            return {};
+        switch ( policy )
+        {
+            case RHIDeviceLostPolicy::Quit:
+                return ProcessExitCode::DeviceLost;
+            case RHIDeviceLostPolicy::None:
+                break;
+        }
+        return ProcessExitCode::InitializationFailed; // 정책이 없으면 기동이 이미 이 코드로 끝내기를 요청했다(`onStartupFinished`)
     }
 
     bool EngineRenderDriver::rebindSceneAfterDeviceRecreate( string* pOutTiming )
@@ -197,6 +222,21 @@ namespace sw
 
     void EngineRenderDriver::submitFrame( const float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider )
     {
+        // 장치를 잃었으면 검은 화면으로 계속 돌지 않는다 — 렌더 스레드가 잃은 프레임을 Present 한 다음 게임 스레드 프레임에서 정책대로 끝낸다.
+        if ( _pRHI != nullptr && _pRHI->hasDevice() && _bDeviceLostHandled == SW_FALSE )
+        {
+            const optional<ProcessExitCode> deviceLostExit = decideDeviceLostExit( _pRHI->getDevice(), _deviceLostPolicy );
+            if ( deviceLostExit.has_value() )
+            {
+                _bDeviceLostHandled = SW_TRUE;
+                SW_LOG_ERROR_ID( "Render.DeviceLostQuit", "The %# device was lost - quitting with exit code %# (EngineConfig _deviceLostPolicy)", RHI::getBackendTypeName( _pRHI->getCommittedBackend() ),
+                                 static_cast<int32>( *deviceLostExit ) );
+                engine::getSubsystem<QuitRequest>().request( *deviceLostExit );
+            }
+        }
+        if ( _bDeviceLostHandled != SW_FALSE )
+            return; // 잃은 장치에 패킷을 더 내지 않는다 — 루프는 이 프레임 뒤 끝난다
+
         if ( _pRHI != nullptr && _pRHI->hasDevice() )
         {
             // 경로로 잡힌 머티리얼(메시의 저장된 참조)의 초기화는 게임 스레드가 한다(프레임당 상한, 패킷 빌더는 `Ready` 가 아닌 배치를 건너뛴다). 머티리얼은 게임 스레드

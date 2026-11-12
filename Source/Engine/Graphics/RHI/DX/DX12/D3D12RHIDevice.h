@@ -195,9 +195,11 @@ namespace sw
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /** @brief `ID3D12Device5::RemoveDevice` 로 장치를 제거합니다. 이후 펜스는 끝난 값(UINT64_MAX)을 돌려주고 호출은 DXGI_ERROR_DEVICE_REMOVED 로 실패한다. */
-        bool   debugRemoveDevice() override;
-        uint32 readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
-        uint32 getValidationMessageCount() const override { return _validationMessageCount.load( std::memory_order_relaxed ); }
+        bool debugRemoveDevice() override;
+        /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
+        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
+        uint32                    readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
+        uint32                    getValidationMessageCount() const override { return _validationMessageCount.load( std::memory_order_relaxed ); }
 
         /** @brief 리소스 생성과 파괴 인터페이스(D3D12RHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;
@@ -753,8 +755,11 @@ namespace sw
          *          손실 뒤에도 `Pending` 으로 남는다. 장치가 없으면 false 입니다.
          */
         bool isDeviceRemoved();
-        /** @brief 장치를 잃었으면 true 입니다(이미 표시했거나 `isDeviceRemoved`). 전송 제출 함수가 진입에서 보고 `Rejected` 를 돌려줍니다(계약 2). */
-        bool isDeviceLost();
+        /**
+         * @brief 장치를 잃었으면 true 입니다(이미 표시했거나 `isDeviceRemoved` — 드라이버에 묻는다). 전송 제출 함수가 진입에서 보고 `Rejected` 를 돌려줍니다(계약 2).
+         * @details 표시만 읽는 공용 질의는 `IRHIDevice::isDeviceLost` 다. 이름을 가른 까닭은 이쪽이 `GetDeviceRemovedReason` 을 부르고 처음 보면 손실을 표시하기 때문이다.
+         */
+        bool pollDeviceLost();
         /** @brief 이 텍스처에 마지막으로 제출한 전송(업로드 또는 읽기 원본)의 시리얼을 기록합니다(bindless 등록 보호와 파괴 지연이 읽는다). */
         void recordTextureTransfer( RHITextureHandle texture, uint64 serial );
         /** @brief 이 텍스처에 마지막으로 제출한 전송의 시리얼입니다. 없으면 0 입니다. */

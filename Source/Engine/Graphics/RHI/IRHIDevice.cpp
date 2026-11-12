@@ -23,6 +23,7 @@
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Window/IRenderSurface.h"
 
@@ -206,6 +207,11 @@ namespace sw
     uint64 IRHIDevice::getGPUIdleWaitCount() const
     {
         return _pDeferredHandleQueue->_gpuIdleWaitCount.load( std::memory_order_relaxed );
+    }
+
+    bool IRHIDevice::isDeviceLost() const
+    {
+        return getTransferSerials().isLost();
     }
 
     bool IRHIDevice::queryNativeHandles( RHIBackend expectedBackend, RHINativeHandles& inoutHandles ) const

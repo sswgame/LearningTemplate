@@ -27,5 +27,6 @@
     "_audioOutput": {
         "_reopenFirstDelayMs": 1000,
         "_reopenMaxDelayMs": 30000
-    }
+    },
+    "_deviceLostPolicy": "Quit"
 }

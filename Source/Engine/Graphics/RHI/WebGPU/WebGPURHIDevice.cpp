@@ -412,7 +412,6 @@ namespace sw
         , _arrFrameFence{}
         , _frameFenceRing{}
         , _bInitialized{ SW_FALSE }
-        , _bDeviceLost{ SW_FALSE }
         , _bTextureFormatsTier1{ SW_FALSE }
         , _bDepth32Stencil8{ SW_FALSE }
         , _bTextureBC{ SW_FALSE }
@@ -1177,7 +1176,7 @@ namespace sw
     void WebGPURHIDevice::beginFrameInternal()
     {
         processCompletions();
-        if ( _bDeviceLost != SW_FALSE )
+        if ( isDeviceLost() )
             return;
         // 앞서가기 상한(`IRHIDevice` 계약): 이 칸을 앞 프레임이 아직 쓰면 그 프레임을 기다린다. 기다리지 않으면 상수 링 · 프레임 완료가 GPU 가 뒤처진 만큼 자란다.
         // 브라우저도 같은 대기다 — 웹 빌드는 ASYNCIFY · JSPI 로 링크해 `wgpuInstanceWaitAny` 가 이벤트 루프에 양보한다(`waitForFuture` 와 같은 길).
@@ -1357,7 +1356,7 @@ namespace sw
         // 폴링으로 둔다: 이 길은 waitIdle(기동 · 종료 · 백엔드 교체 · 창 크기)만 지나고 프레임 경로가 아니다.
         const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( WebGPURHIDeviceInternal::kIdleWaitTimeoutMs ) );
         bool           bTimedOut{ false };
-        while ( _bDeviceLost == SW_FALSE && _frameFenceRing.isIdle() == false )
+        while ( isDeviceLost() == false && _frameFenceRing.isIdle() == false )
         {
             processCompletions();
             if ( deadline.isExpired() )
@@ -1426,7 +1425,6 @@ namespace sw
         if ( reason == WGPUDeviceLostReason_Destroyed || pThis == nullptr )
             return;
         SW_LOG_ERROR_ID( "WebGPU.DeviceLost", "WebGPU device lost (reason %#): %#", static_cast<uint32>( reason ), WebGPURHIUtil::fromStringView( message ) );
-        pThis->_bDeviceLost = SW_TRUE;
         (void)pThis->_transferSerials.markLost();
     }
 } // namespace sw

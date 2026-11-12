@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
@@ -16,13 +17,17 @@
 #include "Engine/Graphics/View/FrameViewports.h"
 #include "Engine/Presentation/IEngineRenderDriver.h"
 
+#include "sw/config/ProcessExitCodes.gen.h"
+
 namespace sw
 {
+    enum class RHIDeviceLostPolicy : uint8;
     enum class WindowLifecycleEvent : uint8;
 
     class FontService;
     class FrameRenderer;
     class FrameRendererSubsystem;
+    class IRHIDevice;
     class RenderPacketBuilder;
     class RenderThreadSubsystem;
     class RHISubsystem;
@@ -52,6 +57,12 @@ namespace sw
         void                        setScenarioCaptureEnabled( bool bEnabled ) override;
         void                        setPresentInterval( uint32 interval ) override;
         [[nodiscard]] uint32        countPendingCaptureJobs( const GameObjectManager* pManager ) const override;
+
+        /**
+         * @brief 장치 분실에 대한 답입니다. 잃지 않았으면 비고, 잃었으면 @p policy 가 고른 종료 코드입니다(`submitFrame` 이 프레임마다 묻는다).
+         * @details 브레드크럼 보고는 손실을 처음 본 백엔드가 이미 했다(`GPUBreadcrumbs::reportDeviceLost`) — 여기서는 루프를 끝낼지만 정한다.
+         */
+        [[nodiscard]] static optional<ProcessExitCode> decideDeviceLostExit( const IRHIDevice& device, RHIDeviceLostPolicy policy );
 
     private:
         /**
@@ -84,6 +95,8 @@ namespace sw
         FontService*            _pFontService;                 ///< 캔버스가 글리프 캐시를 싣는다
         Subscription            _mainWindowResizeSubscription; ///< 주 창 크기 칸의 구독입니다(RHI 가 선 클라이언트만). `onShutdownBegin` 이 창보다 먼저 놓는다
         Subscription            _mainWindowLifecycleSubscription;
+        RHIDeviceLostPolicy     _deviceLostPolicy;       ///< `onStartupFinished` 가 `EngineConfig::_deviceLostPolicy` 에서 읽는다
+        uint8                   _bDeviceLostHandled : 1; ///< 분실을 한 번 처리했다(로그 · 종료 요청을 프레임마다 되풀이하지 않는다)
     };
 
     /**

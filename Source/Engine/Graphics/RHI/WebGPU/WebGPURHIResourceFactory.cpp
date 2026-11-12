@@ -597,7 +597,7 @@ namespace sw
     RHITransferSubmit WebGPURHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
-        if ( pRecord == nullptr || _pDevice->_bDeviceLost != SW_FALSE )
+        if ( pRecord == nullptr || _pDevice->isDeviceLost() )
             return RHITransferSubmit::rejected();
         const RHITextureDesc& textureDesc = pRecord->_desc;
         RHITextureMipSpan     arrSpan[constant::render::kMaxTextureMipCount]{};
@@ -633,7 +633,7 @@ namespace sw
     RHITransferSubmit WebGPURHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
-        if ( pRecord == nullptr || _pDevice->_bDeviceLost != SW_FALSE )
+        if ( pRecord == nullptr || _pDevice->isDeviceLost() )
             return RHITransferSubmit::rejected();
         const RHITextureDesc& textureDesc = pRecord->_desc;
         uint32                rowBytes    = 0;
@@ -660,7 +660,7 @@ namespace sw
     {
         using Internal                     = WebGPURHIResourceFactoryInternal;
         WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
-        if ( pRecord == nullptr || _pDevice->_bDeviceLost != SW_FALSE )
+        if ( pRecord == nullptr || _pDevice->isDeviceLost() )
             return RHITransferSubmit::rejected();
         const RHITextureDesc& textureDesc = pRecord->_desc;
         const bool            bDepth      = Internal::isDepthFormat( pRecord->_wgpuFormat );

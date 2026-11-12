@@ -8,6 +8,7 @@
         "name = ProcessExitCode 열거자(시나리오 결과면 AutomationResult 열거자와 같은 이름), code = 종료 코드, label = 요약 줄 · 보고의 이름.",
         "14 는 없앤 \"미확정\" 결과의 자리라 비워 둔다. 77 은 automake · CTest 의 건너뜀 관례다(이 기계 · 빌드가 그 RHI 백엔드를 못 돌린다).",
         "16 은 -gv_screenshotQuit 의 사진을 쓰지 못한 끝, 17 은 App 초기화 실패다(크래시와 가른다 — 언리얼도 초기화 실패 코드를 따로 낸다).",
+        "18 은 렌더 장치를 잃어 끝낸 것이다(EngineConfig _deviceLostPolicy = Quit — 언리얼 GPU 크래시 종료와 같은 자리).",
         "엔진 · 모듈의 종료 요청(Engine::requestQuit · QuitRequest)은 이 열거형만 받는다. 표에 없는 코드(예외 코드 · 시그널)는 \"crashed\" 로 센다."
     ],
 
@@ -20,6 +21,7 @@
         { "name": "UnhandledLog",    "code": 15, "label": "unhandledLog" },
         { "name": "CaptureWriteFailed",   "code": 16, "label": "captureWriteFailed" },
         { "name": "InitializationFailed", "code": 17, "label": "initializationFailed" },
+        { "name": "DeviceLost",           "code": 18, "label": "deviceLost" },
         { "name": "RHIUnusableHere", "code": 77, "label": "backendUnavailable" }
     ]
 }

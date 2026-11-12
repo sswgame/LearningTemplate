@@ -1319,7 +1319,7 @@ namespace sw
         return true;
     }
 
-    bool D3D12RHIDevice::isDeviceLost()
+    bool D3D12RHIDevice::pollDeviceLost()
     {
         return _transferSerials.isLost() || isDeviceRemoved();
     }
@@ -2312,7 +2312,7 @@ namespace sw
 
         ScopedLock<mutex> submitLock{ _transferSubmitMutex };
         // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다.
-        if ( isDeviceLost() )
+        if ( pollDeviceLost() )
         {
             SW_LOG_ERROR_ID( "D3D12.D3D12DeviceLostWhile", "%#: the D3D12 device was lost while the transfer was recorded; the transfer is rejected", pWhere );
             recycleTransferJob( std::move( job ) );
@@ -2348,7 +2348,7 @@ namespace sw
         if ( _transferFence == nullptr )
             return;
         // 잃은 장치의 펜스는 묻지 않는다: 제거된 장치의 펜스는 끝난 값(UINT64_MAX)을 돌려줘 끝나지 않은 전송이 Complete 로 보인다. 워터마크가 멈추고 남은 티켓은 Failed 다.
-        if ( _device != nullptr && isDeviceLost() == false )
+        if ( _device != nullptr && pollDeviceLost() == false )
         {
             const UINT64 completedFence = _transferFence->GetCompletedValue();
             _transferFenceQueue.retireDone(
