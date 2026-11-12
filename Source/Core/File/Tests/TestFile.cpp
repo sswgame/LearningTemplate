@@ -471,6 +471,27 @@ SW_TEST_CASE( FileTest, ReadOnlyFileIsReported )
 }
 
 /**
+ * @brief [FileTest] 원자적 쓰기는 읽기 전용 파일을 바꿔 끼우지 않는다 — false 이고 내용 · 속성이 그대로다(POSIX `rename` 은 대상 권한을 보지 않아 잠금이 뚫렸다)
+ */
+SW_TEST_CASE( FileTest, WriteRefusesAReadOnlyFile )
+{
+    SW_EXPECT_LOG( "File.WriteReadOnly" );
+    const sw::string filePath = sw::test::makeScratchPath( "locked.txt" );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( filePath, "kept" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( filePath, false ) );
+
+    SW_EXPECT_FALSE( sw::FileUtil::writeTextFile( filePath, "overwritten" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isReadOnlyFile( filePath ) );
+    sw::string text;
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( filePath, text ) );
+    SW_EXPECT_EQUAL( text, sw::string( "kept" ) );
+
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( filePath, true ) ); // 케이스 폴더 정리가 Windows 에서 읽기 전용 파일을 지우지 못한다
+    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath, "overwritten" ) );
+}
+
+/**
  * @brief [FileTest] 순회 콜백은 루트로 시작하는 `/` 경로와 디렉터리 여부를 주고, false 를 돌려주면 멈춘다
  */
 SW_TEST_CASE( FileTest, DirectoryVisitorReportsEntriesAndStops )

@@ -365,12 +365,8 @@
 		       text="프리셋 파일을 쓰지 못했습니다"
 		       sourceHash="18f898bdd9f97186" />
 		<entry key="EdCommon.NotifySaveFailed" text="저장하지 못했습니다" sourceHash="61de646c0ea33e4d" />
-		<entry key="EdCommon.NotifySaveTitle" text="저장" sourceHash="33f85f24c0f5f008" />
 		<entry key="EdCommon.NotifySaved" text="저장했습니다" sourceHash="44fa1773e1e78784" />
 		<entry key="EdCommon.NotifySceneOpenFailed" text="씬을 열지 못했습니다" sourceHash="7a20093ff8131340" />
-		<entry key="EdCommon.NotifySceneReadOnly"
-		       text="씬 파일이 읽기 전용입니다. 먼저 콘텐츠 브라우저에서 Check Out(잠금)하십시오."
-		       sourceHash="08bb20d11ff115fc" />
 		<entry key="EdCommon.NotifySceneTitle" text="씬" sourceHash="4a9a31623ab5f213" />
 		<entry key="EdCommon.NotifyScreenshotFailed"
 		       text="스크린샷을 쓰지 못했습니다(로그를 확인하십시오)"

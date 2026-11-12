@@ -1114,23 +1114,12 @@
 				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdCommon.NotifySaveTitle" source="Save">
-			<origins>
-				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdCommon.NotifySaved" source="Saved">
 			<origins>
 				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifySceneOpenFailed" source="Failed to open the scene">
-			<origins>
-				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdCommon.NotifySceneReadOnly"
-		       source="The scene file is read-only. Check it out (lock it) in the Content Browser first.">
 			<origins>
 				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
 			</origins>
