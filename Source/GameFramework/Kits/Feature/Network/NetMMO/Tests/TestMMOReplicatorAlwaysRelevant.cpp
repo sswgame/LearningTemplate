@@ -18,9 +18,10 @@ namespace
     struct MMOReplicatorAlwaysRelevantTestInternal
     {
         static constexpr int32  kClientCount = 2;
-        static constexpr uint32 kGlobalID    = 9000; ///< 모든 관찰자에게 보이는 후보
-        static constexpr uint32 kPartyID     = 9001; ///< 연결 0 에게만 보이는 후보(파티원)
-        static constexpr uint32 kFillerCount = 5000; ///< 반경 밖의 일반 엔티티. 옛 구현은 관찰자마다 이것까지 정책에 물었다
+        static constexpr uint32 kGlobalID    = 9000;  ///< 모든 관찰자에게 보이는 후보
+        static constexpr uint32 kPartyID     = 9001;  ///< 연결 0 에게만 보이는 후보(파티원)
+        static constexpr uint32 kFillerCount = 5000;  ///< 반경 밖의 일반 엔티티. 옛 구현은 관찰자마다 이것까지 정책에 물었다
+        static constexpr uint32 kFillerBase  = 10000; ///< 일반 엔티티 id 시작 — 관찰자(1000 · 1001) · 후보 id 와 겹치면 setEntity 가 관찰자를 일반 엔티티 자리로 옮긴다
 
         /** @brief 파티원은 연결 0 에게만 보이게 하고 호출 수를 셉니다. 작업 스레드를 주지 않으므로 한 스레드에서만 불린다. */
         class CountingPartyPolicy : public IInterestPolicy
@@ -101,7 +102,7 @@ SW_TEST_CASE( MMOReplicatorAlwaysRelevantTest, AlwaysRelevantCandidatesAreAskedW
     server.setEntity( Internal::makeEntity( Internal::kPartyID, float3{ -9000.0f, 0.0f, 0.0f }, true ) );
     for ( uint32 index = 0; index < Internal::kFillerCount; ++index )
     {
-        server.setEntity( Internal::makeEntity( index, float3{ 20000.0f + static_cast<float32>( index % 100 ) * 10.0f, 0.0f, static_cast<float32>( index / 100 ) * 10.0f }, false ) );
+        server.setEntity( Internal::makeEntity( Internal::kFillerBase + index, float3{ 20000.0f + static_cast<float32>( index % 100 ) * 10.0f, 0.0f, static_cast<float32>( index / 100 ) * 10.0f }, false ) );
     }
     server.setObserver( 0, 1000 );
     server.setObserver( 1, 1001 );
