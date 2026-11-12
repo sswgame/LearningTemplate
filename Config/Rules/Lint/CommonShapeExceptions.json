@@ -77,13 +77,6 @@
         "Source/GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.cpp": "저장 상태의 노드 id 해시다 — 만들기(populateNodes)가 NameHashIndex 로 같은 해시의 두 id 를 거절해 회로 안에서는 하나로 정해진다",
         "Source/Editor/Panels/Inspector/Model/PropertyGridModel.cpp": "인스펙터 행 높이 기억 키다 — 겹치면 한 행의 높이 추정이 섞일 뿐 데이터는 바뀌지 않는다"
     },
-    "editorPointerMove": {
-        "Source/Editor/SelfTest/EditorSelfTestInput.cpp|EditorSelfTestInput::pressAtMark": "입구 자신이다 — 판정이 Reachable 일 때만 옮겨 누른다",
-        "Source/Editor/SelfTest/EditorSelfTestInput.cpp|EditorSelfTestInput::releaseAtMark": "입구 자신이다 — 누른 뒤 놓는 자리로 옮긴다(판정은 누를 때 했다)",
-        "Source/Editor/SelfTest/EditorSelfTestInput.cpp|EditorSelfTestInput::parkMouse": "포인터를 화면 밖으로 치운다 — 레이블을 누르지 않는다",
-        "Source/Editor/SelfTest/EditorScenarioSteps.cpp|runDrag": "EditorDrag 의 끌기 경로(시작 · 중간 · 끝 점)다 — 누름은 reportUnreachableMark · pressAtMark 가 판정한 뒤다",
-        "Source/Editor/SelfTest/EditorSelfTestDevTools.cpp|runGizmoMovesTheSelection": "기즈모 끌기 자체 테스트의 끌기 경로(중간 · 끝 점)다 — 누름은 sceneView.gizmoCenter 를 aimAtMark · pressAtMark 로 판정한 뒤다"
-    },
     "typeChainWalk": {
         "Source/Engine/Reflection/TypeInfo.cpp": "기반 자신이다(getTypeChain — 사슬을 손으로 따라가는 유일한 자리)"
     }

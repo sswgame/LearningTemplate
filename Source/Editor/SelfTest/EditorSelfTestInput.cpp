@@ -97,8 +97,19 @@ namespace sw::editor
                 string               _scrollIntoViewKey;              ///< 다음에 기록할 때 잘려 있으면 그린 창을 스크롤해 보이게 할 레이블(`requestScrollIntoView`)
                 float2               _heldMousePosition{};
                 uint32               _heldMouseViewportID{ 0 };
+                float2               _aimPoint{}; ///< 마지막으로 `Reachable` 로 판정한 점(`moveByOffsetFromAim` 의 기준)
+                uint32               _aimViewportID{ 0 };
+                bool                 _bAimed{ false };      ///< `_aimPoint` 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 bool                 _bHoldMouse{ false };  ///< 누른 채 두는 동안 프레임마다 커서를 이 위치로 다시 넣는다(플랫폼이 실제 커서를 넣어 호버가 풀리지 않게) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 bool                 _bEnabled{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+
+                /** @brief 닿는다고 판정한 점을 끌기 기준(`EditorSelfTestInput::moveByOffsetFromAim`)으로 남깁니다. */
+                void rememberAim( const float2& point, uint32 viewportID )
+                {
+                    _aimPoint      = point;
+                    _aimViewportID = viewportID;
+                    _bAimed        = true;
+                }
             };
 
             /**
@@ -402,6 +413,7 @@ namespace sw::editor
             pState->_listMark.clear();
             pState->_listEvent.clear();
             pState->_bHoldMouse = false;
+            pState->_bAimed     = false;
         }
         return true;
     }
@@ -519,20 +531,25 @@ namespace sw::editor
         pState->_heldMousePosition   = Internal::computeAimPoint( mark, anchor );
         pState->_heldMouseViewportID = mark._viewportID;
         pState->_bHoldMouse          = true;
-        return Internal::evaluateMarkHit( *pState, mark, anchor, outCoverName );
+
+        const EditorMarkHit hit = Internal::evaluateMarkHit( *pState, mark, anchor, outCoverName );
+        if ( hit == EditorMarkHit::Reachable )
+            pState->rememberAim( Internal::computeAimPoint( mark, anchor ), mark._viewportID );
+        return hit;
     }
 
     EditorMarkHit EditorSelfTestInput::pressAtMark( string_view key, const float2& anchor, int32 button, string& outCoverName )
     {
         using Internal = EditorSelfTestInputInternal;
-        EditorSelfTestMark     mark;
-        const Internal::State* pState = Internal::findState();
+        EditorSelfTestMark mark;
+        Internal::State*   pState = Internal::findState();
         if ( pState == nullptr || EditorSelfTestMarks::find( key, mark ) == false )
             return EditorMarkHit::Missing;
         const EditorMarkHit hit = Internal::evaluateMarkHit( *pState, mark, anchor, outCoverName );
         if ( hit != EditorMarkHit::Reachable )
             return hit;
-        moveMouse( Internal::computeAimPoint( mark, anchor ), mark._viewportID );
+        pState->rememberAim( Internal::computeAimPoint( mark, anchor ), mark._viewportID );
+        moveMouse( pState->_aimPoint, pState->_aimViewportID );
         setMouseButton( button, true );
         return hit;
     }
@@ -547,8 +564,20 @@ namespace sw::editor
         return bDrawn;
     }
 
+    bool EditorSelfTestInput::moveByOffsetFromAim( const float2& offset )
+    {
+        const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
+        if ( pState == nullptr || pState->_bAimed == false )
+            return false;
+        moveMouse( float2{ pState->_aimPoint._x + offset._x, pState->_aimPoint._y + offset._y }, pState->_aimViewportID );
+        return true;
+    }
+
     void EditorSelfTestInput::parkMouse()
     {
+        EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
+        if ( pState != nullptr )
+            pState->_bAimed = false;
         releaseMouseHold();
         moveMouse( float2{ EditorSelfTestInputInternal::kParkedMouseCoordinate, EditorSelfTestInputInternal::kParkedMouseCoordinate } );
     }

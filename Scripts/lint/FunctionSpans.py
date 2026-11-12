@@ -3,8 +3,8 @@
 """
 Scripts/lint/FunctionSpans.py
 
-C++ 글에서 함수 정의와 람다의 본문 범위를 찾아 이름을 붙이는 공용 도우미다. 예외 표를 `경로|함수` 열쇠로 두는 규칙(common-shapes 의 `assetEntrance` ·
-`editorPointerMove`, frame-intern)이 모두 이것으로 "이 자리를 담은 함수" 를 정한다 — 규칙마다 정의 줄 패턴을 따로 두다 보니 한쪽만 고친 근사가 갈렸다.
+C++ 글에서 함수 정의와 람다의 본문 범위를 찾아 이름을 붙이는 공용 도우미다. 예외 표를 `경로|함수` 열쇠로 두는 규칙(common-shapes 의 `assetEntrance`,
+frame-intern)이 모두 이것으로 "이 자리를 담은 함수" 를 정한다 — 규칙마다 정의 줄 패턴을 따로 두다 보니 한쪽만 고친 근사가 갈렸다.
 
 - 함수: 반환 형식 · 이름 · 인자 · `{` 꼴의 정의(`형식::함수` 는 적힌 그대로). 제어문(`else if` 등)은 함수가 아니다. 생성자(반환 형식 없음)는 보지 않는다.
 - 람다: `[캡처]( 인자 ) {` · `[캡처] {` 를 담은 함수(또는 람다) 이름 + `#lambda<순번>`(담은 것 안에서 나온 차례, 1 부터) — 예외 함수 안에 새 람다가 생기면
@@ -77,17 +77,6 @@ def findFunctionSpans(code: str) -> list[FunctionSpan]:
     return listSpan
 
 
-def findEnclosingName(listSpan: list[FunctionSpan], index: int) -> str:
-    """@p index 를 담은 가장 안쪽 함수 · 람다의 이름이다. 없으면 `?`."""
-    name = kUnknown
-    for span in listSpan:
-        if span.openIndex > index:
-            break
-        if index < span.closeIndex:
-            name = span.name
-    return name
-
-
 def runSelfCheck() -> None:
     code = (
         "bool A::loadFromAsset( const AssetID& id )\n{\n    if ( x )\n    {\n        call();\n    }\n"
@@ -97,12 +86,7 @@ def runSelfCheck() -> None:
     )
     listSpan = findFunctionSpans(code)
     names = [span.name for span in listSpan]
-    assert names == ["A::loadFromAsset", "A::loadFromAsset#lambda1", "A::loadFromAsset#lambda2", "evaluate", "evaluate#lambda1", "evaluate#lambda1#lambda1"], names
-    assert findEnclosingName(listSpan, code.index("call()")) == "A::loadFromAsset", "제어문 블록은 함수가 아니다"
-    assert findEnclosingName(listSpan, code.index("use( v )")) == "A::loadFromAsset#lambda1"
-    assert findEnclosingName(listSpan, code.index("other()")) == "A::loadFromAsset#lambda2", "새 람다는 다른 열쇠다"
-    assert findEnclosingName(listSpan, code.index("deep()")) == "evaluate#lambda1#lambda1"
-    assert findEnclosingName(listSpan, code.index("arr[2]")) == kUnknown, "배열 초기화는 람다가 아니다"
+    assert names == ["A::loadFromAsset", "A::loadFromAsset#lambda1", "A::loadFromAsset#lambda2", "evaluate", "evaluate#lambda1", "evaluate#lambda1#lambda1"], names   # 제어문 블록 · 배열 초기화는 함수 · 람다가 아니다
 
 
 def main(argv: Sequence[str] | None = None) -> int:

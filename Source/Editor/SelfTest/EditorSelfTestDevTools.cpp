@@ -319,8 +319,6 @@ namespace sw::editor
             {
                 GizmoProbe()
                     : _objectID{ 0 }
-                    , _pressAt{}
-                    , _viewportID{ 0 }
                     , _aimSteps{ 0 }
                     , _startPosition{}
                     , _bWasOver{ SW_FALSE }
@@ -383,16 +381,13 @@ namespace sw::editor
                             ++probe._aimSteps; // 같은 단계에 머문다(단계 번호에서 뺀다)
                             return EditorSelfTestStep::Continue;
                         }
-                        EditorSelfTestMark center{};
-                        const bool         bAimed = hit == EditorMarkHit::Reachable && EditorSelfTestMarks::find( kGizmoCenterMark, center );
-                        const string       what   = hit == EditorMarkHit::Covered ? "the gizmo center is covered by window '" + coverName + "'" : string{ "the gizmo center was not drawn or never settled under the pointer" };
+                        const bool   bAimed = hit == EditorMarkHit::Reachable;
+                        const string what   = hit == EditorMarkHit::Covered ? "the gizmo center is covered by window '" + coverName + "'" : string{ "the gizmo center was not drawn or never settled under the pointer" };
                         if ( context.expect( bAimed, what.c_str() ) == false )
                         {
                             probe.finishGizmo( pManager );
                             return EditorSelfTestStep::Done;
                         }
-                        probe._pressAt    = float2{ ( center._min._x + center._max._x ) * 0.5f, ( center._min._y + center._max._y ) * 0.5f };
-                        probe._viewportID = center._viewportID;
                         return EditorSelfTestStep::Continue;
                     }
                     if ( stepIndex == 2 )
@@ -412,12 +407,12 @@ namespace sw::editor
                     if ( stepIndex < 3 + kDragStepCount )
                     {
                         const float32 offset = kDragPixel * static_cast<float32>( stepIndex - 2 ) / static_cast<float32>( kDragStepCount );
-                        EditorSelfTestInput::moveMouse( float2{ probe._pressAt._x + offset, probe._pressAt._y }, probe._viewportID );
+                        (void)EditorSelfTestInput::moveByOffsetFromAim( float2{ offset, 0.0f } ); // 위에서 누른 점(Reachable)에서 잰다
                         return EditorSelfTestStep::Continue;
                     }
                     if ( stepIndex == 3 + kDragStepCount )
                     {
-                        EditorSelfTestInput::moveMouse( float2{ probe._pressAt._x + kDragPixel, probe._pressAt._y }, probe._viewportID );
+                        (void)EditorSelfTestInput::moveByOffsetFromAim( float2{ kDragPixel, 0.0f } );
                         EditorSelfTestInput::setMouseButton( ImGuiMouseButton_Left, false );
                         return EditorSelfTestStep::Continue;
                     }
@@ -433,9 +428,7 @@ namespace sw::editor
 
             private:
                 uint64 _objectID;
-                float2 _pressAt;
-                uint32 _viewportID; ///< 씬 뷰 캔버스의 뷰포트. 마우스를 움직일 때마다 함께 알린다. 플랫폼이 실제 커서의 뷰포트를 넣기 때문이다
-                uint32 _aimSteps;   ///< 기즈모 가운데 조준에 쓴 프레임 수 — 단계 번호에서 빼 같은 단계에 머문다
+                uint32 _aimSteps; ///< 기즈모 가운데 조준에 쓴 프레임 수 — 단계 번호에서 빼 같은 단계에 머문다
                 float3 _startPosition;
                 uint8  _bWasOver  : 1;
                 uint8  _bWasUsing : 1;
