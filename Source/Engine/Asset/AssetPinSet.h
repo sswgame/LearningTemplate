@@ -3,8 +3,9 @@
  * @brief 미리 읽은 에셋을 붙드는 고정 세트입니다. 메모리 예산을 넘으면 오래 안 쓴 것부터 놓습니다(LRU).
  */
 #pragma once
+#include "Core/Container/list.h"
 #include "Core/Container/string.h"
-#include "Core/Container/vector.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -18,6 +19,7 @@ namespace sw
      * @details 캐시가 약한 참조인 종류(메시 · 프리팹)는 미리 읽은 에셋이 쓰기 전에 사라질 수 있다 — 세트가 토큰을 쥐는 동안 남는다.
      *          비용은 부르는 쪽이 정한다(프리로드 세트는 읽은 파일 바이트 수). 더해서 예산을 넘으면 마지막으로 쓴(`add` · `touch`) 때가 가장 오래된 것부터 놓고,
      *          혼자 예산보다 큰 것은 붙들지 않는다(false — 나머지를 모두 밀어내지 않게). 한 스레드(게임 스레드)에서만 씁니다.
+     *          항목은 쓴 순서 목록(앞이 가장 오래 안 씀)에 두고 경로 → 목록 위치 맵으로 찾는다 — 넣기 · 쓰기 · 놓기가 해시 조회 하나다(언리얼 텍스처 스트리밍 풀 · 유니티 Addressables 의 캐시도 키 조회 + LRU 목록).
      */
     class SW_API AssetPinSet
     {
@@ -43,7 +45,7 @@ namespace sw
         /** @brief 그 경로를 붙들고 있으면 true 입니다. */
         bool contains( string_view path ) const;
         /** @brief 붙든 경로 수입니다. */
-        size_t getCount() const { return _listEntry.size(); }
+        size_t getCount() const { return _listEntryByUse.size(); }
         /** @brief 붙든 비용의 합입니다. */
         uint64 getPinnedBytes() const { return _pinnedBytes; }
         /** @brief 예산입니다. */
@@ -55,18 +57,18 @@ namespace sw
             string                 _path;
             shared_ptr<const void> _pin;
             uint64                 _costBytes{ 0 };
-            uint64                 _lastUse{ 0 }; ///< `_useClock` 의 값 — 작을수록 오래 안 썼다
         };
+        using EntryList = list<Entry>;
 
-        /** @brief 경로의 항목 번호입니다. 없으면 비어 있습니다. */
-        [[nodiscard]] optional<size_t> findIndex( string_view path ) const;
-        /** @brief 합이 예산 안에 들 때까지 가장 오래 안 쓴 것부터 놓습니다. @p keepIndex 는 놓지 않습니다(방금 넣은 것). */
-        void evictOverBudget( size_t keepIndex );
+        /** @brief @p entry 를 가장 최근에 쓴 것으로 옮깁니다(목록 끝). */
+        void markUsed( EntryList::iterator entry );
+        /** @brief 합이 예산 안에 들 때까지 가장 오래 안 쓴 것(목록 앞)부터 놓습니다. 방금 넣은 것은 끝에 있고 혼자 예산 안이라 놓이지 않습니다. */
+        void evictOverBudget();
 
     private:
-        vector<Entry> _listEntry;
-        uint64        _budgetBytes;
-        uint64        _pinnedBytes;
-        uint64        _useClock;
+        EntryList                                  _listEntryByUse; ///< 쓴 순서(앞이 가장 오래 안 씀)
+        unordered_map<string, EntryList::iterator> _mapPathToEntry; ///< 정규화한 경로 → 목록 위치
+        uint64                                     _budgetBytes;
+        uint64                                     _pinnedBytes;
     };
 } // namespace sw

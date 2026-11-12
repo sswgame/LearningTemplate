@@ -8,10 +8,10 @@
 namespace sw
 {
     AssetPinSet::AssetPinSet( uint64 budgetBytes )
-        : _listEntry{}
+        : _listEntryByUse{}
+        , _mapPathToEntry{}
         , _budgetBytes{ budgetBytes }
         , _pinnedBytes{ 0 }
-        , _useClock{ 0 }
     {
     }
 
@@ -21,10 +21,11 @@ namespace sw
     {
         if ( pin == nullptr )
             return false;
-        const optional<size_t> existing = findIndex( path );
-        if ( existing.has_value() )
+        string     key      = FileUtil::normalizePath( path );
+        const auto existing = _mapPathToEntry.find( key );
+        if ( existing != _mapPathToEntry.end() )
         {
-            _listEntry[*existing]._lastUse = ++_useClock;
+            markUsed( existing->second );
             return true;
         }
         if ( costBytes > _budgetBytes )
@@ -33,73 +34,61 @@ namespace sw
             return false;
         }
         Entry entry{};
-        entry._path      = FileUtil::normalizePath( path );
+        entry._path      = key;
         entry._pin       = std::move( pin );
         entry._costBytes = costBytes;
-        entry._lastUse   = ++_useClock;
-        _listEntry.push_back( std::move( entry ) );
+        _listEntryByUse.push_back( std::move( entry ) );
+        _mapPathToEntry.emplace( std::move( key ), std::prev( _listEntryByUse.end() ) );
         _pinnedBytes += costBytes;
-        evictOverBudget( _listEntry.size() - 1 );
+        evictOverBudget();
         return true;
     }
 
     void AssetPinSet::touch( string_view path )
     {
-        const optional<size_t> index = findIndex( path );
-        if ( index.has_value() )
-            _listEntry[*index]._lastUse = ++_useClock;
+        const auto found = _mapPathToEntry.find( FileUtil::normalizePath( path ) );
+        if ( found != _mapPathToEntry.end() )
+            markUsed( found->second );
     }
 
     bool AssetPinSet::remove( string_view path )
     {
-        const optional<size_t> index = findIndex( path );
-        if ( index.has_value() == false )
+        const auto found = _mapPathToEntry.find( FileUtil::normalizePath( path ) );
+        if ( found == _mapPathToEntry.end() )
             return false;
-        _pinnedBytes -= _listEntry[*index]._costBytes;
-        _listEntry.erase( _listEntry.begin() + static_cast<ptrdiff_t>( *index ) );
+        _pinnedBytes -= found->second->_costBytes;
+        _listEntryByUse.erase( found->second );
+        _mapPathToEntry.erase( found );
         return true;
     }
 
     void AssetPinSet::clear()
     {
-        _listEntry.clear();
+        _mapPathToEntry.clear();
+        _listEntryByUse.clear();
         _pinnedBytes = 0;
     }
 
     bool AssetPinSet::contains( string_view path ) const
     {
-        return findIndex( path ).has_value();
+        return _mapPathToEntry.find( FileUtil::normalizePath( path ) ) != _mapPathToEntry.end();
     }
 
-    optional<size_t> AssetPinSet::findIndex( string_view path ) const
+    void AssetPinSet::markUsed( EntryList::iterator entry )
     {
-        const string key = FileUtil::normalizePath( path );
-        for ( size_t index = 0; index < _listEntry.size(); ++index )
-        {
-            if ( _listEntry[index]._path == key )
-                return index;
-        }
-        return nullopt;
+        _listEntryByUse.splice( _listEntryByUse.end(), _listEntryByUse, entry );
     }
 
-    void AssetPinSet::evictOverBudget( size_t keepIndex )
+    void AssetPinSet::evictOverBudget()
     {
-        const string keepPath = _listEntry[keepIndex]._path;
         while ( _pinnedBytes > _budgetBytes )
         {
-            size_t oldest = _listEntry.size();
-            for ( size_t index = 0; index < _listEntry.size(); ++index )
-            {
-                if ( _listEntry[index]._path == keepPath )
-                    continue;
-                const bool bOlder = oldest == _listEntry.size() || _listEntry[index]._lastUse < _listEntry[oldest]._lastUse;
-                if ( bOlder )
-                    oldest = index;
-            }
-            // 넣은 것 혼자서는 예산 안이다(`add` 가 거른다) — 남은 것이 있으면 반드시 놓을 것이 있다.
-            SW_ASSERT( oldest < _listEntry.size() );
-            _pinnedBytes -= _listEntry[oldest]._costBytes;
-            _listEntry.erase( _listEntry.begin() + static_cast<ptrdiff_t>( oldest ) );
+            // 방금 넣은 것(끝) 혼자서는 예산 안이다(`add` 가 거른다) — 넘쳤으면 그 앞에 놓을 것이 반드시 있다.
+            SW_ASSERT( _listEntryByUse.size() > 1 );
+            const Entry& oldest = _listEntryByUse.front();
+            _pinnedBytes -= oldest._costBytes;
+            _mapPathToEntry.erase( oldest._path );
+            _listEntryByUse.erase( _listEntryByUse.begin() );
         }
     }
 } // namespace sw
