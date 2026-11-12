@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from lint.LintScope import LintScope, listRepoFiles, makeWholeScope, readTexts  # noqa: E402
-from lint.NamePathArguments import blankCommentsAndStrings  # noqa: E402
+from lint.CppText import blankCommentsAndStrings  # noqa: E402
 
 kInt = r"(?:const\s+)?(?:sw::)?(?:u?int(?:8|16|32|64)|size_t|usize|isize|int)"
 kOptionalType = r"(?:sw::)?(?:optional|expected)\s*<\s*" + kInt + r"\s*(?:,[^<>;]*(?:<[^<>;]*>)?[^<>;]*)?>"

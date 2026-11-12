@@ -201,11 +201,10 @@ namespace sw
                 return true;
             }
 
-            // 빈 이름은 빈 글이다 — 표시 철자 "None" 을 쓰면 글을 직접 읽는 쪽(`_base` · `_parentEvent`)이 그것을 이름으로 본다.
+            // 빈 이름은 빈 글이다(`view()`) — 표시 글 "None"(`toString`)을 쓰면 글을 직접 읽는 쪽(`_base` · `_parentEvent`)이 그것을 이름으로 본다.
             static string writeHashedStringText( const void* pPtr )
             {
-                const hashed_string& name = *static_cast<const hashed_string*>( pPtr );
-                return name.empty() ? string{} : string( name.c_str() );
+                return string( static_cast<const hashed_string*>( pPtr )->view() );
             }
 
             [[nodiscard]] static bool readHashedStringText( void* pPtr, string_view strView )

@@ -48,9 +48,9 @@ namespace sw
             pUnit->setAnimateWhenOffscreen( true );
             const bool bInterior = slot == 1 && interiorMaterialPath.empty() == false;
             if ( bInterior )
-                pUnit->setMaterialPath( interiorMaterialPath.viewOrEmpty() );
+                pUnit->setMaterialPath( interiorMaterialPath.view() );
             else if ( pIntact != nullptr && pIntact->getMaterialPath().empty() == false )
-                pUnit->setMaterialPath( pIntact->getMaterialPath().viewOrEmpty() );
+                pUnit->setMaterialPath( pIntact->getMaterialPath().view() );
             else if ( pIntact != nullptr )
                 pUnit->setMaterial( pIntact->getMaterial() );
             _arrSkinnedUnit[slot] = TComponentHandle<SkeletalMeshComponent>{ pUnit };
@@ -93,7 +93,7 @@ namespace sw
                 if ( pBaked == nullptr )
                     continue;
                 if ( pSkinned->getMaterialPath().empty() == false )
-                    pBaked->setMaterialPath( pSkinned->getMaterialPath().viewOrEmpty() );
+                    pBaked->setMaterialPath( pSkinned->getMaterialPath().view() );
                 else
                     pBaked->setMaterial( pSkinned->getMaterial() );
                 _arrBakedUnit[slot] = TComponentHandle<MeshComponent>{ pBaked };

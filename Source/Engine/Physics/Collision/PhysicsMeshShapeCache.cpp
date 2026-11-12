@@ -48,7 +48,7 @@ namespace sw
             }
 
             /** @brief 표의 키입니다. 리소스 id 는 소문자로 찾으므로(`normalizePath`) 다른 철자도 같은 칸에 닿습니다. */
-            static string makeKey( string_view path ) { return FileUtil::normalizePath( path ); }
+            static string makeKey( string_view path ) { return FileUtil::normalizePath( path ).str(); }
         };
     } // namespace
 } // namespace sw

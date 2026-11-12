@@ -135,7 +135,7 @@ namespace sw::editor
                 EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
                 if ( listArgument.size() != 1 || pPanels == nullptr )
                     return false;
-                const optional<AbsolutePath> folderPath = EditorPaths::getAssetPaths().findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
+                const optional<AbsolutePath> folderPath = EditorPaths::getAssetPaths().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
                 const string                 folderAbs  = folderPath.has_value() ? folderPath->str() : string{};
                 if ( FileUtil::isDirectory( folderAbs ) == false || pPanels->setPanelOpen<ContentBrowserPanel>( true ) == false )
                     return false;

@@ -432,7 +432,7 @@ namespace sw
                 {
                     for ( const string& root : _files._listCodeRoot )
                     {
-                        resolve( FileUtil::normalizePath( root ), "SW_ASSET_COOK_ROOT", root, CatalogReach::Whole );
+                        resolve( FileUtil::normalizePath( root ).str(), "SW_ASSET_COOK_ROOT", root, CatalogReach::Whole );
                     }
                     return static_cast<uint32>( _files._listCodeRoot.size() );
                 }
@@ -443,7 +443,7 @@ namespace sw
                     uint32 rootCount = 0;
                     for ( const string& gameDomain : _files._listGameDomain )
                     {
-                        const string settingsID = FileUtil::normalizePath( gameDomain + "/" + _rules._gameSettingsPath );
+                        const string settingsID = FileUtil::normalizePath( gameDomain + "/" + _rules._gameSettingsPath ).str();
                         if ( _files._setPackable.contains( settingsID ) == false )
                         {
                             SW_LOG_ERROR_ID( "PackReachability.GameSettingsMissing", "Pack cook: game pack %# has no game settings '%#' - its start map and required data cannot be found", gameDomain, settingsID );
@@ -486,7 +486,7 @@ namespace sw
                     {
                         if ( StringUtil::equals( entry._kind, kind ) == false )
                             continue;
-                        const string path = FileUtil::normalizePath( FileUtil::trimTrailingSlashes( FileUtil::joinPath( pack, entry._path ) ) );
+                        const string path = FileUtil::normalizePath( FileUtil::trimTrailingSlashes( FileUtil::joinPath( pack, entry._path ) ) ).str();
                         resolve( path, settingsID, kRequiredDataElement, CatalogReach::Named ); // 데이터를 읽는다는 뜻일 뿐이다 - 어느 항목을 쓰는지는 id 칸이 말한다
                         return 1;
                     }
@@ -503,7 +503,7 @@ namespace sw
                     AssetCompanionRegistry::appendCompanionPaths( assetID, listCompanion );
                     for ( const string& companion : listCompanion )
                     {
-                        const string normalized = FileUtil::normalizePath( companion );
+                        const string normalized = FileUtil::normalizePath( companion ).str();
                         if ( _files._setPackable.contains( normalized ) )
                             include( normalized, CatalogReach::Whole ); // 곁 파일은 선택 파일이다 — 없으면 넘어간다
                     }
@@ -572,7 +572,7 @@ namespace sw
         _mapShaderStem.clear();
         for ( const PackDomainSources& sources : listSources )
         {
-            const string domain = FileUtil::normalizePath( sources._domain );
+            const string domain = FileUtil::normalizePath( sources._domain ).str();
             for ( const string& assetID : sources._listExistingID )
             {
                 const bool bUsed     = reach._setIncluded.contains( assetID ) || reach._setReferencedExcluded.contains( assetID );
@@ -589,10 +589,10 @@ namespace sw
 
     bool PackStagedSelection::isSelected( string_view domain, string_view relativePath ) const
     {
-        const string assetID = FileUtil::normalizePath( FileUtil::joinPath( domain, relativePath ) );
+        const string assetID = FileUtil::normalizePath( FileUtil::joinPath( domain, relativePath ) ).str();
         if ( StringUtil::contains( assetID, "/shaders/bin/" ) )
         {
-            const string      normalizedDomain = FileUtil::normalizePath( domain );
+            const string      normalizedDomain = FileUtil::normalizePath( domain ).str();
             const string_view fileName         = PackReachabilityInternal::getFileName( assetID );
             // 가장 긴 줄기부터 - `post_bloom_ps` 는 `post` 가 아니라 `post_bloom` 의 것이다.
             for ( size_t underscore = fileName.rfind( '_' ); underscore != string_view::npos && underscore > 0; underscore = fileName.rfind( '_', underscore - 1 ) )

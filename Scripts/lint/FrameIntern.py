@@ -7,6 +7,8 @@ Scripts/lint/FrameIntern.py
 
 **왜 린트인가.** 리터럴에서 이름을 만드는 일은 형식이 막지 못한다(암시적 변환까지 허용되는 정상 코드다). 그런데 프레임마다 돌면
 글자 → FNV → 샤드 뮤텍스를 지나고, 틱은 워커라 경합한다. 함수 안 `static const hashed_string` 이나 데이터 칸으로 옮기면 한 번이다.
+형식 대안(자리마다 한 번 만드는 리터럴 — C++20 고정 문자열 템플릿 인자, 또는 C++17 의 Godot `SNAME` 같은 매크로 + 람다 정적)은 2026-11-12 검토에서 미뤘다:
+표준이 C++17(`SW_CPP_STANDARD`)이고, 리터럴 암시적 생성자를 지우면 깨지는 암시적 호출 자리(명시 2572 곳 밖)는 컴파일러로만 찾을 수 있으며, 자리 정적은 이름 풀 재시작(`NamePoolSubsystem`) 뒤 옛 번호를 든다.
 예외는 `Config/Rules/Lint/FrameInternExceptions.json` 에 `경로::함수` 와 까닭을 적는다.
 
 `py -3 -m Scripts lint frame-intern [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다.

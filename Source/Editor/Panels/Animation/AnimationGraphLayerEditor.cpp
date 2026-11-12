@@ -271,8 +271,7 @@ namespace sw::editor
             pInoutEdit = "Edit Animation Layer";
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerWeightTip" ) );
         AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "WeightParam" ) );
-        // 빈 hashed_string 의 c_str 는 "None" 이다 — 그대로 보이면 그 글이 파라미터 이름으로 저장된다.
-        if ( drawCommittedText( "##layerWeightParam", inoutLayer._weightParameter.empty() ? "" : inoutLayer._weightParameter.c_str(), committed ) )
+        if ( drawCommittedText( "##layerWeightParam", inoutLayer._weightParameter.c_str(), committed ) )
         {
             inoutLayer._weightParameter = hashed_string( committed.c_str() );
             pInoutEdit                  = "Edit Animation Layer";

@@ -862,7 +862,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     const utf8* LocalizationManager::getString( const hashed_string& key ) const
     {
-        // 빈 키는 "글 없음" 이다. `hashed_string` 의 빈 이름은 "None" 으로 읽히므로 키 이름으로 돌려주지 않는다.
+        // 빈 키는 "글 없음" 이다.
         if ( key.empty() )
             return "";
         const utf8* pFound = findString( key );

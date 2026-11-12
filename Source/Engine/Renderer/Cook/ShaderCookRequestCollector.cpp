@@ -192,9 +192,9 @@ namespace sw
                 {
                     // 훑기(`collectContentFiles`)가 리소스 루트 아래에서 낸 파일이라 오지 않는 자리다 — 경로 그대로면 어떤 닿은 id 와도 맞지 않아 경고가 빠질 뿐이다.
                     SW_LOG_ERROR_ID( "ShaderCooker.OriginOutsideRoot", "Shader cook: '%#' is not under the resource root '%#' - its requests have no asset origin", absPath, resourceRoot );
-                    return FileUtil::normalizePath( absPath );
+                    return FileUtil::normalizePath( absPath ).str();
                 }
-                return FileUtil::normalizePath( relativePath );
+                return FileUtil::normalizePath( relativePath ).str();
             }
 
             /** @brief 두 define 목록을 합칩니다(중복 제거, 앞쪽 우선). */

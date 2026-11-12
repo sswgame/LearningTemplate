@@ -41,7 +41,7 @@ SW_TEST_CASE( FileTest, FileUtilPathOperations )
     SW_EXPECT_EQUAL( sw::string( "Projects/Sample/TestFile.bin" ), newExt );
 
     SW_EXPECT_EQUAL( sw::string( "Foo/Bar" ), sw::FileUtil::normalizeSeparators( "Foo\\Bar" ) );
-    SW_EXPECT_EQUAL( sw::string( "foo/bar" ), sw::FileUtil::normalizePath( "Foo\\Bar" ) );
+    SW_EXPECT_EQUAL( sw::string( "foo/bar" ), sw::FileUtil::normalizePath( "Foo\\Bar" ).str() );
     SW_EXPECT_TRUE( sw::FileUtil::isSameDiskPath( "Foo/Bar/", "Foo\\Bar" ) );
 
     SW_EXPECT_TRUE( sw::FileUtil::isAbsolutePath( "C:/Projects/Sample/TestFile.txt" ) );

@@ -59,7 +59,7 @@ namespace sw
         wstring initialDirW;
         if ( params._initialDirectory.empty() == false )
         {
-            const string initialDirNt = FileUtil::normalizePath( params._initialDirectory );
+            const string initialDirNt = FileUtil::normalizePath( params._initialDirectory ).str();
             initialDirW               = StringUtil::utf8ToUTF16( initialDirNt.c_str() );
             ofn.lpstrInitialDir       = initialDirW.c_str();
         }
@@ -96,14 +96,14 @@ namespace sw
         const wstring first( pCurrent );
         pCurrent += first.size() + 1;
         if ( *pCurrent == L'\0' )
-            outListPath.push_back( FileUtil::normalizePath( StringUtil::utf16ToUTF8( first.c_str() ) ) );
+            outListPath.push_back( FileUtil::normalizePath( StringUtil::utf16ToUTF8( first.c_str() ) ).str() );
         else
         {
-            const string directoryPath = FileUtil::normalizePath( StringUtil::utf16ToUTF8( first.c_str() ) );
+            const string directoryPath = FileUtil::normalizePath( StringUtil::utf16ToUTF8( first.c_str() ) ).str();
             while ( *pCurrent != L'\0' )
             {
                 const wstring fileNameW( pCurrent );
-                outListPath.push_back( FileUtil::normalizePath( FileUtil::joinPath( directoryPath, StringUtil::utf16ToUTF8( fileNameW.c_str() ) ) ) );
+                outListPath.push_back( FileUtil::normalizePath( FileUtil::joinPath( directoryPath, StringUtil::utf16ToUTF8( fileNameW.c_str() ) ) ).str() );
                 pCurrent += fileNameW.size() + 1;
             }
         }

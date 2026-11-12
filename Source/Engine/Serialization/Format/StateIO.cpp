@@ -240,8 +240,8 @@ namespace sw
 
     void StateIO::writeName( Archive& outArchive, const hashed_string& name )
     {
-        // 빈 이름의 c_str() 는 "None" 이다 - 그대로 쓰면 읽을 때 "None" 이라는 이름으로 돌아온다. 빈 이름은 빈 글로 쓴다.
-        outArchive << name.viewOrEmpty();
+        // 빈 이름은 빈 글로 쓴다(`view()` 는 빈 이름이면 빈 글이다 — "None" 을 쓰면 읽을 때 "None" 이라는 이름으로 볼 쪽이 생긴다).
+        outArchive << name.view();
     }
 
     bool StateIO::readName( Archive& archive, hashed_string& outName )

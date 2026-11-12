@@ -42,16 +42,6 @@ namespace sw
 
             static bool isSpace( utf8 character ) { return character == ' ' || character == '\t' || character == '\r' || character == '\n'; }
 
-            static string normalizePath( string_view token )
-            {
-                string normalized( token );
-                for ( utf8& character : normalized )
-                {
-                    character = character == '\\' ? '/' : StringUtil::toLowerChar( character );
-                }
-                return normalized;
-            }
-
             static bool startsWithDomain( string_view path, const vector<string>& listDomain )
             {
                 for ( const string& domain : listDomain )
@@ -132,7 +122,7 @@ namespace sw
 {
     void AssetIDSet::addFile( string_view assetID )
     {
-        const string lowered = AssetReferenceFieldsInternal::normalizePath( assetID );
+        const string lowered = FileUtil::normalizePath( assetID ).str();
         size_t       slash   = lowered.rfind( '/' );
         while ( slash != string::npos && slash > 0 )
         {
@@ -242,14 +232,14 @@ namespace sw
 
     bool AssetReferenceFields::isTextAsset( string_view assetID ) const
     {
-        const string lowered = AssetReferenceFieldsInternal::normalizePath( assetID );
+        const string lowered = FileUtil::normalizePath( assetID ).str();
         return std::any_of( _listTextExtension.begin(), _listTextExtension.end(), [&lowered]( const string& extension )
         { return StringUtil::endsWith( lowered, extension ); } );
     }
 
     bool AssetReferenceFields::isReferrer( string_view assetID ) const
     {
-        const string lowered = AssetReferenceFieldsInternal::normalizePath( assetID );
+        const string lowered = FileUtil::normalizePath( assetID ).str();
         // 리다이렉트 표(`redirects.xml`)는 옛 id 를 적는 글이다 — 있는지 검사하거나 옮기기가 고칠 참조가 아니다(`from` 은 다른 형식의 경로 칸 이름이기도 하다).
         if ( isTextAsset( lowered ) == false || AssetReferenceFieldsInternal::startsWithDomain( lowered, _listUncheckedDomain ) || AssetRedirect::isTable( lowered ) )
             return false;
@@ -292,7 +282,7 @@ namespace sw
             { return AssetReferenceFieldsInternal::isOneOf( character, AssetReferenceFieldsInternal::kTemplateCharacters ); } );
             if ( token.empty() || bTemplate )
                 continue;
-            string normalized = AssetReferenceFieldsInternal::normalizePath( token );
+            string normalized = FileUtil::normalizePath( token ).str();
             if ( AssetReferenceFieldsInternal::startsWithDomain( normalized, _listDomain ) == false )
                 continue;
             AssetReference reference;
@@ -551,8 +541,8 @@ namespace sw
 
     vector<AssetReferenceRewriteRule> AssetReferenceFields::makeRewriteRules( string_view oldID, string_view newID, bool bFolder ) const
     {
-        const string                      oldPath = AssetReferenceFieldsInternal::normalizePath( oldID );
-        const string                      newPath = AssetReferenceFieldsInternal::normalizePath( newID );
+        const string                      oldPath = FileUtil::normalizePath( oldID ).str();
+        const string                      newPath = FileUtil::normalizePath( newID ).str();
         vector<AssetReferenceRewriteRule> listRule{
             AssetReferenceRewriteRule{ oldPath, newPath, bFolder }
         };

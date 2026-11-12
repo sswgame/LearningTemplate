@@ -228,8 +228,8 @@ namespace sw::editor
             (void)AssetPaths::collectGamePackDomains( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listPackDomain ); // game/ 이 없으면 팩 루트가 없다
             for ( const string& packDomain : listPackDomain )
             {
-                const string packName = FileUtil::normalizePath( packDomain );
-                if ( packName != FileUtil::normalizePath( packRoot ) )
+                const string packName = FileUtil::normalizePath( packDomain ).str();
+                if ( packName != FileUtil::normalizePath( packRoot ).str() )
                     addRoot( packName, EditorPaths::findContentFolder( packDomain ) );
             }
         }
@@ -386,7 +386,7 @@ namespace sw::editor
 
     bool ContentBrowserModel::revealAsset( string_view assetID )
     {
-        const auto filePath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( assetID ) ); // 디스크 파일(없으면 비어 있다)
+        const auto filePath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( assetID ).str() ); // 디스크 파일(없으면 비어 있다)
         if ( filePath.has_value() == false )
             return false; // 쿠킹 묶음에만 있는 애셋 — 보일 폴더가 없다
         openFolder( FileUtil::getDirectoryPart( filePath->str() ) );

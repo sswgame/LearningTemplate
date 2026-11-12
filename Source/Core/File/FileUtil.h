@@ -14,6 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/Path/PathKey.h"
 
 namespace sw
 {
@@ -132,10 +133,11 @@ namespace sw
          */
         [[nodiscard]] static optional<AbsolutePath> requireAbsolutePath( string_view path );
         /**
-         * @brief 비교 · 맵 키용으로 경로를 정규화합니다(`\` 를 `/` 로 바꾸고 소문자로).
-         * @note Linux 의 파일 I/O 에는 쓰지 마십시오. 파일을 열 때는 normalizeSeparators 나 실제 파일 시스템 경로를 씁니다.
+         * @brief 비교 · 맵 키용으로 경로를 접습니다(`\` 를 `/` 로 바꾸고 소문자로).
+         * @details 결과는 `PathKey` 라 어떤 글로도 암시적으로 바뀌지 않는다 — 디스크 판정(`isPathAtOrUnderRoot` · `isSameDiskPath` …)에 그대로 넘어가지 않는다(리눅스에서 대소문자를 잃는다).
+         *          키 · id 로 꺼낼 때는 `str()` · `view()` 를 적는다. Linux 의 파일 I/O 에는 쓰지 않는다(파일을 열 때는 normalizeSeparators 나 실제 파일 시스템 경로).
          */
-        static string normalizePath( string_view path );
+        [[nodiscard]] static PathKey normalizePath( string_view path );
         /** @brief I/O 용으로 구분자만 정규화합니다(`\` 를 `/` 로). 대소문자는 그대로 둡니다. */
         static string normalizeSeparators( string_view path );
         /** @brief OS 고유의 경로 구분자로 바꿉니다(Windows: `\`, POSIX: `/`). */

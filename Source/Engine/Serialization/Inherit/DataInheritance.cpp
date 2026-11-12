@@ -909,7 +909,7 @@ namespace sw
     bool DataInheritance::collectChildren( string_view contentRoot, string_view baseID, const vector<string>& listExtension, vector<string>& outListChildID )
     {
         outListChildID.clear();
-        const string normalizedBase = FileUtil::normalizePath( baseID );
+        const string normalizedBase = FileUtil::normalizePath( baseID ).str();
         for ( const string& extension : listExtension )
         {
             vector<string> listFile;
@@ -922,8 +922,8 @@ namespace sw
                     return false;
                 const string basePath = findBasePath( text );
                 string       relativePath;
-                if ( basePath.empty() == false && FileUtil::normalizePath( basePath ) == normalizedBase && FileUtil::tryMakePathUnderRoot( contentRoot, filePath, relativePath ) )
-                    outListChildID.push_back( FileUtil::normalizePath( relativePath ) );
+                if ( basePath.empty() == false && FileUtil::normalizePath( basePath ).str() == normalizedBase && FileUtil::tryMakePathUnderRoot( contentRoot, filePath, relativePath ) )
+                    outListChildID.push_back( FileUtil::normalizePath( relativePath ).str() );
             }
         }
         VectorUtil::sort( outListChildID );

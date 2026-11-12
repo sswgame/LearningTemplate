@@ -135,7 +135,7 @@ namespace sw
         {
             const string active   = Internal::describeActiveScreen( ui );
             const bool   bNone    = *pScreen == Internal::kNone;
-            const bool   bMatches = bNone ? active == Internal::kNone : FileUtil::normalizePath( *pScreen ) == active;
+            const bool   bMatches = bNone ? active == Internal::kNone : FileUtil::normalizePath( *pScreen ).str() == active;
             if ( bMatches == false )
             {
                 outFailure += "active screen is '" + active + "', expected '" + *pScreen + "'. ";

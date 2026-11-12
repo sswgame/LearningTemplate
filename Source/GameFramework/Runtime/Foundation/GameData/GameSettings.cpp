@@ -135,7 +135,7 @@ namespace sw
     string GamePackConfig::resolve( string_view packRelative ) const
     {
         const string pack = FileUtil::trimTrailingSlashes( _packRoot.get() );
-        return FileUtil::joinPath( pack, FileUtil::normalizePath( packRelative ) );
+        return FileUtil::joinPath( pack, FileUtil::normalizePath( packRelative ).str() );
     }
 
     bool GamePackConfig::load( string_view gameSettingsFileName )

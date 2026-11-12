@@ -143,7 +143,7 @@ namespace sw
                     vector<string> listEntry;
                     for ( const auto& [name, value] : info._mapNameToValue )
                     {
-                        listEntry.push_back( string( name.view() ) + "=" + sw::to_string( value ) );
+                        listEntry.push_back( string( name.toString() ) + "=" + sw::to_string( value ) );
                     }
                     VectorUtil::sort( listEntry );
                     string text = "enum " + string( info._fullyQualifiedName.view() );
@@ -634,7 +634,7 @@ namespace sw
 
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string      normalizedOut  = FileUtil::normalizeSeparators( cookedDir );
-        const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
+        const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
         const CookJobDesc desc           = makeCookJobDesc( registry );
         const CookJobDesc preloadDesc    = makePreloadCookJobDesc();
 

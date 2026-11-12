@@ -158,7 +158,7 @@ namespace sw
 
     string PrefabCache::makeCacheKey( string_view assetRelativePath )
     {
-        string key = FileUtil::normalizePath( assetRelativePath );
+        string key = FileUtil::normalizePath( assetRelativePath ).str();
 
         // 확장자 길이를 손으로 쓰지 않는다 — 숫자와 문자열이 떨어져 있으면 어긋난다.
         for ( const string_view extension : { ".bin", ".xml", ".json" } )

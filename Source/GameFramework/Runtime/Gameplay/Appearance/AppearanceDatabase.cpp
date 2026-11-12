@@ -160,7 +160,7 @@ namespace sw
         unordered_set<hashed_string> uniqueSetRegion;
         for ( const hashed_string& path : listTablesPath )
         {
-            const shared_ptr<const FitTables> tables = SharedAssetCache<FitTables>::acquire( path.viewOrEmpty() );
+            const shared_ptr<const FitTables> tables = SharedAssetCache<FitTables>::acquire( path.view() );
             if ( tables == nullptr )
             {
                 _report.addErrorWithID( "Appearance.FitTablesUnreadable", "fit tables '%#' cannot be read (the loader logged why)", path.c_str() );

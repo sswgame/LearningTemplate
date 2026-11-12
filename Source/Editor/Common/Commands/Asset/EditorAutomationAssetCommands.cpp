@@ -130,7 +130,7 @@ namespace sw::editor
                     outReply = "asset.openScratch takes one resource id under " + scratchPrefix;
                     return false;
                 }
-                const optional<AbsolutePath> scratchPath  = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
+                const optional<AbsolutePath> scratchPath  = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
                 const string                 absolutePath = scratchPath.has_value() ? scratchPath->str() : string{};
                 if ( absolutePath.empty() )
                 {
@@ -162,8 +162,8 @@ namespace sw::editor
                     return false;
                 }
                 const AssetPaths&            assetPaths = editor::getSubsystem<AssetPaths>();
-                const optional<AbsolutePath> sourcePath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
-                const optional<AbsolutePath> targetPath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[1] ) );
+                const optional<AbsolutePath> sourcePath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
+                const optional<AbsolutePath> targetPath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[1] ).str() );
                 string                       text;
                 if ( sourcePath.has_value() == false || targetPath.has_value() == false || FileUtil::readTextFile( sourcePath->str(), text ) == false )
                 {
@@ -186,7 +186,7 @@ namespace sw::editor
                 const bool   bBadID        = listArgument.size() != 1 || StringUtil::startsWith( listArgument[0], scratchPrefix ) == false || AssetPaths::hasParentDirectoryComponent( listArgument[0] );
                 if ( bBadID )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the command takes one resource id under the scratch folder", pCommand }.appendDetail( " " ).appendDetail( scratchPrefix ) );
-                const optional<AbsolutePath> scratchPath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
+                const optional<AbsolutePath> scratchPath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
                 string                       text;
                 if ( scratchPath.has_value() == false || FileUtil::readTextFile( scratchPath->str(), text ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "no scratch asset (does the scenario declare <Scratch>?)", listArgument[0] } );
@@ -245,7 +245,7 @@ namespace sw::editor
                     outReply = "asset.expectScratchMissing takes one resource id under " + scratchPrefix;
                     return false;
                 }
-                if ( editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) ).has_value() )
+                if ( editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() ).has_value() )
                 {
                     outReply = "'" + listArgument[0] + "' exists - a save wrote to the old place";
                     return false;
@@ -286,8 +286,8 @@ namespace sw::editor
                 if ( listArgument.size() != argumentCount || isScratchID( listArgument[0] ) == false || isScratchID( listArgument[1] ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "wrong arguments - see the command's usage (two resource ids under the scratch folder first)", pCommand } );
                 const AssetPaths&            assetPaths      = editor::getSubsystem<AssetPaths>();
-                const optional<AbsolutePath> sourcePath      = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
-                const optional<AbsolutePath> destinationPath = assetPaths.toDiskPath( FileUtil::normalizePath( listArgument[1] ) );
+                const optional<AbsolutePath> sourcePath      = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
+                const optional<AbsolutePath> destinationPath = assetPaths.toDiskPath( FileUtil::normalizePath( listArgument[1] ).str() );
                 if ( sourcePath.has_value() == false )
                     return unexpected( Error{ ErrorKind::NotFound, "no scratch asset (does the scenario declare <Scratch>?)", listArgument[0] } );
                 if ( destinationPath.has_value() == false )
@@ -399,7 +399,7 @@ namespace sw::editor
              */
             [[nodiscard]] static expected<string> resolveImportFolder( const string& folderID )
             {
-                const string  normalized       = FileUtil::normalizePath( folderID );
+                const string  normalized       = FileUtil::normalizePath( folderID ).str();
                 const string& resourceRoot     = editor::getSubsystem<AssetPaths>().getRootFolderPath();
                 const bool    bOutsideTempArea = FileUtil::startsWithPathComponent( normalized, kImportTempFolder ) == false || normalized.find( ".." ) != string::npos; // 리소스 id 끼리(소문자)
                 if ( bOutsideTempArea || resourceRoot.empty() )

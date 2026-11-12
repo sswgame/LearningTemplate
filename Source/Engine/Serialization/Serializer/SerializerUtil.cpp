@@ -563,7 +563,7 @@ namespace sw
 
     bool SerializerUtil::isNameValueType( const hashed_string& typeName )
     {
-        string_view name = typeName.viewOrEmpty();
+        string_view name = typeName.view();
         if ( StringUtil::startsWith( name, "sw::" ) )
             name.remove_prefix( 4 );
         // 이름 · 경로 형식은 빈 글이 "없음" 이다. `string` 은 넣지 않는다 — 글 칸은 빈 값이 뜻 있는 값일 수 있다(명령 표의 "단축키 없음" 같은 고정 열).
@@ -765,9 +765,9 @@ namespace sw
         {
             const int64 val = pEnumInfo->readValueFromMemory( pValPtr );
             if ( pEnumInfo->_bIsBitFlag )
-                ss.append( pEnumInfo->toStringFlags( val ).c_str() );
+                ss.append( pEnumInfo->toStringFlags( val ).toString() );
             else
-                ss.append( pEnumInfo->toString( val ).c_str() );
+                ss.append( pEnumInfo->toString( val ).toString() ); // 열거자 None 은 빈 이름이라 표시 글로 쓴다
             return;
         }
 

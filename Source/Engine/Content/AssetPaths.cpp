@@ -184,7 +184,7 @@ namespace sw
                 };
                 for ( const string& tokenRaw : listPriority )
                 {
-                    const string token = FileUtil::normalizePath( tokenRaw );
+                    const string token = FileUtil::normalizePath( tokenRaw ).str();
                     if ( token == "game" )
                     {
                         // 게임 프리셋을 읽기 전(기동의 리소스 루트 단계 - 서비스 표가 서기 전이거나 아직 읽지 않았다)에는 활성 팩이 아직 없다 - 그때는 game/ 아래 팩만 순서에 넣는다.
@@ -309,7 +309,7 @@ namespace sw
                     string relative;
                     if ( FileUtil::tryMakePathUnderRoot( mounted._folder, absolutePath, relative ) == false ) // 대소문자는 OS 규칙
                         continue;
-                    outID = mounted._domain + "/" + FileUtil::normalizePath( relative ); // id 는 소문자다
+                    outID = mounted._domain + "/" + FileUtil::normalizePath( relative ).str(); // id 는 소문자다
                     return true;
                 }
                 return false;
@@ -596,7 +596,7 @@ namespace sw
         }
         AssetPathsInternal::getPathStats().recordMiss();
 
-        const string lowerFile = FileUtil::normalizePath( resourceID );
+        const string lowerFile = FileUtil::normalizePath( resourceID ).str();
 
         string found;
         string domainRoot;
@@ -648,7 +648,7 @@ namespace sw
         if ( folderID.empty() || FileUtil::isAbsolutePath( folderID ) || hasParentDirectoryComponent( folderID ) )
             return;
         State&       state       = *_pState;
-        const string lowerFolder = FileUtil::normalizePath( folderID );
+        const string lowerFolder = FileUtil::normalizePath( folderID ).str();
         string       domainRoot;
         string       keyUnderRoot;
         if ( AssetPathsInternal::mapGlobalIDToRoot( state, lowerFolder, domainRoot, keyUnderRoot ) )
@@ -692,7 +692,7 @@ namespace sw
     {
         if ( FileUtil::isAbsolutePath( text ) )
             return {}; // 디스크 경로는 id 가 아니다 - 바꾸는 길은 `toAssetID` 하나다
-        string id = FileUtil::normalizePath( FileUtil::normalizeSeparators( text ) );
+        string id = FileUtil::normalizePath( FileUtil::normalizeSeparators( text ) ).str();
         while ( StringUtil::startsWith( id, "./" ) )
         {
             id.erase( 0, 2 );
@@ -740,7 +740,7 @@ namespace sw
 
     bool AssetPaths::mountDiskDomain( string_view domainName, string_view diskFolder )
     {
-        const string domain       = FileUtil::normalizePath( domainName );
+        const string domain       = FileUtil::normalizePath( domainName ).str();
         const bool   bInvalidName = domain.empty() || domain.find_first_of( "/\\:" ) != string::npos || domain == "." || domain == "..";
         if ( bInvalidName )
         {
@@ -770,7 +770,7 @@ namespace sw
             {
                 if ( mounted._domain != domain )
                     continue;
-                if ( FileUtil::normalizePath( mounted._folder ) == FileUtil::normalizePath( folder ) )
+                if ( FileUtil::isSameDiskPath( mounted._folder, folder ) ) // 디스크 폴더다 — 접은 키로 견주면 리눅스에서 대소문자만 다른 폴더가 같아진다
                     return true;
                 conflictFolder = mounted._folder;
                 bConflict      = true;
@@ -790,7 +790,7 @@ namespace sw
 
     bool AssetPaths::unmountDiskDomain( string_view domainName )
     {
-        const string domain = FileUtil::normalizePath( domainName );
+        const string domain = FileUtil::normalizePath( domainName ).str();
         State&       state  = *_pState;
         bool         bFound{ false };
         {
@@ -819,7 +819,7 @@ namespace sw
         string root;
         string key;
         return assetID.empty() == false && FileUtil::isAbsolutePath( assetID ) == false &&
-               AssetPathsInternal::findMountedDiskDomain( *_pState, FileUtil::normalizePath( assetID ), root, key );
+               AssetPathsInternal::findMountedDiskDomain( *_pState, FileUtil::normalizePath( assetID ).str(), root, key );
     }
 
     const string& AssetPaths::getRootFolderPath() const

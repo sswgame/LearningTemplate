@@ -36,7 +36,7 @@ namespace sw
             if ( other._table == rule._table && other._keyPrefix == rule._keyPrefix )
             {
                 Error error{ ErrorKind::AlreadyExists, "the TTL rule of the table is already registered", entry._name };
-                error.appendDetail( " (" ).appendDetail( rule._table.viewOrEmpty() ).appendDetail( ")" );
+                error.appendDetail( " (" ).appendDetail( rule._table.view() ).appendDetail( ")" );
                 return unexpected( error );
             }
         }

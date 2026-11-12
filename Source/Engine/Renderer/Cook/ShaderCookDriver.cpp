@@ -476,7 +476,7 @@ namespace sw
             if ( slot.has_value() == false )
                 continue;
             // 바이너리 이름에 경로 · 진입점 · 스테이지 · 퍼뮤테이션이 다 들어 요청 하나가 바이너리 하나다 — 그래도 출처는 합쳐 둔다(같은 이름이면 같은 바이너리).
-            vector<vector<string>>& listOrigin = outMapBinaryOrigin[FileUtil::normalizePath( FileUtil::joinPath( slot->_binDirectory, slot->_fileName ) )];
+            vector<vector<string>>& listOrigin = outMapBinaryOrigin[FileUtil::normalizePath( FileUtil::joinPath( slot->_binDirectory, slot->_fileName ) ).str()];
             listOrigin.insert( listOrigin.end(), request._listOrigin.begin(), request._listOrigin.end() );
         }
         return true;

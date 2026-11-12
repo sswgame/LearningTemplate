@@ -12,6 +12,8 @@
  * - FName 과 다른 점이 둘 있습니다.
  *   첫째, 해시는 대소문자를 무시한 **FNV** 이며 실행이 바뀌어도 같습니다. 바이너리 필드 이름, 열거자, 지역화 테이블이 이 값을 저장하기 때문입니다.
  *   둘째, 철자 보존은 **모든 빌드 구성**에서 합니다(언리얼은 에디터에서만 합니다). 저장되는 철자가 빌드에 따라 달라지지 않게 하려는 것입니다.
+ * - 빈 이름(None)의 `c_str()` · `view()` 는 **빈 글**입니다(Godot `StringName`). "None" 표시는 `toString()` 이 냅니다(FName 의 `ToString`).
+ *   읽기는 "None" 철자를 빈 이름으로 되돌립니다(쌓인 데이터).
  * - FName 의 숫자 꼬리(`Actor_12` = "Actor" + 13)는 두지 않았습니다.
  *   `c_str()` 의 영구 포인터를 보관하는 곳이 많고, 같은 이름의 번호는 `GameObjectManager` 가 다시 쓰기 때문입니다.
  *
@@ -169,16 +171,15 @@ namespace sw
         std::basic_string_view<value_type> view() const noexcept { return { c_str(), size() }; }
 
         /**
-         * @brief 이름의 글이되, 빈 이름이면 빈 글입니다. 경로 · 리소스 id · 키처럼 **값으로 쓰는 글**은 이것으로 꺼냅니다.
-         * @details `c_str()` · `view()` 는 FName 의 `ToString()` 처럼 빈 이름을 "None" 으로 보인다(로그 · 직렬화가 그 글을 쓰고, 읽기는 "None" 을 빈 이름으로 되돌린다).
-         *          그 글이 경로 자리로 가면 'None' 파일을 찾는다. 빈 이름 → 빈 글은 Godot `StringName` → `String` 과 같다.
-         *          경로를 받는 함수에 `c_str()` · `view()` 를 넘기는 곳은 린트(`Scripts/lint/NamePathArguments.py`)가 막는다.
+         * @brief 사람이 읽는 글입니다. 빈 이름이면 "None" 입니다(언리얼 FName 의 `ToString`). 로그 · 에디터 표시 · 열거자 이름처럼 **보이는 글**은 이것으로 꺼냅니다.
+         * @details `c_str()` · `view()` 는 빈 이름이면 빈 글이다(Godot `StringName` → `String`). 그래서 경로 · 리소스 id · 키 자리에 그대로 넘겨도
+         *          'None' 파일을 찾지 않는다 — 예전에는 거꾸로라 경로 자리마다 린트로 막았다. 돌려주는 글의 `data()` 는 늘 널로 끝난다.
+         *          열거자 `None` 의 이름도 빈 이름이므로(`hashed_string( "None" )` 이 빈 이름이다) 열거자 이름을 글로 꺼내는 곳은 이것을 쓴다.
          */
-        std::basic_string_view<value_type> viewOrEmpty() const noexcept
+        std::basic_string_view<value_type> toString() const noexcept
         {
-            static constexpr value_type kEmptyText[1] = {}; // data() 를 C 글로 읽는 쪽도 빈 글을 보게(널 · "None" 포인터가 아니게)
             if ( empty() )
-                return { kEmptyText, 0 };
+                return { kNoneText, sizeof( kNoneText ) - 1 };
             return view();
         }
 
@@ -251,6 +252,8 @@ namespace sw
         }
 
     private:
+        static constexpr value_type kNoneText[] = "None"; ///< 빈 이름의 표시 글(`toString`)이자 빈 이름으로 읽히는 철자입니다
+
         /** @brief intern 한 이름의 두 인덱스입니다. */
         struct InternedIndex
         {
@@ -558,6 +561,13 @@ namespace sw
 #define REGISTER_NAME( index, name ) basic_hashed_string<T, N> predefined_##name{ *this, #name };
 #include "Core/Predefined/PredefinedNameType.xxx"
 #undef REGISTER_NAME
+
+            // 빈 이름(0번)의 글은 빈 글이다. 맵 키는 "None" 철자로 남아 읽기가 "None" 을 빈 이름으로 되돌리고, `c_str()` · `view()` 는
+            // 분기 없이 빈 글을 낸다("None" 표시는 `toString` 이 맡는다).
+            static constexpr value_type kEmptyText[1] = {};
+            Entry&                      noneEntry     = _arrChunk[0].load( std::memory_order_relaxed )[static_cast<uint32>( PredefinedNameType::NameType_None )];
+            noneEntry._pStr                           = kEmptyText;
+            noneEntry._stringLength                   = 0;
         }
     };
 
@@ -690,6 +700,9 @@ namespace sw
         const auto   nameIter       = shard._mapKeyToIndex.find( lookupKey );
         const bool   bKnownName     = nameIter != shard._mapKeyToIndex.end();
         const uint32 knownNameIndex = bKnownName ? nameIter->second : 0;
+        // "none" · "NONE" 도 빈 이름이다. 표시 엔트리를 더하면 그 철자가 `view()` 로 새어 경로 자리에 간다.
+        if ( bKnownName && knownNameIndex == static_cast<uint32>( PredefinedNameType::NameType_None ) )
+            return {};
 
         ScopedLock<mutex> allocLock{ info._globalAppendMutex };
 

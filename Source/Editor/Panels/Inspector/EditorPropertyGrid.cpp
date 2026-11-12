@@ -85,7 +85,7 @@ namespace sw::editor
                     if ( choice._value == 0 )
                         continue;
                     bool bChecked = ( ( inoutEditedValue & choice._value ) == choice._value );
-                    if ( ImGui::Checkbox( choice._name.c_str(), &bChecked ) )
+                    if ( ImGui::Checkbox( choice._name.toString().data(), &bChecked ) )
                     {
                         if ( bChecked )
                             inoutEditedValue |= choice._value;
@@ -113,13 +113,13 @@ namespace sw::editor
                 for ( const PropertyEnumChoice& choice : row._listChoice )
                 {
                     const bool bSelected = ( choice._value == row._enumValue );
-                    if ( ImGui::Selectable( choice._name.c_str(), bSelected ) )
+                    if ( ImGui::Selectable( choice._name.toString().data(), bSelected ) )
                         outEditedValue = choice._value;
                     if ( EditorSelfTestMarks::isEnabled() )
                     {
                         // 시나리오가 콤보 항목을 누를 수 있게 한다(`inspector.enum.<프로퍼티>.<열거자>`) — 콤보를 연 프레임에만 그려진다.
                         fixed_string<constant::buffer::kMax128> itemMark;
-                        formatstring( itemMark.data(), itemMark.capacity(), "inspector.enum.%#.%#", row._propName.c_str(), choice._name.c_str() );
+                        formatstring( itemMark.data(), itemMark.capacity(), "inspector.enum.%#.%#", row._propName.c_str(), choice._name );
                         EditorSelfTestMarks::record( itemMark.c_str() );
                     }
                     if ( bSelected )

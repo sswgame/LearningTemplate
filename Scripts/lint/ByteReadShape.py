@@ -6,6 +6,7 @@ Scripts/lint/ByteReadShape.py
 파일 · 세이브 · 패킷에서 온 개수를 믿고 할당하는 모양을 막는다. 2026-11-06 — `MeshVertexAnimation` · `NavMeshAsset` · `ByteReader::readByteVector` · 프로브 격자 · 원시 코덱 · 셰이더 리플렉션에서
 같은 결함(위조된 개수가 수십 기가 할당이 되거나, 곱셈이 넘쳐 길이가 맞아 보인다)이 차례로 나왔다.
 **왜 형식이 아니라 린트인가.** 길은 형식으로 냈다(`ByteReader::readList` · `readCountedList` · `readPodList` · `canHold`, `Archive::readCount`). `vector::resize` 는 어떤 수든 받으므로 다른 길을 형식으로 막지 못한다.
+일반 정수 읽기(`>>` · `readUint32` · `readVarUint` · `readPod` — 약 1600 곳)를 모두 신뢰하지 않는 형식으로 내도, 대부분이 버전 · id · 깃발이라 꺼내는 자리(`value()`)가 늘 생기고 그 뒤 `resize` 로 가는 길은 그대로다(2026-11-12 검토) — 그래서 개수 할당 몫만 여기 남긴다.
 
 1. 개수 할당: 함수 안에서 읽은 변수(`archive >> count` · `count = reader.readUint32()` · `reader.readPod( count )`)를 거르지 않고 `resize` · `reserve` · `assign` · 벡터 생성자에 넘긴다.
    거른 것으로 보는 것: 같은 함수에서 `readCount` · `canHold` · `canHoldCount` · `tryMultiplyCounts` · `hasBytesAvailable` 에 넘겼거나, 0 이 아닌 값과 비교했다.

@@ -57,7 +57,8 @@ SW_TEST_CASE( ReflectionEnumInfoTest, FindRegisteredEnumAndValueToString )
     const sw::EnumInfo* pInfo = findEnum( "sw::DummyType" );
     SW_REQUIRE_NOT_NULL( pInfo );
     SW_EXPECT_EQUAL( sw::string( "DummyType" ), sw::string( pInfo->_name.c_str() ) );
-    SW_EXPECT_EQUAL( sw::string( "None" ), sw::string( pInfo->toString( 0 ).c_str() ) );
+    SW_EXPECT_EQUAL( sw::string( "None" ), sw::string( pInfo->toString( 0 ).toString() ) ); // 열거자 None 은 빈 이름이다 — 표시 글로 꺼낸다
+    SW_EXPECT_EQUAL( sw::string_view( "None" ), sw::string_view( pInfo->valueToCString( 0 ) ) );
     SW_EXPECT_EQUAL( sw::string( "TypeA" ), sw::string( pInfo->toString( 1 ).c_str() ) );
     SW_EXPECT_EQUAL( sw::string( "TypeB" ), sw::string( pInfo->toString( 2 ).c_str() ) );
     SW_EXPECT_TRUE( pInfo->toString( 999 ) == sw::hashed_string() );

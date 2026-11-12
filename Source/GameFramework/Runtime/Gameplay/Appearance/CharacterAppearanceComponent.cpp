@@ -131,7 +131,7 @@ namespace sw
                 if ( part._listSection.empty() )
                     return;
                 main.setSectionName( part._listSection.front()._name );
-                main.setMaterialPath( part._listSection.front()._material.viewOrEmpty() );
+                main.setMaterialPath( part._listSection.front()._material.view() );
                 for ( size_t index = 1; index < part._listSection.size(); ++index )
                 {
                     MeshSectionComponent* pSection = owner.addComponent<MeshSectionComponent>();
@@ -141,7 +141,7 @@ namespace sw
                         continue;
                     }
                     pSection->setSectionName( part._listSection[index]._name );
-                    pSection->setMaterialPath( part._listSection[index]._material.viewOrEmpty() );
+                    pSection->setMaterialPath( part._listSection[index]._material.view() );
                     pSection->followSourceMesh();
                     inoutListSection.push_back( TComponentHandle<MeshSectionComponent>{ pSection } );
                 }
@@ -177,7 +177,7 @@ namespace sw
                     }
                     pSection->setSectionName( listPiece[index]._name );
                     if ( listPiece[index]._material.empty() == false )
-                        pSection->setMaterialPath( listPiece[index]._material.viewOrEmpty() );
+                        pSection->setMaterialPath( listPiece[index]._material.view() );
                     pSection->followSourceMesh();
                 }
             }
@@ -799,14 +799,14 @@ namespace sw
             if ( part._owner.empty() == false || part.isSkinnedFollower() == false )
                 continue; // 몸은 휘는 스킨드다(`AppearanceSocketRig` 의 몸 부품과 같은 판정)
             // 스켈레톤을 먼저 적용한다. 메시의 스킨 사본이 그 본 수를 참조하기 때문이다.
-            // 적지 않은 스켈레톤은 빈 경로(암묵 스켈레톤)다 — 빈 이름의 `c_str()` 은 "None" 이라 그대로 넘기면 경로 "None" 이 된다(C-59).
-            const string_view skeletonPath = part._skeleton.viewOrEmpty();
+            // 적지 않은 스켈레톤은 빈 경로(암묵 스켈레톤)다 — 빈 이름의 `view()` 는 빈 글이다(C-59).
+            const string_view skeletonPath = part._skeleton.view();
             if ( string_view( body.getSkeletonPath() ) != skeletonPath )
                 body.setSkeletonPath( skeletonPath );
             if ( string_view( body.getMeshID() ) != string_view( part._asset.c_str() ) )
-                body.setMeshID( part._asset.viewOrEmpty() );
+                body.setMeshID( part._asset.view() );
             if ( part._material.empty() == false && body.getMaterialPath() != part._material )
-                body.setMaterialPath( part._material.viewOrEmpty() );
+                body.setMaterialPath( part._material.view() );
             GameObjectManager* pManager = findManager();
             if ( pManager != nullptr && body.getOwner() != nullptr )
                 CharacterAppearanceComponentInternal::applyPartSections( *pManager, *body.getOwner(), body, part, _listBodySection, _presetID );
@@ -831,7 +831,7 @@ namespace sw
         const bool          bHasShapes = pBodyPart != nullptr && pBodyPart->_bodyShapes.empty() == false;
         if ( bHasShapes )
         {
-            _bodyShapeSet = SharedAssetCache<BodyShapeSet>::acquire( pBodyPart->_bodyShapes.viewOrEmpty() );
+            _bodyShapeSet = SharedAssetCache<BodyShapeSet>::acquire( pBodyPart->_bodyShapes.view() );
             _shapeReload.markSeen();
             if ( _bodyShapeSet == nullptr )
                 SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceBodyShapesCould", "Appearance '%#' body shapes '%#' could not be read - the body keeps its proportions", _presetID.c_str(), pBodyPart->_bodyShapes.c_str() );
@@ -904,9 +904,9 @@ namespace sw
         GameObject*                                   pObject  = manager.createGameObject( part._partName );
         SkeletalMeshComponent*                        pSkinned = pObject->addComponent<SkeletalMeshComponent>();
         pSkinned->setSkeletonPath( part._skeleton.empty() ? string_view( body.getSkeletonPath() ) : string_view( part._skeleton.c_str() ) );
-        pSkinned->setMeshID( part._asset.viewOrEmpty() );
+        pSkinned->setMeshID( part._asset.view() );
         if ( part._material.empty() == false )
-            pSkinned->setMaterialPath( part._material.viewOrEmpty() );
+            pSkinned->setMaterialPath( part._material.view() );
         // 새 오브젝트라 지울 것이 없다. 구간 컴포넌트는 부품 오브젝트와 함께 사라지고, 다시 조립할 때 구간 머티리얼만 바뀌면 이 목록으로 고친다(`syncParts`).
         outListSection.clear();
         CharacterAppearanceComponentInternal::applyPartSections( manager, *pObject, *pSkinned, part, outListSection, _presetID );
@@ -919,7 +919,7 @@ namespace sw
         else
         {
             PoseModifierComponent* pRig = pObject->addComponent<PoseModifierComponent>();
-            pRig->setRigPath( part._rig.viewOrEmpty() );
+            pRig->setRigPath( part._rig.view() );
             pRig->bindUnit( hashed_string( kBodyRigUnit ), manager.resolveComponent( bodyHandle ) );
             // 소켓을 적었으면 부품을 몸 바인드 포즈의 그 소켓 자리에 둔다 — 리그가 돌지 않는 곳(플레이 없는 미리보기)에서도 제자리에 보인다.
             // 회전은 두지 않는다(리그가 뼈를 그 자리로 끈다).
@@ -947,9 +947,9 @@ namespace sw
                 manager.destroyGameObject( pObject );
             return nullptr; // 부르는 쪽이 스폰하지 못했다고 알린다
         }
-        pMesh->setMeshID( part._asset.viewOrEmpty() );
+        pMesh->setMeshID( part._asset.view() );
         if ( part._material.empty() == false )
-            pMesh->setMaterialPath( part._material.viewOrEmpty() );
+            pMesh->setMaterialPath( part._material.view() );
         outListSection.clear();
         CharacterAppearanceComponentInternal::applyPartSections( manager, *pObject, *pMesh, part, outListSection, _presetID );
         (void)pObject->addComponent<SocketBindingComponent>();
@@ -967,10 +967,10 @@ namespace sw
                 manager.destroyGameObject( pObject );
             return nullptr;
         }
-        pSprite->setClipPath( part._asset.viewOrEmpty() );
+        pSprite->setClipPath( part._asset.view() );
         pSprite->setOrderInLayer( part._layer );
         if ( part._material.empty() == false )
-            pSprite->setMaterialPath( part._material.viewOrEmpty() );
+            pSprite->setMaterialPath( part._material.view() );
         (void)pObject->addComponent<SocketBindingComponent>();
         return pObject;
     }
@@ -1066,11 +1066,11 @@ namespace sw
                 pObject = manager.getSubsystem<SocketPartPool>().takePart( Internal::makePoolKey( part._asset, part._material ) );
                 if ( pObject == nullptr && pAssetManager != nullptr )
                 {
-                    pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, part._asset.viewOrEmpty(), part._partName.c_str() );
+                    pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, part._asset.view(), part._partName.c_str() );
                     // 같은 메시를 머티리얼만 달리한 변형(`material` · `<MaterialVariant>`)이다. 풀에서 꺼낸 부품은 열쇠가 머티리얼을 담아 이미 입었다.
                     if ( pObject != nullptr && part._material.empty() == false )
                         Internal::forEachMesh( *pObject, [&part]( MeshComponent& mesh )
-                        { mesh.setMaterialPath( part._material.viewOrEmpty() ); } );
+                        { mesh.setMaterialPath( part._material.view() ); } );
                 }
                 if ( pObject != nullptr && pObject->getComponent<SocketBindingComponent>() == nullptr )
                     (void)pObject->addComponent<SocketBindingComponent>();
@@ -1396,7 +1396,7 @@ namespace sw
             return;
 
         if ( bHasTables )
-            _fitTablesLoad = SharedAssetCache<FitTables>::request( pBodyPart->_fitTables.viewOrEmpty() );
+            _fitTablesLoad = SharedAssetCache<FitTables>::request( pBodyPart->_fitTables.view() );
         // 몸이 먼저, 그 뒤 몸을 따르는 스킨드 부품. 피팅은 몸 스켈레톤의 바인드 공간에서 풀므로 다른 스켈레톤의 부품은 피팅하지 않는다(데이터 오류로 알린다).
         vector<uint32> listPartIndex{ static_cast<uint32>( _bodyPart ) };
         for ( const SpawnedPart& spawned : _listSpawnedPart )
@@ -1409,12 +1409,12 @@ namespace sw
             const ResolvedPart& part = resolved._listPart[partIndex];
             MeshAssemblyLoad    load;
             load._partIndex             = partIndex;
-            load._mesh                  = MeshCache::request( part._asset.viewOrEmpty() );
+            load._mesh                  = MeshCache::request( part._asset.view() );
             const bool bForeignSkeleton = part._skeleton.empty() == false && part._skeleton != pBodyPart->_skeleton;
             if ( part._fit.empty() == false && bForeignSkeleton )
                 SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartFitData", "Appearance '%#' part '%#' has fit data but its own skeleton '%#' - it is drawn unfitted", _presetID.c_str(), part._partName.c_str(), part._skeleton.c_str() );
             else if ( part._fit.empty() == false )
-                load._fit = SharedAssetCache<FitPartDef>::request( part._fit.viewOrEmpty() );
+                load._fit = SharedAssetCache<FitPartDef>::request( part._fit.view() );
             _listMeshAssemblyLoad.push_back( std::move( load ) );
         }
         _bMeshAssemblyPending = SW_TRUE;

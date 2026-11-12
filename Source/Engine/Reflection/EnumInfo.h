@@ -144,7 +144,7 @@ namespace sw
             {
                 if ( result.empty() == false )
                     result += constant::reflection::kFlagSeparator;
-                result += name.c_str();
+                result += name.toString();
             }
 
             return hashed_string( result.c_str() );
@@ -184,7 +184,7 @@ namespace sw
             return findInMapByNameHash( _mapRedirectNameToValue, nameHash, outValue );
         }
 
-        /** @brief 값에 해당하는 intern 된 열거자 이름입니다. Invalid 나 Count 센티널이면 nullptr 입니다. */
+        /** @brief 값에 해당하는 열거자 이름 글입니다(열거자 `None` 은 "None"). Invalid 나 Count 센티널이거나 이름이 없으면 nullptr 입니다. */
         const utf8* valueToCString( int64 value ) const
         {
             if ( isValidValue( value ) == false )
@@ -192,10 +192,16 @@ namespace sw
             if ( _listDenseName.empty() == false )
             {
                 const bool bInRange = 0 <= value && value < static_cast<int64>( _listDenseName.size() );
-                return bInRange ? _listDenseName[static_cast<size_t>( value )].c_str() : nullptr;
+                return bInRange ? _listDenseName[static_cast<size_t>( value )].toString().data() : nullptr;
             }
-            const hashed_string name = ( _bIsBitFlag != SW_FALSE ) ? toStringFlags( value ) : toString( value );
-            return name.empty() ? nullptr : name.c_str();
+            // 열거자 `None` 의 이름은 빈 이름이라 표시 글(`toString`)로 꺼낸다. 그 `data()` 는 널로 끝나는 영구 글이다.
+            if ( _bIsBitFlag != SW_FALSE )
+            {
+                const hashed_string name = toStringFlags( value );
+                return ( name.empty() && value != 0 ) ? nullptr : name.toString().data();
+            }
+            const auto iter = _mapValueToName.find( value );
+            return iter != _mapValueToName.end() ? iter->second.toString().data() : nullptr;
         }
 
         /** @brief 이름을 값으로 바꿉니다. 철자는 열거자 이름 그대로여야 하고(대소문자가 다르면 모르는 이름), 비트플래그는 `A|B` 도 허용합니다. */
@@ -209,7 +215,7 @@ namespace sw
                 // `hashed_string` 은 대소문자를 구분하지 않으므로 찾은 뒤 철자를 한 번 더 견준다 — 대소문자 무시는 이름마다 별칭을 만든다.
                 const hashed_string key = hashed_string::findInterned( name );
                 const auto          it  = _mapNameToValue.find( key );
-                if ( it != _mapNameToValue.end() && it->first.view() == name )
+                if ( it != _mapNameToValue.end() && it->first.toString() == name )
                 {
                     if ( isValidValue( it->second ) == false )
                         return false;
@@ -297,7 +303,7 @@ namespace sw
         {
             for ( const auto& [nameKey, enumValue] : mapNameToValue )
             {
-                if ( text == nameKey.view() )
+                if ( text == nameKey.toString() )
                 {
                     outValue = enumValue;
                     return true;

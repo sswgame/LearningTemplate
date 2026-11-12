@@ -597,7 +597,7 @@ namespace sw
         {
             _state._skyHdriPath = hdriPath;
             _state._skyHdriLoad = hdriPath.empty() || engine::areEngineServicesBound() == false ? TextureHandle{}
-                                                                                                : engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( hdriPath.viewOrEmpty(), AssetLoadStart::Async );
+                                                                                                : engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( hdriPath.view(), AssetLoadStart::Async );
         }
         if ( bHasSky == false )
         {
@@ -1156,10 +1156,10 @@ namespace sw
         if ( bBorrowRenderTexture )
         {
             TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-            textures.declareRenderTarget( request._renderTexture.viewOrEmpty(), request._outputWidth, request._outputHeight );
+            textures.declareRenderTarget( request._renderTexture.view(), request._outputWidth, request._outputHeight );
             // 기다리지 않고 요청한다 — 0 채우기 전송은 진행 중인 프레임 뒤에 실행되므로(전송 계약 3) 이 스레드의 펌프가 끝낸다(`CanvasTextureLeases::prepareTargets` 와 같다).
             // 옛 경로의 핸들은 덮어쓰며 놓인다(캐시에 돌려준다).
-            view._outputLoad     = textures.request( request._renderTexture.viewOrEmpty(), AssetLoadStart::Async );
+            view._outputLoad     = textures.request( request._renderTexture.view(), AssetLoadStart::Async );
             view._pOutputTexture = nullptr;
             view._outputPath     = request._renderTexture;
         }
