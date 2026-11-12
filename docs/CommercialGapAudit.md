@@ -152,13 +152,6 @@
 - 제안: `ILedgerPolicy::isTransferable( assetID )` 를 원장 계층에 두고 "계정 → 다른 보유자" 다리를 가진 이동이면 `stageTransfer` 가 본다. 사용자 결정(2026-11-12): 맡긴 당사자가 허용한 권한 안에서만 이전한다 — 설계는 DesignBacklog "길드 창고의 이전 불가 자산".
 - 확인: `TestGuildService` 에 "거래 접두어 밖 자산 Deposit → 다른 임원 Withdraw" 가 거절되는지.
 
-#### O-11 접속 상태 변화 한 건마다 이 서버의 전 계정 × 관계 목록을 훑는다
-- 분류: 성능 · 확신: 구조 확인, 규모는 측정 필요
-- 근거: `Source/GameFramework/Kits/Feature/Online/Social/Server/SocialService.cpp:580-595` `notifyFriendsOfPresence` 가 `_mapAccountToLocal` 전체와 각자의 `_listLink` 를 이중 순회한다(서버당 1 만 명 × 관계 100 이면 로그인 한 건에 100 만 번 비교).
-- 상용 서비스: Nakama status follow, EOS Presence 는 "친구 id → 구독자" 역색인으로 낸다.
-- 제안: 관계 로드 때 `친구 id → 이 서버 계정 집합` 역색인을 유지한다.
-- 확인: 부하 봇 `friend_presence_fanout` 에 봇 수를 늘려 서버 틱 시간.
-
 #### O-12 부하 봇이 원장을 쓰는 경로를 하나도 치지 않고, 가벼운 해시 · 닫힌 루프로 잰다
 - 분류: 구조(검증 공백) · 확신: 확인
 - 근거: 봇의 키트 클라이언트는 계정 · 디렉터리 · 채팅 · 친구 · 순위 · 매칭 · 라이브옵스 일곱이다(`Source/Programs/OnlineLoadBot/LoadBot.cpp:125-128`). 동작 표(`LoadBotScenario.cpp:33-53`)에 구매 · 영수증 · 우편 수령 · 거래 · 길드 창고 · 점수 제출이 없다. `Config/Server/Online/Shooter3D.online.json` 의 `_bLightPasswordHash: true` 라 O-3 의 병목이 보이지 않는다. 다음 요청을 답 뒤에 내어(`LoadBot.cpp:521`) 서버가 밀리면 요청률이 함께 줄어 꼬리 지연이 낮게 나온다(coordinated omission).
