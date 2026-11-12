@@ -177,6 +177,22 @@ echo "== WINDOWS_OK, linux 시작 $(date +%T)"
 PYTHONUTF8=1 run build/verify.linux.log py -3 Scripts/dev/LinuxScenarios.py all "$@"
 RC=$?
 [ $DRY -eq 1 ] || tail -n 40 build/verify.linux.log
+# 새니타이저(ASan + UBSan, Linux-Debug-ASan 단위 테스트) — 묶음마다 한 번(linux-verify 스킬). 체인과 CPU 를 다투지 않게 all 뒤에 차례로 돌고, 지면 끝 줄에 적는다(push 는 WINDOWS_OK 로 이미 정해졌다).
+# --record 실행은 건너뛴다: sanitize 도 클론을 HEAD 로 되돌려(reset --hard · clean) 아직 옮기지 않은 기록 골든을 지운다 — goldens 로 옮긴 뒤 따로 돌린다.
+SAN_RC=0
+case " $* " in
+  *" --record "*) echo "== sanitize 건너뜀(--record — goldens 로 옮긴 뒤 LinuxScenarios.py sanitize 를 따로 돌린다)"; SAN_RC=skip ;;
+  *)
+    echo "== sanitize address $(date +%T)"
+    PYTHONUTF8=1 run build/verify.sanitize.log py -3 Scripts/dev/LinuxScenarios.py sanitize address
+    SAN_RC=$?
+    [ $DRY -eq 1 ] || tail -n 20 build/verify.sanitize.log
+    ;;
+esac
 echo "== done $(date +%T)"
-[ $RC -eq 0 ] || { echo "LINUX_FAILED sha=$SHA"; exit 1; }
-echo "VERIFIED=$SHA (시작 단계 $FROM)"
+[ $RC -eq 0 ] || echo "LINUX_FAILED sha=$SHA"
+[ "$SAN_RC" = 0 ] || [ "$SAN_RC" = skip ] || echo "SANITIZE_FAILED (address) sha=$SHA - build/verify.sanitize.log"
+[ $RC -eq 0 ] && { [ "$SAN_RC" = 0 ] || [ "$SAN_RC" = skip ]; } || exit 1
+SAN_NOTE=""
+[ "$SAN_RC" = skip ] && SAN_NOTE=", sanitize 건너뜀"
+echo "VERIFIED=$SHA (시작 단계 $FROM$SAN_NOTE)"
