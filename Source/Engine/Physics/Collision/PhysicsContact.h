@@ -137,6 +137,7 @@ namespace sw
                 state._bBodyRemoved    = false;
                 state._bRestarted      = state._bWasActive;
                 state._subContactCount = 0;
+                state._suspendedCount  = 0;
             }
             state._first            = bSwap ? bodyB : bodyA;
             state._second           = bSwap ? bodyA : bodyB;
@@ -145,6 +146,8 @@ namespace sw
             state._impulse          = state._impulse > impulse ? state._impulse : impulse;
             state._bTouchedThisStep = true;
             state._bReportStay      = isStayListener( state._first ) || isStayListener( state._second );
+            if ( state._suspendedCount > 0 )
+                --state._suspendedCount; // 잠들며 쉬던 셰이프 쌍이 깨어 다시 닿았다 — 같은 접촉이다
             ++state._subContactCount;
         }
 
@@ -170,6 +173,34 @@ namespace sw
             --iter->second._subContactCount;
         }
 
+        /**
+         * @brief 셰이프 쌍 하나가 잠들어 백엔드가 알림을 멈췄습니다(Jolt 는 바디가 잠들면 그 접촉마다 제거를 알린다). 쌍은 끝나지 않고 쉽니다.
+         * @details 쉬는 셰이프 쌍은 닿아 있는 것으로 센다 — 끝 · 시작을 내지 않고, 셰이프 쌍이 모두 쉬면 유지도 내지 않는다(유니티 · 언리얼도 잠든 바디의 접촉을
+         *          끝내지 않는다). 깨어 다시 닿으면 `beginSubContact` 가 쉼을 접촉으로 돌리고, 깨었는데 닿지 않은 것은 `resumeSubContacts` 가 지운다.
+         */
+        void suspendSubContact( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB )
+        {
+            typename PairMap::iterator iter = _mapPair.find( makeKey( bodyA, bodyB ) );
+            if ( iter == _mapPair.end() || iter->second._subContactCount <= 0 )
+                return;
+            --iter->second._subContactCount;
+            ++iter->second._suspendedCount;
+        }
+
+        /**
+         * @brief 쉬는 셰이프 쌍이 있는 바디 쌍 가운데 @p isAsleep( first, second ) 가 거짓인(깨어난) 쌍의 쉼을 지웁니다 — 깨어 다시 닿은 것은 이번 step 의
+         *        알림이 이미 접촉으로 돌렸으니, 남은 쉼은 깨어 보니 떨어진 것이다. 백엔드가 이번 step 의 알림을 넣은 뒤 `finishStep` 앞에서 부릅니다.
+         */
+        template <typename TPredicate>
+        void resumeSubContacts( const TPredicate& isAsleep )
+        {
+            for ( auto& [key, state] : _mapPair )
+            {
+                if ( state._suspendedCount > 0 && isAsleep( state._first._body, state._second._body ) == false )
+                    state._suspendedCount = 0;
+            }
+        }
+
         /** @brief 바디들이 사라졌습니다. 그 바디가 낀 쌍은 다음 `finishStep` 에서 끝납니다. 한 번 훑습니다(대량 파괴에 바디마다 훑지 않는다). */
         void removeBodies( span<const PhysicsBodyHandle> listBody )
         {
@@ -188,6 +219,7 @@ namespace sw
                 if ( bFirstGone || bSecondGone )
                 {
                     state._subContactCount = 0;
+                    state._suspendedCount  = 0;
                     state._bBodyRemoved    = true;
                 }
             }
@@ -204,7 +236,10 @@ namespace sw
             for ( auto& [key, state] : _mapPair )
             {
                 if ( state._first._body == body || state._second._body == body )
+                {
                     state._subContactCount = 0;
+                    state._suspendedCount  = 0;
+                }
             }
         }
 
@@ -217,7 +252,7 @@ namespace sw
             for ( typename PairMap::iterator iter = _mapPair.begin(); iter != _mapPair.end(); )
             {
                 PairState& state   = iter->second;
-                const bool bActive = state._subContactCount > 0 && state._bBodyRemoved == false;
+                const bool bActive = ( state._subContactCount > 0 || state._suspendedCount > 0 ) && state._bBodyRemoved == false;
                 if ( state._bWasActive && bActive && state._bRestarted )
                 {
                     _listRestartEnd.push_back( makeEvent( state, PhysicsContactPhase::End ) ); // 옛 생애의 끝 — 아래 정렬 묶음 앞에 둔다
@@ -225,7 +260,7 @@ namespace sw
                 }
                 else if ( state._bWasActive && bActive )
                 {
-                    if ( state._bReportStay )
+                    if ( state._bReportStay && state._subContactCount > 0 ) // 모두 쉬는(잠든) 쌍은 유지를 내지 않는다
                         outListEvent.push_back( makeEvent( state, PhysicsContactPhase::Stay ) );
                 }
                 else if ( state._bWasActive == false && bActive )
@@ -291,6 +326,7 @@ namespace sw
             Vector             _normal{};
             float32            _impulse{ 0.0f };
             int32              _subContactCount{ 0 };
+            int32              _suspendedCount{ 0 };       ///< 잠들어 백엔드가 알림을 멈춘 셰이프 쌍 수(`suspendSubContact`) — 닿아 있는 것으로 센다
             bool               _bWasActive{ false };       ///< 지난 step 끝에 닿아 있었는지 나타낸다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool               _bTouchedThisStep{ false }; ///< 이번 step 에 새로 닿은 셰이프 쌍이 있었는지 나타낸다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool               _bRestarted{ false };       ///< 지운 바디가 같은 간격 안에서 다시 닿았다 — 끝과 시작을 함께 낸다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다

@@ -258,6 +258,52 @@ SW_TEST_CASE( PhysicsContactTrackerTest, ReshapedBodyKeepsTouchingPair )
 }
 
 /**
+ * @brief [PhysicsContactTrackerTest] 잠들어 쉰 셰이프 쌍(`suspendSubContact`)은 끝을 내지 않고, 깨어 다시 닿으면 이어지며, 깨었는데 닿지 않으면 그때 끝난다
+ */
+SW_TEST_CASE( PhysicsContactTrackerTest, SuspendedPairWaitsForWake )
+{
+    PhysicsContactTracker<PhysicsDimension3D> tracker;
+    const PhysicsContactBody                  bodyA{ PhysicsBodyHandle::fromPacked( 0x100000001ull ), 1 };
+    const PhysicsContactBody                  bodyB{ PhysicsBodyHandle::fromPacked( 0x100000002ull ), 2 };
+    vector<PhysicsContactEvent3D>             listEvent;
+    tracker.setStayListener( bodyA._userData, true );
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+
+    bool       bAsleep  = true;
+    const auto isAsleep = [&bAsleep]( PhysicsBodyHandle, PhysicsBodyHandle )
+    { return bAsleep; };
+    tracker.suspendSubContact( bodyA._body, bodyB._body ); // 잠들었다
+    tracker.resumeSubContacts( isAsleep );
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_EXPECT_EQUAL( size_t{ 0 }, listEvent.size() ); // 끝도 유지도 없다
+    SW_EXPECT_EQUAL( 1u, tracker.getActivePairCount() );
+
+    bAsleep = false; // 깨어 다시 닿았다
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
+    tracker.resumeSubContacts( isAsleep );
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::Stay );
+
+    bAsleep = true; // 다시 잠들었다가
+    tracker.suspendSubContact( bodyA._body, bodyB._body );
+    tracker.resumeSubContacts( isAsleep );
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    bAsleep = false; // 깨었는데 닿지 않는다
+    tracker.resumeSubContacts( isAsleep );
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::End );
+    SW_EXPECT_EQUAL( 0u, tracker.getActivePairCount() );
+}
+
+/**
  * @brief [PhysicsContactTrackerTest] 유지는 듣는 사용자 값이 낀 쌍만 낸다 — 이미 닿은 쌍도 듣기를 켜고 끄면 다음 step 부터 따른다(감사 S-1)
  * @details A-B(A 가 듣는다)와 C-D(아무도 듣지 않는다)가 함께 닿아 있다. 시작 · 끝은 듣기와 상관없이 늘 나온다.
  */

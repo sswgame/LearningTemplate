@@ -347,6 +347,8 @@ namespace sw
         static bool isEarlierReport( const ContactReport& lhs, const ContactReport& rhs );
         /** @brief 스텝 동안 모은 알림을 정렬해 추적기에 넣고 이벤트를 냅니다. */
         void flushContactReports();
+        /** @brief 두 바디가 모두 활성이 아닌지입니다(잠든 섬 — 정적은 늘 활성이 아니다). 없는 바디면 false 입니다. */
+        bool isPairAsleep( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB ) const;
         /** @brief 지금 깨어 있는 강체를 `_listMovedBody` 에 붙입니다(스텝 앞 · 뒤에 한 번씩). */
         void appendActiveBodies();
 

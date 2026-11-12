@@ -111,3 +111,47 @@ SW_TEST_CASE( ContactStayListenerTest, OnlyListeningObjectGetsStay )
     SW_EXPECT_EQUAL( 0u, staleStay );
     SW_EXPECT_EQUAL( receivedBefore, Internal::s_collisionStayCount );
 }
+
+/**
+ * @brief [ContactStayListenerTest] 바닥에 놓인 상자가 잠들어도 접촉은 끝나지 않고(유지만 멈춘다), 깨어 떠나면 그때 끝난다
+ * @details Jolt 는 바디가 잠들면 그 접촉마다 제거를 알린다 — 예전에는 그것을 끝으로 내 잠든 상자마다 거짓 끝이 났다(유니티 · 언리얼은 잠들어도 끝내지 않는다).
+ */
+SW_TEST_CASE( ContactStayListenerTest, SleepingBodyKeepsContact )
+{
+    using Internal = TestContactStayListenerInternal;
+    GameObjectManager   manager;
+    RigidBodyComponent* pFloor = Internal::addBox( manager, "Floor", float3{ 0.0f, 0.0f, 0.0f }, PhysicsBodyType::Static );
+    RigidBodyComponent* pCrate = Internal::addBox( manager, "Crate", float3{ 0.0f, 0.99f, 0.0f }, PhysicsBodyType::Dynamic );
+    SW_REQUIRE_NOT_NULL( pFloor );
+    SW_REQUIRE_NOT_NULL( pCrate );
+    const ScenePhysics& physics = manager.getSubsystem<ScenePhysics>();
+    manager.beginPlay();
+    uint32 begin = 0;
+    uint32 end   = 0;
+    for ( uint32 frame = 0; frame < 120; ++frame )
+    {
+        manager.update( Internal::kFrame );
+        for ( const PhysicsContactEvent3D& event : physics.getFrameEvents3D() )
+        {
+            const bool bCrate = event._bodyA == pCrate->getBodyHandle() || event._bodyB == pCrate->getBodyHandle();
+            begin += ( bCrate && event._phase == PhysicsContactPhase::Begin ) ? 1u : 0u;
+            end += ( bCrate && event._phase == PhysicsContactPhase::End ) ? 1u : 0u;
+        }
+    }
+    SW_REQUIRE_TRUE( pCrate->isSleeping() ); // 2 초 — 잠드는 데 충분하다
+    SW_EXPECT_EQUAL( 1u, begin );
+    SW_EXPECT_EQUAL( 0u, end );
+
+    pCrate->setLinearVelocity( float3{ 0.0f, 8.0f, 0.0f } ); // 깨워 위로 던진다
+    pCrate->wake();
+    for ( uint32 frame = 0; frame < 10; ++frame )
+    {
+        manager.update( Internal::kFrame );
+        for ( const PhysicsContactEvent3D& event : physics.getFrameEvents3D() )
+        {
+            const bool bCrate = event._bodyA == pCrate->getBodyHandle() || event._bodyB == pCrate->getBodyHandle();
+            end += ( bCrate && event._phase == PhysicsContactPhase::End ) ? 1u : 0u;
+        }
+    }
+    SW_EXPECT_EQUAL( 1u, end ); // 떠나면 끝난다
+}
