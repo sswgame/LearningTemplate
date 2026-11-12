@@ -59,12 +59,14 @@ _WIN_KEEP_BIN_EXES: set[str] = {
     "llvm-lib.exe",
     "llvm-rc.exe",
     "lldb.exe",  # 핫 리로드 디버그 확인(liblldb.dll 은 bin 의 DLL 로 이미 남는다) — _ensure_debugger
+    "clang-tidy.exe",  # 정적 분석(`py -3 -m Scripts tidy`, 묶음 검증) — _ensure_bin_from_archive 가 이미 깐 키트에도 더한다
 }
 _POSIX_KEEP_BIN_NAMES: set[str] = {
     "clang",
     "clang++",
     "clang-cl",
     "clang-format",
+    "clang-tidy",
     "lld",
     "ld.lld",
     "llvm-ar",
@@ -352,11 +354,11 @@ def _prune_bin(root: Path) -> None:
             continue
         name = path.name
         if name in _POSIX_KEEP_BIN_NAMES or name.startswith("clang-"):
-            # clang-format 은 유지. clang-tidy/clangd 등만 제거.
-            if name.startswith("clang-format"):
+            # clang-format · clang-tidy 는 유지. clangd 등만 제거.
+            if name.startswith(("clang-format", "clang-tidy")):
                 continue
             if name.startswith(
-                ("clang-tidy", "clangd", "clang-check", "clang-doc")
+                ("clangd", "clang-check", "clang-doc")
             ):
                 path.unlink(missing_ok=True)
             continue
@@ -390,6 +392,30 @@ def _prune_lib_include(root: Path) -> None:
         if drop_path.is_dir():
             shutil.rmtree(drop_path, ignore_errors=True)
 
+def _ensure_bin_from_archive(root: Path, search: dict, file_name: str) -> None:
+    """
+    키트의 bin 에 `file_name` 이 없으면 키트를 만든 같은 압축본(캐시)에서 그 한 파일만 꺼낸다 — **이미 설치된 트리도 복구된다.**
+    최소 키트 검사에 넣지 않는 까닭: 그 검사가 지면 키트를 통째로 다시 풀고 build/ 의 PCH 를 모두 버린다(빠진 도구 하나로 치르기엔 비싸다).
+    """
+    target = root / "bin" / file_name
+    if target.is_file():
+        return
+    url = search[KEY_LLVM_DOWNLOAD_URLS][platform_key()]
+    archive = ensure_cached_download(url, tools_cache_dir() / url.rsplit("/", 1)[-1], min_size=50_000_000, label="Llvm")
+    print(f"[Llvm] Adding {file_name} from the cached LLVM archive...")
+    with tarfile.open(archive, "r:*") as tar_handle:
+        member = next((m for m in tar_handle if m.isfile() and m.name.endswith(f"/bin/{file_name}")), None)
+        if member is None:
+            raise RuntimeError(f"[Llvm] {archive.name} has no bin/{file_name}")
+        source = tar_handle.extractfile(member)
+        target.write_bytes(source.read())
+    target.chmod(member.mode | 0o111)
+
+
+def clang_tidy_file_name() -> str:
+    return "clang-tidy.exe" if is_windows_host() else "clang-tidy"
+
+
 def _ensure_debugger(root: Path, search: dict) -> None:
     """
     Windows 키트(`Tools/LLVM`)에 lldb.exe 와 Python 런타임을 둔다. 없는 것만 더한다 — 키트를 다시 풀면 PCH 를 모두 버리므로 그 길로 가지 않는다.
@@ -397,16 +423,7 @@ def _ensure_debugger(root: Path, search: dict) -> None:
     (python.exe · pythonw.exe 는 빼고 DLL · 표준 라이브러리 zip · ._pth · .pyd 만). 마지막에 `lldb --version` 이 돌아야 끝난다.
     """
     bin_dir = root / "bin"
-    if not (bin_dir / "lldb.exe").is_file():
-        url = search[KEY_LLVM_DOWNLOAD_URLS][platform_key()]
-        archive = ensure_cached_download(url, tools_cache_dir() / url.rsplit("/", 1)[-1], min_size=50_000_000, label="Llvm")
-        print("[Llvm] Adding lldb.exe from the cached LLVM archive...")
-        with tarfile.open(archive, "r:*") as tar_handle:
-            member = next((m for m in tar_handle if m.isfile() and m.name.endswith("/bin/lldb.exe")), None)
-            if member is None:
-                raise RuntimeError(f"[Llvm] {archive.name} has no bin/lldb.exe")
-            source = tar_handle.extractfile(member)
-            (bin_dir / "lldb.exe").write_bytes(source.read())
+    _ensure_bin_from_archive(root, search, "lldb.exe")
 
     # lldb 의 파이썬 바인딩(`lib/site-packages/lldb` — `import lldb` 와 `command script import` 가 쓴다). liblldb.dll 이 bin 옆 `../lib/site-packages` 에서 찾는다.
     site_packages = root / "lib" / "site-packages"
@@ -463,8 +480,10 @@ def setup_llvm(allow_bootstrap: bool = False) -> str:
     tools = resolve_tools_subdir(KEY_LLVM_TOOLS_SUBDIR, search)
     if existing:
         print(f"[Llvm] Using existing LLVM kit: {existing}")
-        if is_windows_host() and Path(existing).resolve() == tools.resolve():
-            _ensure_debugger(tools, search)
+        if Path(existing).resolve() == tools.resolve():
+            _ensure_bin_from_archive(tools, search, clang_tidy_file_name())
+            if is_windows_host():
+                _ensure_debugger(tools, search)
         return _record(Path(existing))
 
     # Stale Tools/LLVM (e.g. Clang 19 vs VS18 STL needing 20): explain before replace.
