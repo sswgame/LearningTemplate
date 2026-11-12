@@ -138,13 +138,6 @@
 
 ### 온라인 서비스 · 저장소
 
-#### O-1 환불 표시와 지급이 서로를 조건으로 걸지 않아 "환불된 구매의 지급" 이 통과한다
-- 분류: 결함(경쟁 — SQL 저장소에서만) · 확신: 확인(코드 경로)
-- 근거: `Source/GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.cpp:439` 가 환불 표시를 읽고(NotFound) `:456` `commitRedeem`(`:117-143`)이 원장 쓰기만 커밋한다. 환불 표시 "없어야 함" 조건이 트랜잭션에 없다. 반대쪽 `revokeRefund` 의 "지급 전 환불" 가지(`:568-575`)도 분개 "없어야 함" 을 걸지 않는다. 읽기는 커밋 트랜잭션 밖이라 PostgreSQL SERIALIZABLE 도 못 본다(`Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/SQLServiceStore.cpp:63-77`). 메모리 저장소는 직렬이라 단위 테스트로는 드러나지 않는다.
-- 상용 서비스: PlayFab · Nakama 는 구매 검증과 환불 처리를 같은 행 잠금 · 유일 제약 아래 둔다.
-- 제안: 연결 포장이 일 안에서 읽은 (테이블, 키, 버전)을 모아 커밋 때 `requireVersion` 으로 자동으로 붙인다. NotFound 읽기는 "없어야 함" 이 된다. 지금은 조건을 손으로 다는 규칙이라 Admin · Mailbox · Guild 로직에도 같은 틈이 있을 수 있다.
-- 확인: 메모리 저장소에 "읽기와 커밋 사이에 다른 일을 끼워 넣는" 테스트 훅을 두고 지급 ↔ 환불을 엇갈린다. `TestPostgresEndToEnd` 에 두 워커 동시 실행.
-
 #### O-3 비밀번호 해시(Argon2id)가 저장소 워커(DB 연결) 스레드에서 돌고 저장소 대기열에 상한이 없다
 - 분류: 성능(DoS) · 확신: 구조 확인, 수치는 측정 필요
 - 근거: `Source/GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.cpp:83-108` 의 로그인 일은 저장소 스레드에서 돌고 그 안의 `Source/GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.cpp:554` 가 해시를 계산한다(19 MiB × 2 회, 워커 기본 4). 로그인이 몰리면 원장 · 우편 · 거래의 저장소 일이 전부 뒤에 선다. `Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool.cpp:138-149` 의 대기열은 상한이 없다.
@@ -762,7 +755,7 @@
 2. **복구 입구** — 복구 입구 통일과 새 씬 · 문서 패널의 자동 저장: E-1(세션 폴더 · pid 잠금 · 리로드 이어 쓰기 P0-3 은 들어갔다).
 3. **에셋 옮김 방송** — `applyAssetMoves` 의 (옛 id → 새 id) 알림과 열린 문서 · 씬 · 선택 갱신, dirty 참조자 거절: P0-4. 참조 쪽은 integ2 의 GUID 2 · 3 단계와 순서를 맞춘다.
 4. **세이브 씬 전환 뒤 적용** — 봉투 머리의 씬으로 옮긴 뒤 적용(`GameSceneFlow`), 교체에서 진 복원 뒤 씬 다시 열기: G-7 · P0-6 의 남은 몫.
-5. **환불과 지급의 상호 조건** — 같은 영수증 레코드를 서로의 조건으로: O-1.
+5. **읽은 것을 커밋 조건으로** — 일 안에서 읽은 것을 커밋 조건으로 자동으로 붙이는 연결 포장과 Admin · Mailbox · Guild 저장 로직 점검(경제 키트의 지급 · 환불 · 철회는 영수증 레코드 하나로 묶였다 — O-1).
 6. **웹 오디오 백엔드** — AudioWorklet + 링 버퍼: P0-11.
 
 ### P1 (29 묶음)

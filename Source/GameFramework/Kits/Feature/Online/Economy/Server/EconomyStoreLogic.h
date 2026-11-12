@@ -18,6 +18,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/EconomyProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
@@ -81,9 +82,12 @@ namespace sw
     struct SW_KIT_SERVER_API EconomyStoreLogic
     {
         static const hashed_string& getPurchaseCountTable(); ///< "econ_purchase" — 키 `<계정 16 진>/<상품 id>`
-        static const hashed_string& getRefundTable();        ///< "econ_refund" — 키는 지급 분개 키, 값은 1 바이트(1 환불 회수, 2 청약철회). 같은 거래를 두 번 회수하지 않는다
         static const hashed_string& getRefundCursorTable();  ///< "econ_refund_cursor" — 키는 스토어 이름, 값은 환불 조회의 기준 시각(가변 정수)
-        /** @brief 쓴 영수증 표입니다(키 = 분개 키 `iap.redeem/<스토어>/<거래 id>`). 보존 정리가 지우지 않는다 — 영수증 지급의 멱등 기록(분개는 감사 내역이라 지워진다). */
+        /**
+         * @brief 영수증 상태 표입니다(키 = 지급 분개 키 `rcpt.<스토어>/<거래 id>`, 값 `[판 번호][상태][계정]`). 보존 정리가 지우지 않는다.
+         * @details 거래 하나의 상태(지급 · 지급 전 환불 · 환불 회수 · 청약철회)가 레코드 하나라서 지급과 환불 · 철회가 서로 이 레코드의 버전을 커밋 조건으로 건다 —
+         *          어느 쪽이 먼저 커밋해도 다른 쪽은 Conflict 로 다시 읽으므로 "환불된 구매의 지급" 이 통과하지 않는다(감사 O-1). 분개는 감사 내역이라 지워지고 이 레코드가 멱등 기록이다(감사 P0-7).
+         */
         static const hashed_string& getReceiptTable();
         static const hashed_string& getDeliveryTable(); ///< "econ_delivery" — 스토어에 아직 알리지 못한 지급. 키는 지급 분개 키, 값은 `[판 번호][스토어][알림 키][기한]`
         static EconomyServiceResult toEconomyResult( LedgerResult result );
@@ -107,13 +111,15 @@ namespace sw
         static EconomyServiceResult redeemReceipt( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers, const EconomyRedeemInput& input,
                                                    EconomyRedeemReply& outReply );
         /**
-         * @brief 스토어 환불 알림으로 지급한 재화를 회수합니다. 빚을 허용하며(이미 쓴 재화도 회수한다) 사유는 "refund.revoke" 입니다.
+         * @brief 스토어 환불 알림으로 지급한 재화를 회수합니다. 사유는 "refund.revoke" 입니다.
          * @param outListChange 회수로 잔액이 바뀐 계정과 그 잔액입니다. 회수하지 않았으면(이미 환불했거나 지급 전이다) 비어 있습니다.
-         * @details 지급 분개(`rcpt.<스토어>` 범위, 거래 id 토큰)를 찾아 같은 다리를 거꾸로 소각으로 보낸다. 환불 표시를 같은 트랜잭션에 쓰므로 두 번 오면 아무것도 하지 않는다.
-         *          지급 전에 환불이 먼저 오면 표시만 남기고, 뒤에 온 지급은 ReceiptRefunded 로 거절된다. 청약철회한 거래면 이미 돌려받았으므로 표시만 본다.
+         * @details 영수증 상태 레코드(`getReceiptTable`)를 읽은 버전으로 바꾸는 쓰기와 회수 분개를 한 트랜잭션에 넣으므로 두 번 오면 아무것도 하지 않는다(AlreadyRefunded).
+         *          지급 전에 환불이 먼저 오면 상태만 "지급 전 환불" 로 남기고, 뒤에 온 지급은 ReceiptRefunded 로 거절된다. 청약철회한 거래면 이미 돌려받았으므로 상태만 본다.
+         *          지급 뒤면 지급 분개(`rcpt.<스토어>` 범위, 거래 id 토큰)의 다리를 거꾸로 소각으로 보내며, 양은 @p recovery 가 정한다(`Debt` 는 모두 · 빚 허용, `Unspent` 는 남은 잔액 안에서).
+         *          지급 분개가 보존 정리로 지워졌으면 지급 내용을 모르므로 회수하지 않고 상태만 바꾸며 오류 로그를 남긴다.
          */
-        static EconomyServiceResult revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotification& notice, int64 nowMs,
-                                                  vector<EconomyBalanceChange>& outListChange );
+        static EconomyServiceResult revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotification& notice,
+                                                  EconomyRefundRecoveryMode recovery, int64 nowMs, vector<EconomyBalanceChange>& outListChange );
         /**
          * @brief 유상 구매를 청약철회합니다. 지급한 계정만, 기한 안에, 아직 쓰지 않은 만큼만 회수하며 빚은 만들지 않습니다. 회수한 양은 `_listWithdrawn` 입니다.
          * @details 사유는 "iap.withdraw" 이고 분개 키는 `withdraw.<스토어>` 범위의 거래 id 토큰이라 다시 와도 한 번만 적용된다. 실제 결제 환불은 스토어나 결제 대행이 회수한 양으로 한다.

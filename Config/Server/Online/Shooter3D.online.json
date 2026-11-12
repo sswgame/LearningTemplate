@@ -26,7 +26,8 @@
             "_name": "economy",
             "_settings": {
                 "_currencyCatalog": "game/shooter3d/data/shooter3d.currencies.xml",
-                "_offerCatalog": "game/shooter3d/data/shooter3d.offers.xml"
+                "_offerCatalog": "game/shooter3d/data/shooter3d.offers.xml",
+                "_refundRecovery": "Debt"
             }
         },
         {

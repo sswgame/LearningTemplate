@@ -114,6 +114,11 @@ namespace sw
             SW_LOG_ERROR_ID( "EconomyService.EconomyServiceNeedsExternalLinks", "EconomyService: a receipt validator binds buyers to linked logins but the account kit's link port is missing" );
             return false;
         }
+        if ( settings._refundRecovery >= EconomyRefundRecoveryMode::Count )
+        {
+            SW_LOG_ERROR_ID( "EconomyService.EconomyServiceNeedsRefundRecovery", "EconomyService needs a refund recovery policy (_refundRecovery: Debt or Unspent)" );
+            return false;
+        }
         _store.bindStore( pStore );
         _settings = settings;
         _refundCursorJob.setPeriod( settings._refundCursorRetryMs ); // 첫 틱에 읽고, 못 읽었으면 이 간격 뒤에 다시 읽는다
@@ -588,13 +593,14 @@ namespace sw
         _settings._pReceiptRegistry->pollRefunds( listNotice );
         for ( ReceiptRefundNotification& notice : listNotice )
         {
-            const CurrencyCatalog* pCurrencies = _settings._pCurrencyCatalog;
-            const int64            nowMs       = _nowMs.count();
-            _store.submit( [pCurrencies, nowMs, notice = std::move( notice )]( IServiceStoreConnection& connection )
+            const CurrencyCatalog*          pCurrencies = _settings._pCurrencyCatalog;
+            const int64                     nowMs       = _nowMs.count();
+            const EconomyRefundRecoveryMode recovery    = _settings._refundRecovery;
+            _store.submit( [pCurrencies, nowMs, recovery, notice = std::move( notice )]( IServiceStoreConnection& connection )
             {
                 EconomyRefundResult done;
                 done._notice        = notice;
-                done._serviceResult = EconomyStoreLogic::revokeRefund( connection, *pCurrencies, notice, nowMs, done._listChange );
+                done._serviceResult = EconomyStoreLogic::revokeRefund( connection, *pCurrencies, notice, recovery, nowMs, done._listChange );
                 return done;
             }, [this]( const EconomyRefundResult& done, ServiceStoreCompletion completion )
             { completeRefund( done._notice, done._serviceResult, done._listChange, completion ); } );

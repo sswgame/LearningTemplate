@@ -79,6 +79,7 @@ namespace sw
                 settings._pPresence              = context._kits.find<IAccountPresence>();            // 계정 키트(다른 서버에 붙은 계정에 잔액 변경 알림을 중계). 선택 의존이라 먼저 섰다
                 settings._pExternalLinks         = context._kits.find<const IAccountExternalLinks>(); // 계정 키트(영수증 구매자를 외부 로그인으로 묶는 제공자가 쓴다 — 그런 제공자가 있는데 없으면 서비스가 거절한다)
                 settings._bAcceptSandboxReceipts = kitConfig._bAcceptSandboxReceipts ? SW_TRUE : SW_FALSE;
+                settings._refundRecovery         = kitConfig._refundRecovery;
                 if ( _service.initialize( context._pStore, settings ) == false )
                 {
                     _receiptRegistry.shutdown();
