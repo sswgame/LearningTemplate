@@ -277,6 +277,8 @@ namespace sw
 
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
+        /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다 — 손실 콜백이 따로 들던 비트필드는 다른 스레드가 쓰는 경쟁이라 없앴다). */
+        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
 
         RHIFormat            getBackBufferFormat() const override { return _swapChain.getRHIFormat(); }
         RHICapabilities      getCapabilities() const override;
@@ -492,7 +494,6 @@ namespace sw
         RHIFrameFenceRing _frameFenceRing; ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
 
         uint8 _bInitialized         : 1;
-        uint8 _bDeviceLost          : 1;
         uint8 _bTextureFormatsTier1 : 1; ///< rg16snorm 첨부 · 블렌드(`texture-formats-tier1`)
         uint8 _bDepth32Stencil8     : 1; ///< 깊이를 되읽을 수 있는 깊이 · 스텐실 형식
         uint8 _bTextureBC           : 1;

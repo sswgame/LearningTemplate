@@ -162,14 +162,19 @@ namespace sw
          * @details 그 뒤의 전송 제출은 진입에서 `Rejected` 이다. GPU 는 실제로 살아 있어 프레임 · 대기는 계속 돈다(Vulkan 과 같은 한계).
          */
         bool debugRemoveDevice() override;
+        /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
+        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
         /**
          * @brief 런타임에 장치 제거 이유(`GetDeviceRemovedReason`)를 묻고, 제거됐으면 전송 손실로 표시합니다(`RHITransferSerials::markLost`). 어느 스레드에서나 부릅니다.
          * @details DXGI_ERROR_DEVICE_REMOVED · DEVICE_RESET · DEVICE_HUNG 등 제거 이유가 실패인 모든 경우가 이 한 곳으로 표시된다 — 호출 결과를 보는 자리마다 따로 표시하면 빠뜨린 자리의 티켓이
          *          손실 뒤에도 `Pending` 으로 남는다. 장치가 없으면 false 입니다.
          */
         bool isDeviceRemoved();
-        /** @brief 장치를 잃었으면 true 입니다(이미 표시했거나 `isDeviceRemoved`). 전송 제출 함수가 진입에서 보고 `Rejected` 를 돌려줍니다(계약 2). */
-        bool isDeviceLost();
+        /**
+         * @brief 장치를 잃었으면 true 입니다(이미 표시했거나 `isDeviceRemoved` — 드라이버에 묻는다). 전송 제출 함수가 진입에서 보고 `Rejected` 를 돌려줍니다(계약 2).
+         * @details 표시만 읽는 공용 질의는 `IRHIDevice::isDeviceLost` 다. 이름을 가른 까닭은 이쪽이 `GetDeviceRemovedReason` 을 부르고 처음 보면 손실을 표시하기 때문이다.
+         */
+        bool pollDeviceLost();
 
         /** @brief DXGI `QueryVideoMemoryInfo` 로 이 프로세스의 사용량(로컬과 비로컬)과 로컬 예산을 채웁니다. 어댑터를 찾지 못하면 false 입니다. */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;

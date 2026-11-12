@@ -166,6 +166,8 @@ namespace sw
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /** @brief 장치 손실 흉내입니다. GL 은 문맥을 일부러 잃을 API 가 없어 DX11 처럼 첫 손실을 본 뒤의 상태(전송 거절 · 대기 멈춤)만 만든다 — GPU 는 살아 있다. */
         bool debugRemoveDevice() override;
+        /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
+        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
 
         /** @brief 백엔드 타입(OpenGL)을 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }

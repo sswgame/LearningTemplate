@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
+#include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 
 #include <algorithm>
 
@@ -180,6 +181,12 @@ namespace sw::test
         /** @brief 부르지 않고 쌓기만 합니다. 테스트가 "GPU 가 그 프레임을 끝냈다" 를 흉내 내어 `_listGPURelease` 를 부릅니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override { _listGPURelease.push_back( releaseDelegate ); }
         uint32 getPendingReleaseCount() const override { return _pendingReleaseCount; }
+        /** @brief 손실 표시만 세운다(실제 백엔드의 `debugRemoveDevice` 와 같은 상태 — 전송 거절 · `isDeviceLost`). */
+        bool debugRemoveDevice() override
+        {
+            (void)_transferSerials.markLost();
+            return true;
+        }
 
 #if !defined( SW_SHIPPING )
         /** @brief `_listLiveTextureIndex` · `_listLiveBufferIndex` 에 든 번호만 살아 있다고 답합니다. */
@@ -191,8 +198,9 @@ namespace sw::test
 #endif
 
     protected:
-        void waitIdleInternal() override { _listShutdownStep.push_back( "waitIdleInternal" ); }
-        void detachCommandRecordingInternal() override { _listShutdownStep.push_back( "detachCommandRecordingInternal" ); }
+        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
+        void                      waitIdleInternal() override { _listShutdownStep.push_back( "waitIdleInternal" ); }
+        void                      detachCommandRecordingInternal() override { _listShutdownStep.push_back( "detachCommandRecordingInternal" ); }
 
         [[nodiscard]] bool queryNativeHandlesInternal( RHINativeHandles& outHandles ) const override
         {
@@ -208,5 +216,8 @@ namespace sw::test
         void* getNativeContext() const override { return nullptr; }
         void* getNativeCommandQueue() const override { return nullptr; }
         void* getNativeTexturePointer( RHITextureHandle ) const override { return nullptr; }
+
+    private:
+        RHITransferSerials _transferSerials{ 1 }; ///< 손실 표시의 저장소(세대 1 — 레지스트리를 거치지 않는 가짜)
     };
 } // namespace sw::test

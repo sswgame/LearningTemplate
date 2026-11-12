@@ -94,7 +94,7 @@ namespace sw
             }
 
             /**
-             * @brief 개발 명령 `rhi.removeDevice [driverWaitMs]` — 장치 제거(TDR)를 흉내 낸다. 제거 뒤 프레임 · 종료가 멈추지 않는지 보는 데 쓴다.
+             * @brief 개발 명령 `rhi.removeDevice [driverWaitMs]` — 장치 제거(TDR)를 흉내 낸다. 제거 뒤 엔진이 Config 정책(`EngineConfig::_deviceLostPolicy`)대로 끝나는지 — 멈추지 않고 정한 종료 코드로 — 보는 데 쓴다.
              * @details 대기를 주면 렌더 스레드가 다음 프레임의 펜스 대기 자리에서 그만큼 잠든 뒤 제거한다(`RHIBackendSwitcher::removeDeviceAfterDriverWaitForTest`) — 실제 TDR 이 첫 손실 결과를 돌려주기 전 드라이버 안에서 막히는 모양이다.
              */
             static bool runRemoveDevice( const vector<string>& listArgument, string& outReply )
@@ -331,7 +331,7 @@ namespace sw
     }
 
     SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice [driverWaitMs]",
-                    "Remove the GPU device as a TDR would (DirectX 12; Vulkan marks it lost) to check that frames and shutdown do not hang; with a wait, the render thread first blocks that long where the fence wait is",
+                    "Remove the GPU device as a TDR would (DirectX 12; Vulkan marks it lost) to check that the engine then ends by _deviceLostPolicy (exit code DeviceLost) without hanging; with a wait, the render thread first blocks that long where the fence wait is",
                     &RHIBackendSwitcherInternal::runRemoveDevice );
     SW_AUTOMATION_STEP( swapBackend, AutomationBackendSteps::kSwapBackendKind, &RHIBackendSwitcherInternal::runSwapBackend, &AutomationBackendSteps::validateSwapBackend, AutomationStepOptions{}.withPrepare( &RHIBackendSwitcherInternal::prepareSwapBackend ).withWallBudget( AutomationBackendSteps::kSwapBackendWallSeconds ) );
     // 설명의 백엔드 목록은 쿠킹 표에서 만든다(줄 순서 = 열거값) — 손으로 적은 목록이 WebGPU 를 빠뜨렸다.

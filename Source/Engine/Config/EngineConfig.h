@@ -116,6 +116,19 @@ namespace sw
 namespace sw
 {
     /**
+     * @enum RHIDeviceLostPolicy
+     * @brief 렌더 장치를 잃었을 때(TDR · 드라이버 재시작 · 개발 명령 `rhi.removeDevice`) 엔진이 할 일입니다. `EngineRenderDriver` 가 프레임마다 `IRHIDevice::isDeviceLost` 를 보고 고른다.
+     * @details 언리얼은 `GetDeviceRemovedReason` → DRED 덤프 → 크래시 리포트 뒤 종료하고 Godot 4 도 치명 오류로 끝낸다 — 그래서 지금 고를 수 있는 값은 종료 하나다.
+     *          유니티처럼 장치를 다시 세우는 값(`RHI::recreateDevice` + 자원 다시 올리기)은 손실 뒤 종료 · 재생성 경로를 검증한 뒤 더한다.
+     */
+    ENUM()
+    enum class RHIDeviceLostPolicy : uint8
+    {
+        None = 0, ///< 파일에 값이 없다 — 기동이 오류로 멈춘다(정책을 짐작하지 않는다)
+        Quit = 1, ///< 손실을 처음 본 백엔드가 브레드크럼을 보고한 뒤, 그 프레임에 `ProcessExitCode::DeviceLost` 로 끝낸다
+    };
+
+    /**
      * @struct EngineConfig
      * @brief `Config/Engine/EngineConfig.json` 이 담는 엔진 기동 설정입니다.
      * @details 이 헤더는 형식(타입 · 범위)만 정하고 값은 모두 그 파일에 있습니다(언리얼 `BaseEngine.ini` 와 같은 바탕 층). 그래서 파일은 모든 키를 적고
@@ -175,6 +188,9 @@ namespace sw
 
         PROPERTY()
         AudioOutputConfig _audioOutput{}; ///< 오디오 출력 장치 다시 열기 간격
+
+        PROPERTY()
+        RHIDeviceLostPolicy _deviceLostPolicy{ RHIDeviceLostPolicy::None }; ///< 렌더 장치를 잃었을 때 할 일(`None` 이면 기동이 오류로 멈춘다)
     };
 
     SW_SERVICE_SLOT_CONST( EngineConfig, Required );
