@@ -969,7 +969,7 @@ namespace sw::editor
         if ( pHiddenID == nullptr || pHiddenID[0] != '#' || pHiddenID[1] != '#' )
             SW_FATAL( "Editor widget id '%#' would show its label on the right of the field - draw the label first (EditorWidgets::drawPropertyRowLabel / drawInlineLabel) and pass a '##' id",
                       pHiddenID != nullptr ? pHiddenID : "(null)" );
-        return EditorWidgetID{ RuntimeTag{}, pHiddenID };
+        return EditorWidgetID{ pHiddenID };
     }
 
     bool EditorWidgets::inputInt( EditorWidgetID id, int32* pValue, int32 step, int32 stepFast, int32 flags )

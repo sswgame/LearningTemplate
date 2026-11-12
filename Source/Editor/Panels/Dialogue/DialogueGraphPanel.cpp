@@ -690,7 +690,7 @@ namespace sw::editor
             {
                 fixed_string<constant::buffer::kMax512> textBuf{ node._text.c_str() };
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "Text" ) ); // 폭 전체 칸이라 이름표는 위에
-                if ( EditorWidgets::inputTextMultiline( "##Text", textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
+                if ( EditorWidgets::inputTextMultiline( SW_WIDGET_ID( "##Text" ), textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
                     node._text = textBuf.c_str();
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     notifyDocumentEdited( "Edit Dialogue Node" );

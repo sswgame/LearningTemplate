@@ -236,7 +236,7 @@ namespace sw::editor
 
             EditorChrome::sameLineIfFits( EditorChrome::measureColumns( 21.0f ) ); // 좁은 창에서 새 키 칸이 오른쪽 끝에서 잘렸다(uiaudit 23)
             EditorChrome::setNextItemWidthColumns( 21.0f );
-            EditorWidgets::inputTextWithHint( "##newKey", SW_LOCKEY( "EditorDataTable", "NewKeyHint" ), _newKeyBuffer.data(), _newKeyBuffer.capacity() );
+            EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##newKey" ), SW_LOCKEY( "EditorDataTable", "NewKeyHint" ), _newKeyBuffer.data(), _newKeyBuffer.capacity() );
             EditorSelfTestMarks::record( "dataTable.newKey" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "AddKey" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdLabel", "AddKey" ) ) && _model.addKey( _newKeyBuffer.c_str() ) )

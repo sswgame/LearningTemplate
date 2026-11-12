@@ -160,7 +160,7 @@ namespace sw::editor
         // 이름표는 왼쪽 열이다 — ImGui 기본(오른쪽 이름표)은 같은 창의 다른 칸과 줄이 맞지 않았다. 입력을 마칠 때 한 번 기록하므로 칸마다 되돌리기 하나다(묶음 키를 쓰면 다른 프레임의 편집까지 하나로 합쳐졌다).
         EditorWidgets::drawPropertyRowLabel( pLabel );
         ImGui::PushID( pLabel );
-        EditorWidgets::dragFloat( "##value", pValue, speed );
+        EditorWidgets::dragFloat( SW_WIDGET_ID( "##value" ), pValue, speed );
         ImGui::PopID();
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( pUndoLabel );
@@ -217,7 +217,7 @@ namespace sw::editor
         drawEditedDragFloat( "w", &pFrame->_uvRect._z, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameWTip" ), "Edit Sprite Frame" );
         drawEditedDragFloat( "h", &pFrame->_uvRect._w, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameHTip" ), "Edit Sprite Frame" );
         EditorWidgets::drawPropertyRowLabel( "durationMs" );
-        EditorWidgets::inputInt( "##durationMs", &pFrame->_durationMs );
+        EditorWidgets::inputInt( SW_WIDGET_ID( "##durationMs" ), &pFrame->_durationMs );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Frame" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameDurationTip" ) );
@@ -230,12 +230,12 @@ namespace sw::editor
             return;
         float2& atlasSize = _model.editAtlasPixelSize();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorSpriteClip", "AtlasSize" ) );
-        EditorWidgets::inputFloat2( "##atlasSize", &atlasSize._x, "%.0f" );
+        EditorWidgets::inputFloat2( SW_WIDGET_ID( "##atlasSize" ), &atlasSize._x, "%.0f" );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.commitAtlasPixelSize() )
             notifyDocumentEdited( "Edit Sprite Atlas Size" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasSizeTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorSpriteClip", "Border" ) );
-        EditorWidgets::inputFloat4( "##border", &frame._borderPixels._x, "%.0f" );
+        EditorWidgets::inputFloat4( SW_WIDGET_ID( "##border" ), &frame._borderPixels._x, "%.0f" );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.commitSelectedFrameBorder() )
             notifyDocumentEdited( "Edit Sprite Frame" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "BorderTip" ) );
@@ -299,7 +299,7 @@ namespace sw::editor
         // 키는 라디안으로 담고(엔진의 각도 단위) 편집은 도로 한다.
         float32 angleDeg = MathUtil::toDegree( pKey->_angle );
         EditorWidgets::drawPropertyRowLabel( "angleDeg" );
-        if ( EditorWidgets::dragFloat( "##angleDeg", &angleDeg, 0.5f ) )
+        if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##angleDeg" ), &angleDeg, 0.5f ) )
             pKey->_angle = MathUtil::toRadian( angleDeg );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Key" );
@@ -318,11 +318,11 @@ namespace sw::editor
         EditorWidgets::drawHelpMarker( SW_LOCKEY( "EditorSpriteClip", "AtlasDragTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Columns" ) );
         ImGui::SetNextItemWidth( EditorChrome::measureStepperInput( 4.0f ) );
-        EditorWidgets::inputInt( "##Columns", &_model.editSliceColumns() );
+        EditorWidgets::inputInt( SW_WIDGET_ID( "##Columns" ), &_model.editSliceColumns() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SliceColumnsTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Rows" ) );
         ImGui::SetNextItemWidth( EditorChrome::measureStepperInput( 4.0f ) );
-        EditorWidgets::inputInt( "##Rows", &_model.editSliceRows() );
+        EditorWidgets::inputInt( SW_WIDGET_ID( "##Rows" ), &_model.editSliceRows() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SliceRowsTip" ) );
         _model.clampSliceGrid();
         if ( ImGui::Button( SW_LOCKEY( "EditorSpriteClip", "AddAllCells" ) ) )
@@ -501,17 +501,17 @@ namespace sw::editor
             return;
         fixed_string<constant::buffer::kMax64>& animationName = _model.editAnimationName();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Name" ) );
-        EditorWidgets::inputText( "##name", animationName.data(), animationName.capacity() );
+        EditorWidgets::inputText( SW_WIDGET_ID( "##name" ), animationName.data(), animationName.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.commitAnimationName() )
             notifyDocumentEdited( "Edit Sprite Animation" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationNameTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "FirstFrame" ) );
-        EditorWidgets::inputInt( "##firstframe", &pAnimation->_firstFrame );
+        EditorWidgets::inputInt( SW_WIDGET_ID( "##firstframe" ), &pAnimation->_firstFrame );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.commitAnimationRange() )
             notifyDocumentEdited( "Edit Sprite Animation" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationFirstFrameTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "FrameCount" ) );
-        EditorWidgets::inputInt( "##framecount", &pAnimation->_frameCount );
+        EditorWidgets::inputInt( SW_WIDGET_ID( "##framecount" ), &pAnimation->_frameCount );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.commitAnimationRange() )
             notifyDocumentEdited( "Edit Sprite Animation" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationFrameCountTip" ) );

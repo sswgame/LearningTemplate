@@ -137,9 +137,9 @@ namespace sw::editor
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "AttachByAddress" ) ) )
         {
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "InspectorAttach" ) );
-            EditorWidgets::inputTextWithHint( "##InspectorAddress", "127.0.0.1:<port>", _address.data(), _address.capacity() );
+            EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##InspectorAddress" ), "127.0.0.1:<port>", _address.data(), _address.capacity() );
             ImGui::SameLine();
-            EditorWidgets::inputTextWithHint( "##InspectorToken", "token", _token.data(), _token.capacity(), ImGuiInputTextFlags_Password );
+            EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##InspectorToken" ), "token", _token.data(), _token.capacity(), ImGuiInputTextFlags_Password );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Attach" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Attach" ) ) )
                 _viewModel.attachByAddress( _address.c_str(), _token.c_str() );
@@ -211,7 +211,7 @@ namespace sw::editor
         ImGui::EndChild();
         constexpr ImGuiInputTextFlags kFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion;
         ImGui::SetNextItemWidth( -1.0f );
-        const bool bEntered = EditorWidgets::inputTextWithHint( "##InspectorCommand", SW_LOCKEY( "EditorMultiplayer", "InspectorConsoleHint" ), _commandLine.data(),
+        const bool bEntered = EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##InspectorCommand" ), SW_LOCKEY( "EditorMultiplayer", "InspectorConsoleHint" ), _commandLine.data(),
                                                                 _commandLine.capacity(), kFlags, &MultiplayerInspectorTabInternal::onCommandLineEdit, &_viewModel );
         if ( bEntered )
         {

@@ -202,12 +202,12 @@ namespace sw::editor
             notifyDocumentEdited( "Edit Tile Set Atlas" );
         int32 grid[2] = { content._columnCount, content._rowCount };
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "Grid" ), SW_LOCKEY( "EditorTileSet", "GridTip" ) );
-        EditorWidgets::inputInt2( "##TileSetGrid", grid );
+        EditorWidgets::inputInt2( SW_WIDGET_ID( "##TileSetGrid" ), grid );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.setAtlasGrid( grid[0], grid[1] ) )
             notifyDocumentEdited( "Edit Tile Set Grid" );
         float32 tileSize = content._tileSize;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "TileSize" ), SW_LOCKEY( "EditorTileSet", "TileSizeTip" ) );
-        EditorWidgets::inputFloat( "##TileSetTileSize", &tileSize, 0.0f, 0.0f, "%.3f" );
+        EditorWidgets::inputFloat( SW_WIDGET_ID( "##TileSetTileSize" ), &tileSize, 0.0f, 0.0f, "%.3f" );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.setTileSize( tileSize ) )
             notifyDocumentEdited( "Edit Tile Set Tile Size" );
         drawIssues( nullopt, nullopt ); // 타일셋 전체의 문제
@@ -295,7 +295,7 @@ namespace sw::editor
         EditorSelfTestMarks::record( "tileSet.solid" );
         int32 navCost = static_cast<int32>( brush._navCost );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "NavCost" ), SW_LOCKEY( "EditorTileSet", "NavCostTip" ) );
-        EditorWidgets::inputInt( "##TileSetNavCost", &navCost );
+        EditorWidgets::inputInt( SW_WIDGET_ID( "##TileSetNavCost" ), &navCost );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.setSelectedNavCost( navCost ) )
             notifyDocumentEdited( "Edit Tile Brush" );
         if ( brush.isRuleTile() )
@@ -405,7 +405,7 @@ namespace sw::editor
         {
             float32 fps = visual._framesPerSecond;
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "Fps" ) );
-            EditorWidgets::inputFloat( "##TileSetFps", &fps, 0.0f, 0.0f, "%.2f" );
+            EditorWidgets::inputFloat( SW_WIDGET_ID( "##TileSetFps" ), &fps, 0.0f, 0.0f, "%.2f" );
             if ( ImGui::IsItemDeactivatedAfterEdit() && _model.setFramesPerSecond( fps ) )
                 notifyDocumentEdited( "Edit Tile Frames" );
         }

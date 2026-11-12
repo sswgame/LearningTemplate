@@ -38,15 +38,15 @@ namespace sw::editor
 
                 ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Camera" ) );
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "FOVDeg" ) );
-                bChanged |= EditorWidgets::sliderFloat( "##FOVDeg", &values._fovYDegrees, 10.0f, 140.0f, "%.1f" );
+                bChanged |= EditorWidgets::sliderFloat( SW_WIDGET_ID( "##FOVDeg" ), &values._fovYDegrees, 10.0f, 140.0f, "%.1f" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraFOV" ) );
 
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NearPlane" ) );
-                bChanged |= EditorWidgets::dragFloat( "##NearPlane", &values._nearPlane, 0.01f, 0.001f, 10.0f );
+                bChanged |= EditorWidgets::dragFloat( SW_WIDGET_ID( "##NearPlane" ), &values._nearPlane, 0.01f, 0.001f, 10.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraNear" ) );
 
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "FarPlane" ) );
-                bChanged |= EditorWidgets::dragFloat( "##FarPlane", &values._farPlane, 1.0f, 1.0f, 10000.0f );
+                bChanged |= EditorWidgets::dragFloat( SW_WIDGET_ID( "##FarPlane" ), &values._farPlane, 1.0f, 1.0f, 10000.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraFar" ) );
 
                 bool bOrtho = values._bOrthographic != SW_FALSE;
@@ -60,7 +60,7 @@ namespace sw::editor
                 if ( bOrtho )
                 {
                     EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "OrthoHeight" ) );
-                    bChanged |= EditorWidgets::dragFloat( "##OrthoHeight", &values._orthoHeight, 0.1f, 0.1f, 100.0f );
+                    bChanged |= EditorWidgets::dragFloat( SW_WIDGET_ID( "##OrthoHeight" ), &values._orthoHeight, 0.1f, 0.1f, 100.0f );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraOrthoHeight" ) );
                 }
                 if ( bChanged )

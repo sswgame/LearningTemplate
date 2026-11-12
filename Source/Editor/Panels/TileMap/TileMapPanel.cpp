@@ -356,7 +356,7 @@ namespace sw::editor
         if ( _document.getPaintLayer() == PaintLayer::Data )
         {
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Value" ) );
-            EditorWidgets::inputInt( "##Value", &_document.editPaintDataValue() );
+            EditorWidgets::inputInt( SW_WIDGET_ID( "##Value" ), &_document.editPaintDataValue() );
             EditorSelfTestMarks::record( "tileMap.dataLayer.value" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataValueTip" ) );
             const bool bRemoveDataLayer = ImGui::Button( SW_LOCKEY( "EdVerb", "Remove" ) );
@@ -368,11 +368,11 @@ namespace sw::editor
         ImGui::Separator();
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "DataLayers" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NameAlt" ) );
-        EditorWidgets::inputText( "##dataLayerName", _newDataLayerName.data(), _newDataLayerName.capacity() );
+        EditorWidgets::inputText( SW_WIDGET_ID( "##dataLayerName" ), _newDataLayerName.data(), _newDataLayerName.capacity() );
         EditorSelfTestMarks::record( "tileMap.dataLayer.name" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataLayerNameTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Default" ) );
-        EditorWidgets::inputInt( "##dataLayerDefault", &_newDataLayerDefault );
+        EditorWidgets::inputInt( SW_WIDGET_ID( "##dataLayerDefault" ), &_newDataLayerDefault );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataLayerDefaultTip" ) );
         const bool bAddDataLayer = ImGui::Button( SW_LOCKEY( "EdText", "AddDataLayer" ) );
         EditorSelfTestMarks::record( "tileMap.dataLayer.add" );
@@ -401,27 +401,27 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "PathTip" ) );
         fixed_string<constant::buffer::kMax128>& name = _document.editName();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NameAlt" ) );
-        EditorWidgets::inputText( "##Name", name.data(), name.capacity() );
+        EditorWidgets::inputText( SW_WIDGET_ID( "##Name" ), name.data(), name.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Tile Map Name" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "NameTip" ) );
         // 이름표는 왼쪽 열(인스펙터와 같다) — ImGui 기본(오른쪽 이름표)은 좁은 왼쪽 칸에서 Height · 가장자리 칸을 잘랐다(uiaudit 21).
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Width" ) );
-        EditorWidgets::inputInt( "##Width", &_document.editInputWidth() );
+        EditorWidgets::inputInt( SW_WIDGET_ID( "##Width" ), &_document.editInputWidth() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "WidthTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Height" ) );
-        EditorWidgets::inputInt( "##Height", &_document.editInputHeight() );
+        EditorWidgets::inputInt( SW_WIDGET_ID( "##Height" ), &_document.editInputHeight() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "HeightTip" ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "ApplySize" ) ) && _document.applyInputSize() )
             notifyDocumentEdited( "Resize Tile Map" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "ApplySizeTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "SpawnX" ) );
-        EditorWidgets::inputInt( "##SpawnX", &_document.editInputSpawnX() );
+        EditorWidgets::inputInt( SW_WIDGET_ID( "##SpawnX" ), &_document.editInputSpawnX() );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _document.applyInputSpawn() )
             notifyDocumentEdited( "Set Tile Map Spawn" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "SpawnXTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "SpawnY" ) );
-        EditorWidgets::inputInt( "##SpawnY", &_document.editInputSpawnY() );
+        EditorWidgets::inputInt( SW_WIDGET_ID( "##SpawnY" ), &_document.editInputSpawnY() );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _document.applyInputSpawn() )
             notifyDocumentEdited( "Set Tile Map Spawn" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "SpawnYTip" ) );
@@ -457,7 +457,7 @@ namespace sw::editor
         _document.collectPaintLayerNames( listLayerName );
         int32 layerIndex = _document.getPaintLayerIndex();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Layer" ) );
-        if ( EditorWidgets::combo( "##Layer", &layerIndex, listLayerName.data(), static_cast<int32>( listLayerName.size() ) ) )
+        if ( EditorWidgets::combo( SW_WIDGET_ID( "##Layer" ), &layerIndex, listLayerName.data(), static_cast<int32>( listLayerName.size() ) ) )
             _document.selectPaintLayer( layerIndex );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "LayerTip" ) );
 
@@ -465,13 +465,13 @@ namespace sw::editor
         if ( layer == PaintLayer::Visual )
         {
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Height" ) );
-            EditorWidgets::inputInt( "##PaintHeight", &_document.editPaintHeight() );
+            EditorWidgets::inputInt( SW_WIDGET_ID( "##PaintHeight" ), &_document.editPaintHeight() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "PaintHeightTip" ) );
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "AtlasID" ) );
-            EditorWidgets::inputInt( "##AtlasID", &_document.editAtlasID() );
+            EditorWidgets::inputInt( SW_WIDGET_ID( "##AtlasID" ), &_document.editAtlasID() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "AtlasIDTip" ) );
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Tint" ) );
-            EditorWidgets::colorEdit3( "##Tint", _document.editTint() );
+            EditorWidgets::colorEdit3( SW_WIDGET_ID( "##Tint" ), _document.editTint() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "TintTip" ) );
         }
         else if ( layer == PaintLayer::Warp )
@@ -481,10 +481,10 @@ namespace sw::editor
             (void)EditorWidgets::drawAssetPathField( "##WarpTarget", warpTarget, "tile map", ".tilemap.xml", "tileMap.warpTarget" ); // 콘텐츠 브라우저에서 끌어 놓을 수 있다. 비우면 같은 맵이다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "WarpTargetTip" ) );
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "TargetX" ) );
-            EditorWidgets::inputInt( "##WarpTileX", &_document.editWarpTileX() );
+            EditorWidgets::inputInt( SW_WIDGET_ID( "##WarpTileX" ), &_document.editWarpTileX() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "WarpTargetXTip" ) );
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "TargetY" ) );
-            EditorWidgets::inputInt( "##WarpTileY", &_document.editWarpTileY() );
+            EditorWidgets::inputInt( SW_WIDGET_ID( "##WarpTileY" ), &_document.editWarpTileY() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "WarpTargetYTip" ) );
         }
         else if ( layer == PaintLayer::Tile )
@@ -516,15 +516,15 @@ namespace sw::editor
             ImGui::TextDisabled( "%s", edges[edgeIndex] );
             ImGui::SameLine( EditorChrome::measureColumns( 2.0f ) + ImGui::GetStyle().ItemSpacing.x ); // 글자 폭(N · W)과 무관하게 칸 시작을 맞춘다
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - 2.0f * ( numberWidth + style.ItemSpacing.x ) - EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Apply" ) ) - style.ItemSpacing.x );
-            EditorWidgets::inputText( "##target", preset._target.data(), preset._target.capacity() );
+            EditorWidgets::inputText( SW_WIDGET_ID( "##target" ), preset._target.data(), preset._target.capacity() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetTip" ) );
             ImGui::SameLine();
             ImGui::SetNextItemWidth( numberWidth );
-            EditorWidgets::inputInt( "##tx", &preset._tileX, 0, 0 );
+            EditorWidgets::inputInt( SW_WIDGET_ID( "##tx" ), &preset._tileX, 0, 0 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetXTip" ) );
             ImGui::SameLine();
             ImGui::SetNextItemWidth( numberWidth );
-            EditorWidgets::inputInt( "##ty", &preset._tileY, 0, 0 );
+            EditorWidgets::inputInt( SW_WIDGET_ID( "##ty" ), &preset._tileY, 0, 0 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetYTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Apply" ) ) && _document.paintEdgeWarp( edgeIndex ) )

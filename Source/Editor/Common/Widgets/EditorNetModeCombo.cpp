@@ -59,7 +59,7 @@ namespace sw::editor
         {
             ImGui::SameLine();
             ImGui::SetNextItemWidth( EditorChrome::measureStepperInput( 2.0f ) ); // -/+ 단추 몫까지(숫자 칸 폭만 주면 숫자가 눌린다)
-            if ( EditorWidgets::inputInt( "##PlayerCount", &settings._clientCount, 1, 1 ) )
+            if ( EditorWidgets::inputInt( SW_WIDGET_ID( "##PlayerCount" ), &settings._clientCount, 1, 1 ) )
                 bChanged = true;
             settings._clientCount = MathUtil::clamp( settings._clientCount, 1, kMaxPlayerCount );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayerCount" ) );

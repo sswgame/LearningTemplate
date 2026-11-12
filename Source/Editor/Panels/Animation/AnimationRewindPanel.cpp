@@ -78,7 +78,7 @@ namespace sw::editor
         float32 seconds = _viewState._requestedWindowSeconds;
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "WindowS" ) );
         EditorChrome::setNextItemWidthColumns( 16.0f );
-        if ( EditorWidgets::sliderFloat( "##Windows", &seconds, 1.0f, 60.0f, "%.0f" ) )
+        if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Windows" ), &seconds, 1.0f, 60.0f, "%.0f" ) )
             _viewModel.setRequestedWindowSeconds( seconds );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "WindowTip" ) );
         bool bDraw = _bDrawSkeleton == SW_TRUE;
@@ -102,7 +102,7 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( -12.0f );
         // 왼쪽이 과거다 — 값은 "가장 늦은 기록에서 몇 초 전" 이라 막대를 뒤집어 그린다.
         float32 position = history - _scrubSecondsAgo;
-        if ( EditorWidgets::sliderFloat( "##RewindTimeline", &position, 0.0f, MathUtil::max( history, 0.001f ), "%.2f s" ) )
+        if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##RewindTimeline" ), &position, 0.0f, MathUtil::max( history, 0.001f ), "%.2f s" ) )
         {
             _scrubSecondsAgo = MathUtil::clamp( history - position, 0.0f, history );
             _viewModel.scrubTo( _scrubSecondsAgo );

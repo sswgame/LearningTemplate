@@ -1055,7 +1055,7 @@ namespace sw::editor
     {
         const utf8* const pAdd = SW_LOCKEY( "EditorCharacterEditor", "AddSocketButton" );
         ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - EditorChrome::measureSmallButton( pAdd ) - ImGui::GetStyle().ItemSpacing.x );
-        EditorWidgets::inputTextWithHint( "##NewSocketName", SW_LOCKEY( "EditorCharacterEditor", "NewSocketHint" ), _newName.data(), _newName.max_size() );
+        EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##NewSocketName" ), SW_LOCKEY( "EditorCharacterEditor", "NewSocketHint" ), _newName.data(), _newName.max_size() );
         ImGui::SameLine();
         if ( ImGui::Button( pAdd ) )
             _document.addSocket( CharacterEditorPanelInternal::makeName( _newName.c_str() ) );
@@ -1087,7 +1087,7 @@ namespace sw::editor
         SocketEditModel&    sockets = _document.getSocketModel();
 
         EditorChrome::setNextItemWidthColumns( 24.0f );
-        EditorWidgets::inputText( "##Rename", _renameBuffer.data(), _renameBuffer.max_size() );
+        EditorWidgets::inputText( SW_WIDGET_ID( "##Rename" ), _renameBuffer.data(), _renameBuffer.max_size() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Rename" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Rename" ) ) )
             _document.renameSocket( name, CharacterEditorPanelInternal::makeName( _renameBuffer.c_str() ) );
@@ -1104,7 +1104,7 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax128> parent;
         parent = socket._parent.c_str();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Parent" ) );
-        if ( EditorWidgets::inputText( "##Parent", parent.data(), parent.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+        if ( EditorWidgets::inputText( SW_WIDGET_ID( "##Parent" ), parent.data(), parent.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
             _document.reportEdit( sockets.setParent( name, CharacterEditorPanelInternal::makeName( parent.c_str() ) ) );
 
         hashed_string pickedKind;
@@ -1113,34 +1113,34 @@ namespace sw::editor
 
         float3 translation = socket._translation;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Translation" ) );
-        if ( EditorWidgets::dragFloat3( "##Translation", &translation._x, CharacterEditorPanelInternal::kDragSpeed ) )
+        if ( EditorWidgets::dragFloat3( SW_WIDGET_ID( "##Translation" ), &translation._x, CharacterEditorPanelInternal::kDragSpeed ) )
             _document.reportEdit( sockets.setTranslation( name, translation, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             sockets.endContinuousEdit();
 
         float3 degrees = socket._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Rotation" ) );
-        if ( EditorWidgets::dragFloat3( "##Rotation", &degrees._x, CharacterEditorPanelInternal::kRotationDragSpeed ) )
+        if ( EditorWidgets::dragFloat3( SW_WIDGET_ID( "##Rotation" ), &degrees._x, CharacterEditorPanelInternal::kRotationDragSpeed ) )
             _document.reportEdit( sockets.setRotationDegrees( name, degrees, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             sockets.endContinuousEdit();
 
         float3 scale = socket._scale;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Scale" ) );
-        if ( EditorWidgets::dragFloat3( "##Scale", &scale._x, CharacterEditorPanelInternal::kDragSpeed ) )
+        if ( EditorWidgets::dragFloat3( SW_WIDGET_ID( "##Scale" ), &scale._x, CharacterEditorPanelInternal::kDragSpeed ) )
             _document.reportEdit( sockets.setScale( name, scale, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             sockets.endContinuousEdit();
 
         int32 anchorIndex = socket._anchor == SocketAnchor::Surface ? 1 : 0;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Anchor" ) );
-        if ( EditorWidgets::combo( "##Anchor", &anchorIndex, "Bone\0Surface\0" ) )
+        if ( EditorWidgets::combo( SW_WIDGET_ID( "##Anchor" ), &anchorIndex, "Bone\0Surface\0" ) )
             _document.reportEdit( sockets.setAnchor( name, anchorIndex == 1 ? SocketAnchor::Surface : SocketAnchor::Bone ) );
 
         fixed_string<constant::file::kMaxPathSize> previewMesh;
         previewMesh = string_view( socket._previewMesh );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "PreviewMesh" ) );
-        if ( EditorWidgets::inputText( "##Previewmesh", previewMesh.data(), previewMesh.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+        if ( EditorWidgets::inputText( SW_WIDGET_ID( "##Previewmesh" ), previewMesh.data(), previewMesh.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
             _document.reportEdit( sockets.setPreviewMesh( name, previewMesh.c_str() ) );
     }
 
@@ -1242,7 +1242,7 @@ namespace sw::editor
 
         float3 translation = current._translation;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "BoneTranslation" ) );
-        if ( EditorWidgets::dragFloat3( "##Bonetranslation", &translation._x, CharacterEditorPanelInternal::kDragSpeed ) )
+        if ( EditorWidgets::dragFloat3( SW_WIDGET_ID( "##Bonetranslation" ), &translation._x, CharacterEditorPanelInternal::kDragSpeed ) )
             _document.reportEdit( pose.setTranslation( bone, translation, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pose.endContinuousEdit();
@@ -1250,14 +1250,14 @@ namespace sw::editor
 
         float3 degrees = current._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "BoneRotation" ) );
-        if ( EditorWidgets::dragFloat3( "##Bonerotation", &degrees._x, CharacterEditorPanelInternal::kRotationDragSpeed ) )
+        if ( EditorWidgets::dragFloat3( SW_WIDGET_ID( "##Bonerotation" ), &degrees._x, CharacterEditorPanelInternal::kRotationDragSpeed ) )
             _document.reportEdit( pose.setRotationDegrees( bone, degrees, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pose.endContinuousEdit();
 
         float3 scale = current._scale;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "BoneScale" ) );
-        if ( EditorWidgets::dragFloat3( "##Bonescale", &scale._x, CharacterEditorPanelInternal::kDragSpeed ) )
+        if ( EditorWidgets::dragFloat3( SW_WIDGET_ID( "##Bonescale" ), &scale._x, CharacterEditorPanelInternal::kDragSpeed ) )
             _document.reportEdit( pose.setScale( bone, scale, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pose.endContinuousEdit();
@@ -1445,7 +1445,7 @@ namespace sw::editor
             {
                 // 축 범위 — 슬라이더 값이 [min, max] 안에서 본 · 모프로 옮겨진다. 끄는 동안 한 되돌리기 단계.
                 float32 arrRange[2] = { Internal::readFloat( shapes.readAttribute( arrAxis, "min" ) ), Internal::readFloat( shapes.readAttribute( arrAxis, "max" ) ) };
-                if ( EditorWidgets::dragFloat2( "##range", arrRange, Internal::kDragSpeed ) )
+                if ( EditorWidgets::dragFloat2( SW_WIDGET_ID( "##range" ), arrRange, Internal::kDragSpeed ) )
                 {
                     (void)BodyCustomizationViewModel::setAxisValue( shapes, row._channel, "min", arrRange[0], true );
                     (void)BodyCustomizationViewModel::setAxisValue( shapes, row._channel, "max", arrRange[1], true );
@@ -1515,13 +1515,13 @@ namespace sw::editor
             ImGui::BeginDisabled( visuals.isOpen() == false );
             Internal::TextBuffer alias{ row._alias.c_str() };
             ImGui::SetNextItemWidth( Internal::kFillWidth );
-            EditorWidgets::inputText( "##alias", alias.data(), alias.max_size() );
+            EditorWidgets::inputText( SW_WIDGET_ID( "##alias" ), alias.data(), alias.max_size() );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 (void)BodyCustomizationViewModel::setSectionAlias( visuals, row, alias.c_str() );
             ImGui::TableNextColumn();
             Internal::TextBuffer groups{ row._groups.c_str() };
             ImGui::SetNextItemWidth( Internal::kFillWidth );
-            EditorWidgets::inputText( "##groups", groups.data(), groups.max_size() );
+            EditorWidgets::inputText( SW_WIDGET_ID( "##groups" ), groups.data(), groups.max_size() );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 (void)BodyCustomizationViewModel::setSectionGroups( visuals, row, StringUtil::replace( groups.c_str(), " ", "" ) );
             ImGui::TableNextColumn();
@@ -1568,7 +1568,7 @@ namespace sw::editor
                 float32 value = field._value;
                 ImGui::PushID( field._pAttribute );
                 EditorWidgets::drawPropertyRowLabel( field._pAttribute ); // 이름은 데이터 칸 이름이다(파일과 같은 철자)
-                const bool bChanged = EditorWidgets::sliderFloat( "##value", &value, 0.0f, field._max );
+                const bool bChanged = EditorWidgets::sliderFloat( SW_WIDGET_ID( "##value" ), &value, 0.0f, field._max );
                 ImGui::PopID();
                 if ( bChanged )
                     (void)BodyCustomizationViewModel::setJiggleValue( profiles, state._bodyProfile, params._group, field._pAttribute, value, true );
@@ -1584,7 +1584,7 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "Wrinkles" ) );
         float32 intensity = state._wrinkleIntensity;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "WrinkleIntensity" ) );
-        if ( EditorWidgets::sliderFloat( "##wrinkleIntensity", &intensity, 0.0f, Internal::kMaxWrinkleWeight ) )
+        if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##wrinkleIntensity" ), &intensity, 0.0f, Internal::kMaxWrinkleWeight ) )
             (void)BodyCustomizationViewModel::setWrinkleIntensity( profiles, state._bodyProfile, intensity, true );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             profiles.endContinuousEdit();
@@ -1596,14 +1596,14 @@ namespace sw::editor
             ImGui::SameLine();
             int32 mask = static_cast<int32>( region._mask );
             EditorWidgets::drawInlineLabel( "mask" ); // 데이터 칸 이름
-            if ( EditorWidgets::sliderInt( "##mask", &mask, 0, static_cast<int32>( Internal::kMaxWrinkleMask ) ) )
+            if ( EditorWidgets::sliderInt( SW_WIDGET_ID( "##mask" ), &mask, 0, static_cast<int32>( Internal::kMaxWrinkleMask ) ) )
                 (void)BodyCustomizationViewModel::setWrinkleMask( profiles, state._bodyProfile, region._region, static_cast<uint32>( mask ) );
             for ( const WrinkleSourceDef& source : region._listSource )
             {
                 float32 weight = source._weight;
                 ImGui::PushID( source._expression.c_str() );
                 EditorWidgets::drawPropertyRowLabel( source._expression.c_str() ); // 표정 이름은 데이터 이름이다
-                const bool bWeightChanged = EditorWidgets::sliderFloat( "##weight", &weight, 0.0f, Internal::kMaxWrinkleWeight );
+                const bool bWeightChanged = EditorWidgets::sliderFloat( SW_WIDGET_ID( "##weight" ), &weight, 0.0f, Internal::kMaxWrinkleWeight );
                 ImGui::PopID();
                 if ( bWeightChanged )
                     (void)BodyCustomizationViewModel::setWrinkleWeight( profiles, state._bodyProfile, region._region, source._expression, weight, true );
@@ -1625,7 +1625,7 @@ namespace sw::editor
             for ( size_t point = 0; point < listPoint.size(); ++point )
             {
                 ImGui::PushID( static_cast<int32>( point ) );
-                bChanged = EditorWidgets::dragFloat2( "##point", &listPoint[point]._x, Internal::kUVDragSpeed, 0.0f, 1.0f ) || bChanged;
+                bChanged = EditorWidgets::dragFloat2( SW_WIDGET_ID( "##point" ), &listPoint[point]._x, Internal::kUVDragSpeed, 0.0f, 1.0f ) || bChanged;
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     profiles.endContinuousEdit();
                 ImGui::PopID();
@@ -1661,7 +1661,7 @@ namespace sw::editor
                 float32 value = field._value;
                 ImGui::PushID( field._pAttribute );
                 EditorWidgets::drawPropertyRowLabel( field._pAttribute ); // 데이터 칸 이름
-                const bool bValueChanged = EditorWidgets::dragFloat( "##value", &value, field._speed, 0.0f, Internal::kMaxFluidValue );
+                const bool bValueChanged = EditorWidgets::dragFloat( SW_WIDGET_ID( "##value" ), &value, field._speed, 0.0f, Internal::kMaxFluidValue );
                 ImGui::PopID();
                 if ( bValueChanged )
                     (void)BodyCustomizationViewModel::setFluidValue( profiles, state._bodyProfile, row._name, field._pAttribute, value, true );
@@ -1864,7 +1864,7 @@ namespace sw::editor
             // 색 — 견본 묶음이 있으면 견본 단추만(염색과 같은 팔레트), 없으면 자유 색.
             if ( row._listSwatch.empty() )
             {
-                if ( EditorWidgets::colorEdit4( "##color", &value._color._x, ImGuiColorEditFlags_NoInputs ) )
+                if ( EditorWidgets::colorEdit4( SW_WIDGET_ID( "##color" ), &value._color._x, ImGuiColorEditFlags_NoInputs ) )
                     (void)BodyCustomizationViewModel::setSkinLayer( appearance, index, value, ImGui::IsItemActive() );
             }
             for ( size_t swatch = 0; swatch < row._listSwatch.size(); ++swatch )
@@ -1881,7 +1881,7 @@ namespace sw::editor
             }
             ImGui::NewLine();
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "LayerOpacity" ), SW_LOCKEY( "EdPlugin", "LayerOpacityTooltip" ) );
-            if ( EditorWidgets::sliderFloat( "##opacity", &value._opacity, 0.0f, 1.0f ) )
+            if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##opacity" ), &value._opacity, 0.0f, 1.0f ) )
                 (void)BodyCustomizationViewModel::setSkinLayer( appearance, index, value, true );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 appearance.endContinuousEdit();
@@ -1897,11 +1897,11 @@ namespace sw::editor
                 if ( index == 0 || reverse == state._listLayer.size() )
                     EditorSelfTestMarks::record( "charactereditor.body.placeLayer" );
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "LayerOffset" ), SW_LOCKEY( "EdPlugin", "LayerOffsetTooltip" ) );
-                bool bChanged = EditorWidgets::dragFloat2( "##offset", &value._offset._x, CharacterEditorPanelInternal::kDragSpeed, 0.0f, 1.0f );
+                bool bChanged = EditorWidgets::dragFloat2( SW_WIDGET_ID( "##offset" ), &value._offset._x, CharacterEditorPanelInternal::kDragSpeed, 0.0f, 1.0f );
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "LayerScale" ), SW_LOCKEY( "EdPlugin", "LayerScaleTooltip" ) );
-                bChanged = EditorWidgets::dragFloat2( "##scale", &value._scale._x, CharacterEditorPanelInternal::kDragSpeed, SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale ) || bChanged;
+                bChanged = EditorWidgets::dragFloat2( SW_WIDGET_ID( "##scale" ), &value._scale._x, CharacterEditorPanelInternal::kDragSpeed, SkinLayerValue::kMinScale, SkinLayerValue::kMaxScale ) || bChanged;
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "LayerRotation" ), SW_LOCKEY( "EdPlugin", "LayerRotationTooltip" ) );
-                bChanged     = EditorWidgets::dragFloat( "##rotation", &value._rotationDegrees, CharacterEditorPanelInternal::kRotationDragSpeed, -SkinLayerValue::kMaxRotation, SkinLayerValue::kMaxRotation ) || bChanged;
+                bChanged     = EditorWidgets::dragFloat( SW_WIDGET_ID( "##rotation" ), &value._rotationDegrees, CharacterEditorPanelInternal::kRotationDragSpeed, -SkinLayerValue::kMaxRotation, SkinLayerValue::kMaxRotation ) || bChanged;
                 bool bMirror = value._bMirror == SW_TRUE;
                 if ( ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "LayerMirror" ), &bMirror ) )
                 {
@@ -1987,7 +1987,7 @@ namespace sw::editor
         CharacterEditorPaths& paths = _document.editPaths();
         (void)EditorWidgets::drawAssetPathField( "##ItemsPath", paths._itemsPath, "appearance items", nullptr, nullptr );
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
-        EditorWidgets::inputText( "##AppearanceFolder", paths._appearanceFolder.data(), paths._appearanceFolder.max_size() );
+        EditorWidgets::inputText( SW_WIDGET_ID( "##AppearanceFolder" ), paths._appearanceFolder.data(), paths._appearanceFolder.max_size() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "LoadData" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "LoadData" ) ) )
             _document.loadAppearanceData();
@@ -2020,20 +2020,20 @@ namespace sw::editor
         {
             text = selection._basePresetID.c_str();
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "BasePreset" ) );
-            if ( EditorWidgets::inputText( "##Basepreset", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+            if ( EditorWidgets::inputText( SW_WIDGET_ID( "##Basepreset" ), text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
                 (void)appearance.setBasePreset( CharacterEditorPanelInternal::makeName( text.c_str() ) ); // 같은 값이면 false 이고 그대로 둔다
         }
         text = selection._bodyType.c_str();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "BodyType" ) );
-        if ( EditorWidgets::inputText( "##Bodytype", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+        if ( EditorWidgets::inputText( SW_WIDGET_ID( "##Bodytype" ), text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
             (void)appearance.setBodyType( CharacterEditorPanelInternal::makeName( text.c_str() ) ); // 같은 값이면 false 이고 그대로 둔다
         text = selection._bodyShape.c_str();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "BodyShape" ) );
-        if ( EditorWidgets::inputText( "##Bodyshape", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+        if ( EditorWidgets::inputText( SW_WIDGET_ID( "##Bodyshape" ), text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
             (void)appearance.setBodyShape( CharacterEditorPanelInternal::makeName( text.c_str() ) ); // 같은 값이면 false 이고 그대로 둔다
         text = selection._face.c_str();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "Face" ) );
-        if ( EditorWidgets::inputText( "##Face", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+        if ( EditorWidgets::inputText( SW_WIDGET_ID( "##Face" ), text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
             (void)appearance.setFace( CharacterEditorPanelInternal::makeName( text.c_str() ) ); // 같은 값이면 false 이고 그대로 둔다
     }
 
@@ -2050,11 +2050,11 @@ namespace sw::editor
                 ImGui::PushID( request._slot.c_str() );
                 text = request._itemID.c_str();
                 EditorWidgets::drawPropertyRowLabel( request._slot.c_str() ); // 이름표는 칸 앞에(칸에 주면 오른쪽에 붙는다)
-                if ( EditorWidgets::inputText( "##item", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+                if ( EditorWidgets::inputText( SW_WIDGET_ID( "##item" ), text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
                     (void)appearance.setSlotItem( request._slot, CharacterEditorPanelInternal::makeName( text.c_str() ) ); // 같은 값이면 false 이고 그대로 둔다
                 ImGui::PopID();
             }
-            EditorWidgets::inputText( "##NewSlot", _newName.data(), _newName.max_size() );
+            EditorWidgets::inputText( SW_WIDGET_ID( "##NewSlot" ), _newName.data(), _newName.max_size() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "AddSlot" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AddSlot" ) ) )
                 (void)appearance.setSlotItem( CharacterEditorPanelInternal::makeName( _newName.c_str() ), hashed_string{} ); // 이미 있으면 false 이고 그대로 둔다
@@ -2101,7 +2101,7 @@ namespace sw::editor
             float32 number = value._number._x;
             ImGui::PushID( value._parameter.c_str() );
             EditorWidgets::drawPropertyRowLabel( value._parameter.c_str() ); // 이름표는 칸 앞에(칸에 주면 오른쪽에 붙는다)
-            if ( EditorWidgets::dragFloat( "##value", &number, CharacterEditorPanelInternal::kDragSpeed ) )
+            if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##value" ), &number, CharacterEditorPanelInternal::kDragSpeed ) )
                 (void)appearance.setNumber( value._parameter, number, true ); // 같은 값이면 false 이고 그대로 둔다
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 appearance.endContinuousEdit();
@@ -2145,7 +2145,7 @@ namespace sw::editor
                 {
                     float32 number = pValue != nullptr ? pValue->_number._x : param._default;
                     EditorWidgets::drawPropertyRowLabel( param._name.c_str() ); // 이름표는 칸 앞에(칸에 주면 오른쪽에 붙는다)
-                    if ( EditorWidgets::sliderFloat( "##value", &number, param._min, param._max ) )
+                    if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##value" ), &number, param._min, param._max ) )
                     {
                         appearance.setNumberSymmetric( pSchema->_listParameter, param, number, true );
                     }
@@ -2162,7 +2162,7 @@ namespace sw::editor
                     const float4 current     = pValue != nullptr ? pValue->_number : param._defaultColor;
                     float32      arrColor[4] = { current._x, current._y, current._z, current._w };
                     EditorWidgets::drawPropertyRowLabel( param._name.c_str() );
-                    if ( EditorWidgets::colorEdit4( "##value", arrColor ) )
+                    if ( EditorWidgets::colorEdit4( SW_WIDGET_ID( "##value" ), arrColor ) )
                     {
                         const float4 edited{ arrColor[0], arrColor[1], arrColor[2], arrColor[3] };
                         appearance.setColorSymmetric( pSchema->_listParameter, param, edited, true );
@@ -2314,7 +2314,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "LoadPresets" ) ) )
             _document.loadPresets();
         EditorChrome::setNextItemWidthColumns( 24.0f );
-        EditorWidgets::inputText( "##PresetName", paths._presetName.data(), paths._presetName.max_size() );
+        EditorWidgets::inputText( SW_WIDGET_ID( "##PresetName" ), paths._presetName.data(), paths._presetName.max_size() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "SaveAsPreset" ) ) );
         ImGui::BeginDisabled( _document.isDatabaseLoaded() == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "SaveAsPreset" ) ) )
@@ -2351,10 +2351,10 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "ASceneSCharacterAppearanceComponentNamesThis" ) );
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         CharacterEditorPaths& paths = _document.editPaths();
-        EditorWidgets::inputText( "##ExportFolder", paths._exportFolder.data(), paths._exportFolder.max_size() );
+        EditorWidgets::inputText( SW_WIDGET_ID( "##ExportFolder" ), paths._exportFolder.data(), paths._exportFolder.max_size() );
         EditorSelfTestMarks::record( "charactereditor.exportFolder" );
         EditorChrome::setNextItemWidthColumns( 24.0f );
-        EditorWidgets::inputText( "##ExportID", paths._exportID.data(), paths._exportID.max_size() );
+        EditorWidgets::inputText( SW_WIDGET_ID( "##ExportID" ), paths._exportID.data(), paths._exportID.max_size() );
         EditorSelfTestMarks::record( "charactereditor.exportID" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "ExportDataPreset" ) ) );
         ImGui::BeginDisabled( _document.isDatabaseLoaded() == false );

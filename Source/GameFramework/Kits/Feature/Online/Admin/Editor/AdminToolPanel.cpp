@@ -122,7 +122,7 @@ namespace sw::editor
             EditorWidgets::drawTextField( "GM account", _loginNameText, 160.0f * EditorThemeUtil::getDPIScale() );
             EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "GMPassword" ) );
             EditorChrome::setNextItemWidthColumns( 19.0f );
-            EditorWidgets::inputText( "##GMpassword", _arrPassword, kPasswordCapacity, ImGuiInputTextFlags_Password );
+            EditorWidgets::inputText( SW_WIDGET_ID( "##GMpassword" ), _arrPassword, kPasswordCapacity, ImGuiInputTextFlags_Password );
         }
         else
         {
@@ -210,7 +210,7 @@ namespace sw::editor
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "AssetId" ), "Asset id" ), _assetText, 160.0f * EditorThemeUtil::getDPIScale() );
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "Amount" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        EditorWidgets::inputScalar( "##Amount", ImGuiDataType_S64, &_amount );
+        EditorWidgets::inputScalar( SW_WIDGET_ID( "##Amount" ), ImGuiDataType_S64, &_amount );
         EditorSelfTestMarks::record( "admin.amount" );
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "MemoTicket" ), "Memo (ticket)" ), _memoText, 240.0f * EditorThemeUtil::getDPIScale() );
         EditorSelfTestMarks::record( "admin.memo" );
@@ -251,7 +251,7 @@ namespace sw::editor
         }
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "Seconds" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        EditorWidgets::inputScalar( "##Seconds", ImGuiDataType_S64, &_sanctionSeconds );
+        EditorWidgets::inputScalar( SW_WIDGET_ID( "##Seconds" ), ImGuiDataType_S64, &_sanctionSeconds );
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "ReasonCode" ), "Reason code" ), _reasonText, 160.0f * EditorThemeUtil::getDPIScale() );
 
         AccountID  accountID     = kInvalidAccountID;
@@ -383,7 +383,7 @@ namespace sw::editor
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "MessageKey" ), "Message key" ), _maintenanceKeyText, 200.0f * EditorThemeUtil::getDPIScale() );
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "MaintenanceSeconds0UntilCleared" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        EditorWidgets::inputScalar( "##Maintenanceseconds0untilcleared", ImGuiDataType_S64, &_maintenanceSeconds );
+        EditorWidgets::inputScalar( SW_WIDGET_ID( "##Maintenanceseconds0untilcleared" ), ImGuiDataType_S64, &_maintenanceSeconds );
         ImGui::BeginDisabled( _memoText.empty() );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "StartMaintenance" ) ) )
             session.requestSetMaintenance( _scopeText, _maintenanceKeyText, _maintenanceSeconds, _memoText );
@@ -395,13 +395,13 @@ namespace sw::editor
 
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "NoticeId" ) );
         EditorChrome::setNextItemWidthColumns( 16.0f );
-        EditorWidgets::inputScalar( "##Noticeid", ImGuiDataType_S64, &_noticeID );
+        EditorWidgets::inputScalar( SW_WIDGET_ID( "##Noticeid" ), ImGuiDataType_S64, &_noticeID );
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "Priority" ) );
         EditorChrome::setNextItemWidthColumns( 16.0f );
-        EditorWidgets::inputInt( "##Priority", &_noticePriority );
+        EditorWidgets::inputInt( SW_WIDGET_ID( "##Priority" ), &_noticePriority );
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "NoticeSeconds0UntilRemoved" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        EditorWidgets::inputScalar( "##Noticeseconds0untilremoved", ImGuiDataType_S64, &_noticeSeconds );
+        EditorWidgets::inputScalar( SW_WIDGET_ID( "##Noticeseconds0untilremoved" ), ImGuiDataType_S64, &_noticeSeconds );
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "NoticeText" ), "Notice text" ), _noticeText, 360.0f * EditorThemeUtil::getDPIScale() );
         const bool bNoticeReady = _memoText.empty() == false && _noticeID > 0;
         ImGui::BeginDisabled( bNoticeReady == false );

@@ -69,7 +69,7 @@ namespace sw::editor
             static bool drawInt32Widget( GlobalVariableInfo& info )
             {
                 int32 iVal = info.getValueAsInt();
-                if ( EditorWidgets::dragInt( "##val", &iVal ) == false )
+                if ( EditorWidgets::dragInt( SW_WIDGET_ID( "##val" ), &iVal ) == false )
                     return false;
                 info.setValueAsInt( iVal );
                 return true;
@@ -78,7 +78,7 @@ namespace sw::editor
             static bool drawFloatWidget( GlobalVariableInfo& info )
             {
                 float32 fVal = info.getValueAsFloat();
-                if ( EditorWidgets::dragFloat( "##val", &fVal, 0.1f ) == false )
+                if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##val" ), &fVal, 0.1f ) == false )
                     return false;
                 info.setValueAsFloat( fVal );
                 return true;
@@ -284,7 +284,7 @@ namespace sw::editor
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "GlobalVariablePresets" ) );
         ImGui::Separator();
 
-        EditorWidgets::inputTextWithHint( "##PresetNameInput", SW_LOCKEY( "EditorSettings", "PresetNameHint" ), _presetNameBuf.data(),
+        EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##PresetNameInput" ), SW_LOCKEY( "EditorSettings", "PresetNameHint" ), _presetNameBuf.data(),
                                           _presetNameBuf.capacity() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) && _model.savePreset( _presetNameBuf.c_str() ) )

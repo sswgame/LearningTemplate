@@ -427,7 +427,7 @@ namespace sw::editor
 
     void InspectorPanel::drawComponentPresetItems( const EditorCommandTarget& target )
     {
-        EditorWidgets::inputTextWithHint( "##presetName", SW_LOCKEY( "EditorInspector", "PresetNameHint" ), _presetNameBuffer.data(), _presetNameBuffer.capacity() );
+        EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##presetName" ), SW_LOCKEY( "EditorInspector", "PresetNameHint" ), _presetNameBuffer.data(), _presetNameBuffer.capacity() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) && _presetNameBuffer.empty() == false && _viewModel.saveComponentPreset( target, _presetNameBuffer.c_str() ) )
             _presetNameBuffer.clear();
@@ -456,7 +456,7 @@ namespace sw::editor
             _nameEditObjectID = _state._objectID;
         }
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NameAlt" ) );
-        const bool bEnter         = EditorWidgets::inputText( "##Name", _nameEditBuffer.data(), _nameEditBuffer.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
+        const bool bEnter         = EditorWidgets::inputText( SW_WIDGET_ID( "##Name" ), _nameEditBuffer.data(), _nameEditBuffer.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         const bool bLeftAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
         if ( bEnter || bLeftAfterEdit )
             _viewModel.renameObject( _nameEditObjectID, _nameEditBuffer.c_str() ); // 빈 이름 · 같은 이름은 ViewModel 이 거른다

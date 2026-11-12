@@ -56,7 +56,7 @@ namespace sw::editor
     namespace
     {
         /** @brief 속성 값 칸의 숨은 id 입니다. 이름표는 행 앞 열(`drawPropertyRowLabel`)에 있다. */
-        constexpr EditorWidgetID kValueWidgetID = "##value";
+        constexpr EditorWidgetID kValueWidgetID = SW_WIDGET_ID( "##value" );
 
         /** @brief 애셋 경로 필드에서 이번 프레임에 일어난 일을 나타냅니다. */
         enum class AssetFieldAction : uint8
@@ -293,7 +293,7 @@ namespace sw::editor
             for ( int32 rowIndex = 0; rowIndex < 4; ++rowIndex )
             {
                 ImGui::PushID( rowIndex );
-                bChanged |= EditorWidgets::dragFloat4( "##row", value.data() + rowIndex * 4, 0.01f );
+                bChanged |= EditorWidgets::dragFloat4( SW_WIDGET_ID( "##row" ), value.data() + rowIndex * 4, 0.01f );
                 ImGui::PopID();
             }
             ImGui::EndGroup();
@@ -950,7 +950,7 @@ namespace sw::editor
         if ( parameter._handleTargetTypeName.empty() )
         {
             EditorWidgets::drawPropertyRowLabel( pLabel ); // 인자 이름은 칸 앞에 — 칸에 보이는 이름표를 주면 오른쪽에 붙는다
-            return kArrDrawMethodArg[slot._builtinIndex]( "##arg", slot._value );
+            return kArrDrawMethodArg[slot._builtinIndex]( SW_WIDGET_ID( "##arg" ), slot._value );
         }
 
         // 타입 핸들 인자 — 프로퍼티와 같은 선택기다. 칸의 값은 타입 없는 핸들이고(`_typeName` 이 `ComponentHandle`), 호출 썽크가 대상 타입을 다시 확인한다.

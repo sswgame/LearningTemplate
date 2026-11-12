@@ -58,16 +58,16 @@ namespace sw::editor
         outReleased   = false;
         ImGui::PushID( pID );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "LatencyMs" ) );
-        bChanged |= EditorWidgets::sliderFloat( "##Latencyms", &inoutSettings._latencyMilliseconds, 0.0f, EditorNetLinkSettings::kMaxLatencyMilliseconds, "%.0f" );
+        bChanged |= EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Latencyms" ), &inoutSettings._latencyMilliseconds, 0.0f, EditorNetLinkSettings::kMaxLatencyMilliseconds, "%.0f" );
         outReleased |= ImGui::IsItemDeactivatedAfterEdit();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "JitterMs" ) );
-        bChanged |= EditorWidgets::sliderFloat( "##Jitterms", &inoutSettings._jitterMilliseconds, 0.0f, EditorNetLinkSettings::kMaxJitterMilliseconds, "%.0f" );
+        bChanged |= EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Jitterms" ), &inoutSettings._jitterMilliseconds, 0.0f, EditorNetLinkSettings::kMaxJitterMilliseconds, "%.0f" );
         outReleased |= ImGui::IsItemDeactivatedAfterEdit();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Loss" ) );
-        bChanged |= EditorWidgets::sliderFloat( "##Loss", &inoutSettings._lossPercent, 0.0f, 100.0f, "%.1f" );
+        bChanged |= EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Loss" ), &inoutSettings._lossPercent, 0.0f, 100.0f, "%.1f" );
         outReleased |= ImGui::IsItemDeactivatedAfterEdit();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "BandwidthKBS" ) );
-        bChanged |= EditorWidgets::sliderInt( "##BandwidthKBs", &inoutSettings._bandwidthKilobytesPerSecond, 0, EditorNetLinkSettings::kMaxBandwidthKilobytesPerSecond, "%d" );
+        bChanged |= EditorWidgets::sliderInt( SW_WIDGET_ID( "##BandwidthKBs" ), &inoutSettings._bandwidthKilobytesPerSecond, 0, EditorNetLinkSettings::kMaxBandwidthKilobytesPerSecond, "%d" );
         outReleased |= ImGui::IsItemDeactivatedAfterEdit();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsBandwidth" ) );
         ImGui::PopID();
@@ -148,7 +148,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsReconnect" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldNumberEm" ) );
-        EditorWidgets::inputFloat( "##SpikeSeconds", &_spikeSeconds, 0.0f, 0.0f, "%.1f s" );
+        EditorWidgets::inputFloat( SW_WIDGET_ID( "##SpikeSeconds" ), &_spikeSeconds, 0.0f, 0.0f, "%.1f s" );
         _spikeSeconds = MathUtil::max( 0.0f, _spikeSeconds );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Spike" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Spike" ) ) )

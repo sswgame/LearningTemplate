@@ -18,6 +18,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include <type_traits>
+
 namespace sw
 {
     /** @brief 서비스 칸의 필수 여부입니다. `Required` 는 바인딩 검사에 들고 `getSubsystem` 이 되며, `Optional` 은 `findSubsystem` 만 된다. */
@@ -41,21 +43,17 @@ namespace sw
         using Access                                     = TAccess;
     };
 
-    /** @brief @p T 가 클래스 안에 칸을 선언했는가입니다 — 숨은 friend 라 ADL 로만 보이고 접근 구역과 무관하다. */
-    template <class T>
-    concept ServiceSlotDeclared = requires( T* pType ) { getServiceSlotTraits( pType ); };
-
-    /** @brief 타입 @p T 의 서비스 칸입니다. 칸을 선언하지 않은 타입은 이 기본 템플릿입니다. */
-    template <class T>
+    /** @brief 타입 @p T 의 서비스 칸입니다. 칸을 선언하지 않은 타입은 이 기본 템플릿입니다. 둘째 인자는 아래 부분 특수화가 고르는 자리다(C++17 — concept 대신 void_t). */
+    template <class T, class = void>
     struct ServiceSlotOf
     {
         static constexpr bool kRegistered = false;
         using Access                      = T;
     };
 
-    /** @brief 클래스 안에 칸을 선언한 타입(`SW_SERVICE_SLOT`)의 칸입니다. 칸은 그 타입의 정적 멤버이고 이 템플릿이 friend 로 읽는다. */
-    template <ServiceSlotDeclared T>
-    struct ServiceSlotOf<T>
+    /** @brief 클래스 안에 칸을 선언한 타입(`SW_SERVICE_SLOT`)의 칸입니다 — 숨은 friend 라 ADL 로만 보이고 접근 구역과 무관하다. 칸은 그 타입의 정적 멤버이고 이 템플릿이 friend 로 읽는다. */
+    template <class T>
+    struct ServiceSlotOf<T, std::void_t<decltype( getServiceSlotTraits( static_cast<T*>( nullptr ) ) )>>
     {
         using Traits                                     = decltype( getServiceSlotTraits( static_cast<T*>( nullptr ) ) );
         static constexpr bool               kRegistered  = true;
@@ -72,7 +70,7 @@ namespace sw
 // 마지막 멤버 함수는 완전 클래스 문맥이라 형식이 완전할 때 칸을 다시 찾는다 — 그 전에 형식이 불완전한 채로 `ServiceSlotOf<Type>` 을 쓴 TU 는 기본 템플릿이 굳어 여기서 멈춘다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define SW_SERVICE_SLOT_IMPL( Type, AccessType, requirement )                                                                                                  \
-    template <class>                                                                                                                                           \
+    template <class, class>                                                                                                                                    \
     friend struct ::sw::ServiceSlotOf;                                                                                                                         \
     friend ::sw::ServiceSlotTraits<AccessType, ::sw::ServiceRequirement::requirement> getServiceSlotTraits( Type* ) noexcept;                                  \
     static constexpr const ::utf8*                                                    kServiceSlotTypeName = #Type;                                            \

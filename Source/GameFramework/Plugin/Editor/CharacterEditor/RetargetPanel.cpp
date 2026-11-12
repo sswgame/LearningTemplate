@@ -375,7 +375,7 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( index ) );
             EditorWidgets::drawInlineLabel( arrLabel[index] ); // 이름표는 칸 앞에(칸에 주면 오른쪽에 붙는다)
             EditorChrome::setNextItemWidthColumns( 21.0f );
-            EditorWidgets::inputText( "##bone", _arrPairName[index].data(), _arrPairName[index].max_size() );
+            EditorWidgets::inputText( SW_WIDGET_ID( "##bone" ), _arrPairName[index].data(), _arrPairName[index].max_size() );
             bChanged = ImGui::IsItemDeactivatedAfterEdit() || bChanged;
             if ( index % 2 == 0 )
                 ImGui::SameLine();
@@ -393,7 +393,7 @@ namespace sw::editor
         int32 mode = static_cast<int32>( _profile.getTranslationMode() );
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "Translation" ) );
         EditorChrome::setNextItemWidthColumns( 27.0f );
-        if ( EditorWidgets::combo( "##Translation", &mode, RetargetPanelInternal::kArrTranslationMode, static_cast<int32>( SW_COUNT_OF( RetargetPanelInternal::kArrTranslationMode ) ) ) )
+        if ( EditorWidgets::combo( SW_WIDGET_ID( "##Translation" ), &mode, RetargetPanelInternal::kArrTranslationMode, static_cast<int32>( SW_COUNT_OF( RetargetPanelInternal::kArrTranslationMode ) ) ) )
         {
             _profile.setRootAndPelvis( _profile.getSourceRoot(), _profile.getTargetRoot(), _profile.getSourcePelvis(), _profile.getTargetPelvis(),
                                        static_cast<RetargetTranslationMode>( mode ) );
@@ -410,7 +410,7 @@ namespace sw::editor
         float32 heightRatio = _profile.getHeightRatioOverride();
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "HeightRatio0Pelvis" ) );
         EditorChrome::setNextItemWidthColumns( 16.0f );
-        EditorWidgets::dragFloat( "##Heightratio0pelvis", &heightRatio, 0.01f, 0.0f, 10.0f, "%.3f" );
+        EditorWidgets::dragFloat( SW_WIDGET_ID( "##Heightratio0pelvis" ), &heightRatio, 0.01f, 0.0f, 10.0f, "%.3f" );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
             _profile.setHeightRatioOverride( heightRatio );
@@ -489,7 +489,7 @@ namespace sw::editor
         ImGui::SeparatorText( SW_LOCKEY( "EdPlugin", "AddChain" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "Name" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        EditorWidgets::inputText( "##NewChain", _newChainName.data(), _newChainName.max_size() );
+        EditorWidgets::inputText( SW_WIDGET_ID( "##NewChain" ), _newChainName.data(), _newChainName.max_size() );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "SourceBones" ) );
         (void)EditorWidgets::drawTextField( "##NewChainSource", _newChainSource, -1.0f );
         EditorWidgets::drawTooltip( RetargetPanelInternal::kBoneListHint );
@@ -532,7 +532,7 @@ namespace sw::editor
             ImGui::SameLine( 200.0f * EditorThemeUtil::getDPIScale() );
             float32 arrDegree[3] = { poseBone._rotationDegrees._x, poseBone._rotationDegrees._y, poseBone._rotationDegrees._z };
             ImGui::SetNextItemWidth( fieldWidth );
-            if ( EditorWidgets::dragFloat3( "##Rotation", arrDegree, Internal::kPoseDragSpeed, -Internal::kPoseDegreeLimit, Internal::kPoseDegreeLimit, "%.1f" ) )
+            if ( EditorWidgets::dragFloat3( SW_WIDGET_ID( "##Rotation" ), arrDegree, Internal::kPoseDragSpeed, -Internal::kPoseDegreeLimit, Internal::kPoseDegreeLimit, "%.1f" ) )
             {
                 poseBone._rotationDegrees = float3{ arrDegree[0], arrDegree[1], arrDegree[2] };
                 bDragged                  = true; // 끄는 동안 미리보기가 바로 바뀐다 — 되돌리기 단계는 놓을 때 한 번
@@ -551,7 +551,7 @@ namespace sw::editor
             bChanged = true;
         }
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        EditorWidgets::inputTextWithHint( "##NewPoseBone", "target bone", _newPoseBone.data(), _newPoseBone.max_size() );
+        EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##NewPoseBone" ), "target bone", _newPoseBone.data(), _newPoseBone.max_size() );
         EditorSelfTestMarks::record( "retarget.targetPose.newBone" );
         ImGui::SameLine();
         const hashed_string newBone( _newPoseBone.c_str() );
@@ -594,10 +594,10 @@ namespace sw::editor
             bChanged = true;
         }
         EditorChrome::setNextItemWidthColumns( 19.0f );
-        EditorWidgets::inputTextWithHint( "##PairSource", "source bone", _newPairSource.data(), _newPairSource.max_size() );
+        EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##PairSource" ), "source bone", _newPairSource.data(), _newPairSource.max_size() );
         ImGui::SameLine();
         EditorChrome::setNextItemWidthColumns( 19.0f );
-        EditorWidgets::inputTextWithHint( "##PairTarget", "target bone", _newPairTarget.data(), _newPairTarget.max_size() );
+        EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##PairTarget" ), "target bone", _newPairTarget.data(), _newPairTarget.max_size() );
         ImGui::SameLine();
         const hashed_string newSource( _newPairSource.c_str() );
         const hashed_string newTarget( _newPairTarget.c_str() );

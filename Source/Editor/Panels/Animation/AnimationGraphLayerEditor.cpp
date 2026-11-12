@@ -266,7 +266,7 @@ namespace sw::editor
     {
         string committed;
         AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "Weight" ) );
-        EditorWidgets::sliderFloat( "##layerWeight", &inoutLayer._weight, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+        EditorWidgets::sliderFloat( SW_WIDGET_ID( "##layerWeight" ), &inoutLayer._weight, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pInoutEdit = "Edit Animation Layer";
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerWeightTip" ) );
@@ -300,7 +300,7 @@ namespace sw::editor
             pInoutEdit        = "Edit Animation Layer";
         }
         AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "HalfLife" ) );
-        EditorWidgets::dragFloat( "##layerHalfLife", &inoutLayer._halfLifeSeconds, 0.01f, 0.0f, 2.0f, inoutLayer._halfLifeSeconds > 0.0f ? "%.2f s" : "(immediate)",
+        EditorWidgets::dragFloat( SW_WIDGET_ID( "##layerHalfLife" ), &inoutLayer._halfLifeSeconds, 0.01f, 0.0f, 2.0f, inoutLayer._halfLifeSeconds > 0.0f ? "%.2f s" : "(immediate)",
                                   ImGuiSliderFlags_AlwaysClamp );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             pInoutEdit = "Edit Animation Layer";
@@ -440,7 +440,7 @@ namespace sw::editor
                 }
                 ImGui::TableNextColumn();
                 ImGui::SetNextItemWidth( -FLT_MIN );
-                EditorWidgets::sliderFloat( "##weight", &entry._weight, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+                EditorWidgets::sliderFloat( SW_WIDGET_ID( "##weight" ), &entry._weight, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     pInoutEdit = "Edit Bone Mask";
                 ImGui::TableNextColumn();
@@ -571,7 +571,7 @@ namespace sw::editor
         // 프리셋의 항목은 그 파일이 원본이다 — 칠하면 저장할 때 버려지므로 보이기만 한다.
         ImGui::BeginDisabled( inoutMask._filePath.empty() == false );
         Internal::drawRowLabel( SW_LOCKEY( "EdWidget", "Weight" ) );
-        EditorWidgets::sliderFloat( "##paintWeight", &_paintWeight, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+        EditorWidgets::sliderFloat( SW_WIDGET_ID( "##paintWeight" ), &_paintWeight, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
         EditorSelfTestMarks::record( "animationGraph.mask.paintWeight" );
         if ( ImGui::Button( SW_LOCKEY( "EditorAnimationGraph", "PaintSubtree" ) ) && BoneMaskHierarchy::paintWeight( inoutMask, _selectedBone, _paintWeight, true ) )
             pInoutEdit = "Paint Bone Mask";

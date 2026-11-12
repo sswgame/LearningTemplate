@@ -452,17 +452,17 @@ namespace sw::editor
         drawLanguageCombo();
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "UIScale" ) );
         EditorChrome::setNextItemWidthColumns( 19.0f );
-        EditorWidgets::sliderFloat( "##UIscale", &_model.editUIScale(), 0.5f, 2.0f, "%.2f" );
+        EditorWidgets::sliderFloat( SW_WIDGET_ID( "##UIscale" ), &_model.editUIScale(), 0.5f, 2.0f, "%.2f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "UIScaleTip" ) );
         ImGui::SameLine();
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "TextScale" ) );
         EditorChrome::setNextItemWidthColumns( 19.0f );
-        EditorWidgets::sliderFloat( "##Textscale", &_model.editTextScale(), 0.75f, 2.0f, "%.2f" );
+        EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Textscale" ), &_model.editTextScale(), 0.75f, 2.0f, "%.2f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "TextScaleTip" ) );
         ImGui::SameLine();
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "SafeZone" ) );
         EditorChrome::setNextItemWidthColumns( 19.0f );
-        EditorWidgets::sliderFloat( "##Safezone", &_model.editSafeZone(), 0.0f, 0.1f, "%.3f" );
+        EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Safezone" ), &_model.editSafeZone(), 0.0f, 0.1f, "%.3f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "SafeZoneTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Rotate" ) ) );
         ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Rotate" ), &_model.editRotated() );
@@ -561,7 +561,7 @@ namespace sw::editor
         const bool bActive      = _model.readAnimationTime( player, time, duration );
         float32    scrubSeconds = time;
         EditorChrome::setNextItemWidthColumns( 29.0f );
-        if ( EditorWidgets::sliderFloat( "##uipreviewanimationtime", &scrubSeconds, 0.0f, MathUtil::max( duration, 0.001f ), "%.2f s" ) )
+        if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##uipreviewanimationtime" ), &scrubSeconds, 0.0f, MathUtil::max( duration, 0.001f ), "%.2f s" ) )
             _model.scrubAnimation( player, scrubSeconds );
         UIPreviewPanelInternal::recordMark( "uipreview", "animationtime" );
         ImGui::SameLine();
@@ -774,7 +774,7 @@ namespace sw::editor
             // 이름표는 행 앞 열에 — 칸에 보이는 이름표를 주면 오른쪽에 붙는다. 칸 id 는 표시 이름(pMark)마다 따로다.
             EditorWidgets::drawPropertyRowLabel( pLabel );
             ImGui::PushID( pMark );
-            const bool bChanged = draw( _slot, EditorWidgetID{ "##value" } );
+            const bool bChanged = draw( _slot, SW_WIDGET_ID( "##value" ) );
             ImGui::PopID();
             if ( bChanged )
                 _widget.setLayoutSlot( _slot );

@@ -96,7 +96,7 @@ namespace sw::editor
 
         // 프리셋 목록 — 고르면 뷰포트 카메라가 그 프리셋이 놓는 자리로 간다.
         const float32 listHeight = ImGui::GetTextLineHeightWithSpacing() * CameraPresetPanelInternal::kListRowCount;
-        if ( EditorWidgets::beginListBox( "##presets", ImVec2{ -FLT_MIN, listHeight } ) )
+        if ( EditorWidgets::beginListBox( SW_WIDGET_ID( "##presets" ), ImVec2{ -FLT_MIN, listHeight } ) )
         {
             const CameraPresetCatalog& catalog = _model.getCatalog();
             for ( size_t index = 0; index < catalog.getCount(); ++index )
@@ -119,7 +119,7 @@ namespace sw::editor
             if ( preset._lens._bOrthographic || preset._view._mode == CameraPresetMode::OrthoTopDown )
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "OrthographicPresetThePreviewDrawsItInPerspective" ) );
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "TargetYaw" ) );
-            if ( EditorWidgets::sliderFloat( "##Targetyaw", &_model.editTargetYawDegrees(), -180.0f, 180.0f, "%.0f deg" ) )
+            if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Targetyaw" ), &_model.editTargetYawDegrees(), -180.0f, 180.0f, "%.0f deg" ) )
                 _model.markViewportDirty();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "DirectionTheTargetFacesFollowFirstPersonAnd" ) );
         }

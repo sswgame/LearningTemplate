@@ -622,7 +622,7 @@ namespace sw::editor
     {
         ImGui::SetNextItemWidth( -1.0f );
         constexpr ImGuiInputTextFlags kFlags     = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackCompletion;
-        const bool                    bSubmitted = EditorWidgets::inputTextWithHint( "##ConsoleCommand", SW_LOCKEY( "EditorConsole", "CommandHint" ), _commandBuffer.data(),
+        const bool                    bSubmitted = EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##ConsoleCommand" ), SW_LOCKEY( "EditorConsole", "CommandHint" ), _commandBuffer.data(),
                                                                                      _commandBuffer.capacity(), kFlags, &ConsolePanelInternal::onCommandLineEdit, &_devConsole );
         if ( bSubmitted )
         {

@@ -133,7 +133,7 @@ namespace sw::editor
 
         fixed_string<constant::buffer::kMax64>& layoutName = EditorMenuBarInternal::getState()._layoutName;
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldWideEm" ) );
-        const bool bEnter = EditorWidgets::inputTextWithHint( "##LayoutName", SW_LOCKEY( "EdCommon", "LayoutNameHint" ), layoutName.data(), layoutName.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
+        const bool bEnter = EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##LayoutName" ), SW_LOCKEY( "EdCommon", "LayoutNameHint" ), layoutName.data(), layoutName.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         ImGui::SameLine();
         if ( ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) || bEnter ) && dockLayout.saveNamedLayout( layoutName.c_str() ) )
             layoutName.clear();

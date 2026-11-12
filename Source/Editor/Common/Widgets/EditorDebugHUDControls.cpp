@@ -86,7 +86,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDCorner" ) );
         float32 opacity = DebugHUD::getOpacity();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Opacity" ) );
-        if ( EditorWidgets::sliderFloat( "##Opacity", &opacity, DebugHUD::kMinOpacity, DebugHUD::kMaxOpacity, "%.2f" ) )
+        if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Opacity" ), &opacity, DebugHUD::kMinOpacity, DebugHUD::kMaxOpacity, "%.2f" ) )
             pHUD->setOpacity( opacity );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDOpacity" ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "OpenInGameSettingsWindow" ) ) && pHUD->openWindow() == false )

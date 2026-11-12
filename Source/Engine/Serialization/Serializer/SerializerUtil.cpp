@@ -175,7 +175,7 @@ namespace sw
                 const int64 value = enumInfo.readValueFromMemory( address.get() );
                 if ( enumInfo._bIsBitFlag == SW_FALSE )
                 {
-                    appendEnumEntry( buffer, enumInfo.toString( value ).getHash(), value );
+                    appendEnumEntry( buffer, enumInfo.getNameByValue( value ).getHash(), value );
                     return;
                 }
 
@@ -765,9 +765,9 @@ namespace sw
         {
             const int64 val = pEnumInfo->readValueFromMemory( pValPtr );
             if ( pEnumInfo->_bIsBitFlag )
-                ss.append( pEnumInfo->toStringFlags( val ).toString() );
+                ss.append( pEnumInfo->toStringFlags( val ) );
             else
-                ss.append( pEnumInfo->toString( val ).toString() ); // 열거자 None 은 빈 이름이라 표시 글로 쓴다
+                ss.append( pEnumInfo->toString( val ) );
             return;
         }
 

@@ -33,7 +33,7 @@ SW_TEST_CASE( ReflectionEnumBitFlagTest, BitFlagDetectionAndToString )
     SW_EXPECT_TRUE( pInfo->_bIsBitFlag == SW_TRUE );
 
     const int64 flagValue = static_cast<int64>( sw::DummyBitFlag::OptionA ) | static_cast<int64>( sw::DummyBitFlag::OptionC );
-    SW_EXPECT_EQUAL( sw::string( "OptionA | OptionC" ), sw::string( pInfo->toStringFlags( flagValue ).c_str() ) );
+    SW_EXPECT_EQUAL( sw::string( "OptionA | OptionC" ), sw::string( pInfo->toStringFlags( flagValue ) ) );
 }
 
 /**
@@ -57,11 +57,11 @@ SW_TEST_CASE( ReflectionEnumInfoTest, FindRegisteredEnumAndValueToString )
     const sw::EnumInfo* pInfo = findEnum( "sw::DummyType" );
     SW_REQUIRE_NOT_NULL( pInfo );
     SW_EXPECT_EQUAL( sw::string( "DummyType" ), sw::string( pInfo->_name.c_str() ) );
-    SW_EXPECT_EQUAL( sw::string( "None" ), sw::string( pInfo->toString( 0 ).toString() ) ); // 열거자 None 은 빈 이름이다 — 표시 글로 꺼낸다
+    SW_EXPECT_EQUAL( sw::string( "None" ), sw::string( pInfo->toString( 0 ) ) ); // 열거자 None 도 표시 글은 "None" 이다
     SW_EXPECT_EQUAL( sw::string_view( "None" ), sw::string_view( pInfo->valueToCString( 0 ) ) );
-    SW_EXPECT_EQUAL( sw::string( "TypeA" ), sw::string( pInfo->toString( 1 ).c_str() ) );
-    SW_EXPECT_EQUAL( sw::string( "TypeB" ), sw::string( pInfo->toString( 2 ).c_str() ) );
-    SW_EXPECT_TRUE( pInfo->toString( 999 ) == sw::hashed_string() );
+    SW_EXPECT_EQUAL( sw::string( "TypeA" ), sw::string( pInfo->toString( 1 ) ) );
+    SW_EXPECT_EQUAL( sw::string( "TypeB" ), sw::string( pInfo->toString( 2 ) ) );
+    SW_EXPECT_TRUE( pInfo->toString( 999 ).empty() );
 }
 
 /**
@@ -176,7 +176,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, NarrowEnumValuesMatchTheirNamesInMemory )
         auto        storage = value;
         const int64 read    = pInfo->readValueFromMemory( &storage );
         SW_EXPECT_EQUAL( static_cast<int64>( value ), read );
-        SW_EXPECT_EQUAL( sw::string( pExpectedName ), sw::string( pInfo->toString( read ).c_str() ) );
+        SW_EXPECT_EQUAL( sw::string( pExpectedName ), sw::string( pInfo->toString( read ) ) );
 
         auto written = decltype( value ){};
         pInfo->writeValueToMemory( &written, read );
@@ -193,9 +193,9 @@ SW_TEST_CASE( ReflectionEnumInfoTest, NarrowEnumValuesMatchTheirNamesInMemory )
     const sw::EnumInfo* pStage = findEnum( "sw::ShaderStageFlag" );
     SW_REQUIRE_NOT_NULL( pStage );
     const uint8 amplification = 0x80;
-    SW_EXPECT_EQUAL( sw::string( "Amplification" ), sw::string( pStage->toString( pStage->readValueFromMemory( &amplification ) ).c_str() ) );
+    SW_EXPECT_EQUAL( sw::string( "Amplification" ), sw::string( pStage->toString( pStage->readValueFromMemory( &amplification ) ) ) );
     const uint8 all = 0xFF;
-    SW_EXPECT_TRUE( pStage->toStringFlags( pStage->readValueFromMemory( &all ) ).view().find( "Amplification" ) != sw::string_view::npos );
+    SW_EXPECT_TRUE( pStage->toStringFlags( pStage->readValueFromMemory( &all ) ).find( "Amplification" ) != sw::string_view::npos );
 }
 
 namespace
@@ -277,8 +277,8 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
     {
         const auto checkRoundTrip = [&report, &info]( int64 expected )
         {
-            const sw::hashed_string written = info._bIsBitFlag ? info.toStringFlags( expected ) : info.toString( expected );
-            int64                   parsed  = -1;
+            const sw::string written{ info._bIsBitFlag ? info.toStringFlags( expected ) : info.toString( expected ) };
+            int64            parsed = -1;
             if ( info.tryParseText( written.c_str(), parsed ) == false || parsed != expected )
                 report += sw::string( "\n  " ) + info._fullyQualifiedName.c_str() + " " + sw::to_string( expected ) + " -> '" + written.c_str() + "'";
         };
@@ -423,7 +423,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, CurrentEnumeratorNameWinsOverItsRedirect )
     value = -1;
     SW_EXPECT_TRUE( info.tryParseText( "Lime", value ) );
     SW_EXPECT_EQUAL( int64( 1 ), value );
-    SW_EXPECT_TRUE( info.toString( 1 ) == sw::hashed_string( "Green" ) );
+    SW_EXPECT_TRUE( info.getNameByValue( 1 ) == sw::hashed_string( "Green" ) );
     SW_EXPECT_FALSE( info.tryParseText( "Teal", value ) );
 }
 
@@ -437,7 +437,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, DenseEnumNamesComeFromTheArray )
     const sw::EnumInfo* pDense = findEnum( "sw::SampleStatus" );
     SW_REQUIRE_NOT_NULL( pDense );
     SW_EXPECT_EQUAL( size_t( 3 ), pDense->_listDenseName.size() );
-    SW_EXPECT_TRUE( pDense->valueToCString( 1 ) == pDense->toString( 1 ).c_str() );
+    SW_EXPECT_TRUE( pDense->valueToCString( 1 ) == pDense->toString( 1 ).data() );
     SW_EXPECT_TRUE( pDense->valueToCString( 3 ) == nullptr );
     SW_EXPECT_TRUE( pDense->valueToCString( -1 ) == nullptr );
 

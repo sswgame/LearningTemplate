@@ -603,7 +603,7 @@ namespace sw::editor
         ImGui::TextUnformatted( "Loop" );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
-        if ( EditorWidgets::combo( "##stateLoop", &loopIndex, arrLoop, 3 ) )
+        if ( EditorWidgets::combo( SW_WIDGET_ID( "##stateLoop" ), &loopIndex, arrLoop, 3 ) )
         {
             pNode->_loop = loopIndex == 0 ? optional<bool>{} : optional<bool>( loopIndex == 1 );
             notifyDocumentEdited( "Edit Animation State" );
@@ -696,14 +696,14 @@ namespace sw::editor
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Value" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
-        EditorWidgets::dragFloat( "##conditionValue", &pLink->_threshold, 0.05f );
+        EditorWidgets::dragFloat( SW_WIDGET_ID( "##conditionValue" ), &pLink->_threshold, 0.05f );
         EditorSelfTestMarks::record( "animationGraph.condition.value" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "ConditionValueTip" ) );
         bEdited = ImGui::IsItemDeactivatedAfterEdit() || bEdited;
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Blend" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
-        EditorWidgets::dragFloat( "##transitionBlend", &pLink->_blendSeconds, 0.01f, -1.0f, 10.0f, pLink->_blendSeconds < 0.0f ? "(player default)" : "%.2f s" );
+        EditorWidgets::dragFloat( SW_WIDGET_ID( "##transitionBlend" ), &pLink->_blendSeconds, 0.01f, -1.0f, 10.0f, pLink->_blendSeconds < 0.0f ? "(player default)" : "%.2f s" );
         EditorSelfTestMarks::record( "animationGraph.condition.blend" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "TransitionBlendTip" ) );
         bEdited = ImGui::IsItemDeactivatedAfterEdit() || bEdited;

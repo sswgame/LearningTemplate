@@ -282,7 +282,7 @@ namespace sw::editor
             {
                 ImGui::SameLine();
                 EditorChrome::setNextItemWidthColumns( 16.0f );
-                if ( EditorWidgets::sliderFloat( "##previewScrub", &time, 0.0f, duration, "%.2f s" ) )
+                if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##previewScrub" ), &time, 0.0f, duration, "%.2f s" ) )
                 {
                     _bPreviewPaused = SW_TRUE; // 문지르는 동안은 멈춘다(언리얼 Persona 타임라인과 같다)
                     seekPreviewTimeline( time );

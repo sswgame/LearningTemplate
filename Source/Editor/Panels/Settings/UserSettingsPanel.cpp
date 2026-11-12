@@ -206,7 +206,7 @@ namespace sw::editor
                 if ( key.has_value() == false )
                     break;
                 int32 number = settings.getIntValue( *key );
-                if ( EditorWidgets::sliderInt( "##value", &number, static_cast<int32>( def._minValue ), static_cast<int32>( def._maxValue ) ) )
+                if ( EditorWidgets::sliderInt( SW_WIDGET_ID( "##value" ), &number, static_cast<int32>( def._minValue ), static_cast<int32>( def._maxValue ) ) )
                     (void)settings.setPendingIntValue( def._id, number );
                 break;
             }
@@ -216,7 +216,7 @@ namespace sw::editor
                 if ( key.has_value() == false )
                     break;
                 float32 number = settings.getFloatValue( *key );
-                if ( EditorWidgets::sliderFloat( "##value", &number, static_cast<float32>( def._minValue ), static_cast<float32>( def._maxValue ), "%.2f" ) )
+                if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##value" ), &number, static_cast<float32>( def._minValue ), static_cast<float32>( def._maxValue ), "%.2f" ) )
                     (void)settings.setPendingFloatValue( def._id, number );
                 break;
             }

@@ -329,7 +329,7 @@ namespace sw::editor
 
         fixed_string<constant::buffer::kMax128>& name = _model.editName();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NameAlt" ) );
-        EditorWidgets::inputText( "##name", name.data(), name.capacity() );
+        EditorWidgets::inputText( SW_WIDGET_ID( "##name" ), name.data(), name.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
             _model.commitName();

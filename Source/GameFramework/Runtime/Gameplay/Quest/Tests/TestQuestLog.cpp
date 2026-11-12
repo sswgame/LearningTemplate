@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
@@ -115,7 +116,7 @@ SW_TEST_CASE_F( QuestLogTest, DebugLinesExplainProgressAndLocks )
         }
         return "(missing)";
     };
-    DebugHUDSectionWriter before;
+    DebugHUDSectionWriter before{ SceneIterationTestAccess::getKey() };
     _log.writeDebugLines( before, 99, 64 );
     SW_EXPECT_EQUAL( string( "locked: RequirementMissing (intro)" ), findLine( before, "wolves" ) );
     SW_EXPECT_EQUAL( string( "available" ), findLine( before, "intro" ) );
@@ -123,14 +124,14 @@ SW_TEST_CASE_F( QuestLogTest, DebugLinesExplainProgressAndLocks )
     finishIntro();
     SW_REQUIRE_TRUE( _log.start( "wolves", 2 ) == QuestStartResult::Ok );
     (void)_log.notify( "Kill", "wolf" );
-    DebugHUDSectionWriter during;
+    DebugHUDSectionWriter during{ SceneIterationTestAccess::getKey() };
     _log.writeDebugLines( during, 99, 64 );
     SW_EXPECT_EQUAL( string( "Completed x1" ), findLine( during, "intro" ) );
     SW_EXPECT_EQUAL( string( "Active stage hunt t=0s" ), findLine( during, "wolves" ) );
     SW_EXPECT_EQUAL( string( "1/2" ), findLine( during, "  Kill wolf" ) );
     SW_EXPECT_EQUAL( string( "0/3 optional" ), findLine( during, "  Collect pelt" ) );
 
-    DebugHUDSectionWriter capped;
+    DebugHUDSectionWriter capped{ SceneIterationTestAccess::getKey() };
     _log.writeDebugLines( capped, 99, 2 );
     SW_EXPECT_EQUAL( uint32( 3 ), capped.getLineCount() ); // 두 줄 + "… N more"
     SW_EXPECT_EQUAL( string( "..." ), capped.getLineAt( 2 )._label );

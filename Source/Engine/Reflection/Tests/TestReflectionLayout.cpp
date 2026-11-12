@@ -316,7 +316,7 @@ SW_TEST_CASE( ReflectionInnerTypesTest, FindInnerEnum )
 
     SW_EXPECT_TRUE( enumInfoFqn->_bIsBitFlag );
     uint32     combined = 1 | 4;
-    sw::string flagStr  = enumInfoFqn->toStringFlags( combined ).c_str();
+    sw::string flagStr{ enumInfoFqn->toStringFlags( combined ) };
     SW_EXPECT_TRUE( flagStr.find( "OptionA" ) != sw::string::npos );
     SW_EXPECT_TRUE( flagStr.find( "OptionC" ) != sw::string::npos );
 }

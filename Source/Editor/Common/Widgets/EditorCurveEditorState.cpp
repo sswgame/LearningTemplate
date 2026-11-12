@@ -120,7 +120,7 @@ namespace sw::editor
                 ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Time" ) );
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( width );
-                EditorWidgets::inputFloat( "##time", &key._time, 0.0f, 0.0f, "%.3f" );
+                EditorWidgets::inputFloat( SW_WIDGET_ID( "##time" ), &key._time, 0.0f, 0.0f, "%.3f" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CurveKeyTime" ) );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                 {
@@ -131,7 +131,7 @@ namespace sw::editor
                 ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Value" ) );
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( width );
-                EditorWidgets::inputFloat( "##value", &key._value, 0.0f, 0.0f, "%.3f" );
+                EditorWidgets::inputFloat( SW_WIDGET_ID( "##value" ), &key._value, 0.0f, 0.0f, "%.3f" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CurveKeyValue" ) );
                 bFinished = bFinished || ImGui::IsItemDeactivatedAfterEdit();
                 ImGui::SameLine();
@@ -140,7 +140,7 @@ namespace sw::editor
                 ImGui::SetNextItemWidth( width );
                 const utf8* const arrName[] = { "Constant", "Linear", "Cubic" };
                 int32             current   = static_cast<int32>( key._interpolation );
-                if ( EditorWidgets::combo( "##interpolation", &current, arrName, 3 ) )
+                if ( EditorWidgets::combo( SW_WIDGET_ID( "##interpolation" ), &current, arrName, 3 ) )
                 {
                     key._interpolation = static_cast<CurveInterpolation>( current );
                     bFinished          = true;

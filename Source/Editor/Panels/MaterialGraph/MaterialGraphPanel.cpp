@@ -296,7 +296,7 @@ namespace sw::editor
                 {
                     EditorWidgets::drawPropertyRowLabel( pName );
                     arrValue[0] = arrOne[0];
-                    bChanged    = EditorWidgets::dragFloat( "##value", arrValue, 0.01f );
+                    bChanged    = EditorWidgets::dragFloat( SW_WIDGET_ID( "##value" ), arrValue, 0.01f );
                 }
                 count = 1;
                 break;
@@ -310,7 +310,7 @@ namespace sw::editor
                     EditorWidgets::drawPropertyRowLabel( pName );
                     arrValue[0] = arrTwo[0];
                     arrValue[1] = arrTwo[1];
-                    bChanged    = EditorWidgets::dragFloat2( "##value", arrValue, 0.01f );
+                    bChanged    = EditorWidgets::dragFloat2( SW_WIDGET_ID( "##value" ), arrValue, 0.01f );
                 }
                 count = 2;
                 break;
@@ -325,7 +325,7 @@ namespace sw::editor
                     arrValue[0] = arrThree[0];
                     arrValue[1] = arrThree[1];
                     arrValue[2] = arrThree[2];
-                    bChanged    = EditorWidgets::dragFloat3( "##value", arrValue, 0.01f );
+                    bChanged    = EditorWidgets::dragFloat3( SW_WIDGET_ID( "##value" ), arrValue, 0.01f );
                 }
                 count = 3;
                 break;
@@ -348,7 +348,7 @@ namespace sw::editor
                 else if ( bRead )
                 {
                     EditorWidgets::drawPropertyRowLabel( pName );
-                    bChanged = EditorWidgets::dragFloat4( "##value", arrValue, 0.01f );
+                    bChanged = EditorWidgets::dragFloat4( SW_WIDGET_ID( "##value" ), arrValue, 0.01f );
                 }
                 count = 4;
                 break;

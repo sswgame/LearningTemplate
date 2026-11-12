@@ -462,7 +462,7 @@ namespace sw::editor
                 ImGui::SameLine();
             bLineStart = false;
             ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldNumberEm" ) );
-            if ( EditorWidgets::dragFloat( "##time", &editTime, 0.01f, 0.01f, 10.0f, "%.2f s" ) )
+            if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##time" ), &editTime, 0.01f, 0.01f, 10.0f, "%.2f s" ) )
                 (void)_document.setBindingTriggerTime( action, bindIndex, editTime );
         }
         // MultiTap 만 누름 횟수를 고른다(2 이상).
@@ -473,7 +473,7 @@ namespace sw::editor
                 ImGui::SameLine();
             bLineStart = false;
             ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldTinyEm" ) );
-            if ( EditorWidgets::dragInt( "##taps", &editTaps, 0.1f, 2, 9, "%d taps" ) )
+            if ( EditorWidgets::dragInt( SW_WIDGET_ID( "##taps" ), &editTaps, 0.1f, 2, 9, "%d taps" ) )
                 (void)_document.setBindingTapCount( action, bindIndex, static_cast<uint8>( MathUtil::clamp( editTaps, 2, 9 ) ) );
         }
         bool bNegate = binding._bNegate;
@@ -602,7 +602,7 @@ namespace sw::editor
             const utf8* arrTypes[] = { "Boolean", "Axis 1D", "Vector 2D" };
             EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "Type" ) );
             EditorChrome::setNextItemWidthColumns( 16.0f );
-            EditorWidgets::combo( "##Type", &_newActionValueType, arrTypes, 3 );
+            EditorWidgets::combo( SW_WIDGET_ID( "##Type" ), &_newActionValueType, arrTypes, 3 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NewActionTypeTip" ) );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "CreateAction" ) ) );
@@ -619,7 +619,7 @@ namespace sw::editor
             ImGui::SameLine();
             EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "Priority" ) );
             EditorChrome::setNextItemWidthColumns( 8.0f );
-            EditorWidgets::inputInt( "##LayerPriority", &_newLayerPriority );
+            EditorWidgets::inputInt( SW_WIDGET_ID( "##LayerPriority" ), &_newLayerPriority );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "CreateLayer" ) ) );
             ImGui::BeginDisabled( _document.canCreateLayer( _newLayerName ) == false );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "CreateLayer" ) ) && _document.createLayer( _newLayerName, _newLayerPriority ) )
@@ -812,12 +812,12 @@ namespace sw::editor
                 ImGui::TextUnformatted( SW_LOCKEY( "EdText", "HapticVibrationTest" ) );
                 EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "LeftMotor" ) );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
-                EditorWidgets::sliderFloat( "##LeftMotor", &_testVibLeft, 0.0f, 1.0f );
+                EditorWidgets::sliderFloat( SW_WIDGET_ID( "##LeftMotor" ), &_testVibLeft, 0.0f, 1.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "LeftMotorTip" ) );
                 ImGui::SameLine();
                 EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "RightMotor" ) );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
-                EditorWidgets::sliderFloat( "##RightMotor", &_testVibRight, 0.0f, 1.0f );
+                EditorWidgets::sliderFloat( SW_WIDGET_ID( "##RightMotor" ), &_testVibRight, 0.0f, 1.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RightMotorTip" ) );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "TestPulse03s" ) ) );
                 if ( ImGui::Button( SW_LOCKEY( "EdText", "TestPulse03s" ) ) )
@@ -899,7 +899,7 @@ namespace sw::editor
 
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "Key" ) );
         EditorChrome::setNextItemWidthColumns( 20.0f );
-        EditorWidgets::combo( "##Key", &_simKeyToInject, arrCommonKeys, 11 );
+        EditorWidgets::combo( SW_WIDGET_ID( "##Key" ), &_simKeyToInject, arrCommonKeys, 11 );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "InjectKeyDown" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "InjectKeyDown" ) ) )
             input.postRawEvent( RawInputEvent::makeKeyDown( arrKeyValues[_simKeyToInject] ) );
@@ -919,10 +919,10 @@ namespace sw::editor
         ImGui::Separator();
         ImGui::Text( "2) Virtual Stick 2D Slider:" );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "SimStickX" ) );
-        EditorWidgets::sliderFloat( "##SimStickX", &_simStick._x, -1.0f, 1.0f );
+        EditorWidgets::sliderFloat( SW_WIDGET_ID( "##SimStickX" ), &_simStick._x, -1.0f, 1.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SimStickXTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "SimStickY" ) );
-        EditorWidgets::sliderFloat( "##SimStickY", &_simStick._y, -1.0f, 1.0f );
+        EditorWidgets::sliderFloat( SW_WIDGET_ID( "##SimStickY" ), &_simStick._y, -1.0f, 1.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SimStickYTip" ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "InjectStickTilt" ) ) )
         {
@@ -1044,7 +1044,7 @@ namespace sw::editor
             int32       frameIdx  = static_cast<int32>( currentFrame );
             const int32 maxFrames = static_cast<int32>( _document.getReplay().getFrameCount() );
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "TimelineFrame" ) );
-            if ( EditorWidgets::sliderInt( "##TimelineFrame", &frameIdx, 0, maxFrames ) )
+            if ( EditorWidgets::sliderInt( SW_WIDGET_ID( "##TimelineFrame" ), &frameIdx, 0, maxFrames ) )
                 _document.seekReplay( input, static_cast<uint32>( frameIdx ) );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TimelineFrameTip" ) );
         }
@@ -1067,15 +1067,15 @@ namespace sw::editor
         const utf8* arrPos[] = { "Bottom-Right", "Bottom-Left", "Top-Right", "Top-Left" };
         int32       posIndex = static_cast<int32>( config._position );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "ScreenAnchorPosition" ) );
-        if ( EditorWidgets::combo( "##ScreenAnchorPosition", &posIndex, arrPos, 4 ) )
+        if ( EditorWidgets::combo( SW_WIDGET_ID( "##ScreenAnchorPosition" ), &posIndex, arrPos, 4 ) )
             config._position = static_cast<ViewportOverlayPosition>( posIndex );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "OverlayAnchorTip" ) );
 
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "HUDOpacity" ) );
-        EditorWidgets::sliderFloat( "##HUDOpacity", &config._opacity, 0.1f, 1.0f );
+        EditorWidgets::sliderFloat( SW_WIDGET_ID( "##HUDOpacity" ), &config._opacity, 0.1f, 1.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "OverlayOpacityTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "HUDScale" ) );
-        EditorWidgets::sliderFloat( "##HUDScale", &config._scale, 0.5f, 2.0f );
+        EditorWidgets::sliderFloat( SW_WIDGET_ID( "##HUDScale" ), &config._scale, 0.5f, 2.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "OverlayScaleTip" ) );
 
         ImGui::Separator();

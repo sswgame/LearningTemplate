@@ -162,7 +162,7 @@ namespace sw::editor
             ImGui::Text( "%.1f dB", static_cast<float64>( heldDb ) );
 
         float32 volume = status._userVolume;
-        if ( EditorWidgets::vSliderFloat( "##Volume", ImVec2{ 28.0f * dpi, Internal::kStripHeight * dpi }, &volume, 0.0f, 1.0f, "" ) )
+        if ( EditorWidgets::vSliderFloat( SW_WIDGET_ID( "##Volume" ), ImVec2{ 28.0f * dpi, Internal::kStripHeight * dpi }, &volume, 0.0f, 1.0f, "" ) )
             audio.setBusVolume( status._name, volume );
         EditorSelfTestMarks::record( ( "audiomixer.volume." + name ).c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "UserVolumeTheOptionsMenuValueCtrl" ) );
