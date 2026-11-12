@@ -101,13 +101,6 @@
 - 제안: `GameNetSession` 이 `MetricRegistry` 를 받아 샤드 라벨로 등록한다. 사유별 끊김 카운터를 `NetDisconnectReason` 열거에서 생성한다. 로그의 주소는 가림 형식을 거친다.
 - 확인: `OpsHTTPEndpointTest` 에 `/metrics` 본문이 `net_connections` · `net_rejected_packets_total` 을 담는지.
 
-#### N-8 NetEndpoint 가 깨어날 때마다 전 슬롯을 훑고, 복호 · 처리를 잠금 하나 안에서 한다
-- 분류: 성능 · 확신: 추정(측정 필요)
-- 근거: `Source/Core/Network/Connection/NetEndpointThread.cpp:56-62` — 받을 것이 있으면 즉시 다시 `update` 를 돈다. `Source/Core/Network/Connection/NetEndpoint.cpp:646-657` 이 잠금 안에서 받은 패킷 전부(AEAD 복호 포함)를 처리한 뒤 `:681-742` 가 연결 수 N 전체를 돈다. 그 사이 게임 스레드와 복제 워커의 `sendMessage` 가 같은 잠금에서 기다린다. 슬롯마다 `NetConnection` 을 미리 만들어 연결당 약 75 KB 를 선점한다(계산값).
-- 상용 엔진: 언리얼은 수신과 `TickFlush` 가 틱 단위로 분리돼 있다.
-- 제안: 보낼 시각이 된 연결만 도는 기한 큐(타이머 휠)를 두고 받기 처리와 슬롯 갱신 주기를 분리한다. 빈 슬롯은 자유 목록으로 관리한다.
-- 확인: 부하 봇 250 · 500 · 1000 연결에서 Net 스레드 CPU 와 틱 시간, Tracy 로 `update` 잠금 구간과 `sendMessage` 잠금 대기.
-
 #### N-9 MMO 관찰자마다 "항상 보이는" 정책을 월드 전체 엔티티에 대해 매 틱 묻는다
 - 분류: 성능 · 확신: 복잡도 확인, 영향은 측정 필요
 - 근거: `Source/GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.cpp:309-316` — `hasAlwaysRelevant()` 면 관찰자마다 `_mapEntity` 전체에 `isAlwaysRelevant( connectionID, entity )` 를 부른다. 관찰자 2000 × 엔티티 5 만이면 틱당 1 억 호출이다.
