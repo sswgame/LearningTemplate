@@ -173,7 +173,7 @@ A reader who knows one of these names must be able to guess the rest. Use a bann
 | 기록은 `record`(`note` 아님), 지우기는 `remove` · `clear` · `untrack`(`forget` 아님), 결과 채택은 `apply` · `attach`(`adopt` 아님), 허가는 `allow` · `accept`(`admit` 은 손님 입장 게임 말만) | 낱말 한 벌 |
 | 형식 끝말: 리플렉션으로 읽는 칸 묶음은 `Params`(`Fields` 는 칸 자체를 다루는 도구 이름만), 비동기 일 하나는 `Job`(`Work` 아님), 결과는 `Result`(`Outcome` · `Verdict` 아님), 테스트 조립은 `Fixture`(`Rig` 은 애니메이션 리그만) | 낱말 한 벌 |
 | `Reply` 는 키트 응답 본문, `OnlineResponse` 는 전송 봉투다 — 다른 개념이라 합치지 않는다. `Since` 는 시간을 세는 칸(`_timeSinceShot`)에만 | 뜻이 다르다 |
-| 새 함수 앞 단어 · 형식 끝 단어는 `Config/Rules/Lint/NamingWords.json` 에 먼저 올린다(`py -3 -m Scripts lint naming-words`, 커밋 훅이 본다) | 이름은 형식으로 막지 못한다 |
+| 새 낱말은 `Config/Rules/Lint/NamingWords.json` 에 먼저 올린다 — 함수 앞 단어(`_functionWords`) · 형식 끝 단어(`_typeSuffixes`)에 더해 모든 이름(멤버 · 상수 · 매크로 · 열거자)과 파일 · 폴더 이름의 **모든 낱말**이 `_words`(a 업계 · b 게임)에 있어야 한다. 문맥에 따라 갈리는 낱말(게임의 `walk` ↔ 엔진의 순회)은 `_scopedWords` 가 쓸 경로를 정한다. 전수 집계는 `py -3 -m Scripts naming-census --out <폴더>`(`py -3 -m Scripts lint naming-words`, 커밋 훅이 본다) | 이름은 형식으로 막지 못한다 — 첫 · 끝 단어만 보던 때 `SceneWalkKey` · `aimAtMark` 가 들어왔다 |
 | 저작 정의는 `Def` 하나(`Definition` 은 쓰지 않는다). 값의 갈래를 고르는 열거형은 `…Kind` — `…Type` 은 C++ · 리플렉션 형식, 외부 형식 · 프로토콜 · 물리 · 렌더 API 의 자기 용어에만 | 저장소 다수 |
 | 읽기 · 쓰기 동사는 원본 종류를 이름에 넣고 짝을 맞춘다: `loadFromAsset`(에셋 id) · `loadFromFile`/`saveToFile`(OS 경로) · `loadFromXMLText`/`saveToXMLText`(글). `read*`/`write*` 는 바이트 스트림 · Archive, `parse*` 는 글 → 스칼라 값에만. GameObject 는 `createGameObject` ↔ `destroyGameObject` | 언리얼 LoadFromFile · SpawnActor/DestroyActor |
 | 에디터 창 하나의 상태 · 명령은 `<창>Model`. `Document` 는 메모리에 든 파일 내용(SceneDocument · XMLDocument)에만 | Qt Model/View |

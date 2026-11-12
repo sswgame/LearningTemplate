@@ -53,6 +53,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("browser-mcp", "setup.BrowserMcp", "에이전트 브라우저 조종 MCP(Chrome DevTools MCP)를 Tools/BrowserMCP 에 고정 판으로 설치(serve 는 띄운다 — .mcp.json)"),
     Subcommand("lint", "lint.PreCommit", "린트 — 인자 없음: 커밋 훅(스테이지된 파일), --list: 규칙 표(lint/Rules.py), <규칙 id> [인자…]: 규칙 하나"),
     Subcommand("new-names", "dev.NewNames", "묶음이 새로 들인 함수 이름을 검토 목록으로 낸다(--base <묶음 시작> [브랜치 …]) — 통합 검토용"),
+    Subcommand("naming-census", "dev.NamingCensus", "Source 의 모든 이름(형식 · 함수 · 멤버 · 상수 · 매크로 · 파일 · 폴더)을 낱말로 쪼개 종류별로 센다(--out <폴더>) — 이름 전수 대조용"),
     Subcommand("client-only-types", "generate.ClientOnlyTypes", "전용 서버가 짓지 않는 소스의 리플렉션 형식 이름 표를 쓴다(--check 는 낡았는지만 본다)"),
     Subcommand("format-includes", "lint.Format:mainFormatIncludes", "include 순서 · 중복 자동 수정(--check 는 검사만)"),
     Subcommand("format", "lint.Format:mainFormatClang", "C++ 코드 clang-format 자동 포맷팅"),
