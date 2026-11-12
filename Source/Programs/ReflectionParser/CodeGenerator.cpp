@@ -273,6 +273,21 @@ namespace sw
                 return string( buf.view() );
             }
 
+            /** @brief 지운 타입 이름을 등록하는 줄(`registry.registerRetiredTypeName`)을 만듭니다. */
+            static string emitRetiredTypeLines( const vector<string>& listRemovedType )
+            {
+                if ( listRemovedType.empty() )
+                    return {};
+                CodeEmitBuffer buf;
+                CodeEmit       emit( buf );
+                emit.push( 3 );
+                for ( const string& removedType : listRemovedType )
+                {
+                    emit.linef( "registry.registerRetiredTypeName( \"%#\" );", CodeEmit::escapeCppString( removedType ) );
+                }
+                return string( buf.view() );
+            }
+
             /**
              * @brief 표식(`Invalid`, `Count`)을 뺀 열거자의 값이 `0..N-1` 로 빈틈없고 겹치지 않으면, 값 순서로 늘어놓은 열거자를 @p outListDense 에 담습니다.
              * @details 그 밖(비트 플래그, 음수, 빈틈, 같은 값의 별명)은 비워 둡니다. 그러면 이름 배열을 만들지 않고 런타임은 이름 맵을 씁니다.
@@ -876,6 +891,10 @@ namespace sw
         emit.push( 3 );
 
         AnnotationFields::emitRuntimeMetadata( emit, typeInfo, "info._metadata.edit()." );
+        for ( const string& removedField : typeInfo._listRemovedField )
+        {
+            emit.linef( "info._listRemovedField.push_back( ::sw::hashed_string( \"%#\" ) );", CodeEmit::escapeCppString( removedField ) );
+        }
         emit.flagIf( typeInfo._bOverridesTick, "info._metadata.edit()._bOverridesTick" );
         emit.flagIf( typeInfo._bOverridesSubTick, "info._metadata.edit()._bOverridesSubTick" );
         emit.flagIf( typeInfo._bOverridesSerializeState, "info._metadata.edit()._bOverridesSerializeState" );
@@ -912,7 +931,8 @@ namespace sw
                             { templatekey::kID, registrarName },
                             { templatekey::kFqn, typeInfo._fullyQualifiedName },
                             { templatekey::kAliasRegs,
-                             CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) },
+                             CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) +
+                                  CodeGeneratorInternal::emitRetiredTypeLines( typeInfo._listRemovedType ) },
                             { templatekey::kFixedCodec, _fixedCodec.getMemberText( typeIndex ) },
         } );
     }
