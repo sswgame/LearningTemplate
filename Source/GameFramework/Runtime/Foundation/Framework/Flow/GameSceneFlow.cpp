@@ -162,7 +162,7 @@ namespace sw
         if ( kind != SceneLoadKind::Travel )
             return; // 도구가 연 씬(편집기 · 진단)은 게임 흐름이 아니다
         // 로드가 끝날 때까지 세이브를 막는다 — 언리얼 게임도 로딩 화면 동안 세이브를 받지 않는다(맵이 반쯤 섰다).
-        _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, future, _saveGate.block( "scene.loading" ) } );
+        _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, future, _saveGate.block( "scene.loading" ), SceneLoadedFunction{} } );
         if ( _pLoadingScreen != nullptr && _pLoadingScreen->hasLoadingScreenDocument() )
             (void)_pLoadingScreen->beginLoading();
 
@@ -173,23 +173,46 @@ namespace sw
 
     void GameSceneFlow::publishFinishedSceneLoads()
     {
-        // 끝난 것만 순서를 지키며 뺀다. 대기열에서 밀린 요청은 nullptr 로 끝나므로 실패로 알린다.
-        size_t keptCount = 0;
+        // 끝난 것만 순서를 지키며 먼저 뺀다 — 알림을 받는 쪽(세이브 적용 · 다시 열기)이 새 로드를 요청하면 목록이 자란다. 대기열에서 밀린 요청은 nullptr 로 끝나므로 실패로 알린다.
+        vector<PendingSceneLoad> listFinished;
+        size_t                   keptCount = 0;
         for ( size_t index = 0; index < _listPendingSceneLoad.size(); ++index )
         {
             PendingSceneLoad& pending = _listPendingSceneLoad[index];
-            if ( pending._future.isReady() == false )
+            if ( pending._future.isReady() )
             {
-                if ( keptCount != index )
-                    _listPendingSceneLoad[keptCount] = std::move( pending );
-                ++keptCount;
+                listFinished.push_back( std::move( pending ) );
                 continue;
             }
-            SceneLoadCompletedEvent event{};
-            event._levelName = pending._scenePath;
-            event._bSuccess  = ( pending._future.get() != nullptr );
-            GameEventUtil::send( event );
+            if ( keptCount != index )
+                _listPendingSceneLoad[keptCount] = std::move( pending );
+            ++keptCount;
         }
         _listPendingSceneLoad.resize( keptCount );
+
+        for ( const PendingSceneLoad& finished : listFinished )
+        {
+            Scene* const            pScene = finished._future.get();
+            SceneLoadCompletedEvent event{};
+            event._levelName = finished._scenePath;
+            event._bSuccess  = ( pScene != nullptr );
+            GameEventUtil::send( event );
+            if ( finished._onLoaded.isBound() )
+                finished._onLoaded( pScene );
+        }
+    }
+
+    bool GameSceneFlow::requestSceneThen( const string& scenePath, const SceneLoadedFunction& onLoaded )
+    {
+        if ( requestLoadScene( scenePath, "requested" ) == false )
+            return false;
+        // 받아들임 알림은 요청 안에서 동기로 돈다 — 방금 넣은 맨 뒤가 이 요청이다. 아니면 알림이 걸리지 않은 범위라 끝을 받을 수 없다(멈춘다).
+        if ( _listPendingSceneLoad.empty() || _listPendingSceneLoad.back()._scenePath != scenePath )
+        {
+            SW_LOG_ERROR_ID( "GameSceneFlow.SceneLoadNotTracked", "The scene '%#' was requested but the scene flow did not receive the load - its completion cannot be delivered", scenePath.c_str() );
+            return false;
+        }
+        _listPendingSceneLoad.back()._onLoaded = onLoaded;
+        return true;
     }
 } // namespace sw

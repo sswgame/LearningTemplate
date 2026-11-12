@@ -181,6 +181,39 @@ SW_TEST_CASE( GameStateSnapshotTest, RestoreInAnotherSceneDoesNotMix )
 }
 
 /**
+ * @brief [GameStateSnapshotTest] 머리만 읽기(`readSceneID`)는 찍은 씬의 리소스 id 를 돌려주고 활성 씬을 건드리지 않는다 — 머리가 틀리거나 잘린 버퍼는 없음이다(감사 G-7)
+ * @details 슬롯 불러오기는 이 값으로 그 씬을 먼저 연 뒤 적용한다(언리얼 게임이 세이브의 맵으로 `OpenLevel` 한 뒤 적용하는 것과 같다).
+ */
+SW_TEST_CASE( GameStateSnapshotTest, ReadSceneIDPeeksTheHeaderOnly )
+{
+    SubsystemScope scope;
+    SceneManager&  sceneManager = scope.emplaceSubsystem<SceneManager>();
+    SW_REQUIRE_TRUE( sceneManager.initializeSubsystem() == SubsystemInitResult::Succeeded );
+    const game::ScopedGameScope scoped{ scope };
+    GameStateSnapshot           snapshot;
+
+    SW_REQUIRE_NOT_NULL( openSceneWithOneObject( sceneManager, "scenes/a.scene" ) );
+    const vector<uint8> saveA = captureEmptyEnvelope( snapshot );
+    SW_REQUIRE_TRUE( saveA.empty() == false );
+
+    // 다른 씬 위에서 머리만 읽는다 — 값은 찍은 씬이고 지금 씬의 오브젝트는 그대로다.
+    GameObjectManager* pSceneB = openSceneWithOneObject( sceneManager, "scenes/b.scene" );
+    SW_REQUIRE_NOT_NULL( pSceneB );
+    const optional<string> sceneID = GameStateSnapshot::readSceneID( saveA.data(), static_cast<uint32>( saveA.size() ) );
+    SW_REQUIRE_TRUE( sceneID.has_value() );
+    SW_EXPECT_TRUE( *sceneID == "scenes/a.scene" );
+    SW_EXPECT_EQUAL( 1u, countObjects( *pSceneB ) );
+
+    // 머리가 없는 버퍼 · 머리 앞에서 잘린 버퍼는 없음이다.
+    vector<uint8> foreign = saveA;
+    foreign[0]            = static_cast<uint8>( foreign[0] ^ 0xFFu );
+    SW_EXPECT_LOG( "GameStateSnapshot.StateSnapshotNoSWST" );
+    SW_EXPECT_FALSE( GameStateSnapshot::readSceneID( foreign.data(), static_cast<uint32>( foreign.size() ) ).has_value() );
+    SW_EXPECT_FALSE( GameStateSnapshot::readSceneID( nullptr, 0 ).has_value() );
+    SW_EXPECT_FALSE( GameStateSnapshot::readSceneID( saveA.data(), 18 ).has_value() ); // 씬 정체 글의 길이 칸에서 잘렸다
+}
+
+/**
  * @brief [GameStateSnapshotTest] 진 복원은 씬을 건드리지 않는다 — 끝이 잘린 봉투는 씬 섹션이 온전해도 활성 씬을 비우기 전에 거절된다(감사 P0-6)
  * @details 예전에는 씬 오브젝트를 먼저 풀고(활성 씬을 비우고) 뒤 섹션을 읽다 졌다. 지금은 섹션을 모두 읽고 분리된 매니저 · 사본에 풀어 본 뒤에만 교체한다.
  */

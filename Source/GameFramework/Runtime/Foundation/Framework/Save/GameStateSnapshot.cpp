@@ -35,10 +35,47 @@ namespace sw
              */
             static constexpr uint32 kVersion = 6; // 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다
 
+            /** @brief 봉투 머리(매직 · 판 뒤의 칸)입니다. */
+            struct Header
+            {
+                uint64 _processToken{ 0 }; ///< 찍은 프로세스의 토큰 — 같으면 id 를 복원한다
+                string _sceneID;           ///< 찍을 때 활성 씬의 리소스 id(씬이 없었으면 빈 글)
+                string _contentText;       ///< 찍을 때 콘텐츠 구성(켠 모드) 글
+            };
+
+            /**
+             * @brief @p pInBuffer 의 머리를 읽어 @p outHeader 를 채우고 @p arch 를 섹션 앞에 둡니다. 머리가 없거나 판이 다르거나 잘렸으면 false 입니다(머리 · 판은 까닭을 남긴다).
+             * @details 봉투 읽기와 머리만 읽기(`readSceneID`)가 같은 길을 쓴다 — 머리 형식을 두 곳에서 따로 읽지 않는다.
+             */
+            static bool readHeader( const void* pInBuffer, uint32 size, Archive& arch, Header& outHeader )
+            {
+                if ( pInBuffer == nullptr || size < sizeof( uint32 ) )
+                    return false;
+                uint32 magic = 0;
+                Memory::copy( &magic, pInBuffer, sizeof( uint32 ) );
+                if ( magic != kMagic )
+                {
+                    SW_LOG_ERROR_ID( "GameStateSnapshot.StateSnapshotNoSWST", "State snapshot has no SWST header - not written by GameStateSnapshot::writeEnvelope" );
+                    return false;
+                }
+                if ( size < sizeof( uint32 ) * 4 )
+                    return false;
+                arch >> magic;
+                uint32 version = 0;
+                arch >> version;
+                if ( version != kVersion )
+                {
+                    SW_LOG_ERROR_ID( "GameStateSnapshot.StateSnapshotVersionNot", "State snapshot version %# is not this build's %#", version, kVersion );
+                    return false;
+                }
+                arch >> outHeader._processToken;
+                return arch.readString( outHeader._sceneID ) && arch.readString( outHeader._contentText ) && arch.isError() == false;
+            }
+
             /**
              * @brief 세이브 머리의 씬 정체 @p savedSceneID 가 지금 활성 씬과 같은지 봅니다. 아니면 까닭을 오류로 남기고 false 입니다.
              * @details 복원은 활성 씬을 비우고 채우므로, 다른 씬(타이틀 · 다른 맵) 위에서 풀면 그 씬에 다른 맵의 오브젝트가 선다. 언리얼 게임은 세이브에 맵 이름을 적고
-             *          `OpenLevel` 뒤에 적용한다 — 여기서는 아직 씬 전환 뒤 적용 흐름이 없어 거절로 막는다(전환은 `GameSceneFlow` 의 다음 단계).
+             *          `OpenLevel` 뒤에 적용한다 — 슬롯 불러오기는 `GameInstance` 가 머리(`readSceneID`)를 보고 그 씬을 먼저 연다. 여기는 그 흐름을 거치지 않은 읽기의 마지막 막기다.
              */
             static bool checkScene( const string& savedSceneID, const string& activeSceneID )
             {
@@ -185,42 +222,16 @@ namespace sw
     {
         const unexpected<SnapshotRestoreFailure> rejected{ SnapshotRestoreFailure::Rejected };
         _pComponentStateStore->clear();
-        if ( pInBuffer == nullptr || size < sizeof( uint32 ) )
-            return rejected;
-
-        uint32 magic = 0;
-        Memory::copy( &magic, pInBuffer, sizeof( uint32 ) );
-
-        if ( magic != StateEnvelopeInternal::kMagic )
-        {
-            SW_LOG_ERROR_ID( "GameStateSnapshot.StateSnapshotNoSWST", "State snapshot has no SWST header - not written by GameStateSnapshot::writeEnvelope" );
-            return rejected;
-        }
-
-        if ( size < sizeof( uint32 ) * 4 )
-            return rejected;
-
-        Archive arch( static_cast<const uint8*>( pInBuffer ), size );
-        arch >> magic;
-
-        uint32 version = 0;
-        arch >> version;
-        if ( version != StateEnvelopeInternal::kVersion )
-        {
-            SW_LOG_ERROR_ID( "GameStateSnapshot.StateSnapshotVersionNot", "State snapshot version %# is not this build's %#", version, StateEnvelopeInternal::kVersion );
-            return rejected;
-        }
 
         // ---- 1 단계: 검증. 봉투를 끝까지 읽고 분리된 사본에 풀어 본다 — 지금 씬과 상태 인스턴스는 건드리지 않는다. ----
-        uint64 processToken = 0;
-        arch >> processToken;
-        string sceneID;
-        string contentText;
-        if ( arch.readString( sceneID ) == false || arch.readString( contentText ) == false )
+        Archive                       arch( static_cast<const uint8*>( pInBuffer ), size );
+        StateEnvelopeInternal::Header header;
+        if ( StateEnvelopeInternal::readHeader( pInBuffer, size, arch, header ) == false )
             return rejected;
-        if ( StateEnvelopeInternal::checkContent( contentText ) == false || StateEnvelopeInternal::checkScene( sceneID, GameStateSnapshotInternal::findActiveSceneID() ) == false )
+        if ( StateEnvelopeInternal::checkContent( header._contentText ) == false ||
+             StateEnvelopeInternal::checkScene( header._sceneID, GameStateSnapshotInternal::findActiveSceneID() ) == false )
             return rejected;
-        const bool              bSameProcess = ( processToken == ObjectStateSerializer::getProcessToken() );
+        const bool              bSameProcess = ( header._processToken == ObjectStateSerializer::getProcessToken() );
         const SceneObjectFormat format       = bSameProcess ? SceneObjectFormat::RestoreIdentity : SceneObjectFormat::WithIdentity;
 
         // 섹션 셋(씬 오브젝트 · 파생의 리플렉션 상태 · 컴포넌트 상태)을 모두 읽은 뒤에 푼다 — 끝이 잘린 봉투가 씬을 비운 뒤에 지지 않게 한다.
@@ -295,6 +306,15 @@ namespace sw
         // 읽기 훅(`onAfterStateDeserialize`)은 부르는 쪽이 이 뒤에 부르고 `endRestore` 로 저장소를 비운다.
         restoreStatefulComponents();
         return {};
+    }
+
+    optional<string> GameStateSnapshot::readSceneID( const void* pInBuffer, uint32 size )
+    {
+        Archive                       arch( static_cast<const uint8*>( pInBuffer ), size );
+        StateEnvelopeInternal::Header header;
+        if ( StateEnvelopeInternal::readHeader( pInBuffer, size, arch, header ) == false )
+            return nullopt;
+        return header._sceneID;
     }
 
     void GameStateSnapshot::endRestore()

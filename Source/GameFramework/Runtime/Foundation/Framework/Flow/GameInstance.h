@@ -116,8 +116,10 @@ namespace sw
 
         /**
          * @brief Shipping/Gameplay: 로컬 저장 슬롯에서 씬과 게임 상태 전체를 불러오기를 맡깁니다. 비우면 기본 슬롯입니다.
-         * @details 읽기가 끝난 뒤의 `update` 가 복원하고 성공 · 실패와 함께 `SaveGameLoadedEvent` 를 "game" 채널에 냅니다.
-         * @return 읽기를 맡겼으면 true 입니다. 슬롯이 없거나 틀리면 알리고 이벤트 없이 false 입니다.
+         * @details 읽기가 끝나면 봉투 머리의 씬 정체를 본다. 지금 활성 씬이면 바로 복원하고, 다른 씬이면 `GameSceneFlow::requestSceneThen` 으로 그 씬을 연 뒤
+         *          (`SceneLoadCompletedEvent` 바로 뒤) 복원한다(감사 G-7 — 언리얼 게임은 세이브의 맵으로 `OpenLevel` 한 뒤 적용한다). 어느 쪽이든 끝에 성공 · 실패와 함께
+         *          `SaveGameLoadedEvent` 를 "game" 채널에 냅니다.
+         * @return 읽기를 맡겼으면 true 입니다. 슬롯이 없거나 틀리거나, 앞의 세이브가 아직 씬을 옮기는 중이면 알리고 이벤트 없이 false 입니다.
          */
         [[nodiscard]] bool loadGameFromSlot( string_view slot = {} );
         /** @brief 이 인스턴스에서 성공한 세이브 슬롯 쓰기 · 읽기 수입니다. */
@@ -252,6 +254,7 @@ namespace sw
         /**
          * @brief `captureSnapshot` 이 같은 목적으로 쓴 봉투를 읽고(`GameStateSnapshot::readEnvelope`) 읽기 훅을 부릅니다.
          * @details 목적과 상관없이(세이브 · 핫 리로드) 교체 중에 졌으면 세이브 막기(`_brokenRestoreBlock`)를 걸고, 성공하면 푼다. 검증에서 진 것은 막기를 바꾸지 않는다(씬이 그대로다).
+         *          세이브 목적에서 교체가 졌으면 그 씬을 디스크에서 다시 열고(`reopenBrokenScene`), 다시 서면 막기를 푼다.
          */
         [[nodiscard]] expected<void, SnapshotRestoreFailure> readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size );
 
@@ -267,6 +270,14 @@ namespace sw
         void onSaveSlotWritten( const LocalStoreCompletion& completion );
         /** @brief 세이브 읽기 완료입니다 - 복원하고 `SaveGameLoadedEvent` 를 냅니다. */
         void onSaveSlotRead( const LocalStoreCompletion& completion );
+        /** @brief 찍은 씬이 열린 뒤입니다(`GameSceneFlow::requestSceneThen`) — 기다리던 세이브를 적용하고 `SaveGameLoadedEvent` 를 냅니다. @p pScene 이 nullptr 이면 실패로 알린다. */
+        void onSaveSceneLoaded( Scene* pScene );
+        /** @brief 성공한 읽기 수를 세고 `SaveGameLoadedEvent` 를 냅니다. */
+        void publishSlotLoaded( const string& slot, bool bLoaded );
+        /** @brief 교체에서 진 복원 뒤 활성 씬을 그 리소스에서 다시 엽니다. 리소스가 없거나 요청이 실패하면 알리고 막기는 남는다. */
+        void reopenBrokenScene();
+        /** @brief 깨진 씬이 다시 열린 뒤입니다 — 섰으면 깨진 복원의 세이브 막기를 풉니다. */
+        void onBrokenSceneReopened( Scene* pScene );
         /** @brief 끝난(꺼진) 세이브 요청 구독을 걷고 @p request 를 듭니다. */
         void holdSlotRequest( Subscription request );
         /**
@@ -317,6 +328,13 @@ namespace sw
         string                            _loadedAudioEvents;   ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
         vector<Subscription>              _listSlotRequest;     ///< 맡긴 세이브 쓰기 · 읽기의 완료 구독(끝난 것은 꺼져 다음 요청이 걷는다). 게임 범위보다 늦게 선언해 먼저 진다
         SaveSlotCounts                    _saveSlotCounts;      ///< 성공한 세이브 슬롯 쓰기 · 읽기 수
+        /** @brief 찍은 씬이 열리기를 기다리는 세이브 하나입니다(`onSaveSlotRead` → `onSaveSceneLoaded`). */
+        struct PendingSlotRestore
+        {
+            string        _slot;  ///< 읽은 슬롯 이름
+            vector<uint8> _bytes; ///< 읽은 봉투 바이트
+        };
+        optional<PendingSlotRestore> _pendingSlotRestore; ///< 씬을 옮기는 중인 세이브(없으면 없음) — 하나만 둔다, 겹친 불러오기는 거절한다
         /**
          * @brief 마지막 복원이 교체 중에 졌다 — 씬은 비워져 일부만 섰다. 다음 성공한 복원까지 세이브를 막는다(감사 P0-6).
          * @details 예전에는 실패를 경고만 하고 간격 자동 저장(예: 300 초 · 슬롯 셋)이 깨진 씬을 15 분 안에 모든 슬롯에 썼다. 수동 · 간격 · 종료 저장이 모두
