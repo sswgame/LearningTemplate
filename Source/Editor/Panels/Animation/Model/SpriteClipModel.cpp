@@ -52,7 +52,6 @@ namespace sw::editor
             /** @brief 스프라이트 클립 문서가 아닌 이미지 경로인지입니다. */
             [[nodiscard]] static bool isImagePath( string_view path ) { return EditorAssetTypeRegistry::matches( EditorAssetType{ Texture2D::kAssetType }, path ); }
         };
-        using Internal = SpriteClipModelInternal;
     } // namespace
 
     SpriteClipModel::SpriteClipModel()
@@ -69,12 +68,12 @@ namespace sw::editor
         , _previewSeconds{ 0.0f }
         , _bPreviewPlaying{ SW_FALSE }
     {
-        applyClip( makeNewClip( Internal::findDefaultAtlas() ) );
+        applyClip( makeNewClip( SpriteClipModelInternal::findDefaultAtlas() ) );
     }
 
     string SpriteClipModel::computeClipPath( string_view path )
     {
-        if ( Internal::isImagePath( path ) == false )
+        if ( SpriteClipModelInternal::isImagePath( path ) == false )
             return string{ path };
         return FileUtil::removeExtension( path ) + string{ SpriteClipAsset::kExtension };
     }
@@ -101,9 +100,9 @@ namespace sw::editor
         _bPreviewPlaying   = SW_FALSE;
         if ( result == ToolAssetLoadResult::Missing )
         {
-            applyClip( makeNewClip( Internal::findDefaultAtlas() ) );
+            applyClip( makeNewClip( SpriteClipModelInternal::findDefaultAtlas() ) );
         }
-        else if ( Internal::isImagePath( path ) )
+        else if ( SpriteClipModelInternal::isImagePath( path ) )
         {
             applyClip( makeNewClip( data._atlasPath ) );
         }
@@ -117,7 +116,7 @@ namespace sw::editor
     bool SpriteClipModel::saveDocument( string_view path )
     {
         // 패널은 `computeClipPath` 를 거쳐 부른다 - 여기가 이미지를 덮는 마지막 관문이다.
-        const bool bSaved = Internal::isImagePath( path ) == false && EditorToolAssetCommands::saveSpriteClip( captureClipData(), path );
+        const bool bSaved = SpriteClipModelInternal::isImagePath( path ) == false && EditorToolAssetCommands::saveSpriteClip( captureClipData(), path );
         if ( bSaved == false )
         {
             _status = SW_LOCKEY( "EditorSpriteClip", "SaveFailedStatus" );
@@ -142,7 +141,7 @@ namespace sw::editor
 
     SpriteClipFrame* SpriteClipModel::editSelectedFrame()
     {
-        return Internal::isValidIndex( _clip._listFrame, _selectedFrame ) ? &_clip._listFrame[static_cast<size_t>( _selectedFrame )] : nullptr;
+        return SpriteClipModelInternal::isValidIndex( _clip._listFrame, _selectedFrame ) ? &_clip._listFrame[static_cast<size_t>( _selectedFrame )] : nullptr;
     }
 
     void SpriteClipModel::addFrame()
@@ -154,7 +153,7 @@ namespace sw::editor
     bool SpriteClipModel::removeSelectedFrame()
     {
         const int32 removedFrame = _selectedFrame;
-        if ( Internal::eraseSelected( _clip._listFrame, _selectedFrame ) == false )
+        if ( SpriteClipModelInternal::eraseSelected( _clip._listFrame, _selectedFrame ) == false )
             return false;
         for ( SpriteClipAnimation& animation : _clip._listAnimation )
         {
@@ -191,7 +190,7 @@ namespace sw::editor
     bool SpriteClipModel::moveSelectedFrame( int32 delta )
     {
         const int32 target = _selectedFrame + delta;
-        if ( editSelectedFrame() == nullptr || Internal::isValidIndex( _clip._listFrame, target ) == false || delta == 0 )
+        if ( editSelectedFrame() == nullptr || SpriteClipModelInternal::isValidIndex( _clip._listFrame, target ) == false || delta == 0 )
             return false;
         std::swap( _clip._listFrame[static_cast<size_t>( _selectedFrame )], _clip._listFrame[static_cast<size_t>( target )] );
         _selectedFrame = target;
@@ -229,7 +228,7 @@ namespace sw::editor
 
     SpriteClipKey* SpriteClipModel::editSelectedKey()
     {
-        return Internal::isValidIndex( _clip._listKey, _selectedKey ) ? &_clip._listKey[static_cast<size_t>( _selectedKey )] : nullptr;
+        return SpriteClipModelInternal::isValidIndex( _clip._listKey, _selectedKey ) ? &_clip._listKey[static_cast<size_t>( _selectedKey )] : nullptr;
     }
 
     void SpriteClipModel::addKey()
@@ -240,19 +239,19 @@ namespace sw::editor
 
     bool SpriteClipModel::removeSelectedKey()
     {
-        return Internal::eraseSelected( _clip._listKey, _selectedKey );
+        return SpriteClipModelInternal::eraseSelected( _clip._listKey, _selectedKey );
     }
 
     void SpriteClipModel::selectAnimation( int32 animationIndex )
     {
-        _selectedAnimation = Internal::isValidIndex( _clip._listAnimation, animationIndex ) ? animationIndex : -1;
+        _selectedAnimation = SpriteClipModelInternal::isValidIndex( _clip._listAnimation, animationIndex ) ? animationIndex : -1;
         _animationName     = ( _selectedAnimation >= 0 ) ? _clip._listAnimation[static_cast<size_t>( _selectedAnimation )]._name.c_str() : "";
         _previewSeconds    = 0.0f;
     }
 
     SpriteClipAnimation* SpriteClipModel::editSelectedAnimation()
     {
-        return Internal::isValidIndex( _clip._listAnimation, _selectedAnimation ) ? &_clip._listAnimation[static_cast<size_t>( _selectedAnimation )] : nullptr;
+        return SpriteClipModelInternal::isValidIndex( _clip._listAnimation, _selectedAnimation ) ? &_clip._listAnimation[static_cast<size_t>( _selectedAnimation )] : nullptr;
     }
 
     bool SpriteClipModel::addAnimation()
@@ -284,7 +283,7 @@ namespace sw::editor
 
     bool SpriteClipModel::removeSelectedAnimation()
     {
-        if ( Internal::eraseSelected( _clip._listAnimation, _selectedAnimation ) == false )
+        if ( SpriteClipModelInternal::eraseSelected( _clip._listAnimation, _selectedAnimation ) == false )
             return false;
         selectAnimation( _selectedAnimation );
         return true;
@@ -347,7 +346,7 @@ namespace sw::editor
         const optional<int32> cell = AtlasGridUtil::findCellAtUV( u, v, _sliceColumns, _sliceRows );
         if ( cell.has_value() == false )
             return AtlasPickResult::None;
-        const bool bAdded = bAddFrame || Internal::isValidIndex( _clip._listFrame, _selectedFrame ) == false;
+        const bool bAdded = bAddFrame || SpriteClipModelInternal::isValidIndex( _clip._listFrame, _selectedFrame ) == false;
         if ( bAdded )
             addFrame();
         _clip._listFrame[static_cast<size_t>( _selectedFrame )]._uvRect = AtlasGridUtil::computeCellUVRect( *cell, _sliceColumns, _sliceRows );
@@ -364,7 +363,7 @@ namespace sw::editor
 
     bool SpriteClipModel::findSelectedFrameBounds( float4& outBounds ) const
     {
-        if ( Internal::isValidIndex( _clip._listFrame, _selectedFrame ) == false )
+        if ( SpriteClipModelInternal::isValidIndex( _clip._listFrame, _selectedFrame ) == false )
             return false;
         const float4& uv   = _clip._listFrame[static_cast<size_t>( _selectedFrame )]._uvRect;
         const float32 left = MathUtil::min( uv._x, uv._x + uv._z );
@@ -381,7 +380,7 @@ namespace sw::editor
         const float32 bottom = snapToAtlasPixel( MathUtil::max( uvFrom._y, uvTo._y ), false );
         if ( right - left <= 0.0f || bottom - top <= 0.0f )
             return AtlasPickResult::None;
-        const bool bAdded = bAddFrame || Internal::isValidIndex( _clip._listFrame, _selectedFrame ) == false;
+        const bool bAdded = bAddFrame || SpriteClipModelInternal::isValidIndex( _clip._listFrame, _selectedFrame ) == false;
         if ( bAdded )
             addFrame();
         _clip._listFrame[static_cast<size_t>( _selectedFrame )]._uvRect = float4{ left, top, right - left, bottom - top };
@@ -448,7 +447,7 @@ namespace sw::editor
         outFirstFrame = 0;
         outFrameCount = _clip.getFrameCount();
         outLoop       = true;
-        if ( Internal::isValidIndex( _clip._listAnimation, _selectedAnimation ) == false )
+        if ( SpriteClipModelInternal::isValidIndex( _clip._listAnimation, _selectedAnimation ) == false )
             return;
         const SpriteClipAnimation& animation = _clip._listAnimation[static_cast<size_t>( _selectedAnimation )];
         outFirstFrame                        = MathUtil::clamp( animation._firstFrame, 0, outFrameCount );

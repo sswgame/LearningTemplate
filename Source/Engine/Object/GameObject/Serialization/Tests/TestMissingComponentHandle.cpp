@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/GameObject/Serialization/Tests/HandleTestComponents.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 using namespace sw;
 
