@@ -25,12 +25,11 @@ namespace sw::editor
 {
     /**
      * @struct AudioGraphEdit
-     * @brief 모델이 사본을 고친 일 하나입니다. 패널이 되돌리기 이름과 합칠 키로 문서 기반에 넘긴다(`EditorDocumentPanel::notifyDocumentEdited`).
+     * @brief 모델이 사본을 고친 일 하나입니다. 패널이 되돌리기 이름으로 문서 기반에 넘긴다(`EditorDocumentPanel::notifyDocumentEdited` — 끌기 한 번은 상호작용 구간이 한 단계로 묶는다).
      */
     struct AudioGraphEdit
     {
-        const utf8* _pLabel{ nullptr };       ///< 되돌리기 이름. nullptr 이면 고친 것이 없다
-        const utf8* _pCoalesceKey{ nullptr }; ///< 이어진 같은 편집(노드 끌기 · 값 끌기)을 한 단계로 합치는 키. nullptr 이면 합치지 않는다
+        const utf8* _pLabel{ nullptr }; ///< 되돌리기 이름. nullptr 이면 고친 것이 없다
     };
 
     /**
@@ -73,9 +72,9 @@ namespace sw::editor
         /** @brief 속성 그리드가 바로 고치는 사본입니다. 고치면 `markEdited` 를 부릅니다. */
         AudioGraphDef& editGraph() { return _editGraph; }
         /** @brief 속성 그리드가 사본을 고쳤습니다. */
-        void markEdited() { recordEdit( "Edit Audio Graph", "audiograph.values" ); }
-        /** @brief 캔버스가 주석 상자(`editGraph()._listComment`)를 고쳤습니다. 끌기 · 늘이기는 @p pCoalesceKey 로 한 단계에 합친다. */
-        void markCommentsEdited( const utf8* pLabel, const utf8* pCoalesceKey = nullptr ) { recordEdit( pLabel, pCoalesceKey ); }
+        void markEdited() { recordEdit( "Edit Audio Graph" ); }
+        /** @brief 캔버스가 주석 상자(`editGraph()._listComment`)를 고쳤습니다. */
+        void markCommentsEdited( const utf8* pLabel ) { recordEdit( pLabel ); }
         /** @brief 지난번 뒤로 고친 일이 있으면 @p outEdit 에 담고 비운 뒤 true 입니다. 패널이 그리기마다 한 번 부른다. */
         [[nodiscard]] bool takeEdit( AudioGraphEdit& outEdit );
 
@@ -124,7 +123,7 @@ namespace sw::editor
 
     private:
         /** @brief 고친 일을 쌓습니다. 한 그리기 안의 여러 편집은 마지막 이름 하나로 넘긴다(되돌리기 한 단계). */
-        void recordEdit( const utf8* pLabel, const utf8* pCoalesceKey = nullptr ) { _pendingEdit = AudioGraphEdit{ pLabel, pCoalesceKey }; }
+        void recordEdit( const utf8* pLabel ) { _pendingEdit = AudioGraphEdit{ pLabel }; }
         /** @brief 노드 번호로 든 고름 · 놓을 노드를 풉니다(그래프를 통째로 바꾸거나 노드를 지웠을 때). */
         void clearNodeRefs();
 

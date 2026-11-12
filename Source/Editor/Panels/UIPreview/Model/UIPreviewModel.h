@@ -167,8 +167,13 @@ namespace sw::editor
         // --- 프로퍼티 편집 ---------------------------------------------------------------
         /** @brief 고른 위젯 @p widget 의 프로퍼티 기준 값이 그 위젯 것이 아니면 다시 잡습니다 — 그리드가 값을 바꿨을 때 이전 값을 알기 위해서입니다. */
         void syncBaseline( const Widget& widget );
-        /** @brief 그리드가 고른 위젯의 프로퍼티 하나를 고쳤다고 알릴 때 되돌리기 항목을 남깁니다. */
+        /**
+         * @brief 그리드가 고른 위젯의 프로퍼티 하나를 고쳤다고 알립니다. 값은 이미 바뀌었고, 되돌리기는 상호작용 구간으로 쥔다 — 구간이 끝나면(`finishPropertyInteraction`)
+         *        (구간 전 값, 끝 값)을 한 항목으로 남긴다(감사 P0-1, 언리얼 `FScopedTransaction` 을 누를 때 열고 뗄 때 닫는 자리).
+         */
         void onPropertyEdited( const PropertyInfo& prop );
+        /** @brief 상호작용 구간이 끝났습니다(활성 위젯이 없다 — View 가 판단한다). 쥔 프로퍼티 편집이 있으면 되돌리기 항목 하나로 남깁니다. */
+        void finishPropertyInteraction();
         /**
          * @brief 슬롯 편집 하나(손잡이 · Slot 필드 · 격자 셀)를 맺습니다 — `_slot` 텍스트 전후가 다르면 되돌리기 항목을 남기고 dirty 로 하고 기준 값을 다시 잡게 합니다.
          * @return 항목을 남겼으면 true 입니다.
@@ -245,6 +250,15 @@ namespace sw::editor
             string _name{};
             string _text{};
         };
+        /** @brief 쥔 상호작용 구간 하나입니다 — 구간 전 값과 지금 값. 세대가 다르면 그 트리의 항목이다(새 트리에 쓰지 않는다). */
+        struct PendingPropertyEdit
+        {
+            string _name{};
+            string _oldText{};
+            string _newText{};
+            uint32 _ordinal{ 0 };
+            uint32 _generation{ 0 };
+        };
 
         void setDirty( bool bDirty );
         void notifyTargetReleasing();
@@ -253,7 +267,7 @@ namespace sw::editor
         void setNavigationMode( bool bNavigation );
         void captureBaseline( const Widget& widget );
         /** @brief 프로퍼티 편집 하나를 되돌리기 항목으로 남깁니다(인스펙터와 슬롯 편집이 함께 씁니다). */
-        void pushPropertyEdit( uint32 ordinal, const string& propertyName, const string& oldText, const string& newText, const string& coalesceKey );
+        void pushPropertyEdit( uint32 generation, uint32 ordinal, const string& propertyName, const string& oldText, const string& newText );
         /** @brief 구조를 고친 뒤 고름 · 기준 값 · 호버를 정리합니다 — @p selectedOrdinal 의 위젯을 고릅니다(비어 있으면 고름을 푼다). */
         void afterStructureEdit( UIScreen& screen, optional<uint32> selectedOrdinal );
         /** @brief 되돌리기와 다시 하기가 부릅니다 — 문서 순서 번호 @p ordinal 의 위젯 프로퍼티 @p propertyName 에 @p text 를 씁니다. 다른 세대의 항목이면 버립니다. */
@@ -268,23 +282,24 @@ namespace sw::editor
         bool applyMove( uint32 generation, uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex );
 
     private:
-        unique_ptr<UndoStepOwner>       _pUndoOwner;        ///< 이 미리보기가 남긴 코드 되돌리기 단계의 주인(모델이 사라지면 그 명령이 빠진다). 포인터라 헤더가 되돌리기 배관(`UndoStep.h`)을 끌지 않는다(MVVM View include 계약)
-        Delegate<void( bool )>          _onDirtyChanged;    ///< 문서 dirty 를 패널에 알린다
-        Delegate<void()>                _onTargetReleasing; ///< 렌더 텍스처를 놓기 직전에 뷰에 알린다
-        vector<UIPreviewWidgetRow>      _listRow;           ///< 위젯 목록 행. 트리나 그 구조 세대가 바뀔 때만 다시 짓는다
-        const WidgetTree*               _pRowTree;          ///< `_listRow` 를 지은 트리
-        uint64                          _rowTreeGeneration; ///< `_listRow` 를 지은 때의 `WidgetTree::getStructureGeneration`(세대는 1 부터)
-        vector<string>                  _listLanguage;      ///< 언어 콤보의 코드(첫 줄 = 게임 언어)
-        vector<BaselineValue>           _listBaseline;      ///< 고른 위젯의 프로퍼티 기준 값
-        vector<const TypeInfo*>         _listPaletteType;   ///< 팔레트의 위젯 타입(이름순)
-        hashed_string                   _paletteType;       ///< 팔레트에서 고른 타입(Add 가 붙인다)
-        EditableAssetPath               _documentPath;      ///< 미리보는 문서. 경로 칸은 확정할 때만 바꾼다(글자마다 다시 짓지 않는다)
-        string                          _openedDocument;    ///< 지금 미리보기 화면의 문서
-        string                          _targetPath;        ///< 지금 렌더 텍스처 경로
-        string                          _error;             ///< 마지막으로 열지 못한 까닭
-        string                          _language;          ///< 고른 언어 코드. 빈 값 = 게임 언어 그대로
-        hashed_string                   _theme;             ///< 빈 이름 = 게임의 지금 테마
-        hashed_string                   _animation;         ///< 고른 애니메이션(빈 이름 = 없음)
+        unique_ptr<UndoStepOwner>       _pUndoOwner;          ///< 이 미리보기가 남긴 코드 되돌리기 단계의 주인(모델이 사라지면 그 명령이 빠진다). 포인터라 헤더가 되돌리기 배관(`UndoStep.h`)을 끌지 않는다(MVVM View include 계약)
+        Delegate<void( bool )>          _onDirtyChanged;      ///< 문서 dirty 를 패널에 알린다
+        Delegate<void()>                _onTargetReleasing;   ///< 렌더 텍스처를 놓기 직전에 뷰에 알린다
+        vector<UIPreviewWidgetRow>      _listRow;             ///< 위젯 목록 행. 트리나 그 구조 세대가 바뀔 때만 다시 짓는다
+        const WidgetTree*               _pRowTree;            ///< `_listRow` 를 지은 트리
+        uint64                          _rowTreeGeneration;   ///< `_listRow` 를 지은 때의 `WidgetTree::getStructureGeneration`(세대는 1 부터)
+        vector<string>                  _listLanguage;        ///< 언어 콤보의 코드(첫 줄 = 게임 언어)
+        vector<BaselineValue>           _listBaseline;        ///< 고른 위젯의 프로퍼티 기준 값
+        optional<PendingPropertyEdit>   _pendingPropertyEdit; ///< 쥔 상호작용 구간(그리드 끌기 · 글 칸). 끝나면 되돌리기 항목 하나가 된다
+        vector<const TypeInfo*>         _listPaletteType;     ///< 팔레트의 위젯 타입(이름순)
+        hashed_string                   _paletteType;         ///< 팔레트에서 고른 타입(Add 가 붙인다)
+        EditableAssetPath               _documentPath;        ///< 미리보는 문서. 경로 칸은 확정할 때만 바꾼다(글자마다 다시 짓지 않는다)
+        string                          _openedDocument;      ///< 지금 미리보기 화면의 문서
+        string                          _targetPath;          ///< 지금 렌더 텍스처 경로
+        string                          _error;               ///< 마지막으로 열지 못한 까닭
+        string                          _language;            ///< 고른 언어 코드. 빈 값 = 게임 언어 그대로
+        hashed_string                   _theme;               ///< 빈 이름 = 게임의 지금 테마
+        hashed_string                   _animation;           ///< 고른 애니메이션(빈 이름 = 없음)
         UIViewport                      _viewport;
         UIPointerState                  _pointer;        ///< 입력 흉내의 포인터 상태(미리보기 트리 하나만 본다)
         UIPreviewPointerTracker         _pointerTracker; ///< 입력 흉내의 포인터 판단(누른 버튼 · 안에 있음 · 마지막 위치)

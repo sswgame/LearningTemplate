@@ -118,7 +118,6 @@ namespace sw
         , _listParkedCommand{}
         , _objectEditListener{}
         , _transactionLabel{}
-        , _lastCoalesceKey{}
         , _empty{}
         , _index{ 0 }
         , _parkedIndex{ 0 }
@@ -170,8 +169,6 @@ namespace sw
             _listPendingTransactionCommand.push_back( std::move( cmd ) );
             return;
         }
-
-        _lastCoalesceKey.clear();
 
         if ( _index < _listCommand.size() )
             _listCommand.erase( _listCommand.begin() + static_cast<std::ptrdiff_t>( _index ), _listCommand.end() );
@@ -242,38 +239,6 @@ namespace sw
         _listPendingTransactionCommand.clear();
     }
 
-    void CommandStack::pushCoalesce( string_view coalesceKey, Command cmd )
-    {
-        // 재진입(undo/redo 콜백 안의 push)을 여기서도 막는다. 막지 않으면 `push` 는 거절되는데 coalesce 키만 남아, 다음 병합이
-        // 상관없는 지난 명령의 redo 를 바꾼다.
-        if ( isExecutable( cmd ) == false || _bIsExecuting )
-            return;
-        watchOwners( cmd );
-
-        if ( _transactionDepth != 0 )
-        {
-            _listPendingTransactionCommand.push_back( std::move( cmd ) );
-            return;
-        }
-
-        const bool bCanCoalesce = coalesceKey.empty() == false &&
-                                  _lastCoalesceKey == coalesceKey &&
-                                  _index > 0 &&
-                                  _index <= _listCommand.size();
-
-        if ( bCanCoalesce )
-        {
-            // 처음 실행할 때의 undo 는 보존하고, 최신 redo 와 레이블만 바꾼다
-            _listCommand[_index - 1]._redo = std::move( cmd._redo );
-            if ( cmd._label.empty() == false )
-                _listCommand[_index - 1]._label = std::move( cmd._label );
-            return;
-        }
-
-        push( std::move( cmd ) );
-        _lastCoalesceKey = coalesceKey;
-    }
-
     bool CommandStack::canUndo() const
     {
         return _index > 0;
@@ -286,7 +251,6 @@ namespace sw
 
     void CommandStack::undo()
     {
-        _lastCoalesceKey.clear();
         if ( canUndo() == false || _bIsExecuting )
             return;
         --_index;
@@ -297,7 +261,6 @@ namespace sw
 
     void CommandStack::redo()
     {
-        _lastCoalesceKey.clear();
         if ( canRedo() == false || _bIsExecuting )
             return;
         const size_t targetIndex = _index;
@@ -330,9 +293,6 @@ namespace sw
             ++keptPendingCount;
         }
         _listPendingTransactionCommand.resize( keptPendingCount );
-        // 병합 대상이 바뀌었을 수 있다 — 다음 병합 push 가 엉뚱한 명령을 고치지 않게 끊는다.
-        if ( droppedCount > 0 )
-            _lastCoalesceKey.clear();
         return droppedCount;
     }
 
@@ -455,7 +415,6 @@ namespace sw
         _listCommand.clear();
         _listPendingTransactionCommand.clear();
         _transactionLabel.clear();
-        _lastCoalesceKey.clear();
         _index            = 0;
         _transactionDepth = 0;
     }
@@ -501,7 +460,6 @@ namespace sw
         if ( _bIsExecuting )
             return;
 
-        _lastCoalesceKey.clear();
         if ( targetIndex > _listCommand.size() )
             targetIndex = _listCommand.size();
 

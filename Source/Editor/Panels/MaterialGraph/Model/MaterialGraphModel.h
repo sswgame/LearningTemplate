@@ -26,8 +26,7 @@ namespace sw::editor
     /** @brief 모델이 사본을 고친 일 하나입니다. 패널이 문서 기반(`notifyDocumentEdited`)에 넘긴다. */
     struct MaterialGraphEdit
     {
-        const utf8* _pLabel{ nullptr };       ///< 되돌리기 이름. nullptr 이면 고친 것이 없다
-        const utf8* _pCoalesceKey{ nullptr }; ///< 이어진 같은 편집을 한 단계로 합치는 키
+        const utf8* _pLabel{ nullptr }; ///< 되돌리기 이름. nullptr 이면 고친 것이 없다(끌기 한 번은 문서 패널의 상호작용 구간이 한 단계로 묶는다)
     };
 
     /**
@@ -62,7 +61,7 @@ namespace sw::editor
         [[nodiscard]] const MaterialGraphDef& getGraph() const { return _graph; }
         MaterialGraphDef&                     editGraph() { return _graph; }
         /** @brief 캔버스가 주석 상자를 고쳤습니다. */
-        void markCommentsEdited( const utf8* pLabel, const utf8* pCoalesceKey = nullptr ) { recordEdit( pLabel, pCoalesceKey, false ); }
+        void markCommentsEdited( const utf8* pLabel ) { recordEdit( pLabel, false ); }
         /** @brief 지난번 뒤로 고친 일이 있으면 @p outEdit 에 담고 비운 뒤 true 입니다. */
         [[nodiscard]] bool takeEdit( MaterialGraphEdit& outEdit );
 
@@ -122,7 +121,7 @@ namespace sw::editor
             vector<MaterialGraphPinInfo> _listOutput;
         };
 
-        void recordEdit( const utf8* pLabel, const utf8* pCoalesceKey, bool bChangesShader );
+        void recordEdit( const utf8* pLabel, bool bChangesShader );
         void rebuildPins();
         /** @brief 노드 @p fromIndex 의 입력을 거슬러 @p targetIndex 에 닿으면 true 입니다(고리 검사). */
         [[nodiscard]] bool usesNode( uint32 fromIndex, uint32 targetIndex, vector<uint8>& inoutListSeen ) const;

@@ -696,7 +696,7 @@ namespace sw::editor
         if ( bEdited )
         {
             _statusText.clear();
-            notifyDocumentEdited( "Edit Behavior Node", "behavior-tree-node-edit" ); // 연속 편집은 한 번의 되돌리기로 합친다
+            notifyDocumentEdited( "Edit Behavior Node" ); // 연속 편집은 상호작용 구간 하나라 한 번의 되돌리기다
         }
     }
 

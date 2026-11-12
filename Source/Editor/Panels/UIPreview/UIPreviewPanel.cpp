@@ -359,6 +359,13 @@ namespace sw::editor
         _model.onPropertyEdited( prop );
     }
 
+    void UIPreviewPanel::flushDocumentInteraction()
+    {
+        EditorDocumentPanel::flushDocumentInteraction();
+        if ( isWidgetInteractionActive() == false )
+            _model.finishPropertyInteraction(); // 그리드 끌기 · 글 칸이 풀린 프레임이다 — 구간 하나가 되돌리기 항목 하나다
+    }
+
     void UIPreviewPanel::drawLanguageCombo()
     {
         const string& language = _model.getLanguage();

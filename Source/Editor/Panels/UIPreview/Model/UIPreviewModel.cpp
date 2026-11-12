@@ -96,6 +96,7 @@ namespace sw::editor
         , _rowTreeGeneration{ 0 }
         , _listLanguage{}
         , _listBaseline{}
+        , _pendingPropertyEdit{}
         , _listPaletteType{}
         , _paletteType{}
         , _documentPath{ initialDocument }
@@ -224,6 +225,7 @@ namespace sw::editor
         _rowTreeGeneration = 0;
         ++_generation;
         _listBaseline.clear();
+        _pendingPropertyEdit = nullopt; // 닫은 화면의 구간이다 — 새 화면에 쓰지 않는다
         setDirty( false );
     }
 
@@ -290,8 +292,9 @@ namespace sw::editor
         _pointerTracker.reset();
         ++_generation;
         _listBaseline.clear();
-        _baselineWidget = kInvalidWidgetID;
-        _selected       = _selectedOrdinal.has_value() ? UIPreviewLogic::findWidgetByOrdinal( tree, *_selectedOrdinal ) : kInvalidWidgetID;
+        _pendingPropertyEdit = nullopt; // 트리를 새로 지었다 — 옛 세대의 구간은 끊는다(옛 되돌리기 항목과 같은 규칙)
+        _baselineWidget      = kInvalidWidgetID;
+        _selected            = _selectedOrdinal.has_value() ? UIPreviewLogic::findWidgetByOrdinal( tree, *_selectedOrdinal ) : kInvalidWidgetID;
         if ( bRebuilt )
         {
             // 다시 만든 트리는 디스크 문서 그대로다 — 고친 값과 입력 흉내의 흔적이 모두 사라졌다. 재생기도 새것이라 멈춤 표시를 남기지 않는다.
@@ -426,6 +429,7 @@ namespace sw::editor
 
     void UIPreviewModel::captureBaseline( const Widget& widget )
     {
+        finishPropertyInteraction(); // 쥔 구간은 지금 기준 값(그 위젯)의 것이다 — 기준을 바꾸기 전에 맺는다
         _listBaseline.clear();
         _baselineWidget       = widget.getID();
         const TypeInfo* pType = widget.getTypeInfo();
@@ -462,17 +466,36 @@ namespace sw::editor
         }
         const string name    = prop._name.c_str();
         const string newText = UIPreviewLogic::formatWidgetProperty( *pWidget, prop );
-        for ( BaselineValue& baseline : _listBaseline )
+        // 끌어 바꾸는 값은 프레임마다 알려 온다 — 구간(위젯 활성 ~ 해제) 동안 쥐고 끝에 항목 하나로 남긴다. 기준 값은 구간이 끝날 때 옮긴다.
+        const bool bSameSpan = _pendingPropertyEdit.has_value() && _pendingPropertyEdit->_name == name && _pendingPropertyEdit->_ordinal == *_selectedOrdinal &&
+                               _pendingPropertyEdit->_generation == _generation;
+        if ( bSameSpan == false )
+            finishPropertyInteraction(); // 다른 프로퍼티의 구간이 열려 있었다 — 먼저 맺는다
+        for ( const BaselineValue& baseline : _listBaseline )
         {
             if ( baseline._name != name )
                 continue;
             if ( baseline._text == newText )
+            {
+                _pendingPropertyEdit = nullopt; // 구간 전 값으로 돌아왔다 — 남길 것이 없다
                 return;
-            const string oldText = baseline._text;
-            baseline._text       = newText;
-            // 끌어 바꾸는 값은 프레임마다 알려 온다 — 같은 위젯 · 같은 프로퍼티의 연속 편집은 되돌리기 항목 하나로 합친다.
-            pushPropertyEdit( *_selectedOrdinal, name, oldText, newText, UIPreviewLogic::makeEditCoalesceKey( _generation, *_selectedOrdinal, name ) );
+            }
+            _pendingPropertyEdit = PendingPropertyEdit{ name, baseline._text, newText, *_selectedOrdinal, _generation };
             return;
+        }
+    }
+
+    void UIPreviewModel::finishPropertyInteraction()
+    {
+        if ( _pendingPropertyEdit.has_value() == false )
+            return;
+        const PendingPropertyEdit edit = std::move( *_pendingPropertyEdit );
+        _pendingPropertyEdit           = nullopt;
+        pushPropertyEdit( edit._generation, edit._ordinal, edit._name, edit._oldText, edit._newText );
+        for ( BaselineValue& baseline : _listBaseline )
+        {
+            if ( baseline._name == edit._name )
+                baseline._text = edit._newText;
         }
     }
 
@@ -480,19 +503,18 @@ namespace sw::editor
     {
         if ( ordinal.has_value() == false || newText == oldText )
             return false;
-        pushPropertyEdit( *ordinal, "_slot", oldText, newText, string{} );
+        pushPropertyEdit( _generation, *ordinal, "_slot", oldText, newText );
         setDirty( true );
         _baselineWidget = kInvalidWidgetID; // 인스펙터의 기준 값을 다시 잡는다
         return true;
     }
 
-    void UIPreviewModel::pushPropertyEdit( uint32 ordinal, const string& propertyName, const string& oldText, const string& newText, const string& coalesceKey )
+    void UIPreviewModel::pushPropertyEdit( uint32 generation, uint32 ordinal, const string& propertyName, const string& oldText, const string& newText )
     {
         EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         if ( propertyName == "_slot" )
             ++_slotEditCount;
-        const uint32                  generation = _generation;
-        const shared_ptr<EditSession> pSession   = _pSession;
+        const shared_ptr<EditSession> pSession = _pSession;
         transaction.push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, oldText]()
         {
             pSession->apply( generation, ordinal, propertyName, oldText );
@@ -503,7 +525,7 @@ namespace sw::editor
             pSession->apply( generation, ordinal, propertyName, newText );
         } ),
                                                    *_pUndoOwner ),
-                          "Edit UI Widget", coalesceKey );
+                          "Edit UI Widget" );
     }
 
     void UIPreviewModel::afterStructureEdit( UIScreen& screen, optional<uint32> selectedOrdinal )

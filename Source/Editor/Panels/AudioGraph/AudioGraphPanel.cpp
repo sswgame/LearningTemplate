@@ -295,7 +295,7 @@ namespace sw::editor
                 _model.recordNodePosition( nodeIndex, float2{ position.x, position.y } );
             }
             if ( _nodeGraph.syncCommentLayout( _model.editGraph()._listComment ) )
-                _model.markCommentsEdited( "Move Audio Graph Comment", "audiograph.comment.move" );
+                _model.markCommentsEdited( "Move Audio Graph Comment" );
         }
 
         int32 selectedNodeID{ 0 };
@@ -376,7 +376,7 @@ namespace sw::editor
         // 이번 그리기에서 캔버스 · 그리드가 고친 일을 문서 기반에 넘긴다 — 되돌리기 단계와 dirty 가 여기서 선다.
         AudioGraphEdit edit;
         if ( _model.takeEdit( edit ) )
-            notifyDocumentEdited( edit._pLabel, edit._pCoalesceKey != nullptr ? string_view{ edit._pCoalesceKey } : string_view{} );
+            notifyDocumentEdited( edit._pLabel );
     }
 
     SW_EDITOR_PANEL( AudioGraphPanel, AudioGraphPanel::kPanelID, EditorPanelCategory::Tool, 2102 );

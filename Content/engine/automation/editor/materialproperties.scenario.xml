@@ -3,7 +3,9 @@
   에디터 시나리오 — 머티리얼 창의 프로퍼티 검색과 기본값 되돌리기(언리얼 머티리얼 인스턴스 에디터 · 유니티 머티리얼 인스펙터와 같은 자리).
   (1) 맞는 프로퍼티가 없는 검색어는 빈 목록 대신 0 건 안내를 보이고, 이름 일부("rough")로 찾으면 그 행이 보인다.
   (2) 거칠기를 바꾸면 기본값과 다른 프로퍼티가 하나가 되고 행 끝에 되돌리기 단추(material.reset._roughness)가 생긴다 — 누르면 기본값으로 돌아온다.
-  (3) 끝에서 검색어를 지우고 다시 읽어 문서를 저장하지 않은 편집 없이 둔다(뒤 시나리오가 같은 패널을 연다).
+  (3) 거칠기 슬라이더를 끌면 끌기 한 번이 되돌리기 한 단계이고(감사 P0-1 — 예전에는 프레임마다 한 단계), 그 단계는 이 창의 스택에 든다 —
+      창에 포커스를 둔 채 edit.undo 한 번이면 스택 위치와 값이 끌기 전으로 돌아온다(P0-2 — 예전에는 전역 스택에 들어 창의 Ctrl+Z 가 아무것도 하지 않았다).
+  (4) 끝에서 검색어를 지우고 다시 읽어 문서를 저장하지 않은 편집 없이 둔다(뒤 시나리오가 같은 패널을 연다).
   실행: App -EnableEditor -scenario=engine/automation/editor/materialproperties.scenario.xml -unattended
 -->
 <Scenario name="editor.materialproperties" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
@@ -41,6 +43,16 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="material.reset._roughness"/>
 	<WaitUntil watch="Editor.MaterialModifiedPropertyCount" equals="0" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<!-- (3) 끌기 한 번 = 이 창의 스택에 한 단계 -->
+	<Remember watch="Editor.FocusedUndoIndex" as="undoBeforeDrag"/>
+	<EditorDrag mark="material.property._roughness" dx="60" dy="0"/>
+	<WaitUntil watch="Editor.MaterialModifiedPropertyCount" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.FocusedUndoIndex" differsFrom="undoBeforeDrag" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<DevCommand line="editor edit.undo"/>
+	<WaitUntil watch="Editor.FocusedUndoIndex" sameAs="undoBeforeDrag" timeoutFrames="60"/>
+	<Expect watch="Editor.MaterialModifiedPropertyCount" equals="0"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="material.propertyFilter"/>
 	<EditorWaitSettled/>

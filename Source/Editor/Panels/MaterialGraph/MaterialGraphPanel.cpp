@@ -266,7 +266,7 @@ namespace sw::editor
                 _model.recordNodePosition( nodeIndex, float2{ position.x, position.y } );
             }
             if ( _nodeGraph.syncCommentLayout( _model.editGraph()._listComment ) )
-                _model.markCommentsEdited( "Move Material Graph Comment", "materialgraph.comment.move" );
+                _model.markCommentsEdited( "Move Material Graph Comment" );
         }
 
         int32 selectedNodeID{ 0 };
@@ -469,7 +469,7 @@ namespace sw::editor
         _model.refreshPreview( getPreviewScene(), getLoadedAssetPath() );
         MaterialGraphEdit edit;
         if ( _model.takeEdit( edit ) )
-            notifyDocumentEdited( edit._pLabel, edit._pCoalesceKey != nullptr ? string_view{ edit._pCoalesceKey } : string_view{} );
+            notifyDocumentEdited( edit._pLabel );
     }
 
     SW_EDITOR_PANEL( MaterialGraphPanel, MaterialGraphPanel::kPanelID, EditorPanelCategory::Tool, 1301 );

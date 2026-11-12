@@ -34,7 +34,8 @@ namespace sw::editor
      *          - 뷰포트 위치에서 `drawPreviewViewport( size )` 를 부른다. 이 함수를 부른 프레임만 그리므로, 가려진 탭은 그리지 않는다.
      *          - 미리보기 씬의 오브젝트 편집은 `recordPreviewModify` 와 `getPreviewCommandStack` 으로 **창의 스택**에 남긴다. 창이 포커스일 때
      *            Ctrl+Z 는 이 스택만 되돌리고(`editor::getFocusedCommandStack`), 메인 씬 기록은 그대로 둔다. 창을 닫으면 스택도 사라진다
-     *            (되돌리기 어려운 결정 4). 문서 텍스트 편집(`notifyDocumentEdited`)은 지금처럼 에디터 전역 스택에 남는다.
+     *            (되돌리기 어려운 결정 4). 문서 텍스트 편집(`notifyDocumentEdited`)도 이 스택에 남는다(`getDocumentCommandStack`, 감사 P0-2) —
+     *            창에 포커스를 둔 Ctrl+Z 가 그 편집을 되돌리고, 창을 닫으면(`releasePreview`) 씬 편집과 함께 버린다.
      *          - 선택은 창마다 따로 있다(`getPreviewSelection`, 이 창의 씬과 스택에 묶인 `EditorSelection`). 창이 포커스를 얻거나 선택이 바뀌면
      *            인스펙터가 그 선택을 대상으로 삼는다(`editor::getFocusedSelection`). 인스펙터의 값과 구조 편집, 전역 명령(삭제, 정렬 등)의 기록은
      *            이 창의 스택에 남는다. `EditorTransaction` 이 오브젝트가 있는 씬으로 스택을 고르기 때문이다.
@@ -62,7 +63,7 @@ namespace sw::editor
         /** @brief 창 범위 Undo 스택입니다. */
         CommandStack& getPreviewCommandStack() { return *_pCommandStack; }
         /** @brief 문서 편집도 이 창의 스택으로 간다 — 이 창에 포커스가 있을 때 Ctrl+Z 가 가는 스택(`setFocusedCommandStack`)과 같다. */
-        CommandStack* findDocumentCommandStack() override { return _pCommandStack.get(); }
+        CommandStack& getDocumentCommandStack() override { return *_pCommandStack; }
         /** @brief 미리보기 씬과 창의 스택에 묶인 창 범위 선택입니다. 씬을 만들기 전에는 묶이지 않은 빈 선택입니다. */
         EditorSelection&       getPreviewSelection() { return *_pSelection; }
         const EditorSelection& getPreviewSelection() const { return *_pSelection; }

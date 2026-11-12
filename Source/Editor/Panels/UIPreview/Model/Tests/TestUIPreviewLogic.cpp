@@ -502,14 +502,6 @@ SW_TEST_CASE( UIPreviewLogicTest, TreeFilterKeepsMatchesAndTheirAncestors )
     SW_EXPECT_TRUE( listOrdinal.empty() );
 }
 
-// 트리를 새로 지은 뒤의 편집이 옛 세대 항목과 합쳐지면 Undo 가 끊긴 항목을 불러 아무 일도 하지 않는다.
-SW_TEST_CASE( UIPreviewLogicTest, CoalesceKeyDiffersAcrossGenerations )
-{
-    SW_EXPECT_TRUE( UIPreviewLogic::makeEditCoalesceKey( 1, 2, "_opacity" ) == UIPreviewLogic::makeEditCoalesceKey( 1, 2, "_opacity" ) );
-    SW_EXPECT_FALSE( UIPreviewLogic::makeEditCoalesceKey( 1, 2, "_opacity" ) == UIPreviewLogic::makeEditCoalesceKey( 2, 2, "_opacity" ) );
-    SW_EXPECT_FALSE( UIPreviewLogic::makeEditCoalesceKey( 1, 2, "_opacity" ) == UIPreviewLogic::makeEditCoalesceKey( 1, 3, "_opacity" ) );
-}
-
 // ---------------------------------------------------------------------- 입력 흉내
 
 SW_TEST_CASE( UIPreviewPointerTrackerTest, EnteringSendsAMoveEvenWithoutMotionAndNoMoreAfterThat )
