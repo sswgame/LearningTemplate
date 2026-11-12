@@ -167,6 +167,9 @@ namespace sw
 
     void TileMapRendererComponent::setTileMapData( const TileMapXMLData& map, shared_ptr<const TileSetAsset> pTileSet )
     {
+        // 받은 타일셋이 지금 판이다 — 넘겨받는 입구마다 다시 읽기 횟수를 맞춘다. 맵 파일 길(`loadTileMap`)만 적으면 타일셋을 직접 넘긴 쪽(편집기 · 테스트)은
+        // 그 전의 다시 읽기를 낡음으로 보고 첫 틱에 경로로 다시 받으려 한다(글로 만든 타일셋은 경로가 없어 실패).
+        _tileSetReload.markSeen();
         _map      = map;
         _pTileSet = std::move( pTileSet );
         _bLoaded  = SW_FALSE;

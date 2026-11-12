@@ -4,6 +4,7 @@
         "Source/Games/": "게임 모듈의 자동 플레이 · 스트레스 시험 — DevTools 가 게임을 알면 의존이 거꾸로다(게임은 DevTools 를 못 본다)",
         "Source/App/Dev/": "실행 중 백엔드 교체 — 에디터 모듈 재생성이 App 전용 EditorModuleManager 를 알아야 한다(DevTools 는 App 을 못 본다). DevTools 로 옮기려면 엔진에 모듈 교체 인터페이스를 새로 둬야 하는데 배포(SW_SHIPPING)에서는 쓰지 않는 창구라 두지 않는다(사용자 결정 2026-11-08) — App/Dev 는 배포에서 빠진다",
         "Source/GameFramework/Runtime/Foundation/GameData/Dev/": "gamesettings 실행 인자 덮어쓰기(IGameSettingsOverride) — GameFramework 내부 형식이라 DevTools 가 볼 수 없다(TargetLayers devtools 게이트)",
+        "Source/GameFramework/Runtime/Foundation/Framework/Save/Dev/": "스냅샷 복원 교체 단계 결함 주입(ISnapshotFaultHook · gv_saveRestoreBreakReplace) — GameFramework 내부 형식이라 DevTools 가 볼 수 없다(GameData/Dev 와 같은 까닭). 배포에서는 창구가 비어 결함 없이 돈다",
         "Source/Engine/Graphics/Material/Dev/": "머티리얼 그래프 컴파일러 — REFLECT 에셋 형식이라 Engine 리플렉션 단계가 필요하고 헤드리스 셰이더 쿠커(Renderer/Cook)가 부른다. 언리얼도 머티리얼 컴파일러는 Engine(WITH_EDITOR)"
     }
 }
