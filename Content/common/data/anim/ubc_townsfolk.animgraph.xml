@@ -3,7 +3,7 @@
 <AnimationGraphAsset>
 	<nodes>
 		<node id="1" name="Locomotion" x="40.0" y="40.0" loop="true">
-			<blend_space x="Speed">
+			<blend_space x="Speed" min_x="0" max_x="2.1">
 				<samples>
 					<sample clip="idle_loop" x="0" />
 					<sample clip="walk_loop" x="0.84" />

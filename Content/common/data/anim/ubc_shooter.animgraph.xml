@@ -7,21 +7,21 @@
 		<node id="2" name="walk_loop" x="260.0" y="40.0" loop="true" />
 		<node id="3" name="jog_fwd_loop" x="480.0" y="40.0" loop="true" />
 		<node id="4" name="WalkBackwards" x="700.0" y="40.0" loop="true">
-			<blend_space x="Speed">
+			<blend_space x="Speed" min_x="0" max_x="1">
 				<samples>
 					<sample clip="walk_loop" x="0" />
 				</samples>
 			</blend_space>
 		</node>
 		<node id="5" name="StrafeLeft" x="40.0" y="200.0" loop="true">
-			<blend_space x="Speed">
+			<blend_space x="Speed" min_x="0" max_x="1">
 				<samples>
 					<sample clip="jog_fwd_loop" x="0" />
 				</samples>
 			</blend_space>
 		</node>
 		<node id="6" name="StrafeRight" x="260.0" y="200.0" loop="true">
-			<blend_space x="Speed">
+			<blend_space x="Speed" min_x="0" max_x="1">
 				<samples>
 					<sample clip="jog_fwd_loop" x="0" />
 				</samples>

@@ -204,9 +204,16 @@ namespace sw
         def._notifyMode                  = params._notify;
         def._space.clear();
         def._space.setAxisCount( def._parameterY.empty() ? 1u : 2u );
+        def._space.setAxisRange( float2{ params._minX, params._minY }, float2{ params._maxX, params._maxY } );
         if ( def._parameterX.empty() )
         {
             SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBlend", "Animation graph node '%#' has a blend space without an 'x' parameter", inoutNode._name.c_str() );
+            return false;
+        }
+        if ( def._space.hasValidAxisRange() == false )
+        {
+            SW_LOG_ERROR_ID( "AnimationGraphAsset.BlendSpaceAxisRange", "Animation graph node '%#' blend space needs max_x > min_x%#", inoutNode._name.c_str(),
+                             def._space.getAxisCount() == 2 ? " and max_y > min_y" : "" );
             return false;
         }
 
@@ -230,6 +237,17 @@ namespace sw
         if ( bValid && def._space.getSampleCount() == 0 )
         {
             SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBlend6", "Animation graph node '%#' has a blend space without samples", inoutNode._name.c_str() );
+            bValid = false;
+        }
+        // 범위 밖 표본은 가둔 파라미터가 닿지 못하고, 겹친 표본은 늘 가중치 0 이다 — 둘 다 조용히 버리지 않고 로드 오류로 멈춘다.
+        if ( bValid && def._space.hasSampleOutsideAxisRange() )
+        {
+            SW_LOG_ERROR_ID( "AnimationGraphAsset.BlendSpaceSampleOutsideRange", "Animation graph node '%#' blend space has a sample outside its axis range", inoutNode._name.c_str() );
+            bValid = false;
+        }
+        if ( bValid && def._space.hasCoincidentSamples() )
+        {
+            SW_LOG_ERROR_ID( "AnimationGraphAsset.BlendSpaceCoincidentSamples", "Animation graph node '%#' blend space has two samples at the same position", inoutNode._name.c_str() );
             bValid = false;
         }
         // 2D 가중치는 삼각분할의 무게중심이라 넓이가 없는 표본(둘 · 한 줄)은 섞을 삼각형이 없다 — 대신할 규칙을 두지 않고 로드 오류로 멈춘다.
@@ -597,6 +615,10 @@ namespace sw
             blendSpace._x               = def._parameterX;
             blendSpace._y               = def._parameterY;
             blendSpace._notify          = def._notifyMode;
+            blendSpace._minX            = def._space.getAxisMinimum()._x;
+            blendSpace._maxX            = def._space.getAxisMaximum()._x;
+            blendSpace._minY            = def._space.getAxisMinimum()._y;
+            blendSpace._maxY            = def._space.getAxisMaximum()._y;
             const XMLNode blendSpaceXML = nodeXML.appendChild( "blend_space" );
             XMLFields::writeProperties( blendSpaceXML, blendSpace );
             const XMLNode samplesXML = blendSpaceXML.appendChild( "samples" );

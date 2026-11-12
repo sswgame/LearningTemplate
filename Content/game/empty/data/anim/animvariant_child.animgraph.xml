@@ -2,7 +2,7 @@
 <AnimationGraphAsset _base="game/empty/data/anim/animvariant_base.animgraph.xml">
 	<nodes>
 		<node name="Idle">
-			<blend_space x="Speed">
+			<blend_space x="Speed" min_x="0" max_x="1">
 				<samples>
 					<sample clip="cheer" x="0" />
 				</samples>
