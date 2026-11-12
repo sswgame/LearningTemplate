@@ -117,7 +117,9 @@ lane_lint() {
 
 lane_debug_nogpu() {
   run_ctest Ninja-Debug nogpu -L nogpu || return 1
-  [ $DRY -eq 1 ] || grep -E "case run" build/Ninja-Debug/Testing/Logs/UnitTests.log   # App --test 의 케이스 수(보고에 적는다)
+  # App --test 의 케이스 수(보고에 적는다) — 보고 JSON 에서 읽는다(엔진 로그 파일에는 요약 줄이 없다). 보고 줄은 판정을 바꾸지 않는다.
+  [ $DRY -eq 1 ] || py -3 -c "import json; d=json.load(open('build/Ninja-Debug/Testing/Reports/UnitTests.json', encoding='utf-8')); print(f\"App --test: {d['runCount']} case run(s), {d['failedCount']} failed\")" || true
+  return 0
 }
 
 lane_server_tools() {
