@@ -64,13 +64,6 @@
 - 제안: 문자열 변수를 잠금 안에서 사본을 돌려주는 접근자 형식(`GlobalString::get()`)으로 바꿔 직접 참조가 컴파일되지 않게 한다. 렌더 스레드가 읽는 변수는 프레임 스냅샷으로 옮기는 길 하나만 둔다.
 - 확인: TSan(Linux Debug)에서 한 스레드가 `gv_renderPipeline` 을 반복해 바꾸는 시나리오.
 
-#### C-8 32 비트 이름 해시가 밖으로 나가는 키인데 현지화 표에 충돌 검사가 없다
-- 분류: 결함(잠재 데이터 오류) · 확신: 코드 확인, 확률은 계산
-- 근거: `Source/Core/Name/hashed_string.h:13` 이 "바이너리 필드 이름 · 열거자 · 지역화 테이블이 이 값을 저장" 한다고 적는다(uint32, 대소문자 무시 FNV-1a). `Source/Engine/Localization/StringTable.cpp:83-88` 은 `_mapTable[keyHash] = pStored` 로 나중 것이 이긴다. 생일 문제로 키 3 만 개에 약 10 %, 10 만 개에 약 69 % 다. 열거자 쪽(`Source/Engine/Reflection/TypeRegistry.cpp:55`)은 충돌을 보지만 타입 이름 표(`:188,203`)는 보지 않는다.
-- 상용 엔진: 언리얼 `FTextKey` 는 해시로 버킷만 고르고 키 글을 비교한다.
-- 제안: 밖으로 나가는 키 해시를 64 비트로 올리고(`computeStringHash64` 가 이미 있다), 표를 지을 때 "같은 해시, 다른 키" 를 오류로 멈춘다(쿠킹 · 로드 양쪽).
-- 확인: 단위 테스트 — 32 비트 해시가 같은 두 키를 `LocalizationManager` 에 넣어 오류가 나는지.
-
 #### C-9 컨테이너가 std 와 같은 이름 · API 인데 복잡도가 다르다
 - 분류: 성능 · 확신: 코드 확인, 배수는 측정 필요
 - 근거: ① `Source/Core/Container/vector.h:977-988` — 범위 `insert` 가 원소마다 `insert( pos, *it )` 을 부른다(`ByteStream.h:54` · `Archive.cpp:112` 의 바이트 붙이기가 이 경로다). ② `Source/Core/Container/deque.h:14` — `std::deque` 래퍼라 MSVC 에서 `sizeof( T ) > 8` 이면 원소마다 힙 할당 하나다(`AsyncFileIOQueue` · `NetTransport` 가 쓴다 — MSVC 헤더 값은 다시 열지 않았다). ③ `Source/Core/Container/unordered_map.h:645` — `reserve` 가 버킷만 잡는다. ④ `Source/Core/Container/map.h:30` — 정렬 벡터라 대량 구축이 O(n²) 다.
@@ -461,13 +454,6 @@
 - 상용 엔진: 언리얼은 히트 프록시(ID 버퍼, 픽셀 정확), 유니티는 GPU 피킹 패스, Godot 4 는 AABB 뒤에 메시 삼각형 레이다.
 - 제안: 렌더 쪽에 오브젝트 id 타깃을 두고 클릭 때 1 픽셀 읽기로 고른다. 그 전 단계로는 구 → OBB(`GameObject::getWorldBox`) → 메시 삼각형 순으로 좁힌다.
 - 확인: 시나리오 `viewportpick` 에 "긴 기둥 옆 빈 곳 클릭 → 선택 없음" 과 "큰 바닥 위 작은 큐브 → 큐브".
-
-#### E-11 읽기 전용 · 잠금 확인이 씬 저장에만 있다
-- 분류: 구조 + 결함 · 확신: 호출 위치는 확인, 플랫폼별 결과는 추정
-- 근거: `Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp:244-268` — `reportReadOnlyTarget` 은 씬 저장 두 곳에서만 부른다. 문서 패널의 `saveDocument` 들은 묻지 않고 `FileUtil::writeTextFile`(임시 파일 → 바꿔 끼우기)로 간다. POSIX 는 `std::rename`(`Source/Core/File/PlatformFileUtil.cpp:315`)이 읽기 전용 대상도 바꿔 끼워 잠금 규약(LFS lockable = 읽기 전용)이 조용히 뚫린다(추정). Windows 는 실패해 20 ms × 10 회를 UI 스레드에서 잔다.
-- 상용 엔진: 언리얼은 저장 전 `PromptForCheckoutAndSave` 가 모든 패키지에 같은 길이다.
-- 제안: "에디터가 콘텐츠 파일을 쓰는 입구" 하나(`EditorContentWrite::write( assetID, text )`)를 두어 읽기 전용 · 남의 잠금 · 쓰기 게이트를 거기서 본다.
-- 확인: 단위(스크래치 파일을 읽기 전용으로) — 문서 저장이 false + 알림이고 파일 내용 · 속성이 그대로인지 Windows · Linux 둘 다.
 
 ## P2 — 개선과 작은 결함
 
