@@ -124,7 +124,7 @@ namespace sw
     {
         // 남은 구독은 무효로 만든다 — 주인이 나중에 놓아도 아무것도 풀지 않는다(칸은 아래 기록 비우기와 함께 사라진다).
         // 아래 언로드가 콜백을 부르지 않도록 칸도 지금 비운다(매니저가 내려가는 중이라 다시 설 인스턴스가 없다).
-        detachAllSubscriptions();
+        _subscriptions.detachAll();
         for ( const CallbackRegistration& registration : _listCallbackRegistration )
         {
             clearSlot( registration );
@@ -524,7 +524,7 @@ namespace sw
         }
         const uint64 id = _callbackIDAllocator.allocate();
         _listCallbackRegistration.push_back( { id, string( moduleName ), slot } );
-        return issueSubscription( id );
+        return _subscriptions.issue( id );
     }
 
     void LiveReloadManager::releaseSubscription( uint64 id )

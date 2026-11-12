@@ -21,6 +21,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -50,7 +51,7 @@ namespace sw
      *         덮어쓰거나 통째로 비우는 길이 없습니다. 모듈마다의 칸은 그 모듈의 주인 하나가 걸고(다시 걸면 앞 구독은 아무것도 풀지 않는다),
      *         배치 직전 콜백은 여럿이 걸 수 있는 목록입니다.
      */
-    class LiveReloadManager final : public ILiveReloadManager, public SubscriptionSource
+    class LiveReloadManager final : public ILiveReloadManager
     {
     public:
         // 델리게이트 형식은 창구(`ILiveReloadManager`)가 정한다. 검사 콜백(`OnValidateLibraryDelegate`)은 옛 라이브러리가 아직 돌 때(prepare) 불리고,
@@ -276,10 +277,9 @@ namespace sw
             bool   _bSucceeded{ false };       ///< 끝난 빌드가 성공했다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
-    protected:
-        void releaseSubscription( uint64 id ) override;
-
     private:
+        /** @brief 칸 구독 @p id 가 풀렸습니다. 그 칸을 비웁니다(`_subscriptions` 가 부른다). */
+        void releaseSubscription( uint64 id );
         /** @brief @p moduleName 의 @p slot 칸을 새로 걸 구독을 냅니다. 같은 칸의 앞 등록은 표에서 빠집니다(앞 구독은 아무것도 풀지 않게 된다). */
         [[nodiscard]] Subscription issueSlotSubscription( string_view moduleName, CallbackSlot slot );
         /** @brief @p registration 이 가리키는 칸을 비웁니다. */
@@ -346,11 +346,12 @@ namespace sw
         MulticastDelegate<bool( const vector<string>& )> _onBeforeCommitBatch;         ///< 배치 직전 콜백(더한 순서 — 부를 때는 거꾸로, `broadcastUntilReverse`)
         MulticastDelegate<bool()>                        _reloadHolds;                 ///< 리로드 잡음(`addReloadHold`)
         FlushWorkersDelegate                             _flushWorkers;
-        vector<CallbackRegistration>                     _listCallbackRegistration; ///< 살아 있는 칸 구독이 가리키는 칸
-        IDAllocator<uint64>                              _callbackIDAllocator;      ///< 칸 구독 번호(0 은 빈 구독)
-        DeferredLibraryUnloadQueue                       _deferredUnloadQueue;      ///< 언로드를 미룬 옛 라이브러리(`kMaxDeferredUnloadBatchCount` 배치까지)
-        ShadowCopySerials                                _shadowCopySerials;        ///< 섀도 복사본 이름의 일련번호 · 라이브러리 이름 세대(`ModuleShadowCopy::writeShadowCopy`)
-        uint32                                           _completedReloadCount;     ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
+        vector<CallbackRegistration>                     _listCallbackRegistration;                                                                                    ///< 살아 있는 칸 구독이 가리키는 칸
+        IDAllocator<uint64>                              _callbackIDAllocator;                                                                                         ///< 칸 구독 번호(0 은 빈 구독)
+        SubscriptionList                                 _subscriptions{ SubscriptionList::ReleaseFunction::create<&LiveReloadManager::releaseSubscription>( this ) }; ///< 칸 구독을 내준다(믹스인 상속 대신 합성 — 기반은 창구 하나). 풀리면 `releaseSubscription`
+        DeferredLibraryUnloadQueue                       _deferredUnloadQueue;                                                                                         ///< 언로드를 미룬 옛 라이브러리(`kMaxDeferredUnloadBatchCount` 배치까지)
+        ShadowCopySerials                                _shadowCopySerials;                                                                                           ///< 섀도 복사본 이름의 일련번호 · 라이브러리 이름 세대(`ModuleShadowCopy::writeShadowCopy`)
+        uint32                                           _completedReloadCount;                                                                                        ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
         uint8                                            _bReloadGraphBroken : 1;
         uint8                                            _bBuildStampPending : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다
         [[maybe_unused]] uint8                           _reserved           : 6;
