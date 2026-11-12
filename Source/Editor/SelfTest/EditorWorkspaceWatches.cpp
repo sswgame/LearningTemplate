@@ -153,6 +153,19 @@ namespace sw::editor
             return true;
         }
 
+        /** @brief Ctrl+Z 가 가는 스택(포커스한 미리보기 창의 스택, 없으면 메인 스택)의 위치입니다 — 문서 편집이 그 창의 되돌리기에 들었는지 본다(감사 P0-2). */
+        [[nodiscard]] bool readFocusedUndoIndex( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const CommandStack* pStack = editor::getFocusedCommandStack();
+            if ( pStack == nullptr ) // 필수 서비스: 메인 스택이 없으면 버그
+            {
+                SW_LOG_ERROR_ID( "EditorWorkspaceWatches.WatchEditorFocusedUndoIndexCommandStack", "[Scenario] watch Editor.FocusedUndoIndex: CommandStack is missing" );
+                return false;
+            }
+            outValue = static_cast<float64>( pStack->getCurrentIndex() );
+            return true;
+        }
+
         /** @brief 툴이 겨누는 씬과 Undo 스택이 메인 씬의 것이면 1 입니다 — 포커스를 쥔 미리보기 창이 닫힌 뒤에도 남아 있으면 0 입니다(선택은 포커스를 잃어도 남는 것이 정상이라 보지 않는다). */
         [[nodiscard]] bool readToolFocusIsMain( const GameObjectManager* /*pManager*/, float64& outValue )
         {
@@ -400,6 +413,8 @@ namespace sw::editor
                          &readSelectedIsEditorCamera );
     SW_AUTOMATION_WATCH( editorUndoCount, "Editor.UndoCount", "Commands on the undo stack", &readUndoCount );
     SW_AUTOMATION_WATCH( editorUndoIndex, "Editor.UndoIndex", "Position on the undo stack (commands not undone)", &readUndoIndex );
+    SW_AUTOMATION_WATCH( editorFocusedUndoIndex, "Editor.FocusedUndoIndex", "Position on the undo stack Ctrl+Z goes to (the focused preview window's stack, else the main stack)",
+                         &readFocusedUndoIndex );
     SW_AUTOMATION_WATCH( editorToolFocusIsMain, "Editor.ToolFocusIsMain", "1 when the scene and undo stack tools aim at are the main scene's (0 while a preview window holds the focus)",
                          &readToolFocusIsMain );
     SW_AUTOMATION_QUERY_WATCH( editorSceneHash, "Editor.SceneHash", "Hash of the edited scene content (every object's name, parent and saved state; the scene view camera is left out)",

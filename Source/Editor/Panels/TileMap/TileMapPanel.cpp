@@ -4,7 +4,6 @@
 
 #include "Core/Container/unordered_set.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -347,13 +346,9 @@ namespace sw::editor
         input._bClicked    = bHovered && EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left );
         input._bButtonDown = ImGui::IsMouseDown( ImGuiMouseButton_Left );
         input._bPainting   = ImGui::IsItemActive() && input._bButtonDown;
-        // 한 프레임에 칠한 셀은 기록 하나다 — 획마다 다른 묶음 키라 끄는 동안의 프레임은 합쳐지고 다음 획은 새 기록이다(같은 키면 다른 편집이 끼기 전까지 모든 획이 한 기록이 됐다).
+        // 획 하나(캔버스를 누른 동안)는 상호작용 구간 하나라 되돌리기 한 단계다 — 다음 획은 새 구간이다(감사 P0-1).
         if ( _document.applyToolInput( input ) )
-        {
-            StringBuilder<constant::buffer::kMax256> textBuilder;
-            textBuilder.appendFormat( "tilemap-paint-%#", _document.getStrokeSerial() );
-            notifyDocumentEdited( "Paint Tile Map", textBuilder.view() );
-        }
+            notifyDocumentEdited( "Paint Tile Map" );
     }
 
     void TileMapPanel::drawDataLayerControls()

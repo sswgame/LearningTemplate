@@ -18,6 +18,8 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditSpan.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -169,20 +171,17 @@ namespace sw::editor
         , _kind{ kind }
         , _loadedAssetPath{}
         , _pendingFocusPath{}
-        , _documentUndoBaseline{}
         , _lastSavedDocumentText{}
-        , _pendingEditLabel{}
         , _assetsMovedSubscription{}
         , _pUndoTarget{ make_shared<EditorDocumentPanel*>( this ) }
+        , _pEditSpan{ make_unique<DocumentEditSpan>() }
         , _pUndoOwner{ make_unique<UndoStepOwner>() }
         , _listRecentPath{}
         , _listOpenCandidate{}
         , _openFilter{}
-        , _documentLoadEpoch{ 0 }
         , _bLoaded{ SW_FALSE }
         , _bConfirmSwitch{ SW_FALSE }
         , _bLoadFailed{ SW_FALSE }
-        , _bEditPending{ SW_FALSE }
         , _reserved{ 0 }
     {
         if ( bLoadOnOpen == false )
@@ -268,7 +267,6 @@ namespace sw::editor
     {
         _bLoaded     = SW_TRUE;
         _bLoadFailed = SW_FALSE;
-        ++_documentLoadEpoch; // 다시 읽은 뒤의 편집을 읽기 전 되돌리기 항목에 합치지 않는다
         clearDocumentDirty();
         syncDocumentUndoBaseline();
     }
@@ -302,52 +300,56 @@ namespace sw::editor
             reloadDocument();
     }
 
+    CommandStack& EditorDocumentPanel::getDocumentCommandStack()
+    {
+        return editor::getSubsystem<CommandStack>(); // 작업 공간 스택은 에디터 범위의 필수 서비스다
+    }
+
+    bool EditorDocumentPanel::isWidgetInteractionActive()
+    {
+        return ImGui::GetCurrentContext() != nullptr && ImGui::IsAnyItemActive();
+    }
+
     void EditorDocumentPanel::flushDocumentInteraction()
     {
-        if ( _bEditPending == SW_FALSE || ( ImGui::GetCurrentContext() != nullptr && ImGui::IsAnyItemActive() ) )
+        if ( _pEditSpan->isHolding() == false || isWidgetInteractionActive() )
             return;
-        const string label = std::move( _pendingEditLabel );
-        _bEditPending      = SW_FALSE;
-        notifyDocumentEdited( label, string_view{} ); // 구간 전 글(기준선) → 지금 글을 한 단계로(구간이 합치기를 대신한다)
+        const optional<DocumentEdit> edit = _pEditSpan->finish( captureDocumentText() );
+        if ( edit.has_value() )
+            recordDocumentEdit( *edit );
     }
 
     void EditorDocumentPanel::syncDocumentUndoBaseline()
     {
-        _bEditPending          = SW_FALSE; // 문서를 다시 읽었다 — 쥔 구간의 기준선이 없다
-        _documentUndoBaseline  = captureDocumentText();
-        _lastSavedDocumentText = _documentUndoBaseline;
+        _lastSavedDocumentText = captureDocumentText();
+        _pEditSpan->resetBaseline( _lastSavedDocumentText ); // 문서를 다시 읽었거나 저장했다 — 쥔 구간의 기준선이 없다
     }
 
     void EditorDocumentPanel::restoreDocumentFromUndo( string_view text )
     {
         applyDocumentText( text );
-        _documentUndoBaseline = string{ text };
+        _pEditSpan->resetBaseline( string{ text } );
         if ( EditorSessionPolicy::shouldClearDocumentDirtyOnRestore( text == _lastSavedDocumentText ) )
             clearDocumentDirty();
         else
             markDocumentDirty();
     }
 
-    void EditorDocumentPanel::notifyDocumentEdited( string_view label, string_view coalesceKey )
+    void EditorDocumentPanel::notifyDocumentEdited( string_view label )
     {
-        // 상호작용 구간(감사 P0-1): 합치기 키가 있는 편집(슬라이더 · 노드 끌기 · 칠하기)은 위젯이 활성인 동안 쥐고, 끝난 프레임에 (구간 전 글, 끝 글)을 한 번 기록한다
-        // (`flushDocumentInteraction`). 예전에는 키로 합쳤는데 기록이 거래 구간 안이라 병합에 닿지 않아 끌기 한 번이 프레임마다 한 단계였고, 한도(128)를 넘겨
+        // 상호작용 구간(감사 P0-1): 위젯이 활성인 동안의 편집(슬라이더 · 노드 끌기 · 칠하기 · 글 칸)은 쥐고, 풀린 프레임에 (구간 전 글, 끝 글)을 한 번 기록한다
+        // (`flushDocumentInteraction`). 예전에는 합치기 키로 합쳤는데 기록이 거래 구간 안이라 병합에 닿지 않아 끌기 한 번이 프레임마다 한 단계였고, 한도(128)를 넘겨
         // 씬 편집 기록까지 밀어냈다. 언리얼이 누를 때 FScopedTransaction 을 열고 뗄 때 닫는 것과 같은 모양이다.
-        // 바뀐 것이 없으면 아무것도 하지 않는다 — 먼저 본다. 매 프레임 알리는 패널이 활성 위젯(글 칸) 동안 dirty 로 표시하면 제목이 바뀌어 그 칸이 포커스를 잃는다.
-        const string after = captureDocumentText();
-        if ( after == _documentUndoBaseline )
-        {
-            _bEditPending = SW_FALSE; // 쥔 구간이 처음 글로 돌아왔다 — 기록할 것이 없다
-            return;
-        }
-        if ( coalesceKey.empty() == false && ImGui::GetCurrentContext() != nullptr && ImGui::IsAnyItemActive() )
-        {
-            _pendingEditLabel = string{ label };
-            _bEditPending     = SW_TRUE;
+        // 바뀐 것이 없으면 아무것도 하지 않는다 — 매 프레임 알리는 패널이 활성 위젯(글 칸) 동안 dirty 로 표시하면 제목이 바뀌어 그 칸이 포커스를 잃는다.
+        const optional<DocumentEdit> edit = _pEditSpan->notifyEdited( label, captureDocumentText(), isWidgetInteractionActive() );
+        if ( edit.has_value() )
+            recordDocumentEdit( *edit );
+        else if ( _pEditSpan->isHolding() )
             markDocumentDirty();
-            return;
-        }
-        _bEditPending = SW_FALSE;
+    }
+
+    void EditorDocumentPanel::recordDocumentEdit( const DocumentEdit& edit )
+    {
         EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         // 이 편집이 속한 문서를 적어 둔다 — 되돌리기는 **그 문서가 아직 열려 있을 때만** 적용한다. 주의: `this` 와 바뀐 구간만 잡으면
         // 다른 문서로 바꾼 뒤 Ctrl+Z 할 때 앞 문서의 구간을 지금 문서의 텍스트에 붙여, 지금 문서가 깨진 채 dirty 가 되고 저장하면
@@ -356,7 +358,7 @@ namespace sw::editor
         const string                           documentPath = _loadedAssetPath;
         const shared_ptr<EditorDocumentPanel*> pTarget      = _pUndoTarget;
         transaction.recordDocumentText(
-            _documentUndoBaseline, after, label, *_pUndoOwner,
+            edit._before, edit._after, edit._label, *_pUndoOwner,
             SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [pTarget, documentPath]( string_view snapshot )
         {
             EditorDocumentPanel* pPanel = *pTarget;
@@ -372,8 +374,7 @@ namespace sw::editor
             EditorDocumentPanel* pPanel = *pTarget;
             return pPanel != nullptr ? pPanel->captureDocumentText() : string{};
         } ),
-            EditorSessionPolicy::makeDocumentCoalesceKey( coalesceKey, reinterpret_cast<uintptr_t>( pTarget.get() ), documentPath, _documentLoadEpoch ), findDocumentCommandStack() );
-        _documentUndoBaseline = after;
+            getDocumentCommandStack() );
         markDocumentDirty();
     }
 } // namespace sw::editor

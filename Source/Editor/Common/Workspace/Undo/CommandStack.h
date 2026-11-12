@@ -79,8 +79,6 @@ namespace sw
         void cancelTransaction();
         /** @brief 트랜잭션 진행 여부를 반환합니다. */
         bool isInsideTransaction() const { return _transactionDepth != 0; }
-        /** @brief 동일한 coalesceKey로 연속 push될 때 최초 undo를 보존하고 최신 redo로 병합합니다. */
-        void pushCoalesce( string_view coalesceKey, Command cmd );
 
         /** @brief 실행 취소 가능 여부를 반환합니다. */
         bool canUndo() const;
@@ -139,7 +137,7 @@ namespace sw
         [[nodiscard]] bool load( Archive& archive );
 
     private:
-        /** @brief @p cmd(안쪽 명령까지)의 코드 단계 주인마다 사라짐을 한 번 구독합니다(`push` · `pushCoalesce`). */
+        /** @brief @p cmd(안쪽 명령까지)의 코드 단계 주인마다 사라짐을 한 번 구독합니다(`push`). */
         void watchOwners( const Command& cmd );
         /** @brief 주인이 사라졌다 — 그 명령을 빼고 구독을 놓습니다. */
         void onOwnerReleased( uint64 ownerID );
@@ -162,7 +160,6 @@ namespace sw
         vector<Command>                  _listParkedCommand; ///< 보관한 내역(`parkHistory`)
         DelegateSlot<ObjectEditListener> _objectEditListener;
         string                           _transactionLabel;
-        string                           _lastCoalesceKey;
         string                           _empty;
         size_t                           _index;
         size_t                           _parkedIndex; ///< 보관한 내역의 위치

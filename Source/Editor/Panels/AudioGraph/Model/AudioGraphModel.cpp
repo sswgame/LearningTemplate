@@ -191,7 +191,7 @@ namespace sw::editor
         if ( bMoved == false )
             return;
         stored = position;
-        recordEdit( "Move Audio Graph Nodes", "audiograph.move" );
+        recordEdit( "Move Audio Graph Nodes" );
     }
 
     void AudioGraphModel::selectNodeByID( int32 nodeID )

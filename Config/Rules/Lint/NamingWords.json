@@ -673,7 +673,11 @@
     "writeNodeFields": "writeNodeProperties — 금지 명사 이전(Fields → Properties · Work → Job · Outcome/Verdict/Judgement → Result · Tally → Stats · Dirtied → Dirty)(2026-11-12)",
     "writeUnitFields": "writeUnitProperties — 금지 명사 이전(Fields → Properties · Work → Job · Outcome/Verdict/Judgement → Result · Tally → Stats · Dirtied → Dirty)(2026-11-12)",
     "OnlineOutcome": "OnlineServiceResult — 서버 저장 함수 결과(언리얼 TOnlineResult)(2026-11-12)",
-    "MailboxOutcome": "MailboxServiceResult — OnlineServiceResult 별칭(2026-11-12)"
+    "MailboxOutcome": "MailboxServiceResult — OnlineServiceResult 별칭(2026-11-12)",
+    "pushCoalesce": "DocumentEditSpan — 문서 편집은 상호작용 구간(위젯 활성 ~ 해제) 하나가 한 단계다. 키 병합은 거래 구간 안에서 닿지 않았다(감사 P0-1, 2026-11-12)",
+    "makeDocumentCoalesceKey": "DocumentEditSpan — 합치기 키가 없다(감사 P0-1, 2026-11-12)",
+    "makeEditCoalesceKey": "UIPreviewModel::finishPropertyInteraction — 프로퍼티 편집도 상호작용 구간 하나가 한 항목이다(감사 P0-1, 2026-11-12)",
+    "findDocumentCommandStack": "getDocumentCommandStack — 문서 기록이 갈 스택은 늘 있다(nullptr 폴백 없음, 감사 P0-2, 2026-11-12)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",

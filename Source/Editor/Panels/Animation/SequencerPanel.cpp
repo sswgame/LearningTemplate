@@ -383,14 +383,14 @@ namespace sw::editor
         if ( listItem.size() >= itemCountBefore && _sequence->_bDraftOpened == SW_FALSE )
             _document._selectedItem = selectedItem;
         if ( SequenceClipTiming::hasTimingChanged( _listTimingBefore, listItem ) )
-            notifyDocumentEdited( "Edit Sequence Timeline", "sequence-timeline" );
+            notifyDocumentEdited( "Edit Sequence Timeline" );
         if ( _currentFrame != frameBefore )
             previewCurrentFrame();
 
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "CinematicNote" ) );                 // 폭 전체 칸이라 이름표는 위에(오른쪽 이름표는 창 밖으로 잘린다)
         (void)EditorWidgets::drawTextFieldMultiline( "##CinematicNote", _cinematicNote, 2 ); // 바뀐 때는 아래 IsItemDeactivatedAfterEdit 가 본다
         if ( ImGui::IsItemDeactivatedAfterEdit() )
-            notifyDocumentEdited( "Edit Sequence Note", "sequence-note" );
+            notifyDocumentEdited( "Edit Sequence Note" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CinematicNoteTip" ) );
     }
 
@@ -489,7 +489,7 @@ namespace sw::editor
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorSequencer", "BindingNameLabel" ), SW_LOCKEY( "EditorSequencer", "BindingNameTip" ) );
             (void)EditorWidgets::drawTextField( "##bindingName", name, -1.0f );
             if ( ImGui::IsItemDeactivatedAfterEdit() && _document.renameBinding( binding._id, name ) )
-                notifyDocumentEdited( "Rename Sequence Binding", "sequence-binding" );
+                notifyDocumentEdited( "Rename Sequence Binding" );
             break;
         }
     }
@@ -765,7 +765,7 @@ namespace sw::editor
                 // 거절되면 칸이 항목의 값으로 돌아간다. 비운 채 치는 동안에는 아래 안내가 그 사실을 미리 알린다.
                 if ( bEdited && _document.commitItemEdit() )
                 {
-                    notifyDocumentEdited( "Edit Sequence Item", "sequence-item" );
+                    notifyDocumentEdited( "Edit Sequence Item" );
                     previewCurrentFrame();
                 }
                 if ( _document.isItemAcceptable( edit ) == false )
@@ -996,7 +996,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( pTooltip );
         if ( ImGui::IsItemDeactivatedAfterEdit() == false )
             return;
-        notifyDocumentEdited( "Edit Sequence Track", "sequence-track" );
+        notifyDocumentEdited( "Edit Sequence Track" );
         if ( bPreviewOnEdit )
             previewCurrentFrame();
     }
@@ -1104,7 +1104,7 @@ namespace sw::editor
                 previewCurrentFrame();
             }
             if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sequence Key", "sequence-key" );
+                notifyDocumentEdited( "Edit Sequence Key" );
             fixed_string<constant::buffer::kMax64> mark;
             formatstring( mark.data(), mark.capacity(), "sequencer.channel.%#", channelIndex );
             EditorSelfTestMarks::record( mark.c_str() );

@@ -2,7 +2,7 @@
 
 > 질문: 언리얼 5 · 유니티 6 · Godot 4 의 같은 시스템과 견주었을 때 이 엔진에 어떤 결함 · 성능 문제 · 구조 빈틈이 있고, 무엇부터 고치는가?
 > 독자: 다음 묶음을 고르는 통합 담당과 그 일을 받는 작업자(에이전트와 사람).
-> 결론: 지금 코드 경로로 확인된 오동작(P0) 17 건을 먼저 닫는다 — 에디터 4(되돌리기 2 · 자동 저장 · 에셋 옮김), 세이브 손실 2, 영수증 이중 지급 1, 연결 번호 오배달 1, Android 3(종료 · 볼륨 키 · 오디오 백엔드), 시퀀서 · ALSA · 타일맵 3, Win32 Alt 1, POSIX 프로세스 2. 그 뒤 P1 108 건(조건부 결함과 확장 · 성능 병목), P2 74 건이다. 실행 단위는 맨 아래 "다음 할 일" 에 있다.
+> 결론: 지금 코드 경로로 확인된 오동작(P0) 15 건을 먼저 닫는다 — 에디터 2(자동 저장 · 에셋 옮김), 세이브 손실 2, 영수증 이중 지급 1, 연결 번호 오배달 1, Android 3(종료 · 볼륨 키 · 오디오 백엔드), 시퀀서 · ALSA · 타일맵 3, Win32 Alt 1, POSIX 프로세스 2. 그 뒤 P1 108 건(조건부 결함과 확장 · 성능 병목), P2 74 건이다. 실행 단위는 맨 아래 "다음 할 일" 에 있다.
 
 기준 커밋은 main `e480b07498` 이다. 줄 번호는 그 커밋의 것이다.
 
@@ -24,27 +24,13 @@
 항목 대부분이 아래 여섯 모양 가운데 하나다. 증상을 하나씩 고치지 말고 이 모양을 쓸 수 없게 형식을 바꾼다.
 
 1. **세대 없는 번호 · 순번 · 경로 글을 정체로 쓴다.** 연결 슬롯 번호(P0-8), 컴포넌트 `이름#순번`(A-2), 복셀 블록 순서 번호(K-3), 재시작마다 1 부터인 파티 · 티켓 id(O-7), 열린 문서의 경로 글(P0-4), 32 비트 이름 해시(C-8).
-2. **같은 사실을 두 곳이 따로 안다.** 쓰는 쪽 · 읽는 쪽의 한도와 판(A-3 · A-5 · A-6), 개수는 CPU · 목록은 GPU(RN-1), 문서 기록은 전역 스택 · Ctrl+Z 는 창 스택(P0-2), 멱등 기록과 감사 내역이 한 레코드(P0-7), 캐시 기록과 서버 메모리 표(O-6 · O-7).
+2. **같은 사실을 두 곳이 따로 안다.** 쓰는 쪽 · 읽는 쪽의 한도와 판(A-3 · A-5 · A-6), 개수는 CPU · 목록은 GPU(RN-1), 멱등 기록과 감사 내역이 한 레코드(P0-7), 캐시 기록과 서버 메모리 표(O-6 · O-7).
 3. **실패 · 잘림을 값으로 돌려주지 않거나 호출자가 버린다.** `(void)` 로 버린 신뢰 송신(N-3), 구간 읽기 실패 뒤 새 판(P0-5), exec 실패를 성공으로(P0-16), 잘린 포맷을 성공으로(C-10), 팩 마운트 실패 뒤 기동(A-4).
 4. **플랫폼 창이 "빠뜨려도 컴파일되는" 선택 훅을 가진다.** 포커스 전달 · 글 입력 · 닫기 완료 · 쉬기 · 수명 구독 · 오디오 백엔드(P0-9 ~ P0-11, P-3 ~ P-6).
 5. **플레이어 세이브가 핫 리로드용 엄격한 스냅샷 형식을 그대로 쓴다.** 판이 정확히 같아야 읽고, 개수 · 색인으로 짝짓고, 실패하면 조용히 새 판이다(P0-5 · P0-6 · A-6 · G-1).
-6. **상태 변화를 값이 아니라 호출 순서 규칙으로 다룬다.** 일시정지(P0-12), 오너 이동(P0-14), 배율 변경(S-4), 장치 유실(P0-13), 빨리 감기(K-2), 끌기 한 번(P0-1).
+6. **상태 변화를 값이 아니라 호출 순서 규칙으로 다룬다.** 일시정지(P0-12), 오너 이동(P0-14), 배율 변경(S-4), 장치 유실(P0-13), 빨리 감기(K-2).
 
 ## P0 — 확인된 오동작
-
-### P0-1 에디터: 문서 편집 합치기가 거래 구간 안에서 죽는다 — 끌기 한 번이 프레임마다 되돌리기 한 단계
-- 분류: 결함 · 확신: 확인
-- 근거: `Source/Editor/Common/Workspace/Undo/CommandStack.cpp:253-257` — `pushCoalesce` 는 거래 중이면 대기 목록에 넣고 돌아간다. `endTransaction`(`:218-225`)이 그것을 `push` 로 올리고, `push` 는 `_lastCoalesceKey.clear()`(`:174`)를 한다. 합치기 키를 주는 길은 `EditorDocumentPanel::notifyDocumentEdited`(`Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp:301`)와 `UIPreviewModel::pushPropertyEdit` 둘뿐이고 둘 다 `EditorTransaction` 을 먼저 연다. 그래서 병합 분기(`:264-271`)에 닿지 않는다. 머티리얼 슬라이더 · 그래프 노드 이동 · 타일맵 칠하기 · 시퀀서 편집이 프레임마다 한 단계를 쌓고, 한도 128(`:182`)이라 2 초쯤 끌면 씬 편집 기록까지 밀려 나간다. `DocumentCoalesceTest` 는 `stack.pushCoalesce` 를 직접 불러 이 길을 보지 않는다. 회귀 시작은 6ca2c5c73c(기록 함수를 인스턴스 멤버로).
-- 상용 엔진: 언리얼은 마우스를 누를 때 `FScopedTransaction` 을 열고 뗄 때 닫는다. 유니티는 `Undo.IncrementCurrentGroup` · `CollapseUndoOperations`, Godot 은 `MERGE_ENDS` 다.
-- 제안: 키 문자열 대신 "상호작용 구간" 을 형식으로 둔다. 위젯 활성 ~ 해제 동안 문서 패널이 편집 전 글 하나만 쥐고, 해제 때 (전, 후)를 한 번 기록한다(인스펙터 `InspectorEditRecorder` 와 같은 모양). `pushCoalesce` 와 span 병합은 지운다 — 병합을 그대로 되살리면 `reconstructBefore`(`Source/Editor/Common/Workspace/EditorTransaction.cpp:349-352`)가 첫 구간의 접두 · 접미 길이를 지금 글에 대는 둘째 결함이 드러난다.
-- 확인: 단위 `DocumentCoalesceTest.TransactionScopedEditsCoalesce`(`EditorTransaction` 두 번에 같은 키 → `getCommandCount()==1`, 되돌린 글이 처음 글). 시나리오 `materialproperties` 에 슬라이더 끌기 → `Editor.UndoCount` 가 1 늘었는지.
-
-### P0-2 에디터: 미리보기 패널의 문서 편집은 전역 스택에 기록되는데 Ctrl+Z 는 그 창의 스택으로 간다
-- 분류: 결함 · 확신: 확인(코드 경로 — 재현 필요)
-- 근거: `Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp:340` 이 포커스를 얻으면 `setFocusedCommandStack( _pCommandStack.get() )` 를 하고, `Source/Editor/Common/Input/EditorCommandGUI.cpp:125` 의 `commandUndo` 는 그 스택을 되돌린다. 문서 편집 기록은 `Source/Editor/Common/Workspace/EditorTransaction.cpp:316` 에서 `findSubsystem<CommandStack>()`(전역)으로 간다. 머티리얼 · 머티리얼 그래프 창에 포커스가 있는 동안 Ctrl+Z 는 비어 있는 창 스택을 되돌려 아무 일도 하지 않는다. 문서 패널의 되돌리기를 보는 시나리오는 `sequencercuts` 하나다.
-- 상용 엔진: 언리얼 에셋 편집기는 전역 트랜잭션 버퍼 하나, Godot 은 씬 · 리소스별 history 에 편집과 undo 가 같은 id 로 간다.
-- 제안: "이 문서의 기록이 갈 스택" 을 문서 패널이 하나만 답한다(`getDocumentCommandStack()`). `recordDocumentText` 가 스택을 인자로 받는다. 문서마다 스택이 되면 플레이 경계의 `parkHistory` 가 문서 기록을 버리는 E-3 도 함께 닫힌다.
-- 확인: 시나리오 `materialproperties` · `materialgraphpanel` 에 "프로퍼티 편집 → 그 창에 포커스 둔 채 `edit.undo` → 값 복귀".
 
 ### P0-3 에디터: 자동 저장 세션이 인스턴스와 모듈 리로드를 구분하지 않는다
 - 분류: 결함(데이터 손실) · 확신: 확인
@@ -634,15 +620,15 @@
 - 분류: 결함 · 확신: 확인
 - 근거: `Source/Editor/Panels/Scene/Model/HistoryViewModel.cpp:43-69` — `undo` · `redo` · `jumpTo` · `clear` 가 `pStack->undo()` 를 그리기 도중 바로 부른다. `edit.undo` 명령은 `EditorCommandRegistry.cpp:155-159` 에서 `isGatedByEditLock`(플레이 · 베이크 중 꺼짐)에 걸리고 다음 프레임 시작에 도는데 패널 단추는 둘 다 건너뛴다. `CommandStack::undo`(`:287-296`)는 진행 중 상호작용도 보지 않아 기즈모 끌기 중 Ctrl+Z 가 돌면 redo 가 잘리고 되돌린 편집이 기록 없이 되살아난다.
 - 상용 엔진: 언리얼 `UTransBuffer::CanUndo` 는 트랜잭션이 열려 있으면 거절하고 Undo History 창도 같은 `GEditor->UndoTransaction` 을 탄다.
-- 제안: 되돌리기 입구를 하나로 둔다. History 는 `edit.undo` · `edit.redo` · `edit.jumpTo` 를 큐에 넣기만 한다. 스택에 "상호작용 구간" 카운터(P0-1 의 구간 형식)를 두어 열려 있으면 거절한다.
+- 제안: 되돌리기 입구를 하나로 둔다. History 는 `edit.undo` · `edit.redo` · `edit.jumpTo` 를 큐에 넣기만 한다. 스택에 "상호작용 구간" 카운터(문서 편집의 `DocumentEditSpan` 과 같은 구간)를 두어 열려 있으면 거절한다.
 - 확인: 시나리오 `lightprobebake` 에 "베이크 중 `history.step.0` 클릭 → `Editor.UndoIndex` 그대로".
 
-#### E-3 플레이 경계에서 문서 편집 기록이 사라진다 — 문서와 씬이 전역 스택 하나를 쓴다
+#### E-3 플레이 경계에서 미리보기 없는 문서 패널의 편집 기록이 사라진다 — 그 패널은 씬과 전역 스택 하나를 쓴다
 - 분류: 결함(되돌리기 손실) · 확신: 확인
-- 근거: `Source/Editor/Common/Workspace/Play/EditorPlaySession.cpp:573`(`parkHistory`) · `:564`(`clear`) · `:587`(`unparkHistory` 는 지금 내역을 버린다). 씬 편집은 Stop 이 스냅샷으로 되돌리니 맞지만 문서 패널 편집도 같은 전역 스택에 들어간다(P0-2). 플레이 중 머티리얼을 고친 뒤 Stop 하면 문서는 dirty 인데 그 편집은 되돌릴 수 없다.
+- 근거: `Source/Editor/Common/Workspace/Play/EditorPlaySession.cpp:573`(`parkHistory`) · `:564`(`clear`) · `:587`(`unparkHistory` 는 지금 내역을 버린다). 문서 기록이 갈 스택은 `EditorDocumentPanel::getDocumentCommandStack` 하나가 답하고, 미리보기 패널(머티리얼 · 머티리얼 그래프 · 프리팹 …)은 자기 창 스택이라 플레이 경계를 넘는다. 미리보기가 없는 문서 패널(시퀀서 · 타일맵 · 대화 · 애니메이션 그래프 · UI 미리보기 …)은 기본 답인 전역 스택이라, 플레이 중 고친 뒤 Stop 하면 문서는 dirty 인데 그 편집은 되돌릴 수 없다.
 - 상용 엔진: 유니티는 플레이 중 에셋 편집과 그 Undo 가 플레이 종료 뒤에도 남는다. Godot 은 리소스마다 history 가 따로다.
-- 제안: P0-2 의 "문서마다 스택" 으로 가면 `parkHistory` 는 씬 스택만 맡는다.
-- 확인: 시나리오 `undosurvivesplay` 에 "플레이 중 머티리얼 프로퍼티 편집 → Stop → 그 창에서 undo → 값 복귀".
+- 제안: 문서 패널마다 스택을 두고(미리보기 패널의 창 스택을 기반으로 올린다) 포커스가 그 스택을 겨누게 한다 — `parkHistory` 는 씬 스택만 맡는다. 그때 `Editor.UndoCount` · History 패널이 보는 스택(전역 → 포커스)과 이를 보는 시나리오(`sequencercuts` · `gimmickgraph` · `uipreview*`)를 함께 옮긴다.
+- 확인: 시나리오 `undosurvivesplay` 에 "플레이 중 시퀀서 편집 → Stop → 그 창에서 undo → 값 복귀".
 
 #### E-4 그룹 기즈모가 부모 · 자식 동시 선택을 거르지 않는다 — 선택 순서에 따라 자식이 이중 변환된다
 - 분류: 결함 · 확신: 확인(코드 추적 — 재현 필요)
@@ -681,9 +667,9 @@
 
 #### E-9 문서 편집 알림마다 문서 전체를 직렬화해 비교한다
 - 분류: 성능 · 확신: 구조 확인, 측정 필요
-- 근거: `Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp:302-303` — `notifyDocumentEdited` 가 매번 `captureDocumentText()`(문서 전체 → 글)를 하고 기준 글과 통째로 비교한다. 끌기 중에는 프레임마다 돈다(P0-1). 타일맵(512×512 칸)이나 긴 시퀀스는 MB 단위 직렬화가 프레임마다 든다. 같은 모양이 키트 에디터 확장에 있다(`Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifierSession.cpp:316-319` 의 `isStackUnsaved()` 가 호출마다 스택을 JSON 으로 만들어 비교).
+- 근거: `Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp:302-303` — `notifyDocumentEdited` 가 매번 `captureDocumentText()`(문서 전체 → 글)를 하고 기준 글과 통째로 비교한다. 끌기 중에는 프레임마다 돈다(상호작용 구간을 쥔 동안에도 알림마다 직렬화해 기준 글과 비교한다). 타일맵(512×512 칸)이나 긴 시퀀스는 MB 단위 직렬화가 프레임마다 든다. 같은 모양이 키트 에디터 확장에 있다(`Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifierSession.cpp:316-319` 의 `isStackUnsaved()` 가 호출마다 스택을 JSON 으로 만들어 비교).
 - 상용 엔진: 언리얼은 바뀐 UObject 만 트랜잭션에 직렬화하고 dirty 는 깃발이다. Godot 은 프로퍼티 단위 do · undo 다.
-- 제안: P0-1 의 구간 형식으로 가면 직렬화는 구간 시작 · 끝 두 번이 된다. 큰 문서는 문서 모델이 "바뀐 범위" 를 내는 데이터 단계로 기록한다. 미저장 판정은 편집 개정 번호로 한다.
+- 제안: 구간(`DocumentEditSpan`)을 쥔 동안은 직렬화하지 않고 dirty 만 표시하면 직렬화는 구간 시작 · 끝 두 번이 된다. 큰 문서는 문서 모델이 "바뀐 범위" 를 내는 데이터 단계로 기록한다. 미저장 판정은 편집 개정 번호로 한다.
 - 확인: `-gv_editorPanelTimes` 로 `tilemaptools` 를 256² · 512² 맵에서 칠하는 프레임.
 
 #### E-10 뷰포트 피킹이 경계 구 레이 검사이고 전체 오브젝트를 훑는다
@@ -797,7 +783,7 @@
 
 ### 에디터
 
-- **E-13 되돌리기 한도가 개수 상수이고 일부 문서 패널은 되돌리기가 없다** (구조 — 확인, NEXT "표 페이지 Ctrl+Z" 보강) — `CommandStack.cpp:182` 의 128 과 `EditSnapshotHistory.h` 의 64 가 C++ 상수이고 바이트 한도가 없다(8000 개 다중 편집 128 번이면 GB 단위). AudioEvents · InputMap · DataTable 패널은 undo 가 0 건이다. 상용: 언리얼 Undo Buffer Size(MB). 제안: 한도를 `Config/Editor`(개수 + 바이트)로, 세 패널은 P0-1 · P0-2 의 문서 스택을 받는다. 확인: `CommandStackTest.EvictsByByteBudget`.
+- **E-13 되돌리기 한도가 개수 상수이고 일부 문서 패널은 되돌리기가 없다** (구조 — 확인, NEXT "표 페이지 Ctrl+Z" 보강) — `CommandStack.cpp:182` 의 128 과 `EditSnapshotHistory.h` 의 64 가 C++ 상수이고 바이트 한도가 없다(8000 개 다중 편집 128 번이면 GB 단위). AudioEvents · InputMap · DataTable 패널은 undo 가 0 건이다. 상용: 언리얼 Undo Buffer Size(MB). 제안: 한도를 `Config/Editor`(개수 + 바이트)로, 세 패널은 문서 패널 기반의 구간 · 스택(`DocumentEditSpan` · `getDocumentCommandStack`)을 받는다. 확인: `CommandStackTest.EvictsByByteBudget`.
 - **E-15 외부 프로세스: 패키징 출력은 끝나야 보이고 넷플레이 자식은 에디터가 죽으면 고아가 된다** (구조 — 확인) — `Source/Editor/Panels/Packaging/Model/PackagingModel.cpp:150-156`(줄이 종료 때 한 번에 온다, 오류 판정이 `"error"` 부분 문자열), `Source/Core/Process/Windows/WindowsProcess.cpp:251`(잡 오브젝트에 `KILL_ON_JOB_CLOSE` 없음). 상용: 언리얼 UAT 는 줄 단위로 흘린다. 제안: `takeLines` + `ProcessOptions` 의 "부모와 함께 종료" 칸(Windows 잡, Linux `PR_SET_PDEATHSIG`). 확인: 시나리오 `packaging` 에 "Running 동안 줄 수 > 0".
 - **E-16 (보강) MVVM 강제 범위와 SelfTest 가 덮지 않는 길** (구조 — 확인, DesignBacklog "에디터 UI 스레드 분리" 1 번 보강) — `Config/Rules/Layers/EditorLayers.toml:55-63` 의 `[panelViewBan]` 이 문서 패널의 View 를 막지 않아 `MaterialPanel.cpp:362-386` · `SequencerPanel.cpp` · `TileMapPanel.cpp:352` 가 문서 모델을 직접 고친다. `EditorUndoCoverage.cpp` 는 레지스트리의 거래 명령만 돌아 이 문서의 에디터 P0 넷이 모두 빈칸에 있었다. 제안: `notifyDocumentEdited` 를 Model 창구로 내리고 `editor/undocoverage` 에 "문서 패널 전수"(열기 → 편집 → undo → 글 해시 비교)를 더한다. 확인: View 파일의 `notifyDocumentEdited` 호출 수 0 린트.
 
@@ -807,7 +793,7 @@
 
 ### P0 (12 묶음)
 
-1. **에디터 되돌리기 구조** — 상호작용 구간 형식 + 문서마다 스택: P0-1 · P0-2, 함께 닫히는 E-2 · E-3 · E-9 · E-13. `editor/undocoverage` 에 문서 패널 전수 단계(E-16)를 먼저 더해 지는 것을 본다.
+1. **에디터 되돌리기 구조** — 문서마다 스택(미리보기 없는 문서 패널): E-3, 함께 닫히는 E-2 · E-9 · E-13. 상호작용 구간(`DocumentEditSpan`)과 문서 스택의 답(`getDocumentCommandStack`)은 들어갔다. `editor/undocoverage` 에 문서 패널 전수 단계(E-16)를 먼저 더해 지는 것을 본다.
 2. **자동 저장 세션** — 세션 폴더 · pid 잠금 · 리로드 이어 쓰기: P0-3, 복구 입구 통일과 dirty 문서 목록 E-1.
 3. **에셋 옮김 방송** — `applyAssetMoves` 의 (옛 id → 새 id) 알림과 열린 문서 · 씬 · 선택 갱신, dirty 참조자 거절: P0-4. 참조 쪽은 integ2 의 GUID 2 · 3 단계와 순서를 맞춘다.
 4. **세이브 안전** — 구간 실패를 로드 실패로, 두 단계 복원, 범위형 저장 막기, 봉투에 씬 id: P0-5 · P0-6 · G-7.
@@ -967,7 +953,7 @@
 ### Editor (5)
 
 - AssetActions — 읽음 — Place Actor 트랜잭션. 이상 없음(다중 오브젝트 프리팹 redo 는 E-16 에 추정으로).
-- Common — 읽음(Workspace · Commands · GUI · Asset/Reference · Task · Input) — 트랜잭션 버퍼 · AssetRegistry · PIE. P0-1 ~ P0-4, E-1 · E-3 · E-5 · E-6 · E-8 · E-9 · E-11 ~ E-15. Localization · Widgets · 임포터 본문은 훑음.
+- Common — 읽음(Workspace · Commands · GUI · Asset/Reference · Task · Input) — 트랜잭션 버퍼 · AssetRegistry · PIE. P0-3 · P0-4, E-1 · E-3 · E-5 · E-6 · E-8 · E-9 · E-11 ~ E-15. Localization · Widgets · 임포터 본문은 훑음.
 - Panels — 읽음(Scene · Inspector · ContentBrowser · Material · Autosave · Packaging · UIPreview · TileMap · Console) — Details 패널 · Outliner · Undo History. E-2 · E-7 · E-13 · E-16. 32 개 패널 가운데 Animation · AudioMixer · Catalog · MapCheck · Mesh · Physics · Prefab · ProjectSettings(워크트리에서 수정 중) · RenderTarget · Settings · VFX 본문은 훑음.
 - SelfTest — 읽음 — 트랜잭션 커버리지. E-16.
 - Viewport — 읽음 — 히트 프록시 · 그룹 기즈모. E-4 · E-10. 카메라 · 그리드 · 지형 붓은 안 읽음.

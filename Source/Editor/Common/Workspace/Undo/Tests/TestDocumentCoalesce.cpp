@@ -1,54 +1,128 @@
-// DocumentCoalesceTest — 문서 편집의 합치기 키: 같은 패널 · 같은 문서 · 같은 로드 회차의 이어진 편집만 한 단계로 합친다.
-// 예전 키는 패널 종류마다 고정이라, 문서를 바꾼 뒤의 끌기가 앞 문서의 되돌리기 항목에 합쳐져 그 편집을 되돌릴 수 없었다(nogpu).
+// DocumentCoalesceTest — 문서 편집의 상호작용 구간(`DocumentEditSpan`)을 `EditorTransaction` 경로로 본다: 끌기 한 번(프레임마다 거래 구간 하나)이
+// 되돌리기 한 단계이고, 그 단계는 문서 패널이 답한 스택에 간다(nogpu).
+// 예전에는 합치기 키(`CommandStack::pushCoalesce`)로 합쳤는데 기록이 거래 구간 안이라 병합에 닿지 않아 끌기 한 번이 프레임마다 한 단계였고(감사 P0-1),
+// 옛 테스트는 `pushCoalesce` 를 직접 불러 그 길을 보지 못했다. 미리보기 창의 문서 편집은 전역 스택으로 가 그 창의 Ctrl+Z 가 비어 있었다(P0-2).
 #include "pch.h"
 
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
+#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditSpan.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 
 namespace
 {
-    struct DocumentCoalesceTestUtil
+    /** @brief 문서 하나(글 한 벌)와 그 되돌리기 배관입니다 — 문서 패널의 `recordDocumentEdit` 와 같은 길로 기록한다. */
+    struct DocumentCoalesceTestDocument
     {
-        static void doNothing() {}
+        sw::string                   _text{};
+        sw::editor::DocumentEditSpan _span{};
+        sw::editor::UndoStepOwner    _owner{};
 
-        static sw::CommandStack::Command makeCommand()
+        void       restore( sw::string_view text ) { _text = sw::string{ text }; }
+        sw::string capture() const { return _text; }
+
+        /** @brief 한 프레임의 편집입니다 — 그 프레임의 거래 구간 안에서 알린다(문서 패널 · 명령 레지스트리가 여는 구간과 같다). */
+        void editInFrame( sw::string_view text, bool bInteracting, sw::CommandStack& targetStack )
         {
-            sw::CommandStack::Command command;
-            command._label = "edit";
-            command._undo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&doNothing>(), s_owner );
-            command._redo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&doNothing>(), s_owner );
-            return command;
+            sw::editor::EditorTransaction transaction;
+            _text                                             = sw::string{ text };
+            const sw::optional<sw::editor::DocumentEdit> edit = _span.notifyEdited( "Drag", _text, bInteracting );
+            if ( edit.has_value() )
+                record( transaction, *edit, targetStack );
         }
 
-        static inline sw::editor::UndoStepOwner s_owner{};
+        /** @brief 위젯이 풀린 프레임입니다(`flushDocumentInteraction`). */
+        void releaseInFrame( sw::CommandStack& targetStack )
+        {
+            sw::editor::EditorTransaction transaction;
+            if ( _span.isHolding() == false )
+                return;
+            const sw::optional<sw::editor::DocumentEdit> edit = _span.finish( _text );
+            if ( edit.has_value() )
+                record( transaction, *edit, targetStack );
+        }
+
+        void record( sw::editor::EditorTransaction& transaction, const sw::editor::DocumentEdit& edit, sw::CommandStack& targetStack )
+        {
+            transaction.recordDocumentText( edit._before, edit._after, edit._label, _owner,
+                                            SW_DELEGATE_METHOD( sw::editor::EditorDocumentRestoreDelegate, &DocumentCoalesceTestDocument::restore, this ),
+                                            SW_DELEGATE_METHOD( sw::editor::EditorDocumentCaptureDelegate, &DocumentCoalesceTestDocument::capture, this ),
+                                            targetStack );
+        }
     };
 } // namespace
 
-/** @brief [DocumentCoalesceTest] 패널 · 문서 · 로드 회차 중 하나라도 다르면 키가 다르다 */
-SW_TEST_CASE( DocumentCoalesceTest, KeyIsScopedToPanelDocumentAndLoad )
+/** @brief [DocumentCoalesceTest] 거래 구간 안의 끌기 세 프레임과 해제는 한 단계이고, 되돌리면 처음 글 · 다시 하면 끝 글이다 */
+SW_TEST_CASE( DocumentCoalesceTest, TransactionScopedEditsCoalesce )
 {
-    using Policy         = sw::editor::EditorSessionPolicy;
-    const sw::string key = Policy::makeDocumentCoalesceKey( "Graph.Move", 1, "a.xml", 1 );
-    SW_EXPECT_EQUAL( key, Policy::makeDocumentCoalesceKey( "Graph.Move", 1, "a.xml", 1 ) );
-    SW_EXPECT_FALSE( key == Policy::makeDocumentCoalesceKey( "Graph.Move", 1, "b.xml", 1 ) );
-    SW_EXPECT_FALSE( key == Policy::makeDocumentCoalesceKey( "Graph.Move", 2, "a.xml", 1 ) );
-    SW_EXPECT_FALSE( key == Policy::makeDocumentCoalesceKey( "Graph.Move", 1, "a.xml", 2 ) );
-    SW_EXPECT_FALSE( key == Policy::makeDocumentCoalesceKey( "Graph.Value", 1, "a.xml", 1 ) );
-    SW_EXPECT_TRUE( Policy::makeDocumentCoalesceKey( "", 1, "a.xml", 1 ).empty() ); // 합치지 않는 편집이다
+    sw::CommandStack   stack;
+    sw::SubsystemScope scope;
+    SW_REQUIRE_TRUE( scope.bind( &stack ) );
+    const sw::editor::ScopedEditorScope scopedEditor( scope );
+
+    DocumentCoalesceTestDocument document;
+    document._text = "roughness=0.5";
+    document._span.resetBaseline( document._text );
+
+    document.editInFrame( "roughness=0.6", true, stack );
+    document.editInFrame( "roughness=0.7", true, stack );
+    document.editInFrame( "roughness=0.8", true, stack );
+    SW_EXPECT_EQUAL( stack.getCommandCount(), size_t{ 0 } ); // 구간 동안은 기록하지 않는다
+    SW_EXPECT_TRUE( document._span.isHolding() );
+
+    document.releaseInFrame( stack );
+    SW_EXPECT_EQUAL( stack.getCommandCount(), size_t{ 1 } );
+
+    stack.undo();
+    SW_EXPECT_TRUE( document._text == "roughness=0.5" );
+    stack.redo();
+    SW_EXPECT_TRUE( document._text == "roughness=0.8" );
 }
 
-/** @brief [DocumentCoalesceTest] 같은 문서의 이어진 끌기는 한 단계이고, 문서를 바꾼 뒤의 끌기는 새 단계다 */
-SW_TEST_CASE( DocumentCoalesceTest, SwitchingDocumentStartsANewStep )
+/** @brief [DocumentCoalesceTest] 구간 밖의 편집은 편집마다 한 단계이고, 처음 글로 돌아온 구간은 단계를 남기지 않는다 */
+SW_TEST_CASE( DocumentCoalesceTest, SpanReturningToStartRecordsNothing )
 {
-    using Policy = sw::editor::EditorSessionPolicy;
-    sw::CommandStack stack;
-    stack.pushCoalesce( Policy::makeDocumentCoalesceKey( "Graph.Move", 1, "a.xml", 1 ), DocumentCoalesceTestUtil::makeCommand() );
-    stack.pushCoalesce( Policy::makeDocumentCoalesceKey( "Graph.Move", 1, "a.xml", 1 ), DocumentCoalesceTestUtil::makeCommand() );
-    SW_EXPECT_EQUAL( size_t( 1 ), stack.getCommandCount() );
+    sw::CommandStack   stack;
+    sw::SubsystemScope scope;
+    SW_REQUIRE_TRUE( scope.bind( &stack ) );
+    const sw::editor::ScopedEditorScope scopedEditor( scope );
 
-    stack.pushCoalesce( Policy::makeDocumentCoalesceKey( "Graph.Move", 1, "b.xml", 2 ), DocumentCoalesceTestUtil::makeCommand() );
-    SW_EXPECT_EQUAL( size_t( 2 ), stack.getCommandCount() );
+    DocumentCoalesceTestDocument document;
+    document._text = "a";
+    document._span.resetBaseline( document._text );
+
+    document.editInFrame( "b", false, stack );
+    document.editInFrame( "c", false, stack );
+    SW_EXPECT_EQUAL( stack.getCommandCount(), size_t{ 2 } );
+
+    document.editInFrame( "d", true, stack );
+    document.editInFrame( "c", true, stack ); // 끌다가 구간 전 값으로 돌아왔다
+    document.releaseInFrame( stack );
+    SW_EXPECT_EQUAL( stack.getCommandCount(), size_t{ 2 } );
+}
+
+/** @brief [DocumentCoalesceTest] 기록은 문서 패널이 답한 스택(미리보기 창의 스택)에 가고 작업 공간 스택에는 가지 않는다 — 그 창의 Ctrl+Z 가 되돌린다 */
+SW_TEST_CASE( DocumentCoalesceTest, RecordGoesToTheDocumentStack )
+{
+    sw::CommandStack   workspaceStack;
+    sw::SubsystemScope scope;
+    SW_REQUIRE_TRUE( scope.bind( &workspaceStack ) );
+    const sw::editor::ScopedEditorScope scopedEditor( scope );
+
+    sw::CommandStack             previewStack;
+    DocumentCoalesceTestDocument document;
+    document._text = "before";
+    document._span.resetBaseline( document._text );
+
+    document.editInFrame( "after", true, previewStack );
+    document.releaseInFrame( previewStack );
+    SW_EXPECT_EQUAL( previewStack.getCommandCount(), size_t{ 1 } );
+    SW_EXPECT_EQUAL( workspaceStack.getCommandCount(), size_t{ 0 } );
+
+    previewStack.undo();
+    SW_EXPECT_TRUE( document._text == "before" );
 }

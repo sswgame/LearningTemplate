@@ -331,7 +331,7 @@ namespace sw::editor
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
             _model.commitName();
-            notifyDocumentEdited( "Edit Material Name", "material-name" );
+            notifyDocumentEdited( "Edit Material Name" );
             applyLivePreview();
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "NameTip" ) );
@@ -340,7 +340,7 @@ namespace sw::editor
         if ( EditorWidgets::drawAssetSlot( SW_LOCKEY( "EdWidget", "Shader" ), shaderPath, ".hlsl" ) )
         {
             _model.setShaderPath( shaderPath );
-            notifyDocumentEdited( "Edit Material Shader", "material-shader" );
+            notifyDocumentEdited( "Edit Material Shader" );
         }
         ImGui::EndGroup();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "ShaderTip" ) );
@@ -390,9 +390,7 @@ namespace sw::editor
             }
             if ( bChanged )
             {
-                fixed_string<constant::buffer::kMax128> key;
-                formatstring( key.data(), key.capacity(), "material-prop:%s", pProp->_name.c_str() );
-                notifyDocumentEdited( "Edit Material Property", key.c_str() );
+                notifyDocumentEdited( "Edit Material Property" ); // 슬라이더 끌기 한 번은 상호작용 구간 하나 = 되돌리기 한 단계(감사 P0-1)
                 applyLivePreview();
             }
             ImGui::PopID();

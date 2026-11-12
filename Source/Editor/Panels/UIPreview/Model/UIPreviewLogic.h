@@ -310,10 +310,6 @@ namespace sw::editor
          * @return 옮길 수 있으면 true 입니다. 루트이거나 형제 끝을 넘으면 false 입니다.
          */
         [[nodiscard]] static bool findSiblingMove( const Widget& widget, int32 delta, uint32& outFromIndex, uint32& outToIndex );
-        /**
-         * @brief 인스펙터 끌기의 되돌리기 항목을 합치는 키입니다. 세대가 들어 있어야 한다 — 트리를 새로 지은 뒤의 편집이 옛 세대 항목과 합쳐지면, 되돌리기가 끊긴 옛 항목을 불러 아무 일도 하지 않는다.
-         */
-        static string makeEditCoalesceKey( uint32 generation, uint32 ordinal, string_view propertyName );
         /** @brief 시간 막대 줄입니다 — "0.25 / 1.00 s". */
         static string makeTimeLabel( float32 time, float32 duration );
     };

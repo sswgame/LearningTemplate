@@ -37,18 +37,6 @@ namespace sw::editor
     public:
         /** @brief 저장하지 않은 변경이 있으면 확인이 필요합니다. */
         static bool needsUnsavedPrompt( bool bDirty ) { return bDirty == true; }
-        /**
-         * @brief 문서 편집의 합치기 키입니다. @p coalesceKey 가 비면 비고(합치지 않는다), 아니면 패널 · 문서 · 로드 회차로 가릅니다.
-         * @details 편집 종류만으로 합치면 문서를 바꾼 뒤의 편집이 앞 문서의 되돌리기 항목으로 들어가 되돌릴 수 없다.
-         */
-        static string makeDocumentCoalesceKey( string_view coalesceKey, uintptr_t panelID, string_view documentPath, uint32 loadEpoch )
-        {
-            if ( coalesceKey.empty() )
-                return string{};
-            StringBuilder<constant::buffer::kMax256> key;
-            key.appendFormat( "%#|%#|%#|%#", coalesceKey, static_cast<uint64>( panelID ), documentPath, loadEpoch );
-            return string( key.view() );
-        }
         /** @brief 씬이나 도구 문서가 dirty 이면 종료 확인이 필요합니다. */
         static bool needsQuitPrompt( bool bSceneDirty, uint32 dirtyDocumentCount )
         {
@@ -97,13 +85,6 @@ namespace sw::editor
         static bool shouldMarkDocumentDirtyOnNodeMove( bool bLayoutReady, bool bPositionChanged )
         {
             return bLayoutReady == true && bPositionChanged == true;
-        }
-        /** @brief 같은 coalesce 키만 연속 편집으로 합칩니다. 빈 키는 합치지 않습니다. */
-        static bool shouldCoalesceDocumentEdits( string_view previousKey, string_view nextKey )
-        {
-            if ( previousKey.empty() || nextKey.empty() )
-                return false;
-            return previousKey == nextKey;
         }
         /** @brief Undo 로 복원한 텍스트가 마지막 저장본과 같으면 dirty 를 지웁니다. */
         static bool shouldClearDocumentDirtyOnRestore( bool bMatchesLastSaved )
