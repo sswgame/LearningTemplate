@@ -703,7 +703,14 @@ namespace sw::editor
         outPlan._fixedFileCount           = static_cast<uint32>( referrerRewriteCount );
         EditorWorkspace* const pWorkspace = editor::findSubsystem<EditorWorkspace>();
         if ( pWorkspace != nullptr )
-            pWorkspace->notifyAssetsMoved( outPlan._listOldID, outPlan._listNewID ); // 열린 문서 · 씬 · 포커스가 새 id 를 따른다
+        {
+            // 열린 문서 · 씬 · 포커스 · 선택이 새 id 를 따르고, 깨끗한 참조 문서는 고친 글을 다시 읽는다. 리다이렉트 표(`referrerRewriteCount` 뒤)는 문서가 아니다.
+            EditorAssetMoveNotice notice{ outPlan._listOldID, outPlan._listNewID, {} };
+            notice._listRewrittenID.reserve( referrerRewriteCount );
+            for ( size_t index = 0; index < referrerRewriteCount; ++index )
+                notice._listRewrittenID.push_back( listRewrite[index]._referrerID );
+            pWorkspace->notifyAssetsMoved( notice );
+        }
         if ( outPlan._listMove.size() == 1 )
             SW_LOG_INFO_ID( "Asset.Moved", "Moved '%#' to '%#' and fixed %# referencing file(s)", outPlan._listOldID.front(), outPlan._listNewID.front(), outPlan._fixedFileCount );
         else

@@ -45,13 +45,13 @@
 	<WaitUntil watch="Editor.MaterialModifiedPropertyCount" equals="0" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<!-- (3) 끌기 한 번 = 이 창의 스택에 한 단계 -->
-	<Remember watch="Editor.FocusedUndoIndex" as="undoBeforeDrag"/>
+	<Remember watch="Editor.UndoIndex" as="undoBeforeDrag"/>
 	<EditorDrag mark="material.property._roughness" dx="60" dy="0"/>
 	<WaitUntil watch="Editor.MaterialModifiedPropertyCount" equals="1" timeoutFrames="60"/>
-	<WaitUntil watch="Editor.FocusedUndoIndex" differsFrom="undoBeforeDrag" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.UndoIndex" differsFrom="undoBeforeDrag" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<DevCommand line="editor edit.undo"/>
-	<WaitUntil watch="Editor.FocusedUndoIndex" sameAs="undoBeforeDrag" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.UndoIndex" sameAs="undoBeforeDrag" timeoutFrames="60"/>
 	<Expect watch="Editor.MaterialModifiedPropertyCount" equals="0"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="material.propertyFilter"/>

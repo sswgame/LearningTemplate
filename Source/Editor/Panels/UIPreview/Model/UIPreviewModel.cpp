@@ -87,8 +87,9 @@ namespace sw::editor
         return getEditorToolDefaults()._uiPreviewDocument;
     }
 
-    UIPreviewModel::UIPreviewModel( const DataPath& initialDocument )
-        : _pUndoOwner{ make_unique<UndoStepOwner>() }
+    UIPreviewModel::UIPreviewModel( const DataPath& initialDocument, CommandStack& documentStack )
+        : _pDocumentStack{ &documentStack }
+        , _pUndoOwner{ make_unique<UndoStepOwner>() }
         , _onDirtyChanged{}
         , _onTargetReleasing{}
         , _listRow{}
@@ -525,7 +526,7 @@ namespace sw::editor
             pSession->apply( generation, ordinal, propertyName, newText );
         } ),
                                                    *_pUndoOwner ),
-                          "Edit UI Widget" );
+                          "Edit UI Widget", *_pDocumentStack );
     }
 
     void UIPreviewModel::afterStructureEdit( UIScreen& screen, optional<uint32> selectedOrdinal )
@@ -582,7 +583,7 @@ namespace sw::editor
             pSession->insert( generation, typeName, parentOrdinal, index );
         } ),
                                                    *_pUndoOwner ),
-                          "Add UI Widget" );
+                          "Add UI Widget", *_pDocumentStack );
         return true;
     }
 
@@ -620,7 +621,7 @@ namespace sw::editor
             pSession->detach( generation, parentOrdinal, index, pHolder );
         } ),
                                                    *_pUndoOwner ),
-                          "Delete UI Widget" );
+                          "Delete UI Widget", *_pDocumentStack );
         return true;
     }
 
@@ -642,7 +643,7 @@ namespace sw::editor
             pSession->move( generation, parentOrdinal, fromIndex, toIndex );
         } ),
                                                    *_pUndoOwner ),
-                          "Reorder UI Widget" );
+                          "Reorder UI Widget", *_pDocumentStack );
     }
 
     bool UIPreviewModel::canMoveSelected( const WidgetTree& tree, int32 delta ) const

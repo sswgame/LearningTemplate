@@ -79,6 +79,8 @@ namespace sw::editor
          *        코드 단계(`UndoStep::makeTransient` — 기록을 맡길 때 버린다)다. 작업 공간 스택으로 간다(문서 편집은 `recordDocumentText` 가 스택을 받는다).
          */
         void push( UndoStep undo, UndoStep redo, string_view label );
+        /** @brief 같은 단계를 문서의 스택 @p documentStack 에 올립니다(`EditorDocumentPanel::getDocumentCommandStack`, 감사 E-3). 씬을 dirty 로 표시하지 않는다 — 문서 dirty 는 패널이 한다. */
+        void push( UndoStep undo, UndoStep redo, string_view label, CommandStack& documentStack );
         /**
          * @brief 문서 편집 하나(상호작용 구간 하나 — `DocumentEditSpan`)를 @p stack 에 한 단계로 기록합니다. 바뀐 구간만 쥐고 되돌릴 때 @p capture 의 지금 글에서 다시 짓는다.
          * @details 스택은 부르는 쪽이 정한다 — 문서 패널이 하나만 답한다(`EditorDocumentPanel::getDocumentCommandStack`, 감사 P0-2). 예전에는 문서 기록은 전역 스택으로

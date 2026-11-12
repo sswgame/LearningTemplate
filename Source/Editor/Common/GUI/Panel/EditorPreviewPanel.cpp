@@ -101,7 +101,6 @@ namespace sw::editor
     EditorPreviewPanel::EditorPreviewPanel( const EditorAssetType& kind, bool bLoadOnOpen )
         : EditorDocumentPanel{ kind, bLoadOnOpen }
         , _viewport{}
-        , _pCommandStack{ make_unique<CommandStack>() }
         , _pSelection{ make_unique<EditorSelection>() }
         , _bFocusApplied{ SW_FALSE }
         , _bPreviewPaused{ SW_FALSE }
@@ -129,25 +128,25 @@ namespace sw::editor
     void EditorPreviewPanel::releasePreview()
     {
         applyWindowFocus( false );
-        resetPreviewEdits(); // 창 스택의 명령은 이 씬의 키를 가리킨다 — 씬과 함께 버린다(되돌리기 어려운 결정 4)
+        resetDocumentHistory(); // 창 스택의 명령은 이 씬의 키를 가리킨다 — 씬과 함께 버린다(되돌리기 어려운 결정 4)
         _pSelection->unbindPreviewScope();
         _viewport.shutdown();
     }
 
     void EditorPreviewPanel::acknowledgePreviewEdits()
     {
-        _seenCommandCount = _pCommandStack->getCommandCount();
+        _seenCommandCount = getDocumentCommandStack().getCommandCount();
     }
 
-    void EditorPreviewPanel::resetPreviewEdits()
+    void EditorPreviewPanel::resetDocumentHistory()
     {
-        _pCommandStack->clear();
-        _seenCommandCount = 0;
+        EditorDocumentPanel::resetDocumentHistory();
+        _seenCommandCount = 0; // 비운 스택을 "편집이 줄었다" 로 읽어 dirty 로 만들지 않는다
     }
 
     void EditorPreviewPanel::syncDocumentDirty()
     {
-        const size_t count = _pCommandStack->getCommandCount();
+        const size_t count = getDocumentCommandStack().getCommandCount();
         if ( count == _seenCommandCount )
             return;
         _seenCommandCount = count;
@@ -172,7 +171,7 @@ namespace sw::editor
             Scene* pScene = _viewport.getScene();
             if ( pScene != nullptr )
             {
-                _pSelection->bindPreviewScope( *pScene, *_pCommandStack );
+                _pSelection->bindPreviewScope( *pScene, getDocumentCommandStack() );
                 populatePreviewScene( *pScene );
                 framePreviewSubject(); // 처음 카메라 = 맞춤(F) — 창마다 따로 두던 frameSphere 를 한 곳으로
             }
@@ -331,7 +330,7 @@ namespace sw::editor
 
     bool EditorPreviewPanel::recordPreviewModify( GameObject& obj, const ObjectSnapshot& before, const ObjectSnapshot& after, string_view label )
     {
-        _pCommandStack->push( ObjectSnapshot::makeModify( editor::getSubsystem<SceneManager>(), obj, before, after, label ) ); // 인스펙터 편집은 선택의 `recordModify` 로 같은 스택
+        getDocumentCommandStack().push( ObjectSnapshot::makeModify( editor::getSubsystem<SceneManager>(), obj, before, after, label ) ); // 인스펙터 편집은 선택의 `recordModify` 로 같은 스택
         return true;
     }
 
@@ -353,7 +352,6 @@ namespace sw::editor
             if ( _bFocusApplied )
                 return;
             (void)editor::getSubsystem<SceneManager>().focusScene( pScene ); // 이 창의 씬이라 늘 알려진 씬이다
-            setFocusedCommandStack( _pCommandStack.get() );
             if ( _pSelection->isPreviewScope() )
                 setFocusedSelection( _pSelection.get() ); // 포커스를 잃어도 남는다 — 인스펙터가 이 선택을 고친다(`getFocusedSelection`)
             _bFocusApplied = SW_TRUE;
@@ -361,9 +359,6 @@ namespace sw::editor
         }
         if ( _bFocusApplied == false )
             return;
-        // 이 창이 건 것만 푼다 — 그 사이 다른 창이 자기 것을 걸었으면 그대로 둔다.
-        if ( getFocusedCommandStack() == _pCommandStack.get() )
-            setFocusedCommandStack( nullptr );
         // 소멸자 · 종료에서도 오는 길이라 씬 관리자가 먼저 내려갔을 수 있다 — 초점 씬을 풀 대상이 없을 뿐 오류가 아니다.
         SceneManager* pSceneManager    = findSubsystem<SceneManager>(); // 종료 순서에 따라 이미 없을 수 있다
         const bool    bOwnSceneFocused = pSceneManager != nullptr && pScene != nullptr && pSceneManager->getFocusedScene() == pScene;

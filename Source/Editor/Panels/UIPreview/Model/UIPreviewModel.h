@@ -27,6 +27,7 @@ namespace sw
     struct PropertyInfo;
     struct TypeInfo;
 
+    class CommandStack;
     class DataPath;
     class LocalizationManager;
     class UIAnimationPlayer;
@@ -81,8 +82,8 @@ namespace sw::editor
     class UIPreviewModel
     {
     public:
-        /** @brief 처음 여는 문서 @p initialDocument(editortooldefaults 의 칸)로 만듭니다. */
-        explicit UIPreviewModel( const DataPath& initialDocument );
+        /** @brief 처음 여는 문서 @p initialDocument(editortooldefaults 의 칸)로 만듭니다. 되돌리기는 패널 문서의 스택 @p documentStack 에 쌓는다(감사 E-3 — 패널보다 오래 살지 않는다). */
+        UIPreviewModel( const DataPath& initialDocument, CommandStack& documentStack );
         /** @brief 처음 여는 문서입니다(에디터 도구 시드 editortooldefaults.json). View 가 서비스 로케이터에 닿지 않게 Model 이 읽는다. */
         [[nodiscard]] static const DataPath& getDefaultDocument();
         ~UIPreviewModel();
@@ -282,6 +283,7 @@ namespace sw::editor
         bool applyMove( uint32 generation, uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex );
 
     private:
+        CommandStack*                   _pDocumentStack;      ///< 되돌리기가 갈 패널 문서의 스택(빌림 — 패널이 모델과 함께 든다)
         unique_ptr<UndoStepOwner>       _pUndoOwner;          ///< 이 미리보기가 남긴 코드 되돌리기 단계의 주인(모델이 사라지면 그 명령이 빠진다). 포인터라 헤더가 되돌리기 배관(`UndoStep.h`)을 끌지 않는다(MVVM View include 계약)
         Delegate<void( bool )>          _onDirtyChanged;      ///< 문서 dirty 를 패널에 알린다
         Delegate<void()>                _onTargetReleasing;   ///< 렌더 텍스처를 놓기 직전에 뷰에 알린다

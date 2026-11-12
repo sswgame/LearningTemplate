@@ -79,7 +79,7 @@ namespace sw::editor
             return false;
 
         const bool bSpawned = _viewModel.rebuildRoot( getPreviewScene(), getPreviewSelection(), getLoadedAssetPath() );
-        resetPreviewEdits(); // 옛 문서의 편집 기록은 새 루트와 맞지 않는다
+        resetDocumentHistory(); // 옛 문서의 편집 기록은 새 루트와 맞지 않는다
         if ( bSpawned )
             getPreviewViewport().frameSphere( float3{ 0.0f, 0.0f, 0.0f }, PrefabEditorPanelInternal::kFrameRadius );
         return bSpawned;

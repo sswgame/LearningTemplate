@@ -176,6 +176,7 @@ namespace sw::editor
         , _pUndoTarget{ make_shared<EditorDocumentPanel*>( this ) }
         , _pEditSpan{ make_unique<DocumentEditSpan>() }
         , _pUndoOwner{ make_unique<UndoStepOwner>() }
+        , _pDocumentStack{ make_unique<CommandStack>() }
         , _listRecentPath{}
         , _listOpenCandidate{}
         , _openFilter{}
@@ -186,23 +187,18 @@ namespace sw::editor
     {
         if ( bLoadOnOpen == false )
             _bLoaded = SW_TRUE;
-        // 열린 문서의 에셋을 옮기면 경로가 따라간다 — 옛 id 로 남으면 다음 저장이 옛 자리에 파일을 다시 만든다(감사 P0-4).
+        // 열린 문서의 에셋을 옮기면 경로가 따라가고, 글을 고친 참조 문서는 다시 읽는다 — 옛 id 로 남으면 다음 저장이 옛 자리에 파일을 다시 만들거나 고친 참조를 덮는다(감사 P0-4).
         EditorWorkspace* const pWorkspace = editor::findSubsystem<EditorWorkspace>(); // 작업 공간 없는 패널 테스트는 옮김도 없다
         if ( pWorkspace != nullptr )
         {
             _assetsMovedSubscription = pWorkspace->onAssetsMoved().add(
-                SW_DELEGATE_LAMBDA( EditorAssetsMovedDelegate, [this]( const vector<string>& listOldID, const vector<string>& listNewID )
+                SW_DELEGATE_LAMBDA( EditorAssetsMovedDelegate, [this]( const EditorAssetMoveNotice& notice )
             {
-                for ( size_t index = 0; index < listOldID.size() && index < listNewID.size(); ++index )
-                {
-                    if ( _loadedAssetPath == listOldID[index] )
-                        _loadedAssetPath = listNewID[index];
-                    for ( string& recentPath : _listRecentPath )
-                    {
-                        if ( recentPath == listOldID[index] )
-                            recentPath = listNewID[index];
-                    }
-                }
+                const bool bRewrittenReferrer = EditorDocumentOpenUtil::applyAssetMove( notice, _loadedAssetPath, _listRecentPath );
+                // 깨끗한 참조 문서는 디스크에서 고친 글을 다시 읽는다 — 옛 id 를 든 채 두면 다음 저장이 고친 참조를 옛 id 로 덮는다. 읽기는 다음 그리기의
+                // `ensureDocumentLoaded` 가 한다(옮기기는 다른 창의 그리기 안에서 돈다). 미저장 참조자는 계획이 거절해 여기 오지 않는다.
+                if ( bRewrittenReferrer && isDocumentDirty() == false && _bLoadFailed == SW_FALSE )
+                    _bLoaded = SW_FALSE;
             } ) );
         }
     }
@@ -236,6 +232,8 @@ namespace sw::editor
     EditorDocumentPanel::~EditorDocumentPanel()
     {
         *_pUndoTarget = nullptr;
+        if ( getFocusedCommandStack() == _pDocumentStack.get() )
+            setFocusedCommandStack( nullptr ); // 사라질 스택을 Ctrl+Z 가 겨누지 않게
     }
 
     optional<AbsolutePath> EditorDocumentPanel::getDocumentDiskPath() const
@@ -287,6 +285,7 @@ namespace sw::editor
         _bLoaded     = SW_TRUE;
         _bLoadFailed = SW_FALSE;
         clearDocumentDirty();
+        resetDocumentHistory();
         syncDocumentUndoBaseline();
     }
 
@@ -319,9 +318,9 @@ namespace sw::editor
             reloadDocument();
     }
 
-    CommandStack& EditorDocumentPanel::getDocumentCommandStack()
+    void EditorDocumentPanel::resetDocumentHistory()
     {
-        return editor::getSubsystem<CommandStack>(); // 작업 공간 스택은 에디터 범위의 필수 서비스다
+        _pDocumentStack->clear();
     }
 
     bool EditorDocumentPanel::isWidgetInteractionActive()
