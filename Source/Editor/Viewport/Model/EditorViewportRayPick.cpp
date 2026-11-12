@@ -174,7 +174,7 @@ namespace sw::editor
                 for ( size_t vertex = 0; vertex < listPosed.size(); ++vertex )
                 {
                     if ( listPalette.empty() == false )
-                        Mesh::skinVertex( listPalette, listSkin[vertex], listPosed[vertex] );
+                        MeshSkinBinding::skinVertex( listPalette, listSkin[vertex], listPosed[vertex] );
                     const float32* pPosition = listPosed[vertex]._arrPosition;
                     outListPosition[vertex]  = float3{ pPosition[0], pPosition[1], pPosition[2] };
                 }

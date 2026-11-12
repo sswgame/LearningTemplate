@@ -285,7 +285,7 @@ SW_TEST_CASE( ShopTest, BuyBackReturnsWornItemWithSameDurability )
     const sw::optional<int32> returnedSlot = inventory.findFirstSlot( kSword );
     SW_REQUIRE_TRUE( returnedSlot.has_value() );
     SW_EXPECT_EQUAL( 40.0f, inventory.getSlot( returnedSlot.value() )._durability );
-    SW_EXPECT_TRUE( restored.findRuntime( kSmith )->_listBuyback.empty() );
+    SW_EXPECT_TRUE( static_cast<const sw::ShopManager&>( restored ).findRuntime( kSmith )->_listBuyback.empty() );
 }
 
 /**
@@ -315,8 +315,8 @@ SW_TEST_CASE( ShopTest, SellsChosenSlotAndReportsBuyBack )
     SW_REQUIRE_TRUE( shop.sell( kSmith, 0, 1, wallet, inventory ) == sw::ShopResult::Ok );
     SW_EXPECT_EQUAL( 1, inventory.getItemCount( kSword ) );
     SW_EXPECT_EQUAL( 100.0f, inventory.getSlot( inventory.findFirstSlot( kSword ).value() )._durability );
-    SW_REQUIRE_EQUAL( size_t( 1 ), shop.findRuntime( kSmith )->_listBuyback.size() );
-    SW_EXPECT_EQUAL( 30.0f, shop.findRuntime( kSmith )->_listBuyback[0]._listPiece[0]._durability );
+    SW_REQUIRE_EQUAL( size_t( 1 ), static_cast<const sw::ShopManager&>( shop ).findRuntime( kSmith )->_listBuyback.size() );
+    SW_EXPECT_EQUAL( 30.0f, static_cast<const sw::ShopManager&>( shop ).findRuntime( kSmith )->_listBuyback[0]._listPiece[0]._durability );
 
     // 상점 데이터는 buybackLimit 를 적어야 한다(없으면 그 상점을 넣지 않는다 — 기본값에 기대지 않는다)
     sw::ShopCatalog missingLimit;

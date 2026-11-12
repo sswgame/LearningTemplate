@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 
 struct ID3D11UnorderedAccessView;
