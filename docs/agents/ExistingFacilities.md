@@ -21,7 +21,7 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Angle wrap and interpolation | `Core/Math/MathUtil.h` `wrapAngle` · `lerpAngle` (radians) | `while ( a > kPi ) a -= kTwoPi` loops, degree copies of them |
 | Data-defined resource path | `Engine/Serialization/Serializer/DataPath.h` `DataPath` (only data files fill it) | string literal paths in headers |
 | Field that points at another asset | `Engine/Asset/AssetRef.h` `AssetRef<T>` (`T::kAssetType`; wrong suffix is a load error, `acquire` · `request` go to the kind's cache, reference lists and pickers follow the type) | a `string` path field with `AssetPath` |
-| Resolve a resource id | `Engine/Content/AssetPaths.h`; read: `Engine/Content/AssetIO.h` `readTextAsset` · `readBinaryAsset` · `collectResources` | disk paths in runtime game code |
+| Resolve a resource id | `Engine/Content/AssetPaths.h`; read: `Engine/Content/AssetIO.h` `readTextAsset` · `readBinaryAsset` · `collectAssets` | disk paths in runtime game code |
 | User data and config folder | `Core/File/UserDataPath.h` `getDataDirectory` · `getConfigDirectory` · `resolve` | `getenv( "HOME" )` · `%LOCALAPPDATA%` by hand |
 | Path text (join, extension, normalize) | `Core/File/FileUtil.h` `joinPath` · `getExtension` · `removeExtension` · `getFileNamePart` · `getDirectoryPart` · `normalizeSeparators` · `splitPath`; part under a root: `tryMakePathUnderRoot` | `std::filesystem::path`, `rfind( '.' )` · `find_last_of( '/' )` loops |
 | Read or write a whole file | `Core/File/FileUtil.h` `readFile` · `readTextFile` · `writeFile` · `writeTextFile` (`[[nodiscard]] bool`) | `fopen` · `_wfopen` · `std::ifstream` · `std::ofstream` |
@@ -38,7 +38,7 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Parse a number or bool | `Core/String/StringUtil.h` `parseInt` · `parseInt64` · `parseUint64` · `parseFloat` · `parseDouble` · `tryParseBool` · `parseIntList`; exactly N floats: `parseExactFloats` | `atoi` · `strtol` · `strtod` · `std::stoi` · `sscanf` |
 | Split text into a list | `Core/String/StringUtil.h` `split( text, separators, StringSplitOptions{ _bTrim, _bDropEmpty } )`; one token at a time without allocation: `forEachToken`; lines: `forEachLine` | `find` · `substr` loops, a local `splitList` / `splitTokens` |
 | Trim, compare, case | `Core/String/StringUtil.h` `trim` · `startsWith` · `endsWith` · `toLower` · `matchesWildcard` | hand loops over `char` |
-| UTF-8 and UTF-16 | `Core/String/StringUtil.h` `utf8ToUtf16` · `utf16ToUtf8` · `isValidUtf8` | `MultiByteToWideChar` at call sites |
+| UTF-8 and UTF-16 | `Core/String/StringUtil.h` `utf8ToUTF16` · `utf16ToUTF8` · `isValidUTF8` | `MultiByteToWideChar` at call sites |
 | Format text, hex, colors, Base64 | `Core/String/formatString.h` `formatstring` (`%x`, `%X`, `Format::hex`); build: `Core/String/StringBuilder.h`; colors: `Core/Math/Color.h` `Color::fromHex` · `toHex`; Base64: `Core/Encoding/Base64Util.h` | `snprintf` chains, own hex tables |
 | Bytes or fixed-width integers as hex | `Core/Encoding/HexUtil.h` `encodeBytes` · `appendBytes` · `appendUint64` · `decodeBytes` (`HexCase`) | a `"0123456789abcdef"` table and nibble shifts |
 | Hash, interned name | `Core/Hash/HashUtil.h` `combine` · `computeStringHash64` · `mix64`; `Core/Name/hashed_string.h` | literal FNV or golden-ratio constants |
@@ -63,9 +63,9 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Console variable, cheat, switch | `Core/GlobalVariable/GlobalVariableManager.h` `SW_GLOBAL_VARIABLE` · `SW_EXTERN_GLOBAL_VARIABLE` | a mutable `static` tuning flag |
 | User-facing text | `Engine/Localization/LocalizationManager.h` `getString` · `formatText` through `engine::getSubsystem<LocalizationManager>()` | literal UI strings |
 | Editor label on a widget whose label is its ImGui ID (button, combo, menu, tab, window) | `EditorThemeUtil::makeIconLabel( icon, SW_LOCKEY(...), "English" )` · `makeStableLabel( SW_LOCKEY(...), "English" )` → "label###id"; panel windows: `EditorPanelText::makeWindowName` (names in `editor/panels/editor.panels.xml`), finding a window by title: `makeWindowID`; data text (commands · panels): `Meta = "Localizable"` + `EditorDataText::localize`; keys held by static registration tables: `SW_LOCKEYREF` resolved at draw | the translated text as the ID (it changes with the language), `FindWindowByName( title )` |
-| Adding a localization key | add the entry to `editor.strings.xml` (editor code) or `engine.strings.xml` (GameFramework editor folders, ko · ja), then `App -export-po` → fill `po/<culture>.po` → `App -import-po=<po>` → `App --gather-text` → `App --check-text` (0 errors); numbers with fixed digits `TextArgumentList::addDecimal( name, value, digits )`, words chosen in code ICU `select`, counts `plural`; no `[word]` in sources (read as a rich text tag) | English literals left in code, a key without its translations |
+| Adding a localization key | entry in `editor.strings.xml` (editor code) or `engine.strings.xml` (GameFramework editor folders, ko · ja) → `App -export-po` → fill `po/<culture>.po` → `App -import-po=<po>` → `App --gather-text` → `App --check-text` (0 errors); fixed digits `TextArgumentList::addDecimal`, words chosen in code ICU `select`, counts `plural`; no `[word]` in sources (rich text tag) | English literals left in code, a key without its translations |
 | Moving a file that has `SW_LOCKEY` | rerun `App --gather-text` and commit `Content/**/localization/*.strings.xml` (origins carry the source path; ToolCheckText fails otherwise) | committing the move alone |
-| Moving, renaming or deleting an asset (assets are referenced by path only — no `.meta`, no GUID) | `py -3 -m Scripts move-asset <old id> <new id>` (git mv + fixes every path field, folders and `models_raw` sources included; editor: Content Browser rename · move); after a delete the pre-commit lint (`Scripts/lint/AssetReferences.py`) lists who still points at it; full check: `py -3 -m Scripts asset-refs` · `App --check-asset-refs` (ctest `ToolCheckAssetRefs`). Which attributes · element texts · JSON keys are paths: the reflection declarations (`PROPERTY( AssetPath )` · `AssetRef<T>` · `DataPath`), collected by the parser into `Config/Dev/AssetReferenceFields.generated.json` — there is no hand list; a hand-read XML path field moves to a schema struct read by `XMLFields` | `git mv` or a text search-and-replace of the old path |
+| Moving, renaming or deleting an asset | `py -3 -m Scripts move-asset <old id> <new id>` (git mv + every path field, folders and `models_raw` sources included; editor: Content Browser rename · move); after a delete the pre-commit lint (`Scripts/lint/AssetReferences.py`) lists who still points at it; full check `py -3 -m Scripts asset-refs` · `App --check-asset-refs`. Path fields come only from reflection declarations (`PROPERTY( AssetPath )` · `AssetRef<T>` · `DataPath`) collected into `Config/Dev/AssetReferenceFields.generated.json`; a hand-read XML path field moves to a schema struct read by `XMLFields` | `git mv` or a text search-and-replace of the old path |
 | Player input | `Engine/Input/InputManager.h` `getInputMap`; actions are defined in `*.input.xml` (a game stacks `common/input/` maps and its own diff, [InputMapBundle](../InputMapBundle.md)) and queried by name | polling `getKeyboard()` keys in game code |
 | Run a child process | `Core/Process/Process.h` `Process::execute` · `launch` · `launchDetached` with `ProcessCommand::at( AbsolutePath, … )` (a file) or `ProcessCommand::fromSearchPath( "git", … )` (a PATH name); Python: `Scripts/common/RunProcess.py` `runProcess` | `system` · `popen` · `CreateProcess` · `fork` · `exec*`; a string that may be either a path or a name; Python `subprocess` |
 | App · Server command-line arguments from a script | `Scripts/common/AppArguments.py` `flag` · `option` · `variable` (checked against `Source/Core/Predefined/ArgumentList.xxx` and the registered `gv_` names), `without` · `readValue`, ctest chain command `findChainCommand` · `readChainStages` | literal `"-scenario=…"` · `"-unattended"` · `"-gv_x=…"` strings; parsing `ctest -N` output in each script |
@@ -83,16 +83,30 @@ Search here before writing a helper for a common job. If the job is missing, sea
 
 A new row names the header and the API.
 
+## 리소스 읽기 입구와 에셋 참조
+
+설계는 [ResourceStructure](../ResourceStructure.md) 2 · 4 절, 규칙은 여기가 정본이다.
+
+- **리소스는 id 로 읽는다.** 그래야 조건(`_when`) · 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조(리소스 해시)를 받는다. 리플렉션 파일 하나는 `ConfigManager::readComposedXMLDocument`, 루트를 손으로 읽는 형식은 `XMLReadUtil::parseResourceRoot`, 그 밖은 `XMLDocument::loadResource` · `loadResourceAs` · `parseResourceText`(테스트 `ResourceEntranceTest`).
+- 글을 읽은 뒤 id 없이 글 입구(`loadFromAsset` · `loadFromFile`)로 넘기지 않는다 — 린트 `common-shapes` 의 `assetEntrance` 가 막고, 예외는 문맥을 정하는 쪽(문화권 표 · 경로 교체 표)만 `Config/Rules/Lint/CommonShapeExceptions.json` 에 까닭과 함께. 팩 설정(`PackEngineSettings`)은 층 · 조건이 기대는 값을 정하므로 그대로 읽는다. 미리 보기 · 테스트는 `loadFromXMLText`(층을 얹지 않는다).
+- **다른 에셋을 가리키는 칸은 `AssetRef<T>`**(언리얼 `TSoftObjectPtr<T>`). 스스로 읽지 않는다(`acquire()` · `request()`). 접미사가 대상 종류와 다르면 로드 오류다.
+- 경로 칸은 리플렉션 선언에서만 온다 — 손으로 쓴 이름 표를 두지 않는다. 생성 목록은 `Config/Dev/AssetReferenceFields.generated.json`(낡음은 `--check-asset-refs`), `Config/Dev/AssetReferenceFields.json` 에는 도메인 · 확장자 · 임포트 폴더 규칙만.
+- `AssetRef<T>` 칸이 만들어지는 곳에서 `T` 는 완전해야 한다(`unique_ptr<T>` 소멸자와 같은 규칙) — 대상 헤더를 못 읽으면 생성자를 .cpp 로 옮긴다.
+- 종류는 접미사 · 경로 규칙(`AssetTypeDef::makeDataFile`) · 내장 이름(`withBuiltinNames`) 셋으로만 가른다. 셋 다 없는 종류는 `AssetRef<T>` 가 컴파일에서 막는다(`AssetTypeDef::canTellPath`). 모르는 내장 이름은 폴백 없이 오류다.
+- 종류가 하나로 정해지지 않는 칸(인턴 열쇠로 쓰는 칸, 종류가 여럿인 칸, 종류 정의가 없는 파일)은 `PROPERTY( AssetPath )` 로 두어 생성 목록에 넣는다.
+- **쿠킹은 닿는 것만 담는다**(`PackReachability`, 언리얼 "참조된 패키지만 쿠킹"): 뿌리(`PackConfig.json` `_cookRules`, 게임 설정 `<RequiredData>`, `SW_ASSET_COOK_ROOT`)에서 참조 칸 · `_base` · 곁 파일(`SW_ASSET_COMPANION`)을 따라간다. 코드가 경로를 조립해 읽는 파일은 뿌리나 곁 파일로 선언한다 — 닿지 않으면 배포에서 빠진다. 닿는 참조가 없는 파일을 가리키면 쿠킹 오류다.
+
 ## 리플렉션 스키마로 읽지 않고 손으로 두는 것
 
 데이터 파일의 칸은 `PROPERTY` 구조체 + `XMLFields` · `JSONFields::readProperties` 로 읽는다. 목록 칸(`vector<이름 · 태그 ID · 수 · 열거>`)은 속성 하나에 낱말을 잇고(구분자 `,;| \t`), 범위는 원소마다 본다. 아래만 손으로 둔다.
 
-- 바깥 표준 · 원문 편집: 시나리오 단계의 수 비교(`equals` · `near` · `atLeast` · `atMost` — 어느 속성을 적었는지가 규칙)와 여러 단계가 함께 쓰는 감시 값 참조 · 시한 읽기, VRM · glTF(`Vrm*` · `ModelImportVrm` · `ModelImportMaterial`), TMX(`TranslationMemory`), JWT, 알림 테이블의 `<Notify>`(처리기마다 선언한 인자), `UIStyleSheet`(규칙 칸은 이미 WidgetStyle 리플렉션 대입 — 상태 이름은 CSS 철자 `focus-visible`), 머티리얼 속성 항목 쓰기(종류마다 적는 칸이 다르고 물려받기라 생략이 곧 부모 값), 타일맵 머리말(자식 원소 형식), 프로파일러 트레이스, 스토어 영수증, `CatalogXMLText` · `RigSaveParams`(원문 위치를 지키며 고친다), `TextGatherer`, `XMLReadUtil`. **칸 데이터 · 물려받기**도 손 읽기로 둔다: 타일맵의 타일 칸(수천 개 · 깃발 칸은 표가 정한다 — `readProperties` 는 속성마다 이름 글을 만들어 느리다), 립싱크 프레임 가중치, 문화권 표(적지 않은 칸은 부모 문화권에서 물려받는다 — 적었는지가 뜻이라 스키마 기본값으로 담지 못한다).
+- 바깥 표준 · 원문을 지키며 고치는 것: VRM · glTF(`ModelImportVrm` · `ModelImportMaterial`), TMX(`TranslationMemory`), JWT, 스토어 영수증, 프로파일러 트레이스, `UIStyleSheet`(상태 이름은 CSS 철자), `CatalogXMLText` · `RigSaveParams`, `TextGatherer`, `XMLReadUtil`, 시나리오 단계의 수 비교(`equals` · `near` · `atLeast` · `atMost`)와 감시 값 참조 · 시한, 알림 `<Notify>`(처리기마다 인자가 다르다), 머티리얼 속성 항목 쓰기(생략이 곧 부모 값), 타일맵 머리말.
+- 양이 많거나 물려받기가 뜻인 칸: 타일맵 타일 칸(`readProperties` 는 속성마다 이름 글을 만들어 느리다), 립싱크 프레임 가중치, 문화권 표(적었는지가 뜻이라 스키마 기본값으로 담지 못한다).
 - 적었는지가 뜻인 것: 조건 하나만 적는 원소(`<Requires>` · `<When>` · `<Hide>`), 값 · 범위 · 선택지 중 하나를 적는 외형 값과 장비 슬롯, `width` 와 `early` · `late`, 없으면 다른 칸을 따르는 `max`.
-- 고유 문법: 일정 조건(`ScheduleCondition` — 날짜 범위 · 조건식 · 어휘 검사), 이름=수 목록(`seasons="Spring=2"`), 고정 길이 수 배열(능력치 · 적성 · 네 값 배율), 낱말을 비트로 합치는 칸(`sizes` · `targets` · `search` · `services`), 격자 · 패턴 글, 시계 표기 시각.
-- `TagContainer` 칸: 층이 `XMLFields` 보다 위이고 정렬 불변식을 `addTag` 가 지킨다(`AppearanceXMLUtil::readTags`).
-- JSON 에서 키가 동적이거나 칸 구조가 아닌 것: 메시 수정자 인자 · 격자 · 커브 키, 크래시 매니페스트의 문맥, 사용자 설정 값, 프로젝트 설정 차이 쓰기, 프리팹 트리, 부하 봇 단계(동작마다 받는 키가 다르다), 비주얼 로그의 벡터 배열, 게임 문자열 산출(`LoadBotMetrics` 는 쓰기만).
-- 이름표로 그대로 두는 것: UI 라벨 · 명령 이름 · 바깥 표준 철자(Prometheus 지표 종류 · CLDR 복수 범주 · VRM · 명령줄 백엔드 이름), 사용자 기기에 저장되는 설정 값(스피커 모드 · 크래시 보고 동의), 종료 진단에서도 쓰는 이름(RHI 메모리 종류 — 엔진 서비스가 내려간 뒤), Core 층(리플렉션 없음)
+- 고유 문법: `ScheduleCondition`, 이름=수 목록(`seasons="Spring=2"`), 고정 길이 수 배열, 낱말을 비트로 합치는 칸(`sizes` · `targets` · `search` · `services`), 격자 · 패턴 글, 시계 표기 시각.
+- `TagContainer` 칸: 정렬 불변식을 `addTag` 가 지킨다(`AppearanceXMLUtil::readTags`).
+- 키가 동적인 JSON: 메시 수정자 인자 · 격자 · 커브 키, 크래시 매니페스트 문맥, 사용자 설정 값, 프로젝트 설정 차이 쓰기, 프리팹 트리, 부하 봇 단계, 비주얼 로그 벡터 배열, `LoadBotMetrics`(쓰기만).
+- 이름표로 두는 것: UI 라벨 · 명령 이름 · 바깥 표준 철자(Prometheus 지표 종류 · CLDR 복수 범주 · 명령줄 백엔드 이름), 사용자 기기에 저장되는 설정 값, 엔진 서비스가 내려간 뒤 쓰는 이름(RHI 메모리 종류), Core 층(리플렉션 없음).
 
 ## 에디터 패널: 그리기와 로직
 

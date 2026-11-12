@@ -4,7 +4,7 @@
 > 독자: 플랫폼 백엔드(WebGPU · Android Vulkan) · Emscripten · NDK 빌드를 잇는 세션(에이전트와 사람).
 > 결론: Android 는 Vulkan 1.2 + 디스크립터 인덱싱이 필수다(없으면 장치를 고르지 않는다). 웹은 WebGPU 하나이고 bindless 가 없어 DX11 과 같은 고정 슬롯 모델로 그린다. 대상이 못 주는 것은 능력 깃발(`RHICapabilities`) · 형식 대체 · 쿠킹 변형으로 가르고, 필수인데 없는 것은 오류로 멈춘다.
 
-사용자 결정: Android 지원, iOS 제외, 웹은 최신 브라우저의 WebGPU 만(WebGL2 없음), 콘솔은 대기 — 콘솔 갈래를 만들지도 막지도 않는다. 판 · 한도 수치 중 "(기억)" 은 기억에 의존한 값이라 붙이기 전에 그 판의 명세 · 브라우저 문서로 다시 확인한다.
+사용자 결정: Android 지원, iOS 제외, 웹은 최신 브라우저의 WebGPU 만(WebGL2 없음), 콘솔은 대기(갈래를 만들지도 막지도 않는다). "(기억)" 표시 값은 붙이기 전에 그 판의 명세로 다시 확인한다(context7).
 
 ## 요구 판
 
@@ -35,7 +35,7 @@
 | 스레드 | 렌더 스레드 · 병렬 기록 · 워커 생성 | 모두 된다 | 장치는 만든 스레드에서만(Emscripten 에서 JS 객체는 워커를 넘지 못한다) | `_bParallelCommandRecording` · `_bThreadSafeResourceCreation` 거짓, 웹은 렌더 스레드를 띄우지 않는다(`gv_useRenderThread` 기본값을 플랫폼 사슬로) |
 | GPU 대기 | `waitIdle`(종료 · 백엔드 교체 · 크기 변경 · 셰이더 핫 리로드 · 파이프라인 바꿈) | 된다 | 브라우저는 GPU 를 동기로 기다릴 수 없다 | 씬 활성화 · 에셋 핫 리로드 · 캡처는 `flushRenderThread` + 펜스 지연 해제다. 남은 `waitIdle` 은 이유가 붙은 도구 · 수명 길(`RHIWaitIdleReason`)이고, 시나리오 `empty/noidlewait` · `editor/assetcascade` 가 `RHI.GPUIdleWaits` 를 본다. WebGPU 의 `waitIdleInternal` 은 기다리지 않고 해제 큐를 비운다 — WebGPU 는 GPU 가 쓰는 객체를 놓아도 구현이 끝날 때까지 살린다(명세). 되읽기는 늘 `mapAsync` 콜백이다 |
 | 타임스탬프 | `IRHITimestampProvider` | 된다(`timestampPeriod`) | `timestamp-query` 선택, 시각은 패스 경계에서만(값은 나노초, 브라우저는 거칠게 준다) | WebGPU: 기능이 있으면 제공자가 칸을 연다 — `writeTimestamp` 는 빈 계산 패스의 시작 시각이고 프레임 끝에 풀어 되읽기 버퍼 풀로 기다리지 않고 읽는다. 지금 GPU 시계를 묻는 길이 없어 `readGPUClockNanos` 는 거짓(외부 타임라인은 열지 않는다) |
-| 표면 | 창 핸들(`IRenderSurface`) | `ANativeWindow*`(`NativeSurfaceKind::AndroidWindow`), 앱 수명 안에서 사라졌다 생긴다 | canvas 선택자(`NativeSurfaceKind::WebCanvas`) | Android: `VK_KHR_android_surface`. 웹: `WGPUSurfaceSourceCanvasHTMLSelector` |
+| 표면 | 창 핸들(`IRenderSurface`) | `ANativeWindow*`(`NativeSurfaceKind::AndroidWindow`), 앱 수명 안에서 사라졌다 생긴다 | canvas 선택자(`NativeSurfaceKind::WebCanvas`) | Android: `VK_KHR_android_surface`. 웹: `WGPUEmscriptenSurfaceSourceCanvasHTMLSelector` |
 
 ## 플랫폼 코드의 자리
 
@@ -48,7 +48,8 @@
 ## 화면 대응(모바일 · 데스크톱)
 
 - 안전 여백: 플랫폼 창이 `IWindow::getSafeAreaInsets`(물리 픽셀)를 준다 — Android 는 JNI `getRootWindowInsets`, 웹은 셸 HTML 의 CSS 변수 `--sw-safe-left/top/right/bottom`(= `env(safe-area-inset-*)`). `UIScaleSettings::makeViewport` 가 변마다 디버그 흉내(`gv_uiSafeZone`)와 큰 쪽을 고른다.
-- 크기 · 회전 · 수명: `CallbackInputWindow::applyPlatformResize` 하나로 모은다. Android `APP_CMD_TERM_WINDOW` → `SurfaceLost`(렌더러가 `IRHIDevice::releaseSurface`), `INIT_WINDOW` → `SurfaceRestored`(`restoreSurface`), `PAUSE` · `RESUME` · 웹 `visibilitychange` → 앱 멈춤 · 돌아옴. 회전한 기기(Vulkan 서피스 `currentTransform` 90 · 180 · 270)는 pre-rotation 이다: 스왑체인을 그 회전으로 만들어 합성기가 돌리지 않고(이미지는 기기 기본 방향 크기, `getWidth/Height` · 백버퍼 크기는 논리 크기), 화면에 쓰는 모든 것(Present · Canvas · 캡처 → 화면 · 개발 겹치기 · UI)이 논리 크기 대기 텍스처에 쓴 뒤 출력 패스 하나(`RenderPassType::ScreenRotation`, `FrameScreenRotation`)가 돌려 옮긴다. 데스크톱은 PSO · 대기 텍스처 · 패스가 없다(`RHICapabilities::_bSurfacePreRotation`). 거울 회전은 IDENTITY + 합성기이고, 스왑체인은 서피스의 회전 · 크기가 정말 바뀌었을 때만 다시 만든다(`VulkanRHISwapChain::hasSurfaceChanged` — 논리 크기 · 만든 때의 회전과 대조).
+- 크기 · 회전 · 수명: `CallbackInputWindow::applyPlatformResize` 하나로 모은다. Android `APP_CMD_TERM_WINDOW` → `SurfaceLost`(`IRHIDevice::releaseSurface`), `INIT_WINDOW` → `SurfaceRestored`(`restoreSurface`), `PAUSE` · `RESUME` · 웹 `visibilitychange` → 앱 멈춤 · 돌아옴.
+- 회전(pre-rotation): 서피스 `currentTransform` 이 90 · 180 · 270 이면 스왑체인을 그 회전으로 만들고(이미지는 기기 기본 방향, `getWidth/Height` · 백버퍼는 논리 크기), 화면에 쓰는 모든 것이 논리 크기 대기 텍스처에 쓴 뒤 출력 패스 하나(`RenderPassType::ScreenRotation`, `FrameScreenRotation`)가 돌려 옮긴다. 데스크톱에는 이 패스가 없다(`RHICapabilities::_bSurfacePreRotation`). 거울 회전은 IDENTITY + 합성기, 스왑체인은 회전 · 크기가 정말 바뀌었을 때만 다시 만든다(`VulkanRHISwapChain::hasSurfaceChanged`).
 - 좁은 화면 · 방향: 리소스 태그 `screen.compact`(dp 너비 < `uiscale.xml` `_compactMaxWidth`) · `orientation.portrait` — UI 문서 · 스타일 시트가 읽을 때 `_when` 변형으로 다시 배치한다(캐시가 합성의 한 길을 지난다, 태그가 바뀌면 `reloadComposed`). 규칙은 `UIScaleSettings::makeScreenTags` 한 곳이다.
 - 손가락: 터치 장치의 첫 손가락이 UI 포인터가 되고, 조작을 비켜 짚으면 `_minTouchTargetSize`(48)까지 넓혀 고른다(`UIEventRouter::hitTestTouch`).
 - 품질 등급: `engine.settings.xml` 의 `<AutoDetect platform=… requireNativeBindless=…>` — 플랫폼 기본 RHI 의 정적 능력과 시스템 메모리로 고른다.
@@ -57,9 +58,9 @@
 
 ## 남은 일(코드를 붙여 보지 못한 것)
 
-- 웹 실행: 확인 절차는 `py -3 -m Scripts web-check --game Empty` 하나다(묶기 · COOP/COEP 서버 · 헤드리스 브라우저 두 번 — WebGPU · 오류 없음 · 화면 PNG · IDBFS 영속). 아직 돌리지 않았다 — Web-Shipping 빌드(호스트 Ninja-Release 로 쿠킹, 단계 텍스처 16 계약이 처음 걸린다) 뒤 통합에서 돌린다. 입력 · 클립보드(paste 이벤트) 판정은 없다 — 배포 빌드에 시나리오 실행기가 없어 앱 반응을 읽을 길이 없다(웹 시나리오를 쿠킹하거나 반응을 페이지로 내보내는 길이 필요하다).
+- 웹 실행: `py -3 -m Scripts web-check --game Empty`(묶기 · COOP/COEP 서버 · 헤드리스 브라우저 — WebGPU · 오류 없음 · 화면 PNG · IDBFS 영속)를 아직 돌리지 않았다. Web-Shipping 빌드(단계 텍스처 16 계약이 처음 걸린다) 뒤 통합에서 돌린다. 입력 · 클립보드(paste) 판정은 없다 — 배포 빌드에 시나리오 실행기가 없어 앱 반응을 읽을 길이 없다(웹 시나리오를 쿠킹하거나 반응을 페이지로 내보내는 길이 필요하다).
 - 웹 온라인: 스트림은 WebSocket 이다 — 클라이언트 `WebSocketStreamTransport`(Web), 서버는 같은 리슨에서 첫 바이트로 가르는 `WebSocketAcceptTransport`(온라인 서비스 리슨). 남은 것: `ws://` 만이라 https 페이지는 `wss://`(수락 쪽 TLS 종단)가 필요하다. 게임 세션(암호화 UDP)은 브라우저에 UDP 가 없어 아직 길이 없다(WebSocket · WebTransport 위 데이터그램 갈래).
-- 웹 오디오: `Audio/Web/WebAudioBackend` — 믹서 스레드(pthread)가 렌더해 Wasm 공유 메모리의 SPSC 링(`Audio/CircularAudioBuffer`)에 넣고 AudioWorklet 처리기(`WebAudioBackend.js`)가 꺼낸다. 첫 사용자 몸짓에서 `AudioContext.resume`, 워클릿 오류 · 모듈 실패는 출력 유실(`notifyOutputLost`)로 오프라인 → 다시 열기. 아직 컴파일 · 실행하지 않았다 — `web-check` 가 워클릿이 링을 당기기 시작한 줄(`[WebAudio] output started`)을 판정한다. Android 는 AAudio(`Audio/Android`)가 있고 실기기에서 장치 분리 → 다시 열기를 본다.
+- 웹 오디오: `Audio/Web/WebAudioBackend`(믹서 스레드 → SPSC 링 `Audio/CircularAudioBuffer` → AudioWorklet `WebAudioBackend.js`, 첫 사용자 몸짓에 `AudioContext.resume`, 워클릿 실패는 `notifyOutputLost` → 다시 열기)는 아직 컴파일 · 실행하지 않았다 — `web-check` 가 `[WebAudio] output started` 줄을 판정한다. Android AAudio(`Audio/Android`)는 실기기에서 장치 분리 → 다시 열기를 본다.
 - Android 실기기: APK 기동 · 회전(pre-rotation 방향) · APK 팩 읽기(`AAssetDir_getNextFileName` 이 폴더 앞머리를 붙이는지) · 터치를 확인한다. 클립보드는 아직 OS 를 잇지 않는다(`AndroidClipboard.cpp` 의 `isAvailable` false — JNI `ClipboardManager` 는 Looper 스레드 제약을 실기기와 함께 본다).
 
 ## 입력(웹 · Android)
@@ -73,7 +74,7 @@
 | 무엇 | 쓰는 곳 | 판(기억) | 라이선스 |
 |---|---|---|---|
 | Emscripten SDK(emsdk) | 웹 빌드 도구 사슬 — `Tools/emsdk`(`PlatformSdk.py web`) | `search_paths.defaults.json` 의 `emsdk_version` | MIT / University of Illinois NCSA(emscripten) |
-| Dawn | vcpkg `dawn`(`ThirdParty/dawn`) — 데스크톱은 네이티브 구현(`dawn::webgpu_dawn`, Windows `vulkan,d3d12`, Linux `vulkan,x11`), 웹은 같은 판의 emdawnwebgpu 포트 파일(`webgpu/webgpu.h`) | vcpkg 기준선의 판(지금 20260911.162847) | BSD-3-Clause |
+| Dawn | vcpkg `dawn`(`ThirdParty/dawn`) — 데스크톱은 네이티브 구현(`dawn::webgpu_dawn`, Windows `vulkan,d3d12`, Linux `vulkan,x11`), 웹은 같은 판의 emdawnwebgpu 포트 파일(`webgpu/webgpu.h`) | `vcpkg.json` `builtin-baseline` 의 판 | BSD-3-Clause |
 | Tint 실행 파일 | 셰이더 쿠커의 SPIR-V → WGSL 단계 — `dawn[tint-tools]` 가 깔고 빌드가 App 옆에 둔다(`sw_copyTintTool`) | Dawn 과 같은 판 | BSD-3-Clause |
 | Android NDK | `libvulkan.so` · `libandroid.so` · `liblog.so`, `android_native_app_glue`(NDK 소스) — `Tools/Android/ndk/<판>`(`PlatformSdk.py android`) | `android_ndk_version` | Apache-2.0(NDK), 앱 글루 Apache-2.0 |
 | Android SDK build-tools · 플랫폼 | APK 패키징(aapt2 · zipalign · apksigner, android.jar) — `Tools/Android`(`PlatformSdk.py android`) | `android_build_tools` · `android_platform` | Apache-2.0 |
