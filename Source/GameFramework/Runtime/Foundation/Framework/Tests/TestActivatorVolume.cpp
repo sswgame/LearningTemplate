@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/AutosaveTriggerComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/SaveGate.h"
 
 // ActivatorVolumeTest — 볼륨 바탕(한 번 · 거리로 들어오기, 안에 있는 동안 되풀이하지 않기)을 자동 저장 볼륨으로 본다. 슬롯은 메모리 저장소다(nogpu, 물리 없음).
 
@@ -24,6 +25,7 @@ namespace
     {
         MemoryLocalDatabase        _database;
         unique_ptr<GameLocalStore> _pStore;
+        SaveGate                   _saveGate;
         AutosaveManager            _autosave;
         SubsystemScope             _scope;
         GameObjectManager          _manager;
@@ -36,7 +38,7 @@ namespace
         {
             AutosaveSettings settings;
             settings._interval = 0.0f;
-            SW_REQUIRE_TRUE( _autosave.initialize( settings, *_pStore, AutosaveManager::SaveDelegate::create( []( vector<uint8>& outBytes )
+            SW_REQUIRE_TRUE( _autosave.initialize( settings, *_pStore, _saveGate, AutosaveManager::SaveDelegate::create( []( vector<uint8>& outBytes )
             {
                 outBytes.push_back( 1 );
                 return true;

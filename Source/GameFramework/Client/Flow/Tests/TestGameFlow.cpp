@@ -9,6 +9,7 @@
 #include "GameFramework/Client/Flow/LoadingScreenController.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/ScreenTransitionManager.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/SaveGate.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 
 using namespace sw;
@@ -63,7 +64,8 @@ SW_TEST_CASE( GameFlowTest, GameWithoutTitleScene )
     GameSettings            settings;
     ScreenTransitionManager transition;
     LoadingScreenController loading;
-    GameSceneFlow           flow( settings, transition, &loading.getLoadingScreen() );
+    SaveGate                saveGate;
+    GameSceneFlow           flow( settings, transition, &loading.getLoadingScreen(), saveGate );
     SW_EXPECT_FALSE( flow.requestTitleScene() );
 
     UIGlobalCommandRegistry commands;
