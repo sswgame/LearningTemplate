@@ -313,8 +313,6 @@ namespace sw
                 return true;
             }
 
-            static bool walkChild( void* pContext, string_view name, bool bDirectory, bool bLink );
-
             /**
              * @brief 폴더 하나의 항목을 이름의 바이트 순으로 걷습니다. OS 가 주는 순서(NTFS 이름 순, ext4 해시 순)에 기대면 같은 트리가 플랫폼마다 다른 목록이 되어
              *        첫 일치를 고르는 쪽(Quick Open)이 갈렸다 — 훑는 모든 길이 이 한 곳을 지나 순서를 정한다(언리얼 `IterateDirectory` 는 순서를 정하지 않아 부른 쪽이 정렬한다).
