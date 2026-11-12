@@ -13,7 +13,7 @@
  *            첫 읽기 전의 말하기는 `_maxPendingSendPerMember` 개까지 대기시켰다가 읽기가 끝나면 처리한다.
  *          - 기록은 영속 테이블 `chat_history` 에 둔다. 키는 `<채널 id>/<보낸 시각 16진>.<서버 16진>.<순번 16진>` 이며 키 순서가 시간 순서이다.
  *            틱마다 쌓인 기록을 트랜잭션 하나로 쓰며 최선 노력이다. 실패하면 경고를 남기고 버린다.
- *            지우기는 TTL 규칙(`makeTTLRule`, 기간은 `ChatKitConfig::_historyRetentionDays`)이 한다. 기록을 쓰는 트랜잭션에 TTL 색인 `chat_history_expiry` 의
+ *            지우기는 TTL 규칙(`makeTTLRule`, 기간은 `ChatKitConfig::_historyTTL`)이 한다. 기록을 쓰는 트랜잭션에 TTL 색인 `chat_history_expiry` 의
  *            줄 `<날짜 끝 16진>/<채널 id>/`(채널 · 날짜마다 한 번)을 함께 넣고, 매일 쓸기가 기간이 지난 날짜의 채널만 범위 읽기로 지운다.
  *            새 글이 없는 채널(귓속말 쌍, 해산된 길드)도 색인 줄이 남아 있어 함께 지워진다(개인정보 보존 기간).
  *          - 신고(`reportMessage`)는 저장된 기록에서 그 메시지와 앞 메시지(`ChatLimit::kReportContextCount`)를 읽어 신고 레코드(`ServiceReportStore`)로 남긴다.

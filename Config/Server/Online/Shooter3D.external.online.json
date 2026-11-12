@@ -1,7 +1,11 @@
 {
     "_storeName": "main",
     "_cacheName": "main",
-    "_retentionMailSentDays": 90,
+    "_auditRetention": { "_expireAfterDays": 365, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_ledgerRetention": { "_expireAfterDays": 400, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 500 },
+    "_closedReportTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 2000, "_maxDeletePerSweep": 500 },
+    "_mailSentTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_ttlSweepMinuteOfDay": 300,
     "_listKit": [
         {
             "_name": "account",
@@ -12,7 +16,7 @@
         {
             "_name": "chat",
             "_settings": {
-                "_historyRetentionDays": 30,
+                "_historyTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 20000 },
                 "_bannedWordsFile": "Config/Server/chat_banned_words.txt",
                 "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt"
             }
@@ -30,7 +34,7 @@
         {
             "_name": "liveops",
             "_settings": {
-                "_pushClaimRetentionDays": 30,
+                "_pushClaimTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500 },
                 "_pushProvidersFile": "Config/Server/Online/Providers/Shooter3D.push.json",
                 "_pushTrustFile": "Config/Server/Online/ca-bundle.pem"
             }

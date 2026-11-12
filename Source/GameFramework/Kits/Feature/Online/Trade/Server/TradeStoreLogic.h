@@ -6,7 +6,7 @@
  *          - `trade_active`: 계정(16진)에서 거래 id 로 가는 테이블이다. 계정마다 열린 거래는 하나이며 "없어야 함" 조건으로 넣으므로 서버가 여러 대여도 하나뿐이다.
  *          - `trade_owner`: `<주인 서버 16진>/<거래 16진>` 키이며 재시작 복구에 쓰는 인덱스이다.
  *          - `trade_session_expiry`: 닫힌 거래의 TTL 색인 `<닫은 시각 16진>/<거래 16진>` 이다. 거래를 닫아 쓰는 트랜잭션(`stageSession`)이 함께 넣고,
- *            TTL 규칙(`makeTTLRule`, 기간은 `TradeKitConfig::_closedRetentionDays`)이 닫은 뒤 기간이 지난 거래 레코드를 지운다. 열린 거래는 지우지 않는다.
+ *            TTL 규칙(`makeTTLRule`, 기간은 `TradeKitConfig::_closedSessionTTL`)이 닫은 뒤 기간이 지난 거래 레코드를 지운다. 열린 거래는 지우지 않는다.
  *            지워도 다른 합 · 멱등이 깨지지 않는다: 정산 멱등은 원장 분개 `trade/<id>` 가 맡고(분개는 원장 보존 기간을 따른다), 남은 활성 링크는 다음 신청이
  *            "거래 없음" 으로 정리한다. 닫힌 거래의 확정 재시도는 기간 뒤에 NotFound 가 된다.
  *

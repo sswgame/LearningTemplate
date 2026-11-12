@@ -99,9 +99,11 @@ namespace
         ServiceTTLRule makeRule( int64 expireAfterMs = 1000 ) const
         {
             ServiceTTLRule rule;
-            rule._table         = _table;
-            rule._expireAfterMs = expireAfterMs;
-            rule._pfnReadTime   = &readLeadingTime;
+            rule._table             = _table;
+            rule._expireAfterMs     = expireAfterMs;
+            rule._pfnReadTime       = &readLeadingTime;
+            rule._maxScanPerSweep   = 100;
+            rule._maxDeletePerSweep = 100;
             return rule;
         }
 
@@ -444,17 +446,21 @@ SW_TEST_CASE( ServiceTTLTest, JobSweepsOnSchedule )
 
     ServiceScheduler scheduler;
     scheduler.initialize( &store, 1 );
-    ServiceTTLMonitorConfig settings;
-    settings._minuteOfDay = 0;
+    constexpr int32 kMinuteOfDay = 0;
 
     ServiceTTLMonitor empty;
-    SW_EXPECT_TRUE( empty.initialize( &store, &scheduler, {}, settings ) );
+    SW_EXPECT_TRUE( empty.initialize( &store, &scheduler, {}, kMinuteOfDay ) );
 
     ServiceTTLMonitor badRule;
-    SW_EXPECT_FALSE( badRule.initialize( &store, &scheduler, { rig.makeRule( 0 ) }, settings ) );
+    SW_EXPECT_FALSE( badRule.initialize( &store, &scheduler, { rig.makeRule( 0 ) }, kMinuteOfDay ) );
+
+    ServiceTTLRule unlimited     = rig.makeRule();
+    unlimited._maxDeletePerSweep = 0; // 상한은 설정이 정한다 - 없으면 기동 오류다
+    ServiceTTLMonitor noLimit;
+    SW_EXPECT_FALSE( noLimit.initialize( &store, &scheduler, { unlimited }, kMinuteOfDay ) );
 
     ServiceTTLMonitor job;
-    SW_REQUIRE_TRUE( job.initialize( &store, &scheduler, { rig.makeRule() }, settings ) );
+    SW_REQUIRE_TRUE( job.initialize( &store, &scheduler, { rig.makeRule() }, kMinuteOfDay ) );
     scheduler.update( UnixMilliseconds{ kNowMs } );
     while ( store.pollCompletions() > 0 )
     {

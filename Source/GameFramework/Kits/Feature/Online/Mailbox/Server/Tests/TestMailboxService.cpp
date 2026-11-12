@@ -394,7 +394,7 @@ SW_TEST_CASE( MailboxServiceTest, ServerAssembledFromConfigServesTheClient )
     MailboxClient              client; // 묶음보다 먼저 선언해 나중에 지운다 - 지울 때 스스로 등록을 푼다
     test::OnlineRuntimeFixture rig;
     {
-        const auto result = rig.fromConfig( kServerJSON, kOnlineJSON, kNowMs );
+        const auto result = rig.fromConfig( kServerJSON, test::OnlineRuntimeFixture::withBaseTTL( kOnlineJSON ), kNowMs );
         SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
     }
     const int32 clientIndex = rig._clients.connect( test::OnlineRuntimeFixture::kPort, { &client } );
@@ -413,7 +413,7 @@ SW_TEST_CASE( MailboxServiceTest, ServerAssembledFromConfigServesTheClient )
     SW_EXPECT_TRUE( bReplied );
 
     test::OnlineRuntimeFixture unnamed;
-    const auto                 failed1 = unnamed.fromConfig( kServerJSON, R"({ "_listKit": [ { "_name": "mailbox" } ] })", kNowMs );
+    const auto                 failed1 = unnamed.fromConfig( kServerJSON, test::OnlineRuntimeFixture::withBaseTTL( R"({ "_listKit": [ { "_name": "mailbox" } ] })" ), kNowMs );
     SW_REQUIRE_FALSE( failed1.has_value() );
     const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
     SW_EXPECT_TRUE( error1.find( "_storeName" ) != string::npos );

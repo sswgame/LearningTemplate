@@ -87,6 +87,11 @@ namespace sw
         return _expireAfterMs > 0 && ( _pfnReadTime != nullptr || _ttlIndexTable.empty() == false );
     }
 
+    bool ServiceTTLRule::isSchedulable() const
+    {
+        return isValid() && _maxScanPerSweep > 0 && _maxDeletePerSweep > 0;
+    }
+
     string ServiceTTLRule::makeTTLIndexKey( int64 timeMs, string_view target )
     {
         string key;

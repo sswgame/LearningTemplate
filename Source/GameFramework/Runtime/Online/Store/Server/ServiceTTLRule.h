@@ -57,6 +57,8 @@ namespace sw
         ServiceTTLTimeFn  _pfnReadTime{ nullptr };   ///< 색인 규칙은 비워도 된다(색인의 시각을 믿는다). 커서 규칙은 필수다
         ServiceTTLStageFn _pfnStageErase{ nullptr }; ///< 비우면 지우기만 한다. 값이 있으면 지우는 트랜잭션에 이 쓰기를 함께 넣는다
         string            _cursor{};                 ///< 다음 회차가 이어서 훑을 위치. 쓸기가 채운다
+        int32             _maxScanPerSweep{ 0 };     ///< 예약 쓸기 한 회차에 훑는 레코드 상한(Config JSON `ServiceTTLConfig`). 0 이면 예약 쓸기에 올리지 못한다
+        int32             _maxDeletePerSweep{ 0 };   ///< 예약 쓸기 한 회차에 지우는 레코드 상한(Config JSON `ServiceTTLConfig`)
 
         // 보존 기간 쓸기입니다. 저장소 스레드(`IServiceStoreJob::run` 안)에서 씁니다. */
         static constexpr int32 kPageSize = 64; ///< 한 트랜잭션의 쓰기 상한에 맞춘 한 쪽의 크기
@@ -72,6 +74,8 @@ namespace sw
 
         /** @brief 규칙이 쓸 수 있는 모양인지입니다. 기간이 양수이고, 커서 규칙이면 시각 읽기가 있어야 합니다. */
         bool isValid() const;
+        /** @brief 예약 쓸기(`ServiceTTLMonitor`)에 올릴 수 있는지입니다. 모양이 맞고 쓸기 상한 둘이 양수여야 합니다 — 상한은 표마다 크기가 달라 설정이 정한다. */
+        bool isSchedulable() const;
 
         /** @brief TTL 색인 키 `<기준 시각 16 진>/<대상>` 을 만듭니다. 대상이 `/` 로 끝나면 접두어 묶음입니다. 음수 시각은 0 으로 둡니다. */
         static string makeTTLIndexKey( int64 timeMs, string_view target );

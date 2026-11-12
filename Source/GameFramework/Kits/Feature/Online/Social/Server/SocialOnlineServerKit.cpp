@@ -1,7 +1,5 @@
 #include "pch.h"
 
-#include "Core/Foundation/Constants.h"
-
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/GroupChannelMembership.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialKitConfig.h"
@@ -69,7 +67,7 @@ namespace sw
                     .and_then( [&]
                 { return exposeInterface<IAccountBlockList>( context, entry, _blockList ); } )
                     .and_then( [&]
-                { return addTTLRule( context, entry, GuildService::makeInviteTTLRule( kitConfig._expiredInviteRetentionDays * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond ) ); } );
+                { return addTTLRule( context, entry, GuildService::makeInviteTTLRule( kitConfig._expiredInviteTTL.getExpireAfterMs() ), kitConfig._expiredInviteTTL ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override

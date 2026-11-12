@@ -79,6 +79,10 @@ def writeConfigs(outDir: Path, gamePort: int, servicePort: int, account: str = _
     onlineConfig = {
         "_storeName": "local",
         "_cacheName": "local",
+        # 기반 표 TTL 은 필수다(코드에 기본값이 없다). 짧은 짝 실행이라 지우지 않는다(기간 0).
+        **{name: {"_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1}
+           for name in ("_auditRetention", "_ledgerRetention", "_closedReportTTL", "_mailSentTTL")},
+        "_ttlSweepMinuteOfDay": 300,
         "_listKit": [
             {"_name": "account", "_settings": {
                 "_ticketKeySecretEnvironment": _kTicketKeyEnvironment,

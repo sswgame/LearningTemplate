@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Foundation/Constants.h"
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeKitConfig.h"
@@ -67,7 +66,7 @@ namespace sw
                 if ( expected<void> result = registerServerService( context, entry, &_server ); result.has_value() == false )
                     return result;
                 return addTTLRule( context, entry,
-                                   TradeStoreLogic::makeTTLRule( kitConfig._closedRetentionDays * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond ) );
+                                   TradeStoreLogic::makeTTLRule( kitConfig._closedSessionTTL.getExpireAfterMs() ), kitConfig._closedSessionTTL );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override

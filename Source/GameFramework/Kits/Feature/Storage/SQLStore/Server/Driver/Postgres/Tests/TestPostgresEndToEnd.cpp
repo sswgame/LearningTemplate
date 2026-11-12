@@ -735,7 +735,7 @@ SW_TEST_CASE( PostgresEndToEndTest, ConfigSelectsPostgresAndReachesTheEndpoint )
     test::OnlineRuntimeFixture rig;
     string                     error;
     {
-        const auto result = rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), PostgresEndToEndTestUtil::kOnlineJSON, kNowMs );
+        const auto result = rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseTTL( PostgresEndToEndTestUtil::kOnlineJSON ), kNowMs );
         SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
     }
     SW_EXPECT_TRUE( server.getMigrationCount() >= 2 );
@@ -800,7 +800,7 @@ SW_TEST_CASE( PostgresEndToEndTest, WrongPasswordStopsStartup )
 
     test::OnlineRuntimeFixture rig;
     string                     error;
-    error = describeError( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), PostgresEndToEndTestUtil::kOnlineJSON, kNowMs ) );
+    error = describeError( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseTTL( PostgresEndToEndTestUtil::kOnlineJSON ), kNowMs ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "postgres connection failed" ) != string::npos );
     SW_EXPECT_EQUAL( 0, server.getAuthenticatedCount() );
@@ -812,7 +812,7 @@ SW_TEST_CASE( PostgresEndToEndTest, MissingSecretStopsStartup )
     SW_EXPECT_LOG( "Server.SecretNotSet" );
     test::OnlineRuntimeFixture rig;
     string                     error;
-    error = describeError( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( 5432 ), PostgresEndToEndTestUtil::kOnlineJSON, kNowMs ) );
+    error = describeError( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( 5432 ), test::OnlineRuntimeFixture::withBaseTTL( PostgresEndToEndTestUtil::kOnlineJSON ), kNowMs ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "main" ) != string::npos );
 }

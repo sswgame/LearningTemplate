@@ -1,7 +1,11 @@
 {
     "_storeName": "local",
     "_cacheName": "local",
-    "_retentionMailSentDays": 90,
+    "_auditRetention": { "_expireAfterDays": 365, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_ledgerRetention": { "_expireAfterDays": 400, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 500 },
+    "_closedReportTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 2000, "_maxDeletePerSweep": 500 },
+    "_mailSentTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_ttlSweepMinuteOfDay": 300,
     "_publicAddress": "127.0.0.1",
     "_listKit": [
         {
@@ -19,7 +23,7 @@
         {
             "_name": "chat",
             "_settings": {
-                "_historyRetentionDays": 30,
+                "_historyTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 20000 },
                 "_bannedWordsFile": "Config/Server/chat_banned_words.txt",
                 "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt"
             }
@@ -35,8 +39,8 @@
         {
             "_name": "leaderboard",
             "_settings": {
-                "_pastScoreRetentionDays": 30,
-                "_seasonResultRetentionDays": 365,
+                "_pastScoreTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+                "_seasonResultTTL": { "_expireAfterDays": 365, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 },
                 "_catalog": "game/shooter3d/data/shooter3d.leaderboards.xml"
             }
         },

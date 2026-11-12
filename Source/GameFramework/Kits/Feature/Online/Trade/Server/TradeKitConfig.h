@@ -9,6 +9,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
+
 namespace sw
 {
     /** @brief 거래 키트의 서버 설정입니다. */
@@ -22,8 +24,8 @@ namespace sw
         /** @brief 한쪽이 내놓을 수 있는 자산 줄 수입니다. */
         PROPERTY( Min = 1 )
         int32 _maxLegsPerSide{ 8 };
-        /** @brief 닫힌 거래 레코드를 남기는 기간(일)입니다. 보존 쓸기가 닫은 뒤 이 기간이 지난 거래를 지웁니다(분쟁 조회 기간). */
-        PROPERTY( Min = 1, Max = 3650 )
-        int32 _closedRetentionDays{ 90 };
+        /** @brief 닫힌 거래 레코드의 TTL 입니다. TTL 쓸기가 닫은 뒤 이 기간이 지난 거래를 지웁니다(분쟁 조회 기간). */
+        PROPERTY( Required )
+        ServiceTTLConfig _closedSessionTTL{};
     };
 } // namespace sw

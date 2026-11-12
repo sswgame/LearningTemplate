@@ -18,13 +18,13 @@ namespace sw
         };
 
         /** @brief 규칙 사본을 저장소 스레드에서 쓸습니다. 한 테이블이 실패해도 다른 테이블은 이어서 쓴다. */
-        ServiceTTLSweepResult sweepRules( IServiceStoreConnection& connection, vector<ServiceTTLRule> listRule, int64 nowMs, const ServiceTTLMonitorConfig& settings )
+        ServiceTTLSweepResult sweepRules( IServiceStoreConnection& connection, vector<ServiceTTLRule> listRule, int64 nowMs )
         {
             ServiceTTLSweepResult sweep;
             for ( ServiceTTLRule& rule : listRule )
             {
                 ServiceTTLSweepReport    report;
-                const ServiceStoreResult swept = ServiceTTLRule::sweep( connection, rule, nowMs, settings._maxScanPerRule, settings._maxDeletePerRule, report );
+                const ServiceStoreResult swept = ServiceTTLRule::sweep( connection, rule, nowMs, rule._maxScanPerSweep, rule._maxDeletePerSweep, report );
                 sweep._deletedCount += report._deletedCount;
                 if ( report._deletedCount > 0 )
                     SW_LOG_INFO_ID( "ServiceTTLMonitor.TTLSweptTableDeleted", "TTL swept table '%#': deleted %# of %# scanned", rule._table.c_str(), report._deletedCount, report._scannedCount );
@@ -41,7 +41,6 @@ namespace sw
 
     ServiceTTLMonitor::ServiceTTLMonitor()
         : _listRule{}
-        , _settings{}
         , _pScheduler{ nullptr }
         , _lastDeletedCount{ 0 }
         , _sweepJob{}
@@ -54,29 +53,28 @@ namespace sw
         shutdown();
     }
 
-    bool ServiceTTLMonitor::initialize( IServiceStore* pStore, ServiceScheduler* pScheduler, vector<ServiceTTLRule> listRule, const ServiceTTLMonitorConfig& settings )
+    bool ServiceTTLMonitor::initialize( IServiceStore* pStore, ServiceScheduler* pScheduler, vector<ServiceTTLRule> listRule, int32 minuteOfDay )
     {
         if ( listRule.empty() )
             return true;
         for ( const ServiceTTLRule& rule : listRule )
         {
-            if ( rule.isValid() == false )
+            if ( rule.isSchedulable() == false )
             {
-                SW_LOG_ERROR_ID( "ServiceTTLMonitor.ServiceTTLMonitorRuleTableNeeds", "ServiceTTLMonitor: the rule of table '%#' needs a positive expire-after and a time reader or a TTL index", rule._table.c_str() );
+                SW_LOG_ERROR_ID( "ServiceTTLMonitor.ServiceTTLMonitorRuleTableNeeds", "ServiceTTLMonitor: the rule of table '%#' needs a positive expire-after, a time reader or a TTL index, and positive sweep limits", rule._table.c_str() );
                 return false;
             }
         }
         _store.bindStore( pStore );
         _pScheduler = pScheduler;
-        _settings   = settings;
         _listRule   = std::move( listRule );
         ScheduleDef schedule;
         schedule._jobID       = kJobID;
         schedule._kind        = ScheduleKind::Daily;
-        schedule._minuteOfDay = settings._minuteOfDay;
+        schedule._minuteOfDay = minuteOfDay;
         if ( _pScheduler->registerJob( schedule, ScheduledJobFunction::create<&ServiceTTLMonitor::onScheduledRun>( this ) ) == false )
         {
-            SW_LOG_ERROR_ID( "ServiceTTLMonitor.ServiceTTLMonitorSweepJobCould", "ServiceTTLMonitor: the sweep job could not be scheduled (minute of day %#)", settings._minuteOfDay );
+            SW_LOG_ERROR_ID( "ServiceTTLMonitor.ServiceTTLMonitorSweepJobCould", "ServiceTTLMonitor: the sweep job could not be scheduled (minute of day %#)", minuteOfDay );
             return false;
         }
         return true;
@@ -97,8 +95,8 @@ namespace sw
         _sweepJob.holdRun( run );
         if ( _sweepJob.tryStart( run._occurrenceMs ) == false )
             return;
-        _store.submit( [listRule = _listRule, nowMs = run._occurrenceMs.count(), settings = _settings]( IServiceStoreConnection& connection )
-        { return sweepRules( connection, listRule, nowMs, settings ); },
+        _store.submit( [listRule = _listRule, nowMs = run._occurrenceMs.count()]( IServiceStoreConnection& connection )
+        { return sweepRules( connection, listRule, nowMs ); },
                        [this]( ServiceTTLSweepResult& sweep, ServiceStoreCompletion completion )
         {
             if ( completion.isCancelled() == false ) // 종료 때문에 취소된 일은 오류로 남기지 않는다

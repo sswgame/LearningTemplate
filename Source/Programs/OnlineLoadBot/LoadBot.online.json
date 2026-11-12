@@ -5,13 +5,18 @@
     "_ioThreadCount": 0,
     "_requestBurstPerRemote": 1000000,
     "_requestBurstPerAccount": 1000000,
+    "_auditRetention": { "_expireAfterDays": 365, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_ledgerRetention": { "_expireAfterDays": 400, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 500 },
+    "_closedReportTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 2000, "_maxDeletePerSweep": 500 },
+    "_mailSentTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_ttlSweepMinuteOfDay": 300,
     "_listKit": [
         { "_name": "account", "_settings": { "_attemptBurst": 1000000 } },
         { "_name": "directory" },
-        { "_name": "chat", "_settings": { "_bannedWordsFile": "", "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt" } },
-        { "_name": "social" },
-        { "_name": "leaderboard", "_settings": { "_listBoardID": [ "kills" ] } },
+        { "_name": "chat", "_settings": { "_historyTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 20000 }, "_bannedWordsFile": "", "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt" } },
+        { "_name": "social", "_settings": { "_expiredInviteTTL": { "_expireAfterDays": 7, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 } } },
+        { "_name": "leaderboard", "_settings": { "_pastScoreTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 }, "_seasonResultTTL": { "_expireAfterDays": 365, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 }, "_listBoardID": [ "kills" ] } },
         { "_name": "matchmaking", "_settings": { "_listMode": [ { "_modeID": "solo", "_teamCount": 2, "_teamSize": 1 }, { "_modeID": "duo", "_teamCount": 2, "_teamSize": 2 } ] } },
-        { "_name": "liveops" }
+        { "_name": "liveops", "_settings": { "_pushClaimTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500 } } }
     ]
 }

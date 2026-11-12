@@ -167,11 +167,11 @@ namespace sw
         }
 
         /**
-         * @brief 이 키트 테이블의 TTL 규칙 @p rule 을 문맥에 올립니다. 런타임이 모든 키트의 `initialize` 뒤에 기반 규칙(감사 · 원장 · 신고 · 보낸 우편)과 함께 매일 쓸기에 넘깁니다.
+         * @brief 이 키트 테이블의 TTL 규칙 @p rule 에 설정 @p config 의 쓸기 상한을 넣어 문맥에 올립니다. 런타임이 모든 키트의 `initialize` 뒤에 기반 규칙(감사 · 원장 · 신고 · 보낸 우편)과 함께 매일 쓸기에 넘깁니다.
          * @details 기간은 키트 설정(Config JSON)에서 읽어 넣습니다. 규칙이 틀렸거나(기간 · 시각 읽기 · 색인이 없다) 같은 테이블 · 접두어 규칙이 이미 있으면 대상이 키트 이름인 오류입니다.
          *          테이블 주인이 보존을 정하는 자리다 — PlayFab 의 데이터 보존 정책, Nakama 의 저장소 TTL 과 같다.
          */
-        [[nodiscard]] static expected<void> addTTLRule( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, ServiceTTLRule rule );
+        [[nodiscard]] static expected<void> addTTLRule( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, ServiceTTLRule rule, const ServiceTTLConfig& config );
 
     private:
         uint8 _bStarted : 1;

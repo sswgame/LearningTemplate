@@ -368,7 +368,7 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
             "_refundRecovery": "Debt",
             "_receiptProvidersFile": "%#"%# } } ] })",
                                     test::ScopedScratchDomain::kDomain, test::ScopedScratchDomain::kDomain, providersFile, trustOption );
-        return string( resultBuilder.view() );
+        return test::OnlineRuntimeFixture::withBaseTTL( resultBuilder.view() );
     };
 
     {

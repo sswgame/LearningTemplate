@@ -698,7 +698,21 @@
     "makeTopicClaimRetentionRule": "PushNotificationDispatcher::makeTopicClaimTTLRule(2026-11-12)",
     "makeRetentionRule": "makeTTLRule — TTL 규칙을 만든다(2026-11-12)",
     "makeRetentionRules": "makeTTLRules — 기반 TTL 규칙(2026-11-12)",
-    "makeRetentionSettings": "ServiceTTLRule 쓸기 상한은 규칙마다 Config JSON 에서(2026-11-12)"
+    "makeRetentionSettings": "ServiceTTLRule 쓸기 상한은 규칙마다 Config JSON 에서(2026-11-12)",
+    "ServiceTTLMonitorConfig": "ServiceTTLRule::_maxScanPerSweep · _maxDeletePerSweep — 쓸기 상한은 규칙마다 Config JSON(ServiceTTLConfig)에서(2026-11-12)",
+    "_retentionAuditDays": "OnlineServerConfig::_auditRetention — 기간과 쓸기 상한을 함께 적는 ServiceTTLConfig(2026-11-12)",
+    "_retentionLedgerDays": "OnlineServerConfig::_ledgerRetention(ServiceTTLConfig)(2026-11-12)",
+    "_retentionReportDays": "OnlineServerConfig::_closedReportTTL(ServiceTTLConfig)(2026-11-12)",
+    "_retentionMailSentDays": "OnlineServerConfig::_mailSentTTL(ServiceTTLConfig)(2026-11-12)",
+    "_retentionMinuteOfDay": "OnlineServerConfig::_ttlSweepMinuteOfDay(2026-11-12)",
+    "_historyRetentionDays": "ChatKitConfig::_historyTTL(ServiceTTLConfig)(2026-11-12)",
+    "_pastScoreRetentionDays": "LeaderboardKitConfig::_pastScoreTTL(ServiceTTLConfig)(2026-11-12)",
+    "_seasonResultRetentionDays": "LeaderboardKitConfig::_seasonResultTTL(ServiceTTLConfig)(2026-11-12)",
+    "_pushClaimRetentionDays": "LiveOpsKitConfig::_pushClaimTTL(ServiceTTLConfig)(2026-11-12)",
+    "_expiredInviteRetentionDays": "SocialKitConfig::_expiredInviteTTL(ServiceTTLConfig)(2026-11-12)",
+    "_closedRetentionDays": "TradeKitConfig::_closedSessionTTL(ServiceTTLConfig)(2026-11-12)",
+    "_maxScanPerRule": "ServiceTTLRule::_maxScanPerSweep — 규칙마다 Config JSON 에서(2026-11-12)",
+    "_maxDeletePerRule": "ServiceTTLRule::_maxDeletePerSweep — 규칙마다 Config JSON 에서(2026-11-12)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",

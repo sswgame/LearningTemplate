@@ -3,9 +3,12 @@
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 
 #include "Core/File/ProcessRoots.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
+
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
@@ -21,6 +24,17 @@ namespace sw
 
 namespace sw
 {
+    int64 ServiceTTLConfig::getExpireAfterMs() const
+    {
+        return static_cast<int64>( _expireAfterDays ) * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond;
+    }
+
+    void ServiceTTLConfig::applySweepLimits( ServiceTTLRule& inoutRule ) const
+    {
+        inoutRule._maxScanPerSweep   = _maxScanPerSweep;
+        inoutRule._maxDeletePerSweep = _maxDeletePerSweep;
+    }
+
     expected<void> OnlineServerKitEntry::readSettingsInto( void* pSettings, const TypeInfo& typeInfo ) const
     {
         const string label = "kit '" + _name + "' settings";

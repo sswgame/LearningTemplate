@@ -70,42 +70,42 @@ namespace sw
             /** @brief 분개를 내역보다 하루 더 남긴다 — 내역이 가리키는 분개가 먼저 사라지지 않게 한다. */
             static constexpr int64 kJournalExtraDays = 1;
 
-            static ServiceTTLRule makeTTLRule( const hashed_string& table, int64 days, ServiceTTLTimeFn pfnReadTime )
+            /** @brief 기반 규칙 @p rule 에 설정 @p config 의 기간 · 쓸기 상한을 넣어 @p inoutListRule 에 붙입니다. 기간 0 은 그 표를 지우지 않는다는 뜻이라 붙이지 않는다. */
+            static void addBaseRule( vector<ServiceTTLRule>& inoutListRule, ServiceTTLRule rule, const ServiceTTLConfig& config )
+            {
+                if ( config._expireAfterDays == 0 )
+                    return;
+                rule._expireAfterMs = config.getExpireAfterMs();
+                config.applySweepLimits( rule );
+                inoutListRule.push_back( std::move( rule ) );
+            }
+
+            static ServiceTTLRule makeCursorRule( const hashed_string& table, ServiceTTLTimeFn pfnReadTime )
             {
                 ServiceTTLRule rule;
-                rule._table         = table;
-                rule._expireAfterMs = days * kDayMs;
-                rule._pfnReadTime   = pfnReadTime;
+                rule._table       = table;
+                rule._pfnReadTime = pfnReadTime;
                 return rule;
             }
 
-            /** @brief 설정의 보존 일수(0 이면 지우지 않음)로 쓸기 규칙을 만듭니다. */
+            /** @brief 설정의 기반 표 TTL(감사 · 원장 · 닫힌 신고 · 보낸 우편)로 쓸기 규칙을 만듭니다. */
             static vector<ServiceTTLRule> makeTTLRules( const OnlineServerConfig& config )
             {
                 vector<ServiceTTLRule> listRule;
-                if ( config._retentionAuditDays > 0 )
-                    listRule.push_back( makeTTLRule( ServiceAuditLog::getTable(), config._retentionAuditDays, &ServiceAuditLog::readTimeMs ) );
-                if ( config._retentionLedgerDays > 0 )
+                addBaseRule( listRule, makeCursorRule( ServiceAuditLog::getTable(), &ServiceAuditLog::readTimeMs ), config._auditRetention );
+                addBaseRule( listRule, makeCursorRule( Ledger::getHistoryTable(), &Ledger::readHistoryTimeMs ), config._ledgerRetention );
+                if ( config._ledgerRetention._expireAfterDays > 0 )
                 {
-                    listRule.push_back( makeTTLRule( Ledger::getHistoryTable(), config._retentionLedgerDays, &Ledger::readHistoryTimeMs ) );
-                    listRule.push_back( Ledger::makeJournalRetentionRule( ( config._retentionLedgerDays + kJournalExtraDays ) * kDayMs ) ); // 지우는 분개의 공급 합을 이월에 남긴다
+                    ServiceTTLRule journal = Ledger::makeJournalRetentionRule( ( config._ledgerRetention._expireAfterDays + kJournalExtraDays ) * kDayMs ); // 지우는 분개의 공급 합을 이월에 남긴다
+                    config._ledgerRetention.applySweepLimits( journal );
+                    listRule.push_back( std::move( journal ) );
                 }
-                if ( config._retentionReportDays > 0 )
-                {
-                    ServiceTTLRule rule = makeTTLRule( ServiceReportStore::getTable(), config._retentionReportDays, &ServiceReportStore::readClosedTimeMs );
-                    rule._keyPrefix     = "closed/";
-                    listRule.push_back( std::move( rule ) );
-                }
-                if ( config._retentionMailSentDays > 0 ) // 우편 자체는 우편함 만료 정리가 지운다. 보낸 기록은 멱등 창이라 따로 둔다
-                    listRule.push_back( makeTTLRule( ServiceMail::getSentTable(), config._retentionMailSentDays, &ServiceMail::readSentTimeMs ) );
+                ServiceTTLRule report = makeCursorRule( ServiceReportStore::getTable(), &ServiceReportStore::readClosedTimeMs );
+                report._keyPrefix     = "closed/";
+                addBaseRule( listRule, std::move( report ), config._closedReportTTL );
+                // 우편 자체는 우편함 만료 정리가 지운다. 보낸 기록은 멱등 창이라 따로 둔다
+                addBaseRule( listRule, makeCursorRule( ServiceMail::getSentTable(), &ServiceMail::readSentTimeMs ), config._mailSentTTL );
                 return listRule;
-            }
-
-            static ServiceTTLMonitorConfig makeTTLMonitorConfig( const OnlineServerConfig& config )
-            {
-                ServiceTTLMonitorConfig settings;
-                settings._minuteOfDay = config._retentionMinuteOfDay;
-                return settings;
             }
 
             /** @brief 설정의 키트 목록에 @p name 이 있는지입니다. */
@@ -240,7 +240,7 @@ namespace sw
         unique_ptr<IStreamTransport>        _ownedAdminTransport{};
         unique_ptr<ITLSContext>             _tlsContext{};
         ServiceScheduler                    _scheduler{};
-        ServiceTTLMonitor                   _retention{};
+        ServiceTTLMonitor                   _ttlMonitor{};
         RemoteConfig                        _remoteConfig{};
         OnlineServiceHost                   _host{};
         unique_ptr<EphemeralServerBus>      _bus{};
@@ -291,7 +291,7 @@ namespace sw
             // 키트가 모두 멈춘 뒤다. 시작하지 않았어도 종료해도 된다 — 호스트는 자기 초기화 비트를 보고, 스케줄러는 목록과 저장소 포인터를 비울 뿐이다.
             Parts& parts = *_runtime._parts;
             parts._host.shutdown();
-            parts._retention.shutdown(); // 저장소가 살아 있을 때 맡긴 쓸기를 회수한다
+            parts._ttlMonitor.shutdown(); // 저장소가 살아 있을 때 맡긴 쓸기를 회수한다
             parts._scheduler.shutdown();
             if ( parts._store != nullptr )
             {
@@ -388,8 +388,8 @@ namespace sw
                 listRule.push_back( std::move( rule ) );
             }
             parts._context._listTTLRule.clear();
-            if ( parts._retention.initialize( parts._store.get(), &parts._scheduler, std::move( listRule ), Internal::makeTTLMonitorConfig( parts._config ) ) == false )
-                return unexpected( Error{ ErrorKind::ExternalFailure, "the retention sweep job could not be scheduled" } );
+            if ( parts._ttlMonitor.initialize( parts._store.get(), &parts._scheduler, std::move( listRule ), parts._config._ttlSweepMinuteOfDay ) == false )
+                return unexpected( Error{ ErrorKind::ExternalFailure, "the TTL sweep job could not be scheduled" } );
         }
         if ( expected<void> host = startHost( settings ); host.has_value() == false )
             return host;

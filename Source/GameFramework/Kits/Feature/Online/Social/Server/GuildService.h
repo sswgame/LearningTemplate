@@ -6,7 +6,7 @@
  *            이름은 `social_guild_name` 에 ASCII 소문자로 바꾼 바이트의 16진 문자열로 두므로 대소문자를 무시하고 유일하다.
  *            초대는 `social_guild_invite`(`<계정>/<길드>`, 7일)에, 순번은 `social_sequence/guild` 에 두며 순번은 만들기와 같은 트랜잭션에서 늘린다.
  *            초대를 쓰는 트랜잭션이 TTL 색인 `social_guild_invite_expiry`(`<만료 16진>/<초대 키>`)를 함께 넣고, TTL 규칙(`makeInviteTTLRule`,
- *            기간은 `SocialKitConfig::_expiredInviteRetentionDays`)이 만료 뒤 기간이 지난 초대를 지운다. 다시 보내 늦춰진 초대는 새 줄이 맡는다.
+ *            기간은 `SocialKitConfig::_expiredInviteTTL`)이 만료 뒤 기간이 지난 초대를 지운다. 다시 보내 늦춰진 초대는 새 줄이 맡는다.
  *            초대는 수락 권한일 뿐 다른 합 · 멱등의 근거가 아니다 — 만료된 초대는 지우기 전에도 수락이 거절된다.
  *          - 한 계정은 한 길드에만 들어간다. 계정의 길드를 "없어야 함" 조건으로 쓰기 때문이다. 정원은 100명이다.
  *            길드장은 혼자일 때만 떠날 수 있고 그때 길드가 해산되며 이름도 지운다. 내보내기는 더 높은 역할만 할 수 있다.
