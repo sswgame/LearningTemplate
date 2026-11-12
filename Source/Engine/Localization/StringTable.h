@@ -3,6 +3,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -41,6 +42,30 @@ namespace sw
     };
 
     /**
+     * @class LocalizationKeyIndex
+     * @brief 현지화 키의 해시(64 비트, 대소문자 무시 FNV-1a)를 정하고, 같은 해시에 다른 키가 오면 오류로 멈추게 하는 색인입니다.
+     * @details 실행 표 · 쿠킹된 `.locres` 는 키 글을 버리고 해시만 쓴다. 그래서 해시는 **밖으로 나가는 키**다 — 32 비트(`hashed_string::getHash`)면
+     *          키 3 만 개에 충돌 약 10 % 이고 나중 것이 조용히 이겼다. 64 비트로 올리고, 키 글이 보이는 곳(프로젝트 읽기 · 쿠킹)에서는 이 색인으로 "같은 해시, 다른 키" 를 거절한다.
+     *          언리얼 `FTextKey` 는 해시로 버킷만 고르고 키 글을 비교한다 — 여기는 키 글을 들지 않는 대신 글이 있는 단계에서 충돌을 막는다(Godot `StringName` 도 글 비교).
+     *          대소문자만 다른 철자는 같은 키다(`hashed_string` 과 같은 FName 규칙).
+     */
+    class SW_API LocalizationKeyIndex
+    {
+    public:
+        /** @brief 키의 해시입니다. 실행 표 · `.locres` 가 모두 이 값으로 연다. */
+        [[nodiscard]] static uint64 computeHash( string_view key );
+
+        /** @brief @p key 를 넣고 해시를 돌려줍니다. 같은 해시에 다른 키가 이미 있으면 `AlreadyExists` 오류이고 아무것도 바꾸지 않습니다. */
+        [[nodiscard]] expected<uint64> add( string_view key );
+        /** @brief @p keyHash 로 넣습니다. 테스트가 충돌을 일부러 만들 때와 `add` 가 쓴다. */
+        [[nodiscard]] expected<uint64> addWithHash( string_view key, uint64 keyHash );
+        void                           clear();
+
+    private:
+        unordered_map<uint64, string> _mapKeyByHash; ///< 해시 → 처음 들어온 키 철자
+    };
+
+    /**
      * @class StringTable
      * @brief 문화권 하나의 실행 테이블(키 해시 → 텍스트)입니다. 파일을 읽지 않으며, `LocalizationManager` 가 원문과 번역 테이블 문서에서 채웁니다.
      */
@@ -72,7 +97,7 @@ namespace sw
         [[nodiscard]] const utf8* findByHash( uint64 keyHash ) const;
         bool                      contains( const hashed_string& key ) const;
         void                      setString( const hashed_string& key, const string& value );
-        /** @brief 키 해시로 넣습니다. 키를 intern 하지 않습니다(`hashed_string::computeHash` 와 같은 해시). */
+        /** @brief 키 해시로 넣습니다. 키를 intern 하지 않습니다(`LocalizationKeyIndex::computeHash` 의 해시). */
         void   setStringByHash( uint64 keyHash, string_view value );
         void   clear();
         size_t size() const;
