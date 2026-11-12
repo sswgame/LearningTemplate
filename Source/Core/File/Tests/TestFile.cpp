@@ -342,6 +342,32 @@ SW_TEST_CASE( FileTest, DirectoryWalkCollectsFilesAndFolders )
 }
 
 /**
+ * @brief [FileTest] 모은 파일 · 폴더는 바이트 순이다 — 훑는 순서(NTFS 이름 순, ext4 해시 순)에 기대지 않는다.
+ * @details 정렬하지 않으면 Linux 에서 `scratch/…` 사본이 `engine/…` 원본보다 먼저 나와 Quick Open 이 사본을 골랐다(editor.sequencerkeys).
+ */
+SW_TEST_CASE( FileTest, CollectedPathsAreSortedOnEveryPlatform )
+{
+    const sw::string rootDir = sw::test::makeScratchPath( "sw_walk_sorted" );
+    for ( const char* pFolder : { "scratch", "engine", "common", "game", "editor" } )
+    {
+        const sw::string folder = sw::FileUtil::joinPath( rootDir, pFolder );
+        SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( folder ) );
+        SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "same.txt" ), "a" ) );
+    }
+
+    sw::vector<sw::string> listFile{ "keep-first" }; // 부른 쪽이 넣어 둔 항목은 건드리지 않는다
+    SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rootDir, ".txt", listFile, true ) );
+    SW_REQUIRE_EQUAL( size_t( 6 ), listFile.size() );
+    SW_EXPECT_TRUE( listFile[0] == "keep-first" );
+    SW_EXPECT_TRUE( std::is_sorted( listFile.begin() + 1, listFile.end() ) );
+
+    sw::vector<sw::string> listFolder;
+    SW_EXPECT_TRUE( sw::FileUtil::collectFolders( rootDir, listFolder, true ) );
+    SW_EXPECT_EQUAL( size_t( 5 ), listFolder.size() );
+    SW_EXPECT_TRUE( std::is_sorted( listFolder.begin(), listFolder.end() ) );
+}
+
+/**
  * @brief [FileTest] 쓰기는 원자적이다: 다 쓴 뒤 바꿔 끼우고, 같은 폴더에 임시 파일을 남기지 않는다.
  * @details 원본을 "wb" 로 열어 그 자리에 쓰면 도중에 실패할 때 원본이 빈 파일로 남는다.
  */
