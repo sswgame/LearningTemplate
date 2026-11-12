@@ -37,6 +37,7 @@ function(sw_defineEngineABIStamp)
 		OUTPUT "${SW_ENGINE_ABI_STAMP_HEADER}"
 		COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/EngineABIStamp.py"
 			--root "${CMAKE_SOURCE_DIR}" --out "${SW_ENGINE_ABI_STAMP_HEADER}"
+			--cache "${CMAKE_BINARY_DIR}/generated/engineabi/EngineABIStamp.cache.json" # 파일 지문 캐시 — 바뀐 헤더만 다시 읽는다
 		DEPENDS ${swEngineABIHeaders} "${CMAKE_SOURCE_DIR}/Scripts/generate/EngineABIStamp.py"
 		COMMENT "Fingerprinting Core/Engine headers for the hot reload ABI stamp"
 		VERBATIM

@@ -4,16 +4,16 @@
 다시 링크되지 못해도(잠김) 모듈은 **새 헤더로** 빌드되어 써질 수 있습니다. 그 모듈을 올리면 돌고 있는 엔진과 구조체 배치 · vtable 이
 어긋나 조용히 망가집니다. 그래서 Engine 과 모듈이 **같은 헤더 지문**을 바이너리에 박고, 핫 리로드는 올리기 전에 둘을 대조합니다.
 
-지문은 헤더 내용 전부(주석 포함)입니다. 주석만 바꿔도 스탬프가 바뀌는 것은 일부러입니다 — 헤더가 바뀐 빌드는 Engine 도 다시 링크해야
+지문은 헤더 내용 전부(주석 포함)입니다 — 경로와 파일마다의 내용 SHA-1 을 차례로 넣은 SHA-1 이고, 파일 지문은 빌드 트리의 캐시(`--cache`)에서
+(mtime, 크기)가 같으면 다시 읽지 않습니다(`FileDigestCache.py`). 주석만 바꿔도 스탬프가 바뀌는 것은 일부러입니다 — 헤더가 바뀐 빌드는 Engine 도 다시 링크해야
 맞으므로, 그 빌드의 모듈은 재시작 전까지 받지 않는 쪽이 안전합니다. 내용이 같으면 파일을 다시 쓰지 않아(재빌드를 부르지 않는다)
 Ninja 의 restat 이 그 뒤를 멈춥니다.
 
-사용법: py -3 Scripts/generate/EngineABIStamp.py --root <repo> --out <path/EngineABIStamp.gen.h>
+사용법: py -3 Scripts/generate/EngineABIStamp.py --root <repo> --out <path/EngineABIStamp.gen.h> --cache <빌드 트리 안 json>
 """
 from __future__ import annotations
 
 import argparse
-import hashlib
 import os
 import sys
 from pathlib import Path
@@ -21,6 +21,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
+from generate.FileDigestCache import FileDigestCache  # noqa: E402
 from generate.GeneratorOutput import writeGeneratedFile  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 
@@ -48,16 +49,9 @@ def collectHeaderPathsInternal(repositoryRoot: Path) -> list[str]:
     return listPath
 
 
-def computeStampInternal(repositoryRoot: Path) -> str:
-    """헤더 경로와 내용(줄 끝은 LF 로 맞춤)을 차례로 넣은 SHA-1 입니다. 체크아웃마다 다른 CRLF 가 스탬프를 바꾸지 않게 합니다."""
-    digest = hashlib.sha1()
-    for relativePath in collectHeaderPathsInternal(repositoryRoot):
-        content = (repositoryRoot / relativePath).read_bytes().replace(b"\r\n", b"\n")
-        digest.update(relativePath.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(content)
-        digest.update(b"\0")
-    return digest.hexdigest()
+def computeStampInternal(repositoryRoot: Path, cache: FileDigestCache) -> str:
+    """헤더 경로와 내용 지문(줄 끝은 LF 로 맞춤)을 차례로 넣은 SHA-1 입니다. 체크아웃마다 다른 CRLF 가 스탬프를 바꾸지 않게 합니다."""
+    return cache.treeDigest(repositoryRoot, collectHeaderPathsInternal(repositoryRoot)).hex()
 
 
 def makeHeaderTextInternal(stamp: str) -> str:
@@ -74,9 +68,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Core · Engine 헤더 지문(핫 리로드 ABI 도장)을 씁니다.")
     parser.add_argument("--root", required=True, help="저장소 루트")
     parser.add_argument("--out", required=True, help="쓸 헤더 경로")
+    parser.add_argument("--cache", required=True, help="파일 지문 캐시(빌드 트리 안 JSON)")
     args = parser.parse_args(argv)
 
-    text = makeHeaderTextInternal(computeStampInternal(Path(os.path.normpath(Path(args.root).absolute()))))
+    cache = FileDigestCache(Path(args.cache))
+    text = makeHeaderTextInternal(computeStampInternal(Path(os.path.normpath(Path(args.root).absolute())), cache))
+    cache.save()
     # 빌드마다 도는 단계라 바뀐 때만 한 줄 찍는다. 줄끝은 LF(어느 체크아웃에서나 같은 바이트).
     writeGeneratedFile(Path(args.out), text, tag="EngineABIStamp", newline="\n", bReportUnchanged=False)
     return ExitCode.Passed

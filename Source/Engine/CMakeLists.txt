@@ -148,6 +148,7 @@ add_custom_command(
 	COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/CookCodeFingerprint.py"
 		--root "${CMAKE_SOURCE_DIR}" --inputs "${CMAKE_SOURCE_DIR}/Config/Dev/CookCodeInputs.json"
 		--vcpkg-status "${swCookVcpkgStatus}" --out "${swCookCodeHeader}"
+		--cache "${CMAKE_BINARY_DIR}/generated/engineabi/CookCodeFingerprint.cache.json" # 파일 지문 캐시 — 바뀐 소스만 다시 읽는다
 	DEPENDS ${swCookCodeInputs} "${CMAKE_SOURCE_DIR}/Config/Dev/CookCodeInputs.json" "${swCookVcpkgStatus}"
 		"${CMAKE_SOURCE_DIR}/Scripts/generate/CookCodeFingerprint.py"
 	COMMENT "Fingerprinting cooker code"
