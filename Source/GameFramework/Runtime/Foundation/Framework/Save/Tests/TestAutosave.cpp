@@ -6,16 +6,28 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/SaveGate.h"
 
-// AutosaveTest — 자동 저장 정책(순환 슬롯 · 요청 합치기 · 최소 간격 · 막기 · 종료 · 체크포인트 되돌리기). 슬롯은 메모리 로컬 저장소에 쓴다(nogpu, 디스크 없음).
+// AutosaveTest — 자동 저장 정책(순환 슬롯 · 요청 합치기 · 최소 간격 · 막기 문 · 종료 · 체크포인트 되돌리기 · 깨진 복원). 슬롯은 메모리 로컬 저장소에 쓴다(nogpu, 디스크 없음).
 
 namespace
 {
-    /** @brief 상태 만들기 · 되살리기를 흉내 냅니다. 저장마다 번호를 붙인 바이트를 만들고, 되살리기는 받은 바이트를 적어 둡니다. */
+    /**
+     * @brief 상태 만들기 · 되살리기를 흉내 냅니다. 저장마다 번호를 붙인 바이트를 만들고, 되살리기는 받은 바이트를 적어 둡니다.
+     * @details 게임 인스턴스처럼 세이브 막기 문을 들고, `_bBreakRestore` 면 되살리기가 "씬을 비운 뒤 졌다" 로 막기를 건다(`GameInstance::readStateEnvelope`). 성공한 되살리기가 푼다.
+     */
     struct FakeGame
     {
         sw::vector<sw::string> _listSavedState{};
         sw::string             _loadedState{};
+        sw::SaveGate           _saveGate{};
+        sw::Subscription       _brokenRestoreBlock{};
+        uint8                  _bBreakRestore : 1;
+
+        FakeGame()
+            : _bBreakRestore{ SW_FALSE }
+        {
+        }
 
         sw::AutosaveManager::SaveDelegate makeSave()
         {
@@ -33,6 +45,12 @@ namespace
         {
             return sw::AutosaveManager::LoadDelegate::create( [this]( const sw::vector<uint8>& bytes )
             {
+                if ( _bBreakRestore == SW_TRUE )
+                {
+                    _brokenRestoreBlock = _saveGate.block( sw::hashed_string( "restore.broken" ) );
+                    return false;
+                }
+                _brokenRestoreBlock.reset();
                 _loadedState.assign( bytes.begin(), bytes.end() );
                 return true;
             } );
@@ -72,7 +90,7 @@ SW_TEST_CASE( AutosaveTest, RotatesSlotsAndContinuesAcrossRuns )
     {
         sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
         sw::AutosaveManager                manager;
-        SW_REQUIRE_TRUE( manager.initialize( settings, *store, game.makeSave(), game.makeLoad() ) );
+        SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
         SW_EXPECT_TRUE( manager.isScanning() );
         store->update();
         SW_REQUIRE_FALSE( manager.isScanning() );
@@ -90,7 +108,7 @@ SW_TEST_CASE( AutosaveTest, RotatesSlotsAndContinuesAcrossRuns )
 
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     sw::AutosaveManager                next;
-    SW_REQUIRE_TRUE( next.initialize( settings, *store, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( next.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
     store->update();
     SW_REQUIRE_TRUE( next.findLatestSlot() != nullptr );
     SW_EXPECT_EQUAL( uint64( 4 ), next.findLatestSlot()->_sequence );
@@ -105,7 +123,7 @@ SW_TEST_CASE( AutosaveTest, RotatesSlotsAndContinuesAcrossRuns )
 }
 
 /**
- * @brief [AutosaveTest] 한 프레임의 요청은 하나로 합쳐 더 중요한 까닭으로 남고, 최소 간격 안의 요청은 버리지 않고 기다렸다 저장한다. 막기 중에는 기다리되 종료는 막기를 넘는다
+ * @brief [AutosaveTest] 한 프레임의 요청은 하나로 합쳐 더 중요한 까닭으로 남고, 최소 간격 안의 요청은 버리지 않고 기다렸다 저장한다. 막기 문이 막힌 동안은 기다리고 종료도 쓰지 않는다
  */
 SW_TEST_CASE( AutosaveTest, MergesWaitsAndBlocks )
 {
@@ -115,7 +133,7 @@ SW_TEST_CASE( AutosaveTest, MergesWaitsAndBlocks )
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     FakeGame                           game;
     sw::AutosaveManager                manager;
-    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
     store->update();
 
     manager.notifyAreaChanged( sw::hashed_string( "forest" ) );
@@ -132,16 +150,18 @@ SW_TEST_CASE( AutosaveTest, MergesWaitsAndBlocks )
     step( manager, *store, 25.0f );
     SW_EXPECT_EQUAL( 2u, manager.getSaveCount() );
 
-    manager.setBlocked( sw::hashed_string( "combat" ) );
+    sw::Subscription cinematicBlock = game._saveGate.block( sw::hashed_string( "cinematic" ) );
     manager.notifyBeforeBoss( sw::hashed_string( "dragon" ) );
     step( manager, *store, 60.0f );
     SW_EXPECT_EQUAL( 2u, manager.getSaveCount() );
-    SW_EXPECT_TRUE( manager.notifyQuit() ); // 종료는 막기를 넘는다
+    SW_EXPECT_FALSE( manager.notifyQuit() ); // 종료는 기다릴 수 없어 막힌 동안은 쓰지 않는다 — 마지막 좋은 슬롯이 남는다
     store->update();
-    SW_EXPECT_EQUAL( 3u, manager.getSaveCount() );
-    manager.clearBlocked( sw::hashed_string( "combat" ) );
+    SW_EXPECT_EQUAL( 2u, manager.getSaveCount() );
+    SW_EXPECT_TRUE( manager.hasPendingRequest() );
+    cinematicBlock.reset(); // 범위형 막기 — 구독을 놓으면 풀린다
     step( manager, *store, 0.1f );
-    SW_EXPECT_EQUAL( 3u, manager.getSaveCount() ); // 종료 저장이 쌓인 요청을 가져갔다
+    SW_EXPECT_EQUAL( 3u, manager.getSaveCount() ); // 기다린 요청이 저장됐다
+    SW_EXPECT_TRUE( manager.findLatestSlot()->_trigger == sw::AutosaveTrigger::BeforeBoss );
 }
 
 /**
@@ -155,7 +175,7 @@ SW_TEST_CASE( AutosaveTest, RestoresTheLatestCheckpoint )
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     FakeGame                           game;
     sw::AutosaveManager                manager;
-    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
     store->update();
 
     manager.reachCheckpoint( sw::hashed_string( "gate" ) );
@@ -190,7 +210,7 @@ SW_TEST_CASE( AutosaveTest, FailedWriteLeavesNoStaleSlotInfo )
     {
         sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
         sw::AutosaveManager                manager;
-        SW_REQUIRE_TRUE( manager.initialize( settings, *store, game.makeSave(), game.makeLoad() ) );
+        SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
         store->update();
         database.failNextWrite(); // 상태 슬롯 쓰기가 도중에 꺼진다
         SW_REQUIRE_TRUE( manager.saveNow( sw::AutosaveTrigger::Manual ) );
@@ -201,7 +221,49 @@ SW_TEST_CASE( AutosaveTest, FailedWriteLeavesNoStaleSlotInfo )
     }
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     sw::AutosaveManager                next;
-    SW_REQUIRE_TRUE( next.initialize( settings, *store, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( next.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
     store->update();
     SW_EXPECT_TRUE( next.findLatestSlot() == nullptr );
+}
+
+/**
+ * @brief [AutosaveTest] 씬을 비운 뒤 진 복원은 세이브 막기를 들고, 그동안 간격 · 직접 · 종료 저장이 슬롯을 덮지 않는다. 다음 성공한 복원이 막기를 풀면 기다린 요청이 저장된다
+ * @details 감사 P0-6 — 예전에는 실패를 경고만 하고 간격 저장이 깨진 씬을 순환 슬롯 모두에 썼다.
+ */
+SW_TEST_CASE( AutosaveTest, FailedRestoreBlocksSaving )
+{
+    sw::AutosaveSettings settings = makeSettings();
+    settings._interval            = 10.0f;
+    settings._minimumGap          = 0.0f;
+    sw::MemoryLocalDatabase            database;
+    sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
+    FakeGame                           game;
+    sw::AutosaveManager                manager;
+    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
+    store->update();
+    SW_REQUIRE_TRUE( manager.saveNow( sw::AutosaveTrigger::Manual ) );
+    store->update();
+    SW_REQUIRE_EQUAL( 1u, manager.getSaveCount() );
+
+    game._bBreakRestore = SW_TRUE;
+    SW_EXPECT_LOG( "Autosave.AutosaveSlotReadBut" );
+    SW_REQUIRE_TRUE( manager.restoreLatest() );
+    store->update();
+    SW_REQUIRE_TRUE( manager.isBlocked() );
+
+    step( manager, *store, 15.0f ); // 간격이 지났다 — 요청은 기다린다
+    SW_EXPECT_EQUAL( 1u, manager.getSaveCount() );
+    SW_EXPECT_TRUE( manager.hasPendingRequest() );
+    SW_EXPECT_FALSE( manager.saveNow( sw::AutosaveTrigger::Manual ) );
+    SW_EXPECT_FALSE( manager.notifyQuit() );
+    store->update();
+    SW_EXPECT_EQUAL( 1u, manager.getSaveCount() );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( game._listSavedState.size() ) ); // 상태를 찍지도 않았다
+
+    game._bBreakRestore = SW_FALSE;
+    SW_REQUIRE_TRUE( manager.restoreLatest() );
+    store->update();
+    SW_EXPECT_FALSE( manager.isBlocked() );
+    step( manager, *store, 0.1f );
+    SW_EXPECT_EQUAL( 2u, manager.getSaveCount() );
 }

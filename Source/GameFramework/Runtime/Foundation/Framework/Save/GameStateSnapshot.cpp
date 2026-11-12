@@ -8,6 +8,7 @@
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Reflection/ReflectedInstance.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -179,10 +180,13 @@ namespace sw
         return true;
     }
 
-    bool GameStateSnapshot::readEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, void* pStateInstance, const void* pInBuffer, uint32 size )
+    expected<void, SnapshotRestoreFailure> GameStateSnapshot::readEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, void* pStateInstance, const void* pInBuffer,
+                                                                            uint32 size )
     {
+        const unexpected<SnapshotRestoreFailure> rejected{ SnapshotRestoreFailure::Rejected };
+        _pComponentStateStore->clear();
         if ( pInBuffer == nullptr || size < sizeof( uint32 ) )
-            return false;
+            return rejected;
 
         uint32 magic = 0;
         Memory::copy( &magic, pInBuffer, sizeof( uint32 ) );
@@ -190,11 +194,11 @@ namespace sw
         if ( magic != StateEnvelopeInternal::kMagic )
         {
             SW_LOG_ERROR_ID( "GameStateSnapshot.StateSnapshotNoSWST", "State snapshot has no SWST header - not written by GameStateSnapshot::writeEnvelope" );
-            return false;
+            return rejected;
         }
 
         if ( size < sizeof( uint32 ) * 4 )
-            return false;
+            return rejected;
 
         Archive arch( static_cast<const uint8*>( pInBuffer ), size );
         arch >> magic;
@@ -204,65 +208,93 @@ namespace sw
         if ( version != StateEnvelopeInternal::kVersion )
         {
             SW_LOG_ERROR_ID( "GameStateSnapshot.StateSnapshotVersionNot", "State snapshot version %# is not this build's %#", version, StateEnvelopeInternal::kVersion );
-            return false;
+            return rejected;
         }
 
+        // ---- 1 단계: 검증. 봉투를 끝까지 읽고 분리된 사본에 풀어 본다 — 지금 씬과 상태 인스턴스는 건드리지 않는다. ----
         uint64 processToken = 0;
         arch >> processToken;
-        // 씬 정체 · 콘텐츠 구성: 씬을 건드리기 전에 본다 — 맞지 않는 세이브는 아무것도 바꾸지 않고 거절한다.
         string sceneID;
         string contentText;
         if ( arch.readString( sceneID ) == false || arch.readString( contentText ) == false )
-            return false;
+            return rejected;
         if ( StateEnvelopeInternal::checkContent( contentText ) == false || StateEnvelopeInternal::checkScene( sceneID, GameStateSnapshotInternal::findActiveSceneID() ) == false )
-            return false;
+            return rejected;
         const bool              bSameProcess = ( processToken == ObjectStateSerializer::getProcessToken() );
         const SceneObjectFormat format       = bSameProcess ? SceneObjectFormat::RestoreIdentity : SceneObjectFormat::WithIdentity;
 
-        // 1) 씬 오브젝트 복원
+        // 섹션 셋(씬 오브젝트 · 파생의 리플렉션 상태 · 컴포넌트 상태)을 모두 읽은 뒤에 푼다 — 끝이 잘린 봉투가 씬을 비운 뒤에 지지 않게 한다.
         vector<uint8> bytesScene;
-        if ( arch.readSection( bytesScene ) == false )
-            return false;
-
-        vector<ComponentStateStore::SavedComponentID> listComponentIDRemap;
-        if ( bytesScene.empty() == false && deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, listComponentIDRemap ) == false )
-            return false;
-
-        // 2) 파생 클래스 커스텀 리플렉션 상태 복원
         vector<uint8> bytesState;
-        if ( arch.readSection( bytesState ) == false )
-            return false;
+        vector<uint8> bytesComponent;
+        if ( arch.readSection( bytesScene ) == false || arch.readSection( bytesState ) == false || arch.readSection( bytesComponent ) == false || arch.isError() )
+            return rejected;
 
-        if ( bytesState.empty() == false && pStateType != nullptr && pStateInstance != nullptr )
+        GameObjectManager* const pLiveManager = GameStateSnapshotInternal::findActiveObjectManager();
+        if ( bytesScene.empty() == false )
         {
-            if ( BinarySerializer::deserialize( pStateInstance, *pStateType, bytesState.data(), bytesState.size(), SerializeContext::getDefault( purpose ) ) == false )
-                return false;
+            if ( pLiveManager == nullptr )
+            {
+                SW_LOG_ERROR_ID( "GameStateSnapshot.NoActiveSceneForObjects", "State snapshot carries scene objects but there is no active scene to restore them into" );
+                return rejected;
+            }
+            // 분리된 매니저 — 같은 엔진 서비스를 받되 활성 씬과 오브젝트를 나누지 않는다(프리팹 원형이 쓰는 손수 만든 매니저와 같다). 풀어 본 것은 여기서 버린다.
+            GameObjectManager                             probeManager( pLiveManager->getSceneEngineServices() );
+            vector<ComponentStateStore::SavedComponentID> listProbeRemap;
+            if ( deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, probeManager, listProbeRemap ) == false )
+                return rejected;
         }
 
-        // 3) 컴포넌트 상태는 훅이 다시 만든 컴포넌트에 넘긴다. 못 읽으면 알리고 넘어간다. 씬은 이미 섰고, 디렉터는 새로 시작한다.
-        vector<uint8> bytesComponent;
-        if ( arch.readSection( bytesComponent ) == false )
-            return false;
-        _pComponentStateStore->clear();
+        const bool bHasState = bytesState.empty() == false && pStateType != nullptr && pStateInstance != nullptr;
+        if ( bHasState )
+        {
+            // 상태 인스턴스에 바로 풀면 반쯤 덮인 채 진다 — 새 사본에 먼저 풀어 본다.
+            const ReflectedInstance probeState = ReflectedInstance::create( *pStateType );
+            if ( probeState.isValid() == false )
+            {
+                SW_LOG_ERROR_ID( "GameStateSnapshot.StateTypeNotConstructible", "State type '%#' cannot be default-constructed, so the save cannot be checked before it is applied",
+                                 pStateType->_name.c_str() );
+                return rejected;
+            }
+            if ( BinarySerializer::deserialize( probeState.get(), *pStateType, bytesState.data(), bytesState.size(), SerializeContext::getDefault( purpose ) ) == false )
+                return rejected;
+        }
+
+        // 컴포넌트 상태는 훅이 다시 만든 컴포넌트에 넘긴다. 못 읽으면 알리고 비운다 — 디렉터는 새로 시작한다(씬 · 상태는 그대로 선다).
         if ( bytesComponent.empty() == false )
         {
             Archive componentArch( bytesComponent.data(), bytesComponent.size() );
             if ( _pComponentStateStore->read( componentArch ) == false )
+            {
                 SW_LOG_WARNING_ID( "GameStateSnapshot.ComponentStateSectionCould", "Component state section could not be read - components start fresh" );
-            // 다른 실행의 세이브는 컴포넌트 id 가 새로 나갔다. 씬 섹션이 만든 표로 저장된 id 를 이번 id 로 바꿔 id 로만 짝짓는다.
-            if ( format == SceneObjectFormat::WithIdentity )
-                _pComponentStateStore->remapComponentIDs( listComponentIDRemap );
+                _pComponentStateStore->clear();
+            }
         }
 
-        if ( arch.isError() )
+        // ---- 2 단계: 교체. 검증을 지난 봉투만 씬을 비우고 채운다. 같은 바이트 · 같은 코드라 여기서 지는 것은 검증이 못 본 결함이다 — 씬이 깨졌다고 알린다. ----
+        const unexpected<SnapshotRestoreFailure>      broken{ SnapshotRestoreFailure::SceneBroken };
+        vector<ComponentStateStore::SavedComponentID> listComponentIDRemap;
+        if ( bytesScene.empty() == false )
         {
-            _pComponentStateStore->clear(); // 끝이 깨진 봉투 — 실어 둔 상태를 남기지 않는다(읽기 훅을 부르지 않으니 비울 쪽이 없다)
-            return false;
+            pLiveManager->clear();
+            if ( deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, *pLiveManager, listComponentIDRemap ) == false )
+            {
+                _pComponentStateStore->clear();
+                return broken;
+            }
         }
+        if ( bHasState && BinarySerializer::deserialize( pStateInstance, *pStateType, bytesState.data(), bytesState.size(), SerializeContext::getDefault( purpose ) ) == false )
+        {
+            _pComponentStateStore->clear();
+            return broken;
+        }
+        // 다른 실행의 세이브는 컴포넌트 id 가 새로 나갔다. 씬 섹션이 만든 표로 저장된 id 를 이번 id 로 바꿔 id 로만 짝짓는다.
+        if ( format == SceneObjectFormat::WithIdentity )
+            _pComponentStateStore->remapComponentIDs( listComponentIDRemap );
 
         // 읽기 훅(`onAfterStateDeserialize`)은 부르는 쪽이 이 뒤에 부르고 `endRestore` 로 저장소를 비운다.
         restoreStatefulComponents();
-        return true;
+        return {};
     }
 
     void GameStateSnapshot::endRestore()
@@ -319,19 +351,14 @@ namespace sw
         return true;
     }
 
-    bool GameStateSnapshot::deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format,
+    bool GameStateSnapshot::deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format, GameObjectManager& manager,
                                                      vector<ComponentStateStore::SavedComponentID>& outListRemap )
     {
         outListRemap.clear();
         if ( pData == nullptr || size < sizeof( uint32 ) )
             return false;
 
-        GameObjectManager* pObjectManager = GameStateSnapshotInternal::findActiveObjectManager();
-        if ( pObjectManager == nullptr )
-            return false;
-
-        // 기존 오브젝트를 정리한다.
-        pObjectManager->clear();
+        GameObjectManager* const pObjectManager = &manager;
 
         size_t offset = 0;
         uint32 count  = 0;
@@ -354,8 +381,7 @@ namespace sw
         // 부착은 상태의 부착 필드(부모의 **id** 와 컴포넌트 키)로 잇는다. 부모 이름으로 찾아 부모의 primary 에 붙이면
         // 부모보다 먼저 읽힌 소켓 자식(손에 든 무기)이 몸통으로 옮겨 가므로 깨진다.
         // 다른 실행의 세이브는 id 를 복원하지 않고, 스트림에 적힌 그때의 id 로 묶음 안에서 부모를 찾는다.
-        // **하나라도 못 읽으면 실패다.** 읽기를 멈추고도 true 를 돌려주면 핫 리로드가 스냅샷을 버리고 저장 막기를 풀어 버린다.
-        // 씬은 이미 비운 뒤라서, 못 읽은 오브젝트부터 뒤가 사라진 채 저장될 수 있다.
+        // **하나라도 못 읽으면 실패다.** 읽기를 멈추고도 true 를 돌려주면 검증이 지나가 활성 씬이 못 읽은 오브젝트부터 뒤가 사라진 채 교체된다.
         const bool       bRestoreIdentity = ( format == SceneObjectFormat::RestoreIdentity );
         bool             bComplete        = true;
         ObjectStateBatch batch( bRestoreIdentity ? ObjectIDSpace::Live : ObjectIDSpace::Saved );
@@ -399,7 +425,7 @@ namespace sw
 
         if ( bComplete == false )
         {
-            SW_LOG_ERROR_ID( "GameStateSnapshot.SceneRestoreStoppedAfter", "Scene restore stopped after %# of %# objects - the snapshot is kept and saving stays blocked",
+            SW_LOG_ERROR_ID( "GameStateSnapshot.SceneRestoreStoppedAfter", "Scene restore stopped after %# of %# objects",
                              static_cast<uint32>( listRestoredObject.size() ), count );
             return false;
         }
