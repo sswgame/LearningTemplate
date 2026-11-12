@@ -13,7 +13,9 @@
  *            첫 읽기 전의 말하기는 `_maxPendingSendPerMember` 개까지 대기시켰다가 읽기가 끝나면 처리한다.
  *          - 기록은 영속 테이블 `chat_history` 에 둔다. 키는 `<채널 id>/<보낸 시각 16진>.<서버 16진>.<순번 16진>` 이며 키 순서가 시간 순서이다.
  *            틱마다 쌓인 기록을 트랜잭션 하나로 쓰며 최선 노력이다. 실패하면 경고를 남기고 버린다.
- *            순번이 `_historyTrimEvery` 의 배수인 메시지의 채널은 보존 기간이 지난 기록을 64개까지 지운다.
+ *            지우기는 보존 규칙(`makeRetentionRule`, 기간은 `ChatKitConfig::_historyRetentionDays`)이 한다. 기록을 쓰는 트랜잭션에 만료 색인 `chat_history_expiry` 의
+ *            줄 `<날짜 끝 16진>/<채널 id>/`(채널 · 날짜마다 한 번)을 함께 넣고, 매일 쓸기가 기간이 지난 날짜의 채널만 범위 읽기로 지운다.
+ *            새 글이 없는 채널(귓속말 쌍, 해산된 길드)도 색인 줄이 남아 있어 함께 지워진다(개인정보 보존 기간).
  *          - 신고(`reportMessage`)는 저장된 기록에서 그 메시지와 앞 메시지(`ChatLimit::kReportContextCount`)를 읽어 신고 레코드(`ServiceReportStore`)로 남긴다.
  *            기록은 틱마다 쓰이므로 막 받은 메시지는 아직 없을 수 있다(NotFound). GM 키트가 목록을 읽고 처리한다. 계정마다 도배를 제한한다.
  *          - `shutdown` 은 맡긴 저장 작업을 회수하고(최대 5초) 접속 상태 찾기를 취소한다. 호스트(접속 상태, 저장소)보다 먼저 종료해도 늦게 종료해도 된다.
@@ -23,6 +25,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Event/EventBuffer.h"
@@ -37,6 +40,7 @@
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
 #include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 
@@ -75,9 +79,7 @@ namespace sw
         string         _ignoredCharactersPath{}; ///< 건너뛸 글자 파일(필수 — `ChatTextNormalizer`). 서버 조립 단계는 `Config/Server/chat_ignored_characters.txt` 를 쓴다
         ChatFilterMode _filterMode{ ChatFilterMode::Mask };
         int64          _sanctionCacheMs{ 60 * constant::time::kMillisecondsPerSecond };
-        int64          _historyRetentionMs{ 30 * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond };
-        int32          _historyFlushMax{ 60 };                                                 ///< 트랜잭션 하나에 쓰는 기록 수이다. 상한 64 안이다
-        int32          _historyTrimEvery{ 64 };                                                ///< 순번이 이 수의 배수인 메시지의 채널을 정리한다
+        int32          _historyFlushMax{ 60 };                                                 ///< 트랜잭션 하나에 쓰는 기록 수이다. 색인 줄과 합쳐 상한 64 안에서 자른다
         int32          _maxQueuedHistory{ 4096 };                                              ///< 저장소가 늦을 때 쌓아 둘 기록 수이다. 넘으면 오래된 것부터 버린다
         int32          _maxPendingSendPerMember{ 4 };                                          ///< 제재 첫 읽기를 기다리는 말하기 요청의 상한이다
         int64          _pendingSendRetryAfterMs{ 1000 };                                       ///< 대기 큐가 찼을 때 클라이언트에 알려 줄 기다릴 시간(ms)이다
@@ -158,6 +160,9 @@ namespace sw
         /** @brief 쌓인 기록을 저장소에 씁니다. */
         void update( UnixMilliseconds nowMs );
 
+        /** @brief 기록 테이블의 보존 규칙입니다(만료 색인 규칙). 키트 조립이 `IOnlineServerKit::addRetentionRule` 로 올립니다. */
+        static ServiceRetentionRule makeRetentionRule( int64 retentionMs );
+
         // 클라이언트 요청이다. 결과는 같은 요청 태그로 takeCompletions 에서 받는다
         void joinChannel( AccountID accountID, string_view channelID, UnixMilliseconds nowMs, uint64 requestTag );
         void leaveChannel( AccountID accountID, string_view channelID, uint64 requestTag );
@@ -191,7 +196,7 @@ namespace sw
         /** @brief 저장 일의 완료입니다. */
         void applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, UnixMilliseconds nowMs );
         void applyHistoryRead( uint64 requestTag, ChatServiceResult result, vector<ChatMessage>&& listMessage, string&& nextCursor );
-        void applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, ServiceStoreCompletion completion );
+        void applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, const vector<string>& listIndexKey, ServiceStoreCompletion completion );
         void applyReport( uint64 requestTag, ChatServiceResult result );
 
         struct PendingSend
@@ -249,8 +254,10 @@ namespace sw
         AccountPresenceTracker                   _presenceFinds; ///< 다른 서버 귓속말의 상대 찾기(`initialize` 가 묶고 `shutdown` 이 푼다)
         string                                   _serverTopic;
         uint32                                   _sequence;
-        uint32                                   _reportSequence; ///< 신고 키의 고유 값(서버 id 와 섞는다)
-        ServiceStoreTracker                      _store;          ///< 저장소에 맡긴 일의 앞이다(기록 · 제재 · 신고)
+        uint32                                   _reportSequence;         ///< 신고 키의 고유 값(서버 id 와 섞는다)
+        ServiceStoreTracker                      _store;                  ///< 저장소에 맡긴 일의 앞이다(기록 · 제재 · 신고)
+        unordered_set<string>                    _uniqueIndexedGroupKeys; ///< 이 서버가 커밋한 만료 색인 줄(채널 · 날짜마다 한 번). 날짜가 바뀌면 비운다
+        int64                                    _indexedDayEndMs;        ///< `_uniqueIndexedGroupKeys` 가 담은 날짜의 끝
         uint8                                    _bHistoryWriting;
     };
 } // namespace sw

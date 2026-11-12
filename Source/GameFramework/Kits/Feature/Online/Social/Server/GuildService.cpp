@@ -115,6 +115,12 @@ namespace sw
                 return s_table;
             }
 
+            static const hashed_string& getInviteExpiryTable()
+            {
+                static const hashed_string s_table{ "social_guild_invite_expiry" };
+                return s_table;
+            }
+
             static const hashed_string& getApplicationTable()
             {
                 static const hashed_string s_table{ "social_guild_application" };
@@ -267,6 +273,9 @@ namespace sw
                 outExpiresMs = reader.readVarInt();
                 return reader.hasOverflowed() == false;
             }
+
+            /** @brief 초대 레코드의 만료 시각을 읽습니다(보존 쓸기). */
+            [[nodiscard]] static bool readInviteExpiryMs( const ServiceRecord& record, int64& outTimeMs ) { return decodeInviteExpiry( record._bytes, outTimeMs ); }
         };
 
         /** @brief 길드 요청 하나를 저장소 스레드에서 처리합니다. 읽기, 규칙 검사, 버전 조건 쓰기 순서로 진행하며 충돌이 나면 다시 시도합니다. 한 번 쓰고 버린다. */
@@ -615,8 +624,10 @@ namespace sw
                 if ( targetRead == ServiceStoreResult::Ok )
                     return fail( SocialResult::AlreadyInGuild );
                 ServiceTransaction transaction;
-                transaction.put( Internal::getInviteTable(), Internal::makePairKey( _request._targetID, guildID ),
-                                 Internal::encodeInvite( _request._accountID, _request._nowMs.count() + GuildLimit::kInviteLifetimeMs ) ); // 다시 보내면 덮어쓴다
+                const string       inviteKey = Internal::makePairKey( _request._targetID, guildID );
+                const int64        expiresMs = _request._nowMs.count() + GuildLimit::kInviteLifetimeMs;
+                transaction.put( Internal::getInviteTable(), inviteKey, Internal::encodeInvite( _request._accountID, expiresMs ) ); // 다시 보내면 덮어쓴다
+                transaction.put( Internal::getInviteExpiryTable(), ServiceRetentionRule::makeIndexKey( expiresMs, inviteKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
                 _serviceResult._invitedID = _request._targetID;
                 return connection.commit( transaction );
             }
@@ -1181,6 +1192,16 @@ namespace sw
     {
         _store.bindStore( nullptr ); // 남은 일은 조립이 저장소 드레인으로 거둔다(예전과 같이 여기서 기다리지 않는다)
         _pLedgerPolicy = nullptr;    // 이벤트 칸은 건 쪽이 구독을 놓아 비운다
+    }
+
+    ServiceRetentionRule GuildService::makeInviteRetentionRule( int64 retentionMs )
+    {
+        ServiceRetentionRule rule;
+        rule._table       = GuildServiceInternal::getInviteTable();
+        rule._indexTable  = GuildServiceInternal::getInviteExpiryTable();
+        rule._retentionMs = retentionMs;
+        rule._pfnReadTime = &GuildServiceInternal::readInviteExpiryMs;
+        return rule;
     }
 
     bool GuildService::isValidName( string_view name )

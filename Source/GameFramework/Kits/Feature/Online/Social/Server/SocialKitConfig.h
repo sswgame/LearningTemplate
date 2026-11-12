@@ -19,5 +19,8 @@ namespace sw
         /** @brief 레벨 2 부터의 누적 경험치입니다(레벨 순서). 늘어나야 하며 없으면 모든 길드가 레벨 1 입니다. */
         PROPERTY()
         vector<int64> _listGuildLevelExperience{};
+        /** @brief 만료된 길드 초대를 남기는 기간(일)입니다. 만료 뒤 이 기간이 지나면 보존 쓸기가 지웁니다. */
+        PROPERTY( Min = 1, Max = 3650 )
+        int32 _expiredInviteRetentionDays{ 7 };
     };
 } // namespace sw

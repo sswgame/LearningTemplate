@@ -99,8 +99,12 @@ namespace sw
                 _settings._bannedWordsPath       = bannedWordsPath->has_value() ? ( *bannedWordsPath )->str() : string();
                 _settings._ignoredCharactersPath = ignoredCharactersPath->has_value() ? ( *ignoredCharactersPath )->str() : string();
                 // 멤버 창은 친구와 매칭 키트가 `start` 에서 읽는다. 부르는 것은 모든 키트가 시작한 뒤다.
-                return registerServerService( context, entry, &_server ).and_then( [&]
-                { return exposeInterface<IGroupChannelMembership>( context, entry, _groupChannels ); } );
+                const int64 retentionMs = kitConfig._historyRetentionDays * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond;
+                return registerServerService( context, entry, &_server )
+                    .and_then( [&]
+                { return exposeInterface<IGroupChannelMembership>( context, entry, _groupChannels ); } )
+                    .and_then( [&]
+                { return addRetentionRule( context, entry, ChatService::makeRetentionRule( retentionMs ) ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override

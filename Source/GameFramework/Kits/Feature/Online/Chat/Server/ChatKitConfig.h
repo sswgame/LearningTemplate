@@ -22,5 +22,8 @@ namespace sw
         /** @brief 정규화가 건너뛸 글자 파일입니다(`ChatTextNormalizer`). */
         PROPERTY( Required )
         string _ignoredCharactersFile{};
+        /** @brief 채팅 기록(귓속말 · 길드 · 파티 포함)을 남기는 기간(일)입니다. 보존 쓸기가 보낸 뒤 이 기간이 지난 기록을 지웁니다(개인정보 보존 기간). */
+        PROPERTY( Min = 1, Max = 3650 )
+        int32 _historyRetentionDays{ 30 };
     };
 } // namespace sw

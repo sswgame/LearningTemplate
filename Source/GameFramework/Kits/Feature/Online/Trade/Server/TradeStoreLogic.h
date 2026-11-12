@@ -5,6 +5,10 @@
  *          - `trade_session`: 거래 id(16진)에서 형식 버전, 주인 서버, 스냅샷으로 가는 테이블이다.
  *          - `trade_active`: 계정(16진)에서 거래 id 로 가는 테이블이다. 계정마다 열린 거래는 하나이며 "없어야 함" 조건으로 넣으므로 서버가 여러 대여도 하나뿐이다.
  *          - `trade_owner`: `<주인 서버 16진>/<거래 16진>` 키이며 재시작 복구에 쓰는 인덱스이다.
+ *          - `trade_session_expiry`: 닫힌 거래의 만료 색인 `<닫은 시각 16진>/<거래 16진>` 이다. 거래를 닫아 쓰는 트랜잭션(`stageSession`)이 함께 넣고,
+ *            보존 규칙(`makeRetentionRule`, 기간은 `TradeKitConfig::_closedRetentionDays`)이 닫은 뒤 기간이 지난 거래 레코드를 지운다. 열린 거래는 지우지 않는다.
+ *            지워도 다른 합 · 멱등이 깨지지 않는다: 정산 멱등은 원장 분개 `trade/<id>` 가 맡고(분개는 원장 보존 기간을 따른다), 남은 활성 링크는 다음 신청이
+ *            "거래 없음" 으로 정리한다. 닫힌 거래의 확정 재시도는 기간 뒤에 NotFound 가 된다.
  *
  *          정산은 두 방향의 항목을 **한 분개**(키는 `trade/<거래 id 16진의 16진>`)로 `Ledger::stageTransfer` 에 넣고, 거래 레코드(Settled), 활성 링크 지우기, 감사 기록을 한 커밋으로 쓴다.
  *          잔액이 모자라면 원장 부분을 붙이지 않고 Failed 로 닫으며 아무것도 움직이지 않는다. 커밋이 Conflict 나 Unavailable 이면 분개로 확인한다. 응답이 유실됐거나 다른 서버가 먼저 처리한 경우이다.
@@ -22,6 +26,8 @@
 
 namespace sw
 {
+    struct ServiceRetentionRule;
+
     class IServiceStoreConnection;
     class ServiceTransaction;
 
@@ -47,6 +53,10 @@ namespace sw
         static const hashed_string& getSessionTable();
         static const hashed_string& getActiveTable();
         static const hashed_string& getOwnerTable();
+        static const hashed_string& getSessionExpiryTable(); ///< "trade_session_expiry"
+
+        /** @brief 닫힌 거래 레코드의 보존 규칙입니다(만료 색인 규칙). 키트 조립이 `IOnlineServerKit::addRetentionRule` 로 올립니다. */
+        static ServiceRetentionRule makeRetentionRule( int64 retentionMs );
 
         /** @brief 거래를 엽니다(Invited). @p seed 로 거래 id 를 만들며 겹치면 다음 값을 씁니다. 양쪽 활성 링크는 "없어야 함" 조건이며, 닫혔거나 시한이 지난 이전 거래는 이때 정리합니다. */
         TradeServiceResult invite( AccountID fromID, AccountID toID, uint64 seed, int64 nowMs, TradeSnapshot& outSnapshot );

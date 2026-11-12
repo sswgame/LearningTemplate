@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeSessionRecord.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -27,7 +28,22 @@ namespace sw
                 vector<uint8> bytes;
                 if ( TradeSessionRecord::encodeSession( TradeSessionRecord{ snapshot, ownerServerID }, bytes ) == false )
                     return false;
-                inoutTransaction.put( TradeStoreLogic::getSessionTable(), ServiceKeyUtil::makeHex64( snapshot._tradeID ), std::move( bytes ), expectedVersion );
+                const string sessionKey = ServiceKeyUtil::makeHex64( snapshot._tradeID );
+                if ( snapshot.isClosed() ) // 닫는 모든 경로가 이 함수를 지나므로 색인 줄을 빠뜨리는 경로가 없다
+                    inoutTransaction.put( TradeStoreLogic::getSessionExpiryTable(), ServiceRetentionRule::makeIndexKey( snapshot._updatedMs, sessionKey ), vector<uint8>{},
+                                          ServiceRecord::kAnyVersion );
+                inoutTransaction.put( TradeStoreLogic::getSessionTable(), sessionKey, std::move( bytes ), expectedVersion );
+                return true;
+            }
+
+            /** @brief 닫힌 거래 레코드의 닫은 시각을 읽습니다(보존 쓸기). 열린 거래나 읽지 못하는 레코드는 false 이고 지우지 않습니다. */
+            [[nodiscard]] static bool readClosedTimeMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                TradeSnapshot snapshot;
+                uint64        ownerServerID = 0;
+                if ( decodeSession( record._key, record._bytes, snapshot, ownerServerID ) == false || snapshot.isClosed() == false )
+                    return false;
+                outTimeMs = snapshot._updatedMs;
                 return true;
             }
 
@@ -112,6 +128,22 @@ namespace sw
     {
         static const hashed_string s_table{ "trade_active" };
         return s_table;
+    }
+
+    const hashed_string& TradeStoreLogic::getSessionExpiryTable()
+    {
+        static const hashed_string s_table{ "trade_session_expiry" };
+        return s_table;
+    }
+
+    ServiceRetentionRule TradeStoreLogic::makeRetentionRule( int64 retentionMs )
+    {
+        ServiceRetentionRule rule;
+        rule._table       = getSessionTable();
+        rule._indexTable  = getSessionExpiryTable();
+        rule._retentionMs = retentionMs;
+        rule._pfnReadTime = &TradeStoreLogicInternal::readClosedTimeMs;
+        return rule;
     }
 
     const hashed_string& TradeStoreLogic::getOwnerTable()

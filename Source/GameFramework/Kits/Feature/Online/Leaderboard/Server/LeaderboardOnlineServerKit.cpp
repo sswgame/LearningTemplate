@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardServer.h"
@@ -44,8 +46,14 @@ namespace sw
                 if ( catalogPath.empty() && _listInlineBoardID.empty() )
                     SW_LOG_WARNING_ID( "LeaderboardOnlineServerKit.LeaderboardKitNeitherCatalog", "Leaderboard kit: neither _catalog nor _listBoardID - no boards are registered" );
                 // 매칭 키트가 실력 모드의 통계를 읽는다. 접속한 계정의 통계만 메모리에 있다.
-                return registerServerService( context, entry, &_server ).and_then( [&]
-                { return exposeInterface<IAccountStatSource>( context, entry, _service ); } );
+                constexpr int64 kDayMs = constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond;
+                return registerServerService( context, entry, &_server )
+                    .and_then( [&]
+                { return exposeInterface<IAccountStatSource>( context, entry, _service ); } )
+                    .and_then( [&]
+                { return addRetentionRule( context, entry, LeaderboardService::makeScoreRetentionRule( kitConfig._pastScoreRetentionDays * kDayMs ) ); } )
+                    .and_then( [&]
+                { return addRetentionRule( context, entry, LeaderboardService::makeSeasonResultRetentionRule( kitConfig._seasonResultRetentionDays * kDayMs ) ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override

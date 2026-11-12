@@ -6,8 +6,10 @@
 
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStoreLogic.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 
 using namespace sw;
 
@@ -348,6 +350,30 @@ SW_TEST_CASE( TradeServiceTest, CloseForAccountWhenLeaving )
     SW_REQUIRE_EQUAL( size_t( 1 ), listClosed.size() );
     SW_EXPECT_TRUE( listClosed[0]._closeReason == TradeCloseReason::PartyLeft );
     SW_EXPECT_TRUE( rig.invite( kAlice, kCarol )._result == TradeResult::Ok );
+}
+
+/** @brief [TradeServiceTest] 보존 규칙: 거절된(닫힌) 거래는 닫은 뒤 기간이 지나면 지우고, 열린 거래는 남긴다(감사 O-9) */
+SW_TEST_CASE( TradeServiceTest, ClosedTradesExpireByRetention )
+{
+    TradeWorld    world;
+    TradeFixture& rig = world._rig;
+    for ( int32 index = 0; index < 3; ++index )
+    {
+        const uint64 tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
+        SW_REQUIRE_TRUE( rig.respond( kBob, tradeID, false )._result == TradeResult::Ok );
+    }
+    SW_REQUIRE_TRUE( rig.invite( kAlice, kBob )._result == TradeResult::Ok ); // 열린 거래다
+    SW_REQUIRE_EQUAL( 4, world._database.countRecords( TradeStoreLogic::getSessionTable() ) );
+    SW_EXPECT_EQUAL( 3, world._database.countRecords( TradeStoreLogic::getSessionExpiryTable() ) );
+
+    ServiceRetentionRule   rule = TradeStoreLogic::makeRetentionRule( 1000 );
+    ServiceRetentionReport report;
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( world._database, rule, kNowMs + 500, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 4, world._database.countRecords( TradeStoreLogic::getSessionTable() ) ); // 아직 기간 안이다
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( world._database, rule, kNowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 3, report._deletedCount );
+    SW_EXPECT_EQUAL( 1, world._database.countRecords( TradeStoreLogic::getSessionTable() ) );
+    SW_EXPECT_EQUAL( 0, world._database.countRecords( TradeStoreLogic::getSessionExpiryTable() ) );
 }
 
 /** @brief [TradeServiceTest] 기동 복구: 다시 뜬 서버는 자기가 연 열린 거래를 닫아 당사자를 풀어 준다. 재화는 그대로다 */

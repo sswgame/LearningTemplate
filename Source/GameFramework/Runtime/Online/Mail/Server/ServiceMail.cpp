@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -225,11 +226,7 @@ namespace sw
 
     string ServiceMail::makeExpiryKey( int64 expiresMs, string_view mailKey )
     {
-        string key;
-        ServiceKeyUtil::appendHex64( key, static_cast<uint64>( expiresMs < 0 ? 0 : expiresMs ) );
-        key.push_back( '/' );
-        key += mailKey;
-        return key;
+        return ServiceRetentionRule::makeIndexKey( expiresMs, mailKey ); // 보존 규칙의 만료 색인과 같은 모양이다
     }
 
     bool ServiceMail::parseRecipient( string_view mailKey, uint64& outAccountID )

@@ -8,6 +8,7 @@
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
 
@@ -84,6 +85,7 @@ namespace
     {
         MemoryServiceDatabase _database;
         hashed_string         _table{ "retention_test" };
+        hashed_string         _indexTable{ "retention_test_index" }; ///< 만료 색인 규칙용이다
 
         void put( string_view key, int64 timeMs )
         {
@@ -104,6 +106,22 @@ namespace
         }
 
         int32 count() const { return _database.countRecords( _table ); }
+
+        void putIndex( int64 timeMs, string_view target )
+        {
+            ServiceTransaction transaction;
+            transaction.put( _indexTable, ServiceRetentionRule::makeIndexKey( timeMs, target ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+            SW_REQUIRE_TRUE( _database.commit( transaction ) == ServiceStoreResult::Ok );
+        }
+
+        ServiceRetentionRule makeIndexRule( int64 retentionMs = 1000 ) const
+        {
+            ServiceRetentionRule rule = makeRule( retentionMs );
+            rule._indexTable          = _indexTable;
+            return rule;
+        }
+
+        int32 countIndex() const { return _database.countRecords( _indexTable ); }
     };
 } // namespace
 
@@ -351,6 +369,68 @@ SW_TEST_CASE( ServiceRetentionTest, InvalidRuleIsRefused )
     rule              = rig.makeRule();
     rule._pfnReadTime = nullptr;
     SW_EXPECT_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Invalid );
+}
+
+/** @brief [ServiceRetentionTest] 만료 색인: 기간이 지난 줄까지만 읽고, 대상이 없거나 다시 써서 늦춰졌으면 색인 줄만 지운다 */
+SW_TEST_CASE( ServiceRetentionTest, IndexExpiresByRange )
+{
+    RetentionFixture rig;
+    rig.put( "a", kNowMs - 2000 );
+    rig.putIndex( kNowMs - 2000, "a" );    // 지운다
+    rig.putIndex( kNowMs - 1500, "gone" ); // 대상이 없다 - 색인 줄만 지운다
+    rig.put( "b", kNowMs - 10 );
+    rig.putIndex( kNowMs - 1200, "b" ); // 다시 써서 시각이 늦춰졌다 - 레코드는 남는다
+    rig.putIndex( kNowMs - 10, "b" );
+    rig.put( "c", kNowMs - 5000 );
+    rig.putIndex( kNowMs - 500, "c" ); // 색인이 아직 기간 안이다 - 레코드가 오래됐어도 보지 않는다
+
+    ServiceRetentionRule   rule = rig.makeIndexRule();
+    ServiceRetentionReport report;
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._deletedCount );
+    SW_EXPECT_EQUAL( 3, report._scannedCount ); // 기간 안의 줄에서 멈춘다
+    SW_EXPECT_EQUAL( 2, rig.count() );
+    SW_EXPECT_EQUAL( 2, rig.countIndex() );
+    SW_EXPECT_TRUE( rule._cursor.empty() );
+}
+
+/** @brief [ServiceRetentionTest] 만료 색인의 접두어 묶음: 한 쪽보다 큰 묶음도 한 회차에 지우고, 기간 안의 레코드에서 멈춘 뒤 색인 줄을 지운다 */
+SW_TEST_CASE( ServiceRetentionTest, IndexGroupExpiresPrefix )
+{
+    RetentionFixture rig;
+    for ( int32 index = 0; index < 100; ++index )
+    {
+        rig.put( "ch/" + ServiceKeyUtil::makeHex64( static_cast<uint64>( index ) ), kNowMs - 5000 + index );
+    }
+    rig.put( "ch/" + ServiceKeyUtil::makeHex64( 1000 ), kNowMs - 10 ); // 기간 안이다
+    rig.put( "other/a", kNowMs - 5000 );                               // 다른 묶음이다
+    rig.putIndex( kNowMs - 2000, "ch/" );
+
+    ServiceRetentionRule   rule = rig.makeIndexRule();
+    ServiceRetentionReport report;
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 1000, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 100, report._deletedCount );
+    SW_EXPECT_EQUAL( 2, rig.count() );
+    SW_EXPECT_EQUAL( 0, rig.countIndex() );
+}
+
+/** @brief [ServiceRetentionTest] 만료 색인: 지우기 상한에 닿은 묶음은 색인 줄을 남겨 다음 회차가 이어서 지운다 */
+SW_TEST_CASE( ServiceRetentionTest, IndexGroupResumesAfterLimit )
+{
+    RetentionFixture rig;
+    for ( int32 index = 0; index < 100; ++index )
+    {
+        rig.put( "ch/" + ServiceKeyUtil::makeHex64( static_cast<uint64>( index ) ), kNowMs - 5000 );
+    }
+    rig.putIndex( kNowMs - 2000, "ch/" );
+    ServiceRetentionRule   rule = rig.makeIndexRule();
+    ServiceRetentionReport report;
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 10, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 63, report._deletedCount ); // 한 쪽(쓰기 상한 - 색인 줄)을 지운 뒤 상한에 닿았다
+    SW_EXPECT_EQUAL( 1, rig.countIndex() );
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 1000, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, rig.count() );
+    SW_EXPECT_EQUAL( 0, rig.countIndex() );
 }
 
 /** @brief [ServiceRetentionTest] 예약 작업: 회차를 차지하면 쓸고 끝을 적는다. 회차 시각을 기준으로 지운다. 규칙이 없으면 등록하지 않고, 틀린 규칙은 거절한다 */

@@ -7,6 +7,8 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Fake/FakePushProvider.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationDispatcher.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
 
@@ -276,4 +278,25 @@ SW_TEST_CASE( PushDispatcherTest, TopicClaimSendsOnce )
     rig.pump();
     SW_EXPECT_EQUAL( size_t( 3 ), rig._provider.getSent().size() );
     SW_EXPECT_EQUAL( 0, rig._dispatcher.getInFlightCount() );
+}
+
+/** @brief [PushDispatcherTest] 토픽 표는 창 끝에서 보존 기간이 지나면 지우고, 창 끝을 읽을 수 없는 키는 남긴다(감사 O-9) */
+SW_TEST_CASE( PushDispatcherTest, TopicClaimsExpireAfterWindow )
+{
+    DispatcherFixture             rig;
+    const PushNotificationMessage message;
+    const string                  claimKey = "event.1/" + ServiceKeyUtil::makeHex64( static_cast<uint64>( kNowMs ) ) + "/" + ServiceKeyUtil::makeHex64( 7 );
+    rig._dispatcher.notifyTopicOnce( claimKey, "news", message, UnixMilliseconds{ rig._nowMs } );
+    rig._dispatcher.notifyTopicOnce( "event.2", "news", message, UnixMilliseconds{ rig._nowMs } );
+    rig.pump();
+    const hashed_string claimTable{ "liveops_push" };
+    SW_REQUIRE_EQUAL( 2, rig._database.countRecords( claimTable ) );
+
+    ServiceRetentionRule   rule = PushNotificationDispatcher::makeTopicClaimRetentionRule( 1000 );
+    ServiceRetentionReport report;
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs + 500, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 2, rig._database.countRecords( claimTable ) );
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._deletedCount );
+    SW_EXPECT_EQUAL( 1, rig._database.countRecords( claimTable ) );
 }

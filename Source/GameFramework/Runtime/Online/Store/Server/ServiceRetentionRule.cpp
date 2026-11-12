@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
+
 #include <algorithm>
 
 namespace sw
@@ -12,9 +14,11 @@ namespace sw
                                                     ServiceRetentionReport& outReport )
     {
         outReport = ServiceRetentionReport{};
-        if ( inoutRule._pfnReadTime == nullptr || inoutRule._retentionMs <= 0 )
+        if ( inoutRule.isValid() == false )
             return ServiceStoreResult::Invalid;
         const int64 cutoffMs = nowMs - inoutRule._retentionMs;
+        if ( inoutRule._indexTable.empty() == false )
+            return sweepIndex( connection, inoutRule, cutoffMs, maxScanCount, maxDeleteCount, outReport );
         while ( outReport._scannedCount < maxScanCount && outReport._deletedCount < maxDeleteCount )
         {
             const int32              pageSize = MathUtil::min( kPageSize, maxScanCount - outReport._scannedCount );
@@ -76,5 +80,146 @@ namespace sw
                 inoutRule._cursor = *pLastKey;
         }
         return ServiceStoreResult::Ok;
+    }
+
+    bool ServiceRetentionRule::isValid() const
+    {
+        return _retentionMs > 0 && ( _pfnReadTime != nullptr || _indexTable.empty() == false );
+    }
+
+    string ServiceRetentionRule::makeIndexKey( int64 timeMs, string_view target )
+    {
+        string key;
+        ServiceKeyUtil::appendHex64( key, static_cast<uint64>( timeMs < 0 ? 0 : timeMs ) );
+        key.push_back( '/' );
+        key += target;
+        return key;
+    }
+
+    bool ServiceRetentionRule::parseIndexKey( string_view indexKey, int64& outTimeMs, string_view& outTarget )
+    {
+        const size_t width  = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+        uint64       timeMs = 0;
+        if ( indexKey.size() <= width + 1 || indexKey[width] != '/' || ServiceKeyUtil::parseHex64( indexKey.substr( 0, width ), timeMs ) == false )
+            return false;
+        outTimeMs = static_cast<int64>( timeMs );
+        outTarget = indexKey.substr( width + 1 );
+        return true;
+    }
+
+    ServiceStoreResult ServiceRetentionRule::sweepIndex( IServiceStoreConnection& connection, const ServiceRetentionRule& rule, int64 cutoffMs, int32 maxScanCount,
+                                                         int32 maxDeleteCount, ServiceRetentionReport& outReport )
+    {
+        string cursor; // 회차 안에서만 쓴다 - Conflict 로 남긴 줄을 이번 회차에 다시 보지 않으려는 것이다
+        while ( outReport._scannedCount < maxScanCount && outReport._deletedCount < maxDeleteCount )
+        {
+            const int32              pageSize = MathUtil::min( kPageSize, maxScanCount - outReport._scannedCount );
+            vector<ServiceRecord>    listEntry;
+            const ServiceStoreResult listed = connection.listRecords( rule._indexTable, "", cursor, pageSize, false, listEntry );
+            if ( listed != ServiceStoreResult::Ok )
+                return listed;
+            if ( listEntry.empty() )
+            {
+                outReport._bWrapped = SW_TRUE;
+                return ServiceStoreResult::Ok;
+            }
+            for ( const ServiceRecord& entry : listEntry )
+            {
+                if ( outReport._deletedCount >= maxDeleteCount )
+                    return ServiceStoreResult::Ok;
+                int64       entryMs = 0;
+                string_view target;
+                const bool  bParsed = parseIndexKey( entry._key, entryMs, target );
+                if ( bParsed && entryMs > cutoffMs )
+                    return ServiceStoreResult::Ok; // 시각 순이다. 여기부터는 아직 기간 안이다
+                ++outReport._scannedCount;
+                const string previous = cursor;
+                cursor                = entry._key;
+                if ( bParsed == false )
+                {
+                    // 색인 형식이 틀린 줄이다. 데이터가 아니라 색인이므로 지워도 잃는 것이 없고, 남기면 앞자리를 막는다
+                    ServiceTransaction drop;
+                    drop.erase( rule._indexTable, entry._key, entry._version );
+                    const ServiceStoreResult dropped = connection.commit( drop );
+                    if ( dropped != ServiceStoreResult::Ok && dropped != ServiceStoreResult::Conflict )
+                        return dropped;
+                    continue;
+                }
+                bool                     bEntryDone = true;
+                const ServiceStoreResult expired    = expireIndexEntry( connection, rule, entry, target, cutoffMs, outReport, bEntryDone );
+                if ( expired != ServiceStoreResult::Ok && expired != ServiceStoreResult::Conflict )
+                    return expired; // Conflict 는 다음 회차가 맨 앞에서 다시 본다
+                if ( expired == ServiceStoreResult::Ok && bEntryDone == false )
+                {
+                    cursor = previous; // 묶음이 한 쪽보다 크다. 같은 줄을 다시 읽어 이어서 지운다(지운 만큼 줄었으므로 끝난다)
+                    break;
+                }
+            }
+        }
+        return ServiceStoreResult::Ok;
+    }
+
+    ServiceStoreResult ServiceRetentionRule::expireIndexEntry( IServiceStoreConnection& connection, const ServiceRetentionRule& rule, const ServiceRecord& entry,
+                                                               string_view target, int64 cutoffMs, ServiceRetentionReport& inoutReport, bool& outbEntryDone )
+    {
+        vector<ServiceRecord> listTarget;
+        bool                  bEntryDone = true; // 색인 줄도 지울지다
+        if ( target.back() == '/' )
+        {
+            // 접두어 묶음: 한 트랜잭션에 색인 줄 하나가 함께 들어가므로 쓰기 상한보다 하나 적게 읽는다
+            constexpr int32          kGroupPageSize = ServiceTransaction::kMaxWriteCount - 1;
+            const ServiceStoreResult listed         = connection.listRecords( rule._table, target, "", kGroupPageSize, false, listTarget );
+            if ( listed != ServiceStoreResult::Ok )
+                return listed;
+            const bool bFullPage    = static_cast<int32>( listTarget.size() ) == kGroupPageSize;
+            size_t     expiredCount = 0;
+            for ( const ServiceRecord& record : listTarget )
+            {
+                int64 recordMs = 0;
+                if ( rule._pfnReadTime != nullptr && ( rule._pfnReadTime( record, recordMs ) == false || recordMs > cutoffMs ) )
+                    break; // 키 순서가 시각 순서다. 여기부터 남는다(읽지 못하는 것도 남긴다)
+                ++expiredCount;
+            }
+            bEntryDone = expiredCount < listTarget.size() || bFullPage == false;
+            listTarget.resize( expiredCount );
+        }
+        else
+        {
+            ServiceRecord            record;
+            const ServiceStoreResult read = connection.readRecord( rule._table, target, record );
+            if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
+                return read;
+            if ( read == ServiceStoreResult::Ok )
+            {
+                record._key         = string( target ); // 읽기는 키를 채우지 않는다. 시각 읽기가 키를 볼 수 있다
+                int64      recordMs = 0;
+                const bool bExpired = rule._pfnReadTime == nullptr || ( rule._pfnReadTime( record, recordMs ) && recordMs <= cutoffMs );
+                if ( bExpired )
+                    listTarget.push_back( std::move( record ) );
+            }
+            // 없거나, 다시 써서 시각이 늦춰졌거나(새 색인 줄이 있다), 읽지 못하면 레코드는 두고 이 색인 줄만 지운다
+        }
+        ServiceTransaction           transaction;
+        vector<const ServiceRecord*> listErased;
+        for ( const ServiceRecord& record : listTarget )
+        {
+            transaction.erase( rule._table, record._key, record._version );
+            listErased.push_back( &record );
+        }
+        if ( bEntryDone )
+            transaction.erase( rule._indexTable, entry._key, entry._version );
+        if ( rule._pfnStageErase != nullptr && listErased.empty() == false )
+        {
+            const ServiceStoreResult staged = rule._pfnStageErase( connection, listErased, transaction );
+            if ( staged != ServiceStoreResult::Ok )
+                return staged;
+        }
+        if ( transaction.isEmpty() )
+            return ServiceStoreResult::Ok;
+        const ServiceStoreResult committed = connection.commit( transaction );
+        if ( committed == ServiceStoreResult::Ok )
+            inoutReport._deletedCount += static_cast<int32>( listErased.size() );
+        outbEntryDone = bEntryDone;
+        return committed;
     }
 } // namespace sw
