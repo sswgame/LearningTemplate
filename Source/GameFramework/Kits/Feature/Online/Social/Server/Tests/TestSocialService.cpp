@@ -1,5 +1,5 @@
 // SocialServiceTest — 친구 로직(메모리 저장소 + 메모리 캐시 + 프로세스 안 버스): 관계 바꾸기와 양쪽 알림, 이름으로 신청, 이 서버 관계 메모리(차단 조회)와 버스로 다시 읽기,
-// 읽는 도중 바뀐 관계, 접속 상태 쓰기 · 연장 · 조회 · 떠날 때. 규칙 표는 SocialLinkRulesTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
+// 읽는 도중 바뀐 관계, 접속 상태 쓰기 · 연장 · 조회 · 떠날 때 · 친구 역색인을 따른 전달. 규칙 표는 SocialLinkRulesTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
@@ -15,6 +15,8 @@
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+
+#include <algorithm>
 
 using namespace sw;
 
@@ -332,6 +334,56 @@ SW_TEST_CASE( SocialServiceTest, PresenceReachesFriends )
     const vector<SocialPresence> listFromMemory = rigA.queryPresence( kAlice );
     SW_REQUIRE_EQUAL( size_t( 1 ), listFromMemory.size() );
     SW_EXPECT_EQUAL( string( "same" ), listFromMemory[0]._activity );
+}
+
+/** @brief [SocialServiceTest] 접속 상태 전달은 친구 역색인을 따른다 — 관계를 다시 읽거나(끊음) 계정이 떠나면 받는 사람에서 빠지고, 다시 오면 돌아온다. 친구가 아닌 계정과 자신은 받지 않는다 */
+SW_TEST_CASE( SocialServiceTest, PresenceFanoutFollowsFriendIndex )
+{
+    constexpr AccountID kDave = 14; // 이 서버에 있지만 친구가 아니다
+    SocialWorld         world;
+    SocialFixture&      rig = world._rig;
+    rig.befriend( kAlice, kBob );
+    rig.befriend( kAlice, kCarol );
+    (void)rig.links( kAlice );
+    (void)rig.links( kBob );
+    (void)rig.links( kCarol );
+    (void)rig.links( kDave );
+    (void)rig.takeNotifications();
+
+    const auto collectRecipients = [&rig]( SocialPresenceStatus status )
+    {
+        SW_EXPECT_TRUE( rig.setPresence( kAlice, status ) == SocialResult::Ok );
+        vector<AccountID> listRecipient;
+        for ( const SocialNotification& notification : rig.takeNotifications() )
+        {
+            if ( notification._kind == SocialNotificationKind::PresenceChanged && notification._otherID == kAlice )
+                listRecipient.push_back( notification._recipientID );
+        }
+        std::sort( listRecipient.begin(), listRecipient.end() );
+        return listRecipient;
+    };
+
+    vector<AccountID> listRecipient = collectRecipients( SocialPresenceStatus::Online );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listRecipient.size() );
+    SW_EXPECT_EQUAL( kBob, listRecipient[0] );
+    SW_EXPECT_EQUAL( kCarol, listRecipient[1] );
+
+    SW_EXPECT_TRUE( rig.change( SocialLinkOperation::Remove, kBob, kAlice ) == SocialResult::Ok ); // 두 사람 모두 다시 읽는다
+    (void)rig.takeNotifications();
+    listRecipient = collectRecipients( SocialPresenceStatus::Away );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listRecipient.size() );
+    SW_EXPECT_EQUAL( kCarol, listRecipient[0] );
+
+    rig._service.removeAccount( kCarol ); // 접속 상태를 쓰지 않았으니 조용히 떠난다
+    SW_EXPECT_TRUE( collectRecipients( SocialPresenceStatus::Busy ).empty() );
+
+    (void)rig.links( kCarol ); // 다시 접속하면 역색인에 돌아온다
+    listRecipient = collectRecipients( SocialPresenceStatus::Online );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listRecipient.size() );
+    SW_EXPECT_EQUAL( kCarol, listRecipient[0] );
+
+    (void)rig.links( kCarol ); // 같은 목록을 다시 읽어도 두 번 받지 않는다
+    SW_EXPECT_EQUAL( size_t( 1 ), collectRecipients( SocialPresenceStatus::InGame ).size() );
 }
 
 /** @brief [SocialServiceTest] 떠나면 친구에게 Offline 을 알리고 캐시 값을 지워 조회가 Offline 이다. 접속 상태를 쓰지 않은 계정은 조용히 떠난다 */
