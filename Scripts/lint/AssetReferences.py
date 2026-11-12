@@ -13,8 +13,8 @@ Scripts/lint/AssetReferences.py
   임포트 산출물(`models/` · `textures/` · `heightfields/`)은 커밋하지 않으므로 같은 자리의 원본(`models_raw/<이름>.glb` 등)이 있으면 있다.
 - 옮긴 에셋의 옛 id(도메인 뿌리의 `redirects.xml`, 런타임 `AssetRedirect`)는 엔진이 풀어 읽지만, 저장소 안의 참조는 새 id 로 고친다 — 남은 옛 참조를
   보고한다(언리얼 "Fix Up Redirectors" 자리). 리다이렉트는 저장소 밖(세이브 · 서버 · 배포된 팩)에 적힌 옛 경로를 살리려고 있다.
-- 검사 범위는 인덱스의 모든 참조 파일(Content 의 글 에셋 + `listCMakeFile`)이다 — 680 개 남짓이라 1 초 안팎이고, 지우거나 옮긴 에셋을 가리키던 다른 파일
-  (역참조)도 같은 한 번의 훑기로 잡힌다. 저장소가 깨끗해야 하므로(ctest 가 지킨다) 걸린 것은 모두 이 커밋이 고칠 몫이다.
+- 검사 범위는 인덱스의 모든 참조 파일(Content 의 글 에셋 + `listCMakeFile`)이다 — 지우거나 옮긴 에셋을 가리키던 다른 파일(역참조)도 같은 판정에서 잡힌다.
+  참조 파일마다 뽑은 경로는 블롭 id 키 색인(`FactCache`)에 두어 커밋마다 바뀐 파일만 다시 읽는다. 저장소가 깨끗해야 하므로(ctest 가 지킨다) 걸린 것은 모두 이 커밋이 고칠 몫이다.
 """
 
 from __future__ import annotations
@@ -32,6 +32,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.Git import resolveGitExecutable, runGit  # noqa: E402
+from lint.FactCache import getIndexKeys, loadFacts  # noqa: E402
+from lint.LintScope import LintScope  # noqa: E402
 
 kConfigPath = "Config/Dev/AssetReferenceFields.json"
 kGeneratedPath = "Config/Dev/AssetReferenceFields.generated.json"   # 리플렉션 파서가 낸 경로 칸 표 — Scripts/generate/AssetReferenceFieldList.py 가 쓴다
@@ -418,10 +420,14 @@ def addRedirects(tableText: str | None, listMove: list[tuple[str, str]]) -> str:
 
 def collectProblems(listRelativePath: list[str], mapText: dict[str, str], assets: AssetSet, config: FieldConfig, mapRedirect: dict[str, str] | None = None) -> list[str]:
     """참조 파일들에서 없는 경로와 옮긴 에셋의 옛 id 를 `파일:줄: 칸 = '경로'` 로 모읍니다."""
+    return collectReferenceProblems({path: extractReferences(path, mapText[path], config) for path in listRelativePath}, assets, config, mapRedirect)
+
+
+def collectReferenceProblems(mapReference: dict[str, list[Reference]], assets: AssetSet, config: FieldConfig, mapRedirect: dict[str, str] | None = None) -> list[str]:
     listProblem: list[str] = []
     mapRedirect = mapRedirect or {}
-    for relativePath in listRelativePath:
-        for reference in extractReferences(relativePath, mapText[relativePath], config):
+    for relativePath, listReference in mapReference.items():
+        for reference in listReference:
             if not isChecked(reference, config):
                 continue
             if reference.path in mapRedirect:
@@ -438,26 +444,27 @@ def listMetaProblems(listIndex: list[str]) -> list[str]:
     return [f"{path}: .meta 는 쓰지 않는다 — 지운다(에셋은 경로로만 가리킨다)" for path in listIndex if path.startswith(prefix) and path.endswith(".meta")]
 
 
-def checkStagedAssetReferences(projectRoot: Path) -> list[str] | None:
+def checkAssetReferences(projectRoot: Path, scope: LintScope) -> list[str]:
     """
-    커밋 전 검사입니다. 스테이지에 Content · CMake 참조 파일 · 칸 목록의 변경(지우기 · 옮기기 포함)이 없으면 None(돌지 않음),
-    있으면 인덱스 전체를 훑어 끊어진 참조 목록을 돌려줍니다.
+    린트 규칙(`Rules.py`): 인덱스 전체의 끊어진 참조 — 지우거나 옮긴 에셋을 가리키던 다른 파일(역참조)까지 잡으려고 판정은 늘 전체로 낸다.
+    참조 파일마다 뽑은 경로는 블롭 id 를 키로 한 색인(`FactCache`)에 두어 바뀐 파일만 다시 읽는다. 커밋 훅은 Content · CMake 참조 파일이 바뀌었을 때만 돈다
+    (칸 목록이 바뀌면 `Rule.inputs` 가 저장소 전체로 돌린다).
     """
     config = loadConfig(projectRoot)
-    status = runGit(["diff", "--cached", "--name-only", "--no-renames"], cwd=projectRoot)
-    if status.returnCode != 0:
-        raise RuntimeError(f"git diff --cached 실패: {status.stderr.strip()}")
-    listChanged = [line.strip().replace("\\", "/") for line in status.stdout.splitlines() if line.strip()]
-    bRelevant = any(path.startswith(kContentFolder + "/") or path in config.listCMakeFile or path in (kConfigPath, kGeneratedPath) for path in listChanged)
-    if not bRelevant:
-        return None
-    listIndex = listIndexFiles(projectRoot)
+    if not scope.bWholeRepo and not scope.touches((kContentFolder,), files=config.listCMakeFile):
+        return []
+    mapKey = getIndexKeys(projectRoot)
+    listIndex = list(mapKey)
     prefix = kContentFolder + "/"
     assets = AssetSet(path[len(prefix):] for path in listIndex if path.startswith(prefix))
     listReferrer = [path for path in listIndex if isReferrer(path, config)]
     listRedirect = [path for path in listIndex if isRedirectTable(path)]
     mapRedirect = parseRedirects(readIndexBlobs(projectRoot, listRedirect)) if listRedirect else {}
-    return listMetaProblems(listIndex) + collectProblems(listReferrer, readIndexBlobs(projectRoot, listReferrer), assets, config, mapRedirect)
+    mapFact = loadFacts(projectRoot, "asset-refs", [__file__, str(projectRoot / kConfigPath), str(projectRoot / kGeneratedPath)], listReferrer,
+                        lambda path, text: [[reference.line, reference.field, reference.start, reference.end, reference.path] for reference in extractReferences(path, text, config)],
+                        mapKey=mapKey, readTexts=lambda listPath: readIndexBlobs(projectRoot, listPath))
+    mapReference = {path: [Reference(*row) for row in listRow] for path, listRow in mapFact.items()}
+    return listMetaProblems(listIndex) + collectReferenceProblems(mapReference, assets, config, mapRedirect)
 
 
 def checkWorkingTree(projectRoot: Path) -> list[str]:

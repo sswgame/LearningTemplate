@@ -25,6 +25,7 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from lint.CppShape import isTarget, stripCode  # noqa: E402
+from lint.LintScope import LintScope, makeFileScope, makeWholeScope  # noqa: E402
 
 kEntryFile = "Source/Engine/Serialization/Format/StateIO.h"
 kSignature = re.compile(r"\b(?:(\w+)\s*::\s*)?(writeState|readState)\s*\(\s*(?:sw::|::sw::)?Archive\s*&[^)]*\)\s*(?:const\s*)?(?:override\s*)?(?:=\s*0\s*)?([;{])")
@@ -46,8 +47,9 @@ def inspectText(text: str, relative: str) -> list[str]:
     return listViolation
 
 
-def checkStateShape(projectRoot: Path, listFile: Sequence[str]) -> list[str]:
+def checkStateShape(projectRoot: Path, scope: LintScope) -> list[str]:
     """@p listFile 가운데 Source 의 C++ 파일을 보고 어긋남을 `경로:줄: 설명` 으로 돌려준다. 테스트는 일부러 꾸민 바이트를 다루므로 보지 않습니다."""
+    listFile = scope.listAbsolute(projectRoot, (".h", ".cpp"))
     listViolation: list[str] = []
     for file in listFile:
         path = Path(file).resolve()
@@ -86,8 +88,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("[StateShape] self-check OK")
         return 0
     projectRoot = Path(__file__).resolve().parents[2]
-    listFile = args.files if args.files else [str(path) for path in (projectRoot / "Source").rglob("*") if path.suffix in (".h", ".cpp")]
-    listViolation = checkStateShape(projectRoot, listFile)
+    listViolation = checkStateShape(projectRoot, makeFileScope(projectRoot, args.files) if args.files else makeWholeScope(projectRoot))
     for line in listViolation:
         print(line)
     print(f"[StateShape] {'FAIL' if listViolation else 'OK'} — {len(listViolation)}건")

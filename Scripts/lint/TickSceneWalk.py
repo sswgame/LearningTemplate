@@ -34,6 +34,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.FactCache import loadFacts  # noqa: E402
+from lint.LintScope import LintScope, listRepoFiles, makeWholeScope  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/TickSceneWalkExceptions.json"
 kComment = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
@@ -52,7 +54,10 @@ class FunctionBody:
     path: str
     owner: str   # 클래스 이름(정의가 `클래스::함수` 일 때) — 클래스 안 인라인 정의 · 도우미는 빈 글
     name: str
-    body: str
+    walk: str | None                       # 몸 안의 첫 씬 순회 글(없으면 None)
+    listQualifiedCall: list[list[str]]     # `클래스::함수(` 의 (클래스, 함수)
+    listMemberCall: list[str]              # `.함수(` · `->함수(`
+    listBareCall: list[str]                # `함수(`
 
     @property
     def key(self) -> str:
@@ -75,13 +80,24 @@ def readBodies(path: str, text: str) -> list[FunctionBody]:
             elif code[cursor] == "}":
                 depth -= 1
             cursor += 1
-        listBody.append(FunctionBody(path, match.group(1) or "", name, code[match.end():cursor]))
+        body = code[match.end():cursor]
+        walk = kSceneWalk.search(body)
+        listBody.append(FunctionBody(path, match.group(1) or "", name, walk.group(0) if walk else None,
+                                     [list(pair) for pair in kQualifiedCall.findall(body)], kMemberCall.findall(body), kBareCall.findall(body)))
     return listBody
 
 
+def extractBodyFacts(path: str, text: str) -> list[list]:
+    """색인(`FactCache`)에 두는 파일 하나의 사실 — 함수마다 (클래스, 이름, 순회, 호출들)."""
+    return [[body.owner, body.name, body.walk, body.listQualifiedCall, body.listMemberCall, body.listBareCall] for body in readBodies(path, text)]
+
+
 def findWalkingTicks(listSource: Sequence[tuple[str, str]]) -> dict[str, str]:
-    """씬 전체 순회에 닿는 틱을 `경로::클래스::함수` → 근거 줄(처음 닿는 순회) 로 돌려준다."""
-    listBody = [body for path, text in listSource for body in readBodies(path, text)]
+    return findWalkingTicksInBodies([body for path, text in listSource for body in readBodies(path, text)])
+
+
+def findWalkingTicksInBodies(listBody: list[FunctionBody]) -> dict[str, str]:
+    """씬 전체 순회에 닿는 틱을 `경로::클래스::함수` → 근거 줄(처음 닿는 순회) 로 돌려준다. 호출 그래프는 저장소 전체다."""
     byQualified: dict[str, list[FunctionBody]] = {}
     byLocal: dict[tuple[str, str], list[FunctionBody]] = {}
     for body in listBody:
@@ -90,21 +106,20 @@ def findWalkingTicks(listSource: Sequence[tuple[str, str]]) -> dict[str, str]:
             byLocal.setdefault((body.path, body.name), []).append(body)
     reason: dict[str, str] = {}
     for body in listBody:
-        match = kSceneWalk.search(body.body)
-        if match:
-            reason.setdefault(body.key, match.group(0))
+        if body.walk is not None:
+            reason.setdefault(body.key, body.walk)
 
     def callees(body: FunctionBody) -> set[str]:
         listKey: set[str] = set()
-        for owner, name in kQualifiedCall.findall(body.body):
+        for owner, name in body.listQualifiedCall:
             if f"{owner}::{name}" in byQualified:
                 listKey.add(f"{owner}::{name}")
             for helper in byLocal.get((body.path, name), []):   # 익명 네임스페이스의 `…Internal` 구조체 안에 정의한 정적 도우미
                 listKey.add(helper.key)
-        for name in kMemberCall.findall(body.body):   # 틱 뒤로 미룬 람다의 `self.update…(` — 같은 클래스의 멤버로만 푼다
+        for name in body.listMemberCall:   # 틱 뒤로 미룬 람다의 `self.update…(` — 같은 클래스의 멤버로만 푼다
             if body.owner and f"{body.owner}::{name}" in byQualified:
                 listKey.add(f"{body.owner}::{name}")
-        for name in kBareCall.findall(body.body):
+        for name in body.listBareCall:
             if body.owner and f"{body.owner}::{name}" in byQualified:
                 listKey.add(f"{body.owner}::{name}")
             for helper in byLocal.get((body.path, name), []):
@@ -131,7 +146,10 @@ def findWalkingTicks(listSource: Sequence[tuple[str, str]]) -> dict[str, str]:
 
 
 def findProblems(listSource: Sequence[tuple[str, str]], exceptions: dict) -> list[str]:
-    found = findWalkingTicks(listSource)
+    return judgeTicks(findWalkingTicks(listSource), exceptions)
+
+
+def judgeTicks(found: dict[str, str], exceptions: dict) -> list[str]:
     listProblem = [f"{key}: 틱에서 씬 전체를 돈다 — 등록 목록(ComponentRegistry) · 서브틱 선행 조건 · 프레임 시스템으로(docs/agents/TickPlacement.md): {line}"
                    for key, line in sorted(found.items()) if key not in exceptions]
     for key in sorted(set(exceptions) - set(found)):
@@ -139,21 +157,19 @@ def findProblems(listSource: Sequence[tuple[str, str]], exceptions: dict) -> lis
     return listProblem
 
 
-def readSources(projectRoot: Path) -> list[tuple[str, str]]:
-    listSource: list[tuple[str, str]] = []
-    for path in (projectRoot / "Source").rglob("*.cpp"):
-        if "Tests" in path.parts:
-            continue
-        try:
-            listSource.append((path.relative_to(projectRoot).as_posix(), path.read_text(encoding="utf-8")))
-        except (UnicodeDecodeError, OSError):
-            continue
-    return listSource
+def readAllBodies(projectRoot: Path) -> list[FunctionBody]:
+    """저장소 전체(테스트 밖 .cpp)의 함수 — 내용이 바뀐 파일만 다시 읽는다(`FactCache`)."""
+    listPath = [path for path in listRepoFiles(projectRoot) if path.startswith("Source/") and path.endswith(".cpp") and "Tests" not in path.split("/")]
+    mapFact = loadFacts(projectRoot, "tick-scene-walk", [__file__], listPath, extractBodyFacts)
+    return [FunctionBody(path, *fact) for path, listFact in mapFact.items() for fact in listFact]
 
 
-def checkTickSceneWalk(projectRoot: Path) -> list[str]:
+def checkTickSceneWalk(projectRoot: Path, scope: LintScope) -> list[str]:
+    """호출 그래프가 파일을 건너므로 판정은 늘 저장소 전체 색인으로 낸다. 커밋 훅은 .cpp 가 바뀌었을 때만 돈다."""
+    if not scope.bWholeRepo and not scope.touches(("Source",), (".cpp",)):
+        return []
     exceptions = json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))["_exceptions"]
-    return findProblems(readSources(projectRoot), exceptions)
+    return judgeTicks(findWalkingTicksInBodies(readAllBodies(projectRoot)), exceptions)
 
 
 def runSelfCheck() -> None:
@@ -190,7 +206,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runSelfCheck()
         print("[TickSceneWalk] self-check OK")
         return ExitCode.Passed
-    listProblem = checkTickSceneWalk(getProjectRoot())
+    listProblem = checkTickSceneWalk(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[TickSceneWalk] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")

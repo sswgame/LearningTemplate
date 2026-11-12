@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.LintScope import LintScope, makeWholeScope, readTexts  # noqa: E402
 from lint.NamePathArguments import blankCommentsAndStrings  # noqa: E402
 
 kSlot = re.compile(r"\bSW_SERVICE_SLOT(?:_CONST)?\s*\(\s*(\w+)\s*,")
@@ -55,19 +56,12 @@ def findProblems(listSource: list[tuple[str, str]]) -> list[str]:
     return listProblem
 
 
-def readSources(projectRoot: Path) -> list[tuple[str, str]]:
-    listSource: list[tuple[str, str]] = []
-    for pattern in ("*.cpp", "*.h", "*.inl"):
-        for path in (projectRoot / "Source").rglob(pattern):
-            try:
-                listSource.append((path.relative_to(projectRoot).as_posix(), path.read_text(encoding="utf-8")))
-            except (UnicodeDecodeError, OSError):
-                continue
-    return listSource
+def readSources(projectRoot: Path, scope: LintScope) -> list[tuple[str, str]]:
+    return readTexts(projectRoot, scope.select(("Source",), (".cpp", ".h", ".inl")))
 
 
-def checkServiceSlotOrder(projectRoot: Path) -> list[str]:
-    return findProblems(readSources(projectRoot))
+def checkServiceSlotOrder(projectRoot: Path, scope: LintScope) -> list[str]:
+    return findProblems(readSources(projectRoot, scope))
 
 
 def runSelfCheck() -> None:
@@ -91,7 +85,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runSelfCheck()
         print("[ServiceSlotOrder] self-check OK")
         return ExitCode.Passed
-    listProblem = checkServiceSlotOrder(getProjectRoot())
+    listProblem = checkServiceSlotOrder(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[ServiceSlotOrder] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")

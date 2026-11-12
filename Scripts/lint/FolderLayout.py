@@ -8,14 +8,13 @@ Scripts/lint/FolderLayout.py
   2. 기능 폴더의 `Component/` 에는 컴포넌트(`*Component` · 허용 끝말)만 — 씬 서비스 · 질의 · 검사는 `<기능>/Scene/`.
 
 **왜 린트인가.** 폴더 자리는 형식이 말하지 못한다. 기준표 없이 "처음 쓰는 쪽" · 이름 낱말로 자리를 정해 RegistrationList(String 폴더) · StringUtil(Container) 같은
-어긋남이 쌓였다(FolderMoves 13 절, 2026-11-08 전수 조사). 저장소 전체 경로만 보므로 빠르다.
+어긋남이 쌓였다(FolderMoves 13 절, 2026-11-08 전수 조사). 경로만 본다.
 `Dev/` 폴더 자리는 린트가 아니라 configure 가 막는다(`cmake/Engine/UnbuiltSources.cmake`, 표 `Config/Rules/Layers/DevFolders.json`) — 배포가 빼는 개발 폴더 목록과 한 표다.
 """
 
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -23,17 +22,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.LintScope import LintScope, makeWholeScope  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/FolderLayout.json"
 
 
-def checkFolderLayout(projectRoot: Path, listPath: list[str] | None = None) -> list[str]:
+def checkFolderLayout(projectRoot: Path, scope: LintScope) -> list[str]:
     table = json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))
     banned = {name.lower(): reason for name, reason in table["_bannedFolderNames"].items()}
     componentRoots = tuple(table["_componentFolderModel"])
     componentSuffixes = tuple(table["_componentSuffixes"])
-    if listPath is None:
-        listPath = subprocess.run(["git", "ls-files", "Source"], cwd=projectRoot, capture_output=True, text=True, encoding="utf-8").stdout.splitlines()
+    listPath = scope.select(("Source",))
     listProblem: list[str] = []
     seenFolder: set[str] = set()
     for relative in listPath:
@@ -53,7 +52,7 @@ def checkFolderLayout(projectRoot: Path, listPath: list[str] | None = None) -> l
 
 
 def main(listArgument: list[str] | None = None) -> int:  # noqa: ARG001 — `py -3 -m Scripts lint folder-layout` 가 인자 목록을 넘긴다
-    listProblem = checkFolderLayout(getProjectRoot())
+    listProblem = checkFolderLayout(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[FolderLayout] {'OK' if not listProblem else f'FAIL {len(listProblem)}건'}")

@@ -39,6 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.LintScope import LintScope, makeWholeScope, readTexts  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/CommonShapeExceptions.json"
 kExtensions = (".h", ".cpp", ".inl")
@@ -136,7 +137,7 @@ def collectViolations(path: str, text: str) -> list[tuple[str, str, str]]:
     return listViolation
 
 
-def findProblems(listSource: Iterable[tuple[str, str]], exceptions: dict) -> list[str]:
+def findProblems(listSource: Iterable[tuple[str, str]], exceptions: dict, bWholeRepo: bool = True) -> list[str]:
     listProblem: list[str] = []
     seenKey: set[tuple[str, str]] = set()
     for path, text in listSource:
@@ -144,7 +145,7 @@ def findProblems(listSource: Iterable[tuple[str, str]], exceptions: dict) -> lis
             seenKey.add((rule, key))
             if key not in exceptions.get(rule, {}):
                 listProblem.append(f"{path}: {message} (예외는 {kConfigPath} 의 {rule} 에 '{key}' 와 까닭)")
-    for rule, table in exceptions.items():
+    for rule, table in exceptions.items() if bWholeRepo else ():   # 낡은 예외는 저장소 전체를 봐야 안다
         if rule.startswith("_"):
             continue
         for key in table:
@@ -153,20 +154,13 @@ def findProblems(listSource: Iterable[tuple[str, str]], exceptions: dict) -> lis
     return listProblem
 
 
-def readSources(projectRoot: Path) -> list[tuple[str, str]]:
-    listSource: list[tuple[str, str]] = []
-    for path in (projectRoot / "Source").rglob("*"):
-        if path.suffix in kExtensions and not any(part in path.parts for part in kSkipParts):
-            try:
-                listSource.append((path.relative_to(projectRoot).as_posix(), path.read_text(encoding="utf-8")))
-            except (UnicodeDecodeError, OSError):
-                continue
-    return listSource
+def readSources(projectRoot: Path, scope: LintScope) -> list[tuple[str, str]]:
+    return readTexts(projectRoot, scope.select(("Source",), kExtensions, kSkipParts))
 
 
-def checkCommonShapes(projectRoot: Path) -> list[str]:
+def checkCommonShapes(projectRoot: Path, scope: LintScope) -> list[str]:
     exceptions = json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))
-    return findProblems(readSources(projectRoot), exceptions)
+    return findProblems(readSources(projectRoot, scope), exceptions, scope.bWholeRepo)
 
 
 def runSelfCheck() -> None:
@@ -212,7 +206,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runSelfCheck()
         print("[CommonShapes] self-check OK")
         return ExitCode.Passed
-    listProblem = checkCommonShapes(getProjectRoot())
+    listProblem = checkCommonShapes(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[CommonShapes] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")

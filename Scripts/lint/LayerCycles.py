@@ -31,6 +31,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.FactCache import loadFacts  # noqa: E402
+from lint.LintScope import LintScope, listRepoFiles, makeWholeScope  # noqa: E402
 
 kExtensions = (".h", ".hpp", ".inl", ".cpp", ".c", ".xxx")
 kRootLayerName = "<root>"   # 에디터 표: `Source/Editor` 바로 아래 파일
@@ -45,16 +47,20 @@ def findKey(mapTier: dict[str, int], relative: str) -> str | None:
     return best
 
 
-def countPairs(mapTier: dict[str, int], module: str, listSource: Iterable[tuple[str, str]]) -> Counter[tuple[str, str]]:
-    """같은 층의 다른 키 사이 include 수 — (include 하는 키, include 되는 키)."""
-    pattern = re.compile(r'^\s*#\s*include\s*"' + re.escape(module) + r'/([^"]+)"', re.M)
+def findIncludes(module: str, text: str) -> list[str]:
+    """글 하나가 include 하는 `<module>/` 아래 경로(모듈 기준) — 색인(`FactCache`)에 두는 사실이다."""
+    return re.findall(r'^\s*#\s*include\s*"' + re.escape(module) + r'/([^"]+)"', text, re.M)
+
+
+def countIncludePairs(mapTier: dict[str, int], mapInclude: dict[str, list[str]]) -> Counter[tuple[str, str]]:
+    """같은 층의 다른 키 사이 include 수 — (include 하는 키, include 되는 키). `mapInclude` 는 모듈 기준 경로 → include 목록."""
     counter: Counter[tuple[str, str]] = Counter()
-    for relative, text in listSource:
+    for relative, listInclude in mapInclude.items():
         source = findKey(mapTier, relative) or (kRootLayerName if "/" not in relative and kRootLayerName in mapTier else None)
         if source is None:
             continue
-        for match in pattern.finditer(text):
-            target = findKey(mapTier, match.group(1))
+        for include in listInclude:
+            target = findKey(mapTier, include)
             if target is not None and target != source and mapTier[target] == mapTier[source]:
                 counter[(source, target)] += 1
     return counter
@@ -73,22 +79,31 @@ def readTable(projectRoot: Path, module: str) -> dict:
     return tomllib.loads((projectRoot / "Config" / "Rules" / "Layers" / f"{module}Layers.toml").read_text(encoding="utf-8"))
 
 
-def readSources(projectRoot: Path, module: str) -> list[tuple[str, str]]:
-    moduleDir = projectRoot / "Source" / module
-    return [(path.relative_to(moduleDir).as_posix(), path.read_text(encoding="utf-8", errors="replace"))
-            for path in sorted(moduleDir.rglob("*")) if path.suffix in kExtensions and path.is_file()]
+def countPairs(mapTier: dict[str, int], module: str, listSource: Iterable[tuple[str, str]]) -> Counter[tuple[str, str]]:
+    return countIncludePairs(mapTier, {relative: findIncludes(module, text) for relative, text in listSource})
 
 
-def checkLayerCycles(projectRoot: Path) -> list[str]:
+def readIncludes(projectRoot: Path, module: str) -> dict[str, list[str]]:
+    """모듈 기준 경로 → include 목록. 저장소 전체 색인이고, 내용이 바뀐 파일만 다시 읽는다(`FactCache`)."""
+    head = f"Source/{module}/"
+    listPath = [path for path in listRepoFiles(projectRoot) if path.startswith(head) and path.endswith(kExtensions)]
+    mapFact = loadFacts(projectRoot, f"layer-cycles-{module}", [__file__], listPath, lambda _, text: findIncludes(module, text), errors="replace")
+    return {path[len(head):]: listInclude for path, listInclude in mapFact.items()}
+
+
+def checkLayerCycles(projectRoot: Path, scope: LintScope) -> list[str]:
+    """순환은 두 방향이 모두 있어야 보이므로 판정은 늘 저장소 전체 색인으로 낸다. 커밋 훅은 Engine C++ 이 바뀌었을 때만 돈다."""
+    if not scope.bWholeRepo and not scope.touches(("Source/Engine",), kExtensions):
+        return []
     table = readTable(projectRoot, "Engine")
     mapTier: dict[str, int] = table["tier"]
     setAllowedTier = {int(tier) for tier in table.get("sameTierCycle", {})}
-    return findCycles(mapTier, countPairs(mapTier, "Engine", readSources(projectRoot, "Engine")), setAllowedTier)
+    return findCycles(mapTier, countIncludePairs(mapTier, readIncludes(projectRoot, "Engine")), setAllowedTier)
 
 
 def printCensus(projectRoot: Path, module: str) -> None:
     mapTier: dict[str, int] = readTable(projectRoot, module)["tier"]
-    counter = countPairs(mapTier, module, readSources(projectRoot, module))
+    counter = countIncludePairs(mapTier, readIncludes(projectRoot, module))
     for (source, target), count in sorted(counter.items(), key=lambda item: (mapTier[item[0][0]], item[0])):
         back = counter.get((target, source), 0)
         if back and source > target:
@@ -120,7 +135,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if arguments.census:
         printCensus(getProjectRoot(), arguments.census)
         return ExitCode.Passed
-    listProblem = checkLayerCycles(getProjectRoot())
+    listProblem = checkLayerCycles(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[layer-cycles] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")

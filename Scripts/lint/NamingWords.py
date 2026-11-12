@@ -36,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.LintScope import LintScope, makeWholeScope, readTexts  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/NamingWords.json"
 kBaselinePath = "Config/Rules/Lint/NamingBaseline.json"
@@ -158,27 +159,20 @@ def classifyNames(listSource: Iterable[tuple[str, str]], table: dict) -> tuple[l
     return listProblem, ratchet
 
 
-def compareBaseline(ratchet: dict[str, dict[str, str]], baseline: dict[str, list[str]]) -> list[str]:
+def compareBaseline(ratchet: dict[str, dict[str, str]], baseline: dict[str, list[str]], bWholeRepo: bool = True) -> list[str]:
     listProblem: list[str] = []
     for rule in kRatchetRules:
         allowed = set(baseline.get(rule, []))
         for name, where in sorted(ratchet[rule].items()):
             if name not in allowed:
                 listProblem.append(f"[{rule}] {where}")
-        for name in sorted(allowed - set(ratchet[rule])):
+        for name in sorted(allowed - set(ratchet[rule])) if bWholeRepo else ():   # 고친 이름은 저장소 전체를 봐야 안다
             listProblem.append(f"[{rule}] 기준선의 '{name}' 가 더는 없다 — 고친 이름을 기준선에서 뺀다(`py -3 Scripts/lint/NamingWords.py --lower-baseline`)")
     return listProblem
 
 
-def readSources(projectRoot: Path) -> list[tuple[str, str]]:
-    listSource: list[tuple[str, str]] = []
-    for path in (projectRoot / "Source").rglob("*"):
-        if path.suffix in kExtensions:
-            try:
-                listSource.append((path.relative_to(projectRoot).as_posix(), path.read_text(encoding="utf-8")))
-            except (UnicodeDecodeError, OSError):
-                continue
-    return listSource
+def readSources(projectRoot: Path, scope: LintScope) -> list[tuple[str, str]]:
+    return readTexts(projectRoot, scope.select(("Source",), kExtensions))
 
 
 def readTable(projectRoot: Path) -> dict:
@@ -199,9 +193,9 @@ def writeBaseline(projectRoot: Path, baseline: dict[str, list[str]]) -> None:
     (projectRoot / kBaselinePath).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
-def checkNamingWords(projectRoot: Path) -> list[str]:
-    listProblem, ratchet = classifyNames(readSources(projectRoot), readTable(projectRoot))
-    return listProblem + compareBaseline(ratchet, readBaseline(projectRoot))
+def checkNamingWords(projectRoot: Path, scope: LintScope) -> list[str]:
+    listProblem, ratchet = classifyNames(readSources(projectRoot, scope), readTable(projectRoot))
+    return listProblem + compareBaseline(ratchet, readBaseline(projectRoot), scope.bWholeRepo)
 
 
 def runSelfCheck() -> None:
@@ -240,7 +234,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return ExitCode.Passed
     projectRoot = getProjectRoot()
     if arguments.write_baseline or arguments.lower_baseline:
-        _, ratchet = classifyNames(readSources(projectRoot), readTable(projectRoot))
+        _, ratchet = classifyNames(readSources(projectRoot, makeWholeScope(projectRoot)), readTable(projectRoot))
         current = {rule: list(ratchet[rule]) for rule in kRatchetRules}
         if arguments.lower_baseline:
             old = readBaseline(projectRoot)
@@ -248,7 +242,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         writeBaseline(projectRoot, current)
         print(f"[NamingWords] 기준선: " + ", ".join(f"{rule} {len(current[rule])}" for rule in kRatchetRules))
         return ExitCode.Passed
-    listProblem = checkNamingWords(projectRoot)
+    listProblem = checkNamingWords(projectRoot, makeWholeScope(projectRoot))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[NamingWords] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")

@@ -9,7 +9,7 @@ Scripts/lint/Acronyms.py
 **왜 린트인가.** 약어 일괄 변경(1dafbae0c9) 뒤 도구를 지워 새 어긋남(`FourCcUtil` · `HpackDecoder` · `kDxgiFormat…`)이 다시 쌓였다(FolderMoves 11 절) — 이름은 형식이 막지 못한다.
 바깥 이름(서드파티 · OS API 를 그대로 쓰는 자리)과 데이터 철자(직렬화 키)는 `_keep` 에 이름 하나씩 까닭과 함께 둔다.
 
-`py -3 -m Scripts lint acronyms [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 돌린다(저장소 전체 — 수 초).
+`py -3 -m Scripts lint acronyms [--self-check]` 로 돌리고, 커밋 훅(`Rules.py` 표)이 스테이지된 파일에 돌린다.
 """
 
 from __future__ import annotations
@@ -17,7 +17,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -26,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.LintScope import LintScope, makeWholeScope  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/Acronyms.json"
 kExtensions = (".h", ".cpp", ".inl")
@@ -53,16 +53,15 @@ def readTable(projectRoot: Path) -> tuple[set[str], dict[str, str]]:
     return {item.upper() for item in table["_acronyms"]}, table.get("_keep", {})
 
 
-def listSourceFiles(projectRoot: Path) -> list[str]:
-    result = subprocess.run(["git", "ls-files", "Source"], cwd=projectRoot, capture_output=True, text=True, encoding="utf-8")
-    return [line for line in result.stdout.splitlines() if line.endswith(kExtensions)]
+def listSourceFiles(scope: LintScope) -> list[str]:
+    return scope.select(("Source",), kExtensions)
 
 
-def checkAcronyms(projectRoot: Path) -> list[str]:
+def checkAcronyms(projectRoot: Path, scope: LintScope) -> list[str]:
     acronyms, keep = readTable(projectRoot)
     listProblem: list[str] = []
     seen: set[str] = set()
-    listFile = listSourceFiles(projectRoot)
+    listFile = listSourceFiles(scope)
     for relative in listFile:
         # 파일 · 폴더 이름(확장자 앞)
         for segment in Path(relative).with_suffix("").parts[1:]:
@@ -106,7 +105,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.self_check:
         return runSelfCheck()
-    listProblem = checkAcronyms(getProjectRoot())
+    listProblem = checkAcronyms(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[Acronyms] {'OK' if not listProblem else f'FAIL {len(listProblem)}건'}")

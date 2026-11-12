@@ -32,8 +32,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ExitCode import ExitCode  # noqa: E402
-from common.Git import runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.FactCache import loadFacts  # noqa: E402
+from lint.LintScope import LintScope, listRepoFiles, makeWholeScope  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/FeatureReferenceExceptions.json"
 kCppExtensions = (".h", ".cpp", ".inl", ".xxx")
@@ -73,62 +74,44 @@ class Exceptions:
     dictCommand: dict[str, str]
 
 
-def findComponents(sources: Sources) -> dict[str, str]:
-    """`REFLECT` 가 붙은 컴포넌트 이름 → 정의 파일."""
-    dictFound: dict[str, str] = {}
-    for path, text in sources.dictHeader.items():
-        if not path.endswith(".h"):
-            continue
-        for match in kClassPattern.finditer(text):
-            before = text[:match.start()].splitlines()[-kReflectLookBackLines:]
-            if any("REFLECT(" in line for line in before):
-                dictFound[match.group(1)] = path
-    return dictFound
+def classifyPath(relative: str) -> str | None:
+    """파일이 드는 묶음(`Sources` 의 칸 이름) — 훑지 않는 파일은 None."""
+    suffix = Path(relative).suffix.lower()
+    if relative.startswith("Source/") and suffix in kCppExtensions:
+        return "dictTestCode" if "/Tests/" in relative else "dictHeader"
+    if relative.startswith("Content/") and suffix in kContentExtensions:
+        return "dictContent"
+    if relative.startswith(("Scripts/", "Test/")) and suffix in kScriptExtensions and relative != "Scripts/lint/FeatureReferences.py":
+        return "dictScript"
+    return None
 
 
-def findDefinitions(sources: Sources, pattern: re.Pattern[str]) -> dict[str, str]:
-    """등록 매크로의 이름 → 정의 파일."""
-    dictFound: dict[str, str] = {}
-    for path, text in sources.dictHeader.items():
-        if path.endswith("AutomationWatch.h") or path.endswith("AutomationComponentWatch.h"):
-            continue   # 매크로 정의 자체
-        for match in pattern.finditer(text):
-            dictFound[match.group(1)] = path
-    return dictFound
+def stripRegistrations(text: str) -> str:
+    for pattern in (kWatchPattern, kCommandPattern):
+        text = pattern.sub("", text)
+    return text
 
 
-def collectComponentReferences(sources: Sources) -> set[str]:
-    setReference: set[str] = set()
-    for text in sources.dictContent.values():
-        setReference.update(word for word in kWordPattern.findall(text) if word.endswith("Component"))
-    for text in sources.dictHeader.values():
-        setReference.update(kAddComponentPattern.findall(text))
-        setReference.update(kBasePattern.findall(text))
-    return setReference
-
-
-def collectLiterals(sources: Sources, listStripPattern: Sequence[re.Pattern[str]]) -> set[str]:
-    """등록 줄을 뺀 코드 · 스크립트의 글자 첫 낱말."""
-    setLiteral: set[str] = set()
-    for dictText in (sources.dictHeader, sources.dictTestCode, sources.dictScript):
-        for text in dictText.values():
-            for pattern in listStripPattern:
-                text = pattern.sub("", text)
-            setLiteral.update(kLiteralPattern.findall(text))
-    return setLiteral
-
-
-def collectScenarioWords(sources: Sources) -> tuple[set[str], set[str]]:
-    """시나리오의 감시 값 이름들, `line="…"` 의 낱말들."""
-    setWatch: set[str] = set()
-    setCommandWord: set[str] = set()
-    for path, text in sources.dictContent.items():
-        if not path.endswith(".scenario.xml"):
-            continue
-        setWatch.update(kWatchUsePattern.findall(text))
-        for line in kCommandLinePattern.findall(text):
-            setCommandWord.update(line.split())
-    return setWatch, setCommandWord
+def extractFacts(bucket: str, path: str, text: str) -> dict[str, list[str]]:
+    """파일 하나의 사실 — 정의(컴포넌트 · 감시 값 · 명령), 참조(컴포넌트 이름 · 글자 첫 낱말 · 시나리오 낱말), 등록 없는 명령 함수. 색인(`FactCache`)에 둔다."""
+    facts: dict[str, list[str]] = {}
+    if bucket == "dictHeader":
+        if path.endswith(".h"):
+            facts["component"] = [match.group(1) for match in kClassPattern.finditer(text)
+                                  if any("REFLECT(" in line for line in text[:match.start()].splitlines()[-kReflectLookBackLines:])]
+        if not (path.endswith("AutomationWatch.h") or path.endswith("AutomationComponentWatch.h")):   # 매크로 정의 자체
+            facts["watch"] = [match.group(1) for match in kWatchPattern.finditer(text)]
+            facts["command"] = [match.group(1) for match in kCommandPattern.finditer(text)]
+        facts["componentReference"] = kAddComponentPattern.findall(text) + kBasePattern.findall(text)
+        facts["lostRunner"] = [match.group(1) for match in kCommandRunnerPattern.finditer(text) if len(re.findall(rf"\b{match.group(1)}\b", text)) < 2]
+    if bucket in ("dictHeader", "dictTestCode", "dictScript"):
+        facts["literal"] = sorted(set(kLiteralPattern.findall(stripRegistrations(text))))
+    if bucket == "dictContent":
+        facts["componentReference"] = sorted({word for word in kWordPattern.findall(text) if word.endswith("Component")})
+        if path.endswith(".scenario.xml"):
+            facts["scenarioWatch"] = kWatchUsePattern.findall(text)
+            facts["commandWord"] = [word for line in kCommandLinePattern.findall(text) for word in line.split()]
+    return facts
 
 
 def checkExceptionsTable(kind: str, dictDefined: dict[str, str], setReference: set[str], dictException: dict[str, str]) -> list[str]:
@@ -144,22 +127,28 @@ def checkExceptionsTable(kind: str, dictDefined: dict[str, str], setReference: s
     return listProblem
 
 
-def findProblems(sources: Sources, exceptions: Exceptions) -> list[str]:
+def judgeFacts(mapFact: dict[str, dict[str, list[str]]], exceptions: Exceptions) -> list[str]:
+    """저장소 전체 사실(경로 → 사실, 경로 순)로 참조 0 을 가린다 — 참조는 어느 파일에서 와도 되므로 판정은 늘 전체로 낸다."""
+    def collect(key: str) -> set[str]:
+        return {name for facts in mapFact.values() for name in facts.get(key, ())}
+
+    def define(key: str) -> dict[str, str]:
+        return {name: path for path, facts in mapFact.items() for name in facts.get(key, ())}   # 같은 이름은 뒤 파일이 이긴다
+
     listProblem: list[str] = []
-    dictComponent = findComponents(sources)
-    setComponentReference = collectComponentReferences(sources)
+    dictComponent = define("component")
+    setComponentReference = collect("componentReference")
     for name, path in sorted(dictComponent.items()):
         bFolderExcepted = any(path.startswith(folder + "/") for folder in exceptions.dictFolder)
         if name not in setComponentReference and not bFolderExcepted and name not in exceptions.dictComponent:
             listProblem.append(f"{path}: 컴포넌트 {name} 를 콘텐츠도 코드도 쓰지 않는다 — 배치하거나 {kConfigPath} 에 까닭을 적는다")
     listProblem += checkExceptionsTable("컴포넌트", dictComponent, setComponentReference, exceptions.dictComponent)
 
-    dictWatch = findDefinitions(sources, kWatchPattern)
-    dictCommand = findDefinitions(sources, kCommandPattern)
-    setLiteral = collectLiterals(sources, [kWatchPattern, kCommandPattern])
-    setScenarioWatch, setCommandWord = collectScenarioWords(sources)
-    setWatchReference = setScenarioWatch | setLiteral
-    setCommandReference = setCommandWord | setLiteral
+    dictWatch = define("watch")
+    dictCommand = define("command")
+    setLiteral = collect("literal")
+    setWatchReference = collect("scenarioWatch") | setLiteral
+    setCommandReference = collect("commandWord") | setLiteral
     for name, path in sorted(dictWatch.items()):
         if name not in setWatchReference and name not in exceptions.dictWatch:
             listProblem.append(f"{path}: 감시 값 {name} 를 아무도 읽지 않는다 — 판정에 쓰거나 지우거나 {kConfigPath} 에 까닭을 적는다")
@@ -168,12 +157,16 @@ def findProblems(sources: Sources, exceptions: Exceptions) -> list[str]:
         if name not in setCommandReference and name not in exceptions.dictCommand:
             listProblem.append(f"{path}: 개발 명령 {name} 를 자동화가 부르지 않는다 — 시나리오로 잇거나 {kConfigPath} 에 까닭을 적는다")
     listProblem += checkExceptionsTable("개발 명령", dictCommand, setCommandReference, exceptions.dictCommand)
-    for path, text in sorted(sources.dictHeader.items()):
-        for match in kCommandRunnerPattern.finditer(text):
-            name = match.group(1)
-            if len(re.findall(rf"\b{name}\b", text)) < 2:
-                listProblem.append(f"{path}: 명령 함수 {name} 를 등록(SW_DEV_COMMAND)도 호출도 하지 않는다 — 등록 줄을 되살리거나 함수를 지운다")
+    for path in sorted(mapFact):
+        for name in mapFact[path].get("lostRunner", ()):
+            listProblem.append(f"{path}: 명령 함수 {name} 를 등록(SW_DEV_COMMAND)도 호출도 하지 않는다 — 등록 줄을 되살리거나 함수를 지운다")
     return listProblem
+
+
+def findProblems(sources: Sources, exceptions: Exceptions) -> list[str]:
+    mapFact = {path: extractFacts(bucket, path, text) for bucket in ("dictHeader", "dictTestCode", "dictContent", "dictScript")
+               for path, text in getattr(sources, bucket).items()}
+    return judgeFacts(mapFact, exceptions)
 
 
 def readExceptions(projectRoot: Path) -> Exceptions:
@@ -181,30 +174,17 @@ def readExceptions(projectRoot: Path) -> Exceptions:
     return Exceptions(data["_folders"], data["_components"], data["_watches"], data["_devCommands"])
 
 
-def readSources(projectRoot: Path) -> Sources:
-    """저장소에 있는 파일만 본다(`git ls-files`, 빌드 산출물 · 임포트 산출물을 줍지 않는다)."""
-    result = runGit(["ls-files", "--cached", "--others", "--exclude-standard", "Source", "Content", "Scripts", "Test"], cwd=projectRoot)
-    sources = Sources()
-    for relative in result.stdout.splitlines():
-        path = projectRoot / relative
-        suffix = path.suffix.lower()
-        if relative.startswith("Source/") and suffix in kCppExtensions:
-            bucket = sources.dictTestCode if "/Tests/" in relative else sources.dictHeader
-        elif relative.startswith("Content/") and suffix in kContentExtensions:
-            bucket = sources.dictContent
-        elif relative.startswith(("Scripts/", "Test/")) and suffix in kScriptExtensions and relative != "Scripts/lint/FeatureReferences.py":
-            bucket = sources.dictScript
-        else:
-            continue
-        try:
-            bucket[relative] = path.read_text(encoding="utf-8", errors="ignore")
-        except OSError:
-            continue   # 지운 채 스테이지하지 않은 파일
-    return sources
+def readFacts(projectRoot: Path) -> dict[str, dict[str, list[str]]]:
+    """저장소에 있는 파일만 본다(git 이 아는 파일 — 빌드 산출물 · 임포트 산출물을 줍지 않는다). 내용이 바뀐 파일만 다시 읽는다(`FactCache`)."""
+    listPath = [path for path in listRepoFiles(projectRoot) if classifyPath(path) is not None]
+    return loadFacts(projectRoot, "feature-refs", [__file__], listPath, lambda path, text: extractFacts(classifyPath(path), path, text), errors="ignore")
 
 
-def checkFeatureReferences(projectRoot: Path) -> list[str]:
-    return findProblems(readSources(projectRoot), readExceptions(projectRoot))
+def checkFeatureReferences(projectRoot: Path, scope: LintScope) -> list[str]:
+    """커밋 훅은 훑는 파일이 바뀌었을 때만 돈다(지운 파일 포함 — 참조를 지우면 참조 0 이 생긴다)."""
+    if not scope.bWholeRepo and not any(classifyPath(path) for path in (*scope.listFile, *scope.listRemoved)):
+        return []
+    return judgeFacts(readFacts(projectRoot), readExceptions(projectRoot))
 
 
 def runSelfCheck() -> None:
@@ -249,7 +229,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runSelfCheck()
         print("[FeatureReferences] self-check OK")
         return ExitCode.Passed
-    listProblem = checkFeatureReferences(getProjectRoot())
+    listProblem = checkFeatureReferences(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for line in listProblem:
         print(f"  - {line}")
     print(f"[FeatureReferences] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")

@@ -25,6 +25,7 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from lint.CppShape import isTarget, stripCode  # noqa: E402
+from lint.LintScope import LintScope, makeFileScope, makeWholeScope  # noqa: E402
 from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 
@@ -66,8 +67,9 @@ def loadExceptions(projectRoot: Path) -> frozenset[str]:
     return frozenset(entry["_path"] for entry in data["_listFile"])
 
 
-def checkCatalogRootShape(projectRoot: Path, listFile: Sequence[str]) -> list[str]:
+def checkCatalogRootShape(projectRoot: Path, scope: LintScope) -> list[str]:
     """@p listFile 가운데 대상 C++ 파일을 보고 어긋남을 `경로:줄: 설명` 으로 돌려준다."""
+    listFile = scope.listAbsolute(projectRoot, (".h", ".cpp"))
     return flatMapInProcesses(functools.partial(inspectListedFile, projectRoot, loadExceptions(projectRoot)), listFile)
 
 
@@ -99,8 +101,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("[CatalogRootShape] self-check OK")
         return 0
     projectRoot = Path(__file__).resolve().parents[2]
-    listFile = args.files if args.files else [str(path) for path in (projectRoot / "Source").rglob("*") if path.suffix in (".h", ".cpp")]
-    listViolation = checkCatalogRootShape(projectRoot, listFile)
+    listViolation = checkCatalogRootShape(projectRoot, makeFileScope(projectRoot, args.files) if args.files else makeWholeScope(projectRoot))
     for line in listViolation:
         print(line)
     print(f"[CatalogRootShape] {'FAIL' if listViolation else 'OK'} — {len(listViolation)}건")

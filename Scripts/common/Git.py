@@ -12,7 +12,6 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-from .Paths import getProjectRoot
 from .HostPlatform import isWindowsHost
 from .RunProcess import ProcessResult, runProcess
 
@@ -65,9 +64,6 @@ def runGit(args: Sequence[str], *, cwd: Path | None = None) -> ProcessResult:
     return runProcess([gitExe, *args], cwd=cwd)
 
 
-kStagedFileArgument = ["diff", "--cached", "--name-only", "--diff-filter=ACM"]
-
-
 def listGitFiles(projectRoot: Path, listGitArgument: list[str], extensions: set[str] | None) -> set[Path]:
     """
     git 명령이 한 줄에 하나씩 찍는 저장소 기준 경로를 절대 경로로 풀어 모읍니다. 지금 있는 파일만, `extensions` 가 있으면 그 확장자만.
@@ -85,10 +81,3 @@ def listGitFiles(projectRoot: Path, listGitArgument: list[str], extensions: set[
             if resolvedPath.is_file() and (extensions is None or resolvedPath.suffix.lower() in extensions):
                 fileSet.add(resolvedPath)
     return fileSet
-
-
-def getAllStagedFiles(root: Path | None = None) -> list[Path]:
-    """
-    Git Staged(인덱스) 상태인 모든 파일 목록을 반환합니다.
-    """
-    return sorted(listGitFiles(root or getProjectRoot(), kStagedFileArgument, None))

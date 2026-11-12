@@ -26,12 +26,13 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.LintScope import LintScope, makeWholeScope  # noqa: E402
 
 kExtensions = (".h", ".cpp", ".inl")
 # 함수 정적을 매크로 본문에 둘 수 있는 곳(세 틀의 정의 매크로)
@@ -211,10 +212,8 @@ def findMutableStatics(text: str) -> list[tuple[int, str, str, str]]:
     return found
 
 
-def iterSources(projectRoot: Path) -> Iterable[Path]:
-    for path in (projectRoot / "Source").rglob("*"):
-        if path.suffix in kExtensions and "ThirdParty" not in path.parts:
-            yield path
+def iterSources(projectRoot: Path, scope: LintScope) -> list[str]:
+    return scope.select(("Source",), kExtensions, ("ThirdParty",))
 
 
 def loadExceptions(projectRoot: Path) -> tuple[dict[tuple[str, str], str], list[str]]:
@@ -230,11 +229,11 @@ def loadExceptions(projectRoot: Path) -> tuple[dict[tuple[str, str], str], list[
     return table, listProblem
 
 
-def checkMutableStatics(projectRoot: Path) -> list[str]:
+def checkMutableStatics(projectRoot: Path, scope: LintScope) -> list[str]:
     table, listProblem = loadExceptions(projectRoot)
     used: set[tuple[str, str]] = set()
-    for path in iterSources(projectRoot):
-        relPath = path.relative_to(projectRoot).as_posix()
+    for relPath in iterSources(projectRoot, scope):
+        path = projectRoot / relPath
         if "/Tests/" in relPath or relPath.startswith("Source/Core/Testing/"):
             continue  # 테스트 고정물은 프로세스 수명 상태를 흉내 낸다 — 엔진 범위가 아니다
         text = path.read_text(encoding="utf-8", errors="replace")
@@ -249,7 +248,7 @@ def checkMutableStatics(projectRoot: Path) -> list[str]:
                     line = text.count("\n", 0, m.start()) + 1
                     if re.search(r"\)\s*\\?\s*\{", m.group(0)):
                         listProblem.append(f"{relPath}:{line}: 매크로 본문의 함수 정적 가변 변수 — 정적 등록은 공통 틀 매크로(SW_DEFINE_REGISTRATION_LIST · SLOT · CHAIN)를 감싼다")
-    for key in sorted(set(table) - used):
+    for key in sorted(set(table) - used) if scope.bWholeRepo else ():   # 낡은 예외는 저장소 전체를 봐야 안다
         listProblem.append(f"{kExceptionFile}: {key[0]} `{key[1]}` — 소스에 없는 예외 항목(지운다)")
     return listProblem
 
@@ -299,7 +298,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.self_check:
         return ExitCode.Passed if selfCheck() else ExitCode.Violation
-    listProblem = checkMutableStatics(getProjectRoot())
+    listProblem = checkMutableStatics(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for line in listProblem:
         print(f"  - {line}")
     print(f"[mutable-statics] {'FAIL' if listProblem else 'OK'} ({len(listProblem)})")

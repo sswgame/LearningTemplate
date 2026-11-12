@@ -7,7 +7,7 @@ CMake 의 `include()` · `add_subdirectory()` 경로가 저장소의 실제 이�
 
 왜 린트인가: C++ include 는 컴파일러가 본다(`-Werror=nonportable-include-path`, cmake/Modules/Compiler/Clang.cmake). CMake 경로는 컴파일러 · clang-tidy 가
 보지 않고, Windows 는 대소문자를 가리지 않아 Linux 구성에서야 "없는 파일" 로 선다(`RhiBackends.cmake` 를 `RHIBackends.cmake` 로 부르던 결함). 형식으로 막을 수 없는 틈이다.
-CMake 파일만이 아니라 이름 바꾸기도 참조를 깨므로 커밋마다 CMake 파일 전부를 본다(수백 개라 빠르다).
+CMake 파일만이 아니라 이름 바꾸기도 참조를 깨므로 판정은 CMake 파일 전부의 색인(`FactCache`, 바뀐 파일만 다시 읽는다)으로 낸다.
 
   python Scripts/lint/CMakePathCase.py    (= `py -3 -m Scripts lint cmake-path-case`)
 
@@ -17,7 +17,6 @@ CMake 파일만이 아니라 이름 바꾸기도 참조를 깨므로 커밋마�
 from __future__ import annotations
 
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -26,6 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.FactCache import loadFacts  # noqa: E402
+from lint.LintScope import LintScope, listRepoFiles, makeWholeScope  # noqa: E402
 
 kCheckTag = "CMakePathCase"
 
@@ -33,31 +34,35 @@ _kPathCallRe = re.compile(r'\b(?:include|add_subdirectory)\(\s*"?([^\s")]+)', re
 _kRootPathRe = re.compile(r'\$\{CMAKE_SOURCE_DIR\}/([^\s"$)<]+)')
 
 
-def checkCMakePathCase(projectRoot: Path) -> list[str]:
-    """대소문자만 다른 CMake 경로를 "파일: 적은 경로 → 실제 이름" 줄로 돌려준다."""
-    listFile = subprocess.run(["git", "ls-files"], cwd=projectRoot, capture_output=True, text=True, encoding="utf-8", check=True).stdout.splitlines()
+def extractPaths(text: str) -> dict[str, list[str]]:
+    """CMake 글 하나가 적은 경로 — 저장소 루트 기준(`${CMAKE_SOURCE_DIR}/…`)과 `include()` · `add_subdirectory()` 인자. 색인(`FactCache`)에 둔다."""
+    return {"root": [match.group(1) for match in _kRootPathRe.finditer(text)],
+            "call": [match.group(1) for match in _kPathCallRe.finditer(text) if "$" not in match.group(1) and "<" not in match.group(1)]}   # 변수 · 생성기 식은 구성 때에만 풀린다
+
+
+def checkCMakePathCase(projectRoot: Path, scope: LintScope) -> list[str]:
+    """대소문자만 다른 CMake 경로를 "파일: 적은 경로 → 실제 이름" 줄로 돌려준다.
+    이름 바꾸기도 바뀌지 않은 CMake 파일의 참조를 깨므로 판정은 늘 저장소 전체 색인으로 낸다 — 커밋 훅은 CMake 파일이 바뀌었거나 파일을 지웠을(옮겼을) 때만 돈다."""
+    if not scope.bWholeRepo and not scope.listRemoved and not scope.touches(suffixes=(".cmake", "CMakeLists.txt")):
+        return []
+    listFile = listRepoFiles(projectRoot)
     setExact = set(listFile)
     for file in listFile:
         parts = file.split("/")
         setExact.update("/".join(parts[:index]) for index in range(1, len(parts)))
     mapLower = {path.lower(): path for path in setExact}
+    listCMake = [file for file in listFile if file.endswith(".cmake") or file.endswith("CMakeLists.txt")]
+    mapFact = loadFacts(projectRoot, "cmake-path-case", [__file__], listCMake, lambda _, text: extractPaths(text), errors="ignore")
 
     listViolation: list[str] = []
-    for file in listFile:
-        if not ( file.endswith(".cmake") or file.endswith("CMakeLists.txt") ):
-            continue
-        text = (projectRoot / file).read_text(encoding="utf-8", errors="ignore")
+    for file, facts in mapFact.items():
         baseDir = str(Path(file).parent).replace("\\", "/")
         # 스크립트 경로(`-P`) · 파일 인자처럼 저장소 루트에서 적은 경로도 같은 덫이다 — 윈도우는 통과하고 리눅스 구성 · 빌드가 선다.
-        for match in _kRootPathRe.finditer(text):
-            written = match.group(1)
+        for written in facts["root"]:
             actual = mapLower.get(written.lower())
             if written not in setExact and actual is not None:
                 listViolation.append(f"{file}: '{written}' → 실제 이름 '{actual}'")
-        for match in _kPathCallRe.finditer(text):
-            written = match.group(1)
-            if "$" in written or "<" in written:
-                continue   # 변수 · 생성기 식은 구성 때에만 풀린다
+        for written in facts["call"]:
             candidates = [written, f"{baseDir}/{written}" if baseDir != "." else written]
             if any(candidate in setExact for candidate in candidates):
                 continue
@@ -70,7 +75,7 @@ def checkCMakePathCase(projectRoot: Path) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    listViolation = checkCMakePathCase(getProjectRoot())
+    listViolation = checkCMakePathCase(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for line in listViolation:
         print(f"  - {line}")
     return ExitCode.Violation if listViolation else ExitCode.Passed

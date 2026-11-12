@@ -60,6 +60,13 @@ run_ctest() {
 }
 
 if [ $STAGE -le 1 ]; then
+  # 커밋 훅은 스테이지된 파일만 본다(Scripts/lint/LintScope.py) — 낡은 예외 · 기준선 같은 저장소 전체 판정은 여기서 한 번 낸다.
+  echo "== lint --all $(date +%T)"
+  mkdir -p build
+  py -3 -m Scripts lint --all > build/verify.lint.log 2>&1
+  RC=$?
+  tail -n 20 build/verify.lint.log
+  [ $RC -eq 0 ] || windows_failed "lint --all"
   build_preset Ninja-Debug
   echo "== unit $(date +%T)"
   build/Ninja-Debug/Bin/App.exe --test > build/Ninja-Debug/Testing/Logs/verify.unit.log 2>&1

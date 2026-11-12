@@ -26,7 +26,7 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 from common.ClangFormat import resolveClangFormat  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.FileCollect import collectRepositoryFiles, collectSourceFiles, getLintSearchDirs, resolveFileArguments  # noqa: E402
-from common.Git import kStagedFileArgument, listGitFiles  # noqa: E402
+from common.Git import listGitFiles  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.ProjectConstants import kCppAllExtensions, kNotOurDirNames, kShaderSourceExtensions  # noqa: E402
 from common.RunProcess import runProcess  # noqa: E402
@@ -38,15 +38,6 @@ kClangFormatTag = "FormatClangFormat"
 
 
 # --- git 이 알려 주는 대상 ------------------------------------------------------
-
-def getStagedCppFiles(root: Path | None = None,
-                      extensions: set[str] | None = None) -> list[Path]:
-    """
-    Git Staged(인덱스) 상태인 C++ 소스 및 헤더 파일 목록을 반환합니다.
-    """
-    targetExtensions = extensions if extensions is not None else kCppAllExtensions
-    return sorted(listGitFiles(root or getProjectRoot(), kStagedFileArgument, targetExtensions))
-
 
 def getModifiedCppFiles(root: Path | None = None,
                         extensions: set[str] | None = None,

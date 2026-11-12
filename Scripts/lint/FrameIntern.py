@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.LintScope import LintScope, makeWholeScope, readTexts  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/FrameInternExceptions.json"
 kComment = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
@@ -60,21 +61,13 @@ def findProblems(listSource: Iterable[tuple[str, str]], exceptions: dict) -> lis
     return listProblem
 
 
-def readSources(projectRoot: Path) -> list[tuple[str, str]]:
-    listSource: list[tuple[str, str]] = []
-    for path in (projectRoot / "Source").rglob("*.cpp"):
-        if "Tests" in path.parts:
-            continue
-        try:
-            listSource.append((path.relative_to(projectRoot).as_posix(), path.read_text(encoding="utf-8")))
-        except (UnicodeDecodeError, OSError):
-            continue
-    return listSource
+def readSources(projectRoot: Path, scope: LintScope) -> list[tuple[str, str]]:
+    return readTexts(projectRoot, scope.select(("Source",), (".cpp",), ("Tests",)))
 
 
-def checkFrameIntern(projectRoot: Path) -> list[str]:
+def checkFrameIntern(projectRoot: Path, scope: LintScope) -> list[str]:
     exceptions = json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))["_exceptions"]
-    return findProblems(readSources(projectRoot), exceptions)
+    return findProblems(readSources(projectRoot, scope), exceptions)
 
 
 def runSelfCheck() -> None:
@@ -95,7 +88,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runSelfCheck()
         print("[FrameIntern] self-check OK")
         return ExitCode.Passed
-    listProblem = checkFrameIntern(getProjectRoot())
+    listProblem = checkFrameIntern(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[FrameIntern] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")

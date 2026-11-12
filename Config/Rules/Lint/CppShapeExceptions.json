@@ -8,6 +8,7 @@
         "Source/Engine/Renderer/Cook/ShaderCookDriver.cpp|CookState": "규칙 10 전 코드 — 요청 계획 · 결과 합치기 · 목록 쓰기가 굽기 상태를 차례로 바꾼다. CookState 의 멤버로 옮길 때 지운다"
     },
     "multipleBase": {
+        "Source/DevTools/ModuleReload/LiveReload/LiveReloadManager.h|LiveReloadManager": "구독 출처(SubscriptionSource)는 파생이 releaseSubscription 을 덮어쓰는 기반이라 창구(ILiveReloadManager)와 함께 둘째 기반이 됐다(3e3791b25d) — 커밋 훅이 이 헤더를 다시 보지 않아 lint --all 전까지 드러나지 않았다. 구독 출처를 멤버(releaseSubscription 을 주인에게 넘기는 작은 출처 형식)로 옮기면 이 줄을 지운다",
         "Source/Core/Container/pair.h|CompressedPair": "빈 기반 최적화(EBO) — 빈 타입 칸이 바이트를 먹지 않게 하는 표준 기법이다. 멤버로 들면 [[no_unique_address]] 가 MSVC 에서 듣지 않는다",
         "Source/Core/Container/pair.h|pair": "둘 다 빈 타입인 쌍의 특수화 — CompressedPair 와 같은 빈 기반 최적화다",
         "Source/Engine/UI/Accessibility/Windows/UIAAccessibilityBridge.cpp|Element": "UI Automation COM 요소 — 한 객체가 QueryInterface 로 여러 제공자 인터페이스를 내야 하는 플랫폼 형식이다",

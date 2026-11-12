@@ -33,6 +33,7 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.FileCollect import collectRepositoryFiles, resolveFileArguments  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.ProjectConstants import kCppAllExtensions, kCppSourceExtensions, kLintTargetBaseDirNames, kLintTargetRelDirs, kNotOurDirNames  # noqa: E402
+from lint.LintScope import LintScope  # noqa: E402
 from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 kCheckTag = "CheckIncludeOrder"
@@ -363,9 +364,10 @@ def checkIncludeOrder(repositoryRoot: Path, listFileArgument: Sequence[str] | No
     return flatMapInProcesses(worker, listPath), len(listPath)
 
 
-def checkStaged(repositoryRoot: Path, listFile: Sequence[str]) -> list[str]:
-    """커밋 훅(`Rules.py`): 스테이지된 파일의 위반 줄 — 읽지 못한 파일(`!`)도 위반이다."""
-    return [line.lstrip("!") for line in checkIncludeOrder(repositoryRoot, listFile)[0]]
+def checkIncludeOrderScope(repositoryRoot: Path, scope: LintScope) -> list[str]:
+    """`Rules.py`: scope 의 C++ 파일의 위반 줄 — 읽지 못한 파일(`!`)도 위반이다."""
+    listFile = scope.listAbsolute(repositoryRoot, tuple(sorted(kCppAllExtensions)))
+    return [line.lstrip("!") for line in checkIncludeOrder(repositoryRoot, listFile)[0]] if listFile else []
 
 
 def main(argv: Sequence[str] | None = None) -> int:

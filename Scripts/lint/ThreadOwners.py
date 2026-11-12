@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.LintScope import LintScope, makeWholeScope, readTexts  # noqa: E402
 from lint.CppShape import stripCode  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/ThreadOwners.json"
@@ -51,7 +52,7 @@ def toOwnerKey(relative: str) -> str:
     return relative.rsplit(".", 1)[0]
 
 
-def findProblems(listSource: Iterable[tuple[str, str]], setOwner: frozenset[str]) -> list[str]:
+def findProblems(listSource: Iterable[tuple[str, str]], setOwner: frozenset[str], bWholeRepo: bool = True) -> list[str]:
     listProblem: list[str] = []
     setUsedOwner: set[str] = set()
     for relative, text in listSource:
@@ -64,21 +65,13 @@ def findProblems(listSource: Iterable[tuple[str, str]], setOwner: frozenset[str]
             continue
         listProblem.append(f"{relative}:{listLine[0]}: TaskManager 밖에서 스레드를 만든다 — 계산 · 짧은 IO 는 `engine::runParallelByCost` · 태스크 · 스테이지로 낸다"
                            f"(OS 를 막고 기다려야 하면 {kConfigPath} 에 까닭과 함께 적는다)")
-    for owner in sorted(setOwner - setUsedOwner):
+    for owner in sorted(setOwner - setUsedOwner) if bWholeRepo else ():   # 낡은 항목은 저장소 전체를 봐야 안다
         listProblem.append(f"{kConfigPath}: `{owner}` 는 더는 스레드를 만들지 않는다 — 목록에서 뺀다")
     return listProblem
 
 
-def readSources(projectRoot: Path) -> list[tuple[str, str]]:
-    listSource: list[tuple[str, str]] = []
-    for path in (projectRoot / "Source").rglob("*"):
-        if path.suffix not in (".h", ".cpp") or "Tests" in path.parts:
-            continue
-        try:
-            listSource.append((path.relative_to(projectRoot).as_posix(), path.read_text(encoding="utf-8")))
-        except (UnicodeDecodeError, OSError):
-            continue
-    return listSource
+def readSources(projectRoot: Path, scope: LintScope) -> list[tuple[str, str]]:
+    return readTexts(projectRoot, scope.select(("Source",), (".h", ".cpp"), ("Tests",)))
 
 
 def loadOwners(projectRoot: Path) -> frozenset[str]:
@@ -90,8 +83,8 @@ def loadOwners(projectRoot: Path) -> frozenset[str]:
     return frozenset(entry["_path"] for entry in data["_listOwner"])
 
 
-def checkThreadOwners(projectRoot: Path) -> list[str]:
-    return findProblems(readSources(projectRoot), loadOwners(projectRoot))
+def checkThreadOwners(projectRoot: Path, scope: LintScope) -> list[str]:
+    return findProblems(readSources(projectRoot, scope), loadOwners(projectRoot), scope.bWholeRepo)
 
 
 def runSelfCheck() -> None:
@@ -117,7 +110,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runSelfCheck()
         print("[ThreadOwners] self-check OK")
         return ExitCode.Passed
-    listProblem = checkThreadOwners(getProjectRoot())
+    listProblem = checkThreadOwners(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")
     print(f"[ThreadOwners] {'FAIL' if listProblem else 'OK'} ({len(listProblem)}건)")
