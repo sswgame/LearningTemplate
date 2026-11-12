@@ -707,7 +707,6 @@
 ### Core
 
 - **C-16 (보강) 원자적 쓰기가 fsync 를 하지 않는다** (결함 · 내구성 — 코드 확인) — `Source/Core/File/FileUtil.cpp:96-121` 은 `fflush` · `fclose` 뒤 바로 이름을 바꾼다. 세이브는 알려진 한도(`FileLocalSlotStorage.h:5`)지만 같은 길로 쓰는 장치 키 파일(`LocalDeviceKeyProvider.cpp:122-137`)에는 봉투가 없어 깨진 채 남으면 그 사용자는 지울 때까지 저장 · 읽기가 모두 IOError 다. 상용: 콘솔 세이브 API · SQLite 는 fsync 한다. 제안: `writeAtomically` 에 내구성 등급(`Durable` | `Fast`)을 필수 인자로 받고 세이브는 한 세대 전 파일을 남긴다. 확인: 0 바이트 · 쓰레기 키 파일을 두고 기동해 복구되는지.
-- **C-17 유한 자원이 차면 멈추지 않고 계속한다** (구조 — 주석에 적힌 한도) — 도우미 슬롯 8 개를 넘으면 마지막 슬롯을 나눠 써 깨우기가 엉뚱한 스레드로 간다(`Source/Core/Task/TaskManager.h:315-316`). 이름 풀 1,048,576 을 넘으면 `SW_LOG_ASSERT` 뒤 `None` 을 돌려줘 모든 새 이름이 서로 같아진다(`Source/Core/Name/hashed_string.h:697-701`). 상용: FName 은 넘치면 치명 오류다. 제안: 둘 다 치명 오류로 멈추고 75 % 에서 경고한다. 확인: 작은 상한으로 지은 단위 테스트.
 - **C-19 IO · 로그의 실패 경로** (결함 · 작음 — 확인) — IOCP 포트 실패 뒤 IO 스레드가 끝나도 큐는 요청을 계속 받아 영영 끝나지 않는다(`Source/Core/File/Windows/WindowsAsyncFileIOBackend.cpp:113-117`). `flushForCrash` 가 막히는 장치 잠금을 잡는다(`Source/Core/Log/Sink/AsyncLogSink.cpp:262-265`). 큐가 가득 찬 줄은 큐에 든 줄보다 먼저 나간다(`:444-449`). 제안: 백엔드 실패를 큐 상태로 올려 새 요청을 즉시 실패시키고 크래시 flush 는 `try_lock` 으로 한다. 확인: 가짜 백엔드 단위 테스트.
 - **C-20 구독의 약한 역참조** (결함 — 추정) — `Subscription::reset`(`Source/Core/Delegate/Subscription.h:208-223`)은 출처 포인터를 읽은 뒤 잠금을 잡는다. 다른 스레드가 그 사이 출처를 소멸시키면 해제 뒤 사용이다. `LockedMulticastDelegate` 머리말("약 2 초 뒤 경고하고 돌아온다")과 코드(끝까지 기다림, `:153-172`)도 어긋난다. 제안: 같은 스레드 규칙을 `ThreadOwners` 표지로 형식에 올린다. 확인: TSan 구성 단위 테스트.
 - **C-21 다시 열어 확인하지 않은 후보** (미확인) — `SlotHandleTable` 세대 31 비트 + LIFO 재사용, `DynamicBitset` 범위 밖 쓰기 뒤 계속, Base64 `=` 개수 무제한, `MathUtil::wrapAngle` 이 무한대에서 끝나지 않음, `SpatialHashGrid2D` 셀 크기 조용한 대체, `BitReader::readVarUint` 넘친 비트 버림, `PositionWelder` NaN 캐스트, Windows `fromSearchPath` 가 작업 폴더를 PATH 보다 먼저 뒤짐, POSIX `Process` 소멸자의 좀비, Windows 크래시 필터의 로더 락 · 힙 사용. 고치기 전에 줄을 다시 읽는다.
@@ -718,7 +717,6 @@
 - **N-12 NetRequestServer 의 멱등 기억에 바이트 상한이 없다** (결함 · 자원 — 확인) — `Source/Core/Network/Message/NetRequest.cpp:525-533` 이 응답 본문(1 MiB 까지)을 600 초 동안 개수(10 만)로만 제한해 둔다. 같은 키 대기자는 `_maxInFlightPerConnection` 을 우회한다(`:439-444`). 상용: 바이트 예산 LRU. 제안: 총 바이트 예산과 주체별 항목 상한. 확인: `NetRequestTest.IdempotencyStoreHonoursByteBudget`.
 - **N-13 RemoteCall 에 연결별 호출률 제한이 없고 인자가 글로 오간다** (구조 — 확인) — `Source/GameFramework/Kits/Feature/Network/NetClientServer/RemoteCall.cpp:281-343`. 상용: 언리얼 RPC DoS Detection + NetFieldExport 인덱스. 제안: 함수 메타데이터에 초당 상한(기본값은 Config), 접속 때 함수표 해시로 인덱스 합의. 확인: `TestRemoteCall` 에 상한 초과 사례.
 - **N-14 주소 형식과 소켓이 IPv4 전용이다** (구조 — 확인) — `Source/Core/Network/NetTypes.h:158-161`, `Transport/PlatformSocketUtil.cpp:75,275`. 상용: 언리얼 `FInternetAddr` · 유니티 Transport · ENet 은 v4/v6 을 받는다. 제안: 요구 여부를 [PlatformTargets](PlatformTargets.md) 에 한 줄로 정하고 `NetAddress` 를 주소군 + 16 바이트로 넓힌다. 확인: `TestNetTransport` 에 `::1` 루프백.
-- **N-15 롤백 세션이 상대가 보낸 정수를 검사 없이 산술에 쓴다** (결함 — 확인) — `Source/GameFramework/Kits/Feature/Network/NetLockstep/RollbackSession.cpp:264-298` 의 `remoteFrame` · `peerAdvantage` 가 `:123` 에서 int32 넘침(UB)이고 다른 참가자를 계속 기다리게 할 수 있다. 상용: GGPO 는 프레임 창 안으로 자른다. 제안: `[−kFrameWindow, kFrameWindow]` 로 제한하는 형식을 거친다. 확인: 극단값 메시지가 Malformed 인지, UBSan.
 
 ### 온라인
 
