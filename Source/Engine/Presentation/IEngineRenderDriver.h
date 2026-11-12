@@ -17,6 +17,7 @@ namespace sw
     class RenderThread;
     class RHI;
     struct FrameViewports;
+    enum class RHIDeviceLostPolicy : uint8;
     enum class RHIInitResult : uint8;
     enum class RHIWaitIdleReason : uint8;
 
@@ -58,5 +59,12 @@ namespace sw
         virtual void setPresentInterval( uint32 interval ) = 0;
         /** @brief 씬 @p pManager 의 주 화면 캡처까지 남은 일 수입니다(`CaptureReadiness::countPendingJobs`). */
         [[nodiscard]] virtual uint32 countPendingCaptureJobs( const GameObjectManager* pManager ) const = 0;
+        /**
+         * @brief 장치 분실 정책을 설정 값(`EngineConfig::_deviceLostPolicy`) 대신 @p policy 로 덮습니다. 개발 구성의 시나리오 입구(`-gv_deviceLostPolicy`)만 부른다.
+         * @details 기동 순서와 상관없이 이긴다 — 설정 읽기(`onStartupFinished`)는 덮은 값을 지우지 않는다. `None` 은 받지 않는다(덮지 않음은 부르지 않는 것이다).
+         */
+        virtual void overrideDeviceLostPolicy( RHIDeviceLostPolicy policy ) = 0;
+        /** @brief 잃은 장치를 다시 만들어 장면을 다시 묶은 횟수입니다(`RHIDeviceLostPolicy::Recreate`). 감시 값 `Render.DeviceRecreateCount`. */
+        [[nodiscard]] virtual uint32 getDeviceRecreateCount() const = 0;
     };
 } // namespace sw

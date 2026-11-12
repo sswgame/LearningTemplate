@@ -20,6 +20,7 @@ namespace sw
     struct NativeWindowEvent;
 
     class CameraComponent;
+    class Engine;
     class IRHIDevice;
 
     /**
@@ -109,6 +110,12 @@ namespace sw
 
         /** @brief 에디터 DLL 에서 API 테이블을 받아 바인딩합니다. ABI 버전이나 스탬프가 다르면 실패합니다. */
         [[nodiscard]] bool bindEditorAPI( void* pLibraryModule );
+        /**
+         * @brief 예약된 장치 교체 · 다시 만들기를 적용합니다 — 모듈을 내리고(상태를 맡긴다) → 엔진이 장치를 다시 만들고(`Engine::applyPendingBackendChange`) → 모듈을 다시 세운다.
+         * @details 이 순서를 아는 곳은 여기 하나다. 개발 구성의 백엔드 교체(`RHIBackendSwitcher`)와, 배포도 쓰는 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)이 같은 길로 온다
+         *          (언리얼 · 유니티도 장치 상실 · 어댑터 변경을 한 재생성 경로로 모은다). 프레임 경계에서만 부른다. 장치가 없어지면 false 이고 모듈을 다시 세우지 않는다.
+         */
+        [[nodiscard]] bool applyPendingBackendChange( Engine& engine );
         /** @brief RHI 핫스왑 뒤 게임, 에디터 순서(기동과 같다)로 다시 초기화합니다. 실패하면 false 를 반환합니다. */
         [[nodiscard]] bool reinitializeAfterRHISwap( void* pEditorModule, void* pGameModule );
 

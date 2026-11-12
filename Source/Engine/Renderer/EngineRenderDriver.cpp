@@ -2,7 +2,6 @@
 
 #include "Engine/Renderer/EngineRenderDriver.h"
 
-#include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -59,6 +58,8 @@ namespace sw
         , _mainWindowResizeSubscription{}
         , _mainWindowLifecycleSubscription{}
         , _deviceLostPolicy{ RHIDeviceLostPolicy::None }
+        , _deviceLostPolicyOverride{ RHIDeviceLostPolicy::None }
+        , _deviceRecreateCount{ 0 }
         , _bDeviceLostHandled{ SW_FALSE }
     {
     }
@@ -149,13 +150,19 @@ namespace sw
         return CaptureReadiness::countPendingJobs( pManager );
     }
 
+    void EngineRenderDriver::overrideDeviceLostPolicy( const RHIDeviceLostPolicy policy )
+    {
+        SW_ASSERT( policy != RHIDeviceLostPolicy::None );
+        SW_LOG_INFO_ID( "Render.DeviceLostPolicyOverride", "Device-lost policy overridden to %# (EngineConfig _deviceLostPolicy is ignored)", static_cast<int32>( policy ) );
+        _deviceLostPolicyOverride = policy;
+    }
+
     optional<RHIDeviceLostPolicy> EngineRenderDriver::decideDeviceLostResponse( const IRHIDevice& device, const RHIBackend backend, const RHIDeviceLostPolicy policy )
     {
         if ( device.isDeviceLost() == false )
             return {};
-        // 다시 만드는 길(모듈 내리기 → 장치 → 모듈 세우기)은 개발 구성의 백엔드 교체기 하나다 — 배포는 언리얼처럼 끝낸다.
-        const bool bHostRecreates = build::kShipping == false;
-        if ( policy == RHIDeviceLostPolicy::Recreate && bHostRecreates && RHI::canRecreateAfterDeviceLost( backend ) )
+        // 다시 만드는 길(모듈 내리기 → 장치 → 모듈 세우기)은 호스트의 모듈 관리자 하나다(`EditorModuleManager::applyPendingBackendChange`, 개발 · 배포 공통).
+        if ( policy == RHIDeviceLostPolicy::Recreate && RHI::canRecreateAfterDeviceLost( backend ) )
             return RHIDeviceLostPolicy::Recreate;
         return RHIDeviceLostPolicy::Quit; // `None` 이면 기동이 이미 InitializationFailed 로 끝내기를 요청했다(`onStartupFinished`) — 처음 요청의 코드가 이긴다
     }
@@ -223,7 +230,8 @@ namespace sw
         // 장치를 잃었으면 검은 화면으로 계속 돌지 않는다 — 렌더 스레드가 잃은 프레임을 Present 한 다음 게임 스레드 프레임에서 정책대로 끝낸다.
         if ( _pRHI != nullptr && _pRHI->hasDevice() && _bDeviceLostHandled == SW_FALSE )
         {
-            const optional<RHIDeviceLostPolicy> response = decideDeviceLostResponse( _pRHI->getDevice(), _pRHI->getCommittedBackend(), _deviceLostPolicy );
+            const RHIDeviceLostPolicy           policy   = _deviceLostPolicyOverride != RHIDeviceLostPolicy::None ? _deviceLostPolicyOverride : _deviceLostPolicy;
+            const optional<RHIDeviceLostPolicy> response = decideDeviceLostResponse( _pRHI->getDevice(), _pRHI->getCommittedBackend(), policy );
             if ( response.has_value() )
             {
                 _bDeviceLostHandled = SW_TRUE;
@@ -342,6 +350,11 @@ namespace sw
             if ( bRecreateLost )
                 engine::getSubsystem<QuitRequest>().request( ProcessExitCode::DeviceLost ); // 다시 만든 장치에 장면을 묶지 못했다 — 검은 화면으로 돌지 않는다
             return false;
+        }
+        if ( bRecreateLost )
+        {
+            ++_deviceRecreateCount;
+            SW_LOG_INFO_ID( "Render.DeviceRecreated", "The lost device was recreated on %# (recreate %#)", RHI::getBackendTypeName( _pRHI->getCommittedBackend() ), _deviceRecreateCount );
         }
         SW_LOG_INFO_ID( "Engine.BackendSwapTookMs", "Backend swap took %#ms (shut down %#ms, device %#ms, %#)", swapWatch.getElapsedMicroseconds() / 1000, shutdownMicroseconds / 1000,
                         ( recreateMicroseconds - shutdownMicroseconds ) / 1000, rebindTiming.c_str() );

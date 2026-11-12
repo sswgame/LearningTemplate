@@ -128,7 +128,7 @@ namespace sw
      * @brief 렌더 장치를 잃었을 때(TDR · 드라이버 재시작 · 개발 명령 `rhi.removeDevice`) 엔진이 할 일입니다. `EngineRenderDriver` 가 프레임마다 `IRHIDevice::isDeviceLost` 를 보고 고른다.
      * @details 언리얼은 `GetDeviceRemovedReason` → DRED 덤프 → 크래시 리포트 뒤 종료하고 Godot 4 도 치명 오류로 끝낸다(기본값 `Quit`).
      *          유니티는 D3D11 장치를 잃으면 장치를 다시 만들고 자원을 다시 올린다 — 그 자리가 `Recreate` 다. 다시 만드는 길은 백엔드 교체와 같은 하나
-     *          (모듈 내리기 → `RHI::recreateDevice` → 자원 다시 올리기 → 모듈 세우기, 개발 구성의 `RHIBackendSwitcher`)라, 그 길이 없는 배포 구성과
+     *          (모듈 내리기 → `RHI::recreateDevice` → 자원 다시 올리기 → 모듈 세우기, App 의 `EditorModuleManager::applyPendingBackendChange` — 개발 · 배포 공통)이고,
      *          다시 만들기가 어려운 백엔드(`RHI::canRecreateAfterDeviceLost` — OpenGL 은 컨텍스트 · 창 픽셀 포맷, WebGPU 는 브라우저 장치)는 `Quit` 로 답한다.
      */
     ENUM()
@@ -136,7 +136,7 @@ namespace sw
     {
         None     = 0, ///< 파일에 값이 없다 — 기동이 오류로 멈춘다(정책을 짐작하지 않는다)
         Quit     = 1, ///< 손실을 처음 본 백엔드가 브레드크럼을 보고한 뒤, 그 프레임에 `ProcessExitCode::DeviceLost` 로 끝낸다
-        Recreate = 2, ///< 같은 백엔드로 장치를 다시 만든다(프레임 끝의 재생성 길). 그 길이 없거나 백엔드가 다시 만들 수 없으면 `Quit` 와 같고, 다시 만들기가 실패해도 `DeviceLost` 로 끝낸다
+        Recreate = 2, ///< 같은 백엔드로 장치를 다시 만든다(프레임 끝의 재생성 길). 백엔드가 다시 만들 수 없으면 `Quit` 와 같고, 다시 만들기가 실패해도 `DeviceLost` 로 끝낸다
     };
 
     /**

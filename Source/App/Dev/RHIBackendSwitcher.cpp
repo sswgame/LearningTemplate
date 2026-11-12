@@ -15,6 +15,7 @@
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Engine.h"
@@ -22,12 +23,16 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
+#include "Engine/Presentation/IEngineRenderDriver.h"
 #include "Engine/Renderer/RenderThread.h"
 
 #include "sw/config/ConfigConstants.h"
 
 namespace sw
 {
+    /** @brief 시나리오가 장치 분실 정책을 설정 파일 대신 고르는 입구입니다(0 = 설정 값, 1 = Quit, 2 = Recreate). 교체기가 기동 때 렌더 드라이버에 덮는다(`overrideDeviceLostPolicy`). */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_deviceLostPolicy, 0, "장치 분실 정책 덮기 (0=EngineConfig 값, 1=Quit, 2=Recreate — 시나리오가 Recreate 길을 끝까지 볼 때)" );
+
     namespace
     {
         /** @brief gv_rhiBackend 의 변수 정보를 찾습니다. 없거나 엔진 서비스가 묶이지 않았으면(크래시 보고 프로세스) nullptr 입니다. */
@@ -162,6 +167,15 @@ namespace sw
                 outValue = static_cast<float64>( pSwitcher->getFailedSwapCount() );
                 return true;
             }
+
+            [[nodiscard]] static bool readDeviceRecreateCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const IEngineRenderDriver* pRenderDriver = engine::findSubsystem<IEngineRenderDriver>();
+                if ( pRenderDriver == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pRenderDriver->getDeviceRecreateCount() );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -236,6 +250,17 @@ namespace sw
         _pGameModuleManager = pGameModuleManager;
         _bEnableEditor      = bEnableEditor ? SW_TRUE : SW_FALSE;
 
+        // 시나리오가 장치 분실 정책을 고르는 입구(`<Launch variable="gv_deviceLostPolicy" value="2"/>`) — 설정 파일을 고치지 않고 Recreate 길을 끝까지 본다.
+        IEngineRenderDriver* const pRenderDriver = pEngine != nullptr ? pEngine->getRenderDriver() : nullptr;
+        if ( gv_deviceLostPolicy != 0 && pRenderDriver != nullptr )
+        {
+            const bool bKnownPolicy = gv_deviceLostPolicy == static_cast<int32>( RHIDeviceLostPolicy::Quit ) || gv_deviceLostPolicy == static_cast<int32>( RHIDeviceLostPolicy::Recreate );
+            if ( bKnownPolicy )
+                pRenderDriver->overrideDeviceLostPolicy( static_cast<RHIDeviceLostPolicy>( gv_deviceLostPolicy ) );
+            else
+                SW_LOG_ERROR_ID( "App.DeviceLostPolicyOverrideUnknown", "gv_deviceLostPolicy %# is not a policy (1 = Quit, 2 = Recreate) - the EngineConfig value stays", gv_deviceLostPolicy );
+        }
+
         GlobalVariableInfo* pBackendVariable = findRHIBackendSwitcherVariable();
         if ( pBackendVariable != nullptr )
             pBackendVariable->_onValueChanged = SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &RHIBackendSwitcher::onBackendVariableChanged, this );
@@ -297,37 +322,8 @@ namespace sw
     {
         if ( _pEngine == nullptr || _pGameModuleManager == nullptr )
             return false;
-
-        // 모듈 핸들은 교체 **전에** 받아 둔다. 디바이스를 다시 만드는 동안 LiveReload 가 돌지는 않지만, 재생성 경로가 "테이블이
-        // 비었으면 모듈에서 다시 바인딩" 을 하려면 핸들이 필요하다.
-        // 모듈 수명은 GameModuleManager 가 안다(배포는 정적 링크라 nullptr). 여기서 리로드 내부를 직접 뒤지지 않는다.
-        void* const pEditorModule = _pGameModuleManager->getLoadedModuleHandle( sw::config::kTargetEditorModule );
-        void* const pGameModule   = _pGameModuleManager->getLoadedModuleHandle( sw::config::kTargetGameModule );
-
-        // API 테이블은 놓지 않는다. 모듈을 언로드하지 않고 같은 테이블로 다시 만든다(편집기는 리로드와 같은 길로 상태를 맡겼다 되찾는다 — `IModuleStateStore`).
-        // 엔진 몫(`Backend swap took`)과 모듈 몫(게임 · 에디터를 다시 세우고 씬 상태를 되돌린다)을 함께 남긴다 - 교체 시간의 대부분이 모듈 몫이던 때 엔진 줄만 보였다.
-        const Stopwatch swapWatch;
-        _pGameModuleManager->suspendModules( ModuleScope::Both, false, FlushReason::BackendSwap );
-        const uint64 suspendMicroseconds = swapWatch.getElapsedMicroseconds();
-
-        const bool   bSwapOk            = _pEngine->applyPendingBackendChange();
-        const uint64 engineMicroseconds = swapWatch.getElapsedMicroseconds();
-        RHI*         pRHI               = _pEngine->getRHI();
-        if ( pRHI == nullptr || pRHI->hasDevice() == false )
-        {
-            SW_LOG_ERROR_ID( "App.ApplyPendingBackendChangeFailedNoRHI", "applyPendingBackendChange failed - no RHI device, modules are not recreated." );
-            return false;
-        }
-
-        const bool bReinitOk = _pGameModuleManager->reinitializeAfterRHISwap( pEditorModule, pGameModule );
-        if ( bReinitOk == false )
-            SW_LOG_ERROR_ID( "App.ReinitializeAfterRHISwapFailed", "reinitializeAfterRHISwap failed." );
-        const uint64 totalMicroseconds = swapWatch.getElapsedMicroseconds();
-        SW_LOG_INFO_ID( "App.BackendSwapModulesTook", "Backend swap with modules took %#ms (suspend modules %#ms, engine %#ms, recreate modules %#ms)", totalMicroseconds / 1000, suspendMicroseconds / 1000,
-                        ( engineMicroseconds - suspendMicroseconds ) / 1000, ( totalMicroseconds - engineMicroseconds ) / 1000 );
-        if ( bSwapOk == false )
-            SW_LOG_ERROR_ID( "App.ApplyPendingBackendChangeFailedRestoredPrevious", "applyPendingBackendChange failed - restored the previous backend and recreated the modules." );
-        return bSwapOk && bReinitOk;
+        // 순서(모듈 내리기 → 장치 → 모듈 세우기)는 배포도 쓰는 모듈 호스트 하나가 안다 — 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)이 같은 길이다.
+        return _pGameModuleManager->applyPendingBackendChange( *_pEngine );
     }
 
     SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice [driverWaitMs]",
@@ -341,6 +337,8 @@ namespace sw
 #undef SW_RHI_BACKEND_WATCH_NAME_ROW
     SW_AUTOMATION_WATCH( rhiSwapPending, "RHI.SwapPending", "1 from a backend swap request (SwapBackend, gv_rhiBackend) until the end-of-frame swap has run",
                          &RHIBackendSwitcherInternal::readSwapPending );
+    SW_AUTOMATION_WATCH( renderDeviceRecreateCount, "Render.DeviceRecreateCount", "Lost devices recreated with the scene rebound (EngineConfig _deviceLostPolicy = Recreate) since the process started",
+                         &RHIBackendSwitcherInternal::readDeviceRecreateCount );
     SW_AUTOMATION_WATCH( rhiSwapFailedCount, "RHI.SwapFailedCount", "Backend swaps that failed since the process started (each falls back to the previous backend)",
                          &RHIBackendSwitcherInternal::readFailedSwapCount );
 

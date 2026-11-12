@@ -3,9 +3,14 @@
 #include "App/EditorModuleManager.h"
 
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/Constants.h"
+#include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -310,6 +315,41 @@ namespace sw
         if ( engine::registerModuleTypes( sw::config::kTargetEditorModule ) == false )
             return false;
         return _editorAPI.create != nullptr && _editorAPI.destroy != nullptr;
+    }
+
+    bool EditorModuleManager::applyPendingBackendChange( Engine& engine )
+    {
+        // 모듈 핸들은 교체 **전에** 받아 둔다. 디바이스를 다시 만드는 동안 LiveReload 가 돌지는 않지만, 재생성 경로가 "테이블이
+        // 비었으면 모듈에서 다시 바인딩" 을 하려면 핸들이 필요하다.
+        // 모듈 수명은 GameModuleManager 가 안다(배포는 정적 링크라 nullptr). 여기서 리로드 내부를 직접 뒤지지 않는다.
+        void* const pEditorModule = getLoadedModuleHandle( sw::config::kTargetEditorModule );
+        void* const pGameModule   = getLoadedModuleHandle( sw::config::kTargetGameModule );
+
+        // API 테이블은 놓지 않는다. 모듈을 언로드하지 않고 같은 테이블로 다시 만든다(편집기는 리로드와 같은 길로 상태를 맡겼다 되찾는다 — `IModuleStateStore`).
+        // 엔진 몫(`Backend swap took`)과 모듈 몫(게임 · 에디터를 다시 세우고 씬 상태를 되돌린다)을 함께 남긴다 - 교체 시간의 대부분이 모듈 몫이던 때 엔진 줄만 보였다.
+        constexpr uint64 kMicrosPerMilli = static_cast<uint64>( constant::time::kMicrosecondsPerMillisecond );
+        const Stopwatch  swapWatch;
+        suspendModules( ModuleScope::Both, false, FlushReason::BackendSwap );
+        const uint64 suspendMicroseconds = swapWatch.getElapsedMicroseconds();
+
+        const bool   bSwapOk            = engine.applyPendingBackendChange();
+        const uint64 engineMicroseconds = swapWatch.getElapsedMicroseconds();
+        RHI*         pRHI               = engine.getRHI();
+        if ( pRHI == nullptr || pRHI->hasDevice() == false )
+        {
+            SW_LOG_ERROR_ID( "App.ApplyPendingBackendChangeFailedNoRHI", "applyPendingBackendChange failed - no RHI device, modules are not recreated." );
+            return false;
+        }
+
+        const bool bReinitOk = reinitializeAfterRHISwap( pEditorModule, pGameModule );
+        if ( bReinitOk == false )
+            SW_LOG_ERROR_ID( "App.ReinitializeAfterRHISwapFailed", "reinitializeAfterRHISwap failed." );
+        const uint64 totalMicroseconds = swapWatch.getElapsedMicroseconds();
+        SW_LOG_INFO_ID( "App.BackendSwapModulesTook", "Backend swap with modules took %#ms (suspend modules %#ms, engine %#ms, recreate modules %#ms)", totalMicroseconds / kMicrosPerMilli, suspendMicroseconds / kMicrosPerMilli,
+                        ( engineMicroseconds - suspendMicroseconds ) / kMicrosPerMilli, ( totalMicroseconds - engineMicroseconds ) / kMicrosPerMilli );
+        if ( bSwapOk == false )
+            SW_LOG_ERROR_ID( "App.ApplyPendingBackendChangeFailedRestoredPrevious", "applyPendingBackendChange failed - restored the previous backend and recreated the modules." );
+        return bSwapOk && bReinitOk;
     }
 
     bool EditorModuleManager::reinitializeAfterRHISwap( void* pEditorModule, void* pGameModule )
