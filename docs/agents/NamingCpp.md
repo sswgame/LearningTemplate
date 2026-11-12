@@ -152,6 +152,8 @@ A reader who knows one of these names must be able to guess the rest. Use a bann
 
 폴더 · 형식 · 함수 이름의 낱말 뜻이다. 새 이름이 같은 낱말을 다른 뜻으로 쓰면 이름을 바꾼다. 새 함수 앞 단어 · 형식 끝 단어는 `Config/Rules/Lint/NamingWords.json` 에 먼저 올린다(린트 `naming-words`, 커밋 훅), 옛 이름은 그 `_bannedNames` 에 둔다.
 
+이름 · 경로는 도구로 바꾼다(`py -3 -m Scripts rename-symbol` · `move-source`, 여러 쌍은 `Scripts/dev/RenameIdentifier.py`) — 코드와 문서(`docs/agents` 포함)를 함께 고친다. 옛 이름을 일부러 적는 줄("쓰지 않는 것" 예, 이력)에는 표지 `keep-old-name` 를 단다(Markdown 은 `<!-- keep-old-name -->`, 규칙은 `Scripts/common/RenameScope.py`).
+
 | 규칙 | 근거 |
 |---|---|
 | Asset = 콘텐츠(`Engine/Asset`, 데이터 폴더 `Content/`), Resource = GPU · RHI 자원만 | 언리얼 Content · FRenderResource |

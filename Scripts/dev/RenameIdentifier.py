@@ -13,7 +13,7 @@ Scripts/dev/RenameIdentifier.py
 안전: 단어 단위로만 바꾸고, 흔한 이름(단어 하나 · 6 글자 미만)과 새 이름이 이미 있는 경우는 거절한다. `--dry-run` 으로 파일별 횟수를 먼저 본다.
 
 사용: `py -3 Scripts/dev/RenameIdentifier.py <쌍 파일.json> [--dry-run]`
-쌍 파일: `[{"old": "shouldShowCursor", "new": "shouldShowCursor", "why": "실제 값은 UI 가 커서를 보이길 바란다"}, …]`
+쌍 파일: `[{"old": "isCursorCaptured", "new": "shouldShowCursor", "why": "실제 값은 UI 가 커서를 보이길 바란다"}, …]`  (keep-old-name)
 """
 
 from __future__ import annotations
@@ -30,8 +30,9 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.Paths import getProjectRoot  # noqa: E402
+from common.RenameScope import checkRewriteUnmarkedLines, rewriteUnmarkedLines  # noqa: E402
 
-kRoots = ("Source", "Content", "Config", "docs", "Scripts", "Test", ".claude/skills")
+kRoots = ("Source", "Content", "Config", "docs", "Scripts", "Test", ".claude/skills", "AGENTS.md", "CLAUDE.md")
 kTextSuffixes = {".h", ".cpp", ".inl", ".hlsl", ".hlsli", ".py", ".md", ".json", ".xml", ".txt", ".cmake", ".material", ".ini", ".toml", ".yaml", ".yml"}
 kSkipParts = {"ThirdParty", "build", ".git", "graphify-out", "__pycache__", "node_modules"}
 kNamingPath = "Config/Rules/Lint/NamingWords.json"
@@ -62,6 +63,9 @@ def listTextFiles(root: Path) -> list[Path]:
         folder = root / base
         if folder.exists() is False:
             continue
+        if folder.is_file():
+            listPath.append(folder)
+            continue
         for path in folder.rglob("*"):
             if path.is_file() and path.suffix.lower() in kTextSuffixes and kSkipParts.isdisjoint(path.relative_to(root).parts):
                 listPath.append(path)
@@ -71,6 +75,19 @@ def listTextFiles(root: Path) -> list[Path]:
 def replaceWord(text: str, old: str, new: str) -> tuple[str, int]:
     pattern = re.compile(r"(?<![A-Za-z0-9_])" + re.escape(old) + r"(?![A-Za-z0-9_])")
     return pattern.subn(new, text)
+
+
+def replaceWordOutsideMarkedLines(text: str, old: str, new: str) -> tuple[str, int]:
+    """`replaceWord` 와 같되 옛 이름을 일부러 적은 줄(`keep-old-name` 표지)은 남긴다."""
+    count = 0
+
+    def rewrite(part: str) -> str:
+        nonlocal count
+        changed, partCount = replaceWord(part, old, new)
+        count += partCount
+        return changed
+
+    return rewriteUnmarkedLines(text, rewrite), count
 
 
 def findFilesNamed(root: Path, stem: str) -> list[Path]:
@@ -105,7 +122,7 @@ def renameAll(root: Path, listPair: Sequence[dict], bDryRun: bool) -> int:
         old, new = pair["old"], pair["new"]
         touched: list[tuple[str, int]] = []
         for path in listFile:
-            changed, count = replaceWord(texts[path], old, new)
+            changed, count = replaceWordOutsideMarkedLines(texts[path], old, new)
             if count:
                 texts[path] = changed
                 touched.append((path.relative_to(root).as_posix(), count))
@@ -135,12 +152,16 @@ def renameAll(root: Path, listPair: Sequence[dict], bDryRun: bool) -> int:
 
 
 def selfCheck() -> None:
-    assert checkPair("shouldShowCursor", "shouldShowCursor") is None
+    # 예시 이름은 이 도구의 치환이 다시 바꾸지 않게 표지를 단다 — 첫 묶음이 이 줄까지 바꿔 old == new 가 되어 자체 확인이 깨져 있었다.
+    assert checkPair("isCursorCaptured", "shouldShowCursor") is None  # keep-old-name
     assert checkPair("reads", "uses") is not None, "단어 하나는 거절"
     assert checkPair("When", "Condition") is not None, "흔한 이름은 거절"
     assert checkPair("_bNot", "_bNegate") is None, "멤버 머리 이름은 단어 하나여도 받는다"
-    text, count = replaceWord("shouldShowCursor(); bool isCursorCapturedLater; x.shouldShowCursor", "shouldShowCursor", "shouldShowCursor")
+    text, count = replaceWord("isCursorCaptured(); bool isCursorCapturedLater; x.isCursorCaptured", "isCursorCaptured", "shouldShowCursor")  # keep-old-name
     assert count == 2 and "isCursorCapturedLater" in text, (text, count)
+    text, count = replaceWordOutsideMarkedLines("`oldHelperName`\nnot `oldHelperName` <!-- keep-old-name -->\n", "oldHelperName", "newHelperName")
+    assert count == 1 and text == "`newHelperName`\nnot `oldHelperName` <!-- keep-old-name -->\n", (text, count)
+    checkRewriteUnmarkedLines()
 
 
 def main(argv: Sequence[str] | None = None) -> int:

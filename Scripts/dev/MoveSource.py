@@ -6,11 +6,11 @@
 
 move-source: 경로는 `Source/` 기준(폴더면 안의 파일 전부, 하위 폴더 포함). 하는 일:
   1. `git mv`
-  2. 추적 중인 텍스트 파일(Source · Tools · cmake · Scripts · docs · 최상위 CMake)에서 옮긴 파일의 전체 경로(`Engine/X/Y.h`)와
+  2. 추적 중인 텍스트 파일(Source · Tools · cmake · Scripts · docs · 스킬 · 최상위 CMake)에서 옮긴 파일의 전체 경로(`Engine/X/Y.h`)와
      폴더 접두어(`Engine/X/` — CMake 정규식 · 주석)를 새 경로로
   3. 같은 폴더 짧은 include(`#include "Y.h"`)가 옮긴 뒤 다른 폴더를 가리키게 되면 전체 경로로
   4. 고친 C++ 파일의 include 순서를 `format-includes` 규칙으로
-rename-symbol: 낱말 경계로 바꾼다(부분 일치 없음). 새 이름이 이미 쓰이고 있으면 겹친 파일을 알리고 멈춘다(`--force` 로 강행).
+rename-symbol: 낱말 경계로 바꾼다(부분 일치 없음, 코드와 문서 .md). 옛 이름을 일부러 적은 줄은 `keep-old-name` 표지로 남는다. 새 이름이 이미 쓰이고 있으면 겹친 파일을 알리고 멈춘다(`--force` 로 강행).
   C 계열 소스(C++ · HLSL)의 문자열 리터럴 안은 기본으로 건너뛰고 그 파일을 알린다(`--include-strings` 로 함께 바꾼다).
 """
 
@@ -27,15 +27,15 @@ from pathlib import Path
 from common.ExitCode import ExitCode
 from common.Git import runGit
 from common.Paths import getProjectRoot
+from common.RenameScope import checkRewriteUnmarkedLines, rewriteUnmarkedLines
 
 kTextSuffix = {".h", ".hpp", ".inl", ".cpp", ".c", ".cmake", ".txt", ".md", ".json", ".in", ".py", ".toml", ".xxx", ".natvis", ".hlsl", ".hlsli", ".xml", ".po", ".tpl"}
 kCppSuffix = {".h", ".hpp", ".inl", ".cpp"}
-kScanRoot = ["Source", "Content", "Source/Programs/ReflectionParser", "Source/Programs/OnlineLoadBot", "cmake", "Scripts", "docs", "Config", "CMakeLists.txt", "CMakePresets.json", "AGENTS.md", "CLAUDE.md"]
+kScanRoot = ["Source", "Content", "Source/Programs/ReflectionParser", "Source/Programs/OnlineLoadBot", "cmake", "Scripts", "docs", "Config", "CMakeLists.txt", "CMakePresets.json", "AGENTS.md", "CLAUDE.md", ".claude/skills"]
 kBareInclude = re.compile(r'^(\s*#\s*include\s*")([^"/]+)(")', re.M)
 
 
-# 규칙 문서는 "쓰지 말 것" 예로 옛 이름을 일부러 든다 — 이름 바꾸기가 그 예까지 바꾸면 규칙이 거꾸로 된다.
-kNeverRewrite = ("docs/agents/", "docs/04_CodingGuidelines.md")
+# 문서(docs/agents 포함)도 바꾼다. 옛 이름을 일부러 적은 줄은 표지로 남긴다(`common/RenameScope.py`).
 # 이름 바꾸기만 건너뛰는 곳: 린트의 금지 · 옛 이름 표(데이터)는 옛 이름을 일부러 적는다. 파일 옮기기(경로 표)는 그대로 고친다.
 # 스크립트의 시험 글은 폴더가 아니라 형식으로 지킨다 — Python 은 코드 토큰만 바꾼다(`rewritePythonCode`).
 kNeverRename = ("Config/Rules/Lint/",)
@@ -118,7 +118,7 @@ def listTrackedText(root: Path) -> list[Path]:
     if not result.bSucceeded:
         raise RuntimeError(f"git ls-files 실패: {result.stderr.strip()}")
     return [root / line for line in result.stdout.splitlines()
-            if Path(line).suffix.lower() in kTextSuffix and not line.startswith(kNeverRewrite) and (root / line).is_file()]
+            if Path(line).suffix.lower() in kTextSuffix and (root / line).is_file()]
 
 
 def listRenameFiles(root: Path) -> list[Path]:
@@ -268,9 +268,12 @@ def mainMove(argv: list[str]) -> int:
     changedCppSet = {source / new for new in mapMovedText} | set(listNeighbourText)
     for path in listTrackedText(root):
         text = readText(path)
-        rewritten = text
-        for pattern, replacement in listRule:
-            rewritten = pattern.sub(replacement, rewritten)
+        def rewritePaths(part: str) -> str:
+            for pattern, replacement in listRule:
+                part = pattern.sub(replacement, part)
+            return part
+
+        rewritten = rewriteUnmarkedLines(text, rewritePaths)
         if rewritten != text:
             writeText(path, rewritten)
             if path.suffix.lower() in kCppSuffix:
@@ -296,6 +299,7 @@ def mainRename(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     checkRewriteOutsideStrings()
     checkPathRuleSinglePass()
+    checkRewriteUnmarkedLines()
 
     root = getProjectRoot()
     listPair = [pair.partition("=")[::2] for pair in args.pair]
@@ -304,7 +308,7 @@ def mainRename(argv: list[str]) -> int:
     def rewriteFile(path: Path, text: str, rewrite) -> str:
         suffix = path.suffix.lower()
         if args.include_strings or (suffix not in kCLikeSuffix and suffix != ".py"):
-            return rewrite(text)
+            return rewriteUnmarkedLines(text, rewrite)
         rewritten, skippedCount = (rewritePythonCode if suffix == ".py" else rewriteOutsideStrings)(text, rewrite)
         if skippedCount:
             listSkipped.append(f"{path.relative_to(root).as_posix()}({skippedCount})")
@@ -336,13 +340,15 @@ def mainRename(argv: list[str]) -> int:
         print(f"[rename-symbol] {changedCount} 파일" + (" (dry-run)" if args.dry_run else ""))
         reportSkipped()
         return ExitCode.Passed if args.dry_run else formatChanged(root, listChanged)
-    listFile = [path for path in listRenameFiles(root) if path.suffix.lower() in kCppSuffix | {".xxx", ".natvis", ".txt", ".cmake"}]
+    # 문서(.md)도 함께 바꾼다 — 빼면 개명마다 규칙 문서의 예시 이름이 낡는다. 겹침 검사는 코드만 본다(문서는 새 이름을 미리 적을 수 있다).
+    kCodeSuffix = kCppSuffix | {".xxx", ".natvis", ".txt", ".cmake"}
+    listFile = [path for path in listRenameFiles(root) if path.suffix.lower() in kCodeSuffix | {".md"}]
     mapText = {path: readText(path) for path in listFile}
     bClash = False
     for old, new in listPair:
         if not old or not new:
             raise ValueError("Old=New 모양이어야 한다")
-        listClash = [path for path, text in mapText.items() if re.search(rf"\b{re.escape(new)}\b", text)]
+        listClash = [path for path, text in mapText.items() if path.suffix.lower() in kCodeSuffix and re.search(rf"\b{re.escape(new)}\b", text)]
         if listClash and not args.force:
             bClash = True
             print(f"[rename-symbol] '{new}' 이 이미 쓰인다: " + ", ".join(str(path.relative_to(root)) for path in listClash[:5]), file=sys.stderr)
