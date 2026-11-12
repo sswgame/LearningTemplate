@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    struct FileUtil;
-
     /**
      * @class PathKey
      * @brief 소문자 · `/` 로 접은 경로 키입니다. 만드는 길은 `FileUtil::normalizePath` 하나입니다.
