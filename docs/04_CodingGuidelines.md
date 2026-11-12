@@ -47,11 +47,9 @@ SW_EXTERN_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMeshes );         // 테스�
 | `bool findBody( handle, PhysicsBody& out )` | `PhysicsBody* findBody( handle )` · `bool tryGetBody( handle, PhysicsBody& outBody )` |
 | `getOrLoadTexture( path )` · `findOrAddSlot( name )` | `acquire( path )`(공유 소유) · `getOrCreateSlot( name )` |
 | `Folder* ensureFolder( path )` | `getOrCreateFolder( path )` · `void ensureFolder( path )` |
-| `void parse( XmlNode node, Desc& out )` | `void parse( XmlNode node, Desc& outDesc )` |
+| `void parse( XMLNode node, Desc& out )` | `void parse( XMLNode node, Desc& outDesc )` |
 | `find( string_view )` + `find( const hashed_string& )` | `find( const hashed_string& )` 하나. 키가 아닌 글은 `findStringByText( string_view )` |
 | 매 프레임 `string resolvePresentSource()` | `string_view resolvePresentSource()` · `hashed_string` |
-
-접미사: `Def`(파일에서 읽는 정의: `AbilityDef`) · `Desc`(`create*` 에 넘기는 서술: `PhysicsShapeDesc3D`) · `Spec`(부여된 실행 인스턴스: `AbilitySpec`) · `Config`(프리셋 · 배포: `GameConfig`) · `Settings`(실행 중 바꾸는 설정: `GameSettings`) · `Params`(호출 인자 묶음). `RT` 는 render thread, render target 은 `RenderTarget`.
 
 ## 3. 헤더 · include — [규칙](agents/Includes.md#c-structure-and-includes)
 
@@ -67,8 +65,6 @@ SW_EXTERN_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMeshes );         // 테스�
     #include "Core/Foundation/PlatformOSHeaders.h"
 #endif
 ```
-
-아래 층이 위 층을 알아야 하면 include 대신 인터페이스를 받는다(`Concurrency` 는 교착 검출기 대신 `ILockObserver`). `Log` 보다 아래 층의 `.cpp` 는 `SW_LOG_*` 대신 `SW_LOW_LEVEL_*`.
 
 | 쓰지 않는 것 | 쓰는 것 |
 | :--- | :--- |
@@ -93,9 +89,9 @@ GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때
 
 | 쓰지 않는 것 | 쓰는 것 |
 | :--- | :--- |
-| 상수를 여러 곳에 복사 | `.cpp` 하나는 `WeaponInternal::kMaxSpread`, 모듈 하나는 `MeshAssetFormat::kExtension`, 모듈 사이는 `RHIDescriptors.h` `constant` · `shaderslot::k*` |
-| `kFrameCount = constant::kMaxFrameCountInFlight`(별칭) | `constant::kMaxFrameCountInFlight` 를 그대로 |
-| `nanoseconds / 1000000000` | `nanoseconds / constant::kNanosecondsPerSecond` |
+| 상수를 여러 곳에 복사 | `.cpp` 하나는 `WeaponInternal::kMaxSpread`, 모듈 하나는 `MeshAssetFormat::kExtension`, 모듈 사이는 `constant::render::…` · `shaderslot::k*` |
+| `kFrameCount = constant::render::kMaxFrameCountInFlight`(별칭) | `constant::render::kMaxFrameCountInFlight` 를 그대로 |
+| `nanoseconds / 1000000000` | `nanoseconds / constant::time::kNanosecondsPerSecond` |
 | `0x53574846`(4 글자 표식) | `FourCCUtil::make( "SWHF" )` |
 | `char buf[64]` · `fixed_string<256>` | `constant::buffer::kMax64` · `constant::file::kMaxPathSize` |
 | 게임플레이 튜닝 `kWalkSpeed` | 컴포넌트 `PROPERTY` `_walkSpeed` |
@@ -104,17 +100,15 @@ GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때
 | `(void)table.loadFromAsset();` | 읽기 결과를 받아 실패를 알리거나 멈춘다 |
 | 파이썬 `except Exception: pass` · `os.environ.get( "X", "경로" )` | 예상한 예외만 잡고, 필수 설정이 없으면 `sys.exit` 로 멈춘다 |
 
-데이터 주도 규칙: 필수 값이 없으면 기본값으로 돌지 않고 오류로 멈춘다(폴백 없음).
-
 ## 5. 헬퍼 · 이름공간 — [규칙](agents/Helpers.md#where-a-helper-goes)
 
 ```cpp
-// D3D11RHIDevice.cpp — Internal 이름은 클래스가 아니라 번역 단위를 따른다(유니티 빌드에서 겹치지 않게)
+// VulkanRHIResourceFactory.cpp — Internal 이름은 클래스가 아니라 번역 단위를 따른다(유니티 빌드에서 겹치지 않게)
 namespace sw
 {
     namespace                                   // 익명 이름공간은 파일에 하나, 스코프 맨 위
     {
-        struct D3D11RHIDeviceInternal
+        struct VulkanRHIResourceFactoryInternal
         {
             static constexpr uint32 kMaxStage = 5;   // 맨 상수를 익명 이름공간에 두면 다른 .cpp 와 겹칠 수 있다
             static VkShaderStageFlagBits toStage( RHIShaderStage stage );
@@ -181,7 +175,7 @@ Foo::Foo()
 
 | 대상 | 예 |
 | :--- | :--- |
-| CMake 옵션 · 함수 · 정의 · 타깃 | `option( SW_ENABLE_PCH … )` · `sw_configurePch()` · `SW_PLATFORM_WINDOWS` · `App` · `SWGame` |
+| CMake 옵션 · 함수 · 정의 · 타깃 | `option( SW_ENABLE_PCH … )` · `sw_configurePCH()` · `SW_PLATFORM_WINDOWS` · `App` · `SWGame` |
 | Python 함수 · 헬퍼 · 상수 · 파일 | `setupEnvironment()` · `safeCallInternal()` · `kRepoRoot` · `SetupEnvironment.py` |
 | 리소스 이름 | `Content/game/<게임 소문자>/maps/0.title.scene.xml`(대문자는 `README.md` 만) |
 | 텍스처 · 모델 원본 | `textures_raw/hero.png` → `App --import-textures` → `textures/hero.dds` + `textures_raw/import.stamp` |
