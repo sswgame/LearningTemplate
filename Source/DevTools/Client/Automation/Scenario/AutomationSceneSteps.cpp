@@ -2,6 +2,7 @@
  * @file AutomationSceneSteps.cpp
  * @brief 시나리오가 씬과 연출을 다루는 단계입니다 — 데모 · 어트랙트 · 튜토리얼 재생(`ScenarioPlayback`)이 쓰는 것.
  * @details - `<LoadScene path="game/x/maps/a.scene.xml" timeoutFrames="600"/>`: 씬 로드를 요청하고 그 씬이 활성이 될 때까지 시나리오 시계를 붙잡는다(못 열면 실패).
+ *          - `<ExpectActiveScene path="game/x/maps/a.scene.xml"/>`: 활성 씬이 그 리소스에서 왔는지 본다(세이브 불러오기가 찍은 씬으로 옮겼는지 — 감사 G-7).
  *          - `<PlaySequence object="Intro"/>`: 활성 씬의 그 이름 오브젝트에 붙은 시퀀스(`SequencePlayerComponent`)를 처음부터 재생한다.
  *          - `<WaitSequence object="Intro" timeoutFrames="1800"/>`: 그 시퀀스가 끝날 때까지 붙잡는다(언리얼 Sequencer 의 Play → Wait 같은 쌍).
  *          시퀀스 안에서 게임 행동을 끼우는 쪽(시퀀서 이벤트 트랙이 시나리오를 부르는 것)은 `ScenarioPlayback::play` 를 부른다.
@@ -71,6 +72,17 @@ namespace sw
                 return hold;
             }
 
+            static bool runExpectActiveScene( AutomationStepContext& context, const AutomationStep& step )
+            {
+                const AutomationExpectActiveSceneParams params = step.readValidatedProperties<AutomationExpectActiveSceneParams>();
+                const Scene* const                      pScene = engine::getSubsystem<SceneManager>().getActiveScene();
+                if ( pScene == nullptr )
+                    context.recordFailure( step, "there is no active scene" );
+                else if ( pScene->getSourcePath() != params._path )
+                    context.recordFailure( step, "the active scene came from '" + pScene->getSourcePath() + "', not '" + params._path + "'" );
+                return true;
+            }
+
             static SequencePlayerComponent* findSequence( AutomationStepContext& context, const AutomationStep& step )
             {
                 GameObjectManager* pManager = context.findActiveObjectManager();
@@ -106,6 +118,7 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_STEP( sceneLoadScene, "LoadScene", &AutomationSceneStepsInternal::runNothing, &AutomationStep::validateProperties<AutomationLoadSceneParams>, AutomationStepOptions{}.withHold( &AutomationSceneStepsInternal::holdLoadScene ) );
+    SW_AUTOMATION_STEP( sceneExpectActiveScene, "ExpectActiveScene", &AutomationSceneStepsInternal::runExpectActiveScene, &AutomationStep::validateProperties<AutomationExpectActiveSceneParams>, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( scenePlaySequence, "PlaySequence", &AutomationSceneStepsInternal::runPlaySequence, &AutomationStep::validateProperties<AutomationSequenceStepParams>, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( sceneWaitSequence, "WaitSequence", &AutomationSceneStepsInternal::runNothing, &AutomationStep::validateProperties<AutomationSequenceStepParams>, AutomationStepOptions{}.withHold( &AutomationSceneStepsInternal::holdWaitSequence ) );
 } // namespace sw

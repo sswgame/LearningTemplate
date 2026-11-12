@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -35,6 +36,9 @@ namespace sw
     {
     public:
         static constexpr const utf8* kSubsystemName = "GameSceneFlow";
+
+        /** @brief 맡긴 씬 로드의 끝을 받는 함수입니다 — 활성이 된 씬, 실패 · 뒤 요청에 밀렸으면 nullptr. */
+        using SceneLoadedFunction = Delegate<void( Scene* pScene )>;
 
         /**
          * @brief @p settings 는 게임 인스턴스의 gamesettings 이고 이 서브시스템보다 오래 산다. 화면 전환 · 로딩 화면은 같은 게임 범위의 형제다(먼저 선다). 로딩 화면은 없을 수 있다(전용 서버 — `IGameInstanceClientHook` 이 없다).
@@ -84,6 +88,13 @@ namespace sw
          */
         [[nodiscard]] bool requestTitleScene();
 
+        /**
+         * @brief @p scenePath 의 로드를 게임 이동으로 요청하고, 끝나면 그 로드의 `SceneLoadCompletedEvent` 바로 뒤에 @p onLoaded 를 부릅니다. 요청이 실패하면 false 이고 @p onLoaded 는 불리지 않습니다.
+         * @details 세이브 불러오기(찍은 씬으로 옮긴 뒤 적용)와 깨진 복원 뒤 씬 다시 열기가 쓴다. 이벤트 버스가 없는 범위(도구 · 테스트)에서도 끝을 잃지 않게 이벤트 구독이 아니라
+         *          그 로드에 묶인 함수로 받는다(유니티 `LoadSceneAsync(...).completed`, 언리얼은 `OpenLevel` 뒤 `PostLoadMapWithWorld` 구독).
+         */
+        [[nodiscard]] bool requestSceneThen( const string& scenePath, const SceneLoadedFunction& onLoaded );
+
         /** @brief 타이틀 씬이 있는 게임이면 true 입니다 — 세션 명령(타이틀로)을 걸지 정한다. */
         bool hasTitleScene() const;
         /**
@@ -99,9 +110,10 @@ namespace sw
         /** @brief 맡긴 씬 로드 하나입니다. 끝나면 `update` 가 `SceneLoadCompletedEvent` 를 내고 목록에서 뺍니다. */
         struct PendingSceneLoad
         {
-            string             _scenePath;
-            TaskFuture<Scene*> _future;
-            Subscription       _saveBlock; ///< 로드가 끝날 때까지 세이브를 막는다 — 반쯤 선 씬 · 옛 씬을 새 씬 이름으로 쓰지 않게 한다(목록에서 빠지면 풀린다)
+            string              _scenePath;
+            TaskFuture<Scene*>  _future;
+            Subscription        _saveBlock; ///< 로드가 끝날 때까지 세이브를 막는다 — 반쯤 선 씬 · 옛 씬을 새 씬 이름으로 쓰지 않게 한다(목록에서 빠지면 풀린다)
+            SceneLoadedFunction _onLoaded;  ///< 끝을 받을 함수(`requestSceneThen`) — 묶이지 않았으면 이벤트만 낸다
         };
 
         /**
@@ -111,7 +123,7 @@ namespace sw
         [[nodiscard]] bool requestLoadScene( const string& scenePath, const utf8* pWhich );
         /** @brief 씬 로드 받아들임 알림입니다. 게임 이동(`SceneLoadKind::Travel`)이면 대기 목록에 넣고 로딩 화면을 띄우고 `SceneLoadRequestedEvent` 를 냅니다. */
         void onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future );
-        /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 냅니다(요청 순서). */
+        /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 내고 묶인 함수를 부릅니다(요청 순서). 받는 쪽이 새 로드를 요청해도 된다 — 끝난 것을 먼저 목록에서 뺀 뒤 알린다. */
         void publishFinishedSceneLoads();
 
     private:
