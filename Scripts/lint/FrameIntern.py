@@ -25,11 +25,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.FunctionSpans import findFunctionSpans  # noqa: E402
 from lint.LintScope import LintScope, makeWholeScope, readTexts  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/FrameInternExceptions.json"
 kComment = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
-kDefinition = re.compile(r"^[ \t]*[\w:<>,&\*\s]*?\b\w+::(onTick|tick\w*|update\w*|paint\w*)\s*\([^;{]*\)\s*(?:const\s*)?(?:noexcept\s*)?(?:override\s*)?\{", re.M)
+kFrameFunctionName = re.compile(r"(?:\w+::)+(onTick|tick\w*|update\w*|paint\w*)")   # 프레임 함수 정의 이름(정의는 FunctionSpans 가 찾는다)
 kLiteralName = re.compile(r"hashed_string\s*[({]\s*\"")
 
 
@@ -37,18 +38,13 @@ def findLiteralNames(text: str) -> list[tuple[str, str]]:
     """글 하나에서 (함수 이름, 줄) 을 돌려준다. `static` 줄은 한 번만 만들어지므로 뺀다."""
     code = kComment.sub("", text)
     listFound: list[tuple[str, str]] = []
-    for match in kDefinition.finditer(code):
-        depth = 1
-        cursor = match.end()
-        while cursor < len(code) and depth > 0:
-            if code[cursor] == "{":
-                depth += 1
-            elif code[cursor] == "}":
-                depth -= 1
-            cursor += 1
-        for line in code[match.end():cursor].split("\n"):
+    for span in findFunctionSpans(code):
+        nameMatch = kFrameFunctionName.fullmatch(span.name)
+        if nameMatch is None:
+            continue
+        for line in code[span.openIndex + 1:span.closeIndex].split("\n"):
             if kLiteralName.search(line) and "static" not in line:
-                listFound.append((match.group(1), line.strip()))
+                listFound.append((nameMatch.group(1), line.strip()))
     return listFound
 
 

@@ -48,6 +48,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from lint.FunctionSpans import findClosingBrace, findEnclosingName, findFunctionSpans, runSelfCheck as runFunctionSpansSelfCheck  # noqa: E402
 from lint.LintScope import LintScope, makeWholeScope, readTexts  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/CommonShapeExceptions.json"
@@ -66,8 +67,6 @@ kOneLineValidatorPattern = re.compile(r"expected<void>\s+(?:\w+::)?\w+\(\s*const
 kCanvasDeletePattern = re.compile(r"\bed::BeginDelete\(")
 kSavedTextPattern = re.compile(r"^\s*string\s+_savedText\s*;", re.M)
 kMakeDeltaPattern = re.compile(r"\bDataInheritance::makeDelta\(")
-# 정의 줄만 본다(줄머리에 반환 형식이 있다) — `if ( A::loadX( y ) )` 같은 호출은 걸리지 않는다.
-kAssetEntrancePattern = re.compile(r"^[ \t]*(?:\[\[nodiscard\]\]\s*)?(?:static\s+)?[\w:<>]+[\s*&]+(\w+::load\w*)\([^;{}]*\)\s*(?:const\s*)?\{", re.M)
 kReadTextAssetPattern = re.compile(r"\bAssetIO::readTextAsset\(\s*(\w+)?")
 kEngineChildPattern = re.compile(r"\bProcessCommand::at\(")
 kEditorScanPattern = re.compile(r"\bFileUtil::collect(?:Files|Folders)\(\s*([^,]+?)\s*,")
@@ -77,23 +76,9 @@ kEditorPointerMovePattern = re.compile(r"\bEditorSelfTestInput::moveMouse\(")
 kEditorPointerBarePattern = re.compile(r"(?<![\w.>:])moveMouse\(")
 kEditorPointerBaseFile = "Source/Editor/SelfTest/EditorSelfTestInput.cpp"
 kEditorPointerDefinitionPattern = re.compile(r"[ \t]*void\s+(?:EditorSelfTestInput::)?moveMouse\(")
-# 함수 정의 머리(반환 형식 · 이름 · 인자 · 여는 중괄호). 제어문은 이름에서 뺀다.
-kFunctionHeadPattern = re.compile(r"^[ \t]*(?:template\s*<[^>]*>\s*)?(?:\[\[nodiscard\]\]\s*)?(?:(?:static|inline|virtual|constexpr)\s+)*[\w:<>,*&]+[\s*&]+([\w:~]+)\s*\([^;{}]*\)\s*(?:const\s*)?(?:(?:override|final|noexcept)\s*)*\{", re.M)
-kControlWords = frozenset({"if", "for", "while", "switch", "catch", "return", "else"})
 kTypeChainWalkPattern = re.compile(r"\b(\w+)\s*=\s*\1->getParentType\(\s*\)")
+kAssetEntranceName = re.compile(r"\w+::load\w*")   # 리소스 입구 이름(정의는 FunctionSpans 가 찾는다)
 kAssetCarrierPattern = re.compile(r"withAsset\(|parseResourceText\(|parseResourceRoot\(|loadResource\w*\(|loadFromAsset\(")
-
-
-def findClosingBrace(code: str, openIndex: int) -> int:
-    depth = 0
-    for index in range(openIndex, len(code)):
-        if code[index] == "{":
-            depth += 1
-        elif code[index] == "}":
-            depth -= 1
-            if depth == 0:
-                return index
-    return len(code)
 
 
 def findSameSpellingSwitches(code: str) -> list[str]:
@@ -113,28 +98,18 @@ def findSameSpellingSwitches(code: str) -> list[str]:
 def findIdDroppingEntrances(code: str) -> list[str]:
     """글을 읽은 뒤 id 를 싣지 않는 리소스 입구(`형식::함수`)를 돌려준다."""
     listEntrance: list[str] = []
-    for match in kAssetEntrancePattern.finditer(code):
-        body = code[match.end() - 1:findClosingBrace(code, match.end() - 1)]
+    for span in findFunctionSpans(code):
+        if kAssetEntranceName.fullmatch(span.name) is None:
+            continue
+        body = code[span.openIndex:span.closeIndex]
         readMatch = kReadTextAssetPattern.search(body)
         if readMatch is None or kAssetCarrierPattern.search(body, readMatch.end()):
             continue
         idName = readMatch.group(1)
         bPassesID = idName is not None and idName != "AssetID" and re.search(rf"[(,]\s*{re.escape(idName)}\s*[,)]", body[readMatch.end():]) is not None
         if not bPassesID:
-            listEntrance.append(match.group(1))
+            listEntrance.append(span.name)
     return listEntrance
-
-
-def findEnclosingFunction(code: str, index: int) -> str:
-    """@p index 를 담은 가장 안쪽 함수 정의의 이름(적힌 대로 — `형식::함수`)이다. 없으면 `?`."""
-    name = "?"
-    for match in kFunctionHeadPattern.finditer(code, 0, index):
-        if match.group(1) in kControlWords:
-            continue
-        openIndex = match.end() - 1
-        if openIndex < index < findClosingBrace(code, openIndex):
-            name = match.group(1)
-    return name
 
 
 def findPointerMoves(path: str, code: str) -> list[str]:
@@ -143,11 +118,12 @@ def findPointerMoves(path: str, code: str) -> list[str]:
     if path == kEditorPointerBaseFile:
         listMatch += list(kEditorPointerBarePattern.finditer(code))
     listFunction: set[str] = set()
+    listSpan = findFunctionSpans(code) if listMatch else []
     for match in listMatch:
         lineStart = code.rfind("\n", 0, match.start()) + 1
         if kEditorPointerDefinitionPattern.match(code, lineStart):
             continue
-        listFunction.add(findEnclosingFunction(code, match.start()))
+        listFunction.add(findEnclosingName(listSpan, match.start()))
     return sorted(listFunction)
 
 
@@ -215,6 +191,7 @@ def checkCommonShapes(projectRoot: Path, scope: LintScope) -> list[str]:
 
 
 def runSelfCheck() -> None:
+    runFunctionSpansSelfCheck()   # 공용 함수 범위 도우미(`경로|함수` 열쇠)도 함께 본다
     same = 'const utf8* f( Kind k ) { switch ( k )\n{\ncase Kind::Aa: return "Aa";\ncase Kind::Bb: return "Bb";\n}\n}'
     other = 'const utf8* f( Kind k ) { switch ( k )\n{\ncase Kind::Aa: return "aa";\ncase Kind::Bb: return "Bb";\n}\n}'
     filtered = 'const utf8* f( Kind k ) { switch ( k )\n{\ncase Kind::Aa: return "Aa";\ncase Kind::Bb: return "Bb";\ndefault: return nullptr;\n}\n}'
@@ -251,6 +228,8 @@ def runSelfCheck() -> None:
     assert collectViolations("Source/A/a.cpp", "for ( const TypeInfo* p : t.getTypeChain() ) {}") == []
     pointerMove = "static bool runDrag( Runner& runner )\n{\n    if ( x )\n    {\n        EditorSelfTestInput::moveMouse( float2{ 1.0f, 2.0f } );\n    }\n    return true;\n}"
     assert [v[1] for v in collectViolations("Source/Editor/a.cpp", pointerMove)] == ["Source/Editor/a.cpp|runDrag"], "열쇠는 담은 함수다(제어문이 아니다)"
+    inLambda = pointerMove.replace("    if ( x )\n    {\n        EditorSelfTestInput::moveMouse", "    each( [&]( int v )\n    {\n        EditorSelfTestInput::moveMouse").replace("    }\n    return true;", "    } );\n    return true;")
+    assert [v[1] for v in collectViolations("Source/Editor/a.cpp", inLambda)] == ["Source/Editor/a.cpp|runDrag#lambda1"], "예외 함수 안 새 람다는 다른 열쇠다"
     base = "int x;\n    void EditorSelfTestInput::moveMouse( const float2& p )\n{\n}\n\nvoid EditorSelfTestInput::parkMouse()\n{\n    moveMouse( p );\n}"
     assert [v[1] for v in collectViolations(kEditorPointerBaseFile, base)] == [kEditorPointerBaseFile + "|EditorSelfTestInput::parkMouse"], "입구 파일은 이름 없는 호출도 보고 정의 줄은 보지 않는다"
     assert collectViolations("Source/Editor/a.cpp", "(void)EditorSelfTestInput::pressAtMark( pKey, anchor, 0, cover );") == [], "입구는 걸리지 않는다"
