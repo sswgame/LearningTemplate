@@ -61,6 +61,16 @@ namespace sw
                 return true;
             }
 
+            /** @brief 색인보다 먼저 쓴 기록의 색인 키입니다(백필). 쓰는 쪽과 같은 채널 · 날짜 줄이라 겹쳐 넣어도 한 줄이다. */
+            [[nodiscard]] static bool makeHistoryBackfillKey( const ServiceRecord& record, string& outIndexKey )
+            {
+                int64 sentMs = 0;
+                if ( readHistoryTimeMs( record, sentMs ) == false )
+                    return false;
+                outIndexKey = makeGroupIndexKey( string_view( record._key ).substr( 0, record._key.rfind( '/' ) ), sentMs );
+                return true;
+            }
+
             static string makeHistoryKey( string_view channelID, int64 sentMs, uint64 serverID, uint64 sequence )
             {
                 string key{ channelID };
@@ -713,10 +723,11 @@ namespace sw
     ServiceTTLRule ChatService::makeTTLRule( int64 expireAfterMs )
     {
         ServiceTTLRule rule;
-        rule._table         = ChatServiceInternal::getHistoryTable();
-        rule._ttlIndexTable = ChatServiceInternal::getHistoryIndexTable();
-        rule._expireAfterMs = expireAfterMs;
-        rule._pfnReadTime   = &ChatServiceInternal::readHistoryTimeMs;
+        rule._table               = ChatServiceInternal::getHistoryTable();
+        rule._ttlIndexTable       = ChatServiceInternal::getHistoryIndexTable();
+        rule._expireAfterMs       = expireAfterMs;
+        rule._pfnReadTime         = &ChatServiceInternal::readHistoryTimeMs;
+        rule._pfnBackfillIndexKey = &ChatServiceInternal::makeHistoryBackfillKey;
         return rule;
     }
 

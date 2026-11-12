@@ -20,10 +20,12 @@ namespace sw
     {
         struct LedgerInternal
         {
-            static constexpr uint64 kJournalFormat = 1;
-            static constexpr uint64 kCarryFormat   = 1;
-            static constexpr int32  kListPageSize  = 64;
-            static constexpr int32  kTimeHexWidth  = 16;
+            static constexpr uint64      kJournalFormat       = 1;
+            static constexpr uint64      kCarryFormat         = 1;
+            static constexpr int32       kListPageSize        = 64;
+            static constexpr int32       kTimeHexWidth        = 16;
+            static constexpr string_view kLegacyMintHolderKey = "sys/mint"; ///< 예전 판이 발행 다리에 넣던 내역 줄의 보유자 키
+            static constexpr string_view kLegacySinkHolderKey = "sys/sink"; ///< 예전 판이 소각 다리에 넣던 내역 줄의 보유자 키
 
             /** @brief 한 (보유자, 자산)의 순변화입니다. */
             struct Delta
@@ -168,8 +170,46 @@ namespace sw
                 return true;
             }
 
-            /** @brief 지우는 분개들의 공급 합을 자산별 이월 레코드에 더하는 쓰기를 붙입니다(`ServiceTTLStageFn`). 이월 레코드는 읽은 버전을 조건으로 쓴다. */
-            static ServiceStoreResult stageJournalCarry( IServiceStoreConnection& connection, const vector<const ServiceRecord*>& listErased, ServiceTransaction& inoutTransaction )
+            static const hashed_string& getJournalExpiryTable()
+            {
+                static const hashed_string s_table{ "ledger_journal_expiry" };
+                return s_table;
+            }
+
+            /** @brief 지우는 분개 @p journalKey 의 내역 색인 줄(보유자마다 하나)을 지우는 쓰기를 붙입니다. 없는 줄을 지워도 된다(조건 없음). */
+            static void stageHistoryErase( const LedgerJournalEntry& entry, string_view journalKey, ServiceTransaction& inoutTransaction )
+            {
+                LedgerTransferRequest request;
+                request._listPosting = entry._listPosting;
+                vector<Delta> listDelta;
+                collectDeltas( request, listDelta ); // 넣을 때(`stageTransfer`)와 같은 보유자 키 · 같은 순서다
+                const string* pLastHolderKey = nullptr;
+                for ( const Delta& delta : listDelta )
+                {
+                    if ( pLastHolderKey != nullptr && *pLastHolderKey == delta._holderKey )
+                        continue;
+                    inoutTransaction.erase( Ledger::getHistoryTable(), makeHistoryKey( delta._holderKey, entry._timeMs, journalKey ) );
+                    pLastHolderKey = &delta._holderKey;
+                }
+                // 예전 판은 발행 · 소각에도 내역 줄(`sys/mint/…` · `sys/sink/…`)을 넣었다 — 그 줄도 분개와 함께 지운다(없으면 조건 없는 지우기라 그냥 지나간다)
+                bool bIssued = false;
+                bool bBurned = false;
+                for ( const LedgerPosting& posting : entry._listPosting )
+                {
+                    bIssued = bIssued || posting._from._kind == LedgerHolderKind::Mint;
+                    bBurned = bBurned || posting._to._kind == LedgerHolderKind::Sink;
+                }
+                if ( bIssued )
+                    inoutTransaction.erase( Ledger::getHistoryTable(), makeHistoryKey( string( kLegacyMintHolderKey ), entry._timeMs, journalKey ) );
+                if ( bBurned )
+                    inoutTransaction.erase( Ledger::getHistoryTable(), makeHistoryKey( string( kLegacySinkHolderKey ), entry._timeMs, journalKey ) );
+            }
+
+            /**
+             * @brief 지우는 분개들의 공급 합을 자산별 이월 레코드에 더하고 내역 줄을 지우는 쓰기를 붙입니다(`ServiceTTLStageFn`). 이월 레코드는 읽은 버전을 조건으로 쓴다.
+             * @details 분개 하나의 쓰기는 분개 · 색인 줄 2 + 이월(자산 ≤ 16) + 내역(보유자 ≤ 32)이라 쓰기 상한(64) 안이다.
+             */
+            static ServiceStoreResult stageJournalErase( IServiceStoreConnection& connection, const vector<const ServiceRecord*>& listErased, ServiceTransaction& inoutTransaction )
             {
                 vector<LedgerSupplyStats> listSupply;
                 for ( const ServiceRecord* pRecord : listErased )
@@ -178,6 +218,7 @@ namespace sw
                     if ( decodeJournal( pRecord->_bytes, entry, nullptr ) == false )
                         return ServiceStoreResult::Invalid; // 시각을 읽은 분개라 여기 오지 않는다
                     Ledger::addSupply( entry, listSupply );
+                    stageHistoryErase( entry, pRecord->_key, inoutTransaction );
                 }
                 for ( const LedgerSupplyStats& supply : listSupply )
                 {
@@ -353,13 +394,15 @@ namespace sw
         return s_table;
     }
 
-    ServiceTTLRule Ledger::makeJournalRetentionRule( int64 retentionMs )
+    ServiceTTLRule Ledger::makeJournalTTLRule( int64 retentionMs )
     {
         ServiceTTLRule rule;
-        rule._table         = getJournalTable();
-        rule._expireAfterMs = retentionMs;
-        rule._pfnReadTime   = &LedgerInternal::readJournalTimeMs;
-        rule._pfnStageErase = &LedgerInternal::stageJournalCarry;
+        rule._table               = getJournalTable();
+        rule._ttlIndexTable       = LedgerInternal::getJournalExpiryTable();
+        rule._expireAfterMs       = retentionMs;
+        rule._pfnReadTime         = &LedgerInternal::readJournalTimeMs;
+        rule._pfnStageErase       = &LedgerInternal::stageJournalErase;
+        rule._pfnBackfillIndexKey = &ServiceTTLRule::makeRecordIndexKey<&LedgerInternal::readJournalTimeMs>;
         return rule;
     }
 
@@ -412,40 +455,6 @@ namespace sw
                 return ServiceStoreResult::Ok;
             cursor = listRecord.back()._key;
         }
-    }
-
-    bool Ledger::readHistoryTimeMs( const ServiceRecord& record, int64& outTimeMs )
-    {
-        const string_view key        = record._key;
-        size_t            timeOffset = 0;
-        if ( StringUtil::startsWith( key, "acct/" ) )
-            timeOffset = 5 + static_cast<size_t>( ServiceKeyUtil::kHexWidth ) + 1; // "acct/<16 진>/"
-        else if ( StringUtil::startsWith( key, "sys/mint/" ) || StringUtil::startsWith( key, "sys/sink/" ) )
-            timeOffset = 9;
-        else if ( StringUtil::startsWith( key, "esc/" ) )
-        {
-            // "esc/<도메인>/<토큰>/" — 도메인과 토큰의 글자 규칙에 '/' 가 없으므로 슬래시 셋째 뒤가 시각이다
-            size_t slashCount = 0;
-            for ( size_t index = 0; index < key.size() && slashCount < 3; ++index )
-            {
-                if ( key[index] == '/' )
-                {
-                    ++slashCount;
-                    timeOffset = index + 1;
-                }
-            }
-            if ( slashCount < 3 )
-                return false;
-        }
-        else
-            return false;
-        if ( key.size() < timeOffset + static_cast<size_t>( ServiceKeyUtil::kHexWidth ) )
-            return false;
-        uint64 timeMs = 0;
-        if ( ServiceKeyUtil::parseHex64( key.substr( timeOffset, static_cast<size_t>( ServiceKeyUtil::kHexWidth ) ), timeMs ) == false )
-            return false;
-        outTimeMs = static_cast<int64>( timeMs );
-        return true;
     }
 
     const hashed_string& Ledger::getHistoryTable()
@@ -517,6 +526,7 @@ namespace sw
         const uint64 contentHash = LedgerInternal::computeContentHash( request );
         pending.put( getJournalTable(), request._journalKey, LedgerInternal::encodeJournal( request, contentHash, outResult._listHolderBalance ),
                      ServiceRecord::kAbsentVersion );
+        pending.put( LedgerInternal::getJournalExpiryTable(), ServiceTTLRule::makeTTLIndexKey( request._timeMs, request._journalKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
         const string* pLastHolderKey = nullptr;
         for ( const LedgerInternal::Delta& delta : listDelta )
         {

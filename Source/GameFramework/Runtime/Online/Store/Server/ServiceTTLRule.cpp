@@ -10,6 +10,18 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct ServiceTTLRuleInternal
+        {
+            static constexpr uint8 kBackfillRunning = 1; ///< 진행 값 [1][커서]
+            static constexpr uint8 kBackfillDone    = 2; ///< 진행 값 [2] — 다시 훑지 않는다
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     ServiceStoreResult ServiceTTLRule::sweep( IServiceStoreConnection& connection, ServiceTTLRule& inoutRule, int64 nowMs, int32 maxScanCount, int32 maxDeleteCount,
                                               ServiceTTLSweepReport& outReport )
     {
@@ -18,7 +30,15 @@ namespace sw
             return ServiceStoreResult::Invalid;
         const int64 cutoffMs = nowMs - inoutRule._expireAfterMs;
         if ( inoutRule._ttlIndexTable.empty() == false )
+        {
+            if ( inoutRule._pfnBackfillIndexKey != nullptr )
+            {
+                const ServiceStoreResult backfilled = backfillTTLIndex( connection, inoutRule, maxScanCount, outReport );
+                if ( backfilled != ServiceStoreResult::Ok )
+                    return backfilled; // 채우지 못한 줄은 다음 회차가 이어서 넣는다 - 범위 읽기는 그 뒤에 해도 늦지 않다
+            }
             return sweepTTLIndex( connection, inoutRule, cutoffMs, maxScanCount, maxDeleteCount, outReport );
+        }
         while ( outReport._scannedCount < maxScanCount && outReport._deletedCount < maxDeleteCount )
         {
             const int32              pageSize = MathUtil::min( kPageSize, maxScanCount - outReport._scannedCount );
@@ -90,6 +110,71 @@ namespace sw
     bool ServiceTTLRule::isSchedulable() const
     {
         return isValid() && _maxScanPerSweep > 0 && _maxDeletePerSweep > 0;
+    }
+
+    const hashed_string& ServiceTTLRule::getBackfillTable()
+    {
+        static const hashed_string s_table{ "service_ttl_backfill" };
+        return s_table;
+    }
+
+    ServiceStoreResult ServiceTTLRule::backfillTTLIndex( IServiceStoreConnection& connection, const ServiceTTLRule& rule, int32 maxScanCount, ServiceTTLSweepReport& inoutReport )
+    {
+        using Internal = ServiceTTLRuleInternal;
+        string progressKey{ rule._table.viewOrEmpty() };
+        progressKey.push_back( '/' );
+        progressKey += rule._keyPrefix;
+        int32 scannedCount = 0;
+        while ( scannedCount < maxScanCount )
+        {
+            ServiceRecord            progress;
+            const ServiceStoreResult read = connection.readRecord( getBackfillTable(), progressKey, progress );
+            if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
+                return read;
+            if ( read == ServiceStoreResult::Ok && ( progress._bytes.empty() || progress._bytes[0] != Internal::kBackfillRunning ) )
+                return ServiceStoreResult::Ok; // 끝났다. 모르는 값도 다시 훑지 않는다 - 줄이 빠진 레코드는 남는 쪽으로 틀린다
+            string cursor;
+            for ( size_t index = 1; index < progress._bytes.size(); ++index )
+            {
+                cursor.push_back( static_cast<utf8>( progress._bytes[index] ) );
+            }
+            // 한 트랜잭션에 진행 줄 하나가 함께 들어가므로 쓰기 상한보다 하나 적게 읽는다
+            const int32              pageSize = MathUtil::min( ServiceTransaction::kMaxWriteCount - 1, maxScanCount - scannedCount );
+            vector<ServiceRecord>    listRecord;
+            const ServiceStoreResult listed = connection.listRecords( rule._table, rule._keyPrefix, cursor, pageSize, false, listRecord );
+            if ( listed != ServiceStoreResult::Ok )
+                return listed;
+            ServiceTransaction transaction;
+            int32              indexedCount = 0;
+            for ( const ServiceRecord& record : listRecord )
+            {
+                string indexKey;
+                if ( rule._pfnBackfillIndexKey( record, indexKey ) == false )
+                    continue; // 기준 시각이 아직 없는 레코드(열린 거래 · 열린 신고)다. 시각이 생기는 쓰기가 줄을 넣는다
+                transaction.put( rule._ttlIndexTable, indexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
+                ++indexedCount;
+            }
+            scannedCount += static_cast<int32>( listRecord.size() );
+            const bool    bDone = static_cast<int32>( listRecord.size() ) < pageSize;
+            vector<uint8> progressBytes{ bDone ? Internal::kBackfillDone : Internal::kBackfillRunning };
+            if ( bDone == false )
+            {
+                for ( const utf8 letter : listRecord.back()._key )
+                {
+                    progressBytes.push_back( static_cast<uint8>( letter ) );
+                }
+            }
+            transaction.put( getBackfillTable(), progressKey, std::move( progressBytes ), progress._version ); // 없으면 "없어야 함"이다
+            const ServiceStoreResult committed = connection.commit( transaction );
+            if ( committed == ServiceStoreResult::Conflict )
+                return ServiceStoreResult::Ok; // 다른 쓸기가 같은 진행을 옮겼다. 다음 회차가 이어 간다
+            if ( committed != ServiceStoreResult::Ok )
+                return committed;
+            inoutReport._backfilledCount += indexedCount;
+            if ( bDone )
+                return ServiceStoreResult::Ok;
+        }
+        return ServiceStoreResult::Ok;
     }
 
     string ServiceTTLRule::makeTTLIndexKey( int64 timeMs, string_view target )

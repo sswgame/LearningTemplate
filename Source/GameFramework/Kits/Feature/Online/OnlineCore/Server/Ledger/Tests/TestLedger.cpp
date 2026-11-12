@@ -155,13 +155,14 @@ SW_TEST_CASE( LedgerTest, AuditStaysBalancedAfterJournalSweep )
     SW_REQUIRE_TRUE( move( database, makeMove( sw::LedgerHolder::makeAccount( kAlice ), sw::LedgerHolder::makeSink(), 30, "test/burn.old" ), result ) ==
                      sw::LedgerResult::Ok );
 
-    sw::ServiceTTLRule        rule = sw::Ledger::makeJournalRetentionRule( kRetentionMs );
+    sw::ServiceTTLRule        rule = sw::Ledger::makeJournalTTLRule( kRetentionMs );
     sw::ServiceTTLSweepReport sweepReport;
     SW_REQUIRE_TRUE( sw::ServiceTTLRule::sweep( database, rule, grant._timeMs + kRetentionMs, 100, 100, sweepReport ) == sw::ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 2, sweepReport._deletedCount );
     sw::vector<sw::ServiceRecord> listJournal;
     SW_REQUIRE_TRUE( database.listRecords( sw::Ledger::getJournalTable(), "", "", 100, false, listJournal ) == sw::ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( listJournal.empty() );
+    SW_EXPECT_EQUAL( 0, database.countRecords( sw::Ledger::getHistoryTable() ) ); // 내역은 분개의 색인이라 같은 트랜잭션에서 지웠다
 
     sw::LedgerAuditReport report;
     SW_REQUIRE_TRUE( sw::LedgerAuditReport::computeReport( database, report ) == sw::ServiceStoreResult::Ok );

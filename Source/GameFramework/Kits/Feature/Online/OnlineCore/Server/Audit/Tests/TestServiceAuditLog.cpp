@@ -58,6 +58,41 @@ SW_TEST_CASE( ServiceAuditLogTest, EntryCommitsOnlyWithItsEffect )
     SW_EXPECT_EQUAL( 1, database.countRecords( ServiceAuditLog::getTable() ) );
 }
 
+/** @brief [ServiceAuditLogTest] TTL: 줄을 넣는 트랜잭션이 색인을 함께 넣고, 쓸기는 기간이 지난 줄만 지운다. 색인 없는 옛 줄은 백필이 한 번 채운다(감사 O-9) */
+SW_TEST_CASE( ServiceAuditLogTest, ExpiresByTTLIndexAndBackfillsLegacyLines )
+{
+    MemoryServiceDatabase database;
+    ServiceTransaction    staged;
+    ServiceAuditLog::stageEntry( staged, makeEntry( "acct.01", 1000 ), 0, 1 );
+    SW_REQUIRE_TRUE( database.commit( staged ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, database.countRecords( ServiceAuditLog::getExpiryTable() ) );
+
+    ServiceTransaction legacy; // 색인보다 먼저 쓴 줄이다
+    legacy.put( ServiceAuditLog::getTable(), ServiceAuditLog::makeKey( makeEntry( "acct.02", 500 ), 0, 2 ), vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
+    SW_REQUIRE_TRUE( database.commit( legacy ) == ServiceStoreResult::Ok );
+    ServiceTransaction fresh;
+    ServiceAuditLog::stageEntry( fresh, makeEntry( "acct.03", 5000 ), 0, 3 );
+    SW_REQUIRE_TRUE( database.commit( fresh ) == ServiceStoreResult::Ok );
+
+    ServiceTTLRule        rule = ServiceAuditLog::makeTTLRule( 1000 );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, rule, 2000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 3, report._backfilledCount ); // 셋 다 키에서 줄을 만든다 - 이미 있는 줄은 겹쳐 넣어 한 줄이다
+    SW_EXPECT_EQUAL( 2, report._deletedCount );    // 옛 줄과 1000 의 줄
+    SW_EXPECT_EQUAL( 1, database.countRecords( ServiceAuditLog::getTable() ) );
+    SW_EXPECT_EQUAL( 1, database.countRecords( ServiceAuditLog::getExpiryTable() ) );
+
+    ServiceAuditEntry tooLong = makeEntry( "acct.01", 10 ); // 색인 키가 키 상한을 넘는 대상은 효과까지 Invalid 다
+    tooLong._subject          = "acct.";
+    for ( int32 index = 0; index < 200; ++index )
+    {
+        tooLong._subject.push_back( 'a' );
+    }
+    ServiceTransaction refused;
+    ServiceAuditLog::stageEntry( refused, tooLong, 0, 4 );
+    SW_EXPECT_TRUE( database.commit( refused ) == ServiceStoreResult::Invalid );
+}
+
 SW_TEST_CASE( ServiceAuditLogTest, ListsNewestFirstWithCursor )
 {
     MemoryServiceDatabase database;

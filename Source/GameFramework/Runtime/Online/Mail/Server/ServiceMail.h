@@ -26,6 +26,7 @@
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Mail/ServiceMailTypes.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
@@ -90,7 +91,10 @@ namespace sw
         static const hashed_string& getMailTable();
         static const hashed_string& getSentTable();
         static const hashed_string& getExpiryTable();
-        static const hashed_string& getNoticeTable(); ///< "mail_notice"
+        static const hashed_string& getNoticeTable();     ///< "mail_notice"
+        static const hashed_string& getSentExpiryTable(); ///< "mail_sent_expiry" — 보낸 기록의 TTL 색인(`<만든 시각>/<보낸 키>`)
+        /** @brief 보낸 기록의 TTL 규칙입니다(TTL 색인 + 색인 없는 옛 기록의 백필). 기간은 운영 설정 `_mailSentTTL` 이 정한다. */
+        static ServiceTTLRule makeSentTTLRule( int64 expireAfterMs );
 
         /**
          * @brief 우편 하나를 @p inoutTransaction 에 붙입니다. 우편, 보낸 기록, TTL 색인(만료가 있을 때), 재원에서 우편으로 가는 맡김 이동(재원이 발행이 아닐 때)을 붙입니다.

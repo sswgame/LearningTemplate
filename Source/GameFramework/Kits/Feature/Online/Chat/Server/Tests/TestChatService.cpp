@@ -472,6 +472,36 @@ SW_TEST_CASE( ChatServiceTest, WhisperHistoryExpiresWithoutNewMessages )
     SW_EXPECT_EQUAL( 0, database.countRecords( hashed_string( "chat_history_expiry" ) ) );
 }
 
+/** @brief [ChatServiceTest] 색인 없이 쓴 옛 귓속말 기록도 31 일 뒤 쓸기에서 지워진다 — 운영 규칙의 백필이 채널 · 날짜 줄을 채운다(감사 O-9) */
+SW_TEST_CASE( ChatServiceTest, LegacyWhisperHistoryIsBackfilledAndExpires )
+{
+    MemoryServiceDatabase database;
+    ChatFixture           rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
+    SW_EXPECT_TRUE( rig.whisper( kAlice, kBob, "psst" )._result == ChatResult::Ok );
+    rig.flush();
+    const hashed_string   historyTable{ "chat_history" };
+    const hashed_string   expiryTable{ "chat_history_expiry" };
+    vector<ServiceRecord> listIndex; // 색인보다 먼저 쓴 기록으로 만든다
+    SW_REQUIRE_TRUE( database.listRecords( expiryTable, "", "", 100, false, listIndex ) == ServiceStoreResult::Ok );
+    ServiceTransaction dropIndex;
+    for ( const ServiceRecord& entry : listIndex )
+    {
+        dropIndex.erase( expiryTable, entry._key );
+    }
+    SW_REQUIRE_TRUE( database.commit( dropIndex ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_EQUAL( 0, database.countRecords( expiryTable ) );
+    SW_REQUIRE_EQUAL( 1, database.countRecords( historyTable ) );
+
+    ServiceTTLRule        rule = ChatService::makeTTLRule( 30 * kChatDayMs );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, rule, kNowMs + 29 * kChatDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._backfilledCount );
+    SW_EXPECT_EQUAL( 1, database.countRecords( historyTable ) ); // 아직 기간 안이다
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, rule, kNowMs + 31 * kChatDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, database.countRecords( historyTable ) );
+    SW_EXPECT_EQUAL( 0, database.countRecords( expiryTable ) );
+}
+
 /** @brief [ChatServiceTest] 귓속말: 자신 · 0 은 Invalid, 상대가 이 서버에 있으면 그 사람에게만 가고 당사자가 기록을 읽는다. 서버가 하나인데 상대가 없으면 TargetOffline 이다 */
 SW_TEST_CASE( ChatServiceTest, WhisperOnOneServer )
 {

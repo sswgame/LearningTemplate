@@ -712,7 +712,9 @@
     "_expiredInviteRetentionDays": "SocialKitConfig::_expiredInviteTTL(ServiceTTLConfig)(2026-11-12)",
     "_closedRetentionDays": "TradeKitConfig::_closedSessionTTL(ServiceTTLConfig)(2026-11-12)",
     "_maxScanPerRule": "ServiceTTLRule::_maxScanPerSweep — 규칙마다 Config JSON 에서(2026-11-12)",
-    "_maxDeletePerRule": "ServiceTTLRule::_maxDeletePerSweep — 규칙마다 Config JSON 에서(2026-11-12)"
+    "_maxDeletePerRule": "ServiceTTLRule::_maxDeletePerSweep — 규칙마다 Config JSON 에서(2026-11-12)",
+    "makeJournalRetentionRule": "Ledger::makeJournalTTLRule — 분개 표의 TTL 색인 규칙(내역 줄은 분개와 함께 지운다)(2026-11-12)",
+    "stageJournalCarry": "LedgerInternal::stageJournalErase — 이월과 내역 지우기를 함께 붙인다(2026-11-12)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",
@@ -806,6 +808,7 @@
     "axis",
     "b2",
     "back",
+    "backfill",
     "bad",
     "bake",
     "balance",

@@ -435,6 +435,36 @@ SW_TEST_CASE( ServiceTTLTest, IndexGroupResumesAfterLimit )
     SW_EXPECT_EQUAL( 0, rig.countIndex() );
 }
 
+/** @brief [ServiceTTLTest] 색인 백필: 색인 없는 기존 레코드를 한 번 훑어 줄을 넣고 지운다. 상한을 넘으면 진행을 남겨 이어 가고, 끝난 뒤에는 다시 훑지 않는다 */
+SW_TEST_CASE( ServiceTTLTest, IndexBackfillsLegacyRecordsOnce )
+{
+    TTLFixture rig;
+    rig.put( "a", kNowMs - 2000 );
+    rig.put( "b", kNowMs - 1500 );
+    rig.put( "c", kNowMs - 10 );
+    ServiceTTLRule rule       = rig.makeIndexRule();
+    rule._pfnBackfillIndexKey = &ServiceTTLRule::makeRecordIndexKey<&readLeadingTime>;
+
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 2, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 2, report._backfilledCount ); // 훑기 상한까지만 - 진행은 저장소에 남는다
+    SW_EXPECT_EQUAL( 2, report._deletedCount );
+    SW_EXPECT_EQUAL( 1, rig._database.countRecords( ServiceTTLRule::getBackfillTable() ) );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._backfilledCount ); // 이어서 c 만
+    SW_EXPECT_EQUAL( 0, report._deletedCount );
+    SW_EXPECT_EQUAL( 1, rig.count() );
+    SW_EXPECT_EQUAL( 1, rig.countIndex() );
+
+    rig.put( "d", kNowMs - 5000 ); // 백필이 끝난 뒤 색인 없이 쓴 레코드는 다시 훑지 않는다 - 색인은 쓰는 쪽이 넣는다
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, report._backfilledCount );
+    SW_EXPECT_EQUAL( 2, rig.count() );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._deletedCount ); // c 는 색인으로 지운다
+    SW_EXPECT_EQUAL( 1, rig.count() );
+}
+
 /** @brief [ServiceTTLTest] 예약 작업: 회차를 차지하면 쓸고 끝을 적는다. 회차 시각을 기준으로 지운다. 규칙이 없으면 등록하지 않고, 틀린 규칙은 거절한다 */
 SW_TEST_CASE( ServiceTTLTest, JobSweepsOnSchedule )
 {

@@ -1213,20 +1213,22 @@ namespace sw
     ServiceTTLRule GuildService::makeInviteTTLRule( int64 expireAfterMs )
     {
         ServiceTTLRule rule;
-        rule._table         = GuildServiceInternal::getInviteTable();
-        rule._ttlIndexTable = GuildServiceInternal::getInviteExpiryTable();
-        rule._expireAfterMs = expireAfterMs;
-        rule._pfnReadTime   = &GuildServiceInternal::readInviteExpiryMs;
+        rule._table               = GuildServiceInternal::getInviteTable();
+        rule._ttlIndexTable       = GuildServiceInternal::getInviteExpiryTable();
+        rule._expireAfterMs       = expireAfterMs;
+        rule._pfnReadTime         = &GuildServiceInternal::readInviteExpiryMs;
+        rule._pfnBackfillIndexKey = &ServiceTTLRule::makeRecordIndexKey<&GuildServiceInternal::readInviteExpiryMs>;
         return rule;
     }
 
     ServiceTTLRule GuildService::makeApplicationTTLRule( int64 expireAfterMs )
     {
         ServiceTTLRule rule;
-        rule._table         = GuildServiceInternal::getApplicationTable();
-        rule._ttlIndexTable = GuildServiceInternal::getApplicationExpiryTable();
-        rule._expireAfterMs = expireAfterMs;
-        rule._pfnReadTime   = &GuildServiceInternal::readApplicationExpiryMs;
+        rule._table               = GuildServiceInternal::getApplicationTable();
+        rule._ttlIndexTable       = GuildServiceInternal::getApplicationExpiryTable();
+        rule._expireAfterMs       = expireAfterMs;
+        rule._pfnReadTime         = &GuildServiceInternal::readApplicationExpiryMs;
+        rule._pfnBackfillIndexKey = &ServiceTTLRule::makeRecordIndexKey<&GuildServiceInternal::readApplicationExpiryMs>;
         return rule;
     }
 

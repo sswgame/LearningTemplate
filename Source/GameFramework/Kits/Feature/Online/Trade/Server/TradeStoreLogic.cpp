@@ -139,10 +139,11 @@ namespace sw
     ServiceTTLRule TradeStoreLogic::makeTTLRule( int64 expireAfterMs )
     {
         ServiceTTLRule rule;
-        rule._table         = getSessionTable();
-        rule._ttlIndexTable = getSessionExpiryTable();
-        rule._expireAfterMs = expireAfterMs;
-        rule._pfnReadTime   = &TradeStoreLogicInternal::readClosedTimeMs;
+        rule._table               = getSessionTable();
+        rule._ttlIndexTable       = getSessionExpiryTable();
+        rule._expireAfterMs       = expireAfterMs;
+        rule._pfnReadTime         = &TradeStoreLogicInternal::readClosedTimeMs;
+        rule._pfnBackfillIndexKey = &ServiceTTLRule::makeRecordIndexKey<&TradeStoreLogicInternal::readClosedTimeMs>; // 열린 거래는 닫을 때 줄이 생긴다
         return rule;
     }
 

@@ -154,10 +154,7 @@ SW_TEST_CASE( ServiceMailTest, SentRecordExpiresByRetentionRule )
     broken.put( sw::ServiceMail::getSentTable(), "0000000000000016/broken", sw::vector<uint8>{ 'x' }, sw::ServiceRecord::kAbsentVersion );
     SW_REQUIRE_TRUE( database.commit( broken ) == sw::ServiceStoreResult::Ok );
 
-    sw::ServiceTTLRule rule;
-    rule._table         = sw::ServiceMail::getSentTable();
-    rule._expireAfterMs = kRetentionMs;
-    rule._pfnReadTime   = &sw::ServiceMail::readSentTimeMs;
+    sw::ServiceTTLRule        rule = sw::ServiceMail::makeSentTTLRule( kRetentionMs ); // 운영과 같은 TTL 색인 규칙
     sw::ServiceTTLSweepReport report;
     SW_REQUIRE_TRUE( sw::ServiceTTLRule::sweep( database, rule, kNowMs + kRetentionMs - 1, 64, 64, report ) == sw::ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 2, database.countRecords( sw::ServiceMail::getSentTable() ) );
