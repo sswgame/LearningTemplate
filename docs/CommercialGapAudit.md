@@ -419,13 +419,6 @@
 - 제안: 캐시 엔트리를 참조 수(이벤트 라이브러리 · 재생 중 보이스)로 잡고 0 이 된 것을 예산 기준 LRU 로 퇴출한다.
 - 확인: 단위 `AudioClipCacheTest.EvictsUnreferencedClipsOverBudget`, 감시 값 `Audio.ClipCache.bytes`.
 
-#### S-4 켜진 채 트랜스폼 배율을 바꾸면 그림만 커지고 콜라이더는 만들 때 크기로 남는다
-- 분류: 결함 · 확신: 확인
-- 근거: `Source/Engine/Physics/Component/RigidBodyComponent.cpp:326-329` 가 바깥 이동 때 `_worldScale` 을 새로 읽지만 셰이프는 만들 때만 배율을 곱한다(`:239-245`, `PhysicsComponent.cpp:150-159`). 다시 만드는 조건은 `requestRebuild()`(프로퍼티 세터)뿐이다. 2D(`RigidBody2DComponent.cpp:242`)와 캐릭터(`:283`)도 같다.
-- 상용 엔진: 언리얼은 `OnUpdateTransform` 에서 `UpdateBodyScale` 로 셰이프를 다시 만든다. Godot 은 물리 바디 배율을 지원하지 않는다고 경고한다.
-- 제안: 프레임 시작 훅에서 "만들 때 배율 ≠ 지금 배율" 이면 재생성하거나, 지원하지 않기로 하면 오류로 멈춘다. 조용히 어긋나는 길은 없앤다.
-- 확인: 단위 `RigidBodyComponentTest.ScaleChangeRebuildsShape`(배율 2 뒤 레이캐스트 거리).
-
 #### S-5 2D 블렌드 스페이스가 역거리 가중이라 표본 전부가 늘 켜진다
 - 분류: 성능 + 품질 · 확신: 확인
 - 근거: `Source/Engine/Animation/Graph/BlendSpace.cpp:46-81` — 표본 위에 정확히 있지 않으면 모든 표본의 가중치가 0 보다 크다. `Source/Engine/Animation/Component/SkeletalAnimatorComponent.cpp:1321-1332` 는 가중치가 0 보다 크면 샘플하므로 표본 N 개의 클립을 평가마다 전부 샘플 · 블렌드한다. 알림 기본 모드가 `All`(`AnimationGraphAsset.h:99`)이라 표본 전부가 알림을 낸다. 두 축의 단위를 정규화하지 않아 한 축이 거리를 지배한다.
