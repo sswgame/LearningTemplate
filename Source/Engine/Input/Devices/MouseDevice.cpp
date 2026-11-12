@@ -34,6 +34,7 @@ namespace sw
         , _bHasPosition{ SW_FALSE }
         , _bRawMotionSource{ SW_FALSE }
         , _bRawMotionThisFrame{ SW_FALSE }
+        , _bRawMotionConfirmed{ SW_FALSE }
     {
         MouseDevice::resetState();
     }
@@ -82,7 +83,7 @@ namespace sw
 
     float2 MouseDevice::getMovementDelta() const
     {
-        if ( _bRawMotionSource == SW_TRUE || _bRawMotionThisFrame == SW_TRUE )
+        if ( isRawMotionConfirmed() || _bRawMotionThisFrame == SW_TRUE )
             return _rawDelta;
         return float2{ static_cast<float32>( _delta._x ), static_cast<float32>( _delta._y ) };
     }
@@ -248,6 +249,7 @@ namespace sw
         _rawDelta._x += dx;
         _rawDelta._y += dy;
         _bRawMotionThisFrame = SW_TRUE;
+        _bRawMotionConfirmed = _bRawMotionSource; // 등록 뒤 첫 보고가 원천을 확정한다 — 등록 없이 온 이동(가상 입력)은 그 프레임만 원시다
     }
 
     void MouseDevice::addWheelDelta( float32 delta )
