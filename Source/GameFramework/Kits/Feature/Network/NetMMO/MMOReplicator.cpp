@@ -60,6 +60,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     MMOReplicator::MMOReplicator()
         : _mapEntity{}
+        , _setAlwaysRelevant{}
         , _listObserver{}
         , _interest{}
         , _settings{}
@@ -128,12 +129,17 @@ namespace sw
         }
         _mapEntity[entity._entityID] = entity;
         _interest.setPoint( entity._entityID, entity._position );
+        if ( entity._bAlwaysRelevant )
+            _setAlwaysRelevant.insert( entity._entityID );
+        else
+            _setAlwaysRelevant.erase( entity._entityID );
     }
 
     void MMOReplicator::removeEntity( uint32 entityID )
     {
         _mapEntity.erase( entityID );
         _interest.removePoint( entityID );
+        _setAlwaysRelevant.erase( entityID );
     }
 
     void MMOReplicator::setObserver( int32 connectionID, uint32 entityID )
@@ -275,8 +281,6 @@ namespace sw
             return;
         const float3 center = observerIter->second._position;
 
-        const bool bAlwaysPolicy = _pPolicy->hasAlwaysRelevant();
-
         // 1) 보이지 않게 됨: 사라졌거나 나가는 반경 밖으로 간 엔티티이다. 항상 보이는 엔티티는 제외한다.
         vector<uint32>& listLeave = scratch._listLeave;
         listLeave.clear();
@@ -288,7 +292,7 @@ namespace sw
                 listLeave.push_back( visible.first );
                 continue;
             }
-            const bool bAlways = bAlwaysPolicy && _pPolicy->isAlwaysRelevant( connectionID, entityIter->second );
+            const bool bAlways = entityIter->second._bAlwaysRelevant && _pPolicy->isAlwaysRelevant( connectionID, entityIter->second );
             if ( bAlways == false && _interest.isOutsideLeaveRadius( center, entityIter->second._position ) )
                 listLeave.push_back( visible.first );
         }
@@ -302,17 +306,14 @@ namespace sw
 
     void MMOReplicator::sendEnters( int32 connectionID, Observer& observer, const float3& center, ObserverScratch& scratch )
     {
-        const bool bAlwaysPolicy = _pPolicy->hasAlwaysRelevant();
-        // 2) 새로 보임: 들어오는 반경 안의 엔티티이다. 가까운 것부터 처리하고 틱마다 상한을 둔다.
+        // 2) 새로 보임: 들어오는 반경 안의 엔티티와 항상 보임 후보 가운데 정책이 고른 것이다. 가까운 것부터 처리하고 틱마다 상한을 둔다.
         vector<SlotHandle>& listNear = scratch._listNear;
         _interest.queryEntering( center, listNear );
-        if ( bAlwaysPolicy )
+        // 후보 집합만 묻는다 — 관찰자 × 월드 전체 엔티티가 아니라 관찰자 × 후보 수이다(언리얼 Replication Graph 의 AlwaysRelevant 노드가 미리 만든 목록을 주는 것과 같다).
+        for ( const uint32 entityID : _setAlwaysRelevant )
         {
-            for ( const auto& entity : _mapEntity )
-            {
-                if ( _pPolicy->isAlwaysRelevant( connectionID, entity.second ) )
-                    listNear.push_back( NetInterestGrid::makeKey( entity.first ) );
-            }
+            if ( _pPolicy->isAlwaysRelevant( connectionID, getEntity( entityID ) ) )
+                listNear.push_back( NetInterestGrid::makeKey( entityID ) );
         }
         // 거리는 한 번만 계산하고 (거리, id) 로 정렬한다. 비교마다 해시를 찾지 않으려는 것이다. 이미 보이는 엔티티는 뺀다.
         vector<pair<float32, uint32>>& listRank = scratch._listRank;
