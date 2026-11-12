@@ -512,13 +512,6 @@
 - 제안: 수명 통보를 멀티캐스트 + 순서 선언(표면 해제는 렌더러가 마지막)으로 바꾸고 멈춤 진입 때 입력 리셋 · 햅틱 정지 · 오디오 서스펜드를 구독자로 건다.
 - 확인: 시나리오 — `simulateAppInterruption` 뒤 `Input.AnyDown == 0`, `Haptics.Active == 0`, `Audio.DeviceRunning == 0`.
 
-#### P-7 런타임 UI: 이벤트 처리 중 위젯을 즉시 파괴할 수 있다(해제 후 사용)
-- 분류: 결함(잠재) · 구조 · 확신: 확인(가드 없음) — 지금 엔진 화면에는 재현 경로가 없다
-- 근거: `Source/Engine/UI/WidgetTree/PanelWidget.cpp:48-71` — `removeChild` · `clearChildren` 이 곧바로 `unique_ptr` 을 놓는다. `Source/Engine/UI/Widgets/ButtonWidget.cpp` 의 `handleClick`(113 행 부근)은 `_onClicked.broadcast` 뒤에 `getTree()` · `_command` 를 읽는다. 클릭 리스너가 그 버튼이 든 패널을 다시 만들면(목록의 "삭제" 버튼) 파괴된 `this` 로 돌아온다.
-- 상용 엔진: Slate 는 `FWidgetPath` 가 `TSharedRef` 를 쥐어 전달 중 수명을 지킨다. 유니티 UI Toolkit 은 디스패치 중 제거를 미루고 Godot 은 `queue_free` 다.
-- 제안: `WidgetTree` 에 "전달 중" 깊이를 두고 그동안 떼어진 위젯은 트리의 보류 목록으로 옮겨 전달이 끝난 뒤 파괴한다(반환형을 `DetachedWidget` 로 바꿔 즉시 파괴 길을 없앤다).
-- 확인: 단위 `UIFocusAndEventsTest.ButtonMayClearItsParentOnClick`(ASan 구성 — P-8).
-
 #### P-9 (보강) 웹 · Android 프리셋이 Shipping 뿐이라 플랫폼 결함을 자동으로 볼 길이 없다
 - 분류: 구조 · 확신: 확인(프리셋), 개발 구성이 두 플랫폼에서 지어지는지는 추정
 - 근거: `CMakePresets.json` 에 `Web-Shipping` · `Android-Shipping` 만 있다. [PlatformTargets](PlatformTargets.md) 의 "배포 빌드에 시나리오 실행기가 없어 앱 반응을 읽을 길이 없다" 가 이 결과이고, P0-9 ~ P0-11 과 P-3 ~ P-6 이 모두 그 틈에서 나왔다.
