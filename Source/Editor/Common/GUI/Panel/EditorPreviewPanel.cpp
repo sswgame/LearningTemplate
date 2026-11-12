@@ -78,12 +78,23 @@ namespace sw::editor
             outValue = static_cast<float64>( tickCount );
             return true;
         }
+
+        /** @brief 감시 값 `Editor.PreviewSceneCount` — 씬 매니저가 가진 미리보기 씬 수입니다. 미리보기 창을 닫으면 그 창의 씬이 빠진다(감사 E-14). */
+        [[nodiscard]] bool readPreviewSceneCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SceneManager* pSceneManager = findSubsystem<SceneManager>();
+            if ( pSceneManager == nullptr )
+                return false;
+            outValue = static_cast<float64>( pSceneManager->getPreviewScenes().size() );
+            return true;
+        }
     } // namespace
 
     SW_AUTOMATION_WATCH( editorPreviewTimeScale, "Editor.PreviewTimeScale", "Time scale the preview bar of the preview window drawn most recently gave its scene (0 while paused)",
                          &readPreviewTimeScale );
     SW_AUTOMATION_WATCH( editorPreviewFloorShown, "Editor.PreviewFloorShown", "1 when the preview window drawn most recently shows its floor", &readPreviewFloorShown );
     SW_AUTOMATION_WATCH( editorPreviewAxesShown, "Editor.PreviewAxesShown", "1 when the preview window drawn most recently draws its axis indicator", &readPreviewAxesShown );
+    SW_AUTOMATION_WATCH( editorPreviewSceneCount, "Editor.PreviewSceneCount", "Preview scenes the scene manager holds (a closed preview window holds none)", &readPreviewSceneCount );
     SW_AUTOMATION_WATCH( editorPreviewTickCount, "Editor.PreviewTickCount", "Ticks the scene manager gave all preview scenes (a hidden preview window adds none)",
                          &readPreviewTickCount );
 
@@ -112,8 +123,13 @@ namespace sw::editor
 
     void EditorPreviewPanel::shutdown()
     {
+        releasePreview();
+    }
+
+    void EditorPreviewPanel::releasePreview()
+    {
         applyWindowFocus( false );
-        resetPreviewEdits();
+        resetPreviewEdits(); // 창 스택의 명령은 이 씬의 키를 가리킨다 — 씬과 함께 버린다(되돌리기 어려운 결정 4)
         _pSelection->unbindPreviewScope();
         _viewport.shutdown();
     }
