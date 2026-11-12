@@ -203,11 +203,24 @@ namespace sw
     // ------------------------------------------------------------------------------
     void AbilityComponent::recomputeAttribute( const hashed_string& name )
     {
+        if ( _bRestoringState == SW_TRUE )
+            return; // 상태 적용 끝에 모든 어트리뷰트를 한 번에 집계 · 클램프한다(`applySaveState`) — 하나씩 하면 체력이 옛 최대 체력으로 잘린다
         AttributeSet*  pAttributeSet = nullptr;
         AttributeData* pData         = findAttributeDataMutable( name, &pAttributeSet );
         if ( pData == nullptr )
             return;
 
+        float32 newValue = computeAggregatedValue( name, pData->_baseValue );
+        pAttributeSet->preAttributeChange( name, newValue );
+        const float32 oldValue = pData->_currentValue;
+        if ( oldValue == newValue )
+            return;
+        pData->_currentValue = newValue;
+        notifyAttributeChanged( *pAttributeSet, name, oldValue, newValue );
+    }
+
+    float32 AbilityComponent::computeAggregatedValue( const hashed_string& name, float32 baseValue ) const
+    {
         AttributeAggregation aggregation;
         for ( const unique_ptr<ActiveGameplayEffect>& pActiveEffect : _activeEffects )
         {
@@ -222,13 +235,7 @@ namespace sw
             }
         }
 
-        float32 newValue = aggregation.evaluate( pData->_baseValue );
-        pAttributeSet->preAttributeChange( name, newValue );
-        const float32 oldValue = pData->_currentValue;
-        if ( oldValue == newValue )
-            return;
-        pData->_currentValue = newValue;
-        notifyAttributeChanged( *pAttributeSet, name, oldValue, newValue );
+        return aggregation.evaluate( baseValue );
     }
 
     AttributeData* AbilityComponent::findAttributeDataMutable( const hashed_string& name, AttributeSet** ppOutSet )
@@ -277,7 +284,7 @@ namespace sw
             }
             deliverFatalHit( hit );
         }
-        const bool bDamageTaken = bHealth && newValue < oldValue && _bShowDamageNumbers;
+        const bool bDamageTaken = bHealth && newValue < oldValue && _bShowDamageNumbers && _bRestoringState == SW_FALSE; // 불러온 체력은 맞은 것이 아니다
         if ( bDamageTaken )
             spawnDamageNumber( oldValue - newValue );
     }

@@ -31,6 +31,9 @@ namespace sw
 {
     struct AbilityPresentationEvent;
     struct AbilityEventData;
+    struct AbilitySaveState;
+
+    class StateIO;
 
     class AbilityCatalog;
     class AbilityClassRegistry;
@@ -70,8 +73,9 @@ namespace sw
      *          `_bShowDamageNumbers` 가 켜져 있으면 체력이 깎일 때 피해 숫자 창구(`IDamageNumberSink`, 클라이언트 전용 구현)로 숫자를 띄운다.
      *          체력 어트리뷰트의 이름은 `_healthAttribute` 와 `_maxHealthAttribute` 로 바꿀 수 있다.
      *
-     *          **저장**: PROPERTY 만 저장한다(어빌리티 세트 id, 표시 설정). 런타임 상태(어트리뷰트 값, 이펙트, 어빌리티)는 저장하지 않고
-     *          플레이를 시작할 때 세트에서 다시 만든다. 세이브가 필요한 값은 게임의 `SaveGame` 이 `SavedAttributeFile` 로 base 값을 담는다.
+     *          **저장**: 설정은 PROPERTY 로, 런타임 상태(어트리뷰트 base, 걸린 이펙트, 이펙트 밖 태그)는 `ComponentStateStore` 계약
+     *          (`serializeState` / `restoreState`, `AbilitySaveState`)으로 모든 게임의 상태 스냅샷에 실린다(정적 등록 — 게임이 적지 않는다).
+     *          부여한 어빌리티는 싣지 않고 플레이를 시작할 때 세트가 다시 준다. 실행 중이던 어빌리티는 이어 가지 않는다(언리얼 GAS 와 같다).
      */
     REFLECT( Category = "Gameplay", DisplayName = "Ability System Component", Tooltip = "Attributes, gameplay effects, abilities and gameplay tags (Unreal GAS style)" )
     class SW_GF_API AbilityComponent : public HealthSourceComponent
@@ -104,6 +108,13 @@ namespace sw
          */
         void onModuleUnloading( string_view moduleName ) override;
         void onTick( TickContext& context ) override;
+        /**
+         * @brief `ComponentStateStore` 계약입니다. 어트리뷰트 base, 걸린 이펙트(정의 id · 남은 시간 · 스택 · 계산해 둔 모디파이어), 이펙트 밖 태그를 놓습니다.
+         * @details 읽기는 끝까지 맞고 세트 · 카탈로그와도 맞을 때만 한 번에 적용한다(`applySaveState`). 맞지 않으면 아무것도 바꾸지 않고 거절한다.
+         */
+        void serializeState( StateIO& io );
+        /** @brief 다시 만든 컴포넌트가 상태를 받습니다. 플레이 시작 전이면 보관했다가 세트를 준 뒤(`onBeginPlay`) 적용합니다 — 세트가 어트리뷰트를 만든 뒤라야 읽힌다. */
+        void restoreState( vector<uint8>&& bytes );
 
         // --------------------------------------------------------------------------
         // 1) 시간, 카탈로그, 세트
@@ -408,8 +419,10 @@ namespace sw
         void compactPendingRemovals();
 
         // ---- 어트리뷰트 ----
-        /** @brief 어트리뷰트 하나의 current 를 base 와 적용된 이펙트로 다시 집계하고, 바뀌었으면 알립니다. */
+        /** @brief 어트리뷰트 하나의 current 를 base 와 적용된 이펙트로 다시 집계하고, 바뀌었으면 알립니다. 상태를 적용하는 동안(`_bRestoringState`)에는 미룹니다. */
         void recomputeAttribute( const hashed_string& name );
+        /** @brief @p baseValue 에 @p name 을 바꾸는 걸린 이펙트를 모두 집계한 값입니다(훅 전). */
+        float32 computeAggregatedValue( const hashed_string& name, float32 baseValue ) const;
         /** @brief 세트 안의 값을 찾습니다. 쓰기용입니다. */
         AttributeData* findAttributeDataMutable( const hashed_string& name, AttributeSet** ppOutSet );
         /** @brief current 가 바뀐 것을 알립니다. 세트의 훅, 델리게이트, 체력 UI 순서로 알립니다. */
@@ -431,6 +444,17 @@ namespace sw
         /** @brief 제거할 스펙을 정리합니다. 취소하고 `onRemoved` 를 부른 뒤 제거 표시를 합니다. */
         void retireAbilitySpec( AbilitySpec& spec );
 
+        // ---- 저장 ----
+        /** @brief 지금 상태를 @p outState 에 모읍니다. 이펙트 밖 태그는 가진 태그에서 걸린 이펙트와 실행 중 어빌리티가 준 몫을 뺀 것입니다. */
+        void captureSaveState( AbilitySaveState& outState ) const;
+        /**
+         * @brief 읽은 상태를 적용합니다. 세트에 없는 어트리뷰트나 카탈로그에 없는 이펙트가 있으면 알리고 아무것도 바꾸지 않은 채 false 입니다.
+         * @details 훅을 끈 채 base · 이펙트 · 태그를 모두 쓴 뒤 한 번에 클램프한다. 하나씩 쓰면 체력이 그 순간의 최대 체력(기본값)으로 잘린다(180/200 → 100/200).
+         */
+        [[nodiscard]] bool applySaveState( const AbilitySaveState& state );
+        /** @brief 보관한 상태(`restoreState`)를 읽어 적용합니다. 보관한 것이 없으면 false 입니다. */
+        bool applyPendingState();
+
         // ---- 스레드와 연결된 UI ----
         /**
          * @brief 이 컴포넌트를 지금 바꿔도 되면 true 입니다. 틱 중이고 지금 틱하는 오브젝트가 주인이 아니면 false 입니다.
@@ -442,7 +466,7 @@ namespace sw
         /** @brief base 를 쓰기 직전에 부릅니다. @p name 이 체력이고 무적이면 내려가는 @p inoutNewBase 를 @p oldBase 로 되돌립니다(`getInvulnerableTag`). */
         void guardHealthBaseChange( const hashed_string& name, float32 oldBase, float32& inoutNewBase );
 
-        // ---- 런타임 상태(저장하지 않는다) ----
+        // ---- 런타임 상태(`serializeState` 가 싣는다 — 구독 · 델리게이트 · 기록은 싣지 않는다) ----
         vector<unique_ptr<AttributeSet>>                                                                _listAttributeSet;
         ActiveEffectContainer                                                                           _activeEffects;
         AbilitySpecContainer                                                                            _abilitySpecs;
@@ -468,6 +492,8 @@ namespace sw
         const AbilityEffectContext*                                                                     _pExecutingContext;          ///< 지금 적용 중인 즉시 이펙트의 컨텍스트(`executeSpec` 안만). 체력이 0 에 닿으면 그 맞힌 자리로 치명 신호를 낸다
         uint8                                                                                           _bHasPendingRemoval;
         uint8                                                                                           _bRefreshingOngoingTags; ///< `refreshOngoingTagRequirements` 안이다 — 그 안에서 바뀐 태그로 다시 들어가지 않는다
+        uint8                                                                                           _bRestoringState;        ///< `applySaveState` 안이다 — 집계 · 태그 반응 · 피해 숫자를 미룬다
+        vector<uint8>                                                                                   _pendingStateBytes;      ///< 플레이 시작 전에 받은 상태(`restoreState`)
 
         // ---- 저장되는 설정 ----
         PROPERTY( Category = "Ability System", DisplayName = "Ability Set", Tooltip = "Ability set id in the AbilityCatalog, granted on begin play" )
