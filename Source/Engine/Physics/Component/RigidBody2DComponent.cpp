@@ -238,30 +238,29 @@ namespace sw
         physics.bindBodyOwner( *this );
     }
 
-    PhysicsBodyHandle RigidBody2DComponent::rebuildScaledBody( ScenePhysics& physics, IPhysicsBodyScene2D& scene )
+    PhysicsBodyHandle RigidBody2DComponent::applyScaledShape( ScenePhysics& physics, IPhysicsBodyScene2D& scene )
     {
-        // 셰이프는 지을 때 배율을 굽는다 — 마지막 스텝의 자세 · 속도로 다시 지어 이어 간다(3D 강체와 같다).
-        PhysicsBodyPage2D&      page            = *_pPosePage;
-        const uint32            index           = getPoseIndex();
-        const PhysicsBodyHandle oldBody         = page._arrBody[index];
-        const float2            linearVelocity  = scene.getLinearVelocity( oldBody );
-        const float32           angularVelocity = scene.getAngularVelocity( oldBody );
-        const float2            position        = page._arrCurrentPosition[index];
-        const float32           angle           = page._arrCurrentRotation[index];
-        releasePhysics( physics );
-        createBody( physics, scene, position, angle, _worldScale );
-        const PhysicsBodyHandle body = page._arrBody[index];
-        if ( body.isValid() && _bodyType == PhysicsBodyType::Dynamic )
+        // 셰이프는 지을 때 배율을 굽는다 — 바디를 다시 지으면 핸들이 바뀌어 닿아 있던 쌍마다 끝 → 시작이 나므로 셰이프만 간다(감사 S-4).
+        const PhysicsBodyHandle    body = _pPosePage->_arrBody[getPoseIndex()];
+        vector<PhysicsShapeDesc2D> listShape;
+        listShape.reserve( _listShape.size() );
+        for ( const PhysicsShapeDesc2D& shape : _listShape )
         {
-            scene.setLinearVelocity( body, linearVelocity );
-            scene.setAngularVelocity( body, angularVelocity );
+            listShape.push_back( PhysicsComponent::makeScaledShape( shape, _worldScale ) );
         }
+        if ( scene.setBodyShape( body, span<const PhysicsShapeDesc2D>{ listShape.data(), listShape.size() }, _material, _mass ) == false )
+        {
+            releasePhysics( physics );
+            return PhysicsBodyHandle{};
+        }
+        markShapeScale( _worldScale );
         return body;
     }
 
-    void RigidBody2DComponent::readWorldPose2D( float2& outPosition, float32& outAngle )
+    bool RigidBody2DComponent::readWorldPose2D( float2& outPosition, float32& outAngle )
     {
-        PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
+        if ( PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale ) == false )
+            return false;
         outPosition = float2{ _worldPosition._x, _worldPosition._y };
         outAngle    = PhysicsComponent::getAngle2D( _worldRotation );
     }
@@ -290,7 +289,8 @@ namespace sw
         SW_ASSERT( body.isValid() == false || pScene->isBodyValid( body ) );
         if ( body.isValid() == false )
         {
-            readWorldPose2D( position, angle );
+            if ( readWorldPose2D( position, angle ) == false )
+                return; // 배율 0 — 바디를 만들지 않는다(`readWorldPose` 가 알렸다). 배율이 돌아오면 이 길로 만든다
             createBody( physics, *pScene, position, angle, _worldScale );
             (void)consumeTeleport();
             return;
@@ -304,11 +304,14 @@ namespace sw
 
         const bool bTeleported = consumeTeleport();
         const bool bMoved      = bTeleported || bTransformChanged;
-        if ( bMoved )
-            readWorldPose2D( position, angle );
+        if ( bMoved && readWorldPose2D( position, angle ) == false )
+        {
+            releasePhysics( physics ); // 배율 0 — 셰이프를 지을 수 없어 시뮬레이션에서 뺀다(3D 강체와 같다)
+            return;
+        }
         if ( isShapeScaleStale( _worldScale ) )
         {
-            body = rebuildScaledBody( physics, *pScene );
+            body = applyScaledShape( physics, *pScene );
             if ( body.isValid() == false )
                 return;
         }

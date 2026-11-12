@@ -25,6 +25,7 @@
 namespace sw
 {
 
+    struct PhysicsShapeDesc2D;
     struct TileMapXMLData;
     class Material;
     class SceneComponent;
@@ -134,9 +135,14 @@ namespace sw
         void markCollisionDirty( int32 chunkIndex );
         /** @brief 표시된 청크 바디만 다시 만들고 외곽선 · 병합 사각형을 다시 구합니다. 한 프레임에 여러 칸을 칠해도 한 번이다. */
         void flushCollision();
-        /** @brief 청크 하나의 정적 바디(셰이프 여럿 — 맵 원점 기준)를 다시 만듭니다. */
+        /** @brief 청크 하나의 정적 바디(셰이프 여럿 — 맵 원점 기준)를 맞춥니다 — 바디가 있으면 셰이프만 가고, 없으면 만들고, 단단한 칸이 없으면 놓습니다. */
         void rebuildChunkBody( int32 chunkIndex, const vector<uint8>& listSolid, IPhysicsScene2D& scene );
-        /** @brief 오브젝트가 움직였으면 바디들을 그 자리 · 회전으로 옮깁니다(배율이 바뀌었으면 셰이프 크기가 달라 다시 만든다). */
+        /** @brief 청크 하나의 병합 사각형 셰이프를 지금 축 배율(`_colliderScale`)로 @p outListShape 에 붙입니다(맵 원점 기준). */
+        void appendChunkShapes( int32 chunkIndex, const vector<uint8>& listSolid, vector<PhysicsShapeDesc2D>& outListShape ) const;
+        /**
+         * @brief 오브젝트가 움직였으면 바디들을 그 자리 · 회전으로 옮깁니다. 배율이 바뀌었으면 바디는 두고 셰이프만 갑니다(`IPhysicsBodyScene::setBodyShape` —
+         *        다시 만들면 맵에 닿아 있던 쌍마다 끝 → 시작이 난다, 감사 S-4).
+         */
         void followOwnerTransform();
         /** @brief 오브젝트 월드 행렬의 2D 자리 · 회전 · 축 배율입니다(바디는 배율을 갖지 않아 셰이프에 곱한다). */
         void computeColliderFrame( float2& outOrigin, float32& outAngle, float2& outScale ) const;

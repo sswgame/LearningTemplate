@@ -25,7 +25,8 @@ namespace sw
     bool BuoyancyVolumeComponent::computeSurface( float3& outSurfacePoint, float3& outSurfaceNormal, float3& outCenter, quaternion& outRotation ) const
     {
         float3 scale;
-        PhysicsComponent::readWorldPose( *this, outCenter, outRotation, scale );
+        if ( PhysicsComponent::readWorldPose( *this, outCenter, outRotation, scale ) == false )
+            return false; // 배율 0 — 수면을 정할 수 없다
         const float4x4 world = getWorldMatrix();
         const float3   up    = float3::transformVector( float3{ 0.0f, 1.0f, 0.0f }, world ).normalize();
         if ( up.getLength() <= 0.0f )

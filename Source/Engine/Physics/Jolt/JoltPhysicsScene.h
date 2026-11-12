@@ -176,6 +176,7 @@ namespace sw
         void              createBodies( span<const PhysicsBodyDesc3D> listDesc, vector<PhysicsBodyHandle>& outListBody ) override;
         void              destroyBody( PhysicsBodyHandle body ) override;
         void              destroyBodies( span<const PhysicsBodyHandle> listBody ) override;
+        bool              setBodyShape( PhysicsBodyHandle body, span<const PhysicsShapeDesc3D> listShape, const hashed_string& material, float32 mass ) override;
         bool              isBodyValid( PhysicsBodyHandle body ) const override;
         uint32            getBodyCount() const override;
         void              setBodyEnabled( PhysicsBodyHandle body, bool bEnabled ) override;
@@ -221,6 +222,7 @@ namespace sw
         void                    destroyCharacter( PhysicsCharacterHandle character ) override;
         PhysicsCharacterState3D moveCharacter( PhysicsCharacterHandle character, const float3& velocity, float32 deltaTime ) override;
         void                    setCharacterPosition( PhysicsCharacterHandle character, const float3& position ) override;
+        bool                    setCharacterSize( PhysicsCharacterHandle character, float32 radius, float32 halfHeight ) override;
         bool                    getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState3D& outState ) const override;
 
         PhysicsVehicleHandle createWheeledVehicle( PhysicsBodyHandle chassis, const PhysicsWheeledVehicleDesc& desc ) override;
@@ -312,6 +314,10 @@ namespace sw
 
         /** @brief 셰이프 서술자 여럿을 Jolt 셰이프 하나로 만듭니다(둘 이상이면 정적 컴파운드). 실패하면 오류를 남기고 nullptr 를 반환합니다. */
         JPH::RefConst<JPH::Shape> createJoltShape( span<const PhysicsShapeDesc3D> listShape, const hashed_string& defaultMaterial, bool bAllowMesh ) const;
+        /** @brief 캐릭터 캡슐 셰이프입니다(바닥이 원점 — 발). 지을 수 없으면 오류를 남기고 nullptr 입니다. */
+        static JPH::RefConst<JPH::Shape> createCharacterShape( float32 radius, float32 halfHeight );
+        /** @brief 캐릭터 캡슐의 엔진 서술자입니다(속 바디 기록 — `createCharacterShape` 와 같은 모양). */
+        static PhysicsShapeDesc3D makeCharacterShapeDesc( float32 radius, float32 halfHeight );
         /** @brief 셰이프 하나를 로컬 위치와 회전 없이 만듭니다. */
         JPH::RefConst<JPH::Shape> createSingleJoltShape( const PhysicsShapeDesc3D& shape, const PhysicsMaterialDef& material, const JPH::PhysicsMaterial* pMaterial ) const;
         /** @brief 재질 이름을 풉니다. 이름을 적지 않았으면 첫 재질이고, 적은 이름이 설정에 없으면 오류를 남기고 nullptr 입니다(다른 재질로 만들지 않는다). */

@@ -219,6 +219,45 @@ SW_TEST_CASE( PhysicsContactTrackerTest, ReenabledBodyGetsEndThenBegin )
 }
 
 /**
+ * @brief [PhysicsContactTrackerTest] 셰이프를 간 바디(`resetSubContacts`)는 새 셰이프가 다시 닿으면 쌍이 이어지고(끝 · 시작 없음), 닿지 않으면 끝난다(감사 S-4)
+ * @details 옛 셰이프 쌍 둘이 닿아 있다가 셰이프를 간다 — 백엔드는 옛 셰이프의 끝 알림을 버리고 새 셰이프의 시작만 넣는다.
+ */
+SW_TEST_CASE( PhysicsContactTrackerTest, ReshapedBodyKeepsTouchingPair )
+{
+    PhysicsContactTracker<PhysicsDimension2D> tracker;
+    const PhysicsContactBody                  bodyA{ PhysicsBodyHandle::fromPacked( 0x100000001ull ), 1 };
+    const PhysicsContactBody                  bodyB{ PhysicsBodyHandle::fromPacked( 0x100000002ull ), 2 };
+    vector<PhysicsContactEvent2D>             listEvent;
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f ); // 셰이프 쌍 둘
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+
+    tracker.resetSubContacts( bodyB._body );
+    tracker.beginSubContact( bodyB, bodyA, {}, {}, 0.0f ); // 새 셰이프 하나가 다시 닿았다
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_EXPECT_EQUAL( size_t{ 0 }, listEvent.size() ); // 유지는 듣지 않으니 아무것도 없다
+    SW_EXPECT_EQUAL( 1u, tracker.getActivePairCount() );
+
+    tracker.endSubContact( bodyA._body, bodyB._body ); // 새 셰이프 쌍의 끝 하나로 끝난다(옛 쌍 수가 남지 않았다)
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::End );
+
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    tracker.resetSubContacts( bodyA._body ); // 셰이프를 갈았는데 새 셰이프가 닿지 않는다
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::End );
+    SW_EXPECT_EQUAL( 0u, tracker.getActivePairCount() );
+}
+
+/**
  * @brief [PhysicsContactTrackerTest] 유지는 듣는 사용자 값이 낀 쌍만 낸다 — 이미 닿은 쌍도 듣기를 켜고 끄면 다음 step 부터 따른다(감사 S-1)
  * @details A-B(A 가 듣는다)와 C-D(아무도 듣지 않는다)가 함께 닿아 있다. 시작 · 끝은 듣기와 상관없이 늘 나온다.
  */

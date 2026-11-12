@@ -281,12 +281,23 @@ namespace sw
         if ( bUnchanged )
             return;
         float3 position{};
-        PhysicsComponent::readWorldPose( *this, position, _worldRotation, _worldScale );
-        // 캡슐은 지을 때 배율을 굽는다 — 배율이 바뀌면 지금 자리에서 다시 짓고 세로 속도 · 이동 상태는 잇는다(강체 `rebuildScaledBody` 와 같다).
-        const bool bRescale = bCreate == false && isShapeScaleStale( _worldScale );
-        if ( bRescale )
-            releasePhysics( physics );
-        if ( bCreate || bRescale )
+        if ( PhysicsComponent::readWorldPose( *this, position, _worldRotation, _worldScale ) == false )
+        {
+            releasePhysics( physics ); // 배율 0 — 캡슐을 지을 수 없다(`readWorldPose` 가 알렸다). 배율이 돌아오면 다시 만든다
+            return;
+        }
+        // 캡슐은 지을 때 배율을 굽는다 — 배율이 바뀌면 캐릭터는 두고 크기만 간다(속 바디의 접촉 · 세로 속도가 이어진다 — 강체 `applyScaledShape` 와 같다, 감사 S-4).
+        if ( bCreate == false && isShapeScaleStale( _worldScale ) )
+        {
+            const PhysicsShapeDesc3D capsule = getScaledCapsule();
+            if ( pScene->setCharacterSize( _character, capsule._radius, capsule._halfHeight ) == false )
+            {
+                releasePhysics( physics );
+                return;
+            }
+            markShapeScale( _worldScale );
+        }
+        if ( bCreate )
         {
             const PhysicsShapeDesc3D capsule = getScaledCapsule();
             PhysicsCharacterDesc3D   desc;
@@ -301,11 +312,8 @@ namespace sw
             desc._bInnerBody    = _bInnerBody;
             _character          = pScene->createCharacter( desc );
             markShapeScale( _worldScale );
-            if ( bCreate )
-            {
-                _state         = PhysicsCharacterState3D{};
-                _verticalSpeed = 0.0f;
-            }
+            _state            = PhysicsCharacterState3D{};
+            _verticalSpeed    = 0.0f;
             _state._position  = position;
             _previousPosition = position;
             return;
@@ -425,11 +433,9 @@ namespace sw
             return;
         const float3 position = float3::lerp( _previousPosition, _state._position, alpha );
         // 회전 · 배율은 트랜스폼의 것이다. 이 프레임 시작 뒤에 누가 옮겼을 때만 다시 읽는다(자리는 아래에서 캐릭터 자리로 덮는다 — 전에도 그랬다).
-        if ( consumeTransformChange() )
-        {
-            float3 current{};
-            PhysicsComponent::readWorldPose( *this, current, _worldRotation, _worldScale );
-        }
+        float3 current{};
+        if ( consumeTransformChange() && PhysicsComponent::readWorldPose( *this, current, _worldRotation, _worldScale ) == false )
+            return; // 배율 0 — 트랜스폼을 덮어쓰지 않는다(다음 프레임 시작 훅이 캐릭터를 놓는다)
         if ( _pendingGroundYaw != 0.0f )
         {
             _worldRotation    = quaternion::concatenate( _worldRotation, quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, _pendingGroundYaw ) ).normalize();
