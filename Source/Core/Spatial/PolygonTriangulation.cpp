@@ -285,8 +285,7 @@ namespace sw
                 listHoleOfOuter[bestOuter].push_back( hole );
         }
 
-        const size_t entryIndexCount = outListIndex.size(); // 실패하면 여기로 되돌린다
-        bool         bComplete       = true;
+        bool bComplete = true;
         for ( size_t outer = 0; outer < listShellLoop.size(); ++outer )
         {
             vector<uint32>          listPolygon = listLoop[listShellLoop[outer]];
@@ -319,8 +318,6 @@ namespace sw
             if ( PolygonTriangulationInternal::clipEars( listPoint, std::move( listPolygon ), sign, outListIndex ) == false )
                 bComplete = false;
         }
-        if ( bComplete == false )
-            outListIndex.resize( entryIndexCount ); // 막힌 고리의 부채꼴은 구멍을 덮는다 — 반쪽 결과를 남기지 않는다(감사 C-2)
         return bComplete;
     }
 } // namespace sw
