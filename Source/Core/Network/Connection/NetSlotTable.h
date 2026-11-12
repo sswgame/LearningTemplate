@@ -4,6 +4,12 @@
  * @details 슬롯 번호가 곧 연결 ID다. 클라이언트는 슬롯 하나(서버 연결, ID 0), 서버는 `_maxConnections` 개를 쓴다.
  *          주소 맵은 패킷마다 슬롯을 O(1)로 찾게 한다. 맵에는 지금 그 주소를 가진 슬롯만 있다(`bindAddress` 와 `unbindAddress` 가 짝을 맞춘다).
  *
+ *          **살아 있는 슬롯 · 빈 슬롯 목록**(감사 N-8): 슬롯의 열기 · 닫기 · 놓기(`open` · `close` · `release`)는 여기서만 상태를 바꾼다.
+ *          살아 있는(Connecting · Connected) 슬롯은 번호 순으로 정렬된 조밀한 목록에 다음에 볼 시각(`NetLiveSlot::_dueTime`)과 함께 있고,
+ *          빈 슬롯은 내림차순 목록의 끝이 가장 낮은 번호다. 그래서 갱신은 정원(`_maxConnections`)이 아니라 기한이 된 연결만 보고(슬롯 하나가 약 75 KB 라
+ *          전 슬롯을 훑으면 캐시를 다 넘긴다), 위조 요청마다 빈 슬롯을 선형으로 찾지 않는다. 열기 · 닫기는 목록을 밀어 O(N) 이지만 드물다.
+ *          언리얼은 연결 객체 배열(`ClientConnections`)만 돌고 빈 칸이 없다 — 슬롯 번호가 곧 연결 ID 인 이 구조에서 같은 효과를 내는 모양이다.
+ *
  *          **스레드**: 잠금이 없다. `NetEndpoint` 의 값 멤버로 그 잠금 안에서만 쓴다.
  */
 #pragma once
@@ -48,6 +54,16 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 살아 있는(Connecting · Connected) 슬롯 하나와 갱신이 그 슬롯을 다시 볼 시각입니다. */
+    struct NetLiveSlot
+    {
+        float64 _dueTime{ 0.0 }; ///< 이 시각이 되면 `NetEndpoint::updateSlots` 가 본다. 음의 무한대면 다음 갱신에서 바로 본다(`touch`).
+        int32   _slotIndex{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class NetSlotTable
      * @brief 연결 슬롯과 주소 맵을 함께 쥡니다. 슬롯을 비우거나 다시 채우는 일은 맵과 짝을 맞춰 여기서만 합니다.
@@ -61,8 +77,28 @@ namespace sw
         NetSlotTable( const NetSlotTable& )            = delete;
         NetSlotTable& operator=( const NetSlotTable& ) = delete;
 
-        /** @brief 모든 슬롯을 버리고 비어 있는(Disconnected) 슬롯 @p slotCount 개로 다시 채웁니다. 주소 맵도 비웁니다. */
+        /** @brief 모든 슬롯을 버리고 비어 있는(Disconnected) 슬롯 @p slotCount 개로 다시 채웁니다. 주소 맵 · 살아 있는 목록도 비우고 모두 빈 슬롯이 됩니다. */
         void reset( int32 slotCount );
+
+        /** @brief 빈 슬롯 @p slotIndex 를 @p state(Connecting · Connected)로 열어 살아 있는 목록에 넣습니다. 다음 갱신에서 바로 봅니다. 빈 슬롯이 아니면 단언입니다. */
+        void open( int32 slotIndex, NetConnectionState state );
+        /**
+         * @brief 살아 있는 슬롯을 닫습니다(Disconnected, 살아 있는 목록에서 뺀다).
+         * @param bHoldUntilReleased 참이면 게임 스레드가 끊김 사건을 꺼낼 때까지(`release`) 빈 슬롯으로 돌리지 않는다(`NetEndpointSlot::_bReleasePending`).
+         */
+        void close( int32 slotIndex, bool bHoldUntilReleased );
+        /** @brief 닫힌 뒤 붙잡아 둔 슬롯을 빈 슬롯으로 돌립니다. 붙잡지 않았거나 이미 놓았으면 아무것도 하지 않습니다. */
+        void release( int32 slotIndex );
+        /** @brief 이 슬롯을 다음 갱신에서 보게 합니다(받은 패킷 · 넣은 메시지가 보낼 것을 만들었다). 살아 있지 않으면 아무것도 하지 않습니다. */
+        void touch( int32 slotIndex );
+        /** @brief 살아 있는 슬롯 모두를 다음 갱신에서 보게 합니다(시계를 민 뒤처럼 기한이 모두 바뀌었을 때). */
+        void touchAll();
+        /** @brief 살아 있는 슬롯 @p slotIndex 를 다시 볼 시각을 정합니다. 살아 있지 않으면 단언입니다. */
+        void setDueTime( int32 slotIndex, float64 dueTime );
+        /** @brief 기한(@p nowSeconds 이하)이 된 살아 있는 슬롯 번호를 @p outListSlot 에 비운 뒤 번호 순으로 담습니다. */
+        void collectDue( float64 nowSeconds, vector<int32>& outListSlot ) const;
+        /** @brief 살아 있는 슬롯 목록(번호 순)입니다. 받은 메시지 꺼내기 · 보내기처럼 연결된 것만 도는 쪽이 씁니다. */
+        const vector<NetLiveSlot>& getLiveSlots() const { return _listLiveSlot; }
 
         int32                  getCount() const { return static_cast<int32>( _listSlot.size() ); }
         bool                   isValid( int32 slotIndex ) const { return 0 <= slotIndex && slotIndex < getCount(); }
@@ -82,7 +118,7 @@ namespace sw
         void bindAddress( int32 slotIndex, const NetAddress& address );
         /** @brief 슬롯의 주소를 주소 맵에서 풉니다. 같은 주소가 다른 슬롯에 묶여 있으면 그대로 둡니다. */
         void unbindAddress( int32 slotIndex );
-        /** @brief 첫 빈(Disconnected, 끊김 사건을 게임 스레드가 꺼낸) 슬롯 번호입니다. 없으면(가득 참) 비어 있습니다. */
+        /** @brief 가장 낮은 빈(Disconnected, 끊김 사건을 게임 스레드가 꺼낸) 슬롯 번호입니다. 없으면(가득 참) 비어 있습니다. O(1) 입니다. */
         [[nodiscard]] optional<int32> findFreeSlot() const;
         int32                         countConnected() const;
         /** @brief 연결된 슬롯 번호를 @p outListConnection 에 비운 뒤 담습니다. */
@@ -92,7 +128,13 @@ namespace sw
         static uint64 makeAddressKey( const NetAddress& address ) { return ( static_cast<uint64>( address._ipv4 ) << 16 ) | address._port; }
 
     private:
+        /** @brief 살아 있는 목록에서 @p slotIndex 의 자리입니다(정렬돼 있어 이분 탐색). 없으면 비어 있습니다. */
+        [[nodiscard]] optional<size_t> findLive( int32 slotIndex ) const;
+
+    private:
         vector<NetEndpointSlot>      _listSlot;
+        vector<NetLiveSlot>          _listLiveSlot;     ///< 살아 있는 슬롯, 번호 오름차순 — 순서를 번호 순으로 두어 사건 · 메시지를 꺼내는 순서가 예전 전 슬롯 훑기와 같다.
+        vector<int32>                _listFreeSlot;     ///< 빈 슬롯, 번호 내림차순 — 끝이 가장 낮은 번호다.
         unordered_map<uint64, int32> _mapSlotByAddress; ///< 연결이 많아도 패킷마다 선형 탐색하지 않게 한다.
     };
 } // namespace sw

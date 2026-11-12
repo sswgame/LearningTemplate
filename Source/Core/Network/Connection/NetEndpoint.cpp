@@ -104,11 +104,13 @@ namespace sw
         , _credentials{}
         , _settings{}
         , _sentKindStats{}
+        , _listDueSlot{}
         , _pTransport{ nullptr }
         , _rejectedPacketCount{ 0 }
         , _authenticationFailureCount{ 0 }
         , _replayRejectedCount{ 0 }
         , _mismatchLogCount{ 0 }
+        , _slotVisitCount{ 0 }
         , _lastUpdateTime{ -1.0 }
         , _nextDebuggerPollTime{ 0.0 }
         , _protocolID{ 0 }
@@ -278,9 +280,9 @@ namespace sw
         _protocolID = NetProtocol::makeProtocolID( _settings._gameID, _settings._wireVersion, computeFeatureMask() );
         _slotTable.reset( 1 );
         _slotTable.bindAddress( 0, serverAddress );
-        NetEndpointSlot& slot  = _slotTable.get( 0 );
+        NetEndpointSlot& slot = _slotTable.get( 0 );
+        _slotTable.open( 0, NetConnectionState::Connecting );
         slot._clientSalt       = _challenge.nextSalt();
-        slot._state            = NetConnectionState::Connecting;
         slot._connectStartTime = -1.0; // 첫 update 에서 시각을 정한다.
         slot._lastSendTime     = -1.0;
         if ( isEncrypted() )
@@ -582,6 +584,7 @@ namespace sw
                 if ( slot._connectStartTime >= 0.0 )
                     slot._connectStartTime += stalledSeconds;
             }
+            _slotTable.touchAll(); // 기한을 시계에서 셈했으니 민 시계로 다시 센다
         }
 #endif
         _lastUpdateTime = nowSeconds;
@@ -642,16 +645,25 @@ namespace sw
                     break;
                 receivedCount += gotCount;
             }
-            // 2) 처리, 타임아웃, 보낼 패킷 생성(잠금 안).
-            vector<DeferredWarning> listWarning;
+            // 2) 처리, 타임아웃, 보낼 패킷 생성(잠금 안). 받은 것은 일괄 받기 크기(`kReceiveBatchSize`)씩 잠금을 따로 잡아 처리한다 —
+            //    복호까지 512 개를 한 잠금에서 하면 그동안 게임 스레드 · 복제 워커의 `sendMessage` 가 모두 기다린다(감사 N-8). 묶음 사이에 그들이 끼어든다.
             {
                 ScopedLock<mutex> lock{ _mutex };
                 updateDebugHold( nowSeconds );
-                for ( int32 index = 0; index < receivedCount; ++index )
+            }
+            for ( int32 first = 0; first < receivedCount; first += kReceiveBatchSize )
+            {
+                const int32       last = MathUtil::min( receivedCount, first + kReceiveBatchSize );
+                ScopedLock<mutex> lock{ _mutex };
+                for ( int32 index = first; index < last; ++index )
                 {
                     const NetReceivedDatagram& datagram = _listReceived[static_cast<size_t>( index )];
                     handlePacket( nowSeconds, datagram._from, datagram._buffer.data(), static_cast<int32>( datagram._buffer.size() ) );
                 }
+            }
+            vector<DeferredWarning> listWarning;
+            {
+                ScopedLock<mutex> lock{ _mutex };
                 updateSlots( nowSeconds );
                 takePending( _flushBatch, _listDeliver );
                 listWarning.swap( _listDeferredWarning );
@@ -681,8 +693,11 @@ namespace sw
 
     void NetEndpoint::updateSlots( float64 nowSeconds )
     {
-        const int32 slotCount = _slotTable.getCount();
-        for ( int32 index = 0; index < slotCount; ++index )
+        // 기한이 된 연결만 본다(감사 N-8). 기한은 다녀간 뒤 `computeNextDueTime` 이 정하고, 받은 패킷 · 넣은 메시지가 `touch` 로 앞당긴다.
+        // 언리얼은 틱마다 모든 연결을 `TickFlush` 하고, 여기서는 보낼 시각 · 타임아웃이 된 것만 돈다 — 깨어날 때마다 정원 N 을 훑지 않는다.
+        _slotTable.collectDue( nowSeconds, _listDueSlot );
+        _slotVisitCount += static_cast<uint64>( _listDueSlot.size() );
+        for ( const int32 index : _listDueSlot )
         {
             NetEndpointSlot& slot = _slotTable.get( index );
             switch ( slot._state )
@@ -739,7 +754,23 @@ namespace sw
                     break;
                 }
             }
+            if ( slot._state == NetConnectionState::Connecting || slot._state == NetConnectionState::Connected )
+                _slotTable.setDueTime( index, computeNextDueTime( nowSeconds, slot ) );
         }
+    }
+
+    float64 NetEndpoint::computeNextDueTime( float64 nowSeconds, const NetEndpointSlot& slot ) const
+    {
+        if ( slot._lastSendTime < 0.0 )
+            return nowSeconds; // 아직 보낸 적이 없다 — 다음 갱신에서 다시 본다
+        if ( slot._state == NetConnectionState::Connecting )
+            return MathUtil::min( slot._connectStartTime + _settings._connectTimeout, slot._lastSendTime + _settings._connectRetryInterval );
+        // 한가한(보낼 것 · 확인할 것 · 확인을 기다리는 신뢰 메시지가 없는) 연결은 유지 간격, 아니면 보내기 간격마다 본다.
+        // 신뢰 메시지의 재전송 시각과 토큰 충전은 시계로만 오므로, 그것이 남아 있는 동안은 보내기 간격마다 다시 묻는다.
+        const bool    bIdle     = slot._connection.hasDataToSend( nowSeconds ) == false && slot._connection.getPendingReliableCount() == 0;
+        const float64 sendAt    = slot._lastSendTime + ( bIdle ? MathUtil::max( _settings._sendInterval, _settings._keepAliveInterval ) : _settings._sendInterval );
+        const float64 timeoutAt = slot._lastReceiveTime + computeTimeoutSeconds( slot );
+        return MathUtil::min( sendAt, timeoutAt );
     }
 
     void NetEndpoint::handlePacket( float64 nowSeconds, const NetAddress& from, const uint8* pData, int32 size )
@@ -761,6 +792,8 @@ namespace sw
             return;
         }
         const optional<int32> slotIndex = _slotTable.findByAddress( from );
+        if ( slotIndex.has_value() )
+            _slotTable.touch( *slotIndex ); // 받은 것이 확인 · 응답 · 상태를 바꿨을 수 있다 — 이번 갱신에서 그 슬롯을 본다
         if ( isEncrypted() && ( type == PacketType::Payload || type == PacketType::Disconnect ) )
         {
             handleSealedPacket( nowSeconds, type, slotIndex, pData + NetEndpointInternal::kHeaderSize, size - NetEndpointInternal::kHeaderSize );
@@ -975,9 +1008,9 @@ namespace sw
         NetEndpointSlot& slot = _slotTable.get( freeIndex );
         slot                  = NetEndpointSlot{};
         _slotTable.bindAddress( freeIndex, packet._from );
-        slot._clientSalt      = packet._valueA;
-        slot._serverSalt      = packet._valueB;
-        slot._state           = NetConnectionState::Connected;
+        slot._clientSalt = packet._valueA;
+        slot._serverSalt = packet._valueB;
+        _slotTable.open( freeIndex, NetConnectionState::Connected );
         slot._lastReceiveTime = packet._nowSeconds;
         slot._lastSendTime    = -1.0;
         slot._connection.reset();
@@ -1069,7 +1102,7 @@ namespace sw
         }
         const bool bWasVisible = slot._state == NetConnectionState::Connected || _bServer == SW_FALSE;
         _slotTable.unbindAddress( slotIndex );
-        slot._state            = NetConnectionState::Disconnected;
+        _slotTable.close( slotIndex, bWasVisible ); // 보인 끊김은 게임 스레드가 사건을 꺼낼 때까지 번호를 다시 주지 않는다(`releaseDisconnectedSlots`)
         slot._bRemoteDebugHold = SW_FALSE;
         slot._connection.reset();
         if ( slot._security != nullptr )
@@ -1079,10 +1112,7 @@ namespace sw
             slot._security.reset();
         }
         if ( bWasVisible )
-        {
-            slot._bReleasePending = SW_TRUE; // 게임 스레드가 이 사건을 꺼낼 때까지 번호를 다시 주지 않는다(`releaseDisconnectedSlots`)
             pushEvent( NetEndpointEvent{ slotIndex, reason, NetEndpointEvent::Kind::Disconnected } );
-        }
         if ( _bServer == SW_FALSE )
             _clientIndex = constant::invalid_index::kInt32;
     }
@@ -1110,6 +1140,7 @@ namespace sw
         if ( bQueued )
         {
             _sentKindStats.add( pData, size );
+            _slotTable.touch( connectionID ); // 보낼 것이 생겼다 — 다음 유지 시각을 기다리지 않는다
             return true;
         }
         const bool bReliable    = channel == NetChannelType::ReliableOrdered || channel == NetChannelType::ReliableUnordered;
@@ -1129,7 +1160,10 @@ namespace sw
         NetEndpointSlot*  pSlot   = _slotTable.findConnected( connectionID );
         const bool        bQueued = pSlot != nullptr && pSlot->_connection.sendNotifiedMessage( pData, size, tag );
         if ( bQueued )
+        {
             _sentKindStats.add( pData, size );
+            _slotTable.touch( connectionID );
+        }
         return bQueued;
     }
 
@@ -1143,11 +1177,13 @@ namespace sw
     {
         if ( NetEndpointInternal::reportOversizeMessage( channel, pData, size ) )
             return 0;
-        ScopedLock<mutex> lock{ _mutex };
-        int32             sentCount = 0;
-        const int32       slotCount = _slotTable.getCount();
-        for ( int32 index = 0; index < slotCount; ++index )
+        ScopedLock<mutex>          lock{ _mutex };
+        int32                      sentCount = 0;
+        const vector<NetLiveSlot>& listLive  = _slotTable.getLiveSlots();
+        // 뒤에서부터 돈다 — 창이 차 닫힌 연결(`sendMessageLocked`)은 목록에서 빠지고 뒤 칸이 당겨지는데, 뒤 칸은 이미 보냈다.
+        for ( size_t position = listLive.size(); position > 0; --position )
         {
+            const int32 index = listLive[position - 1]._slotIndex;
             if ( index != exceptID && sendMessageLocked( index, channel, pData, size, WindowFullPolicy::Close ) )
                 ++sentCount;
         }
@@ -1220,7 +1256,7 @@ namespace sw
         for ( const NetEndpointEvent& event : listEvent )
         {
             if ( event._kind == NetEndpointEvent::Kind::Disconnected && _slotTable.isValid( event._connectionID ) )
-                _slotTable.get( event._connectionID )._bReleasePending = SW_FALSE;
+                _slotTable.release( event._connectionID );
         }
     }
 
@@ -1238,10 +1274,10 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         outInbound._listEvent.swap( _listEvent );
         releaseDisconnectedSlots( outInbound._listEvent );
-        const int32 slotCount = _slotTable.getCount();
-        for ( int32 index = 0; index < slotCount; ++index )
+        for ( const NetLiveSlot& live : _slotTable.getLiveSlots() ) // 정원이 아니라 살아 있는 연결만(번호 순)
         {
-            NetEndpointSlot& slot = _slotTable.get( index );
+            const int32      index = live._slotIndex;
+            NetEndpointSlot& slot  = _slotTable.get( index );
             if ( slot._state != NetConnectionState::Connected )
                 continue;
             const size_t firstNotice = outInbound._listDeliveryNotice.size();
@@ -1306,6 +1342,12 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         return _replayRejectedCount;
+    }
+
+    uint64 NetEndpoint::getSlotVisitCount() const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _slotVisitCount;
     }
 
     uint32 NetEndpoint::getProtocolID() const
