@@ -9,6 +9,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
@@ -29,8 +30,23 @@ namespace sw
              *          섹션은 씬 오브젝트, 파생의 리플렉션 상태, 컴포넌트 상태(`ComponentStateStore`) 셋이다.
              *          토큰이 지금 프로세스와 같으면(핫 리로드) id 를 복원하고, 다르면(다른 실행의 세이브 파일) id 를 읽고 버린다.
              *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
+             *          머리의 씬 정체는 찍을 때 활성 씬의 리소스 id(`Scene::getSourcePath`)다 — 읽을 때 지금 활성 씬과 다르면 섞지 않고 거절한다.
              */
-            static constexpr uint32 kVersion = 5; // 4: 오브젝트 id 묶음에 컴포넌트 안정 키가 실린다, 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다
+            static constexpr uint32 kVersion = 6; // 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다
+
+            /**
+             * @brief 세이브 머리의 씬 정체 @p savedSceneID 가 지금 활성 씬과 같은지 봅니다. 아니면 까닭을 오류로 남기고 false 입니다.
+             * @details 복원은 활성 씬을 비우고 채우므로, 다른 씬(타이틀 · 다른 맵) 위에서 풀면 그 씬에 다른 맵의 오브젝트가 선다. 언리얼 게임은 세이브에 맵 이름을 적고
+             *          `OpenLevel` 뒤에 적용한다 — 여기서는 아직 씬 전환 뒤 적용 흐름이 없어 거절로 막는다(전환은 `GameSceneFlow` 의 다음 단계).
+             */
+            static bool checkScene( const string& savedSceneID, const string& activeSceneID )
+            {
+                if ( savedSceneID == activeSceneID )
+                    return true;
+                SW_LOG_ERROR_ID( "GameStateSnapshot.SceneMismatch", "This save was made in scene '%#' but the active scene is '%#' - open that scene before loading it",
+                                 savedSceneID.c_str(), activeSceneID.c_str() );
+                return false;
+            }
 
             /** @brief 지금 실행의 콘텐츠 구성(`IContentConfiguration`)입니다. 걸린 것이 없으면 nullptr(구성 없음)입니다. */
             static const IContentConfiguration* findContent() { return game::findSubsystem<IContentConfiguration>(); }
@@ -60,6 +76,13 @@ namespace sw
             {
                 SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 return pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
+            }
+            /** @brief 활성 씬의 리소스 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면(씬 없는 스냅샷) 빈 글입니다. */
+            static string findActiveSceneID()
+            {
+                SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
+                const Scene* const  pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
+                return pScene != nullptr ? pScene->getSourcePath() : string{};
             }
         };
     } // namespace
@@ -111,6 +134,8 @@ namespace sw
         arch << StateEnvelopeInternal::kMagic;
         arch << StateEnvelopeInternal::kVersion;
         arch << ObjectStateSerializer::getProcessToken();
+        // 이 세이브를 찍은 씬 — 읽는 쪽이 같은 씬 위인지 봉투를 풀기 전에 본다(씬이 없으면 빈 글).
+        arch.writeString( GameStateSnapshotInternal::findActiveSceneID() );
         // 이 세이브를 만든 콘텐츠 구성(켠 모드) — 읽는 쪽이 같은 구성인지 봉투를 풀기 전에 본다(없으면 빈 글).
         const IContentConfiguration* const pContent = StateEnvelopeInternal::findContent();
         arch.writeString( pContent != nullptr ? pContent->makeContentConfigText() : string{} );
@@ -184,9 +209,12 @@ namespace sw
 
         uint64 processToken = 0;
         arch >> processToken;
-        // 콘텐츠 구성: 씬을 건드리기 전에 본다 — 맞지 않는 세이브는 아무것도 바꾸지 않고 거절한다.
+        // 씬 정체 · 콘텐츠 구성: 씬을 건드리기 전에 본다 — 맞지 않는 세이브는 아무것도 바꾸지 않고 거절한다.
+        string sceneID;
         string contentText;
-        if ( arch.readString( contentText ) == false || StateEnvelopeInternal::checkContent( contentText ) == false )
+        if ( arch.readString( sceneID ) == false || arch.readString( contentText ) == false )
+            return false;
+        if ( StateEnvelopeInternal::checkContent( contentText ) == false || StateEnvelopeInternal::checkScene( sceneID, GameStateSnapshotInternal::findActiveSceneID() ) == false )
             return false;
         const bool              bSameProcess = ( processToken == ObjectStateSerializer::getProcessToken() );
         const SceneObjectFormat format       = bSameProcess ? SceneObjectFormat::RestoreIdentity : SceneObjectFormat::WithIdentity;

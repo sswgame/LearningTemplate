@@ -93,6 +93,7 @@ namespace sw
         /**
          * @brief 읽기: 같은 목적으로 쓴 봉투를 읽어 씬 오브젝트 · 리플렉션 상태 · 컴포넌트 상태를 되살리고, 올린 타입마다 실어 둔 상태를 돌려줍니다.
          * @details 성공하면 부르는 쪽은 읽기 훅을 부르고 `endRestore` 로 저장소를 비운다. 실패하면 false 이고 훅을 부르지 않는다.
+         *          머리의 씬 정체(찍을 때 활성 씬의 리소스 id)가 지금 활성 씬과 다르면 씬을 건드리지 않고 false 다 — 그 씬을 연 뒤에 읽는다.
          */
         [[nodiscard]] bool readEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, void* pStateInstance, const void* pInBuffer, uint32 size );
         /** @brief 읽기 끝: 읽기 훅이 넘겨받은 뒤 저장소를 비웁니다. */

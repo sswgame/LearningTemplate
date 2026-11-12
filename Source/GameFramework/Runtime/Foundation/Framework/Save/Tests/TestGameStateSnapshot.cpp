@@ -1,8 +1,12 @@
-// GameStateSnapshotTest — 상태 스냅샷 봉투: 왕복, 머리(SWST) · 판이 다른 버퍼, 잘린 버퍼, 실패한 읽기가 실어 둔 상태를 남기지 않는 것, 머리의 콘텐츠 구성(켠 모드)(nogpu, 활성 씬 없음).
+// GameStateSnapshotTest — 상태 스냅샷 봉투: 왕복, 머리(SWST) · 판이 다른 버퍼, 잘린 버퍼, 실패한 읽기가 실어 둔 상태를 남기지 않는 것, 머리의 콘텐츠 구성(켠 모드) · 씬 정체(nogpu, 씬 테스트만 지역 씬 매니저).
 #include "pch.h"
 
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
+
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -35,6 +39,28 @@ namespace
             return false;
         }
     };
+
+    /** @brief @p manager 의 살아 있는 오브젝트 수입니다. */
+    uint32 countObjects( const sw::GameObjectManager& manager )
+    {
+        uint32 count = 0;
+        manager.forEachGameObject( [&count]( sw::GameObject* )
+        { ++count; } );
+        return count;
+    }
+
+    /** @brief 지역 씬 매니저에 리소스 id @p pSceneID 의 빈 씬을 활성으로 세우고 오브젝트 하나를 둡니다. 실패하면 nullptr 입니다. */
+    sw::GameObjectManager* openSceneWithOneObject( sw::SceneManager& sceneManager, const utf8* pSceneID )
+    {
+        sw::Scene* const pScene = sceneManager.createEmptyActiveScene( pSceneID );
+        if ( pScene == nullptr )
+            return nullptr;
+        pScene->setSourcePath( pSceneID );
+        sw::GameObjectManager* const pManager = pScene->getObjectManager();
+        if ( pManager == nullptr || pManager->createGameObject( sw::hashed_string( "Marker" ) ) == nullptr )
+            return nullptr;
+        return pManager;
+    }
 } // namespace
 
 using namespace sw;
@@ -121,4 +147,35 @@ SW_TEST_CASE( GameStateSnapshotTest, HeaderCarriesTheContentConfiguration )
         SW_EXPECT_LOG( "GameStateSnapshot.SaveNeedsContent" );
         SW_EXPECT_FALSE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, moddedSave.data(), static_cast<uint32>( moddedSave.size() ) ) );
     }
+}
+
+/**
+ * @brief [GameStateSnapshotTest] 봉투 머리는 찍은 씬의 리소스 id 를 싣고, 다른 씬 위에서 읽으면 그 씬을 비우지 않고 거절한다 — 같은 씬이면 지금처럼 복원한다
+ * @details 언리얼 게임은 세이브의 맵을 연 뒤 적용한다. 씬 전환 뒤 적용 흐름이 들어오기 전까지 다른 씬의 세이브는 섞지 않고 거절한다.
+ */
+SW_TEST_CASE( GameStateSnapshotTest, RestoreInAnotherSceneDoesNotMix )
+{
+    SubsystemScope scope;
+    SceneManager&  sceneManager = scope.emplaceSubsystem<SceneManager>();
+    SW_REQUIRE_TRUE( sceneManager.initializeSubsystem() == SubsystemInitResult::Succeeded );
+    const game::ScopedGameScope scoped{ scope };
+    GameStateSnapshot           snapshot;
+
+    // 같은 씬: 찍은 씬 위에서 읽으면 복원한다.
+    GameObjectManager* pSceneA = openSceneWithOneObject( sceneManager, "scenes/a.scene" );
+    SW_REQUIRE_NOT_NULL( pSceneA );
+    const vector<uint8> saveA = captureEmptyEnvelope( snapshot );
+    SW_REQUIRE_TRUE( saveA.empty() == false );
+    SW_EXPECT_TRUE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, saveA.data(), static_cast<uint32>( saveA.size() ) ) );
+    snapshot.endRestore();
+    SW_EXPECT_EQUAL( 1u, countObjects( *pSceneA ) );
+
+    // 다른 씬: 씬 A 의 세이브를 씬 B 에서 읽으면 거절하고 B 의 오브젝트는 그대로다.
+    GameObjectManager* pSceneB = openSceneWithOneObject( sceneManager, "scenes/b.scene" );
+    SW_REQUIRE_NOT_NULL( pSceneB );
+    SW_EXPECT_LOG( "GameStateSnapshot.SceneMismatch" );
+    SW_EXPECT_FALSE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, saveA.data(), static_cast<uint32>( saveA.size() ) ) );
+    SW_EXPECT_EQUAL( 1u, countObjects( *pSceneB ) );
+    SW_EXPECT_NOT_NULL( pSceneB->findGameObjectByName( hashed_string( "Marker" ) ) );
+    SW_EXPECT_TRUE( snapshot.getComponentStateStore().isEmpty() );
 }
