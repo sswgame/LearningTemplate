@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/CompareUtil.h"
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/ContentFileSource.h"
 #include "Core/File/FileUtil.h"
@@ -154,16 +155,11 @@ namespace sw
             }
 
             /** @brief @p packPath 가 패치 목록이 가리키는 패치 팩이면 true 입니다(파일 이름 비교, 대소문자 무시). */
-            static bool isPatchPackFile( const string& packPath, const vector<PackPatchManifest>& listManifest )
+            static bool isPatchPackFile( const string& packPath, const unordered_set<string>& uniquePatchFileNameLower )
             {
                 string_view fileName;
                 FileUtil::getFileNamePart( packPath, fileName );
-                for ( const PackPatchManifest& manifest : listManifest )
-                {
-                    if ( StringUtil::equals( fileName, manifest._packFileName, true ) )
-                        return true;
-                }
-                return false;
+                return uniquePatchFileNameLower.contains( StringUtil::toLower( string( fileName ).c_str() ) );
             }
 
             /**
@@ -643,11 +639,17 @@ namespace sw
         if ( PackManagerInternal::collectPatchManifests( listCandidateFile, listManifest ) == false )
             return false;
 
+        // 패치 팩 이름(대소문자 무시)을 한 번 색인한다 — 팩 파일마다 패치 목록을 훑지 않는다(팩 수 × 쌓인 패치 수).
+        unordered_set<string> uniquePatchFileNameLower;
+        for ( const PackPatchManifest& manifest : listManifest )
+        {
+            uniquePatchFileNameLower.insert( StringUtil::toLower( manifest._packFileName.c_str() ) );
+        }
         bool           bAnyMounted = false;
         vector<string> listMountedPath;
         for ( const string& packPath : listCandidateFile )
         {
-            if ( FileUtil::hasAnyExtension( packPath, { ".pack", ".swpk" } ) == false || PackManagerInternal::isPatchPackFile( packPath, listManifest ) )
+            if ( FileUtil::hasAnyExtension( packPath, { ".pack", ".swpk" } ) == false || PackManagerInternal::isPatchPackFile( packPath, uniquePatchFileNameLower ) )
                 continue;
 
             if ( mountPack( packPath ) ) // 우선순위는 팩의 마운트 도메인으로 정한다(`mountReader`)

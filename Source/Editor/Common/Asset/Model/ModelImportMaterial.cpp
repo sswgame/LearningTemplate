@@ -7,6 +7,8 @@
 #include "Editor/Common/Asset/Model/ModelImportMaterial.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -253,6 +255,12 @@ namespace sw::editor
     uint32 ModelImportMaterial::keepPreviousSectionNames( vector<ModelImportSection>& inoutListSection, const vector<MeshSection>& listPrevious )
     {
         uint32 keptCount = 0;
+        // 지금 구간 이름마다 그 이름인 구간 수 — 이름이 쓰였는지 볼 때 구간 목록을 훑지 않는다(구간 수 × 앞 구간 수 × 구간 수). 이름을 바꿀 때 함께 고친다.
+        unordered_map<string, uint32> mapNameCount;
+        for ( const ModelImportSection& section : inoutListSection )
+        {
+            ++mapNameCount[section._sectionName];
+        }
         for ( ModelImportSection& section : inoutListSection )
         {
             if ( section._sourceMaterial.empty() )
@@ -264,11 +272,13 @@ namespace sw::editor
                                          StringUtil::equals( previous._sourceMaterial.c_str(), section._sourceMaterial ) && StringUtil::equals( previous._sourceNode.c_str(), section._sourceNode );
                 if ( bSameSource == false || StringUtil::equals( previous._name.c_str(), section._sectionName ) )
                     continue;
-                const bool bNameTaken = VectorUtil::containsIf( inoutListSection, [&previous]( const ModelImportSection& other )
-                { return StringUtil::equals( other._sectionName, previous._name.c_str() ); } );
-                if ( bNameTaken )
+                const string previousName( previous._name.c_str() );
+                const auto   takenIter = mapNameCount.find( previousName );
+                if ( takenIter != mapNameCount.end() && takenIter->second > 0 )
                     continue; // 다른 새 구간이 이미 그 이름이다 — 이름이 겹치는 메시는 구간이 없어진다(`Mesh::setSections`)
-                section._sectionName = previous._name.c_str();
+                --mapNameCount[section._sectionName];
+                ++mapNameCount[previousName];
+                section._sectionName = previousName;
                 ++keptCount;
                 break;
             }
@@ -321,16 +331,15 @@ namespace sw::editor
             return true;
         if ( result._listPBRMaterial.empty() == false )
         {
-            vector<string> listWrittenStem;
+            unordered_set<string> uniqueWrittenStem; // 구간마다 쓴 목록을 훑지 않는다
             for ( const ModelImportSection& section : result._listSection )
             {
-                if ( VectorUtil::contains( listWrittenStem, section._fileStem ) )
+                if ( uniqueWrittenStem.insert( section._fileStem ).second == false )
                     continue;
-                listWrittenStem.push_back( section._fileStem );
                 if ( writePBRMaterialFile( assetPaths, result._listPBRMaterial[section._materialIndex], section._fileStem, sourcePath, sideFolder ) == false )
                     return false;
             }
-            SW_LOG_INFO_ID( "ModelImporter.GlTFPbrMaterialSections", "glTF '%#': %# material sections, %# PBR materials", sourcePath, result._listSection.size(), listWrittenStem.size() );
+            SW_LOG_INFO_ID( "ModelImporter.GlTFPbrMaterialSections", "glTF '%#': %# material sections, %# PBR materials", sourcePath, result._listSection.size(), uniqueWrittenStem.size() );
             return true;
         }
         const string   rawTextureFolder = makeRawTextureFolder( sourcePath );
@@ -358,13 +367,12 @@ namespace sw::editor
             return false;
         }
 
-        vector<string> listWrittenStem;
+        unordered_set<string> uniqueWrittenStem;
         for ( const ModelImportSection& section : result._listSection )
         {
             // 같은 머티리얼의 구간(1인칭 가시성이 다른)은 머티리얼 파일 하나를 쓴다.
-            if ( std::find( listWrittenStem.begin(), listWrittenStem.end(), section._fileStem ) != listWrittenStem.end() )
+            if ( uniqueWrittenStem.insert( section._fileStem ).second == false )
                 continue;
-            listWrittenStem.push_back( section._fileStem );
             const string materialText = ToonMaterialDef::makeMaterialXML( result._listToonMaterial[section._materialIndex], listTexturePath, pDefaultAssets->_toonMaterialTemplate );
             if ( materialText.empty() || writeSharedMaterial( assetPaths, materialText, toonTemplateText, pDefaultAssets->_toonMaterialTemplate.get(), section._fileStem, sourcePath, sideFolder ) == false )
             {

@@ -2,7 +2,6 @@
 
 #include "Engine/Asset/Cook/PackCooker.h"
 
-#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
@@ -70,6 +69,7 @@ namespace sw
             {
                 unordered_set<string> _setIncluded;
                 unordered_set<string> _setReferencedExcluded;
+                unordered_set<string> _setExcludedSource; ///< `PackCookParams::_listExcludedSourceFile` 의 색인(절대 경로) — 파일마다 목록을 훑지 않는다(파일 수 × 제외 수). 목록은 순서가 설정 해시에 들어가 그대로 둔다
                 PackStagedSelection   _staged;
             };
 
@@ -106,10 +106,10 @@ namespace sw
             };
 
             /** @brief 원본 파일 하나가 팩에 담길 수 있는지(제외 규칙 · 위 층이 뺀 파일 · 낡은 쿠킹본이 아닌지)입니다. 고르기의 후보 판정이다. */
-            static bool isPackableSource( string_view relativePath, const string& absPath, const PackConfig& config, const PackCookParams& params )
+            static bool isPackableSource( string_view relativePath, const string& absPath, const PackConfig& config, const PackCookParams& params, const PackSelection& selection )
             {
                 return PackCooker::shouldIncludeFile( relativePath, config, params._shaderFolder, params._buildTarget ) &&
-                       VectorUtil::contains( params._listExcludedSourceFile, FileUtil::normalizePath( absPath ).str() ) == false && AssetCookPath::isCookedOutput( relativePath ) == false;
+                       selection._setExcludedSource.contains( FileUtil::normalizePath( absPath ).str() ) == false && AssetCookPath::isCookedOutput( relativePath ) == false;
             }
 
             /** @brief 도메인 기준 상대 경로의 정규화 리소스 id(`game/empty/maps/a.scene.xml`)입니다. */
@@ -167,6 +167,11 @@ namespace sw
                     return false;
                 }
 
+                outSelection._setExcludedSource.clear();
+                for ( const string& excludedPath : params._listExcludedSourceFile )
+                {
+                    outSelection._setExcludedSource.insert( excludedPath );
+                }
                 PackReachFiles               files;
                 PackDiskReachSource          source;
                 vector<PackDomainCandidates> listCandidates;
@@ -187,7 +192,7 @@ namespace sw
                         string assetID = makeAssetID( domain, relativePath );
                         files._setExisting.insert( assetID );
                         candidates._listExisting.push_back( assetID );
-                        if ( isPackableSource( relativePath, absPath, config, params ) == false )
+                        if ( isPackableSource( relativePath, absPath, config, params, outSelection ) == false )
                             continue;
                         files._setPackable.insert( assetID );
                         source._mapAbsolutePath.try_emplace( assetID, absPath );
@@ -453,7 +458,7 @@ namespace sw
                         continue;
                     if ( PackCooker::shouldIncludeFile( relativePath, config, params._shaderFolder, params._buildTarget ) == false )
                         continue;
-                    if ( VectorUtil::contains( params._listExcludedSourceFile, FileUtil::normalizePath( absPath ).str() ) )
+                    if ( selection._setExcludedSource.contains( FileUtil::normalizePath( absPath ).str() ) )
                         continue; // 위 층이 뺀 파일(출시 문화권 밖 번역 테이블 — 언리얼 Cultures to Stage). 런타임은 없는 테이블을 "아직 번역 없음" 으로 읽는다
                     // 산출물은 스테이징에만 있다. 소스 트리에 남은 것은 낡은 쿠킹 잔재이고, Dev 런타임이 소스가 없을 때 그것으로 물러나 실패를 가리므로 넣지 않는다.
                     if ( AssetCookPath::isCookedOutput( relativePath ) )

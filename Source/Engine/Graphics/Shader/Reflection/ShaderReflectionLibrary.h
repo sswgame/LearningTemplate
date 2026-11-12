@@ -55,6 +55,12 @@ namespace sw
         [[nodiscard]] static bool loadManifest( string_view binDirectoryRelative, EntryMap& outMapEntry );
 
         /**
+         * @brief 디스크의 매니페스트 파일 하나(쿠킹 스테이징 — 리소스 트리 밖)를 통째로 읽습니다. 쿠킹본 판정(`ShaderCookStamp::verifyCookedShaders`)이 키를 견줄 때 씁니다.
+         * @return 파일이 없거나 형식이나 내용이 맞지 않으면 false 입니다(그때 `outMapEntry` 는 비어 있습니다).
+         */
+        [[nodiscard]] static bool loadManifestFile( string_view absManifestPath, EntryMap& outMapEntry );
+
+        /**
          * @brief 셰이더 하나의 리플렉션을 쿠킹된 매니페스트에서 조회합니다(쿠킹본 정책의 공급자 `CookedShaderBytecodeProvider` 가 부른다 — 소스 정책은 실행 중 바이트코드에서 만든다).
          * @details 매니페스트는 경로별로 한 번만 읽어 캐시합니다. 팩 파일과 낱개 파일을 가리지 않고 읽습니다. 리플렉션을 구하는 입구는 `ShaderCache::getReflection` 하나입니다.
          *          주의: 한쪽(ShaderBindingLayoutCache)만 다른 출처를 쓰고 Material 이 XML 순서 패킹으로 남으면 셰이더는 24바이트 원소를 읽는데

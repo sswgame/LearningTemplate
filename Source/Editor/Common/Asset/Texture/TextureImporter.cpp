@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 
-#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -710,13 +710,17 @@ namespace sw::editor
         const TextureRawImporter importer{ config, pTaskManager };
         AssetImportSummary       summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager );
         // 공유 원본이 쓰는 규칙은 패턴에 맞는 파일이 없어도(모델 옆 자리로 골랐다) 살아 있다.
-        const vector<string>      listSourcePath = AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer );
+        const vector<string> listSourcePath = AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer );
+        // 원본마다 공유 규칙 이름을 한 번만 구한다 — 규칙마다 원본 전체를 훑으면 규칙 수 × 원본 수다.
+        unordered_set<string> uniqueSharedRuleName;
+        for ( const string& path : listSourcePath )
+        {
+            uniqueSharedRuleName.insert( TextureImportConfig::findSharedRuleName( path ) );
+        }
         vector<TextureImportRule> listCheckedRule;
         for ( const TextureImportRule& rule : config.getRules() )
         {
-            const string ruleName = StringUtil::toLower( rule._name.c_str() );
-            const bool   bShared  = VectorUtil::containsIf( listSourcePath, [&ruleName]( const string& path )
-               { return TextureImportConfig::findSharedRuleName( path ) == ruleName; } );
+            const bool bShared = uniqueSharedRuleName.contains( StringUtil::toLower( rule._name.c_str() ) );
             if ( bShared == false )
                 listCheckedRule.push_back( rule );
         }

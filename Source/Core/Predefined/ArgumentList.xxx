@@ -57,6 +57,8 @@ SW_REGISTER_ARGUMENT( LANGUAGE, "", false, "lang" )
 
 // 셰이더를 모든 백엔드의 바이너리로 쿠킹하고 끝낸다(헤드리스). 쓸 폴더는 `-cooked-dir=<폴더>` 다(`<폴더>/<도메인>/shaders/bin/<백엔드>` — 팩이 거기서 담는다). 개발 실행은 굽지 않아도 돈다(쓰일 때 컴파일)
 SW_REGISTER_ARGUMENT( COOK_SHADERS, false, false, "cook-shaders" )
+// `--cook-shaders` 와 함께: 표본 규칙(`Config/Dev/ShaderCookSample.json` 의 축 — 소스 · 진입점 · 스테이지 · 퍼뮤테이션 define)의 값마다 한 번 덮는 요청만 굽는다. 빈 쿠킹 폴더에만 굽는다(채워졌으면 실패)
+SW_REGISTER_ARGUMENT( COOK_SHADERS_SAMPLE, false, false, "cook-shaders-sample" )
 
 // 씬과 프리팹을 바이너리(SCN1, PFB2)로 쿠킹하고 끝낸다(VAT · 내비메시 포함). 쓸 폴더는 `-cooked-dir=<폴더>` 다
 SW_REGISTER_ARGUMENT( COOK_SCENES, false, false, "cook-scenes" )
@@ -199,9 +201,10 @@ SW_REGISTER_ARGUMENT( SCENARIO_REPORT, CommandLineDiskPath{}, false, "scenario-r
 // `-scenario` 를 이 백엔드들(`all` 또는 `dx11,vk` — 쿠킹 표의 명령줄 이름)마다 자식 App 으로 동시에 돌리고 결과를 모은다(`AutomationPerBackend`).
 // 이 프로세스는 창 · GPU 없이 기다리기만 한다. 종료 코드는 첫 실패 백엔드의 것, 모두 건너뛰면 13.
 SW_REGISTER_ARGUMENT( SCENARIO_BACKENDS, "", false, "scenario-backends" )
-// `-scenario-backends` 와 함께: 그린 화소를 판정하는 시나리오(`<ExpectImage>` · 마젠타 문턱이 있는 `<CaptureEditorUI>`)만 모든 백엔드에서 돌고, 나머지는 백엔드를 돌아가며 하나씩 맡는다 — 백엔드와 무관한 로직을
-// 네 번 돌지 않는다(언리얼 편집기 테스트가 RHI 하나로 도는 것과 같다). 편집기 체인이 쓴다.
-SW_REGISTER_ARGUMENT( SCENARIO_BACKEND_SPLIT, false, false, "scenario-backend-split" )
+// `-scenario-backends` 와 함께 시나리오를 백엔드에 나눠 준다. `independent`: 판정이 백엔드에 달린 시나리오(`<ExpectImage>` · 마젠타 문턱이 있는 `<CaptureEditorUI>` · `<Record>` …)만 모든 백엔드에서 돌고,
+// 나머지는 백엔드를 돌아가며 하나씩 맡는다 — 백엔드와 무관한 로직을 네 번 돌지 않는다(언리얼 편집기 테스트가 RHI 하나로 도는 것과 같다). Release 편집기 체인이 쓴다.
+// `all`: 모든 시나리오를 돌아가며 하나씩 — 그림 · 기록 대조는 Release 가 네 백엔드로 맡고 Debug 체인은 단언 · 검사를 시나리오마다 한 번 지나려고 쓴다(`Test/Scenario/CMakeLists.txt`).
+SW_REGISTER_ARGUMENT( SCENARIO_BACKEND_SPLIT, "", false, "scenario-backend-split" )
 // 나눌 때 첫 시나리오를 맡을 백엔드 번호(돌아가며 맡는 시작점). 없으면(-1) UTC 날짜(일)로 정해 날마다 한 칸씩 돈다 — 나흘이면 모든 시나리오가 모든 백엔드를 거친다.
 // 부모 로그에 고른 값이 남으므로 같은 배정으로 다시 돌릴 때 이 값을 준다.
 SW_REGISTER_ARGUMENT( SCENARIO_BACKEND_SPLIT_OFFSET, -1, false, "scenario-backend-split-offset" )

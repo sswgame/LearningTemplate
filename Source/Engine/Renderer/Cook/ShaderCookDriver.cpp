@@ -23,6 +23,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
@@ -39,6 +40,9 @@
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Renderer/Cook/ShaderCookRequestCollector.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
+
+#include <algorithm>
 
 namespace sw
 {
@@ -388,8 +392,33 @@ namespace sw
     ShaderCookSummary ShaderCookDriver::cookAllShaders( string_view        cookedDir,
                                                         string_view        resourceRoot,
                                                         ShaderTargetFormat targetFormat,
-                                                        bool               bForceAll )
+                                                        bool               bForceAll,
+                                                        ShaderCookScope    scope )
     {
+        // 표본은 빈 스테이징에만 굽는다 — 쿠커가 요청 밖의 바이너리를 지우므로 채워진 스테이징을 표본으로 덮으면 쿠킹본을 잃는다.
+        vector<ShaderCookSampleAxis> listSampleAxis;
+        if ( scope == ShaderCookScope::Sample )
+        {
+            vector<string> listExisting;
+            (void)FileUtil::collectFiles( cookedDir, "", listExisting, true ); // 폴더가 없으면 빈 목록이다
+            const expected<vector<ShaderCookSampleAxis>> rule = loadSampleRule();
+            if ( cookedDir.empty() || listExisting.empty() == false || rule.has_value() == false )
+            {
+                if ( rule.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "ShaderCooker.SampleRuleInvalid", "%#: %#", rule.error().message(), rule.error().detail() );
+                }
+                else
+                {
+                    SW_LOG_ERROR_ID( "ShaderCooker.SampleNeedsEmptyStaging", "A sample cook needs an empty cooked folder (it would remove the binaries it does not cook): '%#'", cookedDir );
+                }
+                ShaderCookSummary nothingCooked{};
+                nothingCooked._failedCount = 1;
+                return nothingCooked;
+            }
+            listSampleAxis = *rule;
+        }
+
         // 루트를 주지 않으면 찾아 둔 리소스 루트다. 그것도 없으면 쿠킹하지 못한다(작업 폴더 기준 "Resource" 로 짐작하지 않는다).
         const string rootDir = resourceRoot.empty() ? engine::getSubsystem<AssetPaths>().getRootFolderPath() : string( resourceRoot );
         if ( rootDir.empty() || FileUtil::isDirectory( rootDir ) == false )
@@ -431,13 +460,100 @@ namespace sw
             nothingCooked._failedCount = 1; // 아무것도 쿠킹하지 않은 채 성공으로 끝나지 않는다
             return nothingCooked;
         }
+        if ( scope == ShaderCookScope::Sample )
+        {
+            const size_t requestCount = listRequest.size();
+            listRequest               = selectSample( listRequest, listSampleAxis );
+            SW_LOG_INFO_ID( "ShaderCooker.SampleSelected", "Sample cook: %# of %# requests cover every value of the rule axes (%#)", listRequest.size(), requestCount, kSampleRuleFile );
+        }
         return cookRequests( cookedDir, listRequest, targetFormat, bForceAll );
+    }
+
+    expected<vector<ShaderCookSampleAxis>> ShaderCookDriver::parseSampleRule( string_view jsonText, string_view sourceName )
+    {
+        static constexpr struct
+        {
+            string_view          _name;
+            ShaderCookSampleAxis _axis;
+        } kArrAxisName[] = {
+            {           "source",            ShaderCookSampleAxis::Source},
+            {       "entryPoint",        ShaderCookSampleAxis::EntryPoint},
+            {            "stage",             ShaderCookSampleAxis::Stage},
+            {"permutationDefine", ShaderCookSampleAxis::PermutationDefine},
+        };
+        JSONDocument document;
+        if ( document.parse( jsonText, sourceName ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the shader cook sample rule is not JSON", sourceName } );
+        const JSONValue listAxisValue = document.getRoot().get( "_listCoverAxis" );
+        if ( listAxisValue.isArray() == false || listAxisValue.size() == 0 )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the shader cook sample rule needs a non-empty _listCoverAxis array", sourceName } );
+        vector<ShaderCookSampleAxis> listAxis;
+        for ( size_t index = 0; index < listAxisValue.size(); ++index )
+        {
+            const JSONValue item = listAxisValue.at( index );
+            const string    name = item.isString() ? item.asString() : string{};
+            const auto*     pFound =
+                std::find_if( std::begin( kArrAxisName ), std::end( kArrAxisName ), [&name]( const auto& entry )
+            { return entry._name == string_view{ name }; } );
+            if ( pFound == std::end( kArrAxisName ) || VectorUtil::contains( listAxis, pFound->_axis ) )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "_listCoverAxis takes source | entryPoint | stage | permutationDefine (each once)", name } );
+            listAxis.push_back( pFound->_axis );
+        }
+        return listAxis;
+    }
+
+    expected<vector<ShaderCookSampleAxis>> ShaderCookDriver::loadSampleRule()
+    {
+        const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kSampleRuleFile );
+        string       text;
+        if ( FileUtil::readTextFile( path, text ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "could not read the shader cook sample rule", path } );
+        return parseSampleRule( text, path );
+    }
+
+    vector<ShaderCookRequest> ShaderCookDriver::selectSample( const vector<ShaderCookRequest>& listRequest, const vector<ShaderCookSampleAxis>& listAxis )
+    {
+        // 축마다 이미 덮은 값. 값 글은 축 안에서만 견주므로 축끼리 섞이지 않는다.
+        vector<unordered_set<string>> listCovered( listAxis.size() );
+        vector<ShaderCookRequest>     listSample;
+        vector<string>                listValue;
+        for ( const ShaderCookRequest& request : listRequest )
+        {
+            bool bAddsValue = false;
+            for ( size_t axisIndex = 0; axisIndex < listAxis.size(); ++axisIndex )
+            {
+                listValue.clear();
+                switch ( listAxis[axisIndex] )
+                {
+                    case ShaderCookSampleAxis::Source:
+                        listValue.push_back( request._shaderPath );
+                        break;
+                    case ShaderCookSampleAxis::EntryPoint:
+                        listValue.push_back( request._shaderPath + "|" + request._entryPoint );
+                        break;
+                    case ShaderCookSampleAxis::Stage:
+                        listValue.push_back( to_string( static_cast<uint32>( request._stage ) ) );
+                        break;
+                    case ShaderCookSampleAxis::PermutationDefine:
+                        if ( request._listPermutation.empty() )
+                            listValue.emplace_back(); // 퍼뮤테이션이 없는 갈래도 한 번 덮는다
+                        listValue.insert( listValue.end(), request._listPermutation.begin(), request._listPermutation.end() );
+                        break;
+                }
+                for ( const string& value : listValue )
+                    bAddsValue = listCovered[axisIndex].insert( value ).second || bAddsValue;
+            }
+            if ( bAddsValue )
+                listSample.push_back( request );
+        }
+        return listSample;
     }
 
     void ShaderCookDriver::collectCookedDomains( const vector<ShaderCookRequest>& listRequest, vector<string>& outListDomain )
     {
         static constexpr string_view kShadersSuffix = "/shaders";
         outListDomain.clear();
+        unordered_set<string> uniqueDomain; // 목록은 처음 나온 순서를 지키고, 있는지는 집합으로 본다(요청 수 × 도메인 수를 훑지 않는다)
         for ( const ShaderCookRequest& request : listRequest )
         {
             const ShaderSourceID        source{ request._shaderPath }; // 폴더 값은 이 객체의 글을 가리킨다
@@ -445,7 +561,7 @@ namespace sw
             if ( shadersFolder.has_value() == false || StringUtil::endsWith( *shadersFolder, kShadersSuffix ) == false )
                 continue;
             string domain{ shadersFolder->substr( 0, shadersFolder->size() - kShadersSuffix.size() ) };
-            if ( VectorUtil::contains( outListDomain, domain ) == false )
+            if ( uniqueDomain.insert( domain ).second )
                 outListDomain.push_back( std::move( domain ) );
         }
     }

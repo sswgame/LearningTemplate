@@ -4,7 +4,7 @@
 
 #include "DevTools/Client/Automation/Runner/AutomationPerBackend.h"
 
-// AutomationPerBackendTest — 백엔드 사이의 `<Record>` 대조(`findRecordMismatches`, 부모 App 가 자식 보고의 records[] 로 결정성을 판정하는 근거)와 백엔드 목록 읽기(`parseBackendList`)(nogpu).
+// AutomationPerBackendTest — 백엔드 사이의 `<Record>` 대조(`findRecordMismatches`, 부모 App 가 자식 보고의 records[] 로 결정성을 판정하는 근거)와 백엔드 목록 · 나누기 값 읽기(`parseBackendList` · `parseBackendSplit`)(nogpu).
 
 /**
  * @brief [AutomationPerBackendTest] 모두 같으면 빈 목록이고, 다른 순번만 한 줄로 각 백엔드의 값을 적는다
@@ -77,4 +77,19 @@ SW_TEST_CASE( AutomationPerBackendTest, BackendListAllFollowsPlatformAvailabilit
     SW_REQUIRE_TRUE( listNamed.has_value() );
     SW_EXPECT_TRUE( *listNamed == ( sw::vector<sw::string>{ "dx12", "gl" } ) );
     SW_EXPECT_FALSE( sw::AutomationPerBackend::parseBackendList( "all,vk" ).has_value() );
+}
+
+/**
+ * @brief [AutomationPerBackendTest] 나누기 값은 independent · all 둘뿐이다 — 빈 값 · 옛 맨 플래그 꼴 · 모르는 값은 오류다(체인이 말없이 나누지 않고 돌지 않게)
+ */
+SW_TEST_CASE( AutomationPerBackendTest, BackendSplitTakesIndependentOrAll )
+{
+    const sw::expected<sw::AutomationBackendSplit> independent = sw::AutomationPerBackend::parseBackendSplit( "independent" );
+    SW_REQUIRE_TRUE( independent.has_value() );
+    SW_EXPECT_TRUE( *independent == sw::AutomationBackendSplit::Independent );
+    const sw::expected<sw::AutomationBackendSplit> all = sw::AutomationPerBackend::parseBackendSplit( "all" );
+    SW_REQUIRE_TRUE( all.has_value() );
+    SW_EXPECT_TRUE( *all == sw::AutomationBackendSplit::All );
+    SW_EXPECT_FALSE( sw::AutomationPerBackend::parseBackendSplit( "" ).has_value() );
+    SW_EXPECT_FALSE( sw::AutomationPerBackend::parseBackendSplit( "true" ).has_value() );
 }

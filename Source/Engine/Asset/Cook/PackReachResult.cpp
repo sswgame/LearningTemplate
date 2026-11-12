@@ -92,6 +92,13 @@ namespace sw
                 vector<CatalogEntry>    _listEntry;
             };
 
+            /** @brief 연 카탈로그의 항목 하나의 자리입니다(색인 값 — 카탈로그는 `unique_ptr` 라 옮겨지지 않고, 항목 목록은 연 뒤 바뀌지 않는다). */
+            struct CatalogEntrySlot
+            {
+                CatalogFile* _pCatalog{ nullptr };
+                size_t       _index{ 0 };
+            };
+
             /** @brief 불린 항목 id 하나입니다. */
             struct NamedEntry
             {
@@ -115,7 +122,12 @@ namespace sw
                 unordered_set<string>           _setNamedEntry;    ///< 불린 항목(`<이름 공간>\t<id>`)
                 vector<NamedEntry>              _listPendingEntry; ///< 불렸고 아직 찾아보지 않은 항목
                 vector<unique_ptr<CatalogFile>> _listCatalog;      ///< 연 카탈로그 파일
-                uint8                           _bFailed : 1;
+                // 아래 색인은 찾기마다 목록 · 집합 전체를 훑지 않으려는 것이다(불린 항목 수 × 연 항목 수, 폴더 참조 수 × 파일 수). 값의 순서는 예전 훑기의 순서(연 순서 · 집합 순서) 그대로다.
+                unordered_map<string, vector<CatalogEntrySlot>> _mapEntrySlot;      ///< `<이름 공간>\t<id>` → 연 카탈로그의 그 항목들(연 순서)
+                unordered_map<string, vector<CatalogFile*>>     _mapCatalogByID;    ///< 카탈로그 파일 id → 연 카탈로그
+                unordered_map<string, vector<string>>           _mapPackableUnder;  ///< 폴더 → 그 아래 담을 수 있는 파일(`_files._setPackable` 순서)
+                unordered_set<string>                           _setExistingFolder; ///< 있는 파일이 아래에 있는 폴더
+                uint8                                           _bFailed : 1;
 
                 Walker( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source, unordered_set<string>& setIncluded,
                         unordered_set<string>& setReferencedExcluded )
@@ -132,8 +144,23 @@ namespace sw
                     , _setNamedEntry{}
                     , _listPendingEntry{}
                     , _listCatalog{}
+                    , _mapEntrySlot{}
+                    , _mapCatalogByID{}
+                    , _mapPackableUnder{}
+                    , _setExistingFolder{}
                     , _bFailed{ SW_FALSE }
                 {
+                    // 파일마다 조상 폴더(`a/b/c.x` → `a/b` · `a`)를 한 번 색인한다.
+                    for ( const string& assetID : files._setPackable )
+                    {
+                        for ( size_t slash = assetID.rfind( '/' ); slash != string::npos && slash > 0; slash = assetID.rfind( '/', slash - 1 ) )
+                            _mapPackableUnder[assetID.substr( 0, slash )].push_back( assetID );
+                    }
+                    for ( const string& assetID : files._setExisting )
+                    {
+                        for ( size_t slash = assetID.rfind( '/' ); slash != string::npos && slash > 0; slash = assetID.rfind( '/', slash - 1 ) )
+                            _setExistingFolder.insert( assetID.substr( 0, slash ) );
+                    }
                     for ( const string& field : rules._listUnfollowedField )
                     {
                         _setUnfollowedField.insert( field );
@@ -298,21 +325,24 @@ namespace sw
                         if ( bWhole || _setNamedEntry.contains( makeTabKey( rule._kind, entry._id ) ) )
                             visitEntry( catalog, entry );
                     }
+                    for ( size_t index = 0; index < catalog._listEntry.size(); ++index )
+                    {
+                        _mapEntrySlot[makeTabKey( rule._kind, catalog._listEntry[index]._id )].push_back( CatalogEntrySlot{ pCatalog.get(), index } );
+                    }
+                    _mapCatalogByID[assetID].push_back( pCatalog.get() );
                     _listCatalog.push_back( std::move( pCatalog ) );
                 }
 
                 /** @brief 불린 항목을 연 카탈로그에서 찾아 따라갑니다. 아직 열지 않은 파일은 열 때 `_setNamedEntry` 로 본다. 없는 id 는 담을 것이 없다. */
                 void visitNamedEntry( const NamedEntry& named )
                 {
-                    for ( const unique_ptr<CatalogFile>& pCatalog : _listCatalog )
+                    const auto slotIter = _mapEntrySlot.find( makeTabKey( named._kind, named._id ) );
+                    if ( slotIter == _mapEntrySlot.end() )
+                        return;
+                    const vector<CatalogEntrySlot> listSlot = slotIter->second; // 따라가는 동안 새 카탈로그가 열려 색인이 자랄 수 있다 — 지금 연 것까지만 본다(예전 훑기와 같다)
+                    for ( const CatalogEntrySlot& slot : listSlot )
                     {
-                        if ( pCatalog->_pRule->_kind != named._kind )
-                            continue;
-                        for ( CatalogEntry& entry : pCatalog->_listEntry )
-                        {
-                            if ( entry._id == named._id )
-                                visitEntry( *pCatalog, entry );
-                        }
+                        visitEntry( *slot._pCatalog, slot._pCatalog->_listEntry[slot._index] );
                     }
                 }
 
@@ -321,10 +351,12 @@ namespace sw
                 {
                     if ( _setWholeCatalog.insert( assetID ).second == false )
                         return;
-                    for ( const unique_ptr<CatalogFile>& pCatalog : _listCatalog )
+                    const auto catalogIter = _mapCatalogByID.find( assetID );
+                    if ( catalogIter == _mapCatalogByID.end() )
+                        return;
+                    const vector<CatalogFile*> listOpened = catalogIter->second; // 따라가는 동안 색인이 자랄 수 있다
+                    for ( CatalogFile* pCatalog : listOpened )
                     {
-                        if ( pCatalog->_assetID != assetID )
-                            continue;
                         for ( CatalogEntry& entry : pCatalog->_listEntry )
                         {
                             visitEntry( *pCatalog, entry );
@@ -339,21 +371,6 @@ namespace sw
                         markWholeCatalog( assetID );
                     if ( _setIncluded.insert( assetID ).second )
                         _listPending.push_back( assetID );
-                }
-
-                /** @brief @p folder 아래(`folder/…`)의 파일을 @p setFile 에서 찾아 @p outListFile 에 더합니다. */
-                static void collectUnderFolder( const unordered_set<string>& setFile, const string& folder, vector<string>* pOutListFile, bool& outbAny )
-                {
-                    const string prefix = folder + "/";
-                    for ( const string& assetID : setFile )
-                    {
-                        if ( StringUtil::startsWith( assetID, prefix ) == false )
-                            continue;
-                        outbAny = true;
-                        if ( pOutListFile == nullptr )
-                            return;
-                        pOutListFile->push_back( assetID );
-                    }
                 }
 
                 /**
@@ -374,11 +391,10 @@ namespace sw
                         _setReferencedExcluded.insert( path );
                         return;
                     }
-                    vector<string> listUnder;
-                    bool           bPackableUnder = false;
-                    collectUnderFolder( _files._setPackable, path, &listUnder, bPackableUnder );
-                    if ( bPackableUnder )
+                    const auto underIter = _mapPackableUnder.find( path );
+                    if ( underIter != _mapPackableUnder.end() )
                     {
+                        const vector<string>& listUnder = underIter->second; // 색인은 생성자에서만 채운다
                         // 폴더를 가리키는 참조는 런타임이 그 폴더를 훑는다는 뜻이다(외형 데이터 폴더 · 시나리오 사본 원본) — 그 아래 전부가 쓰인다.
                         for ( const string& assetID : listUnder )
                         {
@@ -386,9 +402,7 @@ namespace sw
                         }
                         return;
                     }
-                    bool bExistingUnder = false;
-                    collectUnderFolder( _files._setExisting, path, nullptr, bExistingUnder );
-                    if ( bExistingUnder )
+                    if ( _setExistingFolder.contains( path ) )
                         return;
                     SW_LOG_ERROR_ID( "PackReachability.MissingReference", "Pack cook: %# (%#) references '%#', which is not in any cooked domain - fix the reference or add the asset (nothing is dropped silently)",
                                      referrer, field, path );

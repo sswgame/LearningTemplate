@@ -331,19 +331,26 @@ namespace sw
     {
         outListOrder.clear();
         outLatestBuild = string( installedBuild );
+        // 시작 빌드마다 (마지막 패치 번호, 패치 수)를 한 번 색인한다 — 걸음마다 목록 전체를 훑으면 쌓인 패치 수의 제곱이다.
+        struct StartInfo
+        {
+            size_t _lastIndex{ 0 };
+            int32  _count{ 0 };
+        };
+        unordered_map<string, StartInfo> mapStart;
+        for ( size_t manifestIndex = 0; manifestIndex < listManifest.size(); ++manifestIndex )
+        {
+            StartInfo& start = mapStart[listManifest[manifestIndex]._fromBuild];
+            start._lastIndex = manifestIndex;
+            ++start._count;
+        }
         while ( true )
         {
-            size_t nextIndex  = listManifest.size();
-            int32  startCount = 0;
-            for ( size_t manifestIndex = 0; manifestIndex < listManifest.size(); ++manifestIndex )
-            {
-                if ( listManifest[manifestIndex]._fromBuild != outLatestBuild )
-                    continue;
-                nextIndex = manifestIndex;
-                ++startCount;
-            }
-            if ( startCount == 0 )
+            const auto startIter = mapStart.find( outLatestBuild );
+            if ( startIter == mapStart.end() )
                 break;
+            const size_t nextIndex  = startIter->second._lastIndex;
+            const int32  startCount = startIter->second._count;
             if ( startCount > 1 )
             {
                 SW_LOG_ERROR_ID( "PackPatch.PackPatchChainForks", "Pack patch chain forks: %# patches start at build '%#'", startCount, outLatestBuild );
@@ -357,9 +364,14 @@ namespace sw
             outListOrder.push_back( nextIndex );
             outLatestBuild = listManifest[nextIndex]._toBuild;
         }
+        vector<uint8> listReached( listManifest.size(), uint8{ 0 } );
+        for ( const size_t manifestIndex : outListOrder )
+        {
+            listReached[manifestIndex] = 1;
+        }
         for ( size_t manifestIndex = 0; manifestIndex < listManifest.size(); ++manifestIndex )
         {
-            if ( std::find( outListOrder.begin(), outListOrder.end(), manifestIndex ) != outListOrder.end() )
+            if ( listReached[manifestIndex] != 0 )
                 continue;
             SW_LOG_ERROR_ID( "PackPatch.PackPatchBuildCannot", "Pack patch from build '%#' to '%#' (%#) cannot be reached from the installed build '%#' - a patch in between is missing", listManifest[manifestIndex]._fromBuild,
                              listManifest[manifestIndex]._toBuild, listManifest[manifestIndex]._packFileName, installedBuild );

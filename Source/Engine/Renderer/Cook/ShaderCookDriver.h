@@ -10,9 +10,11 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Graphics/Shader/Compile/IShaderCookService.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 
 namespace sw
@@ -37,11 +39,38 @@ namespace sw
     };
 
     /**
+     * @enum ShaderCookSampleAxis
+     * @brief 표본이 값마다 적어도 한 번 덮을 요청의 축입니다. 규칙 파일의 이름(`source` · `entryPoint` · `stage` · `permutationDefine`)과 짝입니다.
+     * @details 굽기 경로의 갈래는 소스(include · 도메인 · 머티리얼 그래프 생성물) · 진입점 · 스테이지(그래픽 · 컴퓨트 · 지오메트리 · 테셀레이션) · 퍼뮤테이션 define(변형 키)이 정한다.
+     *          바인드리스는 형식(SM6.6 의 DX12 · Vulkan)이 정하므로 축이 아니다. 언리얼 `-ShaderCompileWorker` 테스트가 셰이더 형식 · 퍼뮤테이션 대표만 굽는 것과 같은 자리다.
+     */
+    enum class ShaderCookSampleAxis : uint8
+    {
+        Source,
+        EntryPoint,
+        Stage,
+        PermutationDefine,
+    };
+
+    /**
      * @struct ShaderCookDriver
      * @brief 요청 수집과 일괄 쿠킹입니다. `App --cook-shaders` 와 테스트가 부릅니다.
      */
     struct SW_API ShaderCookDriver
     {
+        /** @brief 표본 규칙 파일(프로젝트 루트 기준, 개발 전용)입니다 — `{ "_listCoverAxis": [ "source", … ] }`. */
+        static constexpr const utf8* kSampleRuleFile = "Config/Dev/ShaderCookSample.json";
+
+        /** @brief 표본 규칙 JSON 글을 읽습니다. 칸이 없거나 비었거나 모르는 · 겹친 축이면 그 값이 대상인 오류입니다(기본값이 없다). */
+        [[nodiscard]] static expected<vector<ShaderCookSampleAxis>> parseSampleRule( string_view jsonText, string_view sourceName );
+        /** @brief 프로젝트의 표본 규칙 파일을 읽습니다(`parseSampleRule`). */
+        [[nodiscard]] static expected<vector<ShaderCookSampleAxis>> loadSampleRule();
+        /**
+         * @brief 요청을 순서대로 보며 @p listAxis 의 어느 축에서든 아직 덮지 않은 값을 가진 요청만 고릅니다(퍼뮤테이션이 없는 요청은 빈 define 하나로 센다). 결정적이다 — 같은 요청 목록이면 같은 표본이다.
+         * @details 표본은 모든 소스 · 진입점 · 스테이지 · define 을 한 번씩 컴파일 · 리플렉션 · 계약 검사에 지나게 한다. 전체 굽기는 배포 쿠킹(CookAssets — shipping-check)이 본다.
+         */
+        [[nodiscard]] static vector<ShaderCookRequest> selectSample( const vector<ShaderCookRequest>& listRequest, const vector<ShaderCookSampleAxis>& listAxis );
+
         /**
          * @brief 렌더 파이프라인 에셋(pipeline XML)과 엔진 기동 데이터(enginedefaultassets.xml)를 바탕으로
          *        게임 런타임에 실제로 필요한 셰이더와 퍼뮤테이션만 네 RHI 바이너리로 한꺼번에 쿠킹합니다.
@@ -49,12 +78,15 @@ namespace sw
          * @param resourceRoot 리소스 루트 디렉터리(비어 있으면 AssetPaths 기준으로 자동 탐색)
          * @param targetFormat 대상 포맷(Count 면 DX11, DX12, Vulkan, OpenGL 모두 쿠킹)
          * @param bForceAll true 면 내용 해시와 상관없이 모두 다시 컴파일
+         * @param scope Sample 이면 표본(`selectSample`)만 굽는다. 쿠커는 요청 밖의 바이너리를 지우고 스탬프는 폴더의 소스 모두를 적으므로 표본은 빈(없는) 스테이징에만 굽는다 —
+         *              채워진 스테이징이면 실패다(쿠킹본을 표본으로 덮지 않는다)
          * @return 쿠킹된 수, 실패 수, 계약 위반 수, 지운 옛 바이너리 수. 요청이 하나도 없어도 실패다
          */
         static ShaderCookSummary cookAllShaders( string_view        cookedDir,
                                                  string_view        resourceRoot = {},
                                                  ShaderTargetFormat targetFormat = ShaderTargetFormat::Count,
-                                                 bool               bForceAll    = false );
+                                                 bool               bForceAll    = false,
+                                                 ShaderCookScope    scope        = ShaderCookScope::All );
 
         /** @brief 요청 @p listRequest 가 쿠킹하는 도메인(`engine` · `game/<팩>`)을 처음 나온 순서로 모읍니다. `shaders` 폴더 칸이 없는 요청은 쿠킹도 실패하므로 여기서는 건너뜁니다. */
         static void collectCookedDomains( const vector<ShaderCookRequest>& listRequest, vector<string>& outListDomain );

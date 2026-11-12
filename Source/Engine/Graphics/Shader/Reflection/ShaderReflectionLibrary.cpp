@@ -148,17 +148,13 @@ namespace sw
         }
 
         /**
-         * @brief 리소스 상대 경로의 매니페스트 파일 하나를 읽어 `outMapEntry` 에 채운다.
-         * @return 파일이 없거나 형식 · 내용이 맞지 않으면 false 다(그때 `outMapEntry` 는 비어 있다).
+         * @brief 매니페스트 바이트를 `outMapEntry` 에 풉니다. @p manifestLabel 은 경고 글의 이름표입니다.
+         * @return 형식 · 내용이 맞지 않으면 false 다(그때 `outMapEntry` 는 비어 있다).
          */
-        [[nodiscard]] bool readManifestInternal( const AssetID& assetID, ShaderReflectionLibrary::EntryMap& outMapEntry )
+        [[nodiscard]] bool parseManifestInternal( const vector<uint8>& bytes, string_view manifestLabel, ShaderReflectionLibrary::EntryMap& outMapEntry )
         {
-            const string& manifestRelative = assetID.str();
+            const string manifestRelative( manifestLabel );
             outMapEntry.clear();
-            // 매니페스트는 리소스 id 다 — 리소스 입구로 바이트를 읽고 버퍼로 연다(`Archive` 의 파일 입구는 디스크 경로만 받는다).
-            vector<uint8> bytes;
-            if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
-                return false;
             Archive archive( bytes.data(), static_cast<uint64>( bytes.size() ) );
             if ( archive.isError() )
                 return false;
@@ -189,6 +185,20 @@ namespace sw
                 outMapEntry.emplace( std::move( entryKey ), std::move( entryData ) );
             }
             return true;
+        }
+
+        /**
+         * @brief 리소스 상대 경로의 매니페스트 파일 하나를 읽어 `outMapEntry` 에 채운다.
+         * @return 파일이 없거나 형식 · 내용이 맞지 않으면 false 다(그때 `outMapEntry` 는 비어 있다).
+         */
+        [[nodiscard]] bool readManifestInternal( const AssetID& assetID, ShaderReflectionLibrary::EntryMap& outMapEntry )
+        {
+            outMapEntry.clear();
+            // 매니페스트는 리소스 id 다 — 리소스 입구로 바이트를 읽고 버퍼로 연다(`Archive` 의 파일 입구는 디스크 경로만 받는다).
+            vector<uint8> bytes;
+            if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
+                return false;
+            return parseManifestInternal( bytes, assetID.str(), outMapEntry );
         }
     } // namespace
 
@@ -247,6 +257,16 @@ namespace sw
         if ( manifestRelative.empty() == false && manifestRelative.back() != '/' )
             manifestRelative += '/';
         return readManifestInternal( AssetID{ manifestRelative + getManifestFileName() }, outMapEntry );
+    }
+
+    bool ShaderReflectionLibrary::loadManifestFile( string_view absManifestPath, EntryMap& outMapEntry )
+    {
+        SW_MEMORY_SCOPE( Shader );
+        outMapEntry.clear();
+        vector<uint8> bytes;
+        if ( FileUtil::readFile( absManifestPath, bytes ) == false )
+            return false;
+        return parseManifestInternal( bytes, absManifestPath, outMapEntry );
     }
 
     bool ShaderReflectionLibrary::tryGet( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )

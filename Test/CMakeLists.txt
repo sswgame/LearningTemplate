@@ -220,12 +220,19 @@ endif()
 
 # 셰이더 캐시 — 제 DDC(`-shader-ddc-dir`)와 쿠킹 스테이징을 지운 뒤 굽고 판정한다(`Shader/RunShaderCacheRebuild.cmake`). 빌드 폴더가 함께 쓰는 DDC 는 건드리지 않는다 —
 # 지우면 뒤에 도는 시나리오 체인이 모두 빈 캐시로 돌아 백엔드마다 실행 시한에 걸렸다.
-add_test(NAME ShaderCache.RebuildFromEmpty
-	COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DDDC_DIR=${CMAKE_BINARY_DIR}/Testing/ShaderCache/DDC"
-		"-DCOOKED_DIR=${CMAKE_BINARY_DIR}/Testing/ShaderCache/Cooked" "-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs"
-		-P "${CMAKE_CURRENT_SOURCE_DIR}/Shader/RunShaderCacheRebuild.cmake"
-	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-set_tests_properties(ShaderCache.RebuildFromEmpty PROPERTIES LABELS nogpu TIMEOUT 3600 RUN_SERIAL TRUE)
+# Debug 에만 둔다: 보는 것은 빈 캐시에서 다시 만드는 길(구성과 무관한 로직)이고 쿠커의 단언은 Debug 에만 있다. 최적화 빌드의 쿠킹은 shipping-check(배포 구성 빌드의 CookAssets)가 본다.
+# 두 구성에서 돌면 묶음 검증마다 Debug 503 초 + Release 361 초를 차례로 썼다(2026-11-13).
+# CPU 를 다 쓰는 굽기라 시간 판정이 있는 항목(hostgpu · load)은 이것 뒤에 돈다(`swCpuHeavyTest` → DEPENDS, 아래 · Scenario/) — 다른 nogpu 항목과는 함께 돈다(예전 RUN_SERIAL 은 그것까지 막았다).
+set(swCpuHeavyTest "")
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	add_test(NAME ShaderCache.RebuildFromEmpty
+		COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DDDC_DIR=${CMAKE_BINARY_DIR}/Testing/ShaderCache/DDC"
+			"-DCOOKED_DIR=${CMAKE_BINARY_DIR}/Testing/ShaderCache/Cooked" "-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs"
+			-P "${CMAKE_CURRENT_SOURCE_DIR}/Shader/RunShaderCacheRebuild.cmake"
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(ShaderCache.RebuildFromEmpty PROPERTIES LABELS nogpu TIMEOUT 3600)
+	set(swCpuHeavyTest ShaderCache.RebuildFromEmpty)
+endif()
 
 # 리플렉션 파서 — Engine 을 링크하지 못해 단위 테스트 틀에 들어가지 못한다. 사례 헤더 하나마다 실제 실행 파일을 돌려 산출물 · 오류를 대조한다(`ReflectionParser/RunParserFixture.cmake`, 왜 이 모양인지 거기 적었다).
 if(TARGET ReflectionParser)
@@ -286,5 +293,8 @@ endif()
 get_property(swAllTest DIRECTORY PROPERTY TESTS)
 list(FILTER swAllTest EXCLUDE REGEX "^Import\.")
 set_tests_properties(${swAllTest} PROPERTIES FIXTURES_REQUIRED ImportedAssets)
+if(swCpuHeavyTest AND TARGET EditorModule)
+	set_tests_properties(Bake.Portraits.DirectX11 Bake.Portraits.DirectX12 Bake.Portraits.Vulkan Bake.Portraits.OpenGL PROPERTIES DEPENDS ${swCpuHeavyTest})
+endif()
 
 add_subdirectory(Scenario)
