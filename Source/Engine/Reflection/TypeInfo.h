@@ -57,29 +57,6 @@ namespace sw
             : PropertyListView{ listProperty.data(), listProperty.size() }
         {
         }
-        struct TypeInfo;
-
-        /**
-         * @struct TypeChain
-         * @brief 자기부터 기반까지의 타입 사슬입니다(`TypeInfo::getTypeChain`). 부모 사슬을 따라가는 곳은 모두 이것만 쓴다 — 고리 · 깊이 상한을 한 곳에서 막는다.
-         * @details 예전에는 걷는 곳마다 고리 방지를 따로 두었다(깊이 상한 · 방문 목록 · 아무것도 없음). 없는 걷기 하나(필드 이름 해시 검사)가 고리 사슬에서
-         *          끝나지 않았다. 언리얼 `UStruct::GetSuperStruct` 사슬은 컴파일러가 고리를 막지만, 여기는 이름으로 잇는 사슬이라 데이터가 고리를 만들 수 있다.
-         *          찾을 수 없는 부모에서 끝나고, 이미 담은 타입을 다시 만나면(고리) 그 앞에서 끝나며 `isLoop` 이 참이다. 상한(`kMaxParentChainDepth`)에서도 끝난다.
-         */
-        struct TypeChain
-        {
-            const TypeInfo* _arrType[constant::reflection::kMaxParentChainDepth]{}; ///< [0] 이 자기, 뒤로 갈수록 기반
-            uint32          _count{ 0 };
-            uint8           _bLoop{ SW_FALSE };   ///< 고리를 만나 끝났다
-            uint8           _bCapped{ SW_FALSE }; ///< 깊이 상한에서 끝났다
-
-            uint32                 size() const { return _count; }
-            bool                   isLoop() const { return _bLoop != SW_FALSE; }
-            const TypeInfo*        operator[]( uint32 index ) const { return _arrType[index]; }
-            const TypeInfo* const* begin() const { return _arrType; }
-            const TypeInfo* const* end() const { return _arrType + _count; }
-        };
-
         /** @brief 포인터 배열(상속 병합 목록)을 봅니다. */
         PropertyListView( const PropertyInfo* const* ppItems, size_t count ) noexcept
             : _pValues{ nullptr }
@@ -98,6 +75,29 @@ namespace sw
         const PropertyInfo*        _pValues;
         const PropertyInfo* const* _ppItems;
         size_t                     _count;
+    };
+
+    struct TypeInfo;
+
+    /**
+     * @struct TypeChain
+     * @brief 자기부터 기반까지의 타입 사슬입니다(`TypeInfo::getTypeChain`). 부모 사슬을 따라가는 곳은 모두 이것만 쓴다 — 고리 · 깊이 상한을 한 곳에서 막는다.
+     * @details 예전에는 걷는 곳마다 고리 방지를 따로 두었다(깊이 상한 · 방문 목록 · 아무것도 없음). 없는 걷기 하나(필드 이름 해시 검사)가 고리 사슬에서
+     *          끝나지 않았다. 언리얼 `UStruct::GetSuperStruct` 사슬은 컴파일러가 고리를 막지만, 여기는 이름으로 잇는 사슬이라 데이터가 고리를 만들 수 있다.
+     *          찾을 수 없는 부모에서 끝나고, 이미 담은 타입을 다시 만나면(고리) 그 앞에서 끝나며 `isLoop` 이 참이다. 상한(`kMaxParentChainDepth`)에서도 끝난다.
+     */
+    struct TypeChain
+    {
+        const TypeInfo* _arrType[constant::reflection::kMaxParentChainDepth]{}; ///< [0] 이 자기, 뒤로 갈수록 기반
+        uint32          _count{ 0 };
+        uint8           _bLoop{ SW_FALSE };   ///< 고리를 만나 끝났다
+        uint8           _bCapped{ SW_FALSE }; ///< 깊이 상한에서 끝났다
+
+        uint32                 size() const { return _count; }
+        bool                   isLoop() const { return _bLoop != SW_FALSE; }
+        const TypeInfo*        operator[]( uint32 index ) const { return _arrType[index]; }
+        const TypeInfo* const* begin() const { return _arrType; }
+        const TypeInfo* const* end() const { return _arrType + _count; }
     };
 
     /// @brief 등록된 타입의 정보입니다. FQN, 프로퍼티, 메서드, 생성 가능 여부를 담습니다.
