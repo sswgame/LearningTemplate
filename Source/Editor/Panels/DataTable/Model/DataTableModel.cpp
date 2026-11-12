@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Commands/Asset/EditorContentWrite.h"
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/Localization/LocalizationTools.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -71,6 +72,14 @@ namespace sw::editor
         saveLocalization(); // 고친 것이 있을 때만 쓴다
         const bool bGameDataSaved = _gameDataPath.empty() || saveGameDataFile();
         return bGameDataSaved && isAnyDirty() == false;
+    }
+
+    void DataTableModel::collectFilesToSave( vector<string>& outListPath ) const
+    {
+        if ( _bLocalizationDirty )
+            EditorDataTableCommands::collectLocalizationFiles( _localizationSheet, outListPath );
+        if ( _gameDataPath.empty() == false )
+            outListPath.push_back( _gameDataPath );
     }
 
     void DataTableModel::revertLocalization()
@@ -260,6 +269,8 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "DataTablePanel.GameDataNotValidXML", "Game data table '%#' is not saved - the text is not valid XML: %#", fileName.c_str(), _gameDataDocument.getError().c_str() );
             return false;
         }
+        if ( EditorContentWrite::refuseReadOnly( _gameDataPath, EditorContentWriteKind::Save ) ) // Save File 단추는 패널 저장을 지나지 않는다 — 같은 확인을 여기서도
+            return false;
         if ( FileUtil::writeTextFile( _gameDataPath, _selectedGameDataRawText ) == false )
         {
             SW_LOG_ERROR_ID( "DataTablePanel.CouldNotWriteGame", "Could not write game data table '%#'", _gameDataPath.c_str() );

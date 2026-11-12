@@ -123,6 +123,15 @@ namespace sw::editor
         return bAllSaved;
     }
 
+    void ProjectSettingsPanel::collectFilesToSave( vector<string>& outListPath ) const
+    {
+        for ( const unique_ptr<Page>& pPage : _listPage )
+        {
+            if ( pPage->_bDirty )
+                outListPath.push_back( pPage->_absolutePath );
+        }
+    }
+
     void ProjectSettingsPanel::revertDocument()
     {
         for ( const unique_ptr<Page>& pPage : _listPage )

@@ -207,6 +207,25 @@ namespace sw::editor
         }
     }
 
+    void EditorDocumentPanel::collectFilesToSave( vector<string>& outListPath ) const
+    {
+        appendFileToSave( _loadedAssetPath, outListPath );
+    }
+
+    void EditorDocumentPanel::appendFileToSave( string_view path, vector<string>& outListPath )
+    {
+        if ( path.empty() )
+            return;
+        if ( AbsolutePath::isStrictAbsolute( path ) )
+        {
+            outListPath.push_back( FileUtil::normalizeSeparators( path ) );
+            return;
+        }
+        const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( path );
+        if ( diskPath.has_value() )
+            outListPath.push_back( diskPath->str() );
+    }
+
     void EditorDocumentPanel::onDocumentSaved()
     {
         EditorContext* pContext = editor::findSubsystem<EditorContext>(); // 컨텍스트 없는 패널 테스트는 감시도 없다

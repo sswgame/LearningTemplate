@@ -109,6 +109,8 @@ namespace sw::editor
 
         /** @brief 스택을 사이드카 문서에 씁니다. 성공하면 지금 스택이 저장된 상태가 됩니다(`isStackUnsaved`). */
         [[nodiscard]] bool saveSidecar();
+        /** @brief `saveSidecar` 가 쓸 사이드카의 디스크 경로입니다(메시 파일 곁). 대상이 없거나 메시 자리를 풀지 못하면 빈 값입니다(이유는 `toDiskPath` 가 남긴다). */
+        [[nodiscard]] optional<string> findSidecarPath() const;
         /** @brief 사이드카 문서에서 스택을 다시 읽습니다. 없으면 false 입니다. 읽으면 그 스택이 저장된 상태가 됩니다. */
         [[nodiscard]] bool loadSidecar();
         /**

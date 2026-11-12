@@ -29,6 +29,8 @@ namespace sw::editor
         /** @brief 스프라이트 클립 편집 UI를 그립니다. */
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
+        /** @brief 포커스한 이미지가 아니라 곁 클립 파일(`SpriteClipModel::computeClipPath`)에 쓴다. */
+        void collectFilesToSave( vector<string>& outListPath ) const override;
         /** @brief 아틀라스 이미지를 해제합니다. */
         void shutdown() override;
         /** @brief 문서를 읽었습니다(감시 값이 읽지 않은 창을 거른다). */

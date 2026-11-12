@@ -198,6 +198,11 @@ namespace sw::editor
         return true;
     }
 
+    void GlobalVariablesPanel::collectFilesToSave( vector<string>& outListPath ) const
+    {
+        GlobalVariablesModel::collectFilesToSave( outListPath );
+    }
+
     void GlobalVariablesPanel::revertDocument()
     {
         GlobalVariablesModel::getVariableManager().resetAllToDefault();

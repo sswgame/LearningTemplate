@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 
@@ -31,7 +32,7 @@ namespace sw::editor
         /**
          * @brief `saveDocument()` 를 호출하고 성공했을 때만 dirty 를 지웁니다.
          * @details 모든 저장 경로가 이 함수를 거친다. 파생 클래스가 각자 구현하면 실패해도 dirty 를 지워 편집이 조용히 사라지거나, 성공해도 계속 미저장으로 남는다.
-         *          연 에셋 파일(`getDocumentAssetPath`)이 읽기 전용(버전 관리가 잠그지 않음)이면 `saveDocument` 를 부르지 않고 알린다 — 씬 저장 · 옮기기 · 삭제와 같은 확인(`EditorContentWrite::refuseReadOnly`)이다.
+         *          저장이 쓸 파일(`collectFilesToSave`) 중 하나라도 읽기 전용(버전 관리가 잠그지 않음)이면 `saveDocument` 를 부르지 않고 알린다 — 씬 저장 · 옮기기 · 삭제와 같은 확인(`EditorContentWrite::refuseReadOnly`)이다.
          * @return 저장에 성공했으면 true 입니다. false 이면 dirty 는 그대로 남습니다.
          */
         [[nodiscard]] bool saveDocumentAndClearDirty();
@@ -108,6 +109,12 @@ namespace sw::editor
         void clearDocumentDirty() { _bDocumentDirty = SW_FALSE; }
         /** @brief 문서를 디스크에 씁니다. 성공하면 true 입니다. */
         [[nodiscard]] virtual bool saveDocument() = 0;
+        /**
+         * @brief 지금 `saveDocument` 가 쓸 파일(디스크 절대 경로)을 @p outListPath 에 더합니다. `saveDocumentAndClearDirty` 가 쓰기 전에 하나씩 읽기 전용을 확인한다.
+         * @details 두 기반이 정한다(순수 가상) — 에셋 문서(`EditorDocumentPanel`)는 연 파일이 기본이고 다른 파일을 쓰는 패널이 재정의하며, 상태 문서(`EditorStateDocumentPanel`)는 패널마다 반드시 적는다.
+         *          빠뜨리면 그 파일은 확인 없이 Core 원자적 쓰기에서 알림 없이 진다. 유니티 `AssetModificationProcessor.OnWillSaveAssets( paths )` 가 저장할 경로 목록으로 체크아웃을 묻는 자리다.
+         */
+        virtual void collectFilesToSave( vector<string>& outListPath ) const = 0;
         /**
          * @brief 지금 저장해도 되면 true 입니다. false 이면 `saveDocumentAndClearDirty` 가 `saveDocument` 를 호출하지 않고 false 를 반환합니다.
          * @details 문서를 읽지 못한 패널(깨졌거나 새 형식)은 이전 문서의 데이터를 가지고 있다. 그대로 쓰면 읽지 못한 파일을 이전 문서로 덮어쓴다.

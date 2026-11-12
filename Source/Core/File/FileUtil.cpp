@@ -31,6 +31,8 @@ namespace sw
             atomic<FileUtil::WriteGate> _writeGate{ nullptr };
             /** @brief 새로 만드는 자리의 이름 규칙입니다(`FileUtil::setCreateRule`). 함수 포인터 하나라 상수 초기화된다. */
             atomic<FileUtil::WriteGate> _createRule{ nullptr };
+            /** @brief 읽기 전용이 "체크아웃 안 함" 인 자리의 규칙입니다(`FileUtil::setCheckoutRule`). 함수 포인터 하나라 상수 초기화된다. */
+            atomic<FileUtil::CheckoutRule> _checkoutRule{ nullptr };
         };
 
         struct FileUtilInternal
@@ -55,6 +57,16 @@ namespace sw
                     return true;
                 } ); // 폴더를 열지 못하면 항목이 없는 것과 같다 — 아래가 outName 이 비었는지로 가른다
                 return outName.empty() == false;
+            }
+
+            /** @brief @p path 에 체크아웃하지 않은 파일(`FileUtil::findNotOpenForEdit`)이 있으면 경로와 이유를 오류로 남기고 true 입니다 — 지우기 · 옮기기 · 덮는 복사의 입구가 부른다. */
+            [[nodiscard]] static bool refuseNotOpenForEdit( string_view path, const utf8* pAction )
+            {
+                const optional<string> lockedPath = FileUtil::findNotOpenForEdit( path );
+                if ( lockedPath.has_value() == false )
+                    return false;
+                SW_LOG_ERROR_ID( "File.NotOpenForEdit", "Refused to %# %# - '%#' is read-only (not checked out), check it out first", pAction, path, *lockedPath );
+                return true;
             }
 
             /** @brief 실패한 쓰기의 임시 파일을 지웁니다. 지우지 못하면 경고합니다 — 원본 옆에 `.tmp<pid>_<번호>` 가 남습니다. */
@@ -751,6 +763,34 @@ namespace sw
         return isCreateAllowed( path );
     }
 
+    FileUtil::CheckoutRule FileUtil::setCheckoutRule( CheckoutRule rule )
+    {
+        return FileUtilInternal::s_writeCounters._checkoutRule.exchange( rule, std::memory_order_acq_rel );
+    }
+
+    optional<string> FileUtil::findNotOpenForEdit( string_view path )
+    {
+        const CheckoutRule             rule = FileUtilInternal::s_writeCounters._checkoutRule.load( std::memory_order_acquire );
+        PlatformFileSystem::FileStatus status;
+        if ( rule == nullptr || path.empty() || PlatformFileSystem::queryStatus( path, status ) == false )
+            return nullopt; // 없는 자리는 지우거나 옮길 것이 없다
+        if ( status._kind == PlatformFileSystem::FileKind::File )
+            return status._bReadOnly && rule( path ) ? optional<string>{ normalizeSeparators( path ) } : nullopt;
+        if ( status._kind != PlatformFileSystem::FileKind::Directory || status._bLink )
+            return nullopt; // 폴더 링크는 링크만 지운다(가리키는 폴더는 그대로다)
+        optional<string> found;
+        (void)forEachDirectoryEntry( path, true, [&found, rule]( const DirectoryEntry& entry )
+        {
+            if ( entry._bDirectory == false && isReadOnlyFile( entry._path ) && rule( entry._path ) )
+            {
+                found = normalizeSeparators( entry._path );
+                return false;
+            }
+            return true;
+        } ); // 폴더를 끝까지 읽지 못하면 본 데까지다 — 지우기 자체가 못 지운 항목을 알린다
+        return found;
+    }
+
     bool FileUtil::isCreateAllowed( string_view path )
     {
         // 이름 규칙은 새로 생기는 자리만 본다 — 있는 파일을 덮어쓰거나 지우는 것은 이름을 만들지 않는다.
@@ -868,7 +908,7 @@ namespace sw
     {
         for ( const string& path : listPath )
         {
-            if ( exists( path ) && isWriteAllowed( path ) == false )
+            if ( exists( path ) && ( isWriteAllowed( path ) == false || FileUtilInternal::refuseNotOpenForEdit( path, "recycle" ) ) )
                 return false;
         }
         const bool bMoved = PlatformFileUtil::moveToRecycleBin( listPath );
@@ -1236,7 +1276,7 @@ namespace sw
 
     bool FileUtil::copyFile( string_view source, string_view destination )
     {
-        if ( isWriteAllowed( destination ) == false )
+        if ( isWriteAllowed( destination ) == false || FileUtilInternal::refuseNotOpenForEdit( destination, "overwrite" ) )
             return false;
         if ( PlatformFileSystem::copyFileOverwrite( source, destination ) == false )
         {
@@ -1269,7 +1309,7 @@ namespace sw
     {
         if ( path.empty() )
             return true;
-        if ( exists( path ) && isWriteAllowed( path ) == false ) // 없는 파일을 지우는 정리는 바꾸는 것이 아니다
+        if ( exists( path ) && ( isWriteAllowed( path ) == false || FileUtilInternal::refuseNotOpenForEdit( path, "remove" ) ) ) // 없는 파일을 지우는 정리는 바꾸는 것이 아니다
             return false;
         if ( PlatformFileSystem::removeEntry( path ) )
         {
@@ -1286,7 +1326,7 @@ namespace sw
     {
         if ( path.empty() )
             return true;
-        if ( exists( path ) && isWriteAllowed( path ) == false )
+        if ( exists( path ) && ( isWriteAllowed( path ) == false || FileUtilInternal::refuseNotOpenForEdit( path, "remove" ) ) )
             return false;
         if ( PlatformFileSystem::removeEntry( path ) )
         {
@@ -1298,7 +1338,7 @@ namespace sw
 
     bool FileUtil::renamePath( string_view from, string_view to )
     {
-        if ( from.empty() || to.empty() || exists( to ) || isWriteAllowed( from ) == false || isWriteAllowed( to ) == false )
+        if ( from.empty() || to.empty() || exists( to ) || isWriteAllowed( from ) == false || isWriteAllowed( to ) == false || FileUtilInternal::refuseNotOpenForEdit( from, "move" ) )
             return false;
         if ( PlatformFileUtil::replaceFile( string( from ).c_str(), string( to ).c_str() ) == false ) // 폴더는 대상이 없을 때 옮겨진다(MoveFileExW · rename)
             return false;
@@ -1312,7 +1352,7 @@ namespace sw
     {
         if ( path.empty() )
             return true;
-        if ( exists( path ) && isWriteAllowed( path ) == false )
+        if ( exists( path ) && ( isWriteAllowed( path ) == false || FileUtilInternal::refuseNotOpenForEdit( path, "remove" ) ) )
             return false;
 
         PlatformFileSystem::FileStatus status;
