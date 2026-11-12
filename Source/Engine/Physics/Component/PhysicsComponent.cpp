@@ -13,10 +13,20 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct PhysicsComponentInternal
+        {
+            /// 지은 배율과 다르다고 볼 상대 차이 — 회전한 월드 행렬을 풀면 축 길이가 몇 ulp 흔들려 절대 `kEpsilon`(1e-6)으로는 배율 5 짜리 회전 바디가 프레임마다 다시 지어진다.
+            static constexpr float32 kShapeScaleTolerance = 1e-4f;
+        };
+    } // namespace
+
     PhysicsComponent::PhysicsComponent( PhysicsComponentPhase phase )
         : _pScenePhysics{ nullptr }
         , _physicsIndex{ kNotRegistered }
         , _syncedTransformVersion{ 0 }
+        , _shapeScale{ 1.0f, 1.0f, 1.0f }
         , _phase{ phase }
         , _bRebuildPending{ false }
         , _bTeleportPending{ false }
@@ -102,6 +112,15 @@ namespace sw
     {
         SceneComponent::onPropertyChanged( propertyName );
         _bRebuildPending = true;
+    }
+
+    bool PhysicsComponent::isShapeScaleStale( const float3& worldScale ) const
+    {
+        const float3 delta{ worldScale._x - _shapeScale._x, worldScale._y - _shapeScale._y, worldScale._z - _shapeScale._z };
+        const float3 limit{ PhysicsComponentInternal::kShapeScaleTolerance * MathUtil::max( 1.0f, MathUtil::abs( _shapeScale._x ) ),
+                            PhysicsComponentInternal::kShapeScaleTolerance * MathUtil::max( 1.0f, MathUtil::abs( _shapeScale._y ) ),
+                            PhysicsComponentInternal::kShapeScaleTolerance * MathUtil::max( 1.0f, MathUtil::abs( _shapeScale._z ) ) };
+        return MathUtil::abs( delta._x ) > limit._x || MathUtil::abs( delta._y ) > limit._y || MathUtil::abs( delta._z ) > limit._z;
     }
 
     bool PhysicsComponent::isSimulated() const

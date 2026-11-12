@@ -108,25 +108,35 @@ namespace sw
         const bool bTransformChanged = consumeTransformChange();
         const bool bCreate           = _character.isValid() == false;
         const bool bTeleported       = consumeTeleport();
-        const bool bUnchanged        = bCreate == false && bTransformChanged == false && bTeleported == false;
+        // 배율은 끝 훅(`endPhysicsFrame`)이 먼저 읽었을 수 있다 — 변경 번호만이 아니라 지은 배율과의 값 비교로도 본다(3D 컨트롤러와 같다).
+        const bool bUnchanged = bCreate == false && bTransformChanged == false && bTeleported == false && isShapeScaleStale( _worldScale ) == false;
         if ( bUnchanged )
             return;
         PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
         const float2 position{ _worldPosition._x, _worldPosition._y };
-        if ( bCreate )
+        // 캡슐은 지을 때 배율을 굽는다 — 배율이 바뀌면 지금 자리에서 다시 짓고 세로 속도 · 이동 상태는 잇는다.
+        const bool bRescale = bCreate == false && isShapeScaleStale( _worldScale );
+        if ( bRescale )
+            releasePhysics( physics );
+        if ( bCreate || bRescale )
         {
-            PhysicsCharacterDesc2D desc;
+            const PhysicsShapeDesc2D capsule = getScaledCapsule();
+            PhysicsCharacterDesc2D   desc;
             desc._position      = position;
             desc._userData      = getOwner()->getObjectID();
-            desc._radius        = _radius;
-            desc._halfHeight    = _halfHeight;
+            desc._radius        = capsule._radius;
+            desc._halfHeight    = capsule._halfHeight;
             desc._maxSlopeAngle = _maxSlopeAngle;
             desc._layer         = physics.resolveLayer( _layer );
             _character          = pScene->createCharacter( desc );
-            _state              = PhysicsCharacterState2D{};
-            _state._position    = position;
-            _previousPosition   = position;
-            _verticalSpeed      = 0.0f;
+            markShapeScale( _worldScale );
+            if ( bCreate )
+            {
+                _state         = PhysicsCharacterState2D{};
+                _verticalSpeed = 0.0f;
+            }
+            _state._position  = position;
+            _previousPosition = position;
             return;
         }
         pScene->setCharacterPosition( _character, position );
@@ -186,6 +196,15 @@ namespace sw
             PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
         // 강체와 같이 모아 한 번에 쓴다 — 적용 · 변경 번호 맞추기는 `ScenePhysics::queuePoseWrite` 가 한다.
         physics.queuePoseWrite( *this, float3{ position._x, position._y, _worldPosition._z }, _worldRotation, _worldScale );
+    }
+
+    PhysicsShapeDesc2D CharacterController2DComponent::getScaledCapsule() const
+    {
+        PhysicsShapeDesc2D capsule;
+        capsule._type       = PhysicsShapeType2D::Capsule;
+        capsule._radius     = _radius;
+        capsule._halfHeight = _halfHeight;
+        return PhysicsComponent::makeScaledShape( capsule, _worldScale );
     }
 
     void CharacterController2DComponent::releasePhysics( ScenePhysics& physics )

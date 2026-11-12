@@ -126,6 +126,8 @@ namespace sw
         void readWorldPose2D( float2& outPosition, float32& outAngle );
         /** @brief 지금 속성 · 자세로 바디를 만듭니다. */
         void createBody( ScenePhysics& physics, IPhysicsBodyScene2D& scene, const float2& position, float32 angle, const float3& scale );
+        /** @brief 셰이프를 지금 배율(`_worldScale`)로 다시 지은 바디로 바꿉니다(마지막 스텝 자세 · 동적 바디 속도를 잇는다). 만들지 못하면 무효 핸들입니다. */
+        PhysicsBodyHandle rebuildScaledBody( ScenePhysics& physics, IPhysicsBodyScene2D& scene );
 
         PROPERTY( Category = "Body", Tooltip = "Static never moves, Kinematic follows the transform, Dynamic is simulated" )
         PhysicsBodyType _bodyType;

@@ -284,7 +284,29 @@ namespace sw
         _kinematicTargetPosition = position;
         _kinematicTargetRotation = rotation;
         _bRestPoseWritten        = false;
+        markShapeScale( scale );
         physics.bindBodyOwner( *this );
+    }
+
+    PhysicsBodyHandle RigidBodyComponent::rebuildScaledBody( ScenePhysics& physics, IPhysicsBodyScene3D& scene )
+    {
+        // 셰이프는 지을 때 배율을 굽는다 — 마지막 스텝의 자세 · 속도로 다시 지어 이어 간다(바깥 이동은 부르는 쪽이 이 뒤에 평소대로 옮긴다).
+        PhysicsBodyPage3D&      page            = *_pPosePage;
+        const uint32            index           = getPoseIndex();
+        const PhysicsBodyHandle oldBody         = page._arrBody[index];
+        const float3            linearVelocity  = scene.getLinearVelocity( oldBody );
+        const float3            angularVelocity = scene.getAngularVelocity( oldBody );
+        const float3            position        = page._arrCurrentPosition[index];
+        const quaternion        rotation        = page._arrCurrentRotation[index];
+        releasePhysics( physics );
+        createBody( physics, scene, position, rotation, _worldScale );
+        const PhysicsBodyHandle body = page._arrBody[index];
+        if ( body.isValid() && _bodyType == PhysicsBodyType::Dynamic )
+        {
+            scene.setLinearVelocity( body, linearVelocity );
+            scene.setAngularVelocity( body, angularVelocity );
+        }
+        return body;
     }
 
     void RigidBodyComponent::beginPhysicsFrame( ScenePhysics& physics )
@@ -301,12 +323,12 @@ namespace sw
             releasePhysics( physics );
 
         // 트랜스폼의 바깥 변화(코드 · 부모가 옮김)는 칸의 변경 번호로 안다 — 같으면 월드 행렬을 풀지 않는다(정적 · 잠든 바디 대부분).
-        const bool              bTransformChanged = consumeTransformChange();
-        PhysicsBodyPage3D&      page              = *_pPosePage;
-        const uint32            index             = getPoseIndex();
-        const PhysicsBodyHandle body              = page._arrBody[index];
-        float3                  position{};
-        quaternion              rotation{};
+        const bool         bTransformChanged = consumeTransformChange();
+        PhysicsBodyPage3D& page              = *_pPosePage;
+        const uint32       index             = getPoseIndex();
+        PhysicsBodyHandle  body              = page._arrBody[index];
+        float3             position{};
+        quaternion         rotation{};
         // 바디는 이 컴포넌트만 지운다(씬을 내릴 때는 `ScenePhysics::onSceneCleared` 가 먼저 놓게 한다) — 프레임마다 백엔드에 묻지 않고 Debug 에서만 확인한다.
         SW_ASSERT( body.isValid() == false || pScene->isBodyValid( body ) );
         if ( body.isValid() == false )
@@ -327,6 +349,12 @@ namespace sw
         const bool bMoved      = bTeleported || bTransformChanged;
         if ( bMoved )
             PhysicsComponent::readWorldPose( *this, position, rotation, _worldScale );
+        if ( isShapeScaleStale( _worldScale ) )
+        {
+            body = rebuildScaledBody( physics, *pScene );
+            if ( body.isValid() == false )
+                return;
+        }
         if ( _bodyType == PhysicsBodyType::Kinematic && bTeleported == false )
         {
             // 목표는 트랜스폼이다 — 옮겨지지 않았으면 지난 목표가 곧 트랜스폼이다.
