@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 
@@ -120,6 +121,40 @@ namespace sw::editor
             if ( pObj != nullptr )
                 outListObject.push_back( pObj );
         }
+    }
+
+    void EditorSelection::getTopLevelObjects( vector<GameObject*>& outListObject ) const
+    {
+        vector<GameObject*> listSelected;
+        getSelectedObjects( listSelected );
+        outListObject = filterTopLevel( listSelected );
+    }
+
+    vector<GameObject*> EditorSelection::filterTopLevel( const vector<GameObject*>& listObject )
+    {
+        // 조상 확인을 해시 집합으로 한다. 오브젝트 × 깊이이며, 목록 전체를 조상마다 훑지 않는다(8000 개 선택이면 그쪽이 제곱이다).
+        unordered_set<const GameObject*> uniquePicked;
+        uniquePicked.reserve( listObject.size() );
+        for ( const GameObject* pObj : listObject )
+        {
+            if ( pObj != nullptr )
+                uniquePicked.insert( pObj );
+        }
+        vector<GameObject*> listRoot;
+        listRoot.reserve( listObject.size() );
+        for ( GameObject* pObj : listObject )
+        {
+            if ( pObj == nullptr )
+                continue;
+            bool bAncestorPicked = false;
+            for ( const GameObject* pParent = pObj->getParent(); pParent != nullptr && bAncestorPicked == false; pParent = pParent->getParent() )
+            {
+                bAncestorPicked = uniquePicked.contains( pParent );
+            }
+            if ( bAncestorPicked == false )
+                listRoot.push_back( pObj );
+        }
+        return listRoot;
     }
 
     void EditorSelection::selectAsset( string_view assetPath, SelectionMode mode )

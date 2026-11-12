@@ -76,6 +76,17 @@ namespace sw::editor
         /** @brief 아직 살아 있는 선택 오브젝트를 선택한 순서로 @p outListObject 에 채웁니다(먼저 비웁니다). */
         void   getSelectedObjects( vector<GameObject*>& outListObject ) const;
         size_t getSelectedObjectCount() const { return _listSelectedObject.size(); }
+        /**
+         * @brief 살아 있는 선택에서 조상이 함께 선택된 오브젝트를 뺀 "최상위 집합" 을 선택한 순서로 @p outListObject 에 채웁니다(먼저 비웁니다).
+         * @details 옮기기 · 회전 · 정렬 · 스냅 · 복제 · 삭제처럼 오브젝트 묶음을 바꾸는 조작은 이것을 쓴다. 자식은 부모를 따라 바뀌므로 자기 차례에 또 바꾸면
+         *          이중 변환 · 이중 복제가 된다(유니티 `Selection.GetTransforms( SelectionMode.TopLevel )` · 언리얼은 부모가 선택된 액터를 이동에서 뺀다).
+         */
+        void getTopLevelObjects( vector<GameObject*>& outListObject ) const;
+        /**
+         * @brief @p listObject 에서 조상이 함께 든 오브젝트와 nullptr 를 뺀 목록을 원래 순서로 반환합니다. `getTopLevelObjects` 와 같은 거르기이며,
+         *        선택이 아니라 id 목록(명령 대상 · 시나리오 인자)으로 오브젝트를 받은 조작이 씁니다.
+         */
+        static vector<GameObject*> filterTopLevel( const vector<GameObject*>& listObject );
 
         void                  selectAsset( string_view assetPath, SelectionMode mode = SelectionMode::Replace );
         void                  selectAssets( const vector<string>& listAssetPath, SelectionMode mode = SelectionMode::Replace );
