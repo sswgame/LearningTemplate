@@ -31,18 +31,10 @@ namespace sw::editor
         /**
          * @brief `saveDocument()` 를 호출하고 성공했을 때만 dirty 를 지웁니다.
          * @details 모든 저장 경로가 이 함수를 거친다. 파생 클래스가 각자 구현하면 실패해도 dirty 를 지워 편집이 조용히 사라지거나, 성공해도 계속 미저장으로 남는다.
+         *          연 에셋 파일(`getDocumentAssetPath`)이 읽기 전용(버전 관리가 잠그지 않음)이면 `saveDocument` 를 부르지 않고 알린다 — 씬 저장 · 옮기기 · 삭제와 같은 확인(`EditorContentWrite::refuseReadOnly`)이다.
          * @return 저장에 성공했으면 true 입니다. false 이면 dirty 는 그대로 남습니다.
          */
-        [[nodiscard]] bool saveDocumentAndClearDirty()
-        {
-            if ( canSaveDocument() == false )
-                return false;
-            if ( saveDocument() == false )
-                return false;
-            clearDocumentDirty();
-            onDocumentSaved();
-            return true;
-        }
+        [[nodiscard]] bool saveDocumentAndClearDirty();
         /** @brief dirty 이면 저장합니다. 이미 깨끗하거나 저장에 실패하면 false 입니다. */
         [[nodiscard]] bool trySaveDirtyDocument()
         {

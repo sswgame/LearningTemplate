@@ -13,6 +13,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Asset/Reference/EditorReferenceIndex.h"
+#include "Editor/Common/Commands/Asset/EditorContentWrite.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
@@ -288,6 +289,24 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief @p absolutePath 가 읽기 전용(`EditorContentWrite::findReadOnlyAtOrUnder`)이면 계획의 실패 이유를 적고 true 입니다 — 옮기기 계획은 알림 대신 `_failure` 로 이유를 돌려준다. */
+            [[nodiscard]] static bool failOnReadOnly( string_view absolutePath, EditorAssetMovePlan& inoutPlan )
+            {
+                const optional<string> readOnlyPath = EditorContentWrite::findReadOnlyAtOrUnder( absolutePath );
+                if ( readOnlyPath.has_value() == false )
+                    return false;
+                StringBuilder<constant::buffer::kMax256> failureBuilder;
+                failureBuilder.appendFormat( "'%#' is read-only (not checked out) - lock it first, nothing was moved", *readOnlyPath );
+                inoutPlan._failure = string( failureBuilder.view() );
+                return true;
+            }
+
+            /** @brief 지우기 전 확인 둘이다 — 열린 문서(`refuseOpenDocumentDelete`)와 읽기 전용(`EditorContentWrite::refuseReadOnly`, 저장 · 옮기기와 같은 확인). 거절하면 이유를 알리고 true 입니다. */
+            [[nodiscard]] static bool refuseDelete( string_view absolutePath )
+            {
+                return refuseOpenDocumentDelete( absolutePath ) || EditorContentWrite::refuseReadOnly( absolutePath, EditorContentWriteKind::Delete );
+            }
+
             /**
              * @brief @p absolutePath(파일, 또는 폴더면 그 아래)에 열린 문서가 있으면 지우기를 거절하고 이유를 알린 뒤 true 입니다(감사 P0-4).
              * @details 연 문서를 지우면 다음 저장(Ctrl+S)이 파일을 되살린다. 유니티 · Godot 는 GUID · UID 로 연 문서를 끊고, 이 엔진은 경로가 정체라 거절이 그 자리다.
@@ -501,6 +520,17 @@ namespace sw::editor
                                          outPlan._listUnfixedReferrer.size(), AssetReferenceFields::kGeneratedFile, outPlan._listUnfixedReferrer.front() );
             outPlan._failure = string( failureBuilder.view() );
             return false;
+        }
+        // 옮기는 파일과 고칠 참조 파일이 읽기 전용(잠그지 않음)이면 옮기지 않는다 — 저장 · 삭제와 같은 확인이다. 옮기는 참조자의 새 자리는 아직 없고 그 원본을 옮기는 쪽에서 본다.
+        for ( const EditorAssetMove& move : outPlan._listMove )
+        {
+            if ( EditorAssetFileCommandsInternal::failOnReadOnly( move._sourceAbs, outPlan ) )
+                return false;
+        }
+        for ( const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite : listRewrite )
+        {
+            if ( rewrite._bNewFile == false && EditorAssetFileCommandsInternal::failOnReadOnly( rewrite._referrerAbs, outPlan ) )
+                return false;
         }
         // 미저장 참조 문서는 옛 id 를 들고 있다 — 고친 디스크 글을 다음 저장이 덮지 않게 먼저 저장을 요구한다(감사 P0-4).
         vector<EditorOpenDocument> listOpen;
@@ -718,7 +748,7 @@ namespace sw::editor
 
     bool EditorAssetFileCommands::moveToTrash( string_view absolutePath )
     {
-        if ( EditorAssetFileCommandsInternal::refuseOpenDocumentDelete( absolutePath ) )
+        if ( EditorAssetFileCommandsInternal::refuseDelete( absolutePath ) )
             return false;
         // 휴지통을 쓸 수 없는 곳(Linux 에서 홈을 모를 때)은 지운다.
         if ( PlatformFileUtil::hasRecycleBin() == false )
@@ -736,7 +766,7 @@ namespace sw::editor
 
     bool EditorAssetFileCommands::deleteAsset( string_view absolutePath )
     {
-        if ( absolutePath.empty() || EditorAssetFileCommandsInternal::refuseOpenDocumentDelete( absolutePath ) )
+        if ( absolutePath.empty() || EditorAssetFileCommandsInternal::refuseDelete( absolutePath ) )
             return false;
         const string abs{ absolutePath };
         if ( FileUtil::removeFile( abs ) == false )
