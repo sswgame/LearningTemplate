@@ -69,10 +69,24 @@ def checkClientOnlyTypes(projectRoot: Path, scope: LintScope) -> list[str]:
     return [f"{kTablePath} 가 소스와 다르다 — `py -3 -m Scripts client-only-types` 로 다시 쓴다"]
 
 
+def runSelfCheck() -> None:
+    listFolder = ["Audio", "Renderer"]
+    assert isClientOnlySource("Source/Engine/Audio/Mixer.h", listFolder) and isClientOnlySource("Source/Games/X/Client/Hud.h", listFolder)
+    assert not isClientOnlySource("Source/Engine/AudioShared/A.h", listFolder), "폴더 이름의 앞부분만 같으면 아니다"
+    header = "REFLECT( Component )\nclass SW_API HudComponent : public Component\n{\n};\nREFLECT()\nstruct Marker\n{\n};\nclass NotReflected\n{\n};\n"
+    assert kReflectedType.findall(header) == ["HudComponent", "Marker"], kReflectedType.findall(header)
+    assert json.loads(makeTableText(["A", "B"]))["listType"] == ["A", "B"]
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="전용 서버가 짓지 않는 소스의 리플렉션 형식 이름 표를 쓴다")
     parser.add_argument("--check", action="store_true", help="쓰지 않고 낡았는지만 본다")
+    parser.add_argument("--self-check", action="store_true", help="고르기 · 형식 이름 뽑기만 본다")
     arguments = parser.parse_args(argv)
+    if arguments.self_check:
+        runSelfCheck()
+        print("[ClientOnlyTypes] self-check OK")
+        return ExitCode.Passed
     projectRoot = getProjectRoot()
     if arguments.check:
         listProblem = checkClientOnlyTypes(projectRoot, makeWholeScope(projectRoot))

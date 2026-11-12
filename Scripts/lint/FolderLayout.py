@@ -28,11 +28,13 @@ kConfigPath = "Config/Rules/Lint/FolderLayout.json"
 
 
 def checkFolderLayout(projectRoot: Path, scope: LintScope) -> list[str]:
-    table = json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))
+    return findProblems(scope.select(("Source",)), json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8")))
+
+
+def findProblems(listPath: list[str], table: dict) -> list[str]:
     banned = {name.lower(): reason for name, reason in table["_bannedFolderNames"].items()}
     componentRoots = tuple(table["_componentFolderModel"])
     componentSuffixes = tuple(table["_componentSuffixes"])
-    listPath = scope.select(("Source",))
     listProblem: list[str] = []
     seenFolder: set[str] = set()
     for relative in listPath:
@@ -51,7 +53,19 @@ def checkFolderLayout(projectRoot: Path, scope: LintScope) -> list[str]:
     return listProblem
 
 
-def main(listArgument: list[str] | None = None) -> int:  # noqa: ARG001 — `py -3 -m Scripts lint folder-layout` 가 인자 목록을 넘긴다
+def runSelfCheck() -> None:
+    table = {"_bannedFolderNames": {"Utils": "기능 이름으로"}, "_componentFolderModel": ["Source/GameFramework/Runtime/"], "_componentSuffixes": ["Component"]}
+    listProblem = findProblems(["Source/Engine/Utils/A.h", "Source/Engine/utils/B.h", "Source/Engine/X/Component/FooComponent.h",
+                                "Source/Engine/X/Component/FooQuery.h", "Source/GameFramework/Runtime/Component/Any.h", "Source/Engine/X/Component/Tests/T.cpp"], table)
+    assert listProblem == ["Source/Engine/Utils/: 잡동사니 폴더 'Utils' — 기능 이름으로", "Source/Engine/utils/: 잡동사니 폴더 'utils' — 기능 이름으로",
+                           "Source/Engine/X/Component/FooQuery.h: `Component/` 에는 컴포넌트만 — 씬 서비스 · 질의 · 검사는 `<기능>/Scene/`(FolderLayout 4 절)"], listProblem
+
+
+def main(listArgument: list[str] | None = None) -> int:  # `py -3 -m Scripts lint folder-layout [--self-check]` 가 인자 목록을 넘긴다
+    if listArgument and listArgument[0] == "--self-check":
+        runSelfCheck()
+        print("[FolderLayout] self-check OK")
+        return ExitCode.Passed
     listProblem = checkFolderLayout(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for problem in listProblem:
         print(f"  - {problem}")

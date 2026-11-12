@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
@@ -46,13 +47,18 @@ def checkCMakePathCase(projectRoot: Path, scope: LintScope) -> list[str]:
     if not scope.bWholeRepo and not scope.listRemoved and not scope.touches(suffixes=(".cmake", "CMakeLists.txt")):
         return []
     listFile = listRepoFiles(projectRoot)
+    listCMake = [file for file in listFile if file.endswith(".cmake") or file.endswith("CMakeLists.txt")]
+    mapFact = loadFacts(projectRoot, "cmake-path-case", [__file__], listCMake, lambda _, text: extractPaths(text), errors="ignore")
+    return judgePaths(listFile, mapFact)
+
+
+def judgePaths(listFile: Sequence[str], mapFact: dict[str, dict[str, list[str]]]) -> list[str]:
+    """저장소 파일 목록과 CMake 파일마다 적은 경로(`extractPaths`)로 대소문자만 다른 경로를 찾는다."""
     setExact = set(listFile)
     for file in listFile:
         parts = file.split("/")
         setExact.update("/".join(parts[:index]) for index in range(1, len(parts)))
     mapLower = {path.lower(): path for path in setExact}
-    listCMake = [file for file in listFile if file.endswith(".cmake") or file.endswith("CMakeLists.txt")]
-    mapFact = loadFacts(projectRoot, "cmake-path-case", [__file__], listCMake, lambda _, text: extractPaths(text), errors="ignore")
 
     listViolation: list[str] = []
     for file, facts in mapFact.items():
@@ -74,7 +80,20 @@ def checkCMakePathCase(projectRoot: Path, scope: LintScope) -> list[str]:
     return listViolation
 
 
+def runSelfCheck() -> None:
+    listFile = ["CMakeLists.txt", "cmake/Engine/BuildLayout.cmake", "Source/Engine/CMakeLists.txt", "Source/Engine/Audio/CMakeLists.txt"]
+    text = 'include(${CMAKE_SOURCE_DIR}/cmake/engine/BuildLayout.cmake)\nadd_subdirectory(Audio)\nadd_subdirectory(audio)\nadd_subdirectory(${X})\n'
+    listViolation = judgePaths(listFile, {"Source/Engine/CMakeLists.txt": extractPaths(text)})
+    assert listViolation == ["Source/Engine/CMakeLists.txt: 'cmake/engine/BuildLayout.cmake' → 실제 이름 'cmake/Engine/BuildLayout.cmake'",
+                             "Source/Engine/CMakeLists.txt: 'audio' → 실제 이름 'Source/Engine/Audio'"], listViolation
+    assert judgePaths(listFile, {"CMakeLists.txt": extractPaths("add_subdirectory(Source/Engine)\n")}) == [], "맞는 대소문자는 통과한다"
+
+
 def main(argv: list[str] | None = None) -> int:
+    if argv and argv[0] == "--self-check":
+        runSelfCheck()
+        print(f"[{kCheckTag}] self-check OK")
+        return ExitCode.Passed
     listViolation = checkCMakePathCase(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for line in listViolation:
         print(f"  - {line}")
