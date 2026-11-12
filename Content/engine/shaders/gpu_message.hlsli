@@ -13,6 +13,12 @@
  *   SW_GPU_LOG( SW_GPU_MESSAGE_ID_X, a, b, c, d );        // 누구든 적되 id 당 프레임 예산(`-gv_gpuMessageLogBudget`)까지만
  *   SW_GPU_ASSERT( level < levelCount, SW_GPU_ASSERT_ID_CULL_LOD_LEVEL, level );                 // 틀리면 적는다(값 하나)
  *   SW_GPU_ASSERT_ARGS( i < count, SW_GPU_ASSERT_ID_X, i, count, base, 0 );                      // 틀리면 문맥 인자 넷과 함께 적는다
+ *   SW_GPU_CHECK( i < count, SW_GPU_ASSERT_ID_X, i );     // 틀리면 이 호출에서 처음 틀린 것만 기억한다(적지 않는다) — 읽기 도우미 · 루프 안처럼 펼쳐지는 자리
+ *   SW_GPU_FLUSH_CHECKS();                                // 기억한 첫 실패를 한 번 적는다 — SW_GPU_CHECK 를 쓴 진입점 끝에 한 번
+ *
+ * SW_GPU_ASSERT 는 자리마다 원자 증가 + 기록 쓰기를 펼친다. 인라인되는 읽기 도우미에 두면 부르는 자리 수만큼 셰이더가 커져 드라이버 컴파일이 멎는다
+ * (dzn: mesh_modifier 의 원소 읽기 assert 23 자리가 메시지 변형 컴파일을 몇 분 넘게 붙잡았다). 검사는 SW_GPU_CHECK 로 모으고 쓰기는 진입점 한 곳에서 한다 —
+ * 언리얼 ShaderPrint 도 쓰기 자리를 줄이려 셰이더마다 출력 지점을 한정한다.
  *
  * **퍼뮤테이션이다.** 셰이더에 `SW_GPU_MESSAGES_ENABLED` 가 정의될 때만 버퍼를 선언하고 기록을 낸다. 아니면 매크로가 모두 비어 코드도 바인딩(u4)도 없다 — Shipping 은 그 define 을
  * 붙이지 않는다(`GPUMessageChannel::isRequested`). 조건 · 인자 식도 평가하지 않으므로 부작용 있는 식을 넣지 않는다.
@@ -27,8 +33,10 @@
 
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_GPUMessageRW, SW_SLOT_GPU_MESSAGE_UAV );
 
-static uint g_GPUMessageX = SW_GPU_MESSAGE_NO_COORD; // 이 호출의 픽셀 x 또는 스레드(SW_GPU_MESSAGE_PIXEL · SW_GPU_MESSAGE_THREAD 가 정한다)
-static uint g_GPUMessageY = SW_GPU_MESSAGE_NO_COORD; // 픽셀 y — 스레드 기록이면 NO_COORD
+static uint g_GPUMessageX          = SW_GPU_MESSAGE_NO_COORD; // 이 호출의 픽셀 x 또는 스레드(SW_GPU_MESSAGE_PIXEL · SW_GPU_MESSAGE_THREAD 가 정한다)
+static uint g_GPUMessageY          = SW_GPU_MESSAGE_NO_COORD; // 픽셀 y — 스레드 기록이면 NO_COORD
+static uint g_GPUMessageCheckID    = 0u;                      // 이 호출에서 처음 틀린 SW_GPU_CHECK 의 id(0 = 없음 — assert id 는 1 부터다)
+static uint g_GPUMessageCheckValue = 0u;                      // 그 검사의 값
 
 struct GPUMessage
 {
@@ -41,6 +49,8 @@ struct GPUMessage
     static bool isSelected();
     static bool takeLogBudget( uint messageID );
     static void write( uint messageID, uint4 argBits );
+    static void noteCheck( uint conditionID, uint value );
+    static void flushChecks();
     static bool isFinite( float value );
     static bool isFinite( float3 value );
     static bool isFinite( float4 value );
@@ -112,6 +122,23 @@ static void GPUMessage::write( uint messageID, uint4 argBits )
     g_GPUMessageRW[base + SW_GPU_MESSAGE_RECORD_SEQUENCE]  = sequence + 1u;
 }
 
+/** @brief 틀린 검사를 기억합니다. 이미 기억한 것이 있으면 그대로 둔다 — 첫 실패가 원인이고 뒤 실패는 대개 그 결과다. */
+static void GPUMessage::noteCheck( uint conditionID, uint value )
+{
+    if ( g_GPUMessageCheckID == 0u )
+    {
+        g_GPUMessageCheckID    = conditionID;
+        g_GPUMessageCheckValue = value;
+    }
+}
+
+/** @brief 기억한 첫 실패를 기록 하나로 적습니다. 없으면 아무것도 하지 않는다. */
+static void GPUMessage::flushChecks()
+{
+    if ( g_GPUMessageCheckID != 0u )
+        GPUMessage::write( g_GPUMessageCheckID, uint4( g_GPUMessageCheckValue, 0u, 0u, 0u ) );
+}
+
 static bool GPUMessage::isFinite( float value )
 {
     return isnan( value ) == false && isinf( value ) == false;
@@ -144,6 +171,12 @@ static bool GPUMessage::isFinite( float4 value )
             GPUMessage::write( conditionID, SW_GPU_MESSAGE_ARGS( a0, a1, a2, a3 ) ); \
         }
     #define SW_GPU_ASSERT( condition, conditionID, value ) SW_GPU_ASSERT_ARGS( condition, conditionID, value, 0u, 0u, 0u )
+    #define SW_GPU_CHECK( condition, conditionID, value ) \
+        if ( ( condition ) == false )                     \
+        {                                                 \
+            GPUMessage::noteCheck( conditionID, value );  \
+        }
+    #define SW_GPU_FLUSH_CHECKS() GPUMessage::flushChecks()
 
 #else // !SW_GPU_MESSAGES_ENABLED
 
@@ -153,6 +186,8 @@ static bool GPUMessage::isFinite( float4 value )
     #define SW_GPU_LOG( messageID, a0, a1, a2, a3 )
     #define SW_GPU_ASSERT_ARGS( condition, conditionID, a0, a1, a2, a3 )
     #define SW_GPU_ASSERT( condition, conditionID, value )
+    #define SW_GPU_CHECK( condition, conditionID, value )
+    #define SW_GPU_FLUSH_CHECKS()
 
 #endif // SW_GPU_MESSAGES_ENABLED
 
