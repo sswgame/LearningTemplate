@@ -242,6 +242,12 @@ namespace sw
     {
     }
 
+    GameObjectManager::GameObjectManager( TransientTag )
+        : GameObjectManager( SceneEngineServices::makeFromBoundEngine() )
+    {
+        _bTransient = SW_TRUE;
+    }
+
     GameObjectManager::GameObjectManager( const SceneEngineServices& services )
         : _pOwnedObjectIDAllocator{ services._pObjectIDAllocator == nullptr ? make_unique<ObjectIDAllocator>() : nullptr } // 엔진 범위가 없으면 이 매니저가 번호 공간의 주인이다
         , _pObjectIDAllocator{ services._pObjectIDAllocator != nullptr ? services._pObjectIDAllocator : _pOwnedObjectIDAllocator.get() }
@@ -256,6 +262,8 @@ namespace sw
         , _services{ services }
         , _bRunningFrameSystems{ SW_FALSE }
         , _bPhysicsStepEnabled{ SW_TRUE }
+        , _bTransient{ SW_FALSE }
+        , _bBuiltOnWorker{ static_cast<uint8>( TaskManager::isOnPoolWorkerThread() ? SW_TRUE : SW_FALSE ) }
         , _updateCount{ 0 }
         , _deferredRegistrationDepth{ 0 }
         , _listDeferredRegister{}
@@ -1062,21 +1070,30 @@ namespace sw
 
     void GameObjectManager::registerComponent( Component& comp )
     {
+        if ( _bTransient == SW_TRUE )
+            return; // 씬 밖 오브젝트는 게임에 들지 않는다 — 훅이 없다
         if ( _deferredRegistrationDepth != 0 )
+        {
             _listDeferredRegister.push_back( comp.getHandle() );
-        else
-            comp.dispatchRegister( *this );
+            return;
+        }
+        // 워커에서 세운 매니저가 워커에서 훅을 부르면 공유 에셋을 만지는 훅이 게임 스레드와 겹친다(씬 로드는 미루고, 씬 밖 상태 읽기는 TransientTag 다).
+        SW_ASSERT( _bBuiltOnWorker == SW_FALSE || TaskManager::isOnPoolWorkerThread() == false );
+        comp.dispatchRegister( *this );
     }
 
     void GameObjectManager::postLoadComponent( Component& comp )
     {
+        if ( _bTransient == SW_TRUE )
+            return;
         if ( _deferredRegistrationDepth != 0 )
         {
             comp.markPostLoadPending();
             _listDeferredPostLoad.push_back( comp.getHandle() );
+            return;
         }
-        else
-            comp.dispatchPostLoad();
+        SW_ASSERT( _bBuiltOnWorker == SW_FALSE || TaskManager::isOnPoolWorkerThread() == false ); // `registerComponent` 와 같은 규칙
+        comp.dispatchPostLoad();
     }
 
     void GameObjectManager::endDeferredRegistration()

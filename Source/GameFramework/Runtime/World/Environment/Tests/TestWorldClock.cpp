@@ -2,6 +2,9 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 using namespace sw;
@@ -146,4 +149,24 @@ SW_TEST_CASE( WorldClockTest, AdvancesAcrossEveryHourForAnyDayLength )
         SW_EXPECT_EQUAL( 24u, WorldClockTestUtil::countEvents( listEvent, WorldClockEvent::Kind::HourChanged ) );
         SW_EXPECT_EQUAL( 1u, WorldClockTestUtil::countEvents( listEvent, WorldClockEvent::Kind::DayChanged ) );
     }
+}
+
+/**
+ * @brief [WorldClockTest] 판 1(머리표 없음 · float32 시각) 세션 상태 구간 본문을 판 올림 사슬(CLOK 1 → 2)로 올려 읽는다 — 날 · 시각 · 배율 · 멈춤이 그대로다(감사 A-6)
+ */
+SW_TEST_CASE( WorldClockTest, UpgradesVersionOneSectionBody )
+{
+    sw::Archive oldBody;
+    oldBody << int32{ 4 } << 12.0f << 2.0f << uint8{ SW_TRUE }; // 하루 24 초 설정의 12 시
+    sw::Archive body( oldBody.getData(), oldBody.getSize() );
+    SW_REQUIRE_TRUE( sw::StateIO::upgradeSectionBody( sw::WorldClock::kStateTag, 1, sw::WorldClock::kStateVersion, body ) );
+
+    sw::WorldClock clock;
+    SW_REQUIRE_TRUE( clock.initialize( WorldClockTestUtil::makeSettings() ) );
+    SW_REQUIRE_TRUE( clock.readState( body ) );
+    SW_EXPECT_EQUAL( size_t{ 0 }, body.getRemainingBytes() );
+    SW_EXPECT_EQUAL( 4, clock.getDay() );
+    SW_EXPECT_NEAR( 12.0f, clock.getHour(), 1.0e-4f );
+    SW_EXPECT_NEAR( 2.0f, clock.getTimeScale(), 1.0e-6f );
+    SW_EXPECT_TRUE( clock.isPaused() );
 }

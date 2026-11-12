@@ -108,6 +108,7 @@ namespace sw
         , _pendingLabel{}
         , _lastCheckpointID{}
         , _restoringCheckpointID{}
+        , _restoringSlot{}
         , _playTime{ 0.0 }
         , _lastSaveTime{ -1.0 }
         , _intervalTimer{ 0.0f }
@@ -143,12 +144,13 @@ namespace sw
         _pendingLabel          = hashed_string{};
         _lastCheckpointID      = hashed_string{};
         _restoringCheckpointID = hashed_string{};
-        _playTime              = 0.0;
-        _lastSaveTime          = -1.0;
-        _intervalTimer         = 0.0f;
-        _saveCount             = 0;
-        _bPending              = SW_FALSE;
-        _bSaving               = SW_FALSE;
+        _restoringSlot.clear();
+        _playTime      = 0.0;
+        _lastSaveTime  = -1.0;
+        _intervalTimer = 0.0f;
+        _saveCount     = 0;
+        _bPending      = SW_FALSE;
+        _bSaving       = SW_FALSE;
         // 앞 초기화가 맡긴 요청은 잊는다(구독을 놓으면 콜백이 불리지 않는다).
         _saveRequest    = Subscription{};
         _infoRequest    = Subscription{};
@@ -247,7 +249,7 @@ namespace sw
 
     bool AutosaveManager::submitRestore( const AutosaveSlotInfo* pSlot, bool bCheckpoint )
     {
-        if ( pSlot == nullptr || _onLoad.isBound() == false || isScanning() )
+        if ( pSlot == nullptr || _onLoad.isBound() == false || isScanning() || isRestoring() )
             return false;
         _restoringCheckpointID = bCheckpoint ? pSlot->_label : hashed_string{};
         _restoreRequest        = _pStore->submitRead( pSlot->_slotName, GameLocalStore::CompletionFunction::create<&AutosaveManager::onSlotRead>( this ) );
@@ -256,17 +258,30 @@ namespace sw
 
     void AutosaveManager::onSlotRead( const LocalStoreCompletion& completion )
     {
-        const hashed_string checkpointID = _restoringCheckpointID;
-        _restoringCheckpointID           = hashed_string{};
         if ( completion._result != LocalStoreResult::Ok || completion._formatVersion != AutosaveInternal::kSlotFormatVersion )
         {
+            _restoringCheckpointID = hashed_string{};
             SW_LOG_WARNING_ID( "Autosave.AutosaveSlotCouldNot", "Autosave slot %# could not be restored (local store result %#, format version %#, this build reads %#)", completion._slot.c_str(),
                                static_cast<int32>( completion._result ), completion._formatVersion, AutosaveInternal::kSlotFormatVersion );
             return;
         }
-        if ( _onLoad( completion._bytes ) == false )
+        // 적용은 게임이 씬을 옮긴 뒤일 수 있다(감사 G-7) — 체크포인트 표시는 완료에서 한다.
+        _restoringSlot = completion._slot;
+        if ( _onLoad( completion._slot, completion._bytes, RestoreCompletedFunction::create<&AutosaveManager::onRestoreCompleted>( this ) ) == false )
+            onRestoreCompleted( false );
+    }
+
+    void AutosaveManager::onRestoreCompleted( bool bRestored )
+    {
+        if ( _restoringSlot.empty() )
+            return; // 다시 초기화해 잊은 되돌리기다
+        const hashed_string checkpointID = _restoringCheckpointID;
+        const string        slot         = std::move( _restoringSlot );
+        _restoringCheckpointID           = hashed_string{};
+        _restoringSlot.clear();
+        if ( bRestored == false )
         {
-            SW_LOG_WARNING_ID( "Autosave.AutosaveSlotReadBut", "Autosave slot %# was read but the game could not restore it", completion._slot.c_str() );
+            SW_LOG_WARNING_ID( "Autosave.AutosaveSlotReadBut", "Autosave slot %# was read but the game could not restore it", slot.c_str() );
             return;
         }
         if ( checkpointID.empty() )

@@ -43,16 +43,20 @@ namespace sw
                 StateIO::writeSection( outArchive, TState::kStateTag, TState::kStateVersion, body );
             }
 
-            /** @brief 구간 하나를 사본에 읽고 끝까지 맞으면 반영합니다. 버전이 다르거나 깨졌으면 경고를 남기고 그대로 둔 채 false 입니다(부르는 쪽이 로드 전체를 실패시킨다). */
+            /**
+             * @brief 구간 하나를 사본에 읽고 끝까지 맞으면 반영합니다. 옛 판은 판 올림 사슬(`SW_STATE_FORMAT_UPGRADE`)로 올려 읽습니다(감사 A-6).
+             *        올릴 단계가 없거나 깨졌으면 경고를 남기고 그대로 둔 채 false 입니다(부르는 쪽이 로드 전체를 실패시킨다).
+             */
             template <typename TState>
             [[nodiscard]] static bool applyStateSection( const Section& section, TState& inoutState, const utf8* pName )
             {
-                if ( section._version != TState::kStateVersion )
+                Archive body = section._body;
+                if ( StateIO::upgradeSectionBody( TState::kStateTag, section._version, TState::kStateVersion, body ) == false )
                 {
-                    SW_LOG_WARNING_ID( "SessionState.SessionStateSectionVersionNot", "SessionState: %# section version %# is not %#", pName, section._version, TState::kStateVersion );
+                    SW_LOG_WARNING_ID( "SessionState.SessionStateSectionVersionNot", "SessionState: %# section version %# is not %# and has no upgrade chain to it", pName, section._version,
+                                       TState::kStateVersion );
                     return false;
                 }
-                Archive    body  = section._body;
                 TState     state = inoutState;
                 const bool bRead = state.readState( body ) && body.getRemainingBytes() == 0;
                 if ( bRead == false )
@@ -268,9 +272,9 @@ namespace sw
             visit( _weather, "weather" );
             visit( _land, "land" );
         };
-        Archive& archive = io.getArchive();
         if ( io.isWriting() )
         {
+            Archive& archive = io.getArchive();
             // 열리기 전(복원한 직후의 두 번째 캡처)이면 받은 바이트가 곧 상태이다. 빈 판을 쓰면 세이브를 잃는다.
             if ( _bInitialized == SW_FALSE && _pendingStateBytes.empty() == false )
             {
@@ -284,7 +288,8 @@ namespace sw
             return;
         }
         io.header( kStateTag, kStateVersion );
-        uint32 sectionCount = 0;
+        Archive& archive      = io.getArchive(); // 머리 뒤에 받는다 — 옛 판이면 올린 바이트다
+        uint32   sectionCount = 0;
         // 구간마다 태그, 버전, 길이(12바이트) 이상
         io.count( 12, sectionCount );
         if ( io.isOk() == false )

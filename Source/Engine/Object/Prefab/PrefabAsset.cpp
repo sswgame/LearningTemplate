@@ -1142,7 +1142,8 @@ namespace sw
             return true;
 
         // 원형은 씬 밖에서 짓는다(`PrefabOverrides::makeBaseState` 와 같은 방법, 언리얼 CDO 처럼 월드에 들지 않는다). 매니저 하나를 상태마다 비워 쓴다.
-        GameObjectManager scratch;
+        // 캐시는 워커에서도 로드한다 — 씬 밖 매니저(TransientTag)는 훅을 부르지 않아 공유 에셋을 만지지 않는다(감사 A-15). 스폰 때 산 오브젝트에서 훅이 돈다.
+        GameObjectManager scratch( GameObjectManager::TransientTag{} );
         if ( bHasState && PrefabAssetInternal::bakeSpawnTemplate( scratch, _name, [&]( GameObject* pTemp )
         { return applyStateTo( pTemp ); }, _spawnTemplate ) == false )
         {

@@ -115,8 +115,19 @@ namespace sw
          *          에셋 매니저는 씬 안의 코드가 `findAssetManager` 로 씁니다. 빈 칸은 그 서비스가 없다는 뜻입니다.
          */
         explicit GameObjectManager( const SceneEngineServices& services );
-        /** @brief 바인딩된 서비스 표에서 묶음을 한 번 읽어 만듭니다(`SceneEngineServices::makeFromBoundEngine`). 테스트 · 프리팹 원형 같은 손수 만든 매니저용입니다. */
+        /** @brief 바인딩된 서비스 표에서 묶음을 한 번 읽어 만듭니다(`SceneEngineServices::makeFromBoundEngine`). 테스트 · 손수 만든 매니저용입니다. */
         GameObjectManager();
+        /** @brief `GameObjectManager( TransientTag )` 의 표지입니다. */
+        struct TransientTag
+        {
+        };
+        /**
+         * @brief 월드에 들지 않는 씬 밖 매니저를 만듭니다 — 상태를 읽고 쓰기만 하고 컴포넌트 훅(`onRegister` · `onPostLoad`)을 부르지 않습니다.
+         * @details 프리팹 원형 · 기준 상태처럼 로드(워커일 수 있다)가 상태 글을 오브젝트로 한 번 읽어 다시 쓰는 자리다. 훅은 공유 에셋(머티리얼) · 엔진 서비스를 만져
+         *          게임 스레드에서만 돈다(`beginDeferredRegistration`) — 씬 밖 오브젝트는 게임에 들지 않으므로 훅을 부를 일이 없다.
+         *          언리얼 Transient 패키지의 아키타입(월드에 등록하지 않은 컴포넌트) · Godot 트리에 들지 않은 노드(`_enter_tree` 없음) 자리다.
+         */
+        explicit GameObjectManager( TransientTag );
         /** @brief 등록된 오브젝트를 모두 파괴합니다. */
         ~GameObjectManager();
 
@@ -242,9 +253,12 @@ namespace sw
          *          다음 프레임에 다시 부른다 — 그동안 이 매니저는 활성 씬이 아니어야 한다(`SceneManager` 가 씬을 받기 전에 부른다). 바깥 짝 하나만 쥔 동안만 부른다.
          */
         [[nodiscard]] bool processDeferredRegistration( uint32 maxCount );
-        /** @brief 막 붙은 컴포넌트를 등록합니다(`GameObject::attachCreatedComponent`). 미루는 중이면 줄에 세웁니다. */
+        /**
+         * @brief 막 붙은 컴포넌트를 등록합니다(`GameObject::attachCreatedComponent`). 미루는 중이면 줄에 세우고, 씬 밖 매니저(`TransientTag`)면 부르지 않습니다.
+         * @details 워커에서 세운 매니저가 워커에서 훅을 부르면 단언한다(감사 A-15) — 씬 로드는 등록을 미루고, 씬 밖 상태 읽기는 `TransientTag` 로 만든다.
+         */
         void registerComponent( Component& comp );
-        /** @brief 값을 다 읽은 컴포넌트의 `onPostLoad` 를 부릅니다(`ObjectStateBatch`). 미루는 중이면 줄에 세웁니다. */
+        /** @brief 값을 다 읽은 컴포넌트의 `onPostLoad` 를 부릅니다(`ObjectStateBatch`). 미루는 중이면 줄에 세우고, 씬 밖 매니저면 부르지 않습니다. 스레드 규칙은 `registerComponent` 와 같다. */
         void postLoadComponent( Component& comp );
 
         /** @brief 플레이 중(`beginPlay` 뒤, `endPlay` 전)이면 true 입니다. 이때 붙는 컴포넌트는 다음 틱 단계에서 onBeginPlay 를 받습니다. */
@@ -655,6 +669,10 @@ namespace sw
         uint8 _bRunningFrameSystems : 1;
         /** @brief false 면 `Physics` 단계를 건너뜁니다(`setPhysicsStepEnabled`). */
         uint8 _bPhysicsStepEnabled : 1;
+        /** @brief 씬 밖 매니저입니다(`TransientTag`) — 컴포넌트 훅을 부르지 않습니다. */
+        uint8 _bTransient : 1;
+        /** @brief 작업 풀의 워커에서 세웠습니다 — 워커에서 훅을 부르면 단언합니다(`registerComponent`). */
+        uint8 _bBuiltOnWorker : 1;
         /** @brief `update` 를 시작한 횟수입니다(`getUpdateCount`). */
         uint64 _updateCount;
         /** @brief `beginDeferredRegistration` 의 중첩 깊이입니다. 0 이 아니면 등록 · 로드 뒤 처리를 줄에 세웁니다. */
