@@ -472,6 +472,9 @@ namespace sw
         hashed_string _driver{};
         PROPERTY( Name = "radius_degrees", Min = 1.0, Max = 180.0, Units = deg )
         float32 _radiusDegrees{ 45.0f };
+        /** @brief 이보다 작은 포즈 가중치는 0 으로 둔다(언리얼 RBF WeightThreshold) — 가우스 핵은 먼 포즈도 0 이 아니라 모든 포즈의 보정을 늘 내던 것을 막는다. */
+        PROPERTY( Name = "weight_threshold", Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _weightThreshold{ 0.001f };
     };
 
     /** @brief 구동 포즈(`<poses><item …>`) 하나의 칸입니다. 모프(`morphs`) · 보정 본(`bones`) 목록은 노드가 푼다. */
