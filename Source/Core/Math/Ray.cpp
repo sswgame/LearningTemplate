@@ -132,7 +132,7 @@ namespace sw
         return true;
     }
 
-    bool Ray::intersectTriangle( const Ray& ray, const float3& a, const float3& b, const float3& c, float32 maxDistance, float32& outDistance )
+    bool Ray::intersectTriangle( const Ray& ray, const float3& a, const float3& b, const float3& c, float32 maxDistance, RayTriangleHit& outHit )
     {
         const float3  edge1       = b - a;
         const float3  edge2       = c - a;
@@ -142,17 +142,23 @@ namespace sw
             return false; // 광선이 삼각형 면과 나란하다
         const float32 inverseDeterminant = 1.0f / determinant;
         const float3  tVector            = ray._origin - a;
-        const float32 u                  = tVector.dot( pVector ) * inverseDeterminant;
+        float32       u                  = tVector.dot( pVector ) * inverseDeterminant;
         if ( u < -RayInternal::kBarycentricSlack || u > 1.0f + RayInternal::kBarycentricSlack )
             return false;
-        const float3  qVector = tVector.cross( edge1 );
-        const float32 v       = ray._direction.dot( qVector ) * inverseDeterminant;
+        const float3 qVector = tVector.cross( edge1 );
+        float32      v       = ray._direction.dot( qVector ) * inverseDeterminant;
         if ( v < -RayInternal::kBarycentricSlack || u + v > 1.0f + RayInternal::kBarycentricSlack )
             return false;
         const float32 distance = edge2.dot( qVector ) * inverseDeterminant;
         if ( distance < 0.0f || distance > maxDistance )
             return false;
-        outDistance = distance;
+        // 여유 안의 무게중심 값은 경계로 묶는다 — 보간한 UV · 위치가 삼각형 밖으로 나가지 않게.
+        u                  = MathUtil::saturate( u );
+        v                  = MathUtil::clamp( v, 0.0f, 1.0f - u );
+        outHit._distance   = distance;
+        outHit._baryU      = u;
+        outHit._baryV      = v;
+        outHit._bFrontFace = ray._direction.dot( edge1.cross( edge2 ) ) < 0.0f ? SW_TRUE : SW_FALSE;
         return true;
     }
 

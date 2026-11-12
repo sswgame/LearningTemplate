@@ -2,7 +2,9 @@
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/BodySurfacePick.h"
 
-#include "Engine/Character/Fit/CharacterGeometry.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
+
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 
@@ -51,15 +53,15 @@ namespace sw::editor
                 const uint32 c = listIndex[triangle * 3u + 2u];
                 if ( a >= listPosition.size() || b >= listPosition.size() || c >= listPosition.size() )
                     continue;
-                float32 distance{ 0.0f };
-                float32 u{ 0.0f };
-                float32 v{ 0.0f };
-                bool    bFrontFace{ false };
-                if ( CharacterGeometryUtil::intersectRayTriangle( origin, direction, listPosition[a], listPosition[b], listPosition[c], distance, u, v, bFrontFace ) == false )
+                RayTriangleHit triangleHit{};
+                if ( Ray::intersectTriangle( Ray{ origin, direction }, listPosition[a], listPosition[b], listPosition[c], MathUtil::kMaxFloat, triangleHit ) == false )
                     continue;
+                const float32 distance = triangleHit._distance;
                 if ( bHit && distance >= outHit._distance )
                     continue;
-                // u 는 둘째, v 는 셋째 꼭짓점의 무게다(`intersectRayTriangle`).
+                // u 는 둘째, v 는 셋째 꼭짓점의 무게다(`RayTriangleHit`).
+                const float32 u   = triangleHit._baryU;
+                const float32 v   = triangleHit._baryV;
                 const float32 w   = 1.0f - u - v;
                 const float2  uvA = float2{ listVertex[a]._arrUV[0], listVertex[a]._arrUV[1] };
                 const float2  uvB = float2{ listVertex[b]._arrUV[0], listVertex[b]._arrUV[1] };
