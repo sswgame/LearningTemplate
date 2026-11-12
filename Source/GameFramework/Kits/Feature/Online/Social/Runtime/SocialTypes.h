@@ -42,6 +42,7 @@ namespace sw
         CapExceeded,       ///< 길드 창고 — 꺼내면 계정 잔액 상한을 넘는다
         StorageNotEmpty,   ///< 길드 창고에 남은 것이 있어 길드를 해산할 수 없다(먼저 꺼낸다)
         GuildClosed,       ///< 가입 신청을 받지 않는 길드이다
+        StorageLimit,      ///< 길드 창고 — 맡긴 사람별 몫의 자산 종류(`GuildLimit::kMaxDepositorAsset`)나 그가 준 꺼내기 허용 수(`kMaxStorageGrant`)가 상한이다
         Count
     };
 
@@ -230,7 +231,11 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 길드 창고의 자산 하나입니다. 원장의 맡김(`esc/guild/<길드 16진>`) 잔액입니다. 자산 상한은 `LedgerConstant::kMaxAssetIDSize` 와 같은 값입니다. */
+    /**
+     * @brief 길드 창고의 자산 하나입니다. 자산 상한은 `LedgerConstant::kMaxAssetIDSize` 와 같은 값입니다.
+     * @details 이전 가능 자산은 공용 맡김(`esc/guild/<길드 16진>`)이고 `_depositorID` 가 없다. 이전 불가 자산(유료 재화)은 맡긴 사람별 맡김
+     *          (`esc/guild/<길드 16진>.<계정 16진>`)이며 `_depositorID` 가 그 몫의 주인이다 — 맡긴 본인이나 그가 허용한 멤버만 꺼낸다.
+     */
     REFLECT()
     struct GuildStorageItem
     {
@@ -239,6 +244,8 @@ namespace sw
         string _assetID{};
         PROPERTY()
         int64 _amount{ 0 };
+        PROPERTY()
+        AccountID _depositorID{ kInvalidAccountID }; ///< 맡긴 사람별 몫의 주인이다. 공용 창고 자산이면 `kInvalidAccountID`
     };
 } // namespace sw
 
@@ -260,13 +267,15 @@ namespace sw
 {
     struct GuildLimit
     {
-        static constexpr int32 kMaxStorageItem        = 128; ///< 창고 목록 응답의 자산 수 상한이다
+        static constexpr int32 kMaxStorageItem        = 128; ///< 창고 목록 응답의 자산 수 상한이다(공용 창고와 맡긴 사람별 몫을 합친 수)
         static constexpr int32 kMaxMember             = 100;
-        static constexpr int32 kMaxNameSize           = 24;        ///< UTF-8 바이트 수이다
-        static constexpr int32 kMaxNoticeSize         = 256;       ///< UTF-8 바이트 수이다
-        static constexpr int64 kInviteLifetimeMs      = 604800000; ///< 7일이다
-        static constexpr int64 kApplicationLifetimeMs = 604800000; ///< 가입 신청이 남는 기간이며 7일이다
-        static constexpr int32 kMaxApplication        = 50;        ///< 길드 하나가 쌓아 두는 살아 있는 신청 수이다
-        static constexpr int32 kMaxLevelCount         = 100;       ///< 레벨 테이블의 길이 상한이다
+        static constexpr int32 kMaxNameSize           = 24;                               ///< UTF-8 바이트 수이다
+        static constexpr int32 kMaxNoticeSize         = 256;                              ///< UTF-8 바이트 수이다
+        static constexpr int64 kInviteLifetimeMs      = 604800000;                        ///< 7일이다
+        static constexpr int64 kApplicationLifetimeMs = 604800000;                        ///< 가입 신청이 남는 기간이며 7일이다
+        static constexpr int32 kMaxApplication        = 50;                               ///< 길드 하나가 쌓아 두는 살아 있는 신청 수이다
+        static constexpr int32 kMaxLevelCount         = 100;                              ///< 레벨 테이블의 길이 상한이다
+        static constexpr int32 kMaxDepositorAsset     = LedgerConstant::kMaxPostingCount; ///< 맡긴 사람 한 명의 몫에 드는 이전 불가 자산 종류 수이다. 떠날 때 돌려주는 이동 하나(다리 상한)에 담긴다
+        static constexpr int32 kMaxStorageGrant       = 32;                               ///< 맡긴 사람 한 명이 남겨 둘 수 있는 꺼내기 허용(받는 계정 · 자산 쌍) 수이다
     };
 } // namespace sw

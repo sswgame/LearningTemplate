@@ -51,6 +51,8 @@ namespace sw
         GuildApplications,
         GuildApprove,
         GuildReject,
+        GuildGrantWithdrawal,
+        GuildRevokeWithdrawal,
         Count,
     };
 
@@ -134,6 +136,21 @@ namespace sw
         string _assetID{}; ///< 상한은 `LedgerConstant::kMaxAssetIDSize` 와 같다
         PROPERTY()
         int64 _amount{ 0 }; ///< 1 이상
+        PROPERTY()
+        AccountID _depositorID{ kInvalidAccountID }; ///< 꺼내기만 쓴다. 이전 불가 자산이면 꺼낼 몫의 주인, 공용 창고 자산이면 `kInvalidAccountID`. 맡기기는 비워 둔다(몫 주인은 서버가 정한다)
+    };
+
+    /** @brief 길드 창고 꺼내기 허용(`GuildGrantWithdrawal` · `GuildRevokeWithdrawal`)의 요청입니다. 맡긴 사람이 자기 몫(이전 불가 자산)에 대해 보냅니다. */
+    REFLECT()
+    struct GuildWithdrawalGrantRequest
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        AccountID _otherID{ kInvalidAccountID }; ///< 허용을 받는 멤버이다
+        PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
+        string _assetID{}; ///< 상한은 `LedgerConstant::kMaxAssetIDSize` 와 같다
+        PROPERTY()
+        int64 _amount{ 0 }; ///< 부여의 한도(1 이상, 덮어쓴다). 회수는 보지 않는다
     };
 
     /** @brief 공개 길드 켜고 끄기(`GuildSetJoinPolicy`)의 요청입니다. */
@@ -243,32 +260,34 @@ namespace sw
     /** @brief Social 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct SocialMethod : OnlineMethodTable<SocialMethodName, OnlineMethodRange::kSocial, SocialPushName>
     {
-        using RequestFriend       = Method<MethodName::RequestFriend, SocialAccountRequest, SocialLinkReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using RequestFriendByName = Method<MethodName::RequestFriendByName, SocialTextRequest, SocialLinkReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 상대의 표시 이름(정식 계정)을 받으며 응답의 `_otherID` 에 찾은 계정이 들어간다
-        using RespondFriend       = Method<MethodName::RespondFriend, SocialRespondRequest, SocialLinkReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using RemoveFriend        = Method<MethodName::RemoveFriend, SocialAccountRequest, SocialLinkReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 친구, 보낸 신청, 받은 신청을 지운다
-        using Block               = Method<MethodName::Block, SocialAccountRequest, SocialLinkReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using Unblock             = Method<MethodName::Unblock, SocialAccountRequest, SocialLinkReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using ListLinks           = Method<MethodName::ListLinks, OnlineNoBody, SocialLinksReply>; ///< 관계 목록을 돌려주며 이 서버의 메모리에도 로드한다
-        using SetPresence         = Method<MethodName::SetPresence, SocialPresenceRequest, SocialResultReply>;
-        using FriendPresence      = Method<MethodName::FriendPresence, OnlineNoBody, SocialPresenceReply>;                                              ///< 친구들의 접속 상태를 돌려준다
-        using GuildCreate         = Method<MethodName::GuildCreate, SocialTextRequest, GuildInfoReply, OnlineMethodFlag::RequiresIdempotencyKey>;       ///< 이름을 받아 길드(id 와 이름)를 돌려준다
-        using GuildInvite         = Method<MethodName::GuildInvite, SocialAccountRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 임원 이상만 부를 수 있다
-        using GuildAccept         = Method<MethodName::GuildAccept, GuildIDRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using GuildLeave          = Method<MethodName::GuildLeave, OnlineNoBody, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using GuildKick           = Method<MethodName::GuildKick, SocialAccountRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;            ///< 더 높은 역할만 부를 수 있다
-        using GuildSetRole        = Method<MethodName::GuildSetRole, GuildRoleRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;             ///< 길드장만 부를 수 있다. 역할이 Master 이면 길드장을 넘기는 것이다
-        using GuildSetNotice      = Method<MethodName::GuildSetNotice, SocialTextRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;          ///< 임원 이상만 부를 수 있다
-        using GuildGet            = Method<MethodName::GuildGet, OnlineNoBody, GuildInfoReply>;                                                                  ///< 내 길드를 멤버 목록까지 돌려준다
-        using GuildDeposit        = Method<MethodName::GuildDeposit, GuildAssetRequest, GuildStorageReply, OnlineMethodFlag::RequiresIdempotencyKey>;            ///< 내 계정에서 길드 창고로 옮긴다
-        using GuildWithdraw       = Method<MethodName::GuildWithdraw, GuildAssetRequest, GuildStorageReply, OnlineMethodFlag::RequiresIdempotencyKey>;           ///< 길드 창고에서 내 계정으로 옮긴다. 임원 이상
-        using GuildStorage        = Method<MethodName::GuildStorage, OnlineNoBody, GuildStorageReply>;                                                           ///< 길드 창고의 잔액 목록을 돌려준다
-        using GuildSetJoinPolicy  = Method<MethodName::GuildSetJoinPolicy, GuildJoinPolicyRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 임원 이상
-        using GuildApply          = Method<MethodName::GuildApply, GuildIDRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;                 ///< 공개 길드에 가입 신청을 낸다. 다시 내면 기한이 늘어난다
-        using GuildApplications   = Method<MethodName::GuildApplications, OnlineNoBody, GuildApplicationsReply>;                                                 ///< 내 길드의 살아 있는 신청 목록이다. 임원 이상
-        using GuildApprove        = Method<MethodName::GuildApprove, SocialAccountRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;         ///< 신청한 계정을 받아들인다. 임원 이상
-        using GuildReject         = Method<MethodName::GuildReject, SocialAccountRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;          ///< 신청한 계정의 신청을 지운다. 임원 이상
-        using Notification        = Push<PushName::Notification, SocialNotification>;                                                                            ///< 알림 하나이다
+        using RequestFriend         = Method<MethodName::RequestFriend, SocialAccountRequest, SocialLinkReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using RequestFriendByName   = Method<MethodName::RequestFriendByName, SocialTextRequest, SocialLinkReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 상대의 표시 이름(정식 계정)을 받으며 응답의 `_otherID` 에 찾은 계정이 들어간다
+        using RespondFriend         = Method<MethodName::RespondFriend, SocialRespondRequest, SocialLinkReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using RemoveFriend          = Method<MethodName::RemoveFriend, SocialAccountRequest, SocialLinkReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 친구, 보낸 신청, 받은 신청을 지운다
+        using Block                 = Method<MethodName::Block, SocialAccountRequest, SocialLinkReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using Unblock               = Method<MethodName::Unblock, SocialAccountRequest, SocialLinkReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using ListLinks             = Method<MethodName::ListLinks, OnlineNoBody, SocialLinksReply>; ///< 관계 목록을 돌려주며 이 서버의 메모리에도 로드한다
+        using SetPresence           = Method<MethodName::SetPresence, SocialPresenceRequest, SocialResultReply>;
+        using FriendPresence        = Method<MethodName::FriendPresence, OnlineNoBody, SocialPresenceReply>;                                              ///< 친구들의 접속 상태를 돌려준다
+        using GuildCreate           = Method<MethodName::GuildCreate, SocialTextRequest, GuildInfoReply, OnlineMethodFlag::RequiresIdempotencyKey>;       ///< 이름을 받아 길드(id 와 이름)를 돌려준다
+        using GuildInvite           = Method<MethodName::GuildInvite, SocialAccountRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 임원 이상만 부를 수 있다
+        using GuildAccept           = Method<MethodName::GuildAccept, GuildIDRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using GuildLeave            = Method<MethodName::GuildLeave, OnlineNoBody, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using GuildKick             = Method<MethodName::GuildKick, SocialAccountRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;                    ///< 더 높은 역할만 부를 수 있다
+        using GuildSetRole          = Method<MethodName::GuildSetRole, GuildRoleRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;                     ///< 길드장만 부를 수 있다. 역할이 Master 이면 길드장을 넘기는 것이다
+        using GuildSetNotice        = Method<MethodName::GuildSetNotice, SocialTextRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;                  ///< 임원 이상만 부를 수 있다
+        using GuildGet              = Method<MethodName::GuildGet, OnlineNoBody, GuildInfoReply>;                                                                          ///< 내 길드를 멤버 목록까지 돌려준다
+        using GuildDeposit          = Method<MethodName::GuildDeposit, GuildAssetRequest, GuildStorageReply, OnlineMethodFlag::RequiresIdempotencyKey>;                    ///< 내 계정에서 길드 창고로 옮긴다
+        using GuildWithdraw         = Method<MethodName::GuildWithdraw, GuildAssetRequest, GuildStorageReply, OnlineMethodFlag::RequiresIdempotencyKey>;                   ///< 길드 창고에서 내 계정으로 옮긴다. 공용 창고는 임원 이상, 맡긴 사람별 몫은 본인이나 허용을 받은 멤버
+        using GuildStorage          = Method<MethodName::GuildStorage, OnlineNoBody, GuildStorageReply>;                                                                   ///< 길드 창고의 잔액 목록을 돌려준다
+        using GuildSetJoinPolicy    = Method<MethodName::GuildSetJoinPolicy, GuildJoinPolicyRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;         ///< 임원 이상
+        using GuildApply            = Method<MethodName::GuildApply, GuildIDRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;                         ///< 공개 길드에 가입 신청을 낸다. 다시 내면 기한이 늘어난다
+        using GuildApplications     = Method<MethodName::GuildApplications, OnlineNoBody, GuildApplicationsReply>;                                                         ///< 내 길드의 살아 있는 신청 목록이다. 임원 이상
+        using GuildApprove          = Method<MethodName::GuildApprove, SocialAccountRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;                 ///< 신청한 계정을 받아들인다. 임원 이상
+        using GuildReject           = Method<MethodName::GuildReject, SocialAccountRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;                  ///< 신청한 계정의 신청을 지운다. 임원 이상
+        using GuildGrantWithdrawal  = Method<MethodName::GuildGrantWithdrawal, GuildWithdrawalGrantRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;  ///< 내 몫을 다른 멤버가 한도까지 꺼내도록 허용한다
+        using GuildRevokeWithdrawal = Method<MethodName::GuildRevokeWithdrawal, GuildWithdrawalGrantRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 내가 준 꺼내기 허용을 거둔다
+        using Notification          = Push<PushName::Notification, SocialNotification>;                                                                                    ///< 알림 하나이다
     };
 } // namespace sw
 
@@ -281,7 +300,7 @@ namespace sw
      */
     struct SW_KIT_API SocialProtocol
     {
-        using Table        = OnlineProtocolTable<SocialMethod, OnlineMethodList<SocialMethod::RequestFriend, SocialMethod::RequestFriendByName, SocialMethod::RespondFriend, SocialMethod::RemoveFriend, SocialMethod::Block, SocialMethod::Unblock, SocialMethod::ListLinks, SocialMethod::SetPresence, SocialMethod::FriendPresence, SocialMethod::GuildCreate, SocialMethod::GuildInvite, SocialMethod::GuildAccept, SocialMethod::GuildLeave, SocialMethod::GuildKick, SocialMethod::GuildSetRole, SocialMethod::GuildSetNotice, SocialMethod::GuildGet, SocialMethod::GuildDeposit, SocialMethod::GuildWithdraw, SocialMethod::GuildStorage, SocialMethod::GuildSetJoinPolicy, SocialMethod::GuildApply, SocialMethod::GuildApplications, SocialMethod::GuildApprove, SocialMethod::GuildReject>, OnlinePushList<SocialMethod::Notification>>;
+        using Table        = OnlineProtocolTable<SocialMethod, OnlineMethodList<SocialMethod::RequestFriend, SocialMethod::RequestFriendByName, SocialMethod::RespondFriend, SocialMethod::RemoveFriend, SocialMethod::Block, SocialMethod::Unblock, SocialMethod::ListLinks, SocialMethod::SetPresence, SocialMethod::FriendPresence, SocialMethod::GuildCreate, SocialMethod::GuildInvite, SocialMethod::GuildAccept, SocialMethod::GuildLeave, SocialMethod::GuildKick, SocialMethod::GuildSetRole, SocialMethod::GuildSetNotice, SocialMethod::GuildGet, SocialMethod::GuildDeposit, SocialMethod::GuildWithdraw, SocialMethod::GuildStorage, SocialMethod::GuildSetJoinPolicy, SocialMethod::GuildApply, SocialMethod::GuildApplications, SocialMethod::GuildApprove, SocialMethod::GuildReject, SocialMethod::GuildGrantWithdrawal, SocialMethod::GuildRevokeWithdrawal>, OnlinePushList<SocialMethod::Notification>>;
         using MessageTypes = Table::MessageTypes;
         using ResultName   = SocialResult;
 

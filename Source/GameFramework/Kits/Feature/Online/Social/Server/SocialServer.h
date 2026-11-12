@@ -63,6 +63,8 @@ namespace sw
         void handleCall( OnlineServerCall<SocialMethod::GuildApplications> call, const OnlineCallContext& context, const OnlineNoBody& request );
         void handleCall( OnlineServerCall<SocialMethod::GuildApprove> call, const OnlineCallContext& context, const SocialAccountRequest& request );
         void handleCall( OnlineServerCall<SocialMethod::GuildReject> call, const OnlineCallContext& context, const SocialAccountRequest& request );
+        void handleCall( OnlineServerCall<SocialMethod::GuildGrantWithdrawal> call, const OnlineCallContext& context, const GuildWithdrawalGrantRequest& request );
+        void handleCall( OnlineServerCall<SocialMethod::GuildRevokeWithdrawal> call, const OnlineCallContext& context, const GuildWithdrawalGrantRequest& request );
 
         // IOnlineServerService
         void onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
