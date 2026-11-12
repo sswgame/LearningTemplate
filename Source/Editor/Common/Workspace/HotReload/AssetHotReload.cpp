@@ -118,11 +118,12 @@ namespace sw::editor
                 FileUtil::getFileNamePart( changeEvent._filename, leafName );
                 if ( StringUtil::startsWith( leafName, kFenceFileStem ) == false )
                     return false; // 값싼 이름 검사로 대부분의 사건을 거른다
-                const string eventPath   = FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
-                const string scratchRoot = FileUtil::normalizePath( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), AutomationScratch::kScratchDomain ) );
-                if ( FileUtil::normalizePath( FileUtil::getDirectoryPart( eventPath ) ) != scratchRoot )
+                // 디스크 경로다 — OS 규칙으로 견준다(접은 키는 리눅스에서 대소문자만 다른 폴더를 같게 본다)
+                const string eventPath   = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
+                const string scratchRoot = FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), AutomationScratch::kScratchDomain );
+                if ( FileUtil::isSameDiskPath( FileUtil::getDirectoryPart( eventPath ), scratchRoot ) == false )
                     return false;
-                outbOwn = eventPath == FileUtil::normalizePath( makeFenceMarkerPath() );
+                outbOwn = FileUtil::isSameDiskPath( eventPath, makeFenceMarkerPath() );
                 return true;
             }
 
@@ -461,13 +462,13 @@ namespace sw::editor
         }
         const uint64 contentHash = ContentHash::computeFile( diskPath->str() );
         if ( contentHash != 0 )
-            _mapAppliedContentHash[FileUtil::normalizePath( relativePath )] = contentHash;
+            _mapAppliedContentHash[FileUtil::normalizePath( relativePath ).str()] = contentHash;
         applyChangedFile( relativePath );
     }
 
     bool AssetHotReload::isAlreadyApplied( const string& relativePath )
     {
-        const auto itApplied = _mapAppliedContentHash.find( FileUtil::normalizePath( relativePath ) );
+        const auto itApplied = _mapAppliedContentHash.find( FileUtil::normalizePath( relativePath ).str() );
         if ( itApplied == _mapAppliedContentHash.end() )
             return false;
         const bool bSame = ContentHash::computeFile( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), relativePath ) ) == itApplied->second;
@@ -478,7 +479,7 @@ namespace sw::editor
 
     void AssetHotReload::reloadDependents( const string& relativePath )
     {
-        const string assetID = FileUtil::normalizePath( relativePath );
+        const string assetID = FileUtil::normalizePath( relativePath ).str();
         // 펼쳐 넣는 종류면 바뀐 파일의 참조를 먼저 맞춘다 — 부모를 바꿨으면 새 사슬로 순환을 본다(감시가 올린 번호의 증분 갱신은 다음 `update` 라 늦다).
         // 바뀐 파일의 나가는 참조는 순환 검사에만 쓰인다(따라가는 것은 들어오는 참조) — `_base` 를 적지 않은 파일(체크아웃 한 번에 수천 개)은 표를 다시 정렬하지 않는다.
         // 색인에 없는 새 파일도 여기서 넣지 않는다 — 있으면 추적기가 "생긴 파일" 을 몰라 다른 파일의 참조 판정을 다시 보지 않는다.

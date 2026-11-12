@@ -21,7 +21,7 @@ namespace sw
     {
         if ( pin == nullptr )
             return false;
-        string     key      = FileUtil::normalizePath( path );
+        string     key      = FileUtil::normalizePath( path ).str();
         const auto existing = _mapPathToEntry.find( key );
         if ( existing != _mapPathToEntry.end() )
         {
@@ -46,14 +46,14 @@ namespace sw
 
     void AssetPinSet::touch( string_view path )
     {
-        const auto found = _mapPathToEntry.find( FileUtil::normalizePath( path ) );
+        const auto found = _mapPathToEntry.find( FileUtil::normalizePath( path ).str() );
         if ( found != _mapPathToEntry.end() )
             markUsed( found->second );
     }
 
     bool AssetPinSet::remove( string_view path )
     {
-        const auto found = _mapPathToEntry.find( FileUtil::normalizePath( path ) );
+        const auto found = _mapPathToEntry.find( FileUtil::normalizePath( path ).str() );
         if ( found == _mapPathToEntry.end() )
             return false;
         _pinnedBytes -= found->second->_costBytes;
@@ -71,7 +71,7 @@ namespace sw
 
     bool AssetPinSet::contains( string_view path ) const
     {
-        return _mapPathToEntry.find( FileUtil::normalizePath( path ) ) != _mapPathToEntry.end();
+        return _mapPathToEntry.find( FileUtil::normalizePath( path ).str() ) != _mapPathToEntry.end();
     }
 
     void AssetPinSet::markUsed( EntryList::iterator entry )

@@ -38,11 +38,11 @@ namespace
         EditorReferenceIndexData data{};
         for ( const auto& [pReferrer, pTarget] : listEdge )
         {
-            data._listReference.push_back( EditorAssetReference{ sw::FileUtil::normalizePath( pReferrer ), sw::FileUtil::normalizePath( pTarget ), 1u, true } );
+            data._listReference.push_back( EditorAssetReference{ sw::FileUtil::normalizePath( pReferrer ).str(), sw::FileUtil::normalizePath( pTarget ).str(), 1u, true } );
         }
         for ( const auto& [pReferrer, pTarget] : listPlainEdge )
         {
-            data._listReference.push_back( EditorAssetReference{ sw::FileUtil::normalizePath( pReferrer ), sw::FileUtil::normalizePath( pTarget ), 1u, false } );
+            data._listReference.push_back( EditorAssetReference{ sw::FileUtil::normalizePath( pReferrer ).str(), sw::FileUtil::normalizePath( pTarget ).str(), 1u, false } );
         }
         sw::VectorUtil::sort( data._listReference, []( const EditorAssetReference& left, const EditorAssetReference& right )
         { return left._targetPath != right._targetPath ? left._targetPath < right._targetPath : left._referrerPath < right._referrerPath; } );
@@ -104,7 +104,7 @@ SW_TEST_CASE( AssetReloadCascadeTest, ParentChangeReloadsLoadedChildWithNewValue
     sw::vector<sw::string> listOrder;
     SW_REQUIRE_TRUE( AssetReloadCascade::planDependents( index, parentID, &shouldInlineMaterial, listOrder ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listOrder.size() );
-    SW_EXPECT_EQUAL( sw::FileUtil::normalizePath( childID ), listOrder[0] );
+    SW_EXPECT_EQUAL( sw::FileUtil::normalizePath( childID ).str(), listOrder[0] );
     SW_REQUIRE_TRUE( child->loadFromAsset( sw::AssetID{ listOrder[0] } ) );
     SW_EXPECT_EQUAL( sw::string( "0.9" ), readRoughness( *child ) );
 }

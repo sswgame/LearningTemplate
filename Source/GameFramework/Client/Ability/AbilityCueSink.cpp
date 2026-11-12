@@ -35,7 +35,7 @@ namespace sw
                 if ( cueDef._prefab.empty() == false )
                 {
                     AssetManager*   pAssetManager = game::findSubsystem<AssetManager>();
-                    GameObject*     pSpawned      = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( pManager, cueDef._prefab.viewOrEmpty() ) : nullptr;
+                    GameObject*     pSpawned      = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( pManager, cueDef._prefab.view() ) : nullptr;
                     SceneComponent* pScene        = pSpawned != nullptr ? pSpawned->getPrimarySceneComponent() : nullptr;
                     if ( pScene != nullptr )
                         pScene->setWorldPosition( position );

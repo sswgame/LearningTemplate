@@ -485,7 +485,7 @@ namespace sw
                     continue;
                 const string fileName = FileUtil::getFileNamePart( tablePath );
                 if ( project.isStagedCulture( string_view( fileName ).substr( 0, fileName.size() - tableSuffixLength ) ) == false )
-                    outListAbsPath.push_back( FileUtil::normalizePath( tablePath ) );
+                    outListAbsPath.push_back( FileUtil::normalizePath( tablePath ).str() );
             }
         }
         return {};

@@ -52,7 +52,7 @@ SW_TEST_CASE( ShaderCookCoverageTest, EveryEngineShaderFieldIsCooked )
     uint32 shaderFieldCount = 0;
     for ( const PropertyInfo& property : EngineDefaultAssets::StaticType()->getPropertiesWithBase() )
     {
-        const string_view name = property._name.viewOrEmpty();
+        const string_view name = property._name.view();
         if ( property._typeName != hashed_string( "DataPath" ) || name.substr( 0, 7 ) != "_shader" )
             continue;
         ++shaderFieldCount;

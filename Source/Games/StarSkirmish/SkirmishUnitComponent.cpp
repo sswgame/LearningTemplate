@@ -117,7 +117,7 @@ namespace sw
         SkirmishUnitModelDef def;
         if ( XMLFields::readProperties( node, def, sourceName ) == false )
         {
-            SW_LOG_ERROR_ID( "SkirmishUnit.ModelInvalidFieldsSkipped", "%#: model '%#' has invalid fields - skipped", sourceName, def._id.viewOrEmpty() );
+            SW_LOG_ERROR_ID( "SkirmishUnit.ModelInvalidFieldsSkipped", "%#: model '%#' has invalid fields - skipped", sourceName, def._id.view() );
             return false;
         }
         SkirmishUnitModel entry;

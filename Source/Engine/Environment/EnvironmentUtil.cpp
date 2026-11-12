@@ -51,13 +51,13 @@ namespace sw
             return false;
         const hashed_string hashedPath( string{ path }.c_str() );
         MaterialCache&      cache = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
-        _pMaterial                = cache.acquire( hashedPath.viewOrEmpty() );
+        _pMaterial                = cache.acquire( hashedPath.view() );
         if ( _pMaterial == nullptr )
         {
             SW_LOG_WARNING_ID( "EnvironmentUtil.MaterialCouldNotAcquired", "Material '%#' could not be acquired - the scene default material is used", hashedPath.c_str() );
             return false;
         }
-        cache.requestInitialize( hashedPath.viewOrEmpty() );
+        cache.requestInitialize( hashedPath.view() );
         _acquiredPath = hashedPath;
         _instance     = MaterialInstance::create( _pMaterial );
         return true;
@@ -71,7 +71,7 @@ namespace sw
         if ( _acquiredPath.empty() )
             return;
         if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( _acquiredPath.viewOrEmpty() );
+            engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( _acquiredPath.view() );
         _acquiredPath = hashed_string{};
     }
 

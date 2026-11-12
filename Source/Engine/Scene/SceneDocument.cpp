@@ -417,7 +417,7 @@ namespace sw
             return true;
 
         // 자기 포함은 사슬로 잡는다. 디스크 입구로 연 맨 위 씬은 경로 모양이 달라 한 겹 더 돈 뒤에 잡힌다.
-        inoutListChain.push_back( FileUtil::normalizePath( _sourcePath ) );
+        inoutListChain.push_back( FileUtil::normalizePath( _sourcePath ).str() );
         if ( inoutListChain.size() > DataInheritance::getMaxDepth() )
         {
             SW_LOG_ERROR_ID( "SceneDocument.InstanceTooDeep", "Scene instances in %# nest deeper than %# levels - the scene is not loaded", absPath, DataInheritance::getMaxDepth() );
@@ -433,7 +433,7 @@ namespace sw
             if ( anchor._sceneInstance.empty() )
                 continue;
 
-            const string instancePath = FileUtil::normalizePath( anchor._sceneInstance );
+            const string instancePath = FileUtil::normalizePath( anchor._sceneInstance ).str();
             for ( const string& chainPath : inoutListChain )
             {
                 if ( chainPath != instancePath )

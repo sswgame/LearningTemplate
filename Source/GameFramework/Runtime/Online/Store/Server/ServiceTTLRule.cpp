@@ -156,7 +156,7 @@ namespace sw
                                                          ServiceTTLSweepReport& inoutReport )
     {
         using Internal = ServiceTTLRuleInternal;
-        string progressKey{ rule._table.viewOrEmpty() };
+        string progressKey{ rule._table.view() };
         progressKey.push_back( '/' );
         progressKey += rule._keyPrefix;
         int32 scannedCount = 0;

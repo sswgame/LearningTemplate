@@ -41,9 +41,9 @@ namespace sw::editor
 
                 string relative;
                 if ( resourceRoot.empty() == false && FileUtil::tryMakePathUnderRoot( resourceRoot, item._absolutePath, relative ) ) // 대소문자는 OS 규칙
-                    item._relativePath = FileUtil::normalizePath( relative );                                                        // 상대 키는 소문자다
+                    item._relativePath = FileUtil::normalizePath( relative ).str();                                                  // 상대 키는 소문자다
                 if ( item._relativePath.empty() )
-                    item._relativePath = FileUtil::normalizePath( item._name );
+                    item._relativePath = FileUtil::normalizePath( item._name ).str();
 
                 outList.push_back( std::move( item ) );
             }
@@ -87,10 +87,10 @@ namespace sw::editor
         }
         for ( string& companion : listCompanion )
         {
-            companion = FileUtil::normalizePath( companion );
+            companion = FileUtil::normalizePath( companion ).str();
         }
         (void)VectorUtil::removeIf( outList, [&listCompanion]( const EditorFolderListingEntry& entry )
-        { return entry._bIsDirectory == false && VectorUtil::contains( listCompanion, FileUtil::normalizePath( entry._relativePath ) ); } );
+        { return entry._bIsDirectory == false && VectorUtil::contains( listCompanion, FileUtil::normalizePath( entry._relativePath ).str() ); } );
     }
 
     void EditorFolderListing::collectChildFolders( string_view folderAbs, vector<string>& outList )

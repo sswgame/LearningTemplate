@@ -46,7 +46,7 @@ namespace sw
              */
             [[nodiscard]] static bool findEntryIgnoringCase( const string& directory, string_view component, string& outName )
             {
-                const string lowerComponent = FileUtil::normalizePath( component );
+                const PathKey lowerComponent = FileUtil::normalizePath( component );
                 outName.clear();
                 (void)FileUtil::forEachDirectoryEntry( directory, false, [&outName, &lowerComponent]( const DirectoryEntry& entry )
                 {
@@ -543,7 +543,7 @@ namespace sw
         return path[0] == '/' || path[0] == '\\';
     }
 
-    string FileUtil::normalizePath( string_view path )
+    PathKey FileUtil::normalizePath( string_view path )
     {
         string outResult{ path };
         for ( utf8& ch : outResult )
@@ -553,7 +553,7 @@ namespace sw
             else
                 ch = StringUtil::toLowerChar( ch );
         }
-        return outResult;
+        return PathKey{ std::move( outResult ) };
     }
 
     string FileUtil::normalizeSeparators( string_view path )

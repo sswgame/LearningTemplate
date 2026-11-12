@@ -820,7 +820,7 @@ namespace sw::editor
             }
 
             // 리소스 id 는 소문자 규칙이라 파일 이름을 소문자로 담는다.
-            const string fileName  = FileUtil::normalizePath( FileUtil::getFileNamePart( sourcePath ) );
+            const string fileName  = FileUtil::normalizePath( FileUtil::getFileNamePart( sourcePath ) ).str();
             const string plainPath = FileUtil::joinPath( destFolderAbs, fileName );
             if ( FileUtil::isSameDiskPath( sourcePath, plainPath ) )
             {

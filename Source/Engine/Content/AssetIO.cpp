@@ -114,7 +114,7 @@ namespace sw
                 if ( pPackManager != nullptr && pPackManager->hasPatchPacks() )
                 {
                     string       patchedPackPath;
-                    const string patchedKey = FileUtil::normalizePath( relativePath );
+                    const string patchedKey = FileUtil::normalizePath( relativePath ).str();
                     if ( pPackManager->hasPatchFile( patchedKey ) && readFromPack( *pPackManager, patchedKey, patchedPackPath ) )
                     {
                         if ( pOutAbsPath != nullptr )
@@ -135,7 +135,7 @@ namespace sw
                 return false;
 
             // 2. 마운트된 팩에서 O(1) 해시로 찾아 압축을 풀어 읽는다(엔진 밖이면 마운트된 팩이 없다)
-            const string normalizedKey = FileUtil::normalizePath( relativePath );
+            const string normalizedKey = FileUtil::normalizePath( relativePath ).str();
             string       mountedPackPath;
             if ( pPackManager != nullptr && readFromPack( *pPackManager, normalizedKey, mountedPackPath ) )
             {
@@ -268,7 +268,7 @@ namespace sw
         if ( bDiskDomain )
             return false;
 
-        const string normalizedKey = FileUtil::normalizePath( relativePath );
+        const string normalizedKey = FileUtil::normalizePath( relativePath ).str();
         return pPackManager != nullptr && pPackManager->hasFile( normalizedKey );
     }
 

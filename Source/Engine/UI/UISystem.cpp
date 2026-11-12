@@ -465,7 +465,7 @@ namespace sw
 
     UIScreenHandle UISystem::pushDocumentScreen( unique_ptr<UIScreen> screen, string_view documentPath, vector<UIBindingDef> listBinding, vector<string> listStyleSheet )
     {
-        screen->_documentPath   = FileUtil::normalizePath( documentPath );
+        screen->_documentPath   = FileUtil::normalizePath( documentPath ).str();
         screen->_listBinding    = std::move( listBinding );
         screen->_listStyleSheet = std::move( listStyleSheet );
         applyDocumentAnimations( *screen );
@@ -520,7 +520,7 @@ namespace sw
         if ( root == nullptr )
             return nullptr;
         unique_ptr<UIScreen> screen = sw::make_unique<UIScreen>( desc, std::move( root ) );
-        screen->_documentPath       = FileUtil::normalizePath( documentPath );
+        screen->_documentPath       = FileUtil::normalizePath( documentPath ).str();
         screen->_listBinding        = std::move( listBinding );
         screen->_listStyleSheet     = std::move( listStyleSheet );
         screen->_handle             = _nextScreenHandle++;
