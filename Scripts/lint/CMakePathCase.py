@@ -16,16 +16,18 @@ CMake 파일만이 아니라 이름 바꾸기도 참조를 깨므로 판정은 C
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
+from typing import Iterable, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from lint.FactCache import loadFacts  # noqa: E402
+from lint.FactCache import openFacts  # noqa: E402
 from lint.LintScope import LintScope, listRepoFiles, makeWholeScope  # noqa: E402
 
 kCheckTag = "CMakePathCase"
@@ -46,13 +48,29 @@ def checkCMakePathCase(projectRoot: Path, scope: LintScope) -> list[str]:
     if not scope.bWholeRepo and not scope.listRemoved and not scope.touches(suffixes=(".cmake", "CMakeLists.txt")):
         return []
     listFile = listRepoFiles(projectRoot)
+    listCMake = [file for file in listFile if file.endswith(".cmake") or file.endswith("CMakeLists.txt")]
+    facts = openFacts(projectRoot, "cmake-path-case", [__file__], listCMake, lambda _, text: extractPaths(text), errors="ignore",
+                      contribute=lambda file, fact: [json.dumps([file, kind, index, written]) for kind in ("root", "call") for index, written in enumerate(fact[kind])])
+    return judgePaths(listFile, unfoldPaths(listCMake, facts.summary))
+
+
+def unfoldPaths(listCMake: Sequence[str], summary: Iterable[str]) -> dict[str, dict[str, list[str]]]:
+    """요약 토큰을 `extractPaths` 모양(파일 순 · 적은 차례)으로 되돌린다."""
+    mapRow: dict[str, list[tuple[str, int, str]]] = {}
+    for token in summary:
+        file, kind, index, written = json.loads(token)
+        mapRow.setdefault(file, []).append((kind, index, written))
+    return {file: {kind: [written for rowKind, _, written in sorted(mapRow[file], key=lambda row: row[1]) if rowKind == kind] for kind in ("root", "call")}
+            for file in listCMake if file in mapRow}
+
+
+def judgePaths(listFile: Sequence[str], mapFact: dict[str, dict[str, list[str]]]) -> list[str]:
+    """저장소 파일 목록과 CMake 파일마다 적은 경로(`extractPaths`)로 대소문자만 다른 경로를 찾는다."""
     setExact = set(listFile)
     for file in listFile:
         parts = file.split("/")
         setExact.update("/".join(parts[:index]) for index in range(1, len(parts)))
     mapLower = {path.lower(): path for path in setExact}
-    listCMake = [file for file in listFile if file.endswith(".cmake") or file.endswith("CMakeLists.txt")]
-    mapFact = loadFacts(projectRoot, "cmake-path-case", [__file__], listCMake, lambda _, text: extractPaths(text), errors="ignore")
 
     listViolation: list[str] = []
     for file, facts in mapFact.items():
@@ -74,7 +92,23 @@ def checkCMakePathCase(projectRoot: Path, scope: LintScope) -> list[str]:
     return listViolation
 
 
+def runSelfCheck() -> None:
+    listFile = ["CMakeLists.txt", "cmake/Engine/BuildLayout.cmake", "Source/Engine/CMakeLists.txt", "Source/Engine/Audio/CMakeLists.txt"]
+    text = 'include(${CMAKE_SOURCE_DIR}/cmake/engine/BuildLayout.cmake)\nadd_subdirectory(Audio)\nadd_subdirectory(audio)\nadd_subdirectory(${X})\n'
+    listViolation = judgePaths(listFile, {"Source/Engine/CMakeLists.txt": extractPaths(text)})
+    assert listViolation == ["Source/Engine/CMakeLists.txt: 'cmake/engine/BuildLayout.cmake' → 실제 이름 'cmake/Engine/BuildLayout.cmake'",
+                             "Source/Engine/CMakeLists.txt: 'audio' → 실제 이름 'Source/Engine/Audio'"], listViolation
+    assert judgePaths(listFile, {"CMakeLists.txt": extractPaths("add_subdirectory(Source/Engine)\n")}) == [], "맞는 대소문자는 통과한다"
+    fact = extractPaths("add_subdirectory(b)\nadd_subdirectory(a)\nadd_subdirectory(b)\n")
+    tokens = [json.dumps(["x/CMakeLists.txt", kind, index, written]) for kind in ("root", "call") for index, written in enumerate(fact[kind])]
+    assert unfoldPaths(["x/CMakeLists.txt"], reversed(tokens)) == {"x/CMakeLists.txt": fact}, "요약에서 차례 · 겹친 경로를 되돌린다"
+
+
 def main(argv: list[str] | None = None) -> int:
+    if argv and argv[0] == "--self-check":
+        runSelfCheck()
+        print(f"[{kCheckTag}] self-check OK")
+        return ExitCode.Passed
     listViolation = checkCMakePathCase(getProjectRoot(), makeWholeScope(getProjectRoot()))
     for line in listViolation:
         print(f"  - {line}")

@@ -33,10 +33,13 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.FileCollect import collectRepositoryFiles, resolveFileArguments  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.ProjectConstants import kCppAllExtensions, kCppSourceExtensions, kGeneratedRelDirs, kLintTargetBaseDirNames, kLintTargetRelDirs, kNotOurDirNames  # noqa: E402
-from lint.LintScope import LintScope, listRepoFiles  # noqa: E402
+from lint.LintScope import LintScope, listRepoFiles, readBytes  # noqa: E402
 from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 kCheckTag = "CheckIncludeOrder"
+
+#: 위반 안내가 시키는 고치는 명령 — `Scripts/__main__.py` 의 `format`(`Format.mainFormat`)이다. 자체 검사가 이 명령이 실제로 include 를 고치는지 본다.
+kFixCommand = "py -3 -m Scripts format --files"
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
 
@@ -327,7 +330,7 @@ def inspectText(rawText: str, relative: str, headerMaps: tuple[dict[str, str], d
     newBody, listViolation = computeIncludeOrderInternal(body, relative, *headerMaps)
     if newBody != body:
         listViolation.append(f"{relative}: Include 순서/중복 문제가 발견되었습니다. "
-                             f"(`py -3 Scripts/lint/Format.py --files {relative}` 로 고친다)")
+                             f"(`{kFixCommand} {relative}` 로 고친다)")
     restored = ("\ufeff" if text.startswith("\ufeff") else "") + newBody.replace("\n", lineEnding)
     return listViolation, (restored if restored != rawText else None)
 
@@ -345,9 +348,10 @@ def inspectFileInternal(headerMaps: tuple, repositoryRoot: Path, path: Path) -> 
     """파일 하나의 위반(읽을 수 없으면 `!` 로 시작하는 한 줄). 훑는 사이에 지워진 파일은 건너뛴다."""
     relative = path.resolve().relative_to(repositoryRoot).as_posix()
     try:
-        rawText = path.read_bytes().decode("utf-8")
-    except FileNotFoundError:
-        return []
+        data = readBytes(path)
+        if data is None:
+            return []
+        rawText = data.decode("utf-8")
     except (OSError, UnicodeDecodeError) as exception:
         return [f"!{relative}: 읽기 실패: {exception}"]
     return inspectText(rawText, relative, headerMaps)[0]

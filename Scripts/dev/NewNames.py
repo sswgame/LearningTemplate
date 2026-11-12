@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -25,6 +24,7 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
+from common.Git import runGitOrRaise  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
 kDeclaration = re.compile(r"^\+\s*(?:\[\[nodiscard\]\]\s*)?(?:(?:static|virtual|inline|constexpr|explicit|SW_\w+)\s+)*[\w:<>,\s\*&]+?\b([a-z][A-Za-z0-9]*)\s*\([^;{]*\)\s*(?:const\s*)?(?:(?:override|final|noexcept)\s*)*(?:=\s*0\s*)?[;{]")
@@ -33,7 +33,7 @@ kKeywords = {"if", "for", "while", "switch", "return", "sizeof", "static_cast", 
 
 
 def runGit(projectRoot: Path, *arguments: str) -> str:
-    return subprocess.run(["git", *arguments], cwd=projectRoot, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True).stdout
+    return runGitOrRaise(arguments, cwd=projectRoot)
 
 
 def collectNewNames(projectRoot: Path, base: str, ref: str | None) -> dict[str, str]:

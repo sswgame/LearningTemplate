@@ -30,6 +30,7 @@ from common.ToolDownload import ensureCachedDownload, extractZipSafe, resolveToo
 from common.ToolchainConfig import loadSearchPaths  # noqa: E402
 from common.HostPlatform import isWindowsHost  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
+from common.Git import runGitOrRaise  # noqa: E402
 
 
 kPresetFile = Path(__file__).resolve().parents[2] / "CMakePresets.json"
@@ -56,7 +57,7 @@ class PlatformSdk:
         root = resolveToolsSubdir("emsdk_tools_subdir", self._search)
         version = self.require("emsdk_version")
         if not (root / ".git").is_dir():
-            subprocess.run(["git", "clone", "--depth", "1", "--branch", version, self.require("emsdk_git_url"), str(root)], check=True)
+            runGitOrRaise(["clone", "--depth", "1", "--branch", version, self.require("emsdk_git_url"), str(root)])
         tool = str(root / ("emsdk.bat" if isWindowsHost() else "emsdk"))
         subprocess.run([tool, "install", version], check=True, cwd=root)
         subprocess.run([tool, "activate", version], check=True, cwd=root)

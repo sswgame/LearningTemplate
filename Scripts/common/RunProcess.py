@@ -15,7 +15,7 @@ import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
+from typing import Mapping, Sequence
 
 
 @dataclass(frozen=True)
@@ -45,16 +45,18 @@ def runProcess(command: Sequence[str | Path],
                *,
                cwd: Path | None = None,
                timeoutSeconds: float | None = None,
-               bCapture: bool = True) -> ProcessResult:
+               bCapture: bool = True,
+               environment: Mapping[str, str] | None = None) -> ProcessResult:
     """
     `command` 를 돌리고 끝날 때까지 기다립니다.
 
     - `bCapture` : 출력을 잡는다(UTF-8, 깨진 바이트는 대체 글자). 거짓이면 부모 콘솔로 흘린다.
+    - `environment` : 자식의 환경(없으면 이 프로세스의 것) — git 은 `Git.runGit` 이 저장소 환경 변수를 뺀 것을 넘긴다.
     """
     listArgument = [str(part) for part in command]
     try:
         completed = subprocess.run(listArgument, cwd=str(cwd) if cwd else None, capture_output=bCapture, timeout=timeoutSeconds,
-                                   encoding="utf-8", errors="replace", check=False)
+                                   encoding="utf-8", errors="replace", check=False, env=dict(environment) if environment is not None else None)
         return ProcessResult(returnCode=completed.returncode, stdout=completed.stdout or "", stderr=completed.stderr or "")
     except (FileNotFoundError, PermissionError) as error:
         return ProcessResult(returnCode=-1, stderr=f"실행 파일을 띄우지 못했다: {listArgument[0]} ({error})", bLaunched=False)

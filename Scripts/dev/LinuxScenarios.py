@@ -30,6 +30,7 @@ import sys
 import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
+from common.Git import runGitOrRaise  # noqa: E402
 from common.HostPlatform import isWindowsHost  # noqa: E402
 from common import AppArguments  # noqa: E402
 from dev import ScenarioCulprit  # noqa: E402
@@ -63,12 +64,12 @@ def run_in_wsl(argv):
     """Windows 쪽: HEAD 를 refs/linux-verify 에 적고 같은 명령을 WSL 에서 띄운다."""
     command = argv[2:] if argv[:1] == ['--gpu'] else argv  # `--gpu <드라이버> all` 도 HEAD 를 옮긴다
     if command and command[0] in ('build', 'all'):
-        head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=REPO, text=True).strip()
-        subprocess.check_call(['git', 'update-ref', 'refs/linux-verify', head], cwd=REPO)
+        head = runGitOrRaise(['rev-parse', 'HEAD'], cwd=REPO).strip()
+        runGitOrRaise(['update-ref', 'refs/linux-verify', head], cwd=REPO)
     env = dict(os.environ, MSYS_NO_PATHCONV='1', MSYS2_ARG_CONV_EXCL='*')
     wslRepo = to_wsl_path(REPO, env)
     # 클론은 refs/linux-verify 를 공통 git 폴더에서 받는다 — 워크트리의 .git 은 Windows 경로를 적은 파일이라 WSL 의 git 이 열지 못한다.
-    commonDir = pathlib.Path(subprocess.check_output(['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'], cwd=REPO, text=True).strip())
+    commonDir = pathlib.Path(runGitOrRaise(['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd=REPO).strip())
     env[GIT_SOURCE_ENV] = to_wsl_path(commonDir, env)
     env['WSLENV'] = ':'.join(filter(None, (os.environ.get('WSLENV'), GIT_SOURCE_ENV)))
     return subprocess.call(['wsl.exe', '-d', DISTRO, '--', 'python3', f'{wslRepo}/Scripts/dev/LinuxScenarios.py'] + argv, env=env)
@@ -171,8 +172,11 @@ def sync_clone():
     source = os.environ.get(GIT_SOURCE_ENV) or WSL_REPO
     # reset 은 추적 안 된 파일을 남긴다 — 커밋하지 않은 옛 기록 골든(.linux.ppm)이 남아 판정 기준이 됐다(geometrystage 가 옛 마젠타 판과 견줘 졌다).
     # 무시 목록 밖의 추적 안 된 파일을 지워 클론을 커밋 그대로 둔다(임포트 결과 · 빌드는 무시 목록이라 남는다). 기록한 골든은 build 전에 goldens 로 옮긴다.
-    shell(f'cd {CLONE} && git fetch -q {source} refs/linux-verify && git reset -q --hard FETCH_HEAD && git clean -fdq', check=True)
-    print('클론:', shell(f'git -C {CLONE} log -1 --format=%h', capture_output=True, text=True).stdout.strip())
+    clone = pathlib.Path(CLONE)
+    runGitOrRaise(['fetch', '-q', source, 'refs/linux-verify'], cwd=clone)
+    runGitOrRaise(['reset', '-q', '--hard', 'FETCH_HEAD'], cwd=clone)
+    runGitOrRaise(['clean', '-fdq'], cwd=clone)
+    print('클론:', runGitOrRaise(['log', '-1', '--format=%h'], cwd=clone).strip())
 
 
 def ensure_vcpkg_manifest(installedDir):
@@ -395,7 +399,7 @@ def verify_all(arguments):
     code = build()
     if code != 0:
         return code
-    head = shell(f'git -C {CLONE} rev-parse HEAD', capture_output=True, text=True).stdout.strip()
+    head = runGitOrRaise(['rev-parse', 'HEAD'], cwd=pathlib.Path(CLONE)).strip()
     server_dir = f'{CLONE}/build/Linux-Server'
     steps = [('Release 단위', f'cd {RELEASE} && ./Bin/App --test -unattended > /tmp/lt.unit.log 2>&1; rc=$?; grep -E "case run|FAILED" /tmp/lt.unit.log | tail -n 5 | cut -c1-160; exit $rc'),
              ('서버 빌드', f'cmake --build {server_dir} -j8 > /tmp/srv.build.log 2>&1; rc=$?; grep -E "error:|FAILED:|undefined reference" /tmp/srv.build.log | head -n 20 | cut -c1-220; exit $rc'),

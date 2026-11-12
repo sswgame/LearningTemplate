@@ -16,16 +16,17 @@ Scripts/lint/LintScope.py
 from __future__ import annotations
 
 import functools
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
-from common.Git import runGit
+from common.Git import runGitInHookRepository
 
 
 def runGitLines(projectRoot: Path, listArgument: list[str]) -> list[str]:
     """`-z` 로 찍은 git 경로 목록. 실패하면 멈춘다 — 빈 목록이면 커밋 훅이 검사 없이 통과한다."""
-    result = runGit([*listArgument, "-z"], cwd=projectRoot)
+    result = runGitInHookRepository([*listArgument, "-z"], cwd=projectRoot)   # 커밋하는 인덱스(`git commit -a` 의 임시 인덱스 포함)를 본다
     if result.returnCode != 0:
         raise RuntimeError(f"git {' '.join(listArgument)} 실패: {result.stderr.strip()}")
     return [path for path in result.stdout.split("\0") if path]
@@ -72,10 +73,28 @@ def makeWholeScope(projectRoot: Path) -> LintScope:
     return LintScope(listRepoFiles(projectRoot), (), True)
 
 
+def listMergeParents(projectRoot: Path) -> list[str]:
+    """병합 중이면 들여오는 커밋들(`MERGE_HEAD` 의 줄 — 문어발 병합은 여럿), 아니면 빈 목록."""
+    result = runGitInHookRepository(["rev-parse", "--path-format=absolute", "--git-path", "MERGE_HEAD"], cwd=projectRoot)
+    if result.returnCode != 0:
+        raise RuntimeError(f"git rev-parse --git-path MERGE_HEAD 실패: {result.stderr.strip()}")
+    mergeHead = Path(result.stdout.strip())
+    return mergeHead.read_text(encoding="utf-8").split() if mergeHead.is_file() else []
+
+
 def makeStagedScope(projectRoot: Path) -> LintScope:
-    """스테이지된 변경. 옮기기는 지우기 + 더하기로 본다(`--no-renames`) — 옮기며 고친 파일도 검사에서 빠지지 않는다."""
+    """
+    스테이지된 변경. 옮기기는 지우기 + 더하기로 본다(`--no-renames`) — 옮기며 고친 파일도 검사에서 빠지지 않는다.
+
+    병합 중이면 스테이지 내용이 **모든 부모와 다른** 파일(손으로 푼 충돌 · 병합하며 고친 파일)만 본다 — 한쪽 부모와 같은 파일은 그 브랜치의 커밋에서
+    이미 린트를 지났다. 두 브랜치가 따로는 맞고 합치면 어긋나는 의미 충돌(한쪽이 지운 이름을 다른 쪽이 새로 쓴다)은 묶음 검증 첫 단계 `lint --all` 이 본다.
+    """
     listChanged = runGitLines(projectRoot, ["diff", "--cached", "--name-only", "--no-renames", "--diff-filter=ACM"])
     listRemoved = runGitLines(projectRoot, ["diff", "--cached", "--name-only", "--no-renames", "--diff-filter=D"])
+    for parent in listMergeParents(projectRoot):
+        setDiffer = set(runGitLines(projectRoot, ["diff", "--cached", "--name-only", "--no-renames", parent]))
+        listChanged = [path for path in listChanged if path in setDiffer]
+        listRemoved = [path for path in listRemoved if path in setDiffer]
     return LintScope(tuple(sorted(path for path in listChanged if (projectRoot / path).is_file())), tuple(sorted(listRemoved)), False)
 
 
@@ -94,12 +113,37 @@ def makeFileScope(projectRoot: Path, listFileArgument: Iterable[str]) -> LintSco
     return LintScope(tuple(sorted(listFile)), (), False)
 
 
+@functools.lru_cache(maxsize=4096)
+def readBytesInternal(key: str) -> bytes | None:
+    try:
+        return Path(key).read_bytes()
+    except FileNotFoundError:
+        return None
+
+
+def readBytes(path: Path | str) -> bytes | None:
+    """
+    파일 바이트(없으면 None, 그 밖의 OSError 는 올린다). **규칙은 파일 내용을 이것(`readText` · `readTexts`)이나 `FactCache` 로만 얻는다** — 커밋 훅은
+    규칙 스물 몇 개가 같은 스테이지 파일을 보므로 한 번 읽어 함께 쓴다. `PreCommit.checkReadBound` 가 스테이지 파일 하나에 모든 규칙이 연 파일이 그 파일
+    한 번뿐인지 본다(직접 `read_text` 하면 두 번째 열기로 걸린다). 크기 한도는 `--all` 이 저장소 전체를 붙잡지 않게 둔다(커밋 훅의 스테이지는 다 담는다).
+    """
+    return readBytesInternal(os.path.normcase(os.path.abspath(path)))
+
+
+def readText(path: Path | str, errors: str = "strict", encoding: str = "utf-8") -> str | None:
+    """`Path.read_text` 와 같은 글(줄 끝은 LF 로). 못 읽거나(지웠거나 OSError) `errors="strict"` 에서 UTF-8 이 아니면 None."""
+    try:
+        data = readBytes(path)
+        return None if data is None else data.decode(encoding, errors).replace("\r\n", "\n").replace("\r", "\n")
+    except (UnicodeDecodeError, OSError):
+        return None
+
+
 def readTexts(projectRoot: Path, listRelative: Iterable[str], errors: str = "strict") -> list[tuple[str, str]]:
     """(경로, 글) 목록. 못 읽는 파일(지웠거나 UTF-8 이 아니면 — `errors="strict"` 일 때)은 건너뛴다(규칙들이 저장소를 걸을 때와 같다)."""
     listSource: list[tuple[str, str]] = []
     for relative in listRelative:
-        try:
-            listSource.append((relative, (projectRoot / relative).read_text(encoding="utf-8", errors=errors)))
-        except (UnicodeDecodeError, OSError):
-            continue
+        text = readText(projectRoot / relative, errors)
+        if text is not None:
+            listSource.append((relative, text))
     return listSource

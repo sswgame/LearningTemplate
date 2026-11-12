@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from lint.LintScope import LintScope, listRepoFiles, makeWholeScope  # noqa: E402
+from lint.LintScope import LintScope, listRepoFiles, makeWholeScope, readText  # noqa: E402
 
 kExtensions = (".h", ".hpp", ".inl", ".cpp", ".c", ".xxx")
 kSourceExtensions = (".cpp", ".c")
@@ -142,7 +142,9 @@ class ModuleTexts(dict):
         return relative in self._setRelative
 
     def __missing__(self, relative: str) -> str:
-        text = (self._moduleDir / relative).read_text(encoding="utf-8", errors="replace")
+        text = readText(self._moduleDir / relative, errors="replace")
+        if text is None:
+            raise FileNotFoundError(self._moduleDir / relative)   # git 이 아는 파일만 찾는다 — 예전 read_text 처럼 멈춘다
         self[relative] = text
         return text
 

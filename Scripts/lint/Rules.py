@@ -17,8 +17,9 @@ Scripts/lint/Rules.py
 - `check`      : `모듈:함수`. 모두 `(projectRoot, scope: LintScope)` 를 받아 위반 줄 목록을 돌려준다(`LintScope.py`). 커밋 훅의 scope 는 스테이지된
                  파일, `--all` 은 저장소 전체다 — 규칙은 저장소를 스스로 걷지 않는다. 여러 파일의 관계를 보는 규칙은 `FactCache` 의 색인을 쓴다.
 - `exceptions` : 예외 · 기준선 파일(없으면 빈 글). 예외에는 까닭을 함께 적는다.
-- `inputs`     : 그 밖에 규칙이 읽는 표(파일 · 폴더). 규칙 모듈 · 예외 파일 · 입력이 스테이지에 있으면 그 규칙은 커밋 훅에서도 저장소 전체를 본다
-                 (표가 바뀌면 바뀌지 않은 파일의 판정도 바뀐다 — 언리얼 UBT 가 규칙 파일이 바뀌면 다시 짓는 것과 같다).
+- `inputs`     : 그 밖에 규칙이 읽는 표(파일 · 폴더). 규칙 모듈 · 그 규칙만 쓰는 도우미 · 예외 파일 · 입력이 스테이지에 있으면 그 규칙은 커밋 훅에서도
+                 저장소 전체를 본다(표가 바뀌면 바뀌지 않은 파일의 판정도 바뀐다 — 언리얼 UBT 가 규칙 파일이 바뀌면 다시 짓는 것과 같다). 여러 규칙이
+                 함께 쓰는 도우미(LintScope · CppText · common …)가 바뀌면 그것을 쓰는 규칙의 자체 검사만 돈다(`Rule.listOwnInputs` · `listInputs`).
 
 규칙 데이터는 `Config/Rules/` 한 폴더다 — 빌드가 막는 층 · 타깃 경계 표는 `Config/Rules/Layers/`(CMake · 생성기 · 린트가 함께 읽는다),
 린트의 예외 · 기준선 · 낱말 표는 `Config/Rules/Lint/`.
@@ -26,36 +27,13 @@ Scripts/lint/Rules.py
 
 from __future__ import annotations
 
-import ast
+import collections
 import functools
 from dataclasses import dataclass
-from pathlib import Path
+
+from lint.ModuleImports import getModuleFile, listImportedModuleFiles
 
 kLayerTables = ("Config/Rules/Layers/",)
-kScriptsDir = Path(__file__).resolve().parents[1]
-
-
-@functools.cache
-def listImportedModuleFiles(moduleName: str) -> tuple[str, ...]:
-    """`moduleName`(`lint.CppShape`)과 그것이 거쳐서라도 import 하는 Scripts 안 모듈의 파일(저장소 기준) — 손으로 적은 의존 목록은 낡는다."""
-    setSeen: set[str] = set()
-    listPending = [moduleName]
-    while listPending:
-        name = listPending.pop()
-        base = kScriptsDir / name.replace(".", "/")
-        path = base.with_suffix(".py") if base.with_suffix(".py").is_file() else base / "__init__.py"
-        if name in setSeen or not path.is_file():
-            continue   # 표준 · 외부 모듈
-        setSeen.add(name)
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-            if isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
-                listPending.append(node.module)
-                listPending.extend(f"{node.module}.{alias.name}" for alias in node.names)   # `from common import Paths` 의 하위 모듈
-            elif isinstance(node, ast.Import):
-                listPending.extend(alias.name for alias in node.names)
-    return tuple(sorted(path.relative_to(kScriptsDir.parent).as_posix()
-                        for name in setSeen
-                        for path in (kScriptsDir / (name.replace(".", "/") + ".py"), kScriptsDir / name.replace(".", "/") / "__init__.py") if path.is_file()))
 
 
 @dataclass(frozen=True)
@@ -71,16 +49,23 @@ class Rule:
     def getModuleName(self) -> str:
         return self.check.partition(":")[0]
 
+    def listTables(self) -> list[str]:
+        """규칙이 읽는 표 — 예외 파일과 입력 표(파일 · 폴더)."""
+        return [*([self.exceptions.split()[0]] if self.exceptions else []), *self.inputs]
+
+    def listOwnInputs(self) -> list[str]:
+        """스테이지에 있으면 이 규칙을 저장소 전체로 돌릴 파일 · 폴더 — 규칙 모듈, 이 규칙만 import 하는 도우미, 표."""
+        mapUserCount = countModuleUsers()
+        ownModule = getModuleFile(self.getModuleName())
+        return [*(path for path in listImportedModuleFiles(self.getModuleName()) if path == ownModule or mapUserCount[path] == 1), *self.listTables()]
+
     def listInputs(self) -> list[str]:
-        """스테이지에 있으면 이 규칙을 저장소 전체로 돌릴 파일 · 폴더 — 규칙 모듈과 그것이 import 하는 모듈(고르기 · 색인 · 다른 규칙 모듈), 예외 파일, 입력 표."""
-        listInput = [*listImportedModuleFiles(self.getModuleName()), *self.inputs]
-        if self.exceptions:
-            listInput.append(self.exceptions.split()[0])
-        return listInput
+        """스테이지에 있으면 이 규칙의 자체 검사를 돌릴 파일 · 폴더 — 규칙 모듈과 그것이 import 하는 모든 모듈(여러 규칙이 함께 쓰는 도우미 포함), 표."""
+        return [*listImportedModuleFiles(self.getModuleName()), *self.listTables()]
 
 
 kRules: tuple[Rule, ...] = (
-    # --- 형식(고치는 것은 `format` · `format-includes`) -------------------------------------------------------------------------
+    # --- 형식(고치는 것은 `format` 하나 — include 순서 + clang-format) -------------------------------------------------------------------------
     Rule("include-order", "형식", "include 순서 · 묶음", "include 줄의 순서는 컴파일러가 보지 않는다", "lint.IncludeOrder:checkIncludeOrderScope"),
     # --- 경계(빌드 게이트가 닿지 않는 자리) ------------------------------------------------------------------------------------
     Rule("layer-includes", "경계", "아래 층 파일이 위 층 헤더를 include(Core · Engine · GameFramework · Editor 층 표)", "빌드의 #error 껍데기가 막지만 그 부분을 컴파일할 때(Debug 빌드)에야 드러나고, 아무도 include 하지 않는 헤더는 보지 않는다 — 같은 표로 커밋 때 먼저 본다", "lint.LayerIncludes:checkLayerIncludes", inputs=kLayerTables),
@@ -115,6 +100,12 @@ kRules: tuple[Rule, ...] = (
 )
 
 kRuleById: dict[str, Rule] = {rule.id: rule for rule in kRules}
+
+
+@functools.cache
+def countModuleUsers() -> collections.Counter[str]:
+    """모듈 파일마다 그것을 (거쳐서라도) import 하는 규칙 수 — 1 이면 그 규칙의 것, 2 이상이면 함께 쓰는 도우미다."""
+    return collections.Counter(path for rule in kRules for path in listImportedModuleFiles(rule.getModuleName()))
 
 
 def formatTable() -> str:

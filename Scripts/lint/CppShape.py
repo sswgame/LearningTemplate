@@ -49,7 +49,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
-from lint.LintScope import LintScope, makeFileScope, makeWholeScope  # noqa: E402
+from lint.LintScope import LintScope, makeFileScope, makeWholeScope, readText  # noqa: E402
 from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 
@@ -718,7 +718,9 @@ def findStaleMultipleBaseExceptions(projectRoot: Path) -> list[str]:
 
 
 def inspectFile(path: Path, relative: str) -> list[str]:
-    raw = path.read_text(encoding="utf-8-sig", errors="ignore")
+    raw = readText(path, errors="ignore", encoding="utf-8-sig")
+    if raw is None:
+        raise FileNotFoundError(path)   # 부른 쪽이 있는 파일만 넘긴다 — 예전 read_text 처럼 멈춘다
     code = stripCode(raw)
     rawLines = raw.splitlines()
     listProblem: list[tuple[int, str]] = []

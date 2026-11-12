@@ -6,8 +6,10 @@ git 실행 파일 탐색과 git 이 알려 주는 파일 목록 — setup(vcpkg 
 
 from __future__ import annotations
 
+import functools
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -56,12 +58,55 @@ def ensureGitOnPath() -> str | None:
     return gitPath
 
 
+@functools.cache
+def listRepositoryEnvironmentNames() -> tuple[str, ...]:
+    """git 이 어느 저장소 · 인덱스를 볼지 고르는 환경 변수(`git rev-parse --local-env-vars` — git 이 서브모듈에 들어갈 때 스스로 지우는 목록)."""
+    completed = subprocess.run([resolveGitExecutable() or "git", "rev-parse", "--local-env-vars"], capture_output=True, encoding="utf-8", errors="replace", check=False)
+    if completed.returncode != 0:
+        raise RuntimeError(f"git rev-parse --local-env-vars 실패: {completed.stderr.strip()}")
+    return tuple(completed.stdout.split())
+
+
+def makeIsolatedEnvironment() -> dict[str, str]:
+    """이 프로세스의 환경에서 저장소를 고르는 git 환경 변수를 뺀 것."""
+    setName = set(listRepositoryEnvironmentNames())
+    return {name: value for name, value in os.environ.items() if name not in setName}
+
+
 def runGit(args: Sequence[str], *, cwd: Path | None = None) -> ProcessResult:
     """
     Git 명령어를 실행하고 결과를 반환합니다(출력은 UTF-8 — 한글 경로 · 커밋 메시지가 시스템 코드 페이지로 깨지지 않게).
+
+    저장소는 `cwd`(없으면 이 프로세스의 폴더)가 고른다 — 물려받은 `GIT_DIR` · `GIT_INDEX_FILE` · `GIT_WORK_TREE` 등은 늘 뺀다. 커밋 훅 안에서 부른
+    스크립트가 그 값을 물려받으면 다른 저장소(임시 · 클론)를 가리킨 명령이 훅의 저장소를 건드린다(임시 저장소 `git init` 이 공용 config 에 core.bare 를
+    썼다). Scripts 는 git 을 이 입구(또는 `runGitInHookRepository` · `runGitBytes`)로만 부른다 — platform-chains 가 subprocess 로 직접 부르는 것을 막는다.
+    """
+    gitExe = resolveGitExecutable() or "git"
+    return runProcess([gitExe, *args], cwd=cwd, environment=makeIsolatedEnvironment())
+
+
+def runGitOrRaise(args: Sequence[str], *, cwd: Path | None = None) -> str:
+    """`runGit` 의 표준 출력 — 지면 멈춘다(`subprocess.check_output` 을 대신한다)."""
+    result = runGit(args, cwd=cwd)
+    if result.returnCode != 0:
+        raise RuntimeError(f"git {' '.join(args)} 실패: {result.stderr.strip() or result.stdout.strip()}")
+    return result.stdout
+
+
+def runGitInHookRepository(args: Sequence[str], *, cwd: Path) -> ProcessResult:
+    """
+    물려받은 git 환경 변수를 **그대로 둔** git — 커밋 훅 린트가 지금 커밋하는 인덱스를 볼 때만 쓴다. `git commit -a` · `git commit <경로>` 는 임시 인덱스를
+    `GIT_INDEX_FILE` 로 넘기므로, 빼면 스테이지 목록 · 블롭이 커밋 내용과 어긋난다. 훅 밖에서는 `runGit` 과 같다.
     """
     gitExe = resolveGitExecutable() or "git"
     return runProcess([gitExe, *args], cwd=cwd)
+
+
+def runGitBytes(args: Sequence[str], *, cwd: Path, inputBytes: bytes, bHookRepository: bool) -> tuple[int, bytes, str]:
+    """표준 입력을 넘기고 바이트 출력을 받는 git(`cat-file --batch`) — (종료 코드, 출력, 오류 글). 환경은 `bHookRepository` 가 고른다(위 두 입구와 같은 뜻)."""
+    completed = subprocess.run([resolveGitExecutable() or "git", *args], input=inputBytes, cwd=cwd, capture_output=True, check=False,
+                               env=None if bHookRepository else makeIsolatedEnvironment())
+    return completed.returncode, completed.stdout, completed.stderr.decode("utf-8", "replace")
 
 
 def listGitFiles(projectRoot: Path, listGitArgument: list[str], extensions: set[str] | None) -> set[Path]:
