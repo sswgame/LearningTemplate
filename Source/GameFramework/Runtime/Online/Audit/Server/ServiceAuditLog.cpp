@@ -96,11 +96,12 @@ namespace sw
     ServiceTTLRule ServiceAuditLog::makeTTLRule( int64 expireAfterMs )
     {
         ServiceTTLRule rule;
-        rule._table               = getTable();
-        rule._ttlIndexTable       = getExpiryTable();
-        rule._expireAfterMs       = expireAfterMs;
-        rule._pfnReadTime         = &readTimeMs;
-        rule._pfnBackfillIndexKey = &ServiceTTLRule::makeRecordIndexKey<&readTimeMs>;
+        rule._table           = getTable();
+        rule._ttlIndexTable   = getExpiryTable();
+        rule._expireAfterMs   = expireAfterMs;
+        rule._pfnReadTime     = &readTimeMs;
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readTimeMs>();
+        rule._backfillVersion = 1;
         return rule;
     }
 

@@ -58,12 +58,13 @@ namespace sw
     ServiceTTLRule ServiceReportStore::makeClosedTTLRule( int64 expireAfterMs )
     {
         ServiceTTLRule rule;
-        rule._table               = getTable();
-        rule._ttlIndexTable       = getExpiryTable();
-        rule._keyPrefix           = string( ServiceReportInternal::kClosedPrefix );
-        rule._expireAfterMs       = expireAfterMs;
-        rule._pfnReadTime         = &readClosedTimeMs;
-        rule._pfnBackfillIndexKey = &ServiceTTLRule::makeRecordIndexKey<&readClosedTimeMs>;
+        rule._table           = getTable();
+        rule._ttlIndexTable   = getExpiryTable();
+        rule._keyPrefix       = string( ServiceReportInternal::kClosedPrefix );
+        rule._expireAfterMs   = expireAfterMs;
+        rule._pfnReadTime     = &readClosedTimeMs;
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readClosedTimeMs>();
+        rule._backfillVersion = 1;
         return rule;
     }
 

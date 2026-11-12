@@ -714,7 +714,10 @@
     "_maxScanPerRule": "ServiceTTLRule::_maxScanPerSweep — 규칙마다 Config JSON 에서(2026-11-12)",
     "_maxDeletePerRule": "ServiceTTLRule::_maxDeletePerSweep — 규칙마다 Config JSON 에서(2026-11-12)",
     "makeJournalRetentionRule": "Ledger::makeJournalTTLRule — 분개 표의 TTL 색인 규칙(내역 줄은 분개와 함께 지운다)(2026-11-12)",
-    "stageJournalCarry": "LedgerInternal::stageJournalErase — 이월과 내역 지우기를 함께 붙인다(2026-11-12)"
+    "stageJournalCarry": "LedgerInternal::stageJournalErase — 이월과 내역 지우기를 함께 붙인다(2026-11-12)",
+    "_pfnBackfillIndexKey": "ServiceTTLRule::_pBackfillSource — 불변 사본을 드는 백필 출처(IServiceTTLBackfillSource)(2026-11-12)",
+    "makeRecordIndexKey": "ServiceTTLRule::makeRecordBackfillSource — 레코드 키 + 시각 읽기 백필 출처(2026-11-12)",
+    "ServiceTTLBackfillFn": "IServiceTTLBackfillSource — 다른 표 읽기 · 불변 사본이 필요한 백필이 있다(2026-11-12)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",

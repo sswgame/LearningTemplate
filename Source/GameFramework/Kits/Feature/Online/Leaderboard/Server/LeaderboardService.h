@@ -183,6 +183,10 @@ namespace sw
         static ServiceTTLRule makeScoreTTLRule( int64 expireAfterMs );
         /** @brief 시즌 결과의 TTL 규칙입니다(TTL 색인 규칙, 정산 창이 닫힌 뒤부터 잰다). */
         static ServiceTTLRule makeSeasonResultTTLRule( int64 expireAfterMs );
+        /** @brief 색인보다 먼저 쓴 점수의 백필 출처입니다. 줄의 시각이 보드 정의(초기화 · 시즌)에서 나오므로 @p listBoard 를 복사한 불변 사본을 든다. */
+        static shared_ptr<const IServiceTTLBackfillSource> makeScoreBackfillSource( const vector<LeaderboardDef>& listBoard );
+        /** @brief 색인보다 먼저 쓴 시즌 결과의 백필 출처입니다(시즌 끝 + 정산 창). */
+        static shared_ptr<const IServiceTTLBackfillSource> makeSeasonResultBackfillSource( const vector<LeaderboardDef>& listBoard );
 
         // 예약 작업
         void onScheduledRun( const ScheduledRun& run );

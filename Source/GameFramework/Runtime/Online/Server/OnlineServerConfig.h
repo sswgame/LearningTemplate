@@ -146,6 +146,12 @@ namespace sw
          *         우편 보관(30 일) + 받은 우편 보관(우편함 `_claimedRetentionDays`)보다 길게 둔다. */
         PROPERTY( Required )
         ServiceTTLConfig _mailSentTTL{};
+        /**
+         * @brief TTL 색인 백필의 순차 배포 창(시간)입니다. 새 색인 판을 처음 본 뒤 이 시간 안에 끝난 백필 바퀴는 처음부터 다시 돈다.
+         * @details 옛 판 서버가 모두 내려갈 때까지(배포가 끝날 때까지) 걸리는 시간보다 길게 둔다 — 창이 지난 뒤 시작한 마지막 바퀴가 옛 판이 색인 줄 없이 쓴 레코드를 줍는다.
+         */
+        PROPERTY( Required, Min = 0, Max = 8760 )
+        int32 _ttlBackfillRolloutHours{ 0 };
         /** @brief TTL 쓸기(`ServiceTTLMonitor`)를 도는 시각(UTC 분, 0..1439)입니다. 저장소가 한가한 시간에 둡니다. */
         PROPERTY( Required, Min = 0, Max = 1439 )
         int32 _ttlSweepMinuteOfDay{ 0 };

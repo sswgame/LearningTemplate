@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/WebSocketAcceptTransport.h"
@@ -367,6 +368,11 @@ namespace sw
             for ( ServiceTTLRule& rule : parts._context._listTTLRule )
             {
                 listRule.push_back( std::move( rule ) );
+            }
+            const int64 rolloutMs = static_cast<int64>( parts._config._ttlBackfillRolloutHours ) * constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
+            for ( ServiceTTLRule& rule : listRule )
+            {
+                rule._backfillRolloutMs = rolloutMs; // 배포 창은 서버 전체에 하나다 - 옛 판 서버가 내려가는 시간은 표와 상관없다
             }
             parts._context._listTTLRule.clear();
             if ( parts._ttlMonitor.initialize( parts._store.get(), &parts._scheduler, std::move( listRule ), parts._config._ttlSweepMinuteOfDay ) == false )

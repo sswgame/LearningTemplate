@@ -15,6 +15,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
@@ -34,8 +35,16 @@ namespace sw
         bool isActive( int64 nowMs ) const { return _startMs <= nowMs && nowMs < _endMs; }
 
         // 캠페인 레코드 · 수령 표식입니다(저장소 스레드). */
-        static const hashed_string& getCampaignTable(); ///< "mail_campaign"
-        static const hashed_string& getClaimTable();    ///< "mail_campaign_claim"
+        static const hashed_string& getCampaignTable();       ///< "mail_campaign"
+        static const hashed_string& getClaimTable();          ///< "mail_campaign_claim"
+        static const hashed_string& getCampaignExpiryTable(); ///< "mail_campaign_expiry" — 캠페인의 TTL 색인(`<끝>/<id>`)
+        static const hashed_string& getClaimExpiryTable();    ///< "mail_campaign_claim_expiry" — 수령 표식 묶음의 TTL 색인(`<끝>/<id>/`)
+        /** @brief 캠페인 레코드의 끝 시각을 읽습니다(TTL 쓸기 · 백필). */
+        [[nodiscard]] static bool readEndMs( const ServiceRecord& record, int64& outTimeMs );
+        /** @brief 끝난 캠페인 레코드의 TTL 규칙입니다. 서비스가 주기마다 전부 읽는 표라 끝난 캠페인이 쌓이면 읽기도 커진다. */
+        static ServiceTTLRule makeCampaignTTLRule( int64 expireAfterMs );
+        /** @brief 끝난 캠페인의 수령 표식 묶음 TTL 규칙입니다(접두어 묶음 줄 하나가 그 캠페인의 표식 전부를 지운다). */
+        static ServiceTTLRule makeClaimTTLRule( int64 expireAfterMs );
 
         /** @brief 캠페인을 붙입니다("없어야 한다"). 규칙 위반(id 0, 기간, 첨부 수, 금액, 글 길이)은 false 이고 아무것도 붙이지 않는다. */
         [[nodiscard]] static bool stageCreate( const ServiceMailCampaign& campaign, ServiceTransaction& inoutTransaction );

@@ -23,8 +23,10 @@
  *          - 대상이 `/` 로 끝나면 접두어 묶음이다(채팅 채널 하나). 그 접두어 아래를 앞에서부터 읽어 기간이 지난 레코드를 지우고, 지나지 않은 레코드를 만나거나
  *            끝에 닿으면 색인 줄도 지운다. 접두어 아래는 키 순서가 시각 순서여야 한다.
  *          키트는 자기 레코드를 쓰는 트랜잭션에 색인 줄을 함께 넣고, 규칙은 키트 조립이 내놓는다(`IOnlineServerKit::addTTLRule`).
- *          - 색인보다 먼저 쓴 레코드(색인 줄이 없다)는 백필(`_pfnBackfillIndexKey`)이 한 번 채운다. 색인 규칙의 쓸기는 범위 읽기 전에 `_table`(`_keyPrefix` 아래)을
- *            커서로 훑어 레코드마다 색인 키를 만들어 넣고, 진행(커서 · 끝)은 `service_ttl_backfill` 에 같은 트랜잭션으로 적는다. 끝나면 다시 훑지 않는다.
+ *          - 색인보다 먼저 쓴 레코드(색인 줄이 없다)는 백필(`_pBackfillSource`)이 채운다. 색인 규칙의 쓸기는 범위 읽기 전에 `_table`(`_keyPrefix` 아래)을
+ *            커서로 훑어 레코드마다 색인 키를 만들어 넣고, 진행(판 · 시작 · 커서 · 끝)은 `service_ttl_backfill` 에 같은 트랜잭션으로 적는다.
+ *            진행은 색인 판(`_backfillVersion`)마다다 — 쓰는 쪽의 색인 줄 모양을 바꾸면 판을 올려 다시 훑는다. 배포 창(`_backfillRolloutMs`) 안에 끝난 바퀴는
+ *            끝으로 치지 않고 처음부터 다시 돈다 — 순차 배포 중 아직 옛 판으로 도는 서버가 색인 줄 없이 쓴 레코드를, 창이 지난 뒤 시작한 마지막 바퀴가 줍는다.
  *            색인 키는 레코드에서 정해지므로(시각 + 키) 쓰는 쪽이 넣은 줄과 같고, 겹쳐 넣어도 한 줄이다. MongoDB 가 TTL 인덱스를 만들 때 기존 문서까지
  *            색인을 짓는 것(index build), DynamoDB GSI 의 backfill 과 같은 자리다.
  *          MongoDB TTL 인덱스 · DynamoDB TTL 과 같은 자리다 — 테이블 주인이 기간을 정하고 저장소가 시각 순으로 지운다.
@@ -33,6 +35,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -51,22 +54,41 @@ namespace sw
      */
     using ServiceTTLStageFn = ServiceStoreResult ( * )( IServiceStoreConnection& connection, const vector<const ServiceRecord*>& listErased, ServiceTransaction& inoutTransaction );
 
-    /** @brief 레코드 @p record 의 TTL 색인 키를 만듭니다(색인 백필). 만들 수 없으면(기준 시각이 아직 없다 · 형식이 틀리다) false 이고 그 레코드는 건너뜁니다. */
-    using ServiceTTLBackfillFn = bool ( * )( const ServiceRecord& record, string& outIndexKey );
+    /**
+     * @class IServiceTTLBackfillSource
+     * @brief 색인보다 먼저 쓴 레코드의 TTL 색인 키를 만듭니다(색인 백필). 저장소 스레드가 부르므로 만든 뒤 바꾸지 않는다 — 필요한 표(보드 카탈로그)는 불변 사본을 든다.
+     */
+    class IServiceTTLBackfillSource
+    {
+    public:
+        virtual ~IServiceTTLBackfillSource() = default;
+        /** @brief @p record 의 색인 키를 만듭니다. 만들 수 없으면(기준 시각이 아직 없다 · 형식이 틀리다) false 이고 그 레코드는 건너뜁니다. 다른 표를 읽어야 하면 @p connection 으로 읽는다. */
+        [[nodiscard]] virtual bool makeIndexKey( IServiceStoreConnection& connection, const ServiceRecord& record, string& outIndexKey ) const = 0;
+    };
+
+    /** @brief 대상이 레코드 키이고 기준 시각을 @p TReadTime 이 읽는 표의 백필 출처입니다(쓰는 쪽이 `makeTTLIndexKey( 그 시각, 레코드 키 )` 로 줄을 넣는 표). */
+    template <ServiceTTLTimeFn TReadTime>
+    class ServiceTTLRecordBackfillSource final : public IServiceTTLBackfillSource
+    {
+    public:
+        [[nodiscard]] bool makeIndexKey( IServiceStoreConnection& connection, const ServiceRecord& record, string& outIndexKey ) const override;
+    };
 
     /** @brief 테이블 하나의 TTL 규칙입니다. */
     struct SW_GF_API ServiceTTLRule
     {
-        hashed_string        _table{};
-        hashed_string        _ttlIndexTable{}; ///< 비우면 `_table` 을 커서로 훑는다. 값이 있으면 이 TTL 색인을 시각 순으로 범위 읽기한다
-        string               _keyPrefix{};     ///< 비우면 테이블 전체. 값이 있으면 이 접두어의 레코드만 훑는다(색인 규칙은 백필이 훑을 범위다)
-        int64                _expireAfterMs{ 0 };
-        ServiceTTLTimeFn     _pfnReadTime{ nullptr };         ///< 색인 규칙은 비워도 된다(색인의 시각을 믿는다). 커서 규칙은 필수다
-        ServiceTTLStageFn    _pfnStageErase{ nullptr };       ///< 비우면 지우기만 한다. 값이 있으면 지우는 트랜잭션에 이 쓰기를 함께 넣는다
-        ServiceTTLBackfillFn _pfnBackfillIndexKey{ nullptr }; ///< 색인 규칙만. 값이 있으면 색인 없는 기존 레코드를 한 번 훑어 줄을 채운다(`_keyPrefix` 가 훑을 범위다)
-        string               _cursor{};                       ///< 다음 회차가 이어서 훑을 위치. 쓸기가 채운다
-        int32                _maxScanPerSweep{ 0 };           ///< 예약 쓸기 한 회차에 훑는 레코드 상한(Config JSON `ServiceTTLConfig`). 0 이면 예약 쓸기에 올리지 못한다
-        int32                _maxDeletePerSweep{ 0 };         ///< 예약 쓸기 한 회차에 지우는 레코드 상한(Config JSON `ServiceTTLConfig`)
+        hashed_string                               _table{};
+        hashed_string                               _ttlIndexTable{}; ///< 비우면 `_table` 을 커서로 훑는다. 값이 있으면 이 TTL 색인을 시각 순으로 범위 읽기한다
+        string                                      _keyPrefix{};     ///< 비우면 테이블 전체. 값이 있으면 이 접두어의 레코드만 훑는다(색인 규칙은 백필이 훑을 범위다)
+        int64                                       _expireAfterMs{ 0 };
+        ServiceTTLTimeFn                            _pfnReadTime{ nullptr };   ///< 색인 규칙은 비워도 된다(색인의 시각을 믿는다). 커서 규칙은 필수다
+        ServiceTTLStageFn                           _pfnStageErase{ nullptr }; ///< 비우면 지우기만 한다. 값이 있으면 지우는 트랜잭션에 이 쓰기를 함께 넣는다
+        shared_ptr<const IServiceTTLBackfillSource> _pBackfillSource{};        ///< 색인 규칙만. 값이 있으면 색인 없는 기존 레코드를 훑어 줄을 채운다(`_keyPrefix` 가 훑을 범위다)
+        uint32                                      _backfillVersion{ 0 };     ///< 색인 줄 모양의 판. 백필이 있으면 1 이상이고, 쓰는 쪽의 줄 모양을 바꾸면 올려 다시 훑게 한다
+        int64                                       _backfillRolloutMs{ 0 };   ///< 판을 처음 본 뒤 이 시간 안에 끝난 바퀴는 다시 돈다(순차 배포 창, 운영 설정 `_ttlBackfillRolloutHours`)
+        string                                      _cursor{};                 ///< 다음 회차가 이어서 훑을 위치. 쓸기가 채운다
+        int32                                       _maxScanPerSweep{ 0 };     ///< 예약 쓸기 한 회차에 훑는 레코드 상한(Config JSON `ServiceTTLConfig`). 0 이면 예약 쓸기에 올리지 못한다
+        int32                                       _maxDeletePerSweep{ 0 };   ///< 예약 쓸기 한 회차에 지우는 레코드 상한(Config JSON `ServiceTTLConfig`)
 
         // 보존 기간 쓸기입니다. 저장소 스레드(`IServiceStoreJob::run` 안)에서 씁니다. */
         static constexpr int32 kPageSize = 64; ///< 한 트랜잭션의 쓰기 상한에 맞춘 한 쪽의 크기
@@ -89,26 +111,19 @@ namespace sw
         static string makeTTLIndexKey( int64 timeMs, string_view target );
         /** @brief TTL 색인 키를 기준 시각과 대상으로 나눕니다. 형식이 틀리면 false 입니다. */
         [[nodiscard]] static bool parseTTLIndexKey( string_view indexKey, int64& outTimeMs, string_view& outTarget );
-        /** @brief 백필 진행 표("service_ttl_backfill")입니다. 키는 `<표>/<접두어>`, 값은 진행 중이면 [1][커서], 끝났으면 [2] 이다. */
+        /** @brief 백필 진행 표("service_ttl_backfill")입니다. 키는 `<표>/<접두어>`, 값은 [판][상태][판을 처음 본 시각][이 바퀴 시작][커서] 이다. */
         static const hashed_string& getBackfillTable();
 
-        /**
-         * @brief 대상이 레코드 키이고 기준 시각을 @p TReadTime 이 읽는 규칙의 백필 함수입니다(`_pfnBackfillIndexKey = &makeRecordIndexKey<&X::readTimeMs>`).
-         * @details 쓰는 쪽이 `makeTTLIndexKey( 그 시각, 레코드 키 )` 로 줄을 넣는 표만 쓴다 — 줄의 시각이 레코드에서 나오지 않는 표(시즌 끝으로 재는 결과)는 쓸 수 없다.
-         */
+        /** @brief `ServiceTTLRecordBackfillSource<TReadTime>` 하나를 만듭니다. 줄의 시각이 레코드에서 나오지 않는 표(시즌 끝으로 재는 결과)는 자기 출처를 쓴다. */
         template <ServiceTTLTimeFn TReadTime>
-        static bool makeRecordIndexKey( const ServiceRecord& record, string& outIndexKey )
+        static shared_ptr<const IServiceTTLBackfillSource> makeRecordBackfillSource()
         {
-            int64 timeMs = 0;
-            if ( TReadTime( record, timeMs ) == false )
-                return false;
-            outIndexKey = makeTTLIndexKey( timeMs, record._key );
-            return true;
+            return shared_ptr<const IServiceTTLBackfillSource>( make_shared<ServiceTTLRecordBackfillSource<TReadTime>>() );
         }
 
     private:
-        /** @brief 색인 없는 기존 레코드에 색인 줄을 넣습니다(한 번). 이번 회차에 @p maxScanCount 개까지 훑고, 진행은 `getBackfillTable` 에 줄과 같은 트랜잭션으로 적는다. */
-        [[nodiscard]] static ServiceStoreResult backfillTTLIndex( IServiceStoreConnection& connection, const ServiceTTLRule& rule, int32 maxScanCount,
+        /** @brief 색인 없는 기존 레코드에 색인 줄을 넣습니다(판마다, 배포 창이 지난 바퀴까지). 이번 회차에 @p maxScanCount 개까지 훑고, 진행은 `getBackfillTable` 에 줄과 같은 트랜잭션으로 적는다. */
+        [[nodiscard]] static ServiceStoreResult backfillTTLIndex( IServiceStoreConnection& connection, const ServiceTTLRule& rule, int64 nowMs, int32 maxScanCount,
                                                                   ServiceTTLSweepReport& inoutReport );
         [[nodiscard]] static ServiceStoreResult sweepTTLIndex( IServiceStoreConnection& connection, const ServiceTTLRule& rule, int64 cutoffMs, int32 maxScanCount,
                                                                int32 maxDeleteCount, ServiceTTLSweepReport& outReport );
@@ -128,4 +143,18 @@ namespace sw
         int32 _backfilledCount{ 0 }; ///< 백필이 넣은 색인 줄 수
         uint8 _bWrapped{ SW_FALSE }; ///< 테이블 끝까지 훑어 커서를 비웠다
     };
+} // namespace sw
+
+namespace sw
+{
+    template <ServiceTTLTimeFn TReadTime>
+    bool ServiceTTLRecordBackfillSource<TReadTime>::makeIndexKey( IServiceStoreConnection& connection, const ServiceRecord& record, string& outIndexKey ) const
+    {
+        (void)connection;
+        int64 timeMs = 0;
+        if ( TReadTime( record, timeMs ) == false )
+            return false;
+        outIndexKey = ServiceTTLRule::makeTTLIndexKey( timeMs, record._key );
+        return true;
+    }
 } // namespace sw

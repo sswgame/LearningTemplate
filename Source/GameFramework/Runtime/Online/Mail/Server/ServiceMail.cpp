@@ -88,11 +88,12 @@ namespace sw
     ServiceTTLRule ServiceMail::makeSentTTLRule( int64 expireAfterMs )
     {
         ServiceTTLRule rule;
-        rule._table               = getSentTable();
-        rule._ttlIndexTable       = getSentExpiryTable();
-        rule._expireAfterMs       = expireAfterMs;
-        rule._pfnReadTime         = &readSentTimeMs;
-        rule._pfnBackfillIndexKey = &ServiceTTLRule::makeRecordIndexKey<&readSentTimeMs>;
+        rule._table           = getSentTable();
+        rule._ttlIndexTable   = getSentExpiryTable();
+        rule._expireAfterMs   = expireAfterMs;
+        rule._pfnReadTime     = &readSentTimeMs;
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readSentTimeMs>();
+        rule._backfillVersion = 1;
         return rule;
     }
 

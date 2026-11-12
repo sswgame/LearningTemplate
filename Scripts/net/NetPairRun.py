@@ -83,8 +83,10 @@ def writeConfigs(outDir: Path, gamePort: int, servicePort: int, account: str = _
         **{name: {"_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1}
            for name in ("_auditRetention", "_ledgerRetention", "_closedReportTTL", "_mailSentTTL")},
         "_ttlSweepMinuteOfDay": 300,
+        "_ttlBackfillRolloutHours": 0,
         "_listKit": [
             {"_name": "account", "_settings": {
+                "_expiredSessionTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
                 "_ticketKeySecretEnvironment": _kTicketKeyEnvironment,
                 "_bLightPasswordHash": True,
                 "_listSeedTestAccount": [{"_loginName": account, "_password": password}],

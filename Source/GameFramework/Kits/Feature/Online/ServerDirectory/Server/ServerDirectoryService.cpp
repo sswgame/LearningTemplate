@@ -37,6 +37,26 @@ namespace sw
                 return s_table;
             }
 
+            /** @brief 공지의 끝 시각을 읽습니다. 끝이 없는 공지(0)는 false 라 지우지 않는다. */
+            [[nodiscard]] static bool readNoticeEndMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                ServiceAnnouncement notice;
+                if ( ServerDirectoryProtocol::decodeNotice( record._key, record._bytes, notice ) == false || notice._endMs == 0 )
+                    return false;
+                outTimeMs = notice._endMs;
+                return true;
+            }
+
+            /** @brief 점검 창의 끝 시각을 읽습니다. 끝이 없는 점검(0)은 false 라 지우지 않는다. */
+            [[nodiscard]] static bool readMaintenanceEndMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                MaintenanceWindow window;
+                if ( ServerDirectoryProtocol::decodeMaintenance( record._key, record._bytes, window ) == false || window._endMs == 0 )
+                    return false;
+                outTimeMs = window._endMs;
+                return true;
+            }
+
             /** @brief 점검 창 규칙입니다. 운영 쓰기와 저장소에서 읽은 레코드(A 는 상한을 보지 않는다)가 같은 규칙을 지납니다. */
             static bool isValidWindow( const MaintenanceWindow& window )
             {
@@ -436,6 +456,25 @@ namespace sw
         pendingJob._auditEntry._after   = notice._text;
         pendingJob._auditEntry._timeMs  = nowMs.count();
         submitWrite( std::move( pendingJob ), requestTag );
+    }
+
+    ServiceTTLRule ServerDirectoryService::makeNoticeTTLRule( int64 expireAfterMs )
+    {
+        // 표가 작아 색인 없이 커서로 훑는다(liveops_push 와 같다). 읽기가 앞 128 줄만 보므로, 끝난 공지가 쌓이면 새 공지가 목록에서 빠졌다
+        ServiceTTLRule rule;
+        rule._table         = ServerDirectoryServiceInternal::getNoticeTable();
+        rule._expireAfterMs = expireAfterMs;
+        rule._pfnReadTime   = &ServerDirectoryServiceInternal::readNoticeEndMs;
+        return rule;
+    }
+
+    ServiceTTLRule ServerDirectoryService::makeMaintenanceTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule; // 읽기가 앞 kMaxMaintenanceRow 줄만 본다 - 끝난 점검이 쌓이면 새 점검이 빠진다
+        rule._table         = ServerDirectoryServiceInternal::getMaintenanceTable();
+        rule._expireAfterMs = expireAfterMs;
+        rule._pfnReadTime   = &ServerDirectoryServiceInternal::readMaintenanceEndMs;
+        return rule;
     }
 
     void ServerDirectoryService::removeNotice( uint64 noticeID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )

@@ -8,6 +8,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSet.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/AccountNameIndex.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
@@ -84,8 +85,11 @@ namespace sw
                 Memory::wipe( arrTicketKey, sizeof( arrTicketKey ) );
                 // 여기부터 실패하면 세운 로그인 서비스를 스스로 내린다 — 초기화에 실패한 키트는 shutdown 을 받지 않는다.
                 expected<void> assembled =
-                    createPlatformProviders( *providersFile, *trustFile, linkSecretKeyEnvironment, context._clock ).and_then( [&]
-                { return exposeAccount( context, entry ); } );
+                    createPlatformProviders( *providersFile, *trustFile, linkSecretKeyEnvironment, context._clock )
+                        .and_then( [&]
+                { return exposeAccount( context, entry ); } )
+                        .and_then( [&]
+                { return addTTLRule( context, entry, LoginStoreLogic::makeSessionTTLRule( kitConfig._expiredSessionTTL.getExpireAfterMs() ), kitConfig._expiredSessionTTL ); } );
                 if ( assembled.has_value() == false )
                     shutdown();
                 return assembled;

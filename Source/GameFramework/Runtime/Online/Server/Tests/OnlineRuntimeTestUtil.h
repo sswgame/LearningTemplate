@@ -39,7 +39,7 @@ namespace sw::test
             constexpr string_view kBaseTTLJSON = R"( "_auditRetention": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
 "_ledgerRetention": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
 "_closedReportTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
-"_mailSentTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 }, "_ttlSweepMinuteOfDay": 300,)";
+"_mailSentTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 }, "_ttlSweepMinuteOfDay": 300, "_ttlBackfillRolloutHours": 0,)";
             string                text{ onlineJSON.substr( 0, 1 ) };
             text += kBaseTTLJSON;
             text += onlineJSON.substr( 1 );

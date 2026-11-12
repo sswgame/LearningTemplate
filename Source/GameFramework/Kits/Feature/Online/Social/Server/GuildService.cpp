@@ -466,6 +466,8 @@ namespace sw
                 }
                 if ( liveCount >= GuildLimit::kMaxApplication )
                     return fail( SocialResult::PendingLimit );
+                // 쓰기: 죽은 신청 지우기(최대 kMaxApplication) + 신청 + TTL 색인 줄 + 길드 버전 조건
+                static_assert( GuildLimit::kMaxApplication + 3 <= ServiceTransaction::kMaxWriteCount, "runApply 의 트랜잭션이 쓰기 상한을 넘을 수 있다" );
                 const int64 expiresMs = _request._nowMs.count() + GuildLimit::kApplicationLifetimeMs;
                 transaction.put( Internal::getApplicationTable(), selfKey, Internal::encodeApplication( _request._nowMs.count(), expiresMs ) );
                 // 해산한 길드 · 다시 오지 않는 신청자의 신청은 이 함수가 다시 돌지 않아 남는다 - TTL 색인 줄이 기간 뒤에 지운다. 다시 낸 신청은 새 줄이 맡는다
@@ -1213,22 +1215,24 @@ namespace sw
     ServiceTTLRule GuildService::makeInviteTTLRule( int64 expireAfterMs )
     {
         ServiceTTLRule rule;
-        rule._table               = GuildServiceInternal::getInviteTable();
-        rule._ttlIndexTable       = GuildServiceInternal::getInviteExpiryTable();
-        rule._expireAfterMs       = expireAfterMs;
-        rule._pfnReadTime         = &GuildServiceInternal::readInviteExpiryMs;
-        rule._pfnBackfillIndexKey = &ServiceTTLRule::makeRecordIndexKey<&GuildServiceInternal::readInviteExpiryMs>;
+        rule._table           = GuildServiceInternal::getInviteTable();
+        rule._ttlIndexTable   = GuildServiceInternal::getInviteExpiryTable();
+        rule._expireAfterMs   = expireAfterMs;
+        rule._pfnReadTime     = &GuildServiceInternal::readInviteExpiryMs;
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&GuildServiceInternal::readInviteExpiryMs>();
+        rule._backfillVersion = 1;
         return rule;
     }
 
     ServiceTTLRule GuildService::makeApplicationTTLRule( int64 expireAfterMs )
     {
         ServiceTTLRule rule;
-        rule._table               = GuildServiceInternal::getApplicationTable();
-        rule._ttlIndexTable       = GuildServiceInternal::getApplicationExpiryTable();
-        rule._expireAfterMs       = expireAfterMs;
-        rule._pfnReadTime         = &GuildServiceInternal::readApplicationExpiryMs;
-        rule._pfnBackfillIndexKey = &ServiceTTLRule::makeRecordIndexKey<&GuildServiceInternal::readApplicationExpiryMs>;
+        rule._table           = GuildServiceInternal::getApplicationTable();
+        rule._ttlIndexTable   = GuildServiceInternal::getApplicationExpiryTable();
+        rule._expireAfterMs   = expireAfterMs;
+        rule._pfnReadTime     = &GuildServiceInternal::readApplicationExpiryMs;
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&GuildServiceInternal::readApplicationExpiryMs>();
+        rule._backfillVersion = 1;
         return rule;
     }
 

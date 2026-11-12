@@ -6,11 +6,13 @@
     "_closedReportTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 2000, "_maxDeletePerSweep": 500 },
     "_mailSentTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
     "_ttlSweepMinuteOfDay": 300,
+    "_ttlBackfillRolloutHours": 24,
     "_publicAddress": "127.0.0.1",
     "_listKit": [
         {
             "_name": "account",
             "_settings": {
+                "_expiredSessionTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
                 "_bLightPasswordHash": true,
                 "_listSeedTestAccount": [
                     {
@@ -47,7 +49,8 @@
         {
             "_name": "mailbox",
             "_settings": {
-                "_claimedRetentionDays": 30
+                "_claimedRetentionDays": 30,
+                "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 }
             }
         },
         {

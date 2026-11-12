@@ -3,7 +3,9 @@
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
@@ -14,8 +16,39 @@ namespace sw
     {
         struct ServiceTTLRuleInternal
         {
-            static constexpr uint8 kBackfillRunning = 1; ///< 진행 값 [1][커서]
-            static constexpr uint8 kBackfillDone    = 2; ///< 진행 값 [2] — 다시 훑지 않는다
+            static constexpr uint64 kBackfillRunning = 1; ///< 이 바퀴가 도는 중이다
+            static constexpr uint64 kBackfillDone    = 2; ///< 이 판은 끝났다 — 판이 오르기 전에는 다시 훑지 않는다
+
+            /** @brief 백필 진행 한 줄입니다(`ServiceTTLRule::getBackfillTable`). */
+            struct BackfillProgress
+            {
+                string _cursor{};
+                int64  _activatedMs{ 0 }; ///< 이 판을 처음 본 시각 — 배포 창을 잰다
+                int64  _passStartMs{ 0 }; ///< 이 바퀴를 시작한 시각
+                uint64 _version{ 0 };
+                uint64 _state{ kBackfillRunning };
+            };
+
+            static vector<uint8> encodeProgress( const BackfillProgress& progress )
+            {
+                BitWriter writer;
+                writer.writeVarUint( progress._version );
+                writer.writeVarUint( progress._state );
+                writer.writeVarInt( progress._activatedMs );
+                writer.writeVarInt( progress._passStartMs );
+                ServiceKeyUtil::writeString( writer, progress._cursor );
+                return writer.releaseBytes();
+            }
+
+            [[nodiscard]] static bool decodeProgress( const vector<uint8>& bytes, BackfillProgress& outProgress )
+            {
+                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+                outProgress._version     = reader.readVarUint();
+                outProgress._state       = reader.readVarUint();
+                outProgress._activatedMs = reader.readVarInt();
+                outProgress._passStartMs = reader.readVarInt();
+                return ServiceKeyUtil::readString( reader, OnlineLimit::kMaxKeySize, outProgress._cursor ) && reader.hasOverflowed() == false;
+            }
         };
     } // namespace
 } // namespace sw
@@ -31,9 +64,9 @@ namespace sw
         const int64 cutoffMs = nowMs - inoutRule._expireAfterMs;
         if ( inoutRule._ttlIndexTable.empty() == false )
         {
-            if ( inoutRule._pfnBackfillIndexKey != nullptr )
+            if ( inoutRule._pBackfillSource != nullptr )
             {
-                const ServiceStoreResult backfilled = backfillTTLIndex( connection, inoutRule, maxScanCount, outReport );
+                const ServiceStoreResult backfilled = backfillTTLIndex( connection, inoutRule, nowMs, maxScanCount, outReport );
                 if ( backfilled != ServiceStoreResult::Ok )
                     return backfilled; // 채우지 못한 줄은 다음 회차가 이어서 넣는다 - 범위 읽기는 그 뒤에 해도 늦지 않다
             }
@@ -104,7 +137,8 @@ namespace sw
 
     bool ServiceTTLRule::isValid() const
     {
-        return _expireAfterMs > 0 && ( _pfnReadTime != nullptr || _ttlIndexTable.empty() == false );
+        const bool bBackfillOk = _pBackfillSource == nullptr || ( _ttlIndexTable.empty() == false && _backfillVersion > 0 && _backfillRolloutMs >= 0 );
+        return _expireAfterMs > 0 && ( _pfnReadTime != nullptr || _ttlIndexTable.empty() == false ) && bBackfillOk;
     }
 
     bool ServiceTTLRule::isSchedulable() const
@@ -118,7 +152,8 @@ namespace sw
         return s_table;
     }
 
-    ServiceStoreResult ServiceTTLRule::backfillTTLIndex( IServiceStoreConnection& connection, const ServiceTTLRule& rule, int32 maxScanCount, ServiceTTLSweepReport& inoutReport )
+    ServiceStoreResult ServiceTTLRule::backfillTTLIndex( IServiceStoreConnection& connection, const ServiceTTLRule& rule, int64 nowMs, int32 maxScanCount,
+                                                         ServiceTTLSweepReport& inoutReport )
     {
         using Internal = ServiceTTLRuleInternal;
         string progressKey{ rule._table.viewOrEmpty() };
@@ -127,21 +162,26 @@ namespace sw
         int32 scannedCount = 0;
         while ( scannedCount < maxScanCount )
         {
-            ServiceRecord            progress;
-            const ServiceStoreResult read = connection.readRecord( getBackfillTable(), progressKey, progress );
+            ServiceRecord            progressRecord;
+            const ServiceStoreResult read = connection.readRecord( getBackfillTable(), progressKey, progressRecord );
             if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
                 return read;
-            if ( read == ServiceStoreResult::Ok && ( progress._bytes.empty() || progress._bytes[0] != Internal::kBackfillRunning ) )
-                return ServiceStoreResult::Ok; // 끝났다. 모르는 값도 다시 훑지 않는다 - 줄이 빠진 레코드는 남는 쪽으로 틀린다
-            string cursor;
-            for ( size_t index = 1; index < progress._bytes.size(); ++index )
+            Internal::BackfillProgress progress;
+            const bool                 bKnown = read == ServiceStoreResult::Ok && Internal::decodeProgress( progressRecord._bytes, progress );
+            if ( bKnown && progress._version >= rule._backfillVersion && progress._state == Internal::kBackfillDone )
+                return ServiceStoreResult::Ok; // 이 판은 끝났다
+            if ( bKnown == false || progress._version < rule._backfillVersion )
             {
-                cursor.push_back( static_cast<utf8>( progress._bytes[index] ) );
+                // 처음이거나 판이 올랐다(모르는 값도 처음부터 다시 훑는다 - 겹쳐 넣어도 같은 줄이다)
+                progress              = Internal::BackfillProgress{};
+                progress._version     = rule._backfillVersion;
+                progress._activatedMs = nowMs;
+                progress._passStartMs = nowMs;
             }
             // 한 트랜잭션에 진행 줄 하나가 함께 들어가므로 쓰기 상한보다 하나 적게 읽는다
             const int32              pageSize = MathUtil::min( ServiceTransaction::kMaxWriteCount - 1, maxScanCount - scannedCount );
             vector<ServiceRecord>    listRecord;
-            const ServiceStoreResult listed = connection.listRecords( rule._table, rule._keyPrefix, cursor, pageSize, false, listRecord );
+            const ServiceStoreResult listed = connection.listRecords( rule._table, rule._keyPrefix, progress._cursor, pageSize, false, listRecord );
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             ServiceTransaction transaction;
@@ -149,30 +189,33 @@ namespace sw
             for ( const ServiceRecord& record : listRecord )
             {
                 string indexKey;
-                if ( rule._pfnBackfillIndexKey( record, indexKey ) == false )
+                if ( rule._pBackfillSource->makeIndexKey( connection, record, indexKey ) == false )
                     continue; // 기준 시각이 아직 없는 레코드(열린 거래 · 열린 신고)다. 시각이 생기는 쓰기가 줄을 넣는다
                 transaction.put( rule._ttlIndexTable, indexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
                 ++indexedCount;
             }
             scannedCount += static_cast<int32>( listRecord.size() );
-            const bool    bDone = static_cast<int32>( listRecord.size() ) < pageSize;
-            vector<uint8> progressBytes{ bDone ? Internal::kBackfillDone : Internal::kBackfillRunning };
-            if ( bDone == false )
+            const bool bPassEnded = static_cast<int32>( listRecord.size() ) < pageSize;
+            bool       bNewPass   = false;
+            if ( bPassEnded == false )
+                progress._cursor = listRecord.back()._key;
+            else if ( progress._passStartMs >= progress._activatedMs + rule._backfillRolloutMs )
+                progress._state = Internal::kBackfillDone; // 배포 창이 지난 뒤 시작한 바퀴다 - 옛 판 서버가 쓴 레코드까지 주웠다
+            else
             {
-                for ( const utf8 letter : listRecord.back()._key )
-                {
-                    progressBytes.push_back( static_cast<uint8>( letter ) );
-                }
+                progress._cursor.clear(); // 창 안에 끝난 바퀴다. 아직 옛 판으로 쓰는 서버가 있을 수 있어 처음부터 다시 돈다
+                progress._passStartMs = nowMs;
+                bNewPass              = true;
             }
-            transaction.put( getBackfillTable(), progressKey, std::move( progressBytes ), progress._version ); // 없으면 "없어야 함"이다
+            transaction.put( getBackfillTable(), progressKey, Internal::encodeProgress( progress ), progressRecord._version ); // 없으면 "없어야 함"이다
             const ServiceStoreResult committed = connection.commit( transaction );
             if ( committed == ServiceStoreResult::Conflict )
                 return ServiceStoreResult::Ok; // 다른 쓸기가 같은 진행을 옮겼다. 다음 회차가 이어 간다
             if ( committed != ServiceStoreResult::Ok )
                 return committed;
             inoutReport._backfilledCount += indexedCount;
-            if ( bDone )
-                return ServiceStoreResult::Ok;
+            if ( bPassEnded || bNewPass )
+                return ServiceStoreResult::Ok; // 새 바퀴는 다음 회차부터 돈다 - 한 회차에 같은 표를 두 번 훑지 않는다
         }
         return ServiceStoreResult::Ok;
     }

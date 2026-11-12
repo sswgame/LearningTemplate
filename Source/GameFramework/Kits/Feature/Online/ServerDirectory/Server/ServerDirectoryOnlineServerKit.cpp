@@ -36,8 +36,14 @@ namespace sw
                     return result;
                 _settings._listServerKind = std::move( kitConfig._listServerKind );
                 // 점검 · 공지 창은 GM 키트가 `start` 에서 읽는다(GM 키트의 선택 의존).
-                return registerServerService( context, entry, &_server ).and_then( [&]
-                { return exposeInterface<IServerDirectoryControl>( context, entry, _service ); } );
+                const ServiceTTLConfig& noticeTTL = kitConfig._endedNoticeTTL;
+                return registerServerService( context, entry, &_server )
+                    .and_then( [&]
+                { return exposeInterface<IServerDirectoryControl>( context, entry, _service ); } )
+                    .and_then( [&]
+                { return addTTLRule( context, entry, ServerDirectoryService::makeNoticeTTLRule( noticeTTL.getExpireAfterMs() ), noticeTTL ); } )
+                    .and_then( [&]
+                { return addTTLRule( context, entry, ServerDirectoryService::makeMaintenanceTTLRule( noticeTTL.getExpireAfterMs() ), noticeTTL ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override

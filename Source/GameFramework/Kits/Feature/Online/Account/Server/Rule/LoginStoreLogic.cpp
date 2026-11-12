@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
@@ -48,6 +49,12 @@ namespace sw
             static const hashed_string& getSessionTable()
             {
                 static const hashed_string s_table{ "login_session" };
+                return s_table;
+            }
+
+            static const hashed_string& getSessionExpiryTable()
+            {
+                static const hashed_string s_table{ "login_session_expiry" };
                 return s_table;
             }
 
@@ -241,6 +248,26 @@ namespace sw
                     return false;
                 record._revokeReason = static_cast<LoginRevokeReason>( revokeReason );
                 outRecord            = record;
+                return true;
+            }
+
+            /**
+             * @brief 세션 레코드를 쓰고 그 만료 시각의 TTL 색인 줄을 함께 넣습니다. 세션을 쓰는 모든 곳이 이 함수를 지난다 — 만료를 늦춘 세션은 새 줄이 맡는다.
+             * @details 밀려난 세션(묘비) · 끝난 세션은 로그아웃하지 않으면 지우는 길이 없어 로그인마다 쌓였다. 줄은 만료 뒤 TTL 규칙(`makeSessionTTLRule`)이 지운다.
+             */
+            static void stageSession( ServiceTransaction& inoutTransaction, string_view sessionKey, const SessionRecord& session, uint64 expectedVersion )
+            {
+                inoutTransaction.put( getSessionTable(), sessionKey, session.encodeSession(), expectedVersion );
+                inoutTransaction.put( getSessionExpiryTable(), ServiceTTLRule::makeTTLIndexKey( session._expiresAtMs, sessionKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+            }
+
+            /** @brief 세션 레코드의 만료 시각을 읽습니다(TTL 쓸기). 읽지 못하면 지우지 않는다. */
+            [[nodiscard]] static bool readSessionExpiryMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                SessionRecord session;
+                if ( decodeSession( record._bytes, session ) == false )
+                    return false;
+                outTimeMs = session._expiresAtMs;
                 return true;
             }
 
@@ -774,7 +801,7 @@ namespace sw
             session._resumeDeadlineMs = 0;
             ++session._rotation;
             ServiceTransaction transaction;
-            transaction.put( Internal::getSessionTable(), sessionKey, session.encodeSession(), sessionRaw._version );
+            Internal::stageSession( transaction, sessionKey, session, sessionRaw._version );
             const ServiceStoreResult commitResult = _connection.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
                 continue; // 같은 토큰으로 그사이 돌아온 쪽이 있다. 다시 읽으면 비밀이 달라서 InvalidToken 이 된다
@@ -857,7 +884,7 @@ namespace sw
                 return;
             session._resumeDeadlineMs = nowMs + _settings._reconnectGraceMs;
             ServiceTransaction transaction;
-            transaction.put( Internal::getSessionTable(), sessionKey, session.encodeSession(), sessionRaw._version );
+            Internal::stageSession( transaction, sessionKey, session, sessionRaw._version );
             const ServiceStoreResult commitResult = _connection.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
                 continue;
@@ -1293,6 +1320,18 @@ namespace sw
         return ServiceStoreResult::Ok;
     }
 
+    ServiceTTLRule LoginStoreLogic::makeSessionTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule;
+        rule._table           = LoginStoreLogicInternal::getSessionTable();
+        rule._ttlIndexTable   = LoginStoreLogicInternal::getSessionExpiryTable();
+        rule._expireAfterMs   = expireAfterMs;
+        rule._pfnReadTime     = &LoginStoreLogicInternal::readSessionExpiryMs; // 지우기 전에 만료를 다시 본다 - 늘린 세션은 남긴다
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&LoginStoreLogicInternal::readSessionExpiryMs>();
+        rule._backfillVersion = 1;
+        return rule;
+    }
+
     ServiceStoreResult LoginStoreLogic::eraseRevocation( IServiceStoreConnection& connection, string_view key )
     {
         ServiceTransaction transaction;
@@ -1401,7 +1440,7 @@ namespace sw
             {
                 oldSession._revokeReason = LoginRevokeReason::DuplicateLogin;
                 oldSession._expiresAtMs  = MathUtil::min( oldSession._expiresAtMs, nowMs + _settings._tombstoneLifetimeMs );
-                inoutTransaction.put( Internal::getSessionTable(), oldSessionKey, oldSession.encodeSession(), oldSessionRaw._version );
+                Internal::stageSession( inoutTransaction, oldSessionKey, oldSession, oldSessionRaw._version );
                 outReplacedSessionID = oldSessionID;
             }
         }
@@ -1415,8 +1454,7 @@ namespace sw
         session._expiresAtMs = nowMs + _settings._sessionLifetimeMs;
         if ( Internal::computeTokenDigest( _crypto, outToken._arrSecret, session._arrTokenDigest ) == false )
             return LoginServiceResult::fail( OnlineError::kUnavailable );
-        inoutTransaction.put( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( outToken._sessionID ), session.encodeSession(),
-                              ServiceRecord::kAbsentVersion );
+        Internal::stageSession( inoutTransaction, ServiceKeyUtil::makeHex64( outToken._sessionID ), session, ServiceRecord::kAbsentVersion );
         inoutTransaction.put( Internal::getAccountSessionTable(), accountKey, ServiceKeyUtil::encodeVarID( outToken._sessionID ), linkRaw._version );
         outExpiresAtMs = session._expiresAtMs;
         return LoginResult::Ok;
@@ -1457,7 +1495,7 @@ namespace sw
             return LoginServiceResult::fail( OnlineError::kUnavailable );
         session._revokeReason = reason;
         session._expiresAtMs  = MathUtil::min( session._expiresAtMs, nowMs + _settings._tombstoneLifetimeMs );
-        inoutTransaction.put( Internal::getSessionTable(), sessionKey, session.encodeSession(), sessionRaw._version );
+        Internal::stageSession( inoutTransaction, sessionKey, session, sessionRaw._version );
         inoutTransaction.erase( Internal::getAccountSessionTable(), accountKey, linkRaw._version );
         outSessionID = sessionID;
         return LoginResult::Ok;

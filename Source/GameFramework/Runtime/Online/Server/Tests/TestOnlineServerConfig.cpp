@@ -38,7 +38,7 @@ namespace
 SW_TEST_CASE( OnlineServerConfigTest, SettingsObjectFillsTheKitConfig )
 {
     sw::ConfigManager manager;
-    SW_REQUIRE_TRUE( manager.loadConfigFromJSON<sw::OnlineServerConfig>( R"({ "_ttlSweepMinuteOfDay": 300,
+    SW_REQUIRE_TRUE( manager.loadConfigFromJSON<sw::OnlineServerConfig>( R"({ "_ttlSweepMinuteOfDay": 300, "_ttlBackfillRolloutHours": 24,
 "_auditRetention": { "_expireAfterDays": 365, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
 "_ledgerRetention": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
 "_closedReportTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },

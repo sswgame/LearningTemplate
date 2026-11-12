@@ -280,6 +280,88 @@ namespace sw
             }
         };
 
+        /**
+         * @brief 보드 카탈로그의 불변 사본으로 색인보다 먼저 쓴 점수 · 시즌 결과의 TTL 색인 키를 만듭니다(백필).
+         * @details 줄의 시각(다음 초기화, 시즌 끝 + 정산 창)이 레코드가 아니라 보드 정의에서 나온다. 저장소 스레드가 읽으므로 만들 때 정의를 복사해 두고 바꾸지 않는다.
+         *          모르는 보드 · 초기화 없는 보드 · 모르는 시즌의 레코드는 줄을 만들지 않는다(남는 쪽으로 틀린다).
+         */
+        class LeaderboardBackfillSource final : public IServiceTTLBackfillSource
+        {
+        public:
+            enum class Kind : uint8
+            {
+                Score = 0,   ///< `<보드>/<기간 16 진 16>/<계정 16 진>`
+                SeasonResult ///< `<보드>/<시즌 16 진 8>/<계정 16 진>`
+            };
+
+            LeaderboardBackfillSource( vector<LeaderboardDef> listBoard, Kind kind )
+                : _listBoard{ std::move( listBoard ) }
+                , _kind{ kind }
+            {
+            }
+
+            [[nodiscard]] bool makeIndexKey( IServiceStoreConnection& connection, const ServiceRecord& record, string& outIndexKey ) const override
+            {
+                (void)connection;
+                constexpr size_t  kAccountWidth = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                const size_t      periodWidth   = _kind == Kind::Score ? static_cast<size_t>( ServiceKeyUtil::kHexWidth ) : kSeasonHexWidth;
+                const size_t      tailSize      = 1 + periodWidth + 1 + kAccountWidth;
+                const string_view key           = record._key;
+                if ( key.size() <= tailSize || key[key.size() - kAccountWidth - 1] != '/' || key[key.size() - tailSize] != '/' )
+                    return false;
+                const string_view boardID  = key.substr( 0, key.size() - tailSize );
+                uint64            periodID = 0;
+                if ( parseHex( key.substr( key.size() - tailSize + 1, periodWidth ), periodID ) == false )
+                    return false;
+                const LeaderboardDef* pBoard = nullptr;
+                for ( const LeaderboardDef& board : _listBoard )
+                {
+                    if ( board._boardID == boardID )
+                        pBoard = &board;
+                }
+                if ( pBoard == nullptr )
+                    return false;
+                int64 baseMs = 0;
+                if ( _kind == Kind::Score )
+                    baseMs = LeaderboardServiceInternal::computeScoreExpiryBaseMs( *pBoard, periodID );
+                else
+                {
+                    for ( const LeaderboardSeason& season : pBoard->_listSeason )
+                    {
+                        if ( season._seasonID == periodID )
+                            baseMs = season._endMs + LeaderboardServiceInternal::kSettlementWindowMs; // 쓰는 쪽(`stageSeasonResult`)과 같은 시각이다
+                    }
+                }
+                if ( baseMs <= 0 )
+                    return false;
+                outIndexKey = ServiceTTLRule::makeTTLIndexKey( baseMs, key );
+                return true;
+            }
+
+        private:
+            static constexpr size_t kSeasonHexWidth  = 8;  ///< `makeSeasonHex` 의 자릿수
+            static constexpr uint64 kHexLetterValue  = 10; ///< 'a' · 'A' 의 값
+            static constexpr int32  kBitsPerHexDigit = 4;
+
+            [[nodiscard]] static bool parseHex( string_view text, uint64& outValue )
+            {
+                outValue = 0;
+                for ( const utf8 letter : text )
+                {
+                    const bool bDigit = letter >= '0' && letter <= '9';
+                    const bool bLower = letter >= 'a' && letter <= 'f';
+                    const bool bUpper = letter >= 'A' && letter <= 'F';
+                    if ( bDigit == false && bLower == false && bUpper == false )
+                        return false;
+                    const uint64 digit = bDigit ? static_cast<uint64>( letter - '0' ) : static_cast<uint64>( ( bLower ? letter - 'a' : letter - 'A' ) + kHexLetterValue );
+                    outValue           = ( outValue << kBitsPerHexDigit ) | digit;
+                }
+                return text.empty() == false;
+            }
+
+            vector<LeaderboardDef> _listBoard;
+            Kind                   _kind;
+        };
     } // namespace
 
     /** @brief 점수(또는 통계) 하나를 버전 조건으로 쓰는 일의 입력입니다. 저장소 스레드가 읽는 값 복사입니다(`LeaderboardService::submitWrite` 가 받으므로 이름 있는 이름공간에 둔다). */
@@ -816,6 +898,16 @@ namespace sw
         rule._expireAfterMs = expireAfterMs;
         rule._pfnReadTime   = &LeaderboardServiceInternal::readScoreTimeMs;
         return rule;
+    }
+
+    shared_ptr<const IServiceTTLBackfillSource> LeaderboardService::makeScoreBackfillSource( const vector<LeaderboardDef>& listBoard )
+    {
+        return shared_ptr<const IServiceTTLBackfillSource>( make_shared<LeaderboardBackfillSource>( listBoard, LeaderboardBackfillSource::Kind::Score ) );
+    }
+
+    shared_ptr<const IServiceTTLBackfillSource> LeaderboardService::makeSeasonResultBackfillSource( const vector<LeaderboardDef>& listBoard )
+    {
+        return shared_ptr<const IServiceTTLBackfillSource>( make_shared<LeaderboardBackfillSource>( listBoard, LeaderboardBackfillSource::Kind::SeasonResult ) );
     }
 
     ServiceTTLRule LeaderboardService::makeSeasonResultTTLRule( int64 expireAfterMs )

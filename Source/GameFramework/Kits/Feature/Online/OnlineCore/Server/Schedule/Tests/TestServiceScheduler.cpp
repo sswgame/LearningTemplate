@@ -442,8 +442,9 @@ SW_TEST_CASE( ServiceTTLTest, IndexBackfillsLegacyRecordsOnce )
     rig.put( "a", kNowMs - 2000 );
     rig.put( "b", kNowMs - 1500 );
     rig.put( "c", kNowMs - 10 );
-    ServiceTTLRule rule       = rig.makeIndexRule();
-    rule._pfnBackfillIndexKey = &ServiceTTLRule::makeRecordIndexKey<&readLeadingTime>;
+    ServiceTTLRule rule   = rig.makeIndexRule();
+    rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readLeadingTime>();
+    rule._backfillVersion = 1;
 
     ServiceTTLSweepReport report;
     SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 2, 100, report ) == ServiceStoreResult::Ok );
@@ -462,6 +463,38 @@ SW_TEST_CASE( ServiceTTLTest, IndexBackfillsLegacyRecordsOnce )
     SW_EXPECT_EQUAL( 2, rig.count() );
     SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, report._deletedCount ); // c 는 색인으로 지운다
+    SW_EXPECT_EQUAL( 1, rig.count() );
+
+    rule._backfillVersion = 2; // 쓰는 쪽의 줄 모양이 바뀌었다 - 새 판은 처음부터 다시 훑어 d 를 줍는다
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._backfilledCount );
+    SW_EXPECT_EQUAL( 1, report._deletedCount );
+    SW_EXPECT_EQUAL( 0, rig.count() );
+}
+
+/** @brief [ServiceTTLTest] 색인 백필의 배포 창: 창 안에 끝난 바퀴는 처음부터 다시 돌아, 그사이 옛 판 서버가 색인 줄 없이 쓴 레코드를 창이 지난 뒤의 바퀴가 줍는다 */
+SW_TEST_CASE( ServiceTTLTest, IndexBackfillRepeatsUntilRolloutWindowEnds )
+{
+    TTLFixture rig;
+    rig.put( "a", kNowMs - 5000 );
+    ServiceTTLRule rule     = rig.makeIndexRule();
+    rule._pBackfillSource   = ServiceTTLRule::makeRecordBackfillSource<&readLeadingTime>();
+    rule._backfillVersion   = 1;
+    rule._backfillRolloutMs = 10000;
+
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._backfilledCount );
+    SW_EXPECT_EQUAL( 0, rig.count() );
+    rig.put( "b", kNowMs - 5000 ); // 옛 판 서버가 배포 창 안에서 색인 줄 없이 썼다
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs + 5000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._backfilledCount ); // 창 안의 다음 바퀴가 줍는다
+    SW_EXPECT_EQUAL( 0, rig.count() );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs + 20000, 100, 100, report ) == ServiceStoreResult::Ok ); // 창이 지난 뒤 마지막 바퀴를 시작한다
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs + 30000, 100, 100, report ) == ServiceStoreResult::Ok ); // 마지막 바퀴가 끝나 판을 닫는다
+    rig.put( "c", kNowMs - 5000 );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs + 40000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, report._backfilledCount ); // 판이 끝났다 - 창 뒤의 색인 없는 쓰기는 없다(옛 판 서버가 모두 내려갔다)
     SW_EXPECT_EQUAL( 1, rig.count() );
 }
 

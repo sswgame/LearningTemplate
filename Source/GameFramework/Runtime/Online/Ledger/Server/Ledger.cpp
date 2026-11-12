@@ -638,12 +638,13 @@ namespace sw
     ServiceTTLRule Ledger::makeJournalTTLRule( int64 retentionMs )
     {
         ServiceTTLRule rule;
-        rule._table               = getJournalTable();
-        rule._ttlIndexTable       = LedgerInternal::getJournalExpiryTable();
-        rule._expireAfterMs       = retentionMs;
-        rule._pfnReadTime         = &LedgerInternal::readJournalTimeMs;
-        rule._pfnStageErase       = &LedgerInternal::stageJournalErase;
-        rule._pfnBackfillIndexKey = &ServiceTTLRule::makeRecordIndexKey<&LedgerInternal::readJournalTimeMs>;
+        rule._table           = getJournalTable();
+        rule._ttlIndexTable   = LedgerInternal::getJournalExpiryTable();
+        rule._expireAfterMs   = retentionMs;
+        rule._pfnReadTime     = &LedgerInternal::readJournalTimeMs;
+        rule._pfnStageErase   = &LedgerInternal::stageJournalErase;
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&LedgerInternal::readJournalTimeMs>();
+        rule._backfillVersion = 1;
         return rule;
     }
 
