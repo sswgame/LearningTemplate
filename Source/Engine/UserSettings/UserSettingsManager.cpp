@@ -315,7 +315,7 @@ namespace sw
         return true;
     }
 
-    string UserSettingsManager::makeUserJSON() const
+    expected<string> UserSettingsManager::makeUserJSON() const
     {
         const vector<UserSettingDef>&  listSetting = _schema.getSettings();
         vector<UserSettingsWriteEntry> listEntry;
@@ -340,13 +340,20 @@ namespace sw
             SW_LOG_WARNING_ID( "UserSettings.CannotCreateFolderUser", "Cannot create the folder for user settings '%#'", filePath );
             return false;
         }
+        // 글을 못 만들면(잘못된 UTF-8 값) 있던 파일을 덮지 않는다.
+        const expected<string> text = makeUserJSON();
+        if ( text.has_value() == false )
+        {
+            SW_LOG_WARNING_ID( "UserSettings.UserSettingsNotWritable", "User settings '%#' were not written: %# (%#)", filePath, text.error().message(), text.error().detail() );
+            return false;
+        }
         // 교체 재시도 sleep 이 이 안에 있다(`FileUtil::writeAtomically`, Core 라 프로파일러를 못 쓴다). 서비스가 묶이기 전 호출은 계측 없이 쓴다.
         const bool bWritten = [&]()
         {
             if ( engine::areEngineServicesBound() == false )
-                return FileUtil::writeTextFile( filePath, makeUserJSON() );
+                return FileUtil::writeTextFile( filePath, *text );
             SW_PROFILE_SCOPE( "GT.Settings.save" );
-            return FileUtil::writeTextFile( filePath, makeUserJSON() );
+            return FileUtil::writeTextFile( filePath, *text );
         }();
         if ( bWritten == false )
         {

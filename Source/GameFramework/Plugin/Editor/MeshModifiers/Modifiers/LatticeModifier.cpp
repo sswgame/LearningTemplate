@@ -148,7 +148,7 @@ namespace sw::editor
         return result;
     }
 
-    void LatticeModifier::writeExtraJSON( const JSONValue& object ) const
+    expected<void> LatticeModifier::writeExtraJSON( const JSONValue& object ) const
     {
         const JSONValue box = object.set( "box" );
         box.setObject();
@@ -177,6 +177,7 @@ namespace sw::editor
             points.pushBack().setFloat( static_cast<float64>( point._y ) );
             points.pushBack().setFloat( static_cast<float64>( point._z ) );
         }
+        return {};
     }
 
     bool LatticeModifier::readExtraJSON( const JSONValue& object )

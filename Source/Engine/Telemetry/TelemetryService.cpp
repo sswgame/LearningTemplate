@@ -495,7 +495,8 @@ namespace sw
         {
             TelemetryServiceInternal::setValueJSON( params.set( value._name.c_str() ), value );
         }
-        return doc.dump( -1 );
+        // 텔레메트리 줄은 구조화 로그와 같은 규칙이다(`JSONWriter`) — 잘못된 UTF-8 은 U+FFFD 로 바꾸고 줄을 잃지 않는다.
+        return root.describe();
     }
 
     string TelemetryService::makeContextLineLocked() const
@@ -510,7 +511,7 @@ namespace sw
         root.set( "buildID" ).setString( _context->_buildID );
         root.set( "game" ).setString( _context->_game );
         root.set( "file" ).setUint( _fileIndex );
-        return doc.dump( -1 );
+        return root.describe(); // 이벤트 줄과 같은 규칙(U+FFFD)
     }
 
     string TelemetryService::makeSpoolFilePathLocked( uint32 fileIndex ) const

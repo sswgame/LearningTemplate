@@ -62,10 +62,10 @@ namespace sw::editor
         /** @brief 모든 구간을 건 뒤의 마무리(법선 재계산을 고르면 면 법선으로 다시 만든다)입니다. */
         void finishApply( MeshModifierMesh& inoutMesh ) const;
 
-        /** @brief 저장 문서(JSON 글)를 만듭니다. @p indent 가 음수면 한 줄입니다. */
-        string makeJSONText( int32 indent = 2 ) const;
-        /** @brief 위에서 @p endIndex 개 모디파이어만 담은 한 줄 저장 글입니다. 같은 글이면 그 구간을 건 결과가 같아 앞부분 결과 캐시의 열쇠로 씁니다. */
-        string makePrefixJSONText( int32 endIndex ) const;
+        /** @brief 저장 문서(JSON 글)를 만듭니다. @p indent 가 음수면 한 줄입니다. 이름 · 글 매개변수에 잘못된 UTF-8 이 있으면 오류입니다(`JSONDocument::dump`). */
+        [[nodiscard]] expected<string> makeJSONText( int32 indent = 2 ) const;
+        /** @brief 위에서 @p endIndex 개 모디파이어만 담은 한 줄 저장 글입니다. 같은 글이면 그 구간을 건 결과가 같아 앞부분 결과 캐시의 열쇠로 씁니다. 실패 규칙은 위와 같습니다. */
+        [[nodiscard]] expected<string> makePrefixJSONText( int32 endIndex ) const;
         /** @brief 저장 문서를 읽습니다. 문서가 틀리면 false 이고 스택은 비웁니다. 모르는 종류는 경고하고 건너뜁니다. */
         [[nodiscard]] bool readJSONText( string_view jsonText );
         /** @brief 절대 경로에 저장합니다. */

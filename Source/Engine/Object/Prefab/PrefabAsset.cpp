@@ -653,21 +653,23 @@ namespace sw
         }
         _listNestedInstance = std::move( listNode );
 
+        JSONDocument stateDoc;
         if ( root.has( PrefabAssetInternal::kNestedList ) )
         {
-            JSONDocument    stateDoc;
             const JSONValue stateRoot = stateDoc.makeObject();
             for ( const string& key : root.getMemberNames() )
             {
                 if ( key != PrefabAssetInternal::kNestedList )
                     stateRoot.set( key ).assignFrom( root.get( key ) );
             }
-            _stateData = stateDoc.dump( 0 );
         }
-        else
+        const expected<string> stateText = root.has( PrefabAssetInternal::kNestedList ) ? stateDoc.dump( 0 ) : doc.dump( 0 );
+        if ( stateText.has_value() == false )
         {
-            _stateData = doc.dump( 0 );
+            SW_LOG_ERROR_ID( "PrefabAsset.PrefabStateNotWritable", "Prefab state could not be written as JSON: %# (%#) - %#", stateText.error().message(), stateText.error().detail(), absPath );
+            return false;
         }
+        _stateData = *stateText;
 
         if ( _name.empty() )
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
@@ -955,8 +957,14 @@ namespace sw
             if ( overrideXML.empty() == false )
                 variantRoot.set( PrefabAssetInternal::kVariantOverrides ).setString( overrideXML );
             PrefabAssetInternal::writeNodesToJSON( variantRoot, listOwnNode, -1 );
-            const string variantText = variantDoc.dump( 0 );
-            if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || FileUtil::writeFile( absPath.str(), reinterpret_cast<const uint8*>( variantText.data() ), variantText.size() ) == false )
+            const expected<string> variantText = variantDoc.dump( 0 );
+            if ( variantText.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "PrefabAsset.PrefabVariantNotWritable", "Prefab variant '%#' could not be written as JSON: %# (%#); nothing written: %#", _name, variantText.error().message(),
+                                 variantText.error().detail(), absPath.str() );
+                return false;
+            }
+            if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || FileUtil::writeFile( absPath.str(), reinterpret_cast<const uint8*>( variantText->data() ), variantText->size() ) == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabJSON2", "Failed to write prefab JSON: %#", absPath.str() );
                 return false;
@@ -980,7 +988,14 @@ namespace sw
                 return false;
             }
             PrefabAssetInternal::writeNodesToJSON( doc.getRoot(), _listNestedInstance, -1 );
-            jsonStr = doc.dump( 0 );
+            const expected<string> nestedText = doc.dump( 0 );
+            if ( nestedText.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "PrefabAsset.PrefabNestedNotWritable", "Prefab '%#' could not be written as JSON: %# (%#); nothing written: %#", _name, nestedText.error().message(),
+                                 nestedText.error().detail(), absPath.str() );
+                return false;
+            }
+            jsonStr = *nestedText;
         }
 
         const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) &&

@@ -627,7 +627,7 @@
     "Source/Engine/Server/OpsHTTPEndpoint.cpp": {"integer": 15},
     "Source/Engine/Server/ServerObservability.cpp": {"float": 3},
     "Source/Engine/Telemetry/CrashReportService.cpp": {"minus-one": 1},
-    "Source/Engine/Telemetry/TelemetryService.cpp": {"minus-one": 2, "float": 1},
+    "Source/Engine/Telemetry/TelemetryService.cpp": {"float": 1},
     "Source/Engine/Text/FreeType/FreeTypeRasterizer.cpp": {"float": 1},
     "Source/Engine/Text/MSDF/MSDFShape.cpp": {"float": 17},
     "Source/Engine/Text/RichTextParser.cpp": {"integer": 1},

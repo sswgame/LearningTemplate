@@ -317,10 +317,13 @@ namespace sw
                 return AssetPaths::collectGamePackDomains( params._resourceRoot, outListDomain );
             }
 
-            /** @brief 작업 키의 설정 해시입니다 — 담는 규칙과 팩 바이트를 정하는 값 모두(설정 전체 · 셰이더 폴더 · 빌드 타깃). */
-            static uint64 computeSettingsHash( const PackConfig& config, const PackCookParams& params )
+            /** @brief 작업 키의 설정 해시입니다 — 담는 규칙과 팩 바이트를 정하는 값 모두(설정 전체 · 셰이더 폴더 · 빌드 타깃). 설정을 글로 못 쓰면 오류입니다. */
+            [[nodiscard]] static expected<uint64> computeSettingsHash( const PackConfig& config, const PackCookParams& params )
             {
-                string canonical = JSONSerializer::serialize( &config, *PackConfig::StaticType() );
+                expected<string> configText = JSONSerializer::serialize( &config, *PackConfig::StaticType() );
+                if ( configText.has_value() == false )
+                    return unexpected( configText.error() );
+                string canonical = std::move( *configText );
                 canonical.append( "\nshader=" ).append( params._shaderFolder ).append( "\ntarget=" ).append( params._buildTarget );
                 // 팩 형식 버전도 설정이다 - 형식을 올리면 옛 형식의 산출물을 재사용하지 않는다(리더가 거절할 팩을 남기지 않게).
                 utf8 arrFormat[constant::buffer::kMax32];
@@ -626,10 +629,16 @@ namespace sw
         }
 
         CookJobDesc desc;
-        desc._cookerName      = "Pack";
-        desc._codeFingerprint = CookCodeFingerprint::find( "Pack" );
-        desc._target          = params._buildTarget + "-" + params._shaderFolder;
-        desc._settingsHash    = PackCookerInternal::computeSettingsHash( config, params );
+        desc._cookerName                    = "Pack";
+        desc._codeFingerprint               = CookCodeFingerprint::find( "Pack" );
+        desc._target                        = params._buildTarget + "-" + params._shaderFolder;
+        const expected<uint64> settingsHash = PackCookerInternal::computeSettingsHash( config, params );
+        if ( settingsHash.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "PackCooker.SettingsNotWritable", "Pack cook settings could not be written as JSON: %# (%#)", settingsHash.error().message(), settingsHash.error().detail() );
+            return false;
+        }
+        desc._settingsHash = *settingsHash;
 
         PackCookerInternal::PackSelection selection;
         if ( PackCookerInternal::selectFiles( config, params, listDomain, desc, selection ) == false )

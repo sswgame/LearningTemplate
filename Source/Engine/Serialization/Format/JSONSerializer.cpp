@@ -34,16 +34,32 @@ namespace sw
                 return listMissing.empty();
             }
 
+            /**
+             * @brief @p field 의 원문을 @p orphan 에 담아 목록에 넣습니다. 글로 못 쓰는 값(잘못된 UTF-8)은 경고를 남기고 버립니다.
+             * @details 파서는 잘못된 UTF-8 을 받지 않으므로 읽은 글에서는 생기지 않는다 — `setString` 으로 손으로 넣은 값만 닿는다.
+             */
+            static void pushOrphan( vector<SchemaOrphanValue>& outListOrphan, SchemaOrphanValue orphan, const JSONValue& field, string_view name )
+            {
+                expected<string> text = field.dump();
+                if ( text.has_value() == false )
+                {
+                    SW_LOG_WARNING_ID( "Serialization.OrphanNotWritable", "'%#' could not be kept as JSON text: %# (%#) - value dropped", name, text.error().message(),
+                                       text.error().detail() );
+                    return;
+                }
+                orphan._text = std::move( *text );
+                outListOrphan.push_back( std::move( orphan ) );
+            }
+
             /** @brief 파일의 모르는 키를 orphan 으로 담습니다. 전역 이름 표에 넣지 않는다(XML 과 같다 — 아는 이름이면 그것을, 아니면 해시만). */
             static void pushUnknownKeyOrphan( vector<SchemaOrphanValue>& outListOrphan, const string& keyRaw, const JSONValue& field )
             {
                 SchemaOrphanValue orphan;
                 orphan._name     = hashed_string::findInterned( string_view{ keyRaw.c_str(), keyRaw.size() } );
                 orphan._nameHash = hashed_string::computeHash( string_view{ keyRaw.c_str(), keyRaw.size() } );
-                orphan._text     = field.dump();
                 // 버렸다고 알릴 때 찍을 이름 — 위의 `_name` 은 intern 된 이름일 때만 찬다
                 orphan._writtenName = keyRaw;
-                outListOrphan.push_back( std::move( orphan ) );
+                pushOrphan( outListOrphan, std::move( orphan ), field, keyRaw );
             }
 
             /** @brief 읽지 못한 알려진 필드를 orphan 으로 담습니다. */
@@ -52,8 +68,16 @@ namespace sw
                 SchemaOrphanValue orphan;
                 orphan._name     = prop._name;
                 orphan._nameHash = prop.getNameHash();
-                orphan._text     = field.dump();
-                outListOrphan.push_back( std::move( orphan ) );
+                pushOrphan( outListOrphan, std::move( orphan ), field, prop._name.c_str() );
+            }
+
+            /** @brief 문서를 글로 씁니다. 못 쓰면(잘못된 UTF-8 문자열 칸) 타입 이름을 앞에 붙인 오류입니다. */
+            [[nodiscard]] static expected<string> dumpDocument( const JSONDocument& doc, const TypeInfo& typeInfo, int32 indent )
+            {
+                expected<string> text = doc.dump( indent );
+                if ( text.has_value() == false )
+                    text.error().prependDetail( ": " ).prependDetail( typeInfo._name.c_str() );
+                return text;
             }
 
             /** @brief 읽은 필드가 아닌 프로퍼티는 기본값으로 채웁니다. 이 목적이 다루지 않는 필드는 지금 값 그대로다. */
@@ -304,11 +328,13 @@ namespace sw
                     if ( pObject == nullptr )
                     {
                         // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 건너뛴다.
-                        const string                        rawJSON = element.dump();
+                        const expected<string> rawJSON = element.dump();
+                        if ( rawJSON.has_value() == false )
+                            return ContainerReadResult::FieldFailed; // 원문을 그대로 맡을 수 없다(잘못된 UTF-8) — 바꾼 바이트를 다음 저장에 쓰지 않는다
                         SerializeContext::OpaqueElementView opaque{};
                         opaque._typeName = listKey[0];
                         opaque._format   = SerializeContext::OpaqueFormat::JSON;
-                        opaque._text     = rawJSON;
+                        opaque._text     = *rawJSON;
                         (void)_context.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다
                         return ContainerReadResult::Read;
                     }
@@ -348,8 +374,7 @@ namespace sw
                     orphan._name         = _propForOrphan._name;
                     orphan._nameHash     = _propForOrphan.getNameHash();
                     orphan._wireTypeHash = 0;
-                    orphan._text         = element.dump();
-                    _pOutListOrphan->push_back( std::move( orphan ) );
+                    JSONSerializerInternal::pushOrphan( *_pOutListOrphan, std::move( orphan ), element, _propForOrphan._name.c_str() );
                     return ContainerReadResult::Read;
                 }
 
@@ -380,7 +405,8 @@ namespace sw
                 {
                     if ( src.isString() )
                         return makeFieldResult( ( *pTextReader )( pValPtr, src.asString() ) );
-                    return makeFieldResult( ( *pTextReader )( pValPtr, src.dump() ) );
+                    const expected<string> text = src.dump();
+                    return makeFieldResult( text.has_value() && ( *pTextReader )( pValPtr, *text ) );
                 }
 
                 const EnumInfo* pEnumInfo = engine::getSubsystem<TypeRegistry>().findEnum( typeName );
@@ -390,7 +416,7 @@ namespace sw
                     int64                 parsedValue{ 0 };
                     const optional<int64> number = src.isNumber() ? src.read<int64>() : nullopt;
                     const string          text   = src.isString() ? string( src.asString() ) : number.has_value() ? sw::to_string( *number )
-                                                                                                                  : src.dump();
+                                                                                                                  : src.describe(); // 아래 경고에만 쓰인다
                     if ( ( src.isString() || number.has_value() ) && pEnumInfo->tryParseText( text, parsedValue ) )
                     {
                         pEnumInfo->writeValueToMemory( pValPtr, parsedValue );
@@ -408,13 +434,15 @@ namespace sw
                     {
                         if ( src.isObject() )
                             return JSONSerializer::readObject( src, pValPtr, *pStructInfo, nullptr, nullptr, context );
-                        return makeFieldResult( JSONSerializer::deserialize( pValPtr, *pStructInfo, src.dump(), context ) );
+                        const expected<string> text = src.dump();
+                        return makeFieldResult( text.has_value() && JSONSerializer::deserialize( pValPtr, *pStructInfo, *text, context ) );
                     }
                 }
 
                 if ( src.isString() )
                     return makeFieldResult( parseTextValueCoerced( value, typeName, src.asString(), context ) );
-                return makeFieldResult( parseTextValueCoerced( value, typeName, src.dump(), context ) );
+                const expected<string> text = src.dump();
+                return makeFieldResult( text.has_value() && parseTextValueCoerced( value, typeName, *text, context ) );
             }
             static void writeProperty( JSONValue parent, const PropertyInfo& prop, const ObjectAddress instance, const SerializeContext& context )
             {
@@ -469,19 +497,19 @@ namespace sw
 
 namespace sw
 {
-    string JSONSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
+    expected<string> JSONSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         JSONDocument doc;
         writeObject( doc.makeObject(), pInstance, typeInfo, context );
-        return doc.dump();
+        return JSONSerializerInternal::dumpDocument( doc, typeInfo, JSONDocument::kSingleLineIndent );
     }
 
-    string JSONSerializer::serializePretty( const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
-                                            const SerializeContext& context )
+    expected<string> JSONSerializer::serializePretty( const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
+                                                      const SerializeContext& context )
     {
         JSONDocument doc;
         writeObject( doc.makeObject(), pInstance, typeInfo, context );
-        return doc.dump( static_cast<int32>( indentSpaces == 0 ? 4 : indentSpaces ) );
+        return JSONSerializerInternal::dumpDocument( doc, typeInfo, static_cast<int32>( indentSpaces == 0 ? 4 : indentSpaces ) );
     }
 
     bool JSONSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
@@ -698,8 +726,8 @@ namespace sw
         return readObject( doc.getRoot(), pInstance, typeInfo, pOutListOrphan, pOutVersion, context ) == FieldReadResult::Read ? SoftReadResult::Read : SoftReadResult::Rejected;
     }
 
-    string JSONSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
-                                               const SerializeContext& context )
+    expected<string> JSONSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
+                                                         const SerializeContext& context )
     {
         JSONDocument doc;
         JSONValue    root = doc.makeObject();
@@ -710,7 +738,7 @@ namespace sw
                 return;
             JSONSerializerInternal::writeProperty( root, prop, ObjectAddress{ pInstance }, context );
         }, true /* 상속 PROPERTY 포함 */ );
-        return doc.dump();
+        return JSONSerializerInternal::dumpDocument( doc, typeInfo, JSONDocument::kSingleLineIndent );
     }
 
     bool JSONSerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,

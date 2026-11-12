@@ -338,8 +338,11 @@ namespace sw::editor
 
     expected<string> ProjectSettingsDocument::makeDifferenceJSON() const
     {
-        const string fullText = JSONSerializer::serialize( _current.get(), *_pType );
-        JSONDocument fullDocument;
+        const expected<string> serialized = JSONSerializer::serialize( _current.get(), *_pType );
+        if ( serialized.has_value() == false )
+            return unexpected( serialized.error() );
+        const string& fullText = *serialized;
+        JSONDocument  fullDocument;
         if ( fullDocument.parse( fullText ) == false || fullDocument.getRoot().isObject() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the serialized settings are not a JSON object" } );
         // 바탕 층(`ConfigBaseLayer`)은 파일이 값의 원본이라 모든 키를 쓴다(언리얼 `BaseEngine.ini` 와 같은 층).

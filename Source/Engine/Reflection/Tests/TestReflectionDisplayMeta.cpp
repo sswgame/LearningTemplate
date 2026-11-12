@@ -69,7 +69,7 @@ SW_TEST_CASE( ReflectionDisplayMetaTest, FixedCArrayRoundTripsInEveryFormat )
     SW_EXPECT_TRUE_MSG( sw::XMLSerializer::deserialize( &fromXML, *pType, xml ), xml.c_str() );
     SW_EXPECT_TRUE_MSG( isSame( fromXML ), xml.c_str() );
 
-    const sw::string     json = sw::JSONSerializer::serialize( &source, *pType );
+    const sw::string     json = sw::JSONSerializer::serialize( &source, *pType ).value();
     sw::DisplayMetaActor fromJSON;
     SW_EXPECT_TRUE_MSG( sw::JSONSerializer::deserialize( &fromJSON, *pType, json ), json.c_str() );
     SW_EXPECT_TRUE_MSG( isSame( fromJSON ), json.c_str() );

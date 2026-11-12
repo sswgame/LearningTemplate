@@ -138,7 +138,7 @@ SW_TEST_CASE( AssetRefTest, RoundTrips )
     source._reference = "common/data/a.reftarget.xml";
     source._listReference.emplace_back( string_view{ "common/data/b.reftarget.xml" } );
 
-    const string json = JSONSerializer::serialize( &source, *AssetRefSample::StaticType() );
+    const string json = JSONSerializer::serialize( &source, *AssetRefSample::StaticType() ).value();
     SW_EXPECT_TRUE( json.find( "\"common/data/a.reftarget.xml\"" ) != string::npos );
     AssetRefSample fromJSON;
     SW_REQUIRE_TRUE( JSONSerializer::deserialize( &fromJSON, *AssetRefSample::StaticType(), json ) );

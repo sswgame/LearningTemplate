@@ -42,7 +42,10 @@ namespace sw
                     if ( document.parse( kit._settings.empty() ? string_view( "{}" ) : string_view( kit._settings ) ) == false )
                         return unexpected( Error{ ErrorKind::InvalidArgument, "the account kit settings are not JSON", document.getLastError() } );
                     document.getRoot().set( "_bLightPasswordHash" ).setBool( true );
-                    kit._settings = document.dump();
+                    const expected<string> settingsText = document.dump();
+                    if ( settingsText.has_value() == false )
+                        return unexpected( settingsText.error() );
+                    kit._settings = *settingsText;
                     return {};
                 }
                 return unexpected( Error{ ErrorKind::NotFound, "--light-hash needs the account kit in the online config", kAccountKit } );

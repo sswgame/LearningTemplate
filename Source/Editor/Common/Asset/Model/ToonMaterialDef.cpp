@@ -198,7 +198,7 @@ namespace sw::editor
                     return {};
                 const optional<float32> number = value.read<float32>();
                 if ( number.has_value() == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "is not a number", key }.appendDetail( " " ).appendDetail( value.dump() ) );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "is not a number", key }.appendDetail( " " ).appendDetail( value.describe() ) );
                 inoutValue = *number;
                 return {};
             }
@@ -231,7 +231,7 @@ namespace sw::editor
                     return {};
                 const optional<int32> index = textureInfo.get( "index" ).read<int32>();
                 if ( index.has_value() == false || *index < 0 )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "the texture index is not a texture number", what }.appendDetail( ".index " ).appendDetail( textureInfo.get( "index" ).dump() ) );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the texture index is not a texture number", what }.appendDetail( ".index " ).appendDetail( textureInfo.get( "index" ).describe() ) );
                 const JSONValue extensions = textureInfo.get( "extensions" );
                 if ( extensions.isObject() )
                 {
@@ -245,7 +245,7 @@ namespace sw::editor
                 {
                     const optional<int32> texCoordIndex = texCoord.read<int32>();
                     if ( texCoordIndex.has_value() == false )
-                        return unexpected( Error{ ErrorKind::InvalidArgument, "the texCoord is not a number", what }.appendDetail( ".texCoord " ).appendDetail( texCoord.dump() ) );
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "the texCoord is not a number", what }.appendDetail( ".texCoord " ).appendDetail( texCoord.describe() ) );
                     if ( *texCoordIndex != 0 )
                         appendIgnored( pOutListIgnored, "texCoord" );
                 }

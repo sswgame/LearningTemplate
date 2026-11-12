@@ -40,7 +40,7 @@ namespace
             }
             case PurposeFormat::JSON:
             {
-                return sw::JSONSerializer::deserialize( &outTarget, *pTypeInfo, sw::JSONSerializer::serialize( &source, *pTypeInfo, context ), context );
+                return sw::JSONSerializer::deserialize( &outTarget, *pTypeInfo, sw::JSONSerializer::serialize( &source, *pTypeInfo, context ).value(), context );
             }
             case PurposeFormat::Binary:
             {
@@ -166,7 +166,7 @@ SW_TEST_CASE( ReflectionPurposeTest, RuntimeStateInAnAuthoringFileFailsTheRead )
     SW_EXPECT_FALSE( sw::XMLSerializer::deserialize( &xmlTarget, *pTypeInfo, sw::XMLSerializer::serialize( &source, *pTypeInfo, snapshot ), authoring ) );
 
     sw::PurposePlainSample jsonTarget;
-    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &jsonTarget, *pTypeInfo, sw::JSONSerializer::serialize( &source, *pTypeInfo, snapshot ), authoring ) );
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &jsonTarget, *pTypeInfo, sw::JSONSerializer::serialize( &source, *pTypeInfo, snapshot ).value(), authoring ) );
 
     sw::vector<uint8> bytes;
     SW_REQUIRE_TRUE( sw::BinarySerializer::serialize( &source, *pTypeInfo, bytes, snapshot ) );
@@ -199,7 +199,7 @@ SW_TEST_CASE( ReflectionPurposeTest, RuntimeStateInAContainerElementRejectsTheSo
 
     sw::PurposeListHolder             jsonTarget;
     sw::vector<sw::SchemaOrphanValue> listJSONOrphan;
-    const sw::string                  jsonText = sw::JSONSerializer::serialize( &source, *pHolderType, snapshot );
+    const sw::string                  jsonText = sw::JSONSerializer::serialize( &source, *pHolderType, snapshot ).value();
     SW_EXPECT_TRUE( sw::JSONSerializer::deserializeSoft( &jsonTarget, *pHolderType, jsonText, &listJSONOrphan, nullptr, authoring ) == sw::SoftReadResult::Rejected );
 
     // 저작 목적으로 쓴 데이터는 원소에도 RuntimeState 를 싣지 않으므로 소프트 읽기가 그대로 읽는다.

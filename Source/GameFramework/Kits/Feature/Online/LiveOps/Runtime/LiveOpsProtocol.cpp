@@ -35,7 +35,7 @@ namespace sw
         return true;
     }
 
-    string LiveOpsProtocol::writeEventJSON( const LiveEventDef& definition )
+    expected<string> LiveOpsProtocol::writeEventJSON( const LiveEventDef& definition )
     {
         return JSONSerializer::serialize( &definition, *LiveEventDef::StaticType() );
     }

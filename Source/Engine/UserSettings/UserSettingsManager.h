@@ -202,8 +202,8 @@ namespace sw
         [[nodiscard]] bool loadUserJSON( string_view jsonText, string_view sourceName );
         /** @brief 기본값과 다른 확정 값만 사용자 파일에 씁니다. 확인 대기 중인 설정은 되돌릴 값(옛 값)을 씁니다. */
         [[nodiscard]] bool saveUserFile( string_view filePath ) const;
-        /** @brief `saveUserFile` 이 쓰는 JSON 글입니다. */
-        string makeUserJSON() const;
+        /** @brief `saveUserFile` 이 쓰는 JSON 글입니다. 값에 잘못된 UTF-8 이 있으면 오류입니다(`UserSettingsFileEntry::makeJSON`). */
+        [[nodiscard]] expected<string> makeUserJSON() const;
         /** @brief `applyPending` 이 저장할 경로입니다. 비면 저장하지 않습니다(테스트와 헤드리스). 초기화 전에 정하면(기동 확장) 초기화가 그 자리를 읽고 쓴다. */
         void          setUserFilePath( string_view filePath ) { _userFilePath = string( filePath ); }
         const string& getUserFilePath() const { return _userFilePath; }

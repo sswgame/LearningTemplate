@@ -536,7 +536,21 @@ namespace sw
             (void)ObjectValidation::reportGameObject( *pGameObject, true );
 
         const ObjectStateSerializerInternal::GameObjectWriteContext writeContext( pGameObject, options );
-        return TSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, writeContext.getContext() );
+        if constexpr ( std::is_same_v<TSerializer, JSONSerializer> )
+        {
+            // shortcut: 이 함수는 아직 빈 글을 실패로 돌려준다(XML 과 같은 계약) — 텍스트 저장 계약을 expected 로 옮길 때 같이 바꾼다.
+            const expected<string> text = JSONSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, writeContext.getContext() );
+            if ( text.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "ObjectStateSerializer.JSONNotWritable", "GameObject state could not be written as JSON: %# (%#)", text.error().message(), text.error().detail() );
+                return {};
+            }
+            return *text;
+        }
+        else
+        {
+            return TSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, writeContext.getContext() );
+        }
     }
 
     template <typename DeserializeStateFunc>

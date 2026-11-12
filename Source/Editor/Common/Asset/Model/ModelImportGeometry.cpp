@@ -455,7 +455,10 @@ namespace sw::editor
         if ( promotedCount == 0 )
             return promotedCount;
 
-        vector<uint8> rewrittenBytes = Internal::rewriteBytes( inoutBytes, span, document.dump() );
+        const expected<string> rewrittenJSON = document.dump();
+        if ( rewrittenJSON.has_value() == false )
+            return 0; // 다시 쓰지 못하는 글 — 고치지 않고 cgltf 가 알리게 한다
+        vector<uint8> rewrittenBytes = Internal::rewriteBytes( inoutBytes, span, *rewrittenJSON );
         inoutBytes.swap( rewrittenBytes );
         return promotedCount;
     }

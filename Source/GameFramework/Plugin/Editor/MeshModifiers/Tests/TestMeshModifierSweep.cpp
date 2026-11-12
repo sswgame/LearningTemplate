@@ -131,8 +131,10 @@ SW_TEST_CASE( MeshModifierSweepTest, EveryModifierSurvivesTheDocumentRoundTrip )
         MeshModifierStack                        loaded;
         StringBuilder<constant::buffer::kMax256> contextBuilder;
         contextBuilder.appendFormat( "modifier %#", pRegistration->_pID );
-        const string context{ contextBuilder.view() };
-        SW_EXPECT_TRUE_MSG( loaded.readJSONText( stack.makeJSONText( -1 ) ), context.c_str() );
+        const string           context{ contextBuilder.view() };
+        const expected<string> stackText = stack.makeJSONText( -1 );
+        SW_REQUIRE_TRUE( stackText.has_value() );
+        SW_EXPECT_TRUE_MSG( loaded.readJSONText( *stackText ), context.c_str() );
         MeshModifierMesh original = MeshModifierSweepTestUtil::makeGridMesh();
         MeshModifierMesh reread   = original;
         stack.apply( original, evaluation );

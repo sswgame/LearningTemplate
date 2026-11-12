@@ -17,6 +17,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -339,8 +340,8 @@ namespace sw::editor
          * @details UV · 색 · 가중치 모디파이어, 정점 전체를 봐야 하는 모디파이어(Relax · Conform), 묶음(Deformable)이 재정의한다.
          */
         virtual void applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const;
-        /** @brief 매개변수 밖의 추가 상태(격자 제어점 등)를 저장 문서 객체에 씁니다. 기본은 없습니다. */
-        virtual void writeExtraJSON( const JSONValue& object ) const;
+        /** @brief 매개변수 밖의 추가 상태(격자 제어점 등)를 저장 문서 객체에 씁니다. 기본은 없습니다. 쓰지 못하면(하위 스택 글 실패) 오류입니다. */
+        [[nodiscard]] virtual expected<void> writeExtraJSON( const JSONValue& object ) const;
         /** @brief 추가 상태를 읽습니다. 틀리면 false 이고 상태는 기본값으로 둡니다. 기본은 아무것도 읽지 않고 true 입니다. */
         [[nodiscard]] virtual bool readExtraJSON( const JSONValue& object );
         /** @brief 매개변수 값이 바깥(패널 · 저장 문서)에서 바뀐 뒤 부릅니다. 파생이 값에 묶인 상태를 다시 맞춥니다. */

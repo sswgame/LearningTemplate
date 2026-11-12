@@ -441,7 +441,7 @@ SW_TEST_CASE( DataPathTest, RoundTripsAndStaysUnsetWhenAbsent )
     SerializerSample source;
     SW_REQUIRE_TRUE( SerializerUtil::applyPropertyText( getSampleProperty( "_path" ), MutableObjectAddress{ &source }, "common/materials/a.material", getContext() ) );
     SerializerSample fromJSON;
-    SW_REQUIRE_TRUE( JSONSerializer::deserialize( &fromJSON, getSampleType(), JSONSerializer::serialize( &source, getSampleType() ) ) );
+    SW_REQUIRE_TRUE( JSONSerializer::deserialize( &fromJSON, getSampleType(), JSONSerializer::serialize( &source, getSampleType() ).value() ) );
     SW_EXPECT_TRUE( fromJSON._path == "common/materials/a.material" );
 
     vector<uint8> bytes;
