@@ -12,9 +12,6 @@
     "oneLineValidator": {
         "Source/Engine/Automation/Scenario/AutomationScenario.h": "기반 자신이다(AutomationStep::validateProperties)"
     },
-    "canvasDelete": {
-        "Source/Editor/Common/Widgets/EditorNodeGraph.cpp": "기반 자신이다"
-    },
     "makeDelta": {
         "Source/Engine/Serialization/Inherit/DataInheritance.cpp": "기반 자신이다",
         "Source/Engine/Serialization/Inherit/ResourceComposer.cpp": "기반 자신이다",

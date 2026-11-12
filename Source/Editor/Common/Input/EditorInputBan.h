@@ -1,6 +1,6 @@
 /**
  * @file EditorInputBan.h
- * @brief 에디터 코드 전체(에디터 모듈의 모든 부분 · 에디터 확장 모듈)에서 imgui.h 끝에 붙는 헤더입니다. ImGui 입력 · 팝업 · 끌어 놓기 함수를 `[[deprecated]]` 로 다시 선언합니다.
+ * @brief 에디터 코드 전체(에디터 모듈의 모든 부분 · 에디터 확장 모듈)에서 imgui.h 끝에 붙는 헤더입니다. ImGui 입력 · 팝업 · 끌어 놓기 함수와 노드 캔버스 지우기 구간을 `[[deprecated]]` 로 다시 선언합니다.
  * @details CMake 가 ImGui 의 사용자 헤더 자리(`IMGUI_INCLUDE_IMGUI_USER_H` + `IMGUI_USER_H_FILENAME`)에 이 파일을 두고 사용 중단 경고를 오류로 올린다
  *          (`sw_applyEditorInputBan`, 옵션 `SW_EDITOR_INPUT_BAN` 기본 ON). imgui.h 가 선언을 다 마친 뒤에 붙으므로 이 파일은 imgui.h 를 include 하지 않는다.
  *          에디터 코드가 아래 함수를 부르면 컴파일이 멈춘다. 대신 쓸 곳: 단축키 · 단추 · 몸짓은 에디터 입력 맵(`EditorInputActions`, `editor.input.xml`),
@@ -60,3 +60,13 @@ namespace ImGui
 } // namespace ImGui
 
 #endif // defined( IMGUI_VERSION ) && !defined( SW_EDITOR_INPUT_ADAPTER )
+
+// 노드 캔버스 지우기 구간(imgui-node-editor `BeginDelete`)은 `EditorNodeGraph::collectRemovals` 한 곳만 연다 — 패널마다 손 구간을 두면 링크 거절 · 주석 노드 가르기가
+// 갈린다. 이 선언이 imgui_node_editor.h 의 선언보다 먼저라(그 헤더가 imgui.h 를 먼저 끌어 온다) 뒤의 선언도 사용 중단을 잇는다. 정적 라이브러리라 API 매크로는 비어 있다.
+// 받지 않는 곳은 `Common/Widgets/EditorNodeGraph.cpp` 하나다 — imgui.h 앞에서 `SW_EDITOR_NODE_GRAPH_ADAPTER` 를 정의하고 유니티 묶음에서 빠진다(CMake `sw_applyEditorInputBan`).
+#if defined( IMGUI_VERSION ) && !defined( SW_EDITOR_NODE_GRAPH_ADAPTER )
+namespace ax::NodeEditor
+{
+    [[deprecated( "editor code does not open the node canvas delete pass - use EditorNodeGraph::collectRemovals" )]] bool BeginDelete();
+} // namespace ax::NodeEditor
+#endif // defined( IMGUI_VERSION ) && !defined( SW_EDITOR_NODE_GRAPH_ADAPTER )

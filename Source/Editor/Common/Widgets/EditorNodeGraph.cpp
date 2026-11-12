@@ -1,5 +1,8 @@
 #include "pch.h"
 
+// 노드 캔버스 지우기 구간 금지(EditorInputBan.h)를 받지 않는 유일한 자리다 — collectRemovals 가 그 구간의 입구다(유니티 묶음에서 빠진다, CMake `sw_applyEditorInputBan`).
+#define SW_EDITOR_NODE_GRAPH_ADAPTER
+
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 
 #include "Core/Algorithm/VectorUtil.h"
