@@ -20,7 +20,8 @@ CMake(`*.cmake` · `CMakeLists.txt`, ThirdParty 제외)도 같은 규칙이다 �
 사슬은 `else()` + `message(FATAL_ERROR …)` 로 끝나고, 부정(`NOT WIN32`)만으로 된 조건은 `return()` · `FATAL_ERROR` 만 거는 가드일 때만 쓴다.
 POSIX 계열은 `UNIX` · `CMAKE_HOST_UNIX` 로 이름을 적는다. 다른 변수가 섞인 조건(`WIN32 AND NOT SW_SHIPPING_BUILD`)은 기능 검사라 보지 않는다.
 
-스크립트(`Scripts/**.py`)는 git 을 `common/Git.py` 입구로만 띄운다(물려받은 저장소 환경 변수를 뺀다 — 직접 띄우기를 같은 스크립트 검사가 막는다).
+스크립트(`Scripts/**.py` · `.claude/hooks/*.py`)는 git 을 `common/Git.py` 입구로만, 셸(`Scripts/**.sh`)은 `common/Git.sh` 의 sw_git 으로만 띄운다(물려받은
+저장소 환경 변수를 뺀다). CMake 는 git 을 띄우지 않는다(`execute_process` · `find_package(Git)` — 파이썬 단계로).
 스크립트는 호스트 OS 를 `common/HostPlatform.py` 의 표에서만 읽는다 — `sys.platform` · `os.name` · `platform.system()` 을
 다른 곳에서 물으면 `else` 가 "Windows 아니면 Linux" 가 된다. 표는 모르는 호스트에서 들여올 때 멈춘다.
 
@@ -109,6 +110,13 @@ kPythonHostTable = "Scripts/common/HostPlatform.py"
 # git 을 자식 프로세스로 직접 띄우는 줄(리스트 인자 · 셸 글) — 입구 `common/Git.py`(runGit · runGitInHookRepository · runGitBytes)만 띄운다.
 kPythonDirectGit = re.compile(r"\b(?:subprocess\.(?:run|call|check_call|check_output|Popen)|Popen|shell)\s*\(\s*(?:\[\s*(?:[\"']git[\"']|gitExe\b|resolveGitExecutable\b)|f?[\"'][^\"']*\bgit\s)")
 kPythonGitEntrance = "Scripts/common/Git.py"
+# 셸: 명령 자리(줄 머리 · `;` `&` `|` `(` `$(` 뒤)의 `git` — 입구 `Scripts/common/Git.sh` 의 sw_git 만 부른다.
+kShellDirectGit = re.compile(r"(?:^|[;&|(]|\$\()\s*(?:command\s+)?git\s")
+kShellGitEntrance = "Scripts/common/Git.sh"
+# CMake: 구성 중 git 을 띄우는 자리(`execute_process` · `add_custom_command` · `add_custom_target` 의 git · GIT_EXECUTABLE, find_package(Git)).
+# 지금 CMake 는 git 을 띄우지 않는다 — 필요해지면 환경을 비우는 함수 하나를 cmake 쪽에 두고 이 예외에 그 파일을 적는다.
+kCMakeDirectGit = re.compile(r"\b(?:execute_process|add_custom_command|add_custom_target)\s*\((?:[^()]|\([^()]*\))*?\b(?:git|GIT_EXECUTABLE)\b|\bfind_package\s*\(\s*Git\b", re.I | re.S)
+kGitHint = "물려받은 GIT_DIR · GIT_INDEX_FILE 을 빼는 입구를 거친다 — 커밋 훅이 넘긴 환경을 물려받으면 다른 저장소를 가리킨 git 이 훅의 저장소를 건드린다"
 
 
 def isCMakePlatformOnly(condition: str) -> bool:
@@ -168,12 +176,28 @@ def findPythonProblemsInText(path: str, text: str) -> list[str]:
 
 
 def readBuildSources(projectRoot: Path, scope: LintScope) -> list[tuple[str, str]]:
-    """CMake · 스크립트 글(뿌리 CMakeLists.txt, cmake/*.cmake, Source 의 CMakeLists.txt, Scripts/*.py)."""
+    """CMake · 스크립트 글(뿌리 CMakeLists.txt, cmake/*.cmake, Source 의 CMakeLists.txt, Scripts 의 .py · .sh, .claude/hooks 의 .py)."""
     listPath = [path for path in scope.listFile
                 if path == "CMakeLists.txt" or (path.startswith("cmake/") and path.endswith(".cmake"))
                 or (path.startswith("Source/") and path.endswith("/CMakeLists.txt"))
-                or (path.startswith("Scripts/") and path.endswith(".py") and "/__pycache__/" not in path)]
+                or (path.startswith(("Scripts/", ".claude/hooks/")) and path.endswith(".py") and "/__pycache__/" not in path)
+                or (path.startswith("Scripts/") and path.endswith(".sh"))]
     return readTexts(projectRoot, listPath)
+
+
+def findShellProblemsInText(path: str, text: str) -> list[str]:
+    """셸 스크립트 하나가 git 을 입구 밖에서 띄우는 줄."""
+    if path == kShellGitEntrance:
+        return []
+    return [f"{path}:{lineNumber}: git 을 직접 띄운다 — `source Scripts/common/Git.sh` 뒤 sw_git 으로({kGitHint})"
+            for lineNumber, line in enumerate(text.split("\n"), 1) if kShellDirectGit.search(line.split("#")[0])]
+
+
+def findCMakeGitProblemsInText(path: str, text: str) -> list[str]:
+    """CMake 글 하나가 git 을 띄우는 자리."""
+    code = "\n".join(line.split("#")[0] for line in text.split("\n"))
+    return [f"{path}:{code.count(chr(10), 0, match.start()) + 1}: CMake 가 git 을 띄운다 — 파이썬 Scripts 의 runGit 을 부르는 단계로 옮긴다({kGitHint})"
+            for match in kCMakeDirectGit.finditer(code)]
 
 
 def findBuildProblems(listSource: Iterable[tuple[str, str]]) -> list[str]:
@@ -181,8 +205,10 @@ def findBuildProblems(listSource: Iterable[tuple[str, str]]) -> list[str]:
     for path, text in listSource:
         if path.endswith(".py"):
             listProblem.extend(findPythonProblemsInText(path, text))
+        elif path.endswith(".sh"):
+            listProblem.extend(findShellProblemsInText(path, text))
         else:
-            listProblem.extend(findCMakeProblemsInText(path, text))
+            listProblem.extend(findCMakeProblemsInText(path, text) + findCMakeGitProblemsInText(path, text))
     return listProblem
 
 
@@ -226,6 +252,14 @@ def runSelfCheck() -> None:
     assert len(findBuildProblems([("Scripts/a.py", "shell(f'git -C {CLONE} log')\n")])) == 1, "셸 글 git"
     assert findBuildProblems([(kPythonGitEntrance, "subprocess.run([gitExe, 'status'])\n")]) == [], "입구 자체"
     assert findBuildProblems([("Scripts/a.py", "runGit(['mv', a, b], cwd=root)\n")]) == [], "입구를 거친 git"
+    assert len(findBuildProblems([("Scripts/a.sh", "SHA=$(git rev-parse HEAD)\n")])) == 1, "셸 $( git"
+    assert len(findBuildProblems([("Scripts/a.sh", "cd x && git status\n")])) == 1, "셸 && git"
+    assert findBuildProblems([("Scripts/a.sh", "source Scripts/common/Git.sh\nSHA=$(sw_git rev-parse HEAD)\n# git push\necho \"use .gitignore\"\n")]) == [], "셸 입구 · 주석 · 낱말 안 git"
+    assert findBuildProblems([(kShellGitEntrance, "git \"$@\"\n")]) == [], "셸 입구 자체"
+    assert len(findBuildProblems([("cmake/a.cmake", "execute_process(\n\tCOMMAND ${GIT_EXECUTABLE} rev-parse HEAD\n\tOUTPUT_VARIABLE x)\n")])) == 1, "CMake execute_process git"
+    assert len(findBuildProblems([("cmake/a.cmake", "find_package(Git REQUIRED)\n")])) == 1, "CMake find_package(Git)"
+    assert findBuildProblems([("cmake/a.cmake", "# execute_process(COMMAND git status)\nexecute_process(COMMAND python x.py)\n")]) == [], "CMake 주석 · git 없는 execute_process"
+    assert len(findBuildProblems([(".claude/hooks/a.py", "subprocess.run(['git', 'status'])\n")])) == 1, "훅의 git 직접 띄우기"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
