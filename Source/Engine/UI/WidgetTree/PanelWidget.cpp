@@ -10,6 +10,52 @@
 
 namespace sw
 {
+    DetachedWidget::DetachedWidget()
+        : _widget{}
+        , _pRetireTree{ nullptr }
+    {
+    }
+
+    DetachedWidget::DetachedWidget( unique_ptr<Widget> widget, WidgetTree* pRetireTree )
+        : _widget{ std::move( widget ) }
+        , _pRetireTree{ pRetireTree }
+    {
+    }
+
+    DetachedWidget::~DetachedWidget()
+    {
+        if ( _pRetireTree != nullptr )
+            _pRetireTree->retireWidget( std::move( _widget ) );
+    }
+
+    DetachedWidget::DetachedWidget( DetachedWidget&& other ) noexcept
+        : _widget{ std::move( other._widget ) }
+        , _pRetireTree{ other._pRetireTree }
+    {
+        other._pRetireTree = nullptr;
+    }
+
+    DetachedWidget& DetachedWidget::operator=( DetachedWidget&& other ) noexcept
+    {
+        if ( this == &other )
+            return *this;
+        if ( _pRetireTree != nullptr )
+            _pRetireTree->retireWidget( std::move( _widget ) );
+        _widget            = std::move( other._widget );
+        _pRetireTree       = other._pRetireTree;
+        other._pRetireTree = nullptr;
+        return *this;
+    }
+
+    unique_ptr<Widget> DetachedWidget::release()
+    {
+        _pRetireTree = nullptr;
+        return std::move( _widget );
+    }
+} // namespace sw
+
+namespace sw
+{
     PanelWidget::PanelWidget()
         : Widget{}
         , _listChild{}
@@ -45,28 +91,35 @@ namespace sw
         return pChild;
     }
 
-    unique_ptr<Widget> PanelWidget::removeChild( Widget* pChild )
+    DetachedWidget PanelWidget::removeChild( Widget* pChild )
     {
         const optional<uint32> index = findChildIndex( pChild );
         if ( index.has_value() == false )
-            return nullptr;
+            return {};
+        WidgetTree* const  pTree = getTree();
         unique_ptr<Widget> child = std::move( _listChild[*index] );
         _listChild.erase( _listChild.begin() + *index );
         child->detachFromTree();
         child->_pParent = nullptr;
         invalidate( WidgetDirty::kLayout );
-        return child;
+        const bool bDispatching = pTree != nullptr && pTree->isDispatching();
+        return DetachedWidget{ std::move( child ), bDispatching ? pTree : nullptr };
     }
 
     void PanelWidget::clearChildren()
     {
         if ( _listChild.empty() )
             return;
-        for ( const unique_ptr<Widget>& child : _listChild )
+        WidgetTree* const          pTree = getTree();
+        vector<unique_ptr<Widget>> listChild;
+        listChild.swap( _listChild );
+        for ( unique_ptr<Widget>& child : listChild )
         {
             child->detachFromTree();
+            child->_pParent = nullptr;
+            if ( pTree != nullptr )
+                pTree->retireWidget( std::move( child ) ); // 전달 중이면 트리가 맡아 전달이 끝난 뒤 지운다
         }
-        _listChild.clear();
         invalidate( WidgetDirty::kLayout );
     }
 

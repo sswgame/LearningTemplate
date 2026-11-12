@@ -33,6 +33,7 @@ namespace sw
         tree._pFocusManager = this;
         _pFocusedTree       = &tree;
         pNew->invalidate( WidgetDirty::kStyle );
+        const WidgetTree::DispatchScope dispatch{ tree };
         pNew->onFocusChanged( true );
         return true;
     }
@@ -50,6 +51,7 @@ namespace sw
         if ( pOld == nullptr )
             return;
         pOld->invalidate( WidgetDirty::kStyle );
+        const WidgetTree::DispatchScope dispatch{ tree };
         pOld->onFocusChanged( false );
     }
 

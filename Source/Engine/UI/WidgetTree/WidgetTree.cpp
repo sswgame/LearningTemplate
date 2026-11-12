@@ -45,11 +45,14 @@ namespace sw
         , _structureGeneration{ 1 }
         , _layoutSerial{ 0 }
         , _measureCount{ 0 }
+        , _listRetiredWidget{}
+        , _dispatchDepth{ 0 }
     {
     }
 
     WidgetTree::~WidgetTree()
     {
+        SW_ASSERT( _dispatchDepth == 0 ); // 전달 중에 트리(화면)를 지우면 돌아온 핸들러가 지운 트리를 읽는다 — 화면 닫기는 `UISystem::applyPendingCloses` 로 미룬다
         if ( _pFocusManager != nullptr )
             _pFocusManager->removeTree( *this );
         setRoot( nullptr );
@@ -60,7 +63,7 @@ namespace sw
         if ( _root != nullptr )
         {
             _root->detachFromTree();
-            _root.reset();
+            retireWidget( std::move( _root ) );
         }
         _listLayoutDirtyRoot.clear();
         _listPaintDirty.clear();
@@ -71,6 +74,33 @@ namespace sw
             SW_ASSERT( _root->getParent() == nullptr && _root->getTree() == nullptr );
             _root->attachToTree( this, nullptr );
         }
+    }
+
+    WidgetTree::DispatchScope::DispatchScope( WidgetTree& tree )
+        : _pTree{ &tree }
+    {
+        ++_pTree->_dispatchDepth;
+    }
+
+    WidgetTree::DispatchScope::~DispatchScope()
+    {
+        SW_ASSERT( _pTree->_dispatchDepth > 0 );
+        --_pTree->_dispatchDepth;
+        if ( _pTree->_dispatchDepth != 0 )
+            return;
+        vector<unique_ptr<Widget>> listRetired;
+        listRetired.swap( _pTree->_listRetiredWidget ); // 지우는 소멸자가 다시 떼어도 목록을 도는 중에 바뀌지 않는다
+        listRetired.clear();
+    }
+
+    void WidgetTree::retireWidget( unique_ptr<Widget> widget )
+    {
+        if ( widget == nullptr )
+            return;
+        SW_ASSERT( widget->getTree() == nullptr && widget->getParent() == nullptr );
+        if ( _dispatchDepth == 0 )
+            return; // 전달 밖이면 그 위젯이 호출 스택에 없으므로 여기서 지운다
+        _listRetiredWidget.push_back( std::move( widget ) );
     }
 
     Widget* WidgetTree::findWidgetByName( const hashed_string& name ) const

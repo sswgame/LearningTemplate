@@ -14,6 +14,36 @@
 
 namespace sw
 {
+    class WidgetTree;
+
+    /**
+     * @class DetachedWidget
+     * @brief 패널에서 떼어 낸 위젯의 소유권입니다. 버리면(소멸) 떼어 낸 트리가 이벤트를 전달하는 중일 때는 전달이 끝난 뒤 지웁니다.
+     * @details `removeChild` 가 `unique_ptr` 를 돌려주면 핸들러 안에서 버린 반환값이 곧바로 그 위젯을 지워 돌아온 `this` 가 지워진 메모리가 됐다.
+     *          반환형으로 즉시 파괴 길을 막는다(Godot `queue_free` · 유니티 UI Toolkit 의 디스패치 중 제거 미루기와 같은 뜻).
+     *          다시 붙이거나 오래 맡길 때는 `release` 로 꺼낸다 — 이 값은 떼어 낸 트리보다 오래 살면 안 된다(트리 포인터를 든다).
+     */
+    class SW_API DetachedWidget
+    {
+    public:
+        DetachedWidget();
+        DetachedWidget( unique_ptr<Widget> widget, WidgetTree* pRetireTree );
+        ~DetachedWidget();
+        DetachedWidget( DetachedWidget&& other ) noexcept;
+        DetachedWidget& operator=( DetachedWidget&& other ) noexcept;
+        DetachedWidget( const DetachedWidget& )            = delete;
+        DetachedWidget& operator=( const DetachedWidget& ) = delete;
+
+        Widget* get() const { return _widget.get(); }
+        bool    isEmpty() const { return _widget == nullptr; }
+        /** @brief 소유권을 꺼냅니다(다시 붙이거나 되돌리기 기록에 맡길 때). 꺼낸 뒤 바로 버리면 즉시 지워지므로 이벤트 핸들러 안에서는 붙일 때만 꺼냅니다. */
+        [[nodiscard]] unique_ptr<Widget> release();
+
+    private:
+        unique_ptr<Widget> _widget;
+        WidgetTree*        _pRetireTree; ///< 뗄 때 이벤트를 전달하던 트리입니다(아니면 nullptr 이며 버리면 바로 지웁니다).
+    };
+
     /**
      * @class PanelWidget
      * @brief 자식을 가지는 위젯입니다. 자식 순서가 그리기 순서이고(뒤가 위이며, z 순서를 두는 패널은 `collectPaintOrder`), 히트 테스트는 그 역순입니다.
@@ -34,9 +64,9 @@ namespace sw
         Widget* addChild( unique_ptr<Widget> child );
         /** @brief 자식을 @p index 위치에 끼웁니다(끝을 넘으면 끝에 붙입니다). */
         Widget* insertChild( uint32 index, unique_ptr<Widget> child );
-        /** @brief 자식을 떼어 소유권을 돌려줍니다(트리에서 떨어지며, 포커스가 그 아래에 있으면 트리가 해제합니다). 자식이 아니면 nullptr 입니다. */
-        unique_ptr<Widget> removeChild( Widget* pChild );
-        /** @brief 자식을 모두 떼어 지웁니다. */
+        /** @brief 자식을 떼어 소유권을 돌려줍니다(트리에서 떨어지며, 포커스가 그 아래에 있으면 트리가 해제합니다). 자식이 아니면 비어 있습니다. */
+        DetachedWidget removeChild( Widget* pChild );
+        /** @brief 자식을 모두 떼어 지웁니다(트리가 이벤트를 전달하는 중이면 전달이 끝난 뒤 지웁니다). */
         void   clearChildren();
         uint32 getChildCount() const { return static_cast<uint32>( _listChild.size() ); }
         /** @brief @p index 번째 자식입니다(범위는 호출하는 쪽이 지킵니다). */

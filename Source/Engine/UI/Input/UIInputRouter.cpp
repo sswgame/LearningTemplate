@@ -625,6 +625,7 @@ namespace sw
         UITextEvent event{};
         event._text         = string{ text };
         event._bComposition = bComposition ? SW_TRUE : SW_FALSE;
+        const WidgetTree::DispatchScope dispatch{ *pTree };
         (void)pWidget->onTextEvent( event );
     }
 

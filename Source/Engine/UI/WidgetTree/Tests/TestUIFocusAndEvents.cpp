@@ -166,6 +166,21 @@ namespace
             return event;
         }
     };
+
+    /** @brief 지워질 때 표시를 남기는 버튼입니다(전달 중 파괴가 미뤄졌는지 본다). */
+    class UIDestroyFlagButton final : public ButtonWidget
+    {
+    public:
+        explicit UIDestroyFlagButton( bool& outDestroyed )
+            : ButtonWidget{}
+            , _pDestroyed{ &outDestroyed }
+        {
+        }
+        ~UIDestroyFlagButton() override { *_pDestroyed = true; }
+
+    private:
+        bool* _pDestroyed;
+    };
 } // namespace
 
 // ---------------------------------------------------------------------- 탐색
@@ -324,7 +339,7 @@ SW_TEST_CASE( UIFocusManagerTest, RemovingTheFocusedWidgetReleasesFocus )
     UIFocusGrid    grid;
     UIFocusManager manager;
     SW_REQUIRE_TRUE( manager.setFocus( grid._tree, grid._pA->getID() ) );
-    unique_ptr<Widget> removed = grid._pCanvas->removeChild( grid._pA );
+    DetachedWidget removed = grid._pCanvas->removeChild( grid._pA );
     SW_EXPECT_TRUE( grid._tree.getFocusedWidget() == kInvalidWidgetID );
     SW_EXPECT_TRUE( manager.getFocusedWidget() == kInvalidWidgetID );
     SW_EXPECT_TRUE( manager.setFocus( grid._tree, grid._pB->getID() ) );
@@ -540,7 +555,7 @@ SW_TEST_CASE( UIPointerStateTest, CaptureEndsWhenTheWidgetIsRemoved )
     scene._pLeaf->setCaptureOnDown();
     UIPointerState pointer;
     (void)pointer.process( scene._tree, UIEventScene::makeEvent( UIPointerEventKind::Down, 10.0f, 10.0f ) );
-    unique_ptr<Widget>    removed = scene._pRoot->removeChild( scene._pLeaf );
+    DetachedWidget        removed = scene._pRoot->removeChild( scene._pLeaf );
     const UIPointerResult result  = pointer.process( scene._tree, UIEventScene::makeEvent( UIPointerEventKind::Move, 90.0f, 10.0f ) );
     SW_EXPECT_TRUE( pointer.getCapturedWidget() == kInvalidWidgetID );
     SW_EXPECT_TRUE( result._bHitWidget == SW_TRUE );
@@ -569,7 +584,7 @@ SW_TEST_CASE( UIPointerStateTest, CancelCaptureTellsTheWidgetOnce )
 
     (void)pointer.process( scene._tree, UIEventScene::makeEvent( UIPointerEventKind::Down, 10.0f, 10.0f ) );
     (void)scene._log.take();
-    unique_ptr<Widget> removed = scene._pRoot->removeChild( scene._pLeaf );
+    DetachedWidget removed = scene._pRoot->removeChild( scene._pLeaf );
     pointer.cancelCapture(); // 이미 떨어진 위젯에는 알리지 않는다
     SW_EXPECT_TRUE( scene._log.take().empty() );
     SW_EXPECT_TRUE( pointer.getCapturedWidget() == kInvalidWidgetID );
@@ -614,6 +629,33 @@ SW_TEST_CASE( UIPointerStateTest, CancelCaptureEndsSliderDrag )
     SW_EXPECT_NEAR( valueAtCancel, pSlider->getValue(), 1.0e-6f );
 }
 
+/** @brief [UIFocusAndEventsTest] 클릭 리스너가 버튼이 든 패널을 비워도 버튼은 전달이 끝난 뒤 지워진다(해제 후 사용이 없다 — ASan 구성이 지킨다) */
+SW_TEST_CASE( UIFocusAndEventsTest, ButtonMayClearItsParentOnClick )
+{
+    WidgetTree                      tree;
+    CanvasPanel&                    canvas = UITestUtil::setRoot<CanvasPanel>( tree );
+    bool                            bDestroyed{ false };
+    unique_ptr<UIDestroyFlagButton> button  = make_unique<UIDestroyFlagButton>( bDestroyed );
+    UIDestroyFlagButton*            pButton = button.get();
+    pButton->setLayoutSlot( UITestUtil::makeCanvasSlot( 0.0f, 0.0f, 50.0f, 20.0f ) );
+    (void)canvas.addChild( std::move( button ) );
+    (void)UITestUtil::layout( tree, float2{ 100.0f, 100.0f } );
+    bool               bAliveInListener{ false };
+    const Subscription clicked = pButton->getOnClicked().add( [&canvas, &bDestroyed, &bAliveInListener]( WidgetID )
+    {
+        canvas.clearChildren();
+        bAliveInListener = bDestroyed == false;
+    } );
+
+    UIPointerState pointer;
+    (void)pointer.process( tree, UIEventScene::makeEvent( UIPointerEventKind::Down, 10.0f, 10.0f ) );
+    (void)pointer.process( tree, UIEventScene::makeEvent( UIPointerEventKind::Up, 10.0f, 10.0f ) );
+    SW_EXPECT_TRUE( bAliveInListener );
+    SW_EXPECT_TRUE( bDestroyed );
+    SW_EXPECT_FALSE( tree.isDispatching() );
+    SW_EXPECT_EQUAL( 1u, tree.getWidgetCount() );
+}
+
 SW_TEST_CASE( UIPointerStateTest, ClearHoverAndForgetTree )
 {
     UIEventScene   scene;
@@ -646,12 +688,12 @@ SW_TEST_CASE( WidgetTreeTest, NamesAndIdsFollowTheWidgets )
     SW_EXPECT_TRUE( grid._tree.findWidgetByName( hashed_string( "a" ) ) == nullptr );
     SW_EXPECT_TRUE( grid._tree.findWidgetByName( hashed_string( "renamed" ) ) == grid._pA );
 
-    const WidgetID     id      = grid._pB->getID();
-    unique_ptr<Widget> removed = grid._pCanvas->removeChild( grid._pB );
+    const WidgetID id      = grid._pB->getID();
+    DetachedWidget removed = grid._pCanvas->removeChild( grid._pB );
     SW_EXPECT_TRUE( grid._tree.findWidgetByID( id ) == nullptr );
     SW_EXPECT_TRUE( grid._tree.findWidgetByName( hashed_string( "b" ) ) == nullptr );
     SW_EXPECT_EQUAL( 4u, grid._tree.getWidgetCount() );
-    SW_EXPECT_TRUE( removed->getTree() == nullptr );
+    SW_EXPECT_TRUE( removed.get()->getTree() == nullptr );
 }
 
 SW_TEST_CASE( WidgetTreeTest, StructureGenerationOnlyMovesWithStructure )
@@ -661,7 +703,7 @@ SW_TEST_CASE( WidgetTreeTest, StructureGenerationOnlyMovesWithStructure )
     grid._pA->setOpacity( 0.5f );
     grid._pA->setLayoutSlot( UITestUtil::makeCanvasSlot( 1.0f, 2.0f, 3.0f, 4.0f ) );
     SW_EXPECT_TRUE( grid._tree.getStructureGeneration() == before );
-    unique_ptr<Widget> removed = grid._pCanvas->removeChild( grid._pB );
+    DetachedWidget removed = grid._pCanvas->removeChild( grid._pB );
     SW_EXPECT_TRUE( grid._tree.getStructureGeneration() > before );
 }
 
