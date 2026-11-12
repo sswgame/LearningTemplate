@@ -949,8 +949,10 @@ namespace sw
             const int64 elapsed = reportWatch.getElapsedMilliseconds();
             if ( elapsed >= static_cast<int64>( kStageWaitReportMs ) )
             {
-                SW_LOG_ERROR_ID( "TaskManager.StillWaitingTaskAfter", "%#: still waiting for %# task(s) after %# ms (first unfinished: '%#')", owner, join.getPending(), kStageWaitReportMs,
-                                 _nodePool->describeFirstUnfinished( stage._pNode ) );
+                // 진행 알림이다(정보) — 판정이 아니다. 고정 벽시계로 오류를 내면 느린 구성 · 부하에서 제때 끝난 긴 일(Debug 의 메시 LOD 짓기)도 실패가 됐다. 멈춤 판정은
+                // 기계 배율을 읽는 행 감시(`AutomationHangWatchdog`, `gv_scenarioWallScale`) 하나다 — 언리얼도 대기가 아니라 `FThreadHeartBeat`(HangDuration 배율)가 판정한다.
+                SW_LOG_INFO_ID( "TaskManager.StillWaitingTaskAfter", "%#: still waiting for %# task(s) after %# ms (first unfinished: '%#')", owner, join.getPending(), kStageWaitReportMs,
+                                _nodePool->describeFirstUnfinished( stage._pNode ) );
                 reportWatch = Stopwatch{};
                 continue;
             }
@@ -1042,8 +1044,8 @@ namespace sw
             const int64 elapsed = reportStopwatch.getElapsedMilliseconds();
             if ( elapsed >= static_cast<int64>( kStageWaitReportMs ) )
             {
-                SW_LOG_ERROR_ID( "TaskManager.StillWaitingTaskAfter", "%#: still waiting for %# task(s) after %# ms (first unfinished: '%#')", owner, _activeTaskCount.load( std::memory_order_acquire ),
-                                 kStageWaitReportMs, describeUnfinishedTask() );
+                SW_LOG_INFO_ID( "TaskManager.StillWaitingTaskAfter", "%#: still waiting for %# task(s) after %# ms (first unfinished: '%#')", owner, _activeTaskCount.load( std::memory_order_acquire ),
+                                kStageWaitReportMs, describeUnfinishedTask() );
                 reportStopwatch = Stopwatch{};
                 continue;
             }

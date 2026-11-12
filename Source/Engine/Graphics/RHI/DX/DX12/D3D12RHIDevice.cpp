@@ -1399,7 +1399,8 @@ namespace sw
             return false;
         }
         // 끝날 때까지 기다린다. 시간 초과로 실패를 돌려주면 부르는 쪽(링 슬롯 · 리드백 · 크기 변경 · 해제 큐 비우기)이 GPU 가 아직 쓰는 자원을
-        // 풀거나 재사용한다. 2 초마다 한 번 알리고, 장치가 제거되면(TDR) 멈춘다 — 그때는 기다려도 끝나지 않는다.
+        // 풀거나 재사용한다. 2 초마다 한 번 알리고(정보 — 부하에 느린 GPU 도 제때 끝나므로 고정 간격은 판정이 아니다. 멈춤은 행 감시가 기계 배율로 본다),
+        // 장치가 제거되면(TDR) 멈춘다 — 그때는 기다려도 끝나지 않는다.
         bool   bReached = SUCCEEDED( _fence->SetEventOnCompletion( fenceValue, fenceEvent ) );
         uint32 waitedSeconds{ 0 };
         while ( bReached && WaitForSingleObject( fenceEvent, 2000 ) != WAIT_OBJECT_0 )
@@ -1414,7 +1415,7 @@ namespace sw
             }
             if ( _fence->GetCompletedValue() >= fenceValue )
                 break;
-            SW_LOG_WARNING_ID( "D3D12.GPUNotReachedFence", "GPU has not reached fence %# after %# s — still waiting", fenceValue, waitedSeconds );
+            SW_LOG_INFO_ID( "D3D12.GPUNotReachedFence", "GPU has not reached fence %# after %# s — still waiting", fenceValue, waitedSeconds );
         }
         CloseHandle( fenceEvent );
         return bReached;

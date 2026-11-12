@@ -39,6 +39,16 @@ class ToolGateTest(unittest.TestCase):
         self.assertIsNone(self.pre("Bash", {"command": "git status"}))
         self.assertIsNone(self.pre("Edit", {"file_path": "D:/P/docs/NEXT.md"}))
 
+    def testPollingLoopIsRefused(self):
+        for command in ('until grep -q "x" f; do sleep 5; done; cat f', "until ! tasklist | grep -q git; do :; done", "while true; do sleep 1; done"):
+            self.assertIn("no-polling-wait", self.pre("Bash", {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])
+
+    def testBuildOnlyInMainTree(self):
+        for command in ("cd D:/P/.claude/worktrees/work-e10 && cmake --build --preset Ninja-Debug", "cmake --preset Ninja-Debug -S .claude/worktrees/x"):
+            self.assertIn("one-build-in-main-tree", self.pre("Bash", {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])
+        for command in ("cmake --build --preset Ninja-Debug", "git -C .claude/worktrees/x log", "cd build/Ninja-Debug && ctest -R foo"):
+            self.assertIsNone(self.pre("Bash", {"command": command}))
+
     def testAnyOfRequirement(self):
         target = {"file_path": "D:/P/Source/Engine/Graphics/RHI/Vulkan/V.cpp"}
         self.post("Skill", {"skill": "ponytail"})

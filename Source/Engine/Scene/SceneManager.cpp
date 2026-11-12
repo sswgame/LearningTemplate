@@ -127,7 +127,7 @@ namespace sw
         const bool bNeedWait     = _services._pTaskManager != nullptr && ( bLoading || bAsyncReady );
 
         if ( bNeedWait )
-            _services._pTaskManager->waitStage( _loadStage, "SceneManager::shutdown" ); // 오래 걸리면 남은 태스크 이름이 주기적으로 오류로 남는다
+            _services._pTaskManager->waitStage( _loadStage, "SceneManager::shutdown" ); // 오래 걸리면 남은 태스크 이름이 주기적으로 로그에 남는다
 
         if ( _asyncLoad != nullptr )
         {
