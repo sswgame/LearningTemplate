@@ -28,7 +28,7 @@
 3. **실패 · 잘림을 값으로 돌려주지 않거나 호출자가 버린다.** `(void)` 로 버린 신뢰 송신(N-3), 구간 읽기 실패 뒤 새 판(P0-5), exec 실패를 성공으로(P0-16), 잘린 포맷을 성공으로(C-10), 팩 마운트 실패 뒤 기동(A-4).
 4. **플랫폼 창이 "빠뜨려도 컴파일되는" 선택 훅을 가진다.** 포커스 전달 · 글 입력 · 닫기 완료 · 쉬기 · 수명 구독 · 오디오 백엔드(P0-9 ~ P0-11, P-3 ~ P-6).
 5. **플레이어 세이브가 핫 리로드용 엄격한 스냅샷 형식을 그대로 쓴다.** 판이 정확히 같아야 읽고, 개수 · 색인으로 짝짓고, 실패하면 조용히 새 판이다(P0-5 · P0-6 · A-6 · G-1).
-6. **상태 변화를 값이 아니라 호출 순서 규칙으로 다룬다.** 일시정지(P0-12), 오너 이동(P0-14), 배율 변경(S-4), 장치 유실(P0-13), 빨리 감기(K-2), 끌기 한 번(P0-1).
+6. **상태 변화를 값이 아니라 호출 순서 규칙으로 다룬다.** 일시정지(P0-12), 배율 변경(S-4), 장치 유실(P0-13), 빨리 감기(K-2), 끌기 한 번(P0-1).
 
 ## P0 — 확인된 오동작
 
@@ -80,13 +80,6 @@
 - 상용 엔진: 언리얼 AudioMixer 는 장치 유실 때 Null 장치로 넘겼다가 새 기본 장치로 스왑한다. 유니티는 `OnAudioConfigurationChanged` 다.
 - 제안: 백엔드 계약에 "출력이 죽었다" 상태를 넣는다(백엔드가 원자 플래그를 세우고 스트림 스레드는 끝난다). `IAudioService::update` 가 그 상태를 보고 오프라인 렌더로 넘기고 주기적으로 다시 연다.
 - 확인: 단위 — 쓰기가 늘 실패하는 가짜 백엔드로 `AudioServiceTest.OutputLossFallsBackToOfflineRender`(렌더한 프레임 ≤ 흐른 시간 × 48000).
-
-### P0-14 타일맵: 충돌이 오브젝트 이동을 따라가지 않고, 타일 한 칸 편집에 맵 전체 바디를 다시 만든다
-- 분류: 결함 + 성능 · 확신: 확인
-- 근거: `Source/Engine/TileMap/Component/TileMapRendererComponent.cpp:108-125` — 오너가 움직이면 `refreshChunkCells` 로 그림만 다시 놓고 `refreshCollision()`(호출처는 `:227` rebuild 와 `:359` setTile 뿐)은 부르지 않는다. 정적 바디는 만들 때의 월드 자리(`:490-508`)에 남고, 회전한 오너는 두 모서리의 AABB 상자가 된다. `setTile`(`:343-360`)은 매번 맵 전체의 솔리드 마스크 · 사각형 병합을 다시 구하고 모든 바디를 `destroyBody` → `createBody` 한다. 타일에 닿아 있던 모든 쌍에 End → Begin 이 거짓으로 나간다.
-- 상용 엔진: 유니티 `TilemapCollider2D` 는 바뀐 타일만 모아 늦게 반영한다. Godot 4 `TileMapLayer` 는 사분면 단위로 바디를 갱신하고 변환을 따라간다.
-- 제안: 충돌도 `TileChunkGrid` 청크 단위(청크마다 바디 하나에 셰이프 여럿)로 두고 바뀐 청크만 더티로 표시해 물리 `BeginFrame` 에서 한 번 반영한다. 오너 변환은 바디의 부모 변환으로 다룬다.
-- 확인: 단위 `TileMapCollisionTest.BodiesFollowOwnerTransform` · `SetTileRebuildsOnlyItsChunk` · `SetTileKeepsUnrelatedContacts`. 측정 — 256×256 맵에서 프레임당 `setTile` 32 회의 Tracy 구간.
 
 ## P1 — 조건부 결함과 확장 · 성능 병목
 
@@ -798,7 +791,7 @@
 
 한 줄이 한 묶음(커밋 하나에서 서넛)이다. 각 묶음은 "확인" 에 적은 단위 테스트를 먼저 써서 지금 지는 것을 본 뒤 고친다. 성능 묶음은 측정이 먼저다. 온라인 · 서버 · 보안 묶음은 `security-and-hardening`, 외부 API(Win32 · Vulkan · D3D · NDK · Emscripten)를 고치는 묶음은 context7 로 그 판의 문서를 먼저 대조한다.
 
-### P0 (12 묶음)
+### P0 (11 묶음)
 
 1. **에디터 되돌리기 구조** — 상호작용 구간 형식 + 문서마다 스택: P0-1 · P0-2, 함께 닫히는 E-2 · E-3 · E-9 · E-13. `editor/undocoverage` 에 문서 패널 전수 단계(E-16)를 먼저 더해 지는 것을 본다.
 2. **자동 저장 세션** — 세션 폴더 · pid 잠금 · 리로드 이어 쓰기: P0-3, 복구 입구 통일과 dirty 문서 목록 E-1.
@@ -809,7 +802,6 @@
 7. **Android 수명 · 키** — finish 요청과 닫힘 확정, 옮기지 못한 키는 소비하지 않음: P0-9 · P0-10. 가짜 `android_app` 단위 테스트로 데스크톱에서 고정한 뒤 실기기.
 8. **오디오 플랫폼과 장치 유실** — CMake 구성 오류(없는 백엔드) → AAudio · AudioWorklet 백엔드, "출력이 죽었다" 상태와 오프라인 렌더 넘김: P0-11 · P0-13.
 9. **시퀀서 갱신 구간** — 플레이어가 지난 구간을 값으로 돌려준다: P0-12.
-10. **타일맵 충돌 청크** — 청크 단위 바디 · 더티 반영 · 오너 변환 추종: P0-14.
 11. **Win32 Alt · 전체 화면 · 원시 입력** — `SC_KEYMENU` · `WM_SYSCHAR` 처리, `MakeWindowAssociation`, `RegisterRawInputDevices`: P0-15 · R-1 · P-1. 재현 시나리오 먼저.
 12. **POSIX 프로세스** — exec 실패 파이프, 공용 줄 분리기: P0-16 · P0-17.
 
@@ -934,7 +926,7 @@
 - Server — 읽음 — 운영 HTTP 끝점 · 관리 채널. N-7. 토큰 · 상수 시간 비교는 이상 없음.
 - Telemetry — 읽음 — 분석 공급자 배치 플러시. N-6. 동의 · 상한은 이상 없음.
 - Text — 읽음 — Slate 폰트 캐시. RN-14. TextLayout · Bidi · HarfBuzz 는 안 읽음.
-- TileMap — 읽음 — TilemapCollider2D · TileMapLayer. P0-14.
+- TileMap — 읽음 — TilemapCollider2D · TileMapLayer. 청크 충돌 · 오너 추종은 고침(P0-14 지움).
 - UI — 읽음 — Slate 무효화 · 위젯 경로 · ListView. P-7. 레이아웃 · 페인트 캐시 · 가상 목록은 이상 없음. Accessibility · Binding 은 훑음.
 - UserSettings — 읽음 — GameUserSettings. A-5.
 - VFX — 읽음 — Niagara · VFX Graph. RN-9. CPU 시뮬레이션 결정성은 이상 없음.
