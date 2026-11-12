@@ -511,7 +511,6 @@ namespace sw
         uint64                                    _rawMouseEventCount{ 0 };             /**< OS 에서 받은 원시 마우스 이동 보고 수(`getRawMouseEventCount`) */
 
     private:
+        SW_SERVICE_SLOT( InputManager, Required );
     };
-
-    SW_SERVICE_SLOT( InputManager, Required );
 } // namespace sw

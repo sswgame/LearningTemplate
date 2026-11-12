@@ -129,7 +129,7 @@ namespace sw
         vector<RHIBackendEntry> _listEntry;
         vector<LoadedModule>    _listLoadedModule;
         uint32                  _lastDeviceGeneration; ///< `createDevice` 가 마지막으로 붙인 장치 세대(0 은 "세대 없음")
-    };
 
-    SW_SERVICE_SLOT( RHIBackendRegistry, Required );
+        SW_SERVICE_SLOT( RHIBackendRegistry, Required );
+    };
 } // namespace sw

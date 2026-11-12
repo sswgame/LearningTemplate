@@ -445,7 +445,7 @@ namespace sw
         uint8                             _bServerTickKnown;        ///< 클라이언트 — 서버 틱을 한 번이라도 받았다
         uint64                            _clientHostFrameNumber;   ///< 클라이언트 호스트 — 프레임 앞 훅이 센 프레임 수(리슨 호스트의 `[frame=N]`)
         uint8                             _bFrameClockShown;        ///< 클라이언트 호스트 — 로그 꼬리표를 붙여 두었다(서버가 아니게 되면 뗀다)
-    };
 
-    SW_SERVICE_SLOT( GameNetSession, Required );
+        SW_SERVICE_SLOT( GameNetSession, Required );
+    };
 } // namespace sw

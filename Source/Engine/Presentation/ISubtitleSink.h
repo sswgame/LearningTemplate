@@ -11,14 +11,14 @@
 namespace sw
 {
     /** @class ISubtitleSink @brief 자막 줄을 받는 쪽입니다. 게임 스레드에서 부릅니다. */
-    class ISubtitleSink
+    class SW_API ISubtitleSink
     {
     public:
         virtual ~ISubtitleSink() = default;
 
         /** @brief @p speaker 의 줄 @p text 를 자막으로 올립니다. 보이는 시간은 @p durationSeconds 이고 0 이하면 읽기 시간입니다(대화 진행은 읽기 시간, 시퀀서 자막은 구간 길이). */
         virtual void postSubtitle( string_view speaker, string_view text, float32 durationSeconds ) = 0;
-    };
 
-    SW_SERVICE_SLOT( ISubtitleSink, Optional );
+        SW_SERVICE_SLOT( ISubtitleSink, Optional );
+    };
 } // namespace sw

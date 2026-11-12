@@ -78,7 +78,7 @@
 
 | 우선순위 | 코드에서 확인한 구조 | 고도화 방향과 조건 |
 |---|---|---|
-| 조건부(다중 엔진 필요 시 높음) | **엔진 서비스 빠른 조회는 프로세스 전역 단일 바인딩이다.** [`ServiceSlotOf<T>::s_slot`](../Source/Core/Subsystem/ServiceSlot.h)은 타입마다 정적 슬롯 하나이고, [`EngineServices.cpp`](../Source/Engine/Foundation/EngineServices.cpp)는 전역 `s_pSubsystems` 하나를 바인딩한다. 두 번째 엔진의 바인딩은 `EngineServiceBindKind::AlreadyBound` 로 거절된다(앞 엔진을 덮지 않는다). | 에디터 다중 미리보기, 인프로세스 서버·클라이언트 등 동시 Engine이 실제 요구될 때만 호출 경로에 `EngineContext`/locator를 전달해 슬롯을 컨텍스트별로 분리하고, 두 인스턴스 격리 테스트를 만든다. |
+| 조건부(다중 엔진 필요 시 높음) | **엔진 서비스 빠른 조회는 프로세스 전역 단일 바인딩이다.** [`T::s_serviceSlot`](../Source/Core/Subsystem/ServiceSlot.h)은 타입마다 정적 슬롯 하나이고, [`EngineServices.cpp`](../Source/Engine/Foundation/EngineServices.cpp)는 전역 `s_pSubsystems` 하나를 바인딩한다. 두 번째 엔진의 바인딩은 `EngineServiceBindKind::AlreadyBound` 로 거절된다(앞 엔진을 덮지 않는다). | 에디터 다중 미리보기, 인프로세스 서버·클라이언트 등 동시 Engine이 실제 요구될 때만 호출 경로에 `EngineContext`/locator를 전달해 슬롯을 컨텍스트별로 분리하고, 두 인스턴스 격리 테스트를 만든다. |
 | 중간(계약 일관성) | **서브시스템 의존성은 두 선언으로 나뉜다.** [`EngineSubsystemRegistration.h`](../Source/Engine/Foundation/EngineSubsystemRegistration.h)의 등록 `after` 목록은 공장이 다른 범위 항목을 찾기 전의 생성 순서를 정하고, 각 `ISubsystem::getSubsystemDependencies()`는 초기화·종료 순서를 정한다. 의미가 달라 둘을 단순 통합하면 안 되지만, 동일한 관계를 중복 선언할 때 누락·불일치가 가능하다. | 기존 테스트와 등록 표에서 두 그래프의 역할을 확인하고, 공장이 `scope.get<T>()`로 요구하는 타입이 `after`에 빠지면 시작 단계에서 이미 오류가 나는지 검증한다. 수명 의존성 누락도 독립 테스트/진단으로 잡는다. 선언을 하나로 합치는 것은 생성 순서와 초기화·역순 종료 의미를 모두 보존할 수 있을 때만 검토한다. |
 
 ### 셰이더 구조와 디퍼드/G버퍼 활용 고도화 (코드 대조 2026-11-07)

@@ -141,7 +141,7 @@ namespace sw
          *          개발 중 파일을 만들어 넣는 길은 그대로 열려 있습니다.
          */
         atomic<bool> _bLoadAttempted;
-    };
 
-    SW_SERVICE_SLOT( ComponentDefaults, Required );
+        SW_SERVICE_SLOT( ComponentDefaults, Required );
+    };
 } // namespace sw

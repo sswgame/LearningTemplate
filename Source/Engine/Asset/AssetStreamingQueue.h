@@ -173,7 +173,7 @@ namespace sw
         mutable mutex        _completedMutex;
         deque<CompletedItem> _listCompleted;
         bool _bInitialized   SW_GUARDED_BY( _mutex );
-    };
 
-    SW_SERVICE_SLOT( AssetStreamingQueue, Required );
+        SW_SERVICE_SLOT( AssetStreamingQueue, Required );
+    };
 } // namespace sw

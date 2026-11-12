@@ -511,7 +511,7 @@ namespace sw
          */
         atomic<uint32>           _clearEpoch;
         unique_ptr<TaskNodePool> _nodePool; ///< 태스크 노드 · 스테이지 · 병렬 그룹 풀
-    };
 
-    SW_SERVICE_SLOT( TaskManager, Required );
+        SW_SERVICE_SLOT( TaskManager, Required );
+    };
 } // namespace sw

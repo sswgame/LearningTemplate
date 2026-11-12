@@ -187,7 +187,7 @@ namespace sw
 
     private:
         Store _store; ///< 칸 받기 · 놓기는 .cpp 에서만 인스턴스화한다(페이지의 칸 채우기 · 비우기가 엔진 모듈 밖에 보이지 않는다)
-    };
 
-    SW_SERVICE_SLOT( SceneTransformStorage, Required );
+        SW_SERVICE_SLOT( SceneTransformStorage, Required );
+    };
 } // namespace sw

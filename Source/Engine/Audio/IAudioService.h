@@ -291,9 +291,9 @@ namespace sw
         uint8                   _bDeviceOpen  : 1;  /**< 장치를 열었는지입니다. */
         uint8                   _bOutputOpen  : 1;  /**< 장치가 엔진을 당기고 있는지입니다. */
         uint8                   _bInitialized : 1;  /**< initialize 가 끝났는지입니다. */
-    };
 
-    SW_SERVICE_SLOT( IAudioService, Optional );
+        SW_SERVICE_SLOT( IAudioService, Optional );
+    };
 } // namespace sw
 
 namespace sw

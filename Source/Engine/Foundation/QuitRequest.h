@@ -38,7 +38,7 @@ namespace sw
     private:
         ProcessExitCode _exitCode;
         uint8           _bRequested : 1;
-    };
 
-    SW_SERVICE_SLOT( QuitRequest, Required );
+        SW_SERVICE_SLOT( QuitRequest, Required );
+    };
 } // namespace sw

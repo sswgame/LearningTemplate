@@ -23,7 +23,7 @@ namespace sw
     };
 
     /** @class IEngineUIDriver @brief 런타임 UI 의 프레임 단계입니다. 게임 스레드에서 부릅니다. */
-    class IEngineUIDriver
+    class SW_API IEngineUIDriver
     {
     public:
         virtual ~IEngineUIDriver() = default;
@@ -34,7 +34,7 @@ namespace sw
         virtual void updateFrame( const EngineUIFrame& frame ) = 0;
         /** @brief 게임 update 가 돌지 않는 동안(에디터 멈춤 · Simulate) 화면 그리기와 포인터 입력을 막습니다. */
         virtual void setOnScreenSuppressed( bool bSuppressed ) = 0;
-    };
 
-    SW_SERVICE_SLOT( IEngineUIDriver, Optional );
+        SW_SERVICE_SLOT( IEngineUIDriver, Optional );
+    };
 } // namespace sw

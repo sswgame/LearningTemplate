@@ -54,7 +54,7 @@ namespace sw
     private:
         UIClipboardAPI _api;
         string         _text; ///< 엔진 안 클립보드입니다(운영체제 연결이 없을 때만 씁니다).
-    };
 
-    SW_SERVICE_SLOT( UIClipboardService, Required );
+        SW_SERVICE_SLOT( UIClipboardService, Required );
+    };
 } // namespace sw

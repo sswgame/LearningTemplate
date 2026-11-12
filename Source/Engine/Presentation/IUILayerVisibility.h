@@ -16,7 +16,7 @@ namespace sw
      * @class IUILayerVisibility
      * @brief 레이어 숨김 요청을 받는 쪽입니다. 게임 스레드에서 부릅니다.
      */
-    class IUILayerVisibility
+    class SW_API IUILayerVisibility
     {
     public:
         virtual ~IUILayerVisibility() = default;
@@ -25,7 +25,7 @@ namespace sw
         virtual void addLayerHideRequest( UILayerMask layers ) = 0;
         /** @brief `addLayerHideRequest` 로 건 요청을 하나 풉니다. */
         virtual void removeLayerHideRequest( UILayerMask layers ) = 0;
-    };
 
-    SW_SERVICE_SLOT( IUILayerVisibility, Optional );
+        SW_SERVICE_SLOT( IUILayerVisibility, Optional );
+    };
 } // namespace sw

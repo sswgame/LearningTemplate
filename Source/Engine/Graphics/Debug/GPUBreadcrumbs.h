@@ -164,7 +164,7 @@ namespace sw
         uint32 _count                             SW_GUARDED_BY( _mutex ){ 0 };
         atomic<uint32>                            _lastRecordedID{ 0 };
         atomic<uint32>                            _bLostReported{ 0 };
-    };
 
-    SW_SERVICE_SLOT( GPUBreadcrumbLog, Optional );
+        SW_SERVICE_SLOT( GPUBreadcrumbLog, Optional );
+    };
 } // namespace sw

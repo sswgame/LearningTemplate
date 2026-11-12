@@ -107,7 +107,7 @@ namespace sw
 
         /** @brief 이 객체가 내준 구독입니다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&CompressionCodecRegistry::releaseSubscription>( this ) };
-    };
 
-    SW_SERVICE_SLOT( CompressionCodecRegistry, Required );
+        SW_SERVICE_SLOT( CompressionCodecRegistry, Required );
+    };
 } // namespace sw

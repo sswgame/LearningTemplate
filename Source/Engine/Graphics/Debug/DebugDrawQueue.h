@@ -150,7 +150,7 @@ namespace sw
         vector<DebugSphere>                                     _listVisibleSphere;
         vector<DebugText>                                       _listVisibleText;
         unordered_map<hashed_string, uint8> _mapCategoryEnabled SW_GUARDED_BY( _mutex ); ///< 본 카테고리 → 켜짐(1) 또는 꺼짐(0)
-    };
 
-    SW_SERVICE_SLOT( DebugDrawQueue, Required );
+        SW_SERVICE_SLOT( DebugDrawQueue, Required );
+    };
 } // namespace sw

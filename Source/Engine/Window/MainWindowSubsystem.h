@@ -117,7 +117,7 @@ namespace sw
         TitleTarget         _titleTarget;         ///< 제목을 거는 이음매(`getTitleTarget`)
         uint32              _pendingClientWidth;  ///< `setPendingClientSize` 가 적은 너비(0 이면 요청 없음)
         uint32              _pendingClientHeight; ///< `setPendingClientSize` 가 적은 높이
-    };
 
-    SW_SERVICE_SLOT( MainWindowSubsystem, Optional );
+        SW_SERVICE_SLOT( MainWindowSubsystem, Optional );
+    };
 } // namespace sw

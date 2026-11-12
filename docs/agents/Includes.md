@@ -46,7 +46,7 @@ clang-cl defines both `__clang__` and `_MSC_VER`, so "may I use an MSVC extensio
 
 Reach a service through the window of its lifetime: `getSubsystem<T>()` (must exist, `T&`) or `findSubsystem<T>()` (may be missing, `T*`) on `engine::`, `game::`, `editor::` or the owning object.
 
-- A new engine service registers itself — there is no central list. Its header declares the slot after the class (`SW_SERVICE_SLOT( T, Required | Optional )` or `SW_SERVICE_SLOT_CONST`, `Core/Subsystem/ServiceSlot.h`), and the `.cpp` that puts the object into a scope has one registration line (`Engine/Foundation/EngineSubsystemRegistration.h`):
+- A new engine service registers itself — there is no central list. Its class body declares the slot (`SW_SERVICE_SLOT( T, Required | Optional )` or `SW_SERVICE_SLOT_CONST`, `Core/Subsystem/ServiceSlot.h`; the class is `SW_API`), and the `.cpp` that puts the object into a scope has one registration line (`Engine/Foundation/EngineSubsystemRegistration.h`):
   - `SW_ENGINE_SERVICE_SUBSYSTEM( T, GameVisible | HostOnly, Services | Startup, ( TypesBuiltFirst... ), factory )` — builds the subsystem and fills its slot (`SW_ENGINE_DEFAULT_FACTORY( T )` for a plain `emplaceSubsystem<T>()`).
   - `SW_ENGINE_SUBSYSTEM( T, Services | Startup, ( TypesBuiltFirst... ), factory )` — builds a subsystem without a slot (found only through scopes).
   - `SW_ENGINE_SERVICE( T, GameVisible | HostOnly )` — a slot for an object another subsystem binds (a value bundle, an object inside a subsystem); the line sits next to that `bind`.

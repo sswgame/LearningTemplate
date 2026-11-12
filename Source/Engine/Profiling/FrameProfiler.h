@@ -232,9 +232,9 @@ namespace sw
         atomic<uint32>       _scopeCount{ 0 };
         atomic<uint64>       _frameCount{ 0 };
         atomic<bool>         _bEnabled{ SW_FALSE };
-    };
 
-    SW_SERVICE_SLOT( FrameProfiler, Required );
+        SW_SERVICE_SLOT( FrameProfiler, Required );
+    };
 } // namespace sw
 
 namespace sw

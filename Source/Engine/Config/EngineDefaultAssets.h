@@ -271,7 +271,7 @@ namespace sw
          * @return 파일을 못 읽었거나 `Required` 칸이 빠졌거나 (개발 빌드에서) 그 칸이 가리키는 파일이 없으면 false 입니다. 대신 쓸 내장 값은 없습니다.
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID = {} );
-    };
 
-    SW_SERVICE_SLOT_CONST( EngineDefaultAssets, Required );
+        SW_SERVICE_SLOT_CONST( EngineDefaultAssets, Required );
+    };
 } // namespace sw

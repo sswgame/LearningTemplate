@@ -209,7 +209,7 @@ namespace sw
 
     private:
         unique_ptr<State> _pState;
-    };
 
-    SW_SERVICE_SLOT( AssetPaths, Required );
+        SW_SERVICE_SLOT( AssetPaths, Required );
+    };
 } // namespace sw
