@@ -4,7 +4,9 @@
  * @details 우편 레코드, 보낸 기록(멱등), 만료 색인, 첨부 맡김 이동(재원이 발행이 아닐 때)을 부르는 쪽 트랜잭션에 붙인다.
  *          테이블은 세 개다.
  *          `mail_item` 의 키는 `<받는 계정 16 진>/<만든 시각 16 진>.<멱등 키 해시 16 진>` 이다.
- *          `mail_sent` 의 키는 `<받는 계정 16 진>/<멱등 키>` 이고 값은 우편 키이다.
+ *          `mail_sent` 의 키는 `<받는 계정 16 진>/<멱등 키>` 이고 값은 우편 키이다. 보내기 멱등 기록이라 우편이 지워져도 남고, 보존 규칙(`OnlineServerConfig::_retentionMailSentDays`)이
+ *          보낸 시각(값인 우편 키의 만든 시각)부터 그 기간 뒤에 지운다. 그 뒤 같은 멱등 키로 다시 보내면 새 우편이 된다 — 멱등 키에 TTL 을 두는 PlayFab · Stripe 와 같은 계약이다.
+ *          지워도 다른 곳의 합 · 멱등이 깨지지 않는다: 원장 분개 키(`mail.send` · `mail.claim` · `mail.expire`)는 우편 키에서 나오고, 업적 · 시즌 보상은 자기 레코드가 한 번만 보내기를 막는다.
  *          `mail_expiry` 의 키는 `<만료 16 진>/<우편 키>` 이고 값은 없다.
  *          `mail_notice` 의 키는 `<만든 시각 16 진>/<우편 키>` 이고 값은 제목 키다. 새 우편 알림을 보낼 차례이며, 우편함 키트가 가져가며 지운다(`claimNotices`).
  *          우편을 넣는 모든 경로가 이 함수 하나를 지나므로 알림을 빠뜨리는 경로가 없다. 우편 하나는 쓰기 네 개(우편, 보낸 기록, 만료, 알림)이다.
@@ -108,6 +110,8 @@ namespace sw
         /** @brief 우편의 맡김 보유자 `esc/mail/<토큰>` 을 반환합니다. 토큰은 우편 키의 `/` 를 `.` 로 바꾼 값입니다. */
         static LedgerHolder makeEscrowHolder( string_view mailKey );
         static string       makeExpiryKey( int64 expiresMs, string_view mailKey );
+        /** @brief 보낸 기록(`mail_sent`)의 값인 우편 키에서 보낸 시각을 읽습니다(보존 기간 쓸기 `ServiceRetentionRule` 용). 형식이 틀리면 false 이고 그 기록은 지우지 않습니다. */
+        [[nodiscard]] static bool readSentTimeMs( const ServiceRecord& record, int64& outTimeMs );
         /** @brief 우편 키 앞의 받는 계정을 구합니다. 형식이 틀리면 false 입니다. */
         [[nodiscard]] static bool parseRecipient( string_view mailKey, uint64& outAccountID );
 

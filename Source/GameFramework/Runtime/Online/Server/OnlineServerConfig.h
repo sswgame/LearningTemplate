@@ -117,6 +117,10 @@ namespace sw
         /** @brief 닫힌 신고(`service_report`)를 남기는 기간(일)입니다. 0 이면 지우지 않습니다. 열린 신고는 지우지 않습니다. */
         PROPERTY( Min = 0, Max = 36500 )
         int32 _retentionReportDays{ 90 };
+        /** @brief 우편 보낸 기록(`mail_sent`, 보내기 멱등)을 남기는 기간(일)입니다. 0 이면 지우지 않습니다. 이 기간이 지나면 같은 멱등 키로 다시 보낸 우편(일괄 우편 다시 돌리기 등)을 가리지 못합니다.
+         *         우편 보관(30 일) + 받은 우편 보관(우편함 `_claimedRetentionDays`)보다 길게 둔다. */
+        PROPERTY( Min = 0, Max = 36500 )
+        int32 _retentionMailSentDays{ 90 };
         /** @brief 보존 기간 쓸기를 도는 시각(UTC 분, 0..1439)입니다. 저장소가 한가한 시간에 둡니다. */
         PROPERTY( Min = 0, Max = 1439 )
         int32 _retentionMinuteOfDay{ 5 * 60 };

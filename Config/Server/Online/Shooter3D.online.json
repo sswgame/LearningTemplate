@@ -1,6 +1,7 @@
 {
     "_storeName": "local",
     "_cacheName": "local",
+    "_retentionMailSentDays": 90,
     "_publicAddress": "127.0.0.1",
     "_listKit": [
         {

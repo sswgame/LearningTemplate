@@ -1,6 +1,7 @@
 {
     "_storeName": "main",
     "_cacheName": "main",
+    "_retentionMailSentDays": 90,
     "_listKit": [
         {
             "_name": "account",
