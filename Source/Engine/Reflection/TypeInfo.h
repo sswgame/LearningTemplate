@@ -264,8 +264,6 @@ namespace sw
         }
         /** @brief 조상 테이블이 없을 때의 경로입니다. 만들 수 있으면 만들어서 답하고, 아니면 부모 포인터를 따라갑니다. */
         bool isDerivedFromSlow( const TypeInfo* pTarget ) const;
-        /** @brief 부모 TypeInfo 입니다. 찾아 둔 것이 없으면 이름으로 찾아 기록합니다. 부모가 없거나 등록되지 않았으면 nullptr 입니다. */
-        const TypeInfo* getParentType() const;
         /** @brief 부모 포인터를 이름으로 다시 찾습니다. 등록 배치가 끝날 때 `TypeRegistry` 가 부릅니다. */
         void resolveParentType() const;
         /** @brief 부모 포인터와 "찾지 못했다"는 기록을 비웁니다. 해제 뒤에는 부모가 사라졌을 수 있으므로 `TypeRegistry` 가 부릅니다. */
@@ -425,8 +423,15 @@ namespace sw
             }
         }
 
-        /** @brief 자기부터 기반까지의 사슬입니다(`TypeChain`). 부모 사슬을 걷는 곳은 모두 이것을 쓴다 — `getParentType` 을 손으로 따라가지 않는다(린트 `typeChainWalk`). */
+        /** @brief 자기부터 기반까지의 사슬입니다(`TypeChain`). 부모 사슬을 걷는 곳은 모두 이것을 쓴다(부모 한 단계는 `getTypeChain()[1]`). */
         TypeChain getTypeChain() const;
+
+    private:
+        /**
+         * @brief 부모 TypeInfo 입니다. 찾아 둔 것이 없으면 이름으로 찾아 기록합니다. 부모가 없거나 등록되지 않았으면 nullptr 입니다.
+         * @details 비공개다 — 밖에서 `p = p->getParentType()` 으로 손으로 걸으면 고리 방지가 빠진다(고리 사슬에서 끝나지 않았다). 사슬은 `getTypeChain` 한 곳이 걷는다.
+         */
+        const TypeInfo* getParentType() const;
     };
 
 } // namespace sw

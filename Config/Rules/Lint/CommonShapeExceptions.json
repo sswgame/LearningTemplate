@@ -68,8 +68,5 @@
         "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.cpp": "무작위 씨앗에 섞는 값이다(pickUnit) — 겹쳐도 같은 씨앗일 뿐 표가 아니다",
         "Source/GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.cpp": "저장 상태의 노드 id 해시다 — 만들기(populateNodes)가 NameHashIndex 로 같은 해시의 두 id 를 거절해 회로 안에서는 하나로 정해진다",
         "Source/Editor/Panels/Inspector/Model/PropertyGridModel.cpp": "인스펙터 행 높이 기억 키다 — 겹치면 한 행의 높이 추정이 섞일 뿐 데이터는 바뀌지 않는다"
-    },
-    "typeChainWalk": {
-        "Source/Engine/Reflection/TypeInfo.cpp": "기반 자신이다(getTypeChain — 사슬을 손으로 따라가는 유일한 자리)"
     }
 }
