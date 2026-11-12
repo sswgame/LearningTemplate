@@ -21,6 +21,7 @@ Scripts/lint/PreCommit.py
 from __future__ import annotations
 
 import builtins
+import collections
 import contextlib
 import dataclasses
 import functools
@@ -42,6 +43,7 @@ from common.Git import runGit, runGitInHookRepository  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from lint.Format import runClangFormatBatch  # noqa: E402
 from lint.LintScope import LintScope, makeStagedScope, makeWholeScope, readBytesInternal  # noqa: E402
+from lint.FactCache import kCacheFolder, setReadAllStore  # noqa: E402
 from lint.ModuleImports import listImportedModuleFiles  # noqa: E402
 from lint.Rules import Rule, formatTable, kRuleById, kRules  # noqa: E402
 
@@ -120,7 +122,9 @@ def checkReadBound(projectRoot: Path) -> list[str]:
     연 파일이 그 파일 한 번뿐이어야 한다. 사실 캐시(`FactCache`)를 먼저 데우므로 캐시 미스는 0 이다 — 넘으면 어떤 규칙이 스테이지 밖 파일을 읽거나
     (색인 없이 저장소 · 폴더 · 짝을 읽는다) 같은 파일을 따로 읽은 것이다(`LintScope.readBytes` 를 거치지 않았다).
 
-    세지 않는 것: 규칙의 표(`Config/Rules/`, `Rule.listTables`), 규칙 코드(Scripts 모듈 — 사실 캐시의 판), `Saved/`(캐시), `.git/`.
+    사실 캐시 파일(`Saved/Lint/<저장소>/`)도 센다: 저장소마다 manifest 하나와 조각 하나까지 — 판정에 전체가 필요한 규칙은 요약(manifest)만 읽어야 한다.
+    호출 그래프처럼 접을 수 없어 `bReadAll=True` 로 부른 저장소(`FactCache.setReadAllStore`)만 조각 수를 세지 않는다.
+    세지 않는 것: 규칙의 표(`Config/Rules/`, `Rule.listTables`), 규칙 코드(Scripts 모듈 — 사실 캐시의 판), 그 밖의 `Saved/`, `.git/`.
     shortcut: `io.open` · `open` 만 센다 — git 으로 읽는 블롭(`git cat-file`)은 세지 않는다, 그런 규칙이 늘면 git 호출도 센다.
     """
     setCode = {path for rule in kRules for path in listImportedModuleFiles(rule.getModuleName())}
@@ -140,7 +144,7 @@ def checkReadBound(projectRoot: Path) -> list[str]:
                 relative = Path(file).resolve().relative_to(resolvedRoot).as_posix() if isinstance(file, (str, Path)) else ""
             except ValueError:
                 relative = ""
-            if relative and relative not in setCode and not relative.startswith(("Config/Rules/", "Saved/", ".git/")):
+            if relative and relative not in setCode and (relative.startswith(kCacheFolder + "/") or not relative.startswith(("Config/Rules/", "Saved/", ".git/"))):
                 listOpened.append((current[0], relative))
             return originalOpen(file, *args, **kwargs)
 
@@ -151,14 +155,24 @@ def checkReadBound(projectRoot: Path) -> list[str]:
                 runRule(rule, projectRoot, LintScope((probe,), (), False))
         finally:
             io.open = builtins.open = originalOpen
+        mapStoreFiles: dict[tuple[str, str], list[str]] = {}
         for index, (ruleID, relative) in enumerate(listOpened):
             rule = kRuleById[ruleID]
+            if relative.startswith(kCacheFolder + "/"):
+                store, _, fileName = relative[len(kCacheFolder) + 1:].partition("/")
+                if store not in setReadAllStore and fileName.startswith("shard-"):
+                    mapStoreFiles.setdefault((ruleID, store), []).append(fileName)
+                continue
             if any(relative == table or relative.startswith(table.rstrip("/") + "/") for table in rule.listTables()):
                 continue
             if relative != probe:
                 listProblem.append(f"{ruleID}: 스테이지 '{probe}' 하나에 스테이지 밖 '{relative}' 를 읽는다 — 여러 파일을 보는 판정은 `FactCache` 색인으로")
             elif any(other == relative for _, other in listOpened[:index]):
                 listProblem.append(f"{ruleID}: 스테이지 '{probe}' 를 다른 규칙과 따로 다시 읽는다 — `LintScope.readText` · `readTexts` 로")
+        for (ruleID, store), listShard in sorted(mapStoreFiles.items()):
+            if len(listShard) > 1:
+                listProblem.append(f"{ruleID}: 스테이지 '{probe}' 하나에 사실 캐시 '{store}' 의 조각 {len(listShard)} 개를 읽는다 — 판정은 요약(`contribute`)이나 "
+                                   "함께 묻는 파일을 한 조각에(`shardOf`)")
     return listProblem
 
 
@@ -230,6 +244,39 @@ def checkFixCommand(projectRoot: Path) -> list[str]:
     return [] if bFixed else [f"안내 명령 '{kFixCommand} <파일>' 이 include 순서를 고치지 않는다"]
 
 
+def checkFactStore() -> list[str]:
+    """사실 저장소(`FactCache.openFacts`) — 임시 폴더에서 짓고, 한 파일 고치기 · 지우기 · 더하기 뒤 요약이 처음부터 접은 것과 같은지, 물은 사실이 맞는지,
+    조각을 망가뜨리면 다시 지어 같은 답을 내는지 본다."""
+    from lint.FactCache import openFacts
+    listProblem: list[str] = []
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+
+        def run(mapText: dict[str, str], want: list[str]) -> tuple[dict, collections.Counter[str]]:
+            facts = openFacts(root, "probe", [], sorted(mapText), lambda _, text: text.split(), mapKey={path: f"k{hash(text)}" for path, text in mapText.items()},
+                              readTexts=lambda listPath: {path: mapText.get(path) for path in listPath}, want=want, contribute=lambda _, listWord: listWord)
+            return facts.mapFact, facts.summary
+
+        def expect(mapText: dict[str, str], want: list[str], what: str) -> None:
+            mapFact, summary = run(mapText, want)
+            if summary != collections.Counter(word for text in mapText.values() for word in text.split()):
+                listProblem.append(f"사실 저장소: {what} 뒤 요약이 처음부터 접은 것과 다르다")
+            if mapFact != {path: mapText[path].split() for path in sorted(want) if path in mapText}:
+                listProblem.append(f"사실 저장소: {what} 뒤 물은 사실이 다르다")
+
+        mapText = {f"d{index % 7}/f{index}.txt": f"a b w{index % 3}" for index in range(40)}
+        expect(mapText, [], "처음 짓기")
+        mapText["d1/f1.txt"] = "a c"
+        del mapText["d2/f2.txt"]
+        mapText["d9/new.txt"] = "z z"
+        expect(mapText, ["d1/f1.txt", "d9/new.txt"], "고치기 · 지우기 · 더하기")
+        for shard in (root / kCacheFolder / "probe").glob("shard-*.json"):
+            shard.write_text("{}", encoding="utf-8")
+            break
+        expect(mapText, sorted(mapText), "조각을 망가뜨린")
+    return listProblem
+
+
 def checkRuleRowDiff() -> list[str]:
     """표 줄 비교(`diffRuleRows`) — 지금 표 글과 같으면 바뀐 줄이 없고, 한 규칙의 `blocks` 를 바꾼 글이면 그 규칙 하나다."""
     text = (Path(__file__).resolve().parent / "Rules.py").read_text(encoding="utf-8")
@@ -277,7 +324,7 @@ def runLint(projectRoot: Path, scope: LintScope) -> int:
 
     # 린트 코드(규칙 · 도우미 · 이 파일 · 하위 명령 표)가 바뀌면 커밋 훅의 모양(스테이지 비례 읽기 · 병합 범위)과 안내가 시키는 고치는 명령을 다시 본다 — 시간을 재지 않고 연 파일을 센다.
     if scope.bWholeRepo or scope.touches(roots=("Scripts/lint/", "Scripts/__main__.py", *sorted({path for rule in kRules for path in rule.listInputs() if path.startswith("Scripts/")}))):
-        listShape = checkReadBound(projectRoot) + checkMergeScope() + checkFixCommand(projectRoot) + checkRuleRowDiff()
+        listShape = checkReadBound(projectRoot) + checkMergeScope() + checkFixCommand(projectRoot) + checkRuleRowDiff() + checkFactStore()
         if listShape:
             hasErrors = True
             print(f"[lint-shape] FAIL — 커밋 훅 · 고치는 명령의 모양 {len(listShape)}건")

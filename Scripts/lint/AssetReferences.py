@@ -25,13 +25,13 @@ import sys
 import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Any, Callable, Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.Git import runGit, runGitBytes  # noqa: E402
-from lint.FactCache import getIndexKeys, loadFacts  # noqa: E402
+from lint.FactCache import Facts, getIndexKeys, openFacts  # noqa: E402
 from lint.LintScope import LintScope  # noqa: E402
 
 kConfigPath = "Config/Dev/AssetReferenceFields.json"
@@ -299,7 +299,11 @@ def resolves(assetID: str, assets: AssetSet, config: FieldConfig) -> bool:
 
 
 def isChecked(reference: Reference, config: FieldConfig) -> bool:
-    return not any(reference.path.startswith(domain + "/") for domain in config.listUncheckedDomain)
+    return isCheckedPath(reference.path, config)
+
+
+def isCheckedPath(assetID: str, config: FieldConfig) -> bool:
+    return not any(assetID.startswith(domain + "/") for domain in config.listUncheckedDomain)
 
 
 def isReferrer(relativePath: str, config: FieldConfig) -> bool:
@@ -457,9 +461,16 @@ def checkAssetReferences(projectRoot: Path, scope: LintScope) -> list[str]:
     listReferrer = [path for path in listIndex if isReferrer(path, config)]
     listRedirect = [path for path in listIndex if isRedirectTable(path)]
     mapRedirect = parseRedirects(readIndexBlobs(projectRoot, listRedirect)) if listRedirect else {}
-    mapFact = loadFacts(projectRoot, "asset-refs", [__file__, str(projectRoot / kConfigPath), str(projectRoot / kGeneratedPath)], listReferrer,
-                        lambda path, text: [[reference.line, reference.field, reference.start, reference.end, reference.path] for reference in extractReferences(path, text, config)],
-                        mapKey=mapKey, readTexts=lambda listPath: readIndexBlobs(projectRoot, listPath))
+    def openReferences(**options: Any) -> Facts:
+        return openFacts(projectRoot, "asset-refs", [__file__, str(projectRoot / kConfigPath), str(projectRoot / kGeneratedPath)], listReferrer,
+                         lambda path, text: [[reference.line, reference.field, reference.start, reference.end, reference.path] for reference in extractReferences(path, text, config)],
+                         mapKey=mapKey, readTexts=lambda listPath: readIndexBlobs(projectRoot, listPath), contribute=lambda _, listRow: [row[4] for row in listRow], **options)
+
+    # 판정은 참조한 경로만으로 난다(옮긴 옛 id · 없는 경로) — 요약(경로마다 참조 수)으로 거르고, 걸린 것이 있을 때만 사실 전체를 읽어 줄 번호를 낸다.
+    listFailing = [path for path in openReferences().summary if isCheckedPath(path, config) and (path in mapRedirect or not resolves(path, assets, config))]
+    if not listFailing:
+        return listMetaProblems(listIndex)
+    mapFact = openReferences(want=None, bReadAll=True).mapFact
     mapReference = {path: [Reference(*row) for row in listRow] for path, listRow in mapFact.items()}
     return listMetaProblems(listIndex) + collectReferenceProblems(mapReference, assets, config, mapRedirect)
 

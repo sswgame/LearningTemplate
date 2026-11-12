@@ -26,14 +26,14 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Sequence
+from typing import Iterable, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from lint.FactCache import loadFacts  # noqa: E402
+from lint.FactCache import openFacts  # noqa: E402
 from lint.LintScope import LintScope, listRepoFiles, makeWholeScope  # noqa: E402
 
 kConfigPath = "Config/Rules/Lint/FeatureReferenceExceptions.json"
@@ -127,13 +127,43 @@ def checkExceptionsTable(kind: str, dictDefined: dict[str, str], setReference: s
     return listProblem
 
 
+kDefineKeys = ("component", "watch", "command")
+kCollectKeys = ("componentReference", "literal", "scenarioWatch", "commandWord")
+
+
+def foldTokens(path: str, facts: dict[str, list[str]]) -> list[str]:
+    """파일 하나의 사실을 판정이 쓰는 토큰으로 — 정의(이름 · 경로), 참조 낱말(경로 없이), 등록 없는 명령 함수(경로 · 차례). 요약은 이 토큰의 수다."""
+    listToken = [f"D	{key}	{name}	{path}" for key in kDefineKeys for name in facts.get(key, ())]   # 탭으로 가른다 — 이름 · 경로에 탭은 없다
+    listToken += [f"C	{key}	{name}" for key in kCollectKeys for name in sorted(set(facts.get(key, ())))]
+    listToken += [f"L	{path}	{index}	{name}" for index, name in enumerate(facts.get("lostRunner", ()))]
+    return listToken
+
+
 def judgeFacts(mapFact: dict[str, dict[str, list[str]]], exceptions: Exceptions) -> list[str]:
-    """저장소 전체 사실(경로 → 사실, 경로 순)로 참조 0 을 가린다 — 참조는 어느 파일에서 와도 되므로 판정은 늘 전체로 낸다."""
+    """저장소 전체 사실(경로 → 사실, 경로 순)로 참조 0 을 가린다 — 자체 검사의 입구. 커밋 훅은 접은 요약(`judgeSummary`)을 쓴다."""
+    return judgeSummary([token for path, facts in sorted(mapFact.items()) for token in foldTokens(path, facts)], exceptions)
+
+
+def judgeSummary(listToken: Iterable[str], exceptions: Exceptions) -> list[str]:
+    """요약 토큰으로 참조 0 을 가린다 — 참조는 어느 파일에서 와도 되므로 판정은 늘 전체(의 요약)로 낸다."""
+    mapDefine: dict[str, dict[str, str]] = {key: {} for key in kDefineKeys}
+    mapCollect: dict[str, set[str]] = {key: set() for key in kCollectKeys}
+    listLost: list[tuple[str, int, str]] = []
+    for token in listToken:
+        row = token.split("	")
+        if row[0] == "D":
+            _, key, name, path = row
+            mapDefine[key][name] = max(path, mapDefine[key].get(name, path))   # 같은 이름은 경로 순으로 뒤 파일이 이긴다
+        elif row[0] == "C":
+            mapCollect[row[1]].add(row[2])
+        else:
+            listLost.append((row[1], int(row[2]), row[3]))
+
     def collect(key: str) -> set[str]:
-        return {name for facts in mapFact.values() for name in facts.get(key, ())}
+        return mapCollect[key]
 
     def define(key: str) -> dict[str, str]:
-        return {name: path for path, facts in mapFact.items() for name in facts.get(key, ())}   # 같은 이름은 뒤 파일이 이긴다
+        return mapDefine[key]
 
     listProblem: list[str] = []
     dictComponent = define("component")
@@ -157,9 +187,8 @@ def judgeFacts(mapFact: dict[str, dict[str, list[str]]], exceptions: Exceptions)
         if name not in setCommandReference and name not in exceptions.dictCommand:
             listProblem.append(f"{path}: 개발 명령 {name} 를 자동화가 부르지 않는다 — 시나리오로 잇거나 {kConfigPath} 에 까닭을 적는다")
     listProblem += checkExceptionsTable("개발 명령", dictCommand, setCommandReference, exceptions.dictCommand)
-    for path in sorted(mapFact):
-        for name in mapFact[path].get("lostRunner", ()):
-            listProblem.append(f"{path}: 명령 함수 {name} 를 등록(SW_DEV_COMMAND)도 호출도 하지 않는다 — 등록 줄을 되살리거나 함수를 지운다")
+    for path, _, name in sorted(listLost):
+        listProblem.append(f"{path}: 명령 함수 {name} 를 등록(SW_DEV_COMMAND)도 호출도 하지 않는다 — 등록 줄을 되살리거나 함수를 지운다")
     return listProblem
 
 
@@ -174,17 +203,18 @@ def readExceptions(projectRoot: Path) -> Exceptions:
     return Exceptions(data["_folders"], data["_components"], data["_watches"], data["_devCommands"])
 
 
-def readFacts(projectRoot: Path) -> dict[str, dict[str, list[str]]]:
-    """저장소에 있는 파일만 본다(git 이 아는 파일 — 빌드 산출물 · 임포트 산출물을 줍지 않는다). 내용이 바뀐 파일만 다시 읽는다(`FactCache`)."""
+def readSummary(projectRoot: Path) -> list[str]:
+    """저장소에 있는 파일만 본다(git 이 아는 파일 — 빌드 산출물 · 임포트 산출물을 줍지 않는다). 내용이 바뀐 파일만 다시 읽고(`FactCache`), 판정은 접은 토큰만 읽는다."""
     listPath = [path for path in listRepoFiles(projectRoot) if classifyPath(path) is not None]
-    return loadFacts(projectRoot, "feature-refs", [__file__], listPath, lambda path, text: extractFacts(classifyPath(path), path, text), errors="ignore")
+    return list(openFacts(projectRoot, "feature-refs", [__file__], listPath, lambda path, text: extractFacts(classifyPath(path), path, text), errors="ignore",
+                          contribute=foldTokens).summary)
 
 
 def checkFeatureReferences(projectRoot: Path, scope: LintScope) -> list[str]:
     """커밋 훅은 훑는 파일이 바뀌었을 때만 돈다(지운 파일 포함 — 참조를 지우면 참조 0 이 생긴다)."""
     if not scope.bWholeRepo and not any(classifyPath(path) for path in (*scope.listFile, *scope.listRemoved)):
         return []
-    return judgeFacts(readFacts(projectRoot), readExceptions(projectRoot))
+    return judgeSummary(readSummary(projectRoot), readExceptions(projectRoot))
 
 
 def runSelfCheck() -> None:

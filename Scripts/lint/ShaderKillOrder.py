@@ -117,7 +117,8 @@ def readFunctions(projectRoot: Path) -> list[tuple[str, str, str]]:
     """Content · Source 의 셰이더 함수 전체 — 내용이 바뀐 파일만 다시 읽는다(`FactCache`)."""
     listPath = [path for path in listRepoFiles(projectRoot)
                 if path.startswith(("Content/", "Source/")) and path.endswith(kExtensions) and "ThirdParty" not in path.split("/")]
-    mapFact = loadFacts(projectRoot, "shader-kill-order", [__file__], listPath, lambda path, text: [[name, body] for _, name, body in collectFunctions(path, text)])
+    mapFact = loadFacts(projectRoot, "shader-kill-order", [__file__], listPath, lambda path, text: [[name, body] for _, name, body in collectFunctions(path, text)],
+                        want=None, bReadAll=True)   # 버리기 닫힘이 호출 그래프 전체라 접을 수 없다
     return [(path, name, body) for path, listFunction in mapFact.items() for name, body in listFunction]
 
 

@@ -160,7 +160,7 @@ def judgeTicks(found: dict[str, str], exceptions: dict) -> list[str]:
 def readAllBodies(projectRoot: Path) -> list[FunctionBody]:
     """저장소 전체(테스트 밖 .cpp)의 함수 — 내용이 바뀐 파일만 다시 읽는다(`FactCache`)."""
     listPath = [path for path in listRepoFiles(projectRoot) if path.startswith("Source/") and path.endswith(".cpp") and "Tests" not in path.split("/")]
-    mapFact = loadFacts(projectRoot, "tick-scene-walk", [__file__], listPath, extractBodyFacts)
+    mapFact = loadFacts(projectRoot, "tick-scene-walk", [__file__], listPath, extractBodyFacts, want=None, bReadAll=True)   # 씬 순회 이유가 호출 그래프 전체로 번져 접을 수 없다
     return [FunctionBody(path, *fact) for path, listFact in mapFact.items() for fact in listFact]
 
 

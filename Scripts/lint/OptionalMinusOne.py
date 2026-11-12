@@ -196,8 +196,9 @@ def checkOptionalMinusOne(projectRoot: Path, scope: LintScope) -> list[str]:
     if not setStem:
         return []
     listPath = [path for path in listRepoFiles(projectRoot) if path.startswith("Source/") and path.endswith(kSuffixes)]
-    mapFact = loadFacts(projectRoot, "optional-minus-one", [__file__], listPath, lambda _, text: extractFacts(text))
-    return judgeFacts({path: fact for path, fact in mapFact.items() if path.rsplit(".", 1)[0] in setStem})
+    mapFact = loadFacts(projectRoot, "optional-minus-one", [__file__], listPath, lambda _, text: extractFacts(text),
+                        want=[path for path in listPath if path.rsplit(".", 1)[0] in setStem], shardOf=lambda path: path.rsplit(".", 1)[0])   # 한 짝은 한 조각
+    return judgeFacts(mapFact)
 
 
 def runSelfCheck() -> None:

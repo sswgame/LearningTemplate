@@ -216,8 +216,9 @@ def checkRequiredNameFields(projectRoot: Path, scope: LintScope) -> list[str]:
         return []
     listPath = [path for path in listRepoFiles(projectRoot) if isTarget(path)]
     mapFact = loadFacts(projectRoot, "required-name-fields", [__file__, str(projectRoot / kConfigPath)], listPath,
-                        lambda path, text: extractFacts(path, text, config), errors="strict")
-    return judgeFacts({path: fact for path, fact in mapFact.items() if path.rpartition("/")[0] in setFolder}, config, scope.bWholeRepo)
+                        lambda path, text: extractFacts(path, text, config), errors="strict",
+                        want=[path for path in listPath if path.rpartition("/")[0] in setFolder], shardOf=lambda path: path.rpartition("/")[0])   # 한 폴더는 한 조각
+    return judgeFacts(mapFact, config, scope.bWholeRepo)
 
 
 def runSelfCheck() -> None:

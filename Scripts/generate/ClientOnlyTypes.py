@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from lint.FactCache import loadFacts  # noqa: E402
+from lint.FactCache import openFacts  # noqa: E402
 from lint.LintScope import LintScope, listRepoFiles, makeWholeScope  # noqa: E402
 from generate.TargetLayers import readServerUnbuiltFolders  # noqa: E402 — 짓지 않는 엔진 폴더의 정본은 BuildLayout.cmake 한 곳이다
 
@@ -45,8 +45,8 @@ def collectTypeNames(projectRoot: Path) -> list[str]:
     listUnbuiltFolder = readServerUnbuiltFolders(projectRoot)
     listPath = [path for path in listRepoFiles(projectRoot)
                 if path.startswith("Source/") and path.endswith(".h") and "/Tests/" not in path and isClientOnlySource(path, listUnbuiltFolder)]
-    mapFact = loadFacts(projectRoot, "client-only-types", [__file__], listPath, lambda _, text: kReflectedType.findall(text))
-    return sorted({name for listName in mapFact.values() for name in listName})
+    facts = openFacts(projectRoot, "client-only-types", [__file__], listPath, lambda _, text: kReflectedType.findall(text), contribute=lambda _, listName: listName)
+    return sorted(facts.summary)   # 요약(이름 → 그 이름을 정의한 파일 수)만 읽는다
 
 
 def makeTableText(listName: list[str]) -> str:

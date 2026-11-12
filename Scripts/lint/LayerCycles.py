@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from lint.FactCache import loadFacts  # noqa: E402
+from lint.FactCache import openFacts  # noqa: E402
 from lint.LintScope import LintScope, listRepoFiles, makeWholeScope  # noqa: E402
 
 kExtensions = (".h", ".hpp", ".inl", ".cpp", ".c", ".xxx")
@@ -83,12 +83,15 @@ def countPairs(mapTier: dict[str, int], module: str, listSource: Iterable[tuple[
     return countIncludePairs(mapTier, {relative: findIncludes(module, text) for relative, text in listSource})
 
 
-def readIncludes(projectRoot: Path, module: str) -> dict[str, list[str]]:
-    """모듈 기준 경로 → include 목록. 저장소 전체 색인이고, 내용이 바뀐 파일만 다시 읽는다(`FactCache`)."""
+def readPairs(projectRoot: Path, module: str, mapTier: dict[str, int]) -> Counter[tuple[str, str]]:
+    """같은 층 키 사이 include 수(`countIncludePairs`) — 파일마다의 include 는 색인(`FactCache`)에 두고, 판정은 파일마다 접은 쌍의 수(요약)만 읽는다."""
     head = f"Source/{module}/"
     listPath = [path for path in listRepoFiles(projectRoot) if path.startswith(head) and path.endswith(kExtensions)]
-    mapFact = loadFacts(projectRoot, f"layer-cycles-{module}", [__file__], listPath, lambda _, text: findIncludes(module, text), errors="replace")
-    return {path[len(head):]: listInclude for path, listInclude in mapFact.items()}
+    facts = openFacts(projectRoot, f"layer-cycles-{module}", [__file__, str(projectRoot / "Config" / "Rules" / "Layers" / f"{module}Layers.toml")], listPath,
+                      lambda _, text: findIncludes(module, text), errors="replace",
+                      contribute=lambda path, listInclude: [f"{source}\t{target}" for (source, target), count in countIncludePairs(mapTier, {path[len(head):]: listInclude}).items()
+                                                            for _ in range(count)])
+    return Counter({tuple(token.split("\t")): count for token, count in facts.summary.items()})
 
 
 def checkLayerCycles(projectRoot: Path, scope: LintScope) -> list[str]:
@@ -98,12 +101,12 @@ def checkLayerCycles(projectRoot: Path, scope: LintScope) -> list[str]:
     table = readTable(projectRoot, "Engine")
     mapTier: dict[str, int] = table["tier"]
     setAllowedTier = {int(tier) for tier in table.get("sameTierCycle", {})}
-    return findCycles(mapTier, countIncludePairs(mapTier, readIncludes(projectRoot, "Engine")), setAllowedTier)
+    return findCycles(mapTier, readPairs(projectRoot, "Engine", mapTier), setAllowedTier)
 
 
 def printCensus(projectRoot: Path, module: str) -> None:
     mapTier: dict[str, int] = readTable(projectRoot, module)["tier"]
-    counter = countIncludePairs(mapTier, readIncludes(projectRoot, module))
+    counter = readPairs(projectRoot, module, mapTier)
     for (source, target), count in sorted(counter.items(), key=lambda item: (mapTier[item[0][0]], item[0])):
         back = counter.get((target, source), 0)
         if back and source > target:

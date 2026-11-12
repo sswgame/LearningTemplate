@@ -16,17 +16,18 @@ CMake 파일만이 아니라 이름 바꾸기도 참조를 깨므로 판정은 C
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
-from typing import Sequence
+from typing import Iterable, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from lint.FactCache import loadFacts  # noqa: E402
+from lint.FactCache import openFacts  # noqa: E402
 from lint.LintScope import LintScope, listRepoFiles, makeWholeScope  # noqa: E402
 
 kCheckTag = "CMakePathCase"
@@ -48,8 +49,19 @@ def checkCMakePathCase(projectRoot: Path, scope: LintScope) -> list[str]:
         return []
     listFile = listRepoFiles(projectRoot)
     listCMake = [file for file in listFile if file.endswith(".cmake") or file.endswith("CMakeLists.txt")]
-    mapFact = loadFacts(projectRoot, "cmake-path-case", [__file__], listCMake, lambda _, text: extractPaths(text), errors="ignore")
-    return judgePaths(listFile, mapFact)
+    facts = openFacts(projectRoot, "cmake-path-case", [__file__], listCMake, lambda _, text: extractPaths(text), errors="ignore",
+                      contribute=lambda file, fact: [json.dumps([file, kind, index, written]) for kind in ("root", "call") for index, written in enumerate(fact[kind])])
+    return judgePaths(listFile, unfoldPaths(listCMake, facts.summary))
+
+
+def unfoldPaths(listCMake: Sequence[str], summary: Iterable[str]) -> dict[str, dict[str, list[str]]]:
+    """요약 토큰을 `extractPaths` 모양(파일 순 · 적은 차례)으로 되돌린다."""
+    mapRow: dict[str, list[tuple[str, int, str]]] = {}
+    for token in summary:
+        file, kind, index, written = json.loads(token)
+        mapRow.setdefault(file, []).append((kind, index, written))
+    return {file: {kind: [written for rowKind, _, written in sorted(mapRow[file], key=lambda row: row[1]) if rowKind == kind] for kind in ("root", "call")}
+            for file in listCMake if file in mapRow}
 
 
 def judgePaths(listFile: Sequence[str], mapFact: dict[str, dict[str, list[str]]]) -> list[str]:
@@ -87,6 +99,9 @@ def runSelfCheck() -> None:
     assert listViolation == ["Source/Engine/CMakeLists.txt: 'cmake/engine/BuildLayout.cmake' → 실제 이름 'cmake/Engine/BuildLayout.cmake'",
                              "Source/Engine/CMakeLists.txt: 'audio' → 실제 이름 'Source/Engine/Audio'"], listViolation
     assert judgePaths(listFile, {"CMakeLists.txt": extractPaths("add_subdirectory(Source/Engine)\n")}) == [], "맞는 대소문자는 통과한다"
+    fact = extractPaths("add_subdirectory(b)\nadd_subdirectory(a)\nadd_subdirectory(b)\n")
+    tokens = [json.dumps(["x/CMakeLists.txt", kind, index, written]) for kind in ("root", "call") for index, written in enumerate(fact[kind])]
+    assert unfoldPaths(["x/CMakeLists.txt"], reversed(tokens)) == {"x/CMakeLists.txt": fact}, "요약에서 차례 · 겹친 경로를 되돌린다"
 
 
 def main(argv: list[str] | None = None) -> int:
