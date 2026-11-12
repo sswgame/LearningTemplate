@@ -760,6 +760,9 @@ namespace sw
                 return false;
             }
         }
+        // 체크아웃하지 않은 파일(버전 관리 트리의 읽기 전용, 폴더면 그 아래)은 바꾸지 않는다 — FileUtil 의 쓰기 · 지우기 · 옮기기 입구와, 경로를 스스로 여는 서드파티 저장(DDS · SQLite)이 모두 이 함수를 지난다.
+        if ( FileUtilInternal::refuseNotOpenForEdit( path, "change" ) )
+            return false;
         return isCreateAllowed( path );
     }
 
@@ -908,7 +911,7 @@ namespace sw
     {
         for ( const string& path : listPath )
         {
-            if ( exists( path ) && ( isWriteAllowed( path ) == false || FileUtilInternal::refuseNotOpenForEdit( path, "recycle" ) ) )
+            if ( exists( path ) && isWriteAllowed( path ) == false )
                 return false;
         }
         const bool bMoved = PlatformFileUtil::moveToRecycleBin( listPath );
@@ -1276,7 +1279,7 @@ namespace sw
 
     bool FileUtil::copyFile( string_view source, string_view destination )
     {
-        if ( isWriteAllowed( destination ) == false || FileUtilInternal::refuseNotOpenForEdit( destination, "overwrite" ) )
+        if ( isWriteAllowed( destination ) == false )
             return false;
         if ( PlatformFileSystem::copyFileOverwrite( source, destination ) == false )
         {
@@ -1309,7 +1312,7 @@ namespace sw
     {
         if ( path.empty() )
             return true;
-        if ( exists( path ) && ( isWriteAllowed( path ) == false || FileUtilInternal::refuseNotOpenForEdit( path, "remove" ) ) ) // 없는 파일을 지우는 정리는 바꾸는 것이 아니다
+        if ( exists( path ) && isWriteAllowed( path ) == false ) // 없는 파일을 지우는 정리는 바꾸는 것이 아니다
             return false;
         if ( PlatformFileSystem::removeEntry( path ) )
         {
@@ -1326,7 +1329,7 @@ namespace sw
     {
         if ( path.empty() )
             return true;
-        if ( exists( path ) && ( isWriteAllowed( path ) == false || FileUtilInternal::refuseNotOpenForEdit( path, "remove" ) ) )
+        if ( exists( path ) && isWriteAllowed( path ) == false )
             return false;
         if ( PlatformFileSystem::removeEntry( path ) )
         {
@@ -1338,7 +1341,7 @@ namespace sw
 
     bool FileUtil::renamePath( string_view from, string_view to )
     {
-        if ( from.empty() || to.empty() || exists( to ) || isWriteAllowed( from ) == false || isWriteAllowed( to ) == false || FileUtilInternal::refuseNotOpenForEdit( from, "move" ) )
+        if ( from.empty() || to.empty() || exists( to ) || isWriteAllowed( from ) == false || isWriteAllowed( to ) == false )
             return false;
         if ( PlatformFileUtil::replaceFile( string( from ).c_str(), string( to ).c_str() ) == false ) // 폴더는 대상이 없을 때 옮겨진다(MoveFileExW · rename)
             return false;
@@ -1352,7 +1355,7 @@ namespace sw
     {
         if ( path.empty() )
             return true;
-        if ( exists( path ) && ( isWriteAllowed( path ) == false || FileUtilInternal::refuseNotOpenForEdit( path, "remove" ) ) )
+        if ( exists( path ) && isWriteAllowed( path ) == false )
             return false;
 
         PlatformFileSystem::FileStatus status;
