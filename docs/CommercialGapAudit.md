@@ -307,13 +307,6 @@
 - 제안: 네 값을 `PhysicsSettings`(데이터)로 옮기고 없으면 로드 오류로 둔다. 할당자는 폴백형으로 바꾸되 폴백이 일어난 스텝을 카운터 · 경고로 올린다.
 - 확인: 단위 `PhysicsScene3DTest.LargeActivePileDoesNotAbort`(작은 할당자 설정으로 재현), 감시 값 `Physics.TempAllocator.peakBytes`.
 
-#### S-5 2D 블렌드 스페이스가 역거리 가중이라 표본 전부가 늘 켜진다
-- 분류: 성능 + 품질 · 확신: 확인
-- 근거: `Source/Engine/Animation/Graph/BlendSpace.cpp:46-81` — 표본 위에 정확히 있지 않으면 모든 표본의 가중치가 0 보다 크다. `Source/Engine/Animation/Component/SkeletalAnimatorComponent.cpp:1321-1332` 는 가중치가 0 보다 크면 샘플하므로 표본 N 개의 클립을 평가마다 전부 샘플 · 블렌드한다. 알림 기본 모드가 `All`(`AnimationGraphAsset.h:99`)이라 표본 전부가 알림을 낸다. 두 축의 단위를 정규화하지 않아 한 축이 거리를 지배한다.
-- 상용 엔진: 언리얼 Blend Space 는 들로네 삼각분할(표본 많아야 3 개)이고 축마다 정규화한다. Godot `AnimationNodeBlendSpace2D` 도 삼각형이다.
-- 제안: 그래프 에셋을 읽을 때 삼각분할을 구워 두고 런타임은 무게중심 좌표 3 개만 낸다. 축 범위는 에셋 값으로 정규화한다.
-- 확인: 단위 `BlendSpaceTest.TwoAxisActivatesAtMostThreeSamples`. 측정 — 9 표본 이동 블렌드 캐릭터 500 의 `GT.Animation` BasePose 구간.
-
 #### S-6 내비메시가 32 비트 폴리 참조(22 비트)에 묶이고 에이전트 종류당 한 장이다
 - 분류: 구조(확장 한도) · 확신: 확인(헤더 확인)
 - 근거: 설치된 `recastnavigation/DetourNavMesh.h:28` 에 `DT_POLYREF64` 가 주석 처리되어 `dtPolyRef` 가 32 비트다. `Source/Engine/Navigation/Recast/RecastNavMesh.cpp:34` `kTileAndPolyBits = 22`, `:405-420` 에서 타일 수 × 타일당 폴리 ≤ 4M 이다. 엔진 쪽 `NavPolyRef` 는 uint64 인데 `Source/Engine/Navigation/Recast/DetourNavCrowd.cpp:249` 가 `static_cast<uint32>` 로 자른다. 내비메시는 씬 경계 전체를 한 장으로 잡고 스트리밍이 없다.
