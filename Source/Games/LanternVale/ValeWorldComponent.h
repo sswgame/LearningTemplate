@@ -33,6 +33,9 @@ namespace sw
         ValeWorldComponent();
         ~ValeWorldComponent() override = default;
 
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
+
         void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( TickContext& context ) override;

@@ -84,11 +84,14 @@ namespace sw
                     return nullptr;
                 }
                 SessionStateComponent* pFound = nullptr;
-                pManager->forEachComponentOfType<SessionStateComponent>( [&pFound]( SessionStateComponent* pComponent )
+                for ( SessionStateComponent* pComponent : pManager->getComponentRegistry().getAll<SessionStateComponent>() )
                 {
-                    if ( pFound == nullptr && pComponent->isInitialized() )
+                    if ( pComponent->isInitialized() )
+                    {
                         pFound = pComponent;
-                } );
+                        break;
+                    }
+                }
                 if ( pFound == nullptr )
                     outReply = "cheat: no initialized SessionStateComponent in the active scene";
                 return pFound;

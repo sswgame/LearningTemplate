@@ -37,6 +37,8 @@ namespace sw
 
         ShooterBlockerComponent();
         virtual ~ShooterBlockerComponent() override = default;
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
 
         /** @brief 같은 상자의 정적 강체를 만듭니다(이미 있으면 모양과 자리만 맞춥니다). */
         void onBeginPlay() override;

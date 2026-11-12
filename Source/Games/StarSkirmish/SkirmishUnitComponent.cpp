@@ -34,14 +34,14 @@ namespace sw
                 return false;
             float32 lagMax        = 0.0f;
             uint32  measuredCount = 0;
-            pManager->forEachComponentOfType<SkirmishUnitComponent>( [&lagMax, &measuredCount]( const SkirmishUnitComponent* pView )
+            for ( const SkirmishUnitComponent* pView : pManager->getComponentRegistry().getAll<SkirmishUnitComponent>() )
             {
                 const float32 lag = pView->measureViewLag();
                 if ( lag < 0.0f )
-                    return;
+                    continue;
                 lagMax = MathUtil::max( lagMax, lag );
                 ++measuredCount;
-            } );
+            }
             if ( measuredCount == 0 )
                 return false;
             outValue = static_cast<float64>( lagMax );
@@ -213,4 +213,16 @@ namespace sw
 {
     /** @brief StarSkirmish 유닛 모델 표(`SkirmishUnitModelCatalog`)의 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 알아본다). */
     SW_MODULE_SHARED_ASSET_CACHE( SkirmishUnitModels, SkirmishUnitModelCatalog, , SkirmishUnitModelCatalog::kAssetType.withLoader( AssetTypeLoader::of<SkirmishUnitModelCatalog>( MemoryTag::Game ) ) );
+
+    void SkirmishUnitComponent::onRegister( GameObjectManager& manager )
+    {
+        GameModeBoundComponent::onRegister( manager );
+        manager.getComponentRegistry().add<SkirmishUnitComponent>( this );
+    }
+
+    void SkirmishUnitComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<SkirmishUnitComponent>( this );
+        GameModeBoundComponent::onUnregister( manager );
+    }
 } // namespace sw

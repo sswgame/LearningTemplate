@@ -16,6 +16,9 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneOccupantIndex.h"
+
+#include <algorithm>
 
 namespace sw
 {
@@ -51,13 +54,6 @@ namespace sw
                 const PawnComponent* pPawn       = target.getComponent<PawnComponent>();
                 Component*           pController = pPawn != nullptr ? manager.resolveComponent( pPawn->getController() ) : nullptr;
                 return pController != nullptr ? castTo<AIControllerComponent>( pController ) : nullptr;
-            }
-
-            /** @brief 물리로 움직이는 개체(캐릭터 · 움직이는 강체)인지입니다 — 근처 역할이 고른다. */
-            static bool isPhysicalBody( const GameObject& object )
-            {
-                const RigidBodyComponent* pBody = object.getComponent<RigidBodyComponent>();
-                return object.getComponent<CharacterControllerComponent>() != nullptr || ( pBody != nullptr && pBody->getBodyType() == PhysicsBodyType::Dynamic );
             }
         };
     } // namespace
@@ -248,12 +244,15 @@ namespace sw
                     return;
                 }
                 const GameObjectHandle handle = occupant.getHandle();
-                manager.forEachComponentOfType<VehicleSeatComponent>( [&]( VehicleSeatComponent* pSeat )
+                for ( VehicleSeatComponent* pSeat : manager.getComponentRegistry().getAll<VehicleSeatComponent>() )
                 {
                     GameObject* const pVehicle = pSeat->getOwner();
-                    if ( pSeat->getOccupant() == handle && pVehicle != nullptr && outListTarget.empty() )
+                    if ( pSeat->getOccupant() == handle && pVehicle != nullptr )
+                    {
                         outListTarget.push_back( pVehicle );
-                } );
+                        break;
+                    }
+                }
                 return;
             }
             case ZoneTargetRole::Riders:
@@ -271,24 +270,18 @@ namespace sw
                 const ZoneCompiledParam* pRadius = module.findParam( hashed_string( "radius" ) );
                 const float32            radius  = pRadius != nullptr ? module.evaluateNumber( pRadius->_name, GameplayContext{} ) : kDefaultNearbyRadius;
                 const float3             center  = ZoneTrackerInternal::findPosition( occupant );
-                // 근처는 물리로 움직이는 개체(캐릭터 · 강체)다 — 같은 씬의 컨트롤러와 강체를 훑는다.
-                const auto consider = [&]( GameObject* pObject )
+                // 근처는 물리로 움직이는 개체(캐릭터 · 움직이는 강체)다 — 씬을 훑지 않고 씬 공간 색인의 물리 층에서 고른다(지역 볼륨 · 표면 지역이 그 층의 사용자다).
+                vector<Component*>            listKey;
+                vector<ZoneOccupantCandidate> listCandidate;
+                ZoneOccupantIndex::queryCandidates( manager, radius * 2.0f, center._x - radius, center._z - radius, center._x + radius, center._z + radius, listKey, listCandidate );
+                for ( const ZoneOccupantCandidate& candidate : listCandidate )
                 {
-                    if ( pObject == nullptr || pObject == &occupant || pObject->isPendingDestroy() || ZoneTrackerInternal::isPhysicalBody( *pObject ) == false )
-                        return;
-                    if ( ( ZoneTrackerInternal::findPosition( *pObject ) - center ).getLength() > radius )
-                        return;
-                    for ( const GameObject* pExisting : outListTarget )
-                    {
-                        if ( pExisting == pObject )
-                            return;
-                    }
-                    outListTarget.push_back( pObject );
-                };
-                manager.forEachComponentOfType<CharacterControllerComponent>( [&]( CharacterControllerComponent* pController )
-                { consider( pController->getOwner() ); } );
-                manager.forEachComponentOfType<RigidBodyComponent>( [&]( RigidBodyComponent* pBody )
-                { consider( pBody->getOwner() ); } );
+                    GameObject* const pObject = candidate._pObject;
+                    if ( pObject == &occupant || pObject->isPendingDestroy() || ( ZoneTrackerInternal::findPosition( *pObject ) - center ).getLength() > radius )
+                        continue;
+                    if ( std::find( outListTarget.begin(), outListTarget.end(), pObject ) == outListTarget.end() )
+                        outListTarget.push_back( pObject );
+                }
                 return;
             }
         }

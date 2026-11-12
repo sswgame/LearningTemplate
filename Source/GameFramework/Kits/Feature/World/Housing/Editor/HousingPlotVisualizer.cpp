@@ -85,10 +85,10 @@ namespace sw::editor
                 const ImU32 colorBounds = EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "HousingPlot" ) );
                 const ImU32 colorCell   = EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "HousingCell" ) );
                 const ImU32 colorLabel  = EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "Label" ) );
-                args._pObjectManager->forEachComponentOfType<HousingPlotComponent>( [&args, colorBounds, colorCell, colorLabel]( const HousingPlotComponent* pPlot )
+                for ( const HousingPlotComponent* pPlot : args._pObjectManager->getComponentRegistry().getAll<HousingPlotComponent>() )
                 {
                     drawPlot( args, *pPlot, colorBounds, colorCell, colorLabel );
-                } );
+                }
             }
 
             /** @brief 감시 값 `Editor.HousingPlotFrames` 입니다. 활성 씬에서 틀(원점 · 칸 크기)을 읽어 그릴 수 있는 부지 수 — 플레이 전 에디터에서 카탈로그를 얻는 길을 본다. */
@@ -97,12 +97,12 @@ namespace sw::editor
                 if ( pManager == nullptr )
                     return false;
                 uint32 count = 0;
-                pManager->forEachComponentOfType<HousingPlotComponent>( [&count]( const HousingPlotComponent* pPlot )
+                for ( const HousingPlotComponent* pPlot : pManager->getComponentRegistry().getAll<HousingPlotComponent>() )
                 {
                     float3  origin   = {};
                     float32 cellSize = 0.0f;
                     count += pPlot->tryGetPlotGrid( origin, cellSize ) ? 1 : 0;
-                } );
+                }
                 outValue = static_cast<float64>( count );
                 return true;
             }

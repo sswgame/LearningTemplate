@@ -22,19 +22,19 @@ namespace sw
     void WesternWitnessComponent::collect( const GameObjectManager& manager, vector<WesternWitness>& outListWitness )
     {
         outListWitness.clear();
-        manager.forEachComponentOfType<WesternWitnessComponent>( [&outListWitness]( WesternWitnessComponent* pWitness )
+        for ( WesternWitnessComponent* pWitness : manager.getComponentRegistry().getAll<WesternWitnessComponent>() )
         {
             const GameObject*     pOwner = pWitness->getOwner();
             const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
             if ( pScene == nullptr || pOwner->isActiveInHierarchy() == false )
-                return;
+                continue;
             WesternWitness witness;
             witness._id       = pOwner->getObjectID();
             witness._position = pScene->getWorldPosition();
             witness._forward  = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, pScene->getWorldMatrix() );
             witness._bLawman  = pWitness->_bLawman ? SW_TRUE : SW_FALSE;
             outListWitness.push_back( witness );
-        } );
+        }
         std::sort( outListWitness.begin(), outListWitness.end(), []( const WesternWitness& lhs, const WesternWitness& rhs )
         { return lhs._id < rhs._id; } );
     }
@@ -75,12 +75,12 @@ namespace sw
     WesternDeedComponent* WesternDeedComponent::useNearest( GameObjectManager& manager, const float3& position, WesternOutlaw& outlaw )
     {
         vector<WesternDeedComponent*> listDeed;
-        manager.forEachComponentOfType<WesternDeedComponent>( [&listDeed]( WesternDeedComponent* pDeed )
+        for ( WesternDeedComponent* pDeed : manager.getComponentRegistry().getAll<WesternDeedComponent>() )
         {
             const GameObject* pOwner = pDeed->getOwner();
             if ( pOwner != nullptr && pOwner->isActiveInHierarchy() && pOwner->getPrimarySceneComponent() != nullptr && pDeed->canUse() )
                 listDeed.push_back( pDeed );
-        } );
+        }
         // 방문 순서를 약속하지 않으므로 같은 거리의 자리를 id 로 정해 둔다.
         std::sort( listDeed.begin(), listDeed.end(), []( const WesternDeedComponent* pLeft, const WesternDeedComponent* pRight )
         { return pLeft->getOwner()->getObjectID() < pRight->getOwner()->getObjectID(); } );
@@ -203,4 +203,28 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( westernPelts, "Western.Pelts", "Pelts held by the western game mode on target", &WesternOutlawWatchesInternal::readPelts, true, false );
     SW_AUTOMATION_QUERY_WATCH( westernStaminaCore, "Western.StaminaCore", "Stamina core (0..100) of the western game mode on target", &WesternOutlawWatchesInternal::readStaminaCore, true, false );
     SW_AUTOMATION_QUERY_WATCH( westernWarmth, "Western.Warmth", "Warmth of the clothes worn on the western game mode on target", &WesternOutlawWatchesInternal::readWarmth, true, false );
+
+    void WesternWitnessComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<WesternWitnessComponent>( this );
+    }
+
+    void WesternWitnessComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<WesternWitnessComponent>( this );
+        Component::onUnregister( manager );
+    }
+
+    void WesternDeedComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<WesternDeedComponent>( this );
+    }
+
+    void WesternDeedComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<WesternDeedComponent>( this );
+        Component::onUnregister( manager );
+    }
 } // namespace sw

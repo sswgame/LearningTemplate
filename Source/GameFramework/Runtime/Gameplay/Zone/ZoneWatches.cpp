@@ -38,12 +38,12 @@ namespace sw
             static void forEachZone( const GameObjectManager& manager, const GameObject& target, TVisit&& visit )
             {
                 const GameObjectHandle handle = target.getHandle();
-                manager.forEachComponentOfType<ZoneVolumeComponent>( [&]( const ZoneVolumeComponent* pVolume )
+                for ( const ZoneVolumeComponent* pVolume : manager.getComponentRegistry().getAll<ZoneVolumeComponent>() )
                 {
                     const ZoneTracker::OccupantRecord* pOccupancy = pVolume->getTracker().findOccupancy( handle );
                     if ( pOccupancy != nullptr && pOccupancy->_bEntered == SW_TRUE )
                         visit( pVolume->getSourceName(), pOccupancy->_sample );
-                } );
+                }
                 const ZoneContactComponent* pContact = target.getComponent<ZoneContactComponent>();
                 if ( pContact == nullptr )
                     return;

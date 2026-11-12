@@ -372,8 +372,10 @@ namespace sw
             return;
         // 씬에 놓인 벽과 엄폐물이다. 에디터에서 옮기면 충돌도 따라온다.
         vector<ShooterArenaBox>& listBox = _listBox;
-        pManager->forEachComponentOfType<ShooterBlockerComponent>( [&listBox]( ShooterBlockerComponent* pBlocker )
-        { listBox.push_back( pBlocker->computeBox() ); } );
+        for ( ShooterBlockerComponent* pBlocker : pManager->getComponentRegistry().getAll<ShooterBlockerComponent>() )
+        {
+            listBox.push_back( pBlocker->computeBox() );
+        }
     }
 
     void ShooterGameModeComponent::startPacing()
@@ -839,13 +841,13 @@ namespace sw
                 bool bFound = false;
                 if ( pManager == nullptr )
                     return false;
-                pManager->forEachComponentOfType<ShooterGameModeComponent>( [&bFound, &outValue]( ShooterGameModeComponent* pGameMode )
+                for ( ShooterGameModeComponent* pGameMode : pManager->getComponentRegistry().getAll<ShooterGameModeComponent>() )
                 {
                     if ( bFound )
-                        return;
+                        break;
                     bFound   = true;
                     outValue = static_cast<float64>( pGameMode->getEffectCreatedCount() );
-                } );
+                }
                 return bFound;
             }
         };
@@ -853,4 +855,16 @@ namespace sw
 
     SW_AUTOMATION_WATCH( shooterEffectCreatedCount, "Shooter3D.EffectCreatedCount", "Instances the effect pools of the shooter game mode created so far (reuse does not count)",
                          &ShooterEffectWatchInternal::readEffectCreatedCount );
+
+    void ShooterGameModeComponent::onRegister( GameObjectManager& manager )
+    {
+        GameModeComponent::onRegister( manager );
+        manager.getComponentRegistry().add<ShooterGameModeComponent>( this );
+    }
+
+    void ShooterGameModeComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<ShooterGameModeComponent>( this );
+        GameModeComponent::onUnregister( manager );
+    }
 } // namespace sw

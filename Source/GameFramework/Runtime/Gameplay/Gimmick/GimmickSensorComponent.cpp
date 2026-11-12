@@ -5,6 +5,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
@@ -184,4 +185,16 @@ namespace sw
 
     SW_AUTOMATION_QUERY_WATCH( gimmickOccupantWeight, "Gimmick.OccupantWeight", "Weight of what overlaps the target's gimmick sensor (kg, the pressure plate's reading)",
                                &GimmickSensorWatchesInternal::readOccupantWeight, true, false );
+
+    void GimmickSensorComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<GimmickSensorComponent>( this );
+    }
+
+    void GimmickSensorComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<GimmickSensorComponent>( this );
+        Component::onUnregister( manager );
+    }
 } // namespace sw

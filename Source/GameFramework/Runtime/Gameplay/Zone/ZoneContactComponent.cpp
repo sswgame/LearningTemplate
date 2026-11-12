@@ -22,6 +22,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneOccupantIndex.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneProfile.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneSystem.h"
 
@@ -59,6 +60,7 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<ZoneContactComponent>( this );
+        ZoneOccupantIndex::addLayerReader( manager ); // 표면 지역의 근처 역할이 물리 층을 질의한다(`ZoneTracker::resolveRoleTargets`)
         (void)ZoneSystem::findOrCreate( manager );
         manager.getSubsystem<ScenePhysics>().registerContactStayListener( *this, ContactStayListener{ &ZoneContactComponent::receiveCollisionStay, nullptr } );
     }
@@ -67,6 +69,7 @@ namespace sw
     {
         manager.getSubsystem<ScenePhysics>().unregisterContactStayListener( *this );
         manager.getComponentRegistry().remove<ZoneContactComponent>( this );
+        ZoneOccupantIndex::removeLayerReader( manager );
         ZoneSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
     }

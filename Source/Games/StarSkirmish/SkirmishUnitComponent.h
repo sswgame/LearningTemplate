@@ -87,6 +87,9 @@ namespace sw
         SkirmishUnitComponent();
         virtual ~SkirmishUnitComponent() override = default;
 
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
+
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 

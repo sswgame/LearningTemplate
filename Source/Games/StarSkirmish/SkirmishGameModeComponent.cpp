@@ -20,6 +20,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/Scene.h"
@@ -132,11 +133,11 @@ namespace sw
                 SkirmishGameModeComponent* pDirector = nullptr;
                 if ( pManager != nullptr )
                 {
-                    pManager->forEachComponentOfType<SkirmishGameModeComponent>( [&pDirector]( SkirmishGameModeComponent* pFound )
+                    for ( SkirmishGameModeComponent* pFound : pManager->getComponentRegistry().getAll<SkirmishGameModeComponent>() )
                     {
                         if ( pDirector == nullptr )
                             pDirector = pFound;
-                    } );
+                    }
                 }
                 if ( pDirector == nullptr )
                     outReply = "skirmish: no skirmish director in the active scene";
@@ -983,5 +984,17 @@ namespace sw
     CameraDirectorComponent* SkirmishGameModeComponent::findCameraRig() const
     {
         return findOn<CameraDirectorComponent>( _cameraRig );
+    }
+
+    void SkirmishGameModeComponent::onRegister( GameObjectManager& manager )
+    {
+        GameModeComponent::onRegister( manager );
+        manager.getComponentRegistry().add<SkirmishGameModeComponent>( this );
+    }
+
+    void SkirmishGameModeComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<SkirmishGameModeComponent>( this );
+        GameModeComponent::onUnregister( manager );
     }
 } // namespace sw

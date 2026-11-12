@@ -389,4 +389,16 @@ namespace sw
                 _listAttributeSet.erase( _listAttributeSet.begin() + static_cast<ptrdiff_t>( setIndex - 1 ) );
         }
     }
+
+    void AbilityComponent::onRegister( GameObjectManager& manager )
+    {
+        HealthSourceComponent::onRegister( manager );
+        manager.getComponentRegistry().add<AbilityComponent>( this );
+    }
+
+    void AbilityComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<AbilityComponent>( this );
+        HealthSourceComponent::onUnregister( manager );
+    }
 } // namespace sw

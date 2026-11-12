@@ -28,6 +28,9 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
+
         HorseFollowAIController();
         ~HorseFollowAIController() override = default;
 

@@ -155,8 +155,10 @@ namespace sw
                 if ( pManager == nullptr )
                     return unexpected( Error{ ErrorKind::NotFound, "cheat: no active scene" } );
                 vector<ShooterPlayerComponent*> listPlayer;
-                pManager->forEachComponentOfType<ShooterPlayerComponent>( [&listPlayer]( ShooterPlayerComponent* pPlayer )
-                { listPlayer.push_back( pPlayer ); } );
+                for ( ShooterPlayerComponent* pPlayer : pManager->getComponentRegistry().getAll<ShooterPlayerComponent>() )
+                {
+                    listPlayer.push_back( pPlayer );
+                }
                 if ( listPlayer.empty() )
                     return unexpected( Error{ ErrorKind::NotFound, "cheat: no ShooterPlayerComponent in the active scene" } );
                 return listPlayer;
@@ -1205,4 +1207,16 @@ namespace sw
                     "Load a projectile into the current weapon of every shooter player (no id: the weapon's own projectile)", &ShooterDevCommandsInternal::runProjectile );
     SW_AUTOMATION_GETTER_WATCH( shooterEnemyHitCount, "Shooter3D.EnemyHitCount", "Shots of the first shooter player that hit an enemy", ShooterPlayerComponent, &ShooterPlayerComponent::getHitCount );
     SW_AUTOMATION_COMPONENT_WATCH( shooterPlayerControllerKind, "Shooter3D.PlayerControllerKind", "Who possesses the first shooter player: 0 the player, 1 an AI (auto play), -1 none", ShooterPlayerComponent, &ShooterPlayerComponentInternal::readControllerKind );
+
+    void ShooterPlayerComponent::onRegister( GameObjectManager& manager )
+    {
+        GameModeBoundComponent::onRegister( manager );
+        manager.getComponentRegistry().add<ShooterPlayerComponent>( this );
+    }
+
+    void ShooterPlayerComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<ShooterPlayerComponent>( this );
+        GameModeBoundComponent::onUnregister( manager );
+    }
 } // namespace sw

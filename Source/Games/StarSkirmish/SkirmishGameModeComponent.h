@@ -59,6 +59,8 @@ namespace sw
 
         SkirmishGameModeComponent();
         virtual ~SkirmishGameModeComponent() override;
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
 
         /** @brief 판을 열고 패드 가상 커서를 켭니다(왼쪽 스틱 = 커서, A/B = 마우스 왼쪽/오른쪽, 오른쪽 스틱 = 카메라 이동). 패드만으로 고르기 · 명령을 씁니다. */
         void onBeginPlay() override;

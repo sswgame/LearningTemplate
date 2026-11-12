@@ -142,6 +142,9 @@ namespace sw
         FractureComponentBase();
         ~FractureComponentBase() override;
 
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
+
         void onBeginPlay() override;
         void onCollisionBegin( const CollisionInfo& collision ) override;
 
