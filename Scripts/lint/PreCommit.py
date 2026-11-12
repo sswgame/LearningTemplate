@@ -22,11 +22,14 @@ from __future__ import annotations
 
 import builtins
 import contextlib
+import dataclasses
+import functools
 import importlib
 import io
 import os
 import sys
 import tempfile
+import types
 from pathlib import Path
 from typing import Callable, Sequence
 
@@ -35,7 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ProjectConstants import kCppAllExtensions, kLintTargetRelDirs, kNotOurDirNames, kShaderSourceExtensions  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
-from common.Git import runGit  # noqa: E402
+from common.Git import runGit, runGitInHookRepository  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from lint.Format import runClangFormatBatch  # noqa: E402
 from lint.LintScope import LintScope, makeStagedScope, makeWholeScope, readBytesInternal  # noqa: E402
@@ -65,9 +68,40 @@ def selectRuleScope(rule: Rule, projectRoot: Path, scope: LintScope) -> LintScop
     여러 규칙이 함께 쓰는 도우미(LintScope · CppText · FunctionSpans · common …)만 바뀌었으면 전체로 돌리지 않는다 — 도우미 하나에 규칙 수십 개가
     저장소 전체를 돌았다. 그 도우미를 쓰는 규칙의 자체 검사가 보고(`runSelfCheck`), 실제 파일에서 판정이 달라졌는지는 묶음 검증 첫 단계 `lint --all` 이 본다.
     """
-    if scope.bWholeRepo or not scope.touches(roots=rule.listOwnInputs()):
+    if scope.bWholeRepo or not (scope.touches(roots=rule.listOwnInputs()) or rule.id in listChangedRuleRows(projectRoot, scope)):
         return scope
     return makeWholeScope(projectRoot)
+
+
+kRulesFile = "Scripts/lint/Rules.py"
+
+
+def listChangedRuleRows(projectRoot: Path, scope: LintScope) -> frozenset[str]:
+    """표(`Rules.py`)가 스테이지에 있으면 줄이 바뀐(새로 생긴) 규칙 id — 그 규칙만 저장소 전체로 돈다(예외 · 입력 표 · 검사 함수를 바꾼 줄)."""
+    if kRulesFile not in scope.listFile:
+        return frozenset()
+    return findChangedRuleRows(projectRoot)
+
+
+@functools.cache
+def findChangedRuleRows(projectRoot: Path) -> frozenset[str]:
+    result = runGitInHookRepository(["show", f"HEAD:{kRulesFile}"], cwd=projectRoot)
+    if result.returnCode != 0:
+        return frozenset(rule.id for rule in kRules)   # HEAD 에 표가 없다(첫 커밋 · 새 표) — 모두 새 줄이다
+    return diffRuleRows(result.stdout, kRules)
+
+
+def diffRuleRows(oldTableText: str, newRules: Sequence[Rule]) -> frozenset[str]:
+    """옛 표 글(`Rules.py` 전체)을 읽어 칸이 다르거나 새로 생긴 규칙 id."""
+    name = "lint.RulesAtHead"
+    module = types.ModuleType(name)
+    sys.modules[name] = module   # dataclass 가 모듈을 sys.modules 에서 찾는다
+    try:
+        exec(compile(oldTableText, f"HEAD:{kRulesFile}", "exec"), module.__dict__)   # noqa: S102 — 이 저장소의 커밋된 표다
+    finally:
+        del sys.modules[name]
+    mapOld = {rule.id: dataclasses.astuple(rule) for rule in module.kRules}
+    return frozenset(rule.id for rule in newRules if mapOld.get(rule.id) != dataclasses.astuple(rule))
 
 
 #: 읽기 한도를 볼 스테이지 파일의 갈래(뿌리, 접미사) — 갈래마다 저장소의 첫 파일 하나를 스테이지된 것처럼 넘긴다.
@@ -196,6 +230,15 @@ def checkFixCommand(projectRoot: Path) -> list[str]:
     return [] if bFixed else [f"안내 명령 '{kFixCommand} <파일>' 이 include 순서를 고치지 않는다"]
 
 
+def checkRuleRowDiff() -> list[str]:
+    """표 줄 비교(`diffRuleRows`) — 지금 표 글과 같으면 바뀐 줄이 없고, 한 규칙의 `blocks` 를 바꾼 글이면 그 규칙 하나다."""
+    text = (Path(__file__).resolve().parent / "Rules.py").read_text(encoding="utf-8")
+    target = kRules[1]
+    edited = text.replace(f'Rule("{target.id}", "{target.group}", "{target.blocks}"', f'Rule("{target.id}", "{target.group}", "{target.blocks} 바꿈"', 1)
+    listProblem = [] if diffRuleRows(text, kRules) == frozenset() else ["지금 표와 같은 글에서 바뀐 규칙 줄이 나온다"]
+    return listProblem + ([] if edited != text and diffRuleRows(edited, kRules) == {target.id} else [f"'{target.id}' 줄만 바꾼 표에서 그 id 하나가 나오지 않는다"])
+
+
 def runSelfCheck(rule: Rule) -> str | None:
     """규칙 모듈의 자체 검사(`runSelfCheck` 가 있을 때) — 실패면 까닭, 통과면 None. 통과 줄은 찍지 않는다."""
     module = importlib.import_module(rule.getModuleName())
@@ -234,7 +277,7 @@ def runLint(projectRoot: Path, scope: LintScope) -> int:
 
     # 린트 코드(규칙 · 도우미 · 이 파일 · 하위 명령 표)가 바뀌면 커밋 훅의 모양(스테이지 비례 읽기 · 병합 범위)과 안내가 시키는 고치는 명령을 다시 본다 — 시간을 재지 않고 연 파일을 센다.
     if scope.bWholeRepo or scope.touches(roots=("Scripts/lint/", "Scripts/__main__.py", *sorted({path for rule in kRules for path in rule.listInputs() if path.startswith("Scripts/")}))):
-        listShape = checkReadBound(projectRoot) + checkMergeScope() + checkFixCommand(projectRoot)
+        listShape = checkReadBound(projectRoot) + checkMergeScope() + checkFixCommand(projectRoot) + checkRuleRowDiff()
         if listShape:
             hasErrors = True
             print(f"[lint-shape] FAIL — 커밋 훅 · 고치는 명령의 모양 {len(listShape)}건")
