@@ -564,19 +564,22 @@ namespace sw
         STICKYKEYS stickyKeys{ sizeof( STICKYKEYS ), 0 };
         SystemParametersInfoW( SPI_GETSTICKYKEYS, sizeof( STICKYKEYS ), &stickyKeys, 0 );
         _arrSavedAccessibilityFlags[0] = stickyKeys.dwFlags;
-        stickyKeys.dwFlags &= static_cast<DWORD>( ~( SKF_STICKYKEYSON | SKF_HOTKEYACTIVE ) );
+        if ( ( stickyKeys.dwFlags & SKF_STICKYKEYSON ) == 0 ) // 사용자가 켠 기능은 그대로 둔다 — 단축키만 끈다(감사 P-11, 언리얼 FWindowsApplication 과 같다)
+            stickyKeys.dwFlags &= static_cast<DWORD>( ~SKF_HOTKEYACTIVE );
         SystemParametersInfoW( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &stickyKeys, 0 );
 
         TOGGLEKEYS toggleKeys{ sizeof( TOGGLEKEYS ), 0 };
         SystemParametersInfoW( SPI_GETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &toggleKeys, 0 );
         _arrSavedAccessibilityFlags[1] = toggleKeys.dwFlags;
-        toggleKeys.dwFlags &= static_cast<DWORD>( ~( TKF_TOGGLEKEYSON | TKF_HOTKEYACTIVE ) );
+        if ( ( toggleKeys.dwFlags & TKF_TOGGLEKEYSON ) == 0 )
+            toggleKeys.dwFlags &= static_cast<DWORD>( ~TKF_HOTKEYACTIVE );
         SystemParametersInfoW( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &toggleKeys, 0 );
 
         FILTERKEYS filterKeys{ sizeof( FILTERKEYS ), 0, 0, 0, 0, 0 };
         SystemParametersInfoW( SPI_GETFILTERKEYS, sizeof( FILTERKEYS ), &filterKeys, 0 );
         _arrSavedAccessibilityFlags[2] = filterKeys.dwFlags;
-        filterKeys.dwFlags &= static_cast<DWORD>( ~( FKF_FILTERKEYSON | FKF_HOTKEYACTIVE ) );
+        if ( ( filterKeys.dwFlags & FKF_FILTERKEYSON ) == 0 )
+            filterKeys.dwFlags &= static_cast<DWORD>( ~FKF_HOTKEYACTIVE );
         SystemParametersInfoW( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &filterKeys, 0 );
 
         _bAccessibilityShortcutsDisabled = SW_TRUE;
