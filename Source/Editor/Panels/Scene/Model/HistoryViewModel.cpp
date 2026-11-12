@@ -11,8 +11,11 @@ namespace sw::editor
     {
         struct HistoryViewModelInternal
         {
-            /** @brief 되돌리기 스택입니다. 선택 서비스: 커맨드 스택은 EditorModule 보다 오래 살아 종료할 때 결합이 먼저 풀린다. */
-            static CommandStack* findStack() { return editor::findSubsystem<CommandStack>(); }
+            /**
+             * @brief Ctrl+Z 가 가는 스택(포커스한 문서 패널의 스택, 없으면 메인 스택)입니다 — 문서마다 스택이라(감사 E-3) 메인만 보이면 문서 기록이 보이지 않는다.
+             *        선택 서비스: 메인 스택은 EditorModule 보다 오래 살아 종료할 때 결합이 먼저 풀린다(그때 nullptr).
+             */
+            static CommandStack* findStack() { return editor::getFocusedCommandStack(); }
         };
     } // namespace
 

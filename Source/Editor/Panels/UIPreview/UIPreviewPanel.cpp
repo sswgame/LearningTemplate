@@ -283,7 +283,7 @@ namespace sw::editor
 
     UIPreviewPanel::UIPreviewPanel()
         : EditorDocumentPanel( EditorAssetType{ UIDocumentAsset::kAssetType }, true ) // 열면 포커스가 없어도 처음 문서(에디터 도구 기본값)를 짓는다
-        , _model{ UIPreviewModel::getDefaultDocument() }
+        , _model{ UIPreviewModel::getDefaultDocument(), getDocumentCommandStack() }   // 기반이 먼저 섰다 — 문서의 스택이 있다
         , _grid{}
         , _paletteFilter{}
         , _listTreeRow{}

@@ -176,6 +176,7 @@ namespace sw::editor
         , _pUndoTarget{ make_shared<EditorDocumentPanel*>( this ) }
         , _pEditSpan{ make_unique<DocumentEditSpan>() }
         , _pUndoOwner{ make_unique<UndoStepOwner>() }
+        , _pDocumentStack{ make_unique<CommandStack>() }
         , _listRecentPath{}
         , _listOpenCandidate{}
         , _openFilter{}
@@ -217,6 +218,8 @@ namespace sw::editor
     EditorDocumentPanel::~EditorDocumentPanel()
     {
         *_pUndoTarget = nullptr;
+        if ( getFocusedCommandStack() == _pDocumentStack.get() )
+            setFocusedCommandStack( nullptr ); // 사라질 스택을 Ctrl+Z 가 겨누지 않게
     }
 
     optional<AbsolutePath> EditorDocumentPanel::getDocumentDiskPath() const
@@ -268,6 +271,7 @@ namespace sw::editor
         _bLoaded     = SW_TRUE;
         _bLoadFailed = SW_FALSE;
         clearDocumentDirty();
+        resetDocumentHistory();
         syncDocumentUndoBaseline();
     }
 
@@ -300,9 +304,9 @@ namespace sw::editor
             reloadDocument();
     }
 
-    CommandStack& EditorDocumentPanel::getDocumentCommandStack()
+    void EditorDocumentPanel::resetDocumentHistory()
     {
-        return editor::getSubsystem<CommandStack>(); // 작업 공간 스택은 에디터 범위의 필수 서비스다
+        _pDocumentStack->clear();
     }
 
     bool EditorDocumentPanel::isWidgetInteractionActive()

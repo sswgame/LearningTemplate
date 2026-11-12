@@ -320,11 +320,16 @@ namespace sw::editor
             return;
         }
 
+        push( std::move( undo ), std::move( redo ), label, *pStack );
+    }
+
+    void EditorTransaction::push( UndoStep undo, UndoStep redo, string_view label, CommandStack& documentStack )
+    {
         CommandStack::Command cmd;
         cmd._label = string{ label };
         cmd._undo  = std::move( undo );
         cmd._redo  = std::move( redo );
-        pStack->push( std::move( cmd ) );
+        documentStack.push( std::move( cmd ) );
     }
 
     void EditorTransaction::recordDocumentText( string_view beforeText, string_view afterText, string_view label, const UndoStepOwner& owner,
