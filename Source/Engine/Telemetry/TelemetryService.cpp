@@ -179,93 +179,122 @@ namespace sw
         , _settingSubscription{}
         , _listPendingLine{}
         , _listBreadcrumb{}
-        , _listClosedFile{}
         , _listEventOccurrence{}
         , _spoolFolder{}
-        , _currentFile{}
         , _currentScene{}
         , _pSettings{ nullptr }
-        , _nullUploader{}
-        , _pUploader{ &_nullUploader }
         , _sessionSeconds{ 0.0 }
+        , _lastSubmittedJob{ 0 }
         , _flushTimer{ 0.0f }
-        , _currentFileBytes{ 0 }
         , _sequence{ 0 }
-        , _fileIndex{ 0 }
-        , _currentFileEvents{ 0 }
         , _breadcrumbHead{ 0 }
         , _bInitialized{ SW_FALSE }
         , _bConsent{ SW_FALSE }
         , _bSessionSampled{ SW_TRUE }
+        , _spoolMutex{}
+        , _spoolProgress{}
+        , _spoolStats{}
+        , _listClosedFile{}
+        , _currentFile{}
+        , _nullUploader{}
+        , _pUploader{ &_nullUploader }
+        , _pUploadingWith{ nullptr }
+        , _uploadBackoff{ ExponentialBackoff::createWithRandomSeed( 0 ) } // 이 값은 쓰이지 않는다 — 실패가 시작될 때 그 일의 설정 값으로 다시 만든다
+        , _uploadRetryAtSeconds{ 0.0 }
+        , _currentFileBytes{ 0 }
+        , _completedJob{ 0 }
+        , _fileIndex{ 0 }
+        , _currentFileEvents{ 0 }
+        , _spoolWorker{}
     {
+        // 스풀 쓰기 · 올리기는 디스크 · 망에서 막히므로 작업 풀이 아니라 전용 스레드다(docs/agents/CppStyle.md — 크래시 보고 올리기와 같은 자리).
+        _spoolWorker.start( "TelemetrySpool", DedicatedWorker<TelemetrySpoolJob>::ProcessDelegate::create<&TelemetryService::processSpoolJob>( this ) );
     }
 
     TelemetryService::~TelemetryService()
     {
         shutdown();
+        _spoolWorker.stop(); // shutdown 이 넘긴 일을 모두 기다렸다 — 남은 일이 없다
     }
 
     void TelemetryService::initialize( string_view spoolFolder, const TelemetryContext& context )
     {
-        using Internal = TelemetryServiceInternal;
-        ScopedLock<mutex> lock{ _mutex };
-        _spoolFolder.set( FileUtil::trimTrailingSlashes( spoolFolder ) );
-        _context.set( context );
-        _stats = TelemetryStats{};
-        _listPendingLine.clear();
-        _listBreadcrumb.clear();
-        _listClosedFile.clear();
-        _frames.reset();
-        _currentScene.clear();
-        _currentFile.clear();
-        _currentFileBytes  = 0;
-        _currentFileEvents = 0;
-        _sequence          = 0;
-        _fileIndex         = 0;
-        _breadcrumbHead    = 0;
-        _sessionSeconds    = 0.0;
-        _flushTimer        = 0.0f;
-        _bConsent          = SW_FALSE;
-        _bInitialized      = SW_TRUE;
-        _listEventOccurrence.assign( _schema.getEvents().size(), 0u );
-        _bSessionSampled = Internal::isSampled( _schema.getSettings()._sessionSampleRate, Internal::toUnit( HashUtil::computeStringHash64( _context->_sessionID ) ) ) ? SW_TRUE : SW_FALSE;
+        using Internal          = TelemetryServiceInternal;
+        const string folderPath = FileUtil::trimTrailingSlashes( spoolFolder );
 
-        // 지난 실행이 닫지 못하고 남긴 파일까지 이어 받는다 — 동의가 켜지면 올리고, 동의가 꺼지면 `setConsent( false )` 가 지운다.
+        // 지난 실행이 닫지 못하고 남긴 파일까지 이어 받는다 — 동의가 켜지면 올리고, 동의가 꺼지면 `setConsent( false )` 가 지운다. 폴더 읽기는 잠금 밖이다.
+        vector<string> listLeftover;
         vector<string> listFile;
-        if ( FileUtil::isDirectory( _spoolFolder.get() ) && FileUtil::collectFiles( _spoolFolder.get(), "", listFile, false ) )
+        if ( FileUtil::isDirectory( folderPath ) && FileUtil::collectFiles( folderPath, "", listFile, false ) )
         {
             for ( const string& path : listFile )
             {
                 if ( Internal::isSpoolFile( path ) )
-                    _listClosedFile.push_back( path );
+                    listLeftover.push_back( path );
             }
-            VectorUtil::sort( _listClosedFile, Internal::SpoolFileLess{} );
+            VectorUtil::sort( listLeftover, Internal::SpoolFileLess{} );
         }
+
+        ScopedLock<mutex> lock{ _mutex };
+        _spoolFolder.set( folderPath );
+        _context.set( context );
+        _stats = TelemetryStats{};
+        _listPendingLine.clear();
+        _listBreadcrumb.clear();
+        _frames.reset();
+        _currentScene.clear();
+        _sequence       = 0;
+        _breadcrumbHead = 0;
+        _sessionSeconds = 0.0;
+        _flushTimer     = 0.0f;
+        _bConsent       = SW_FALSE;
+        _bInitialized   = SW_TRUE;
+        _listEventOccurrence.assign( _schema.getEvents().size(), 0u );
+        _bSessionSampled = Internal::isSampled( _schema.getSettings()._sessionSampleRate, Internal::toUnit( HashUtil::computeStringHash64( _context->_sessionID ) ) ) ? SW_TRUE : SW_FALSE;
+
+        // 스풀 워커는 쉬고 있다 — 처음이거나, 앞 shutdown 이 넘긴 일을 모두 기다렸다.
+        ScopedLock<mutex> spoolLock{ _spoolMutex };
+        _spoolStats = TelemetryStats{};
+        _listClosedFile.swap( listLeftover );
+        _currentFile.clear();
+        _currentFileBytes  = 0;
+        _currentFileEvents = 0;
+        _fileIndex         = 0;
+        _uploadBackoff.reset();
+        _uploadRetryAtSeconds = 0.0;
     }
 
     void TelemetryService::shutdown()
     {
         _settingSubscription.reset();
-        _pSettings = nullptr;
+        _pSettings     = nullptr;
+        uint64 lastJob = 0;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            if ( _bInitialized == SW_FALSE )
+                return;
+            if ( _bConsent == SW_TRUE )
+            {
+                emitSceneSummaryLocked();
+                if ( _schema.findEvent( hashed_string( kSessionEndEvent ) ) != nullptr )
+                {
+                    TelemetryEvent end{ hashed_string( kSessionEndEvent ) };
+                    end.setFloat( "seconds", _sessionSeconds );
+                    (void)recordLocked( end );
+                }
+                (void)submitSpoolJobLocked( TelemetrySpoolJobKind::Close );
+            }
+            _bInitialized = SW_FALSE; // 이 뒤로는 일을 넘기지 않는다
+            lastJob       = _lastSubmittedJob;
+        }
+        // 종료는 마지막 묶음이 디스크 · 끝점에 닿기를 기다린다(기다림은 HTTP 시한까지 — 물러서기 중이면 보내지 않고 다음 실행이 이어 받는다).
+        waitSpoolJob( lastJob, nullptr );
         ScopedLock<mutex> lock{ _mutex };
         if ( _bInitialized == SW_FALSE )
-            return;
-        if ( _bConsent == SW_TRUE )
         {
-            emitSceneSummaryLocked();
-            if ( _schema.findEvent( hashed_string( kSessionEndEvent ) ) != nullptr )
-            {
-                TelemetryEvent end{ hashed_string( kSessionEndEvent ) };
-                end.setFloat( "seconds", _sessionSeconds );
-                (void)recordLocked( end );
-            }
-            flushLocked();
-            closeCurrentFileLocked();
-            uploadClosedLocked();
+            _spoolFolder.reset(); // initialize 가 한 번 정한다 — 다시 시작할 수 있게 비운다
+            _context.reset();
         }
-        _bInitialized = SW_FALSE;
-        _spoolFolder.reset(); // initialize 가 한 번 정한다 — 다시 시작할 수 있게 비운다
-        _context.reset();
     }
 
     span<const utf8* const> TelemetryService::getSubsystemDependencies() const
@@ -348,7 +377,10 @@ namespace sw
             return;
         if ( bEnabled == false )
         {
-            purgeLocked();
+            _listPendingLine.clear();
+            _frames.reset();
+            _currentScene.clear();
+            (void)submitSpoolJobLocked( TelemetrySpoolJobKind::Purge ); // 앞서 넘긴 쓰기 뒤에 온다 — 그것들이 남긴 파일까지 지운다
             if ( bWasEnabled )
                 SW_LOG_INFO_ID( "Telemetry.TelemetryConsentWithdrawnPending", "Telemetry consent withdrawn - pending events and spool files deleted" );
             return;
@@ -393,22 +425,37 @@ namespace sw
 
     void TelemetryService::setUploader( ITelemetryUploader& uploader )
     {
-        ScopedLock<mutex> lock{ _mutex };
+        ScopedLock<mutex> spoolLock{ _spoolMutex };
         _pUploader = &uploader;
     }
 
     void TelemetryService::releaseUploader( ITelemetryUploader& uploader )
     {
-        ScopedLock<mutex> lock{ _mutex };
-        if ( _pUploader != &uploader )
-            return;
-        if ( _bInitialized == SW_TRUE && _bConsent == SW_TRUE )
         {
-            flushLocked();
-            closeCurrentFileLocked();
-            uploadClosedLocked();
+            ScopedLock<mutex> spoolLock{ _spoolMutex };
+            if ( _pUploader != &uploader )
+                return;
         }
-        _pUploader = &_nullUploader;
+        uint64 lastJob = 0;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            if ( _bInitialized == SW_TRUE && _bConsent == SW_TRUE )
+                (void)submitSpoolJobLocked( TelemetrySpoolJobKind::Close );
+            lastJob = _lastSubmittedJob;
+        }
+        waitSpoolJob( lastJob, &uploader );
+    }
+
+    void TelemetryService::waitSpoolJob( uint64 jobID, const ITelemetryUploader* pReleasedUploader )
+    {
+        UniqueLock<mutex> spoolLock{ _spoolMutex };
+        while ( _completedJob < jobID || ( pReleasedUploader != nullptr && _pUploadingWith == pReleasedUploader ) )
+        {
+            _spoolProgress.wait( spoolLock );
+        }
+        // 기다림과 바꾸기를 한 잠금 안에서 — 그 사이 다른 일이 이 업로더로 보내기 시작할 수 없다.
+        if ( pReleasedUploader != nullptr && _pUploader == pReleasedUploader )
+            _pUploader = &_nullUploader;
     }
 
     TelemetryRecordResult TelemetryService::record( const TelemetryEvent& event )
@@ -466,7 +513,7 @@ namespace sw
         _listPendingLine.push_back( makeEventLineLocked( event, *pDef ) );
         ++_stats._recorded;
         if ( _listPendingLine.size() >= _schema.getSettings()._batchEvents )
-            flushLocked();
+            (void)submitSpoolJobLocked( TelemetrySpoolJobKind::Write );
         return TelemetryRecordResult::Recorded;
     }
 
@@ -496,28 +543,6 @@ namespace sw
             TelemetryServiceInternal::setValueJSON( params.set( value._name.c_str() ), value );
         }
         return doc.dump( -1 );
-    }
-
-    string TelemetryService::makeContextLineLocked() const
-    {
-        JSONDocument    doc;
-        const JSONValue root = doc.makeObject();
-        root.set( "type" ).setString( "context" );
-        root.set( "schema" ).setInt( _schema.getVersion() );
-        root.set( "session" ).setString( _context->_sessionID );
-        root.set( "build" ).setString( _context->_buildConfig );
-        root.set( "platform" ).setString( _context->_platform );
-        root.set( "buildID" ).setString( _context->_buildID );
-        root.set( "game" ).setString( _context->_game );
-        root.set( "file" ).setUint( _fileIndex );
-        return doc.dump( -1 );
-    }
-
-    string TelemetryService::makeSpoolFilePathLocked( uint32 fileIndex ) const
-    {
-        StringBuilder<constant::buffer::kMax256> name;
-        name.appendFormat( "%#%#_%#%#", kSpoolFilePrefix, _context->_sessionID.c_str(), Fmt( fileIndex, Format().width( 4 ).zeroPad() ), kSpoolExtension );
-        return FileUtil::joinPath( _spoolFolder.get(), name.c_str() );
     }
 
     void TelemetryService::pushBreadcrumbLocked( const TelemetryEvent& event )
@@ -556,7 +581,7 @@ namespace sw
 
     void TelemetryService::collectSpoolFiles( vector<string>& outListFilePath ) const
     {
-        ScopedLock<mutex> lock{ _mutex };
+        ScopedLock<mutex> spoolLock{ _spoolMutex };
         outListFilePath = _listClosedFile;
         if ( _currentFile.empty() == false )
             outListFilePath.push_back( _currentFile );
@@ -576,8 +601,18 @@ namespace sw
 
     TelemetryStats TelemetryService::getStats() const
     {
-        ScopedLock<mutex> lock{ _mutex };
-        return _stats;
+        TelemetryStats stats;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            stats = _stats;
+        }
+        ScopedLock<mutex> spoolLock{ _spoolMutex };
+        stats._writtenEvents = _spoolStats._writtenEvents;
+        stats._rotatedFiles  = _spoolStats._rotatedFiles;
+        stats._droppedFiles  = _spoolStats._droppedFiles;
+        stats._uploadedFiles = _spoolStats._uploadedFiles;
+        stats._purgedFiles   = _spoolStats._purgedFiles;
+        return stats;
     }
 
     void TelemetryService::update( float32 deltaSeconds )
@@ -592,7 +627,7 @@ namespace sw
         if ( _flushTimer < _schema.getSettings()._flushSeconds )
             return;
         _flushTimer = 0.0f;
-        flushLocked();
+        (void)submitSpoolJobLocked( TelemetrySpoolJobKind::Write ); // 줄이 없어도 넘긴다 — 실패했던 올리기를 물러서기가 끝나면 다시 한다
     }
 
     void TelemetryService::recordFrame( string_view sceneID, float32 deltaSeconds )
@@ -611,7 +646,7 @@ namespace sw
 
     void TelemetryService::onAfterSceneTick( const EngineFrameContext& context )
     {
-        // 장면별 프레임 시간을 모으고 flush 시간이 되면 쓴다(기록 → 시계 순서). 동의가 없으면 둘 다 아무것도 하지 않는다.
+        // 장면별 프레임 시간을 모으고 flush 시간이 되면 스풀 워커에 넘긴다(기록 → 시계 순서). 게임 스레드는 디스크 · 망을 기다리지 않는다.
         recordFrame( context._activeSceneID, context._deltaSeconds );
         update( context._deltaSeconds );
     }
@@ -635,23 +670,99 @@ namespace sw
 
     void TelemetryService::flush()
     {
-        ScopedLock<mutex> lock{ _mutex };
-        flushLocked();
+        uint64 lastJob = 0;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            if ( _bInitialized == SW_TRUE && _bConsent == SW_TRUE )
+                (void)submitSpoolJobLocked( TelemetrySpoolJobKind::Write );
+            lastJob = _lastSubmittedJob;
+        }
+        waitSpoolJob( lastJob, nullptr );
     }
 
-    void TelemetryService::flushLocked()
+    uint64 TelemetryService::submitSpoolJobLocked( TelemetrySpoolJobKind kind )
     {
-        if ( _bInitialized == SW_FALSE || _bConsent == SW_FALSE )
-            return;
-        if ( _listPendingLine.empty() == false && FileUtil::ensureDirectoryExists( _spoolFolder.get() ) == false )
+        TelemetrySpoolJob job;
+        job._kind          = kind;
+        job._jobID         = _lastSubmittedJob + 1;
+        job._settings      = _schema.getSettings();
+        job._schemaVersion = _schema.getVersion();
+        job._nowSeconds    = _sessionSeconds;
+        job._listLine.swap( _listPendingLine );
+        const uint32 lineCount = static_cast<uint32>( job._listLine.size() );
+        // 넘기기는 워커 큐의 잠금 한 번이다 — `_mutex` 를 쥔 채 넘겨 일 id 순서와 큐 순서가 같다.
+        if ( _spoolWorker.submit( std::move( job ) ) == false )
         {
-            SW_LOG_WARNING_ID( "Telemetry.TelemetrySpoolFolderCannot", "Telemetry spool folder '%#' cannot be created - %# events dropped", _spoolFolder.get().c_str(), static_cast<uint32>( _listPendingLine.size() ) );
-            _listPendingLine.clear();
+            // 워커는 생성자에서 소멸자까지 돈다 — 받지 않았다면 소멸 중의 호출이다(계약 위반).
+            SW_LOG_ERROR_ID( "Telemetry.SpoolWorkerRefusedJob", "Telemetry spool worker is not running - %# events dropped", lineCount );
+            return _lastSubmittedJob;
+        }
+        _sequence += lineCount;
+        _lastSubmittedJob += 1;
+        return _lastSubmittedJob;
+    }
+
+    void TelemetryService::processSpoolJob( TelemetrySpoolJob& job, bool bStopping )
+    {
+        (void)bStopping; // 정지 중에 꺼낸 일도 끝까지 한다(받은 사건을 잃지 않는다) — 소멸자의 stop 앞에서 shutdown 이 이미 기다려 실제로는 남은 일이 없다
+        {
+            // 디스크 쓰기는 스풀 잠금 아래다 — 이 잠금은 워커와 조회만 잡고 게임 루프(`record` · `update`)는 잡지 않는다.
+            ScopedLock<mutex> spoolLock{ _spoolMutex };
+            if ( job._kind == TelemetrySpoolJobKind::Purge )
+            {
+                purgeSpoolLocked();
+            }
+            else
+            {
+                writeLinesSpoolLocked( job );
+                if ( job._kind == TelemetrySpoolJobKind::Close )
+                    closeCurrentFileSpoolLocked();
+                enforceCapsSpoolLocked( job._settings );
+            }
+        }
+        if ( job._kind != TelemetrySpoolJobKind::Purge )
+            uploadClosed( job );
+        {
+            ScopedLock<mutex> spoolLock{ _spoolMutex };
+            _completedJob = job._jobID;
+        }
+        _spoolProgress.notify_all();
+    }
+
+    string TelemetryService::makeContextLineSpoolLocked( int32 schemaVersion ) const
+    {
+        JSONDocument    doc;
+        const JSONValue root = doc.makeObject();
+        root.set( "type" ).setString( "context" );
+        root.set( "schema" ).setInt( schemaVersion );
+        root.set( "session" ).setString( _context->_sessionID );
+        root.set( "build" ).setString( _context->_buildConfig );
+        root.set( "platform" ).setString( _context->_platform );
+        root.set( "buildID" ).setString( _context->_buildID );
+        root.set( "game" ).setString( _context->_game );
+        root.set( "file" ).setUint( _fileIndex );
+        return doc.dump( -1 );
+    }
+
+    string TelemetryService::makeSpoolFilePathSpoolLocked( uint32 fileIndex ) const
+    {
+        StringBuilder<constant::buffer::kMax256> name;
+        name.appendFormat( "%#%#_%#%#", kSpoolFilePrefix, _context->_sessionID.c_str(), Fmt( fileIndex, Format().width( 4 ).zeroPad() ), kSpoolExtension );
+        return FileUtil::joinPath( _spoolFolder.get(), name.c_str() );
+    }
+
+    void TelemetryService::writeLinesSpoolLocked( const TelemetrySpoolJob& job )
+    {
+        if ( job._listLine.empty() )
+            return;
+        if ( FileUtil::ensureDirectoryExists( _spoolFolder.get() ) == false )
+        {
+            SW_LOG_WARNING_ID( "Telemetry.TelemetrySpoolFolderCannot", "Telemetry spool folder '%#' cannot be created - %# events dropped", _spoolFolder.get().c_str(), static_cast<uint32>( job._listLine.size() ) );
             return;
         }
-        const uint64 maxFileBytes = _schema.getSettings()._maxFileBytes;
+        const uint64 maxFileBytes = job._settings._maxFileBytes;
         string       chunk;
-        for ( const string& line : _listPendingLine )
+        for ( const string& line : job._listLine )
         {
             const uint64 lineBytes = line.size() + 1;
             const bool   bFull     = _currentFileEvents > 0 && _currentFileBytes + chunk.size() + lineBytes > maxFileBytes;
@@ -661,21 +772,21 @@ namespace sw
                 if ( chunk.empty() == false && FileUtil::appendTextFile( _currentFile, chunk ) )
                     _currentFileBytes += chunk.size();
                 chunk.clear();
-                closeCurrentFileLocked();
-                ++_stats._rotatedFiles;
+                closeCurrentFileSpoolLocked();
+                ++_spoolStats._rotatedFiles;
             }
             if ( _currentFile.empty() )
             {
-                _currentFile       = makeSpoolFilePathLocked( _fileIndex );
+                _currentFile       = makeSpoolFilePathSpoolLocked( _fileIndex );
                 _currentFileBytes  = 0;
                 _currentFileEvents = 0;
-                chunk += makeContextLineLocked();
+                chunk += makeContextLineSpoolLocked( job._schemaVersion );
                 chunk += '\n';
             }
             chunk += line;
             chunk += '\n';
             ++_currentFileEvents;
-            ++_stats._writtenEvents;
+            ++_spoolStats._writtenEvents;
         }
         if ( chunk.empty() == false )
         {
@@ -684,13 +795,9 @@ namespace sw
             else
                 SW_LOG_WARNING_ID( "Telemetry.TelemetrySpoolFileCannot", "Telemetry spool file '%#' cannot be written", _currentFile.c_str() );
         }
-        _sequence += static_cast<uint32>( _listPendingLine.size() );
-        _listPendingLine.clear();
-        enforceCapsLocked();
-        uploadClosedLocked();
     }
 
-    void TelemetryService::closeCurrentFileLocked()
+    void TelemetryService::closeCurrentFileSpoolLocked()
     {
         if ( _currentFile.empty() )
             return;
@@ -701,10 +808,9 @@ namespace sw
         ++_fileIndex;
     }
 
-    void TelemetryService::enforceCapsLocked()
+    void TelemetryService::enforceCapsSpoolLocked( const TelemetryPipelineConfig& settings )
     {
-        const TelemetryPipelineConfig& settings   = _schema.getSettings();
-        uint64                         totalBytes = _currentFileBytes;
+        uint64 totalBytes = _currentFileBytes;
         for ( const string& path : _listClosedFile )
         {
             uint64 byteCount = 0;
@@ -724,46 +830,77 @@ namespace sw
             totalBytes -= MathUtil::min( totalBytes, oldestBytes );
             (void)FileUtil::removeFile( oldest ); // 실패는 removeFile 이 경고로 남긴다
             _listClosedFile.erase( _listClosedFile.begin() );
-            ++_stats._droppedFiles;
+            ++_spoolStats._droppedFiles;
         }
     }
 
-    void TelemetryService::uploadClosedLocked()
+    void TelemetryService::uploadClosed( const TelemetrySpoolJob& job )
     {
-        ITelemetryUploader& uploader = *_pUploader;
-        while ( _listClosedFile.empty() == false )
+        for ( ;; )
         {
             TelemetryUploadBatch batch;
-            batch._filePath  = _listClosedFile.front();
-            batch._sessionID = _context->_sessionID;
-            if ( FileUtil::readTextFile( batch._filePath, batch._content ) == false )
+            ITelemetryUploader*  pUploader = nullptr;
             {
-                _listClosedFile.erase( _listClosedFile.begin() ); // 지워진 파일 — 목록에서만 뺀다
-                continue;
+                ScopedLock<mutex> spoolLock{ _spoolMutex };
+                if ( _listClosedFile.empty() || job._nowSeconds < _uploadRetryAtSeconds )
+                    return; // 보낼 것이 없거나 물러서는 중이다
+                batch._filePath = _listClosedFile.front();
+                pUploader       = _pUploader;
+                _pUploadingWith = pUploader; // `releaseUploader` 가 이 보내기가 끝나길 기다린다
             }
-            const uint32 lineCount             = StringUtil::countChar( batch._content, '\n' );
-            batch._eventCount                  = lineCount > 0 ? lineCount - 1 : 0; // 첫 줄은 문맥
-            const TelemetryUploadResult result = uploader.upload( batch );
-            if ( result != TelemetryUploadResult::Sent )
-                break;                                     // 보내지 못했다 — 순서를 지켜 다음 flush 에 이 파일부터
-            (void)FileUtil::removeFile( batch._filePath ); // 실패는 removeFile 이 경고로 남긴다
-            _listClosedFile.erase( _listClosedFile.begin() );
-            ++_stats._uploadedFiles;
+            // 잠금 밖 — 파일 읽기와 보내기. 끝점이 느려도 게임 스레드는 기다리지 않는다(목록을 바꾸는 것은 이 스레드뿐이라 맨 앞 파일은 그대로다).
+            batch._sessionID             = _context->_sessionID;
+            const bool            bRead  = FileUtil::readTextFile( batch._filePath, batch._content );
+            TelemetryUploadResult result = TelemetryUploadResult::Kept;
+            if ( bRead )
+            {
+                const uint32 lineCount = StringUtil::countChar( batch._content, '\n' );
+                batch._eventCount      = lineCount > 0 ? lineCount - 1 : 0; // 첫 줄은 문맥
+                result                 = pUploader->upload( batch );
+            }
+            bool bNext = false;
+            {
+                ScopedLock<mutex> spoolLock{ _spoolMutex };
+                _pUploadingWith = nullptr;
+                if ( bRead == false )
+                {
+                    _listClosedFile.erase( _listClosedFile.begin() ); // 지워진 파일 — 목록에서만 뺀다
+                    bNext = true;
+                }
+                else if ( result == TelemetryUploadResult::Sent )
+                {
+                    _uploadBackoff.reset();
+                    (void)FileUtil::removeFile( batch._filePath ); // 실패는 removeFile 이 경고로 남긴다
+                    _listClosedFile.erase( _listClosedFile.begin() );
+                    ++_spoolStats._uploadedFiles;
+                    bNext = true;
+                }
+                else if ( result == TelemetryUploadResult::Failed )
+                {
+                    // 실패가 이어지는 동안 두 배씩 물러선다(지터) — 끝점이 죽었을 때 flush 마다 시한만큼 매달리지 않고, 복구 직후 클라이언트가 한꺼번에 몰리지 않는다.
+                    const float64 msPerSecond = static_cast<float64>( constant::time::kMillisecondsPerSecond );
+                    if ( _uploadBackoff.getNextDelayMs() == 0 )
+                        _uploadBackoff = ExponentialBackoff::createWithRandomSeed( static_cast<int64>( static_cast<float64>( job._settings._uploadRetrySeconds ) * msPerSecond ) );
+                    const int64 delayMs   = _uploadBackoff.takeDelayMs( static_cast<int64>( static_cast<float64>( job._settings._uploadRetryMaxSeconds ) * msPerSecond ) );
+                    _uploadRetryAtSeconds = job._nowSeconds + static_cast<float64>( delayMs ) / msPerSecond;
+                }
+                // Kept(기본 업로더) — 보내지 않고 둔다. 순서를 지켜 다음 일에 이 파일부터.
+            }
+            _spoolProgress.notify_all();
+            if ( bNext == false )
+                return;
         }
     }
 
-    void TelemetryService::purgeLocked()
+    void TelemetryService::purgeSpoolLocked()
     {
-        _listPendingLine.clear();
-        _frames.reset();
-        _currentScene.clear();
         vector<string> listFile = _listClosedFile;
         if ( _currentFile.empty() == false )
             listFile.push_back( _currentFile );
         for ( const string& path : listFile )
         {
             if ( FileUtil::exists( path ) && FileUtil::removeFile( path ) )
-                ++_stats._purgedFiles;
+                ++_spoolStats._purgedFiles;
         }
         _listClosedFile.clear();
         if ( _currentFile.empty() == false )

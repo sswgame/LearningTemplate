@@ -103,6 +103,10 @@ namespace sw
         uint32 _maxFiles{ 16 }; ///< 스풀 파일 수 상한
         PROPERTY( Name = "breadcrumbs", Max = 256 )
         uint32 _breadcrumbCount{ 32 }; ///< 크래시 보고에 붙일 최근 사건 수
+        PROPERTY( Min = 1.0, Units = s )
+        float32 _uploadRetrySeconds{ 30.0f }; ///< 올리기가 실패하면 처음 기다릴 세션 시간(지터 — 첫 실패는 0 ~ 이 값, 그다음부터 두 배씩)
+        PROPERTY( Min = 1.0, Units = s )
+        float32 _uploadRetryMaxSeconds{ 1800.0f }; ///< 실패가 이어질 때 기다림의 위 끝
     };
 } // namespace sw
 
