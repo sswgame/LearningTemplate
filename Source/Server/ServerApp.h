@@ -57,7 +57,9 @@ namespace sw
         ServerApp& operator=( const ServerApp& ) = delete;
 
         /** @brief 프로세스 본문입니다(콘솔 실행 · Windows 서비스 공용). 정상 종료면 0 입니다. */
-        static int32 runMain( int32 argc, utf8* pArgv[] );
+        /** @brief 기동을 마치고 루프에 들어가기 직전에 불리는 함수입니다(서비스 호스트가 그때 RUNNING 을 알린다). 없으면 nullptr 을 넘긴다. */
+        using ReadyFunction = void ( * )();
+        static int32 runMain( int32 argc, utf8* pArgv[], ReadyFunction pfnOnReady );
 
         /** @brief 엔진 · 설정 · 모듈 · 게임을 세웁니다. 헤드리스 작업(서버 팩의 씬 쿠킹)이면 그것으로 끝납니다(`run` 이 바로 돌아온다). */
         [[nodiscard]] bool initialize( int32 argc, utf8* pArgv[] );

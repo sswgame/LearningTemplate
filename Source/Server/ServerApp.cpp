@@ -119,7 +119,7 @@ namespace sw
 
     ServerApp::~ServerApp() = default;
 
-    int32 ServerApp::runMain( int32 argc, utf8* pArgv[] )
+    int32 ServerApp::runMain( int32 argc, utf8* pArgv[], ReadyFunction pfnOnReady )
     {
         // 줄마다 내보낸다. 테스트, journald, docker logs 가 "ready" 줄을 바로 볼 수 있다. 엔진(로거)을 시작하기 전에 켠다.
         ConsoleLogOutput::setFlushEveryLine( true );
@@ -127,7 +127,11 @@ namespace sw
         const bool bStarted   = server.initialize( argc, pArgv );
         const bool bCheckOnly = server._bConfigCheckOnly == SW_TRUE;
         if ( bStarted && bCheckOnly == false )
+        {
+            if ( pfnOnReady != nullptr )
+                pfnOnReady();
             server.run();
+        }
         server.shutdown();
         if ( bCheckOnly ) // 설정 검사만: 잘못된 설정은 로드 오류 코드(종료 코드 표 `LoadError`) — 스크립트가 크래시 · 기동 실패와 가른다
             return static_cast<int32>( bStarted ? ProcessExitCode::Passed : ProcessExitCode::LoadError );

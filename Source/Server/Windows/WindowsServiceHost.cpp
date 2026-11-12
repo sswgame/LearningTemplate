@@ -59,9 +59,10 @@ namespace sw
                     return;
                 ShutdownSignal::setServiceMode( true );
                 reportStatus( SERVICE_START_PENDING, kStartWaitHintMilliseconds );
-                // 기동 완료를 알릴 훅이 본문에 없으니 본문 앞에서 RUNNING 을 보고한다(기동 실패는 STOPPED + 종료 코드로 드러난다).
-                reportStatus( SERVICE_RUNNING, 0 );
-                s_exitCode = ServerApp::runMain( s_argc, s_ppArgv );
+                // RUNNING 은 기동을 마친 뒤에 알린다 — 본문 앞에서 알리면 오케스트레이터가 기동 실패와 정상 기동을 가르지 못했다(감사 P-14).
+                // 기동 실패는 START_PENDING 에서 곧장 STOPPED + 종료 코드다.
+                s_exitCode = ServerApp::runMain( s_argc, s_ppArgv, []()
+                { reportStatus( SERVICE_RUNNING, 0 ); } );
                 reportStatus( SERVICE_STOPPED, 0 );
             }
 
