@@ -2,10 +2,9 @@
 
 #include "Editor/Common/GUI/EditorUIContextState.h"
 
-#include "Core/Container/unordered_map.h"
-#include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Commands/Asset/EditorSaveFileLock.h"
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
@@ -13,9 +12,9 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Console/DevCommandRegistry.h"
 
 #include <imgui.h>
@@ -152,15 +151,10 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `panel.lockSaveFiles` 가 붙잡은 파일 글입니다(디스크 경로 → 글, 없던 파일은 빈 값). 에디터 범위의 상태 저장소가 소유한다. */
-            struct LockedSaveFiles
-            {
-                unordered_map<string, optional<string>> _mapTextByPath;
-            };
-
             /**
              * @brief 문서 패널이 저장할 파일(`IEditorDocumentPanel::collectFilesToSave`)의 글을 붙잡고 모두 읽기 전용으로 둡니다 — 버전 관리가 잠그지 않은 파일(git LFS lockable)을 흉내 낸다.
-             * @details 패널이 내놓는 목록을 그대로 잠그므로 여러 파일을 쓰는 패널 · 연 경로가 없는 상태 문서도 같은 명령이다. 목록이 비면 확인할 것이 없어 실패다. 끝에 `panel.unlockSaveFiles` 로 푼다.
+             * @details 패널이 내놓는 목록을 그대로 잠그므로 여러 파일을 쓰는 패널 · 연 경로가 없는 상태 문서도 같은 명령이다. 목록이 비면 확인할 것이 없어 실패다.
+             *          잠금은 `EditorSaveFileLock` 가 쥐어 시나리오가 `panel.unlockSaveFiles` 전에 끊겨도(실패 · 시간 초과 · 창 닫힘 · 체인 다음 단계) 쓰기를 되돌린다.
              */
             static bool runPanelLockSaveFiles( const vector<string>& listArgument, string& outReply )
             {
@@ -174,18 +168,10 @@ namespace sw::editor
                     outReply = "'" + listArgument[0] + "' has no file to save - open or edit its document first";
                     return false;
                 }
-                LockedSaveFiles& locked = getEditorState<LockedSaveFiles>();
-                locked._mapTextByPath.clear();
-                for ( const string& path : listPath )
+                if ( const expected<void> locked = EditorSaveFileLock::lock( listPath ); locked.has_value() == false )
                 {
-                    string     text;
-                    const bool bExists = FileUtil::isRegularFile( path );
-                    if ( bExists && ( FileUtil::readTextFile( path, text ) == false || FileUtil::setWritable( path, false ) == false ) )
-                    {
-                        outReply = "could not read or lock '" + path + "'";
-                        return false;
-                    }
-                    locked._mapTextByPath.insert_or_assign( path, bExists ? optional<string>{ std::move( text ) } : nullopt );
+                    outReply = AutomationStep::describeReason( locked.error() );
+                    return false;
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
                 replyBuilder.appendFormat( "locked %# file(s) of %#", listPath.size(), listArgument[0] );
@@ -213,22 +199,9 @@ namespace sw::editor
             {
                 if ( listArgument.empty() == false )
                     return false;
-                LockedSaveFiles& locked = getEditorState<LockedSaveFiles>();
-                string           changedPath;
-                for ( const auto& [path, savedText] : locked._mapTextByPath )
+                if ( const optional<string> changedPath = EditorSaveFileLock::unlock(); changedPath.has_value() )
                 {
-                    string     text;
-                    const bool bExists = FileUtil::isRegularFile( path );
-                    if ( bExists )
-                        (void)FileUtil::setWritable( path, true ); // 먼저 푼다 — 견주기가 져도 다음 시나리오가 잠긴 파일을 만나지 않게
-                    const bool bSame = savedText.has_value() ? ( bExists && FileUtil::readTextFile( path, text ) && text == *savedText ) : bExists == false;
-                    if ( bSame == false && changedPath.empty() )
-                        changedPath = path;
-                }
-                locked._mapTextByPath.clear();
-                if ( changedPath.empty() == false )
-                {
-                    outReply = "'" + changedPath + "' changed while it was locked";
+                    outReply = "'" + *changedPath + "' changed while it was locked";
                     return false;
                 }
                 outReply = "unlocked and unchanged";
