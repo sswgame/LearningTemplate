@@ -34,6 +34,15 @@ namespace sw
         /** @brief 원래 타입 이름입니다. */
         const string& getOriginalTypeName() const { return _originalTypeName; }
 
+        /**
+         * @brief 이 오브젝트의 컴포넌트를 가리켰지만 대상이 이 자리(모르는 타입)라 풀지 못한 참조의 키(`타입#n`) 하나를 맡습니다. 같은 키는 한 번만 맡습니다.
+         * @details 읽은 핸들은 키의 해시만 들고 있어, 다시 글로 저장할 때 원래 키 글이 필요하다(`ObjectStateBatch::resolveComponentReference` 가 맡기고
+         *          저장 처리기가 해시로 찾는다). 유니티 Missing Script 가 fileID 를 그대로 들고 있어 참조가 남는 것과 같은 몫이다.
+         */
+        void keepReferencedKey( string_view key );
+        /** @brief 맡은 참조 키들입니다. */
+        const vector<string>& getReferencedKeys() const { return _listReferencedKey; }
+
     private:
         PROPERTY( ReadOnly, Category = "Missing", DisplayName = "Missing Type", Tooltip = "The type this component had when it was saved" )
         string _originalTypeName;
@@ -46,5 +55,8 @@ namespace sw
         /** @brief 바이너리 본문입니다. */
         PROPERTY( HideInInspector )
         vector<uint8> _originalBytes;
+        /** @brief 풀지 못한 참조의 키 글입니다. 바이너리 스냅샷(플레이 · 되돌리기)을 지나도 남게 저장합니다. */
+        PROPERTY( HideInInspector )
+        vector<string> _listReferencedKey;
     };
 } // namespace sw

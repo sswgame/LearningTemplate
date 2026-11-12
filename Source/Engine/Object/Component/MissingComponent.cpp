@@ -9,6 +9,7 @@ namespace sw
         , _originalFormat{ 0 }
         , _originalText{}
         , _originalBytes{}
+        , _listReferencedKey{}
     {
         setCanEverTick( false );
     }
@@ -21,6 +22,16 @@ namespace sw
         _originalBytes.clear();
         if ( element._pBytes != nullptr && element._byteCount > 0 )
             _originalBytes.assign( element._pBytes, element._pBytes + element._byteCount );
+    }
+
+    void MissingComponent::keepReferencedKey( string_view key )
+    {
+        for ( const string& kept : _listReferencedKey )
+        {
+            if ( string_view( kept ) == key )
+                return;
+        }
+        _listReferencedKey.emplace_back( key );
     }
 
     bool MissingComponent::tryGetOriginalElement( SerializeContext::OpaqueElementView& outElement ) const
