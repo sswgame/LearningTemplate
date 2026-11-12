@@ -14,7 +14,7 @@ namespace
                                        "<nodes>"
                                        "<node id=\"1\" name=\"Idle\" x=\"40\" y=\"40\" loop=\"true\"/>"
                                        "<node id=\"2\" name=\"Move\" sync_group=\"Feet\"><blend_space x=\"Speed\" y=\"Direction\" notify=\"HighestWeight\"><samples>"
-                                       "<sample clip=\"Walk\" x=\"1\"/><sample clip=\"Run\" x=\"4\" y=\"1\"/></samples></blend_space></node>"
+                                       "<sample clip=\"Walk\" x=\"1\"/><sample clip=\"Run\" x=\"4\" y=\"1\"/><sample clip=\"Strafe\" x=\"1\" y=\"1\"/></samples></blend_space></node>"
                                        "<node id=\"3\" name=\"Wave\"><pose_node type=\"BlendPoses\" weight=\"WaveWeight\"><inputs><item>Idle</item><item>Hello</item></inputs></pose_node></node>"
                                        "</nodes>"
                                        "<links>"
@@ -57,7 +57,7 @@ SW_TEST_CASE( AnimationGraphAssetTest, ReadsElementsThroughSchemas )
     SW_EXPECT_FALSE( graph._listNode[1]._loop.has_value() );                      // 적지 않음 — 값이 없다
     SW_EXPECT_TRUE( graph._listNode[1]._position == sw::float2( 40.0f, 40.0f ) ); // 적지 않은 자리는 스키마 기본값
     SW_EXPECT_TRUE( graph._listNode[1]._blendSpace._notifyMode == sw::AnimationBlendSpaceNotifyMode::HighestWeight );
-    SW_EXPECT_EQUAL( uint32{ 2 }, graph._listNode[1]._blendSpace._space.getSampleCount() );
+    SW_EXPECT_EQUAL( uint32{ 3 }, graph._listNode[1]._blendSpace._space.getSampleCount() );
     SW_EXPECT_TRUE( graph._listNode[2]._poseNode._type == sw::hashed_string( "BlendPoses" ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, graph._listLink.size() );
     SW_EXPECT_TRUE( graph._listLink[0]._op == sw::AnimationConditionOp::GreaterEqual );
@@ -244,6 +244,18 @@ SW_TEST_CASE( AnimationGraphAssetTest, RejectsMaxLODOnClipState )
     sw::AnimationGraphAsset graph;
     SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"Idle\" max_lod=\"1\"/></nodes></AnimationGraphAsset>" ) );
     SW_EXPECT_TRUE( graph._listNode.empty() );
+}
+
+/**
+ * @brief [AnimationGraphAssetTest] 2D 블렌드 스페이스의 표본이 넓이를 이루지 못하면(한 줄) 섞을 삼각형이 없어 로드 오류다
+ */
+SW_TEST_CASE( AnimationGraphAssetTest, RejectsTwoAxisBlendSpaceWithoutArea )
+{
+    SW_EXPECT_LOG( "AnimationGraphAsset.BlendSpaceNoArea" );
+    sw::AnimationGraphAsset graph;
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"Move\"><blend_space x=\"Speed\" y=\"Direction\"><samples>"
+                                            "<sample clip=\"Idle\"/><sample clip=\"Walk\" x=\"1\" y=\"1\"/><sample clip=\"Run\" x=\"2\" y=\"2\"/>"
+                                            "</samples></blend_space></node></nodes></AnimationGraphAsset>" ) );
 }
 
 /**
