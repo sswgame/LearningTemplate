@@ -96,6 +96,9 @@
 	<EditorClick mark="sceneView.canvas" state="Up"/>
 	<WaitUntil watch="Editor.PlacementOpenedCount" equals="1" timeoutFrames="90"/>
 	<Expect watch="Editor.PlacedCount" equals="1"/>
+	<!-- 연 머티리얼 문서 패널이 포커스를 가져 Editor.UndoCount 가 그 패널 스택(빈 것)을 본다(E-3) — 씬 스택이 그대로인지는 씬 뷰로 돌아와 본다 -->
+	<DevCommand line="panel.focus scene_view"/>
+	<EditorWaitSettled/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
