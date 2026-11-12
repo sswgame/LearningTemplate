@@ -236,6 +236,11 @@ namespace sw
         (void)context;
     }
 
+    bool CharacterAppearanceSocketTask::pollAnimationAssetsReady()
+    {
+        return _owner.isAwaitingMergedMesh() == false;
+    }
+
     void CharacterAppearanceSocketTask::finishAnimationFrame( SkeletalMeshComponent& unit )
     {
         _owner.refreshSocketTransforms( unit );
@@ -618,6 +623,11 @@ namespace sw
                 return true;
         }
         return false;
+    }
+
+    bool CharacterAppearanceComponent::isAwaitingMergedMesh() const
+    {
+        return isMergedMeshAwaited( hasMergedParts(), _bMeshMerged == SW_TRUE, _bMeshAssemblyPending == SW_TRUE || _bMeshApplyQueued == SW_TRUE );
     }
 
     bool CharacterAppearanceComponent::findSocketWorldTransform( const hashed_string& fullName, float4x4& outWorldTransform ) const
@@ -1408,6 +1418,11 @@ namespace sw
             _listMeshAssemblyLoad.push_back( std::move( load ) );
         }
         _bMeshAssemblyPending = SW_TRUE;
+        // 처음 합치는 몸은 합친 메시가 걸릴 때까지 그리지 않는다 — 원본 몸(LOD 없음)을 한 프레임이라도 그리면 대량 스폰이 스킨 변형 풀을 넘친다(`isMergedMeshAwaited`).
+        // 소켓 작업은 조립(`registerSocketTask`)이 이 앞에서 몸 유닛에 걸었다 — 그 작업의 준비 질의가 기다림을 푼다.
+        SkeletalMeshComponent* pBodyUnit = findSkinnedUnit( manager, static_cast<uint32>( _bodyPart ) );
+        if ( pBodyUnit != nullptr && isAwaitingMergedMesh() )
+            pBodyUnit->holdUntilAnimationAssetsReady();
         // 씬의 에셋 대기 목록에 건다 — 도착 단계가 받아 걸고, 자동화의 "에셋 일 0"(`Assets.Pending`)이 그동안 사진을 미룬다(옷이 숨은 몸이 찍히지 않게).
         manager.getPrimitiveRegistry().addAssetWaiter( this, &CharacterAppearanceComponent::waitMeshAssembly );
         // 새로 입은 피팅 부품은 베이크한 메시를 걸 때까지 숨긴다 — 피팅 전의 옷은 몸을 뚫고 나온다. 이미 베이크한 것을 그리는 부품은 다시 조립하는 동안 그대로 보인다.

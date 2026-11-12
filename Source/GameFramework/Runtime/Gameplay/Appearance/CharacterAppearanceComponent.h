@@ -63,9 +63,11 @@ namespace sw
         bool isAnimationActive() const override { return false; }
         /** @brief 몸의 모델 공간을 읽어 소켓 위치만 고친다 — 군중 묶음을 나누는 몸이면 묶음의 포즈를 읽는다. */
         AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::ReadsOnly; }
-        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        void                finishAnimationFrame( SkeletalMeshComponent& unit ) override;
-        void                onAnimationMeshDetached( SkeletalMeshComponent& unit ) override;
+        /** @brief 합친 메시를 기다리는 동안(`CharacterAppearanceComponent::isMergedMeshAwaited`) 거짓입니다 — 몸 유닛이 그때까지 그리지 않는다. */
+        bool pollAnimationAssetsReady() override;
+        void runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
+        void finishAnimationFrame( SkeletalMeshComponent& unit ) override;
+        void onAnimationMeshDetached( SkeletalMeshComponent& unit ) override;
 
     private:
         CharacterAppearanceComponent& _owner;
@@ -118,7 +120,7 @@ namespace sw
      *            스킨 원본을 바꾼다(`SkeletalMeshComponent::setSkinSourceMesh`). 그동안 피팅하는 부품은 숨긴다. 원본 메시 · 표 · 피팅 데이터가 다시 읽히면 다시 조립한다.
      *          - **병합**(`_bMergeParts`): 켜면 몸을 따르는 스킨드 부품(자기 리그 · 다른 스켈레톤이 아닌 것)은 오브젝트를 따로 두지 않는다. 몸과 그 부품들의 메시(베이크한 사본이거나 원본)를
      *            구간이 있는 메시 하나로 합쳐(`CharacterMeshUtil::mergeMeshes`) 몸 유닛이 한 번에 스키닝하고, 부품마다 몸 오브젝트의 구간 컴포넌트(`MeshSectionComponent`)가 자기 머티리얼로 그린다.
-     *            병합한 메시가 준비되기 전에는 몸 원본만 보인다. 합친 메시는 워커가 낮은 상세 단계(LOD)를 만든다(`CharacterLODSettings::buildLODs` — 단계마다 구간 범위가 있고
+     *            병합한 메시가 처음 걸리기 전에는 몸을 그리지 않는다(`isMergedMeshAwaited` — 몸 유닛의 등장 대기). 합친 메시는 워커가 낮은 상세 단계(LOD)를 만든다(`CharacterLODSettings::buildLODs` — 단계마다 구간 범위가 있고
      *            구간마다 줄인다, 부품 · `<Section>` 의 `lodDetail` · `lodDropLevel` 규칙). 몸 유닛은 그 단계에서 가중치가 없는 본을 풀지 않는다(본 LOD 자동 마스크).
      *          - **염색**: 해석 결과의 머티리얼 값(`Parameter`, 꾸미기의 `MaterialColor` 와 `MaterialScalar`)을 주인의 부품마다 머티리얼 인스턴스에 적용한다.
      *          - **장비**: `setEquipment` 로 빌린 장비(`Equipment`)의 슬롯이 프리셋의 장비 구성을 덮는다. 해석은 외형 상태(`CharacterAppearanceState`)가 하고,
@@ -151,6 +153,19 @@ namespace sw
          * @brief 베이크한 메시의 재료가 다 읽혔으면 틱 뒤에 겁니다. 조립에 쓴 에셋(소켓 · 원본 메시 · 피팅 표 · 피팅 데이터)을 에셋 매니저가 다시 읽었으면 다시 조립을 예약합니다(에셋 핫 리로드).
          */
         void onTick( TickContext& context ) override;
+
+        /**
+         * @brief 합칠 부품이 있는데(@p bHasMergedParts) 몸 유닛이 아직 합친 메시를 그리지 않고(@p bMeshMerged 거짓) 그 조립이 읽거나 짓거나 걸기를 기다리는 중이면(@p bAssemblyInFlight) true 입니다.
+         * @details 그동안 몸 유닛은 나타나지 않는다(소켓 작업의 `pollAnimationAssetsReady` 가 거짓 — 렌더 후보 · 스킨 변형에서 빠진다). 예전에는 합친 메시가 걸리기 전 한 프레임에
+         *          원본 몸을 LOD 없이 그려, 같은 메시 캐릭터를 수백 명 한꺼번에 스폰하면 스킨 변형 풀이 넘쳤다(locomotion2d 494 명에서 `MeshDeformPoolLimit`).
+         *          에디터 숨김 · 사진 모드의 `GameObject::setRenderHidden` 과 섞지 않고 스폰의 "준비된 뒤 나타난다" 길(`MeshComponent::holdAppearanceUntilReady`)을 쓴다.
+         *          이미 합친 몸을 다시 조립하는 동안은 지난 합친 메시(LOD 있음)를 그대로 그린다. 조립이 합치지 못하고 끝나면(오류) 기다림이 풀려 원본 몸이 나타난다.
+         *          언리얼 Mutable 은 생성 전 자리 메시(참조 메시 · 없음)를 고르게 하는데, 여기는 "없음" 하나다 — 원본 몸은 부품 없는 맨몸이라 자리 메시로 쓸 수 없다.
+         */
+        [[nodiscard]] static bool isMergedMeshAwaited( bool bHasMergedParts, bool bMeshMerged, bool bAssemblyInFlight )
+        {
+            return bHasMergedParts && bMeshMerged == false && bAssemblyInFlight;
+        }
 
         /** @brief 프리셋과 시드를 바꾸고 다시 조립합니다. 슬롯 덮어쓰기는 그대로 둡니다. */
         void setPreset( const hashed_string& presetID, uint32 seed );
@@ -372,6 +387,8 @@ namespace sw
         bool isMergedPart( const ResolvedPart& part, int32 partIndex ) const;
         /** @brief 합친 부품이 하나라도 있으면 true 입니다. */
         bool hasMergedParts() const;
+        /** @brief 지금 상태로 `isMergedMeshAwaited` 를 묻습니다. */
+        bool isAwaitingMergedMesh() const;
         /**
          * @brief 워커가 합친 메시(@p build 의 `_merged`, 비어 있지 않아야 한다)를 몸 유닛에 걸고 합친 부품의 조각마다 구간 컴포넌트를 둡니다.
          * @return 주인 오브젝트가 없으면 false 입니다(몸 원본만 그려진다).
