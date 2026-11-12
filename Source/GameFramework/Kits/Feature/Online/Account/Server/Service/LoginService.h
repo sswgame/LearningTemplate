@@ -108,6 +108,8 @@ namespace sw
         void setSecretVault( const LoginSecretVault* pVault ) { _pSecretVault = pVault; }
         /** @brief 빌드 버전 확인에 쓸 원격 설정을 지정합니다. 빌려 쓰는 포인터이며, 없으면 확인하지 않습니다. */
         void setRemoteConfig( const RemoteConfig* pRemoteConfig ) { _pRemoteConfig = pRemoteConfig; }
+        /** @brief 탈퇴 정리가 계정을 지운 뒤 부를 키트 훅입니다. 키트 조립이 `start` 에서 넘깁니다(모든 키트의 `initialize` 뒤). 키트가 소유하고 서비스보다 오래 삽니다. */
+        void setAfterDeleteAccount( vector<const IAfterDeleteAccount*> listHook ) { _listAfterDeleteAccount = std::move( listHook ); }
         /** @brief 외부 확인 결과를 회수합니다. 제공자의 `tick` 과 `pollVerifications` 를 부르며, 서비스 스레드의 틱마다 호출합니다. */
         void update( UnixMilliseconds nowMs );
 
@@ -228,7 +230,8 @@ namespace sw
         const RemoteConfig*                                                _pRemoteConfig;
         const LoginSecretVault*                                            _pSecretVault;
         size_t                                                             _refreshCursor;
-        ServicePeriodicJob                                                 _revocationScanJob; ///< 철회 대기열 읽기이다(`_revocationScanMs` 주기)
-        ServiceStoreTracker                                                _store;             ///< 저장소에 맡긴 일의 앞이다
+        ServicePeriodicJob                                                 _revocationScanJob;      ///< 철회 대기열 읽기이다(`_revocationScanMs` 주기)
+        ServiceStoreTracker                                                _store;                  ///< 저장소에 맡긴 일의 앞이다
+        vector<const IAfterDeleteAccount*>                                 _listAfterDeleteAccount; ///< 탈퇴 뒤 키트 정리 훅(`setAfterDeleteAccount`)
     };
 } // namespace sw

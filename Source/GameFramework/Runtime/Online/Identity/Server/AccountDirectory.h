@@ -1,7 +1,8 @@
 /**
  * @file AccountDirectory.h
  * @brief 서버의 계정 포트입니다. 계정 디렉터리 인터페이스(이 프로세스에 접속한 계정)를 둡니다. 값 형식(계정 id · 공개 신원)은 공유 `Identity/AccountIdentity.h` 에 있습니다.
- *        계정을 다루는 다른 포트(차단 목록 `IAccountBlockList`, 세션 끊기 `IAccountSessionControl`, 이름 색인 `IAccountNameIndex`, 외부 로그인 연동 `IAccountExternalLinks`, 오프라인 푸시 `IOfflinePushSender`)도 여기 둔다.
+ *        계정을 다루는 다른 포트(차단 목록 `IAccountBlockList`, 세션 끊기 `IAccountSessionControl`, 이름 색인 `IAccountNameIndex`, 외부 로그인 연동 `IAccountExternalLinks`, 오프라인 푸시 `IOfflinePushSender`,
+ *        탈퇴 뒤 키트 정리 `IAfterDeleteAccount`)도 여기 둔다.
  * @details 발급은 계정 키트(GF_Account, GF_Server_Account)가 한다. 다른 키트(Trade, Economy, Mailbox, Admin)는 이 인터페이스만 보고 계정 키트를 include 하지 않는다
  *          (키트끼리는 include 하지 않는다). 서버가 여럿이면 다른 서버에 붙은 계정은 캐시 층의 접속 상태(`IEphemeralStore`)로 본다.
  *          세션 토큰 검증은 따로 인터페이스를 두지 않는다. 스트림 연결은 로그인할 때 한 번 확인되고 그 뒤로는 연결의 주체로 다니며, UDP 게임 서버는 계정 키트의 접속 테이블이 확인한다.
@@ -167,5 +168,31 @@ namespace sw
 
         /** @brief @p accountID 의 모든 기기에 보냅니다. 계정마다 도배 제한에 걸리면 보내지 않고 false 입니다. @p deepLink 는 앱이 열 화면(예: "mailbox")입니다. */
         virtual bool sendOfflinePush( AccountID accountID, string_view titleKey, string_view bodyKey, string_view deepLink, UnixMilliseconds nowMs ) = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
+    // 탈퇴 정리가 계정 레코드를 지운 뒤 키트마다 부르는 훅 — 키트가 `IOnlineServerKit::getAfterDeleteAccount` 로 내놓고, 계정 키트의 탈퇴 정리가 재시도 대기열
+    // (`account_after_delete`)로 모든 키트를 부른다. Nakama 런타임의 `RegisterAfterDeleteAccount` 훅, PlayFab DeletePlayer 가 타이틀 데이터 · 통계 · 친구를 함께 지우는 자리다.
+    /**
+     * @class IAfterDeleteAccount
+     * @brief 저장소 스레드(`IServiceStoreJob::run`)에서 부릅니다. 키트가 소유하며 바뀌지 않는 상태만 읽어야 합니다(여러 저장소 일이 동시에 부를 수 있다).
+     */
+    class IAfterDeleteAccount
+    {
+    public:
+        IAfterDeleteAccount()          = default;
+        virtual ~IAfterDeleteAccount() = default;
+
+        IAfterDeleteAccount( const IAfterDeleteAccount& )            = delete;
+        IAfterDeleteAccount& operator=( const IAfterDeleteAccount& ) = delete;
+
+        /**
+         * @brief 지운 계정 @p accountID 를 키나 값으로 둔 이 키트의 레코드를 지우거나 익명화합니다.
+         * @details 멱등이어야 한다 — 다 끝낼 때까지 다음 회차가 다시 부른다. 트랜잭션 상한 안에서 스스로 나눠 커밋한다.
+         * @return 남은 것이 없으면 Ok, 충돌로 다 못 했으면 Conflict, 저장소 문제면 Unavailable 입니다. Ok 가 아니면 대기열에 남습니다.
+         */
+        [[nodiscard]] virtual ServiceStoreResult afterDeleteAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs ) const = 0;
     };
 } // namespace sw

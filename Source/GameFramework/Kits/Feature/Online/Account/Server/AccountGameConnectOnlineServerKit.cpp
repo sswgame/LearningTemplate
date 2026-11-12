@@ -89,6 +89,9 @@ namespace sw
                     _pAuthenticator->setNowMs( nowMs );
             }
 
+            /** @brief 게임 접속 인증은 영속 표가 없다(티켓만 확인한다). */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; }
+
             void stop() override
             {
                 // 풀고 나면 엔진 자리가 이 인증기를 부르지 않는다(자리의 잠금) — 그다음에 내린다.

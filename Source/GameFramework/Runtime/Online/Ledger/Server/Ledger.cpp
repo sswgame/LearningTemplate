@@ -567,6 +567,11 @@ namespace sw
         inoutTransaction.put( getDeletionQueueTable(), key, vector<uint8>{} );
     }
 
+    void Ledger::requireNoTombstone( uint64 accountID, ServiceTransaction& inoutTransaction )
+    {
+        inoutTransaction.requireVersion( getTombstoneTable(), LedgerHolder::makeAccount( accountID ).makeKey(), ServiceRecord::kAbsentVersion );
+    }
+
     ServiceStoreResult Ledger::burnDeletedAccounts( IServiceStoreConnection& connection, int64 timeMs, int32 maxCount, int32& outBurnedCount )
     {
         outBurnedCount = 0;

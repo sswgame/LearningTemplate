@@ -56,6 +56,9 @@ namespace sw
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 서버 등록 · 배정 요청. */
             int32 getOpenJobCount() const override { return _service.getPendingCount(); }
 
+            /** @brief 서버 목록 · 점검 공지 표에는 계정이 없다. */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; }
+
             void stop() override
             {
                 if ( isStarted() == false )

@@ -33,6 +33,7 @@ namespace sw
     struct OnlineServerConfig;
 
     class EphemeralStoreRouter;
+    class IAfterDeleteAccount;
     class IClock;
     class IEphemeralStore;
     class IOnlineServerService;
@@ -91,6 +92,8 @@ namespace sw
 
         // 키트가 `initialize` 에서 채운다(`IOnlineServerKit::addRetentionRule`). 런타임이 키트를 모두 띄운 뒤 기반 규칙과 함께 보존 쓸기에 넘긴다.
         vector<ServiceRetentionRule> _listRetentionRule{};
+        // 런타임이 키트의 `initialize` 가 성공할 때마다 `getAfterDeleteAccount` 를 모은다. 계정 키트가 `start` 에서 탈퇴 정리에 넘긴다. 키트가 소유한다.
+        vector<const IAfterDeleteAccount*> _listAfterDeleteAccount{};
     };
 } // namespace sw
 
@@ -133,6 +136,12 @@ namespace sw
         virtual int32 getOpenJobCount() const { return 0; }
         /** @brief 종료 드레인이 시작될 때 한 번 불립니다. 새 일을 받지 않고 진행 중인 일을 마무리하며 접속한 클라이언트에 사유를 알립니다(`ServerShutdownNotice`). 기본은 아무 일도 하지 않습니다. */
         virtual void beginShutdown( const ServerShutdownNotice& notice ) { (void)notice; }
+
+        /**
+         * @brief 탈퇴한 계정의 이 키트 레코드를 지우는 훅입니다. 계정 id 를 키나 값으로 두는 표가 없으면 nullptr 를 반환합니다.
+         * @details 순수 가상이다 — 키트를 새로 만들면 탈퇴 정리를 정하지 않고는 컴파일되지 않는다. 훅은 키트보다 짧게 쓰인다(저장소 일이 키트 `shutdown` 전에 회수된다).
+         */
+        virtual const IAfterDeleteAccount* getAfterDeleteAccount() const = 0;
 
         /** @brief 인터페이스를 `get` 으로 받는 키트 이름(`OnlineServerKitName`)입니다. 설정에 없으면 기동 오류이고, 있으면 이 키트보다 먼저 섭니다. */
         virtual span<const utf8* const> getRequiredKits() const { return {}; }

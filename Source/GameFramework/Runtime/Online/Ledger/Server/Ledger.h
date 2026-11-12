@@ -57,6 +57,12 @@ namespace sw
          */
         static void stageAccountDeletion( uint64 accountID, int64 timeMs, ServiceTransaction& inoutTransaction );
         /**
+         * @brief 계정 @p accountID 에 묘비가 없어야 함을 @p inoutTransaction 의 조건으로 겁니다. 새 계정을 만드는 트랜잭션이 넣습니다.
+         * @details 계정 id 는 64 비트 난수이고 지운 계정의 프로필은 사라지므로 같은 id 가 다시 뽑힐 수 있다(확률 2^-64). 그 id 는 묘비가 막아 커밋이 Conflict 이고, 만드는 쪽이 새 id 로 다시 한다 —
+         *          계정 id 는 다시 쓰지 않는다.
+         */
+        static void requireNoTombstone( uint64 accountID, ServiceTransaction& inoutTransaction );
+        /**
          * @brief 소각 대기의 계정을 @p maxCount 개까지 골라 남은 잔액을 모두 소각합니다. 다 소각한 계정은 대기에서 뺍니다.
          * @details 분개 하나에 자산 `kMaxPostingCount` 개씩, 분개 키는 `acct.<16 진>/delete.<첫 자산>` 이다. 인스턴스 아이템은 상태 레코드(`item_state`)도 지운다.
          *          커밋이 지면 다음 회차가 다시 읽어 남은 것만 소각하므로 두 번 소각하지 않는다.

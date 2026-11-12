@@ -11,6 +11,8 @@
  *          - `login_account_external`: `<계정 16진>/<제공자>` 에서 주체 다이제스트로 가는 테이블이다. 연동 목록과 해제에 쓴다.
  *          - `account_deletion`: `<예약 시각 16진>/<계정 16진>` 키이며 지울 순서를 찾는 인덱스이다.
  *          - `login_account_secret`: `<계정 16진>/<제공자>` 에서 연동 비밀(암호화된 refresh token)로 가는 테이블이다. 같은 제공자로 로그인할 때마다 덮어쓴다.
+ *          - `account_after_delete`: 계정 16진 키이며 값은 없다. 지운 계정 중 키트 훅(`IAfterDeleteAccount`)을 아직 다 돌리지 못한 계정이다. 계정 지우기와 한 트랜잭션에 넣고,
+ *            모든 훅이 Ok 를 낸 회차에 지운다.
  *          - `login_revoke_queue`: `<제공자>/<계정 16진>` 에서 암호화된 연동 비밀로 가는 테이블이다. 탈퇴 정리와 연동 해제가 비밀을 여기로 옮기고, 서비스가 제공자에 철회한 뒤 지운다.
  *
  *          레코드의 첫 바이트는 형식 버전(1)이며 다른 버전은 읽지 않는다. 비밀번호, 장치 비밀, 외부 주체는 다이제스트만 저장한다.
@@ -28,6 +30,7 @@ namespace sw
 {
     enum class ServiceStoreResult : uint8;
 
+    class IAfterDeleteAccount;
     class IServiceStoreConnection;
     class ServiceTransaction;
 
@@ -106,9 +109,10 @@ namespace sw
          * @brief 예약 시각이 지난 계정을 @p maxCount 개까지 지웁니다. 이름, 프로필, 게스트, 외부 연결, 세션을 지웁니다.
          * @details 원장에는 묘비를 세우고(`Ledger::stageAccountDeletion`, 계정 지우기와 한 트랜잭션) 남은 잔액은 소각 분개로 0 으로 만든다(`Ledger::burnDeletedAccounts`).
          *          분개 · 감사 기록은 회계 · 분쟁 근거라 보존 기간까지 남긴다. 거기에는 계정 id 만 있고 개인정보는 없다(GDPR 17 조 3 항 (b) · (e) 의 보존 예외).
+         *          그 뒤 지운 계정마다 키트 훅 @p listAfterDeleteAccount 를 모두 부르고(대기열 `account_after_delete`, 모두 Ok 일 때 뺀다), 원장 잔액을 소각한다.
          * @return 지운 계정 수입니다. 저장소에 문제가 생기면 그 지점에서 멈춥니다.
          */
-        int32 purgeDueDeletions( int64 nowMs, int32 maxCount );
+        int32 purgeDueDeletions( int64 nowMs, int32 maxCount, const vector<const IAfterDeleteAccount*>& listAfterDeleteAccount );
 
         /** @brief 서비스가 고른 세션을 다시 읽어, 다른 프로세스가 밀어냈거나 끝난 세션을 `_listRevoked` 에 넣습니다. 저장소에 문제가 있으면 아무도 끊지 않습니다. */
         void refreshSessions( const vector<LoginSessionRef>& listOnline, int64 nowMs );
@@ -137,6 +141,8 @@ namespace sw
         /** @brief 계정의 현재 세션을 @p reason 이유의 묘비로 바꾸고 연결을 지우는 쓰기를 붙입니다. 세션이 없으면 아무것도 붙이지 않고 @p outSessionID 는 0입니다. */
         LoginServiceResult stageSessionRevoke( uint64 accountID, LoginRevokeReason reason, int64 nowMs, ServiceTransaction& inoutTransaction, uint64& outSessionID );
         LoginServiceResult purgeAccount( uint64 accountID, string_view deletionKey, int64 nowMs );
+        /** @brief 대기열 `account_after_delete` 의 계정을 @p maxCount 개까지 골라 키트 훅을 모두 부르고, 모두 Ok 인 계정을 대기열에서 뺍니다. */
+        void runAfterDeleteAccount( int64 nowMs, int32 maxCount, const vector<const IAfterDeleteAccount*>& listAfterDeleteAccount );
 
     private:
         IServiceStoreConnection&    _connection;
