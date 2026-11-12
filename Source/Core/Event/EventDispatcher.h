@@ -49,7 +49,7 @@ namespace sw
      *
      * @note 스냅샷을 브로드캐스트하는 방법도 있지만, 그러면 콜백이 자신을 해제해도 사본이 계속 호출되어 같은 스레드
      *       안에서의 안전성이 깨집니다. 잠금을 재귀로 바꿔 broadcast 전체를 감싸는 방법은, 임의의 콜백이 도는 내내 다른
-     *       스레드를 스핀하게 만듭니다. 제대로 열려면 reader-writer 방식으로 다시 설계해야 합니다.
+     *       스레드를 세워 둡니다. 제대로 열려면 reader-writer 방식으로 다시 설계해야 합니다.
      */
     class SW_API EventDispatcher final : public ISubsystem
     {
@@ -116,6 +116,9 @@ namespace sw
         template <typename T>
         void enqueueEvent( hashed_string channel, const T& event )
         {
+            // 이벤트의 복사(문자열 · 배열 칸의 힙 할당)는 잠금 밖에서 하고, 잠금 안에서는 아레나 자리로 옮기기만 한다(C-5).
+            // 자리를 잠금 밖에서 만들면 그 사이 `processEvents` 가 아레나를 되감을 수 있어 복사본을 먼저 만든다.
+            T                    eventCopy( event );
             ScopedLock<SpinLock> lock{ _queueSpinLock };
             const int32          allocIdx = _activeAllocatorIndex.load( std::memory_order_relaxed );
 
@@ -129,7 +132,7 @@ namespace sw
                 _arrListOverflowAllocation[allocIdx].push_back( std::move( overflowBlock ) );
             }
 
-            T* pQueuedEvent = sw_placement_new( pMem ) T( event );
+            T* pQueuedEvent = sw_placement_new( pMem ) T( std::move( eventCopy ) );
 
             auto iter = _mapChannelQueue.find( channel );
             if ( iter == _mapChannelQueue.end() )
