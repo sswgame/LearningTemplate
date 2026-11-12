@@ -356,8 +356,7 @@ namespace sw::editor
         if ( _document.getPaintLayer() == PaintLayer::Data )
         {
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Value" ) );
-            EditorWidgets::inputInt( SW_WIDGET_ID( "##Value" ), &_document.editPaintDataValue() );
-            EditorSelfTestMarks::record( "tileMap.dataLayer.value" );
+            EditorWidgets::inputInt( SW_WIDGET_ID( "##Value" ), &_document.editPaintDataValue(), 1, EditorWidgets::kImGuiDefaultIntStepFast, 0, "tileMap.dataLayer.value" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataValueTip" ) );
             const bool bRemoveDataLayer = ImGui::Button( SW_LOCKEY( "EdVerb", "Remove" ) );
             EditorSelfTestMarks::record( "tileMap.dataLayer.remove" );

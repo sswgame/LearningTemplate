@@ -172,6 +172,21 @@ namespace sw::editor
     {
         struct EditorWidgetsInternal
         {
+            /**
+             * @brief 숫자 칸(InputScalar)의 글 칸 부분에 시험 레이블을 찍습니다. 단계 단추가 있으면 마지막 항목은 글 칸과 `-` · `+` 를 묶은 그룹이라
+             *        가운데를 누르면 단추를 누른다 — ImGui 의 배치(글 칸 폭 = 전체 - 2 × (단추 + 안쪽 간격))대로 단추 몫을 뺀다.
+             */
+            static void recordNumberFieldMark( const utf8* pMark, bool bStepButtons )
+            {
+                if ( pMark == nullptr )
+                    return;
+                const ImVec2  min      = ImGui::GetItemRectMin();
+                const ImVec2  max      = ImGui::GetItemRectMax();
+                const float32 buttons  = bStepButtons ? 2.0f * ( ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x ) : 0.0f;
+                const float32 fieldMax = max.x - buttons > min.x ? max.x - buttons : max.x;
+                EditorSelfTestMarks::recordRect( pMark, float2{ min.x, min.y }, float2{ fieldMax, max.y } );
+            }
+
             /** @brief 0 건 안내를 그린 기록입니다. 감시 값이 읽는다. 에디터 범위의 상태 저장소가 소유해 에디터마다(테스트마다) 따로 센다. */
             struct HintState
             {
@@ -972,17 +987,21 @@ namespace sw::editor
         return EditorWidgetID{ pHiddenID };
     }
 
-    bool EditorWidgets::inputInt( EditorWidgetID id, int32* pValue, int32 step, int32 stepFast, int32 flags )
+    bool EditorWidgets::inputInt( EditorWidgetID id, int32* pValue, int32 step, int32 stepFast, int32 flags, const utf8* pMark )
     {
-        return ImGui::InputInt( id.c_str(), pValue, step, stepFast, flags );
+        const bool bChanged = ImGui::InputInt( id.c_str(), pValue, step, stepFast, flags );
+        EditorWidgetsInternal::recordNumberFieldMark( pMark, step > 0 );
+        return bChanged;
     }
     bool EditorWidgets::inputInt2( EditorWidgetID id, int32* arrValue, int32 flags )
     {
         return ImGui::InputInt2( id.c_str(), arrValue, flags );
     }
-    bool EditorWidgets::inputFloat( EditorWidgetID id, float32* pValue, float32 step, float32 stepFast, const utf8* pFormat, int32 flags )
+    bool EditorWidgets::inputFloat( EditorWidgetID id, float32* pValue, float32 step, float32 stepFast, const utf8* pFormat, int32 flags, const utf8* pMark )
     {
-        return ImGui::InputFloat( id.c_str(), pValue, step, stepFast, pFormat, flags );
+        const bool bChanged = ImGui::InputFloat( id.c_str(), pValue, step, stepFast, pFormat, flags );
+        EditorWidgetsInternal::recordNumberFieldMark( pMark, step > 0.0f );
+        return bChanged;
     }
     bool EditorWidgets::inputFloat2( EditorWidgetID id, float32* arrValue, const utf8* pFormat, int32 flags )
     {
@@ -992,9 +1011,11 @@ namespace sw::editor
     {
         return ImGui::InputFloat4( id.c_str(), arrValue, pFormat, flags );
     }
-    bool EditorWidgets::inputScalar( EditorWidgetID id, int32 dataType, void* pData, const void* pStep, const void* pStepFast, const utf8* pFormat, int32 flags )
+    bool EditorWidgets::inputScalar( EditorWidgetID id, int32 dataType, void* pData, const void* pStep, const void* pStepFast, const utf8* pFormat, int32 flags, const utf8* pMark )
     {
-        return ImGui::InputScalar( id.c_str(), dataType, pData, pStep, pStepFast, pFormat, flags );
+        const bool bChanged = ImGui::InputScalar( id.c_str(), dataType, pData, pStep, pStepFast, pFormat, flags );
+        EditorWidgetsInternal::recordNumberFieldMark( pMark, pStep != nullptr );
+        return bChanged;
     }
     bool EditorWidgets::inputScalarN( EditorWidgetID id, int32 dataType, void* pData, int32 components, const void* pStep, const void* pStepFast, const utf8* pFormat,
                                       int32 flags )

@@ -58,6 +58,8 @@ namespace sw::editor
          */
         [[nodiscard]] bool setTarget( GameObject* pObject );
         void               clearTarget();
+        /** @brief 새 에디터 프로세스처럼 비웁니다 — 대상 · 저장하지 않은 스택 · 되돌리기 이력. 시나리오 체인의 다음 단계 앞(`SW_AUTOMATION_STAGE_RESET`)에서 부른다. */
+        void resetToFreshEditor();
         /** @brief 대상 오브젝트입니다. 지워졌으면 nullptr 입니다. */
         GameObject* findTarget() const;
         bool        hasTarget() const { return _meshPath.empty() == false; }

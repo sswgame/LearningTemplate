@@ -16,6 +16,8 @@ source Scripts/common/Git.sh
 SHA=$(sw_git rev-parse HEAD)
 FROM=build
 DRY=0
+NO_LINUX=0
+RECORD=()
 # ctest 슬롯 수는 설정 값이다(Config/Dev/Verify.json — 없으면 멈춘다).
 CTEST_JOBS=$(py -3 -c "import json,sys; print(json.load(open('Config/Dev/Verify.json', encoding='utf-8'))['_ctestJobs'])") || { echo "Config/Dev/Verify.json 의 _ctestJobs 를 읽지 못했다"; exit 2; }
 CTEST_JOBS=${CTEST_JOBS//$'\r'/}
@@ -25,7 +27,11 @@ while true; do
     # --show: 무인 실행의 창 숨김만 끈다(App 이 SW_SHOW_WINDOWS=1 을 본다 — 판정 · 골든은 같다). 보는 사람을 위해 테스트를 하나씩 돌린다.
     --show) export SW_SHOW_WINDOWS=1; CTEST_JOBS=1; shift ;;
     --dry-run) DRY=1; shift ;;
-    *) break ;;
+    --no-linux) NO_LINUX=1; shift ;;
+    --record) RECORD=(--record); shift ;;
+    "") break ;;
+    # 인자 순서와 무관하게 모두 여기서 읽는다 — 예전에는 모르는 인자에서 멈춰 `--no-linux --from gpu-release` 의 --from 을 버리고 처음부터 돌았다.
+    *) echo "모르는 인자: $1 (--from · --show · --dry-run · --no-linux · --record)"; exit 2 ;;
   esac
 done
 case "$FROM" in
@@ -172,18 +178,18 @@ if [ $STAGE -le 4 ]; then
   run_ctest Ninja-Debug gpu -LE nogpu || windows_failed "Ninja-Debug ctest gpu"
 fi
 
-if [ "$1" = "--no-linux" ]; then
+if [ $NO_LINUX -eq 1 ]; then
   echo "WINDOWS_VERIFIED=$SHA (Linux 를 돌리지 않았다, 시작 단계 $FROM)"
   exit 0
 fi
 echo "== WINDOWS_OK, linux 시작 $(date +%T)"
-PYTHONUTF8=1 run build/verify.linux.log py -3 Scripts/dev/LinuxScenarios.py all "$@"
+PYTHONUTF8=1 run build/verify.linux.log py -3 Scripts/dev/LinuxScenarios.py all "${RECORD[@]}"
 RC=$?
 [ $DRY -eq 1 ] || tail -n 40 build/verify.linux.log
 # 새니타이저(ASan + UBSan, Linux-Debug-ASan 단위 테스트) — 묶음마다 한 번(linux-verify 스킬). 체인과 CPU 를 다투지 않게 all 뒤에 차례로 돌고, 지면 끝 줄에 적는다(push 는 WINDOWS_OK 로 이미 정해졌다).
 # --record 실행은 건너뛴다: sanitize 도 클론을 HEAD 로 되돌려(reset --hard · clean) 아직 옮기지 않은 기록 골든을 지운다 — goldens 로 옮긴 뒤 따로 돌린다.
 SAN_RC=0
-case " $* " in
+case " ${RECORD[*]} " in
   *" --record "*) echo "== sanitize 건너뜀(--record — goldens 로 옮긴 뒤 LinuxScenarios.py sanitize 를 따로 돌린다)"; SAN_RC=skip ;;
   *)
     echo "== sanitize address $(date +%T)"

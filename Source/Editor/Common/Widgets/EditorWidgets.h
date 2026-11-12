@@ -216,13 +216,14 @@ namespace sw::editor
         using InputTextCallback = int ( * )( ImGuiInputTextCallbackData* pData );
         using ComboItemGetter   = const utf8* (*)( void* pUserData, int32 index );
 
-        static bool inputInt( EditorWidgetID id, int32* pValue, int32 step = 1, int32 stepFast = kImGuiDefaultIntStepFast, int32 flags = 0 );
+        /** @brief 단계 단추(-, +)가 붙는 숫자 칸입니다. @p pMark 는 시나리오가 누를 레이블로, 글 칸 부분에 찍는다 — 부르는 쪽이 뒤에 찍으면 마지막 항목(단추 묶음)에 찍혀 클릭이 `+` 를 누른다. */
+        static bool inputInt( EditorWidgetID id, int32* pValue, int32 step = 1, int32 stepFast = kImGuiDefaultIntStepFast, int32 flags = 0, const utf8* pMark = nullptr );
         static bool inputInt2( EditorWidgetID id, int32* arrValue, int32 flags = 0 );
-        static bool inputFloat( EditorWidgetID id, float32* pValue, float32 step = 0.0f, float32 stepFast = 0.0f, const utf8* pFormat = "%.3f", int32 flags = 0 );
+        static bool inputFloat( EditorWidgetID id, float32* pValue, float32 step = 0.0f, float32 stepFast = 0.0f, const utf8* pFormat = "%.3f", int32 flags = 0, const utf8* pMark = nullptr );
         static bool inputFloat2( EditorWidgetID id, float32* arrValue, const utf8* pFormat = "%.3f", int32 flags = 0 );
         static bool inputFloat4( EditorWidgetID id, float32* arrValue, const utf8* pFormat = "%.3f", int32 flags = 0 );
         static bool inputScalar( EditorWidgetID id, int32 dataType, void* pData, const void* pStep = nullptr, const void* pStepFast = nullptr, const utf8* pFormat = nullptr,
-                                 int32 flags = 0 );
+                                 int32 flags = 0, const utf8* pMark = nullptr );
         static bool inputScalarN( EditorWidgetID id, int32 dataType, void* pData, int32 components, const void* pStep = nullptr, const void* pStepFast = nullptr,
                                   const utf8* pFormat = nullptr, int32 flags = 0 );
         static bool inputText( EditorWidgetID id, utf8* pBuffer, size_t bufferSize, int32 flags = 0, InputTextCallback pfnCallback = nullptr, void* pUserData = nullptr );

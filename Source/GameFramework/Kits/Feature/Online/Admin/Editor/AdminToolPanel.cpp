@@ -210,8 +210,7 @@ namespace sw::editor
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "AssetId" ), "Asset id" ), _assetText, 160.0f * EditorThemeUtil::getDPIScale() );
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "Amount" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        EditorWidgets::inputScalar( SW_WIDGET_ID( "##Amount" ), ImGuiDataType_S64, &_amount );
-        EditorSelfTestMarks::record( "admin.amount" );
+        EditorWidgets::inputScalar( SW_WIDGET_ID( "##Amount" ), ImGuiDataType_S64, &_amount, nullptr, nullptr, nullptr, 0, "admin.amount" );
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "MemoTicket" ), "Memo (ticket)" ), _memoText, 240.0f * EditorThemeUtil::getDPIScale() );
         EditorSelfTestMarks::record( "admin.memo" );
         ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "RefundRevokeMayLeaveADebt" ), &_bRefund );
