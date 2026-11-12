@@ -24,9 +24,10 @@
             { "_name": "ETC2", "_suffix": ".etc2", "_color": "ETC2_RGBA8_UNORM", "_normal": "EAC_RG11_UNORM", "_mask": "EAC_R11_UNORM", "_hdr": "R16G16B16A16_FLOAT" }
         ]
     },
-    "_audioOutput": {
+    "_audio": {
         "_reopenFirstDelayMs": 1000,
-        "_reopenMaxDelayMs": 30000
+        "_reopenMaxDelayMs": 30000,
+        "_clipCacheMegabytes": 192
     },
     "_deviceLostPolicy": "Quit"
 }

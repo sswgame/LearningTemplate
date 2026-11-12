@@ -121,23 +121,30 @@ namespace sw
 
     SubsystemInitResult IAudioService::initializeSubsystem()
     {
-        return initialize( engine::getSubsystem<EngineConfig>()._audioOutput ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+        return initialize( engine::getSubsystem<EngineConfig>()._audio ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
     }
 
-    bool IAudioService::initialize( const AudioOutputConfig& outputConfig )
+    bool IAudioService::initialize( const AudioConfig& config )
     {
         if ( _bInitialized )
             return true;
 
         // 다시 열기 간격은 설정 파일이 정한다(엔진 설정 바탕 층 — 코드 기본값으로 대신하지 않는다).
-        if ( outputConfig._reopenFirstDelayMs == 0 || outputConfig._reopenMaxDelayMs < outputConfig._reopenFirstDelayMs )
+        if ( config._reopenFirstDelayMs == 0 || config._reopenMaxDelayMs < config._reopenFirstDelayMs )
         {
-            SW_LOG_ERROR_ID( "AudioService.InvalidReopenDelay", "EngineConfig _audioOutput: reopen delays must be first > 0 and max >= first (first %# ms, max %# ms)", outputConfig._reopenFirstDelayMs,
-                             outputConfig._reopenMaxDelayMs );
+            SW_LOG_ERROR_ID( "AudioService.InvalidReopenDelay", "EngineConfig _audio: reopen delays must be first > 0 and max >= first (first %# ms, max %# ms)", config._reopenFirstDelayMs,
+                             config._reopenMaxDelayMs );
             return false;
         }
-        _reopenBackoff     = ExponentialBackoff::createWithRandomSeed( static_cast<int64>( outputConfig._reopenFirstDelayMs ) );
-        _reopenMaxDelayMs  = static_cast<int64>( outputConfig._reopenMaxDelayMs );
+        // 클립 캐시 예산도 설정 파일이 정한다 — 없으면 캐시가 끝없이 자라므로 기동을 멈춘다.
+        if ( config._clipCacheMegabytes == 0 )
+        {
+            SW_LOG_ERROR_ID( "AudioService.MissingClipCacheBudget", "EngineConfig _audio: _clipCacheMegabytes must be > 0" );
+            return false;
+        }
+        _pEngine->getClipStore().setBudgetBytes( static_cast<uint64>( config._clipCacheMegabytes ) * constant::memory::kBytesPerMegabyte );
+        _reopenBackoff     = ExponentialBackoff::createWithRandomSeed( static_cast<int64>( config._reopenFirstDelayMs ) );
+        _reopenMaxDelayMs  = static_cast<int64>( config._reopenMaxDelayMs );
         _reopenSecondsLeft = 0.0; // 장치 없이 시작하면 첫 update 가 바로 다시 열어 본다
 
         // 믹서 그래프는 엔진 데이터가 기준이다. 없거나 틀리면 코드 그래프로 대신하지 않고 기동이 실패한다.

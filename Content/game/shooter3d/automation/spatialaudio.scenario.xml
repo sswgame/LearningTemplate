@@ -10,6 +10,7 @@
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Audio.InstanceCount" atLeast="2" timeoutWallSeconds="10"/>
+	<Expect watch="Audio.ClipCacheBytes" atLeast="1"/><!-- 재생 중인 환경음 클립은 캐시가 들고 센다(예산 퇴출은 재생 중인 것을 빼지 않는다) -->
 	<Expect watch="Audio.ReverbIntensity" key="Cave" equals="0"/>
 	<Expect watch="Audio.EmitterDistance" target="ArenaAmbience" atLeast="10"/>
 	<Wait frames="1"/>
