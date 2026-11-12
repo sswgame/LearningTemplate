@@ -38,6 +38,9 @@ from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 kCheckTag = "CheckIncludeOrder"
 
+#: 위반 안내가 시키는 고치는 명령 — `Scripts/__main__.py` 의 `format`(`Format.mainFormat`)이다. 자체 검사가 이 명령이 실제로 include 를 고치는지 본다.
+kFixCommand = "py -3 -m Scripts format --files"
+
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
 
 
@@ -327,7 +330,7 @@ def inspectText(rawText: str, relative: str, headerMaps: tuple[dict[str, str], d
     newBody, listViolation = computeIncludeOrderInternal(body, relative, *headerMaps)
     if newBody != body:
         listViolation.append(f"{relative}: Include 순서/중복 문제가 발견되었습니다. "
-                             f"(`py -3 Scripts/lint/Format.py --files {relative}` 로 고친다)")
+                             f"(`{kFixCommand} {relative}` 로 고친다)")
     restored = ("\ufeff" if text.startswith("\ufeff") else "") + newBody.replace("\n", lineEnding)
     return listViolation, (restored if restored != rawText else None)
 

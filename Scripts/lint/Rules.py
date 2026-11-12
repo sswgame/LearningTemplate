@@ -65,7 +65,7 @@ class Rule:
 
 
 kRules: tuple[Rule, ...] = (
-    # --- 형식(고치는 것은 `format` · `format-includes`) -------------------------------------------------------------------------
+    # --- 형식(고치는 것은 `format` 하나 — include 순서 + clang-format) -------------------------------------------------------------------------
     Rule("include-order", "형식", "include 순서 · 묶음", "include 줄의 순서는 컴파일러가 보지 않는다", "lint.IncludeOrder:checkIncludeOrderScope"),
     # --- 경계(빌드 게이트가 닿지 않는 자리) ------------------------------------------------------------------------------------
     Rule("layer-includes", "경계", "아래 층 파일이 위 층 헤더를 include(Core · Engine · GameFramework · Editor 층 표)", "빌드의 #error 껍데기가 막지만 그 부분을 컴파일할 때(Debug 빌드)에야 드러나고, 아무도 include 하지 않는 헤더는 보지 않는다 — 같은 표로 커밋 때 먼저 본다", "lint.LayerIncludes:checkLayerIncludes", inputs=kLayerTables),

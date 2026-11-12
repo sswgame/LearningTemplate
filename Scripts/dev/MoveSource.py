@@ -9,7 +9,7 @@ move-source: 경로는 `Source/` 기준(폴더면 안의 파일 전부, 하위 �
   2. 추적 중인 텍스트 파일(Source · Tools · cmake · Scripts · docs · 최상위 CMake)에서 옮긴 파일의 전체 경로(`Engine/X/Y.h`)와
      폴더 접두어(`Engine/X/` — CMake 정규식 · 주석)를 새 경로로
   3. 같은 폴더 짧은 include(`#include "Y.h"`)가 옮긴 뒤 다른 폴더를 가리키게 되면 전체 경로로
-  4. 고친 C++ 파일의 include 순서를 `format-includes` 규칙으로
+  4. 고친 C++ 파일의 include 순서를 include-order 규칙으로(`format` 의 첫 단계와 같은 픽서)
 rename-symbol: 낱말 경계로 바꾼다(부분 일치 없음). 새 이름이 이미 쓰이고 있으면 겹친 파일을 알리고 멈춘다(`--force` 로 강행).
   C 계열 소스(C++ · HLSL)의 문자열 리터럴 안은 기본으로 건너뛰고 그 파일을 알린다(`--include-strings` 로 함께 바꾼다).
 """
