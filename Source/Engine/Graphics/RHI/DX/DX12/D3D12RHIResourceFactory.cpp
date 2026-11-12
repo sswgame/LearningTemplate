@@ -810,15 +810,13 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12Resource> owned = std::move( taken._resource );
 
         // 이 버퍼의 번호를 모두 놓는다(다섯 백엔드 같은 계약 — 위 `registryLock` 아래). 예전에는 값만 지우고 번호를 돌려받지 않아 힙 칸이 샜다.
-        const auto isThis = [buffer]( const D3D12RHIDevice::BindlessResourceRecord& record )
-        { return record._buffer == buffer; };
         const auto deferFree = [this]( RHIDescriptorIndex index )
         {
             _pDevice->retireBindlessReadSlot( index );
             deferFreeBindlessIndex( index );
         };
-        _pDevice->_srvRegistry.releaseIf( RHIBindlessReuse::AfterFence, isThis, deferFree );
-        _pDevice->_uavRegistry.releaseIf( RHIBindlessReuse::AfterFence, isThis, deferFree );
+        _pDevice->_srvRegistry.releaseBuffer( RHIBindlessReuse::AfterFence, buffer, deferFree );
+        _pDevice->_uavRegistry.releaseBuffer( RHIBindlessReuse::AfterFence, buffer, deferFree );
 
         _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeBuffer( buffer ) );
     }
@@ -1134,15 +1132,13 @@ namespace sw
         vector<RHIDescriptorIndex> listFreedIndex;
         {
             UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-            const auto               isThis = [texture]( const D3D12RHIDevice::BindlessResourceRecord& record )
-            { return record._texture == texture; };
-            const auto collect = [this, &listFreedIndex]( RHIDescriptorIndex index )
+            const auto               collect = [this, &listFreedIndex]( RHIDescriptorIndex index )
             {
                 _pDevice->retireBindlessReadSlot( index );
                 listFreedIndex.push_back( index );
             };
-            _pDevice->_srvRegistry.releaseIf( RHIBindlessReuse::AfterFence, isThis, collect );
-            _pDevice->_uavRegistry.releaseIf( RHIBindlessReuse::AfterFence, isThis, collect );
+            _pDevice->_srvRegistry.releaseTexture( RHIBindlessReuse::AfterFence, texture, collect );
+            _pDevice->_uavRegistry.releaseTexture( RHIBindlessReuse::AfterFence, texture, collect );
         }
         for ( const RHIDescriptorIndex index : listFreedIndex )
         {

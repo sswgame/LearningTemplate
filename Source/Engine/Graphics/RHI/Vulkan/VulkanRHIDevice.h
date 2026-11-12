@@ -407,8 +407,6 @@ namespace sw
             uint8          _bRenderTarget : 1;
             uint8          _bDepthStencil : 1;
             uint8          _reserved      : 6;
-            /// @brief 이 텍스처에 발급한 bindless 번호들입니다. 등록마다 하나씩이다(DX11 · DX12 · GL 과 같은 규칙 — 다른 쪽의 해제가 내 번호를 놓지 않는다). 파괴가 모두 놓는다.
-            vector<RHIDescriptorIndex> _listBindlessIndex;
             /// @brief 면이 여럿일 때 면마다의 2D 뷰(렌더 패스 첨부용)와 단일 RT 프레임버퍼입니다. 이때 `_imageView` 는 셰이더가 보는 배열 또는 큐브 뷰입니다.
             vector<VkImageView>   _listSliceView;
             vector<VkFramebuffer> _listSliceFramebuffer;
@@ -987,10 +985,11 @@ namespace sw
             RHIBufferHandle  _buffer{ 0 };
             RHITextureHandle _texture{ 0 };
 
-            bool operator==( const UAVEntry& other ) const { return _buffer == other._buffer && _texture == other._texture; }
+            bool             operator==( const UAVEntry& other ) const { return _buffer == other._buffer && _texture == other._texture; }
+            RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _buffer, _texture }; }
         };
         /// @brief SRV/CB 버퍼 번호 → 원본 버퍼(`_bindlessMutex` 아래). 디스크립터는 그리는 순간 슬롯 세트에 쓰므로 비운 번호도 이 프레임이 끝난 뒤 다시 낸다(`RHIBindlessReuse::AfterFence`).
-        RHIBindlessRegistry<RHIBufferHandle> _bufferRegistry;
+        RHIBindlessRegistry<RHIBufferHandle, RHIBindlessBufferOwnerOf> _bufferRegistry;
         /// @brief UAV 번호(버퍼 UAV 와 RW 텍스처가 같은 공간) → 원본(`_bindlessMutex` 아래).
         RHIBindlessRegistry<UAVEntry> _uavRegistry;
         /**
@@ -1010,9 +1009,9 @@ namespace sw
         /// @brief PSO 호환 렌더 패스, 합성 프레임버퍼, desc 렌더 패스 캐시입니다. Vulkan 만 가지고 있습니다(스왑체인 RP 는 위 `_renderPass`).
         VulkanRHIRenderPassCache _renderPassCache;
 
-        /// @brief 텍스처 번호(set 1 binding 0 배열 원소) → 그 번호를 가진 텍스처(`_bindlessMutex` 아래). 주인을 바로 찾으므로 해제가 전 텍스처를 훑지 않는다.
-        ///        비운 번호는 펜스 뒤에 원소를 더미로 되돌리고 다시 낸다(`RHIBindlessReuse::AfterFence`).
-        RHIBindlessRegistry<RHITextureHandle> _textureRegistry;
+        /// @brief 텍스처 번호(set 1 binding 0 배열 원소) → 그 번호를 가진 텍스처(`_bindlessMutex` 아래). 등록마다 새 번호이고(다른 쪽의 해제가 내 번호를 놓지 않는다),
+        ///        텍스처별 번호 목록은 등록표가 든다(`releaseTexture`). 비운 번호는 펜스 뒤에 원소를 더미로 되돌리고 다시 낸다(`RHIBindlessReuse::AfterFence`).
+        RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> _textureRegistry;
 
         VkDescriptorSetLayout _slotSetLayout;    ///< set 0: 슬롯 세트(b 0..15 UBO, t 16..31 SSBO, u 32..47 SSBO)
         VkDescriptorSetLayout _textureSetLayout; ///< set 1: 텍스처 배열과 immutable sampler

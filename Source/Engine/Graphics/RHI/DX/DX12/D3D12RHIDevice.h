@@ -449,6 +449,8 @@ namespace sw
             {
                 return _resource.Get() == other._resource.Get() && _buffer == other._buffer && _texture == other._texture;
             }
+            /** @brief 자원을 부술 때 이 칸을 찾는 주인입니다(`RHIBindlessRegistry::releaseBuffer` · `releaseTexture`). */
+            RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _buffer, _texture }; }
         };
 
         /** @brief bindless 번호 한 칸이 어느 등록표에 살아 있는가입니다(`BindlessReadSlot::_registry`). SRV · UAV 표가 번호 공간 하나를 나눈다. */
