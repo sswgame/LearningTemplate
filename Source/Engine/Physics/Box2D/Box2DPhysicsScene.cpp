@@ -19,6 +19,18 @@ namespace sw
     {
         struct Box2DPhysicsSceneInternal
         {
+            /** @brief 동적 바디의 질량을 @p mass 로 맞춥니다(관성은 같은 비로). 셰이프로 센 질량을 그대로 두려면 0 이하를 넘긴다. */
+            static void overrideMass( b2BodyId bodyID, PhysicsBodyType type, float32 mass )
+            {
+                if ( mass <= 0.0f || type != PhysicsBodyType::Dynamic )
+                    return;
+                b2MassData    massData = b2Body_GetMassData( bodyID );
+                const float32 scale    = massData.mass > 0.0f ? mass / massData.mass : 1.0f;
+                massData.rotationalInertia *= scale;
+                massData.mass = mass;
+                b2Body_SetMassData( bodyID, massData );
+            }
+
             static b2BodyType toBodyType( PhysicsBodyType type )
             {
                 switch ( type )
@@ -722,14 +734,7 @@ namespace sw
                 return handle;
             }
         }
-        if ( desc._mass > 0.0f && desc._type == PhysicsBodyType::Dynamic )
-        {
-            b2MassData    massData = b2Body_GetMassData( bodyID );
-            const float32 scale    = massData.mass > 0.0f ? desc._mass / massData.mass : 1.0f;
-            massData.rotationalInertia *= scale;
-            massData.mass = desc._mass;
-            b2Body_SetMassData( bodyID, massData );
-        }
+        Box2DPhysicsSceneInternal::overrideMass( bodyID, desc._type, desc._mass );
         ++_bodyCount;
         return handle;
     }
@@ -742,6 +747,45 @@ namespace sw
         {
             outListBody.push_back( createBody( desc ) );
         }
+    }
+
+    bool Box2DPhysicsScene::setBodyShape( PhysicsBodyHandle body, span<const PhysicsShapeDesc2D> listShape, const hashed_string& material, float32 mass )
+    {
+        BodyRecord* pRecord = findBody( body );
+        if ( pRecord == nullptr )
+        {
+            SW_LOG_ERROR_ID( "Box2DPhysicsScene.SetBodyShapeStaleBody", "setBodyShape: the body handle is stale" );
+            return false;
+        }
+        if ( listShape.empty() )
+        {
+            SW_LOG_ERROR_ID( "Box2DPhysicsScene.PhysicsBodyNeedsLeast", "A physics body needs at least one shape" );
+            return false;
+        }
+        // 옛 셰이프를 떼며 셰이프 → 바디 표에서 먼저 뺀다 — 뗄 때 Box2D 가 내는 옛 셰이프의 끝 알림은 바디를 찾지 못해 버려지고, 추적기는 이 바디가 낀 쌍의
+        // 셰이프 쌍 수를 0 으로 돌린다. 새 셰이프가 다음 step 에 다시 닿으면 쌍이 이어지고(끝 · 시작 없음), 닿지 않으면 끝난다. 사슬 조각은 사슬과 함께 지운다.
+        for ( const b2ShapeId& shapeID : pRecord->_listShapeID )
+        {
+            _mapShapeToBody.erase( Box2DUtil::makeShapeKey( shapeID ) );
+            if ( B2_IS_NULL( b2Shape_GetParentChain( shapeID ) ) )
+                b2DestroyShape( shapeID, false );
+        }
+        for ( const b2ChainId& chainID : pRecord->_listChainID )
+        {
+            b2DestroyChain( chainID );
+        }
+        pRecord->_listShapeID.clear();
+        pRecord->_listChainID.clear();
+        _contactTracker.resetSubContacts( body );
+        pRecord->_pListShape = make_shared<const ShapeDescList>( listShape.begin(), listShape.end() );
+        for ( const PhysicsShapeDesc2D& shape : listShape )
+        {
+            if ( attachShape( *pRecord, shape, material, body ) == false )
+                return false;
+        }
+        b2Body_ApplyMassFromShapes( pRecord->_bodyID ); // 옛 셰이프는 질량 갱신 없이 뗐다 — 새 셰이프로 한 번 다시 센다
+        Box2DPhysicsSceneInternal::overrideMass( pRecord->_bodyID, pRecord->_type, mass );
+        return true;
     }
 
     void Box2DPhysicsScene::destroyBody( PhysicsBodyHandle body )

@@ -288,24 +288,22 @@ namespace sw
         physics.bindBodyOwner( *this );
     }
 
-    PhysicsBodyHandle RigidBodyComponent::rebuildScaledBody( ScenePhysics& physics, IPhysicsBodyScene3D& scene )
+    PhysicsBodyHandle RigidBodyComponent::applyScaledShape( ScenePhysics& physics, IPhysicsBodyScene3D& scene )
     {
-        // 셰이프는 지을 때 배율을 굽는다 — 마지막 스텝의 자세 · 속도로 다시 지어 이어 간다(바깥 이동은 부르는 쪽이 이 뒤에 평소대로 옮긴다).
-        PhysicsBodyPage3D&      page            = *_pPosePage;
-        const uint32            index           = getPoseIndex();
-        const PhysicsBodyHandle oldBody         = page._arrBody[index];
-        const float3            linearVelocity  = scene.getLinearVelocity( oldBody );
-        const float3            angularVelocity = scene.getAngularVelocity( oldBody );
-        const float3            position        = page._arrCurrentPosition[index];
-        const quaternion        rotation        = page._arrCurrentRotation[index];
-        releasePhysics( physics );
-        createBody( physics, scene, position, rotation, _worldScale );
-        const PhysicsBodyHandle body = page._arrBody[index];
-        if ( body.isValid() && _bodyType == PhysicsBodyType::Dynamic )
+        // 셰이프는 지을 때 배율을 굽는다 — 바디를 다시 지으면 핸들이 바뀌어 닿아 있던 쌍마다 끝 → 시작이 나므로 셰이프만 간다(감사 S-4).
+        const PhysicsBodyHandle    body = _pPosePage->_arrBody[getPoseIndex()];
+        vector<PhysicsShapeDesc3D> listShape;
+        listShape.reserve( _listShape.size() );
+        for ( const PhysicsShapeDesc3D& shape : _listShape )
         {
-            scene.setLinearVelocity( body, linearVelocity );
-            scene.setAngularVelocity( body, angularVelocity );
+            listShape.push_back( PhysicsComponent::makeScaledShape( shape, _worldScale ) );
         }
+        if ( scene.setBodyShape( body, span<const PhysicsShapeDesc3D>{ listShape.data(), listShape.size() }, _material, _mass ) == false )
+        {
+            releasePhysics( physics );
+            return PhysicsBodyHandle{};
+        }
+        markShapeScale( _worldScale );
         return body;
     }
 
@@ -351,7 +349,7 @@ namespace sw
             PhysicsComponent::readWorldPose( *this, position, rotation, _worldScale );
         if ( isShapeScaleStale( _worldScale ) )
         {
-            body = rebuildScaledBody( physics, *pScene );
+            body = applyScaledShape( physics, *pScene );
             if ( body.isValid() == false )
                 return;
         }

@@ -61,6 +61,7 @@ namespace sw
         void              createBodies( span<const PhysicsBodyDesc2D> listDesc, vector<PhysicsBodyHandle>& outListBody ) override;
         void              destroyBody( PhysicsBodyHandle body ) override;
         void              destroyBodies( span<const PhysicsBodyHandle> listBody ) override;
+        bool              setBodyShape( PhysicsBodyHandle body, span<const PhysicsShapeDesc2D> listShape, const hashed_string& material, float32 mass ) override;
         bool              isBodyValid( PhysicsBodyHandle body ) const override;
         uint32            getBodyCount() const override;
         void              setBodyEnabled( PhysicsBodyHandle body, bool bEnabled ) override;

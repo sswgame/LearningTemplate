@@ -1,4 +1,4 @@
-// PhysicsShapeScaleTest — 켜진 채 트랜스폼 배율을 바꾸면 콜라이더 셰이프가 다음 물리 프레임에 새 배율을 따른다(감사 S-4). 디바이스 없음(nogpu).
+// PhysicsShapeScaleTest — 켜진 채 트랜스폼 배율을 바꾸면 콜라이더 셰이프가 다음 물리 프레임에 새 배율을 따르고, 바디는 그대로라 닿아 있던 접촉이 이어진다(감사 S-4). 디바이스 없음(nogpu).
 // 언리얼 `UpdateBodyScale`(트랜스폼 갱신마다 셰이프 배율)과 같은 계약이다 — 만들 때 크기로 남아 그림과 어긋나지 않는다.
 #include "pch.h"
 
@@ -8,6 +8,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
@@ -52,6 +53,35 @@ namespace
             vector<PhysicsBodyHandle> listBody;
             (void)scene.overlapShape( probe, position, 0.0f, PhysicsQueryFilter{}, listBody );
             return contains( listBody, body );
+        }
+
+        /** @brief @p position 에 셰이프 @p shape 하나를 단 강체 오브젝트를 만듭니다. */
+        template <typename TBody, typename TShape>
+        static TBody* addBody( GameObjectManager& manager, const utf8* pName, const TShape& shape, PhysicsBodyType type, const float3& position )
+        {
+            GameObject* pObject = manager.createGameObject( hashed_string( pName ) );
+            if ( pObject == nullptr )
+                return nullptr;
+            TBody* pBody = pObject->addComponent<TBody>();
+            if ( pBody == nullptr )
+                return nullptr;
+            pBody->setShape( shape );
+            pBody->setBodyType( type );
+            pBody->setLocalPosition( position );
+            return pBody;
+        }
+
+        /** @brief 이번 프레임 이벤트 가운데 바디 @p body 가 낀 @p phase 수입니다. */
+        template <typename TEvent>
+        static uint32 countPhase( const vector<TEvent>& listEvent, PhysicsBodyHandle body, PhysicsContactPhase phase )
+        {
+            uint32 count = 0;
+            for ( const TEvent& event : listEvent )
+            {
+                const bool bInvolved = event._bodyA == body || event._bodyB == body;
+                count += ( bInvolved && event._phase == phase ) ? 1u : 0u;
+            }
+            return count;
         }
     };
 } // namespace
@@ -99,7 +129,7 @@ SW_TEST_CASE( PhysicsShapeScaleTest, RigidBody3DFollowsScale )
 }
 
 /**
- * @brief [PhysicsShapeScaleTest] 시작한 동적 3D 강체의 배율을 바꿔도 속도는 이어지고, 배율이 그대로면 바디를 다시 짓지 않는다(핸들 그대로)
+ * @brief [PhysicsShapeScaleTest] 시작한 동적 3D 강체의 배율을 바꿔도 바디는 그대로(핸들 그대로 — 셰이프만 간다)이고 속도가 이어진다
  */
 SW_TEST_CASE( PhysicsShapeScaleTest, RigidBody3DRescaleKeepsVelocity )
 {
@@ -130,7 +160,7 @@ SW_TEST_CASE( PhysicsShapeScaleTest, RigidBody3DRescaleKeepsVelocity )
     pBody->setLocalScale( float3{ 2.0f, 2.0f, 2.0f } );
     manager.update( Internal::kFrame );
     SW_REQUIRE_TRUE( pBody->getBodyHandle().isValid() );
-    SW_EXPECT_TRUE( unscaled != pBody->getBodyHandle() );                // 셰이프를 새 배율로 다시 지었다
+    SW_EXPECT_TRUE( unscaled == pBody->getBodyHandle() );                // 바디를 다시 짓지 않고 셰이프만 갈았다
     SW_EXPECT_NEAR( speedBefore, pBody->getLinearVelocity()._x, 0.05f ); // 감쇠 한 프레임 몫만 다르다
 }
 
@@ -162,4 +192,95 @@ SW_TEST_CASE( PhysicsShapeScaleTest, RigidBody2DFollowsScale )
     SW_REQUIRE_TRUE( pBody->getBodyHandle().isValid() );
     SW_EXPECT_TRUE( Internal::isOverlapping2D( *pScene, float2{ 0.8f, 0.0f }, pBody->getBodyHandle() ) );
     SW_EXPECT_FALSE( Internal::isOverlapping2D( *pScene, float2{ 1.2f, 0.0f }, pBody->getBodyHandle() ) );
+}
+
+/**
+ * @brief [PhysicsShapeScaleTest] 바닥에 놓인 3D 상자의 배율을 바꿔도 접촉은 끝 → 시작을 내지 않는다(셰이프만 간다 — 감사 S-4) — 줄여 떨어지면 그때만 끝난다
+ * @details 상자는 바닥에 0.01 들어가 닿은 채 놓인다. 가로(XZ)만 1.5 배로 키우면 높이가 그대로라 계속 닿아 있다. 이어서 세로를 0.5 배로 줄이면 바닥과
+ *          0.24 벌어져 다음 프레임에 끝이 난다.
+ */
+SW_TEST_CASE( PhysicsShapeScaleTest, RigidBody3DRescaleKeepsContact )
+{
+    using Internal = TestPhysicsShapeScaleInternal;
+    GameObjectManager  manager;
+    PhysicsShapeDesc3D box;
+    box._type                  = PhysicsShapeType3D::Box;
+    box._halfExtents           = float3{ 0.5f, 0.5f, 0.5f };
+    RigidBodyComponent* pFloor = Internal::addBody<RigidBodyComponent>( manager, "Floor", box, PhysicsBodyType::Static, float3{ 0.0f, 0.0f, 0.0f } );
+    RigidBodyComponent* pCrate = Internal::addBody<RigidBodyComponent>( manager, "Crate", box, PhysicsBodyType::Dynamic, float3{ 0.0f, 0.99f, 0.0f } );
+    SW_REQUIRE_NOT_NULL( pFloor );
+    SW_REQUIRE_NOT_NULL( pCrate );
+    const ScenePhysics& physics = manager.getSubsystem<ScenePhysics>();
+    manager.beginPlay();
+    uint32 begin = 0;
+    for ( uint32 frame = 0; frame < 30; ++frame )
+    {
+        manager.update( Internal::kFrame );
+        begin += Internal::countPhase( physics.getFrameEvents3D(), pCrate->getBodyHandle(), PhysicsContactPhase::Begin );
+    }
+    SW_REQUIRE_EQUAL( 1u, begin ); // 바닥에 닿았다
+    const PhysicsBodyHandle crate = pCrate->getBodyHandle();
+
+    pCrate->setLocalScale( float3{ 1.5f, 1.0f, 1.5f } );
+    uint32 restart = 0;
+    for ( uint32 frame = 0; frame < 10; ++frame )
+    {
+        manager.update( Internal::kFrame );
+        restart += Internal::countPhase( physics.getFrameEvents3D(), crate, PhysicsContactPhase::Begin );
+        restart += Internal::countPhase( physics.getFrameEvents3D(), crate, PhysicsContactPhase::End );
+    }
+    SW_EXPECT_TRUE( crate == pCrate->getBodyHandle() );
+    SW_EXPECT_EQUAL( 0u, restart );
+    const IPhysicsScene3D* pScene = physics.findScene3D();
+    SW_REQUIRE_NOT_NULL( pScene );
+    SW_EXPECT_TRUE( Internal::isOverlapping3D( *pScene, float3{ 0.65f, 0.99f, 0.0f }, crate ) ); // 셰이프는 새 배율이다
+
+    pCrate->setLocalScale( float3{ 1.5f, 0.5f, 1.5f } );
+    manager.update( Internal::kFrame );
+    SW_EXPECT_EQUAL( 1u, Internal::countPhase( physics.getFrameEvents3D(), crate, PhysicsContactPhase::End ) );
+}
+
+/**
+ * @brief [PhysicsShapeScaleTest] 바닥에 놓인 2D 상자의 배율을 바꿔도 접촉은 끝 → 시작을 내지 않는다 — 줄여 떨어지면 그때만 끝난다(3D 와 같은 계약)
+ * @details Box2D 는 셰이프를 떼고 다시 붙인다 — 옛 셰이프의 끝은 버리고 추적기가 쌍을 이어 둔다(`PhysicsContactTracker::resetSubContacts`).
+ */
+SW_TEST_CASE( PhysicsShapeScaleTest, RigidBody2DRescaleKeepsContact )
+{
+    using Internal = TestPhysicsShapeScaleInternal;
+    GameObjectManager  manager;
+    PhysicsShapeDesc2D box;
+    box._type                    = PhysicsShapeType2D::Box;
+    box._halfExtents             = float2{ 0.5f, 0.5f };
+    RigidBody2DComponent* pFloor = Internal::addBody<RigidBody2DComponent>( manager, "Floor2D", box, PhysicsBodyType::Static, float3{ 0.0f, 0.0f, 0.0f } );
+    RigidBody2DComponent* pCrate = Internal::addBody<RigidBody2DComponent>( manager, "Crate2D", box, PhysicsBodyType::Dynamic, float3{ 0.0f, 0.99f, 0.0f } );
+    SW_REQUIRE_NOT_NULL( pFloor );
+    SW_REQUIRE_NOT_NULL( pCrate );
+    const ScenePhysics& physics = manager.getSubsystem<ScenePhysics>();
+    manager.beginPlay();
+    uint32 begin = 0;
+    for ( uint32 frame = 0; frame < 30; ++frame )
+    {
+        manager.update( Internal::kFrame );
+        begin += Internal::countPhase( physics.getFrameEvents2D(), pCrate->getBodyHandle(), PhysicsContactPhase::Begin );
+    }
+    SW_REQUIRE_EQUAL( 1u, begin );
+    const PhysicsBodyHandle crate = pCrate->getBodyHandle();
+
+    pCrate->setLocalScale( float3{ 1.5f, 1.0f, 1.0f } );
+    uint32 restart = 0;
+    for ( uint32 frame = 0; frame < 10; ++frame )
+    {
+        manager.update( Internal::kFrame );
+        restart += Internal::countPhase( physics.getFrameEvents2D(), crate, PhysicsContactPhase::Begin );
+        restart += Internal::countPhase( physics.getFrameEvents2D(), crate, PhysicsContactPhase::End );
+    }
+    SW_EXPECT_TRUE( crate == pCrate->getBodyHandle() );
+    SW_EXPECT_EQUAL( 0u, restart );
+    const IPhysicsScene2D* pScene = physics.findScene2D();
+    SW_REQUIRE_NOT_NULL( pScene );
+    SW_EXPECT_TRUE( Internal::isOverlapping2D( *pScene, float2{ 0.65f, 0.99f }, crate ) );
+
+    pCrate->setLocalScale( float3{ 1.5f, 0.5f, 1.0f } );
+    manager.update( Internal::kFrame );
+    SW_EXPECT_EQUAL( 1u, Internal::countPhase( physics.getFrameEvents2D(), crate, PhysicsContactPhase::End ) );
 }

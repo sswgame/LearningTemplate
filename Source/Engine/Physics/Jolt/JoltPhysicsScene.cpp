@@ -88,6 +88,27 @@ namespace sw
                 return lengthSq > limit * limit ? velocity * ( limit / ::sqrtf( lengthSq ) ) : velocity;
             }
 
+            /**
+             * @brief 셰이프 @p pShape 의 질량 · 관성입니다(@p mass 가 0 보다 크면 그 질량으로 맞춘다).
+             * @details 삼각 메시는 부피가 없어 Jolt 가 질량을 셀 수 없다(움직임 정보를 만들면 단언) — 경계 상자의 질량 · 관성을 준다. 평평한 메시도 두께를 둔다.
+             */
+            static JPH::MassProperties computeMassProperties( const JPH::Shape& shape, float32 density, float32 mass )
+            {
+                JPH::MassProperties massProperties;
+                if ( shape.MustBeStatic() )
+                {
+                    const JPH::Vec3 boxSize = JPH::Vec3::sMax( shape.GetLocalBounds().GetSize(), JPH::Vec3::sReplicate( kMinMeshMassBoxSize ) );
+                    massProperties.SetMassAndInertiaOfSolidBox( boxSize, density );
+                }
+                else
+                {
+                    massProperties = shape.GetMassProperties();
+                }
+                if ( mass > 0.0f )
+                    massProperties.ScaleToMass( mass );
+                return massProperties;
+            }
+
             static float32 combineFriction( float32 frictionA, float32 frictionB ) { return ::sqrtf( frictionA * frictionB ); }
             static float32 combineRestitution( float32 restitutionA, float32 restitutionB ) { return restitutionA > restitutionB ? restitutionA : restitutionB; }
 
@@ -723,14 +744,8 @@ namespace sw
         const bool bHasMotion = bMoving || desc._bAllowTypeChange;
         if ( bHasMotion && pShape->MustBeStatic() )
         {
-            // 삼각 메시는 부피가 없어 Jolt 가 질량을 셀 수 없다(움직임 정보를 만들면 단언) — 경계 상자의 질량 · 관성을 준다. 평평한 메시도 두께를 둔다.
-            const JPH::Vec3     boxSize = JPH::Vec3::sMax( pShape->GetLocalBounds().GetSize(), JPH::Vec3::sReplicate( JoltPhysicsSceneInternal::kMinMeshMassBoxSize ) );
-            JPH::MassProperties massProperties;
-            massProperties.SetMassAndInertiaOfSolidBox( boxSize, material._density );
-            if ( desc._mass > 0.0f )
-                massProperties.ScaleToMass( desc._mass );
             settings.mOverrideMassProperties = JPH::EOverrideMassProperties::MassAndInertiaProvided;
-            settings.mMassPropertiesOverride = massProperties;
+            settings.mMassPropertiesOverride = JoltPhysicsSceneInternal::computeMassProperties( *pShape, material._density, desc._mass );
         }
         else if ( desc._mass > 0.0f && bMoving )
         {
@@ -800,6 +815,37 @@ namespace sw
             const JPH::BodyInterface::AddState state = bodyInterface.AddBodiesPrepare( listMovingID.data(), static_cast<int32>( listMovingID.size() ) );
             bodyInterface.AddBodiesFinalize( listMovingID.data(), static_cast<int32>( listMovingID.size() ), state, JPH::EActivation::Activate );
         }
+    }
+
+    bool JoltPhysicsScene::setBodyShape( PhysicsBodyHandle body, span<const PhysicsShapeDesc3D> listShape, const hashed_string& material, float32 mass )
+    {
+        BodyRecord* pRecord = findBody( body );
+        if ( pRecord == nullptr )
+        {
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.SetBodyShapeStaleBody", "setBodyShape: the body handle is stale" );
+            return false;
+        }
+        const JPH::RefConst<JPH::Shape> pShape = createJoltShape( listShape, material, pRecord->_type != PhysicsBodyType::Dynamic );
+        if ( pShape == nullptr )
+            return false;
+        const PhysicsMaterialDef* pMaterialDef = resolveMaterial( material, hashed_string{} );
+        if ( pMaterialDef == nullptr )
+            return false;
+        // 바디 id 가 그대로라 접촉 쌍도 그대로다 — Jolt 는 옛 셰이프 쌍의 제거와 새 쌍의 추가를 같은 step 에 짝지어 알리고(같은 서브 셰이프 쌍이면 유지),
+        // 추적기는 바디 쌍의 셰이프 쌍 수가 0 이 되지 않는 한 끝 · 시작을 내지 않는다.
+        const JPH::EActivation activation = pRecord->_type == PhysicsBodyType::Static ? JPH::EActivation::DontActivate : JPH::EActivation::Activate;
+        _system.GetBodyInterface().SetShape( pRecord->_bodyID, pShape.GetPtr(), false, activation );
+        {
+            // `SetShape` 의 질량 갱신은 셰이프 질량만 쓴다 — 만들 때와 같이 지정 질량 · 메시 상자 질량을 맞춘다. 움직임 정보가 없는 정적 바디는 질량이 없다.
+            const JPH::BodyLockWrite lock{ _system.GetBodyLockInterface(), pRecord->_bodyID };
+            if ( lock.Succeeded() && lock.GetBody().GetMotionPropertiesUnchecked() != nullptr )
+            {
+                JPH::MotionProperties& motion = *lock.GetBody().GetMotionPropertiesUnchecked();
+                motion.SetMassProperties( motion.GetAllowedDOFs(), JoltPhysicsSceneInternal::computeMassProperties( *pShape, pMaterialDef->_density, mass ) );
+            }
+        }
+        pRecord->_pListShape = make_shared<const ShapeDescList>( listShape.begin(), listShape.end() );
+        return true;
     }
 
     void JoltPhysicsScene::destroyBody( PhysicsBodyHandle body )
