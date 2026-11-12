@@ -208,4 +208,23 @@ namespace sw
             return TErase( connection, accountID, nowMs );
         }
     };
+
+    /** @brief 주인 @p TOwner 의 상수 멤버 함수 @p TErase 를 훅으로 감쌉니다(바뀌지 않는 정의를 읽는 서비스). 주인보다 짧게 삽니다. */
+    template <class TOwner, ServiceStoreResult ( TOwner::*TErase )( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs ) const>
+    class AfterDeleteAccountMember final : public IAfterDeleteAccount
+    {
+    public:
+        explicit AfterDeleteAccountMember( const TOwner* pOwner )
+            : _pOwner{ pOwner }
+        {
+        }
+
+        [[nodiscard]] ServiceStoreResult afterDeleteAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs ) const override
+        {
+            return ( _pOwner->*TErase )( connection, accountID, nowMs );
+        }
+
+    private:
+        const TOwner* _pOwner;
+    };
 } // namespace sw

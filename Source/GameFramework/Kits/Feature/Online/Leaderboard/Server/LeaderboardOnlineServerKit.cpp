@@ -30,6 +30,7 @@ namespace sw
                 , _listInlineBoardID{}
                 , _service{}
                 , _server{}
+                , _afterDeleteAccount{ &_service }
             {
             }
 
@@ -47,6 +48,7 @@ namespace sw
                     SW_LOG_WARNING_ID( "LeaderboardOnlineServerKit.LeaderboardKitNeitherCatalog", "Leaderboard kit: neither _catalog nor _listBoardID - no boards are registered" );
                 // 매칭 키트가 실력 모드의 통계를 읽는다. 접속한 계정의 통계만 메모리에 있다.
                 constexpr int64 kDayMs = constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond;
+                _service.setPastScoreRetentionMs( kitConfig._pastScoreRetentionDays * kDayMs ); // 탈퇴 정리가 지울 지난 기간 — 보존 규칙과 같은 값
                 return registerServerService( context, entry, &_server )
                     .and_then( [&]
                 { return exposeInterface<IAccountStatSource>( context, entry, _service ); } )
@@ -73,6 +75,9 @@ namespace sw
                 _server.initialize( &_service, context._kits.find<IAccountDirectory>(), context._kits.find<IAccountPresence>(), context._pMetricRegistry );
                 return {};
             }
+
+            /** @brief 탈퇴한 계정의 통계 · 업적 · 점수 · 시즌 결과를 지운다(`LeaderboardService::eraseAccount`). */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return &_afterDeleteAccount; }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 기록 쓰기. */
             int32 getOpenJobCount() const override { return _service.getPendingCount(); }
@@ -125,10 +130,11 @@ namespace sw
             }
 
         private:
-            shared_ptr<const LeaderboardCatalog> _pCatalog;          ///< 설정 `_catalog` 의 공유 캐시 한 벌(없으면 nullptr)
-            vector<string>                       _listInlineBoardID; ///< 설정 `_listBoardID`
-            LeaderboardService                   _service;
-            LeaderboardServer                    _server;
+            shared_ptr<const LeaderboardCatalog>                                            _pCatalog;          ///< 설정 `_catalog` 의 공유 캐시 한 벌(없으면 nullptr)
+            vector<string>                                                                  _listInlineBoardID; ///< 설정 `_listBoardID`
+            LeaderboardService                                                              _service;
+            LeaderboardServer                                                               _server;
+            AfterDeleteAccountMember<LeaderboardService, &LeaderboardService::eraseAccount> _afterDeleteAccount; ///< `_service` 를 빌린다(뒤에 선언)
         };
     } // namespace
 } // namespace sw

@@ -33,6 +33,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardTypes.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountStatSource.h"
+#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
@@ -138,6 +139,14 @@ namespace sw
         const LeaderboardDef* findBoard( string_view boardID ) const;
         /** @brief 현재 기간 id 를 반환합니다. 기간 시작 시각이며 None 이면 0입니다. */
         uint64 computePeriodID( const LeaderboardDef& definition, UnixMilliseconds nowMs ) const;
+        /** @brief 지난 기간 점수를 남기는 기간입니다. 키트 조립이 보존 규칙과 같은 값을 넣습니다(탈퇴 정리가 지울 기간을 정한다). */
+        void setPastScoreRetentionMs( int64 retentionMs ) { _pastScoreRetentionMs = retentionMs; }
+        /**
+         * @brief 탈퇴한 계정의 통계 · 업적 · 점수 · 시즌 결과를 지웁니다(키트 조립이 `AfterDeleteAccountMember` 로 훅에 건다). 저장소 스레드에서 부르며 `start` 뒤 바뀌지 않는 보드 정의만 읽습니다.
+         * @details 통계 · 업적은 계정 접두어로, 점수는 보드마다 남아 있을 수 있는 기간(초기화 없음 · 시즌 전부 · 일간/주간은 보존 기간 안)의 키로, 시즌 결과는 시즌마다 키로 지운다.
+         *          캐시 층의 순위(정렬 집합)는 서비스 스레드 것이라 여기서 지우지 않는다 — 기간이 바뀌거나 다시 채울 때 영속 표에서 사라진다.
+         */
+        [[nodiscard]] ServiceStoreResult eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs ) const;
 
         /**
          * @brief 점수를 냅니다. 서버 게임 로직이 부르며, 클라이언트 제출은 바인딩이 `_bClientSubmit` 보드만 넘깁니다. 요청 태그가 0이면 완료가 없습니다.
@@ -282,6 +291,7 @@ namespace sw
 
     private:
         unordered_map<string, LeaderboardDef>              _mapBoard;
+        int64                                              _pastScoreRetentionMs;    ///< `setPastScoreRetentionMs`
         unordered_map<string, vector<PendingRead>>         _mapRankKeyToWaitingRead; ///< 다시 채우는 동안 대기 중인 읽기이다
         unordered_map<string, vector<LeaderboardScoreRow>> _mapRankKeyToLateWrite;   ///< 다시 채우는 동안 쓴 점수(캐시 점수)이다. 채운 뒤 한 번 더 싣는다
         unordered_map<uint64, PendingRead>                 _mapReadyRequestToRead;

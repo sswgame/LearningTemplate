@@ -16,6 +16,7 @@
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
 
@@ -869,4 +870,53 @@ SW_TEST_CASE( LeaderboardServiceTest, RetryableReplyReachesTheServiceAgain )
     finished._result = LeaderboardResult::Ok;
     rig.expectFailureReachesService( LeaderboardMethod::SubmitScore::kID, OnlineError::kUnavailable, finished );
     rig.expectFailureReachesService( LeaderboardMethod::SubmitScore::kID, OnlineError::kBusy, finished );
+}
+
+namespace
+{
+    /** @brief @p table 의 레코드 중 키에 계정 @p accountID(16진)가 든 것의 수입니다. */
+    int32 countAccountKeys( MemoryServiceDatabase& database, const utf8* pTable, AccountID accountID )
+    {
+        vector<ServiceRecord> listRecord;
+        SW_EXPECT_TRUE( database.listRecords( hashed_string( pTable ), "", "", 1000, false, listRecord ) == ServiceStoreResult::Ok );
+        const string accountHex = ServiceKeyUtil::makeHex64( accountID );
+        int32        count      = 0;
+        for ( const ServiceRecord& record : listRecord )
+        {
+            count += record._key.find( accountHex ) != string::npos ? 1 : 0;
+        }
+        return count;
+    }
+} // namespace
+
+/**
+ * @brief [LeaderboardServiceTest] 계정 삭제 → 리더보드 키트에 그 계정의 레코드 0: 통계 · 점수(일간 · 초기화 없음 · 시즌)와 만료 색인 · 시즌 결과가 지워지고 다른 계정은 남는다(감사 P0-7)
+ * @details 변이: 시즌 결과나 만료 색인을 빼면 그 표에 계정 키가 남고, 기간 걷기를 빼면 일간 점수가 남아 진다.
+ */
+SW_TEST_CASE( LeaderboardServiceTest, AccountDeletionErasesScoresAndStats )
+{
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
+    rig._service.setPastScoreRetentionMs( 3 * kDayMs );
+    rig.addBoard( "daily", LeaderboardOrder::Descending, LeaderboardUpdate::Best, LeaderboardReset::Daily );
+    rig.addBoard( "best" );
+    rig.addSeasonBoard( "season", 2 );
+    for ( const AccountID accountID : { AccountID{ 1 }, AccountID{ 2 } } )
+    {
+        SW_REQUIRE_TRUE( rig.submit( "daily", accountID, 10 )._result == LeaderboardResult::Ok );
+        SW_REQUIRE_TRUE( rig.submit( "daily", accountID, 10, kNowMs - kDayMs )._result == LeaderboardResult::Ok ); // 어제 기간
+        SW_REQUIRE_TRUE( rig.submit( "best", accountID, 10 )._result == LeaderboardResult::Ok );
+        SW_REQUIRE_TRUE( rig.submit( "season", accountID, 10, kInSeasonMs )._result == LeaderboardResult::Ok );
+        SW_REQUIRE_TRUE( rig.stat( accountID, "kills", 3, LeaderboardUpdate::Sum )._result == LeaderboardResult::Ok );
+    }
+    SW_REQUIRE_EQUAL( 1, rig.settle( "season", 1 )._succeededCount );
+
+    SW_REQUIRE_TRUE( rig._service.eraseAccount( world._database, 1, kNowMs ) == ServiceStoreResult::Ok );
+    for ( const utf8* pTable : { "lb_score", "lb_score_expiry", "lb_season_result", "lb_season_result_expiry", "lb_stat", "lb_achievement" } )
+    {
+        SW_EXPECT_EQUAL( 0, countAccountKeys( world._database, pTable, 1 ) );
+    }
+    SW_EXPECT_EQUAL( 4, countAccountKeys( world._database, "lb_score", 2 ) ); // 다른 계정은 그대로다(일간 둘 · 초기화 없음 · 시즌)
+    SW_EXPECT_EQUAL( 1, countAccountKeys( world._database, "lb_season_result", 2 ) );
+    SW_EXPECT_TRUE( rig._service.eraseAccount( world._database, 1, kNowMs ) == ServiceStoreResult::Ok ); // 멱등
 }

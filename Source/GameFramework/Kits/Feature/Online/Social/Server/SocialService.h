@@ -96,6 +96,13 @@ namespace sw
         /** @brief 접속 상태의 시한을 연장합니다. */
         void update( UnixMilliseconds nowMs );
 
+        /**
+         * @brief 탈퇴한 계정의 관계 레코드를 모두 지웁니다(친구 키트의 `IAfterDeleteAccount` 몫). 저장소 스레드에서 부릅니다.
+         * @details 내 줄(`<나>/<상대>`)과 상대 쪽 짝 줄을 지우고 상대 개수를 고친다. 내 쪽 줄이 없는 "나를 막은 사람" 은 역색인(`social_blocked_by`, `<막힌 사람>/<막은 사람>`)으로 찾는다.
+         *          마지막으로 내 개수를 지운다. 짝마다 커밋하고 멱등이다.
+         */
+        [[nodiscard]] static ServiceStoreResult eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs );
+
         // 관계 함수들은 비동기이며 완료는 요청 태그로 받는다
         void changeLink( SocialLinkOperation operation, AccountID accountID, AccountID otherID, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 정식 계정의 표시 이름으로 친구 신청합니다. 완료의 `_otherID` 가 찾은 계정입니다. */

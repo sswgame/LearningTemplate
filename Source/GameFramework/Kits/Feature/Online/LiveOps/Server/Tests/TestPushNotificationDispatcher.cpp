@@ -300,3 +300,20 @@ SW_TEST_CASE( PushDispatcherTest, TopicClaimsExpireAfterWindow )
     SW_EXPECT_EQUAL( 1, report._deletedCount );
     SW_EXPECT_EQUAL( 1, rig._database.countRecords( claimTable ) );
 }
+
+/** @brief [PushNotificationDispatcherTest] 계정 삭제 → 라이브 운영 키트에 그 계정의 레코드 0: 기기 목록(푸시 토큰)이 지워지고 다른 계정의 기기는 남는다(감사 P0-7) */
+SW_TEST_CASE( PushNotificationDispatcherTest, AccountDeletionErasesDevices )
+{
+    MemoryServiceDatabase database;
+    ServiceTransaction    seed;
+    seed.put( hashed_string( "liveops_device" ), PushNotificationDispatcher::makeDeviceKey( 7, "fake", "token-a" ), vector<uint8>{ 1 } );
+    seed.put( hashed_string( "liveops_device" ), PushNotificationDispatcher::makeDeviceKey( 7, "fake", "token-b" ), vector<uint8>{ 1 } );
+    seed.put( hashed_string( "liveops_device" ), PushNotificationDispatcher::makeDeviceKey( 8, "fake", "token-c" ), vector<uint8>{ 1 } );
+    SW_REQUIRE_TRUE( database.commit( seed ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( PushNotificationDispatcher::eraseAccount( database, 7, 0 ) == ServiceStoreResult::Ok );
+    vector<ServiceRecord> listRecord;
+    SW_REQUIRE_TRUE( database.listRecords( hashed_string( "liveops_device" ), PushNotificationDispatcher::makeAccountPrefix( 7 ), "", 10, false, listRecord ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listRecord.empty() );
+    SW_REQUIRE_TRUE( database.listRecords( hashed_string( "liveops_device" ), PushNotificationDispatcher::makeAccountPrefix( 8 ), "", 10, false, listRecord ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listRecord.size() );
+}

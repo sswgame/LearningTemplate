@@ -7,6 +7,7 @@
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
 
@@ -99,4 +100,19 @@ SW_TEST_CASE( AdminStoreLogicTest, MutationsNeedMemoAndKey )
     noKey._keyHigh     = 0;
     SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, noKey, reply ).hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( fixture.database.computeContentHash(), hashBefore );
+}
+
+/** @brief [AdminStoreLogicTest] 계정 삭제 → GM 키트에 그 계정의 레코드 0: 등급(`admin_role`)이 지워지고 다른 계정의 등급은 남는다(감사 P0-7) */
+SW_TEST_CASE( AdminStoreLogicTest, AccountDeletionErasesTheRole )
+{
+    MemoryServiceDatabase database;
+    ServiceTransaction    seed;
+    seed.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 7 ), vector<uint8>{ 1 } );
+    seed.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 8 ), vector<uint8>{ 1 } );
+    SW_REQUIRE_TRUE( database.commit( seed ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( AdminStoreLogic::eraseAccount( database, 7, 0 ) == ServiceStoreResult::Ok );
+    ServiceRecord record;
+    SW_EXPECT_TRUE( database.readRecord( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 7 ), record ) == ServiceStoreResult::NotFound );
+    SW_EXPECT_TRUE( database.readRecord( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 8 ), record ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( AdminStoreLogic::eraseAccount( database, 7, 0 ) == ServiceStoreResult::Ok ); // 멱등
 }

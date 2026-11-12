@@ -39,6 +39,8 @@ namespace sw
     struct SW_KIT_SERVER_API AdminStoreLogic
     {
         static const hashed_string& getRoleTable(); ///< "admin_role" 이다. 키는 계정 16진 문자열이고 값은 등급 1바이트이다
+        /** @brief 탈퇴한 계정의 GM 등급(`admin_role`)을 지웁니다(`IAfterDeleteAccount`). GM 감사 기록은 감사 보존 기간까지 남긴다. */
+        [[nodiscard]] static ServiceStoreResult eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs );
 
         static AdminServiceResult execute( IServiceStoreConnection& connection, const AdminCommand& command, AdminReply& outReply );
         /** @brief 등급을 읽습니다. 레코드가 없으면 None 과 버전 0을 반환합니다. */

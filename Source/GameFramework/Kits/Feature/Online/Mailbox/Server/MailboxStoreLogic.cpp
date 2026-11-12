@@ -6,6 +6,7 @@
 
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -251,26 +252,6 @@ namespace sw
                 LedgerTransferResult serviceResult;
                 return Ledger::stageTransfer( connection, request, inoutTransaction, serviceResult ) == LedgerResult::Ok;
             }
-
-            /** @brief @p table 에서 @p prefix 로 시작하는 레코드를 모두 지웁니다(한 트랜잭션에 한 쪽씩). */
-            [[nodiscard]] static ServiceStoreResult eraseByPrefix( IServiceStoreConnection& connection, const hashed_string& table, const string& prefix )
-            {
-                while ( true )
-                {
-                    vector<ServiceRecord>    listRecord;
-                    const ServiceStoreResult listed = connection.listRecords( table, prefix, "", kErasePageSize, false, listRecord );
-                    if ( listed != ServiceStoreResult::Ok || listRecord.empty() )
-                        return listed;
-                    ServiceTransaction transaction;
-                    for ( const ServiceRecord& record : listRecord )
-                    {
-                        transaction.erase( table, record._key, record._version );
-                    }
-                    const ServiceStoreResult committed = connection.commit( transaction );
-                    if ( committed != ServiceStoreResult::Ok )
-                        return committed;
-                }
-            }
         };
     } // namespace
 } // namespace sw
@@ -513,7 +494,7 @@ namespace sw
                     return committed;
             }
         }
-        if ( const ServiceStoreResult sent = Internal::eraseByPrefix( connection, ServiceMail::getSentTable(), prefix ); sent != ServiceStoreResult::Ok )
+        if ( const ServiceStoreResult sent = ServiceStoreUtil::erasePrefix( connection, ServiceMail::getSentTable(), prefix ); sent != ServiceStoreResult::Ok )
             return sent;
         vector<ServiceMailCampaign> listCampaign;
         if ( const ServiceStoreResult read = ServiceMailCampaign::listCampaigns( connection, listCampaign ); read != ServiceStoreResult::Ok )

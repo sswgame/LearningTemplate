@@ -79,6 +79,12 @@ namespace sw
                 return {};
             }
 
+            /**
+             * @brief 거래 레코드는 정산 분쟁의 근거라 닫힌 뒤 보존 기간(`_closedRetentionDays`)까지 남기고 보존 규칙이 지운다 — 원장 분개와 같은 보존 예외(GDPR 17 조 3 항 (b) · (e)).
+             *        열린 거래는 만료가 닫고, 지운 계정이 낀 정산은 원장의 AccountDeleted 로 PartyLeft 실패가 된다. 따로 지울 표가 없다.
+             */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; }
+
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 정산을 맡긴 요청과 열려 있는 거래(재시작 복구가 마무리하지만 서버가 비는 동안 끝나는 편이 낫다). */
             int32 getOpenJobCount() const override { return _service.getPendingCount() + _service.getOpenTradeCount(); }
 

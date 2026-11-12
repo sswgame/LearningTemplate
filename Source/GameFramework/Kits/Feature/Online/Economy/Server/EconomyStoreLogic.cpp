@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/ReceiptBuyerToken.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -795,6 +796,11 @@ namespace sw
                 return Internal::finish( outReply, EconomyServiceResult::fail( OnlineError::kUnavailable ) );
         }
         return Internal::finish( outReply, EconomyServiceResult::fail( OnlineError::kBusy ) );
+    }
+
+    ServiceStoreResult EconomyStoreLogic::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 /*nowMs*/ )
+    {
+        return ServiceStoreUtil::erasePrefix( connection, getPurchaseCountTable(), ServiceKeyUtil::makeHex64( accountID ) + "/" );
     }
 
     EconomyServiceResult EconomyStoreLogic::readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyWalletReply& outReply )

@@ -9,6 +9,7 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsProtocol.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
@@ -182,6 +183,11 @@ namespace sw
     string PushNotificationDispatcher::makeAccountPrefix( AccountID accountID )
     {
         return ServiceKeyUtil::makeHex64( accountID ) + "/";
+    }
+
+    ServiceStoreResult PushNotificationDispatcher::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 /*nowMs*/ )
+    {
+        return ServiceStoreUtil::erasePrefix( connection, PushNotificationDispatcherInternal::getDeviceTable(), makeAccountPrefix( accountID ) );
     }
 
     string PushNotificationDispatcher::makeDeviceKey( AccountID accountID, string_view providerID, string_view token )

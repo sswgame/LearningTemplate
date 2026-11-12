@@ -10,6 +10,7 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
 
@@ -750,4 +751,87 @@ SW_TEST_CASE( GuildServiceTest, LateGrantReplayAfterRevokeChangesNothing )
     SW_EXPECT_TRUE( rig.setGrant( GuildOperation::RevokeWithdrawal, kMember, kOfficer, 0, 2 ) == SocialResult::Ok );
     SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 5, 1 ) == SocialResult::Ok ); // 키 A 재전송
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 1, "test/gem.wd", "cur.gem", kMember )._result == SocialResult::NotAllowed );
+}
+
+namespace
+{
+    /** @brief @p table 의 키 중 `/` 로 나뉜 칸 하나가 계정 @p accountID(16진)와 같은 것의 수입니다(길드 id 와 계정 id 의 16진이 같아도 칸 위치로 가린다). */
+    int32 countAccountField( MemoryServiceDatabase& database, const utf8* pTable, AccountID accountID, int32 fieldIndex )
+    {
+        vector<ServiceRecord> listRecord;
+        SW_EXPECT_TRUE( database.listRecords( hashed_string( pTable ), "", "", 1000, false, listRecord ) == ServiceStoreResult::Ok );
+        const string     accountHex = ServiceKeyUtil::makeHex64( accountID );
+        constexpr size_t kWidth     = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+        int32            count      = 0;
+        for ( const ServiceRecord& record : listRecord )
+        {
+            const size_t offset = static_cast<size_t>( fieldIndex ) * ( kWidth + 1 );
+            count += record._key.size() >= offset + kWidth && record._key.compare( offset, kWidth, accountHex ) == 0 ? 1 : 0;
+        }
+        return count;
+    }
+} // namespace
+
+/**
+ * @brief [GuildServiceTest] 계정 삭제(길드장) → 길드 키트에 그 계정의 레코드 0: 멤버십 · 맡긴 몫(소각) · 준 허용이 지워지고 길드장은 임원에게 넘어간다(감사 P0-7)
+ * @details 변이: 길드장 넘기기를 빼면 길드에 길드장이 없고, 몫 소각을 빼면 맡김 잔액이 남아 진다.
+ */
+SW_TEST_CASE( GuildServiceTest, AccountDeletionHandsOverTheGuild )
+{
+    PaidGemPolicy policy;
+    GuildFixture  rig;
+    rig._service.setLedgerPolicy( &policy );
+    const uint64 guildID = rig.makeGuild();
+    rig.grant( kMaster, 100, "cur.gem" );
+    SW_REQUIRE_TRUE( rig.transfer( GuildOperation::Deposit, kMaster, 30, "test/gem.master", "cur.gem" )._result == SocialResult::Ok );
+    SW_REQUIRE_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMaster, kOfficer, 10, 201 ) == SocialResult::Ok );
+
+    SW_REQUIRE_TRUE( GuildService::eraseAccount( rig._database, kMaster, kNowMs ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_account_guild", kMaster, 0 ) );
+    SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_guild_member", kMaster, 1 ) );
+    SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_guild_depositor", kMaster, 1 ) );
+    SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_guild_storage_grant", kMaster, 1 ) );
+    vector<LedgerBalance> listShare;
+    SW_REQUIRE_TRUE( Ledger::listBalances( rig._database, LedgerHolder::makeEscrow( "guild", ServiceKeyUtil::makeHex64( guildID ) + "." + ServiceKeyUtil::makeHex64( kMaster ) ), listShare ) ==
+                     ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listShare.empty() ); // 돌려줄 계정이 없다 — 소각이다
+    const GuildCompletion got = rig.run( GuildOperation::Get, kOfficer );
+    SW_EXPECT_EQUAL( kOfficer, got._info._masterID );
+    SW_EXPECT_EQUAL( 2, got._info._memberCount );
+    SW_EXPECT_TRUE( GuildService::eraseAccount( rig._database, kMaster, kNowMs ) == ServiceStoreResult::Ok ); // 멱등
+}
+
+/** @brief [GuildServiceTest] 계정 삭제(밖의 사람) → 받은 초대와 그 만료 색인, 낸 신청과 역색인이 0 이다(감사 P0-7) */
+SW_TEST_CASE( GuildServiceTest, AccountDeletionErasesInvitesAndApplications )
+{
+    GuildFixture rig;
+    const uint64 guildID = rig.makeGuild();
+    SW_REQUIRE_TRUE( rig.run( GuildOperation::Invite, kMaster, kOutside )._result == SocialResult::Ok );
+    SW_REQUIRE_TRUE( rig.setOpen( kOfficer, true ) == SocialResult::Ok );
+    SW_REQUIRE_TRUE( rig.run( GuildOperation::Apply, kOutside, kInvalidAccountID, "", guildID )._result == SocialResult::Ok );
+
+    SW_REQUIRE_TRUE( GuildService::eraseAccount( rig._database, kOutside, kNowMs ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_guild_invite", kOutside, 0 ) );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( hashed_string( "social_guild_invite_expiry" ) ) );
+    SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_guild_application", kOutside, 1 ) );
+    SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_account_application", kOutside, 0 ) );
+}
+
+/** @brief [GuildServiceTest] 계정 삭제(혼자 남은 길드장) → 공용 창고를 소각하고 길드를 해산한다 — 창고가 차 있으면 떠나기는 막히지만 지운 계정은 돌려받을 사람이 없다(감사 P0-7) */
+SW_TEST_CASE( GuildServiceTest, AccountDeletionDissolvesASoloGuild )
+{
+    GuildFixture rig;
+    const uint64 guildID = rig.run( GuildOperation::Create, kOutside, kInvalidAccountID, "Solo" )._info._guildID;
+    SW_REQUIRE_TRUE( guildID != 0 );
+    rig.grant( kOutside, 100 );
+    SW_REQUIRE_TRUE( rig.transfer( GuildOperation::Deposit, kOutside, 50, "test/solo.dep" )._result == SocialResult::Ok );
+
+    SW_REQUIRE_TRUE( GuildService::eraseAccount( rig._database, kOutside, kNowMs ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( hashed_string( "social_guild" ) ) );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( hashed_string( "social_guild_name" ) ) );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( hashed_string( "social_guild_member" ) ) );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( hashed_string( "social_account_guild" ) ) );
+    vector<LedgerBalance> listStorage;
+    SW_REQUIRE_TRUE( Ledger::listBalances( rig._database, LedgerHolder::makeEscrow( "guild", ServiceKeyUtil::makeHex64( guildID ) ), listStorage ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listStorage.empty() );
 }
