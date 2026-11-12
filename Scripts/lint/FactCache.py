@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 
 from lint.LintScope import runGitLines
-from lint.Rules import kScriptsDir, listImportedModuleFiles
+from lint.ModuleImports import kScriptsDir, listImportedModuleFiles
 
 kCacheFolder = "Saved/Lint"
 

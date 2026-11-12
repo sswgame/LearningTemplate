@@ -11,13 +11,16 @@ Scripts/lint/PreCommit.py
   py -3 -m Scripts lint <id> [인자…]    # 규칙 하나의 단독 실행(`--all` · `--self-check` 등은 그 모듈의 인자)
 
 커밋 훅은 저장소 크기에 비례하지 않는다: 규칙은 스테이지된 파일만 보고, 여러 파일을 보는 규칙은 내용 해시 색인(`FactCache`)을 바뀐 파일만
-다시 계산해 쓴다. 규칙의 표 · 예외 · 모듈이 스테이지에 있으면 그 규칙만 저장소 전체를 본다(`Rule.listInputs`).
+다시 계산해 쓴다. 규칙의 표 · 예외 · 모듈(그 규칙만 쓰는 도우미 포함)이 스테이지에 있으면 그 규칙만 저장소 전체를 보고(`Rule.listOwnInputs`),
+여러 규칙이 함께 쓰는 도우미만 바뀌었으면 그것을 쓰는 규칙의 자체 검사를 돈다(`Rule.listInputs`). `--all` 은 모든 규칙의 자체 검사도 돈다.
 **통과한 것은 찍지 않는다.** 통과는 한 줄, 실패만 상세를 찍는다. 고치는 것은 `py -3 -m Scripts format` · `format-includes` 다.
 """
 
 from __future__ import annotations
 
+import contextlib
 import importlib
+import io
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -49,10 +52,31 @@ def runRule(rule: Rule, projectRoot: Path, scope: LintScope) -> list[str]:
 
 
 def selectRuleScope(rule: Rule, projectRoot: Path, scope: LintScope) -> LintScope:
-    """규칙의 표 · 예외 · 모듈이 바뀌었으면 그 규칙만 저장소 전체 — 바뀌지 않은 파일의 판정도 달라진다."""
-    if scope.bWholeRepo or not scope.touches(files=(), roots=rule.listInputs()):
+    """
+    규칙 자신의 표 · 예외 · 모듈(그 규칙만 쓰는 도우미 포함)이 바뀌었으면 그 규칙만 저장소 전체 — 바뀌지 않은 파일의 판정도 달라진다.
+
+    여러 규칙이 함께 쓰는 도우미(LintScope · CppText · FunctionSpans · common …)만 바뀌었으면 전체로 돌리지 않는다 — 도우미 하나에 규칙 수십 개가
+    저장소 전체를 돌았다. 그 도우미를 쓰는 규칙의 자체 검사가 보고(`runSelfCheck`), 실제 파일에서 판정이 달라졌는지는 묶음 검증 첫 단계 `lint --all` 이 본다.
+    """
+    if scope.bWholeRepo or not scope.touches(roots=rule.listOwnInputs()):
         return scope
     return makeWholeScope(projectRoot)
+
+
+def runSelfCheck(rule: Rule) -> str | None:
+    """규칙 모듈의 자체 검사(`runSelfCheck` 가 있을 때) — 실패면 까닭, 통과면 None. 통과 줄은 찍지 않는다."""
+    module = importlib.import_module(rule.getModuleName())
+    if not hasattr(module, "runSelfCheck"):
+        return None
+    buffer = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buffer):
+            result = module.runSelfCheck()
+    except (Exception, SystemExit) as error:   # noqa: BLE001 — 자체 검사의 assert · 오류는 모두 실패다
+        return f"{type(error).__name__}: {error} {buffer.getvalue().strip()}".strip()
+    if result is False or (type(result) is int and result != 0):   # 모듈마다 None · 0 · True 가 통과다
+        return buffer.getvalue().strip() or f"돌려준 값 {result}"
+    return None
 
 
 def runLint(projectRoot: Path, scope: LintScope) -> int:
@@ -65,6 +89,9 @@ def runLint(projectRoot: Path, scope: LintScope) -> int:
         if ruleScope.bWholeRepo and not scope.bWholeRepo:
             listWhole.append(rule.id)
         listProblem = runRule(rule, projectRoot, ruleScope)
+        if scope.bWholeRepo or scope.touches(roots=rule.listInputs()):
+            failure = runSelfCheck(rule)
+            listProblem = listProblem + ([f"자체 검사 실패 — {failure}"] if failure else [])
         if listProblem:
             hasErrors = True
             where = f" — 예외 · 기준선: {rule.exceptions}" if rule.exceptions else ""
