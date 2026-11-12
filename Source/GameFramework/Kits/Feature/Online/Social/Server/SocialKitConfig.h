@@ -24,5 +24,8 @@ namespace sw
         /** @brief 만료된 길드 초대의 TTL 입니다. 만료 뒤 이 기간이 지나면 TTL 쓸기가 지웁니다. */
         PROPERTY( Required )
         ServiceTTLConfig _expiredInviteTTL{};
+        /** @brief 만료된 가입 신청의 TTL 입니다. 만료 뒤 이 기간이 지나면 TTL 쓸기가 지웁니다. */
+        PROPERTY( Required )
+        ServiceTTLConfig _expiredApplicationTTL{};
     };
 } // namespace sw

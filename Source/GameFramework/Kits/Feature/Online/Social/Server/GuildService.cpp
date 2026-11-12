@@ -127,6 +127,12 @@ namespace sw
                 return s_table;
             }
 
+            static const hashed_string& getApplicationExpiryTable()
+            {
+                static const hashed_string s_table{ "social_guild_application_expiry" };
+                return s_table;
+            }
+
             /** @brief 이전 불가 자산을 맡긴 사람(`<길드>/<계정>`)입니다. 원장은 보유자를 열거하지 못하므로 해산 확인과 창고 목록이 이것으로 몫을 찾습니다. */
             static const hashed_string& getDepositorTable()
             {
@@ -276,6 +282,13 @@ namespace sw
 
             /** @brief 초대 레코드의 만료 시각을 읽습니다(보존 쓸기). */
             [[nodiscard]] static bool readInviteExpiryMs( const ServiceRecord& record, int64& outTimeMs ) { return decodeInviteExpiry( record._bytes, outTimeMs ); }
+
+            /** @brief 가입 신청 레코드의 만료 시각을 읽습니다(TTL 쓸기). */
+            [[nodiscard]] static bool readApplicationExpiryMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                int64 appliedMs = 0;
+                return decodeApplication( record._bytes, appliedMs, outTimeMs );
+            }
         };
 
         /** @brief 길드 요청 하나를 저장소 스레드에서 처리합니다. 읽기, 규칙 검사, 버전 조건 쓰기 순서로 진행하며 충돌이 나면 다시 시도합니다. 한 번 쓰고 버린다. */
@@ -453,7 +466,10 @@ namespace sw
                 }
                 if ( liveCount >= GuildLimit::kMaxApplication )
                     return fail( SocialResult::PendingLimit );
-                transaction.put( Internal::getApplicationTable(), selfKey, Internal::encodeApplication( _request._nowMs.count(), _request._nowMs.count() + GuildLimit::kApplicationLifetimeMs ) );
+                const int64 expiresMs = _request._nowMs.count() + GuildLimit::kApplicationLifetimeMs;
+                transaction.put( Internal::getApplicationTable(), selfKey, Internal::encodeApplication( _request._nowMs.count(), expiresMs ) );
+                // 해산한 길드 · 다시 오지 않는 신청자의 신청은 이 함수가 다시 돌지 않아 남는다 - TTL 색인 줄이 기간 뒤에 지운다. 다시 낸 신청은 새 줄이 맡는다
+                transaction.put( Internal::getApplicationExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, selfKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
                 transaction.requireVersion( Internal::getGuildTable(), guildKey, guildRecord._version ); // 그사이 비공개로 바뀌면 다시 읽는다
                 return connection.commit( transaction );
             }
@@ -1201,6 +1217,16 @@ namespace sw
         rule._ttlIndexTable = GuildServiceInternal::getInviteExpiryTable();
         rule._expireAfterMs = expireAfterMs;
         rule._pfnReadTime   = &GuildServiceInternal::readInviteExpiryMs;
+        return rule;
+    }
+
+    ServiceTTLRule GuildService::makeApplicationTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule;
+        rule._table         = GuildServiceInternal::getApplicationTable();
+        rule._ttlIndexTable = GuildServiceInternal::getApplicationExpiryTable();
+        rule._expireAfterMs = expireAfterMs;
+        rule._pfnReadTime   = &GuildServiceInternal::readApplicationExpiryMs;
         return rule;
     }
 

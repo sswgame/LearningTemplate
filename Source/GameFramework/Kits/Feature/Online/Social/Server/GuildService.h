@@ -8,6 +8,9 @@
  *            초대를 쓰는 트랜잭션이 TTL 색인 `social_guild_invite_expiry`(`<만료 16진>/<초대 키>`)를 함께 넣고, TTL 규칙(`makeInviteTTLRule`,
  *            기간은 `SocialKitConfig::_expiredInviteTTL`)이 만료 뒤 기간이 지난 초대를 지운다. 다시 보내 늦춰진 초대는 새 줄이 맡는다.
  *            초대는 수락 권한일 뿐 다른 합 · 멱등의 근거가 아니다 — 만료된 초대는 지우기 전에도 수락이 거절된다.
+ *            가입 신청(`social_guild_application`, `<길드>/<계정>`, 7일)도 같다 — 신청을 쓰는 트랜잭션이 `social_guild_application_expiry` 줄을 함께 넣고,
+ *            TTL 규칙(`makeApplicationTTLRule`, 기간은 `SocialKitConfig::_expiredApplicationTTL`)이 지운다. 신청은 받아들이기 권한일 뿐이다 — 멤버 · 계정의 길드는
+ *            "없어야 함" 조건으로 따로 쓰고, 정원은 길드 레코드가 센다. 그래서 지워도 합 · 멱등이 깨지지 않는다.
  *          - 한 계정은 한 길드에만 들어간다. 계정의 길드를 "없어야 함" 조건으로 쓰기 때문이다. 정원은 100명이다.
  *            길드장은 혼자일 때만 떠날 수 있고 그때 길드가 해산되며 이름도 지운다. 내보내기는 더 높은 역할만 할 수 있다.
  *          - 변경한 뒤 멤버 목록을 한 번 더 읽어 `GuildChanged` 알림을 보낸다. 받는 사람이 오프라인이면 호스트가 버린다.
@@ -188,6 +191,8 @@ namespace sw
         static bool isValidName( string_view name );
         /** @brief 만료된 길드 초대의 TTL 규칙입니다(TTL 색인 규칙). 키트 조립이 `IOnlineServerKit::addTTLRule` 로 올립니다. */
         static ServiceTTLRule makeInviteTTLRule( int64 expireAfterMs );
+        /** @brief 만료된 가입 신청의 TTL 규칙입니다(TTL 색인 규칙). 해산한 길드 · 다시 오지 않는 신청자의 신청이 남지 않게 한다. */
+        static ServiceTTLRule makeApplicationTTLRule( int64 expireAfterMs );
 
     private:
         /** @brief 저장소 일의 완료입니다. */

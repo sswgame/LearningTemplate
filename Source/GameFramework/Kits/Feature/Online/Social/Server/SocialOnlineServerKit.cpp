@@ -67,7 +67,9 @@ namespace sw
                     .and_then( [&]
                 { return exposeInterface<IAccountBlockList>( context, entry, _blockList ); } )
                     .and_then( [&]
-                { return addTTLRule( context, entry, GuildService::makeInviteTTLRule( kitConfig._expiredInviteTTL.getExpireAfterMs() ), kitConfig._expiredInviteTTL ); } );
+                { return addTTLRule( context, entry, GuildService::makeInviteTTLRule( kitConfig._expiredInviteTTL.getExpireAfterMs() ), kitConfig._expiredInviteTTL ); } )
+                    .and_then( [&]
+                { return addTTLRule( context, entry, GuildService::makeApplicationTTLRule( kitConfig._expiredApplicationTTL.getExpireAfterMs() ), kitConfig._expiredApplicationTTL ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override
