@@ -6,6 +6,7 @@ Scripts/common/FileCollect.py
 
 from __future__ import annotations
 
+import functools
 import os
 from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator
@@ -14,6 +15,20 @@ from .ProjectConstants import kCppAllExtensions, kGeneratedRelDirs, kLintTargetR
 from .Paths import expandPathTemplate, platformKey
 
 _kRglobSkipDirNames = {"buildtrees", "downloads", "packages"}
+
+
+@functools.lru_cache(maxsize=None)
+def listFilesUnder(root: Path) -> tuple[Path, ...]:
+    """`root` 아래 모든 파일(경로 정렬 — `sorted(root.rglob("*"))` 의 파일과 같은 순서). 한 프로세스에서 폴더마다 한 번만 훑는다.
+
+    configure 생성기(`Scripts/generate/ConfigureFiles.py`)는 한 프로세스에서 층 표 둘 · 타깃 게이트 · 매니페스트가 같은 `Source/` 를
+    따로 rglob 하고 항목마다 `is_file()` 을 물어 같은 트리를 네 번 훑었다. 부분 폴더는 `Source/` 목록을 `is_relative_to` 로 거른다.
+    프로세스 안에서 트리가 바뀌지 않는 짧은 도구 전용이다(오래 도는 프로세스는 쓰지 않는다).
+    """
+    listPath: list[Path] = []
+    for directory, _, listFileName in os.walk(root):
+        listPath.extend(Path(directory, name) for name in listFileName)
+    return tuple(sorted(listPath))
 
 
 def getLintSearchDirs(repositoryRoot: Path) -> list[Path]:

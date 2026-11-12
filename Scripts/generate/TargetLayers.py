@@ -29,6 +29,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
+from common.FileCollect import listFilesUnder  # noqa: E402
 from common.HostPlatform import isWindowsHost  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from generate.GeneratorOutput import GeneratorError, runGenerator, writeGeneratedFile  # noqa: E402
@@ -87,7 +88,7 @@ def makeGameGateName(folder: str) -> str:
 def readModules(sourceDir: Path) -> list[ModuleInfo]:
     """`Source/` 의 매니페스트를 모두 읽는다."""
     listModule: list[ModuleInfo] = []
-    for path in sorted(sourceDir.rglob("*.module.json")):
+    for path in (path for path in listFilesUnder(sourceDir) if path.name.endswith(".module.json")):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             name, kind = data["_name"], data["_kind"]
@@ -180,7 +181,7 @@ def checkAllowClosure(sourceDir: Path, gateName: str, listAllowed: list[str], se
 
 def collectGates(sourceDir: Path, mapRule: dict[str, list[str]], mapAllow: dict[str, list[str]], mapFolder: dict[str, list[str]]) -> dict[str, tuple[list[str], str]]:
     """게이트 이름 → (막는 헤더, 오류 문구). 파일을 쓰지 않는다 — 표를 코드와 대조하는 쪽도 이 함수를 쓴다."""
-    listHeader = sorted(path.relative_to(sourceDir).as_posix() for path in sourceDir.rglob("*") if path.is_file() and path.suffix in kHeaderSuffix)
+    listHeader = sorted(path.relative_to(sourceDir).as_posix() for path in listFilesUnder(sourceDir) if path.suffix in kHeaderSuffix)
     listStale = [prefix for listPrefix in mapRule.values() for prefix in listPrefix if not (sourceDir / prefix).exists()]
     if listStale:
         raise GeneratorError(f"폴더가 없는 게이트 줄: {', '.join(sorted(set(listStale)))} — {kRuleFile.name} 에서 지우세요")
