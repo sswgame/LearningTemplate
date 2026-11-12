@@ -32,13 +32,6 @@
 
 ## P0 — 확인된 오동작
 
-### P0-4 에디터: 열린 문서 · 씬을 옮기거나 지워도 문서 쪽 경로가 따라가지 않는다
-- 분류: 결함(덮어쓰기 · 파일 부활) · 확신: 확인(갱신 길이 없음 — 재현 필요)
-- 근거: `Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp:483-600` 의 `applyAssetMoves` 는 디스크 파일과 참조 글만 고친다. 에디터 전체에 옮김 · 삭제 알림이 없다. 열린 문서 패널의 `_loadedAssetPath`(`Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp:201-206`)와 활성 씬의 `getSourcePath()` 가 옛 id 로 남아, 다음 저장이 옛 자리에 파일을 다시 만들고 옮긴 파일은 편집을 받지 못한다. 메모리의 dirty 씬 · 문서가 옮긴 에셋을 참조하면 디스크에서 고친 참조를 다음 저장이 옛 id 로 덮는다. `EditorSelection::_listSelectedAsset` · `EditorWorkspace::_focusedAssetPath` 도 경로 글이다.
-- 상용 엔진: 언리얼은 이름을 바꿀 때 로드된 참조자를 메모리에서 고치고 dirty 로 표시한다. 유니티 · Godot 4.4 는 GUID · UID 가 정체다.
-- 제안: 참조 쪽은 에셋 GUID 2 · 3 단계(NEXT integ2)가 닫는다. 문서 쪽은 `applyAssetMoves` 성공 때 (옛 id → 새 id) 목록을 한 번 방송하고 문서 패널 · 씬 소스 · 선택 · 포커스 경로가 받는다. dirty 문서가 참조자이면 계획 단계(`planAssetMoves`)에서 "먼저 저장" 으로 거절한다. 삭제는 열린 문서가 있으면 거절한다.
-- 확인: 시나리오 `assetmove` 에 "머티리얼 열기 → 편집 → 이름 바꾸기 → 저장 → 옛 경로 파일 없음 · 새 경로에 편집 반영" 과 "열린 씬 파일 이름 바꾸기 → Ctrl+S → 옛 파일 없음".
-
 ### P0-11 오디오: 웹 클라이언트에 오디오 장치 백엔드가 없다
 - 분류: 결함(남은 일) · 확신: 확인(코드 경로)
 - 근거: 장치 백엔드는 `Source/Engine/Audio/Windows/XAudio2AudioBackend.cpp` · `Linux/AlsaAudioBackend.cpp` · `Android/AAudioAudioBackend.cpp` 셋이다. 웹(Emscripten)에는 없어 예전에는 기동에서 `IAudioService::create` 가 `SW_FATAL` 로 섰다. 지금은 `Source/Engine/CMakeLists.txt` 가 오디오를 짓는 구성에서 `Audio/<플랫폼>/*AudioBackend.cpp` 가 정확히 하나가 아니면 구성 단계에서 멈춘다 — Web 클라이언트 구성은 백엔드가 생길 때까지 서지 않는다.
@@ -732,7 +725,7 @@
 
 1. **에디터 되돌리기 구조** — 문서마다 스택(미리보기 없는 문서 패널): E-3, 함께 닫히는 E-2 · E-9 · E-13. 상호작용 구간(`DocumentEditSpan`)과 문서 스택의 답(`getDocumentCommandStack`)은 들어갔다. `editor/undocoverage` 에 문서 패널 전수 단계(E-16)를 먼저 더해 지는 것을 본다.
 2. **복구 입구** — 복구 입구 통일과 새 씬 · 문서 패널의 자동 저장: E-1(세션 폴더 · pid 잠금 · 리로드 이어 쓰기 P0-3 은 들어갔다).
-3. **에셋 옮김 방송** — `applyAssetMoves` 의 (옛 id → 새 id) 알림과 열린 문서 · 씬 · 선택 갱신, dirty 참조자 거절: P0-4. 참조 쪽은 integ2 의 GUID 2 · 3 단계와 순서를 맞춘다.
+3. **깨끗한 참조 문서 다시 읽기** — 옮김 방송에 참조자 목록을 실어 열린 깨끗한 문서를 다시 읽고, 미리보기 선택의 에셋 경로도 따라가게. 방송 · 미저장 참조자 거절 · 연 문서 삭제 거절은 들어갔다(P0-4). 참조 쪽 근본은 integ2 의 GUID 2 · 3 단계.
 4. **자동 저장 되돌리기의 씬 이동** — `restoreLatest` · `restoreCheckpoint` 도 찍은 씬으로 옮긴 뒤 적용(불러오기 델리게이트 비동기화). 슬롯 불러오기는 들어갔다(G-7 · P0-6).
 5. **읽은 것을 커밋 조건으로** — 일 안에서 읽은 것을 커밋 조건으로 자동으로 붙이는 연결 포장과 Admin · Mailbox · Guild 저장 로직 점검(경제 키트의 지급 · 환불 · 철회는 영수증 레코드 하나로 묶였다 — O-1).
 6. **웹 오디오 백엔드** — AudioWorklet + 링 버퍼: P0-11.
