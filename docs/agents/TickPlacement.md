@@ -1,6 +1,6 @@
 > 질문: 컴포넌트가 프레임마다 할 일은 어디에 두는가 — 주 틱 · 서브틱과 선행 조건 · 일괄 틱 · 프레임 시스템 · 틱 뒤 큐 · 등록 목록?
 > 독자: `onTick` 을 쓰거나, 다른 오브젝트 · 씬 전체를 보는 일을 프레임에 더하는 사람.
-> 결론: 틱은 자기 오브젝트만 읽고 쓴다. 찾기는 `ComponentRegistry`, 오브젝트 사이 순서는 서브틱 선행 조건, 같은 타입이 많으면 일괄 틱, 씬 전체를 한 번 봐야 하는 일은 프레임 시스템, 구조 변경 · 남의 오브젝트 쓰기만 틱 뒤 큐다. 틱에서 닿는 씬 전체 순회는 린트(`tick-scene-walk`)가 멈춘다.
+> 결론: 틱은 자기 오브젝트만 읽고 쓴다. 찾기는 `ComponentRegistry`, 오브젝트 사이 순서는 서브틱 선행 조건, 같은 타입이 많으면 일괄 틱, 씬 전체를 한 번 봐야 하는 일은 프레임 시스템, 구조 변경 · 남의 오브젝트 쓰기만 틱 뒤 큐다. 씬 전체 순회는 열쇠(`SceneWalkKey`)를 받아 틱 코드에서는 컴파일되지 않는다.
 
 ## How a frame runs
 
@@ -36,6 +36,8 @@ Ask in this order. Stop at the first yes.
      - Event-only deferrals stay in the queue with a one-line reason at the call: `WaterBodyComponent::queueRebuild` · `TerrainComponent` (origin moved, river path, load), `FoliageComponent` (load on a worker, begin play — the per-frame terrain follow is `FoliageTerrainFollower`), `CharacterAppearanceComponent` (assemble, visibility, despawn, mesh assembly done), `MountInteractionComponent` · `VehicleExitComponent` · `GrabberComponent` (button pressed this frame).
      - When a reader needs another type's result of this frame earlier than that type's pass, make the order explicit with a "once per frame" call (`GroundSurfaceComponent::sampleGroundOnce`), not by queue position.
 
-## What the lint checks
+## What the type enforces
 
-`py -3 -m Scripts lint tick-scene-walk` (run by the commit hook) follows calls from every `onTick` / `onSubTick` — same-class helpers, `self.` calls inside deferred lambdas, `…Internal::` helpers and `Class::function` calls across files — and fails when one reaches a manager's `forEachGameObject`, `forEachComponent`, `forEachComponentOfType` or `getAllGameObjects`. Own-object walks (`pOwner->forEachComponentOfType`) are fine. A justified exception goes in `Config/Rules/Lint/TickSceneWalkExceptions.json` as `path::Class::function` with the reason; an exception that no longer matches fails too. Virtual hooks (`GameModeComponent` sub-ticks calling a derived `updateGame`) and member calls through other pointers are not followed — the rule above still applies to them.
+`GameObjectManager::forEachGameObject`, `forEachComponent`, `forEachComponentOfType` and `getAllGameObjects` take a `SceneWalkKey` (`Engine/Foundation/SceneWalkKey.h`, an empty type with a private constructor). Component code has no way to make one, so a whole-scene walk from a tick — or from any helper a tick calls — does not compile. The key comes in as an argument from the frameworks that own such walks: automation watches (`SW_AUTOMATION_WALK_WATCH`; `SW_AUTOMATION_COMPONENT_WATCH` / `SW_AUTOMATION_GETTER_WATCH` use it), dev commands (`SW_DEV_SCENE_COMMAND`), debug HUD sections (`DebugHUDSectionWriter::getSceneWalkKey`), save (`StatefulComponentRegistrar`). Engine owners (scene save/cook, tick registry, render binding, nav bake, net session start, state hash history) are the key's friends, each with its reason. The editor (`editor::EditorSceneWalk`) and dev tools (`DevSceneWalk`) hand keys out freely — game, kit and runtime targets cannot include those layers. Tests use `SceneWalkTestAccess`.
+
+What a tick uses instead needs no key: `getComponentRegistry().getAll<T>()` (rule 3), `findGameObjectsByBaseName` (the store's base-name index — `Tree`, `Tree_2`, …), the scene spatial grid (`SceneSpatialGrid`, `ZoneOccupantIndex`). Own-object walks (`getOwner()->forEachComponentOfType`) are not scene walks and stay keyless. A public helper that walks the scene takes the key as a parameter instead of making one, so the key's friend list stays the audit list.
