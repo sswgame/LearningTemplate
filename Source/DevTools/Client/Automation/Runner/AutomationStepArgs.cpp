@@ -145,10 +145,21 @@ namespace sw
                 return true;
             }
             case GlobalVariableType::Int32:
-            case GlobalVariableType::Enum:
             {
                 int32 value = 0;
                 if ( StringUtil::parseInt( expected, value ) == false )
+                    return false;
+                outMatched = info.getValueAsInt() == value;
+                return true;
+            }
+            case GlobalVariableType::Enum:
+            {
+                // 열거자 이름으로 견준다 — 명령줄(`-gv_x=`)은 이름만 받으므로 `<Launch>` 가 숫자를 받던 길은 기동이 거절하고, 이름은 여기서 읽지 못해 둘이 엇갈렸다.
+                // 이름은 이 변수를 등록한 매니저의 파서가 바꾼다(`setValueFromString` 의 Enum 행과 같은 파서).
+                int32                               value   = 0;
+                const GlobalVariableEnumTextParser* pParser = info._pEnumTextParser;
+                const bool                          bParsed = StringUtil::parseInt( expected, value ) || ( pParser != nullptr && pParser->isBound() && ( *pParser )( info._enumType, expected, value ) );
+                if ( bParsed == false )
                     return false;
                 outMatched = info.getValueAsInt() == value;
                 return true;
