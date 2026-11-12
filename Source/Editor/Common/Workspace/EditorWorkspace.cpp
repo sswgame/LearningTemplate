@@ -6,6 +6,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Workspace/Asset/EditorAssetReferenceUtil.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
@@ -183,6 +184,8 @@ namespace sw::editor
             const auto itScene = mapOldToNew.find( pScene->getSourcePath() );
             if ( itScene != mapOldToNew.end() )
                 pScene->setSourcePath( itScene->second ); // 다음 저장(Ctrl+S)이 새 자리에 쓴다 — 옛 자리에 파일을 다시 만들지 않는다
+            // 씬이 든 참조(컴포넌트 칸 · 엔티티 프리팹 · 중첩 부품)를 새 id 로 바꿔 끼운다 — 다시 읽지 않아 되돌리기 · 선택이 그대로이고, 디스크 글은 이미 고쳤으니 dirty 로 만들지 않는다.
+            (void)EditorAssetReferenceUtil::remapScene( *pScene, mapOldToNew );
         }
         if ( _pEditorSelection != nullptr )
             _pEditorSelection->remapAssets( mapOldToNew ); // 고른 에셋 경로도 글이다 — 옛 id 로 남으면 인스펙터 · 명령이 없는 파일을 가리킨다
