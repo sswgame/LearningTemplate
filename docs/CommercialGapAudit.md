@@ -774,7 +774,6 @@
 - **P-10 창이 배경일 때도 패드 입력이 게임에 들어간다** (구조 · 정책 누락 — 확인) — `Source/Engine/Input/InputManager.cpp:367-378`. XInput 은 전역이라 다른 게임을 패드로 하면 이 게임 캐릭터도 움직인다. 상용: SDL `JOYSTICK_ALLOW_BACKGROUND_EVENTS` 기본 0. 제안: `Config/Engine` 에 `backgroundGamepadInput`(필수 값). 확인: `InputManagerTest.BackgroundPadFollowsPolicy`.
 - **P-11 접근성 단축키 끄기 API 는 호출자가 없고 구현은 사용자가 켠 고정 키까지 끈다** (결함 · 죽은 코드 — 확인) — `Source/Engine/Input/Windows/InputManagerWin32.cpp:558-583`. 상용: 언리얼은 기능이 꺼져 있을 때만 단축키를 끈다. 제안: 포커스 획득 · 유실에 묶고 `…ON` 비트는 건드리지 않거나 지운다. 확인: `InputAccessibilityTest.KeepsEnabledStickyKeys`.
 - **P-13 스플래시 창이 상태를 바꿀 때만 메시지를 처리한다** (결함 · UX — 추정) — `Source/Engine/Window/Windows/Win32SplashWindow.cpp:157-183`. 긴 단계 사이 5 초를 넘으면 "응답 없음" 이다. 상용: 언리얼 `FWindowsSplash` 는 전용 스레드. 제안: `ScopedProgressReport` 간격 콜백이 스플래시를 펌프. 확인: `updateStatus` 사이 최대 간격 측정.
-- **P-14 Windows 서비스가 기동 완료 전에 RUNNING 을 보고한다** (구조 — 확인, 주석에 적힌 한도) — `Source/Server/Windows/WindowsServiceHost.cpp` `serviceMain` 이 `ServerApp::runMain` 앞에서 `SERVICE_RUNNING` 을 올린다. 오케스트레이터가 기동 실패와 정상 기동을 구분하지 못한다. 상용: 서비스는 초기화 끝에 RUNNING 을 보고한다. 제안: `ServerApp` 이 기동 완료 훅을 내고 그때 보고한다(`/readyz` 와 같은 시점). 확인: 설정 오류로 기동한 서비스의 SCM 상태.
 
 ### GameFramework Runtime
 
