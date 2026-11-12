@@ -161,8 +161,10 @@ namespace sw::editor
             _selectedComponentID = 0;
     }
 
-    void EditorWorkspace::notifyAssetsMoved( const vector<string>& listOldID, const vector<string>& listNewID )
+    void EditorWorkspace::notifyAssetsMoved( const EditorAssetMoveNotice& notice )
     {
+        const vector<string>& listOldID = notice._listOldID;
+        const vector<string>& listNewID = notice._listNewID;
         SW_ASSERT( listOldID.size() == listNewID.size() );
         // 옛 id → 새 id 를 한 번 색인하고 받는 쪽마다 찾기만 한다(옮긴 수 × 받는 쪽 칸 수로 훑지 않는다 — 언리얼 리다이렉터 고치기도 옛 경로 → 새 경로 맵이다).
         unordered_map<string, string> mapOldToNew;
@@ -184,7 +186,9 @@ namespace sw::editor
         }
         if ( _pEditorSelection != nullptr )
             _pEditorSelection->remapAssets( mapOldToNew ); // 고른 에셋 경로도 글이다 — 옛 id 로 남으면 인스펙터 · 명령이 없는 파일을 가리킨다
-        _assetsMoved.broadcast( listOldID, listNewID );
+        for ( EditorSelection* const pPreviewSelection : editor::getPreviewSelections() )
+            pPreviewSelection->remapAssets( mapOldToNew ); // 미리보기 창의 선택도 같은 글이다(창마다 선택이 따로다)
+        _assetsMoved.broadcast( notice );
     }
 
     void EditorWorkspace::setFocusedAssetPath( const utf8* pPath )
