@@ -309,9 +309,11 @@ SW_TEST_CASE( AutosaveTest, DeferredRestoreMarksCheckpointOnCompletion )
     manager.reachCheckpoint( sw::hashed_string( "gate" ) );
     step( manager, *store, 1.0f );
     const sw::string checkpointState = game._listSavedState.back();
-    manager.reachCheckpoint( sw::hashed_string( "bridge" ) );
+    manager.notifyAreaChanged( sw::hashed_string( "cave" ) );
     step( manager, *store, 1.0f );
     SW_REQUIRE_EQUAL( 2u, manager.getSaveCount() );
+    manager.reachCheckpoint( sw::hashed_string( "bridge" ) ); // 아직 저장 전 — 요청만 쌓였다(가장 새 체크포인트 슬롯은 gate 다)
+    SW_REQUIRE_TRUE( manager.hasPendingRequest() );
 
     // 씬을 옮기는 중 — 바이트는 받았지만 적용 전이다
     game._bDeferRestore = SW_TRUE;
@@ -326,6 +328,7 @@ SW_TEST_CASE( AutosaveTest, DeferredRestoreMarksCheckpointOnCompletion )
     game.finishDeferredRestore( false );
     SW_EXPECT_FALSE( manager.isRestoring() );
     SW_EXPECT_EQUAL( sw::hashed_string( "bridge" ), manager.getLastCheckpointID() );
+    SW_EXPECT_TRUE( manager.hasPendingRequest() );
     SW_EXPECT_TRUE( game._loadedState.empty() );
 
     // 다시 — 이번에는 씬이 섰다: 적용 뒤 체크포인트를 지난 것으로 둔다
@@ -335,6 +338,7 @@ SW_TEST_CASE( AutosaveTest, DeferredRestoreMarksCheckpointOnCompletion )
     SW_EXPECT_FALSE( manager.isRestoring() );
     SW_EXPECT_EQUAL( checkpointState, game._loadedState );
     SW_EXPECT_EQUAL( sw::hashed_string( "gate" ), manager.getLastCheckpointID() );
+    SW_EXPECT_FALSE( manager.hasPendingRequest() ); // 되돌린 판 위에 쌓인 요청은 버린다
     manager.reachCheckpoint( sw::hashed_string( "gate" ) );
     step( manager, *store, 1.0f );
     SW_EXPECT_EQUAL( 2u, manager.getSaveCount() );
