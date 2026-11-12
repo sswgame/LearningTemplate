@@ -949,9 +949,10 @@ namespace sw
         if ( isDirectory( directory ) == false )
             return false;
 
-        const bool bHasFilter = filterExtension.empty() == false;
-        const bool bWalked    = forEachDirectoryEntry( directory, bRecursive, [&outListFilePath, filterExtension, bHasFilter, stopToken]( const DirectoryEntry& entry )
-           {
+        const size_t firstIndex = outListFilePath.size();
+        const bool   bHasFilter = filterExtension.empty() == false;
+        const bool   bWalked    = forEachDirectoryEntry( directory, bRecursive, [&outListFilePath, filterExtension, bHasFilter, stopToken]( const DirectoryEntry& entry )
+             {
             if ( stopToken.isStopRequested() )
                 return false;
             if ( entry._bDirectory || ( bHasFilter && hasExtension( entry._path, filterExtension ) == false ) )
@@ -959,7 +960,9 @@ namespace sw
             outListFilePath.push_back( string( entry._path ) );
             return true;
         } );
-        const bool bStopped   = stopToken.isStopRequested();
+        // 훑는 순서는 OS 마다 다르다(NTFS 는 이름 순, ext4 readdir 은 해시 순) — 같은 트리가 같은 목록이 되게 바이트 순으로 정렬한다
+        std::sort( outListFilePath.begin() + static_cast<ptrdiff_t>( firstIndex ), outListFilePath.end() );
+        const bool bStopped = stopToken.isStopRequested();
         if ( bWalked == false && bStopped == false )
             SW_LOG_WARNING_ID( "FileUtil.CollectingFilesUnderStopped", "Collecting files under '%#' stopped partway - the list is incomplete", directory );
         return bWalked;
@@ -970,12 +973,15 @@ namespace sw
         if ( isDirectory( directory ) == false )
             return false;
 
-        const bool bWalked = forEachDirectoryEntry( directory, bRecursive, [&outListFolder]( const DirectoryEntry& entry )
-        {
+        const size_t firstIndex = outListFolder.size();
+        const bool   bWalked    = forEachDirectoryEntry( directory, bRecursive, [&outListFolder]( const DirectoryEntry& entry )
+             {
             if ( entry._bDirectory )
                 outListFolder.push_back( string( entry._path ) );
             return true;
         } );
+        // collectFiles 와 같은 이유로 정렬한다. 바이트 순이라 부모 폴더가 늘 그 아래 폴더보다 앞선다(앞머리가 같으면 짧은 쪽이 앞)
+        std::sort( outListFolder.begin() + static_cast<ptrdiff_t>( firstIndex ), outListFolder.end() );
         if ( bWalked == false )
             SW_LOG_WARNING_ID( "FileUtil.CollectingFoldersUnderStopped", "Collecting folders under '%#' stopped partway - the list is incomplete", directory );
         return bWalked;
