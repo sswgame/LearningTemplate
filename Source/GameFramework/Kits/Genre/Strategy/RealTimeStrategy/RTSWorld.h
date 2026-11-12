@@ -342,7 +342,8 @@ namespace sw
         const NavGrid&     getGrid() const { return _grid; }
         const RTSCatalog*  getCatalog() const { return _pCatalog; }
         const RTSSettings& getSettings() const { return _settings; }
-        float32            getTime() const { return _time; }
+        /** @brief 시뮬레이션 시각(초)입니다. 차이만 뜻이 있다 — 커지면 기준을 옮긴다(`TimeRolloverUtil::rebase`, 플레이어의 알림 시각도 같이 옮긴다). */
+        float32 getTime() const { return _time; }
         /** @brief 그 셀을 왼쪽 아래로 하는 건물의 가운데 위치를 반환합니다. */
         float3 computeFootprintCenter( const int2& cell, int32 footprint ) const;
 

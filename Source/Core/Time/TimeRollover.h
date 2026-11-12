@@ -28,5 +28,21 @@ namespace sw
             const float64 folded = MathUtil::fmod( seconds, rolloverSeconds );
             return static_cast<float32>( folded < 0.0 ? folded + rolloverSeconds : folded );
         }
+
+        /**
+         * @brief 차이만 뜻이 있는 float32 누적 시각의 기준을 옮깁니다 — @p inoutTime 이 kRebaseSeconds 를 넘으면 그만큼 빼고 true 입니다(그 시각과 비교하는 칸도 같이 빼야 한다).
+         * @details float32 초는 2^22 초에서 0.25 초 걸음을 잃는다(감사 K-5 — 키트 시뮬레이션 시각). 값을 늘 [0, 2 * kRebaseSeconds) 에 두면 걸음이 정확하다.
+         *          kRebaseSeconds 가 2 의 거듭제곱이라 빼기는 오차가 없다. 언리얼의 월드 원점 옮기기(World Origin Rebasing)를 시간 축에 둔 자리다.
+         *          저장 형식(float32 칸)을 그대로 두므로 쌓인 세이브를 올릴 필요가 없다.
+         */
+        static constexpr float32 kRebaseSeconds = 4096.0f;
+
+        [[nodiscard]] static bool rebase( float32& inoutTime ) noexcept
+        {
+            if ( inoutTime < kRebaseSeconds )
+                return false;
+            inoutTime -= kRebaseSeconds;
+            return true;
+        }
     };
 } // namespace sw

@@ -244,7 +244,8 @@ namespace sw
         /** @brief 집 단계의 인구 가중 평균을 반환합니다(번영 평가). */
         float32 computeAverageHouseLevel() const;
         /** @brief 그 집이 그 서비스를 지금 받고 있는지 반환합니다. */
-        bool    isHouseServed( const CityBuilding& house, CityService service ) const;
+        bool isHouseServed( const CityBuilding& house, CityService service ) const;
+        /** @brief 시뮬레이션 시각(초)입니다. 차이만 뜻이 있다 — 커지면 기준을 옮긴다(`TimeRolloverUtil::rebase`, 서비스 시각도 같이 옮긴다). */
         float32 getTime() const { return _time; }
 
         /**

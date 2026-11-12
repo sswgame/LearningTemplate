@@ -56,6 +56,30 @@ SW_TEST_CASE( TimeTest, ShaderTimeFoldKeepsMillisecondsAfterTenHours )
 }
 
 /**
+ * @brief [TimeTest] 차이만 뜻이 있는 float32 시뮬레이션 시각은 기준을 옮겨 0.25 초 걸음을 잃지 않는다(감사 K-5 — 옮기지 않으면 2^22 초에서 멈춘다)
+ */
+SW_TEST_CASE( TimeTest, SimulationTimeRebaseKeepsQuarterSecondSteps )
+{
+    sw::float32 stalled = 4194304.0f; // 2^22 초
+    stalled += 0.25f;
+    SW_EXPECT_TRUE_MSG( stalled == 4194304.0f, "an unrebased float32 clock stops at 2^22 s (the defect)" );
+
+    sw::float32 time    = 0.0f;
+    sw::float64 total   = 0.0;
+    sw::uint32  rebases = 0;
+    for ( sw::uint32 step = 0; step < 40000; ++step )
+    {
+        time += 0.25f;
+        total += 0.25;
+        if ( sw::TimeRolloverUtil::rebase( time ) )
+            ++rebases;
+    }
+    SW_EXPECT_EQUAL( 2u, rebases );
+    SW_EXPECT_TRUE( time < sw::TimeRolloverUtil::kRebaseSeconds );
+    SW_EXPECT_NEAR( total - 2.0 * sw::TimeRolloverUtil::kRebaseSeconds, static_cast<sw::float64>( time ), 1e-9 );
+}
+
+/**
  * @brief [TimeTest] GameTimer 기본 — 민 만큼이 델타이자 누적이다
  */
 SW_TEST_CASE( TimeTest, GameTimerBasic )

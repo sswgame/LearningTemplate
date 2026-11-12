@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Time/TimeRollover.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -19,8 +20,9 @@ namespace sw
     {
         struct CitySimulationInternal
         {
-            static constexpr uint32 kMinBuildingStateBytes = 64; ///< 건물 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
-            static constexpr uint32 kMinWalkerStateBytes   = 56; ///< 일꾼 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
+            static constexpr uint32  kMinBuildingStateBytes = 64;      ///< 건물 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
+            static constexpr uint32  kMinWalkerStateBytes   = 56;      ///< 일꾼 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
+            static constexpr float32 kNeverServicedTime     = -1.0e9f; ///< 서비스를 받은 적 없는 집의 서비스 시각(기준을 옮겨도 이 아래로 내려가지 않는다)
 
             /** @brief 노동을 나누는 순서입니다. 물, 식량 사슬, 나머지 순이며 값이 작을수록 먼저입니다. */
             static int32 computeLaborPriority( const CityBuildingDef& def )
@@ -330,7 +332,7 @@ namespace sw
         building._origin       = int2{ x, y };
         for ( float32& serviceTime : building._arrServiceTime )
         {
-            serviceTime = -1.0e9f;
+            serviceTime = CitySimulationInternal::kNeverServicedTime;
         }
         for ( int32 dy = 0; dy < pDef->_size; ++dy )
         {
@@ -508,6 +510,17 @@ namespace sw
     void CitySimulation::stepFixed( float32 deltaTime )
     {
         _time += deltaTime;
+        // 시각은 서비스 만료(차이)만 본다 — float32 걸음을 지키려 기준을 옮기고, 비교하는 서비스 시각도 같이 옮긴다(감사 K-5).
+        if ( TimeRolloverUtil::rebase( _time ) )
+        {
+            for ( CityBuilding& building : _listBuilding )
+            {
+                for ( float32& serviceTime : building._arrServiceTime )
+                {
+                    serviceTime = MathUtil::max( serviceTime - TimeRolloverUtil::kRebaseSeconds, CitySimulationInternal::kNeverServicedTime );
+                }
+            }
+        }
         if ( _bRoadsDirty != SW_FALSE )
             recomputeRoadComponents();
         if ( _bDesirabilityDirty != SW_FALSE )
