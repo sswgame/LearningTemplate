@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimeRollover.h"
 
 #include "Engine/Environment/Surface/SurfaceDeformBinding.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
@@ -196,7 +197,10 @@ namespace sw
         const RenderView& view( RenderViewType type ) const { return _arrView[static_cast<uint32>( type )]; }
         /** @brief 뷰 @p target 의 컬링 입력입니다. 주 시점은 `_arrView[Main]`, 추가 뷰는 자기 것입니다. */
         RenderView& getCullInputOf( FrameViewTarget& target ) { return &target == &_mainView ? view( RenderViewType::Main ) : target._cullInput; }
-        /** @brief 시간으로 구동하는 컴퓨트 · 노출이 읽을 절대 시간(초)입니다. 렌더러 시계(`FrameMeshDeformState::_animationTimer`)의 누적 시간입니다. */
-        float32 getAnimationTime() const { return static_cast<float32>( _deform._animationTimer.getTotalTime() ); } ///< 셰이더 칸이 float 다 — 주기로 접어 보내는 일은 감사 C-12 의 남은 몫
+        /**
+         * @brief 시간으로 구동하는 컴퓨트가 읽을 시간(초)입니다. 렌더러 시계(`FrameMeshDeformState::_animationTimer`)의 누적 시간을 스냅샷의 주기로 접은 값입니다.
+         * @details 셰이더 칸이 float 라 접지 않으면 긴 실행에서 끊긴다(감사 C-12). 이 함수를 부르는 디스패치는 업로드된 스냅샷이 있을 때만 돈다.
+         */
+        float32 getAnimationTime() const { return TimeRolloverUtil::fold( _deform._animationTimer.getTotalTime(), _gpuScene.getShaderTimeRolloverSeconds() ); }
     };
 } // namespace sw

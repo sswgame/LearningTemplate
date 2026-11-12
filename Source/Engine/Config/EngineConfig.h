@@ -199,6 +199,13 @@ namespace sw
 
         PROPERTY()
         RHIDeviceLostPolicy _deviceLostPolicy{ RHIDeviceLostPolicy::None }; ///< 렌더 장치를 잃었을 때 할 일(`None` 이면 기동이 오류로 멈춘다)
+
+        /**
+         * @brief 셰이더로 보내는 시간(머티리얼 시간 · VAT 시계 · 시간 구동 컴퓨트)을 접는 주기(초)입니다(`TimeRolloverUtil::fold`).
+         * @details 셰이더 칸이 float32 라 접지 않으면 긴 실행에서 시간이 끊긴다(감사 C-12). 주기마다 한 번 시간이 0 으로 돌아간다 — Godot `time_rollover_secs` 와 같은 값이다.
+         */
+        PROPERTY( Min = 1, Units = s )
+        float64 _shaderTimeRolloverSeconds{};
     };
 
     SW_SERVICE_SLOT_CONST( EngineConfig, Required );

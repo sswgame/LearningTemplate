@@ -19,6 +19,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimeRollover.h"
 
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/Animation/Skeletal/Pose.h"
@@ -299,8 +300,13 @@ namespace sw
                                                   string_view meshPath );
         /** @brief 쿠킹본에서 읽은 VAT 수입니다(진단과 테스트용). */
 
-        /** @brief 군중 시계(초)입니다. VAT 시계와 같은 값이며 렌더 스냅샷으로 전달됩니다. */
+        /** @brief 군중 시계(초)입니다. 셰이더로는 접어 보낸다(`getShaderClock`). */
         float64 getClock() const { return _clock; }
+        /**
+         * @brief 셰이더로 보내는 VAT 시계(초)입니다 — 군중 시계를 @p rolloverSeconds 주기로 접은 값입니다(`TimeRolloverUtil::fold`, 감사 C-12).
+         * @details 렌더 스냅샷(`GPUSceneSnapshot::_vertexAnimationTime`)과 유닛의 VAT 오프셋(`SkeletalMeshComponent`)이 같은 이 값으로 잰다 — 한쪽만 접으면 둘의 합이 클립 시각이 아니다.
+         */
+        float32 getShaderClock( float64 rolloverSeconds ) const { return TimeRolloverUtil::fold( _clock, rolloverSeconds ); }
         /** @brief 시계를 정합니다(테스트). */
         void setClock( float64 clock ) { _clock = clock; }
         /** @brief 묶음 목록입니다(렌더 빌더가 멤버 있는 묶음의 팔레트를 싣습니다). */
