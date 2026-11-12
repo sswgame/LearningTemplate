@@ -1051,7 +1051,10 @@ namespace sw
         }
         if ( _slotTable.findFreeSlot().has_value() == false )
         {
-            sendDenied( packet._from, NetDisconnectReason::ServerFull, packet._valueA );
+            // 게임 스레드가 끊김을 꺼내면 곧 빈다 — 가득 참으로 거절하지 않고 답하지 않는다(클라이언트가 재요청 간격마다 다시 묻는다).
+            // 끊고 바로 다시 붙는 클라이언트가 자기 옛 슬롯이 놓이기 전에 도착해 ServerFull 로 끝나던 경쟁이다.
+            if ( _slotTable.countReleasePending() == 0 )
+                sendDenied( packet._from, NetDisconnectReason::ServerFull, packet._valueA );
             return;
         }
         // 슬롯을 할당하지 않고 챌린지 값만 돌려준다. 그 값은 이 주소로 보낸 패킷에만 있으므로, 되돌려 준 응답이 와야 주소가 진짜임이 확인된다.
@@ -1083,7 +1086,8 @@ namespace sw
         const optional<int32> freeSlot = _slotTable.findFreeSlot();
         if ( freeSlot.has_value() == false )
         {
-            sendDenied( packet._from, NetDisconnectReason::ServerFull, packet._valueA );
+            if ( _slotTable.countReleasePending() == 0 ) // 곧 빌 슬롯이 있으면 답하지 않는다 — 클라이언트가 응답을 다시 보낸다(`handleConnectRequest` 와 같다)
+                sendDenied( packet._from, NetDisconnectReason::ServerFull, packet._valueA );
             return;
         }
         const int32 freeIndex = *freeSlot;

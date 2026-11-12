@@ -195,3 +195,17 @@ SW_TEST_CASE( NetSlotTableTest, NextDueTimeIsTheEarliestLiveDeadline )
     table.touch( 0 );
     SW_EXPECT_TRUE( table.getNextDueTime() == std::numeric_limits<float64>::lowest() );
 }
+
+SW_TEST_CASE( NetSlotTableTest, ReleasePendingCountsHeldClosedSlots )
+{
+    NetSlotTable table;
+    table.reset( 3 );
+    table.open( 0, NetConnectionState::Connected );
+    table.open( 1, NetConnectionState::Connected );
+    SW_EXPECT_EQUAL( 0, table.countReleasePending() );
+    table.close( 0, true ); // 끊김 사건을 게임 스레드가 꺼낼 때까지 붙잡는다
+    table.close( 1, false );
+    SW_EXPECT_EQUAL( 1, table.countReleasePending() );
+    table.release( 0 );
+    SW_EXPECT_EQUAL( 0, table.countReleasePending() );
+}

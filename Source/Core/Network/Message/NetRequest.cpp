@@ -575,7 +575,7 @@ namespace sw
 
     void NetRequestServer::purgeIdempotencyLocked( int64 now )
     {
-        const auto isOverCapacity = [this]()
+        const auto isOverCapacity = [this]() SW_REQUIRES_LOCK( _mutex )
         { return static_cast<int32>( _mapIdempotency.size() ) > _settings->_maxIdempotencyEntries || _idempotencyBodyBytes > _settings->_maxIdempotencyBytes; };
         while ( _listExpiry.empty() == false && ( _listExpiry.front().second <= now || isOverCapacity() ) )
         {
