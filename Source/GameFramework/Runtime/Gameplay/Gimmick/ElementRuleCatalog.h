@@ -41,6 +41,7 @@
 
 namespace sw
 {
+    class XMLCatalogRoot;
     class XMLNode;
 
     /** @brief 상태 값이 스텝마다 어떻게 바뀌는지 나타냅니다. */
@@ -270,7 +271,7 @@ namespace sw
         void                              setStepTime( float32 stepTime ) { _stepTime = stepTime; }
 
     private:
-        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool loadFlag( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadStatus( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadMaterial( const XMLNode& node, string_view sourceName );

@@ -26,6 +26,7 @@ namespace sw
 
     class XMLDocument;
     class XMLNode;
+    class XMLCatalogRoot;
 
     /**
      * @struct GameDataXML
@@ -45,14 +46,14 @@ namespace sw
          *          멤버 포인터를 카탈로그 안에서 넘기므로 루트 읽기는 비공개로 둘 수 있다.
          */
         template <typename TLoader, typename TResult>
-        [[nodiscard]] static bool loadFromAsset( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, string_view ), const AssetID& assetID, const utf8* pRootName )
+        [[nodiscard]] static bool loadFromAsset( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLCatalogRoot&, string_view ), const AssetID& assetID, const utf8* pRootName )
         {
             RootCall<TLoader, TResult> call{ loader, pLoadRoot };
             return XMLCatalogLoader::loadFromAsset( &call, &RootCall<TLoader, TResult>::invoke, assetID, pRootName );
         }
         /** @brief `loadFromAsset` 의 XML 문자열 버전입니다. 테스트와 에디터 미리보기(`loadFromXMLText`)가 씁니다. */
         template <typename TLoader, typename TResult>
-        [[nodiscard]] static bool loadFromXMLText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, string_view ), string_view xmlText, string_view sourceName,
+        [[nodiscard]] static bool loadFromXMLText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLCatalogRoot&, string_view ), string_view xmlText, string_view sourceName,
                                                    const utf8* pRootName )
         {
             RootCall<TLoader, TResult> call{ loader, pLoadRoot };
@@ -61,7 +62,7 @@ namespace sw
 
         /** @brief `loadFromAsset` 에 다른 카탈로그(기술, 코스터 설계)를 함께 넘기는 버전입니다. 루트 읽기가 `( root, context, sourceName )` 를 받습니다. */
         template <typename TLoader, typename TResult, typename TContext>
-        [[nodiscard]] static bool loadFromAsset( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, const TContext&, string_view ), const TContext& context,
+        [[nodiscard]] static bool loadFromAsset( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLCatalogRoot&, const TContext&, string_view ), const TContext& context,
                                                  const AssetID& assetID, const utf8* pRootName )
         {
             RootCallWithContext<TLoader, TResult, TContext> call{ loader, pLoadRoot, context };
@@ -69,7 +70,7 @@ namespace sw
         }
         /** @brief `loadFromXMLText` 에 다른 카탈로그를 함께 넘기는 버전입니다. */
         template <typename TLoader, typename TResult, typename TContext>
-        [[nodiscard]] static bool loadFromXMLText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, const TContext&, string_view ), const TContext& context,
+        [[nodiscard]] static bool loadFromXMLText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLCatalogRoot&, const TContext&, string_view ), const TContext& context,
                                                    string_view xmlText, string_view sourceName, const utf8* pRootName )
         {
             RootCallWithContext<TLoader, TResult, TContext> call{ loader, pLoadRoot, context };
@@ -136,9 +137,9 @@ namespace sw
         struct RootCall
         {
             TLoader& loader;
-            TResult ( TLoader::*pLoadRoot )( const XMLNode&, string_view );
+            TResult ( TLoader::*pLoadRoot )( const XMLCatalogRoot&, string_view );
 
-            static bool invoke( void* pCall, const XMLNode& root, string_view sourceName )
+            static bool invoke( void* pCall, const XMLCatalogRoot& root, string_view sourceName )
             {
                 RootCall& call = *static_cast<RootCall*>( pCall );
                 return XMLCatalogLoader::isLoaded( ( call.loader.*call.pLoadRoot )( root, sourceName ) );
@@ -148,10 +149,10 @@ namespace sw
         struct RootCallWithContext
         {
             TLoader& loader;
-            TResult ( TLoader::*pLoadRoot )( const XMLNode&, const TContext&, string_view );
+            TResult ( TLoader::*pLoadRoot )( const XMLCatalogRoot&, const TContext&, string_view );
             const TContext& context;
 
-            static bool invoke( void* pCall, const XMLNode& root, string_view sourceName )
+            static bool invoke( void* pCall, const XMLCatalogRoot& root, string_view sourceName )
             {
                 RootCallWithContext& call = *static_cast<RootCallWithContext*>( pCall );
                 return XMLCatalogLoader::isLoaded( ( call.loader.*call.pLoadRoot )( root, call.context, sourceName ) );

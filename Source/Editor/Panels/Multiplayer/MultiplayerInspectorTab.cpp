@@ -137,9 +137,9 @@ namespace sw::editor
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "AttachByAddress" ) ) )
         {
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "InspectorAttach" ) );
-            ImGui::InputTextWithHint( "##InspectorAddress", "127.0.0.1:<port>", _address.data(), _address.capacity() );
+            EditorWidgets::inputTextWithHint( "##InspectorAddress", "127.0.0.1:<port>", _address.data(), _address.capacity() );
             ImGui::SameLine();
-            ImGui::InputTextWithHint( "##InspectorToken", "token", _token.data(), _token.capacity(), ImGuiInputTextFlags_Password );
+            EditorWidgets::inputTextWithHint( "##InspectorToken", "token", _token.data(), _token.capacity(), ImGuiInputTextFlags_Password );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Attach" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Attach" ) ) )
                 _viewModel.attachByAddress( _address.c_str(), _token.c_str() );
@@ -211,8 +211,8 @@ namespace sw::editor
         ImGui::EndChild();
         constexpr ImGuiInputTextFlags kFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion;
         ImGui::SetNextItemWidth( -1.0f );
-        const bool bEntered = ImGui::InputTextWithHint( "##InspectorCommand", SW_LOCKEY( "EditorMultiplayer", "InspectorConsoleHint" ), _commandLine.data(),
-                                                        _commandLine.capacity(), kFlags, &MultiplayerInspectorTabInternal::onCommandLineEdit, &_viewModel );
+        const bool bEntered = EditorWidgets::inputTextWithHint( "##InspectorCommand", SW_LOCKEY( "EditorMultiplayer", "InspectorConsoleHint" ), _commandLine.data(),
+                                                                _commandLine.capacity(), kFlags, &MultiplayerInspectorTabInternal::onCommandLineEdit, &_viewModel );
         if ( bEntered )
         {
             _viewModel.execute( _commandLine.c_str() ); // 결과(오류 포함)는 결과 줄에 남는다 — 다음 프레임에 모은다

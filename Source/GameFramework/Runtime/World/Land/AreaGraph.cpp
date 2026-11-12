@@ -28,7 +28,7 @@ namespace sw
     {
     }
 
-    uint32 AreaGraph::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 AreaGraph::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         clear();
         // 연결은 지역을 가리키므로 지역을 먼저 다 읽는다.

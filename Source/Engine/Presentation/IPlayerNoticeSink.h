@@ -18,14 +18,14 @@ namespace sw
     };
 
     /** @class IPlayerNoticeSink @brief 플레이어 알림을 받는 쪽입니다. 게임 스레드에서 부릅니다. */
-    class IPlayerNoticeSink
+    class SW_API IPlayerNoticeSink
     {
     public:
         virtual ~IPlayerNoticeSink() = default;
 
         /** @brief @p text(현지화 키 또는 글 그대로)를 @p durationSeconds 동안 @p kind 모양으로 알립니다. 같은 글이 떠 있으면 센다. */
         virtual void postNotice( const string& text, float32 durationSeconds, PlayerNoticeKind kind ) = 0;
-    };
 
-    SW_SERVICE_SLOT( IPlayerNoticeSink, Optional );
+        SW_SERVICE_SLOT( IPlayerNoticeSink, Optional );
+    };
 } // namespace sw

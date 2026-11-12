@@ -118,12 +118,12 @@ namespace sw
         return true;
     }
 
-    uint32 MechCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 MechCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         // 루트가 틀리면 파일을 읽지 않는다 — 코스트 상한이 "제한 없음" 으로 남은 채 판이 열리지 않게 한다.
         MechCatalogRootDef rootDef;
-        if ( XMLFields::readProperties( root, rootDef, sourceName ) == false )
+        if ( root.readProperties( rootDef, sourceName ) == false )
             return 0;
         _deckCostLimit = rootDef._deckCostLimit;
 

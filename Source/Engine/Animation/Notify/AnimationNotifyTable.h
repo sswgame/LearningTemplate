@@ -247,9 +247,9 @@ namespace sw
 
     private:
         NameRegistry<unique_ptr<IAnimationNotifyHandler>> _registry; ///< 이름 → 처리기(등록 순서)
-    };
 
-    SW_SERVICE_SLOT( AnimationNotifyHandlerRegistry, Required );
+        SW_SERVICE_SLOT( AnimationNotifyHandlerRegistry, Required );
+    };
 
     /**
      * @brief 알림 테이블을 기본 처리기 레지스트리로 읽어 나눠 줍니다("AnimationNotifyTable"). 모르는 처리기나 인자는 오류입니다. 제자리에서 다시 읽습니다.

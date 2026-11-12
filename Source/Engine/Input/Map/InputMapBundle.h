@@ -54,9 +54,9 @@ namespace sw
     private:
         mutable mutex                                           _mutex;                  ///< 등록 목록을 지킨다
         RegistrationList<const InputMapExtension> _registration SW_GUARDED_BY( _mutex ); ///< (0, id) 순서, 이름 없는 등록은 거절한다
-    };
 
-    SW_SERVICE_SLOT( InputMapExtensionRegistry, Required );
+        SW_SERVICE_SLOT( InputMapExtensionRegistry, Required );
+    };
 
     /** @brief `SW_INPUT_MAP_EXTENSION` 이 두는 정적 등록자입니다. */
     using InputMapExtensionRegistrar = ModuleEntryRegistrar<InputMapExtensionRegistry, const InputMapExtension*>;

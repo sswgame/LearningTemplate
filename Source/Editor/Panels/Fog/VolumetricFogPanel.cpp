@@ -87,7 +87,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorVolumetricFog", "DebugViewTip" ) );
         int32 slice = _viewState._slice;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorVolumetricFog", "Slice" ), SW_LOCKEY( "EditorVolumetricFog", "SliceTip" ) );
-        if ( ImGui::SliderInt( "##fogSlice", &slice, 0, static_cast<int32>( SW_FOG_VOLUME_DIM_Z ) - 1 ) )
+        if ( EditorWidgets::sliderInt( "##fogSlice", &slice, 0, static_cast<int32>( SW_FOG_VOLUME_DIM_Z ) - 1 ) )
             _viewModel.setSlice( slice );
         EditorSelfTestMarks::record( "volumetricFog.slice" );
     }

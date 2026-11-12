@@ -28,11 +28,11 @@ namespace sw
         return VectorUtil::findBy<&AsymmetricHorrorScoreRule::_action>( _listScoreRule, action );
     }
 
-    uint32 AsymmetricHorrorRulesCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 AsymmetricHorrorRulesCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         AsymmetricHorrorRules rules;
-        if ( XMLFields::readProperties( root, rules, sourceName ) )
+        if ( root.readProperties( rules, sourceName ) )
             _rules = rules;
         // 살인마가 없으면 판을 열 수 없다 — 세는 줄은 살인마뿐이고 없으면 읽기 실패다.
         using Catalog                          = AsymmetricHorrorRulesCatalog;

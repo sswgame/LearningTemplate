@@ -161,7 +161,7 @@ namespace sw::engine
     {
         const utf8*  _pTypeName;                            ///< 오류 문구 · 정렬에 쓰는 타입 이름
         uint64       _typeHash;                             ///< 범위에서 찾는 타입 해시(`getSubsystemTypeHash`)
-        ServiceSlot* _pSlot;                                ///< 그 타입의 칸(`ServiceSlotOf<T>::s_slot`)
+        ServiceSlot* _pSlot;                                ///< 그 타입의 칸(`T::s_serviceSlot`)
         bool ( *_pfnBind )( SubsystemScope& scope, void* ); ///< 모듈 범위에 그 타입으로 건다(`SubsystemScope::bind<T>`)
         ServiceRequirement         _requirement;            ///< 헤더의 칸 선언이 정한 필수 여부
         EngineServiceVisibility    _visibility;             ///< 게임 모듈 노출
@@ -347,17 +347,17 @@ namespace sw::engine
     };
 } // namespace sw::engine
 
-// 인자가 **타입 이름**이라 괄호를 씌울 수 없다(`ServiceSlotOf<(Type)>` 는 올바른 문법이 아니다).
+// 인자가 **타입 이름**이라 괄호를 씌울 수 없다(`(Type)::s_serviceSlot` 은 올바른 문법이 아니다).
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define SW_ENGINE_REGISTRATION_UNPAREN( ... ) __VA_ARGS__
 
 /** @brief 서비스 칸을 정의하고 목록에 답니다. namespace `sw` 안에 둔다. */
-#define SW_ENGINE_SERVICE( Type, visibility )                                                                                                                                           \
-    ServiceSlot                                    ServiceSlotOf<Type>::s_slot{ nullptr }; /* 정의는 namespace `sw` 안이라야 한다(`::sw::ServiceSlot ::sw::…` 는 한 이름으로 읽힌다) */ \
-    static const ::sw::engine::EngineServiceRecord s_engineServiceRecord_##Type                                                                                                         \
-    {                                                                                                                                                                                   \
-        ::sw::engine::EngineRegistrationList::getGlobal(), ServiceSlotOf<Type>::kTypeName, ::sw::getSubsystemTypeHash<Type>(), ServiceSlotOf<Type>::s_slot,                             \
-            &::sw::engine::EngineRegistrationOps<Type>::bind, ServiceSlotOf<Type>::kRequirement, ::sw::engine::EngineServiceVisibility::visibility                                      \
+#define SW_ENGINE_SERVICE( Type, visibility )                                                                                                                                   \
+    ServiceSlot                                    Type::s_serviceSlot{ nullptr }; /* 정의는 namespace `sw` 안이라야 한다(`::sw::ServiceSlot ::sw::…` 는 한 이름으로 읽힌다) */ \
+    static const ::sw::engine::EngineServiceRecord s_engineServiceRecord_##Type                                                                                                 \
+    {                                                                                                                                                                           \
+        ::sw::engine::EngineRegistrationList::getGlobal(), ServiceSlotOf<Type>::kTypeName, ::sw::getSubsystemTypeHash<Type>(), ServiceSlotOf<Type>::getSlot(),                  \
+            &::sw::engine::EngineRegistrationOps<Type>::bind, ServiceSlotOf<Type>::kRequirement, ::sw::engine::EngineServiceVisibility::visibility                              \
     }
 
 /**

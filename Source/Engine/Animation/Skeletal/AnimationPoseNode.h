@@ -151,9 +151,9 @@ namespace sw
 
     private:
         NameRegistry<AnimationPoseNodeType> _registry; ///< 종류 이름 → 계약(등록 순서)
-    };
 
-    SW_SERVICE_SLOT( AnimationPoseNodeRegistry, Required );
+        SW_SERVICE_SLOT( AnimationPoseNodeRegistry, Required );
+    };
 } // namespace sw
 
 namespace sw

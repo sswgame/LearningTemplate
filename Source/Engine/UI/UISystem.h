@@ -488,7 +488,7 @@ namespace sw
         uint8                        _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었는지 나타냅니다.
         uint8                        _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었는지 나타냅니다.
         uint8                        _bOnScreenSuppressed : 1; ///< 화면 그리기와 포인터 입력을 막는지 나타냅니다(`setOnScreenSuppressed`).
-    };
 
-    SW_SERVICE_SLOT( UISystem, Required );
+        SW_SERVICE_SLOT( UISystem, Required );
+    };
 } // namespace sw

@@ -73,7 +73,7 @@ namespace sw
         vector<Entry>  _listEntry;
         atomic<uint32> _count;          ///< `_listEntry` 의 크기를 렌더 스레드가 공개한 값
         atomic<uint32> _nextCaptureKey; ///< `allocateCaptureSceneKey` 의 다음 번호(표시 비트 밖)
-    };
 
-    SW_SERVICE_SLOT( OffscreenSceneRenderers, Optional );
+        SW_SERVICE_SLOT( OffscreenSceneRenderers, Optional );
+    };
 } // namespace sw

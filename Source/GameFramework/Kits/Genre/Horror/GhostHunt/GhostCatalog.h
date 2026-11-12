@@ -234,7 +234,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "GhostHunt"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadVacuum( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadFurniture( const XMLNode& node, string_view sourceName );
 

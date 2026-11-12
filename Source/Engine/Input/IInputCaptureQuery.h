@@ -17,7 +17,7 @@ namespace sw
      * @class IInputCaptureQuery
      * @brief 입력 포획 질의입니다. 게임 스레드에서 부릅니다.
      */
-    class IInputCaptureQuery
+    class SW_API IInputCaptureQuery
     {
     public:
         virtual ~IInputCaptureQuery() = default;
@@ -28,7 +28,7 @@ namespace sw
         [[nodiscard]] virtual bool isActionCaptured( const InputMap& inputMap, const hashed_string& action ) const = 0;
         /** @brief 커서를 바라면(메뉴가 열렸다) true 입니다 — 마우스 잠금 · 시선을 쉽니다. */
         [[nodiscard]] virtual bool shouldShowCursor() const = 0;
-    };
 
-    SW_SERVICE_SLOT( IInputCaptureQuery, Optional );
+        SW_SERVICE_SLOT( IInputCaptureQuery, Optional );
+    };
 } // namespace sw

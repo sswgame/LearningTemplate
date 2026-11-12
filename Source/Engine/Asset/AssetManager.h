@@ -213,7 +213,7 @@ namespace sw
          */
         RegistrationList<AssetCacheBase> _registeredAssetCache;
         vector<ReloadEntry>              _listReloadEntry; ///< 리로드 함수가 있는 캐시만(배포는 늘 비었다)
-    };
 
-    SW_SERVICE_SLOT( AssetManager, Required );
+        SW_SERVICE_SLOT( AssetManager, Required );
+    };
 } // namespace sw

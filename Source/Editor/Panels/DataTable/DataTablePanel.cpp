@@ -204,7 +204,7 @@ namespace sw::editor
             const bool            bHasProject          = selectedProjectIndex >= 0 && static_cast<size_t>( selectedProjectIndex ) < listProject.size();
             const string          projectLabel         = bHasProject ? FileUtil::getFileNamePart( listProject[static_cast<size_t>( selectedProjectIndex )] ) : string( SW_LOCKEY( "EditorDataTable", "NoProject" ) );
             EditorChrome::setNextItemWidthColumns( 29.0f );
-            const bool bProjectOpen = ImGui::BeginCombo( "##locProject", projectLabel.c_str() );
+            const bool bProjectOpen = EditorWidgets::beginCombo( "##locProject", projectLabel.c_str() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "ProjectTip" ) );
             if ( bProjectOpen )
             {
@@ -236,7 +236,7 @@ namespace sw::editor
 
             EditorChrome::sameLineIfFits( EditorChrome::measureColumns( 21.0f ) ); // 좁은 창에서 새 키 칸이 오른쪽 끝에서 잘렸다(uiaudit 23)
             EditorChrome::setNextItemWidthColumns( 21.0f );
-            ImGui::InputTextWithHint( "##newKey", SW_LOCKEY( "EditorDataTable", "NewKeyHint" ), _newKeyBuffer.data(), _newKeyBuffer.capacity() );
+            EditorWidgets::inputTextWithHint( "##newKey", SW_LOCKEY( "EditorDataTable", "NewKeyHint" ), _newKeyBuffer.data(), _newKeyBuffer.capacity() );
             EditorSelfTestMarks::record( "dataTable.newKey" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "AddKey" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdLabel", "AddKey" ) ) && _model.addKey( _newKeyBuffer.c_str() ) )

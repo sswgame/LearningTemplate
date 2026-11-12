@@ -209,7 +209,7 @@ namespace sw
          */
         PROPERTY( Min = 1, Units = s )
         float64 _shaderTimeRolloverSeconds{};
-    };
 
-    SW_SERVICE_SLOT_CONST( EngineConfig, Required );
+        SW_SERVICE_SLOT_CONST( EngineConfig, Required );
+    };
 } // namespace sw

@@ -125,7 +125,7 @@ namespace sw
         Subscription              _documentReloadedSubscription;   ///< 문서 캐시의 다시 읽기 알림 구독
         Subscription              _styleSheetReloadedSubscription; ///< 스타일 시트 캐시의 다시 읽기 알림 구독
         Subscription              _themeChangedSubscription;       ///< 테마가 바뀐 알림 구독
-    };
 
-    SW_SERVICE_SLOT( UIOffscreenScreens, Required );
+        SW_SERVICE_SLOT( UIOffscreenScreens, Required );
+    };
 } // namespace sw

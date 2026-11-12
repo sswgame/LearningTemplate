@@ -264,7 +264,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PreviewStepTip" ) );
             ImGui::SameLine();
             EditorChrome::setNextItemWidthColumns( 6.0f );
-            if ( ImGui::BeginCombo( "##previewSpeed", EditorPreviewPanelInternal::kArrSpeedLabel[_speedIndex] ) )
+            if ( EditorWidgets::beginCombo( "##previewSpeed", EditorPreviewPanelInternal::kArrSpeedLabel[_speedIndex] ) )
             {
                 for ( uint32 index = 0; index < static_cast<uint32>( std::size( EditorPreviewPanelInternal::kArrPreviewSpeed ) ); ++index )
                 {
@@ -282,7 +282,7 @@ namespace sw::editor
             {
                 ImGui::SameLine();
                 EditorChrome::setNextItemWidthColumns( 16.0f );
-                if ( ImGui::SliderFloat( "##previewScrub", &time, 0.0f, duration, "%.2f s" ) )
+                if ( EditorWidgets::sliderFloat( "##previewScrub", &time, 0.0f, duration, "%.2f s" ) )
                 {
                     _bPreviewPaused = SW_TRUE; // 문지르는 동안은 멈춘다(언리얼 Persona 타임라인과 같다)
                     seekPreviewTimeline( time );

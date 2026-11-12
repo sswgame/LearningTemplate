@@ -114,7 +114,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "PartySeries"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         void                         pushEvent( PartySeriesEvent::Kind kind, optional<int32> player, int32 value, int32 points );
 
     private:

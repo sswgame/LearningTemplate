@@ -466,7 +466,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "WesternCatalog"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadPeltGrade( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadHuntWeapon( const XMLNode& node, string_view sourceName );
         /** @brief `<Honor>` 를 읽습니다. 범위가 깨졌으면 세력을 넣지 않고, 단계 · 행동의 스키마 오류는 그것만 빼고 false 입니다. */

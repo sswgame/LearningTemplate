@@ -622,8 +622,8 @@ namespace sw::editor
     {
         ImGui::SetNextItemWidth( -1.0f );
         constexpr ImGuiInputTextFlags kFlags     = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackCompletion;
-        const bool                    bSubmitted = ImGui::InputTextWithHint( "##ConsoleCommand", SW_LOCKEY( "EditorConsole", "CommandHint" ), _commandBuffer.data(),
-                                                                             _commandBuffer.capacity(), kFlags, &ConsolePanelInternal::onCommandLineEdit, &_devConsole );
+        const bool                    bSubmitted = EditorWidgets::inputTextWithHint( "##ConsoleCommand", SW_LOCKEY( "EditorConsole", "CommandHint" ), _commandBuffer.data(),
+                                                                                     _commandBuffer.capacity(), kFlags, &ConsolePanelInternal::onCommandLineEdit, &_devConsole );
         if ( bSubmitted )
         {
             (void)_devConsole.submit( _commandBuffer.c_str() ); // 답 · 실패는 로그로 남아 이 패널에 보인다

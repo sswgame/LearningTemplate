@@ -66,7 +66,7 @@ namespace sw::editor
                     return;
                 }
 
-                if ( ImGui::BeginCombo( pLabel, row._valueText.c_str() ) == false )
+                if ( EditorWidgets::beginCombo( pLabel, row._valueText.c_str() ) == false )
                     return;
                 if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "SelectAll" ) ) )
                 {
@@ -108,7 +108,7 @@ namespace sw::editor
                     return;
                 }
 
-                if ( ImGui::BeginCombo( pLabel, row._valueText.c_str() ) == false )
+                if ( EditorWidgets::beginCombo( pLabel, row._valueText.c_str() ) == false )
                     return;
                 for ( const PropertyEnumChoice& choice : row._listChoice )
                 {
@@ -670,7 +670,7 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax256> elementText{ row._valueText.c_str() };
         const bool                              bEditable = row._bReadOnly == SW_FALSE;
         ImGui::SetNextItemWidth( -FLT_MIN );
-        if ( ImGui::InputText( "##element", elementText.data(), elementText.capacity(), bEditable ? ImGuiInputTextFlags_EnterReturnsTrue : ImGuiInputTextFlags_ReadOnly ) && bEditable )
+        if ( EditorWidgets::inputText( "##element", elementText.data(), elementText.capacity(), bEditable ? ImGuiInputTextFlags_EnterReturnsTrue : ImGuiInputTextFlags_ReadOnly ) && bEditable )
         {
             _pendingEdit      = PendingRowEdit::ReplaceKeyedElement;
             _pendingEditRowID = row._parentRowID;
@@ -684,7 +684,7 @@ namespace sw::editor
         const ImGuiID                            rowID = ImGui::GetID( "##add" );
         fixed_string<constant::buffer::kMax256>& text  = _mapContainerAddText[static_cast<uint32>( rowID )];
         ImGui::SetNextItemWidth( -FLT_MIN );
-        const bool bEntered = ImGui::InputTextWithHint( "##add", pHint, text.data(), text.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
+        const bool bEntered = EditorWidgets::inputTextWithHint( "##add", pHint, text.data(), text.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         if ( bEntered == false || text.empty() )
             return false;
         outText = text.c_str();

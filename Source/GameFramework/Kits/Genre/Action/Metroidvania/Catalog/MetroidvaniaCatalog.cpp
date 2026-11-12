@@ -80,10 +80,10 @@ namespace sw
         return true;
     }
 
-    uint32 MetroidvaniaCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 MetroidvaniaCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
-        if ( loadRules( root, sourceName ) == false )
+        if ( loadRules( root.getNodeForHandRead(), sourceName ) == false ) // 손 읽기: 파일마다 통째로 정하는 규칙 묶음(Rules · Health · Stamina · Parry)을 한 번에 조립한다 — 표는 그 이름을 known 으로 둔다
             return 0;
         // 줍는 것이 능력 · 부적을 가리킨다 — 연결은 참조 표가 보고, 읽기는 표의 순서다.
         using Element                          = XMLCatalogElement<MetroidvaniaCatalog>;

@@ -34,12 +34,12 @@ namespace sw
         return name;
     }
 
-    uint32 BattleRoyaleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 BattleRoyaleCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         // 맵 크기가 깨진 글을 앞의 크기로 읽어 나가지 않는다(자기장 · 비행 경로가 말없이 다른 맵에서 돈다).
         BattleRoyaleCatalogRootDef rootDef;
-        if ( XMLFields::readProperties( root, rootDef, sourceName ) == false )
+        if ( root.readProperties( rootDef, sourceName ) == false )
             return 0;
         _mapSize = rootDef._mapSize;
 

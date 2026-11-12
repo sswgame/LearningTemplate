@@ -424,7 +424,7 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "AbilityCatalog"; ///< 루트 원소(`XMLCatalog`)
         /** @brief 실행 계산 클래스를 이름으로 등록합니다(생성자가 기본 어휘를 올린다). */
         void               registerExecutionClass( const hashed_string& className, ExecutionFactoryFunc factory );
-        uint32             loadRoot( const XMLNode& root, string_view sourceName );
+        uint32             loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool loadEffect( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadAbility( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadAbilitySet( const XMLNode& node, string_view sourceName );

@@ -101,11 +101,11 @@ namespace sw
         return pRank != nullptr ? _lootCatalog.computeDropChance( pRank->_tableID, itemID ) : 0.0f;
     }
 
-    uint32 KartItemCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 KartItemCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         KartItemsRootDef rootDef;
-        if ( XMLFields::readProperties( root, rootDef, sourceName ) )
+        if ( root.readProperties( rootDef, sourceName ) )
             _referencePlaceCount = rootDef._referencePlaceCount;
         // 순위 표는 아이템을 가리키므로 아이템을 모두 읽은 뒤에 읽는다(적힌 순서와 상관없게).
         using Element                          = XMLCatalogElement<KartItemCatalog>;

@@ -104,9 +104,9 @@ namespace sw
         vector<KindEntry> _listKind          SW_GUARDED_BY( _mutex );
         vector<AssetLoadRecord> _listSlowest SW_GUARDED_BY( _mutex ); ///< 느린 것부터(최대 kSlowestCount)
         uint32 _loadCount                    SW_GUARDED_BY( _mutex );
-    };
 
-    SW_SERVICE_SLOT( AssetLoadProfiler, Optional );
+        SW_SERVICE_SLOT( AssetLoadProfiler, Optional );
+    };
 } // namespace sw
 
 namespace sw

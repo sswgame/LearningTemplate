@@ -180,12 +180,12 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    uint32 PartyItemSpawner::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 PartyItemSpawner::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 루트 속성은 `PartyItemSpawnSettings` 스키마다(기본값 = 초기값, 범위 = PROPERTY). 가운데(`_center`)는 게임이 정한다.
         // 틀리면 파일을 읽지 않는다 — 규칙은 기본값인 채 아이템만 읽혀 성공으로 보이지 않게 한다.
         PartyItemSpawnSettings settings;
-        if ( XMLFields::readProperties( root, settings, sourceName ) == false )
+        if ( root.readProperties( settings, sourceName ) == false )
             return 0;
         settings._center                       = _settings._center;
         _settings                              = settings;

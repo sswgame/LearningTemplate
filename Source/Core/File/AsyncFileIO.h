@@ -268,7 +268,7 @@ namespace sw
         unique_ptr<AsyncFileIOQueue>    _queue;
         unique_ptr<IAsyncFileIOBackend> _backend;
         AsyncFileIOConfig               _subsystemSettings; ///< `initializeSubsystem` 이 넘길 설정(`setSubsystemSettings`)
-    };
 
-    SW_SERVICE_SLOT( AsyncFileIO, Required );
+        SW_SERVICE_SLOT( AsyncFileIO, Required );
+    };
 } // namespace sw

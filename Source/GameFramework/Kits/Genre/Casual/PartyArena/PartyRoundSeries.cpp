@@ -85,7 +85,7 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    uint32 PartyRoundSeries::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 PartyRoundSeries::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 승리 점수와 순위 점수는 적지 않으면 지금 설정 그대로다. 적었으면 모두 읽혀야 한다 — 깨진 값은 오류를 남기고 이 파일을 읽지 않는다(깨진 값을 건너뛰어 순위가 밀리지 않게).
         // 끝까지 읽은 뒤 한 번에 옮긴다. 앞 칸만 바뀐 채 실패하거나, 다시 읽을 때 라운드가 뒤에 덧붙지 않게 한다.

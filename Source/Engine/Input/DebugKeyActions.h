@@ -118,7 +118,7 @@ namespace sw
         unique_ptr<InputMap> _mapDebugAction;
         string               _userBindingsPath; ///< 맵을 만들 때 정한 사용자 바인딩 파일 경로입니다(빈 값 = 저장하지 않는다).
         uint8                _bBound : 1;
-    };
 
-    SW_SERVICE_SLOT( DebugKeyActions, Required );
+        SW_SERVICE_SLOT( DebugKeyActions, Required );
+    };
 } // namespace sw

@@ -138,7 +138,7 @@ namespace sw
         return false;
     }
 
-    uint32 ScheduleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 ScheduleCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         /** 원소를 읽는 쪽은 id 글을 받고 알림은 스스로 남기므로 줄 모양으로 잇는다. 함수 안의 형식이라 이 클래스의 비공개를 볼 수 있다. id 는 원소마다의 칸 구조체가 필수로 읽는다 — 여기서는 오류 문장에 쓸 글만 꺼낸다. */
         struct ScheduleElementReader
@@ -201,7 +201,7 @@ namespace sw
         const uint32          loadedCount = XMLCatalogReadResult::readInTableOrder( reader, root, sourceName, kArrElement )._loadedCount;
         resolveReferences( sourceName );
         // 같은 파일의 id 연결은 참조 표가 본다(로드 실패). 코드 등록 이름(활동)은 여기서 보고 같은 정책(로드 실패)으로 맞춘다.
-        const bool bActivitiesKnown = validateActivityNames( root, sourceName ) && _bUnknownIdleActivity == SW_FALSE;
+        const bool bActivitiesKnown = validateActivityNames( root.getNodeForHandRead(), sourceName ) && _bUnknownIdleActivity == SW_FALSE; // 손 읽기: 표가 읽은 뒤 깊은 <Block> 의 활동 이름만 다시 본다
         return bActivitiesKnown ? loadedCount : 0;
     }
 

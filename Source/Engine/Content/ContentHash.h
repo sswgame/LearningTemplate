@@ -102,7 +102,7 @@ namespace sw
         uint64 _writeSerial                    SW_GUARDED_BY( _mutex ); ///< 자기 쓰기 알림마다 오른다
         WriteObserver                          _writeObserver;          ///< 파일 계층에 건 쓰기 관찰자
         uint8                                  _bObserving : 1;         ///< 쓰기 관찰자를 걸었다(내릴 때 뗀다)
-    };
 
-    SW_SERVICE_SLOT( ContentHashCache, Required );
+        SW_SERVICE_SLOT( ContentHashCache, Required );
+    };
 } // namespace sw

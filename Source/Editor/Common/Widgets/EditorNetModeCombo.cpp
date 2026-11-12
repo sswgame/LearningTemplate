@@ -40,7 +40,7 @@ namespace sw::editor
         bool                   bChanged = false;
         ImGui::BeginDisabled( bLocked );
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldModeEm" ) );
-        if ( ImGui::BeginCombo( "##NetMode", getNetModeDisplayName( settings._mode ) ) )
+        if ( EditorWidgets::beginCombo( "##NetMode", getNetModeDisplayName( settings._mode ) ) )
         {
             constexpr EditorNetMode kArrMode[] = { EditorNetMode::Standalone, EditorNetMode::DedicatedServer, EditorNetMode::ListenHost };
             for ( const EditorNetMode mode : kArrMode )
@@ -59,7 +59,7 @@ namespace sw::editor
         {
             ImGui::SameLine();
             ImGui::SetNextItemWidth( EditorChrome::measureStepperInput( 2.0f ) ); // -/+ 단추 몫까지(숫자 칸 폭만 주면 숫자가 눌린다)
-            if ( ImGui::InputInt( "##PlayerCount", &settings._clientCount, 1, 1 ) )
+            if ( EditorWidgets::inputInt( "##PlayerCount", &settings._clientCount, 1, 1 ) )
                 bChanged = true;
             settings._clientCount = MathUtil::clamp( settings._clientCount, 1, kMaxPlayerCount );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayerCount" ) );

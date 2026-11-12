@@ -101,7 +101,7 @@ namespace sw
         return listPath;
     }
 
-    uint32 SkirmishUnitModelCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 SkirmishUnitModelCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<SkirmishUnitModelCatalog>;
         static constexpr Element kArrElement[] = {

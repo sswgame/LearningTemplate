@@ -162,7 +162,7 @@ namespace sw
         Subscription        _updateSubscription; ///< UI 갱신 칸(`UISystem::onUpdateAfterScreens`) 구독
         uint64              _nextOrder;
         UIScreenHandle      _screen;
-    };
 
-    SW_SERVICE_SLOT( UINotificationService, Required );
+        SW_SERVICE_SLOT( UINotificationService, Required );
+    };
 } // namespace sw

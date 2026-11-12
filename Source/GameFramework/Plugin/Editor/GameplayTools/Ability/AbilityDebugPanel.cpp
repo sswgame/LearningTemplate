@@ -97,7 +97,7 @@ namespace sw::editor
 
         const GameObject* pCurrentOwner = pCurrent != nullptr ? pCurrent->getOwner() : nullptr;
         const utf8*       pPreview      = pCurrentOwner != nullptr ? pCurrentOwner->getName().c_str() : SW_LOCKEY( "EdAbilityDebug", "PickTarget" );
-        const bool        bOpen         = ImGui::BeginCombo( "##AbilityTarget", pPreview );
+        const bool        bOpen         = EditorWidgets::beginCombo( "##AbilityTarget", pPreview );
         EditorSelfTestMarks::record( "abilityDebug.target" );
         if ( bOpen == false )
             return;

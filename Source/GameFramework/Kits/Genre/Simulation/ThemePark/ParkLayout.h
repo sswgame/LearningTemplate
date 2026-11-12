@@ -21,6 +21,7 @@
 namespace sw
 {
     class CoasterLayoutCatalog;
+    class XMLCatalogRoot;
     class XMLNode;
 } // namespace sw
 
@@ -181,7 +182,7 @@ namespace sw
          * @details 종류의 로더(공유 캐시)만 부른다. 코스터 파일 이름을 다시 적지 않는다 — 같은 팩의 코스터 종류 파일이다(`GamePackDataUtil::tryMakeSiblingKindPath`).
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        [[nodiscard]] bool loadRoot( const XMLNode& root, const CoasterLayoutCatalog& layouts, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLCatalogRoot& root, const CoasterLayoutCatalog& layouts, string_view sourceName );
         [[nodiscard]] bool loadFlatRide( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadCoaster( const XMLNode& node, const CoasterLayoutCatalog& layouts, string_view sourceName );
 

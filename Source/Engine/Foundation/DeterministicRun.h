@@ -54,7 +54,7 @@ namespace sw
 
     private:
         DeterministicRunPolicy _policy;
-    };
 
-    SW_SERVICE_SLOT( DeterministicRun, Required );
+        SW_SERVICE_SLOT( DeterministicRun, Required );
+    };
 } // namespace sw

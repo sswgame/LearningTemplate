@@ -167,7 +167,7 @@ namespace sw
         return bValid;
     }
 
-    bool InteractionCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    bool InteractionCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<InteractionCatalog>;
         static constexpr Element kArrElement[] = {

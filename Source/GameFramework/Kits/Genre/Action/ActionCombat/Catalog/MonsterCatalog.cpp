@@ -34,7 +34,7 @@ namespace sw
         return false;
     }
 
-    uint32 MonsterCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 MonsterCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 칸의 기본값은 각 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 몬스터를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<MonsterCatalog>;

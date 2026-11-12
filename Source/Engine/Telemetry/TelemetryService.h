@@ -292,7 +292,7 @@ namespace sw
         uint32 _fileIndex                   SW_GUARDED_BY( _spoolMutex );
         uint32 _currentFileEvents           SW_GUARDED_BY( _spoolMutex );
         DedicatedWorker<TelemetrySpoolJob>  _spoolWorker; ///< 맨 뒤 — 생성자가 띄우고 소멸자가 멈춘다(처리 함수가 위 멤버를 쓴다)
-    };
 
-    SW_SERVICE_SLOT( TelemetryService, Required );
+        SW_SERVICE_SLOT( TelemetryService, Required );
+    };
 } // namespace sw

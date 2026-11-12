@@ -189,7 +189,7 @@ namespace sw
         string      sourceName;
         if ( XMLReadUtil::loadRootOrWarn( doc, assetID, ElementRuleCatalogInternal::kRootName, root, sourceName ) == false )
             return false;
-        return loadRoot( root, sourceName );
+        return loadRoot( XMLCatalogRoot{ root }, sourceName );
     }
 
     bool ElementRuleCatalog::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -198,7 +198,7 @@ namespace sw
         XMLNode     root;
         if ( XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, ElementRuleCatalogInternal::kRootName, root ) == false )
             return false;
-        return loadRoot( root, sourceName );
+        return loadRoot( XMLCatalogRoot{ root }, sourceName );
     }
 
     bool ElementRuleCatalog::readIndex( const hashed_string& name, const XMLNode& node, const utf8* pAttribute, optional<int32> ( ElementRuleCatalog::*pFind )( const hashed_string& ) const,
@@ -268,12 +268,12 @@ namespace sw
         return bValid;
     }
 
-    bool ElementRuleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    bool ElementRuleCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         clear();
         // 적지 않으면 clear() 가 둔 기본 스텝 길이다. 0 이하 · 깨진 값은 오류다.
         ElementRuleRootParams rootParams{ _stepTime };
-        const bool            bRoot = XMLFields::readProperties( root, rootParams, sourceName ); // stepTime > 0 은 PROPERTY 가 본다
+        const bool            bRoot = root.readProperties( rootParams, sourceName ); // stepTime > 0 은 PROPERTY 가 본다
         _stepTime                   = bRoot ? rootParams._stepTime : _stepTime;
         // 이름은 앞에서 선언한 것만 가리킬 수 있다. 그래서 플래그, 상태, 재질을 먼저 모두 읽고 규칙을 읽는다.
         using Element                          = XMLCatalogElement<ElementRuleCatalog>;

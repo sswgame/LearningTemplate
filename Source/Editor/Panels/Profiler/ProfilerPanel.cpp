@@ -373,7 +373,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "PauseOnSpike" ) );
         EditorChrome::sameLineIfFits( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldNumberEm" ) );
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldNumberEm" ) );
-        ImGui::DragFloat( "##spikeMs", &_capture.editSpikeThresholdMs(), 0.1f, 0.1f, 1000.0f, "%.1f ms" );
+        EditorWidgets::dragFloat( "##spikeMs", &_capture.editSpikeThresholdMs(), 0.1f, 0.1f, 1000.0f, "%.1f ms" );
         EditorSelfTestMarks::record( "profiler.capture.spikeMs" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SpikeThreshold" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );

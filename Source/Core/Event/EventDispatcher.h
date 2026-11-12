@@ -257,7 +257,6 @@ namespace sw
         atomic<int32>       _activeAllocatorIndex;
 
     private:
+        SW_SERVICE_SLOT( EventDispatcher, Required );
     };
-
-    SW_SERVICE_SLOT( EventDispatcher, Required );
 } // namespace sw

@@ -40,13 +40,13 @@ namespace sw
     {
     }
 
-    uint32 SpawnTable::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 SpawnTable::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         _catalog.clear();
         _curve._listKey.clear();
         // 적지 않은 칸은 생성자의 초기값이다. 깨진 값 · 범위 밖 값은 표 전체를 읽지 않는 오류다(자르지 않는다).
         SpawnTableRootParams rootParams{ _budgetPerMinute, _maxBudget, _startBudget, _bRefundOnDespawn == SW_TRUE };
-        bool                 bValid = XMLFields::readProperties( root, rootParams, sourceName );
+        bool                 bValid = root.readProperties( rootParams, sourceName );
         _budgetPerMinute            = rootParams._budgetPerMinute;
         _maxBudget                  = rootParams._maxBudget;
         _startBudget                = rootParams._startBudget;

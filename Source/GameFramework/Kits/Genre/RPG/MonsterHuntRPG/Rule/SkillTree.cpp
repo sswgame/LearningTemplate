@@ -61,7 +61,7 @@ namespace sw
     // SkillTreeCatalog
     // ------------------------------------------------------------------------------
 
-    uint32 SkillTreeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 SkillTreeCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<SkillTreeCatalog>;
         static constexpr Element kArrElement[] = {

@@ -181,7 +181,7 @@ namespace sw
         atomic<uint64>                                                   _memoryHitCount;    ///< `getMemoryHitCount` — 로드 워커가 함께 센다
         atomic<uint64>                                                   _providerLoadCount; ///< `getProviderLoadCount` — 로드 워커가 함께 센다
         BusyClock                                                        _compileBusy;       ///< `getCompileBusyClock` — 로드 워커 · PSO 워커가 함께 센다
-    };
 
-    SW_SERVICE_SLOT( ShaderCache, Required );
+        SW_SERVICE_SLOT( ShaderCache, Required );
+    };
 } // namespace sw

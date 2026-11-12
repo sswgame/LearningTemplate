@@ -898,8 +898,8 @@ namespace sw::editor
             ImGui::SetKeyboardFocusHere();
             _bFocusRenameInput = SW_FALSE;
         }
-        const bool bEntered = ImGui::InputText( "##cb_rename", _renameBuffer.data(), _renameBuffer.capacity(),
-                                                ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll );
+        const bool bEntered = EditorWidgets::inputText( "##cb_rename", _renameBuffer.data(), _renameBuffer.capacity(),
+                                                        ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll );
         EditorSelfTestMarks::record( "contentBrowser.rename" );
         const bool bEscaped = EditorInputGUI::wasCancelPressed();
         if ( bEscaped )
@@ -1099,7 +1099,7 @@ namespace sw::editor
         typeFilter.sync();
         const vector<EditorAssetBrowserFilter>& listFilter = typeFilter.getFilters();
         EditorChrome::setNextItemWidthColumns( 15.0f );
-        if ( ImGui::BeginCombo( "##cb_type", typeFilter.getSelectedLabel() ) )
+        if ( EditorWidgets::beginCombo( "##cb_type", typeFilter.getSelectedLabel() ) )
         {
             for ( uint32 filterIdx = 0; filterIdx < static_cast<uint32>( listFilter.size() ); ++filterIdx )
             {
@@ -1127,7 +1127,7 @@ namespace sw::editor
         {
             ImGui::SameLine();
             EditorChrome::setNextItemWidthColumns( 11.0f );
-            ImGui::SliderFloat( "##cb_tile", &_tileSize, 64.0f, 160.0f, "%.0f" );
+            EditorWidgets::sliderFloat( "##cb_tile", &_tileSize, 64.0f, 160.0f, "%.0f" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TileSize" ) );
         }
     }

@@ -258,7 +258,7 @@ namespace sw
         return pTarget != nullptr ? pTarget->_blendIn : _defaultBlend;
     }
 
-    uint32 CameraPresetCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 CameraPresetCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 기본 블렌드를 먼저 — `<BlendIn>` 이 없는 프리셋이 이 값으로 시작한다.
         using Element                          = XMLCatalogElement<CameraPresetCatalog>;

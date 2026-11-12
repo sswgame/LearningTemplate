@@ -190,7 +190,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "RestaurantCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadArrival( const XMLNode& node, string_view sourceName );
         /** @brief `<Dish>` 하나를 스키마로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
         [[nodiscard]] bool loadDish( const XMLNode& node, string_view sourceName );

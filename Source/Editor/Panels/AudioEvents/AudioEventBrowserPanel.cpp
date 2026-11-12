@@ -181,7 +181,7 @@ namespace sw::editor
         }
 
         // 고칠 이벤트 — 사본의 이벤트에서 고른다(복제한 새 이벤트는 저장 전에는 엔진 목록에 없다).
-        if ( ImGui::BeginCombo( SW_LOCKEY( "EditorAudioEvents", "EditedEvent" ), _edit.getEventName().c_str() ) )
+        if ( EditorWidgets::beginCombo( SW_LOCKEY( "EditorAudioEvents", "EditedEvent" ), _edit.getEventName().c_str() ) )
         {
             for ( const AudioEventDef& candidate : _edit.getLibrary()._listEvent )
             {

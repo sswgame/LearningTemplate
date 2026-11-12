@@ -298,7 +298,7 @@ namespace sw
         return mapIter != _mapAbilitySet.end() ? &mapIter->second : nullptr;
     }
 
-    uint32 AbilityCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 AbilityCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 어빌리티가 비용 이펙트와 쿨다운 이펙트를 참조하므로, 파일 안의 순서와 상관없이 이펙트를 먼저 모두 읽는다.
         using Element                          = XMLCatalogElement<AbilityCatalog>;

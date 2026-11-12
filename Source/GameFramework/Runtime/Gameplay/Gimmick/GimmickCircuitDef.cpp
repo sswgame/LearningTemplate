@@ -58,7 +58,7 @@ namespace sw
         XMLNode     root;
         if ( XMLReadUtil::loadRootOrWarn( doc, assetID, GimmickCircuitDefInternal::kRootName, root, _sourceName ) == false )
             return false;
-        return loadRoot( root );
+        return loadRoot( XMLCatalogRoot{ root } );
     }
 
     bool GimmickCircuitDef::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -68,15 +68,15 @@ namespace sw
         _sourceName = string( sourceName.empty() ? string_view( "<gimmick xml>" ) : sourceName );
         if ( XMLReadUtil::parseRootOrWarn( doc, xmlText, _sourceName, GimmickCircuitDefInternal::kRootName, root ) == false )
             return false;
-        return loadRoot( root );
+        return loadRoot( XMLCatalogRoot{ root } );
     }
 
-    bool GimmickCircuitDef::loadRoot( const XMLNode& root )
+    bool GimmickCircuitDef::loadRoot( const XMLCatalogRoot& root )
     {
         clear();
         // 적지 않으면 clear() 가 둔 기본 스텝 길이(constant::time::kDefaultFixedStepSeconds)다. 0 이하 · 깨진 값은 오류다.
         GimmickCircuitRootParams rootParams{ _stepTime };
-        const bool               bRoot         = XMLFields::readProperties( root, rootParams, _sourceName ); // stepTime > 0 은 PROPERTY 가 본다
+        const bool               bRoot         = root.readProperties( rootParams, _sourceName ); // stepTime > 0 은 PROPERTY 가 본다
         _stepTime                              = bRoot ? rootParams._stepTime : _stepTime;
         using Element                          = XMLCatalogElement<GimmickCircuitDef>;
         static constexpr Element kArrElement[] = {

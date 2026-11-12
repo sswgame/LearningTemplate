@@ -477,7 +477,7 @@ namespace sw::editor
             ImGui::SetKeyboardFocusHere();
             _bFocusRenameInput = SW_FALSE;
         }
-        const bool bSubmitted = ImGui::InputText( "##InlineRename", _renameBuffer.data(), _renameBuffer.capacity(), ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll );
+        const bool bSubmitted = EditorWidgets::inputText( "##InlineRename", _renameBuffer.data(), _renameBuffer.capacity(), ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll );
         const bool bCanceled  = EditorInputGUI::wasCancelPressed();
         // 엔터도 칸을 놓으므로 확정은 한 번만 한다.
         if ( bSubmitted || ( ImGui::IsItemDeactivated() && bCanceled == false ) )

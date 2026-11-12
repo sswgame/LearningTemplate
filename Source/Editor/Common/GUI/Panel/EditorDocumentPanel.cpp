@@ -72,7 +72,7 @@ namespace sw::editor
         ImGui::SameLine();
         const utf8* pPreview = _loadedAssetPath.empty() ? SW_LOCKEY( "EdCommon", "NoDocument" ) : _loadedAssetPath.c_str();
         ImGui::SetNextItemWidth( -1.0f );
-        if ( ImGui::BeginCombo( "##RecentDocuments", pPreview ) )
+        if ( EditorWidgets::beginCombo( "##RecentDocuments", pPreview ) )
         {
             if ( _listRecentPath.empty() )
                 EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "NoRecentDocuments" ) );

@@ -369,9 +369,9 @@ namespace sw
     private:
         /** @brief 키 바인딩 대상 맵 등록의 구독입니다. 풀리면 `releaseKeyBindingInputMap` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<const InputMap> _subscriptions{ ItemSubscriptionList<const InputMap>::ReleaseFunction::create<&UserSettingsManager::releaseKeyBindingInputMap>( this ) };
-    };
 
-    SW_SERVICE_SLOT( UserSettingsManager, Required );
+        SW_SERVICE_SLOT( UserSettingsManager, Required );
+    };
 
     template <typename T>
     optional<UserSettingKey<T>> UserSettingsManager::resolveKey( const hashed_string& settingID ) const

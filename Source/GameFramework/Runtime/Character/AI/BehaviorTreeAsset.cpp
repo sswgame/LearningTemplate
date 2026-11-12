@@ -17,6 +17,7 @@
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeNodeParams.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogRoot.h"
 
 namespace sw
 {
@@ -434,11 +435,13 @@ namespace sw
         return bLoaded;
     }
 
-    uint32 BehaviorTreeAsset::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 BehaviorTreeAsset::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
-        _tree                = BehaviorTree{};
-        bool          bValid = XMLNameCheck::reportUnknownAttributes( root, nullptr, 0, sourceName, LogLevel::Error );
-        const XMLNode first  = root.findChild();
+        _tree = BehaviorTree{};
+        // 손 읽기: 트리는 원소 이름이 노드 종류인 재귀 구조라 원소 표로 적을 수 없다 — 루트 아래 노드 하나를 읽기 도구(`BehaviorTreeReader`)에 넘긴다.
+        const XMLNode& rootNode = root.getNodeForHandRead();
+        bool           bValid   = XMLNameCheck::reportUnknownAttributes( rootNode, nullptr, 0, sourceName, LogLevel::Error );
+        const XMLNode  first    = rootNode.findChild();
         if ( first.isValid() == false )
         {
             SW_LOG_ERROR_ID( "BehaviorTreeAsset.BehaviorTreeNoRoot", "%#: the behavior tree has no root node", sourceName );

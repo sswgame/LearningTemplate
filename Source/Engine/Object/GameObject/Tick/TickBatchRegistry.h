@@ -100,9 +100,9 @@ namespace sw
         mutex                              _mutex;
         RegistrationList<Entry> _listEntry SW_GUARDED_BY( _mutex ){ "TickBatchRegistry" };
         atomic<uint32>                     _generation{ 0 };
-    };
 
-    SW_SERVICE_SLOT( TickBatchRegistry, Required );
+        SW_SERVICE_SLOT( TickBatchRegistry, Required );
+    };
 
     /**
      * @brief 일괄 틱 줄 하나의 정적 등록자입니다. 줄은 이 등록자가 들고, 붙은 동안 레지스트리의 등록 목록에 오릅니다.

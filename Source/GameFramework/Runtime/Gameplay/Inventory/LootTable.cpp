@@ -44,7 +44,7 @@ namespace sw
 
 namespace sw
 {
-    uint32 LootCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 LootCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<LootCatalog>;
         static constexpr Element kArrElement[] = {

@@ -94,9 +94,9 @@ namespace sw
         return outListProblem.size() == firstCount;
     }
 
-    uint32 HousingPartCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 HousingPartCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
-        if ( XMLFields::readProperties( root, _root, sourceName ) == false )
+        if ( root.readProperties( _root, sourceName ) == false )
             return 0;
         using Element                          = XMLCatalogElement<HousingPartCatalog>;
         static constexpr Element kArrElement[] = {

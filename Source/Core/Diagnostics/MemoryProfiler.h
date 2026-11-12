@@ -476,7 +476,7 @@ namespace sw
         // 콜 스택 세부 추적용 — 할당 때 `_bDetailedTrackingEnabled` 가 true 였던 블록만 올라간다(해제는 블록 헤더의 해시로 내린다)
         mutable mutex                                                    _stackMapMutex;
         unordered_map<uint64, CallStackAllocInfo> _mapCallStackAllocInfo SW_GUARDED_BY( _stackMapMutex );
-    };
 
-    SW_SERVICE_SLOT( MemoryProfiler, Optional );
+        SW_SERVICE_SLOT( MemoryProfiler, Optional );
+    };
 } // namespace sw

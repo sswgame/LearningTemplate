@@ -276,9 +276,9 @@ namespace sw
 
     private:
         ActionTraceInternal::TraceState _state;
-    };
 
-    SW_SERVICE_SLOT( ActionTraceState, Required );
+        SW_SERVICE_SLOT( ActionTraceState, Required );
+    };
 
     ActionTraceInternal::TraceState& ActionTraceInternal::getState()
     {

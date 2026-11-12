@@ -173,9 +173,9 @@ namespace sw
         RegistrationList<const DebugHUDSectionRegistration> _registration SW_GUARDED_BY( _mutex ); ///< (순서, 이름) 순 · 이름은 대소문자 무시
         uint64 _revision                                                  SW_GUARDED_BY( _mutex );
         GameObjectHandle _target                                          SW_GUARDED_BY( _mutex ); ///< `setTarget` 이 정한 대상(무효면 없음)
-    };
 
-    SW_SERVICE_SLOT( DebugHUDRegistry, Required );
+        SW_SERVICE_SLOT( DebugHUDRegistry, Required );
+    };
 } // namespace sw
 
 namespace sw

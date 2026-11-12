@@ -33,7 +33,7 @@ namespace sw
 
 namespace sw
 {
-    uint32 ReputationCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 ReputationCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<ReputationCatalog>;
         static constexpr Element kArrElement[] = {

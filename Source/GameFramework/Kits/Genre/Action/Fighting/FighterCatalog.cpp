@@ -161,7 +161,7 @@ namespace sw
         return GameDataXML::loadFromAsset( *this, &FighterCatalog::loadFileRoot, assetID, "FighterCatalog" );
     }
 
-    uint32 FighterCatalog::loadFileRoot( const XMLNode& root, string_view sourceName )
+    uint32 FighterCatalog::loadFileRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 기반 기술 카탈로그는 데이터가 정한다 — 공유 캐시는 경로만으로 나눠 주므로 호출하는 쪽의 문맥을 받을 수 없다(작물의 계절과 같은 규칙).
         const string_view movesPath = root.getAttributeText( "moves" );
@@ -198,7 +198,7 @@ namespace sw
         (void)add( copy ); // 빈 id 는 카탈로그가 거른다
     }
 
-    uint32 FighterCatalog::loadRoot( const XMLNode& root, const MoveCatalog& moveCatalog, string_view sourceName )
+    uint32 FighterCatalog::loadRoot( const XMLCatalogRoot& root, const MoveCatalog& moveCatalog, string_view sourceName )
     {
         InputCommandParser parser;
         const string_view  buttonNames = root.getAttributeText( "buttons" );

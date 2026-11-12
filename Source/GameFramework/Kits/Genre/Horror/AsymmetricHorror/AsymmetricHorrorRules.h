@@ -315,7 +315,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "AsymmetricHorrorRules"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadCategory( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadScore( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadSkillCheck( const XMLNode& node, string_view sourceName );

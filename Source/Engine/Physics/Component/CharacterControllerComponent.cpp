@@ -139,9 +139,9 @@ namespace sw
 
     private:
         atomic<bool> _state;
-    };
 
-    SW_SERVICE_SLOT( CharacterStepHistorySwitch, Required );
+        SW_SERVICE_SLOT( CharacterStepHistorySwitch, Required );
+    };
 
     atomic<bool>& CharacterControllerHistoryInternal::getEnabled()
     {

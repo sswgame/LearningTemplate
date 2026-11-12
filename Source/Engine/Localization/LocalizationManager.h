@@ -285,7 +285,7 @@ namespace sw
         atomic<uint32> _textRevision;
         /** @brief 텍스트 바뀜 콜백입니다(`registerLanguageChangedCallback`). 자기 잠금을 가진 스레드 안전 멀티캐스트라 `_mutex` 밖에서 부른다. */
         LockedMulticastDelegate<void( string_view, string_view )> _onLanguageChanged;
-    };
 
-    SW_SERVICE_SLOT( LocalizationManager, Required );
+        SW_SERVICE_SLOT( LocalizationManager, Required );
+    };
 } // namespace sw

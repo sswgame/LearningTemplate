@@ -119,17 +119,17 @@ namespace sw::editor
         drawClientSources( sourceIndex );
 
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldMediumEm" ) );
-        ImGui::InputTextWithHint( "##SyncAddress", "127.0.0.1:<port>", _arrAddress[sourceIndex].data(), _arrAddress[sourceIndex].capacity() );
+        EditorWidgets::inputTextWithHint( "##SyncAddress", "127.0.0.1:<port>", _arrAddress[sourceIndex].data(), _arrAddress[sourceIndex].capacity() );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldMediumEm" ) );
-        ImGui::InputTextWithHint( "##SyncToken", "token", _arrToken[sourceIndex].data(), _arrToken[sourceIndex].capacity(), ImGuiInputTextFlags_Password );
+        EditorWidgets::inputTextWithHint( "##SyncToken", "token", _arrToken[sourceIndex].data(), _arrToken[sourceIndex].capacity(), ImGuiInputTextFlags_Password );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ReadServer" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "ReadServer" ) ) )
             _viewModel.loadFromChannel( sourceIndex, _arrAddress[sourceIndex].c_str(), _arrToken[sourceIndex].c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncReadServer" ) );
 
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldPathEm" ) );
-        ImGui::InputTextWithHint( "##SyncPath", "StateHashes/<name>.txt", _arrPath[sourceIndex].data(), _arrPath[sourceIndex].capacity() );
+        EditorWidgets::inputTextWithHint( "##SyncPath", "StateHashes/<name>.txt", _arrPath[sourceIndex].data(), _arrPath[sourceIndex].capacity() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "LoadFile" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "LoadFile" ) ) )
             _viewModel.loadFile( sourceIndex, _arrPath[sourceIndex].c_str() ); // 상대 경로는 이 실행의 산출물 폴더 아래다
@@ -149,7 +149,7 @@ namespace sw::editor
     {
         const bool bSessionRunning = _viewState._bSessionRunning != SW_FALSE;
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldPathEm" ) );
-        ImGui::InputTextWithHint( "##SyncReplayPath", "<name>.swintent", _arrReplayPath.data(), _arrReplayPath.capacity() );
+        EditorWidgets::inputTextWithHint( "##SyncReplayPath", "<name>.swintent", _arrReplayPath.data(), _arrReplayPath.capacity() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ReplayServer" ) ) );
         ImGui::BeginDisabled( bSessionRunning || _arrReplayPath.empty() );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "ReplayServer" ) ) )
@@ -158,7 +158,7 @@ namespace sw::editor
         // 한 틱씩 진행은 떠 있는 서버가 있을 때만 — 전용 서버는 멈춘 채 떠서 `step` 만큼만 돈다.
         ImGui::BeginDisabled( bSessionRunning == false );
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldStepEm" ) );
-        ImGui::InputInt( "##SyncReplayStep", &_replayStepCount, 1, 10 );
+        EditorWidgets::inputInt( "##SyncReplayStep", &_replayStepCount, 1, 10 );
         _replayStepCount = _replayStepCount < 1 ? 1 : _replayStepCount;
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Step" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Step" ) ) )
@@ -174,7 +174,7 @@ namespace sw::editor
         if ( _arrChannelName.empty() )
             _arrChannelName = _viewState._hashChannel.c_str();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldMediumEm" ) );
-        if ( ImGui::InputTextWithHint( "##SyncChannel", "scene | destruction | rollback", _arrChannelName.data(), _arrChannelName.capacity() ) )
+        if ( EditorWidgets::inputTextWithHint( "##SyncChannel", "scene | destruction | rollback", _arrChannelName.data(), _arrChannelName.capacity() ) )
             _viewModel.setHashChannel( _arrChannelName.c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncChannel" ) );
         for ( int32 sourceIndex = 0; sourceIndex < MultiplayerSyncViewModel::kSourceCount; ++sourceIndex )

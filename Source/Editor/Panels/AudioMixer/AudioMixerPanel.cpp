@@ -113,7 +113,7 @@ namespace sw::editor
         ImGui::SameLine();
         EditorChrome::setNextItemWidthColumns( 27.0f );
         const utf8* pPreview = listEventName.empty() ? "(no event library loaded)" : listEventName[_model.getSelectedEvent()].c_str();
-        if ( ImGui::BeginCombo( "##AudioMixerEvent", pPreview ) )
+        if ( EditorWidgets::beginCombo( "##AudioMixerEvent", pPreview ) )
         {
             for ( uint32 index = 0; index < listEventName.size(); ++index )
             {
@@ -162,7 +162,7 @@ namespace sw::editor
             ImGui::Text( "%.1f dB", static_cast<float64>( heldDb ) );
 
         float32 volume = status._userVolume;
-        if ( ImGui::VSliderFloat( "##Volume", ImVec2{ 28.0f * dpi, Internal::kStripHeight * dpi }, &volume, 0.0f, 1.0f, "" ) )
+        if ( EditorWidgets::vSliderFloat( "##Volume", ImVec2{ 28.0f * dpi, Internal::kStripHeight * dpi }, &volume, 0.0f, 1.0f, "" ) )
             audio.setBusVolume( status._name, volume );
         EditorSelfTestMarks::record( ( "audiomixer.volume." + name ).c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "UserVolumeTheOptionsMenuValueCtrl" ) );

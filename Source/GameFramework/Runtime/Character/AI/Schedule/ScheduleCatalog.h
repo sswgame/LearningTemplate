@@ -293,7 +293,7 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "Schedules"; ///< 루트 원소(`XMLCatalog`)
 
-        uint32 loadRoot( const XMLNode& root, string_view sourceName );
+        uint32 loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         /** @brief 원소 종류별 읽기입니다. 잘못된 원소는 오류를 남기고 더하지 않습니다. `loadNPC` 는 NPC 를 더했으면 true 입니다. */
         void               loadCalendar( const XMLNode& node, string_view sourceName );
         void               loadPlace( const XMLNode& node, string_view sourceName, const utf8* pID );

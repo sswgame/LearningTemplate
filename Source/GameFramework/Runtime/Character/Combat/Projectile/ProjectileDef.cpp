@@ -215,7 +215,7 @@ namespace sw
         return nullptr;
     }
 
-    uint32 ProjectileCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 ProjectileCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<ProjectileCatalog>;
         static constexpr Element kArrElement[] = {

@@ -256,7 +256,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "MechCatalog"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadClass( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadMech( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadSkill( const XMLNode& node, string_view sourceName );

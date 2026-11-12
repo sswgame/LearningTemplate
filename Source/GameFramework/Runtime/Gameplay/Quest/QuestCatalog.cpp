@@ -56,7 +56,7 @@ namespace sw
         return VectorUtil::findBy<&QuestStage::_id>( _listStage, stageID );
     }
 
-    uint32 QuestCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 QuestCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<QuestCatalog>;
         static constexpr Element kArrElement[] = {

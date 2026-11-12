@@ -1,3 +1,4 @@
+// ImGui 입력 위젯을 직접 부르는 유일한 자리다 — CMake 가 이 파일에만 SW_EDITOR_WIDGET_ADAPTER=1 을 주어 금지 헤더(EditorInputBan.h)의 위젯 절을 받지 않는다(`sw_applyEditorInputBan`).
 #include "pch.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -6,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
@@ -726,6 +728,9 @@ namespace sw::editor
 
     bool EditorWidgets::beginCombo( const utf8* pLabel, const utf8* pPreview, int32 flags )
     {
+        // 숨은 id 는 그대로 쓴다(앞에 "##" 를 또 붙이면 id 가 바뀐다).
+        if ( pLabel[0] == '#' && pLabel[1] == '#' )
+            return ImGui::BeginCombo( pLabel, pPreview, static_cast<ImGuiComboFlags>( flags ) );
         EditorWidgetsInternal::drawLeadingLabel( pLabel );
         // 보이는 이름표를 감춘 같은 id: "##" 를 앞에 붙인다. `###` 가 있으면 ImGui 가 그 뒤만 해시하므로 언어를 바꿔도 id 가 같다.
         fixed_string<constant::buffer::kMax128> hiddenLabel{ "##" };
@@ -954,5 +959,129 @@ namespace sw::editor
     {
         ImGui::TextDisabled( "(?)" );
         drawTooltip( pDesc );
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    EditorWidgetID EditorWidgetID::fromRuntime( const utf8* pHiddenID )
+    {
+        if ( pHiddenID == nullptr || pHiddenID[0] != '#' || pHiddenID[1] != '#' )
+            SW_FATAL( "Editor widget id '%#' would show its label on the right of the field - draw the label first (EditorWidgets::drawPropertyRowLabel / drawInlineLabel) and pass a '##' id",
+                      pHiddenID != nullptr ? pHiddenID : "(null)" );
+        return EditorWidgetID{ RuntimeTag{}, pHiddenID };
+    }
+
+    bool EditorWidgets::inputInt( EditorWidgetID id, int32* pValue, int32 step, int32 stepFast, int32 flags )
+    {
+        return ImGui::InputInt( id.c_str(), pValue, step, stepFast, flags );
+    }
+    bool EditorWidgets::inputInt2( EditorWidgetID id, int32* arrValue, int32 flags )
+    {
+        return ImGui::InputInt2( id.c_str(), arrValue, flags );
+    }
+    bool EditorWidgets::inputFloat( EditorWidgetID id, float32* pValue, float32 step, float32 stepFast, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::InputFloat( id.c_str(), pValue, step, stepFast, pFormat, flags );
+    }
+    bool EditorWidgets::inputFloat2( EditorWidgetID id, float32* arrValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::InputFloat2( id.c_str(), arrValue, pFormat, flags );
+    }
+    bool EditorWidgets::inputFloat4( EditorWidgetID id, float32* arrValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::InputFloat4( id.c_str(), arrValue, pFormat, flags );
+    }
+    bool EditorWidgets::inputScalar( EditorWidgetID id, int32 dataType, void* pData, const void* pStep, const void* pStepFast, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::InputScalar( id.c_str(), dataType, pData, pStep, pStepFast, pFormat, flags );
+    }
+    bool EditorWidgets::inputScalarN( EditorWidgetID id, int32 dataType, void* pData, int32 components, const void* pStep, const void* pStepFast, const utf8* pFormat,
+                                      int32 flags )
+    {
+        return ImGui::InputScalarN( id.c_str(), dataType, pData, components, pStep, pStepFast, pFormat, flags );
+    }
+    bool EditorWidgets::inputText( EditorWidgetID id, utf8* pBuffer, size_t bufferSize, int32 flags, InputTextCallback pfnCallback, void* pUserData )
+    {
+        return ImGui::InputText( id.c_str(), pBuffer, bufferSize, flags, pfnCallback, pUserData );
+    }
+    bool EditorWidgets::inputTextMultiline( EditorWidgetID id, utf8* pBuffer, size_t bufferSize, const ImVec2& size, int32 flags, InputTextCallback pfnCallback,
+                                            void* pUserData )
+    {
+        return ImGui::InputTextMultiline( id.c_str(), pBuffer, bufferSize, size, flags, pfnCallback, pUserData );
+    }
+    bool EditorWidgets::inputTextWithHint( EditorWidgetID id, const utf8* pHint, utf8* pBuffer, size_t bufferSize, int32 flags, InputTextCallback pfnCallback,
+                                           void* pUserData )
+    {
+        return ImGui::InputTextWithHint( id.c_str(), pHint, pBuffer, bufferSize, flags, pfnCallback, pUserData );
+    }
+    bool EditorWidgets::dragFloat( EditorWidgetID id, float32* pValue, float32 speed, float32 minValue, float32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::DragFloat( id.c_str(), pValue, speed, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::dragFloat2( EditorWidgetID id, float32* arrValue, float32 speed, float32 minValue, float32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::DragFloat2( id.c_str(), arrValue, speed, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::dragFloat3( EditorWidgetID id, float32* arrValue, float32 speed, float32 minValue, float32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::DragFloat3( id.c_str(), arrValue, speed, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::dragFloat4( EditorWidgetID id, float32* arrValue, float32 speed, float32 minValue, float32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::DragFloat4( id.c_str(), arrValue, speed, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::dragInt( EditorWidgetID id, int32* pValue, float32 speed, int32 minValue, int32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::DragInt( id.c_str(), pValue, speed, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::dragScalar( EditorWidgetID id, int32 dataType, void* pData, float32 speed, const void* pMin, const void* pMax, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::DragScalar( id.c_str(), dataType, pData, speed, pMin, pMax, pFormat, flags );
+    }
+    bool EditorWidgets::dragScalarN( EditorWidgetID id, int32 dataType, void* pData, int32 components, float32 speed, const void* pMin, const void* pMax,
+                                     const utf8* pFormat, int32 flags )
+    {
+        return ImGui::DragScalarN( id.c_str(), dataType, pData, components, speed, pMin, pMax, pFormat, flags );
+    }
+    bool EditorWidgets::sliderFloat( EditorWidgetID id, float32* pValue, float32 minValue, float32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::SliderFloat( id.c_str(), pValue, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::sliderInt( EditorWidgetID id, int32* pValue, int32 minValue, int32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::SliderInt( id.c_str(), pValue, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::sliderScalar( EditorWidgetID id, int32 dataType, void* pData, const void* pMin, const void* pMax, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::SliderScalar( id.c_str(), dataType, pData, pMin, pMax, pFormat, flags );
+    }
+    bool EditorWidgets::vSliderFloat( EditorWidgetID id, const ImVec2& size, float32* pValue, float32 minValue, float32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::VSliderFloat( id.c_str(), size, pValue, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::combo( EditorWidgetID id, int32* pCurrent, const utf8* const* arrItem, int32 itemCount, int32 popupMaxHeightInItems )
+    {
+        return ImGui::Combo( id.c_str(), pCurrent, arrItem, itemCount, popupMaxHeightInItems );
+    }
+    bool EditorWidgets::combo( EditorWidgetID id, int32* pCurrent, const utf8* pItemsSeparatedByZeros, int32 popupMaxHeightInItems )
+    {
+        return ImGui::Combo( id.c_str(), pCurrent, pItemsSeparatedByZeros, popupMaxHeightInItems );
+    }
+    bool EditorWidgets::combo( EditorWidgetID id, int32* pCurrent, ComboItemGetter pfnGetter, void* pUserData, int32 itemCount, int32 popupMaxHeightInItems )
+    {
+        return ImGui::Combo( id.c_str(), pCurrent, pfnGetter, pUserData, itemCount, popupMaxHeightInItems );
+    }
+    bool EditorWidgets::colorEdit3( EditorWidgetID id, float32* arrColor, int32 flags )
+    {
+        return ImGui::ColorEdit3( id.c_str(), arrColor, flags );
+    }
+    bool EditorWidgets::colorEdit4( EditorWidgetID id, float32* arrColor, int32 flags )
+    {
+        return ImGui::ColorEdit4( id.c_str(), arrColor, flags );
+    }
+    bool EditorWidgets::beginListBox( EditorWidgetID id, const ImVec2& size )
+    {
+        return ImGui::BeginListBox( id.c_str(), size );
     }
 } // namespace sw::editor
