@@ -32,13 +32,6 @@
 
 ## P0 — 확인된 오동작
 
-### P0-3 에디터: 자동 저장 세션이 인스턴스와 모듈 리로드를 구분하지 않는다
-- 분류: 결함(데이터 손실) · 확신: 확인
-- 근거: `Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp:164` — 잠금 파일이 `session.lock` 하나이고 있기만 하면 비정상 종료로 본다(pid 생존을 보지 않는다). 둘째 에디터가 정상 종료하면 `endSession`(`:332-338`)이 모든 슬롯 폴더와 잠금을 지운다 — 그 뒤 첫 에디터가 죽으면 복구할 것이 없다. `Source/Editor/ImGuiEditor.cpp:541` 의 `shutdownEditorData` 가 모듈 리로드 · 백엔드 교체에서도 `endSession` 을 불러, 씬이 dirty 인 채로 사본이 지워진다(리로드는 가장 죽기 쉬운 순간이다).
-- 상용 엔진: 언리얼 `FPackageAutoSaver` 는 복원 파일을 다음 저장 성공 때까지 남긴다. 유니티는 `Temp/__Backupscenes` 를 프로세스마다 둔다.
-- 제안: 세션을 폴더로 가른다(`Autosave/<pid>-<기동 시각>/`, 잠금에 pid 와 시작 시각). 기동 때 pid 가 죽은 세션만 복구 후보다. `endSession` 은 자기 폴더만, 편집기 종료일 때만 지운다. 리로드 · 교체는 세션 id 를 `IModuleStateStore` 에 맡겨 이어 쓴다.
-- 확인: 단위(스크래치 폴더) — 세션 A 사본 쓰기 → 세션 B begin · end → A 사본이 남았는지. 시나리오 `editormodulereload` 에 "dirty + `autosave.now` → 리로드 → 사본 파일 존재".
-
 ### P0-4 에디터: 열린 문서 · 씬을 옮기거나 지워도 문서 쪽 경로가 따라가지 않는다
 - 분류: 결함(덮어쓰기 · 파일 부활) · 확신: 확인(갱신 길이 없음 — 재현 필요)
 - 근거: `Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp:483-600` 의 `applyAssetMoves` 는 디스크 파일과 참조 글만 고친다. 에디터 전체에 옮김 · 삭제 알림이 없다. 열린 문서 패널의 `_loadedAssetPath`(`Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp:201-206`)와 활성 씬의 `getSourcePath()` 가 옛 id 로 남아, 다음 저장이 옛 자리에 파일을 다시 만들고 옮긴 파일은 편집을 받지 못한다. 메모리의 dirty 씬 · 문서가 옮긴 에셋을 참조하면 디스크에서 고친 참조를 다음 저장이 옛 id 로 덮는다. `EditorSelection::_listSelectedAsset` · `EditorWorkspace::_focusedAssetPath` 도 경로 글이다.
@@ -766,7 +759,7 @@
 ### P0 (6 묶음)
 
 1. **에디터 되돌리기 구조** — 문서마다 스택(미리보기 없는 문서 패널): E-3, 함께 닫히는 E-2 · E-9 · E-13. 상호작용 구간(`DocumentEditSpan`)과 문서 스택의 답(`getDocumentCommandStack`)은 들어갔다. `editor/undocoverage` 에 문서 패널 전수 단계(E-16)를 먼저 더해 지는 것을 본다.
-2. **자동 저장 세션** — 세션 폴더 · pid 잠금 · 리로드 이어 쓰기: P0-3, 복구 입구 통일과 dirty 문서 목록 E-1.
+2. **복구 입구** — 복구 입구 통일과 새 씬 · 문서 패널의 자동 저장: E-1(세션 폴더 · pid 잠금 · 리로드 이어 쓰기 P0-3 은 들어갔다).
 3. **에셋 옮김 방송** — `applyAssetMoves` 의 (옛 id → 새 id) 알림과 열린 문서 · 씬 · 선택 갱신, dirty 참조자 거절: P0-4. 참조 쪽은 integ2 의 GUID 2 · 3 단계와 순서를 맞춘다.
 4. **세이브 씬 전환 뒤 적용** — 봉투 머리의 씬으로 옮긴 뒤 적용(`GameSceneFlow`), 교체에서 진 복원 뒤 씬 다시 열기: G-7 · P0-6 의 남은 몫.
 5. **환불과 지급의 상호 조건** — 같은 영수증 레코드를 서로의 조건으로: O-1.

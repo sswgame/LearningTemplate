@@ -2,17 +2,35 @@
 <!--
   편집기 모듈 핫 리로드: EditorModule(과 편집기 확장)을 두 번 갈아 끼우고, 그래프가 막히지 않았는지 · 묶임이 맞는지 본다. 편집기 인스턴스는 내려가며 되돌리기 기록 ·
   선택 · 복사 버퍼를 호스트의 맡김 칸에 맡기고 새 인스턴스가 되찾는다(로그 "Resumed the undo history").
+  자동 저장 세션도 리로드를 넘어 이어진다: 씬을 dirty 로 두고 autosave.now 로 사본을 쓴 뒤 리로드하면 세션 id 를 맡김 칸에서 되찾고
+  (로그 "resumed session") 사본이 그대로 남는다 — autosave.rescan 이 후보 하나를 읽는다. 예전에는 리로드가 endSession 으로 사본을 지웠다.
   편집기를 켜야 하므로 CTest 가 줍는 폴더(engine/automation 바로 아래)가 아니라 이 하위 폴더에 둔다.
   실행: App -EnableEditor -scenario=engine/automation/editor/editormodulereload.scenario.xml -unattended
 -->
-<Scenario name="engine.editormodulereload" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+<Scenario name="engine.editormodulereload" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
 	<EditorWaitSettled/>
+	<!-- 자동 저장: dirty 씬의 사본 하나 -->
+	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="hierarchy.create"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.SceneDirty" equals="1"/>
+	<DevCommand line="autosave.now"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.AutosaveSnapshotCount" equals="1"/>
 	<DevCommand line="module.reload EditorModule"/>
 	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Module.ReloadCount" atLeast="1"/>
 	<EditorWaitSettled/>
+	<!-- 리로드 뒤: 같은 세션을 잇고 사본 파일이 남았다 -->
+	<ExpectLog id="EditorAutosaveCommands.SessionResumed" atLeast="1"/>
+	<DevCommand line="autosave.rescan"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.AutosaveRecoverableCount" equals="1"/>
 	<DevCommand line="module.reload EditorModule"/>
 	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
@@ -21,5 +39,9 @@
 	<Wait frames="59"/> <!-- 리로드 뒤 도크스페이스가 다시 설 때까지 — 바로 보면 "no main dockspace" -->
 	<Expect watch="Editor.ObjectCount" atLeast="1"/>
 	<EditorExpectDockLayout/>
+	<!-- 고친 씬을 열어 둔 채 끝내지 않는다 -->
+	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<Pass/>
 </Scenario>
