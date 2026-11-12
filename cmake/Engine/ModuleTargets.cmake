@@ -480,9 +480,10 @@ endfunction()
 # sw_applyEditorInputBan — 에디터 코드 타깃에 `Source/Editor/Common/Input/EditorInputBan.h` 를 imgui.h 의 사용자 헤더로 붙이고 사용 중단을 오류로 올린다
 #
 # 그 헤더가 ImGui 입력 · 팝업 · 끌어 놓기 함수(imgui_internal.h 의 다른 겹 포함)를 [[deprecated]] 로 다시 선언한다(`docs/agents/EditorUI.md` 입력 절).
-# ImGui 를 직접 읽는 어댑터 두 파일은 imgui.h 앞에서 SW_EDITOR_INPUT_ADAPTER 를 정의해 금지를 받지 않는다 — 유니티 묶음에 들면 같은 묶음의
-# 다른 파일까지(또는 그 반대로) 정의가 번지므로 묶음에서 뺀다. 노드 캔버스 지우기 구간(`BeginDelete`)의 입구 EditorNodeGraph.cpp 도 같은 까닭으로
-# SW_EDITOR_NODE_GRAPH_ADAPTER 를 정의하고 묶음에서 빠진다. 옵션 SW_EDITOR_INPUT_BAN(Source/Editor/CMakeLists.txt, 기본 ON)이 꺼져 있으면 아무것도 하지 않는다.
+# 금지를 받지 않는 파일(ImGui 입력 어댑터 둘 · 노드 캔버스 지우기 입구 EditorNodeGraph.cpp)의 표시는 이 함수가 소스 속성으로만 준다
+# (SW_EDITOR_INPUT_ADAPTER=1 · SW_EDITOR_NODE_GRAPH_ADAPTER=1). 나머지 파일은 강제 포함한 EditorInputBanGate.h 가 0 으로 정해 두므로 소스 안
+# `#define` 은 다시 정의 오류(-Werror=macro-redefined)로 멈춘다 — 다른 파일이 매크로로 금지를 풀 수 없다. 소스 정의가 붙은 파일은 유니티 묶음에서 빠지고,
+# 관문이 PCH 에 구워 둔 0 과 부딪히지 않게 PCH 도 쓰지 않는다. 옵션 SW_EDITOR_INPUT_BAN(Source/Editor/CMakeLists.txt, 기본 ON)이 꺼져 있으면 아무것도 하지 않는다.
 # ------------------------------------------------------------------------------
 function(sw_applyEditorInputBan TARGET_NAME)
 	if(NOT SW_EDITOR_INPUT_BAN)
@@ -491,14 +492,27 @@ function(sw_applyEditorInputBan TARGET_NAME)
 	target_compile_definitions(${TARGET_NAME} PRIVATE IMGUI_INCLUDE_IMGUI_USER_H
 		"IMGUI_USER_H_FILENAME=\"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorInputBan.h\"")
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-		target_compile_options(${TARGET_NAME} PRIVATE /we4996)
+		target_compile_options(${TARGET_NAME} PRIVATE /we4996 /we4005)
 	else()
-		target_compile_options(${TARGET_NAME} PRIVATE -Werror=deprecated-declarations)
+		target_compile_options(${TARGET_NAME} PRIVATE -Werror=deprecated-declarations -Werror=macro-redefined)
+	endif()
+	set(gateHeader "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorInputBanGate.h")
+	if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+		target_compile_options(${TARGET_NAME} PRIVATE "/FI${gateHeader}")
+	else()
+		target_compile_options(${TARGET_NAME} PRIVATE "SHELL:-include ${gateHeader}")
 	endif()
 	get_target_property(listSource ${TARGET_NAME} SOURCES)
 	foreach(source IN LISTS listSource)
-		if(source MATCHES "Common/Input/EditorInputGUI\\.cpp$|Common/Backend/ImGuiKeyForward\\.cpp$|Common/Widgets/EditorNodeGraph\\.cpp$")
-			set_source_files_properties(${source} TARGET_DIRECTORY ${TARGET_NAME} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+		set(adapterMark "")
+		if(source MATCHES "Common/Input/EditorInputGUI\\.cpp$|Common/Backend/ImGuiKeyForward\\.cpp$")
+			set(adapterMark "SW_EDITOR_INPUT_ADAPTER=1")
+		elseif(source MATCHES "Common/Widgets/EditorNodeGraph\\.cpp$")
+			set(adapterMark "SW_EDITOR_NODE_GRAPH_ADAPTER=1")
+		endif()
+		if(adapterMark)
+			set_property(SOURCE ${source} TARGET_DIRECTORY ${TARGET_NAME} APPEND PROPERTY COMPILE_DEFINITIONS "${adapterMark}")
+			set_source_files_properties(${source} TARGET_DIRECTORY ${TARGET_NAME} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON SKIP_PRECOMPILE_HEADERS ON)
 		endif()
 	endforeach()
 endfunction()
