@@ -37,7 +37,10 @@
             }
         },
         {
-            "_name": "mailbox"
+            "_name": "mailbox",
+            "_settings": {
+                "_claimedRetentionDays": 30
+            }
         },
         {
             "_name": "matchmaking",

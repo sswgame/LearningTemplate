@@ -168,9 +168,15 @@ namespace sw
                 if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
                     return false;
                 ServiceMailRecord mail;
-                const bool        bLive = read == ServiceStoreResult::Ok && ServiceMail::decodeRecord( record._bytes, mail ) && mail._state != ServiceMailState::Claimed;
-                if ( bLive == false )
-                    return true; // 없거나 이미 받은 우편이므로 인덱스만 지운다
+                if ( read == ServiceStoreResult::NotFound || ServiceMail::decodeRecord( record._bytes, mail ) == false )
+                    return true; // 없는 우편이므로 인덱스만 지운다
+                if ( mail._state == ServiceMailState::Claimed )
+                {
+                    // 받은 뒤 보관 기간이 지났다. 첨부는 이미 받는 계정에 있고 수령 분개는 원장에 남으므로 우편만 지운다
+                    if ( isExpired( mail._message, nowMs ) )
+                        inoutTransaction.erase( ServiceMail::getMailTable(), mailKey, record._version );
+                    return true;
+                }
                 inoutTransaction.erase( ServiceMail::getMailTable(), mailKey, record._version );
                 const bool bEscrowed = mail._message._fundingHolder._kind != LedgerHolderKind::Mint && mail._message._listAttachment.empty() == false;
                 if ( bEscrowed == false )
@@ -290,6 +296,8 @@ namespace sw
                 return MailboxResult::AlreadyClaimed;
             if ( MailboxStoreLogicInternal::isExpired( mail._message, input._nowMs ) )
                 return MailboxResult::Expired;
+            if ( input._claimedRetentionMs <= 0 )
+                return MailboxServiceResult::fail( OnlineError::kInvalidRequest ); // 받은 우편의 보관 기간은 설정 필수 값이다
 
             ServiceTransaction    transaction;
             LedgerTransferRequest request;
@@ -321,10 +329,17 @@ namespace sw
                 if ( serviceResult._bReplayed == SW_TRUE )
                     return MailboxResult::AlreadyClaimed; // 분개와 상태는 한 트랜잭션이라 여기에 올 수 없다. 방어 코드이다
             }
-            mail._state = ServiceMailState::Claimed;
+            // 만료를 "받은 뒤 보관 기간" 으로 다시 건다. 만료 정리가 그때 받은 우편을 지우고, 목록은 그때부터 보이지 않는다
+            const int64 purgeMs = input._nowMs + input._claimedRetentionMs;
+            if ( mail._message._expiresMs != purgeMs )
+            {
+                if ( mail._message._expiresMs > 0 )
+                    transaction.erase( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( mail._message._expiresMs, mailKey ) );
+                transaction.put( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( purgeMs, mailKey ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+            }
+            mail._state              = ServiceMailState::Claimed;
+            mail._message._expiresMs = purgeMs;
             transaction.put( ServiceMail::getMailTable(), mail._mailKey, ServiceMail::encodeRecord( mail ), mail._version );
-            if ( mail._message._expiresMs > 0 )
-                transaction.erase( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( mail._message._expiresMs, mailKey ) );
             const ServiceStoreResult committed = connection.commit( transaction );
             if ( committed == ServiceStoreResult::Ok )
             {
@@ -355,7 +370,8 @@ namespace sw
         return MailboxServiceResult::fail( OnlineError::kBusy );
     }
 
-    MailboxServiceResult MailboxStoreLogic::claimAll( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, const ILedgerPolicy* pPolicy, MailboxClaimReply& outReply )
+    MailboxServiceResult MailboxStoreLogic::claimAll( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, int64 claimedRetentionMs, const ILedgerPolicy* pPolicy,
+                                                      MailboxClaimReply& outReply )
     {
         outReply = MailboxClaimReply{};
         vector<ServiceRecord>    listRecord;
@@ -378,6 +394,7 @@ namespace sw
             input._accountID                         = accountID;
             input._nowMs                             = nowMs;
             input._pPolicy                           = pPolicy;
+            input._claimedRetentionMs                = claimedRetentionMs;
             const MailboxServiceResult result        = claim( connection, input, outReply );
             const bool                 bFirstFailure = result != MailboxResult::Ok && result != MailboxResult::AlreadyClaimed && firstFailure == MailboxResult::Ok;
             if ( bFirstFailure )
@@ -398,7 +415,7 @@ namespace sw
             return MailboxResult::HasAttachments;
         ServiceTransaction transaction;
         transaction.erase( ServiceMail::getMailTable(), mail._mailKey, mail._version );
-        if ( mail._message._expiresMs > 0 && mail._state != ServiceMailState::Claimed )
+        if ( mail._message._expiresMs > 0 ) // 받은 우편도 보관 기간 만료 인덱스가 있다
             transaction.erase( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( mail._message._expiresMs, mailKey ) );
         const ServiceStoreResult committed = connection.commit( transaction );
         if ( committed == ServiceStoreResult::Conflict )

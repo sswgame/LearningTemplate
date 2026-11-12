@@ -21,8 +21,9 @@ using namespace sw;
 
 namespace
 {
-    constexpr AccountID kPlayer = 22;
-    constexpr int64     kNowMs  = 1700000000000ll;
+    constexpr AccountID kPlayer             = 22;
+    constexpr int64     kNowMs              = 1700000000000ll;
+    constexpr int64     kClaimedRetentionMs = 1000000; ///< 받은 우편을 남기는 기간(테스트용으로 짧다)
 
     /** @brief 호스트와 클라이언트까지 실제로 도는 묶음입니다. 선언 순서가 수명이다(서비스가 망보다 오래 산다). */
     struct MailboxFixture
@@ -32,7 +33,7 @@ namespace
         MailboxClient           _client{};
         int32                   _clientIndex{ -1 };
 
-        explicit MailboxFixture( MailboxServiceConfig settings = MailboxServiceConfig{}, bool bLogin = true )
+        explicit MailboxFixture( MailboxServiceConfig settings, bool bLogin = true )
         {
             SW_EXPECT_TRUE( _service.initialize( &_rig._server._store, settings ) );
             SW_EXPECT_TRUE( _rig._server._host.registerServerService( &_service ) );
@@ -118,7 +119,8 @@ namespace
         static MailboxServiceConfig makeQuietSettings()
         {
             MailboxServiceConfig settings;
-            settings._noticeIntervalMs = 0;
+            settings._noticeIntervalMs   = 0;
+            settings._claimedRetentionMs = kClaimedRetentionMs;
             return settings;
         }
 
@@ -270,6 +272,35 @@ SW_TEST_CASE( MailboxServiceTest, NeedsStore )
     SW_EXPECT_FALSE( service.initialize( nullptr, MailboxServiceTestUtil::makeQuietSettings() ) );
 }
 
+/** @brief [MailboxServiceTest] 시작: 받은 우편의 보관 기간이 없으면 서지 않는다(설정 필수 값, 기본값으로 메우지 않는다) */
+SW_TEST_CASE( MailboxServiceTest, NeedsClaimedRetention )
+{
+    SW_EXPECT_LOG( "MailboxService.ClaimedRetentionMissing" );
+    MemoryServiceDatabase database;
+    MemoryServiceStore    store{ &database };
+    MailboxServiceConfig  settings = MailboxServiceTestUtil::makeQuietSettings();
+    settings._claimedRetentionMs   = 0;
+    MailboxService service;
+    SW_EXPECT_FALSE( service.initialize( &store, settings ) );
+}
+
+/** @brief [MailboxServiceTest] 정리: 받은 우편은 받은 뒤 보관 기간이 지나면 정리가 지운다 — 우편 레코드가 0 이 되고 받은 재화는 그대로다 */
+SW_TEST_CASE( MailboxServiceTest, SweepRemovesClaimedMail )
+{
+    MailboxServiceConfig settings = MailboxServiceTestUtil::makeQuietSettings();
+    settings._sweepIntervalMs     = 0; // 틱이 스스로 돌지 않는다
+    MailboxFixture rig( settings );
+    const string   mailKey = rig.sendMail( 5, kNowMs + 10 );
+    SW_EXPECT_TRUE( rig.call<MailboxMethod::Claim>( MailboxServiceTestUtil::makeMailRequest( mailKey ) ).isOk() );
+    rig._service.requestSweep();
+    rig.tick( kNowMs + 11 );
+    SW_EXPECT_EQUAL( 1, rig._rig._database.countRecords( ServiceMail::getMailTable() ) ); // 원래 만료가 지났어도 보관 기간까지 남는다
+    rig._service.requestSweep();
+    rig.tick( kNowMs + kClaimedRetentionMs );
+    SW_EXPECT_EQUAL( 0, rig._rig._database.countRecords( ServiceMail::getMailTable() ) );
+    SW_EXPECT_EQUAL( int64( 5 ), rig.getBalanceOf( kPlayer ) );
+}
+
 /** @brief [MailboxServiceTest] 일시 장애는 공통 범주로 와서 기억되지 않아 같은 멱등 키의 재시도가 서비스에 닿아 끝나고, 끝난 수령은 기억한 답을 주어 원장이 한 번만 움직인다 */
 SW_TEST_CASE( MailboxServiceTest, RetryableCategoryReachesTheServiceAgain )
 {
@@ -296,8 +327,8 @@ SW_TEST_CASE( MailboxServiceTest, RetryableCategoryReachesTheServiceAgain )
 /** @brief [MailboxServiceTest] 알림: 접속한 계정의 새 우편은 표에 적은 알림으로 클라이언트에 닿는다 */
 SW_TEST_CASE( MailboxServiceTest, NewMailPushReachesTheClient )
 {
-    MailboxServiceConfig settings;
-    settings._noticeIntervalMs = 1;
+    MailboxServiceConfig settings = MailboxServiceTestUtil::makeQuietSettings();
+    settings._noticeIntervalMs    = 1;
     MailboxFixture rig( settings );
     const string   mailKey = rig.sendMail( 5 );
     rig.tick( kNowMs + 10 );
@@ -314,9 +345,9 @@ SW_TEST_CASE( MailboxServiceTest, NewMailPushReachesTheClient )
 SW_TEST_CASE( MailboxServiceTest, NewMailGoesToOfflinePushWhenAway )
 {
     FakeOfflinePush      offlinePush;
-    MailboxServiceConfig settings;
-    settings._noticeIntervalMs = 1;
-    settings._pOfflinePush     = &offlinePush;
+    MailboxServiceConfig settings = MailboxServiceTestUtil::makeQuietSettings();
+    settings._noticeIntervalMs    = 1;
+    settings._pOfflinePush        = &offlinePush;
     MailboxFixture rig( settings, false );
     (void)rig.sendMail( 5 );
     rig.tick( kNowMs + 10 );
