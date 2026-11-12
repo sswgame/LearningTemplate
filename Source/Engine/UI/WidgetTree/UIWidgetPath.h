@@ -46,10 +46,11 @@ namespace sw
         static bool makePathTo( const WidgetTree& tree, WidgetID widget, UIWidgetPath& outPath );
         /**
          * @brief 경로로 포인터 이벤트를 보냅니다. 터널링(앞에서부터) 뒤 버블링(뒤에서부터) 순서이며, 처리한 위젯이 나오면 멈춥니다.
+         *        보내는 동안 트리는 전달 중(`WidgetTree::DispatchScope`)이라 핸들러가 떼어 낸 위젯은 끝난 뒤 지워집니다.
          * @param outHandler 처리한 위젯 번호입니다(없으면 무효).
          */
-        static UIReply routePointerEvent( const WidgetTree& tree, const UIWidgetPath& path, const UIPointerEvent& event, WidgetID& outHandler );
+        static UIReply routePointerEvent( WidgetTree& tree, const UIWidgetPath& path, const UIPointerEvent& event, WidgetID& outHandler );
         /** @brief 경로로 액션 이벤트를 보냅니다(포커스 경로). 규칙은 포인터와 같습니다. */
-        static UIReply routeActionEvent( const WidgetTree& tree, const UIWidgetPath& path, const UIActionEvent& event, WidgetID& outHandler );
+        static UIReply routeActionEvent( WidgetTree& tree, const UIWidgetPath& path, const UIActionEvent& event, WidgetID& outHandler );
     };
 } // namespace sw

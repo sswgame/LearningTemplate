@@ -38,7 +38,28 @@ namespace sw
         WidgetTree( const WidgetTree& )            = delete;
         WidgetTree& operator=( const WidgetTree& ) = delete;
 
-        /** @brief 루트를 바꿉니다(기존 루트는 떼어 지웁니다). 새 루트 전체가 레이아웃, 그리기, 스타일 더티로 붙습니다. */
+        /**
+         * @struct DispatchScope
+         * @brief 위젯에 이벤트를 보내는 구간을 표시합니다(깊이를 세며 겹쳐도 됩니다). 구간 안에서 떨어진 위젯은 바로 지우지 않고 가장 바깥 구간이 끝날 때 지웁니다.
+         * @details 핸들러가 자기를 담은 패널을 비우면(목록의 "삭제" 버튼) 돌아온 `this` 가 지워진 메모리가 된다. Slate 는 `FWidgetPath` 의 `TSharedRef` 로,
+         *          유니티 UI Toolkit 은 디스패치 중 제거를 미뤄서, Godot 은 `queue_free` 로 같은 일을 막는다 — 소유가 `unique_ptr` 하나인 이 트리는 유니티 · Godot 처럼 미룬다.
+         *          위젯 가상 함수(`onPointerEvent` · `onActionEvent` · `onTextEvent` · `onFocusChanged` · `onHoverChanged` · `onPointerCaptureLost`)를 부르는 곳이 모두 이 구간을 연다.
+         */
+        struct SW_API DispatchScope
+        {
+            explicit DispatchScope( WidgetTree& tree );
+            ~DispatchScope();
+            DispatchScope( const DispatchScope& )            = delete;
+            DispatchScope& operator=( const DispatchScope& ) = delete;
+
+        private:
+            WidgetTree* _pTree;
+        };
+
+        /** @brief 이벤트 전달 구간(`DispatchScope`) 안이면 true 입니다. */
+        bool isDispatching() const { return _dispatchDepth != 0; }
+
+        /** @brief 루트를 바꿉니다(기존 루트는 떼어 지우며, 전달 중이면 전달이 끝난 뒤 지웁니다). 새 루트 전체가 레이아웃, 그리기, 스타일 더티로 붙습니다. */
         void    setRoot( unique_ptr<Widget> root );
         Widget* getRoot() const { return _root.get(); }
 
@@ -88,6 +109,8 @@ namespace sw
 
     private:
         friend class Widget;
+        friend class PanelWidget;
+        friend class DetachedWidget;
         friend class UIFocusManager;
         friend class UILayoutPass;
         friend struct UIPaintContext;
@@ -103,6 +126,8 @@ namespace sw
         void registerName( Widget& widget );
         /** @brief 이름을 제거합니다(이 위젯이 그 이름의 주인일 때만). */
         void unregisterName( Widget& widget );
+        /** @brief 떨어진 @p widget 을 지웁니다. 전달 중이면 보류 목록에 두고 가장 바깥 `DispatchScope` 가 끝날 때 지웁니다. */
+        void retireWidget( unique_ptr<Widget> widget );
         /** @brief @p widget 을 다시 측정할 루트로 적습니다(이미 적혀 있으면 아무것도 하지 않습니다). */
         void addLayoutRoot( Widget& widget );
 
@@ -127,5 +152,7 @@ namespace sw
         uint64                                                         _structureGeneration;  ///< 붙기 · 떨어지기 · 이름 바꾸기마다 오릅니다(`getStructureGeneration`).
         uint32                                                         _layoutSerial;         ///< 레이아웃 순회 번호입니다(0 은 "측정한 적 없음" — UILayoutPass). 순회마다 올라 같은 순회 안의 중복 측정을 막습니다
         uint32                                                         _measureCount;         ///< `computeDesiredSize` 호출 수(누적)입니다. `UILayoutPass::update` 가 앞뒤 차이로 이번 순회의 호출 수를 냅니다
+        vector<unique_ptr<Widget>>                                     _listRetiredWidget;    ///< 전달 중에 떨어져 전달이 끝나면 지울 위젯입니다(`retireWidget`).
+        uint32                                                         _dispatchDepth;        ///< 겹친 `DispatchScope` 수입니다.
     };
 } // namespace sw

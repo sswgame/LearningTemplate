@@ -88,9 +88,10 @@ namespace sw
 
             /** @brief 경로를 따라 터널링 후 버블링 순서로 이벤트를 보냅니다. @p Handler 는 그 이벤트를 받는 Widget 의 가상 함수입니다. */
             template <typename EventType, UIReply ( Widget::*Handler )( const EventType&, UIRoutePhase )>
-            static UIReply route( const WidgetTree& tree, const UIWidgetPath& path, const EventType& event, WidgetID& outHandler )
+            static UIReply route( WidgetTree& tree, const UIWidgetPath& path, const EventType& event, WidgetID& outHandler )
             {
                 outHandler = kInvalidWidgetID;
+                const WidgetTree::DispatchScope dispatch{ tree }; // 핸들러가 떼어 낸 위젯은 전달이 끝난 뒤 지운다
                 // 경로는 시작할 때 고정한다. 처리 중에 위젯이 떨어지면(목록을 지우는 핸들러) 그 번호만 건너뛴다.
                 const vector<WidgetID> listWidget = path._listWidget;
                 const uint32           count      = static_cast<uint32>( listWidget.size() );
@@ -175,12 +176,12 @@ namespace sw
         return true;
     }
 
-    UIReply UIWidgetPath::routePointerEvent( const WidgetTree& tree, const UIWidgetPath& path, const UIPointerEvent& event, WidgetID& outHandler )
+    UIReply UIWidgetPath::routePointerEvent( WidgetTree& tree, const UIWidgetPath& path, const UIPointerEvent& event, WidgetID& outHandler )
     {
         return UIEventRouterInternal::route<UIPointerEvent, &Widget::onPointerEvent>( tree, path, event, outHandler );
     }
 
-    UIReply UIWidgetPath::routeActionEvent( const WidgetTree& tree, const UIWidgetPath& path, const UIActionEvent& event, WidgetID& outHandler )
+    UIReply UIWidgetPath::routeActionEvent( WidgetTree& tree, const UIWidgetPath& path, const UIActionEvent& event, WidgetID& outHandler )
     {
         return UIEventRouterInternal::route<UIActionEvent, &Widget::onActionEvent>( tree, path, event, outHandler );
     }

@@ -414,7 +414,7 @@ namespace sw::editor
         PanelWidget* pParent = findPanelByOrdinal( tree, parentOrdinal );
         if ( pParent == nullptr || index >= pParent->getChildCount() )
             return {};
-        return pParent->removeChild( pParent->getChild( index ) );
+        return pParent->removeChild( pParent->getChild( index ) ).release(); // 되돌리기 기록이 미리보기 트리보다 오래 맡는다(편집은 이벤트 전달 밖이다)
     }
 
     Widget* UIPreviewLogic::attachWidget( WidgetTree& tree, unique_ptr<Widget> widget, uint32 parentOrdinal, uint32 index )
