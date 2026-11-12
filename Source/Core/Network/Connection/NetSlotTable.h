@@ -127,6 +127,8 @@ namespace sw
         /** @brief 가장 낮은 빈(Disconnected, 끊김 사건을 게임 스레드가 꺼낸) 슬롯 번호입니다. 없으면(가득 참) 비어 있습니다. O(1) 입니다. */
         [[nodiscard]] optional<int32> findFreeSlot() const;
         int32                         countConnected() const;
+        /** @brief 닫혔지만 게임 스레드가 끊김 사건을 꺼내지 않아 붙잡아 둔 슬롯 수입니다(`NetEndpointSlot::_bReleasePending`). 곧 빈 슬롯이 된다. */
+        int32 countReleasePending() const { return getCount() - static_cast<int32>( _listLiveSlot.size() ) - static_cast<int32>( _listFreeSlot.size() ); }
         /** @brief 연결된 슬롯 번호를 @p outListConnection 에 비운 뒤 담습니다. */
         void collectConnected( vector<int32>& outListConnection ) const;
 

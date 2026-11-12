@@ -942,3 +942,26 @@ SW_TEST_CASE( NetEndpointTest, WaitSecondsRunToTheNextUpdateWithinTheCap )
     SW_EXPECT_EQUAL( 0.1, NetEndpoint::computeWaitSeconds( 10.0, std::numeric_limits<float64>::infinity(), 0.1 ) ); // 연결 없음
     SW_EXPECT_EQUAL( 0.0, NetEndpoint::computeWaitSeconds( 10.0, 11.0, -1.0 ) );                                    // 틀린 상한은 0
 }
+
+SW_TEST_CASE( NetEndpointTest, ReconnectWaitsForHeldSlotInsteadOfServerFull )
+{
+    // 정원 1 — 끊고 바로 다시 붙는 클라이언트는 게임 스레드가 옛 슬롯의 끊김을 꺼내기 전에 도착한다. 가득 참으로 끝나지 않고 놓이면 붙는다.
+    NetEndpointConfig settings;
+    settings._maxConnections = 1;
+    settings._debugHold      = NetDebugHold::Off;
+    test::LoopbackCluster cluster( 9u );
+    NetTestUtil::addServerAndClient( cluster, settings );
+    SW_REQUIRE_TRUE( cluster.connectClients( 30 ) );
+    vector<NetEndpointEvent> listEvent;
+    cluster.getServer().pollEvents( listEvent );
+
+    cluster.getClient( 0 ).disconnect( 0 );
+    SW_REQUIRE_TRUE( cluster.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
+    cluster.run( 0.5 ); // 서버는 끊김을 받았지만 사건을 아직 꺼내지 않았다 — 슬롯 0 은 붙잡혀 있다
+    SW_EXPECT_TRUE( cluster.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connecting );
+    listEvent.clear();
+    cluster.getServer().pollEvents( listEvent ); // 놓는다
+    SW_EXPECT_TRUE( listEvent.empty() == false && listEvent.back()._kind == NetEndpointEvent::Kind::Disconnected );
+    cluster.run( 0.5 );
+    SW_EXPECT_TRUE( cluster.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
+}
