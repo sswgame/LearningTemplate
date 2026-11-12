@@ -1,10 +1,12 @@
-// GuildServiceTest — 길드 로직(메모리 저장소): 만들기 · 이름 유일, 초대 · 수락 · 만료 · 정원, 떠나기 · 해산, 내보내기 · 역할 · 길드장 넘기기, 공지, 창고(맡기기 · 꺼내기 · 멱등 · 해산 막기),
+// GuildServiceTest — 길드 로직(메모리 저장소): 만들기 · 이름 유일, 초대 · 수락 · 만료 · 정원, 떠나기 · 해산, 내보내기 · 역할 · 길드장 넘기기, 공지, 창고(맡기기 · 꺼내기 · 멱등 · 해산 막기,
+// 이전 불가 자산의 맡긴 사람별 몫 · 꺼내기 허용 · 떠날 때 돌려주기),
 // 공개 길드 신청, 경험치 · 레벨, 알림과 이벤트, 저장소 실패. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
@@ -17,6 +19,14 @@ namespace
     constexpr AccountID kMember  = 3;
     constexpr AccountID kOutside = 4;
     constexpr int64     kNowMs   = 1700000000000ll;
+
+    /** @brief "cur.gem" 만 이전 불가(유료 재화)인 정책입니다. */
+    class PaidGemPolicy final : public ILedgerPolicy
+    {
+    public:
+        int64 getBalanceCap( string_view /*assetID*/ ) const override { return 0; }
+        bool  isTransferable( string_view assetID ) const override { return assetID != "cur.gem"; }
+    };
 
     /** @brief 이벤트를 모읍니다. */
     struct GuildEventSink
@@ -85,16 +95,44 @@ namespace
             return runRequest( request )._result;
         }
 
-        GuildCompletion transfer( GuildOperation operation, AccountID accountID, int64 amount, string_view journalKey, string_view assetID = "cur.gold" )
+        GuildCompletion transfer( GuildOperation operation, AccountID accountID, int64 amount, string_view journalKey, string_view assetID = "cur.gold",
+                                  AccountID depositorID = kInvalidAccountID )
+        {
+            GuildRequest request;
+            request._operation   = operation;
+            request._accountID   = accountID;
+            request._assetID     = string( assetID );
+            request._amount      = amount;
+            request._journalKey  = string( journalKey );
+            request._depositorID = depositorID;
+            request._nowMs       = UnixMilliseconds{ kNowMs };
+            return runRequest( request );
+        }
+
+        /** @brief 꺼내기 허용을 주거나(GrantWithdrawal) 거둡니다(RevokeWithdrawal). */
+        SocialServiceResult setGrant( GuildOperation operation, AccountID accountID, AccountID targetID, int64 amount, string_view journalKey, string_view assetID = "cur.gem" )
         {
             GuildRequest request;
             request._operation  = operation;
             request._accountID  = accountID;
+            request._targetID   = targetID;
             request._assetID    = string( assetID );
             request._amount     = amount;
             request._journalKey = string( journalKey );
             request._nowMs      = UnixMilliseconds{ kNowMs };
-            return runRequest( request );
+            return runRequest( request )._result;
+        }
+
+        /** @brief 분개 키를 붙인 떠나기(@p targetID 없음)나 내보내기입니다. 맡긴 몫을 돌려줄 때 키가 필요합니다. */
+        SocialServiceResult runKeyed( GuildOperation operation, AccountID accountID, AccountID targetID, string_view journalKey )
+        {
+            GuildRequest request;
+            request._operation  = operation;
+            request._accountID  = accountID;
+            request._targetID   = targetID;
+            request._journalKey = string( journalKey );
+            request._nowMs      = UnixMilliseconds{ kNowMs };
+            return runRequest( request )._result;
         }
 
         SocialServiceResult setOpen( AccountID accountID, bool bOpen )
@@ -129,20 +167,20 @@ namespace
             _sink._listEvent.clear();
         }
 
-        void grant( AccountID accountID, int64 amount )
+        void grant( AccountID accountID, int64 amount, string_view assetID = "cur.gold" )
         {
             LedgerTransferRequest request;
-            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), "cur.gold", amount } );
-            request._journalKey = "test/grant/" + to_string( accountID ) + "/" + to_string( amount );
+            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), string( assetID ), amount } );
+            request._journalKey = "test/grant/" + string( assetID ) + "/" + to_string( accountID ) + "/" + to_string( amount );
             request._reason     = "test.grant";
             LedgerTransferResult result;
             SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, result ) == LedgerResult::Ok );
         }
 
-        int64 getBalanceOf( AccountID accountID )
+        int64 getBalanceOf( AccountID accountID, string_view assetID = "cur.gold" )
         {
             LedgerBalance balance;
-            SW_EXPECT_TRUE( Ledger::readBalance( _database, LedgerHolder::makeAccount( accountID ), "cur.gold", balance ) == ServiceStoreResult::Ok );
+            SW_EXPECT_TRUE( Ledger::readBalance( _database, LedgerHolder::makeAccount( accountID ), assetID, balance ) == ServiceStoreResult::Ok );
             return balance._amount;
         }
     };
@@ -546,24 +584,111 @@ SW_TEST_CASE( GuildServiceTest, StoreFailuresChangeNothing )
 }
 
 /**
- * @brief [GuildServiceTest] 이전 불가 자산(유료 재화)은 창고에 들지 않는다 — 공용 창고에 섞이면 다른 임원이 꺼내 계정 사이로 옮겨진다(감사 O-10, 사용자 결정: 맡긴 당사자가 허용한 권한 안에서만)
+ * @brief [GuildServiceTest] 이전 불가 자산(유료 재화)은 맡긴 사람별 몫에 든다 — 다른 임원은 맡긴 사람이 준 허용의 한도 안에서만 꺼내고, 허용을 거두면 못 꺼낸다.
+ *        맡긴 본인은 언제나 꺼낸다. 이전 가능 자산은 그대로 공용 창고이다(감사 O-10, 사용자 결정: 맡긴 당사자가 허용한 권한 안에서만)
  */
-SW_TEST_CASE( GuildServiceTest, NonTransferableAssetStaysOutOfStorage )
+SW_TEST_CASE( GuildServiceTest, NonTransferableShareNeedsDepositorGrant )
 {
-    /** @brief "cur.gem" 만 이전 불가인 정책입니다. */
-    class PaidGemPolicy final : public ILedgerPolicy
-    {
-    public:
-        int64 getBalanceCap( string_view /*assetID*/ ) const override { return 0; }
-        bool  isTransferable( string_view assetID ) const override { return assetID != "cur.gem"; }
-    };
     PaidGemPolicy policy;
     GuildFixture  rig;
     rig._service.setLedgerPolicy( &policy );
     (void)rig.makeGuild();
+    rig.grant( kMember, 100, "cur.gem" );
     rig.grant( kMember, 100 );
 
-    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 10, "test/gem.1", "cur.gem" )._result == SocialResult::NotAllowed );
-    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 1, "test/gem.2", "cur.gem" )._result == SocialResult::NotAllowed );
-    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 10, "test/gold.1" )._result == SocialResult::Ok ); // 이전 가능 자산은 그대로
+    const GuildCompletion deposited = rig.transfer( GuildOperation::Deposit, kMember, 30, "test/gem.dep", "cur.gem" );
+    SW_EXPECT_TRUE( deposited._result == SocialResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 1 ), deposited._listStorage.size() );
+    SW_EXPECT_EQUAL( int64( 30 ), deposited._listStorage[0]._amount );
+    SW_EXPECT_EQUAL( kMember, deposited._listStorage[0]._depositorID );
+    SW_EXPECT_EQUAL( int64( 70 ), rig.getBalanceOf( kMember, "cur.gem" ) );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 1, "test/gem.dep2", "cur.gem", kMember )._result.hasError( OnlineError::kInvalidRequest ) ); // 몫 주인은 서버가 정한다
+
+    // 허용이 없으면 임원도 못 꺼내고, 몫을 적지 않으면 규칙 밖이다
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 5, "test/gem.wd1", "cur.gem", kMember )._result == SocialResult::NotAllowed );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 5, "test/gem.wd2", "cur.gem" )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kMaster, 5, "test/gem.wd3", "cur.gem", kMember )._result == SocialResult::NotAllowed );
+
+    // 허용의 규칙: 맡긴 사람이 지금 멤버에게만, 이전 불가 자산에만, 자기 자신은 아니다
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOutside, 10, "test/grant.out" ) == SocialResult::NotFound );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, "test/grant.gold", "cur.gold" ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kMember, 10, "test/grant.self" ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, "" ).hasError( OnlineError::kInvalidRequest ) );
+
+    // 한도 10 안에서 꺼낸다. 다시 온 같은 부여는 쓴 만큼 줄어든 한도를 되돌리지 않는다
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, "test/grant.1" ) == SocialResult::Ok );
+    const GuildCompletion withdrawn = rig.transfer( GuildOperation::Withdraw, kOfficer, 6, "test/gem.wd4", "cur.gem", kMember );
+    SW_EXPECT_TRUE( withdrawn._result == SocialResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 1 ), withdrawn._listStorage.size() );
+    SW_EXPECT_EQUAL( int64( 24 ), withdrawn._listStorage[0]._amount );
+    SW_EXPECT_EQUAL( kMember, withdrawn._listStorage[0]._depositorID );
+    SW_EXPECT_EQUAL( int64( 6 ), rig.getBalanceOf( kOfficer, "cur.gem" ) );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, "test/grant.1" ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 5, "test/gem.wd5", "cur.gem", kMember )._result == SocialResult::NotAllowed ); // 남은 한도 4
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 4, "test/gem.wd6", "cur.gem", kMember )._result == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 4, "test/gem.wd6", "cur.gem", kMember )._result == SocialResult::Ok ); // 한도를 다 쓴 뒤 다시 온 같은 요청
+    SW_EXPECT_EQUAL( int64( 10 ), rig.getBalanceOf( kOfficer, "cur.gem" ) );
+
+    // 새 허용을 거두면 다시 못 꺼낸다. 다시 온 회수도 Ok 이다
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kMember, kOfficer, 10, "test/grant.2" ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::RevokeWithdrawal, kOfficer, kMember, 0, "test/revoke.0" ) == SocialResult::Ok ); // 남이 준 허용은 거둘 수 없다 — 키의 맡긴 사람이 요청한 계정이라 지울 것이 없다
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::RevokeWithdrawal, kMember, kOfficer, 0, "test/revoke.1" ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::RevokeWithdrawal, kMember, kOfficer, 0, "test/revoke.1" ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 1, "test/gem.wd7", "cur.gem", kMember )._result == SocialResult::NotAllowed );
+
+    // 맡긴 본인은 허용 없이 꺼낸다(멤버 역할이어도)
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kMember, 5, "test/gem.wd8", "cur.gem", kMember )._result == SocialResult::Ok );
+    SW_EXPECT_EQUAL( int64( 75 ), rig.getBalanceOf( kMember, "cur.gem" ) );
+
+    // 이전 가능 자산은 공용 창고 — 몫 주인이 없고 임원이 꺼낸다
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 10, "test/gold.dep" )._result == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 1, "test/gold.wd", "cur.gold", kMember )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kOfficer, 1, "test/gold.wd" )._result == SocialResult::Ok );
+
+    const GuildCompletion listed = rig.run( GuildOperation::ListStorage, kOfficer );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listed._listStorage.size() );
+    SW_EXPECT_EQUAL( string( "cur.gold" ), listed._listStorage[0]._assetID );
+    SW_EXPECT_EQUAL( int64( 9 ), listed._listStorage[0]._amount );
+    SW_EXPECT_EQUAL( kInvalidAccountID, listed._listStorage[0]._depositorID );
+    SW_EXPECT_EQUAL( string( "cur.gem" ), listed._listStorage[1]._assetID );
+    SW_EXPECT_EQUAL( int64( 15 ), listed._listStorage[1]._amount );
+    SW_EXPECT_EQUAL( kMember, listed._listStorage[1]._depositorID );
+}
+
+/** @brief [GuildServiceTest] 맡긴 몫이 남은 길드는 해산하지 못하고, 몫의 주인이 꺼내면 해산된다 — 공용 창고만 보던 해산 확인이 맡긴 사람별 몫까지 본다 */
+SW_TEST_CASE( GuildServiceTest, DepositorShareBlocksDissolution )
+{
+    PaidGemPolicy policy;
+    GuildFixture  rig;
+    rig._service.setLedgerPolicy( &policy );
+    (void)rig.run( GuildOperation::Create, kMaster, kInvalidAccountID, "Solo" );
+    rig.grant( kMaster, 10, "cur.gem" );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMaster, 10, "test/gem.dep", "cur.gem" )._result == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.runKeyed( GuildOperation::Leave, kMaster, kInvalidAccountID, "test/leave.1" ) == SocialResult::StorageNotEmpty );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kMaster, 10, "test/gem.wd", "cur.gem", kMaster )._result == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.runKeyed( GuildOperation::Leave, kMaster, kInvalidAccountID, "test/leave.2" ) == SocialResult::Ok );
+    SW_EXPECT_EQUAL( int64( 10 ), rig.getBalanceOf( kMaster, "cur.gem" ) );
+}
+
+/** @brief [GuildServiceTest] 맡긴 사람이 떠나거나 내보내지면 그의 몫이 같은 트랜잭션에서 그 계정으로 돌아간다 — 멤버가 아니게 된 뒤 아무도 꺼낼 수 없는 몫이 남지 않는다 */
+SW_TEST_CASE( GuildServiceTest, DepositorShareReturnsOnLeaveAndKick )
+{
+    PaidGemPolicy policy;
+    GuildFixture  rig;
+    rig._service.setLedgerPolicy( &policy );
+    (void)rig.makeGuild();
+    rig.grant( kMember, 20, "cur.gem" );
+    rig.grant( kOfficer, 20, "cur.gem" );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 7, "test/gem.dep1", "cur.gem" )._result == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kOfficer, 9, "test/gem.dep2", "cur.gem" )._result == SocialResult::Ok );
+    SW_EXPECT_TRUE( rig.setGrant( GuildOperation::GrantWithdrawal, kOfficer, kMaster, 5, "test/grant.1" ) == SocialResult::Ok );
+
+    SW_EXPECT_TRUE( rig.run( GuildOperation::Leave, kMember )._result.hasError( OnlineError::kInvalidRequest ) ); // 돌려주는 이동의 분개 키가 없다
+    SW_EXPECT_TRUE( rig.runKeyed( GuildOperation::Leave, kMember, kInvalidAccountID, "test/leave.1" ) == SocialResult::Ok );
+    SW_EXPECT_EQUAL( int64( 20 ), rig.getBalanceOf( kMember, "cur.gem" ) );
+
+    SW_EXPECT_TRUE( rig.runKeyed( GuildOperation::Kick, kMaster, kOfficer, "test/kick.1" ) == SocialResult::Ok );
+    SW_EXPECT_EQUAL( int64( 20 ), rig.getBalanceOf( kOfficer, "cur.gem" ) );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::ListStorage, kMaster )._listStorage.empty() );
+    SW_EXPECT_TRUE( rig.runKeyed( GuildOperation::Leave, kMaster, kInvalidAccountID, "test/leave.2" ) == SocialResult::Ok ); // 남은 몫 · 허용이 없어 해산된다
 }

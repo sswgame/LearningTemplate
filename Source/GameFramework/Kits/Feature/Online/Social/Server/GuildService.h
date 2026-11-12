@@ -14,6 +14,10 @@
  *          - 길드 창고는 원장의 맡김(`esc/guild/<길드 16진>`)이다. 맡기기는 멤버 누구나, 꺼내기는 임원 이상이 하며 둘 다 클라이언트 멱등 키로 만든 분개 키가 필수이다.
  *            이동은 멤버 레코드의 버전 조건과 한 트랜잭션에 들어가므로 그사이 내보내지거나 역할이 바뀌면 충돌로 다시 읽는다.
  *            맡기기는 길드 레코드를 다시 써서 해산과 겹치지 않게 하며, 창고에 남은 것이 있으면 해산(혼자 남은 길드장의 떠나기)은 `StorageNotEmpty` 이다.
+ *          - 이전 불가 자산(원장 정책 `isTransferable` 이 false — 유료 재화)은 공용 창고가 아니라 맡긴 사람별 보유자(`esc/guild/<길드 16진>.<계정 16진>`)에 든다.
+ *            맡긴 사람은 `social_guild_depositor`(`<길드>/<계정>`)에 적어 해산 확인과 창고 목록이 열거한다. 꺼내기는 어느 몫인지(`_depositorID`) 적고,
+ *            맡긴 본인이거나 그가 준 허용(`social_guild_storage_grant`, `<길드>/<맡긴 사람>/<받는 계정>/<자산>`, 남은 한도)이 있을 때만 옮기며 한도는 같은 트랜잭션에서 줄인다.
+ *            맡긴 사람이 떠나거나 내보내지면 그의 몫은 같은 트랜잭션에서 그 계정으로 돌아가고 그가 준 허용도 지운다(사용자 결정 2026-11-12, 감사 O-10).
  *
  *          PlayFab Groups 와 Nakama Groups(역할, 초대, 정원)에 해당한다.
  *          - 레벨은 경험치(`addExperience`, 서버 시스템만)와 서버 설정의 레벨 테이블로 응답할 때 정한다. 테이블이 바뀌면 저장된 데이터를 고치지 않아도 레벨이 따라간다.
@@ -51,14 +55,16 @@ namespace sw
         Get,
         Attach,           ///< 로그인한 계정의 길드를 찾는다. 완료는 없고 이벤트만 발생한다
         Deposit,          ///< 내 계정에서 길드 창고로 옮긴다
-        Withdraw,         ///< 길드 창고에서 내 계정으로 옮긴다. 임원 이상
+        Withdraw,         ///< 길드 창고에서 내 계정으로 옮긴다. 공용 창고는 임원 이상, 맡긴 사람별 몫은 본인이나 허용을 받은 멤버
         ListStorage,      ///< 길드 창고의 잔액 목록이다
         SetJoinPolicy,    ///< 공개 길드를 켜고 끈다. 임원 이상
         Apply,            ///< 공개 길드에 가입 신청을 낸다. 길드가 없는 계정만
         ListApplications, ///< 살아 있는 신청 목록이다. 임원 이상
         Approve,          ///< 신청을 받아들인다. 임원 이상
         Reject,           ///< 신청을 지운다. 임원 이상
-        AddExperience     ///< 서버 시스템이 길드 경험치를 늘린다(`addExperience`). 완료는 없다
+        AddExperience,    ///< 서버 시스템이 길드 경험치를 늘린다(`addExperience`). 완료는 없다
+        GrantWithdrawal,  ///< 내 몫(이전 불가 자산)을 다른 멤버가 한도까지 꺼내도록 허용한다. 한도는 덮어쓴다
+        RevokeWithdrawal  ///< 내가 준 꺼내기 허용을 거둔다
     };
 } // namespace sw
 
@@ -88,13 +94,14 @@ namespace sw
     /** @brief 길드 요청 하나입니다. */
     struct GuildRequest
     {
-        string           _text{};                         ///< 이름이나 공지이다
-        string           _assetID{};                      ///< Deposit · Withdraw 의 자산이다
-        string           _journalKey{};                   ///< Deposit · Withdraw 의 분개 키이다. `LedgerJournalKey::makeFromIdempotency( makeAccountScope( 계정 ), 멱등 키 )`
-        AccountID        _accountID{ kInvalidAccountID }; ///< 요청한 사람이다
-        AccountID        _targetID{ kInvalidAccountID };  ///< 초대, 내보내기, 역할 변경의 대상이다
-        uint64           _guildID{ 0 };                   ///< 수락할 길드이다
-        int64            _amount{ 0 };                    ///< Deposit · Withdraw 의 양, AddExperience 의 경험치이다
+        string           _text{};                           ///< 이름이나 공지이다
+        string           _assetID{};                        ///< Deposit · Withdraw 의 자산이다
+        string           _journalKey{};                     ///< 창고 이동 · 허용 · 몫을 돌려주는 떠나기와 내보내기의 분개 키이다. `LedgerJournalKey::makeFromIdempotency( makeAccountScope( 계정 ), 멱등 키 )`
+        AccountID        _accountID{ kInvalidAccountID };   ///< 요청한 사람이다
+        AccountID        _targetID{ kInvalidAccountID };    ///< 초대, 내보내기, 역할 변경의 대상, 꺼내기 허용을 받는 계정이다
+        AccountID        _depositorID{ kInvalidAccountID }; ///< Withdraw 가 꺼낼 맡긴 사람별 몫의 주인이다. 공용 창고 자산이면 `kInvalidAccountID`
+        uint64           _guildID{ 0 };                     ///< 수락할 길드이다
+        int64            _amount{ 0 };                      ///< Deposit · Withdraw 의 양, AddExperience 의 경험치, GrantWithdrawal 의 한도이다
         UnixMilliseconds _nowMs{ 0 };
         GuildRole        _role{ GuildRole::Member };
         GuildOperation   _operation{ GuildOperation::Get };
