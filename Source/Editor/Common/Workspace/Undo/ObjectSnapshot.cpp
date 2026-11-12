@@ -94,14 +94,16 @@ namespace sw
                 return sceneManager.getPreviewSceneKeyOf( obj.getManager() );
             }
 
-            /** @brief 대상을 id 로, 없으면 기록할 때의 이름으로 찾습니다(헤더의 주의 참고). 삭제 대기 오브젝트는 찾지 않습니다. */
-            static GameObject* findObject( const ActiveTarget& target, uint64 objectID, const string& name )
+            /**
+             * @brief 대상을 id 로만 찾습니다. 삭제 대기 오브젝트는 찾지 않습니다.
+             * @details 이름으로 대신 찾지 않는다 — 같은 이름의 다른 오브젝트를 고치거나 지웠다(감사 E-12). 지운 것을 되살리는 단계는 원래 id 로 만들므로 id 가 이어진다.
+             *          못 찾으면 건너뛴다(언리얼 트랜잭션과 같다).
+             */
+            static GameObject* findObject( const ActiveTarget& target, uint64 objectID )
             {
                 if ( target._pManager == nullptr )
                     return nullptr;
                 GameObject* pTarget = target._pManager->findGameObjectByID( objectID );
-                if ( pTarget == nullptr && name.empty() == false )
-                    pTarget = target._pManager->findGameObjectByName( hashed_string( name.c_str() ) );
                 return ( pTarget != nullptr && pTarget->isPendingDestroy() == false ) ? pTarget : nullptr;
             }
 
@@ -122,9 +124,9 @@ namespace sw
             }
 
             /** @brief 기록한 씬에서 @p objectID 를 찾아 @p snapshot 을 다시 읽습니다. 없으면 아무것도 하지 않습니다(데이터 단계). */
-            static void restore( editor::UndoStepContext& context, uint32 sceneKey, uint64 objectID, string name, ObjectSnapshot snapshot )
+            static void restore( editor::UndoStepContext& context, uint32 sceneKey, uint64 objectID, ObjectSnapshot snapshot )
             {
-                GameObject* pTarget = findObject( findActiveTarget( editor::findSubsystem<SceneManager>(), sceneKey ), objectID, name );
+                GameObject* pTarget = findObject( findActiveTarget( editor::findSubsystem<SceneManager>(), sceneKey ), objectID );
                 if ( pTarget == nullptr )
                     return;
                 loadSnapshot( pTarget, snapshot );
@@ -132,10 +134,10 @@ namespace sw
             }
 
             /** @brief 기록한 씬에서 @p objectID 를 없앱니다(자식까지). 알림은 없애기 전 — 받는 쪽이 아직 오브젝트를 찾을 수 있다(데이터 단계). */
-            static void destroy( editor::UndoStepContext& context, uint32 sceneKey, uint64 objectID, string name )
+            static void destroy( editor::UndoStepContext& context, uint32 sceneKey, uint64 objectID )
             {
                 const ActiveTarget target  = findActiveTarget( editor::findSubsystem<SceneManager>(), sceneKey );
-                GameObject*        pTarget = findObject( target, objectID, name );
+                GameObject*        pTarget = findObject( target, objectID );
                 if ( pTarget == nullptr )
                     return;
                 notify( context, pTarget->getObjectID(), ObjectEditKind::Destroyed );
@@ -186,11 +188,10 @@ namespace sw
     {
         const uint32          sceneKey = ObjectSnapshotInternal::computeSceneKey( sceneManager, obj );
         const uint64          objectID = obj.getObjectID();
-        const string          name{ obj.getName().c_str() };
         CommandStack::Command cmd{};
         cmd._label = string{ label };
-        cmd._undo  = SW_UNDO_STEP( ObjectSnapshotInternal::restore, sceneKey, objectID, name, before );
-        cmd._redo  = SW_UNDO_STEP( ObjectSnapshotInternal::restore, sceneKey, objectID, name, after );
+        cmd._undo  = SW_UNDO_STEP( ObjectSnapshotInternal::restore, sceneKey, objectID, before );
+        cmd._redo  = SW_UNDO_STEP( ObjectSnapshotInternal::restore, sceneKey, objectID, after );
         return cmd;
     }
 
@@ -211,7 +212,7 @@ namespace sw
         const bool              bNestedPart = pFoundPart != nullptr;
         const PrefabNestedPart  nestedPart  = bNestedPart ? *pFoundPart : PrefabNestedPart{};
 
-        const editor::UndoStep destroyStep  = SW_UNDO_STEP( ObjectSnapshotInternal::destroy, sceneKey, objectID, name );
+        const editor::UndoStep destroyStep  = SW_UNDO_STEP( ObjectSnapshotInternal::destroy, sceneKey, objectID );
         const editor::UndoStep recreateStep = SW_UNDO_STEP( ObjectSnapshotInternal::recreate, sceneKey, name, snapshot, prefabPath, bNestedPart, nestedPart );
 
         // 생성과 삭제는 같은 두 절차를 반대 순서로 잇는 것이다.
