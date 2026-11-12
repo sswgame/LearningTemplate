@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
@@ -89,7 +90,7 @@ SW_TEST_CASE( InventoryTest, RemovesAllOrNothing )
 }
 
 /**
- * @brief [InventoryTest] 상태를 쓰고 같은 크기의 인벤토리에 읽으면 슬롯이 같다. 슬롯 수가 다르면 읽지 않는다
+ * @brief [InventoryTest] 상태를 쓰고 같은 크기의 인벤토리에 읽으면 슬롯이 같다. 슬롯 수가 줄어도 빈 슬롯에 들어가면 그대로 읽힌다
  */
 SW_TEST_CASE( InventoryTest, StateRoundTrips )
 {
@@ -119,7 +120,84 @@ SW_TEST_CASE( InventoryTest, StateRoundTrips )
     sw::Inventory smaller;
     SW_REQUIRE_TRUE( smaller.initialize( &catalog, 2 ) );
     sw::Archive again( written.getData(), written.getSize() );
-    SW_EXPECT_FALSE( smaller.readState( again ) );
+    SW_REQUIRE_TRUE( smaller.readState( again ) ); // 셋째 슬롯이 비어 있어 둘에 다 든다
+    SW_EXPECT_EQUAL( 12, smaller.getItemCount( kArrow ) );
+    SW_EXPECT_EQUAL( 1, smaller.getItemCount( kSword ) );
+    SW_EXPECT_TRUE( smaller.getOverflow().empty() );
+}
+
+/**
+ * @brief [InventoryTest] 슬롯 10 개 세이브를 설정 8 개 인벤토리로 읽으면 2 개가 넘침 목록으로 가고 잃은 아이템은 없다(감사 A-6).
+ *        넘침 목록은 세이브에 실리고, 자리가 나면 돌려받고, UI 가 꺼내 갈 수 있다
+ */
+SW_TEST_CASE( InventoryTest, ShrunkSlotCountMovesExtraItemsToOverflow )
+{
+    sw::ItemCatalog catalog;
+    loadCatalog( catalog );
+    sw::Inventory original;
+    SW_REQUIRE_TRUE( original.initialize( &catalog, 10 ) );
+    SW_REQUIRE_EQUAL( 10, original.addItem( kSword, 10 ) ); // 겹치지 않는 칼 열 자루가 슬롯 열을 채운다
+    sw::Archive written;
+    original.writeState( written );
+
+    sw::Inventory smaller;
+    SW_REQUIRE_TRUE( smaller.initialize( &catalog, 8 ) );
+    sw::Archive reading( written.getData(), written.getSize() );
+    SW_REQUIRE_TRUE( smaller.readState( reading ) );
+    SW_EXPECT_EQUAL( 8, smaller.getItemCount( kSword ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, smaller.getOverflow().size() );
+    int32 overflowCount = 0;
+    for ( const sw::InventorySlot& stack : smaller.getOverflow() )
+    {
+        overflowCount += stack._count;
+    }
+    SW_EXPECT_EQUAL( 10, smaller.getItemCount( kSword ) + overflowCount ); // 잃은 아이템 0
+
+    // 넘침 목록도 세이브에 실린다
+    sw::Archive rewritten;
+    smaller.writeState( rewritten );
+    sw::Inventory reloaded;
+    SW_REQUIRE_TRUE( reloaded.initialize( &catalog, 8 ) );
+    sw::Archive rereading( rewritten.getData(), rewritten.getSize() );
+    SW_REQUIRE_TRUE( reloaded.readState( rereading ) );
+    SW_EXPECT_EQUAL( size_t{ 2 }, reloaded.getOverflow().size() );
+
+    // 자리가 나면 돌려받고, 남은 것은 UI 가 꺼낸다
+    SW_REQUIRE_TRUE( reloaded.consumeItem( kSword, 1 ) );
+    SW_EXPECT_EQUAL( 1, reloaded.moveOverflowToSlots() );
+    SW_EXPECT_EQUAL( 8, reloaded.getItemCount( kSword ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, reloaded.getOverflow().size() );
+    const sw::InventorySlot taken = reloaded.takeOverflow( 0 );
+    SW_EXPECT_EQUAL( kSword, taken._itemID );
+    SW_EXPECT_TRUE( reloaded.getOverflow().empty() );
+}
+
+/**
+ * @brief [InventoryTest] 판 1(넘침 목록 없음) 구간 본문을 판 올림 사슬(INVT 1 → 2)로 올려 읽는다 — 슬롯이 그대로다
+ */
+SW_TEST_CASE( InventoryTest, UpgradesVersionOneSectionBody )
+{
+    sw::ItemCatalog catalog;
+    loadCatalog( catalog );
+    sw::Inventory original;
+    SW_REQUIRE_TRUE( original.initialize( &catalog, 2, 50.0f ) );
+    SW_REQUIRE_EQUAL( 7, original.addItem( kArrow, 7 ) );
+    sw::Archive written;
+    original.writeState( written );
+
+    // 판 1 바이트: 최대 무게(4) 뒤의 넘침 목록 개수(4)가 없다
+    sw::Archive versionOne;
+    versionOne.writeBytes( written.getData(), 4 );
+    versionOne.writeBytes( written.getData() + 8, written.getSize() - 8 );
+    sw::Archive body( versionOne.getData(), versionOne.getSize() );
+    SW_REQUIRE_TRUE( sw::StateIO::upgradeSectionBody( sw::Inventory::kStateTag, 1, sw::Inventory::kStateVersion, body ) );
+
+    sw::Inventory restored;
+    SW_REQUIRE_TRUE( restored.initialize( &catalog, 2 ) );
+    SW_REQUIRE_TRUE( restored.readState( body ) );
+    SW_EXPECT_EQUAL( 50.0f, restored.getMaxWeight() );
+    SW_EXPECT_EQUAL( 7, restored.getItemCount( kArrow ) );
+    SW_EXPECT_TRUE( restored.getOverflow().empty() );
 }
 
 /**

@@ -152,21 +152,39 @@ SW_TEST_CASE( WorldClockTest, AdvancesAcrossEveryHourForAnyDayLength )
 }
 
 /**
- * @brief [WorldClockTest] 판 1(머리표 없음 · float32 시각) 세션 상태 구간 본문을 판 올림 사슬(CLOK 1 → 2)로 올려 읽는다 — 날 · 시각 · 배율 · 멈춤이 그대로다(감사 A-6)
+ * @brief [WorldClockTest] 판 1(머리표 없음 · float32 시각) 바이트를 머리가 판 1 로 알아보고 사슬(CLOK 1 → 2)로 올려 읽는다 — 날 · 시각 · 배율 · 멈춤이 그대로다(감사 A-6).
+ *        세션 상태 구간 본문(구간이 올리지 않고 넘긴다)과 바깥 형식 안(나일 시티처럼 시계 뒤에 칸이 이어진다) 두 자리 모두다
  */
-SW_TEST_CASE( WorldClockTest, UpgradesVersionOneSectionBody )
+SW_TEST_CASE( WorldClockTest, UpgradesHeaderlessVersionOne )
 {
     sw::Archive oldBody;
     oldBody << int32{ 4 } << 12.0f << 2.0f << uint8{ SW_TRUE }; // 하루 24 초 설정의 12 시
-    sw::Archive body( oldBody.getData(), oldBody.getSize() );
-    SW_REQUIRE_TRUE( sw::StateIO::upgradeSectionBody( sw::WorldClock::kStateTag, 1, sw::WorldClock::kStateVersion, body ) );
 
     sw::WorldClock clock;
     SW_REQUIRE_TRUE( clock.initialize( WorldClockTestUtil::makeSettings() ) );
+    sw::Archive body( oldBody.getData(), oldBody.getSize() );
     SW_REQUIRE_TRUE( clock.readState( body ) );
     SW_EXPECT_EQUAL( size_t{ 0 }, body.getRemainingBytes() );
     SW_EXPECT_EQUAL( 4, clock.getDay() );
     SW_EXPECT_NEAR( 12.0f, clock.getHour(), 1.0e-4f );
     SW_EXPECT_NEAR( 2.0f, clock.getTimeScale(), 1.0e-6f );
     SW_EXPECT_TRUE( clock.isPaused() );
+
+    // 바깥 형식 안: 시계 뒤의 칸(int32 77)이 그대로 읽힌다
+    sw::Archive outer;
+    outer.writeBytes( oldBody.getData(), oldBody.getSize() );
+    outer << int32{ 77 };
+    sw::Archive    reading( outer.getData(), outer.getSize() );
+    sw::WorldClock nested;
+    SW_REQUIRE_TRUE( nested.initialize( WorldClockTestUtil::makeSettings() ) );
+    int32 tail = 0;
+    {
+        sw::StateIO io( reading );
+        io.value( nested );
+        io.value( tail );
+        SW_REQUIRE_TRUE( io.isOk() );
+    }
+    SW_EXPECT_EQUAL( 4, nested.getDay() );
+    SW_EXPECT_EQUAL( 77, tail );
+    SW_EXPECT_EQUAL( size_t{ 0 }, reading.getRemainingBytes() );
 }

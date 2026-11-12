@@ -23,8 +23,9 @@ namespace sw
     {
         struct RestaurantSimulationInternal
         {
-            static constexpr float32 kMinDemand      = 0.05f;
-            static constexpr float32 kMinutesPerHour = 60.0f;
+            static constexpr uint32  kMenuEntryStateMinBytes = 13; ///< 메뉴 항목 하나의 최소 바이트 — 이름(4) + 가격(8) + 켜짐(1)
+            static constexpr float32 kMinDemand              = 0.05f;
+            static constexpr float32 kMinutesPerHour         = 60.0f;
 
             static bool isSeated( const RestaurantCustomer& customer )
             {
@@ -387,17 +388,34 @@ namespace sw
                 _listOrder.push_back( order );
             }
         }
-        // 메뉴는 카탈로그의 요리마다 하나이다. 이름(4) + 가격(8) + 켜짐(1)
-        io.expect( static_cast<uint32>( _listMenu.size() ) );
-        if ( io.isOk() == false )
-            return;
-        for ( MenuEntry& entry : _listMenu )
+        // 메뉴는 카탈로그의 요리마다 하나이다 — 저장한 항목은 요리 id 로 짝짓는다(감사 A-6: 요리를 더하거나 순서를 바꾼 패치 뒤에도 가격 · 켜짐이 남는다).
+        // 카탈로그에서 빠진 요리의 항목은 버리고(아이템이 아니라 그 요리의 설정이다), 새 요리는 지금 값 그대로다. 이름(4) + 가격(8) + 켜짐(1)
+        vector<MenuEntry>  listSavedMenu;
+        vector<MenuEntry>& listMenu = io.isWriting() ? _listMenu : listSavedMenu;
+        io.list( listMenu, RestaurantSimulationInternal::kMenuEntryStateMinBytes, [&]( MenuEntry& entry )
         {
             io.value( entry._dishID );
             io.value( entry._price );
             io.flag( entry._bOnMenu );
             // `setMenuPrice` 처럼 가격은 1 이상이다. 음수 가격은 손님이 낼 때 지갑에서 돈을 뺀다.
             io.check( 1 <= entry._price );
+        } );
+        if ( io.isOk() == false )
+            return;
+        if ( io.isReading() )
+        {
+            vector<hashed_string> listSeenDish;
+            for ( const MenuEntry& saved : listSavedMenu )
+            {
+                if ( io.check( VectorUtil::contains( listSeenDish, saved._dishID ) == false ) == false )
+                    return;
+                listSeenDish.push_back( saved._dishID );
+                for ( MenuEntry& entry : _listMenu )
+                {
+                    if ( entry._dishID == saved._dishID )
+                        entry = saved;
+                }
+            }
         }
         // 스테이션마다 이름(4) + 수(4)
         io.list( _listStation, 8, [&]( StationSlot& slot )

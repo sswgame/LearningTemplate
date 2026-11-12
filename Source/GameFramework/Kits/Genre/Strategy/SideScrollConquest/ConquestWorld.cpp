@@ -17,11 +17,12 @@ namespace sw
     {
         struct ConquestWorldInternal
         {
-            static constexpr float32 kFarAway        = 1.0e9f;
-            static constexpr float32 kGateStandOff   = 0.5f;  ///< 성문 앞에서 멈추는 거리
-            static constexpr float32 kLadderReach    = 1.0f;  ///< 사다리가 이 거리 안에 있으면 그 성문을 넘는다
-            static constexpr float32 kPlantTolerance = 0.05f; ///< 사다리가 걸칠 위치에 이만큼 가까우면 걸친 것으로 본다
-            static constexpr float32 kApproachRatio  = 0.9f;  ///< 사거리의 이 비율까지만 다가간다(경계에서 떨지 않게 하려는 값이다)
+            static constexpr uint32  kSiteStateMinBytes = 18; ///< 거점 하나의 최소 바이트 — 이름(4) + 성문, 성벽, 점령(12) + 주인, 점령 편(2)
+            static constexpr float32 kFarAway           = 1.0e9f;
+            static constexpr float32 kGateStandOff      = 0.5f;  ///< 성문 앞에서 멈추는 거리
+            static constexpr float32 kLadderReach       = 1.0f;  ///< 사다리가 이 거리 안에 있으면 그 성문을 넘는다
+            static constexpr float32 kPlantTolerance    = 0.05f; ///< 사다리가 걸칠 위치에 이만큼 가까우면 걸친 것으로 본다
+            static constexpr float32 kApproachRatio     = 0.9f;  ///< 사거리의 이 비율까지만 다가간다(경계에서 떨지 않게 하려는 값이다)
 
             static float32 computeDirection( ConquestTeam team ) { return team == ConquestTeam::Enemy ? -1.0f : 1.0f; }
 
@@ -245,22 +246,44 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        // 거점은 카탈로그의 거점마다 하나이다. 이름(4) + 성문, 성벽, 점령(12) + 주인, 점령 편(2)
-        io.expect( static_cast<uint32>( _listSite.size() ) );
+        // 거점은 카탈로그의 거점마다 하나이다 — 저장한 거점은 id 로 짝짓는다(감사 A-6: 거점을 더하거나 순서를 바꾼 패치 뒤에도 성문 · 점령이 남는다).
+        // 카탈로그에서 빠진 거점의 상태는 버리고, 새 거점은 지금 값 그대로다. 건물은 저장 번호를 지금 번호로 옮긴다. 이름(4) + 성문, 성벽, 점령(12) + 주인, 점령 편(2)
+        uint32 savedSiteCount = static_cast<uint32>( _listSite.size() );
+        io.count( ConquestWorldInternal::kSiteStateMinBytes, savedSiteCount );
         if ( io.isOk() == false )
             return;
-        for ( ConquestSite& site : _listSite )
+        vector<int32> listSiteMap; // 저장 번호 → 지금 번호(카탈로그에서 빠졌으면 -1)
+        for ( uint32 savedIndex = 0; savedIndex < savedSiteCount; ++savedIndex )
         {
-            io.expect( site._pDef->_id );
+            ConquestSite  site   = io.isWriting() ? _listSite[savedIndex] : ConquestSite{};
+            hashed_string siteID = io.isWriting() ? site._pDef->_id : hashed_string{};
+            io.value( siteID );
             io.value( site._gateHealth );
             io.value( site._wallHealth );
             io.value( site._captureProgress );
             io.enumValue( site._owner, ConquestTeam::Enemy );
             io.enumValue( site._captureTeam, ConquestTeam::Enemy );
-            if ( io.isReading() && io.check( 0.0f <= site._gateHealth && site._gateHealth <= site._pDef->_gateHealth && 0.0f <= site._wallHealth && site._wallHealth <= site._pDef->_wallHealth && 0.0f <= site._captureProgress && site._captureProgress <= _pCatalog->getRules()._captureTime ) == false )
+            if ( io.isWriting() )
+                continue;
+            if ( io.isOk() == false )
                 return;
+            ConquestSite* const pCurrent = VectorUtil::findIf( _listSite, [&]( const ConquestSite& current )
+            { return current._pDef->_id == siteID; } );
+            if ( pCurrent == nullptr )
+            {
+                listSiteMap.push_back( constant::invalid_index::kInt32 );
+                continue;
+            }
+            const int32            currentIndex = static_cast<int32>( pCurrent - _listSite.data() );
+            const ConquestSiteDef& def          = *pCurrent->_pDef;
+            if ( io.check( VectorUtil::contains( listSiteMap, currentIndex ) == false && 0.0f <= site._gateHealth && site._gateHealth <= def._gateHealth && 0.0f <= site._wallHealth && site._wallHealth <= def._wallHealth &&
+                           0.0f <= site._captureProgress && site._captureProgress <= _pCatalog->getRules()._captureTime ) == false )
+                return;
+            site._pDef = &def;
+            *pCurrent  = site;
+            listSiteMap.push_back( currentIndex );
         }
-        const int32 siteCount = static_cast<int32>( _listSite.size() );
+        const int32 siteCount = static_cast<int32>( savedSiteCount );
         // 건물마다 이름(4) + 대기열 수(4) + 진행 둘(8) + 슬롯, 일꾼(8)
         io.list( _listBuilding, 24, [&]( ConquestBuilding& building )
         {
@@ -284,7 +307,14 @@ namespace sw
             io.value( building._trainProgress );
             io.value( building._siteIndex );
             io.value( building._workers );
-            io.check( 0 <= building._siteIndex && building._siteIndex < siteCount && 0 <= building._workers && building._workers <= building._pDef->_workerSlots && 0.0f <= building._cycleProgress && 0.0f <= building._trainProgress );
+            if ( io.check( 0 <= building._siteIndex && building._siteIndex < siteCount && 0 <= building._workers && building._workers <= building._pDef->_workerSlots && 0.0f <= building._cycleProgress && 0.0f <= building._trainProgress ) == false )
+                return;
+            if ( io.isReading() )
+            {
+                // 저장 번호 → 지금 번호. 빠진 거점 위의 건물은 놓을 자리가 없어 거절한다(건물을 조용히 버리지 않는다).
+                building._siteIndex = listSiteMap[static_cast<size_t>( building._siteIndex )];
+                io.check( building._siteIndex != constant::invalid_index::kInt32 );
+            }
         } );
         // 병사마다 이름(4) + 위치, 체력, 쿨다운, 대기 위치, 준 피해(20) + 번호, 부대 슬롯(8) + 편, 명령, 생존, 사다리(4)
         io.list( _listUnit, 36, [&]( ConquestUnit& unit )

@@ -88,8 +88,9 @@ namespace sw
     class SW_GF_API WorldClock
     {
     public:
-        static constexpr uint32 kStateTag     = FourCCUtil::make( "CLOK" );
-        static constexpr uint32 kStateVersion = 2; ///< 2: 하루 안 시각이 float64 다
+        static constexpr uint32 kStateTag               = FourCCUtil::make( "CLOK" );
+        static constexpr uint32 kStateVersion           = 2; ///< 2: 하루 안 시각이 float64 다
+        static constexpr uint32 kStateHeaderlessVersion = 1; ///< 판 1 까지는 머리표가 없었다 — 머리가 없는 바이트는 판 1 로 읽어 올린다(`StateIO::header`)
 
         WorldClock();
 

@@ -402,3 +402,18 @@ SW_TEST_CASE( StateIOTest, SectionUpgradesOldVersionThroughTheChain )
     SW_EXPECT_NEAR( 1.5f, speed, 1.0e-6f );
     SW_EXPECT_EQUAL( size_t{ 0 }, reading.getRemainingBytes() );
 }
+
+/**
+ * @brief [StateIOTest] 머리표가 다른 바이트(다른 형식, 또는 머리표가 생기기 전의 판)는 판을 알 수 없다는 경고와 함께 거절하고 상태는 그대로다
+ */
+SW_TEST_CASE( StateIOTest, HeaderTagMismatchSaysTheVersionIsUnknown )
+{
+    SW_EXPECT_LOG( "StateIO.HeaderTagMismatch" );
+    sw::Archive forged;
+    forged << int16{ 7 } << int16{ 0 } << int32{ 3 } << 1.5f; // 머리표 없는 칸 — 표 자리에 체력이 놓였다
+    sw::Archive               reading( forged.getData(), forged.getSize() );
+    sw::StateUpgradeTestState state;
+    state._health = 11;
+    SW_EXPECT_FALSE( state.readState( reading ) );
+    SW_EXPECT_EQUAL( 11, state._health );
+}

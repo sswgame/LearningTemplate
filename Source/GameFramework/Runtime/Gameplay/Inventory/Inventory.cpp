@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
@@ -17,8 +18,26 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct InventoryInternal
+        {
+            /** @brief 판 1 → 2: 최대 무게 뒤에 빈 넘침 목록(개수 0)을 넣는다. 슬롯 수와 슬롯은 그대로 옮긴다(꼬리). */
+            [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
+            {
+                float32 maxWeight = 0.0f;
+                inOldBody >> maxWeight;
+                outNewBody << maxWeight << uint32{ 0 };
+                return inOldBody.isOk();
+            }
+        };
+    } // namespace
+
+    SW_STATE_FORMAT_UPGRADE( inventory1To2, "INVT", 1, 2, &InventoryInternal::upgradeStateFrom1 );
+
     Inventory::Inventory()
         : _listSlot{}
+        , _listOverflow{}
         , _pCatalog{ nullptr }
         , _maxWeight{ 0.0f }
         , _revision{ 0 }
@@ -34,6 +53,7 @@ namespace sw
         }
         _pCatalog = pCatalog;
         _listSlot.assign( static_cast<size_t>( slotCount ), InventorySlot{} );
+        _listOverflow.clear();
         _maxWeight = maxWeight;
         ++_revision;
         return true;
@@ -46,25 +66,54 @@ namespace sw
         if ( newCount < _listSlot.size() )
         {
             // 줄어드는 슬롯의 아이템은 남는 빈 슬롯으로 먼저 옮긴다.
-            for ( size_t index = newCount; index < _listSlot.size(); ++index )
+            vector<InventorySlot> listCut( _listSlot.begin() + static_cast<ptrdiff_t>( newCount ), _listSlot.end() );
+            _listSlot.resize( newCount );
+            for ( const InventorySlot& stack : listCut )
             {
-                if ( _listSlot[index].isEmpty() )
-                    continue;
-                bool bPlaced = false;
-                for ( size_t target = 0; target < newCount && bPlaced == false; ++target )
-                {
-                    if ( _listSlot[target].isEmpty() )
-                    {
-                        _listSlot[target] = _listSlot[index];
-                        bPlaced           = true;
-                    }
-                }
-                if ( bPlaced == false )
-                    outListOverflow.push_back( _listSlot[index] );
+                if ( stack.isEmpty() == false && placeInEmptySlot( stack ) == false )
+                    outListOverflow.push_back( stack );
             }
         }
         _listSlot.resize( newCount );
         ++_revision;
+    }
+
+    bool Inventory::placeInEmptySlot( const InventorySlot& stack )
+    {
+        for ( InventorySlot& slot : _listSlot )
+        {
+            if ( slot.isEmpty() )
+            {
+                slot = stack;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    int32 Inventory::moveOverflowToSlots()
+    {
+        int32 reclaimed = 0;
+        for ( size_t index = 0; index < _listOverflow.size(); )
+        {
+            if ( placeInEmptySlot( _listOverflow[index] ) == false )
+                break; // 빈 슬롯이 없다 — 남은 것은 다음에
+            _listOverflow.erase( _listOverflow.begin() + static_cast<ptrdiff_t>( index ) );
+            ++reclaimed;
+        }
+        if ( reclaimed > 0 )
+            ++_revision;
+        return reclaimed;
+    }
+
+    InventorySlot Inventory::takeOverflow( const int32 index )
+    {
+        if ( index < 0 || index >= static_cast<int32>( _listOverflow.size() ) )
+            return InventorySlot{};
+        InventorySlot taken = std::move( _listOverflow[static_cast<size_t>( index )] );
+        _listOverflow.erase( _listOverflow.begin() + index );
+        ++_revision;
+        return taken;
     }
 
     bool Inventory::setMaxWeight( float32 maxWeight )
@@ -322,6 +371,7 @@ namespace sw
         {
             slot = InventorySlot{};
         }
+        _listOverflow.clear();
         ++_revision;
     }
 
@@ -407,23 +457,36 @@ namespace sw
     {
         io.value( _maxWeight );
         io.check( 0.0f <= _maxWeight );
-        // 슬롯 수는 늘 같다. 슬롯마다 이름(4) + 개수, 내구도, 피해(12) + 꾸미기 수, 부품 수(8)
-        io.expect( static_cast<uint32>( _listSlot.size() ) );
+        io.list( _listOverflow, kSlotStateMinBytes, [&io]( InventorySlot& stack )
+        { serializeSlot( io, stack ); } );
         if ( io.isOk() == false )
             return;
-        for ( InventorySlot& slot : _listSlot )
+        // 슬롯 수는 설정(가방 크기)이 정한다 — 세이브는 저장한 수를 싣고, 읽을 때 지금 수에 맞춘다(설정을 바꾼 패치 뒤에도 아이템을 잃지 않는다, 감사 A-6).
+        vector<InventorySlot>  listSaved;
+        vector<InventorySlot>& listSlot = io.isWriting() ? _listSlot : listSaved;
+        io.list( listSlot, kSlotStateMinBytes, [&io]( InventorySlot& slot )
+        { serializeSlot( io, slot ); } );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        const size_t slotCount = _listSlot.size();
+        _listSlot.assign( slotCount, InventorySlot{} );
+        vector<InventorySlot> listCut;
+        for ( size_t index = 0; index < listSaved.size(); ++index )
         {
-            serializeSlot( io, slot );
-            if ( io.isOk() == false )
-                return;
+            if ( index < slotCount )
+                _listSlot[index] = std::move( listSaved[index] );
+            else if ( listSaved[index].isEmpty() == false )
+                listCut.push_back( std::move( listSaved[index] ) );
         }
-        if ( io.isReading() )
+        for ( InventorySlot& stack : listCut )
         {
-            ++_revision;
+            if ( placeInEmptySlot( stack ) == false )
+                _listOverflow.push_back( std::move( stack ) );
         }
+        ++_revision;
     }
 
-    void Inventory::serializeSlot( StateIO& io, InventorySlot& inoutSlot )
+    void Inventory::serializeSlot( StateIO& io, InventorySlot& inoutSlot ) // 슬롯마다 이름(4) + 개수, 내구도, 피해(12) + 꾸미기 수, 부품 수(8)
     {
         InventorySlot& slot = inoutSlot;
         {

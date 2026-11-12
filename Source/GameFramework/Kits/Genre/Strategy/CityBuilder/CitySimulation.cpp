@@ -19,6 +19,7 @@ namespace sw
     {
         struct CitySimulationInternal
         {
+            static constexpr uint32 kMinTileStateBytes     = 12; ///< 칸 하나의 최소 바이트 — 건물(4) + 도로 번호(4) + 매력(2) + 지형(1) + 도로(1)
             static constexpr uint32 kMinBuildingStateBytes = 64; ///< 건물 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
             static constexpr uint32 kMinWalkerStateBytes   = 56; ///< 일꾼 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
 
@@ -1078,18 +1079,23 @@ namespace sw
     // ------------------------------------------------------------------------------
     void CitySimulation::serializeState( StateIO& io )
     {
-        io.expect( _topology._width );
-        io.expect( _topology._height );
+        // 지도 크기는 설정이 정한다 — 저장된 크기로 읽어 같은 좌표에 옮긴다. 줄어 밖에 건물 · 도로가 남으면 거절하고, 늘어난 칸은 지금 지형 그대로다(감사 A-6).
+        const GridTopology savedTopology = _topology.serializeSize( io );
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        for ( CityTile& tile : _listTile )
+        // 칸마다 건물(4) + 도로 번호(4) + 매력(2) + 지형(1) + 도로(1)
+        _topology.serializeCells(
+            io, savedTopology, _listTile, CitySimulationInternal::kMinTileStateBytes,
+            []( StateIO& tileIO, CityTile& tile )
         {
-            io.value( tile._buildingIndex );
-            io.value( tile._roadComponent );
-            io.value( tile._desirability );
-            io.enumValue( tile._terrain, CityTerrain::Rock );
-            io.value( tile._bRoad );
-        }
+            tileIO.value( tile._buildingIndex );
+            tileIO.value( tile._roadComponent );
+            tileIO.value( tile._desirability );
+            tileIO.enumValue( tile._terrain, CityTerrain::Rock );
+            tileIO.value( tile._bRoad );
+        },
+            []( const CityTile& tile )
+        { return tile._buildingIndex == constant::invalid_index::kInt32 && tile._bRoad == SW_FALSE; } );
         io.list( _listBuilding, CitySimulationInternal::kMinBuildingStateBytes, [&]( CityBuilding& building )
         {
             io.reference( building._pDef, [this]( const hashed_string& defID )

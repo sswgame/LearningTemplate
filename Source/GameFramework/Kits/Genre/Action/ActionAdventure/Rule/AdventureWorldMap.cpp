@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureWorldMap.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
@@ -88,24 +89,48 @@ namespace sw
     {
         io.value( _orbCount );
         io.check( 0 <= _orbCount );
-        io.expect( static_cast<uint32>( _listActivated.size() ) );
+        // 탑 · 사당은 지도 데이터가 정한다 — 저장한 상태는 표지 id 로 짝짓는다(감사 A-6: 표지를 더하거나 순서를 바꾼 데이터 뒤에도 깨운 탑 · 마친 사당이 남는다).
+        // 데이터에서 빠진 표지의 상태는 버리고, 새 표지는 깨우지 않은 채다. 표지마다 이름(4) + 깨움(1) + 마침(1)
+        uint32 landmarkCount = static_cast<uint32>( _listActivated.size() );
+        io.count( kLandmarkStateMinBytes, landmarkCount );
         if ( io.isOk() == false )
             return;
-        int32 completedCount = 0;
-        for ( size_t index = 0; index < _listActivated.size(); ++index )
+        vector<uint8> listActivated( _listActivated.size(), SW_FALSE );
+        vector<uint8> listCompleted( _listCompleted.size(), SW_FALSE );
+        vector<int32> listSeenIndex;
+        for ( uint32 savedIndex = 0; savedIndex < landmarkCount; ++savedIndex )
         {
-            io.value( _listActivated[index] );
-            io.value( _listCompleted[index] );
+            hashed_string landmarkID = io.isWriting() ? _catalog.getAt( savedIndex )._id : hashed_string{};
+            uint8         bActivated = io.isWriting() ? _listActivated[savedIndex] : SW_FALSE;
+            uint8         bCompleted = io.isWriting() ? _listCompleted[savedIndex] : SW_FALSE;
+            io.value( landmarkID );
+            io.flag( bActivated );
+            io.flag( bCompleted );
             if ( io.isWriting() )
                 continue;
-            // 마친 사당은 찾은 것이고, 사당만 마칠 수 있다
-            const bool bShrine = _catalog.getAt( index )._kind == AdventureLandmarkKind::Shrine;
-            if ( io.check( _listActivated[index] <= SW_TRUE && _listCompleted[index] <= SW_TRUE && ( _listCompleted[index] == SW_FALSE || ( bShrine && _listActivated[index] == SW_TRUE ) ) ) == false )
+            if ( io.isOk() == false )
                 return;
-            completedCount += _listCompleted[index];
+            const optional<int32> found = _catalog.findIndex( landmarkID );
+            if ( found.has_value() == false )
+                continue; // 데이터에서 빠진 표지
+            const size_t index = static_cast<size_t>( *found );
+            // 마친 사당은 찾은 것이고, 사당만 마칠 수 있다. 같은 표지가 두 번 실리지 않는다.
+            const bool bShrine = _catalog.getAt( index )._kind == AdventureLandmarkKind::Shrine;
+            if ( io.check( VectorUtil::contains( listSeenIndex, *found ) == false && ( bCompleted == SW_FALSE || ( bShrine && bActivated == SW_TRUE ) ) ) == false )
+                return;
+            listSeenIndex.push_back( *found );
+            listActivated[index] = bActivated;
+            listCompleted[index] = bCompleted;
         }
         if ( io.isReading() )
         {
+            int32 completedCount = 0;
+            for ( const uint8 bCompleted : listCompleted )
+            {
+                completedCount += bCompleted;
+            }
+            _listActivated        = std::move( listActivated );
+            _listCompleted        = std::move( listCompleted );
             _completedShrineCount = completedCount;
         }
     }

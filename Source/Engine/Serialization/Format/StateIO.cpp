@@ -2,6 +2,7 @@
 
 #include "Engine/Serialization/Format/StateIO.h"
 
+#include "Core/Log/Logger.h"
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
@@ -93,18 +94,35 @@ namespace sw
         (void)_pSourceArchive->setOffset( _pSourceArchive->getSize() - _pUpgradedArchive->getRemainingBytes() );
     }
 
-    void StateIO::header( uint32 tag, uint32 version )
+    void StateIO::header( uint32 tag, uint32 version, uint32 headerlessVersion )
     {
         if ( isWriting() )
         {
             writeHeader( *_pArchive, tag, version );
             return;
         }
-        uint32 readTag     = 0;
-        uint32 readVersion = 0;
+        const uint64 start       = _pArchive->getOffset();
+        uint32       readTag     = 0;
+        uint32       readVersion = 0;
         *_pArchive >> readTag;
         *_pArchive >> readVersion;
-        if ( check( _pArchive->isOk() && readTag == tag ) == false || readVersion == version )
+        if ( check( _pArchive->isOk() ) == false )
+            return;
+        if ( readTag != tag )
+        {
+            if ( headerlessVersion == 0 )
+            {
+                SW_LOG_WARNING_ID( "StateIO.HeaderTagMismatch",
+                                   "State header tag %# is not the expected %# - the bytes are another format or a version from before this format had a header; that version cannot be known, so it is refused (no upgrade)",
+                                   readTag, tag );
+                fail();
+                return;
+            }
+            // 머리표가 없던 판이다 — 머리를 읽지 않은 자리로 돌아가 그 판의 칸으로 올린다.
+            (void)_pArchive->setOffset( start );
+            readVersion = headerlessVersion;
+        }
+        if ( readVersion == version )
             return;
         // 옛 판 — 머리 뒤 바이트를 사슬로 올리고 그 바이트에서 이어 읽는다. 한 입구에서 두 번 올리는 일은 없다(안쪽 형식의 머리는 올린 바이트 안에서 다시 올린다).
         vector<uint8> bytes;

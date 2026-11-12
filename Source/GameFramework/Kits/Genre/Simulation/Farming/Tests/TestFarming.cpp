@@ -182,7 +182,7 @@ SW_TEST_CASE( FarmingTest, CropsWitherOutOfSeason )
 }
 
 /**
- * @brief [FarmingTest] 밭 상태는 작물 · 자람 · 상태 깃발을 그대로 되살리고, 크기가 다른 밭은 읽기를 거절하고 그대로다
+ * @brief [FarmingTest] 밭 상태는 작물 · 자람 · 상태 깃발을 그대로 되살린다. 밭이 커진 설정은 같은 좌표로 읽고, 줄어 밖에 작물이 남으면 거절하고 그대로다(감사 A-6)
  */
 SW_TEST_CASE( FarmingTest, FieldStateRoundTrips )
 {
@@ -212,8 +212,16 @@ SW_TEST_CASE( FarmingTest, FieldStateRoundTrips )
     sw::FarmField wider;
     wider.initialize( 3, 2, &catalog );
     sw::Archive again( written.getData(), written.getSize() );
-    SW_EXPECT_FALSE( wider.readState( again ) );
-    SW_EXPECT_EQUAL( 0u, wider.getCropCount() );
+    SW_REQUIRE_TRUE( wider.readState( again ) );
+    SW_REQUIRE_TRUE( wider.findTile( 1, 1 ) != nullptr );
+    SW_EXPECT_EQUAL( kTomato, wider.findTile( 1, 1 )->_cropID );
+    SW_EXPECT_TRUE( wider.findTile( 2, 1 )->hasCrop() == false );
+
+    sw::FarmField narrower;
+    narrower.initialize( 1, 1, &catalog );
+    sw::Archive third( written.getData(), written.getSize() );
+    SW_EXPECT_FALSE( narrower.readState( third ) ); // (1, 1) 의 토마토가 줄어든 밭 밖이다 — 버리지 않는다
+    SW_EXPECT_EQUAL( 0u, narrower.getCropCount() );
 }
 
 /**
