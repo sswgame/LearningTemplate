@@ -86,6 +86,7 @@ def computeVersion(listVersionFile: Iterable[str]) -> str:
 
 
 #: `bReadAll=True` 로 사실 전체를 읽은 저장소 이름 — 연 파일 수 검사가 이 저장소의 조각 수를 세지 않는다.
+#: 남은 쓰는 곳은 tick-scene-walk 하나다(shader-kill-order 는 요약 + 증분 판정으로 옮겼다) — 그 규칙이 지워지면 이 장치(bReadAll · setReadAllStore)도 지운다.
 setReadAllStore: set[str] = set()
 
 

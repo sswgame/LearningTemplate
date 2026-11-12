@@ -470,7 +470,7 @@ def checkAssetReferences(projectRoot: Path, scope: LintScope) -> list[str]:
     listFailing = [path for path in openReferences().summary if isCheckedPath(path, config) and (path in mapRedirect or not resolves(path, assets, config))]
     if not listFailing:
         return listMetaProblems(listIndex)
-    mapFact = openReferences(want=None, bReadAll=True).mapFact
+    mapFact = openReferences(want=listReferrer).mapFact   # 걸린 때만 — 줄 번호를 내려고 모든 조각을 읽는다
     mapReference = {path: [Reference(*row) for row in listRow] for path, listRow in mapFact.items()}
     return listMetaProblems(listIndex) + collectReferenceProblems(mapReference, assets, config, mapRedirect)
 
