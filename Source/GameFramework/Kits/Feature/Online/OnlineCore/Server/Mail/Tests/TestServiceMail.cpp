@@ -6,8 +6,9 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 
-// ServiceMailTest — 우편 넣기(보상 · 플레이어 첨부 맡김), 멱등 키 재전송, 새 우편 알림이 한 번만 나가는지. (nogpu)
+// ServiceMailTest — 우편 넣기(보상 · 플레이어 첨부 맡김), 멱등 키 재전송, 새 우편 알림이 한 번만 나가는지, 보낸 기록의 보존 기간 쓸기. (nogpu)
 
 namespace
 {
@@ -129,4 +130,44 @@ SW_TEST_CASE( ServiceMailTest, RejectsInvalidMessages )
     sw::ServiceMailMessage crowded = makeReward( "ok.3", 1 );
     crowded._listAttachment.resize( static_cast<size_t>( sw::ServiceMailConstant::kMaxAttachmentCount + 1 ), sw::ServiceMailAttachment{ "gold", 1 } );
     SW_EXPECT_FALSE( sw::ServiceMail::isValidMessage( crowded ) );
+}
+
+/**
+ * @brief [ServiceMailTest] 보낸 기록(`mail_sent`)은 보낸 시각부터 보존 기간이 지나면 보존 규칙이 지우고, 그 전에는 같은 멱등 키를 재생으로 가린다. 시각을 읽지 못하는 기록은 남긴다
+ */
+SW_TEST_CASE( ServiceMailTest, SentRecordExpiresByRetentionRule )
+{
+    constexpr int64              kRetentionMs = 1000000;
+    sw::MemoryServiceDatabase    database;
+    const sw::ServiceMailMessage reward = makeReward( "reward.sent.ttl", 5 );
+    sw::string                   mailKey;
+    bool                         bReplayed = false;
+    SW_REQUIRE_TRUE( send( database, reward, mailKey, bReplayed ) == sw::LedgerResult::Ok );
+
+    sw::ServiceRecord sent;
+    SW_REQUIRE_TRUE( database.readRecord( sw::ServiceMail::getSentTable(), "0000000000000016/reward.sent.ttl", sent ) == sw::ServiceStoreResult::Ok );
+    int64 sentMs = 0;
+    SW_EXPECT_TRUE( sw::ServiceMail::readSentTimeMs( sent, sentMs ) );
+    SW_EXPECT_EQUAL( kNowMs, sentMs );
+
+    sw::ServiceTransaction broken; // 값이 우편 키 모양이 아닌 기록은 시각을 읽지 못해 지우지 않는다
+    broken.put( sw::ServiceMail::getSentTable(), "0000000000000016/broken", sw::vector<uint8>{ 'x' }, sw::ServiceRecord::kAbsentVersion );
+    SW_REQUIRE_TRUE( database.commit( broken ) == sw::ServiceStoreResult::Ok );
+
+    sw::ServiceRetentionRule rule;
+    rule._table       = sw::ServiceMail::getSentTable();
+    rule._retentionMs = kRetentionMs;
+    rule._pfnReadTime = &sw::ServiceMail::readSentTimeMs;
+    sw::ServiceRetentionReport report;
+    SW_REQUIRE_TRUE( sw::ServiceRetentionRule::sweep( database, rule, kNowMs + kRetentionMs - 1, 64, 64, report ) == sw::ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 2, database.countRecords( sw::ServiceMail::getSentTable() ) );
+    sw::string again;
+    SW_REQUIRE_TRUE( send( database, reward, again, bReplayed ) == sw::LedgerResult::Ok );
+    SW_EXPECT_TRUE( bReplayed ); // 보존 기간 안이라 재생이다
+
+    rule._cursor.clear();
+    SW_REQUIRE_TRUE( sw::ServiceRetentionRule::sweep( database, rule, kNowMs + kRetentionMs, 64, 64, report ) == sw::ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._deletedCount );
+    SW_EXPECT_EQUAL( 1, database.countRecords( sw::ServiceMail::getSentTable() ) ); // 깨진 기록만 남는다
+    SW_EXPECT_EQUAL( 1, database.countRecords( sw::ServiceMail::getMailTable() ) ); // 우편은 보존 규칙이 아니라 우편함 정리가 지운다
 }

@@ -21,6 +21,7 @@
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceRetentionJob.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
@@ -95,6 +96,8 @@ namespace sw
                     rule._keyPrefix           = "closed/";
                     listRule.push_back( std::move( rule ) );
                 }
+                if ( config._retentionMailSentDays > 0 ) // 우편 자체는 우편함 만료 정리가 지운다. 보낸 기록은 멱등 창이라 따로 둔다
+                    listRule.push_back( makeRetentionRule( ServiceMail::getSentTable(), config._retentionMailSentDays, &ServiceMail::readSentTimeMs ) );
                 return listRule;
             }
 

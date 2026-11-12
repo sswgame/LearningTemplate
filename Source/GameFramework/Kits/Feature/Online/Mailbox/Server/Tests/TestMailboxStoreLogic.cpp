@@ -1,5 +1,5 @@
 // MailboxStoreLogicTest — 우편함 저장 규칙(메모리 저장소): 수령은 원장을 한 번만 움직이고(두 번째는 AlreadyClaimed), 받지 않은 첨부가 있는 우편은 지울 수 없고,
-// 상한을 넘는 수령은 우편을 그대로 두며(CapExceeded), 남의 우편은 NotFound, 모두 받기는 상한에 걸린 우편만 남긴다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
+// 상한을 넘는 수령은 우편을 그대로 두며(CapExceeded), 남의 우편은 NotFound, 모두 받기는 상한에 걸린 우편만 남기고, 받은 우편은 보관 기간 뒤 만료 정리가 지운다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
@@ -16,6 +16,7 @@ namespace
     constexpr uint64 kRecipient = 22;
     constexpr uint64 kStranger  = 33;
     constexpr int64  kNowMs     = 1700000000000ll;
+    constexpr int64  kClaimedMs = 1000000; ///< 받은 우편을 남기는 기간(테스트용으로 짧다)
 
     /** @brief 자산마다 같은 상한입니다(0 이하면 상한 없음). */
     class FixedCapPolicy final : public ILedgerPolicy
@@ -32,7 +33,7 @@ namespace
         int64 _cap;
     };
 
-    string sendReward( MemoryServiceDatabase& database, string_view idempotencyKey, string_view assetID, int64 amount )
+    string sendReward( MemoryServiceDatabase& database, string_view idempotencyKey, string_view assetID, int64 amount, int64 expiresMs = 0 )
     {
         ServiceMailMessage message;
         if ( amount > 0 )
@@ -42,6 +43,7 @@ namespace
         message._fundingHolder      = LedgerHolder::makeMint();
         message._recipientAccountID = kRecipient;
         message._createdMs          = kNowMs;
+        message._expiresMs          = expiresMs;
         ServiceTransaction transaction;
         string             mailKey;
         bool               bReplayed = false;
@@ -60,10 +62,11 @@ namespace
     MailboxServiceResult claim( MemoryServiceDatabase& database, uint64 accountID, const string& mailKey, const ILedgerPolicy& policy )
     {
         MailboxClaimInput input;
-        input._mailKey   = mailKey;
-        input._pPolicy   = &policy;
-        input._accountID = accountID;
-        input._nowMs     = kNowMs + 1000;
+        input._mailKey            = mailKey;
+        input._pPolicy            = &policy;
+        input._accountID          = accountID;
+        input._nowMs              = kNowMs + 1000;
+        input._claimedRetentionMs = kClaimedMs;
         MailboxClaimReply reply;
         return MailboxStoreLogic::claim( database, input, reply );
     }
@@ -124,8 +127,55 @@ SW_TEST_CASE( MailboxStoreLogicTest, CapExceededLeavesTheMail )
     (void)sendReward( batch, "batch.b", "gold", 90 );
     (void)sendReward( batch, "batch.c", "gems", 3 );
     MailboxClaimReply reply;
-    SW_EXPECT_TRUE( MailboxStoreLogic::claimAll( batch, kRecipient, kNowMs + 1000, &policy, reply ) == MailboxResult::Ok );
+    SW_EXPECT_TRUE( MailboxStoreLogic::claimAll( batch, kRecipient, kNowMs + 1000, kClaimedMs, &policy, reply ) == MailboxResult::Ok );
     SW_EXPECT_EQUAL( reply._claimedCount, 2 ); // 금 하나 + 보석, 남은 금 우편은 상한에 걸린다
     SW_EXPECT_TRUE( readBalance( batch, kRecipient, "gold" ) <= 100 );
     SW_EXPECT_EQUAL( readBalance( batch, kRecipient, "gems" ), int64( 3 ) );
+}
+
+/** @brief [MailboxStoreLogicTest] 받은 우편(만료 있음 · 없음)은 받은 뒤 보관 기간이 지나면 만료 정리가 지운다. 그 전에는 남고, 지운 뒤 잔액은 그대로이며 다시 받으면 NotFound 이다 */
+SW_TEST_CASE( MailboxStoreLogicTest, SweepRemovesClaimedMailAfterRetention )
+{
+    MemoryServiceDatabase database;
+    const FixedCapPolicy  policy{ 0 };
+    const string          expiring = sendReward( database, "reward.expiring", "gold", 5, kNowMs + 100000 );
+    const string          forever  = sendReward( database, "reward.forever", "gold", 7 );
+    SW_EXPECT_TRUE( claim( database, kRecipient, expiring, policy ) == MailboxResult::Ok );
+    SW_EXPECT_TRUE( claim( database, kRecipient, forever, policy ) == MailboxResult::Ok );
+    SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getExpiryTable() ), 2 ); // 둘 다 "받은 뒤 보관 기간" 색인 하나씩이다
+
+    const int64       purgeMs = kNowMs + 1000 + kClaimedMs;
+    MailboxSweepStats stats;
+    MailboxStoreLogic::sweepExpired( database, purgeMs - 1, 16, stats );
+    SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getMailTable() ), 2 ); // 원래 만료(+100 초)가 지났어도 받은 우편은 보관 기간까지 남는다
+
+    MailboxStoreLogic::sweepExpired( database, purgeMs, 16, stats );
+    SW_EXPECT_EQUAL( stats._removedCount, 2 );
+    SW_EXPECT_EQUAL( stats._failedCount, 0 );
+    SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getMailTable() ), 0 );
+    SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getExpiryTable() ), 0 );
+    SW_EXPECT_EQUAL( readBalance( database, kRecipient, "gold" ), int64( 12 ) );
+    SW_EXPECT_TRUE( claim( database, kRecipient, expiring, policy ) == MailboxResult::NotFound );
+    SW_EXPECT_EQUAL( readBalance( database, kRecipient, "gold" ), int64( 12 ) );
+}
+
+/** @brief [MailboxStoreLogicTest] 받은 우편을 사용자가 지우면 보관 기간 색인도 함께 지워진다. 보관 기간이 없는 수령은 거절된다(설정 필수 값) */
+SW_TEST_CASE( MailboxStoreLogicTest, ClaimedMailDeleteAndMissingRetention )
+{
+    MemoryServiceDatabase database;
+    const FixedCapPolicy  policy{ 0 };
+    const string          mailKey = sendReward( database, "reward.delete", "gold", 3 );
+    MailboxClaimInput     input;
+    input._mailKey   = mailKey;
+    input._pPolicy   = &policy;
+    input._accountID = kRecipient;
+    input._nowMs     = kNowMs + 1000;
+    MailboxClaimReply reply;
+    SW_EXPECT_TRUE( MailboxStoreLogic::claim( database, input, reply ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_EQUAL( readBalance( database, kRecipient, "gold" ), int64( 0 ) );
+
+    SW_EXPECT_TRUE( claim( database, kRecipient, mailKey, policy ) == MailboxResult::Ok );
+    SW_EXPECT_TRUE( MailboxStoreLogic::deleteMail( database, kRecipient, mailKey ) == MailboxResult::Ok );
+    SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getMailTable() ), 0 );
+    SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getExpiryTable() ), 0 );
 }

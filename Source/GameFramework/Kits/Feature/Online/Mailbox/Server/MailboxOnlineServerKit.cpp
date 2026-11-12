@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxService.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
@@ -30,7 +32,8 @@ namespace sw
                 MailboxKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
                     return result;
-                _settings._sweepIntervalMs = kitConfig._sweepIntervalMs;
+                _settings._sweepIntervalMs    = kitConfig._sweepIntervalMs;
+                _settings._claimedRetentionMs = static_cast<int64>( kitConfig._claimedRetentionDays ) * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond;
                 if ( expected<void> result = registerServerService( context, entry, &_service ); result.has_value() == false )
                     return result;
                 return {};
@@ -45,7 +48,7 @@ namespace sw
                 _settings._pOfflinePush    = context._kits.find<IOfflinePushSender>();      // 라이브 운영 키트(접속하지 않은 계정의 기기 푸시)
                 _settings._pScheduler      = context._pScheduler;                           // 만료 정리를 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
                 if ( _service.initialize( context._pStore, _settings ) == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "the mailbox service needs a store and a sweep interval of at least a minute" } );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the mailbox service needs a store, a sweep interval of at least a minute and a claimed-mail retention" } );
                 return {};
             }
 

@@ -29,6 +29,7 @@ namespace sw
             const ILedgerPolicy*        _pPolicy{ nullptr };
             AccountID                   _accountID{ kInvalidAccountID };
             int64                       _nowMs{ 0 };
+            int64                       _claimedRetentionMs{ 0 };
         };
 
         /** @brief 메서드마다의 저장 함수입니다. 오버로드라 표에 메서드를 더하고 줄을 빠뜨리면 컴파일되지 않습니다. */
@@ -53,6 +54,7 @@ namespace sw
                 claimInput._accountID                    = input._accountID;
                 claimInput._nowMs                        = input._nowMs;
                 claimInput._pPolicy                      = input._pPolicy;
+                claimInput._claimedRetentionMs           = input._claimedRetentionMs;
                 const MailboxServiceResult serviceResult = MailboxStoreLogic::claim( connection, claimInput, outReply );
                 outReply._result                         = serviceResult._result;
                 return serviceResult;
@@ -61,7 +63,7 @@ namespace sw
             static MailboxServiceResult run( MailboxMethod::ClaimAll, IServiceStoreConnection& connection, const OnlineNoBody& request, const MailboxCallInput& input, MailboxClaimReply& outReply )
             {
                 (void)request;
-                return MailboxStoreLogic::claimAll( connection, input._accountID, input._nowMs, input._pPolicy, outReply );
+                return MailboxStoreLogic::claimAll( connection, input._accountID, input._nowMs, input._claimedRetentionMs, input._pPolicy, outReply );
             }
 
             static MailboxServiceResult run( MailboxMethod::Delete, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxResultReply& outReply )
@@ -100,6 +102,11 @@ namespace sw
         if ( pStore == nullptr )
         {
             SW_LOG_ERROR_ID( "MailboxService.MailboxServiceNeedsStore", "MailboxService needs a store" );
+            return false;
+        }
+        if ( settings._claimedRetentionMs <= 0 )
+        {
+            SW_LOG_ERROR_ID( "MailboxService.ClaimedRetentionMissing", "MailboxService needs a claimed-mail retention above zero (claimedRetentionMs %#)", settings._claimedRetentionMs );
             return false;
         }
         _store.bindStore( pStore );
@@ -256,9 +263,10 @@ namespace sw
             return;
         }
         MailboxCallInput input;
-        input._pPolicy   = _settings._pPolicy;
-        input._accountID = context._accountID;
-        input._nowMs     = context._nowMs.count();
+        input._pPolicy            = _settings._pPolicy;
+        input._accountID          = context._accountID;
+        input._nowMs              = context._nowMs.count();
+        input._claimedRetentionMs = _settings._claimedRetentionMs;
         if ( bWithCampaigns )
             input._listCampaign = _listCampaign;
         _store.submit( [request, input = std::move( input )]( IServiceStoreConnection& connection )

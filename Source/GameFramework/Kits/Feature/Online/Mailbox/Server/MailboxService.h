@@ -45,6 +45,7 @@ namespace sw
     {
         const ILedgerPolicy*     _pPolicy{ nullptr }; ///< 계정 상한이다. 게임이 CurrencyCatalog 를 넘기며, 기반 계층의 계약이라 키트끼리 몰라도 된다
         MetricRegistry*          _pMetricRegistry{ nullptr };
+        int64                    _claimedRetentionMs{ 0 };  ///< 필수. 받은 우편을 남기는 기간이다(`MailboxKitConfig::_claimedRetentionDays`). 0 이하면 서지 않는다
         int64                    _sweepIntervalMs{ 60000 }; ///< 만료 정리 주기이다. 예약 테이블이 있으면 그 주기의 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
         ServiceScheduler*        _pScheduler{ nullptr };    ///< 서버 조립의 예약 테이블이다. 없으면(테스트, 서버 한 대 도구) 틱 주기로 정리한다
         int64                    _campaignRefreshMs{ 60000 };

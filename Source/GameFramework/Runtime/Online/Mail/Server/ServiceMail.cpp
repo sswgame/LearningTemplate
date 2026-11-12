@@ -65,6 +65,19 @@ namespace sw
         return s_table;
     }
 
+    bool ServiceMail::readSentTimeMs( const ServiceRecord& record, int64& outTimeMs )
+    {
+        // 값은 우편 키 `<받는 계정 16 진>/<만든 시각 16 진>.<멱등 키 해시 16 진>` 이다
+        const size_t      width     = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+        const string_view mailKey   = string_view( reinterpret_cast<const utf8*>( record._bytes.data() ), record._bytes.size() );
+        uint64            createdMs = 0;
+        const bool        bShapeOk  = mailKey.size() == width * 3 + 2 && mailKey[width] == '/' && mailKey[width * 2 + 1] == '.';
+        if ( bShapeOk == false || ServiceKeyUtil::parseHex64( mailKey.substr( width + 1, width ), createdMs ) == false )
+            return false;
+        outTimeMs = static_cast<int64>( createdMs );
+        return true;
+    }
+
     const hashed_string& ServiceMail::getExpiryTable()
     {
         static const hashed_string s_table{ "mail_expiry" };
