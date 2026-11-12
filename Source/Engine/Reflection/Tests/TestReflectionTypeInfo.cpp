@@ -789,9 +789,11 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ParentTypePointerIsResolvedAfterBatch 
     SW_REQUIRE_NOT_NULL( pLeaf );
 
     // 배치 끝에서 풀린 포인터는 레지스트리의 그 항목 자체다.
-    SW_EXPECT_TRUE( pLeaf->getParentType() == pMid );
-    SW_EXPECT_TRUE( pMid->getParentType() == pRoot );
-    SW_EXPECT_NULL( pRoot->getParentType() );
+    const sw::TypeChain leafChain = pLeaf->getTypeChain();
+    SW_REQUIRE_EQUAL( 3u, leafChain.size() );
+    SW_EXPECT_TRUE( leafChain[1] == pMid );
+    SW_EXPECT_TRUE( leafChain[2] == pRoot );
+    SW_EXPECT_EQUAL( 1u, pRoot->getTypeChain().size() );
 
     // 포인터 걷기 — 자기 자신·조상은 true, 자손·무관·nullptr 은 false.
     SW_EXPECT_TRUE( pLeaf->isDerivedFrom( pLeaf ) );
@@ -948,15 +950,15 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRe
     SW_REQUIRE_NOT_NULL( pRoot );
     SW_EXPECT_TRUE( pOrphan->hasAncestorDisplay() );
     // 못 푸는 부모는 같은 세대 동안 다시 찾지 않는다 — 두 번 물어도 nullptr 이고, 부모가 등록되면(세대가 오르면) 풀린다.
-    SW_EXPECT_NULL( pOrphan->getParentType() );
-    SW_EXPECT_NULL( pOrphan->getParentType() );
+    SW_EXPECT_EQUAL( 1u, pOrphan->getTypeChain().size() );
+    SW_EXPECT_EQUAL( 1u, pOrphan->getTypeChain().size() );
     SW_EXPECT_FALSE( pOrphan->isDerivedFrom( pRoot ) );
     SW_EXPECT_TRUE( pOrphan->isDerivedFrom( pOrphan ) );
     registry.registerClass( makeType( "DispLateParent", "swtest::DispLateParent", "swtest::DispRoot" ) );
     pOrphan = find( "swtest::DispOrphan" );
     pRoot   = find( "swtest::DispRoot" );
     SW_REQUIRE_NOT_NULL( pOrphan );
-    SW_EXPECT_TRUE( pOrphan->getParentType() == find( "swtest::DispLateParent" ) );
+    SW_EXPECT_TRUE( pOrphan->getTypeChain().size() >= 2 && pOrphan->getTypeChain()[1] == find( "swtest::DispLateParent" ) );
     SW_EXPECT_TRUE( pOrphan->hasAncestorDisplay() ); // 부모 등록이 자손의 표를 이어진 사슬로 다시 지었다
     SW_EXPECT_TRUE( pOrphan->isDerivedFrom( pRoot ) );
     SW_EXPECT_TRUE( pOrphan->hasAncestorDisplay() );

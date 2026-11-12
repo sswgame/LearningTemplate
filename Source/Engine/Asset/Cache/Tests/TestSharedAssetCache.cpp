@@ -91,9 +91,12 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleCacheSharesAndReloadReachesHolders )
 
         // 파일을 고치고 핫 리로드가 부르는 길(레지스트리의 리로드 함수)로 다시 읽는다.
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "table.txt" ), "second" ) );
-        const uint32 reloadsBefore = Util::Cache::getReloadCount();
+        AssetReloadWatch<SharedAssetCacheTestAsset> watch;
+        watch.markSeen();
+        const uint32 reloadsBefore = watch.getSeenCount();
         SW_REQUIRE_TRUE( Util::Cache::reloadShared( id ) );
-        SW_EXPECT_EQUAL( reloadsBefore + 1, Util::Cache::getReloadCount() );
+        watch.markSeen();
+        SW_EXPECT_EQUAL( reloadsBefore + 1, watch.getSeenCount() );
         SW_EXPECT_EQUAL( string( "first" ), held->_text ); // 쥔 쪽은 옛 객체 그대로(Detach)
 
         // 쓰는 쪽은 횟수가 바뀐 것을 보고 다시 받는다 — 새 내용이다.

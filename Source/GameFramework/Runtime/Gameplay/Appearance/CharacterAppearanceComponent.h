@@ -402,8 +402,6 @@ namespace sw
          */
         template <typename Func>
         void forEachPartMesh( GameObjectManager& manager, const SpawnedPart& spawned, Func&& func ) const;
-        /** @brief 피팅 표 · 피팅 데이터 캐시의 다시 읽은 횟수 합입니다(오르기만 한다). */
-        static uint32 computeFitReloadStamp();
         /**
          * @brief 표면 상태를 채널 파일(`_surfaceChannelsPath`)과 영역 수로 맞춥니다. 파일이 비면 상태를 끄고, 같은 파일 · 같은 영역 수면 값을 지키며, 바뀌면 처음부터 다시 만듭니다.
          *        읽지 못하면 오류를 남기고 상태를 끕니다(말없이 다른 채널을 쓰지 않는다).
@@ -461,7 +459,8 @@ namespace sw
         shared_ptr<FitResult>                          _lastFitResult;        ///< 지난 미리보기 조립이 푼 피팅 결과(`getLastFitResult`)
         uint32                                         _fitResultRevision;
         uint32                                         _assembleCount;
-        uint32                                         _seenFitReloadStamp; ///< 마지막으로 구울 때의 `computeFitReloadStamp`
+        AssetReloadWatch<FitTables>                    _fitTablesReload; ///< 마지막으로 구울 때 본 피팅 표 캐시의 다시 읽기(굽기 키에 든다)
+        AssetReloadWatch<FitPartDef>                   _fitPartReload;   ///< 마지막으로 구울 때 본 피팅 데이터 캐시의 다시 읽기(굽기 키에 든다)
         int32                                          _bodyPart;
         bool                                           _bPartsVisible;
         uint8                                          _bAssembleScheduled   : 1;

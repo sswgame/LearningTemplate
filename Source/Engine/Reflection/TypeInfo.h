@@ -100,6 +100,20 @@ namespace sw
         const TypeInfo* const* end() const { return _arrType + _count; }
     };
 
+    /**
+     * @class TypeParentLink
+     * @brief `TypeInfo` 가 한 번 찾아 둔 부모 포인터입니다. 읽고 쓰는 것은 `TypeInfo` 만이다(friend) — 밖에서 포인터를 따라 사슬을 손으로 걸으면 고리 방지가 빠진다.
+     * @details 칸 자체는 `TypeInfo` 의 다른 칸처럼 공개로 둔다 — 칸마다 접근이 섞이면 표준 배치가 깨져 맨 앞 `_castHeader` 를 주소로 읽는 캐스트의 전제가
+     *          흔들린다. 그래서 칸의 접근 대신 이 형식의 접근으로 막는다(포인터 하나라 크기 · 비용은 원자 포인터 그대로). 사슬은 `TypeInfo::getTypeChain` 한 곳이 걷는다.
+     */
+    class TypeParentLink
+    {
+    private:
+        friend struct TypeInfo;
+
+        atomic<const TypeInfo*> _pType{ nullptr };
+    };
+
     /// @brief 등록된 타입의 정보입니다. FQN, 프로퍼티, 메서드, 생성 가능 여부를 담습니다.
     struct SW_API TypeInfo
     {
@@ -111,8 +125,8 @@ namespace sw
          *          이 규칙은 부모를 따라가는 `isSameTypeName` 과 같다. `_typeID` 를 쓰지 않는 이유도 그 사본이다. 사본은 자기 id 를 따로 가진다.
          *          등록이나 해제로 부모 체인이 바뀔 수 있으면 `TypeRegistry` 가 깊이를 `kAncestorDepthUnknown` 으로 비우고,
          *          등록 배치가 끝날 때(`populateLookupCaches`)나 첫 상속 검사가 테이블을 다시 만든다.
-         *          원자값으로 둔 이유는 `_pParentType` 과 같다. 첫 조회는 여러 스레드에서 올 수 있고, 모두 같은 값을 쓴다.
-         *          등록과 캐스트가 동시에 실행되는 경우는 `_pParentType` 과 마찬가지로 가정하지 않는다(모듈 로드는 단일 스레드다).
+         *          원자값으로 둔 이유는 `_parentLink` 와 같다. 첫 조회는 여러 스레드에서 올 수 있고, 모두 같은 값을 쓴다.
+         *          등록과 캐스트가 동시에 실행되는 경우는 `_parentLink` 와 마찬가지로 가정하지 않는다(모듈 로드는 단일 스레드다).
          */
         TypeCastHeader _castHeader;
         size_t         _size;
@@ -163,7 +177,7 @@ namespace sw
          *          비어 있으면 `getParentType()` 이 이름으로 다시 찾는다. 원자값으로 둔 이유는, 배치 밖에서 등록한 타입(테스트)은
          *          첫 조회가 여러 스레드에서 동시에 올 수 있기 때문이다. 같은 값을 쓰는 경쟁이라 relaxed 로 충분하다.
          */
-        mutable atomic<const TypeInfo*> _pParentType;
+        mutable TypeParentLink _parentLink;
         /**
          * @brief `_parentFQN` 을 이름으로 찾아 봤지만 찾지 못했던 때의 타입 테이블 세대입니다. 0 이면 아직 찾아 보지 않았습니다.
          * @details 등록되지 않은 기반 타입은 이름만 적혀 있다. 부모를 물을 때마다(계층 프로퍼티 조회, 이름 따라가기, 기본값 체인 수집)
@@ -264,14 +278,12 @@ namespace sw
         }
         /** @brief 조상 테이블이 없을 때의 경로입니다. 만들 수 있으면 만들어서 답하고, 아니면 부모 포인터를 따라갑니다. */
         bool isDerivedFromSlow( const TypeInfo* pTarget ) const;
-        /** @brief 부모 TypeInfo 입니다. 찾아 둔 것이 없으면 이름으로 찾아 기록합니다. 부모가 없거나 등록되지 않았으면 nullptr 입니다. */
-        const TypeInfo* getParentType() const;
         /** @brief 부모 포인터를 이름으로 다시 찾습니다. 등록 배치가 끝날 때 `TypeRegistry` 가 부릅니다. */
         void resolveParentType() const;
         /** @brief 부모 포인터와 "찾지 못했다"는 기록을 비웁니다. 해제 뒤에는 부모가 사라졌을 수 있으므로 `TypeRegistry` 가 부릅니다. */
         void clearParentType() const
         {
-            _pParentType.store( nullptr, std::memory_order_relaxed );
+            _parentLink._pType.store( nullptr, std::memory_order_relaxed );
             _parentMissGeneration.store( 0, std::memory_order_relaxed );
         }
 
@@ -425,8 +437,15 @@ namespace sw
             }
         }
 
-        /** @brief 자기부터 기반까지의 사슬입니다(`TypeChain`). 부모 사슬을 걷는 곳은 모두 이것을 쓴다 — `getParentType` 을 손으로 따라가지 않는다(린트 `typeChainWalk`). */
+        /** @brief 자기부터 기반까지의 사슬입니다(`TypeChain`). 부모 사슬을 걷는 곳은 모두 이것을 쓴다(부모 한 단계는 `getTypeChain()[1]`). */
         TypeChain getTypeChain() const;
+
+    private:
+        /**
+         * @brief 부모 TypeInfo 입니다. 찾아 둔 것이 없으면 이름으로 찾아 기록합니다. 부모가 없거나 등록되지 않았으면 nullptr 입니다.
+         * @details 비공개다 — 밖에서 `p = p->getParentType()` 으로 손으로 걸으면 고리 방지가 빠진다(고리 사슬에서 끝나지 않았다). 사슬은 `getTypeChain` 한 곳이 걷는다.
+         */
+        const TypeInfo* getParentType() const;
     };
 
 } // namespace sw

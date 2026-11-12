@@ -369,9 +369,10 @@ namespace sw::editor
                     deltaX = static_cast<float64>( ( target._min._x + target._max._x ) * 0.5f - start._x );
                     deltaY = static_cast<float64>( ( target._min._y + target._max._y ) * 0.5f - start._y );
                 }
-                const float2 middle{ start._x + static_cast<float32>( deltaX ) * 0.5f, start._y + static_cast<float32>( deltaY ) * 0.5f };
-                const float2 end{ start._x + static_cast<float32>( deltaX ), start._y + static_cast<float32>( deltaY ) };
-                EditorSelfTestInput::moveMouse( start, found._viewportID );
+                // 끌기 경로는 판정한 점(`start`)에서 잰다 — 레이블 좌표로 손 옮기는 공개 함수는 없다.
+                const float2 middle{ static_cast<float32>( deltaX ) * 0.5f, static_cast<float32>( deltaY ) * 0.5f };
+                const float2 end{ static_cast<float32>( deltaX ), static_cast<float32>( deltaY ) };
+                (void)EditorSelfTestInput::moveByOffsetFromAim( float2{} ); // 위 reportUnreachableMark 가 `start` 를 Reachable 로 판정했다
                 for ( const int32 modifier : listModifier )
                 {
                     EditorSelfTestInput::setKey( modifier, true );
@@ -380,11 +381,11 @@ namespace sw::editor
                 string coverName;
                 (void)EditorSelfTestInput::pressAtMark( mark, params._anchor, button, coverName ); // 위에서 닿는다고 판정했다 — 누르는 점은 `start` 다
                 EditorSelfTestInput::waitNextFrame();
-                EditorSelfTestInput::moveMouse( middle, found._viewportID );
+                (void)EditorSelfTestInput::moveByOffsetFromAim( middle );
                 EditorSelfTestInput::waitNextFrame();
-                EditorSelfTestInput::moveMouse( end, found._viewportID );
+                (void)EditorSelfTestInput::moveByOffsetFromAim( end );
                 EditorSelfTestInput::waitNextFrame();
-                EditorSelfTestInput::moveMouse( end, found._viewportID );
+                (void)EditorSelfTestInput::moveByOffsetFromAim( end );
                 EditorSelfTestInput::setMouseButton( button, false );
                 for ( const int32 modifier : listModifier )
                 {

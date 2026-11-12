@@ -134,7 +134,7 @@ namespace sw
         , _mapNameToPropertyWithBase{}
         , _mapNameToProperty{}
         , _mapNameToMethod{}
-        , _pParentType{ nullptr }
+        , _parentLink{}
         , _parentMissGeneration{ 0 }
         , _typeID{ 0 }
         , _contentGeneration{ 0 }
@@ -380,7 +380,7 @@ namespace sw
 
     const TypeInfo* TypeInfo::getParentType() const
     {
-        const TypeInfo* pParent = _pParentType.load( std::memory_order_relaxed );
+        const TypeInfo* pParent = _parentLink._pType.load( std::memory_order_relaxed );
         if ( pParent != nullptr || _parentFQN.empty() )
             return pParent;
 
@@ -394,7 +394,7 @@ namespace sw
         if ( pParent == this )
             pParent = nullptr;
         if ( pParent != nullptr )
-            _pParentType.store( pParent, std::memory_order_relaxed );
+            _parentLink._pType.store( pParent, std::memory_order_relaxed );
         else
             _parentMissGeneration.store( generation, std::memory_order_release );
         return pParent;
@@ -425,6 +425,8 @@ namespace sw
 
     // `castTo` 는 `TypeInfo` 를 전방 선언만 보고 그 주소를 조상 표로 읽는다(`TypeCastHeader::of`) — 표가 맨 앞 멤버여야 한다.
     static_assert( offsetof( TypeInfo, _castHeader ) == 0, "TypeInfo::_castHeader must be the first member (castTo reads it through a forward-declared TypeInfo)" );
+    // 부모 링크는 칸 접근이 아니라 형식 접근으로 막는다 — 칸 접근을 섞지 않아야 표준 배치가 남는다(위 offsetof).
+    static_assert( std::is_standard_layout_v<TypeParentLink> && sizeof( TypeParentLink ) == sizeof( atomic<const TypeInfo*> ), "TypeParentLink must stay a bare atomic pointer" );
 
     bool isTypeDerivedFromSlow( const TypeInfo* pType, const TypeInfo* pTarget )
     {

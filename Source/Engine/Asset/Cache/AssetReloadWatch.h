@@ -2,7 +2,8 @@
  * @file AssetReloadWatch.h
  * @brief 공유 캐시의 다시 읽기 횟수를 지켜보는 값 형식입니다. "마지막으로 본 횟수" 칸과 대조 · 갱신 줄을 손으로 적지 않게 합니다.
  * @details 에셋 종류가 칸의 형식에 들어 있어 다른 종류의 횟수와 대조할 수 없고, 대조와 갱신이 한 곳이라 갱신을 빠뜨려 매 틱 다시 짓는 일이 없습니다.
- *          `getReloadCount` 를 그대로 잇는 합성값(여러 캐시의 합을 굽기 키에 넣는 자리)이나 저장 구분(`SaveReloadGuard`)은 이 형식의 일이 아닙니다.
+ *          캐시의 횟수(`SharedAssetCache::getReloadCount`)는 비공개이고 이 형식만 읽는다(friend) — 손 대조 칸(`_seen…ReloadCount`)을 형식으로 막는다.
+ *          여러 캐시의 판을 굽기 키에 넣는 자리도 감시를 종류마다 두고 본 값(`getSeenCount`)을 섞는다. 저장 구분(`SaveReloadGuard`)은 이 형식의 일이 아닙니다.
  *          언리얼 `FCoreUObjectDelegates::OnObjectPropertyChanged` · Godot `Resource::changed` 는 구독이고 여기는 틱에서 묻는 쪽이다 — 쥔 객체를 제자리에서 바꾸는 캐시라 틱 밖 콜백을 두지 않는다(기억에 의존).
  */
 #pragma once
@@ -33,6 +34,8 @@ namespace sw
             _seenCount = count;
             return true;
         }
+        /** @brief 마지막으로 본 횟수입니다 — 지은 결과의 키(굽기 키)에 판으로 섞는다. 낡음 판정은 `isStale` · `takeChanged` 가 한다. */
+        [[nodiscard]] uint32 getSeenCount() const { return _seenCount; }
 
     private:
         uint32 _seenCount{ 0 };

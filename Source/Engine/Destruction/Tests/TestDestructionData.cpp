@@ -4,6 +4,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Destruction/DestructionDamage.h"
 #include "Engine/Destruction/DestructionProfile.h"
@@ -365,9 +366,12 @@ SW_TEST_CASE( DestructionProfileTest, SharedCacheGivesOneObjectAndReloadsInPlace
     SW_EXPECT_NEAR( 3.0f, pHeld->_density, 0.0001f );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "concrete.destruction.xml" ), R"(<DestructionProfile density="5"/>)" ) );
-    const uint32 reloadsBefore = SharedAssetCache<DestructionProfile>::getReloadCount();
+    AssetReloadWatch<DestructionProfile> watch;
+    watch.markSeen();
+    const uint32 reloadsBefore = watch.getSeenCount();
     SW_REQUIRE_TRUE( SharedAssetCache<DestructionProfile>::reloadShared( id ) );
-    SW_EXPECT_EQUAL( reloadsBefore + 1, SharedAssetCache<DestructionProfile>::getReloadCount() );
+    watch.markSeen();
+    SW_EXPECT_EQUAL( reloadsBefore + 1, watch.getSeenCount() );
     SW_EXPECT_NEAR( 5.0f, pHeld->_density, 0.0001f ); // 쥔 쪽이 같은 객체에서 새 값을 본다
     SW_EXPECT_TRUE( SharedAssetCache<DestructionProfile>::acquire( id ).get() == pHeld.get() );
 }
