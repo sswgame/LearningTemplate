@@ -21,7 +21,7 @@ namespace sw
 {
     class XMLNode;
 
-    /** @brief 월드에 들어가는 블록 번호입니다. 0 은 공기, 나머지는 카탈로그 순서(1 부터)입니다. */
+    /** @brief 월드에 들어가는 블록 번호입니다. 0 은 공기, 나머지는 카탈로그 순서(1 부터)입니다. 실행 중에만 쓰는 번호라 세이브에는 블록 id 로 적습니다(`VoxelWorld` 팔레트). */
     using VoxelBlockIndex = uint8;
 
     /** @brief 공기 블록 번호입니다. */

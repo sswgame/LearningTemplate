@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -46,6 +47,9 @@ namespace sw
     class SW_KIT_API VoxelWorld
     {
     public:
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "VXWL" );
+        static constexpr uint32 kStateVersion = 2; ///< 2: 머리에 블록 id 팔레트를 싣고 구간 번호는 팔레트 번호(uint16)다
+
         VoxelWorld();
 
         /** @brief 크기를 정하고 모두 공기로 채웁니다. */
@@ -87,9 +91,10 @@ namespace sw
         uint32 countBlocks( VoxelBlockIndex block ) const;
 
         /**
-         * @brief 청크마다 같은 블록이 이어지는 구간(번호와 길이)으로 블록을 씁니다. 핫 리로드와 세이브에 씁니다. 지형이 대부분 공기와 돌이라 결과가 작습니다.
-         *        `writeState` 가 쓴 바이트로 블록을 복원하고 모든 청크를 다시 메싱할 것으로 표시합니다. 같은 청크 수와 카탈로그로 `initialize` 한 뒤에 부릅니다.
-         *        @return 청크 수가 다르거나, 카탈로그에 없는 블록 번호가 있거나, 바이트가 손상됐으면 false 를 반환하고 상태는 그대로 둡니다.
+         * @brief 블록 id 팔레트(세이브 번호 → id)를 한 번 쓰고, 청크마다 같은 블록이 이어지는 구간(팔레트 번호와 길이)으로 블록을 씁니다. 핫 리로드와 세이브에 씁니다.
+         *        `writeState` 가 쓴 바이트로 블록을 복원하고 모든 청크를 다시 메싱할 것으로 표시합니다. 같은 청크 수로 `initialize` 한 뒤에 부릅니다.
+         *        블록은 id 로 지금 카탈로그 번호에 다시 짝지어지므로 `blocks.xml` 순서가 바뀌어도 같은 블록이 나옵니다.
+         *        @return 판이 다르거나, 청크 수가 다르거나, 지금 카탈로그에 없는 블록 id 나 팔레트 밖 번호가 있거나, 바이트가 손상됐으면 false 를 반환하고 상태는 그대로 둡니다.
          */
         SW_DECLARE_STATE_IO_IN_PLACE();
 

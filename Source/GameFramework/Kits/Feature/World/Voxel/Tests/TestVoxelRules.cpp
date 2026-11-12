@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelBody.h"
@@ -62,6 +63,25 @@ namespace
                     world.clearChunkDirty( x, z );
                 }
             }
+        }
+
+        /** @brief 세이브에서 첫 구간이 시작하는 바이트 자리입니다. 머리 · 청크 수 · 팔레트를 같은 칸 함수로 써서 잰다. */
+        static size_t measureRunsOffset( const VoxelWorld& world )
+        {
+            Archive               prefix;
+            StateIO               io( prefix );
+            int32                 chunkCountX = world.getChunkCountX();
+            int32                 chunkCountZ = world.getChunkCountZ();
+            vector<hashed_string> listPaletteID;
+            for ( const VoxelBlockDef& block : world.getCatalog()->getBlocks() )
+            {
+                listPaletteID.push_back( block._id );
+            }
+            io.header( VoxelWorld::kStateTag, VoxelWorld::kStateVersion );
+            io.value( chunkCountX );
+            io.value( chunkCountZ );
+            io.list( listPaletteID );
+            return prefix.getSize();
         }
 
         static vector<uint8> save( const VoxelWorld& world )
@@ -190,24 +210,81 @@ SW_TEST_CASE( VoxelWorldTest, ForgedStateLeavesTheWorldAlone )
 
     SW_REQUIRE_TRUE( target._world.setBlock( 1, 1, 1, target._stone ) );
 
-    // 카탈로그에 없는 블록 번호 — 머리(int32 둘) 뒤 첫 구간의 블록이다
-    constexpr size_t kFirstBlockOffset = sizeof( int32 ) * 2;
-    vector<uint8>    listBadBlock      = listSaved;
-    listBadBlock[kFirstBlockOffset]    = 200;
+    // 팔레트 밖 번호 — 머리 · 청크 수 · 팔레트 뒤 첫 구간의 번호(uint16 낮은 바이트)다
+    const size_t  firstBlockOffset = VoxelFixture::measureRunsOffset( rig._world );
+    vector<uint8> listBadBlock     = listSaved;
+    listBadBlock[firstBlockOffset] = 200;
     Archive badBlock( listBadBlock.data(), listBadBlock.size() );
     SW_EXPECT_FALSE( target._world.readState( badBlock ) );
+
+    // 옛 판(1) — 머리의 판 칸(태그 uint32 뒤)을 1 로 되돌린다
+    vector<uint8> listOldVersion     = listSaved;
+    listOldVersion[sizeof( uint32 )] = 1;
+    Archive oldVersion( listOldVersion.data(), listOldVersion.size() );
+    SW_EXPECT_FALSE( target._world.readState( oldVersion ) );
 
     // 잘린 바이트
     Archive truncated( listSaved.data(), listSaved.size() - 1 );
     SW_EXPECT_FALSE( target._world.readState( truncated ) );
 
     // 청크를 넘는 구간 — 첫 구간 길이를 부풀린다
-    vector<uint8> listLongRun                                                         = listSaved;
-    listLongRun[kFirstBlockOffset + sizeof( VoxelBlockIndex ) + sizeof( uint32 ) - 1] = 0x7f;
+    vector<uint8> listLongRun                                               = listSaved;
+    listLongRun[firstBlockOffset + sizeof( uint16 ) + sizeof( uint32 ) - 1] = 0x7f;
     Archive longRun( listLongRun.data(), listLongRun.size() );
     SW_EXPECT_FALSE( target._world.readState( longRun ) );
 
     SW_EXPECT_TRUE( target._world.getBlock( 1, 1, 1 ) == target._stone ); // 거절은 상태를 바꾸지 않는다
+}
+
+// 세이브는 블록을 id 팔레트로 적는다 — blocks.xml 중간에 블록이 끼어 순서가 바뀌어도 옛 세이브는 같은 블록으로 읽혀야 한다.
+SW_TEST_CASE( VoxelWorldTest, SaveSurvivesCatalogReorder )
+{
+    VoxelFixture rig;
+    rig.layFloor( 2 );
+    SW_REQUIRE_TRUE( rig._world.setBlock( 20, 9, 20, rig._glass ) );
+    SW_REQUIRE_TRUE( rig._world.setBlock( 3, 4, 5, rig._water ) );
+    const vector<uint8> listSaved = VoxelFixture::save( rig._world );
+
+    // 새 블록을 맨 앞에 넣고 나머지 순서도 뒤집은 카탈로그다
+    VoxelBlockCatalog reordered;
+    VoxelWorld        world;
+    const auto        addBlock = [&reordered]( const utf8* pID )
+    {
+        VoxelBlockDef block;
+        block._id   = hashed_string( pID );
+        block._name = pID;
+        return reordered.addBlock( block );
+    };
+    const VoxelBlockIndex sand  = addBlock( "sand" );
+    const VoxelBlockIndex glass = addBlock( "glass" );
+    const VoxelBlockIndex water = addBlock( "water" );
+    const VoxelBlockIndex stone = addBlock( "stone" );
+    SW_REQUIRE_TRUE( stone != rig._stone && glass != rig._glass );
+    SW_REQUIRE_TRUE( world.initialize( 2, 2, &reordered ) );
+
+    Archive reading( listSaved.data(), listSaved.size() );
+    SW_REQUIRE_TRUE( world.readState( reading ) );
+    SW_EXPECT_TRUE( world.getBlock( 20, 9, 20 ) == glass );
+    SW_EXPECT_TRUE( world.getBlock( 3, 4, 5 ) == water );
+    SW_EXPECT_EQUAL( uint32( 32 * 32 ), world.countBlocks( stone ) );
+    SW_EXPECT_EQUAL( uint32( 0 ), world.countBlocks( sand ) );
+}
+
+// 지금 카탈로그에 없는 블록 id 는 공기로 바꾸지 않고 세이브를 거절한다.
+SW_TEST_CASE( VoxelWorldTest, SaveWithUnknownBlockIsRefused )
+{
+    VoxelFixture        rig;
+    const vector<uint8> listSaved = VoxelFixture::save( rig._world );
+
+    VoxelBlockCatalog onlyStone;
+    VoxelBlockDef     block;
+    block._id   = hashed_string( "stone" );
+    block._name = "stone";
+    SW_REQUIRE_TRUE( onlyStone.addBlock( block ) != kVoxelAirBlock );
+    VoxelWorld world;
+    SW_REQUIRE_TRUE( world.initialize( 2, 2, &onlyStone ) );
+    Archive reading( listSaved.data(), listSaved.size() );
+    SW_EXPECT_FALSE( world.readState( reading ) );
 }
 
 // ---- 광선 ----
