@@ -639,7 +639,7 @@ namespace sw
                     return;
                 }
                 result = _field.plant( x, y, seed, pState->getClock().getSeasonName() );
-                if ( result == FarmActionResult::Done && pState->getInventory().removeItem( seed, 1 ) == false )
+                if ( result == FarmActionResult::Done && pState->getInventory().consumeItem( seed, 1 ) == false )
                     SW_LOG_WARNING_ID( "FarmGameMode.PlantedWithoutSeedBag", "[Farm] planted without a seed in the bag" );
                 if ( result == FarmActionResult::Done )
                     getSoundQueue().queueEvent( Internal::kEventPlant );

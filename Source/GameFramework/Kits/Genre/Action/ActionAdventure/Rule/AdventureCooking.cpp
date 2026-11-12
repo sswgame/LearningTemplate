@@ -161,16 +161,15 @@ namespace sw
             }
         }
 
+        // 요리가 들어가지 않으면 소비 전 인벤토리로 되돌린다 — 재료를 id 로 다시 넣으면 개체 상태(내구도 · 꾸미기)가 새것이 된다
+        const Inventory before = inventory;
         for ( const auto& [itemID, count] : pot.getItems() )
         {
-            (void)inventory.removeItem( itemID, count ); // 재료는 위의 hasItems 가 확인했다
+            (void)inventory.consumeItem( itemID, count ); // 재료는 위의 hasItems 가 확인했다
         }
         if ( inventory.addItem( outDish._itemID, 1 ) == 1 )
             return AdventureCookResult::Ok;
-        for ( const auto& [itemID, count] : pot.getItems() )
-        {
-            (void)inventory.addItem( itemID, count );
-        }
+        inventory = before;
         return AdventureCookResult::NoRoom;
     }
 } // namespace sw

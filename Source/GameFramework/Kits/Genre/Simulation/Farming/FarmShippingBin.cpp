@@ -23,7 +23,7 @@ namespace sw
 
     bool FarmShippingBin::shipItem( Inventory& inoutBag, const hashed_string& itemID, int32 count )
     {
-        if ( count <= 0 || inoutBag.removeItem( itemID, count ) == false )
+        if ( count <= 0 || inoutBag.consumeItem( itemID, count ) == false )
             return false;
         _bin.addItem( itemID, count );
         return true;

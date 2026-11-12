@@ -133,7 +133,7 @@ namespace sw
         static constexpr const utf8* kShipAreaID    = "ship";
         static constexpr const utf8* kOutsideAreaID = "outside";
         static constexpr uint32      kStateTag      = FourCCUtil::make( "SCEX" );
-        static constexpr uint32      kStateVersion  = 1;
+        static constexpr uint32      kStateVersion  = 2; ///< 2: 안쪽 터미널 상점(`ShopManager`)이 머리표와 되사기 목록을 싣는다
 
         ScavengerExpedition();
 

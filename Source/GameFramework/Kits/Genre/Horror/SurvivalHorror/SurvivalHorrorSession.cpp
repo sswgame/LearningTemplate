@@ -211,7 +211,7 @@ namespace sw
             return 0;
         const int32 added = _pInventory->addItem( itemID, wanted );
         if ( added > 0 )
-            (void)_pItemBox->removeItem( itemID, added ); // added 는 상자에 있던 수 이하이므로 항상 빠진다
+            (void)_pItemBox->consumeItem( itemID, added ); // added 는 상자에 있던 수 이하이므로 항상 빠진다. 격자 가방은 개체 상태가 없고(id · 개수 — 바이오하자드 상자 · 가방과 같다), 상자에는 가방에서 온 것만 든다
         return added;
     }
 

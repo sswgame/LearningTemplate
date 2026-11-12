@@ -79,11 +79,11 @@ SW_TEST_CASE( InventoryTest, RemovesAllOrNothing )
     SW_REQUIRE_EQUAL( 25, inventory.addItem( kArrow, 25 ) );
 
     const uint32 revision = inventory.getRevision();
-    SW_EXPECT_FALSE( inventory.removeItem( kArrow, 26 ) );
+    SW_EXPECT_FALSE( inventory.consumeItem( kArrow, 26 ) );
     SW_EXPECT_EQUAL( 25, inventory.getItemCount( kArrow ) );
     SW_EXPECT_EQUAL( revision, inventory.getRevision() );
 
-    SW_EXPECT_TRUE( inventory.removeItem( kArrow, 22 ) );
+    SW_EXPECT_TRUE( inventory.consumeItem( kArrow, 22 ) );
     SW_EXPECT_EQUAL( 3, inventory.getItemCount( kArrow ) );
     SW_EXPECT_TRUE( inventory.getRevision() != revision );
 }
@@ -208,4 +208,50 @@ SW_TEST_CASE( ShopTest, BuyBackReturnsWornItemWithSameDurability )
     SW_REQUIRE_TRUE( returnedSlot.has_value() );
     SW_EXPECT_EQUAL( 40.0f, inventory.getSlot( returnedSlot.value() )._durability );
     SW_EXPECT_TRUE( restored.findRuntime( kSmith )->_listBuyback.empty() );
+}
+
+/**
+ * @brief [ShopTest] 같은 id 의 칼 둘 중 닳은 것을 슬롯으로 골라 팔면 새 칼이 남고, 되사기는 따로 `BoughtBack` 으로 알린다(감사 G-3)
+ */
+SW_TEST_CASE( ShopTest, SellsChosenSlotAndReportsBuyBack )
+{
+    sw::ItemCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<ItemCatalog>
+  <Item id="sword" category="Weapon" slot="MainHand" maxStack="1" weight="3" value="40" durability="100"/>
+</ItemCatalog>)",
+                                              "ShopTest" ) );
+    sw::ShopCatalog shops;
+    SW_REQUIRE_TRUE( shops.loadFromXMLText( R"(<ShopCatalog><Shop id="smith" buybackLimit="1"/></ShopCatalog>)", "ShopTest" ) );
+    const sw::hashed_string kSmith{ "smith" };
+
+    sw::Inventory inventory;
+    SW_REQUIRE_TRUE( inventory.initialize( &catalog, 3 ) );
+    SW_REQUIRE_EQUAL( 2, inventory.addItem( kSword, 2 ) );         // 슬롯 0 · 1
+    SW_EXPECT_FALSE( inventory.reduceSlotDurability( 0, 70.0f ) ); // 앞 칼만 닳았다(30 남음). id 판 `sell` 은 뒤 슬롯부터 뺀다
+
+    sw::ShopManager shop;
+    shop.initialize( &shops, &catalog );
+    sw::Wallet wallet;
+    SW_EXPECT_TRUE( shop.sell( kSmith, 2, 1, wallet, inventory ) == sw::ShopResult::NotOwned ); // 빈 슬롯
+    SW_EXPECT_TRUE( shop.sell( kSmith, 0, 2, wallet, inventory ) == sw::ShopResult::NotOwned ); // 그 슬롯에 둘은 없다
+    SW_REQUIRE_TRUE( shop.sell( kSmith, 0, 1, wallet, inventory ) == sw::ShopResult::Ok );
+    SW_EXPECT_EQUAL( 1, inventory.getItemCount( kSword ) );
+    SW_EXPECT_EQUAL( 100.0f, inventory.getSlot( inventory.findFirstSlot( kSword ).value() )._durability );
+    SW_REQUIRE_EQUAL( size_t( 1 ), shop.findRuntime( kSmith )->_listBuyback.size() );
+    SW_EXPECT_EQUAL( 30.0f, shop.findRuntime( kSmith )->_listBuyback[0]._listPiece[0]._durability );
+
+    // 상점 데이터는 buybackLimit 를 적어야 한다(없으면 그 상점을 넣지 않는다 — 기본값에 기대지 않는다)
+    sw::ShopCatalog missingLimit;
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
+    SW_EXPECT_LOG( "Shop.ShopInvalidFieldsSkipped" );
+    SW_EXPECT_TRUE( missingLimit.loadFromXMLText( R"(<ShopCatalog><Shop id="smith" buybackLimit="0"/><Shop id="bare"/></ShopCatalog>)", "ShopTest" ) );
+    SW_EXPECT_TRUE( missingLimit.find( sw::hashed_string{ "smith" } ) != nullptr );
+    SW_EXPECT_TRUE( missingLimit.find( sw::hashed_string{ "bare" } ) == nullptr );
+
+    SW_REQUIRE_TRUE( shop.buyBack( kSmith, 0, wallet, inventory ) == sw::ShopResult::Ok );
+    sw::vector<sw::ShopEvent> listEvent;
+    shop.pollEvents( listEvent );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._kind == sw::ShopEvent::Kind::Sold );
+    SW_EXPECT_TRUE( listEvent[1]._kind == sw::ShopEvent::Kind::BoughtBack );
 }
