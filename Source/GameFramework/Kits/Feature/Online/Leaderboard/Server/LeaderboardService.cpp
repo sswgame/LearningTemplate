@@ -11,6 +11,7 @@
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
@@ -28,7 +29,6 @@ namespace sw
         {
             static constexpr uint8       kFormatVersion        = 1;
             static constexpr int32       kRebuildBatch         = 256;
-            static constexpr int32       kPlayersPerCommit     = 10;  ///< 사람마다 쓰기가 여섯이다. 결과, 결과 TTL 색인, 우편, 보낸 기록, 우편 TTL 색인, 새 우편 알림이며 트랜잭션 상한 64 안에 들어간다
             static constexpr int32       kPlayersPerPage       = 600; ///< 정산 저장소 일 하나가 쓰는 사람 수(커밋 50 번). 페이지 사이에 다른 요청이 저장소 워커를 쓴다
             static constexpr int64       kDayMs                = 86400000;
             static constexpr int64       kWeekMs               = 604800000;
@@ -642,26 +642,29 @@ namespace sw
             }
 
             /**
-             * @brief 정산 페이지 하나입니다. 순위가 정해진 사람 `kPlayersPerPage` 명까지 12명씩 결과와 보상 우편을 한 트랜잭션으로 씁니다. 다 썼으면 true 입니다.
+             * @brief 정산 페이지 하나입니다. 순위가 정해진 사람 `kPlayersPerPage` 명까지 결과와 보상 우편을 트랜잭션 상한(`ServiceTransaction::kMaxWriteCount`)이 차는 만큼씩 묶어 씁니다. 다 썼으면 true 입니다.
              * @details 결과가 있는 사람은 건너뛰므로 다시 돌아도 한 번만 처리된다. 실패하면 다음 실행(임대가 지나 다른 서버가 맡거나 다시 부름)이 남은 사람부터 잇는다.
+             *          한 사람의 쓰기 수는 세지 않고 따로 짜 본 뒤 넣는다 — 커밋당 사람 수를 상수로 두었더니 우편이 쓰기(보낸 기록 TTL 색인)를 하나 늘리자 모든 커밋이 상한을 넘어 정산이 멈췄다.
              */
             static bool writeSettlementPage( IServiceStoreConnection& connection, const LeaderboardDef& board, const LeaderboardSeason& season, const vector<LeaderboardScoreRow>& listPage,
                                              int32 firstRank, UnixMilliseconds nowMs )
             {
-                using Internal = LeaderboardServiceInternal;
-                for ( size_t first = 0; first < listPage.size(); first += static_cast<size_t>( Internal::kPlayersPerCommit ) )
+                ServiceTransaction transaction;
+                for ( size_t index = 0; index < listPage.size(); ++index )
                 {
-                    ServiceTransaction transaction;
-                    const size_t       last = MathUtil::min( listPage.size(), first + static_cast<size_t>( Internal::kPlayersPerCommit ) );
-                    for ( size_t index = first; index < last; ++index )
-                    {
-                        if ( stagePlayer( connection, transaction, board, season, listPage[index], firstRank + static_cast<int32>( index ), nowMs ) == false )
-                            return false;
-                    }
-                    if ( transaction.isEmpty() == false && connection.commit( transaction ) != ServiceStoreResult::Ok )
+                    ServiceTransaction player;
+                    if ( stagePlayer( connection, player, board, season, listPage[index], firstRank + static_cast<int32>( index ), nowMs ) == false )
                         return false;
+                    const size_t writeCount = transaction.getWrites().size() + player.getWrites().size();
+                    if ( writeCount > static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
+                    {
+                        if ( connection.commit( transaction ) != ServiceStoreResult::Ok )
+                            return false;
+                        transaction.clear();
+                    }
+                    Ledger::appendWrites( player, transaction );
                 }
-                return true;
+                return transaction.isEmpty() || connection.commit( transaction ) == ServiceStoreResult::Ok;
             }
 
         private:

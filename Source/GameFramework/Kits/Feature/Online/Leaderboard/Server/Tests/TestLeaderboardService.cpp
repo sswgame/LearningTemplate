@@ -830,7 +830,7 @@ SW_TEST_CASE( LeaderboardServiceTest, SettlementResumesWithoutDoublePaying )
 {
     LeaderboardWorld    world;
     LeaderboardFixture& rig = world._rig;
-    rig.addSeasonBoard( "season", 30 ); // 커밋 하나에 12 명이라 30 명이면 커밋 셋이다
+    rig.addSeasonBoard( "season", 30 ); // 커밋은 쓰기 상한(64)이 차는 만큼 사람을 묶는다 — 30 명이면 여러 커밋이다
     for ( uint64 accountID = 1; accountID <= 30; ++accountID )
     {
         (void)rig.submit( "season", accountID, static_cast<int64>( accountID ), kInSeasonMs );
@@ -839,7 +839,8 @@ SW_TEST_CASE( LeaderboardServiceTest, SettlementResumesWithoutDoublePaying )
     const SettlementSink failed = rig.settle( "season", 1 );
     SW_EXPECT_EQUAL( 1, failed._doneCount );
     SW_EXPECT_EQUAL( 0, failed._succeededCount );
-    SW_EXPECT_EQUAL( 12, world.countMail() );
+    const int32 firstCommitMail = world.countMail(); // 첫 커밋 몫만 남았다(몇 명인지는 사람당 쓰기 수가 정한다)
+    SW_EXPECT_TRUE( 0 < firstCommitMail && firstCommitMail < 30 );
     SW_EXPECT_EQUAL( 0, rig._service.getPendingCount() );
 
     SW_EXPECT_EQUAL( 1, rig.settle( "season", 1 )._succeededCount );
