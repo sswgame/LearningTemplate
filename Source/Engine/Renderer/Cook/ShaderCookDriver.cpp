@@ -553,6 +553,7 @@ namespace sw
     {
         static constexpr string_view kShadersSuffix = "/shaders";
         outListDomain.clear();
+        unordered_set<string> uniqueDomain; // 목록은 처음 나온 순서를 지키고, 있는지는 집합으로 본다(요청 수 × 도메인 수를 훑지 않는다)
         for ( const ShaderCookRequest& request : listRequest )
         {
             const ShaderSourceID        source{ request._shaderPath }; // 폴더 값은 이 객체의 글을 가리킨다
@@ -560,7 +561,7 @@ namespace sw
             if ( shadersFolder.has_value() == false || StringUtil::endsWith( *shadersFolder, kShadersSuffix ) == false )
                 continue;
             string domain{ shadersFolder->substr( 0, shadersFolder->size() - kShadersSuffix.size() ) };
-            if ( VectorUtil::contains( outListDomain, domain ) == false )
+            if ( uniqueDomain.insert( domain ).second )
                 outListDomain.push_back( std::move( domain ) );
         }
     }

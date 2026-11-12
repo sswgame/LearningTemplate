@@ -494,6 +494,17 @@ namespace sw
                 vector<const MeshPassInfo*>    listUniquePass;
                 vector<vector<vector<string>>> listPassOrigins;
                 unordered_map<string, size_t>  mapPassIndex;
+                // 고유 항목마다 이미 단 출처의 색인(`<종류><항목 번호>` 뒤에 줄바꿈으로 이은 출처 id) — 같은 출처를 목록에서 훑어 찾으면 항목마다 출처 수의 제곱이다
+                // (머티리얼이 늘면 변형 하나에 출처가 쌓인다). 목록은 출처를 처음 나온 순서로 지닌다(요청 순서가 그대로다).
+                unordered_set<string> uniqueOriginKey;
+                const auto            appendOriginOnce = [&uniqueOriginKey]( string_view kind, size_t index, const vector<string>& listOrigin, vector<vector<string>>& inoutListOrigin )
+                {
+                    string originKey = string( kind ) + to_string( static_cast<uint64>( index ) );
+                    for ( const string& origin : listOrigin )
+                        originKey += '\n' + origin;
+                    if ( uniqueOriginKey.insert( originKey ).second )
+                        inoutListOrigin.push_back( listOrigin );
+                };
                 for ( const MeshPassInfo& passInfo : listMeshPass )
                 {
                     string key = passInfo._shaderPath + '\n' + passInfo._vertexEntryPoint + '\n' + passInfo._pixelEntryPoint + '\n' + to_string( static_cast<uint64>( passInfo._passType ) ) +
@@ -506,8 +517,7 @@ namespace sw
                         listUniquePass.push_back( &passInfo );
                         listPassOrigins.emplace_back();
                     }
-                    if ( VectorUtil::contains( listPassOrigins[passIt->second], passInfo._listOrigin ) == false )
-                        listPassOrigins[passIt->second].push_back( passInfo._listOrigin );
+                    appendOriginOnce( "pass", passIt->second, passInfo._listOrigin, listPassOrigins[passIt->second] );
                 }
                 // 머티리얼 변형도 같다 — 서로 다른 머티리얼이 같은 셰이더 · define 을 낸다(엔진 도메인 287 개 중 고유 73 개). 출처는 머티리얼마다 묶음으로 단다.
                 vector<const MaterialVariantInfo*> listUniqueVariant;
@@ -524,8 +534,7 @@ namespace sw
                         listUniqueVariant.push_back( &variant );
                         listVariantOrigins.emplace_back();
                     }
-                    if ( VectorUtil::contains( listVariantOrigins[variantIt->second], variant._listOrigin ) == false )
-                        listVariantOrigins[variantIt->second].push_back( variant._listOrigin );
+                    appendOriginOnce( "variant", variantIt->second, variant._listOrigin, listVariantOrigins[variantIt->second] );
                 }
                 for ( size_t passIndex = 0; passIndex < listUniquePass.size(); ++passIndex )
                 {
