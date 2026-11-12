@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
@@ -18,6 +19,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/IEditorPanelService.h"
 
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -26,6 +28,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 namespace sw::editor
@@ -284,6 +287,27 @@ namespace sw::editor
                 }
                 return true;
             }
+
+            /**
+             * @brief @p absolutePath(파일, 또는 폴더면 그 아래)에 열린 문서가 있으면 지우기를 거절하고 이유를 알린 뒤 true 입니다(감사 P0-4).
+             * @details 연 문서를 지우면 다음 저장(Ctrl+S)이 파일을 되살린다. 유니티 · Godot 는 GUID · UID 로 연 문서를 끊고, 이 엔진은 경로가 정체라 거절이 그 자리다.
+             */
+            [[nodiscard]] static bool refuseOpenDocumentDelete( string_view absolutePath )
+            {
+                const string deletedID = editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::normalizeSeparators( absolutePath ) );
+                if ( deletedID.empty() )
+                    return false; // 리소스 트리 밖 파일은 문서로 열 수 없다
+                vector<EditorOpenDocument> listOpen;
+                EditorAssetFileCommands::collectOpenDocuments( listOpen );
+                const optional<string> openDocument = EditorAssetFileCommands::findOpenDocumentAtOrUnder( deletedID, listOpen );
+                if ( openDocument.has_value() == false )
+                    return false;
+                SW_LOG_WARNING_ID( "EditorAssetFileCommands.DeleteRefusedOpenDocument", "Not deleted - '%#' is open in an editor, close it first", *openDocument );
+                EditorContext* const pContext = editor::findSubsystem<EditorContext>();
+                if ( pContext != nullptr )
+                    pContext->getSubsystem<EditorNotificationManager>().push( "Delete refused", *openDocument + " is open - close it first", NotificationKind::Warning );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -478,7 +502,55 @@ namespace sw::editor
             outPlan._failure = string( failureBuilder.view() );
             return false;
         }
+        // 미저장 참조 문서는 옛 id 를 들고 있다 — 고친 디스크 글을 다음 저장이 덮지 않게 먼저 저장을 요구한다(감사 P0-4).
+        vector<EditorOpenDocument> listOpen;
+        collectOpenDocuments( listOpen );
+        const optional<string> dirtyReferrer = findDirtyReferrerDocument( outPlan, listOpen );
+        if ( dirtyReferrer.has_value() )
+        {
+            StringBuilder<constant::buffer::kMax256> failureBuilder;
+            failureBuilder.appendFormat( "'%#' has unsaved edits and names a moved asset - save it first, nothing was moved", *dirtyReferrer );
+            outPlan._failure = string( failureBuilder.view() );
+            return false;
+        }
         return true;
+    }
+
+    void EditorAssetFileCommands::collectOpenDocuments( vector<EditorOpenDocument>& outList )
+    {
+        const IEditorPanelService* const pPanelService = editor::findSubsystem<IEditorPanelService>(); // 셸 없는 테스트 호스트에는 패널이 없다
+        if ( pPanelService != nullptr )
+            pPanelService->collectOpenDocuments( outList );
+        const Scene* const pScene = editor::getActiveScene();
+        if ( pScene == nullptr || pScene->getSourcePath().empty() )
+            return;
+        const EditorWorkspace* const pWorkspace = editor::findSubsystem<EditorWorkspace>();
+        outList.push_back( EditorOpenDocument{ pScene->getSourcePath(), pWorkspace != nullptr && pWorkspace->isSceneDirty() } );
+    }
+
+    optional<string> EditorAssetFileCommands::findDirtyReferrerDocument( const EditorAssetMovePlan& plan, const vector<EditorOpenDocument>& listOpen )
+    {
+        for ( const EditorOpenDocument& document : listOpen )
+        {
+            const bool bReferrer = VectorUtil::contains( plan._listReferrerID, document._assetID ) || VectorUtil::contains( plan._listUnfixedReferrer, document._assetID );
+            if ( document._bDirty && bReferrer )
+                return document._assetID;
+        }
+        return nullopt;
+    }
+
+    optional<string> EditorAssetFileCommands::findOpenDocumentAtOrUnder( string_view deletedID, const vector<EditorOpenDocument>& listOpen )
+    {
+        SW_ASSERT( deletedID.empty() == false );
+        for ( const EditorOpenDocument& document : listOpen )
+        {
+            const string_view documentID = document._assetID;
+            // 같은 id 이거나 지우는 폴더 아래(`<폴더 id>/…`)다 — `a/b` 가 `a/bc` 를 덮지 않게 경계의 `/` 를 본다.
+            const bool bAtOrUnder = documentID == deletedID || ( documentID.size() > deletedID.size() && StringUtil::startsWith( documentID, deletedID ) && documentID[deletedID.size()] == '/' );
+            if ( bAtOrUnder )
+                return document._assetID;
+        }
+        return nullopt;
     }
 
     bool EditorAssetFileCommands::applyAssetMoves( const vector<EditorAssetMove>& listMove, EditorReferenceIndex& inoutIndex, EditorAssetMovePlan& outPlan )
@@ -646,6 +718,8 @@ namespace sw::editor
 
     bool EditorAssetFileCommands::moveToTrash( string_view absolutePath )
     {
+        if ( EditorAssetFileCommandsInternal::refuseOpenDocumentDelete( absolutePath ) )
+            return false;
         // 휴지통을 쓸 수 없는 곳(Linux 에서 홈을 모를 때)은 지운다.
         if ( PlatformFileUtil::hasRecycleBin() == false )
             return deleteAsset( absolutePath );
@@ -662,7 +736,7 @@ namespace sw::editor
 
     bool EditorAssetFileCommands::deleteAsset( string_view absolutePath )
     {
-        if ( absolutePath.empty() )
+        if ( absolutePath.empty() || EditorAssetFileCommandsInternal::refuseOpenDocumentDelete( absolutePath ) )
             return false;
         const string abs{ absolutePath };
         if ( FileUtil::removeFile( abs ) == false )

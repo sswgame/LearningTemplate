@@ -6,6 +6,8 @@
  *          이제 문서 없는 패널은 미저장을 표시할 수 없고(`IEditorPanel` 에 없다), 문서 패널은 저장 · 되돌리기를 반드시 구현한다(순수 가상).
  */
 #pragma once
+#include "Core/Container/string.h"
+
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 
 namespace sw::editor
@@ -65,6 +67,11 @@ namespace sw::editor
             revertDocument();
             clearDocumentDirty();
         }
+        /**
+         * @brief 연 에셋 파일의 리소스 id 입니다. 연 경로가 없는 문서(`EditorStateDocumentPanel`)와 아직 연 문서가 없는 패널은 빈 글입니다.
+         * @details 두 기반이 각각 정한다(순수 가상) — 옮기기 · 삭제 계획(`IEditorPanelService::collectOpenDocuments`)이 연 문서를 묻는 길이다(감사 P0-4).
+         */
+        [[nodiscard]] virtual string_view getDocumentAssetPath() const = 0;
         /** @brief 닫기 확인(Save / Don't Save / Cancel)을 기다리는 중이면 true 입니다. */
         bool isCloseConfirmPending() const { return _bConfirmClose; }
         /**

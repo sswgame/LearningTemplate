@@ -96,7 +96,8 @@ namespace sw::editor
         /** @brief 최근에 연 문서 목록을 반환합니다. 새 것이 앞이고 최대 `kMaxRecentDocumentCount` 개입니다. */
         const vector<string>& getRecentDocumentPaths() const { return _listRecentPath; }
 
-        const string& getLoadedAssetPath() const { return _loadedAssetPath; }
+        const string&             getLoadedAssetPath() const { return _loadedAssetPath; }
+        [[nodiscard]] string_view getDocumentAssetPath() const final { return _loadedAssetPath; }
         /**
          * @brief 열린 문서(리소스 id)의 디스크 자리입니다 - 읽기와 쓰기가 같은 해석이다(R7, `AssetPaths::toDiskPath`: 전역 id 는 아직 없어도 그 도메인 아래, 상대 키는 이긴 있는 파일).
          * @details 예전에는 패널마다 읽기는 `findLooseFile`, 쓰기는 다른 해석(못 찾으면 받은 글 그대로 · 쓸 자리 해석)을 따로 불렀다. 문서가 없거나 풀 수 없으면 빈 값이다(이유는 로그).

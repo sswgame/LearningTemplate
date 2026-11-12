@@ -26,6 +26,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -234,6 +235,130 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief `scratch/` 아래 id 하나를 받아 그 사본 파일이 없으면 성공입니다 — 옮긴 뒤 저장이 옛 자리에 파일을 되살리지 않았는지 본다(감사 P0-4). */
+            static bool runExpectScratchMissing( const vector<string>& listArgument, string& outReply )
+            {
+                const string scratchPrefix = string( AutomationScratch::kScratchDomain ) + "/";
+                const bool   bBadID        = listArgument.size() != 1 || StringUtil::startsWith( listArgument[0], scratchPrefix ) == false || AssetPaths::hasParentDirectoryComponent( listArgument[0] );
+                if ( bBadID )
+                {
+                    outReply = "asset.expectScratchMissing takes one resource id under " + scratchPrefix;
+                    return false;
+                }
+                if ( editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) ).has_value() )
+                {
+                    outReply = "'" + listArgument[0] + "' exists - a save wrote to the old place";
+                    return false;
+                }
+                outReply = listArgument[0] + " is missing";
+                return true;
+            }
+
+            /** @brief `asset.expectScratchContains <scratch/… id> <글>` — 사본 파일에 그 글(공백 없는 한 낱말)이 있으면 성공입니다. 옮긴 문서의 편집이 새 자리에 저장됐는지 본다. */
+            static bool runExpectScratchContains( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 2 )
+                {
+                    outReply = "asset.expectScratchContains takes a resource id under the scratch folder and one word";
+                    return false;
+                }
+                const expected<string> text = readScratchText( vector<string>{ listArgument[0] }, "asset.expectScratchContains" );
+                if ( text.has_value() == false )
+                {
+                    outReply = AutomationStep::describeReason( text.error() );
+                    return false;
+                }
+                if ( text->find( listArgument[1] ) == string::npos )
+                {
+                    outReply = "'" + listArgument[0] + "' does not contain '" + listArgument[1] + "'";
+                    return false;
+                }
+                outReply = listArgument[0] + " contains " + listArgument[1];
+                return true;
+            }
+
+            /** @brief `scratch/` 아래 id 둘(원본 · 대상)을 디스크 옮기기 하나로 풉니다. 원본은 있는 파일, 대상은 만들 자리다(`AssetPaths::toDiskPath`). */
+            [[nodiscard]] static expected<EditorAssetMove> readScratchMove( const vector<string>& listArgument, size_t argumentCount, const utf8* pCommand )
+            {
+                const string scratchPrefix = string( AutomationScratch::kScratchDomain ) + "/";
+                const auto   isScratchID   = [&scratchPrefix]( const string& id )
+                { return StringUtil::startsWith( id, scratchPrefix ) && AssetPaths::hasParentDirectoryComponent( id ) == false; };
+                if ( listArgument.size() != argumentCount || isScratchID( listArgument[0] ) == false || isScratchID( listArgument[1] ) == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "wrong arguments - see the command's usage (two resource ids under the scratch folder first)", pCommand } );
+                const AssetPaths&            assetPaths      = editor::getSubsystem<AssetPaths>();
+                const optional<AbsolutePath> sourcePath      = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
+                const optional<AbsolutePath> destinationPath = assetPaths.toDiskPath( FileUtil::normalizePath( listArgument[1] ) );
+                if ( sourcePath.has_value() == false )
+                    return unexpected( Error{ ErrorKind::NotFound, "no scratch asset (does the scenario declare <Scratch>?)", listArgument[0] } );
+                if ( destinationPath.has_value() == false )
+                    return unexpected( Error{ ErrorKind::NotFound, "the destination id has no disk place", listArgument[1] } );
+                return EditorAssetMove{ sourcePath->str(), destinationPath->str() };
+            }
+
+            /**
+             * @brief 사본 에셋 하나를 콘텐츠 브라우저의 이름 바꾸기 · 옮기기와 같은 길(`EditorAssetFileCommands::applyAssetMoves`)로 옮깁니다 — 이름 칸 입력 없이 시나리오가 부른다.
+             * @details 역색인이 마지막 변경을 따라오지 않았으면 옮기지 않는다(시나리오가 `Editor.ReferenceIndexReady` 를 먼저 기다린다). 옮긴 뒤 진행 중인 스캔을 버린다 — 콘텐츠 브라우저와 같다.
+             */
+            static bool runMoveScratchAsset( const vector<string>& listArgument, string& outReply )
+            {
+                const expected<EditorAssetMove> move = readScratchMove( listArgument, 2, "asset.moveScratch" );
+                if ( move.has_value() == false )
+                {
+                    outReply = AutomationStep::describeReason( move.error() );
+                    return false;
+                }
+                AssetHotReload&             hotReload = editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>();
+                EditorReferenceIndex* const pIndex    = hotReload.findCurrentReferenceIndex();
+                if ( pIndex == nullptr )
+                {
+                    outReply = "the reference index has not caught up with the last file change - wait for Editor.ReferenceIndexReady first";
+                    return false;
+                }
+                EditorAssetMovePlan plan;
+                const bool          bMoved = EditorAssetFileCommands::applyAssetMoves( vector<EditorAssetMove>{ *move }, *pIndex, plan );
+                hotReload.restartPendingReferenceScan();
+                if ( bMoved == false )
+                {
+                    outReply = "not moved - " + plan._failure;
+                    return false;
+                }
+                outReply = "moved " + listArgument[0] + " to " + listArgument[1];
+                return true;
+            }
+
+            /**
+             * @brief `asset.expectScratchMoveRefused <원본> <대상> <낱말>` — 옮기기 계획이 거절하고 그 이유에 낱말이 있으면 성공입니다(디스크는 건드리지 않는다).
+             * @details 미저장 참조 문서의 "먼저 저장" 거절(감사 P0-4)을 시나리오가 본다. 낱말을 받는 까닭: 다른 이유(대상이 이미 있음)의 거절을 통과로 읽지 않게.
+             */
+            static bool runExpectScratchMoveRefused( const vector<string>& listArgument, string& outReply )
+            {
+                const expected<EditorAssetMove> move = readScratchMove( listArgument, 3, "asset.expectScratchMoveRefused" );
+                if ( move.has_value() == false )
+                {
+                    outReply = AutomationStep::describeReason( move.error() );
+                    return false;
+                }
+                const EditorReferenceIndex* const pIndex = editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>().findCurrentReferenceIndex();
+                if ( pIndex == nullptr )
+                {
+                    outReply = "the reference index has not caught up with the last file change - wait for Editor.ReferenceIndexReady first";
+                    return false;
+                }
+                EditorAssetMovePlan plan;
+                if ( EditorAssetFileCommands::planAssetMoves( vector<EditorAssetMove>{ *move }, *pIndex, plan ) )
+                {
+                    outReply = "'" + listArgument[0] + "' could move to '" + listArgument[1] + "' - the plan was expected to refuse";
+                    return false;
+                }
+                if ( plan._failure.find( listArgument[2] ) == string::npos )
+                {
+                    outReply = "refused for another reason - " + plan._failure;
+                    return false;
+                }
+                outReply = "refused - " + plan._failure;
+                return true;
+            }
+
             /**
              * @brief 임시 폴더(`Saved/Automation/` 아래)를 만듭니다. 이미 있으면 성공입니다.
              * @details 에디터 저장은 없는 폴더를 만들지 않고 오류로 멈춘다(`FileUtil::writeTextFile`). 패널이 문서를 열지 않고 쓸 곳을 먼저 마련해야 하는 시나리오(타일맵 저장 왕복)가 쓴다.
@@ -434,6 +559,16 @@ namespace sw::editor
     SW_DEV_COMMAND( ExpectScratchUnchanged, "asset.expectScratchUnchanged", "asset.expectScratchUnchanged <scratch/...resource id>",
                     "Fail unless a scratch asset still has the text asset.snapshotScratch remembered (save, reload and save again must give the same bytes)",
                     &EditorAutomationAssetCommandsInternal::runExpectScratchUnchanged );
+    SW_DEV_COMMAND( ExpectScratchMissing, "asset.expectScratchMissing", "asset.expectScratchMissing <scratch/...resource id>",
+                    "Fail if a scratch asset exists (a save after a move must not bring the old file back)", &EditorAutomationAssetCommandsInternal::runExpectScratchMissing );
+    SW_DEV_COMMAND( ExpectScratchContains, "asset.expectScratchContains", "asset.expectScratchContains <scratch/...resource id> <word>",
+                    "Fail unless a scratch asset's text contains the word", &EditorAutomationAssetCommandsInternal::runExpectScratchContains );
+    SW_DEV_COMMAND( MoveScratchAsset, "asset.moveScratch", "asset.moveScratch <scratch/...source id> <scratch/...destination id>",
+                    "Move or rename a scratch asset the way the Content Browser does (fixes references, open documents follow)",
+                    &EditorAutomationAssetCommandsInternal::runMoveScratchAsset );
+    SW_DEV_COMMAND( ExpectScratchMoveRefused, "asset.expectScratchMoveRefused", "asset.expectScratchMoveRefused <scratch/...source id> <scratch/...destination id> <word>",
+                    "Fail unless planning that move is refused for a reason containing the word (nothing changes on disk)",
+                    &EditorAutomationAssetCommandsInternal::runExpectScratchMoveRefused );
     SW_DEV_COMMAND( MakeTempFolder, "asset.makeTempFolder", "asset.makeTempFolder <folder>", "Create a temp folder under Saved/Automation/ (editor saves do not create missing folders)",
                     &EditorAutomationAssetCommandsInternal::runMakeTempFolder );
     SW_DEV_COMMAND( RemoveTempAsset, "asset.removeTemp", "asset.removeTemp <path>", "Remove a temp asset file under Saved/Automation/",
