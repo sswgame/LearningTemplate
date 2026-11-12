@@ -117,13 +117,6 @@
 - 제안: id 는 캐시 INCR 이나 난수 128 비트로 낸다. `leaveQueue` 는 로컬 티켓이 없으면 파티 기록의 티켓을 푼다.
 - 확인: 같은 가짜 캐시로 `PartyLobbyService` 를 두 번 `initialize` 해 두 번째 `createParty`. `TestMatchQueueService` 에 "A 에서 티켓 → A 버림 → B 에서 leave → join".
 
-#### O-9 키트 테이블은 보존 규칙에 들어갈 길이 없고, 채팅 기록 정리는 일부 채널에만 돈다
-- 분류: 구조 + 결함 · 확신: 확인
-- 근거: `Source/GameFramework/Runtime/Online/Server/OnlineServerRuntime.cpp:82-99` `makeRetentionRules` 는 감사 · 원장 내역 · 분개 · 닫힌 신고 넷만 안다. `Source/GameFramework/Kits/Feature/Online/Chat/Server/ChatService.cpp:679`(`_sequence % _historyTrimEvery`, 서비스 전체 카운터)와 `:109-112`(그 채널만 정리) — 귓속말 쌍 채널, 해산된 길드 채널은 새 글이 없으면 30 일 보존을 넘겨 영구히 남는다(개인정보 문제). 닫힌 `trade_session`, 지난 기간 `lb_score`, `mail_sent`, 만료된 `guild_invite`, `liveops_push` 도 지우는 코드가 없다. 보존 쓸기는 키 순 전수 훑기이고 커서가 프로세스 메모리다.
-- 상용 서비스: Nakama 는 채널 메시지에 TTL 색인을 둔다.
-- 제안: `IOnlineServerKit` 이 보존 규칙(테이블 · 시각 읽기 · 일수 = Config)을 내놓고 런타임이 모은다. 시각이 키 앞에 오는 만료 색인을 공용 형식으로 올려 전수 훑기를 범위 읽기로 바꾼다.
-- 확인: 메모리 저장소로 "거절된 거래 N 건 뒤 `countRecords( trade_session )`", "귓속말 1 건 → 31 일 뒤 쓸기 → 기록 0".
-
 #### O-10 길드 창고가 자산 이전 정책을 보지 않아 거래 불가 자산이 계정 사이로 옮겨진다
 - 분류: 결함(정책 우회) · 확신: 확인
 - 근거: `Source/GameFramework/Kits/Feature/Online/Social/Server/GuildService.cpp:729-737` 의 검사는 자산 id 형식 · 금액 범위 · 분개 키뿐이다. 거래는 `TradeStateMachine.cpp:26-27` 에서 `isTradable` 로 막는다. `ILedgerPolicy` 는 잔액 상한만 안다(`Source/GameFramework/Runtime/Online/Ledger/LedgerTypes.h:129-140`). 멤버가 유료 재화 · 귀속 아이템을 맡기고 임원이 꺼내면 금지된 이전이 된다.
