@@ -6,11 +6,15 @@
      씬의 두 칸이 같은 트랜잭션에서 고쳐진다(Asset.MovedSet). 빈 원본 폴더는 지워진다.
   ② refuse/noted.material 은 notes.scene.xml 이 주석(경로 칸 밖)에서 적는다. refuse 폴더를 target 에 놓으면 대화상자가 거절 이유(outside a path field)와
      그 파일 이름을 빨간 글로 보이고 Move 가 꺼져 있다 — Cancel 로 닫으면 아무것도 옮기지 않는다.
+  ③ 열린 문서가 옮김을 따라간다(감사 P0-4): target/keep.material 을 머티리얼 패널에서 열고 거칠기를 0.9 로 고친 채(미저장) kept.material 로 이름을 바꾸면(asset.moveScratch —
+     콘텐츠 브라우저와 같은 applyAssetMoves) 패널의 문서 경로가 새 id 로 간다. 저장하면 새 자리에 편집이 들어가고 옛 자리에 파일이 되살아나지 않는다.
+  ④ 열린 씬: assetmove.scene.xml 을 열고 빛 컴포넌트를 더해 미저장으로 두면, 그 씬이 적은 probe.material 의 옮기기는 계획에서 "먼저 저장" 으로 거절된다
+     (asset.expectScratchMoveRefused). 씬 파일 자신은 미저장이어도 옮길 수 있고(renamed.scene.xml), Ctrl+S 가 새 자리에 쓰고 옛 파일을 되살리지 않는다.
   쓰기 실패 되돌리기는 잠긴 파일이 있어야 해 시나리오가 만들 수 없다 — applyAssetMoves 의 되돌림 경로는 로그 id EditorAssetFileCommands.MoveRolledBack · MoveIncomplete 로 본다.
   볼 그림: assetmove/confirm.png(파일 2 · 참조 1 · 바깥 도메인 목록), assetmove/refused.png(빨간 이유 글, 꺼진 Move).
   실행: App -EnableEditor -scenario=engine/automation/editor/assetmove.scenario.xml -unattended
 -->
-<Scenario name="editor.assetmove" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.assetmove" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/assetmove" as="scratch/assetmove"/>
 	<EditorWaitSettled/>
 	<ResizeWindow width="1920" height="1080"/>
@@ -54,6 +58,54 @@
 	<ExpectLog id="Asset.MovedSet" count="1"/>
 	<Variable name="gv_editorWatchAsset" value="scratch/assetmove/refuse/noted.material"/>
 	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>
+	<!-- ③ 미저장으로 연 머티리얼의 이름을 바꾸면 문서 경로가 따라가고, 저장은 새 자리에 쓴다 -->
+	<DevCommand line="panel.focus material"/>
+	<EditorWaitSettled/>
+	<DevCommand line="asset.openScratch scratch/assetmove/target/keep.material"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorWatchAsset" value="scratch/assetmove/target/keep.material"/>
+	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="material.propertyFilter"/>
+	<EditorWaitSettled/>
+	<EditorText value="rough"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="material.property._roughness" mods="ctrl"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitSettled/>
+	<EditorText value="0.9"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Enter"/>
+	<WaitUntil watch="Editor.MaterialModifiedPropertyCount" equals="1" timeoutFrames="60"/>
+	<Expect watch="Editor.DirtyDocumentCount" equals="1"/>
+	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
+	<DevCommand line="asset.moveScratch scratch/assetmove/target/keep.material scratch/assetmove/target/kept.material"/>
+	<ExpectLog id="Asset.Moved" contains="kept.material" count="1"/>
+	<Variable name="gv_editorWatchAsset" value="scratch/assetmove/target/kept.material"/>
+	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="60"/>
+	<DevCommand line="panel.saveDocument material"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
+	<DevCommand line="asset.expectScratchMissing scratch/assetmove/target/keep.material"/>
+	<DevCommand line="asset.expectScratchContains scratch/assetmove/target/kept.material 0.9"/>
+	<!-- ④ 미저장 씬이 적은 에셋은 옮기지 않는다("먼저 저장"). 씬 파일 자신은 옮겨지고 Ctrl+S 가 새 자리에 쓴다 -->
+	<DevCommand line="scene.open scratch/assetmove/assetmove.scene.xml"/>
+	<EditorWaitSettled/>
+	<DevCommand line="select.type MeshComponent"/>
+	<DevCommand line="component.add PointLightComponent"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.SceneDirty" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
+	<DevCommand line="asset.expectScratchMoveRefused scratch/assetmove/target/pack/probe.material scratch/assetmove/target/pack/probe_moved.material unsaved"/>
+	<DevCommand line="asset.moveScratch scratch/assetmove/assetmove.scene.xml scratch/assetmove/renamed.scene.xml"/>
+	<ExpectLog id="Asset.Moved" contains="renamed.scene.xml" count="1"/>
+	<Expect watch="Editor.SceneDirty" equals="1"/>
+	<EditorKey key="Ctrl+S"/>
+	<WaitUntil watch="Editor.SceneDirty" equals="0" timeoutFrames="60"/>
+	<DevCommand line="asset.expectScratchMissing scratch/assetmove/assetmove.scene.xml"/>
+	<DevCommand line="asset.expectScratchContains scratch/assetmove/renamed.scene.xml PointLightComponent"/>
+	<DevCommand line="asset.expectScratchContains scratch/assetmove/renamed.scene.xml target/pack/probe.material"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

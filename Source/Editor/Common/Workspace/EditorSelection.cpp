@@ -185,6 +185,25 @@ namespace sw::editor
         notifyChanged();
     }
 
+    void EditorSelection::remapAssets( const vector<string>& listOldID, const vector<string>& listNewID )
+    {
+        SW_ASSERT( listOldID.size() == listNewID.size() );
+        bool bChanged = false;
+        for ( string& selectedAsset : _listSelectedAsset )
+        {
+            for ( size_t index = 0; index < listOldID.size(); ++index )
+            {
+                if ( selectedAsset != listOldID[index] )
+                    continue;
+                selectedAsset = listNewID[index];
+                bChanged      = true;
+                break;
+            }
+        }
+        if ( bChanged )
+            notifyChanged();
+    }
+
     bool EditorSelection::hasAsset( string_view assetPath ) const
     {
         return VectorUtil::contains( _listSelectedAsset, assetPath );

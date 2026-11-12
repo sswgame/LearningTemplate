@@ -19,6 +19,10 @@ namespace sw::editor
      */
     class EditorStateDocumentPanel : public IEditorDocumentPanel
     {
+    public:
+        /** @brief 연 문서 경로가 없다 — 옮기기 · 삭제 계획이 볼 에셋 파일이 아니다. */
+        [[nodiscard]] string_view getDocumentAssetPath() const final { return {}; }
+
     protected:
         EditorStateDocumentPanel()
             : IEditorDocumentPanel{ false }

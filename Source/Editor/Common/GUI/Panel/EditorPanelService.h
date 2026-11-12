@@ -36,6 +36,7 @@ namespace sw::editor
         [[nodiscard]] bool saveAllDirtyDocuments() override;
         void               discardAllDirtyDocuments() override;
         uint32             countDirtyDocuments() const override;
+        void               collectOpenDocuments( vector<EditorOpenDocument>& outList ) const override;
 
     private:
         EditorContext&      _context;

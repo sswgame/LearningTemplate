@@ -7,6 +7,7 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -84,5 +85,16 @@ namespace sw::editor
     uint32 EditorPanelService::countDirtyDocuments() const
     {
         return _panelManager.countDirtyDocuments();
+    }
+
+    void EditorPanelService::collectOpenDocuments( vector<EditorOpenDocument>& outList ) const
+    {
+        for ( const EditorPanelEntry& entry : _panelManager.getPanels() )
+        {
+            const IEditorDocumentPanel* const pDocument = entry._pInstance != nullptr ? entry._pInstance->asDocumentPanel() : nullptr;
+            if ( pDocument == nullptr || pDocument->getDocumentAssetPath().empty() )
+                continue;
+            outList.push_back( EditorOpenDocument{ string{ pDocument->getDocumentAssetPath() }, pDocument->isDocumentDirty() } );
+        }
     }
 } // namespace sw::editor

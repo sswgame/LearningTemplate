@@ -162,6 +162,8 @@ namespace sw::editor
             if ( pScene != nullptr && pScene->getSourcePath() == listOldID[index] )
                 pScene->setSourcePath( listNewID[index] ); // 다음 저장(Ctrl+S)이 새 자리에 쓴다 — 옛 자리에 파일을 다시 만들지 않는다
         }
+        if ( _pEditorSelection != nullptr )
+            _pEditorSelection->remapAssets( listOldID, listNewID ); // 고른 에셋 경로도 글이다 — 옛 id 로 남으면 인스펙터 · 명령이 없는 파일을 가리킨다
         _assetsMoved.broadcast( listOldID, listNewID );
     }
 

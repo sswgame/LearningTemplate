@@ -15,6 +15,7 @@ namespace sw::editor
     class EditorReferenceIndex;
 
     struct EditorNewAssetTemplate;
+    struct EditorOpenDocument;
 } // namespace sw::editor
 
 namespace sw::editor
@@ -59,6 +60,19 @@ namespace sw::editor
          */
         [[nodiscard]] static bool planAssetMoves( const vector<EditorAssetMove>& listMove, const EditorReferenceIndex& index, EditorAssetMovePlan& outPlan );
         /**
+         * @brief 지금 열린 문서를 모읍니다 — 에셋 파일을 연 문서 패널(`IEditorPanelService::collectOpenDocuments`)과 소스 파일이 있는 활성 씬(미저장은 `EditorWorkspace::isSceneDirty`).
+         * @details 패널 서비스가 없는 호스트(셸 없는 테스트)는 연 패널이 없다 — 씬만 본다.
+         */
+        static void collectOpenDocuments( vector<EditorOpenDocument>& outList );
+        /**
+         * @brief 미저장 문서 중 옮기는 에셋을 적은 참조 파일(@p plan 의 `_listReferrerID` · `_listUnfixedReferrer`)이 있으면 그 id 입니다.
+         * @details 옮기기는 디스크의 참조 글을 고친다. 메모리의 미저장 문서는 옛 id 를 들고 있어 다음 저장이 고친 글을 덮는다 — 계획에서 "먼저 저장" 으로 거절한다(감사 P0-4).
+         *          언리얼은 로드된 참조자를 메모리에서 고치고 dirty 로 표시한다. 이 엔진은 문서마다 메모리 꼴이 달라 고칠 수단이 없으니 거절이 그 자리다.
+         */
+        [[nodiscard]] static optional<string> findDirtyReferrerDocument( const EditorAssetMovePlan& plan, const vector<EditorOpenDocument>& listOpen );
+        /** @brief 지우려는 리소스 id(파일, 또는 폴더면 그 아래 전부)에 열린 문서가 있으면 그 문서 id 입니다 — 연 문서를 지우면 다음 저장이 파일을 되살린다(감사 P0-4). */
+        [[nodiscard]] static optional<string> findOpenDocumentAtOrUnder( string_view deletedID, const vector<EditorOpenDocument>& listOpen );
+        /**
          * @brief 옮기기 묶음을 트랜잭션으로 적용합니다. 계획을 다시 세우고, 고칠 글을 모두 미리 만든 뒤 파일을 옮기고 글을 쓴다.
          * @details 옮기기나 쓰기가 하나라도 지면(잠긴 파일 · 읽기 전용) 쓴 글을 원래대로, 옮긴 파일을 거꾸로 되돌린다. 되돌리지 못한 파일은 이름을 오류 로그와 알림에 남긴다.
          *          이 엔진은 경로 하나로 가리키므로 저장소 안의 참조 글을 같은 트랜잭션에서 고치고, 저장소 밖(세이브 · 서버 · 배포된 팩)의 옛 id 를 위해 옛 도메인의
@@ -71,9 +85,9 @@ namespace sw::editor
          * @return 옮기기 목록입니다. 폴더가 아니거나 · 자기 안으로 옮기기 · 이미 있는 대상 · 빈 폴더면 그 이유입니다. 옮긴 뒤 빈 원본 폴더 지우기는 부른 쪽이 한다.
          */
         [[nodiscard]] static expected<vector<EditorAssetMove>> collectFolderMoves( string_view sourceFolderAbs, string_view destinationParentAbs );
-        /** @brief 에셋을 OS 휴지통으로 보냅니다. 휴지통이 없는 플랫폼은 지웁니다. */
+        /** @brief 에셋을 OS 휴지통으로 보냅니다. 휴지통이 없는 플랫폼은 지웁니다. 그 자리(폴더면 그 아래)에 열린 문서가 있으면 지우지 않고 false 입니다(이유를 알린다). */
         [[nodiscard]] static bool moveToTrash( string_view absolutePath );
-        /** @brief 에셋 파일을 삭제합니다. */
+        /** @brief 에셋 파일을 삭제합니다. 열린 문서가 있으면 지우지 않고 false 입니다(`moveToTrash` 와 같다). */
         [[nodiscard]] static bool deleteAsset( string_view absolutePath );
         /**
          * @brief 파일을 Content Browser 폴더로 복사합니다. 같은 이름이 있으면 덮지 않고 `_2` 처럼 새 이름으로 둡니다.

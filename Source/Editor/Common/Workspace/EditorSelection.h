@@ -82,6 +82,8 @@ namespace sw::editor
         bool                  hasAsset( string_view assetPath ) const;
         string_view           getPrimaryAsset() const;
         const vector<string>& getSelectedAssets() const { return _listSelectedAsset; }
+        /** @brief 고른 에셋 중 @p listOldID[i] 를 @p listNewID[i] 로 바꿉니다(에셋 옮김 — `EditorWorkspace::notifyAssetsMoved`). 바뀐 것이 있을 때만 알린다. */
+        void remapAssets( const vector<string>& listOldID, const vector<string>& listNewID );
 
         void              clearObjectSelection();
         void              clearAssetSelection();

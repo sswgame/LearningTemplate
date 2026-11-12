@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorSubsystem.h"
@@ -11,6 +12,16 @@
 
 namespace sw::editor
 {
+    /**
+     * @brief 에셋 파일 하나를 연 문서입니다 — 리소스 id 와 미저장 여부(`IEditorPanelService::collectOpenDocuments`, 활성 씬은 부른 쪽이 더한다).
+     * @details 옮기기 · 삭제 계획이 본다(감사 P0-4): 미저장 문서가 옮기는 에셋을 적었으면 디스크에서 고친 참조를 다음 저장이 옛 id 로 덮고, 연 문서를 지우면 다음 저장이 파일을 되살린다.
+     */
+    struct EditorOpenDocument
+    {
+        string _assetID;
+        bool   _bDirty{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+    };
+
     /**
      * @class IEditorPanelService
      * @brief 패널 열기 · 최대화와 도구 문서 저장을 패널 매니저 · 도킹을 모르고 부르는 인터페이스입니다(`EditorContext::getPanelService`).
@@ -37,5 +48,7 @@ namespace sw::editor
         virtual void discardAllDirtyDocuments() = 0;
         /** @brief 열린 패널 · 닫힌 패널을 모두 포함한 dirty 문서 개수입니다. */
         virtual uint32 countDirtyDocuments() const = 0;
+        /** @brief 에셋 파일을 연 문서 패널마다 한 줄을 @p outList 끝에 더합니다(연 경로가 없는 상태 문서 · 아직 연 문서가 없는 패널은 빠진다). */
+        virtual void collectOpenDocuments( vector<EditorOpenDocument>& outList ) const = 0;
     };
 } // namespace sw::editor
