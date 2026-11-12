@@ -9,22 +9,21 @@ description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에�
 
 ## 순서
 
-평소에는 `bundle-verify` 의 한 명령이 Windows 가 모두 통과한 뒤 Linux 를 돌린다. Windows 가 지면 Linux 를 돌리지 않는다(사용자 결정). 아래는 Linux 결함만 따로 고칠 때다.
+평소에는 `bundle-verify` 의 한 명령이 Windows 가 모두 통과한 뒤 Linux 를 돌린다. Windows 가 지면 Linux 를 돌리지 않는다. 아래는 Linux 결함만 따로 고칠 때다.
 
 1. 처음 한 번: `setup`(Xvfb · 글꼴을 sudo 없이 `~/lt-deps` 에 푼다). 클론과 `build/Linux-Debug`(컴파일러 캐시) · `build/Linux-Server` 구성은 아래 "클론 환경" 을 따른다.
 2. `all`: HEAD 로 Release 빌드 → 단위 · 서버 → 모든 체인(4 개씩 동시). 끝 줄 `LINUX_OK=<sha>`. 앞이 지면 긴 체인을 돌리지 않는다.
 3. 영향 범위만: `build` → `chain <이름…>`(또는 `stages`).
 4. 새니타이저(감사 P-8): 묶음마다 `sanitize`(ASan + UBSan, `Linux-Debug-ASan`) 한 번, 경쟁을 다룬 묶음 뒤에는 `sanitize thread`(TSan — `x64-linux-tsan` 트리플릿을 따로 깐다). 끝 줄 `SANITIZE_OK=<종류>`. 누수는 기준선을 만들기 전까지 끈다(`detect_leaks=0`).
-5. 골든을 새로 뜰 때: `chain --record <이름…>` → `goldens`(본 저장소로 복사, 한 색 사진 경고) → 표본을 눈으로 본다 → 커밋 → `--record` 없이 다시 `chain`.
+5. 골든을 새로 뜰 때: `chain --record <이름…>` → `goldens`(메인 작업 폴더로 복사, 한 색 사진 경고) → 표본을 눈으로 본다 → 커밋 → `--record` 없이 다시 `chain`.
 
 ## 지킬 것
 
-- 시나리오 드라이버는 기본이 WSL GPU 다(Vulkan 은 dzn, GL 은 d3d12). 처음 한 번 `setup-dzn`. 소프트웨어(lavapipe · llvmpipe)는 명령 앞에 `--gpu software`. `.linux` 골든은 dzn 으로 다시 뜬다 — 그 전에는 그림 차이를 참고만 한다.
-- dzn 은 `vkCreateDevice` 에 `descriptorIndexing` 묶음 비트가 있어야 bindless 경로로 셰이더를 내린다(없으면 크기 없는 텍스처 배열을 쓰는 PSO 컴파일에서 죽는다). 드라이버 진단(`DZN_DEBUG=nir`)은 백엔드 자식 프로세스의 콘솔로 나와 체인 실행에서는 버려진다 — `Bin/App -EnableEditor -vk -scenario=…` 를 직접 띄워 본다.
-
+- 시나리오 드라이버는 기본이 WSL GPU 다(Vulkan 은 dzn, GL 은 d3d12, 처음 한 번 `setup-dzn`). 소프트웨어(lavapipe · llvmpipe)는 명령 앞에 `--gpu software`. `.linux` 골든은 dzn 으로 뜬다.
+- dzn 은 `vkCreateDevice` 에 `descriptorIndexing` 묶음 비트가 있어야 bindless 셰이더를 받는다(없으면 크기 없는 텍스처 배열 PSO 컴파일에서 죽는다). 드라이버 진단(`DZN_DEBUG=nir`)은 백엔드 자식 프로세스의 콘솔로 나와 체인 실행에서는 버려진다 — `Bin/App -EnableEditor -vk -scenario=…` 를 직접 띄워 본다.
 - 기록 실행은 그림이 틀려도 통과한다. 기록 통과는 그림의 증거가 아니다.
 - 이 명령은 클론당 하나만 돌린다(체인 병렬은 명령 안에서 한다).
-- 클론은 `build` · `all` 때 `reset --hard` + `git clean -fd` 된다(무시 목록 밖의 추적 안 된 파일 — 커밋하지 않은 기록 골든도 — 이 지워진다). 기록한 골든은 다음 `build` 전에 `goldens` 로 옮긴다. 클론에서 고친 것은 사라진다. 고칠 것은 본 저장소에서 고치고 커밋한다.
+- 클론은 `build` · `all` 때 `reset --hard` + `git clean -fd` 된다(무시 목록 밖의 추적 안 된 파일 — 커밋하지 않은 기록 골든도 — 이 지워진다). 기록한 골든은 다음 `build` 전에 `goldens` 로 옮긴다. 클론에서 고친 것은 사라진다 — 고칠 것은 메인 작업 폴더에서 고치고 커밋한다.
 - 멈출 때는 `stop` 을 쓴다. 게임 프로세스는 이름이 `GameThread` 로 바뀌어 `App` 으로 찾으면 놓치고, Xvfb 도 남는다.
 - 긴 체인은 백그라운드로 돌리고 알림을 기다린다. 결과를 짐작해 말하지 않는다.
 - 로그: `~/LT-linux/build/Linux-Release/Testing/Logs/Scenario.<이름>.vk.log`. 판정 경고 밖의 Error · Warning 분류는 로그를 직접 읽는다.

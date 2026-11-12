@@ -40,7 +40,7 @@ Windows: `py -3 Scripts/dev/ScenarioCulprit.py <체인> <단계> [--preset Ninja
 
 ## 4. 고치기
 
-증상이 아니라 그 모양을 쓸 수 없게 한다. 시나리오의 시한을 늘리거나 고정 대기를 넣지 않는다.
+시나리오의 시한을 늘리거나 고정 대기를 넣지 않는다(구조로 푸는 원칙은 CLAUDE.md 1).
 
 - 입력 대상 대기는 단계가 맡는다(`holdUntilTextTarget` 등). 시나리오에 `<Wait>` 를 더하지 않는다.
 - 레이블이 복합 위젯의 엉뚱한 항목에 찍히면 위젯 함수의 `pMark` 인자로 옮긴다.
@@ -54,5 +54,3 @@ Windows: `py -3 Scripts/dev/ScenarioCulprit.py <체인> <단계> [--preset Ninja
 - 끄고 켠 두 장이 실제로 다른가(`game/empty/automation/deferredtransparent` 처럼). 값을 바꿔도 그림이 같은 시나리오는 아무것도 보지 않는다.
 - 기록 실행(`-scenario-update-golden`)의 통과는 그림의 증거가 아니다.
 - 로그의 Error · Warning 을 선언한 것과 대조한다.
-
-보고 끝에 근본 원인과 같은 결함이 다른 곳에 있을 가능성을 한 줄로 적는다.
