@@ -767,14 +767,12 @@
 - **S-10 보이스 풀이 차면 우선순위와 상관없이 새 소리를 버리고 그 경고를 오디오 스레드에서 찍는다** (결함 · 부하 때 — 확인) — `Source/Engine/Audio/AudioVoicePool.cpp:24-36`, `AudioEngine.cpp:712-717`. 가상 보이스(먼 루프)도 256 칸을 차지한다. 상용: 언리얼 · 유니티는 우선순위가 낮은 것을 뺏는다. 제안: 가상 보이스를 풀 밖 기록으로 빼고 고갈 때 (우선순위, 들림)이 낮은 칸을 한 블록 페이드로 뺏는다. 확인: `AudioVoiceTest.HighPriorityStealsWhenPoolIsFull`.
 - **S-11 전역 잔해 한도를 "먼저 틱한 오브젝트" 가 치르고 한도는 콘솔 변수다** (구조 — 확인) — `Source/Engine/Destruction/Fracture/FractureComponentBase.cpp:1435-1479`. 상용: Chaos 는 조각별 제거 타이머 · 거리 기준. 제안: 잔해 바디를 `ScenePhysics` 풀 하나에 (나이, 부피, 거리) 키로 올린다. 확인: `DestructionStateTest.GlobalBudgetEvictsOldestAcrossObjects`.
 - **S-12 대화 그래프 로드 검증이 링크 끝점 · 시작 노드를 보지 않는다** (구조 — 확인) — `Source/Engine/Dialogue/DialogueGraphAsset.cpp:102-155`. `findStartNode()`(`:185-195`)는 Start 가 없으면 첫 노드로 대신한다(폴백). 상용: Yarn Spinner 는 컴파일에서 끊긴 링크를 오류로. 제안: `validateFile` 이 끝점 · 핀 · Start 정확히 1 개 · 기다림 없는 순환을 검사. 확인: `DialogueGraphTest.RejectsDanglingLink`.
-- **S-13 접촉 추적기: 같은 스텝 간격 안에서 바디를 껐다 켜면 그 쌍을 영영 잃는다** (결함 — 잠재, 지금 호출자 없음) — `Source/Engine/Physics/Collision/PhysicsContact.h:124-144`. 제안: 상태를 열거형 `Active · EndPending · Fresh` 로. 확인: `PhysicsContactTrackerTest.ReenabledBodyGetsEndThenBegin`.
 - **S-14 컴파일한 액션 · 조건식이 등록 엔트리를 원시 포인터로 든다** (구조 — 추정) — `Source/Engine/Behavior/ActionRegistry.cpp:181-189`. "핫 리로드 뒤에는 다시 컴파일" 이 주석 규칙뿐이다. 상용: 언리얼은 핫 리로드 때 `UFunction` 을 재바인딩. 제안: 등록표에 세대를 두고 `invoke` 가 대조. 확인: LiveReload 시나리오에서 리로드 뒤 대화 Action 노드(ASan).
 
 ### 플랫폼 · 입력 · 호스트
 
 - **P-10 창이 배경일 때도 패드 입력이 게임에 들어간다** (구조 · 정책 누락 — 확인) — `Source/Engine/Input/InputManager.cpp:367-378`. XInput 은 전역이라 다른 게임을 패드로 하면 이 게임 캐릭터도 움직인다. 상용: SDL `JOYSTICK_ALLOW_BACKGROUND_EVENTS` 기본 0. 제안: `Config/Engine` 에 `backgroundGamepadInput`(필수 값). 확인: `InputManagerTest.BackgroundPadFollowsPolicy`.
 - **P-11 접근성 단축키 끄기 API 는 호출자가 없고 구현은 사용자가 켠 고정 키까지 끈다** (결함 · 죽은 코드 — 확인) — `Source/Engine/Input/Windows/InputManagerWin32.cpp:558-583`. 상용: 언리얼은 기능이 꺼져 있을 때만 단축키를 끈다. 제안: 포커스 획득 · 유실에 묶고 `…ON` 비트는 건드리지 않거나 지운다. 확인: `InputAccessibilityTest.KeepsEnabledStickyKeys`.
-- **P-12 Win32 창 틀 계산이 DPI 를 모른다** (결함 — 확인, 배율이 다른 모니터에서만) — `Source/Engine/Window/Windows/Win32Window.cpp:119, 274, 417` 의 `AdjustWindowRect`. 상용: `AdjustWindowRectExForDpi`. 제안: 세 곳을 `computeFrameRect( clientSize, dpi )` 하나로. 확인: `WindowTest.ClientSizeMatchesRequest`.
 - **P-13 스플래시 창이 상태를 바꿀 때만 메시지를 처리한다** (결함 · UX — 추정) — `Source/Engine/Window/Windows/Win32SplashWindow.cpp:157-183`. 긴 단계 사이 5 초를 넘으면 "응답 없음" 이다. 상용: 언리얼 `FWindowsSplash` 는 전용 스레드. 제안: `ScopedProgressReport` 간격 콜백이 스플래시를 펌프. 확인: `updateStatus` 사이 최대 간격 측정.
 - **P-14 Windows 서비스가 기동 완료 전에 RUNNING 을 보고한다** (구조 — 확인, 주석에 적힌 한도) — `Source/Server/Windows/WindowsServiceHost.cpp` `serviceMain` 이 `ServerApp::runMain` 앞에서 `SERVICE_RUNNING` 을 올린다. 오케스트레이터가 기동 실패와 정상 기동을 구분하지 못한다. 상용: 서비스는 초기화 끝에 RUNNING 을 보고한다. 제안: `ServerApp` 이 기동 완료 훅을 내고 그때 보고한다(`/readyz` 와 같은 시점). 확인: 설정 오류로 기동한 서비스의 SCM 상태.
 
@@ -802,7 +800,6 @@
 
 ### 에디터
 
-- **E-12 되돌리기 대상의 이름 폴백** (결함 — 잠재) — `Source/Editor/Common/Workspace/Undo/ObjectSnapshot.cpp:97-106` 의 `findObject` 는 id 로 못 찾으면 이름으로 찾아 같은 이름의 다른 오브젝트를 고치거나 지운다. 상용: 언리얼 트랜잭션은 못 찾으면 건너뛴다. 제안: 폴백을 지운다. 확인: `ObjectSnapshotTest.UndoDoesNotTouchSameNamedObject`.
 - **E-13 되돌리기 한도가 개수 상수이고 일부 문서 패널은 되돌리기가 없다** (구조 — 확인, NEXT "표 페이지 Ctrl+Z" 보강) — `CommandStack.cpp:182` 의 128 과 `EditSnapshotHistory.h` 의 64 가 C++ 상수이고 바이트 한도가 없다(8000 개 다중 편집 128 번이면 GB 단위). AudioEvents · InputMap · DataTable 패널은 undo 가 0 건이다. 상용: 언리얼 Undo Buffer Size(MB). 제안: 한도를 `Config/Editor`(개수 + 바이트)로, 세 패널은 P0-1 · P0-2 의 문서 스택을 받는다. 확인: `CommandStackTest.EvictsByByteBudget`.
 - **E-14 미리보기 패널을 닫아도 미리보기 씬 · 렌더 타깃이 남는다** (구조 · 수명 — 확인) — `Source/Editor/Common/GUI/Panel/EditorPreviewPanel.h:136` 의 `onPanelClosed` 는 포커스만 푼다. 일곱 미리보기 창의 씬이 세션 끝까지 남는다. 상용: 언리얼은 에셋 편집기를 닫으면 `FAdvancedPreviewScene` 이 파괴된다. 제안: `IEditorPanel` 계약을 "열 때 비동기 준비 · 닫을 때 해제" 한 쌍으로(NEXT "첫 패널의 느린 프레임" 과 같은 축). 확인: 닫은 뒤 미리보기 씬 수 0.
 - **E-15 외부 프로세스: 패키징 출력은 끝나야 보이고 넷플레이 자식은 에디터가 죽으면 고아가 된다** (구조 — 확인) — `Source/Editor/Panels/Packaging/Model/PackagingModel.cpp:150-156`(줄이 종료 때 한 번에 온다, 오류 판정이 `"error"` 부분 문자열), `Source/Core/Process/Windows/WindowsProcess.cpp:251`(잡 오브젝트에 `KILL_ON_JOB_CLOSE` 없음). 상용: 언리얼 UAT 는 줄 단위로 흘린다. 제안: `takeLines` + `ProcessOptions` 의 "부모와 함께 종료" 칸(Windows 잡, Linux `PR_SET_PDEATHSIG`). 확인: 시나리오 `packaging` 에 "Running 동안 줄 수 > 0".
