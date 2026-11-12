@@ -34,6 +34,9 @@ kBareInclude = re.compile(r'^(\s*#\s*include\s*")([^"/]+)(")', re.M)
 
 # 규칙 문서는 "쓰지 말 것" 예로 옛 이름을 일부러 든다 — 이름 바꾸기가 그 예까지 바꾸면 규칙이 거꾸로 된다.
 kNeverRewrite = ("docs/agents/", "docs/04_CodingGuidelines.md")
+# 이름 바꾸기만 건너뛰는 곳: 린트 규칙 모듈의 자체 시험과 금지 · 옛 이름 표는 옛 이름을 일부러 적는다 — 금지 명사 이전(1692df1e3a)이 NamingWords 자체 시험의
+# `hasPendingWork` 를 `hasPendingJobs` 로, For · Of 이전(c4746a87ed)이 `materialGroupFor` 를 바꿔 자체 시험이 늘 졌다. 파일 옮기기(경로 표)는 그대로 고친다.
+kNeverRename = ("Scripts/lint/", "Config/Rules/Lint/")
 
 # C 계열 소스의 주석 · 문자열 · 문자 리터럴. rename-symbol 은 문자열 안을 기본으로 건너뛴다 — 문자열은 파일 매직("OggS") · JSON 키 · 내보내기
 # 기호 · 데이터 이름처럼 바깥이 정한 철자가 많아, 약어 일괄 변경(1dafbae0c9)이 그 안까지 바꿔 .ogg 디코드 · 구매 응답 · 머티리얼 깃발을 깨뜨렸다.
@@ -80,6 +83,11 @@ def listTrackedText(root: Path) -> list[Path]:
         raise RuntimeError(f"git ls-files 실패: {result.stderr.strip()}")
     return [root / line for line in result.stdout.splitlines()
             if Path(line).suffix.lower() in kTextSuffix and not line.startswith(kNeverRewrite) and (root / line).is_file()]
+
+
+def listRenameFiles(root: Path) -> list[Path]:
+    """이름 바꾸기가 고칠 파일 — `kNeverRename`(린트 자체 시험 · 금지 이름 표) 밖."""
+    return [path for path in listTrackedText(root) if not path.relative_to(root).as_posix().startswith(kNeverRename)]
 
 
 def readText(path: Path) -> str:
@@ -280,7 +288,7 @@ def mainRename(argv: list[str]) -> int:
 
         changedCount = 0
         listChanged: list[Path] = []
-        for path in listTrackedText(root):
+        for path in listRenameFiles(root):
             text = readText(path)
             rewritten = rewriteFile(path, text, rewriteRegex)
             if rewritten != text:
@@ -291,7 +299,7 @@ def mainRename(argv: list[str]) -> int:
         print(f"[rename-symbol] {changedCount} 파일" + (" (dry-run)" if args.dry_run else ""))
         reportSkipped()
         return ExitCode.Passed if args.dry_run else formatChanged(root, listChanged)
-    listFile = [path for path in listTrackedText(root) if path.suffix.lower() in kCppSuffix | {".xxx", ".natvis", ".txt", ".cmake"}]
+    listFile = [path for path in listRenameFiles(root) if path.suffix.lower() in kCppSuffix | {".xxx", ".natvis", ".txt", ".cmake"}]
     mapText = {path: readText(path) for path in listFile}
     bClash = False
     for old, new in listPair:

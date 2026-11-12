@@ -6,15 +6,15 @@ Scripts/lint/NamingWords.py
 이름이 업계 용어(언리얼 · 유니티 · Godot · 일반 프로그래밍)를 쓰는지 표(`Config/Rules/Lint/NamingWords.json`)와 대조한다.
 
 **왜 린트인가.** 이름이 업계 용어인지는 형식이 말할 수 없다. 표 없이 눈에 띈 이름만 고치면 `drain` · `Since` 처럼 같은 일에 새 낱말이
-계속 들어온다(2026-11-07). 예전 검사는 함수 첫 단어와 형식 끝 단어만 봐서, 이름 가운데의 금지어(`hasPendingJobs` · `XMLFields::readProperties`)와
-3인칭 문장형 술어(`shouldDrawBatchInPass`) · 동사 없는 게터(`findOrAddMaterialGroup`)가 그대로 통과했다(2026-11-12 Source 전체 점검 약 470 건).
+계속 들어온다(2026-11-07). 예전 검사는 함수 첫 단어와 형식 끝 단어만 봐서, 이름 가운데의 금지어(`hasPendingWork` · `XMLFields::readProperties`)와
+3인칭 문장형 술어(`shouldDrawBatchInPass`) · 동사 없는 게터(`materialGroupFor`)가 그대로 통과했다(2026-11-12 Source 전체 점검 약 470 건).
 
 규칙:
 - function · suffix — 함수 첫 단어는 `_functionWords`, 형식 끝 단어는 `_typeSuffixes` 에 있어야 한다.
 - verb — 함수 첫 단어가 금지 동사(`_banned`)면 허용 표에 있어도 실패한다(예전에는 허용 표에 없을 때 안내로만 썼다).
 - term — 금지 명사(`_bannedTerms`)는 모든 식별자(함수 · 형식 · 멤버 · 지역)의 **모든 단어**에서 본다. 표준 합성어(`WorkArea` — Win32 `SPI_GETWORKAREA`)는 `_keepTerms`.
 - predicate — `bool` 을 돌려주는 함수의 첫 단어가 3인칭 동사(끝이 s)면 `_predicateWords`(언리얼 `Is · Has · Can · Should · Uses · Needs · Requires · Supports …`)여야 한다.
-- lookup — 끝 단어가 `For` · `Of` 인 함수는 조회 동사(`_lookupWords` — get · find · compute …)로 시작해야 한다(`findOrAddMaterialGroup` 는 "찾거나 만든다" 를 숨겼다).
+- lookup — 끝 단어가 `For` · `Of` 인 함수는 조회 동사(`_lookupWords` — get · find · compute …)로 시작해야 한다(`materialGroupFor` 는 "찾거나 만든다" 를 숨겼다).
 - 이름 하나씩의 예외는 `_keep`, 전수 개명한 옛 이름은 `_bannedNames`(주석 · 문자열 밖 코드만 본다).
 
 verb · term · predicate · lookup 은 기준선(`Config/Rules/Lint/NamingBaseline.json`)을 둔다 — 지금 있는 이름만 적혀 있고 **줄기만 한다**:
@@ -205,16 +205,16 @@ def runSelfCheck() -> None:
     clean = 'struct FooComponent {}; int getValue( int x ); struct MailboxServiceResult {}; // drainEvents() hasWork\nconst char* s = "drainEvents() Verdict"; bool hasValue(); bool setAxisTags(); bool focusPanel(); bool startsWith(); RECT readWorkArea; int getSlotFor( int x );'
     problems, ratchet = classifyNames([("a.h", clean)], table)
     assert problems == [] and all(not names for names in ratchet.values()), (problems, ratchet)
-    bad = 'void drainEvents( int x ); struct FooVerdict {}; bool hasPendingJobs(); bool drawsBatch(); int findOrAddMaterialGroup( int x ); int _verdictCount;'
+    bad = 'void drainEvents( int x ); struct FooVerdict {}; bool hasPendingWork(); bool drawsBatch(); int materialGroupFor( int x ); int _verdictCount;'
     problems, ratchet = classifyNames([("a.h", bad)], table)
     assert len(problems) == 1 and "'Verdict'" in problems[0], problems   # 형식 끝 단어 Verdict 는 표에 없다
     assert set(ratchet["verb"]) == {"drainEvents"}, ratchet
-    assert set(ratchet["term"]) == {"FooVerdict", "hasPendingJobs", "_verdictCount"}, ratchet
+    assert set(ratchet["term"]) == {"FooVerdict", "hasPendingWork", "_verdictCount"}, ratchet
     assert set(ratchet["predicate"]) == {"drawsBatch"}, ratchet
-    assert set(ratchet["lookup"]) == {"findOrAddMaterialGroup"}, ratchet
-    baseline = {"verb": ["drainEvents"], "term": ["FooVerdict", "hasPendingJobs", "_verdictCount", "goneName"], "predicate": ["drawsBatch"], "lookup": []}
+    assert set(ratchet["lookup"]) == {"materialGroupFor"}, ratchet
+    baseline = {"verb": ["drainEvents"], "term": ["FooVerdict", "hasPendingWork", "_verdictCount", "goneName"], "predicate": ["drawsBatch"], "lookup": []}
     ratchetProblems = compareBaseline(ratchet, baseline)
-    assert any("findOrAddMaterialGroup" in line for line in ratchetProblems), ratchetProblems   # 기준선에 없는 새 위반
+    assert any("materialGroupFor" in line for line in ratchetProblems), ratchetProblems   # 기준선에 없는 새 위반
     assert any("goneName" in line for line in ratchetProblems), ratchetProblems   # 고쳐 사라진 이름은 빼라고 한다
     assert len(ratchetProblems) == 2, ratchetProblems
     tableNames = dict(table, _bannedNames={"CombatHealth": "HealthStateMachine"})

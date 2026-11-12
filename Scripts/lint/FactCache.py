@@ -8,7 +8,7 @@ Scripts/lint/FactCache.py
 언리얼 UBT 의 makefile 캐시(바뀐 것만 다시 훑는다)와 같은 방식이다.
 
 - 키는 git 이 이미 아는 해시다: 작업 트리가 인덱스와 같은 파일은 인덱스 블롭 id(`git ls-files -s`), 다른 파일 · 새 파일만 읽어 sha1 을 낸다.
-- 규칙 모듈 · 뽑기가 읽는 표 · 이 파일이 바뀌면(뽑는 법이 바뀌었다) 캐시를 통째로 버린다 — 판 번호를 손으로 올리지 않는다.
+- 규칙 모듈과 그것이 import 하는 모듈 · 뽑기가 읽는 표 · 이 파일이 바뀌면(뽑는 법이 바뀌었다) 캐시를 통째로 버린다 — 판 번호를 손으로 올리지 않는다.
 - 캐시는 파생물이다. 없거나 깨지면 처음부터 다시 뽑는다(정답은 늘 소스다).
 """
 
@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 
 from lint.LintScope import runGitLines
+from lint.Rules import kScriptsDir, listImportedModuleFiles
 
 kCacheFolder = "Saved/Lint"
 
@@ -60,9 +61,18 @@ def readWorkingTree(projectRoot: Path, listRelative: list[str], errors: str) -> 
 
 
 def computeVersion(listVersionFile: Iterable[str]) -> str:
+    """뽑는 법을 정하는 파일들의 해시 — Scripts 의 모듈은 그것이 import 하는 모듈까지 넣는다(도우미 모듈이 바뀌어도 다시 뽑는다)."""
+    setPath: set[Path] = {Path(__file__).resolve()}
+    for file in listVersionFile:
+        path = Path(file).resolve()
+        if path.suffix == ".py" and kScriptsDir in path.parents:
+            moduleName = path.relative_to(kScriptsDir).with_suffix("").as_posix().replace("/", ".")
+            setPath.update(kScriptsDir.parent / relative for relative in listImportedModuleFiles(moduleName))
+        else:
+            setPath.add(path)
     digest = hashlib.sha1()
-    for file in (*listVersionFile, __file__):
-        digest.update(Path(file).read_bytes())
+    for path in sorted(setPath):
+        digest.update(path.read_bytes())
     return digest.hexdigest()
 
 

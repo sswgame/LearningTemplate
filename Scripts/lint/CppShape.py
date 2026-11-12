@@ -509,11 +509,11 @@ def checkStaticOwner(code: str, relative: str, exceptions: dict[str, str]) -> li
             continue
         counts: dict[str, int] = {}
         for signature in statics:
-            for owner in set(re.findall(r"\b([A-Z]\w*)\b", signature)) & owners - {name}:
+            for owner in sorted(set(re.findall(r"\b([A-Z]\w*)\b", signature)) & owners - {name}):
                 counts[owner] = counts.get(owner, 0) + 1
         if not counts:
             continue
-        owner, count = max(counts.items(), key=lambda item: item[1])
+        owner, count = max(sorted(counts.items()), key=lambda item: item[1])   # 같은 수면 이름 순 첫 것 — 집합 순서(해시)로 메시지가 실행마다 바뀌었다
         if count * 2 >= len(statics):
             problems.append((line, f"`{name}` 는 static 함수만 들고 그 함수 대부분({count}/{len(statics)})이 같은 헤더의 `{owner}` 를 다룬다 — `{owner}` 의 (static) 멤버로 합친다"
                                    f"(Helpers.md 주인 우선). 주인이 정말 없으면 {kExceptionsPath} 의 staticOwner 에 까닭과 함께 적는다"))

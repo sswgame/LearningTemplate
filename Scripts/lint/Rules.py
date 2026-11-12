@@ -26,10 +26,36 @@ Scripts/lint/Rules.py
 
 from __future__ import annotations
 
+import ast
+import functools
 from dataclasses import dataclass
+from pathlib import Path
 
 kLayerTables = ("Config/Rules/Layers/",)
-kSharedInputs = ("Scripts/lint/LintScope.py", "Scripts/lint/FactCache.py")   # 모든 규칙이 고르기 · 색인을 이 둘로 한다
+kScriptsDir = Path(__file__).resolve().parents[1]
+
+
+@functools.cache
+def listImportedModuleFiles(moduleName: str) -> tuple[str, ...]:
+    """`moduleName`(`lint.CppShape`)과 그것이 거쳐서라도 import 하는 Scripts 안 모듈의 파일(저장소 기준) — 손으로 적은 의존 목록은 낡는다."""
+    setSeen: set[str] = set()
+    listPending = [moduleName]
+    while listPending:
+        name = listPending.pop()
+        base = kScriptsDir / name.replace(".", "/")
+        path = base.with_suffix(".py") if base.with_suffix(".py").is_file() else base / "__init__.py"
+        if name in setSeen or not path.is_file():
+            continue   # 표준 · 외부 모듈
+        setSeen.add(name)
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+                listPending.append(node.module)
+                listPending.extend(f"{node.module}.{alias.name}" for alias in node.names)   # `from common import Paths` 의 하위 모듈
+            elif isinstance(node, ast.Import):
+                listPending.extend(alias.name for alias in node.names)
+    return tuple(sorted(path.relative_to(kScriptsDir.parent).as_posix()
+                        for name in setSeen
+                        for path in (kScriptsDir / (name.replace(".", "/") + ".py"), kScriptsDir / name.replace(".", "/") / "__init__.py") if path.is_file()))
 
 
 @dataclass(frozen=True)
@@ -46,8 +72,8 @@ class Rule:
         return self.check.partition(":")[0]
 
     def listInputs(self) -> list[str]:
-        """스테이지에 있으면 이 규칙을 저장소 전체로 돌릴 파일 · 폴더 — 규칙 모듈, 고르기 · 색인 모듈, 예외 파일, 입력 표."""
-        listInput = ["Scripts/" + self.getModuleName().replace(".", "/") + ".py", *kSharedInputs, *self.inputs]
+        """스테이지에 있으면 이 규칙을 저장소 전체로 돌릴 파일 · 폴더 — 규칙 모듈과 그것이 import 하는 모듈(고르기 · 색인 · 다른 규칙 모듈), 예외 파일, 입력 표."""
+        listInput = [*listImportedModuleFiles(self.getModuleName()), *self.inputs]
         if self.exceptions:
             listInput.append(self.exceptions.split()[0])
         return listInput

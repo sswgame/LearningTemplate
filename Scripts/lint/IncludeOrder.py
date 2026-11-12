@@ -32,8 +32,8 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 from common.ExitCode import ExitCode  # noqa: E402
 from common.FileCollect import collectRepositoryFiles, resolveFileArguments  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from common.ProjectConstants import kCppAllExtensions, kCppSourceExtensions, kLintTargetBaseDirNames, kLintTargetRelDirs, kNotOurDirNames  # noqa: E402
-from lint.LintScope import LintScope  # noqa: E402
+from common.ProjectConstants import kCppAllExtensions, kCppSourceExtensions, kGeneratedRelDirs, kLintTargetBaseDirNames, kLintTargetRelDirs, kNotOurDirNames  # noqa: E402
+from lint.LintScope import LintScope, listRepoFiles  # noqa: E402
 from lint.Parallel import flatMapInProcesses  # noqa: E402
 
 kCheckTag = "CheckIncludeOrder"
@@ -45,19 +45,22 @@ def buildHeaderLookupInternal(repositoryRoot: Path, baseName: str) -> dict[str, 
     """
     `baseName`(Source · Test · Tools) 아래 헤더를 이름 · 소문자 상대 경로로 찾는 표입니다. 이름이 겹치는 헤더(pch.h 등)는 모호하므로 뺍니다.
 
-    내려받은 외부 도구(`Tools/vcpkg` · `Tools/LLVM` …)로는 내려가지 않습니다(`collectRepositoryFiles`) — `glob("**/*.h")` 로 걸으면
-    표 대부분이 vcpkg 헤더가 되고 파일 셋만 검사해도 표를 짓느라 1 초를 넘깁니다. 이 표는 따옴표 include 의
+    폴더를 걷지 않고 git 이 아는 파일 목록(`LintScope.listRepoFiles`, 한 번 읽어 모든 규칙이 함께 쓴다)에서 고른다 — 커밋 훅이 파일 셋만 볼 때도
+    저장소를 걷지 않는다. 내려받은 외부 도구 · 생성물 폴더는 뺀다(`collectRepositoryFiles` 와 같은 규칙). 이 표는 따옴표 include 의
     경로 복원에만 쓰이고 외부 헤더는 꺾쇠로 include 하므로 결과는 같습니다.
     """
-    baseDir = repositoryRoot / baseName
+    head = baseName + "/"
     lookupMap: dict[str, str] = {}
     nameCounts: dict[str, int] = {}
-    for headerPath in collectRepositoryFiles(repositoryRoot, (baseName,), suffixes=(".h",)):
-        rel = headerPath.relative_to(baseDir).as_posix()
-        nameCounts[headerPath.name] = nameCounts.get(headerPath.name, 0) + 1
-        lookupMap[headerPath.name] = rel
+    for path in listRepoFiles(repositoryRoot.resolve()):
+        if not path.startswith(head) or not path.lower().endswith(".h") or any(part in kNotOurDirNames for part in path.split("/")[:-1])                 or any(path.startswith(generated + "/") for generated in kGeneratedRelDirs):
+            continue
+        rel = path[len(head):]
+        name = rel.rpartition("/")[2]
+        nameCounts[name] = nameCounts.get(name, 0) + 1
+        lookupMap[name] = rel
         lookupMap[rel.lower()] = rel
-        lookupMap[headerPath.name.lower()] = rel
+        lookupMap[name.lower()] = rel
     # Remove ambiguous duplicates (like pch.h)
     return {k: v for k, v in lookupMap.items() if not (k in nameCounts and nameCounts[k] > 1)}
 

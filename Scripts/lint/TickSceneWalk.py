@@ -133,7 +133,7 @@ def findWalkingTicksInBodies(listBody: list[FunctionBody]) -> dict[str, str]:
         for body in listBody:
             if body.key in reason:
                 continue
-            for callee in graph[id(body)]:
+            for callee in sorted(graph[id(body)]):   # 근거 줄이 집합 순서(해시)로 실행마다 바뀌지 않게
                 if callee in reason:
                     reason[body.key] = f"{callee} → {reason[callee]}"
                     bChanged = True

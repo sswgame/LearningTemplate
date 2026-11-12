@@ -186,11 +186,11 @@ def findProblems(mapHeader: dict[str, str], mapSource: dict[str, str], config: d
 
 
 def readTexts(projectRoot: Path, scope: LintScope) -> tuple[dict[str, str], dict[str, str]]:
-    """scope 의 파일이 있는 폴더의 헤더 · 본문 — 헤더 칸의 판정은 같은 폴더의 생성자 초기값까지만 본다(`findProblems`)."""
+    """scope 의 파일이 있던 폴더(지운 파일 포함 — .cpp 를 지우면 헤더 칸의 생성자 초기값이 사라진다)의 헤더 · 본문. 헤더 칸의 판정은 같은 폴더까지만 본다(`findProblems`)."""
     def isTarget(path: str) -> bool:
         return path.startswith("Source/") and path.endswith((".h", ".cpp", ".inl")) and "Tests" not in path.split("/") and not path.endswith(".generated.h")
 
-    setFolder = {path.rpartition("/")[0] for path in scope.listFile if isTarget(path)}
+    setFolder = {path.rpartition("/")[0] for path in (*scope.listFile, *scope.listRemoved) if isTarget(path)}
     mapHeader: dict[str, str] = {}
     mapSource: dict[str, str] = {}
     for relative, text in readSourceTexts(projectRoot, [path for path in listRepoFiles(projectRoot) if isTarget(path) and path.rpartition("/")[0] in setFolder]):
