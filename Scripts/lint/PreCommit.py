@@ -25,14 +25,22 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common.ProjectConstants import kCppAllExtensions, kShaderSourceExtensions  # noqa: E402
+from common.ProjectConstants import kCppAllExtensions, kLintTargetRelDirs, kNotOurDirNames, kShaderSourceExtensions  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from lint.Format import runClangFormatBatch  # noqa: E402
 from lint.LintScope import LintScope, makeStagedScope, makeWholeScope  # noqa: E402
 from lint.Rules import Rule, formatTable, kRuleById, kRules  # noqa: E402
 
-kFormatSuffixes = tuple(sorted(kCppAllExtensions | kShaderSourceExtensions))
+kCppSuffixes = tuple(sorted(kCppAllExtensions))
+kShaderSuffixes = tuple(sorted(kShaderSourceExtensions))
+
+
+def selectFormatFiles(scope: LintScope) -> list[str]:
+    """clang-format 이 볼 파일 — `format --all` 과 같은 대상(C++ 은 `kLintTargetRelDirs`, 셰이더는 남의 코드 · 산출물 폴더 밖). 받아 온 남의 헤더는 고치지 않는다."""
+    listCpp = scope.select(kLintTargetRelDirs, kCppSuffixes)
+    listShader = [path for path in scope.select(suffixes=kShaderSuffixes) if not any(part in kNotOurDirNames for part in path.split("/")[:-1])]
+    return listCpp + listShader
 
 
 def runRule(rule: Rule, projectRoot: Path, scope: LintScope) -> list[str]:
@@ -64,7 +72,7 @@ def runLint(projectRoot: Path, scope: LintScope) -> int:
             for line in listProblem:
                 print(f"  - {line}")
 
-    listFormat = [projectRoot / path for path in scope.select(suffixes=kFormatSuffixes)]
+    listFormat = [projectRoot / path for path in selectFormatFiles(scope)]
     if listFormat and runClangFormatBatch(listFormat, checkOnly=True, cwd=projectRoot) != 0:
         hasErrors = True
         print("[format] FAIL — 'py -3 -m Scripts format' 으로 고친 뒤 다시 git add 한다.")
