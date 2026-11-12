@@ -1,6 +1,6 @@
 ---
 name: linux-verify
-description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에서 시나리오 체인(Vulkan dzn · GL d3d12, --gpu software 는 lavapipe · llvmpipe), .linux 골든 기록과 비교, Linux Debug 단위 테스트. Linux · WSL · Xvfb · lavapipe · llvmpipe · .linux 골든 · Linux 시나리오 · X11 코드를 다룰 때, 또는 묶음 끝 Linux 검증을 할 때 쓴다."
+description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에서 시나리오 체인(Vulkan dzn · GL d3d12, --gpu software 는 lavapipe · llvmpipe), .linux 골든 기록과 비교, Linux Release 단위 · 서버 Debug 단위 테스트. Linux · WSL · Xvfb · lavapipe · llvmpipe · .linux 골든 · Linux 시나리오 · X11 코드를 다룰 때, 또는 묶음 끝 Linux 검증을 할 때 쓴다."
 ---
 
 # linux-verify
@@ -12,7 +12,7 @@ description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에�
 평소에는 `bundle-verify` 의 한 명령이 Windows 가 모두 통과한 뒤 Linux 를 돌린다. Windows 가 지면 Linux 를 돌리지 않는다(사용자 결정). 아래는 Linux 결함만 따로 고칠 때다.
 
 1. 처음 한 번: `setup`(Xvfb · 글꼴을 sudo 없이 `~/lt-deps` 에 푼다). 클론과 `build/Linux-Debug`(컴파일러 캐시) · `build/Linux-Server` 구성은 아래 "클론 환경" 을 따른다.
-2. `all`: HEAD 로 Release 빌드 → 단위 · 서버 → 모든 체인(4 개씩 동시). 끝 줄 `LINUX_OK=<sha>`. 앞이 지면 긴 체인을 돌리지 않는다.
+2. `all`: HEAD 로 Release 빌드 → (Release 단위 ‖ 서버 Debug 빌드 → 기동 → 단위 — 시간을 판정하지 않는 CPU 일끼리 겹친다) → 모든 체인(Release · Vulkan, 4 개씩 동시 — 체인은 혼자 돈다). 끝 줄 `LINUX_OK=<sha>`. 앞이 지면 긴 체인을 돌리지 않는다. 체인 · 골든의 정본은 Release 하나이고 Debug 클라이언트는 짓지 않는다 — Debug 단언은 Windows 의 Debug 체인(시나리오마다 백엔드 하나)과 `sanitize`(Debug)가 본다.
 3. 영향 범위만: `build` → `chain <이름…>`(또는 `stages`).
 4. 새니타이저(감사 P-8): 묶음마다 `sanitize`(ASan + UBSan, `Linux-Debug-ASan`) 한 번, 경쟁을 다룬 묶음 뒤에는 `sanitize thread`(TSan — `x64-linux-tsan` 트리플릿을 따로 깐다). 끝 줄 `SANITIZE_OK=<종류>`. 누수는 기준선을 만들기 전까지 끈다(`detect_leaks=0`).
 5. 골든을 새로 뜰 때: `chain --record <이름…>` → `goldens`(본 저장소로 복사, 한 색 사진 경고) → 표본을 눈으로 본다 → 커밋 → `--record` 없이 다시 `chain`.

@@ -14,7 +14,7 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
   report [체인]          마지막 체인 로그에서 진 단계와 까닭을 다시 낸다
   goldens                클론의 .linux 골든을 본 저장소로 복사하고 한 색인 사진을 알린다
   stop                   돌고 있는 실행을 끝낸다(체인 · 게임 · Xvfb). 게임 프로세스는 이름이 GameThread 로 바뀌어 있다
-  all [--record]         build → 모든 체인(병렬) · Release 단위 · 서버 빌드 · 단위. 끝 줄 LINUX_OK=<sha> 가 나와야 그 커밋을 push 한다
+  all [--record]         build → (Release 단위 ‖ 서버 빌드 · 기동 · 단위) → 모든 체인(병렬, Release · Vulkan). 끝 줄 LINUX_OK=<sha> 가 나와야 그 커밋을 push 한다
   sanitize [address|thread]  새니타이저 Debug(프리셋 Linux-Debug-ASan · Linux-Debug-TSan)로 App 을 짓고 단위 테스트를 돈다. 끝 줄 SANITIZE_OK=<종류>
 """
 import concurrent.futures
@@ -390,6 +390,18 @@ def goldens():
     return 0
 
 
+def run_lane(steps):
+    """(제목, 셸 명령) 묶음을 차례로 돌리고 첫 실패 코드를 돌려준다(뒤 단계는 앞 단계를 기다린다 — 서버 기동은 서버 빌드 뒤다). 출력은 단계마다 한 덩어리로 찍는다."""
+    for title, command in steps:
+        result = shell(command, capture_output=True, text=True)
+        print(f'{title} {result.returncode}', flush=True)
+        if result.stdout.strip():
+            print(result.stdout.rstrip(), flush=True)
+        if result.returncode != 0:
+            return result.returncode
+    return 0
+
+
 def verify_all(arguments):
     """묶음 끝 Linux 검증 한 번. Debug 클라이언트는 짓지 않는다 - Release 단위가 키트까지 덮고 단언은 Windows Debug 가 본다. 서버 구성은 렌더러를 빼 여기서만 드러나는 층 위반이 있어 남긴다."""
     code = build()
@@ -397,15 +409,17 @@ def verify_all(arguments):
         return code
     head = shell(f'git -C {CLONE} rev-parse HEAD', capture_output=True, text=True).stdout.strip()
     server_dir = f'{CLONE}/build/Linux-Server'
-    steps = [('Release 단위', f'cd {RELEASE} && ./Bin/App --test -unattended > /tmp/lt.unit.log 2>&1; rc=$?; grep -E "case run|FAILED" /tmp/lt.unit.log | tail -n 5 | cut -c1-160; exit $rc'),
-             ('서버 빌드', f'cmake --build {server_dir} -j8 > /tmp/srv.build.log 2>&1; rc=$?; grep -E "error:|FAILED:|undefined reference" /tmp/srv.build.log | head -n 20 | cut -c1-220; exit $rc'),
-             ('서버 기동', f'cd {server_dir} && timeout 120 ./Bin/Server -gv_serverExitAfterTicks=60 > /tmp/srv.run.log 2>&1'),
-             ('서버 단위', f'cd {server_dir} && timeout 400 ./Bin/Server --test > /tmp/srv.unit.log 2>&1; rc=$?; grep -E "case run|NO TESTS" /tmp/srv.unit.log | cut -c1-140; exit $rc')]
-    for title, command in steps:
-        rc = shell(command).returncode
-        print(title, rc, flush=True)
-        if rc != 0:
-            return rc
+    # 시간을 판정하지 않는 CPU 일 두 갈래를 겹친다(Release 단위 ‖ 서버 빌드 → 기동 → 단위) — 묶음 검증(VerifyBundle.sh 의 cpu 단계)과 같은 원칙이다.
+    # 체인(시간 · 그림 판정)은 이것들이 끝난 뒤 혼자 돈다.
+    lanes = [[('Release 단위', f'cd {RELEASE} && ./Bin/App --test -unattended > /tmp/lt.unit.log 2>&1; rc=$?; grep -E "case run|FAILED" /tmp/lt.unit.log | tail -n 5 | cut -c1-160; exit $rc')],
+             [('서버 빌드', f'cmake --build {server_dir} -j8 > /tmp/srv.build.log 2>&1; rc=$?; grep -E "error:|FAILED:|undefined reference" /tmp/srv.build.log | head -n 20 | cut -c1-220; exit $rc'),
+              ('서버 기동', f'cd {server_dir} && timeout 120 ./Bin/Server -gv_serverExitAfterTicks=60 > /tmp/srv.run.log 2>&1'),
+              ('서버 단위', f'cd {server_dir} && timeout 400 ./Bin/Server --test > /tmp/srv.unit.log 2>&1; rc=$?; grep -E "case run|NO TESTS" /tmp/srv.unit.log | cut -c1-140; exit $rc')]]
+    with concurrent.futures.ThreadPoolExecutor(len(lanes)) as pool:
+        listCode = list(pool.map(run_lane, lanes))
+    code = next((rc for rc in listCode if rc != 0), 0)
+    if code != 0:
+        return code
     # 빠른 실패: 단위 · 서버가 지면 긴 체인을 돌리지 않는다.
     code = chain(arguments + ALL_CHAINS)
     if code != 0:
