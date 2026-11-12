@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from package.WebCheck import RunReport, judgeRun, kProbePath, writeCheckPage  # noqa: E402
+from package.WebCheck import RunReport, judgeRun, kAudioStartedLine, kProbePath, writeCheckPage  # noqa: E402
 from package.WebPackage import IsolatedRequestHandler, WebPackageError, kIndexHtml, kPackLoaderName, makeWebPackage  # noqa: E402
 
 kProjectRoot = Path(__file__).resolve().parents[3]
@@ -57,13 +57,16 @@ class WebPackageTest(unittest.TestCase):
         self.assertIn(kProbePath, page)
 
     def testJudgeCountsErrorsAndMissingReports(self) -> None:
-        report = RunReport(listLine=["O booted"], gpu="yes")
+        report = RunReport(listLine=["O booted", kAudioStartedLine], gpu="yes")
         report.done.set()
         self.assertEqual([], judgeRun("run1", report))
         report.listLine.append("E WebGPU: device lost")
         report.exit = "abort oom"
         self.assertEqual(2, len(judgeRun("run1", report)))
-        self.assertEqual(2, len(judgeRun("run2", RunReport())))  # 끝나지 않았다 + GPU 보고 없음
+        self.assertEqual(3, len(judgeRun("run2", RunReport())))  # 끝나지 않았다 + GPU 보고 없음 + 오디오 시작 줄 없음
+        silent = RunReport(listLine=["O booted"], gpu="yes")
+        silent.done.set()
+        self.assertEqual(1, len(judgeRun("run3", silent)))  # 워클릿이 링을 당기지 않으면 진다
 
 
 if __name__ == "__main__":
