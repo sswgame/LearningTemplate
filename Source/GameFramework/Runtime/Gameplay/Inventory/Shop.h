@@ -335,7 +335,8 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        ShopState*                    findRuntime( const hashed_string& shopID );
+        /** @brief 쓰기용 상태입니다. 공개 `findRuntime` 과 이름을 나눈다 — 같은 이름의 private 비 const 판은 비 const 객체에서 부른 공개 호출을 가로채 clang 이 접근 오류를 냈다. */
+        ShopState*                    findRuntimeMutable( const hashed_string& shopID );
         [[nodiscard]] optional<int32> findStockIndex( const ShopDef& shop, const hashed_string& itemID ) const;
         /** @brief 꺼낸 조각의 값을 치르고 되사기 목록 · 시세 · 이벤트를 남깁니다. 두 `sell` 의 뒷부분입니다. */
         void  settleSale( const hashed_string& shopID, const hashed_string& itemID, int32 count, int64 total, vector<InventorySlot>&& listPiece, Wallet& wallet, int64* pOutReceived );

@@ -207,7 +207,7 @@ SW_TEST_CASE( ShopTest, BuyBackReturnsWornItemWithSameDurability )
     const sw::optional<int32> returnedSlot = inventory.findFirstSlot( kSword );
     SW_REQUIRE_TRUE( returnedSlot.has_value() );
     SW_EXPECT_EQUAL( 40.0f, inventory.getSlot( returnedSlot.value() )._durability );
-    SW_EXPECT_TRUE( std::as_const( restored ).findRuntime( kSmith )->_listBuyback.empty() ); // 공개 판은 const 다(비 const 판은 private)
+    SW_EXPECT_TRUE( restored.findRuntime( kSmith )->_listBuyback.empty() );
 }
 
 /**
