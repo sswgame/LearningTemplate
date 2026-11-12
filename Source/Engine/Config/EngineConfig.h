@@ -116,7 +116,7 @@ namespace sw
          * @brief 디코드한 클립 캐시(`AudioClipCache`)의 예산(MB)입니다. 넘으면 재생 중이 아닌 클립을 가장 오래 안 쓴 것부터 뺀다.
          * @details 메모리 태그 예산(`MemoryBudget.json` 의 Audio)보다 작게 둔다 — 그 나머지가 스트리밍 디코더 · 믹서 몫이다. 언리얼 `Max Cache Size` · 유니티 `UnloadUnusedAssets` 자리다.
          */
-        PROPERTY( Min = 1, Units = MB )
+        PROPERTY( Min = 1, Meta = "Units=MB" )
         uint32 _clipCacheMegabytes{};
     };
 } // namespace sw
