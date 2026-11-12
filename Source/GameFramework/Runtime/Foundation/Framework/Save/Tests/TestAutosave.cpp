@@ -18,14 +18,18 @@ namespace
      */
     struct FakeGame
     {
-        sw::vector<sw::string> _listSavedState{};
-        sw::string             _loadedState{};
-        sw::SaveGate           _saveGate{};
-        sw::Subscription       _brokenRestoreBlock{};
-        uint8                  _bBreakRestore : 1;
+        sw::vector<sw::string>                        _listSavedState{};
+        sw::string                                    _loadedState{};
+        sw::SaveGate                                  _saveGate{};
+        sw::Subscription                              _brokenRestoreBlock{};
+        sw::vector<uint8>                             _deferredBytes{};
+        sw::AutosaveManager::RestoreCompletedFunction _deferredCompleted{};
+        uint8                                         _bBreakRestore : 1;
+        uint8                                         _bDeferRestore : 1;
 
         FakeGame()
             : _bBreakRestore{ SW_FALSE }
+            , _bDeferRestore{ SW_FALSE }
         {
         }
 
@@ -41,19 +45,39 @@ namespace
                 return true;
             } );
         }
+        /** @brief 바로 적용하고 완료를 안에서 알린다. `_bDeferRestore` 면 씬을 옮기는 게임처럼 바이트와 완료를 들고 있다가 `finishDeferredRestore` 에서 적용한다. */
         sw::AutosaveManager::LoadDelegate makeLoad()
         {
-            return sw::AutosaveManager::LoadDelegate::create( [this]( const sw::vector<uint8>& bytes )
+            return sw::AutosaveManager::LoadDelegate::create( [this]( const sw::string& slot, const sw::vector<uint8>& bytes, const sw::AutosaveManager::RestoreCompletedFunction& onCompleted )
             {
-                if ( _bBreakRestore == SW_TRUE )
+                (void)slot;
+                if ( _bDeferRestore == SW_TRUE )
                 {
-                    _brokenRestoreBlock = _saveGate.block( sw::hashed_string( "restore.broken" ) );
-                    return false;
+                    _deferredBytes     = bytes;
+                    _deferredCompleted = onCompleted;
+                    return true;
                 }
-                _brokenRestoreBlock.reset();
-                _loadedState.assign( bytes.begin(), bytes.end() );
+                onCompleted( apply( bytes ) );
                 return true;
             } );
+        }
+        bool apply( const sw::vector<uint8>& bytes )
+        {
+            if ( _bBreakRestore == SW_TRUE )
+            {
+                _brokenRestoreBlock = _saveGate.block( sw::hashed_string( "restore.broken" ) );
+                return false;
+            }
+            _brokenRestoreBlock.reset();
+            _loadedState.assign( bytes.begin(), bytes.end() );
+            return true;
+        }
+        /** @brief 들고 있던 되살리기를 적용하고(씬이 섰다) 완료를 알립니다. @p bSceneOpened 가 false 면 씬이 열리지 않은 실패다. */
+        void finishDeferredRestore( bool bSceneOpened )
+        {
+            const sw::AutosaveManager::RestoreCompletedFunction onCompleted = _deferredCompleted;
+            _deferredCompleted                                              = sw::AutosaveManager::RestoreCompletedFunction{};
+            onCompleted( bSceneOpened && apply( _deferredBytes ) );
         }
     };
 
@@ -265,5 +289,53 @@ SW_TEST_CASE( AutosaveTest, FailedRestoreBlocksSaving )
     store->update();
     SW_EXPECT_FALSE( manager.isBlocked() );
     step( manager, *store, 0.1f );
+    SW_EXPECT_EQUAL( 2u, manager.getSaveCount() );
+}
+
+/**
+ * @brief [AutosaveTest] 게임이 씬을 옮긴 뒤 적용하는 체크포인트 되돌리기(감사 G-7): 완료 전에는 체크포인트를 지난 것으로 두지 않고 다음 되돌리기를 받지 않는다.
+ *        완료가 성공이면 그 체크포인트에 다시 서도 저장하지 않고, 씬이 열리지 않은 실패면 표시하지 않는다
+ */
+SW_TEST_CASE( AutosaveTest, DeferredRestoreMarksCheckpointOnCompletion )
+{
+    sw::AutosaveSettings settings = makeSettings();
+    settings._minimumGap          = 0.0f;
+    sw::MemoryLocalDatabase            database;
+    sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
+    FakeGame                           game;
+    sw::AutosaveManager                manager;
+    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
+    store->update();
+    manager.reachCheckpoint( sw::hashed_string( "gate" ) );
+    step( manager, *store, 1.0f );
+    const sw::string checkpointState = game._listSavedState.back();
+    manager.reachCheckpoint( sw::hashed_string( "bridge" ) );
+    step( manager, *store, 1.0f );
+    SW_REQUIRE_EQUAL( 2u, manager.getSaveCount() );
+
+    // 씬을 옮기는 중 — 바이트는 받았지만 적용 전이다
+    game._bDeferRestore = SW_TRUE;
+    SW_REQUIRE_TRUE( manager.restoreCheckpoint() );
+    store->update();
+    SW_REQUIRE_TRUE( manager.isRestoring() );
+    SW_EXPECT_EQUAL( sw::hashed_string( "bridge" ), manager.getLastCheckpointID() );
+    SW_EXPECT_FALSE( manager.restoreLatest() ); // 앞 되돌리기가 끝나지 않았다
+
+    // 씬이 열리지 않았다 — 실패, 체크포인트 표시 없음
+    SW_EXPECT_LOG( "Autosave.AutosaveSlotReadBut" );
+    game.finishDeferredRestore( false );
+    SW_EXPECT_FALSE( manager.isRestoring() );
+    SW_EXPECT_EQUAL( sw::hashed_string( "bridge" ), manager.getLastCheckpointID() );
+    SW_EXPECT_TRUE( game._loadedState.empty() );
+
+    // 다시 — 이번에는 씬이 섰다: 적용 뒤 체크포인트를 지난 것으로 둔다
+    SW_REQUIRE_TRUE( manager.restoreCheckpoint() );
+    store->update();
+    game.finishDeferredRestore( true );
+    SW_EXPECT_FALSE( manager.isRestoring() );
+    SW_EXPECT_EQUAL( checkpointState, game._loadedState );
+    SW_EXPECT_EQUAL( sw::hashed_string( "gate" ), manager.getLastCheckpointID() );
+    manager.reachCheckpoint( sw::hashed_string( "gate" ) );
+    step( manager, *store, 1.0f );
     SW_EXPECT_EQUAL( 2u, manager.getSaveCount() );
 }

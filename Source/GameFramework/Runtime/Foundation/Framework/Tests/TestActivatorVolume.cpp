@@ -43,9 +43,11 @@ namespace
                 outBytes.push_back( 1 );
                 return true;
             } ),
-                                                   AutosaveManager::LoadDelegate::create( []( const vector<uint8>& bytes )
+                                                   AutosaveManager::LoadDelegate::create( []( const string& slot, const vector<uint8>& bytes, const AutosaveManager::RestoreCompletedFunction& onCompleted )
             {
+                (void)slot;
                 (void)bytes;
+                onCompleted( true );
                 return true;
             } ) ) );
             _pStore->update();
