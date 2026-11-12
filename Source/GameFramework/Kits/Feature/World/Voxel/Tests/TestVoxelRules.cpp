@@ -452,7 +452,7 @@ SW_TEST_CASE( VoxelBodyTest, OverlapIgnoresTheTouchingFace )
 
 SW_TEST_CASE( VoxelHotbarTest, AddFillsSameBlockThenEmptySlotsAndReturnsTheRest )
 {
-    VoxelHotbar hotbar;
+    VoxelHotbar hotbar{ nullptr };
     SW_EXPECT_EQUAL( 0, hotbar.addBlock( 1, 60 ) );
     SW_EXPECT_EQUAL( 0, hotbar.addBlock( 2, 1 ) );
     SW_EXPECT_EQUAL( 0, hotbar.addBlock( 1, 10 ) ); // 첫 칸을 64 로 채우고 나머지 6 은 빈 칸으로
@@ -464,7 +464,7 @@ SW_TEST_CASE( VoxelHotbarTest, AddFillsSameBlockThenEmptySlotsAndReturnsTheRest 
     SW_EXPECT_EQUAL( 0, hotbar.addBlock( 3, -5 ) );
     SW_EXPECT_EQUAL( 0, hotbar.countBlock( 3 ) );
 
-    VoxelHotbar full;
+    VoxelHotbar full{ nullptr };
     const int32 capacity = VoxelHotbar::kSlotCount * VoxelHotbar::kMaxStack;
     SW_EXPECT_EQUAL( 5, full.addBlock( 1, capacity + 5 ) );
     SW_EXPECT_EQUAL( capacity, full.countBlock( 1 ) );
@@ -472,7 +472,7 @@ SW_TEST_CASE( VoxelHotbarTest, AddFillsSameBlockThenEmptySlotsAndReturnsTheRest 
 
 SW_TEST_CASE( VoxelHotbarTest, ConsumeEmptiesTheSlotAndSelectWraps )
 {
-    VoxelHotbar     hotbar;
+    VoxelHotbar     hotbar{ nullptr };
     VoxelBlockIndex block = kVoxelAirBlock;
     SW_EXPECT_FALSE( hotbar.consumeSelected( block ) );
     SW_EXPECT_EQUAL( 0, hotbar.addBlock( 7, 1 ) );
@@ -494,31 +494,77 @@ SW_TEST_CASE( VoxelHotbarTest, ConsumeEmptiesTheSlotAndSelectWraps )
 
 SW_TEST_CASE( VoxelHotbarTest, StateRoundTripsAndRefusesBadCounts )
 {
-    VoxelHotbar hotbar;
-    SW_EXPECT_EQUAL( 0, hotbar.addBlock( 4, 12 ) );
+    VoxelFixture rig;
+    VoxelHotbar  hotbar{ &rig._catalog };
+    SW_EXPECT_EQUAL( 0, hotbar.addBlock( rig._glass, 12 ) );
     hotbar.select( 3 );
     Archive writing;
     hotbar.writeState( writing );
     const vector<uint8> listSaved( writing.getData(), writing.getData() + writing.getSize() );
 
-    VoxelHotbar restored;
+    VoxelHotbar restored{ &rig._catalog };
     Archive     reading( listSaved.data(), listSaved.size() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
-    SW_EXPECT_EQUAL( 12, restored.countBlock( 4 ) );
+    SW_EXPECT_EQUAL( 12, restored.countBlock( rig._glass ) );
     SW_EXPECT_EQUAL( 3, restored.getSelectedIndex() );
 
-    // 슬롯 하나는 블록 1 바이트 + 개수 int32 다. 첫 개수의 높은 바이트를 부풀린다.
-    vector<uint8> listBadCount                                    = listSaved;
-    listBadCount[sizeof( VoxelBlockIndex ) + sizeof( int32 ) - 1] = 0x7f;
-    VoxelHotbar target;
+    // 첫 슬롯은 머리 뒤 블록 id 글 + 개수 int32 다. 같은 칸 함수로 자리를 재고 첫 개수의 높은 바이트를 부풀린다.
+    Archive       prefix;
+    StateIO       prefixIO( prefix );
+    hashed_string glassID = hashed_string( "glass" );
+    prefixIO.header( VoxelHotbar::kStateTag, VoxelHotbar::kStateVersion );
+    prefixIO.value( glassID );
+    vector<uint8> listBadCount                           = listSaved;
+    listBadCount[prefix.getSize() + sizeof( int32 ) - 1] = 0x7f;
+    VoxelHotbar target{ &rig._catalog };
     Archive     badCount( listBadCount.data(), listBadCount.size() );
     SW_EXPECT_FALSE( target.readState( badCount ) );
-    SW_EXPECT_EQUAL( 0, target.countBlock( 4 ) );
+    SW_EXPECT_EQUAL( 0, target.countBlock( rig._glass ) );
 
     vector<uint8> listBadSelect             = listSaved;
     listBadSelect[listBadSelect.size() - 1] = 0x7f; // 고른 칸의 높은 바이트
     Archive badSelect( listBadSelect.data(), listBadSelect.size() );
     SW_EXPECT_FALSE( target.readState( badSelect ) );
+
+    vector<uint8> listOldVersion     = listSaved;
+    listOldVersion[sizeof( uint32 )] = 1; // 머리의 판 칸(태그 uint32 뒤)
+    Archive oldVersion( listOldVersion.data(), listOldVersion.size() );
+    SW_EXPECT_FALSE( target.readState( oldVersion ) );
+}
+
+// 핫바도 블록을 id 로 적는다 — 카탈로그 순서가 바뀌어도 같은 블록이고, 없는 블록은 거절한다.
+SW_TEST_CASE( VoxelHotbarTest, SaveSurvivesCatalogReorder )
+{
+    VoxelFixture rig;
+    VoxelHotbar  hotbar{ &rig._catalog };
+    SW_EXPECT_EQUAL( 0, hotbar.addBlock( rig._glass, 5 ) );
+    Archive writing;
+    hotbar.writeState( writing );
+    const vector<uint8> listSaved( writing.getData(), writing.getData() + writing.getSize() );
+
+    VoxelBlockCatalog reordered;
+    for ( const utf8* pID : { "sand", "glass" } )
+    {
+        VoxelBlockDef block;
+        block._id   = hashed_string( pID );
+        block._name = pID;
+        SW_REQUIRE_TRUE( reordered.addBlock( block ) != kVoxelAirBlock );
+    }
+    const VoxelBlockIndex glass = reordered.findBlockIndex( hashed_string( "glass" ) );
+    SW_REQUIRE_TRUE( glass != rig._glass );
+    VoxelHotbar restored{ &reordered };
+    Archive     reading( listSaved.data(), listSaved.size() );
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    SW_EXPECT_EQUAL( 5, restored.countBlock( glass ) );
+
+    VoxelBlockCatalog onlySand;
+    VoxelBlockDef     sand;
+    sand._id   = hashed_string( "sand" );
+    sand._name = "sand";
+    SW_REQUIRE_TRUE( onlySand.addBlock( sand ) != kVoxelAirBlock );
+    VoxelHotbar missing{ &onlySand };
+    Archive     readingMissing( listSaved.data(), listSaved.size() );
+    SW_EXPECT_FALSE( missing.readState( readingMissing ) );
 }
 
 // ---- 지형 ----
