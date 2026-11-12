@@ -174,7 +174,7 @@ namespace sw
         const hashed_string shortName     = stored._name; // 아래에서 `stored` 를 옮긴다
 
         // **주소는 고정이다.** 같은 FQN 이 있으면(재등록, 묘비) 그 객체에 덮어써 복원한다. 밖에서 가진 포인터
-        // (`TypeLookupCache`, `_pParentType`, 컴포넌트 풀 키)가 모두 그대로 맞는다. 새 타입은 새 객체다.
+        // (`TypeLookupCache`, `_parentLink`, 컴포넌트 풀 키)가 모두 그대로 맞는다. 새 타입은 새 객체다.
         // 캐시는 아래에서 이 타입과 자손만 다시 짓는다(배치 안이면 배치 끝이).
         if ( existingIt != _mapFqnToClassType.end() )
         {
