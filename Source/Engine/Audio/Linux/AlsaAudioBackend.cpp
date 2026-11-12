@@ -182,7 +182,7 @@ namespace sw
         _impl->_channelCount = channelCount;
         _impl->_listRender.assign( static_cast<size_t>( Internal::kWriteFrameCount ) * channelCount, 0.0f );
         _impl->_listDevice.assign( static_cast<size_t>( Internal::kWriteFrameCount ) * channelCount, 0.0f );
-        _impl->_streamThread = thread( &AlsaAudioBackend::runStream, this );
+        _impl->_streamThread = thread( ThreadCreateKey{}, &AlsaAudioBackend::runStream, this );
         SW_LOG_INFO_ID( "AlsaAudioBackend.ALSAStreamReadyHz", "ALSA stream ready (%# Hz, %# channels, %# frames per write).", audio::kSampleRate, channelCount, Internal::kWriteFrameCount );
         return true;
     }

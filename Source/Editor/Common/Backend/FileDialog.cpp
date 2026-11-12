@@ -46,8 +46,8 @@ namespace sw
         s_pOpenDialog                 = make_unique<OpenFileDialog>();
         s_pOpenDialog->_delegate      = std::move( onSuccess );
         OpenFileDialog* const pDialog = s_pOpenDialog.get();
-        pDialog->_thread              = thread( [pDialog, params, memoryTag = Memory::getCurrentMemoryTag()]()
-        {
+        pDialog->_thread              = thread( ThreadCreateKey{}, [pDialog, params, memoryTag = Memory::getCurrentMemoryTag()]()
+                     {
             // 이 스레드의 할당은 대화상자를 연 쪽의 용도로 센다.
             const ScopedMemoryTag threadMemoryTag{ memoryTag };
             ThreadCrashStack::initializeCurrentThread();

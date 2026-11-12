@@ -220,7 +220,7 @@ namespace sw
             return;
         _settings = settings;
         _state.store( static_cast<uint32>( State::Running ) );
-        _thread = thread( [this]()
+        _thread = thread( ThreadCreateKey{}, [this]()
         { run(); } );
     }
 

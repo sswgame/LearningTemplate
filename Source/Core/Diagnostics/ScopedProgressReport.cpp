@@ -12,7 +12,7 @@ namespace sw
     ScopedProgressReport::ScopedProgressReport( string what )
         : _what{ std::move( what ) }
         , _startNanos{ MonotonicClock::nowNanoseconds() }
-        , _thread{ &ScopedProgressReport::run, this }
+        , _thread{ ThreadCreateKey{}, &ScopedProgressReport::run, this }
     {
     }
 

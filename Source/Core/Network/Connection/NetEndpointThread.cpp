@@ -35,7 +35,7 @@ namespace sw
         _pHost    = pHost;
         _settings = settings;
         _bRunning.store( true, std::memory_order_release );
-        _thread = sw::thread( &NetEndpointThread::run, this );
+        _thread = sw::thread( ThreadCreateKey{}, &NetEndpointThread::run, this );
         return true;
     }
 

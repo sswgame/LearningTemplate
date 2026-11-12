@@ -20,6 +20,7 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
+#include "Core/Testing/ThreadTestAccess.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace
@@ -341,7 +342,7 @@ SW_TEST_CASE( AsyncFileIOTest, ShutdownCancelsBacklogAndRejectsLateRequests )
         // 내리는 스레드와 붙잡힌 IO 스레드를 함께 풀어 준다 — shutdown 은 걸린 요청(문 안의 것)이 끝나기를 기다린다.
         // 문은 shutdown 이 밀린 요청을 취소한 **뒤에** 연다(그 사건을 기다린다). 예전에는 20 ms 를 자고 열어, shutdown 이 그보다 늦게 들어가면
         // IO 스레드가 밀린 요청을 읽어 버려 옳은 구현이 졌다. 취소가 오지 않으면 시한 뒤에 열고 아래 단언이 진다.
-        sw::thread opener( [&gate, &backlog]()
+        sw::thread opener( sw::ThreadTestAccess::getKey(), [&gate, &backlog]()
         {
             (void)sw::test::waitUntil( [&backlog]()
             { return backlog.isDone(); } );
@@ -421,7 +422,7 @@ SW_TEST_CASE( AsyncFileIOTest, ManyRangesOfOneOpenFile )
     sw::vector<sw::thread> listThread;
     for ( uint32 threadIndex = 0; threadIndex < 4; ++threadIndex )
     {
-        listThread.emplace_back( [&file, &syncOkCount, threadIndex]()
+        listThread.emplace_back( sw::ThreadTestAccess::getKey(), [&file, &syncOkCount, threadIndex]()
         {
             sw::vector<uint8> bytes( kRangeBytes );
             for ( uint32 index = threadIndex; index < kRangeCount; index += 4 )
@@ -474,12 +475,12 @@ SW_TEST_CASE( AsyncFileIOTest, RequestWaitWakesOnItsOwnCompletionAndTimesOut )
         sw::vector<sw::thread> listWaiter;
         for ( uint32 index = 0; index < kWaiterCount; ++index )
         {
-            listWaiter.emplace_back( [&held, &heldWokenCount]()
+            listWaiter.emplace_back( sw::ThreadTestAccess::getKey(), [&held, &heldWokenCount]()
             {
                 if ( held.waitFor( 10000 ) )
                     heldWokenCount.fetch_add( 1 );
             } );
-            listWaiter.emplace_back( [&queued, &queuedWokenCount]()
+            listWaiter.emplace_back( sw::ThreadTestAccess::getKey(), [&queued, &queuedWokenCount]()
             {
                 if ( queued.waitFor( 10000 ) && queued.getStatus() == sw::AsyncIOStatus::Succeeded )
                     queuedWokenCount.fetch_add( 1 );
@@ -530,7 +531,7 @@ SW_TEST_CASE( AsyncFileIOTest, ManyThreadsSubmitAndWaitOnTheirOwnRequests )
         sw::vector<sw::thread> listThread;
         for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
         {
-            listThread.emplace_back( [&io, &path, &okCount, threadIndex]()
+            listThread.emplace_back( sw::ThreadTestAccess::getKey(), [&io, &path, &okCount, threadIndex]()
             {
                 for ( uint32 index = 0; index < kRequestPerThread; ++index )
                 {

@@ -8,6 +8,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace
@@ -309,8 +310,8 @@ SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety, ._ta
     sw::atomic<bool>   bWriterDone{ false };
     sw::atomic<uint32> readCount{ 0 };
     sw::atomic<uint32> badReadCount{ 0 };
-    sw::thread         reader( [&]()
-    {
+    sw::thread         reader( sw::ThreadTestAccess::getKey(), [&]()
+            {
         while ( bWriterDone.load( std::memory_order_acquire ) == false )
         {
             const sw::string val = pStrInfo->getValueAsString();

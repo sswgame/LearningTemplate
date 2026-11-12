@@ -275,7 +275,7 @@ namespace sw
         for ( uint32 workerIndex = 0; workerIndex < threadCount; ++workerIndex )
         {
             // 워커가 이미 목록을 읽고 있으므로 const 로 꺼낸다(비 const 첨자는 레이스 탐지기에 쓰기로 잡힌다).
-            std::as_const( _listWorkerSlot )[workerIndex]->_thread = sw::thread( &TaskManager::workerLoop, this, workerIndex );
+            std::as_const( _listWorkerSlot )[workerIndex]->_thread = sw::thread( ThreadCreateKey{}, &TaskManager::workerLoop, this, workerIndex );
         }
 
         _bInitialized = SW_TRUE;

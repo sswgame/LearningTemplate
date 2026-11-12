@@ -16,6 +16,7 @@
 #include "Core/String/string_splitter.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 #include <sstream>
 
@@ -1843,14 +1844,14 @@ SW_TEST_CASE( StringTest, FixedStringConcurrentSizeReadsWriteNothing )
     constexpr uint32           kReadCount = 20000;
 
     uint32     arrMismatch[2] = { 0, 0 };
-    sw::thread first( [&shared, &arrMismatch]()
+    sw::thread first( ThreadTestAccess::getKey(), [&shared, &arrMismatch]()
     {
         for ( uint32 index = 0; index < kReadCount; ++index )
         {
             arrMismatch[0] += ( shared.size() == 18u ) ? 0u : 1u;
         }
     } );
-    sw::thread second( [&shared, &arrMismatch]()
+    sw::thread second( ThreadTestAccess::getKey(), [&shared, &arrMismatch]()
     {
         for ( uint32 index = 0; index < kReadCount; ++index )
         {

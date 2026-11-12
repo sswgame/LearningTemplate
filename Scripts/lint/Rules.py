@@ -85,7 +85,7 @@ kRules: tuple[Rule, ...] = (
     # --- 경계(빌드 게이트가 닿지 않는 자리) ------------------------------------------------------------------------------------
     Rule("layer-includes", "경계", "아래 층 파일이 위 층 헤더를 include(Core · Engine · GameFramework · Editor 층 표)", "빌드의 #error 껍데기가 막지만 그 부분을 컴파일할 때(Debug 빌드)에야 드러나고, 아무도 include 하지 않는 헤더는 보지 않는다 — 같은 표로 커밋 때 먼저 본다", "lint.LayerIncludes:checkLayerIncludes", inputs=kLayerTables),
     Rule("layer-cycles", "경계", "같은 엔진 층의 폴더끼리 서로 include(층 안 순환)", "같은 층은 한 부분이라 #error 껍데기가 없다 — 폴더마다 부분을 나누면 층 번호가 폴더 순서를 흉내 낼 뿐이다", "lint.LayerCycles:checkLayerCycles", exceptions="Config/Rules/Layers/EngineLayers.toml [sameTierCycle]", inputs=kLayerTables),
-    Rule("thread-owners", "경계", "TaskManager 밖에서 스레드를 만드는 파일", "스레드 형식은 합법이라 만드는 자리를 형식으로 막지 못한다", "lint.ThreadOwners:checkThreadOwners", exceptions="Config/Rules/Lint/ThreadOwners.json"),
+    Rule("thread-owners", "경계", "표준 · OS 함수로 스레드를 바로 만드는 파일", "엔진 스레드는 열쇠(ThreadCreateKey)가 막지만 표준 · OS 이름은 우리가 정의하지 않아 형식으로 막지 못한다", "lint.ThreadOwners:checkThreadOwners", exceptions="Config/Rules/Lint/ThreadOwners.json"),
     Rule("cmake-path-case", "경계", "대소문자만 다른 CMake include · add_subdirectory 경로", "CMake 경로는 컴파일러가 보지 않는다(Linux 구성만 선다)", "lint.CMakePathCase:checkCMakePathCase"),
     Rule("folder-layout", "경계", "잡동사니 폴더 · Component 폴더", "파일 자리는 형식이 아니다", "lint.FolderLayout:checkFolderLayout", exceptions="Config/Rules/Lint/FolderLayout.json"),
     Rule("platform-chains", "경계", "빠진 플랫폼을 컴파일 오류로 내지 않는 #if 사슬", "전처리 갈래는 형식이 막지 못한다", "lint.PlatformChains:checkPlatformChains", exceptions="Config/Rules/Lint/PlatformChains.json"),

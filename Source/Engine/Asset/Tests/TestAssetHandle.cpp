@@ -7,6 +7,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryTag.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 #include "Engine/Asset/AssetHandle.h"
 
@@ -371,7 +372,7 @@ SW_TEST_CASE( AssetHandleTest, WaitSleepsWhileAnotherThreadLoads )
     pOperation->_pLoadEntered                     = &bEntered;
     pOperation->_pLoadRelease                     = &bRelease;
 
-    thread loader{ [&]
+    thread loader{ ThreadTestAccess::getKey(), [&]
     {
         pOperation->runLoadIfUnclaimed();
     } };
@@ -379,7 +380,7 @@ SW_TEST_CASE( AssetHandleTest, WaitSleepsWhileAnotherThreadLoads )
     {
         ThreadUtil::yield();
     }
-    thread waiter{ [&]
+    thread waiter{ ThreadTestAccess::getKey(), [&]
     {
         pOperation->wait();
         bWaited.store( true );

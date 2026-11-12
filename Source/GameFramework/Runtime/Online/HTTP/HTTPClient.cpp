@@ -126,7 +126,7 @@ namespace sw
         call->_resolveState = ResolveState::Pending;
         _listResolvingCall.push_back( std::move( call ) );
         if ( _resolver.isRunning() == false )
-            _resolver.start( "HTTPResolve", DedicatedWorker<uint64>::ProcessDelegate::create<&HTTPClient::resolveRequest>( this ) );
+            _resolver.start( ThreadCreateKey{}, "HTTPResolve", DedicatedWorker<uint64>::ProcessDelegate::create<&HTTPClient::resolveRequest>( this ) );
         uint64 resolveJob = requestID;
         (void)_resolver.submit( std::move( resolveJob ) ); // 바로 위에서 띄웠으니 받는다 — 못 받아도 요청은 Pending 으로 남아 시한이 끝낸다
         return requestID;

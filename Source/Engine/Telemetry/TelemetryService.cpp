@@ -208,7 +208,7 @@ namespace sw
         , _spoolWorker{}
     {
         // 스풀 쓰기 · 올리기는 디스크 · 망에서 막히므로 작업 풀이 아니라 전용 스레드다(docs/agents/CppStyle.md — 크래시 보고 올리기와 같은 자리).
-        _spoolWorker.start( "TelemetrySpool", DedicatedWorker<TelemetrySpoolJob>::ProcessDelegate::create<&TelemetryService::processSpoolJob>( this ) );
+        _spoolWorker.start( ThreadCreateKey{}, "TelemetrySpool", DedicatedWorker<TelemetrySpoolJob>::ProcessDelegate::create<&TelemetryService::processSpoolJob>( this ) );
     }
 
     TelemetryService::~TelemetryService()

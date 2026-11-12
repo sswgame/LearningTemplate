@@ -12,6 +12,7 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
+#include "Core/Testing/ThreadTestAccess.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace
@@ -581,7 +582,7 @@ SW_TEST_CASE( TaskManagerTest, ConcurrentSubmitLosesNothing )
     listProducer.reserve( kProducerCount );
     for ( int32 producerIndex = 0; producerIndex < kProducerCount; ++producerIndex )
     {
-        listProducer.emplace_back( [&manager, &ranCount]()
+        listProducer.emplace_back( sw::ThreadTestAccess::getKey(), [&manager, &ranCount]()
         {
             for ( int32 index = 0; index < kPerProducer; ++index )
             {
@@ -1261,8 +1262,8 @@ SW_TEST_CASE( TaskManagerTest, OppositeEdgesAddedConcurrentlyNeverBothSucceed )
 
             sw::atomic<bool>  bGo{ false };
             sw::atomic<int32> linkedCount{ 0 };
-            sw::thread        otherSide( [&]()
-            {
+            sw::thread        otherSide( sw::ThreadTestAccess::getKey(), [&]()
+                   {
                 while ( bGo.load( std::memory_order_acquire ) == false )
                 {
                     sw::ThreadUtil::yield();
@@ -1441,7 +1442,7 @@ SW_TEST_CASE( TaskManagerTest, HelperSlotIsRecycledWhenThreadEnds )
     for ( uint32 threadIndex = 0; threadIndex < 20; ++threadIndex )
     {
         uint32     slot = ~0u;
-        sw::thread helper( [&manager, &slot]()
+        sw::thread helper( sw::ThreadTestAccess::getKey(), [&manager, &slot]()
         {
             slot = manager.getCurrentThreadScratchSlot();
             manager.releaseCurrentThreadHelperSlot();

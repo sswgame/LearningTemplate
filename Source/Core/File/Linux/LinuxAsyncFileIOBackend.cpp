@@ -191,7 +191,7 @@ namespace sw
                 return false;
             }
 
-            _thread = sw::thread( &IOUringAsyncFileIOBackend::run, this, Memory::getCurrentMemoryTag() );
+            _thread = sw::thread( ThreadCreateKey{}, &IOUringAsyncFileIOBackend::run, this, Memory::getCurrentMemoryTag() );
             return true;
         }
 

@@ -793,7 +793,7 @@ namespace sw
         _state->_bInitialized = SW_TRUE;
         for ( int32 index = 0; index < settings._ioThreadCount; ++index )
         {
-            _state->_listThread.emplace_back( &State::runThread, _state.get() );
+            _state->_listThread.emplace_back( ThreadCreateKey{}, &State::runThread, _state.get() );
         }
         return true;
     }

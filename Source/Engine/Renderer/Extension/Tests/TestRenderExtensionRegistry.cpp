@@ -6,6 +6,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 
@@ -226,7 +227,7 @@ SW_TEST_CASE( RenderExtensionRegistryTest, UnregisterFlushesTheRenderScope )
     thread       other;
     {
         const RenderExtensionRegistry::RenderScope scope{ registry };
-        other = thread{ [&]
+        other = thread{ ThreadTestAccess::getKey(), [&]
         {
             bStarted.store( true );
             registry.unregisterExtension( &extension );

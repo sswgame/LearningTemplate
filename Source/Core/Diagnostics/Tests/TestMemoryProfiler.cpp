@@ -11,6 +11,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 using namespace sw;
 
@@ -534,8 +535,8 @@ SW_TEST_CASE( MemoryProfilerTest, LeakWindowReportsAllocationsFromOtherThreads )
 
     void* const      pForeign = reinterpret_cast<void*>( 0x10000 );
     AllocationRecord foreignBlock;
-    thread           worker( [&profiler, pForeign, &foreignBlock]()
-    {
+    thread           worker( ThreadTestAccess::getKey(), [&profiler, pForeign, &foreignBlock]()
+              {
         foreignBlock = profiler.recordAllocation( pForeign, 512, MemoryTag::Physics );
     } );
     worker.join();
@@ -681,8 +682,8 @@ SW_TEST_CASE( MemoryProfilerTest, TagsFollowTheBlockAcrossThreads )
     vector<void*> listBlock( kBlockCount, nullptr );
     void**        ppBlock = listBlock.data();
     void*         pExplicit{ nullptr };
-    thread        worker( [ppBlock, &pExplicit]()
-    {
+    thread        worker( ThreadTestAccess::getKey(), [ppBlock, &pExplicit]()
+           {
         SW_MEMORY_SCOPE( UI );
         for ( uint32 index = 0; index < kBlockCount; ++index )
         {

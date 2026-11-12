@@ -449,7 +449,7 @@ namespace sw
             }
             SW_LOG_INFO_ID( "ScenarioPerBackend.PerBackendStartedLog", "[Scenario] per-backend: %# started (log %#)", child._backend.c_str(), child._logPath.c_str() );
             Process* pProcess  = &child._process;
-            child._flushThread = thread( [pProcess]()
+            child._flushThread = thread( ThreadCreateKey{}, [pProcess]()
             {
                 string line;
                 while ( pProcess->readOutputLine( line ) )

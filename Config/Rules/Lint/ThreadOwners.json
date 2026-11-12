@@ -1,33 +1,8 @@
 {
-    "_comment": "TaskManager 밖에서 스레드를 만드는 파일과 그 까닭(Scripts/lint/ThreadOwners.py). _path 는 확장자 없는 경로(.h · .cpp 둘 다). OS 를 막고 기다려야 하는 곳만 둔다 — 계산 · 짧은 IO 는 engine::runParallelByCost · 태스크 · 스테이지로 낸다(docs/agents/CppStyle.md).",
+    "_comment": "표준 · OS 함수(std::thread · std::async · CreateThread · pthread_create)로 스레드를 바로 만드는 파일과 그 까닭(Scripts/lint/ThreadOwners.py). _path 는 확장자 없는 경로(.h · .cpp 둘 다). 엔진 스레드(sw::thread · DedicatedWorker)의 주인은 형식이 막는다 — Core/Concurrency/thread.h 의 ThreadCreateKey 친구 목록.",
     "_listOwner": [
-        { "_path": "Source/Core/Concurrency/thread", "_reason": "스레드 형식 자신이다(sw::thread — 정지 요청 · 소멸자 합류)" },
-        { "_path": "Source/Core/Task/TaskManager", "_reason": "작업 풀의 워커 스레드다 — 엔진의 나머지 병렬 일은 모두 여기로 간다" },
-        { "_path": "Source/Core/Task/DedicatedWorker", "_reason": "이름 있는 전용 스레드 하나의 작업 줄 — OS 를 막고 기다리는 일(디스크 · 소켓 · 드라이버)을 워커 밖에서 돌리는 집의 형식이다. 쓰는 곳도 이 목록에 따로 든다" },
-        { "_path": "Source/Core/Log/Sink/AsyncLogSink", "_reason": "로그 쓰기 — 작업 풀이 막히거나 멈춘 때(교착 · 크래시 직전)에도 로그가 나가야 한다" },
-        { "_path": "Source/Core/Process/StandardInputReader", "_reason": "표준 입력의 막히는 읽기 — 줄이 올 때까지 OS 가 돌려주지 않는다" },
-        { "_path": "Source/DevTools/Diagnostics/CrashInjection", "_reason": "일부러 죽는 개발 기능 — 작업 스레드 스택 넘침 재현 · 보고 중 stderr 붙잡기는 작업 풀을 믿을 수 없는 때다" },
-        { "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler", "_reason": "크래시 보고 스레드 — 넘친 스택 · 깨진 풀에서 덤프를 쓴다" },
-        { "_path": "Source/Core/File/AsyncFileIO", "_reason": "스레드 풀 파일 IO 백엔드(io_uring 없는 리눅스 · 기타) — 위치 지정 읽기가 OS 에서 막힌다. 수는 동시 요청 수다" },
-        { "_path": "Source/Core/File/Windows/WindowsAsyncFileIOBackend", "_reason": "IOCP 완료 대기(GetQueuedCompletionStatus) — OS 에서 막힌다" },
-        { "_path": "Source/Core/File/Linux/LinuxAsyncFileIOBackend", "_reason": "io_uring 완료 대기 — OS 에서 막힌다" },
-        { "_path": "Source/Core/Network/Transport/Windows/IocpStreamTransport", "_reason": "소켓 IOCP 완료 대기 — OS 에서 막힌다" },
-        { "_path": "Source/Core/Network/Transport/LinuxKernel/EpollStreamTransport", "_reason": "소켓 epoll 대기 — OS 에서 막힌다" },
-        { "_path": "Source/Core/Network/Transport/DelayedStreamTransport", "_reason": "측정용 지연 흉내의 타이머 스레드 — 안쪽 전송이 IO 스레드를 가질 때만 띄운다(머리말)" },
-        { "_path": "Source/Core/Network/Connection/NetEndpointThread", "_reason": "연결 하나의 소켓 대기 루프 — OS 에서 막힌다" },
-        { "_path": "Source/DevTools/FileWatch/Windows/WindowsFileWatcher", "_reason": "ReadDirectoryChangesW 대기 — OS 에서 막힌다" },
-        { "_path": "Source/DevTools/FileWatch/Linux/LinuxFileWatcher", "_reason": "inotify 읽기 대기 — OS 에서 막힌다" },
-        { "_path": "Source/DevTools/ModuleReload/LiveReload/ModuleCompiler", "_reason": "빌드 프로세스가 끝나기를 분 단위로 기다린다 — 워커를 그만큼 잡을 수 없다" },
-        { "_path": "Source/Editor/Common/Task/EditorExternalToolJob", "_reason": "외부 도구 프로세스가 끝나기를 기다린다 — 워커를 그만큼 잡을 수 없다(머리말)" },
-        { "_path": "Source/Editor/Common/Workspace/NetPlay/EditorNetPlaySession", "_reason": "자식 프로세스 출력 파이프의 막히는 읽기 — 프로세스마다 하나" },
-        { "_path": "Source/Engine/Renderer/RenderThread", "_reason": "렌더 스레드 — 게임 스레드와 한 프레임 겹쳐 도는 고정 스레드(언리얼 RenderThread)" },
-        { "_path": "Source/Engine/Physics/Box2D/Box2DWorkerPool", "_reason": "Box2D 솔버는 워커 수만큼 태스크를 한꺼번에 넣고 0 번이 아닌 태스크가 바쁘게 기다려 공유 풀에서는 교착한다(파일 머리말)" },
-        { "_path": "Source/Engine/Renderer/Frame/Resource/MaterialPSOBuilder", "_reason": "PSO 생성 — 드라이버가 직렬이라 생성 하나가 워커를 수 ms 막는다(머리말)" },
-        { "_path": "Source/GameFramework/Runtime/Online/HTTP/HTTPClient", "_reason": "이름 해석(getaddrinfo) — OS 에서 막힌다" },
-        { "_path": "Source/GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HTTP2Client", "_reason": "이름 해석(getaddrinfo) — OS 에서 막힌다" },
-        { "_path": "Source/Engine/Telemetry/TelemetryService", "_reason": "텔레메트리 스풀 쓰기 · 올리기 — 디스크 쓰기와 막히는 HTTP 요청을 게임 스레드 밖에서 순서대로(감사 N-6)" },
-        { "_path": "Source/GameFramework/Runtime/Online/HTTP/TelemetryUploadLink", "_reason": "크래시 보고 올리기 — 막히는 HTTP 요청을 순서대로" },
-        { "_path": "Source/GameFramework/Runtime/Foundation/Framework/Save/Local/ThreadedLocalStore", "_reason": "로컬 저장 — 순서가 있는 디스크 쓰기 · fsync 가 OS 에서 막힌다" },
-        { "_path": "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool", "_reason": "DB 드라이버 호출이 망을 막고 기다린다 — 연결 하나가 스레드 하나(연결은 스레드 사이에 나누지 않는다), 수는 연결 수다" }
+        { "_path": "Source/Core/Concurrency/thread", "_reason": "엔진 스레드 형식 자신이다(std::thread 를 감싸 정지 요청 · 소멸자 합류 · 교착 관찰자를 붙인다)" },
+        { "_path": "Source/DevTools/Diagnostics/CrashInjection", "_reason": "일부러 죽는 개발 기능 — 작업 스레드 스택 넘침 재현 · 보고 중 stderr 붙잡기는 엔진 스레드의 관찰자 · 합류를 믿을 수 없는 때다" },
+        { "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler", "_reason": "크래시 보고 스레드 — 넘친 스택에서도 덤프를 쓰려고 스택 크기를 정해 OS 함수로 띄운다" }
     ]
 }

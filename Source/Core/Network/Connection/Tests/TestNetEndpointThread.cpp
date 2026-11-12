@@ -10,6 +10,7 @@
 #include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
+#include "Core/Testing/ThreadTestAccess.h"
 #include "Core/Time/MonotonicClock.h"
 
 // 네트워크 스레드 · 비동기 — 전용 스레드가 도는 엔드포인트(루프백 · 실제 UDP), 비동기 연결(성공 · 가득 참 · 타임아웃 · 끊음 · 잘못된 주소),
@@ -142,7 +143,7 @@ SW_TEST_CASE( NetEndpointThreadTest, GameThreadsSendAndReceiveConcurrently )
     {
         // 호스트는 스레드를 띄우기 전에 고른다 — 클러스터의 호스트 목록을 여러 스레드가 동시에 만지지 않게(데이터 경쟁 검출기가 잡는다).
         NetEndpoint& client = cluster.getClient( sender % 2 );
-        listSender.emplace_back( [&client, sender]()
+        listSender.emplace_back( ThreadTestAccess::getKey(), [&client, sender]()
         {
             for ( int32 sequence = 0; sequence < kMessagePerSender; ++sequence )
             {
@@ -168,7 +169,7 @@ SW_TEST_CASE( NetEndpointThreadTest, GameThreadsSendAndReceiveConcurrently )
     {
         arrLastSequence[receiver].assign( kSenderCount, -1 );
         arrCount[receiver].assign( kSenderCount, 0 );
-        listReceiver.emplace_back( [&, receiver]()
+        listReceiver.emplace_back( ThreadTestAccess::getKey(), [&, receiver]()
         {
             int32          connectionID = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
@@ -243,7 +244,7 @@ SW_TEST_CASE( NetEndpointThreadTest, ConnectionsChurnWhileGameThreadsSendAndPoll
 
     atomic<bool> bStop{ false };
     // 보내는 스레드 — 연결된 번호마다 신뢰 · 비신뢰를 넣고 방송한다(닫힌 번호면 거절될 뿐이다).
-    sw::thread sender( [&server, &bStop]()
+    sw::thread sender( ThreadTestAccess::getKey(), [&server, &bStop]()
     {
         vector<int32> listConnection;
         int32         sequence = 0;
@@ -263,8 +264,8 @@ SW_TEST_CASE( NetEndpointThreadTest, ConnectionsChurnWhileGameThreadsSendAndPoll
     } );
     // 꺼내는 스레드 — 끊김 사건을 꺼내 슬롯을 놓는다(`pollInbound`).
     atomic<int32> disconnectedCount{ 0 };
-    sw::thread    poller( [&server, &bStop, &disconnectedCount]()
-    {
+    sw::thread    poller( ThreadTestAccess::getKey(), [&server, &bStop, &disconnectedCount]()
+       {
         NetInbound inbound;
         while ( bStop.load() == false )
         {

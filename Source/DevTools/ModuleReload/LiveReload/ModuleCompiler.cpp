@@ -66,7 +66,7 @@ namespace sw
         if ( _pLiveReloadManager != nullptr )
             _pLiveReloadManager->notifyBuildStarted();
 
-        _workerThread = sw::thread( &ModuleCompiler::runBuildThread, this, string( targetName ), Memory::getCurrentMemoryTag() );
+        _workerThread = sw::thread( ThreadCreateKey{}, &ModuleCompiler::runBuildThread, this, string( targetName ), Memory::getCurrentMemoryTag() );
         return true;
     }
 

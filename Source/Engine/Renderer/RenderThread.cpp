@@ -219,7 +219,7 @@ namespace sw
 
         _stop     = StopSource{};
         _bRunning = SW_TRUE;
-        _thread   = sw::thread( &RenderThread::threadMain, this );
+        _thread   = sw::thread( ThreadCreateKey{}, &RenderThread::threadMain, this );
         // 다른 스레드가 장치 대기를 부르면 이 스레드가 받은 작업을 먼저 끝내게 한다(`IRHIDevice::waitIdle`).
         if ( pDevice != nullptr )
             pDevice->setRenderThreadFlush( &RenderThread::pollPacketsThunk, this, _thread.get_id() );

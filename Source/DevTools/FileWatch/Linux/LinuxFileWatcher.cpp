@@ -92,7 +92,7 @@ namespace sw
         }
 
         _bIsWatching  = true;
-        _workerThread = sw::thread( &LinuxFileWatcher::workerThreadMain, this, Memory::getCurrentMemoryTag() );
+        _workerThread = sw::thread( ThreadCreateKey{}, &LinuxFileWatcher::workerThreadMain, this, Memory::getCurrentMemoryTag() );
 
         SW_LOG_INFO_ID( "LinuxFileWatcher.StartedWatchingDirectory", "Started watching directory: %#", _directoryPath.c_str() );
         return true;

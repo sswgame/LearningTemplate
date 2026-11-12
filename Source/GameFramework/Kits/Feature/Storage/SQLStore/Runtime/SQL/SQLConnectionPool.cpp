@@ -96,7 +96,7 @@ namespace sw
         _listWorker.reserve( static_cast<size_t>( settings._workerCount ) );
         for ( int32 workerIndex = 0; workerIndex < settings._workerCount; ++workerIndex )
         {
-            _listWorker.emplace_back( &SQLConnectionPool::runWorker, this, workerIndex );
+            _listWorker.emplace_back( ThreadCreateKey{}, &SQLConnectionPool::runWorker, this, workerIndex );
         }
         return {};
     }

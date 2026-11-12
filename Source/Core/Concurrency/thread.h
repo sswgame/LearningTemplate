@@ -24,6 +24,87 @@
 
 namespace sw
 {
+    // 스레드를 만들 수 있는 주인들 — `ThreadCreateKey` 의 친구다(OS 를 막고 기다려야 하는 곳만. 계산 · 짧은 IO 는 `engine::runParallelByCost` · 태스크 · 스테이지).
+    class TaskManager;                  // 작업 풀의 워커 — 엔진의 나머지 병렬 일은 모두 여기로 간다
+    class AsyncLogSink;                 // 로그 쓰기 — 작업 풀이 막히거나 멈춘 때(교착 · 크래시 직전)에도 나가야 한다
+    class StandardInputReader;          // 표준 입력의 막히는 읽기
+    class ScopedProgressReport;         // 느린 길(셰이더 컴파일 · 링크)을 막고 기다리는 동안 간격마다 한 줄 — 기다리는 쪽이 워커일 수 있다
+    class ThreadPoolAsyncFileIOBackend; // 위치 지정 읽기가 OS 에서 막힌다(io_uring 없는 리눅스 · 기타). 수는 동시 요청 수다
+    class IocpAsyncFileIOBackend;       // IOCP 완료 대기
+    class IOUringAsyncFileIOBackend;    // io_uring 완료 대기
+    class IocpStreamTransport;          // 소켓 IOCP 완료 대기
+    class EpollStreamTransport;         // 소켓 epoll 대기
+    class DelayedStreamTransport;       // 측정용 지연 흉내의 타이머(안쪽 전송이 IO 스레드를 가질 때만)
+    class NetEndpointThread;            // 연결 하나의 소켓 대기 루프
+    class WindowsFileWatcher;           // ReadDirectoryChangesW 대기
+    class LinuxFileWatcher;             // inotify 읽기 대기
+    class ModuleCompiler;               // 빌드 프로세스가 끝나기를 분 단위로 기다린다
+    class AutomationHangWatchdog;       // 멈춘 시나리오 감시 — 게임 스레드 · 작업 풀이 멈춘 때 깨어 있어야 한다
+    class AutomationPerBackend;         // 자식 프로세스 출력 파이프의 막히는 읽기
+    class SavedRetentionSubsystem;      // 오래된 저장 파일 지우기 — 디스크 훑기가 기동을 막지 않게, 멈춤 요청을 받는다
+    class FileDialog;                   // OS 파일 대화 상자가 닫힐 때까지 막는다
+    class AlsaAudioBackend;             // ALSA 쓰기가 장치 버퍼가 빌 때까지 막는다
+    class WebAudioBackend;              // 믹서 스레드(웹 오디오 워클릿에 고정 간격으로 넣는다)
+    class Box2DWorkerPool;              // Box2D 솔버가 공유 풀에서 교착한다(파일 머리말)
+    class RenderThread;                 // 렌더 스레드 — 게임 스레드와 한 프레임 겹쳐 도는 고정 스레드(언리얼 RenderThread)
+    class SQLConnectionPool;            // DB 드라이버 호출이 망을 막고 기다린다 — 연결 하나가 스레드 하나
+    class MaterialPSOBuilder;           // PSO 생성 — 드라이버가 직렬이라 하나가 워커를 수 ms 막는다(DedicatedWorker)
+    class TelemetryService;             // 텔레메트리 스풀 쓰기 · 올리기(DedicatedWorker)
+    class TelemetryUploadLink;          // 크래시 보고 올리기 — 막히는 HTTP(DedicatedWorker)
+    class HTTPClient;                   // 이름 해석(getaddrinfo)(DedicatedWorker)
+    class HTTP2Client;                  // 이름 해석(getaddrinfo)(DedicatedWorker)
+    class ThreadedLocalStore;           // 순서 있는 디스크 쓰기 · fsync(DedicatedWorker)
+    struct ThreadTestAccess;            // 테스트 · 테스트 실행기(`Core/Testing/ThreadTestAccess.h`) — 경합을 일부러 만든다
+    namespace editor
+    {
+        class EditorExternalToolJob; // 외부 도구 프로세스가 끝나기를 기다린다
+        class EditorNetPlaySession;  // 자식 프로세스 출력 파이프의 막히는 읽기 — 프로세스마다 하나
+    } // namespace editor
+
+    /**
+     * @class ThreadCreateKey
+     * @brief 스레드(`sw::thread` · `DedicatedWorker::start`)를 만드는 열쇠입니다. 위 주인만 만든다 — 목록 밖에서 스레드를 띄우는 코드는 컴파일되지 않는다.
+     * @details 자체 스레드는 워커 수가 `TaskManager` 와 따로 놀아 코어를 과포화하고 잠들며 묻는 폴링을 부른다. 그래서 스레드는 OS 를 막고 기다려야 하는
+     *          주인만 만들고, 주인은 열쇠를 자기 안쪽 형식(.cpp 의 내부 상태 · `DedicatedWorker`)에 넘길 수 있다(열쇠는 복사된다).
+     *          언리얼 `FRunnableThread::Create` 는 아무나 부르지만, 우리는 주인 목록을 형식으로 둔다(예전의 린트 표 `ThreadOwners.json` 자리).
+     */
+    class ThreadCreateKey
+    {
+        friend class TaskManager;
+        friend class AsyncLogSink;
+        friend class StandardInputReader;
+        friend class ScopedProgressReport;
+        friend class ThreadPoolAsyncFileIOBackend;
+        friend class IocpAsyncFileIOBackend;
+        friend class IOUringAsyncFileIOBackend;
+        friend class IocpStreamTransport;
+        friend class EpollStreamTransport;
+        friend class DelayedStreamTransport;
+        friend class NetEndpointThread;
+        friend class WindowsFileWatcher;
+        friend class LinuxFileWatcher;
+        friend class ModuleCompiler;
+        friend class AutomationHangWatchdog;
+        friend class AutomationPerBackend;
+        friend class SavedRetentionSubsystem;
+        friend class FileDialog;
+        friend class AlsaAudioBackend;
+        friend class WebAudioBackend;
+        friend class Box2DWorkerPool;
+        friend class RenderThread;
+        friend class SQLConnectionPool;
+        friend class MaterialPSOBuilder;
+        friend class TelemetryService;
+        friend class TelemetryUploadLink;
+        friend class HTTPClient;
+        friend class HTTP2Client;
+        friend class ThreadedLocalStore;
+        friend struct ThreadTestAccess;
+        friend class editor::EditorExternalToolJob;
+        friend class editor::EditorNetPlaySession;
+        ThreadCreateKey() {} // NOLINT(modernize-use-equals-default) — `= default` 면 C++17 집합체라 `{}` 가 private 를 비켜 간다
+    };
+
     /**
      * @class thread
      * @brief std::thread 와 같은 모양(생성 · `join` · `detach` · `joinable` · `get_id`)이고, 시작 · 끝 · 합류 대기를 잠금 관찰자에 알립니다.
@@ -37,12 +118,12 @@ namespace sw
         /** @brief 스레드 없는 빈 객체입니다. */
         thread() noexcept = default;
         /**
-         * @brief @p function 을 @p args 로 부르는 스레드를 시작합니다(std::thread 와 같이 인자를 복사해 넘긴다).
+         * @brief @p function 을 @p args 로 부르는 스레드를 시작합니다(std::thread 와 같이 인자를 복사해 넘긴다). 열쇠(`ThreadCreateKey`)는 허용 주인만 만든다.
          * @details @p function 이 `( StopToken, args... )` 로 불릴 수 있으면 첫 인자로 이 스레드의 정지 토큰을 넘긴다(`std::jthread` 와 같은 규칙).
-         *          그렇지 않고 `( args..., StopToken )` 로 불릴 수 있으면 마지막에 넘긴다 — 멤버 함수(`sw::thread( &X::run, this )`, `run( StopToken )`)가 람다 없이 받는다.
+         *          그렇지 않고 `( args..., StopToken )` 로 불릴 수 있으면 마지막에 넘긴다 — 멤버 함수(`sw::thread( key, &X::run, this )`, `run( StopToken )`)가 람다 없이 받는다.
          */
-        template <typename TFunction, typename... TArgs, typename = std::enable_if_t<!std::is_same_v<std::decay_t<TFunction>, thread>>>
-        explicit thread( TFunction&& function, TArgs&&... args )
+        template <typename TFunction, typename... TArgs>
+        explicit thread( ThreadCreateKey, TFunction&& function, TArgs&&... args )
             : _stopSource{}
             , _thread{ startThread( _stopSource.getToken(), std::forward<TFunction>( function ), std::forward<TArgs>( args )... ) }
         {

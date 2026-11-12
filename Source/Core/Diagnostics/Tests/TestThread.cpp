@@ -12,6 +12,7 @@
 #include "Core/Diagnostics/DeadlockDetector.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 #include "Core/Time/MonotonicClock.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -120,7 +121,7 @@ SW_TEST_CASE( ThreadTest, JoinIsAWaitOnTheThreadsJoinKey )
     SW_REQUIRE_TRUE( mutex::getLockObserver() == &observer );
 
     std::thread::id workerID;
-    thread          worker{ [&workerID]()
+    thread          worker{ ThreadTestAccess::getKey(), [&workerID]()
     { workerID = std::this_thread::get_id(); } };
     worker.join();
     mutex::unregisterLockObserver( &observer );
@@ -179,7 +180,7 @@ SW_TEST_CASE( ThreadTest, JoinWhileHoldingALockTheThreadWaitsForIsADeadlock )
     void* const  pHeldLock = reinterpret_cast<void*>( 0x4000 );
     atomic<bool> bWorkerWaiting{ false };
     detector.recordLockAcquired( pHeldLock );
-    thread     worker{ [&detector, &bWorkerWaiting, &capture, pHeldLock]()
+    thread     worker{ ThreadTestAccess::getKey(), [&detector, &bWorkerWaiting, &capture, pHeldLock]()
     {
         detector.recordLockAttempt( pHeldLock ); // 합류하는 쪽이 쥔 락을 기다린다
         bWorkerWaiting.store( true );
@@ -205,7 +206,7 @@ SW_TEST_CASE( ThreadTest, DestructorRequestsStopAndJoins )
     atomic<bool>  bFinished{ false };
     atomic<int32> loopCount{ 0 };
     {
-        thread worker{ [&bStarted, &bFinished, &loopCount]( StopToken stopToken )
+        thread worker{ ThreadTestAccess::getKey(), [&bStarted, &bFinished, &loopCount]( StopToken stopToken )
         {
             while ( stopToken.isStopRequested() == false )
             {
@@ -229,9 +230,9 @@ SW_TEST_CASE( ThreadTest, DestructorRequestsStopAndJoins )
 SW_TEST_CASE( ThreadTest, MoveAssignJoinsTheCurrentThreadFirst )
 {
     atomic<int32> finishedCount{ 0 };
-    thread        worker{ [&finishedCount]()
+    thread        worker{ ThreadTestAccess::getKey(), [&finishedCount]()
     { finishedCount.fetch_add( 1 ); } };
-    thread        next{ [&finishedCount]( StopToken stopToken )
+    thread        next{ ThreadTestAccess::getKey(), [&finishedCount]( StopToken stopToken )
     {
         while ( stopToken.isStopRequested() == false )
             ThreadUtil::yield();
@@ -252,7 +253,7 @@ SW_TEST_CASE( ThreadTest, MemberFunctionTakesTheStopTokenAsLastArgument )
 {
     StopTokenLastArgumentOwner owner;
     {
-        thread         worker{ &StopTokenLastArgumentOwner::run, &owner, 7 };
+        thread         worker{ ThreadTestAccess::getKey(), &StopTokenLastArgumentOwner::run, &owner, 7 };
         const Deadline deadline = Deadline::afterMilliseconds( 5000 );
         while ( owner._loopCount.load() == 0 && deadline.isExpired() == false )
             ThreadUtil::yield();
@@ -278,7 +279,7 @@ SW_TEST_CASE( ThreadTest, JoinUnderTheLoaderLockAssertsAndDetaches )
     // 뗀 스레드는 이 함수보다 오래 살 수 있다 — 플래그는 스레드와 나눠 갖는다.
     const std::shared_ptr<atomic<bool>> pStarted = std::make_shared<atomic<bool>>( false );
     const std::shared_ptr<atomic<bool>> pRelease = std::make_shared<atomic<bool>>( false );
-    thread                              worker{ [pStarted, pRelease]()
+    thread                              worker{ ThreadTestAccess::getKey(), [pStarted, pRelease]()
     {
         pStarted->store( true );
         while ( pRelease->load() == false )

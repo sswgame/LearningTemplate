@@ -828,7 +828,7 @@ namespace sw
         {
             for ( int32 index = 0; index < state._loopCount; ++index )
             {
-                state.getLoop( index )._thread = sw::thread( &State::runThread, &state, index );
+                state.getLoop( index )._thread = sw::thread( ThreadCreateKey{}, &State::runThread, &state, index );
             }
         }
         return true;
