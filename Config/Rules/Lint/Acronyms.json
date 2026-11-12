@@ -100,6 +100,8 @@
         "GetCurrentProcessId": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "GetCurrentThreadId": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "GetDpiForWindow": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
+        "GetDpiForSystem": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
+        "AdjustWindowRectExForDpi": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "GetFontTexUvWhitePixel": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "GetRuntimeId": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "GetWindowThreadProcessId": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",

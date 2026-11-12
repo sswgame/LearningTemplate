@@ -66,6 +66,17 @@ namespace sw
                 reinterpret_cast<vector<WindowMonitor>*>( userData )->push_back( std::move( monitor ) );
                 return TRUE;
             }
+
+            /**
+             * @brief 클라이언트 크기에 테두리 · 제목 줄을 더한 창 사각형입니다. @p dpi 의 테두리 두께로 잰다 — `AdjustWindowRect` 는 시스템 DPI 로 재서
+             *        배율이 다른 모니터에서 클라이언트 크기가 어긋났다(감사 P-12, 언리얼 · SDL 의 `AdjustWindowRectExForDpi`).
+             */
+            static RECT computeFrameRect( uint32 clientWidth, uint32 clientHeight, UINT dpi )
+            {
+                RECT frameRect = { 0, 0, static_cast<LONG>( clientWidth ), static_cast<LONG>( clientHeight ) };
+                AdjustWindowRectExForDpi( &frameRect, WS_OVERLAPPEDWINDOW, FALSE, 0, dpi );
+                return frameRect;
+            }
         };
     } // namespace
 } // namespace sw
@@ -115,8 +126,7 @@ namespace sw
 
         RegisterClassExW( &wc );
 
-        RECT rc = { 0, 0, static_cast<LONG>( width ), static_cast<LONG>( height ) };
-        AdjustWindowRect( &rc, WS_OVERLAPPEDWINDOW, FALSE );
+        const RECT rc = Win32WindowInternal::computeFrameRect( width, height, GetDpiForSystem() ); // 창이 아직 없어 놓일 모니터를 모른다 — 시스템 DPI 로 잰다
 
         _hWnd = CreateWindowExW(
             0,
@@ -270,8 +280,7 @@ namespace sw
 
         // 창 모드는 요청한 클라이언트 크기다. 이미 창이었으면 크기만 바꾸고 왼쪽 위를 지킨다(X11 · 언리얼의 창 크기 변경과 같다 - 예전에는 늘 가운데로 옮겨
         // 자동화가 바둑판으로 놓은 백엔드 창이 단계마다 한가운데로 겹쳤다). 전체화면에서 돌아올 때만 그 모니터의 작업 영역 가운데에 놓는다.
-        RECT frameRect = { 0, 0, static_cast<LONG>( width ), static_cast<LONG>( height ) };
-        AdjustWindowRect( &frameRect, WS_OVERLAPPEDWINDOW, FALSE );
+        const RECT  frameRect   = Win32WindowInternal::computeFrameRect( width, height, GetDpiForWindow( _hWnd ) );
         const LONG  frameWidth  = frameRect.right - frameRect.left;
         const LONG  frameHeight = frameRect.bottom - frameRect.top;
         const RECT& workRect    = monitorInfo.rcWork;
@@ -409,12 +418,11 @@ namespace sw
     bool Win32Window::fillMinimumTrackSize( LPARAM lParam ) const
     {
         // 창 모드에서 사용자가 줄일 수 있는 하한(`setMinimumClientSize`)이다. 클라이언트 크기에 테두리와 제목 줄을 더해 창 크기로 넘긴다
-        // (`setDisplayMode` 와 같은 `AdjustWindowRect`). SetWindowPos 도 DefWindowProcW 의 WM_WINDOWPOSCHANGING 이 이 값으로 자른다.
+        // (`setDisplayMode` 와 같은 `computeFrameRect`). SetWindowPos 도 DefWindowProcW 의 WM_WINDOWPOSCHANGING 이 이 값으로 자른다.
         const bool bNoMinimumSize = _displayMode != WindowDisplayMode::Windowed || _minClientWidth == 0 || _minClientHeight == 0;
         if ( bNoMinimumSize )
             return false;
-        RECT frameRect = { 0, 0, static_cast<LONG>( _minClientWidth ), static_cast<LONG>( _minClientHeight ) };
-        AdjustWindowRect( &frameRect, WS_OVERLAPPEDWINDOW, FALSE );
+        const RECT  frameRect   = Win32WindowInternal::computeFrameRect( _minClientWidth, _minClientHeight, GetDpiForWindow( _hWnd ) );
         MINMAXINFO* pInfo       = reinterpret_cast<MINMAXINFO*>( lParam );
         pInfo->ptMinTrackSize.x = frameRect.right - frameRect.left;
         pInfo->ptMinTrackSize.y = frameRect.bottom - frameRect.top;
