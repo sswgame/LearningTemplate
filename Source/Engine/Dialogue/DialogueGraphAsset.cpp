@@ -143,6 +143,17 @@ namespace sw
             SW_LOG_ERROR_ID( "Dialogue.SpeakerIDInvalid", "Dialogue graph '%#': speaker %# needs a unique _id of 1 or more (has %#)", sourceLabel, speakerIndex, speakerID );
             bValid = false;
         }
+        // 시작은 정확히 하나다 — 없으면 첫 노드로 대신하던 폴백이 엉뚱한 줄에서 대화를 열었다(감사 S-12, Yarn Spinner 는 컴파일 오류).
+        int32 startCount = 0;
+        for ( const DialogueAssetNode& node : _listNode )
+        {
+            startCount += node._type == DialogueAssetNodeKind::Start ? 1 : 0;
+        }
+        if ( _listNode.empty() == false && startCount != 1 )
+        {
+            SW_LOG_ERROR_ID( "Dialogue.StartNodeCount", "Dialogue graph '%#': needs exactly one Start node (has %#)", sourceLabel, startCount );
+            bValid = false;
+        }
         // 화자는 id 로만 가리킨다 — 목록에 없는 id 는 이름으로 찾아 메우지 않고 읽기 오류다.
         for ( const DialogueAssetNode& node : _listNode )
         {
@@ -189,9 +200,7 @@ namespace sw
             if ( node._type == DialogueAssetNodeKind::Start )
                 return &node;
         }
-        if ( _listNode.empty() )
-            return nullptr;
-        return &_listNode.front();
+        return nullptr; // 읽기 검증이 Start 하나를 보장한다 — 편집 중인 그래프는 없을 수 있다
     }
 
     const DialogueAssetNode* DialogueGraphAsset::findNode( int32 nodeID ) const
