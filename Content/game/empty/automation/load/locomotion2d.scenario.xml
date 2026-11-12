@@ -1,19 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  부하 시나리오 — 2D 이동 블렌드 스페이스(9 표본, common/data/anim/ubc_locomotion2d.animgraph.xml)를 쓰는 Quaternius 마을 사람 500 명(25 열 격자).
+  부하 시나리오 — 2D 이동 블렌드 스페이스(9 표본, common/data/anim/ubc_locomotion2d.animgraph.xml)를 쓰는 Quaternius 마을 사람 400 명(20 열 격자).
+  인원은 스킨 변형 풀(GPUMeshMorphPool::kMaxPoolVertices 4M 정점 = 결과 192MB, 언리얼 r.SkinCache.SceneMemoryLimitInMB 기본 128MB 보다 크다)에 맞춘다 — 자리 잡은 뒤는 LOD 로 500 명이 1M 정점(24%)이지만,
+  스폰 프레임에는 합친 메시가 걸리기 전이라 캐릭터마다 LOD 없는 원본 몸(8483 정점)을 변형해 494 명이 상한이다. 풀을 키우지 않고 측정(캐릭터당 블렌드 비용)은 인원 비례라 400 명으로 잰다.
   -gv_stressTestCharacterBlend=1 이 캐릭터마다 Speed · Posture 를 범위 안에 흩어(벤치 데이터 _characterBlend*) 표본 위가 아니라 삼각형 안을 섞게 한다.
   보는 값은 GT.Animation 의 BasePose 구간이다(삼각분할이면 캐릭터당 샘플 클립 많아야 셋). 감시 값 Animation.BlendSpaceActiveSamples 로 파라미터가 흩어졌는지(표본 위가 아닌지) 먼저 확인한다. 프리팹은 common/prefabs/quaternius/townsfolk_locomotion2d.prefab.xml 이다. 측정 창(<Load>)이 끝내므로 <Pass/> 가 없다.
-  실행: ctest -L load (항목 Scenario.empty.load.locomotion2d) · App -scenario=game/empty/automation/load/locomotion2d.scenario.xml -unattended -gv_stressTestCharacters=500 -gv_stressTestCharacterColumns=25 -gv_stressTestCharacterBlend=1 -gv_stressTestCharacterPrefab=common/prefabs/quaternius/townsfolk_locomotion2d.prefab.xml
+  실행: ctest -L load (항목 Scenario.empty.load.locomotion2d) · App -scenario=game/empty/automation/load/locomotion2d.scenario.xml -unattended -gv_stressTestCharacters=400 -gv_stressTestCharacterColumns=20 -gv_stressTestCharacterBlend=1 -gv_stressTestCharacterPrefab=common/prefabs/quaternius/townsfolk_locomotion2d.prefab.xml
 -->
 <Scenario name="game.empty.load.locomotion2d" fixedDelta="0.0166667" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
-	<Launch variable="gv_stressTestCharacters" value="500"/>
-	<Launch variable="gv_stressTestCharacterColumns" value="25"/>
+	<Launch variable="gv_stressTestCharacters" value="400"/>
+	<Launch variable="gv_stressTestCharacterColumns" value="20"/>
 	<Launch variable="gv_stressTestCharacterBlend" value="1"/>
 	<Launch variable="gv_stressTestCharacterPrefab" value="common/prefabs/quaternius/townsfolk_locomotion2d.prefab.xml"/>
 	<Load durationSeconds="15"/>
-	<!-- 측정이 의미 있는지 스스로 본다 — 캐릭터마다 표본 위(하나)가 아니라 삼각형 안(둘 · 셋)을 섞어야 한다: 500 명이면 평균 둘 이상(1000) · 많아야 셋(1500). -->
+	<!-- 측정이 의미 있는지 스스로 본다 — 캐릭터마다 표본 위(하나)가 아니라 삼각형 안(둘 · 셋)을 섞어야 한다: 400 명이면 평균 둘 이상(800) · 많아야 셋(1200). -->
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<WaitUntil watch="Animation.BlendSpaceActiveSamples" atLeast="1000" timeoutFrames="300"/>
-	<Expect watch="Animation.BlendSpaceActiveSamples" atLeast="1000"/>
-	<Expect watch="Animation.BlendSpaceActiveSamples" atMost="1500"/>
+	<WaitUntil watch="Animation.BlendSpaceActiveSamples" atLeast="800" timeoutFrames="300"/>
+	<Expect watch="Animation.BlendSpaceActiveSamples" atLeast="800"/>
+	<Expect watch="Animation.BlendSpaceActiveSamples" atMost="1200"/>
 </Scenario>
