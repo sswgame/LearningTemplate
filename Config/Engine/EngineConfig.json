@@ -23,5 +23,9 @@
             { "_name": "ASTC", "_suffix": ".astc", "_color": "ASTC_4x4_UNORM", "_normal": "ASTC_4x4_UNORM", "_mask": "ASTC_4x4_UNORM", "_hdr": "R16G16B16A16_FLOAT" },
             { "_name": "ETC2", "_suffix": ".etc2", "_color": "ETC2_RGBA8_UNORM", "_normal": "EAC_RG11_UNORM", "_mask": "EAC_R11_UNORM", "_hdr": "R16G16B16A16_FLOAT" }
         ]
+    },
+    "_audioOutput": {
+        "_reopenFirstDelayMs": 1000,
+        "_reopenMaxDelayMs": 30000
     }
 }

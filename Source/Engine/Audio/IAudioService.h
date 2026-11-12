@@ -40,6 +40,7 @@ namespace sw
 namespace sw
 {
     class AudioEngine;
+    struct AudioOutputConfig;
 
     /**
      * @brief 이름을 붙인 볼륨 버스입니다. 세 버스(`master`, `music`, `sfx`)는 기존 볼륨 필드로 가고, 나머지 이름은 `IAudioService` 의 테이블에 남습니다.
@@ -85,15 +86,16 @@ namespace sw
         /**
          * @brief 출력 장치를 열고, 스피커 모드로 레이아웃을 정해 엔진을 만들고(기본 믹서 그래프), 장치가 엔진을 당기게 합니다.
          * @details 믹서 그래프를 못 읽거나, 장치가 명시 스피커 모드만큼의 채널을 갖지 않으면 실패입니다. 장치를 열지 못하는 것은 성공이며, 오프라인으로 진행합니다.
+         *          @p outputConfig 는 장치를 잃었거나 없이 시작했을 때 다시 열어 보는 간격이다(`EngineConfig::_audioOutput`). 상한이 첫 간격보다 작으면 실패입니다.
          */
-        [[nodiscard]] bool initialize();
+        [[nodiscard]] bool initialize( const AudioOutputConfig& outputConfig );
         /** @brief 출력 장치를 닫고 엔진을 내립니다. */
         void shutdown();
 
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = IEngineAudioDriver::kOwnerSubsystemName;
         /** @brief 기동 순서의 자리 — 장치를 열지 못해도 오프라인으로 선다. 음성 스트리밍이 태스크를 쓴다(서버는 장치 없는 NullAudioBackend). */
-        SubsystemInitResult     initializeSubsystem() override { return initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; }
+        SubsystemInitResult     initializeSubsystem() override;
         void                    shutdownSubsystem() override { shutdown(); }
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override;
@@ -276,7 +278,8 @@ namespace sw
         AudioPlayingID          _musicPlayingID;    /**< 배경음악 재생 id 입니다. */
         float64                 _offlineFrameDebt;  /**< 장치가 없을 때 아직 렌더하지 않은 프레임(소수)입니다. */
         float64                 _reopenSecondsLeft; /**< 장치를 다시 열어 볼 때까지 남은 시간(초)입니다(`retryOpenOutput`). */
-        ExponentialBackoff      _reopenBackoff;     /**< 장치 다시 열기의 간격입니다 — 성공하면 처음부터. */
+        ExponentialBackoff      _reopenBackoff;     /**< 장치 다시 열기의 간격입니다 — 성공하면 처음부터. `initialize` 가 설정의 첫 간격으로 만든다. */
+        int64                   _reopenMaxDelayMs;  /**< 장치 다시 열기 간격의 상한(ms)입니다(`EngineConfig::_audioOutput`). */
         atomic<bool>            _bOutputLost;       /**< 장치 출력이 죽었다는 알림입니다(`notifyOutputLost` — 아무 스레드). */
         AudioOutputDevice       _device;            /**< 열린 장치의 형식입니다(장치가 없으면 채널 수 0). */
         float32                 _masterVolume;      /**< 마스터 볼륨 [0,1] 입니다. */

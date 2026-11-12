@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -16,8 +17,11 @@
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/AudioRenderListener.h"
 #include "Engine/Audio/Graph/AudioGraphDef.h"
+#include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -32,10 +36,6 @@ namespace sw
             static constexpr float32 kMusicCrossfadeSeconds = 0.25f;
             /** @brief 장치 없이 한 번의 update 가 렌더할 최대 시간(초)입니다. 멈춘 프레임 뒤에 몇 분을 몰아서 렌더하지 않게 합니다. */
             static constexpr float64 kMaxOfflineSecondsPerUpdate = 0.25;
-            /** @brief 장치 다시 열기의 첫 간격과 상한(ms)입니다 — 헤드폰을 다시 꽂으면 곧 붙고, 장치가 없는 기계는 30 초에 한 번만 본다. */
-            static constexpr int64   kReopenFirstDelayMs    = 1000;
-            static constexpr int64   kReopenMaxDelayMs      = 30000;
-            static constexpr float64 kMillisecondsPerSecond = 1000.0;
             /** @brief 스피커 모드의 설정 값입니다(`AudioSpeakerMode` 순서). */
             static constexpr const utf8* kArrSpeakerModeName[] = { "auto", "stereo", "surround51", "surround71", "headphones" };
 
@@ -77,7 +77,7 @@ namespace sw
 
     unique_ptr<IAudioService> IAudioService::create()
     {
-        // 플랫폼 클라이언트 빌드는 백엔드 하나를 담는다 — 없거나 둘이면 빌드 구성의 결함이다(장치 없는 오디오로 몰래 바꾸지 않는다).
+        // 플랫폼 클라이언트 빌드는 백엔드 하나를 담는다 — 구성 단계가 먼저 막는다(Source/Engine/CMakeLists.txt). 여기 닿으면 링크가 등록자를 버린 것이다(장치 없는 오디오로 몰래 바꾸지 않는다).
         const AudioBackendRegistrar* pRegistrar = AudioBackendRegistrar::getHead();
         if ( pRegistrar == nullptr )
             SW_FATAL( "No audio device backend is registered in this build (%#) - a client build links Audio/Windows, Audio/Linux or Audio/Android", build::kTargetName );
@@ -102,7 +102,8 @@ namespace sw
         , _musicPlayingID{ 0 }
         , _offlineFrameDebt{ 0.0 }
         , _reopenSecondsLeft{ 0.0 }
-        , _reopenBackoff{ ExponentialBackoff::createWithRandomSeed( IAudioServiceInternal::kReopenFirstDelayMs ) }
+        , _reopenBackoff{ ExponentialBackoff::createWithRandomSeed( 0 ) } // `initialize` 가 설정의 첫 간격으로 바꾼다 — 그 전에는 `update` 가 돌지 않는다
+        , _reopenMaxDelayMs{ 0 }
         , _bOutputLost{ false }
         , _device{}
         , _masterVolume{ 1.0f }
@@ -118,10 +119,26 @@ namespace sw
 
     IAudioService::~IAudioService() = default;
 
-    bool IAudioService::initialize()
+    SubsystemInitResult IAudioService::initializeSubsystem()
+    {
+        return initialize( engine::getSubsystem<EngineConfig>()._audioOutput ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+    }
+
+    bool IAudioService::initialize( const AudioOutputConfig& outputConfig )
     {
         if ( _bInitialized )
             return true;
+
+        // 다시 열기 간격은 설정 파일이 정한다(엔진 설정 바탕 층 — 코드 기본값으로 대신하지 않는다).
+        if ( outputConfig._reopenFirstDelayMs == 0 || outputConfig._reopenMaxDelayMs < outputConfig._reopenFirstDelayMs )
+        {
+            SW_LOG_ERROR_ID( "AudioService.InvalidReopenDelay", "EngineConfig _audioOutput: reopen delays must be first > 0 and max >= first (first %# ms, max %# ms)", outputConfig._reopenFirstDelayMs,
+                             outputConfig._reopenMaxDelayMs );
+            return false;
+        }
+        _reopenBackoff     = ExponentialBackoff::createWithRandomSeed( static_cast<int64>( outputConfig._reopenFirstDelayMs ) );
+        _reopenMaxDelayMs  = static_cast<int64>( outputConfig._reopenMaxDelayMs );
+        _reopenSecondsLeft = 0.0; // 장치 없이 시작하면 첫 update 가 바로 다시 열어 본다
 
         // 믹서 그래프는 엔진 데이터가 기준이다. 없거나 틀리면 코드 그래프로 대신하지 않고 기동이 실패한다.
         AudioMixerDef mixerDesc;
@@ -328,7 +345,7 @@ namespace sw
         _bDeviceOpen       = SW_FALSE;
         _device            = AudioOutputDevice{};
         _offlineFrameDebt  = 0.0;
-        _reopenSecondsLeft = static_cast<float64>( _reopenBackoff.takeDelayMs( IAudioServiceInternal::kReopenMaxDelayMs ) ) / IAudioServiceInternal::kMillisecondsPerSecond;
+        _reopenSecondsLeft = static_cast<float64>( _reopenBackoff.takeDelayMs( _reopenMaxDelayMs ) ) / static_cast<float64>( constant::time::kMillisecondsPerSecond );
         SW_LOG_WARNING_ID( "AudioService.OutputLost", "The audio output device was lost - rendering offline and reopening the default device" );
     }
 
@@ -337,7 +354,7 @@ namespace sw
         _reopenSecondsLeft -= static_cast<float64>( deltaSeconds );
         if ( _reopenSecondsLeft > 0.0 )
             return;
-        _reopenSecondsLeft = static_cast<float64>( _reopenBackoff.takeDelayMs( IAudioServiceInternal::kReopenMaxDelayMs ) ) / IAudioServiceInternal::kMillisecondsPerSecond;
+        _reopenSecondsLeft = static_cast<float64>( _reopenBackoff.takeDelayMs( _reopenMaxDelayMs ) ) / static_cast<float64>( constant::time::kMillisecondsPerSecond );
         AudioOutputDevice device{};
         if ( openDevice( device ) == false )
             return;
@@ -558,7 +575,7 @@ namespace sw
 {
     span<const utf8* const> IAudioService::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName, ConfigManager::kSubsystemName }; // 다시 열기 간격을 엔진 설정에서 읽는다
         return kArrDependency;
     }
 
