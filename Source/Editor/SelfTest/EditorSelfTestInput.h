@@ -21,6 +21,7 @@ namespace sw::editor
         float2 _min{};
         float2 _max{};
         uint32 _itemID{ 0 };
+        uint32 _windowID{ 0 };         ///< 위젯을 그린 ImGui 창. 누를 점의 최상위 창이 이 창(또는 그 조상 · 이 위젯이 담은 자식 창)이 아니면 가려진 것이다(`EditorSelfTestInput::hitTestMark`)
         uint32 _viewportID{ 0 };       ///< 위젯이 그려진 뷰포트. 떠 있는 창(자기 플랫폼 창)이면 마우스를 옮길 때 그 뷰포트를 "커서 아래" 로 알린다
         uint32 _frame{ 0 };            ///< 기록한 ImGui 프레임 번호. 지난 프레임에 그려지지 않은 위젯을 누르지 않게 한다
         uint32 _stableStartFrame{ 0 }; ///< 사각형 · 뷰포트 · 잘림이 지금 값으로 이어서 그려진 첫 프레임(그 사이 빠진 프레임이 있으면 다시 센다)
@@ -70,6 +71,14 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief 레이블의 누를 점에 포인터를 두었을 때 그 점의 입력을 받는 쪽입니다(`EditorSelfTestInput::hitTestMark`). */
+    enum class EditorMarkHit : uint8
+    {
+        Pending,   ///< 아직 판정할 표본이 없다(레이블이 없거나, 포인터가 그 점에 닿은 프레임의 표본이 아직 없다)
+        Reachable, ///< 그 점의 최상위 창이 레이블 주인이다 — 누르면 레이블이 받는다
+        Covered,   ///< 다른 창(오버레이 툴바 · 팝업 · 모달)이 그 점을 덮어 누르면 그쪽이 받는다
+    };
+
     /**
      * @struct EditorSelfTestInput
      * @brief 다음 프레임에 넣을 입력 이벤트 큐입니다. 테스트 단계 하나가 이벤트 몇 개를 넣고 `Continue` 를 반환하면 다음 프레임에 들어갑니다.
@@ -104,7 +113,14 @@ namespace sw::editor
         [[nodiscard]] static bool holdMouseAtMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
         /** @brief ImGui 가 본 포인터가 지금 레이블의 @p anchor 자리에 있으면 true 입니다. 레이블이 없으면 false 입니다. */
         [[nodiscard]] static bool isMouseAtMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
-        static void               releaseMouseHold();
+        /**
+         * @brief 포인터가 레이블의 @p anchor 자리에 있던 프레임에 그 점의 최상위 창(ImGui `HoveredWindow`)이 레이블 주인인지 봅니다. 가려졌으면 @p outCoverName 에 덮은 창 이름을 넣습니다.
+         * @details 잘림 검사(`_bClipped`)는 창 밖으로 잘린 것만 잡는다 — 같은 창 위의 오버레이(씬 뷰 하단 툴바 자식 창) · 팝업에 가려지면 누름이 그쪽으로 가 단계는 성공하고 뒤 기대만 엉뚱하게 졌다.
+         *          주인은 레이블을 그린 창, 그 조상(제목 표시줄 · 도크 탭 · 열린 메뉴 머리), 레이블 사각형 안에 든 자식 창(목록 상자처럼 레이블이 담은 내용)이다.
+         *          언리얼 Automation Driver 의 hit-test 확인 · Playwright actionability 의 "receives events"(elementFromPoint) 와 같은 자리다.
+         */
+        [[nodiscard]] static EditorMarkHit hitTestMark( string_view key, const float2& anchor, string& outCoverName );
+        static void                        releaseMouseHold();
         /** @brief 앞 단계가 넣은 이벤트가 아직 ImGui 에 다 들어가지 않았으면 true 입니다. 입력 단계는 앞 입력이 다 들어간 뒤에 자리를 본다. */
         [[nodiscard]] static bool hasPendingEvents();
         /**

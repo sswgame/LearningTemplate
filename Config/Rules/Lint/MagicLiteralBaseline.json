@@ -329,7 +329,7 @@
     "Source/Editor/SelfTest/EditorSelfTest.cpp": {"integer": 1},
     "Source/Editor/SelfTest/EditorSelfTestCases.cpp": {"float": 13, "integer": 21},
     "Source/Editor/SelfTest/EditorSelfTestDevTools.cpp": {"minus-one": 1, "float": 9, "integer": 12},
-    "Source/Editor/SelfTest/EditorSelfTestInputCases.cpp": {"float": 6, "integer": 5},
+    "Source/Editor/SelfTest/EditorSelfTestInputCases.cpp": {"float": 6, "integer": 6},
     "Source/Editor/SelfTest/EditorSelfTestPanelCases.cpp": {"minus-one": 1, "integer": 8},
     "Source/Editor/SelfTest/EditorSelfTestUnitTests.cpp": {"integer": 1},
     "Source/Editor/SelfTest/EditorUndoSelfTests.cpp": {"integer": 1},

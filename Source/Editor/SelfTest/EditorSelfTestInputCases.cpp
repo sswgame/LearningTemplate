@@ -276,6 +276,96 @@ namespace sw::editor
             }
 
             // --------------------------------------------------------------------------------------------------
+            // input.coveredMarkHitTest: 같은 창의 자식 오버레이가 덮은 레이블은 "가려짐", 덮지 않은 레이블 · 레이블이 담은 자식 창은 "닿음" 이다(`hitTestMark`)
+            // --------------------------------------------------------------------------------------------------
+            /** @brief 지금 조준하는 레이블과 그 판정을 기다린 프레임 수입니다. */
+            struct HitTestProbe
+            {
+                uint32 _caseIndex{ 0 };
+                uint32 _waitSteps{ 0 };
+            };
+
+            /** @brief 가림 판정을 기다리는 단계의 상한입니다(포인터 도착 + 그 프레임의 표본 — 보통 두세 프레임). */
+            static constexpr uint32 kMaxHitWaitStep = 30;
+            /** @brief 프로브 창의 주 뷰포트 작업 영역 안 자리 · 크기와 그 안 위젯 크기입니다(px). 덮개는 덮일 버튼 가운데를 덮되 버튼 밖으로 나간다. */
+            static constexpr ImVec2 kHitProbeWindowOffset{ 40.0f, 300.0f };
+            static constexpr ImVec2 kHitProbeWindowSize{ 320.0f, 220.0f };
+            static constexpr ImVec2 kHitProbeWidgetSize{ 120.0f, 40.0f };
+            static constexpr ImVec2 kHitProbeCoverOffset{ 40.0f, 10.0f };
+            static constexpr ImVec2 kHitProbeCoverSize{ 200.0f, 30.0f };
+
+            /** @brief 프로브 창 하나를 그립니다: 덮일 버튼 위에 자식 창(씬 뷰 하단 툴바와 같은 오버레이), 덮이지 않은 버튼, 자식 창을 담은 레이블. */
+            static void drawHitTestProbeWindow()
+            {
+                const ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
+                ImGui::SetNextWindowViewport( pMainViewport->ID );
+                ImGui::SetNextWindowPos( ImVec2( pMainViewport->WorkPos.x + kHitProbeWindowOffset.x, pMainViewport->WorkPos.y + kHitProbeWindowOffset.y ), ImGuiCond_Always );
+                ImGui::SetNextWindowSize( kHitProbeWindowSize, ImGuiCond_Always );
+                ImGui::SetNextWindowFocus();
+                if ( ImGui::Begin( "Self Test Hit Probe##EditorSelfTestHitProbe", nullptr, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking ) )
+                {
+                    (void)ImGui::Button( "Covered##SelfTestHit", kHitProbeWidgetSize );
+                    EditorSelfTestMarks::record( "selftest.hit.covered" );
+                    const ImVec2 coveredMin = ImGui::GetItemRectMin();
+                    (void)ImGui::Button( "Open##SelfTestHit", kHitProbeWidgetSize );
+                    EditorSelfTestMarks::record( "selftest.hit.open" );
+                    (void)ImGui::BeginChild( "##SelfTestHitContent", kHitProbeWidgetSize, ImGuiChildFlags_Borders );
+                    ImGui::TextUnformatted( "content" );
+                    ImGui::EndChild();
+                    EditorSelfTestMarks::record( "selftest.hit.content" );
+                    // 덮개는 버튼 뒤에 같은 창의 자식으로 그린다 — 씬 뷰 오버레이 툴바(`EditorViewportOverlays::drawBar`)와 같은 모양이다.
+                    // 버튼 가운데를 덮되 버튼 사각형 밖으로 나가게 둔다 — 레이블 안에 든 자식 창은 레이블이 담은 내용으로 치기 때문이다.
+                    ImGui::SetCursorScreenPos( ImVec2( coveredMin.x + kHitProbeCoverOffset.x, coveredMin.y + kHitProbeCoverOffset.y ) );
+                    (void)ImGui::BeginChild( "##SelfTestHitCover", kHitProbeCoverSize, ImGuiChildFlags_Borders );
+                    ImGui::TextUnformatted( "cover" );
+                    ImGui::EndChild();
+                }
+                ImGui::End();
+            }
+
+            static EditorSelfTestStep runCoveredMarkHitTest( EditorSelfTestContext& context )
+            {
+                struct HitCase
+                {
+                    const utf8*   _pMark;
+                    EditorMarkHit _expected;
+                };
+                constexpr HitCase kArrCase[] = {
+                    {"selftest.hit.covered",   EditorMarkHit::Covered},
+                    {   "selftest.hit.open", EditorMarkHit::Reachable},
+                    {"selftest.hit.content", EditorMarkHit::Reachable},
+                };
+                drawHitTestProbeWindow();
+                if ( context.getStepIndex() == 0 )
+                    return EditorSelfTestStep::Continue; // 레이블이 생기도록 한 번 그린다
+                HitTestProbe& probe = context.getTestState<HitTestProbe>();
+                if ( probe._caseIndex >= std::size( kArrCase ) )
+                {
+                    EditorSelfTestInput::releaseMouseHold();
+                    moveMouseAway();
+                    return EditorSelfTestStep::Done;
+                }
+                const HitCase& hitCase = kArrCase[probe._caseIndex];
+                if ( context.expect( EditorSelfTestInput::holdMouseAtMark( hitCase._pMark ), "the hit probe window left no mark" ) == false )
+                {
+                    EditorSelfTestInput::releaseMouseHold();
+                    return EditorSelfTestStep::Done;
+                }
+                string              coverName;
+                const EditorMarkHit hit = EditorSelfTestInput::hitTestMark( hitCase._pMark, float2{ 0.5f, 0.5f }, coverName );
+                if ( hit == EditorMarkHit::Pending && ++probe._waitSteps < kMaxHitWaitStep )
+                    return EditorSelfTestStep::Continue;
+                StringBuilder<constant::buffer::kMax256> whatBuilder;
+                whatBuilder.appendFormat( "hit test of '%#' is %# (cover '%#'), expected %#", hitCase._pMark, static_cast<uint32>( hit ), coverName.c_str(),
+                                          static_cast<uint32>( hitCase._expected ) );
+                const string what{ whatBuilder.view() };
+                (void)context.expect( hit == hitCase._expected, what.c_str() );
+                ++probe._caseIndex;
+                probe._waitSteps = 0;
+                return EditorSelfTestStep::Continue;
+            }
+
+            // --------------------------------------------------------------------------------------------------
             // input.themeSwatch: 기본이 아닌 테마(라이트)에서 테마 대화상자의 스와치를 누르면 액센트가 바뀐다. 끝나면 원래 테마로 되돌린다
             // --------------------------------------------------------------------------------------------------
             /** @brief 테스트 앞의 테마와 에디터 설정 파일 바이트입니다. 스와치 클릭은 설정 파일을 다시 쓰므로(saveToConfig), 끝나면 바이트째 되돌립니다. */
@@ -481,6 +571,7 @@ namespace sw::editor
 
     SW_EDITOR_SELF_TEST( HierarchySearchTyping, "input.hierarchySearchTyping", 1000, &EditorSelfTestInputCasesInternal::TypingProbe::runHierarchySearchTyping );
     SW_EDITOR_SELF_TEST( TooltipOnHover, "input.tooltipOnHover", 1010, &EditorSelfTestInputCasesInternal::runTooltipOnHover );
+    SW_EDITOR_SELF_TEST( CoveredMarkHitTest, "input.coveredMarkHitTest", 1015, &EditorSelfTestInputCasesInternal::runCoveredMarkHitTest );
     SW_EDITOR_SELF_TEST( ThemeSwatch, "input.themeSwatch", 1020, &EditorSelfTestInputCasesInternal::SwatchProbe::runThemeSwatch );
     SW_EDITOR_SELF_TEST( VisibilityToggleFits, "hierarchy.visibilityToggleFits", 1030, &EditorSelfTestInputCasesInternal::ToggleProbe::runVisibilityToggleFits );
     SW_EDITOR_SELF_TEST( SelectedRowToggle, "hierarchy.selectedRowLeavesTheToggleVisible", 1040,
