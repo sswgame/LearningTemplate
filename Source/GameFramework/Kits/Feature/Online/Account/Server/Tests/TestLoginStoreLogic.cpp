@@ -6,6 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
+#include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 using namespace sw;
@@ -221,11 +222,21 @@ SW_TEST_CASE( LoginStoreLogicTest, DeletionWaitsForGraceAndCanBeCancelled )
     Fixture fixture;
     SW_REQUIRE_TRUE( fixture.registerAccount( "Ivan_11", "correct horse" ) == LoginResult::Ok );
     SW_REQUIRE_TRUE( fixture.registerAccount( "Judy_12", "correct horse" ) == LoginResult::Ok );
-    const int64 dueMs = kNowMs + fixture.settings._deletionGraceMs;
+    const int64    dueMs = kNowMs + fixture.settings._deletionGraceMs;
+    vector<uint64> listAccountID;
     for ( const string_view name : { string_view( "Ivan_11" ), string_view( "Judy_12" ) } )
     {
         LoginGrant grant;
         SW_REQUIRE_TRUE( fixture.login( name, "correct horse", grant ) == LoginResult::Ok );
+        listAccountID.push_back( grant._identity._accountID );
+        LedgerTransferRequest coins;
+        coins._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( grant._identity._accountID ), "cur.gold", 50 } );
+        coins._journalKey = LedgerJournalKey::makeAccountScope( grant._identity._accountID );
+        coins._journalKey += "/test.grant";
+        coins._reason = "test.grant";
+        coins._timeMs = kNowMs;
+        LedgerTransferResult coinsResult;
+        SW_REQUIRE_TRUE( Ledger::executeTransfer( fixture.database, coins, coinsResult ) == LedgerResult::Ok );
         LoginStoreResult result;
         LoginStoreLogic  logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, result );
         int64            outDueMs = 0;
@@ -248,4 +259,14 @@ SW_TEST_CASE( LoginStoreLogicTest, DeletionWaitsForGraceAndCanBeCancelled )
     SW_EXPECT_TRUE( fixture.login( "Ivan_11", "correct horse", grant, dueMs + 2 ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( int64{ 0 }, grant._deletionDueMs );
     SW_EXPECT_TRUE( fixture.login( "Judy_12", "correct horse", grant, dueMs + 3 ) == LoginResult::WrongCredentials );
+
+    // 지운 Judy 의 잔액은 같은 정리에서 소각됐고 묘비가 남는다. 취소한 Ivan 의 잔액은 그대로다(감사 P0-7)
+    LedgerBalance balance;
+    SW_REQUIRE_TRUE( Ledger::readBalance( fixture.database, LedgerHolder::makeAccount( listAccountID[0] ), "cur.gold", balance ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( int64{ 50 }, balance._amount );
+    SW_REQUIRE_TRUE( Ledger::readBalance( fixture.database, LedgerHolder::makeAccount( listAccountID[1] ), "cur.gold", balance ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( int64{ 0 }, balance._amount );
+    ServiceRecord tombstone;
+    SW_EXPECT_TRUE( fixture.database.readRecord( Ledger::getTombstoneTable(), LedgerHolder::makeAccount( listAccountID[1] ).makeKey(), tombstone ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( fixture.database.readRecord( Ledger::getTombstoneTable(), LedgerHolder::makeAccount( listAccountID[0] ).makeKey(), tombstone ) == ServiceStoreResult::NotFound );
 }

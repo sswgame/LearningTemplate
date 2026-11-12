@@ -410,6 +410,7 @@ namespace sw
             case LedgerResult::Conflict:
                 return EconomyServiceResult::fail( OnlineError::kBusy );
             case LedgerResult::Invalid:
+            case LedgerResult::AccountDeleted:
                 return EconomyServiceResult::fail( OnlineError::kInvalidRequest );
             case LedgerResult::Unavailable:
                 return EconomyServiceResult::fail( OnlineError::kUnavailable );
