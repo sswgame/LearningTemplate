@@ -298,13 +298,6 @@
 - 제안: 쿠킹이 셀마다 구간을 쓰고 런타임은 셀 색인만 든다. 셀 로드는 워커에서 파싱 · 인스턴스화하고 등록은 `pumpHeldRegistration` 예산을 쓴다. 셀을 내릴 때는 `SaveGame` 표시가 있는 상태를 셀 키로 보관한다(G-7 과 같은 줄기).
 - 확인: `load/` 에 셀 400 × 오브젝트 2000, `GT.Scene.service.SceneStreamingSubsystem` 최대 프레임 시간.
 
-#### A-15 프리팹 스폰이 인스턴스마다 XML 텍스트를 파싱한다
-- 분류: 성능 · 확신: 구조 확인(통합 단계에서 다시 읽지 않음), 비용은 측정 필요
-- 근거: `Source/Engine/Object/Prefab/PrefabAsset.cpp:1017,1021` — 쿠킹본(`.prefab.bin`)이 상태를 XML 문자열로 싣고 `:1065-1066` 의 `applyStateTo` 가 스폰마다 `loadFromXMLString` 으로 파싱한다. 중첩 저작본은 스폰마다 XML 을 합친 뒤 파싱한다(`PrefabCache.cpp:504,580`).
-- 상용 엔진: 언리얼은 아키타입에서 프로퍼티를 복사하고 유니티 `Instantiate` 는 오브젝트 그래프를 복제한다. Godot PackedScene 은 색인 + Variant 배열이다.
-- 제안: 쿠킹이 상태를 `BinarySerializer` 본문으로 굽거나, 캐시가 프리팹마다 원형 오브젝트를 한 번 짓고 리플렉션 복사로 인스턴스를 만든다.
-- 확인: `load/` 에 프리팹 하나를 1000 번 스폰하는 시나리오, Tracy `PrefabCache::spawn`.
-
 #### A-16 쿠킹된 이진 번역 표가 어디서도 쓰이지 않는다
 - 분류: 성능 · 구조 · 확신: 사용처 없음 확인(통합 단계에서 다시 읽지 않음)
 - 근거: `Source/Engine/Localization/LocalizationManager.cpp:418,449,461` — `loadBinaryTable` · `cookBinaryTable` 의 호출이 Localization 폴더와 테스트 밖에 없다. 배포 팩은 저작 XML 을 담고 `readProject`(`:174-250`)가 모든 문화권 XML 을 읽으며 `rebuildTablesLocked`(`:541-636`)는 마운트마다 모든 프로젝트 × 문화권을 다시 채운다.
