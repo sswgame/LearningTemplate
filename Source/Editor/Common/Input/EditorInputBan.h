@@ -69,6 +69,8 @@ namespace ImGui
 
     #define SW_EDITOR_WIDGET_BAN_MESSAGE "editor code does not call ImGui input widgets directly - use EditorWidgets::inputInt / dragFloat / sliderFloat / combo / beginCombo ... with a '##' EditorWidgetID and draw the label first"
 
+struct ImRect; // imgui_internal.h 의 사각형(TempInputText · TempInputScalar)
+
 namespace ImGui
 {
     [[deprecated( SW_EDITOR_WIDGET_BAN_MESSAGE )]] IMGUI_API bool BeginCombo( const utf8* label, const utf8* preview_value, ImGuiComboFlags flags );
@@ -122,6 +124,11 @@ namespace ImGui
     [[deprecated( SW_EDITOR_WIDGET_BAN_MESSAGE )]] IMGUI_API bool BeginListBox( const utf8* label, const ImVec2& size );
     [[deprecated( SW_EDITOR_WIDGET_BAN_MESSAGE )]] IMGUI_API bool ListBox( const utf8* label, int* current_item, const utf8* const items[], int items_count, int height_in_items );
     [[deprecated( SW_EDITOR_WIDGET_BAN_MESSAGE )]] IMGUI_API bool ListBox( const utf8* label, int* current_item, const utf8* ( *getter )( void* user_data, int idx ), void* user_data, int items_count, int height_in_items );
+
+    // imgui_internal.h 의 이름표 받는 입력 겹 — 공개 위젯을 막아도 이 길로 같은 칸을 그릴 수 있다.
+    [[deprecated( SW_EDITOR_WIDGET_BAN_MESSAGE )]] IMGUI_API bool InputTextEx( const utf8* label, const utf8* hint, utf8* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data );
+    [[deprecated( SW_EDITOR_WIDGET_BAN_MESSAGE )]] IMGUI_API bool TempInputText( const ImRect& bb, ImGuiID id, const utf8* label, utf8* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data );
+    [[deprecated( SW_EDITOR_WIDGET_BAN_MESSAGE )]] IMGUI_API bool TempInputScalar( const ImRect& bb, ImGuiID id, const utf8* label, ImGuiDataType data_type, void* p_data, const utf8* format, const void* p_clamp_min, const void* p_clamp_max );
 } // namespace ImGui
 
 #endif // defined( IMGUI_VERSION ) && !defined( SW_EDITOR_WIDGET_ADAPTER )
