@@ -235,13 +235,6 @@
 - 제안: 파일에 스키마 주인별 판(`"versions": { "engine": 3, "game": 2 }`)을 적는다. 빌드보다 새 파일은 덮어쓰지 않고 옆에 보관하고 모르는 키는 원문 그대로 다시 쓴다.
 - 확인: 단위 `UserSettingsFileEntryTest.GameUpgradeRunsWhenEngineVersionIsHigher`, `NewerFileIsNotRewrittenAsOlder`.
 
-#### A-6 플레이어 세이브에 판 올림 길이 없다 — 봉투는 같은 판만, 구간은 정확히 같은 판만, 상태는 색인 · 개수에 묶임
-- 분류: 구조(세이브 호환) · 확신: 확인 — DesignBacklog "데이터 버전 정책은 감사하지 않았다" 의 대조 결과
-- 근거: `Source/Engine/Serialization/Format/StateIO.cpp:116-123` — `readHeader` 가 `readVersion == version` 일 때만 통과한다(약 30 곳이 `io.header( kStateTag, kStateVersion )` 를 쓴다). 봉투도 같다(`Source/GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.cpp:33, 179` `kVersion = 5`, `GameInstance.cpp:578-583` "옛 형식 리더는 두지 않는다"). 판 올림 사슬(`Source/Engine/Serialization/Format/FormatUpgrade.h:22-31`)은 봉투 전체 바이트 단위이고 `SW_SAVE_FORMAT_UPGRADE` 등록이 0 건이다. 이미 올린 곳이 있다(`ShooterGameModeComponent.cpp:43` 3, `FarmGameModeComponent.cpp:45` 4) — 올리면 옛 세이브는 새 판이 된다. 상태가 색인 · 개수로 짝짓는 자리: `Shop.cpp:544-551`, `SpawnDirector.cpp:253-259`, `Weapon.cpp:246-248`, `WeatherSystem.cpp:218`, `ElementGrid.cpp:389-390`. 같은 저장소의 `QuestLog::serializeState`(`QuestLog.cpp:440-448`)는 id 로 짝짓고 `reconcileWithDefinition` 으로 맞춘다 — 규칙이 둘로 갈려 있다. MMO 프로필은 형식이 다르면 로그인을 거절한다(`Source/Games/LanternVale/ValeProfileStore.cpp:71-80` — 전 계정이 잠긴다).
-- 상용 엔진: 언리얼 `FCustomVersion` + `Ar.CustomVer()` + CoreRedirects, 유니티 `FormerlySerializedAs`, Godot 은 리소스 `format` 호환 읽기다.
-- 제안: `StateIO::header` 를 읽은 판을 돌려주는 `versioned( tag, current, upgradeTable )` 로 바꾼다. 구간 종류마다 n → n+1 단계를 등록하고 판이 다른데 단계가 없으면 오류다(올릴 때 승계 함수가 없으면 빌드가 진다). 구간은 길이 머리를 써 모르는 구간을 건너뛰고 보존한다. 상태 직렬화 규칙을 "카탈로그 항목은 id 로, 정의와 다르면 reconcile" 하나로 통일하고 색인 저장은 핫 리로드 목적에만 허용한다(목적 인자로 형식이 가른다).
-- 확인: `Test/Fixtures/formats/save/<태그>/v<n>` 표본을 올려 읽는 단위 테스트. 등록 검사 `StateSectionUpgradeTest.EveryBumpedSectionHasASteps`. `ShopStateTest.SaveSurvivesAddedStock`, `SpawnDirectorTest.SaveSurvivesReorderedTable`.
-
 #### A-7 공유 에셋의 제자리 다시 읽기가 `shared_ptr<const T>` 를 쥔 다른 스레드와 겹칠 수 있다
 - 분류: 결함(잠재 경쟁) · 확신: 구조 확인, 발현은 추정
 - 근거: `Source/Engine/Asset/Cache/SharedAssetTable.h:104-115` — `reloadShared` 가 `*live = std::move( fresh )` 로 살아 있는 객체를 덮는다. 캐시는 워커에서 불러도 된다고 계약하고(`SharedAssetCache.h:100-105`) `shared_ptr<const AssetType>` 를 나눠 준다. 다시 읽기는 배포에도 있다: 매 프레임 `reloadComposedDependents`(`Source/Engine/Engine.cpp:452-455` — 품질 · 언어 태그 변경)와 `ModSession.cpp:322`.
@@ -398,13 +391,6 @@
 - 상용 엔진: 언리얼 `UTransBuffer::CanUndo` 는 트랜잭션이 열려 있으면 거절하고 Undo History 창도 같은 `GEditor->UndoTransaction` 을 탄다.
 - 제안: 되돌리기 입구를 하나로 둔다. History 는 `edit.undo` · `edit.redo` · `edit.jumpTo` 를 큐에 넣기만 한다. 스택에 "상호작용 구간" 카운터(문서 편집의 `DocumentEditSpan` 과 같은 구간)를 두어 열려 있으면 거절한다.
 - 확인: 시나리오 `lightprobebake` 에 "베이크 중 `history.step.0` 클릭 → `Editor.UndoIndex` 그대로".
-
-#### E-3 플레이 경계에서 미리보기 없는 문서 패널의 편집 기록이 사라진다 — 그 패널은 씬과 전역 스택 하나를 쓴다
-- 분류: 결함(되돌리기 손실) · 확신: 확인
-- 근거: `Source/Editor/Common/Workspace/Play/EditorPlaySession.cpp:573`(`parkHistory`) · `:564`(`clear`) · `:587`(`unparkHistory` 는 지금 내역을 버린다). 문서 기록이 갈 스택은 `EditorDocumentPanel::getDocumentCommandStack` 하나가 답하고, 미리보기 패널(머티리얼 · 머티리얼 그래프 · 프리팹 …)은 자기 창 스택이라 플레이 경계를 넘는다. 미리보기가 없는 문서 패널(시퀀서 · 타일맵 · 대화 · 애니메이션 그래프 · UI 미리보기 …)은 기본 답인 전역 스택이라, 플레이 중 고친 뒤 Stop 하면 문서는 dirty 인데 그 편집은 되돌릴 수 없다.
-- 상용 엔진: 유니티는 플레이 중 에셋 편집과 그 Undo 가 플레이 종료 뒤에도 남는다. Godot 은 리소스마다 history 가 따로다.
-- 제안: 문서 패널마다 스택을 두고(미리보기 패널의 창 스택을 기반으로 올린다) 포커스가 그 스택을 겨누게 한다 — `parkHistory` 는 씬 스택만 맡는다. 그때 `Editor.UndoCount` · History 패널이 보는 스택(전역 → 포커스)과 이를 보는 시나리오(`sequencercuts` · `gimmickgraph` · `uipreview*`)를 함께 옮긴다.
-- 확인: 시나리오 `undosurvivesplay` 에 "플레이 중 시퀀서 편집 → Stop → 그 창에서 undo → 값 복귀".
 
 #### E-6 형제 순서 한 줄을 옮기면 형제 전부가 스냅샷 · 기록 · 씬 파일 변경이 된다
 - 분류: 성능 + 구조(팀 병합) · 확신: 확인
