@@ -99,6 +99,16 @@ namespace sw
         _listLiveSlot[*livePosition]._dueTime = dueTime;
     }
 
+    float64 NetSlotTable::getNextDueTime() const
+    {
+        float64 nextDueTime = std::numeric_limits<float64>::infinity();
+        for ( const NetLiveSlot& live : _listLiveSlot )
+        {
+            nextDueTime = live._dueTime < nextDueTime ? live._dueTime : nextDueTime;
+        }
+        return nextDueTime;
+    }
+
     void NetSlotTable::collectDue( float64 nowSeconds, vector<int32>& outListSlot ) const
     {
         outListSlot.clear();

@@ -5,6 +5,7 @@
  *          회선 나쁨(지연 · 흔들림 · 손실 · 중복 · 깨짐 · 순서 뒤바뀜 · 대역폭)은 엔드포인트에 씌우는 `NetEmulationTransport` 하나가 맡습니다 — UDP 에 씌우는 것과 같은 길입니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
@@ -55,10 +56,16 @@ namespace sw
         /** @brief 시간이 흐릅니다 — 루프백은 날아가는 패킷을 배달하고, 흉내는 때가 된 패킷을 안쪽 전송에 넘긴다. UDP 는 하는 일이 없다. */
         virtual void update( float64 time ) { (void)time; }
         /**
-         * @brief 받을 것이 생기거나 @p timeoutSeconds 가 지날 때까지 잠듭니다. 받을 것이 있으면 true 입니다(전용 네트워크 스레드가 바쁘게 돌지 않게).
+         * @brief 받을 것이 생기거나 @p timeoutSeconds 가 지나거나 `wake` 가 불릴 때까지 잠듭니다. 받을 것이 있으면 true 입니다(전용 네트워크 스레드가 바쁘게 돌지 않게).
          * @details 기본은 그냥 잔다 — 깨어날 수단이 없는 전송도 제한 시간마다 `update` 가 돈다.
          */
         virtual bool waitForReceive( float64 timeoutSeconds );
+        /**
+         * @brief `waitForReceive` 에서 자는 스레드를 깨웁니다. 아무 스레드에서나 부른다 — 다른 스레드가 보낼 것을 넣었을 때(GameNetworkingSockets `WakeSteamDatagramThread`).
+         * @details 잠들기 전에 불려도 다음 `waitForReceive` 가 바로 돌아온다(깨움을 잃지 않는다). 기본은 아무것도 하지 않는다 — 그런 전송은 기다리는 쪽이
+         *          제한 시간(`NetEndpointThreadConfig::_maxWaitSeconds`)마다 돈다.
+         */
+        virtual void wake() {}
     };
 } // namespace sw
 
@@ -76,7 +83,9 @@ namespace sw
         [[nodiscard]] bool receive( NetAddress& outFrom, vector<uint8>& outBuffer ) override;
         NetAddress         getLocalAddress() const override { return _address; }
         void               update( float64 time ) override;
-        bool               waitForReceive( float64 timeoutSeconds ) override;
+        /** @brief 날아가는 패킷을 배달하며(`LoopbackNetwork::deliverInFlight`) 받은 편지함을 짧게 나눠 봅니다 — 엔드포인트 스레드는 다음 기한까지 자므로 남의 `update` 를 기다리지 않는다. */
+        bool waitForReceive( float64 timeoutSeconds ) override;
+        void wake() override;
 
         // 망이 부릅니다 — 망의 잠금을 잡은 채로.
         void deliver( const NetAddress& from, vector<uint8>&& buffer );
@@ -93,6 +102,7 @@ namespace sw
         LoopbackNetwork* _pNetwork;
         deque<Datagram>  _listInbox;
         NetAddress       _address;
+        atomic<bool>     _bWakeRequested; ///< `wake` 가 켜고 `waitForReceive` 가 끈다(아무 스레드)
     };
 } // namespace sw
 

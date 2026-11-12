@@ -6,9 +6,20 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct UDPNetTransportInternal
+        {
+            static constexpr int32 kWakeDrainLimit = 64; ///< 한 번 깰 때 비우는 깨우기 데이터그램 상한 — 다른 로컬 프로세스가 쏟아부어도 여기서 묶이지 않는다
+            static constexpr uint8 kWakeByte       = 1;  ///< 깨우기 데이터그램의 한 바이트(값은 보지 않는다)
+        };
+    } // namespace
+
     UDPNetTransport::UDPNetTransport()
         : _localAddress{}
+        , _wakeAddress{}
         , _socketHandle{ PlatformSocketUtil::kInvalidSocket }
+        , _wakeSocketHandle{ PlatformSocketUtil::kInvalidSocket }
     {
     }
 
@@ -23,6 +34,14 @@ namespace sw
         _socketHandle = PlatformSocketUtil::openUDPSocket( port, bLoopbackOnly, sharing );
         if ( _socketHandle == PlatformSocketUtil::kInvalidSocket )
             return false;
+        _wakeSocketHandle = PlatformSocketUtil::openUDPSocket( 0, true, UDPPortSharing::Exclusive );
+        if ( _wakeSocketHandle == PlatformSocketUtil::kInvalidSocket )
+        {
+            SW_LOG_ERROR_ID( "Net.WakeSocketFailed", "UDPNetTransport: cannot open the loopback wake socket - the network thread could not be woken for queued sends" );
+            close();
+            return false;
+        }
+        _wakeAddress  = NetAddress::makeLoopback( PlatformSocketUtil::getBoundPort( _wakeSocketHandle ) );
         _localAddress = NetAddress::makeLoopback( PlatformSocketUtil::getBoundPort( _socketHandle ) );
         return true;
     }
@@ -30,7 +49,9 @@ namespace sw
     void UDPNetTransport::close()
     {
         PlatformSocketUtil::closeSocket( _socketHandle );
-        _socketHandle = PlatformSocketUtil::kInvalidSocket;
+        PlatformSocketUtil::closeSocket( _wakeSocketHandle );
+        _socketHandle     = PlatformSocketUtil::kInvalidSocket;
+        _wakeSocketHandle = PlatformSocketUtil::kInvalidSocket;
     }
 
     bool UDPNetTransport::isOpen() const
@@ -107,8 +128,27 @@ namespace sw
     {
         if ( isOpen() == false )
             return INetTransport::waitForReceive( timeoutSeconds );
-        const int32 timeoutMilli = static_cast<int32>( timeoutSeconds * constant::time::kMillisecondsPerSecond + 0.5 );
-        return PlatformSocketUtil::waitReadable( _socketHandle, timeoutMilli > 0 ? timeoutMilli : 0 );
+        const int32  timeoutMilli = static_cast<int32>( timeoutSeconds * constant::time::kMillisecondsPerSecond + 0.5 );
+        const uint64 arrSocket[]  = { _socketHandle, _wakeSocketHandle };
+        const bool   bReadable    = PlatformSocketUtil::waitReadable( arrSocket, static_cast<int32>( sizeof( arrSocket ) / sizeof( arrSocket[0] ) ), timeoutMilli > 0 ? timeoutMilli : 0 );
+        // 깨우기 바이트를 비운다 — 남기면 다음 poll 이 바로 돌아온다.
+        uint8      arrByte[sizeof( uint64 )]{};
+        NetAddress from{};
+        int32      size = 0;
+        for ( int32 attempt = 0; attempt < UDPNetTransportInternal::kWakeDrainLimit; ++attempt )
+        {
+            if ( PlatformSocketUtil::receiveFrom( _wakeSocketHandle, from, arrByte, static_cast<int32>( sizeof( arrByte ) ), size ) != SocketReceiveResult::Received )
+                break;
+        }
+        return bReadable;
+    }
+
+    void UDPNetTransport::wake()
+    {
+        if ( isOpen() == false )
+            return;
+        const uint8 byte = UDPNetTransportInternal::kWakeByte;
+        (void)PlatformSocketUtil::sendTo( _wakeSocketHandle, _wakeAddress, &byte, static_cast<int32>( sizeof( byte ) ) ); // 실패(버퍼 가득)면 이미 깨울 바이트가 쌓여 있다
     }
 
     bool UDPNetTransport::receive( NetAddress& outFrom, vector<uint8>& outBuffer )

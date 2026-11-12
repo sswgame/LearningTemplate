@@ -16,6 +16,7 @@
 
 #include <chrono>
 #include <cstring>
+#include <limits>
 #include <mutex>
 #include <thread>
 
@@ -117,6 +118,7 @@ namespace sw
         , _slotVisitCount{ 0 }
         , _lastUpdateTime{ -1.0 }
         , _nextDebuggerPollTime{ 0.0 }
+        , _nextUpdateTime{ std::numeric_limits<float64>::lowest() }
         , _protocolID{ 0 }
         , _updateDepth{ 0 }
         , _clientIndex{ constant::invalid_index::kInt32 }
@@ -125,6 +127,8 @@ namespace sw
         , _bConnectPending{ SW_FALSE }
         , _bHasCredentials{ SW_FALSE }
         , _bDebugHold{ SW_FALSE }
+        , _bWaiting{ SW_FALSE }
+        , _bWakeRequested{ SW_FALSE }
     {
     }
 
@@ -229,6 +233,7 @@ namespace sw
     {
         vector<FinishedConnect> listFinished;
         bool                    bStarted = false;
+        INetTransport*          pWake    = nullptr;
         {
             ScopedLock<mutex> lock{ _mutex };
             finishConnect( NetDisconnectReason::Requested ); // 앞의 비동기 연결은 여기서 끝난다.
@@ -236,8 +241,10 @@ namespace sw
             _bHasCredentials = pCredentials != nullptr && pCredentials->_tokenSize > 0 ? SW_TRUE : SW_FALSE;
             bStarted         = startConnect( serverAddress );
             listFinished.swap( _listFinished );
+            pWake = takeWakeTransport();
         }
         deliverFinished( listFinished );
+        wakeTransport( pWake );
         return bStarted;
     }
 
@@ -255,6 +262,7 @@ namespace sw
     {
         vector<FinishedConnect>      listFinished;
         TaskFuture<NetConnectResult> future;
+        INetTransport*               pWake = nullptr;
         {
             ScopedLock<mutex> lock{ _mutex };
             finishConnect( NetDisconnectReason::Requested );
@@ -266,8 +274,10 @@ namespace sw
             if ( startConnect( serverAddress ) == false )
                 finishConnect( NetDisconnectReason::Rejected );
             listFinished.swap( _listFinished );
+            pWake = takeWakeTransport();
         }
         deliverFinished( listFinished );
+        wakeTransport( pWake );
         return future;
     }
 
@@ -299,6 +309,7 @@ namespace sw
                 return false;
             }
         }
+        requestWake( std::numeric_limits<float64>::lowest() ); // 연결 요청은 지금 나간다 — 연결이 없어 상한까지 자던 스레드를 깨운다
         return true;
     }
 
@@ -610,17 +621,69 @@ namespace sw
         return _bDebugHold == SW_TRUE;
     }
 
-    bool NetEndpoint::waitForReceive( float64 timeoutSeconds )
+    float64 NetEndpoint::computeWaitSeconds( float64 nowSeconds, float64 nextUpdateTime, float64 maxWaitSeconds )
+    {
+        return MathUtil::clamp( nextUpdateTime - nowSeconds, 0.0, MathUtil::max( 0.0, maxWaitSeconds ) );
+    }
+
+    bool NetEndpoint::waitForReceive( float64 nowSeconds, float64 maxWaitSeconds )
+    {
+        INetTransport* pTransport  = nullptr;
+        float64        waitSeconds = 0.0;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            pTransport  = _pTransport;
+            waitSeconds = computeWaitSeconds( nowSeconds, _nextUpdateTime, maxWaitSeconds );
+            _bWaiting   = SW_TRUE; // 이 뒤에 앞당기는 쪽은 깨운다(`requestWake`) — 앞이면 위의 자는 시간에 이미 들어갔다
+        }
+        bool bReceived = false;
+        if ( pTransport != nullptr )
+            bReceived = pTransport->waitForReceive( waitSeconds );
+        else
+            ThreadUtil::sleepForSeconds( MathUtil::max( 0.0, maxWaitSeconds ) ); // 전송이 없으면 기한도 없다(update 가 아무것도 하지 않는다)
+        ScopedLock<mutex> lock{ _mutex };
+        _bWaiting       = SW_FALSE;
+        _bWakeRequested = SW_FALSE;
+        return bReceived;
+    }
+
+    void NetEndpoint::wake()
     {
         INetTransport* pTransport = nullptr;
         {
             ScopedLock<mutex> lock{ _mutex };
             pTransport = _pTransport;
         }
+        wakeTransport( pTransport );
+    }
+
+    float64 NetEndpoint::getNextUpdateTime() const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _nextUpdateTime;
+    }
+
+    void NetEndpoint::requestWake( float64 dueTime )
+    {
+        if ( dueTime >= _nextUpdateTime )
+            return; // 이미 그 전에 깬다 — 메시지마다 깨우지 않는다
+        _nextUpdateTime = dueTime;
+        if ( _bWaiting == SW_TRUE )
+            _bWakeRequested = SW_TRUE;
+    }
+
+    INetTransport* NetEndpoint::takeWakeTransport()
+    {
+        if ( _bWakeRequested == SW_FALSE )
+            return nullptr;
+        _bWakeRequested = SW_FALSE;
+        return _pTransport;
+    }
+
+    void NetEndpoint::wakeTransport( INetTransport* pTransport )
+    {
         if ( pTransport != nullptr )
-            return pTransport->waitForReceive( timeoutSeconds );
-        ThreadUtil::sleepForSeconds( timeoutSeconds );
-        return false;
+            pTransport->wake();
     }
 
     void NetEndpoint::update( float64 nowSeconds )
@@ -775,21 +838,23 @@ namespace sw
                 }
             }
             if ( slot._state == NetConnectionState::Connecting || slot._state == NetConnectionState::Connected )
-                _slotTable.setDueTime( index, computeNextDueTime( nowSeconds, slot ) );
+                _slotTable.setDueTime( index, computeNextDueTime( nowSeconds, slot, _settings, computeTimeoutSeconds( slot ) ) );
         }
+        // 디버거 확인 시각은 넣지 않는다 — 그 비트는 데이터 패킷에만 실리고, 연결이 있으면 유지 간격마다 돈다.
+        _nextUpdateTime = _slotTable.getNextDueTime();
     }
 
-    float64 NetEndpoint::computeNextDueTime( float64 nowSeconds, const NetEndpointSlot& slot ) const
+    float64 NetEndpoint::computeNextDueTime( float64 nowSeconds, const NetEndpointSlot& slot, const NetEndpointConfig& settings, float64 timeoutSeconds )
     {
         if ( slot._lastSendTime < 0.0 )
             return nowSeconds; // 아직 보낸 적이 없다 — 다음 갱신에서 다시 본다
         if ( slot._state == NetConnectionState::Connecting )
-            return MathUtil::min( slot._connectStartTime + _settings._connectTimeout, slot._lastSendTime + _settings._connectRetryInterval );
+            return MathUtil::min( slot._connectStartTime + settings._connectTimeout, slot._lastSendTime + settings._connectRetryInterval );
         // 한가한(보낼 것 · 확인할 것 · 확인을 기다리는 신뢰 메시지가 없는) 연결은 유지 간격, 아니면 보내기 간격마다 본다.
         // 신뢰 메시지의 재전송 시각과 토큰 충전은 시계로만 오므로, 그것이 남아 있는 동안은 보내기 간격마다 다시 묻는다.
         const bool    bIdle     = slot._connection->hasDataToSend( nowSeconds ) == false && slot._connection->getPendingReliableCount() == 0;
-        const float64 sendAt    = slot._lastSendTime + ( bIdle ? MathUtil::max( _settings._sendInterval, _settings._keepAliveInterval ) : _settings._sendInterval );
-        const float64 timeoutAt = slot._lastReceiveTime + computeTimeoutSeconds( slot );
+        const float64 sendAt    = slot._lastSendTime + ( bIdle ? MathUtil::max( settings._sendInterval, settings._keepAliveInterval ) : settings._sendInterval );
+        const float64 timeoutAt = slot._lastReceiveTime + timeoutSeconds;
         return MathUtil::min( sendAt, timeoutAt );
     }
 
@@ -1224,16 +1289,30 @@ namespace sw
     {
         if ( NetEndpointInternal::reportOversizeMessage( channel, pData, size ) )
             return false;
-        ScopedLock<mutex> lock{ _mutex };
-        return sendMessageLocked( connectionID, channel, pData, size, WindowFullPolicy::Close );
+        bool           bQueued = false;
+        INetTransport* pWake   = nullptr;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            bQueued = sendMessageLocked( connectionID, channel, pData, size, WindowFullPolicy::Close );
+            pWake   = takeWakeTransport();
+        }
+        wakeTransport( pWake );
+        return bQueued;
     }
 
     bool NetEndpoint::trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
     {
         if ( NetEndpointInternal::reportOversizeMessage( channel, pData, size ) )
             return false;
-        ScopedLock<mutex> lock{ _mutex };
-        return sendMessageLocked( connectionID, channel, pData, size, WindowFullPolicy::Report );
+        bool           bQueued = false;
+        INetTransport* pWake   = nullptr;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            bQueued = sendMessageLocked( connectionID, channel, pData, size, WindowFullPolicy::Report );
+            pWake   = takeWakeTransport();
+        }
+        wakeTransport( pWake );
+        return bQueued;
     }
 
     bool NetEndpoint::sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size, WindowFullPolicy policy )
@@ -1243,7 +1322,8 @@ namespace sw
         if ( bQueued )
         {
             _sentKindStats.add( pData, size );
-            _slotTable.touch( connectionID ); // 보낼 것이 생겼다 — 다음 유지 시각을 기다리지 않는다
+            _slotTable.touch( connectionID );                              // 보낼 것이 생겼다 — 다음 유지 시각을 기다리지 않는다
+            requestWake( pSlot->_lastSendTime + _settings._sendInterval ); // 보내기 간격이 차는 때 — 자는 네트워크 스레드가 그때 깬다
             return true;
         }
         const bool bReliable    = channel == NetChannelType::ReliableOrdered || channel == NetChannelType::ReliableUnordered;
@@ -1259,14 +1339,21 @@ namespace sw
 
     bool NetEndpoint::sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag )
     {
-        ScopedLock<mutex> lock{ _mutex };
-        NetEndpointSlot*  pSlot   = _slotTable.findConnected( connectionID );
-        const bool        bQueued = pSlot != nullptr && pSlot->_connection->sendNotifiedMessage( pData, size, tag );
-        if ( bQueued )
+        bool           bQueued = false;
+        INetTransport* pWake   = nullptr;
         {
-            _sentKindStats.add( pData, size );
-            _slotTable.touch( connectionID );
+            ScopedLock<mutex> lock{ _mutex };
+            NetEndpointSlot*  pSlot = _slotTable.findConnected( connectionID );
+            bQueued                 = pSlot != nullptr && pSlot->_connection->sendNotifiedMessage( pData, size, tag );
+            if ( bQueued )
+            {
+                _sentKindStats.add( pData, size );
+                _slotTable.touch( connectionID );
+                requestWake( pSlot->_lastSendTime + _settings._sendInterval );
+            }
+            pWake = takeWakeTransport();
         }
+        wakeTransport( pWake );
         return bQueued;
     }
 
@@ -1280,16 +1367,21 @@ namespace sw
     {
         if ( NetEndpointInternal::reportOversizeMessage( channel, pData, size ) )
             return 0;
-        ScopedLock<mutex>          lock{ _mutex };
-        int32                      sentCount = 0;
-        const vector<NetLiveSlot>& listLive  = _slotTable.getLiveSlots();
-        // 뒤에서부터 돈다 — 창이 차 닫힌 연결(`sendMessageLocked`)은 목록에서 빠지고 뒤 칸이 당겨지는데, 뒤 칸은 이미 보냈다.
-        for ( size_t position = listLive.size(); position > 0; --position )
+        int32          sentCount = 0;
+        INetTransport* pWake     = nullptr;
         {
-            const int32 index = listLive[position - 1]._slotIndex;
-            if ( index != exceptID && sendMessageLocked( index, channel, pData, size, WindowFullPolicy::Close ) )
-                ++sentCount;
+            ScopedLock<mutex>          lock{ _mutex };
+            const vector<NetLiveSlot>& listLive = _slotTable.getLiveSlots();
+            // 뒤에서부터 돈다 — 창이 차 닫힌 연결(`sendMessageLocked`)은 목록에서 빠지고 뒤 칸이 당겨지는데, 뒤 칸은 이미 보냈다.
+            for ( size_t position = listLive.size(); position > 0; --position )
+            {
+                const int32 index = listLive[position - 1]._slotIndex;
+                if ( index != exceptID && sendMessageLocked( index, channel, pData, size, WindowFullPolicy::Close ) )
+                    ++sentCount;
+            }
+            pWake = takeWakeTransport();
         }
+        wakeTransport( pWake ); // 연결 수만큼이 아니라 한 번
         return sentCount;
     }
 

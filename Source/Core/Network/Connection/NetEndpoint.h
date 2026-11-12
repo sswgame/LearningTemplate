@@ -296,8 +296,17 @@ namespace sw
         TaskFuture<NetConnectResult> connectAsync( const NetAddress& serverAddress, const NetConnectCredentials& credentials ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 소켓에서 받고(잠금 밖), 패킷 처리와 타임아웃 확인과 보낼 패킷 생성을 하고(잠금 안), 보냅니다(잠금 밖). 한 번에 한 스레드만 부른다. */
         void update( float64 nowSeconds ) SW_EXCLUDES_LOCK( _mutex );
-        /** @brief 받을 데이터그램이 생기거나 @p timeoutSeconds 가 지날 때까지 잠듭니다. `update` 를 도는 스레드가 부릅니다. */
-        bool waitForReceive( float64 timeoutSeconds ) SW_EXCLUDES_LOCK( _mutex );
+        /**
+         * @brief 받을 데이터그램이 생기거나, 다음 갱신 시각(`getNextUpdateTime` — 재전송 · 타임아웃 · 유지)이 되거나, 다른 스레드가 보낼 것을 넣거나(`wake`),
+         *        @p maxWaitSeconds 가 지날 때까지 잠듭니다. `update` 를 도는 스레드가 부릅니다(@p nowSeconds 는 `update` 와 같은 시계).
+         * @details 기다리는 동안만 보내기 · 연결이 전송을 깨운다 — 게임 스레드가 직접 `update` 하는 엔드포인트는 깨우기 시스템 호출을 내지 않는다.
+         *          자는 시간을 정하는 것과 "기다리는 중" 표시를 한 잠금 안에서 해서, 그 사이에 넣은 메시지의 깨움을 잃지 않는다.
+         */
+        bool waitForReceive( float64 nowSeconds, float64 maxWaitSeconds ) SW_EXCLUDES_LOCK( _mutex );
+        /** @brief `waitForReceive` 에서 자는 스레드를 깨웁니다(`NetEndpointThread::stop`). */
+        void wake() SW_EXCLUDES_LOCK( _mutex );
+        /** @brief 다음에 `update` 를 불러야 하는 시각입니다 — 살아 있는 연결의 가장 이른 기한. 연결이 없으면 양의 무한대이고, 아직 `update` 를 돈 적이 없으면 음의 무한대입니다. */
+        float64 getNextUpdateTime() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 이 스레드를 `update` 스레드 역할의 소유자로 정합니다(`NetEndpointThread` 가 스레드를 시작할 때). Debug 가 `update` 진입에서 스레드를 확인한다. */
         void bindUpdateThread() { _updateThread.bindToCurrentThread(); }
         /** @brief `update` 스레드 역할을 놓습니다(그 스레드가 끝날 때) — 다음에 `update` 를 부르는 스레드가 받는다. */
@@ -369,6 +378,15 @@ namespace sw
          */
         bool isConnectionSaturated( int32 connectionID ) const SW_EXCLUDES_LOCK( _mutex ) override;
 
+        /**
+         * @brief 막 다녀간 살아 있는 슬롯을 다시 볼 시각입니다 — 타임아웃 · 연결 재요청 · 보낼 간격 중 이른 것. 시계 · 잠금이 없는 순수 함수다.
+         * @details 한가하면 유지 간격, 보낼 것 · 확인을 기다리는 신뢰 메시지(재전송)가 있으면 보내기 간격이다. 받은 패킷 · 넣은 메시지는 `NetSlotTable::touch` 로
+         *          앞당기므로, 그 밖의 길로 보낼 것이 생겨도 늦는 것은 유지 간격까지다.
+         * @param timeoutSeconds 이 연결의 타임아웃(상대의 디버거 대기를 반영한 값).
+         */
+        static float64 computeNextDueTime( float64 nowSeconds, const NetEndpointSlot& slot, const NetEndpointConfig& settings, float64 timeoutSeconds );
+        /** @brief 지금 @p nowSeconds 에서 @p nextUpdateTime 까지 잘 시간입니다. 0 과 @p maxWaitSeconds 사이로 자른다(지난 기한은 0, 기한 없음은 상한). 순수 함수다. */
+        static float64 computeWaitSeconds( float64 nowSeconds, float64 nextUpdateTime, float64 maxWaitSeconds );
         /** @brief 데이터그램(헤더 포함)의 패킷 종류를 미리 확인합니다. 체크섬은 보지 않으며, 너무 짧으면 Count 를 반환합니다(위조 패킷 필터와 진단용). */
         static PacketType peekPacketType( const uint8* pData, int32 size );
         /** @brief 패킷 체크섬입니다(헤더 값을 먼저 섞은 FNV-1a). 테스트와 진단 도구가 고친 패킷의 체크섬을 다시 맞출 때 씁니다. */
@@ -469,15 +487,15 @@ namespace sw
         void handleConnectRequest( const ControlPacket& packet ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 서버가 챌린지 응답을 확인하고 슬롯을 할당해 수락합니다. 이미 연결된 주소의 같은 응답이면 수락만 다시 보냅니다. */
         void handleChallengeResponse( const ControlPacket& packet, BitReader& reader ) SW_REQUIRES_LOCK( _mutex, _updateThread );
-        /** @brief 기한이 된 살아 있는 슬롯만 돌며 타임아웃 · 재요청 · 보내기를 하고 다음 기한을 정합니다(`NetSlotTable::collectDue`). */
+        /** @brief 기한이 된 살아 있는 슬롯만 돌며 타임아웃 · 재요청 · 보내기를 하고 다음 기한을 정합니다(`NetSlotTable::collectDue`). 끝에 다음 갱신 시각을 정합니다. */
         void updateSlots( float64 nowSeconds ) SW_REQUIRES_LOCK( _mutex );
         /**
-         * @brief 막 다녀간 살아 있는 슬롯을 다시 볼 시각입니다 — 타임아웃 · 연결 재요청 · 보낼 간격 중 이른 것.
-         * @details 한가하면 유지 간격, 보낼 것 · 확인을 기다리는 신뢰 메시지가 있으면 보내기 간격이다. 받은 패킷 · 넣은 메시지는 `NetSlotTable::touch` 로 앞당기므로,
-         *          그 밖의 길로 보낼 것이 생겨도 늦는 것은 유지 간격까지다.
+         * @brief 다음 갱신 시각을 @p dueTime 으로 앞당깁니다(다른 스레드가 보낼 것을 넣었거나 연결을 시작했다). 네트워크 스레드가 자는 중이면 깨움을 남긴다(`takeWakeTransport`).
          */
-        float64 computeNextDueTime( float64 nowSeconds, const NetEndpointSlot& slot ) const SW_REQUIRES_LOCK( _mutex );
-        void    sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB ) SW_REQUIRES_LOCK( _mutex );
+        void requestWake( float64 dueTime ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 남은 깨움이 있으면 지우고 깨울 전송을, 없으면 nullptr 를 돌려줍니다. 깨우기(시스템 호출)는 잠금을 놓은 뒤 한다. */
+        INetTransport* takeWakeTransport() SW_REQUIRES_LOCK( _mutex );
+        void           sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 연결 요청을 거절합니다. 이유, 이 엔드포인트의 프로토콜 ID, 요청에 든 클라이언트 솔트(위조 거절을 걸러 내는 값)를 싣습니다. */
         void sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 클라이언트가 챌린지 응답을 보냅니다. 암호화 방식이면 공개 키를, 토큰 결속이면 토큰과 증명 태그를 함께 싣습니다. */
@@ -536,6 +554,7 @@ namespace sw
         /** @brief `_listSealed` 를 받는 키로 엽니다 — 엔드포인트 잠금 없이, `update` 스레드가 쥔 상태만 만진다. */
         void        openSealedPackets( uint32 protocolID ) SW_REQUIRES_LOCK( _updateThread ) SW_EXCLUDES_LOCK( _mutex );
         static void sendBatch( INetTransport* pTransport, const OutgoingBatch& batch );
+        static void wakeTransport( INetTransport* pTransport );
         static void deliverFinished( vector<FinishedConnect>& listFinished );
 
     private:
@@ -570,6 +589,7 @@ namespace sw
         uint64 _slotVisitCount                           SW_GUARDED_BY( _mutex ); ///< `updateSlots` 가 들여다본 슬롯 수의 합(`getSlotVisitCount`).
         float64 _lastUpdateTime                          SW_GUARDED_BY( _mutex ); ///< 지난 `update` 의 시각. 음수면 아직 호출한 적이 없다(가상 시계가 멈춘 시간을 측정할 때 쓴다).
         float64 _nextDebuggerPollTime                    SW_GUARDED_BY( _mutex ); ///< 디버거가 붙었는지 다시 확인할 시각.
+        float64 _nextUpdateTime                          SW_GUARDED_BY( _mutex ); ///< 다음에 `update` 를 불러야 하는 시각(`getNextUpdateTime`). 보내기 · 연결이 앞당긴다.
         uint32 _protocolID                               SW_GUARDED_BY( _mutex );
         atomic<uint32>                                   _updateDepth; ///< `update` 를 두 스레드가 동시에 부르는 실수를 잡는다.
         int32 _clientIndex                               SW_GUARDED_BY( _mutex );
@@ -578,5 +598,7 @@ namespace sw
         uint8 _bConnectPending                           SW_GUARDED_BY( _mutex );
         uint8 _bHasCredentials                           SW_GUARDED_BY( _mutex ); ///< 클라이언트 전용. 자격을 제시하는 연결이다(토큰 결속).
         uint8 _bDebugHold                                SW_GUARDED_BY( _mutex ); ///< 지금 디버거 대기를 알린다(데이터 패킷의 비트).
+        uint8 _bWaiting                                  SW_GUARDED_BY( _mutex ); ///< 네트워크 스레드가 `waitForReceive` 에서 자는 중이다 — 이때만 깨운다.
+        uint8 _bWakeRequested                            SW_GUARDED_BY( _mutex ); ///< 잠금을 놓은 뒤 전송을 깨워야 한다(`takeWakeTransport`).
     };
 } // namespace sw

@@ -407,7 +407,26 @@ namespace sw
 
     bool NetEmulationTransport::waitForReceive( float64 timeoutSeconds )
     {
-        return _pInner != nullptr && _pInner->waitForReceive( timeoutSeconds );
+        float64 waitSeconds = timeoutSeconds;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            // 엔드포인트 스레드는 자기 기한까지만 잔다 — 늦춘 패킷의 때를 넘겨 자면 흉내 낸 지연에 잠든 시간이 더해진다. 시각은 마지막 `update` 기준이다.
+            for ( const Pending& pending : _listPending )
+            {
+                waitSeconds = MathUtil::min( waitSeconds, pending._deliverTime - _time );
+            }
+            for ( const Incoming& incoming : _listIncoming )
+            {
+                waitSeconds = MathUtil::min( waitSeconds, incoming._deliverTime - _time );
+            }
+        }
+        return _pInner != nullptr && _pInner->waitForReceive( MathUtil::max( 0.0, waitSeconds ) );
+    }
+
+    void NetEmulationTransport::wake()
+    {
+        if ( _pInner != nullptr )
+            _pInner->wake();
     }
 
     NetEmulationStats NetEmulationTransport::getStats() const

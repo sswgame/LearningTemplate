@@ -147,7 +147,9 @@ namespace sw
         [[nodiscard]] bool receive( NetAddress& outFrom, vector<uint8>& outBuffer ) override;
         NetAddress         getLocalAddress() const override;
         void               update( float64 time ) override;
-        bool               waitForReceive( float64 timeoutSeconds ) override;
+        /** @brief 안쪽 전송을 기다리되, 늦춘 패킷(보낼 · 받을 줄)이 때가 되는 시각에는 깹니다 — 안쪽 소켓은 그 시각을 모른다. */
+        bool waitForReceive( float64 timeoutSeconds ) override;
+        void wake() override;
 
         NetEmulationStats getStats() const;
         /** @brief 아직 넘기지 않은 패킷 수와 바이트 수를 반환합니다. */

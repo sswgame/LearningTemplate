@@ -4,6 +4,8 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Testing/TestFramework.h"
 
+#include <limits>
+
 // NetSlotTable — 주소 맵은 지금 그 주소를 가진 슬롯만 가리킨다. 풀기는 다른 슬롯이 다시 묶은 같은 주소를 지우지 않는다.
 // 빈 슬롯 · 연결 수 · 연결된 슬롯 찾기는 상태(Disconnected · Connected)로 가른다. 열기 · 닫기 · 놓기가 살아 있는 목록과 빈 슬롯 목록을 맞춘다(감사 N-8).
 
@@ -174,4 +176,22 @@ SW_TEST_CASE( NetSlotTableTest, ConnectionObjectLivesOnlyWhileTheSlotIsOpen )
     table.open( 3, NetConnectionState::Connected );
     SW_REQUIRE_TRUE( table.get( 3 )._connection != nullptr );
     SW_EXPECT_EQUAL( 0, table.get( 3 )._connection->getPendingReliableCount() ); // 새 연결은 옛 연결의 신뢰 창을 잇지 않는다
+}
+
+SW_TEST_CASE( NetSlotTableTest, NextDueTimeIsTheEarliestLiveDeadline )
+{
+    // 네트워크 스레드는 이 시각까지만 잔다(`NetEndpoint::getNextUpdateTime`) — 살아 있는 슬롯이 없으면 기한이 없다.
+    NetSlotTable table;
+    table.reset( 4 );
+    SW_EXPECT_TRUE( table.getNextDueTime() == std::numeric_limits<float64>::infinity() );
+    table.open( 0, NetConnectionState::Connected );
+    table.open( 2, NetConnectionState::Connected );
+    SW_EXPECT_TRUE( table.getNextDueTime() == std::numeric_limits<float64>::lowest() ); // 막 연 슬롯은 바로 본다
+    table.setDueTime( 0, 5.0 );
+    table.setDueTime( 2, 3.0 );
+    SW_EXPECT_EQUAL( 3.0, table.getNextDueTime() );
+    table.close( 2, false );
+    SW_EXPECT_EQUAL( 5.0, table.getNextDueTime() ); // 닫힌 슬롯의 기한은 빠진다
+    table.touch( 0 );
+    SW_EXPECT_TRUE( table.getNextDueTime() == std::numeric_limits<float64>::lowest() );
 }

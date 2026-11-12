@@ -99,6 +99,8 @@ namespace sw
         void touchAll();
         /** @brief 살아 있는 슬롯 @p slotIndex 를 다시 볼 시각을 정합니다. 살아 있지 않으면 단언입니다. */
         void setDueTime( int32 slotIndex, float64 dueTime );
+        /** @brief 살아 있는 슬롯 가운데 가장 이른 기한입니다. 살아 있는 슬롯이 없으면 양의 무한대입니다(`NetEndpoint` 가 다음 갱신 시각을 정한다). */
+        float64 getNextDueTime() const;
         /** @brief 기한(@p nowSeconds 이하)이 된 살아 있는 슬롯 번호를 @p outListSlot 에 비운 뒤 번호 순으로 담습니다. */
         void collectDue( float64 nowSeconds, vector<int32>& outListSlot ) const;
         /** @brief 살아 있는 슬롯 목록(번호 순)입니다. 받은 메시지 꺼내기 · 보내기처럼 연결된 것만 도는 쪽이 씁니다. */
