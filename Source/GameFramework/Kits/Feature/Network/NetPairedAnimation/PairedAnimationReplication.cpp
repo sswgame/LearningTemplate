@@ -124,7 +124,7 @@ namespace sw
         _listJoiningConnection.clear();
         _stats = PairedAnimationReplicationStats{};
         if ( pManager != nullptr )
-            pManager->getSubsystem<NetObjectTable>().captureSceneObjects();
+            pManager->getSubsystem<NetObjectTable>().captureSceneObjects( SceneWalkKey{} );
     }
 
     void PairedAnimationReplicationServer::update()
@@ -304,7 +304,7 @@ namespace sw
         _stats    = PairedAnimationReplicationStats{};
         _listPending.clear();
         if ( pManager != nullptr )
-            pManager->getSubsystem<NetObjectTable>().captureSceneObjects();
+            pManager->getSubsystem<NetObjectTable>().captureSceneObjects( SceneWalkKey{} );
     }
 
     void PairedAnimationReplicationClient::dropPending( uint32 sessionID )

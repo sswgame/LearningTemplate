@@ -22,6 +22,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Foundation/SceneWalkKey.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 
 namespace sw
@@ -60,7 +61,7 @@ namespace sw
          * @brief 지금 매니저에 있는 오브젝트 가운데 아직 표에 없는 것을 씬 오브젝트로 잡습니다. 여러 번 불러도 됩니다(이미 잡은 것 · 생성 오브젝트는 그대로).
          * @details 씬 문서의 오브젝트가 모두 선 뒤(플레이 시작)에 부른다. 이름이 겹친 번호는 이때 오류로 알린다.
          */
-        void captureSceneObjects();
+        void captureSceneObjects( SceneWalkKey key );
         /** @brief 이름의 씬 번호입니다(맨 위 비트를 끈 해시, 해시가 0 이면 1). 잡혀 있는지는 보지 않습니다. */
         static uint32 computeSceneID( const GameObject& object );
 

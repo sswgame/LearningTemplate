@@ -10,6 +10,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 
+#include "Engine/Foundation/SceneWalkKey.h"
+
 namespace sw
 {
     struct NavMeshSettings;
@@ -37,7 +39,7 @@ namespace sw
          *          읽지 못한 메시(로드 실패)는 두 방식 모두 넣지 않는다 — 그리지 않는 메시는 걷는 면도 아니다.
          * @return `Defer` 에서 아직 읽는 중이라 넣지 못한 메시 수입니다. 0 이 아니면 기하가 덜 모였으므로 부르는 쪽이 쓰지 않고 다음 갱신에 다시 모은다. `Wait` 는 늘 0 입니다.
          */
-        [[nodiscard]] static uint32 collectGeometry( GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
+        [[nodiscard]] static uint32 collectGeometry( SceneWalkKey key, GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
                                                      const vector<INavGeometrySource*>& listSource, NavMeshArrival arrival, NavMeshGeometry& outGeometry );
         /** @brief 베이크 경계 — 표면의 상자(있으면)와 기하 경계의 겹침입니다. */
         static AABB computeBakeBounds( const NavMeshSurfaceComponent* pSurface, const NavMeshGeometry& geometry );

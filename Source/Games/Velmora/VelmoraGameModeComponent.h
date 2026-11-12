@@ -78,6 +78,8 @@ namespace sw
 
     protected:
         [[nodiscard]] bool startGame() override;
+        void               onRegister( GameObjectManager& manager ) override;
+        void               onUnregister( GameObjectManager& manager ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;

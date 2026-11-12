@@ -445,7 +445,7 @@ namespace sw
         pRuntime->_searchExtent = float3{ reach, MathUtil::max( 1.0f, pType->_height ), reach };
 
         shared_ptr<NavMeshGeometry> pGeometry        = make_shared<NavMeshGeometry>();
-        const uint32                pendingMeshCount = NavGeometryCollector::collectGeometry( *_pManager, pRuntime->_pSurface, _settings, _listGeometrySource.getItems(), arrival, *pGeometry );
+        const uint32                pendingMeshCount = NavGeometryCollector::collectGeometry( SceneWalkKey{}, *_pManager, pRuntime->_pSurface, _settings, _listGeometrySource.getItems(), arrival, *pGeometry );
         // 메시를 아직 읽는 중이다 — 덜 모인 기하로 굽지 않는다(쿠킹본의 입력 해시도 맞지 않는다). 실패가 아니라 다음 갱신이 다시 마련한다.
         if ( pendingMeshCount > 0 )
         {
@@ -875,11 +875,11 @@ namespace sw
         return NavGeometryCollector::computeBakeBounds( pSurface, geometry );
     }
 
-    void SceneNavigation::collectGeometry( GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
+    void SceneNavigation::collectGeometry( SceneWalkKey key, GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
                                            const vector<INavGeometrySource*>& listSource, NavMeshGeometry& outGeometry )
     {
         // 쿠킹이 쓰는 길이다 — 런타임 베이크와 같은 기하(입력 해시)를 그 자리에서 내야 하므로 메시를 기다린다(`Wait` 는 늘 0 을 돌려준다).
-        (void)NavGeometryCollector::collectGeometry( manager, pSurface, settings, listSource, NavMeshArrival::Wait, outGeometry );
+        (void)NavGeometryCollector::collectGeometry( key, manager, pSurface, settings, listSource, NavMeshArrival::Wait, outGeometry );
     }
 } // namespace sw
 

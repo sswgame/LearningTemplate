@@ -107,7 +107,7 @@ namespace sw
              *          그 자신이 부품이다(부품은 다시 스폰되거나 자기 프리팹의 엔티티로 적히므로 어느 쪽이든 자기 부품을 다시 스폰한다). 인스턴스 밖으로 옮긴 부품과
              *          다시 스폰할 인스턴스가 없는 부품(연결을 끊은 인스턴스의 부품)은 @p outMapDetachedPrefab 에 원본 경로와 함께 담고, 그 프리팹의 인스턴스로 적는다.
              */
-            static void classifyNestedParts( const GameObjectManager& objects, const unordered_map<uint64, string>& mapPrefabSource,
+            static void classifyNestedParts( SceneWalkKey key, const GameObjectManager& objects, const unordered_map<uint64, string>& mapPrefabSource,
                                              unordered_set<uint64>& outUniqueRespawned, unordered_map<uint64, string>& outMapDetachedPrefab )
             {
                 outUniqueRespawned.clear();
@@ -116,7 +116,7 @@ namespace sw
                 if ( registry.getNestedPartCount() == 0 )
                     return;
                 vector<GameObject*> listObject;
-                objects.getAllGameObjects( listObject );
+                objects.getAllGameObjects( key, listObject );
                 for ( const GameObject* pGo : listObject )
                 {
                     const PrefabNestedPart* pPart = pGo != nullptr ? registry.findNestedPart( pGo->getObjectID() ) : nullptr;
@@ -305,10 +305,10 @@ namespace sw
             /**
              * @brief @p inoutInputs 의 프리팹 관련 입력(부품 분류 · 원형 상태 · 부품 덮어쓰기)을 채웁니다. 만들지 못한 프리팹의 원형은 빈 문자열로 남아 전체 상태를 적게 됩니다.
              */
-            static void prepareSavePrefabInputs( const GameObjectManager& objects, AssetManager* pAssetManager, const unordered_map<uint64, string>& mapPrefabSource, SaveInputs& inoutInputs )
+            static void prepareSavePrefabInputs( SceneWalkKey key, const GameObjectManager& objects, AssetManager* pAssetManager, const unordered_map<uint64, string>& mapPrefabSource, SaveInputs& inoutInputs )
             {
                 // 중첩 프리팹 부품마다 저장 방법을 정한다. 다시 스폰될 부품은 적지 않고, 다시 스폰될 곳을 잃은 부품은 자기 프리팹의 인스턴스로 적는다.
-                classifyNestedParts( objects, mapPrefabSource, inoutInputs._uniqueRespawnedPart, inoutInputs._mapDetachedPartPrefab );
+                classifyNestedParts( key, objects, mapPrefabSource, inoutInputs._uniqueRespawnedPart, inoutInputs._mapDetachedPartPrefab );
                 if ( pAssetManager == nullptr )
                     return;
                 for ( const auto& [objectID, prefabPath] : mapPrefabSource )
@@ -788,13 +788,13 @@ namespace sw
         ObjectSaveOptions saveOptions{ SerializePurpose::Authoring };
         saveOptions._pSavedIDMap          = &inputs._mapSavedID;
         AssetManager* const pAssetManager = _services._pAssetManager;
-        SceneInternal::prepareSavePrefabInputs( *_objectManager, pAssetManager, _mapPrefabSource, inputs );
+        SceneInternal::prepareSavePrefabInputs( SceneWalkKey{}, *_objectManager, pAssetManager, _mapPrefabSource, inputs );
         collectSceneInstanceParts( inputs._mapPartOverride, inputs._mapAnchorPart );
 
         // **자식 오브젝트도 자기 엔티티로 적는다.** 오브젝트 상태에는 자식 목록이 없고, 자식은 자기 씬 컴포넌트의 부착 필드(부모의 파일 id)로
         // 읽은 뒤 다시 붙는다(`instantiate` 의 배치이므로 순서는 상관없다). 부모가 있는 오브젝트를 건너뛰면 계층 아래의 오브젝트가
         // 저장할 때마다 파일에서 사라진다.
-        _objectManager->forEachGameObject( [&]( GameObject* pGo )
+        _objectManager->forEachGameObject( SceneWalkKey{}, [&]( GameObject* pGo )
         {
             if ( pGo == nullptr )
                 return;
@@ -1009,7 +1009,7 @@ namespace sw
 
         uint64              nextFileID = computeNextFileID();
         vector<GameObject*> listObject;
-        _objectManager->getAllGameObjects( listObject );
+        _objectManager->getAllGameObjects( SceneWalkKey{}, listObject );
         outMap.reserve( listObject.size() );
         for ( const GameObject* pGo : listObject )
         {
@@ -1111,7 +1111,7 @@ namespace sw
         _listUnresolvedEntity.clear();
         if ( _objectManager != nullptr )
         {
-            for ( GameObject* pObj : _objectManager->getAllGameObjects() )
+            for ( GameObject* pObj : _objectManager->getAllGameObjects( SceneWalkKey{} ) )
             {
                 if ( pObj != nullptr )
                     _objectManager->destroyGameObject( pObj );

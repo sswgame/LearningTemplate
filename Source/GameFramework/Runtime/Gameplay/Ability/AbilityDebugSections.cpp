@@ -26,7 +26,7 @@ namespace sw
             static void writeAbility( DebugHUDSectionWriter& writer )
             {
                 const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
-                const AbilityComponent* const  pAbility = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<AbilityComponent>( *pManager ) : nullptr;
+                const AbilityComponent* const  pAbility = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<AbilityComponent>( writer.getSceneWalkKey(), *pManager ) : nullptr;
                 if ( pAbility == nullptr )
                 {
                     writer.addLine( "target", "none (no ability component in the active scene)" );
@@ -68,12 +68,12 @@ namespace sw
         struct AbilityTestCommandsInternal
         {
             /** @brief `ability.apply <이펙트 id>` — `debug.target` 의 AbilityComponent(없으면 첫 것)에 건다. 거부되면 까닭이 디버거 기록에 남는다. */
-            static bool runApply( const vector<string>& listArgument, string& outReply )
+            static bool runApply( SceneWalkKey key, const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.size() != 1 )
                     return false;
                 const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
-                AbilityComponent* const        pAbility = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<AbilityComponent>( *pManager ) : nullptr;
+                AbilityComponent* const        pAbility = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<AbilityComponent>( key, *pManager ) : nullptr;
                 if ( pAbility == nullptr )
                 {
                     outReply = "ability.apply: no ability component in the active scene";
@@ -93,8 +93,8 @@ namespace sw
         };
     } // namespace
 
-    SW_DEV_COMMAND( AbilityApply, "ability.apply", "ability.apply <effect id>",
-                    "Apply an effect from the catalog to the debug target's ability component (test control; the ability debugger shows it as from devcommand)",
-                    &AbilityTestCommandsInternal::runApply );
+    SW_DEV_SCENE_COMMAND( AbilityApply, "ability.apply", "ability.apply <effect id>",
+                          "Apply an effect from the catalog to the debug target's ability component (test control; the ability debugger shows it as from devcommand)",
+                          &AbilityTestCommandsInternal::runApply );
     SW_DEBUG_HUD_SECTION( ability, "ability", "Ability (effects, tags, log)", 270, DebugHUDSectionFlag::kNone, &AbilityDebugSectionsInternal::writeAbility );
 } // namespace sw

@@ -9,6 +9,7 @@
 
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
 
+#include "Editor/Common/EditorSceneWalk.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -71,7 +72,7 @@ namespace sw::editor
                     slot._pWriter = std::move( old._pWriter );
             }
             if ( slot._pWriter == nullptr )
-                slot._pWriter = make_unique<DebugHUDSectionWriter>();
+                slot._pWriter = make_unique<DebugHUDSectionWriter>( editor::EditorSceneWalk::getKey() );
             _listSlot.push_back( std::move( slot ) );
         }
         _registryRevision = editor::getSubsystem<DebugHUDRegistry>().getRevision();

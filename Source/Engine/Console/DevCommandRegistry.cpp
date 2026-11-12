@@ -50,9 +50,15 @@ namespace sw
     {
     }
 
+    bool DevCommandRegistry::run( const DevCommandRegistration& command, const vector<string>& listArgument, string& outReply )
+    {
+        return command._pSceneFunc != nullptr ? command._pSceneFunc( SceneWalkKey{}, listArgument, outReply ) : command._pFunc( listArgument, outReply );
+    }
+
     bool DevCommandRegistry::registerEntry( const DevCommandRegistration* pRegistration )
     {
-        const bool bInvalidRegistration = pRegistration == nullptr || StringUtil::isNullOrEmpty( pRegistration->_pName ) || pRegistration->_pFunc == nullptr;
+        const bool bInvalidRegistration =
+            pRegistration == nullptr || StringUtil::isNullOrEmpty( pRegistration->_pName ) || ( pRegistration->_pFunc == nullptr ) == ( pRegistration->_pSceneFunc == nullptr );
         if ( bInvalidRegistration )
             return false;
         RegistrationResult result = RegistrationResult::Added;

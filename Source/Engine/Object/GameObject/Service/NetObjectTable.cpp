@@ -39,10 +39,10 @@ namespace sw
         return sceneID != 0 ? sceneID : 1u;
     }
 
-    void NetObjectTable::captureSceneObjects()
+    void NetObjectTable::captureSceneObjects( SceneWalkKey key )
     {
         vector<GameObject*> listObject;
-        _pManager->getAllGameObjects( listObject );
+        _pManager->getAllGameObjects( key, listObject );
         // 이미 번호가 있는 오브젝트(씬 · 생성)를 한 번 모아 정렬한다 — 오브젝트마다 두 목록을 선형으로 훑지 않는다(오브젝트 N 개에 O(N log N)).
         vector<GameObjectHandle> listKnown;
         listKnown.reserve( _listScene.size() + _listSpawned.size() );

@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Name/TagID.h"
 
+#include "Editor/Common/EditorSceneWalk.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -55,7 +56,7 @@ namespace sw::editor
 
                 GameObjectManager*  pObjects = pScene->getObjectManager();
                 vector<GameObject*> listAllObject;
-                pObjects->getAllGameObjects( listAllObject );
+                pObjects->getAllGameObjects( editor::EditorSceneWalk::getKey(), listAllObject );
                 data._listSnapshot.reserve( listAllObject.size() );
 
                 for ( GameObject* pObj : listAllObject )
@@ -101,7 +102,7 @@ namespace sw::editor
                 }
 
                 vector<GameObject*> listAllObject;
-                objects.getAllGameObjects( listAllObject );
+                objects.getAllGameObjects( editor::EditorSceneWalk::getKey(), listAllObject );
 
                 vector<GameObject*> listToDestroy;
                 for ( GameObject* pObj : listAllObject )
@@ -436,7 +437,7 @@ namespace sw::editor
     {
         const TagID playerTag = TagID::request( kPlayerStartTag );
         GameObject* pTagged   = nullptr;
-        manager.forEachGameObject( [&pTagged, playerTag]( GameObject* pObj )
+        manager.forEachGameObject( editor::EditorSceneWalk::getKey(), [&pTagged, playerTag]( GameObject* pObj )
         {
             const bool bFirstTaggedPlayer = pTagged == nullptr && pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( playerTag, true );
             if ( bFirstTaggedPlayer )

@@ -60,7 +60,7 @@ namespace sw
         if ( pObjectManager == nullptr )
             return;
         Material* const pDefaultMaterial = scene.getMaterial();
-        pObjectManager->forEachGameObject( [&]( GameObject* pObj )
+        pObjectManager->forEachGameObject( SceneWalkKey{}, [&]( GameObject* pObj )
         {
             if ( pObj == nullptr )
                 return;

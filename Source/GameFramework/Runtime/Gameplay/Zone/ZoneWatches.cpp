@@ -271,8 +271,8 @@ namespace sw
             {
                 const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
                 // 대상은 지역을 받는 개체다 — 캐릭터(컨트롤러)가 먼저, 없으면 표면 입구를 가진 물체.
-                const CharacterControllerComponent* pController = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<CharacterControllerComponent>( *pManager ) : nullptr;
-                const ZoneContactComponent*         pContact    = pManager != nullptr && pController == nullptr ? GameplayDebugTarget::findTargetComponent<ZoneContactComponent>( *pManager ) : nullptr;
+                const CharacterControllerComponent* pController = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<CharacterControllerComponent>( writer.getSceneWalkKey(), *pManager ) : nullptr;
+                const ZoneContactComponent*         pContact    = pManager != nullptr && pController == nullptr ? GameplayDebugTarget::findTargetComponent<ZoneContactComponent>( writer.getSceneWalkKey(), *pManager ) : nullptr;
                 const GameObject* const             pTarget     = pController != nullptr ? pController->getOwner() : ( pContact != nullptr ? pContact->getOwner() : nullptr );
                 if ( pTarget == nullptr )
                 {

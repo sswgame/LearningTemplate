@@ -16,6 +16,7 @@
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Foundation/SceneWalkKey.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameAccess.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
@@ -176,11 +177,12 @@ namespace sw
          * @details 값 반환형은 호출마다 씬
          *          전체를 새로 할당 · 복사하므로, 매 프레임 도는 곳이나 두 번 이상 쓰는 곳은 이쪽을
          *          씁니다. 순회만 하면 되는 곳은 forEachGameObject 가 복사조차 하지 않습니다.
+         * @note 씬 전체 순회는 열쇠(`SceneWalkKey`)를 받는다 — 컴포넌트 틱은 열쇠가 없다(찾기는 `getComponentRegistry`, 이름은 `findGameObjectsByBaseName`).
          */
-        void getAllGameObjects( vector<GameObject*>& outListGameObject ) const;
+        void getAllGameObjects( SceneWalkKey key, vector<GameObject*>& outListGameObject ) const;
 
         /** @brief 살아 있는 오브젝트 목록을 새 벡터로 반환합니다(한 번만 쓰는 곳 전용). */
-        vector<GameObject*> getAllGameObjects() const;
+        vector<GameObject*> getAllGameObjects( SceneWalkKey key ) const;
 
         /**
          * @brief 힙 할당 없이 등록된 모든 유효한 GameObject 를 순회합니다.
@@ -188,11 +190,11 @@ namespace sw
          *       그런 일을 하는 순회는 `getAllGameObjects( out )` 로 목록을 받아 잠금 없이 돕니다(`beginPlay` 처럼).
          */
         template <typename Func>
-        void forEachGameObject( Func&& func ) const;
+        void forEachGameObject( SceneWalkKey key, Func&& func ) const;
 
         /** @brief 힙 할당 없이 씬의 모든 유효한 Component 를 순회합니다. */
         template <typename Func>
-        void forEachComponent( Func&& func ) const;
+        void forEachComponent( SceneWalkKey key, Func&& func ) const;
 
         /**
          * @brief 힙 할당 없이 씬에서 TComponent 와 그 파생 컴포넌트를 순회합니다. 오브젝트를 훑지 않고 타입별 버킷을 돕니다(`GameObjectStore::forEachComponentOfType`).
@@ -201,11 +203,11 @@ namespace sw
          * @note 공유 잠금 안에서 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`WalkScope`).
          */
         template <typename TComponent, typename Func>
-        void forEachComponentOfType( Func&& func ) const;
+        void forEachComponentOfType( SceneWalkKey key, Func&& func ) const;
 
         /** @brief 런타임 타입 @p pToType 이나 그 파생 컴포넌트를 순회합니다. 콜백은 `Component*` 를 받습니다. 타입을 템플릿으로 모르는 곳(인스펙터 선택기)이 씁니다. */
         template <typename Func>
-        void forEachComponentOfType( const TypeInfo* pToType, Func&& func ) const;
+        void forEachComponentOfType( SceneWalkKey key, const TypeInfo* pToType, Func&& func ) const;
 
         /** @brief 비어 있지 않은 타입별 버킷 수입니다. 진단과 회귀 테스트(모듈 언로드 뒤 묘비)용입니다. */
         uint32 getTypedComponentBucketCount() const;

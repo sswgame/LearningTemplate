@@ -2,6 +2,7 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.h"
 
+#include "Editor/Common/EditorSceneWalk.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -104,7 +105,7 @@ namespace sw::editor
 
         // 펼칠 때만 씬을 훑는다
         _listCandidate.clear();
-        pObjects->forEachGameObject( [this]( GameObject* pObject )
+        pObjects->forEachGameObject( editor::EditorSceneWalk::getKey(), [this]( GameObject* pObject )
         {
             if ( pObject != nullptr && pObject->getComponent<AbilityComponent>() != nullptr )
                 _listCandidate.push_back( pObject->getHandle() );

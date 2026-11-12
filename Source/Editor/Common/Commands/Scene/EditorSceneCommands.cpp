@@ -11,6 +11,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
+#include "Editor/Common/EditorSceneWalk.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -246,7 +247,7 @@ namespace sw::editor
     void EditorSceneCommands::collectRootsInOrder( GameObjectManager& manager, vector<GameObject*>& outListRoot )
     {
         outListRoot.clear();
-        manager.forEachGameObject( [&outListRoot]( GameObject* pObj )
+        manager.forEachGameObject( editor::EditorSceneWalk::getKey(), [&outListRoot]( GameObject* pObj )
         {
             const bool bRootObject = pObj != nullptr && pObj->getParent() == nullptr && pObj->isPendingDestroy() == false;
             if ( bRootObject )
@@ -379,7 +380,7 @@ namespace sw::editor
         outListObject.clear();
         if ( pComponentType == nullptr )
             return;
-        manager.forEachGameObject( [pComponentType, &outListObject]( GameObject* pObj )
+        manager.forEachGameObject( editor::EditorSceneWalk::getKey(), [pComponentType, &outListObject]( GameObject* pObj )
         {
             if ( pObj == nullptr || pObj->isPendingDestroy() )
                 return;
@@ -400,7 +401,7 @@ namespace sw::editor
         outListObject.clear();
         if ( tag.isValid() == false )
             return;
-        manager.forEachGameObject( [tag, &outListObject]( GameObject* pObj )
+        manager.forEachGameObject( editor::EditorSceneWalk::getKey(), [tag, &outListObject]( GameObject* pObj )
         {
             const bool bMatchingLiveObject = pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag );
             if ( bMatchingLiveObject )
@@ -485,7 +486,7 @@ namespace sw::editor
         // 반환값을 const& 로 받으면 복사가 없어 보이지만, 값으로 반환하는 함수라 그때마다 벡터를 하나 할당한다. 그래서
         // 채워 넣는 쪽 오버로드를 쓴다.
         vector<GameObject*> listAll;
-        pManager->getAllGameObjects( listAll );
+        pManager->getAllGameObjects( editor::EditorSceneWalk::getKey(), listAll );
         for ( const GameObject* pOther : listAll )
         {
             if ( pOther == nullptr || pOther == pObj )
@@ -530,7 +531,7 @@ namespace sw::editor
         // 타입 이름에서 인스턴스 수로의 대응이다. 이름으로 묶으므로 게임과 키트의 것을 포함해 등록된 모든 컴포넌트가 잡힌다.
         map<string, uint32> mapTypeToCount;
 
-        pManager->forEachGameObject( [&]( GameObject* pObj )
+        pManager->forEachGameObject( editor::EditorSceneWalk::getKey(), [&]( GameObject* pObj )
         {
             if ( pObj == nullptr )
                 return;

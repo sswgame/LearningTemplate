@@ -182,7 +182,7 @@ namespace sw
                 if ( count._structureGeneration != generation )
                 {
                     count = ObjectCount{ generation, 0, 0 };
-                    pManager->forEachGameObject( [&count]( GameObject* pObject )
+                    pManager->forEachGameObject( writer.getSceneWalkKey(), [&count]( GameObject* pObject )
                     {
                         if ( pObject == nullptr )
                             return;

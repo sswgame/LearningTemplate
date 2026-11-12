@@ -4,6 +4,8 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/EditorSceneWalk.h"
+
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentAssetPathUtil.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -142,7 +144,7 @@ namespace sw::editor
             return 0;
         PrefabInstanceRegistry& prefabs = pObjects->getSubsystem<PrefabInstanceRegistry>();
         uint32                  changedCount{ 0 };
-        pObjects->forEachGameObject( [&scene, &mapOldToNew, &prefabs, &changedCount]( GameObject* pObject )
+        pObjects->forEachGameObject( editor::EditorSceneWalk::getKey(), [&scene, &mapOldToNew, &prefabs, &changedCount]( GameObject* pObject )
         {
             const uint64 objectID = pObject->getObjectID();
             const auto   itPrefab = mapOldToNew.find( string{ scene.getEntityPrefabPath( objectID ) } );

@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Editor/Common/EditorSceneWalk.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -205,7 +206,7 @@ namespace sw::editor
             return 0;
         const Stopwatch     stopwatch;
         vector<GameObject*> listObject;
-        pManager->getAllGameObjects( listObject );
+        pManager->getAllGameObjects( editor::EditorSceneWalk::getKey(), listObject );
         for ( const GameObject* pObject : listObject )
         {
             (void)ObjectValidation::reportGameObject( *pObject, false ); // 결과는 그 씬의 표(SceneValidationIssues)에 남고 테이블이 읽는다

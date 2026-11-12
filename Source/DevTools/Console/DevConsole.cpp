@@ -164,7 +164,7 @@ namespace sw
         if ( const DevCommandRegistration* pCommand = engine::getSubsystem<DevCommandRegistry>().findCommand( head ) )
         {
             const vector<string> listArgument( listToken.begin() + 1, listToken.end() );
-            if ( pCommand->_pFunc( listArgument, outReply ) )
+            if ( DevCommandRegistry::run( *pCommand, listArgument, outReply ) )
                 return DevConsoleResult::Ok;
             if ( outReply.empty() == false )
                 outReply += "\n";

@@ -9,6 +9,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Tests/SceneWalkTestAccess.h"
 #include "Engine/Scene/SceneObjectHash.h"
 
 #include <limits>
@@ -56,13 +57,13 @@ SW_TEST_CASE( SceneStateHashTest, RotationChangesTheHash )
 {
     GameObjectManager manager;
     SceneComponent*   pRoot   = addStateHashTestObject( manager, "Turret", float3{ 1.0f, 0.0f, 2.0f } );
-    const uint64      initial = SceneObjectHash::compute( manager );
+    const uint64      initial = SceneObjectHash::compute( SceneWalkTestAccess::getKey(), manager );
     pRoot->setLocalRotation( float3{ 0.0f, 0.5f, 0.0f } );
-    SW_EXPECT_TRUE( SceneObjectHash::compute( manager ) != initial );
+    SW_EXPECT_TRUE( SceneObjectHash::compute( SceneWalkTestAccess::getKey(), manager ) != initial );
     pRoot->setLocalRotation( float3{ 0.0f, 0.0f, 0.0f } );
-    SW_EXPECT_EQUAL( initial, SceneObjectHash::compute( manager ) );
+    SW_EXPECT_EQUAL( initial, SceneObjectHash::compute( SceneWalkTestAccess::getKey(), manager ) );
     pRoot->setLocalPosition( float3{ 1.0f, -0.0f, 2.0f } );
-    SW_EXPECT_EQUAL( initial, SceneObjectHash::compute( manager ) );
+    SW_EXPECT_EQUAL( initial, SceneObjectHash::compute( SceneWalkTestAccess::getKey(), manager ) );
 }
 
 /**
@@ -77,7 +78,7 @@ SW_TEST_CASE( SceneStateHashTest, NanPositionIsIndependentOfCreationOrder )
     GameObjectManager second;
     addStateHashTestObject( second, "CrateB", float3{ nan, 0.0f, 0.0f } );
     addStateHashTestObject( second, "CrateA", float3{ 1.0f, 0.0f, 0.0f } );
-    SW_EXPECT_EQUAL( SceneObjectHash::compute( first ), SceneObjectHash::compute( second ) );
+    SW_EXPECT_EQUAL( SceneObjectHash::compute( SceneWalkTestAccess::getKey(), first ), SceneObjectHash::compute( SceneWalkTestAccess::getKey(), second ) );
 }
 
 /**
@@ -91,11 +92,11 @@ SW_TEST_CASE( SceneStateHashTest, TransientObjectsAreNotState )
     SceneComponent* pPart = addStateHashTestObject( manager, "Helmet", float3{ 0.0f, 1.8f, 0.0f } );
     SW_REQUIRE_NOT_NULL( pPart );
     pPart->getOwner()->setTransient( true );
-    const uint64 before = SceneObjectHash::compute( manager );
+    const uint64 before = SceneObjectHash::compute( SceneWalkTestAccess::getKey(), manager );
     pPart->setWorldPosition( float3{ 0.3f, 1.7f, 0.1f } );
-    SW_EXPECT_EQUAL( SceneObjectHash::compute( manager ), before );
+    SW_EXPECT_EQUAL( SceneObjectHash::compute( SceneWalkTestAccess::getKey(), manager ), before );
     vector<SceneObjectHash> listObject;
-    SceneObjectHash::collectObjects( manager, listObject );
+    SceneObjectHash::collectObjects( SceneWalkTestAccess::getKey(), manager, listObject );
     SW_REQUIRE_EQUAL( listObject.size(), static_cast<size_t>( 1 ) );
     SW_EXPECT_TRUE( listObject[0]._name == "Player" );
 }

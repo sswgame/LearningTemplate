@@ -68,7 +68,7 @@ namespace sw
         else
             _client.initialize( &host, &manager, settings );
         NetObjectTable& table = manager.getSubsystem<NetObjectTable>();
-        table.captureSceneObjects();
+        table.captureSceneObjects( SceneWalkKey{} );
         _seenSpawnedRevision = table.getSpawnedRevision();
         registerNumberedObjects();
         INetMessageHandler* pHandler = side == DestructionNetSide::Server ? static_cast<INetMessageHandler*>( &_server ) : static_cast<INetMessageHandler*>( &_client );

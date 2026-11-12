@@ -141,7 +141,7 @@ namespace sw
         {
             if ( scene->getObjectManager() == nullptr )
                 continue;
-            scene->getObjectManager()->forEachGameObject( [&]( GameObject* pObject )
+            scene->getObjectManager()->forEachGameObject( SceneWalkKey{}, [&]( GameObject* pObject )
             {
                 for ( Component* pComponent : pObject->getComponents() )
                 {

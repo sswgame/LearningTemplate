@@ -11,6 +11,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/EditorSceneWalk.h"
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -514,7 +515,7 @@ namespace sw::editor
                 if ( params._component.empty() == false )
                     EditorSceneCommands::collectObjectsWithComponent( *pManager, editor::getSubsystem<TypeRegistry>().findType( hashed_string( params._component ) ), listObject );
                 else
-                    pManager->getAllGameObjects( listObject );
+                    pManager->getAllGameObjects( editor::EditorSceneWalk::getKey(), listObject );
 
                 uint32 foundCount = 0;
                 uint32 pickCount  = 0;

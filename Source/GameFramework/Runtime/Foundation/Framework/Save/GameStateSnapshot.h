@@ -14,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Foundation/SceneWalkKey.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
@@ -122,9 +123,9 @@ namespace sw
         /** @brief 상태 스냅샷에 오른 컴포넌트 타입 하나의 일입니다(`register*`). 없는 일은 nullptr 입니다. */
         struct StatefulComponentType
         {
-            void ( *_pCapture )( ComponentStateStore& store, GameObjectManager& manager ){ nullptr };
-            void ( *_pRestore )( const ComponentStateStore& store, GameObjectManager& manager ){ nullptr };
-            void ( *_pDespawn )( GameObjectManager& manager ){ nullptr };
+            void ( *_pCapture )( SceneWalkKey key, ComponentStateStore& store, GameObjectManager& manager ){ nullptr };
+            void ( *_pRestore )( SceneWalkKey key, const ComponentStateStore& store, GameObjectManager& manager ){ nullptr };
+            void ( *_pDespawn )( SceneWalkKey key, GameObjectManager& manager ){ nullptr };
         };
 
         /** @brief `deserializeSceneObjects` 가 읽는 씬 오브젝트 데이터의 형식입니다. */
@@ -136,21 +137,21 @@ namespace sw
 
         // 매니저 타입은 템플릿 매개변수로 둔다 — 이 헤더는 오브젝트 매니저를 include 하지 않고, 등록하는 .cpp 에서 만들어진다.
         template <typename TComponent, typename TManager = GameObjectManager>
-        static void captureComponentStates( ComponentStateStore& store, TManager& manager )
+        static void captureComponentStates( SceneWalkKey key, ComponentStateStore& store, TManager& manager )
         {
-            (void)store.capture<TComponent>( manager );
+            (void)store.capture<TComponent>( key, manager );
         }
         template <typename TComponent, typename TManager = GameObjectManager>
-        static void restoreComponentStates( const ComponentStateStore& store, TManager& manager )
+        static void restoreComponentStates( SceneWalkKey key, const ComponentStateStore& store, TManager& manager )
         {
-            (void)store.restore<TComponent>( manager ); // 넘긴 수는 쓰지 않는다 — 짝이 없는 컴포넌트는 그대로 둔다
+            (void)store.restore<TComponent>( key, manager ); // 넘긴 수는 쓰지 않는다 — 짝이 없는 컴포넌트는 그대로 둔다
         }
         template <typename TComponent, typename TManager = GameObjectManager>
-        static void despawnComponentViews( TManager& manager )
+        static void despawnComponentViews( SceneWalkKey key, TManager& manager )
         {
             // 순회 콜백 안에서는 오브젝트를 지울 수 없다(매니저 잠금 안) — 핸들을 모은 뒤 걷는다.
             vector<TComponentHandle<TComponent>> listComponent;
-            manager.template forEachComponentOfType<TComponent>( [&listComponent]( TComponent* pComponent )
+            manager.template forEachComponentOfType<TComponent>( key, [&listComponent]( TComponent* pComponent )
             { listComponent.push_back( TComponentHandle<TComponent>{ pComponent } ); } );
             for ( const TComponentHandle<TComponent>& handle : listComponent )
             {

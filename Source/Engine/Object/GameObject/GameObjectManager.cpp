@@ -354,7 +354,7 @@ namespace sw
         return _pState->_store.createGameObject( name );
     }
 
-    vector<GameObject*> GameObjectManager::getAllGameObjects() const
+    vector<GameObject*> GameObjectManager::getAllGameObjects( SceneWalkKey /*key*/ ) const
     {
         vector<GameObject*> listAllGameObject;
         _pState->_store.getAllGameObjects( listAllGameObject );
@@ -363,7 +363,7 @@ namespace sw
 
     void GameObjectManager::notifyModuleUnloading( string_view moduleName )
     {
-        forEachComponent( [moduleName]( Component* pComponent )
+        forEachComponent( SceneWalkKey{}, [moduleName]( Component* pComponent )
         { pComponent->onModuleUnloading( moduleName ); } );
     }
 
@@ -414,7 +414,7 @@ namespace sw
         return _pState->_store.getOverflowObjectCount();
     }
 
-    void GameObjectManager::getAllGameObjects( vector<GameObject*>& outListGameObject ) const
+    void GameObjectManager::getAllGameObjects( SceneWalkKey /*key*/, vector<GameObject*>& outListGameObject ) const
     {
         _pState->_store.getAllGameObjects( outListGameObject );
     }

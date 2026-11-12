@@ -482,7 +482,7 @@ namespace sw
             static const SessionStateComponent* findTarget( DebugHUDSectionWriter& writer )
             {
                 const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
-                const SessionStateComponent*   pState   = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<SessionStateComponent>( *pManager ) : nullptr;
+                const SessionStateComponent*   pState   = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<SessionStateComponent>( writer.getSceneWalkKey(), *pManager ) : nullptr;
                 if ( pState == nullptr || pState->isInitialized() == false )
                 {
                     writer.addLine( "target", "none (no open game state in the active scene)" );

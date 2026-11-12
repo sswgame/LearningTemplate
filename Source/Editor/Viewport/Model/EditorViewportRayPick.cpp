@@ -11,6 +11,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/Ray.h"
 
+#include "Editor/Common/EditorSceneWalk.h"
+
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
@@ -356,7 +358,7 @@ namespace sw::editor
         best._distance                     = MathUtil::kMaxFloat;
         const float64 vertexAnimationClock = pManager->getSubsystem<AnimationSystem>().getCrowd().getClock(); // VAT 가 그리는 프레임의 시계(`GPUSkinPaletteCollector::collect`)
 
-        pManager->forEachGameObject( [&]( GameObject* pObj )
+        pManager->forEachGameObject( editor::EditorSceneWalk::getKey(), [&]( GameObject* pObj )
         {
             // 화면을 그리는 에디터 카메라는 레이가 출발하는 위치에 있어 기본 반지름 구가 늘 가장 가깝다 — 집지 않는다
             // (언리얼 · 유니티의 에디터 카메라는 씬 오브젝트가 아니다).

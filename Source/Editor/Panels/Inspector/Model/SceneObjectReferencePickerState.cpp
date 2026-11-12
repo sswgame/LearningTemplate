@@ -7,6 +7,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/EditorSceneWalk.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
 
@@ -127,7 +128,7 @@ namespace sw::editor
             sceneRow._title = FileUtil::getFileNamePart( path ).c_str();
             // 콜백은 오브젝트 맵의 공유 잠금 안이라 이름과 번호만 모으고, 참조는 잠금 밖에서 만든다.
             vector<SceneObjectReferenceChoice> listCollected;
-            scene->getObjectManager()->forEachGameObject( [&listCollected]( GameObject* pObject )
+            scene->getObjectManager()->forEachGameObject( editor::EditorSceneWalk::getKey(), [&listCollected]( GameObject* pObject )
             { listCollected.push_back( SceneObjectReferenceChoice{ string( pObject->getName().c_str() ), string(), pObject->getObjectID() } ); } );
             VectorUtil::sort( listCollected, []( const SceneObjectReferenceChoice& lhs, const SceneObjectReferenceChoice& rhs )
             { return lhs._label < rhs._label; } );

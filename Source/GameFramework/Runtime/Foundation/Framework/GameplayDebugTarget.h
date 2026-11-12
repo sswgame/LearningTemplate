@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Foundation/SceneWalkKey.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -45,17 +46,17 @@ namespace sw
         /**
          * @brief 대상 오브젝트의 @p T 컴포넌트입니다. 대상을 정했고 그 오브젝트에 @p T 가 있으면 그것, 아니면 @p manager 에서 @p T 를 가진 첫 오브젝트(만든 순서)의 것입니다.
          * @details 대상 오브젝트에 @p T 가 없을 때 첫 것으로 바꾸는 까닭: 섹션마다 대상 종류가 다르다(퀘스트는 판 상태, 이동은 캐릭터) — 대상은 "보고 싶은 것" 의 힌트다.
-         *          그래서 섹션은 어떤 오브젝트를 보는지 첫 줄(`target`)에 적는다.
+         *          그래서 섹션은 어떤 오브젝트를 보는지 첫 줄(`target`)에 적는다. 첫 것을 찾느라 씬을 돌므로 열쇠(HUD 글쓴이 · 씬 개발 명령이 넘긴다)를 받는다.
          */
         template <typename T>
-        static T* findTargetComponent( const GameObjectManager& manager )
+        static T* findTargetComponent( SceneWalkKey key, const GameObjectManager& manager )
         {
             if ( const GameObject* pTarget = findTargetObject( manager ); pTarget != nullptr )
             {
                 if ( T* pComponent = pTarget->getComponent<T>(); pComponent != nullptr )
                     return pComponent;
             }
-            for ( const GameObject* pObject : manager.getAllGameObjects() )
+            for ( const GameObject* pObject : manager.getAllGameObjects( key ) )
             {
                 if ( T* pComponent = pObject != nullptr ? pObject->getComponent<T>() : nullptr; pComponent != nullptr )
                     return pComponent;

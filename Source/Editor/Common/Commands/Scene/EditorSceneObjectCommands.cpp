@@ -16,6 +16,7 @@
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
+#include "Editor/Common/EditorSceneWalk.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -293,7 +294,7 @@ namespace sw::editor
         {
             if ( pManager == nullptr || pFound != nullptr )
                 continue;
-            pManager->forEachGameObject( [&]( GameObject* pObject )
+            pManager->forEachGameObject( editor::EditorSceneWalk::getKey(), [&]( GameObject* pObject )
             {
                 if ( pFound != nullptr )
                     return;

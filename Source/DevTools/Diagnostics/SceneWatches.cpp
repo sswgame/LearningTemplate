@@ -10,6 +10,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "DevTools/Diagnostics/DevSceneWalk.h"
+
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -35,7 +37,7 @@ namespace sw
             if ( pManager == nullptr )
                 return false;
             uint32 count = 0;
-            pManager->forEachGameObject( [&count]( GameObject* /*pObject*/ )
+            pManager->forEachGameObject( DevSceneWalk::getKey(), [&count]( GameObject* /*pObject*/ )
             { ++count; } );
             outValue = static_cast<float64>( count );
             return true;
@@ -80,7 +82,7 @@ namespace sw
             if ( pManager == nullptr )
                 return false;
             uint32 sum = 0;
-            pManager->forEachGameObject( [&sum]( GameObject* pObject )
+            pManager->forEachGameObject( DevSceneWalk::getKey(), [&sum]( GameObject* pObject )
             {
                 const SceneComponent* pScene   = pObject->getPrimarySceneComponent();
                 const float3          position = pScene != nullptr ? pScene->getWorldPosition() : float3{};

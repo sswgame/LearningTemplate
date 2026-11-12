@@ -9,6 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
 
+#include "Engine/Foundation/SceneWalkKey.h"
+
 namespace sw
 {
     class GameObject;
@@ -16,6 +18,8 @@ namespace sw
 
     /** @brief 감시 값 함수입니다. 활성 씬의 오브젝트 매니저(없으면 nullptr)를 받아 값을 씁니다. 값을 낼 수 없으면(대상 없음) false 입니다. 게임 스레드에서 부릅니다. */
     using AutomationWatchFunction = bool ( * )( const GameObjectManager* pManager, float64& outValue );
+    /** @brief 씬을 도는 감시 값 함수입니다(`SW_AUTOMATION_WALK_WATCH`). 레지스트리가 순회 열쇠를 넘긴다 — 틱 코드는 열쇠가 없다(`SceneWalkKey`). */
+    using AutomationWalkWatchFunction = bool ( * )( SceneWalkKey key, const GameObjectManager* pManager, float64& outValue );
 
     /**
      * @struct AutomationWatchValue
@@ -115,7 +119,7 @@ namespace sw
     /** @brief 질의 감시 값 함수입니다. 값을 낼 수 없으면 false 이며 @p outValue 의 글에 이유를 적을 수 있습니다(실패 보고에 실린다). 게임 스레드에서 부릅니다. */
     using AutomationQueryWatchFunction = bool ( * )( const AutomationWatchQuery& query, AutomationWatchValue& outValue );
 
-    /** @struct AutomationWatchRegistration @brief 등록 항목 하나입니다. 문자열과 함수는 등록한 이미지의 정적 저장소에 있습니다. 두 함수 중 하나만 있습니다. */
+    /** @struct AutomationWatchRegistration @brief 등록 항목 하나입니다. 문자열과 함수는 등록한 이미지의 정적 저장소에 있습니다. 세 함수 중 하나만 있습니다. */
     struct AutomationWatchRegistration
     {
         const utf8*                  _pName;          ///< `<게임>.<값>` (예: `Shooter3D.WeaponIndex`)
@@ -125,6 +129,7 @@ namespace sw
         bool                         _bNeedsTarget;   ///< 단계에 `target` 이 꼭 있어야 합니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool                         _bNeedsKey;      ///< 단계에 `key` 가 꼭 있어야 합니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool                         _bWallClock;     ///< 값이 엔진 프레임이 아니라 바깥 일(자식 프로세스 · 컴파일러 · OS 파일 감시)을 따라 바뀝니다 — `WaitUntil` 은 `timeoutWallSeconds` 만 받는다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        AutomationWalkWatchFunction  _pWalkFunction;  ///< 씬을 도는 감시 값(인자 없음, 수) — 레지스트리가 순회 열쇠를 넘긴다
     };
 } // namespace sw
 
@@ -160,26 +165,33 @@ namespace sw
      * @brief 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자, @p pName 은 시나리오가 쓰는 이름입니다.
      * @details Shipping 은 Engine · GameFramework · 키트 · 게임을 통째로 링크하므로(`sw_linkWholeArchive`) 어느 .cpp 에 두어도 등록자가 링크에서 빠지지 않는다.
      */
-    #define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, pFunction, nullptr, false, false, false )
+    #define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, pFunction, nullptr, false, false, false, nullptr )
+
+    /**
+     * @brief 씬 전체를 도는 감시 값을 등록합니다. @p pWalkFunction 은 `bool( SceneWalkKey, const GameObjectManager*, float64& )` 입니다 — 레지스트리가 순회 열쇠를 넘긴다.
+     * @details 찾을 컴포넌트가 등록 목록(`ComponentRegistry`)에 있으면 열쇠 없는 `SW_AUTOMATION_WATCH` 로 그 목록을 돈다. 이것은 등록 목록이 없는 타입을 고르는 틀(`AutomationComponentWatch`)의 자리다.
+     */
+    #define SW_AUTOMATION_WALK_WATCH( id, pName, pTooltip, pWalkFunction ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, nullptr, nullptr, false, false, false, pWalkFunction )
 
     /**
      * @brief 바깥 일(자식 프로세스 · 컴파일러 · OS 파일 감시 · 워커 비동기 로드 · GPU 회수)을 따라 바뀌는 감시 값을 등록합니다. 인자는 `SW_AUTOMATION_WATCH` 와 같습니다.
      * @details 시나리오는 프레임을 실시간보다 빨리 돌리므로 프레임 · 시뮬레이션 초 시한은 바깥 일에 몇 초를 주는지 정하지 못한다(1400 프레임이 1 초였다 — 부하 걸린 기계에서 패키징이 졌다).
      *          그래서 이 값을 기다리는 `WaitUntil` 은 `timeoutWallSeconds` 만 받고, 다른 시한은 로드 오류다(언리얼 Gauntlet 의 외부 프로세스 대기도 벽시계 시한이다).
      */
-    #define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, pFunction, nullptr, false, false, true )
+    #define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, pFunction, nullptr, false, false, true, nullptr )
 
     /**
      * @brief 질의 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 단계의 `target`(오브젝트 이름 · NPC id) · `key`(블랙보드 키 · 장소 id)를 받고 수나 글을 냅니다.
      * @details 시나리오: `<Expect watch="AI.State" target="AutoFarmer" is="Harvest"/>`, `<WaitUntil watch="Object.DistanceTo" target="Farmer" key="Bin" atMost="1"/>`.
      */
-    #define SW_AUTOMATION_QUERY_WATCH( id, pName, pTooltip, pQueryFunction, bNeedsTarget, bNeedsKey ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, nullptr, pQueryFunction, bNeedsTarget, bNeedsKey, false )
+    #define SW_AUTOMATION_QUERY_WATCH( id, pName, pTooltip, pQueryFunction, bNeedsTarget, bNeedsKey ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, nullptr, pQueryFunction, bNeedsTarget, bNeedsKey, false, nullptr )
 
 #else
 
 // 자동화를 뺀 배포본: 등록하지 않고 본문 함수만 붙잡는다(`Engine/Automation/Watch/AutomationHooksEnabled.h`).
     #define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction )                                     [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pFunction
     #define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction )                                [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pFunction
+    #define SW_AUTOMATION_WALK_WATCH( id, pName, pTooltip, pWalkFunction )                            [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pWalkFunction
     #define SW_AUTOMATION_QUERY_WATCH( id, pName, pTooltip, pQueryFunction, bNeedsTarget, bNeedsKey ) [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pQueryFunction
 
 #endif // !SW_SHIPPING

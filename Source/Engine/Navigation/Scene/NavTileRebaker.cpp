@@ -214,7 +214,7 @@ namespace sw
             for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
             {
                 listGeometry.push_back( make_shared<NavMeshGeometry>() );
-                pendingMeshCount += NavGeometryCollector::collectGeometry( manager, pRuntime->_pSurface, settings, listSource, arrival, *listGeometry.back() );
+                pendingMeshCount += NavGeometryCollector::collectGeometry( SceneWalkKey{}, manager, pRuntime->_pSurface, settings, listSource, arrival, *listGeometry.back() );
             }
             if ( pendingMeshCount > 0 )
             {

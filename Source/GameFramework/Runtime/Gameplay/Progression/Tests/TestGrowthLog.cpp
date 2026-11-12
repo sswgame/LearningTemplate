@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Object/GameObject/Tests/SceneWalkTestAccess.h"
 
 #include "GameFramework/Runtime/Gameplay/Progression/GrowthLog.h"
 
@@ -19,14 +20,14 @@ SW_TEST_CASE( GrowthLogTest, LinesShowNewestFirstWithTheirSource )
     SW_EXPECT_EQUAL( 3u, log.getCount() );
     SW_EXPECT_EQUAL( 1u, log.countKind( GrowthEventKind::LevelUp ) );
 
-    DebugHUDSectionWriter writer;
+    DebugHUDSectionWriter writer{ sw::SceneWalkTestAccess::getKey() };
     log.writeDebugLines( writer, 8 );
     SW_REQUIRE_EQUAL( 3u, writer.getLineCount() );
     SW_EXPECT_EQUAL( string( "Geralt" ), string( writer.getLineAt( 0 )._label ) );
     SW_EXPECT_EQUAL( string( "SkillRank power 2 (no source)" ), string( writer.getLineAt( 0 )._value ) );
     SW_EXPECT_EQUAL( string( "LevelUp level 3 from contract griffin" ), string( writer.getLineAt( 1 )._value ) );
 
-    DebugHUDSectionWriter capped;
+    DebugHUDSectionWriter capped{ sw::SceneWalkTestAccess::getKey() };
     log.writeDebugLines( capped, 1 );
     SW_EXPECT_EQUAL( 1u, capped.getLineCount() );
 }
@@ -45,7 +46,7 @@ SW_TEST_CASE( GrowthLogTest, RingKeepsTheNewestEntries )
     SW_EXPECT_EQUAL( static_cast<int64>( GrowthLog::kCapacity ) + 2, log.getEntry( GrowthLog::kCapacity - 1 )._value );
 
     log.clear();
-    DebugHUDSectionWriter writer;
+    DebugHUDSectionWriter writer{ sw::SceneWalkTestAccess::getKey() };
     log.writeDebugLines( writer, 8 );
     SW_REQUIRE_EQUAL( 1u, writer.getLineCount() );
     SW_EXPECT_EQUAL( string( "no change recorded yet" ), string( writer.getLineAt( 0 )._value ) );

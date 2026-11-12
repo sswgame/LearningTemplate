@@ -14,6 +14,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Foundation/SceneWalkKey.h"
 #include "Engine/Module/ModuleEntryRegistrar.h"
 
 namespace sw
@@ -47,7 +48,8 @@ namespace sw
         /** @brief 프레임 시간 기록의 길이(프레임)입니다. */
         static constexpr uint32 kFrameHistoryCount = 120;
 
-        DebugHUDSectionWriter();
+        /** @brief HUD 틀(레지스트리 · HUD · 에디터 HUD 뷰 · 테스트)만 만든다 — 열쇠를 받아 섹션 본문에 넘긴다(`getSceneWalkKey`). */
+        explicit DebugHUDSectionWriter( SceneWalkKey key );
 
         /** @brief 줄 · 그래프를 비웁니다(칸은 남긴다). */
         void reset();
@@ -74,6 +76,8 @@ namespace sw
         bool                   hasGraph() const { return _listGraph.empty() == false; }
         const vector<float32>& getGraph() const { return _listGraph; }
         float32                getGraphMax() const { return _graphMax; }
+        /** @brief 씬 전체를 도는 섹션이 쓰는 순회 열쇠입니다(`GameplayDebugTarget::findTargetComponent`) — HUD 틀이 넘긴 것이다. */
+        SceneWalkKey getSceneWalkKey() const { return _sceneWalkKey; }
 
     private:
         vector<DebugHUDLine> _listLine;
@@ -82,6 +86,7 @@ namespace sw
         float32              _graphMax;
         uint32               _lineCount;
         uint32               _frameHistoryCount;
+        SceneWalkKey         _sceneWalkKey;
     };
 } // namespace sw
 

@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Object/GameObject/Tests/SceneWalkTestAccess.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -1122,18 +1123,18 @@ SW_TEST_CASE_F( SkillTreeStateTest, DebugLinesExplainWhyTheNextRankIsLocked )
     _state.addPoints( 1 );
     SW_REQUIRE_EQUAL( sw::SkillResult::Ok, _state.rankUp( "base", 1 ) );
 
-    sw::DebugHUDSectionWriter writer;
+    sw::DebugHUDSectionWriter writer{ sw::SceneWalkTestAccess::getKey() };
     _state.writeDebugLines( writer, 2, 16 );
     SW_EXPECT_EQUAL( sw::string( "points 0, spent 1, level 2" ), findLine( writer, "tree combat" ) );
     SW_EXPECT_EQUAL( sw::string( "1/2 next: NotEnoughPoints (points 0/1)" ), findLine( writer, "base" ) );
     SW_EXPECT_EQUAL( sw::string( "0/1 next: LevelTooLow (needs level 3)" ), findLine( writer, "power" ) );
     SW_EXPECT_EQUAL( sw::string( "0/1 next: TierLocked (spent 1/2)" ), findLine( writer, "stance_a" ) );
 
-    sw::DebugHUDSectionWriter atLevel3;
+    sw::DebugHUDSectionWriter atLevel3{ sw::SceneWalkTestAccess::getKey() };
     _state.writeDebugLines( atLevel3, 3, 16 );
     SW_EXPECT_EQUAL( sw::string( "0/1 next: RequirementMissing (needs base:2)" ), findLine( atLevel3, "power" ) );
 
-    sw::DebugHUDSectionWriter capped;
+    sw::DebugHUDSectionWriter capped{ sw::SceneWalkTestAccess::getKey() };
     _state.writeDebugLines( capped, 3, 2 );
     SW_EXPECT_EQUAL( sw::string( "3 more" ), findLine( capped, "..." ) );
 }

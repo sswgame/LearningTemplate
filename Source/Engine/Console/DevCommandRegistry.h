@@ -15,6 +15,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
+#include "Engine/Foundation/SceneWalkKey.h"
 #include "Engine/Module/ModuleEntryRegistrar.h"
 
 namespace sw
@@ -24,14 +25,17 @@ namespace sw
      * @return 인자가 잘못됐으면 false 이며, 콘솔이 사용법(`_pUsage`)을 함께 알립니다. 답은 @p outReply 에 적습니다.
      */
     using DevCommandFunc = bool ( * )( const vector<string>& listArgument, string& outReply );
+    /** @brief 씬 전체를 도는 개발 명령의 본문입니다(`SW_DEV_SCENE_COMMAND`). 레지스트리가 순회 열쇠를 넘긴다 — 틱 코드는 열쇠가 없다(`SceneWalkKey`). */
+    using DevSceneCommandFunc = bool ( * )( SceneWalkKey key, const vector<string>& listArgument, string& outReply );
 
-    /** @brief 개발 명령 하나의 등록 줄입니다. 문자열은 등록한 이미지(모듈)의 정적 저장소에 있습니다. */
+    /** @brief 개발 명령 하나의 등록 줄입니다. 문자열은 등록한 이미지(모듈)의 정적 저장소에 있습니다. 두 본문 중 하나만 있고, 부르는 길은 `DevCommandRegistry::run` 하나다. */
     struct DevCommandRegistration
     {
-        const utf8*    _pName;  ///< 콘솔에 치는 이름입니다(점으로 묶습니다. 예: `debugdraw.category`). 대소문자를 가리지 않습니다.
-        const utf8*    _pUsage; ///< 사용법 한 줄(`teleport <object> <x> <y> <z>`)
-        const utf8*    _pHelp;  ///< 설명 한 줄입니다.
-        DevCommandFunc _pFunc;
+        const utf8*         _pName;      ///< 콘솔에 치는 이름입니다(점으로 묶습니다. 예: `debugdraw.category`). 대소문자를 가리지 않습니다.
+        const utf8*         _pUsage;     ///< 사용법 한 줄(`teleport <object> <x> <y> <z>`)
+        const utf8*         _pHelp;      ///< 설명 한 줄입니다.
+        DevCommandFunc      _pFunc;      ///< 보통 명령
+        DevSceneCommandFunc _pSceneFunc; ///< 씬 전체를 도는 명령(`SW_DEV_SCENE_COMMAND`)
     };
 
     /**
@@ -83,6 +87,8 @@ namespace sw
         void unregisterEntry( const DevCommandRegistration* pRegistration );
         /** @brief 이름(대소문자 무시)으로 명령을 찾습니다. */
         const DevCommandRegistration* findCommand( string_view name ) const;
+        /** @brief @p command 의 본문을 부릅니다(씬을 도는 명령이면 순회 열쇠를 넘긴다). 본문의 답 그대로입니다 — 인자가 잘못됐으면 false. */
+        [[nodiscard]] static bool run( const DevCommandRegistration& command, const vector<string>& listArgument, string& outReply );
         /** @brief @p prefix 로 시작하는(대소문자 무시) 명령 이름을 사전순으로 채웁니다. */
         void collectNames( string_view prefix, vector<string>& outListName ) const;
         /** @brief 등록된 명령 수입니다. */
@@ -114,15 +120,26 @@ namespace sw
  * @param pHelp   설명 한 줄
  * @param pFunc   `bool( const vector<string>&, string& )` 본문
  */
-    #define SW_DEV_COMMAND( varName, pName, pUsage, pHelp, pFunc )                                                    \
-        static const ::sw::DevCommandRegistration sw_devCommandRegistration_##varName{ pName, pUsage, pHelp, pFunc }; \
-        static ::sw::DevCommandRegistrar          sw_devCommandRegistrar_##varName                                    \
-        {                                                                                                             \
-            &sw_devCommandRegistration_##varName                                                                      \
+    #define SW_DEV_COMMAND( varName, pName, pUsage, pHelp, pFunc )                                                             \
+        static const ::sw::DevCommandRegistration sw_devCommandRegistration_##varName{ pName, pUsage, pHelp, pFunc, nullptr }; \
+        static ::sw::DevCommandRegistrar          sw_devCommandRegistrar_##varName                                             \
+        {                                                                                                                      \
+            &sw_devCommandRegistration_##varName                                                                               \
+        }
+
+/**
+ * @brief 씬 전체를 도는 개발 명령을 등록합니다(`scene.tree` 처럼). 인자는 `SW_DEV_COMMAND` 와 같고 @p pFunc 는 `bool( SceneWalkKey, const vector<string>&, string& )` 입니다.
+ */
+    #define SW_DEV_SCENE_COMMAND( varName, pName, pUsage, pHelp, pFunc )                                                       \
+        static const ::sw::DevCommandRegistration sw_devCommandRegistration_##varName{ pName, pUsage, pHelp, nullptr, pFunc }; \
+        static ::sw::DevCommandRegistrar          sw_devCommandRegistrar_##varName                                             \
+        {                                                                                                                      \
+            &sw_devCommandRegistration_##varName                                                                               \
         }
 
 #else
 
-    #define SW_DEV_COMMAND( varName, pName, pUsage, pHelp, pFunc ) [[maybe_unused]] static constexpr auto sw_devCommandShippingUnused_##varName = pFunc
+    #define SW_DEV_COMMAND( varName, pName, pUsage, pHelp, pFunc )       [[maybe_unused]] static constexpr auto sw_devCommandShippingUnused_##varName = pFunc
+    #define SW_DEV_SCENE_COMMAND( varName, pName, pUsage, pHelp, pFunc ) [[maybe_unused]] static constexpr auto sw_devCommandShippingUnused_##varName = pFunc
 
 #endif

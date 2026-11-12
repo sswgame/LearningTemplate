@@ -9,6 +9,7 @@
 #include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/EditorSceneWalk.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -84,7 +85,7 @@ namespace sw::editor
         if ( pObjects == nullptr )
             return;
         // 값으로 반환하는 `getAllGameObjects()` 는 씬 전체를 복사한다. 순회만 하므로 복사하지 않는 쪽을 쓴다.
-        pObjects->forEachGameObject( [&inoutListItem]( GameObject* pObj )
+        pObjects->forEachGameObject( editor::EditorSceneWalk::getKey(), [&inoutListItem]( GameObject* pObj )
         {
             EditorSearchItem item{};
             item._source   = EditorSearchSource::SceneObject;

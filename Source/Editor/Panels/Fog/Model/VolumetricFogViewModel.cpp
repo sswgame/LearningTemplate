@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/EditorSceneWalk.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -54,7 +55,7 @@ namespace sw::editor
             return;
         GameObject* pFog = nullptr;
         // 공유 잠금 안의 콜백이라 찾기만 한다.
-        pManager->forEachComponentOfType<FogComponent>( [&pFog]( FogComponent* pComponent )
+        pManager->forEachComponentOfType<FogComponent>( editor::EditorSceneWalk::getKey(), [&pFog]( FogComponent* pComponent )
         {
             if ( pFog == nullptr )
                 pFog = pComponent->getOwner();

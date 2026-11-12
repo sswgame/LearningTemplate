@@ -39,6 +39,7 @@
 #include "Core/Registry/RegistrationList.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Engine/Foundation/SceneWalkKey.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Navigation/NavigationTypes.h"
@@ -255,7 +256,7 @@ namespace sw
          * @brief 씬의 베이크 기하를 모읍니다 — 표면의 규칙(파일 `NavMeshSurfaceComponent.h` 머리말). 표면이 없으면 기본 규칙(메시 + Static 강체)입니다.
          * @details 쿠킹(`SceneNavigationCooker`)과 런타임 베이크가 같은 함수를 지납니다 — 두 길의 입력 해시가 같다.
          */
-        static void collectGeometry( GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
+        static void collectGeometry( SceneWalkKey key, GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
                                      const vector<INavGeometrySource*>& listSource, NavMeshGeometry& outGeometry );
         /** @brief 매니저에 놓인 표면 중 @p agentType 을 맡는 첫 표면입니다. */
         const NavMeshSurfaceComponent* findSurface( const hashed_string& agentType );

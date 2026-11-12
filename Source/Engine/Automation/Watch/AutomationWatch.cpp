@@ -78,7 +78,8 @@ namespace sw
     bool AutomationWatchRegistry::registerWatch( const AutomationWatchRegistration* pRegistration )
     {
         const bool bInvalidWatchRegistration =
-            pRegistration == nullptr || pRegistration->_pName == nullptr || ( pRegistration->_pFunction == nullptr ) == ( pRegistration->_pQueryFunction == nullptr );
+            pRegistration == nullptr || pRegistration->_pName == nullptr ||
+            ( pRegistration->_pFunction != nullptr ) + ( pRegistration->_pQueryFunction != nullptr ) + ( pRegistration->_pWalkFunction != nullptr ) != 1;
         if ( bInvalidWatchRegistration )
             return false;
         return AutomationWatchInternal::getRegistrations().addLogged( pRegistration, "Automation watch", pRegistration->_pName ) == RegistrationResult::Added;
@@ -98,8 +99,9 @@ namespace sw
     {
         if ( registration._pQueryFunction != nullptr )
             return registration._pQueryFunction( query, outValue );
-        float64 number = 0.0;
-        if ( registration._pFunction( query._pManager, number ) == false )
+        float64    number = 0.0;
+        const bool bRead  = registration._pWalkFunction != nullptr ? registration._pWalkFunction( SceneWalkKey{}, query._pManager, number ) : registration._pFunction( query._pManager, number );
+        if ( bRead == false )
             return false;
         outValue.setNumber( number );
         return true;

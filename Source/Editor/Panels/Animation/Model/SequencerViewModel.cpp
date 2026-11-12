@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
+#include "Editor/Common/EditorSceneWalk.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -44,7 +45,7 @@ namespace sw::editor
         if ( pManager == nullptr || documentPath.empty() )
             return nullptr;
         SequencePlayerComponent* pFirst = nullptr;
-        for ( GameObject* pObject : pManager->getAllGameObjects() )
+        for ( GameObject* pObject : pManager->getAllGameObjects( editor::EditorSceneWalk::getKey() ) )
         {
             SequencePlayerComponent* pPlayer = pObject != nullptr ? pObject->getComponent<SequencePlayerComponent>() : nullptr;
             // 리소스 id 는 대소문자를 가리지 않는다.

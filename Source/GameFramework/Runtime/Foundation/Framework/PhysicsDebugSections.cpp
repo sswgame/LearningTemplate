@@ -126,13 +126,13 @@ namespace sw
                     writer.addLine( "scene", "none" );
                     return;
                 }
-                if ( const CharacterControllerComponent* pController = GameplayDebugTarget::findTargetComponent<CharacterControllerComponent>( *pManager ) )
+                if ( const CharacterControllerComponent* pController = GameplayDebugTarget::findTargetComponent<CharacterControllerComponent>( writer.getSceneWalkKey(), *pManager ) )
                 {
                     writer.addLine( "target", pController->getOwner() != nullptr ? string( pController->getOwner()->getName().c_str() ) + " (3D)" : string( "? (3D)" ) );
                     writeController3D( writer, *pController );
                     return;
                 }
-                if ( const CharacterController2DComponent* pController = GameplayDebugTarget::findTargetComponent<CharacterController2DComponent>( *pManager ) )
+                if ( const CharacterController2DComponent* pController = GameplayDebugTarget::findTargetComponent<CharacterController2DComponent>( writer.getSceneWalkKey(), *pManager ) )
                 {
                     writer.addLine( "target", pController->getOwner() != nullptr ? string( pController->getOwner()->getName().c_str() ) + " (2D)" : string( "? (2D)" ) );
                     writeController2D( writer, *pController );

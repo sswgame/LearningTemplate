@@ -14,6 +14,7 @@
 #include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/EditorSceneWalk.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetImportJob.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -718,7 +719,7 @@ namespace sw::editor
     {
         const string reloaded = FileUtil::normalizeSeparators( relativePath );
         uint32       notified = 0;
-        objects.forEachGameObject( [&reloaded, &notified]( GameObject* pObject )
+        objects.forEachGameObject( editor::EditorSceneWalk::getKey(), [&reloaded, &notified]( GameObject* pObject )
         {
             for ( Component* pComponent : pObject->getComponents() )
             {

@@ -19,6 +19,8 @@
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
+#include "Engine/Foundation/SceneWalkKey.h"
+
 namespace sw
 {
     class GameObjectManager;
@@ -41,9 +43,9 @@ namespace sw
 
         // 씬 상태 해시 계산입니다. */
         /** @brief `collectObjects` 의 (이름, 오브젝트 해시)를 그 순서로 접은 해시입니다. 오브젝트가 없으면 빈 해시 값입니다. */
-        static uint64 compute( const GameObjectManager& manager );
+        static uint64 compute( SceneWalkKey key, const GameObjectManager& manager );
         /** @brief 이름 있는 오브젝트마다 해시 하나를 (이름, 해시) 순으로 채웁니다. `compute` 가 이 목록을 접습니다. */
-        static void collectObjects( const GameObjectManager& manager, vector<SceneObjectHash>& outListObject );
+        static void collectObjects( SceneWalkKey key, const GameObjectManager& manager, vector<SceneObjectHash>& outListObject );
         /** @brief 한 줄에 하나(`<16자리 16진 해시> <이름>`)로 씁니다. 이름은 줄 끝까지입니다. */
         static void writeObjectReport( const vector<SceneObjectHash>& listObject, string& outText );
         /** @brief `writeObjectReport` 의 글을 되읽습니다. 형식이 다른 줄이 하나라도 있으면 목록을 비우고 false 입니다(다른 글을 오브젝트 목록으로 받지 않는다). */

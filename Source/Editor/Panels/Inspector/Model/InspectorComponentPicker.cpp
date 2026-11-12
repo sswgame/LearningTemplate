@@ -6,6 +6,8 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/EditorSceneWalk.h"
+
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -40,7 +42,7 @@ namespace sw::editor
     {
         outListChoice.clear();
         // 콜백은 공유 잠금 안이라 구조를 바꾸지 않는다. 핸들과 라벨만 모은다.
-        manager.forEachComponentOfType( &targetType, [&outListChoice]( Component* pComp )
+        manager.forEachComponentOfType( editor::EditorSceneWalk::getKey(), &targetType, [&outListChoice]( Component* pComp )
         { outListChoice.push_back( InspectorComponentChoice{ pComp->getHandle(), makeLabel( *pComp ) } ); } );
         // 방문 순서는 약속되지 않는다.
         VectorUtil::sort( outListChoice, []( const InspectorComponentChoice& lhs, const InspectorComponentChoice& rhs )
