@@ -16,8 +16,10 @@
 #include "DevTools/Client/Automation/Runner/AutomationRunner.h"
 #include "DevTools/Client/Automation/Runner/AutomationScenarioChain.h"
 #include "DevTools/Client/Automation/Runner/ScenarioPlayer.h"
+#include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 #include "DevTools/Client/Automation/Scenario/AutomationUserDataRoot.h"
 
+#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Config/GameSelection.h"
@@ -255,6 +257,9 @@ namespace sw
             restoreStartWindowSize();
             // 엔진이 모르는 모듈 상태(편집기의 패널 · 팝업 · 배치)도 새 프로세스처럼 — 그 상태를 가진 모듈이 등록한 되돌리기를 부른다.
             (void)AutomationStageResetRegistry::resetAll();
+            // 앞 단계의 사본 폴더를 거둔다 — 패널 · 문서를 새로 만든 뒤라 연 파일이 없다. 남기면 이 프로세스의 색인 · Quick Open 이 원본과 같은 이름의 사본을 집는다.
+            for ( const AutomationScratchFolder& folder : _pRunner->getScenario().getTestOptions()._listScratchFolder )
+                (void)AutomationScratchWorkspace::discard( folder ); // 못 지우면 경고가 남는다 — 다음 단계의 prepare 는 자기 사본만 새로 만든다
             // 앞 단계가 찾지 못한 번역 키(시네마틱 자막 같은 것)도 비운다 — 판정의 로그 게이트가 그 목록을 세므로, 남기면 뒤 단계가 모두 그 키로 진다.
             engine::getSubsystem<LocalizationManager>().clearMissingKeys();
             // 단계 사이 초기화가 든 시간이다 - 다음 시나리오가 시작하기까지의 프레임(새 게임 · 첫 씬)은 그 실행의 timeline `start` 가 센다.
