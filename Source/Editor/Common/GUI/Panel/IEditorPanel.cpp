@@ -17,6 +17,7 @@ namespace sw::editor
 {
     void IEditorPanel::draw()
     {
+        _bDrawing = SW_TRUE;
         if ( _bOpenedNotified == SW_FALSE )
         {
             _bOpenedNotified = SW_TRUE;
@@ -55,6 +56,13 @@ namespace sw::editor
         // 창 밖에서 그린다 — 접힌 창은 내용을 그리지 않지만 확인은 떠야 한다.
         if ( pDocument != nullptr && pDocument->isCloseConfirmPending() )
             pDocument->drawCloseConfirm();
+
+        _bDrawing = SW_FALSE;
+        if ( _bClosedWhileDrawing )
+        {
+            _bClosedWhileDrawing = SW_FALSE;
+            onPanelClosed(); // 그리기 중에 닫혔다 — 내용이 다 끝난 뒤에 자원을 놓는다
+        }
     }
 
     bool IEditorPanel::hasUnsavedDocument() const

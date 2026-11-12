@@ -499,6 +499,8 @@ namespace sw::editor
         (void)scene; // 몸은 외형 데이터를 읽은 뒤에 세운다(`syncPreviewBody`)
         _previewBody         = GameObjectHandle{};
         _bPreviewBodyDressed = SW_FALSE;
+        _gizmoProxy          = GameObjectHandle{}; // 창을 닫았다 다시 열면 새 씬이다 — 앞 씬의 표시 오브젝트 핸들이 새 씬의 다른 오브젝트로 풀리지 않게
+        _bGizmoPlaced        = SW_FALSE;
     }
 
     void CharacterEditorPanel::drawPreviewTab()

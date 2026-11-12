@@ -130,6 +130,8 @@ namespace sw::editor
             , _bWindowFocused{ SW_FALSE }
             , _bContentDrawn{ SW_FALSE }
             , _bOpenedNotified{ SW_FALSE }
+            , _bDrawing{ SW_FALSE }
+            , _bClosedWhileDrawing{ SW_FALSE }
             , _contentLineCount{ 0.0f }
             , _contentColumnCount{ 0.0f }
         {
@@ -148,7 +150,8 @@ namespace sw::editor
         virtual void onPanelOpened() {}
         /**
          * @brief 패널이 닫힌 순간 한 번 부릅니다. `requestClose` 와 문서의 `applyCloseChoice` 가 닫는 모든 경로에서 부릅니다.
-         * @details 닫힌 패널은 `draw()` 가 돌지 않으므로, 창이 가지고 있던 전역 상태(초점 씬, Undo 스택)는 여기서 해제해야 한다.
+         * @details 닫힌 패널은 `draw()` 가 돌지 않으므로, 창이 가지고 있던 전역 상태(초점 씬, Undo 스택)와 무거운 자원(미리보기 씬 · 렌더 타깃)은 여기서 해제해야 한다.
+         *          그 패널의 `draw()` 안에서 닫히면(X, 창 안의 Close 단추) 그 `draw()` 가 끝난 뒤에 부른다 — 같은 그리기의 남은 내용이 해제한 자원을 보거나 다시 만들지 않게.
          */
         virtual void onPanelClosed() {}
         /**
@@ -177,15 +180,22 @@ namespace sw::editor
         {
             _bOpen           = false;
             _bOpenedNotified = SW_FALSE; // 다시 열면 첫 draw 가 `onPanelOpened` 를 다시 부른다
+            if ( _bDrawing )
+            {
+                _bClosedWhileDrawing = SW_TRUE; // `draw()` 끝에서 부른다
+                return;
+            }
             onPanelClosed();
         }
 
     private:
         bool    _bOpen; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
-        uint8   _bWindowFocused  : 1;
-        uint8   _bContentDrawn   : 1; ///< 마지막 draw 에서 내용을 그렸다(접히거나 가려지지 않았다)
-        uint8   _bOpenedNotified : 1; ///< 이번 열림에 `onPanelOpened` 를 불렀다(`closeNow` 가 내린다)
-        float32 _contentLineCount;    ///< 마지막으로 그린 draw 의 내용 영역 높이 / 글자 줄 높이
-        float32 _contentColumnCount;  ///< 마지막으로 그린 draw 의 내용 영역 폭 / 숫자 "0" 너비
+        uint8   _bWindowFocused      : 1;
+        uint8   _bContentDrawn       : 1; ///< 마지막 draw 에서 내용을 그렸다(접히거나 가려지지 않았다)
+        uint8   _bOpenedNotified     : 1; ///< 이번 열림에 `onPanelOpened` 를 불렀다(`closeNow` 가 내린다)
+        uint8   _bDrawing            : 1; ///< `draw()` 안이다 — 여기서 닫히면 `onPanelClosed` 를 그 끝으로 미룬다
+        uint8   _bClosedWhileDrawing : 1; ///< 이번 `draw()` 안에서 닫혔다
+        float32 _contentLineCount;        ///< 마지막으로 그린 draw 의 내용 영역 높이 / 글자 줄 높이
+        float32 _contentColumnCount;      ///< 마지막으로 그린 draw 의 내용 영역 폭 / 숫자 "0" 너비
     };
 } // namespace sw::editor

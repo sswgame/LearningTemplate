@@ -41,7 +41,11 @@ namespace sw::editor
      *          - 창 스택이 늘거나 줄면 기반 클래스가 문서를 dirty 로 표시한다(`syncDocumentDirty`, 닫기 확인보다 먼저 돈다). 그래서 파생 창이
      *            미리보기 씬 편집을 따로 알릴 필요가 없다. 저장에 성공하면 `acknowledgePreviewEdits`, 문서를 다시 만들면 `resetPreviewEdits` 를
      *            부른다. 닫기 확인은 `IEditorPanel::requestClose` 가 한다.
-     *          - 창을 종료할 때(`shutdown`) 씬, 렌더 타깃, 초점을 놓는다. 파생 창이 `shutdown` 을 재정의하면 기반 클래스의 것을 부른다.
+     *          - 창을 **닫거나**(`onPanelClosed`) 종료할 때(`shutdown`) 기반 클래스가 씬, 렌더 타깃, 초점, 창 스택을 한 곳(`releasePreview`)에서 놓는다.
+     *            다시 열면 첫 `beginPreviewFrame` 이 씬을 새로 만들고 `populatePreviewScene` 을 다시 부른다 — 파생 창은 거기서 앞 씬을 가리키던
+     *            핸들 · "놓았다" 표시를 모두 비운다(objectID 는 씬의 매니저마다 따로 세므로 낡은 핸들이 새 씬의 다른 오브젝트로 풀릴 수 있다).
+     *            열린 문서(편집 사본)는 패널에 남는다. 닫기는 미저장 확인(`requestClose`)을 거친 뒤라 버릴 편집이 없다.
+     *            파생 창이 `shutdown` 을 재정의하면 기반 클래스의 것을 부른다.
      */
     class SW_EDITOR_API EditorPreviewPanel : public EditorDocumentPanel
     {
@@ -134,8 +138,13 @@ namespace sw::editor
         void framePreviewSubject();
         /** @brief @p bFocused 면 초점 씬과 창 스택을 이 창의 것으로 등록하고, 아니면 이 창이 등록해 둔 것을 해제합니다. */
         void applyWindowFocus( bool bFocused );
-        /** @brief 포커스를 가진 채 닫혀도 초점 씬과 창 스택을 해제합니다. 닫힌 창은 그려지지 않아 `beginPreviewFrame` 의 `applyWindowFocus( false )` 가 다시 돌지 않습니다. */
-        void onPanelClosed() override { applyWindowFocus( false ); }
+        /**
+         * @brief 닫히면 미리보기 씬 · 렌더 타깃 · 창 스택을 놓습니다(`releasePreview`). 닫힌 창은 그려지지 않아 `beginPreviewFrame` 의 `applyWindowFocus( false )` 가 다시 돌지 않습니다.
+         * @details 언리얼은 에셋 편집기를 닫으면 `FPreviewScene` 을 파괴한다 — 닫힌 창의 씬 · 타깃이 세션 끝까지 남지 않게 같은 수명을 따른다(감사 E-14).
+         */
+        void onPanelClosed() override { releasePreview(); }
+        /** @brief 초점과 선택 바인딩을 풀고 창 스택을 비운 뒤 씬과 렌더 타깃을 놓습니다. 닫기와 종료가 같이 쓰며 여러 번 불러도 됩니다. */
+        void releasePreview();
 
     private:
         EditorPreviewViewport       _viewport;
