@@ -134,8 +134,26 @@ namespace sw
 
     void VoxelWorld::serializeState( StateIO& io )
     {
+        io.header( kStateTag, kStateVersion ); // 판 1(머리표 없음 · 카탈로그 순서 번호)은 거절한다
         io.expect( _chunkCountX );
         io.expect( _chunkCountZ );
+        // 팔레트: 이 세이브의 번호 i(1 부터) → 블록 id. 마인크래프트 1.13+ 의 이름 팔레트와 같은 까닭으로, 카탈로그 순서가 바뀌어도 블록은 id 로 다시 짝지어진다.
+        // 마인크래프트는 청크마다 쓰인 블록만 싣지만 여기는 세이브 하나에 카탈로그 전체를 한 번 싣는다 — 블록이 255 종 이하라 몇 KB 를 넘지 않는다.
+        vector<hashed_string> listPaletteID;
+        if ( io.isWriting() && _pCatalog != nullptr )
+        {
+            listPaletteID.reserve( _pCatalog->getBlocks().size() );
+            for ( const VoxelBlockDef& block : _pCatalog->getBlocks() )
+            {
+                listPaletteID.push_back( block._id ); // 카탈로그 번호 = 목록 자리 + 1 이므로 쓸 때는 번호를 그대로 쓴다
+            }
+        }
+        if ( io.isReading() && io.check( _pCatalog != nullptr ) == false )
+            return;
+        io.nameList( listPaletteID, [this]( const hashed_string& blockID )
+        { return _pCatalog->findBlockIndex( blockID ) != kVoxelAirBlock; } ); // 지금 카탈로그에 없는 블록은 공기로 바꾸지 않고 거절한다
+        if ( io.isOk() == false )
+            return;
         if ( io.isWriting() )
         {
             // 구간 수를 먼저 세지 않고 끝에 길이 0인 구간을 넣어 닫는다. 런 길이 부호는 방향마다 할 일이 달라 갈린다.
@@ -144,43 +162,49 @@ namespace sw
                 size_t index = 0;
                 while ( index < chunk._listBlock.size() )
                 {
-                    VoxelBlockIndex block = chunk._listBlock[index];
-                    uint32          run   = 1;
+                    const VoxelBlockIndex block = chunk._listBlock[index];
+                    uint32                run   = 1;
                     while ( index + run < chunk._listBlock.size() && chunk._listBlock[index + run] == block )
                     {
                         ++run;
                     }
-                    io.value( block );
+                    uint16 paletteNumber = block; // 팔레트 번호는 uint16 으로 적는다 — 런타임 번호 폭(VoxelBlockIndex)을 넓혀도 형식은 그대로다
+                    io.value( paletteNumber );
                     io.value( run );
                     index += run;
                 }
-                VoxelBlockIndex closeBlock = kVoxelAirBlock;
-                uint32          closeRun   = 0;
-                io.value( closeBlock );
+                uint16 closeNumber = 0;
+                uint32 closeRun    = 0;
+                io.value( closeNumber );
                 io.value( closeRun );
             }
             return;
         }
-        if ( io.check( _pCatalog != nullptr ) == false )
-            return;
-        const size_t       blockLimit = _pCatalog->getBlocks().size(); // 0은 공기이고 1부터 카탈로그 순서이다
-        vector<VoxelChunk> listChunk( _listChunk.size() );             // 사본 대신 새 목록에 읽는다 — 옛 청크는 어차피 버린다
+        // 세이브 번호 → 지금 카탈로그 번호. 0 은 공기다.
+        vector<VoxelBlockIndex> listRemap;
+        listRemap.reserve( listPaletteID.size() + 1 );
+        listRemap.push_back( kVoxelAirBlock );
+        for ( const hashed_string& blockID : listPaletteID )
+        {
+            listRemap.push_back( _pCatalog->findBlockIndex( blockID ) );
+        }
+        vector<VoxelChunk> listChunk( _listChunk.size() ); // 사본 대신 새 목록에 읽는다 — 옛 청크는 어차피 버린다
         for ( VoxelChunk& chunk : listChunk )
         {
             chunk._listBlock.reserve( static_cast<size_t>( kVoxelChunkVolume ) );
             while ( true )
             {
-                VoxelBlockIndex block = kVoxelAirBlock;
-                uint32          run   = 0;
-                io.value( block );
+                uint16 paletteNumber = 0;
+                uint32 run           = 0;
+                io.value( paletteNumber );
                 io.value( run );
-                if ( io.check( static_cast<size_t>( block ) <= blockLimit ) == false )
+                if ( io.check( static_cast<size_t>( paletteNumber ) < listRemap.size() ) == false )
                     return;
                 if ( run == 0 )
                     break;
                 if ( io.check( chunk._listBlock.size() + run <= static_cast<size_t>( kVoxelChunkVolume ) ) == false )
                     return;
-                chunk._listBlock.insert( chunk._listBlock.end(), run, block );
+                chunk._listBlock.insert( chunk._listBlock.end(), run, listRemap[paletteNumber] );
             }
             if ( io.check( chunk._listBlock.size() == static_cast<size_t>( kVoxelChunkVolume ) ) == false )
                 return;
