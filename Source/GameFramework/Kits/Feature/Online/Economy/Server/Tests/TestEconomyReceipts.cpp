@@ -3,6 +3,7 @@
 // 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
@@ -13,6 +14,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Fake/FakeReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Steam/SteamReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
@@ -419,17 +421,22 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemStaysSpentAfterTheJournalIsSwept )
     SW_REQUIRE_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
     SW_REQUIRE_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
 
-    // 보존 쓸기 흉내 — 분개 표를 비운다(감사 내역은 지워진다).
+    // 401 일 뒤 운영과 같은 분개 쓸기 규칙 — 분개(감사 내역)는 지워지고 공급 합은 이월로 남는다
+    constexpr int64        kDayMs       = 24 * constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
+    constexpr int64        kRetentionMs = 401 * kDayMs;
+    ServiceRetentionRule   rule         = Ledger::makeJournalRetentionRule( kRetentionMs );
+    ServiceRetentionReport sweepReport;
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs + kRetentionMs, 1000, 1000, sweepReport ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( sweepReport._deletedCount > 0 );
     vector<ServiceRecord> listJournal;
     SW_REQUIRE_TRUE( rig._database.listRecords( Ledger::getJournalTable(), "", "", 1000, false, listJournal ) == ServiceStoreResult::Ok );
-    SW_REQUIRE_TRUE( listJournal.empty() == false );
-    ServiceTransaction sweep;
-    for ( const ServiceRecord& record : listJournal )
-        sweep.erase( Ledger::getJournalTable(), record._key );
-    SW_REQUIRE_TRUE( rig._database.commit( sweep ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( listJournal.empty() );
 
     SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::AlreadyRedeemed );
     SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
+    LedgerAuditReport audit;
+    SW_REQUIRE_TRUE( LedgerAuditReport::computeReport( rig._database, audit ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( audit.isBalanced() );
 }
 
 /** @brief [EconomyReceiptsTest] 외부 로그인 묶기: 답의 스토어 신원이 그 계정에 연동된 주체여야 받는다 — 남의 주문 번호를 먼저 낸 계정이 받던 결함이다. 진 뒤에도 진짜 구매자는 받는다 */
