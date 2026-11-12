@@ -42,9 +42,10 @@ namespace sw
         const auto freeIter = std::find( _listFreeSlot.begin(), _listFreeSlot.end(), slotIndex );
         SW_ASSERT( freeIter != _listFreeSlot.end() && "NetSlotTable::open needs a free slot" );
         _listFreeSlot.erase( freeIter );
-        _listSlot[static_cast<size_t>( slotIndex )]._state = state;
-        const auto liveIter                                = std::lower_bound( _listLiveSlot.begin(), _listLiveSlot.end(), slotIndex, []( const NetLiveSlot& live, int32 index )
-                                       { return live._slotIndex < index; } );
+        _listSlot[static_cast<size_t>( slotIndex )]._state      = state;
+        _listSlot[static_cast<size_t>( slotIndex )]._connection = make_unique<NetConnection>();
+        const auto liveIter                                     = std::lower_bound( _listLiveSlot.begin(), _listLiveSlot.end(), slotIndex, []( const NetLiveSlot& live, int32 index )
+                                            { return live._slotIndex < index; } );
         _listLiveSlot.insert( liveIter, NetLiveSlot{ std::numeric_limits<float64>::lowest(), slotIndex } );
     }
 
@@ -56,6 +57,7 @@ namespace sw
         NetEndpointSlot& slot = _listSlot[static_cast<size_t>( slotIndex )];
         slot._state           = NetConnectionState::Disconnected;
         slot._bReleasePending = bHoldUntilReleased ? SW_TRUE : SW_FALSE;
+        slot._connection.reset();
         if ( bHoldUntilReleased == false )
         {
             const auto freeIter = std::lower_bound( _listFreeSlot.begin(), _listFreeSlot.end(), slotIndex, []( int32 free, int32 index )
@@ -95,6 +97,16 @@ namespace sw
         const optional<size_t> livePosition = findLive( slotIndex );
         SW_ASSERT( livePosition.has_value() && "NetSlotTable::setDueTime takes a live slot" );
         _listLiveSlot[*livePosition]._dueTime = dueTime;
+    }
+
+    float64 NetSlotTable::getNextDueTime() const
+    {
+        float64 nextDueTime = std::numeric_limits<float64>::infinity();
+        for ( const NetLiveSlot& live : _listLiveSlot )
+        {
+            nextDueTime = live._dueTime < nextDueTime ? live._dueTime : nextDueTime;
+        }
+        return nextDueTime;
     }
 
     void NetSlotTable::collectDue( float64 nowSeconds, vector<int32>& outListSlot ) const

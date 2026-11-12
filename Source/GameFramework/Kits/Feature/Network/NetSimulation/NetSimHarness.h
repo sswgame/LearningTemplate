@@ -140,6 +140,8 @@ namespace sw
         [[nodiscard]] bool receive( NetAddress& outFrom, vector<uint8>& outBuffer ) override;
         NetAddress         getLocalAddress() const override;
         void               update( float64 time ) override;
+        bool               waitForReceive( float64 timeoutSeconds ) override; ///< 안쪽 전송에 넘긴다 — 감싸도 소켓 대기 · 깨움을 잃지 않는다
+        void               wake() override;
 
         const NetSimTraffic& getTraffic() const { return _traffic; }
         /** @brief @p to 로 보낸 바이트입니다. 서버 엔드포인트에서 클라이언트 하나로 내려간 양입니다. */

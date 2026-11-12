@@ -44,6 +44,7 @@ namespace sw
         if ( _thread.joinable() == false )
             return;
         _thread.request_stop();
+        _pHost->wake(); // 다음 기한까지 자는 중일 수 있다
         _thread.join();
         _bRunning.store( false, std::memory_order_release );
     }
@@ -57,8 +58,8 @@ namespace sw
         {
             _pHost->update( getTime() );
             _updateCount.fetch_add( 1, std::memory_order_relaxed );
-            // 받을 것이 오면 바로 깨고(UDP poll), 없으면 최대 대기 뒤에 보낼 시각 · 타임아웃을 보러 돈다.
-            (void)_pHost->waitForReceive( maxWait );
+            // 받을 것이 오거나(UDP poll) 다음 기한(재전송 · 타임아웃 · 유지)이 되거나 다른 스레드가 보낼 것을 넣어 깨울 때까지 잔다.
+            (void)_pHost->waitForReceive( getTime(), maxWait );
         }
         _pHost->releaseUpdateThread();
     }
