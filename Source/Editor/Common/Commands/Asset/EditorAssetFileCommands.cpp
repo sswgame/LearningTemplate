@@ -29,6 +29,8 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 
@@ -324,7 +326,9 @@ namespace sw::editor
                 SW_LOG_WARNING_ID( "EditorAssetFileCommands.DeleteRefusedOpenDocument", "Not deleted - '%#' is open in an editor, close it first", *openDocument );
                 EditorContext* const pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext != nullptr )
-                    pContext->getSubsystem<EditorNotificationManager>().push( "Delete refused", *openDocument + " is open - close it first", NotificationKind::Warning );
+                    pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "DeleteRefusedTitle" ),
+                                                                              SW_LOCKEYFORMAT( "EdCommon", "OpenDocumentNotDeleted", TextArgumentList().addText( "path", *openDocument ) ),
+                                                                              NotificationKind::Warning );
                 return true;
             }
         };
