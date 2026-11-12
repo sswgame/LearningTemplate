@@ -1,12 +1,14 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeServer.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStoreLogic.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
@@ -64,7 +66,8 @@ namespace sw
                 _policy._maxLegsPerSide     = kitConfig._maxLegsPerSide;
                 if ( expected<void> result = registerServerService( context, entry, &_server ); result.has_value() == false )
                     return result;
-                return {};
+                return addRetentionRule( context, entry,
+                                         TradeStoreLogic::makeRetentionRule( kitConfig._closedRetentionDays * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond ) );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override

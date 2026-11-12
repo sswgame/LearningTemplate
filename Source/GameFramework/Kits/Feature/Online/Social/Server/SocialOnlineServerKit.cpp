@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/GroupChannelMembership.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialKitConfig.h"
@@ -63,8 +65,11 @@ namespace sw
                     error.appendDetail( table.error().detail() );
                     return unexpected( error );
                 }
-                return registerServerService( context, entry, &_socialServer ).and_then( [&]
-                { return exposeInterface<IAccountBlockList>( context, entry, _blockList ); } );
+                return registerServerService( context, entry, &_socialServer )
+                    .and_then( [&]
+                { return exposeInterface<IAccountBlockList>( context, entry, _blockList ); } )
+                    .and_then( [&]
+                { return addRetentionRule( context, entry, GuildService::makeInviteRetentionRule( kitConfig._expiredInviteRetentionDays * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond ) ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override

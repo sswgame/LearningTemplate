@@ -9,6 +9,7 @@
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRetentionRule.h"
 
 using namespace sw;
 
@@ -222,6 +223,31 @@ SW_TEST_CASE( GuildServiceTest, NameRules )
     SW_EXPECT_FALSE( GuildService::isValidName( "trail " ) );
     SW_EXPECT_FALSE( GuildService::isValidName( "tab\tname" ) );
     SW_EXPECT_FALSE( GuildService::isValidName( "bad\xFFutf8" ) );
+}
+
+/** @brief [GuildServiceTest] 보존 규칙: 만료된 초대는 기간 뒤에 지우고, 다시 보내 늦춰진 초대는 낡은 색인 줄로 지우지 않는다(감사 O-9) */
+SW_TEST_CASE( GuildServiceTest, ExpiredInvitesAreSwept )
+{
+    GuildFixture rig;
+    (void)rig.makeGuild();
+    SW_REQUIRE_TRUE( rig.run( GuildOperation::Invite, kOfficer, kOutside )._result == SocialResult::Ok );
+    SW_REQUIRE_TRUE( rig.run( GuildOperation::Invite, kOfficer, kOutside, "", 0, kNowMs + 1000 )._result == SocialResult::Ok ); // 다시 보내 만료가 늦춰졌다
+    const hashed_string inviteTable{ "social_guild_invite" };
+    const hashed_string expiryTable{ "social_guild_invite_expiry" };
+    SW_REQUIRE_EQUAL( 1, rig._database.countRecords( inviteTable ) );
+    SW_REQUIRE_EQUAL( 2, rig._database.countRecords( expiryTable ) );
+
+    ServiceRetentionRule   rule = GuildService::makeInviteRetentionRule( 1000 );
+    ServiceRetentionReport report;
+    const int64            firstExpiryMs = kNowMs + GuildLimit::kInviteLifetimeMs;
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, firstExpiryMs + 1500, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, report._deletedCount );
+    SW_EXPECT_EQUAL( 1, rig._database.countRecords( inviteTable ) );
+    SW_EXPECT_EQUAL( 1, rig._database.countRecords( expiryTable ) ); // 낡은 줄만 지웠다
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, firstExpiryMs + 3000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._deletedCount );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( inviteTable ) );
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( expiryTable ) );
 }
 
 /** @brief [GuildServiceTest] 초대 · 수락: 임원 이상만 초대하고, 자신 · 다른 길드 사람은 초대할 수 없다. 초대 없는 수락 · 만료된 수락은 지고, 수락하면 알림 · 이벤트가 난다 */
