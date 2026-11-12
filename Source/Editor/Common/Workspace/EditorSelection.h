@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
@@ -66,7 +67,13 @@ namespace sw::editor
         // 멤버 메서드
         // ------------------------------------------------------------------------------
         void selectObject( GameObject* pObj, SelectionMode mode = SelectionMode::Replace );
+        /**
+         * @brief 여러 오브젝트를 한 번에 고르고 알림은 한 번만 보냅니다. 여러 개를 고르는 길(전체 선택 · Shift 범위 · 삭제 · 붙여 넣기 · 사각 선택)은 이것만 씁니다.
+         * @details 목록 길이 + 선택 수에 비례한다. `selectObject` 를 행마다 부르면 부를 때마다 선택 전체를 풀고(`pruneInvalid`) 알리므로 제곱이 된다
+         *          (언리얼 `USelection::BeginBatchSelectOperation` · 유니티 `Selection.objects = 배열` 처럼 한 번 대입이다).
+         */
         void selectObjects( const vector<GameObject*>& listObj, SelectionMode mode = SelectionMode::Replace );
+        /** @brief 선택 여부입니다. 해시 집합 조회라 행마다 불러도 된다(계층 · 프리팹 행 그리기). */
         bool hasObject( const GameObject* pObj ) const;
         /** @brief 처음 선택한 오브젝트입니다. 선택이 없거나 사라졌으면 nullptr 입니다. */
         GameObject* getPrimaryObject() const;
@@ -130,10 +137,11 @@ namespace sw::editor
         void notifyChanged();
 
     private:
-        vector<GameObjectHandle> _listSelectedObject;
-        vector<string>           _listSelectedAsset;
-        Delegate<void()>         _onSelectionChanged;
-        Scene*                   _pPreviewScene{ nullptr }; ///< 묶인 미리보기 씬(빌림). nullptr 이면 메인 선택이다
-        CommandStack*            _pPreviewStack{ nullptr }; ///< 묶인 창의 Undo 스택(빌림)
+        vector<GameObjectHandle>        _listSelectedObject;   ///< 선택한 순서(주 선택은 맨 앞)
+        unordered_set<GameObjectHandle> _uniqueSelectedObject; ///< `_listSelectedObject` 와 같은 원소의 색인. 포함 확인을 상수 시간에 한다(언리얼은 오브젝트 선택 플래그)
+        vector<string>                  _listSelectedAsset;
+        Delegate<void()>                _onSelectionChanged;
+        Scene*                          _pPreviewScene{ nullptr }; ///< 묶인 미리보기 씬(빌림). nullptr 이면 메인 선택이다
+        CommandStack*                   _pPreviewStack{ nullptr }; ///< 묶인 창의 Undo 스택(빌림)
     };
 } // namespace sw::editor

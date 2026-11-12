@@ -96,6 +96,14 @@ namespace sw::editor
         _selectedComponentKey.clear();
     }
 
+    void EditorWorkspace::selectGameObjects( const vector<GameObject*>& listObj, SelectionMode mode )
+    {
+        if ( _pEditorSelection != nullptr )
+            _pEditorSelection->selectObjects( listObj, mode );
+        _selectedComponentID = 0;
+        _selectedComponentKey.clear();
+    }
+
     void EditorWorkspace::selectComponent( GameObject* pObj, Component* pComp )
     {
         if ( _pEditorSelection != nullptr )

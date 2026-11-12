@@ -47,6 +47,30 @@ namespace sw::editor
                 }
                 outListObject.push_back( pObj );
             }
+
+            /** @brief 지울 오브젝트를 그 씬의 선택에서 한 번에 뺍니다. 미리보기 창의 오브젝트면 창의 선택에서 뺍니다(`findSelectionOf`). */
+            static void removeFromSelection( GameObjectManager& manager, const vector<GameObject*>& listDoomed )
+            {
+                EditorSelection* pSelection = editor::findSelectionOf( manager );
+                if ( pSelection != nullptr )
+                    pSelection->selectObjects( listDoomed, SelectionMode::Remove );
+            }
+
+            /**
+             * @brief `collectSubtreeChildFirst` 로 모은 서브트리 [@p first, @p last) 의 삭제를 한 배치로 기록하고 그 루트(마지막 칸)를 지웁니다.
+             * @details 삭제는 자식까지 지운다(`destroyGameObject` 기본). 그래서 기록도 서브트리 전체를 남긴다. 루트 하나의 스냅샷만 남기면 되돌릴 때 부모만
+             *          돌아오고 자식은 영영 사라진다. **자식부터** 기록하므로 배치의 되돌리기(역순)는 부모를 원래 id 로 먼저 복원하고 자식이 그 id 로 다시 붙는다.
+             */
+            static void recordAndDestroySubtree( EditorTransaction& transaction, GameObjectManager& manager, const vector<GameObject*>& listDoomed, size_t first, size_t last )
+            {
+                EditorTransaction::beginTransaction( "Destroy GameObject" );
+                for ( size_t index = first; index < last; ++index )
+                {
+                    transaction.recordDestruction( listDoomed[index], "Destroy GameObject" );
+                }
+                EditorTransaction::endTransaction();
+                manager.destroyGameObject( listDoomed[last - 1] );
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -197,15 +221,26 @@ namespace sw::editor
         if ( listRoot.empty() )
             return 0;
 
-        uint32 destroyedCount = 0;
-        EditorTransaction::beginTransaction( listRoot.size() == 1 ? string( "Destroy GameObject" ) : "Destroy " + to_string( listRoot.size() ) + " GameObjects" );
+        // 모든 서브트리를 한 목록에 모아 선택에서 한 번에 뺀다 — 루트마다 빼면 루트 수 × 선택 수다.
+        vector<GameObject*> listDoomed;
+        vector<size_t>      listSubtreeEnd;
+        listSubtreeEnd.reserve( listRoot.size() );
         for ( GameObject* pObj : listRoot )
         {
-            if ( destroy( transaction, pManager, pObj ) )
-                ++destroyedCount;
+            EditorSceneCommandsInternal::collectSubtreeChildFirst( pObj, listDoomed );
+            listSubtreeEnd.push_back( listDoomed.size() );
+        }
+        EditorSceneCommandsInternal::removeFromSelection( *pManager, listDoomed );
+
+        EditorTransaction::beginTransaction( listRoot.size() == 1 ? string( "Destroy GameObject" ) : "Destroy " + to_string( listRoot.size() ) + " GameObjects" );
+        size_t first = 0;
+        for ( const size_t last : listSubtreeEnd )
+        {
+            EditorSceneCommandsInternal::recordAndDestroySubtree( transaction, *pManager, listDoomed, first, last );
+            first = last;
         }
         EditorTransaction::endTransaction();
-        return destroyedCount;
+        return static_cast<uint32>( listRoot.size() );
     }
 
     void EditorSceneCommands::collectRootsInOrder( GameObjectManager& manager, vector<GameObject*>& outListRoot )
@@ -245,30 +280,10 @@ namespace sw::editor
         if ( pManager == nullptr || pObj == nullptr )
             return false;
 
-        // 삭제는 자식까지 지운다(`destroyGameObject` 기본). 그래서 기록도 서브트리 전체를 남긴다. 이 오브젝트 하나의 스냅샷만 남기면
-        // 되돌릴 때 부모만 돌아오고 자식은 영영 사라진다(그대로 저장하면 파일에서도). **자식부터** 기록해 한 배치로 넣는다.
-        // 배치의 되돌리기는 역순이라 부모가 원래 id 로 먼저 복원되고, 자식은 그 id 로 부모를 찾아 다시 붙는다.
         vector<GameObject*> listSubtree;
         EditorSceneCommandsInternal::collectSubtreeChildFirst( pObj, listSubtree );
-
-        // 지울 것은 그 씬의 선택에서 뺀다. 미리보기 창의 오브젝트면 창의 선택에서 뺀다(`findSelectionOf`).
-        EditorSelection* pSelection = editor::findSelectionOf( *pManager );
-        if ( pSelection != nullptr )
-        {
-            for ( GameObject* pDoomed : listSubtree )
-            {
-                if ( pSelection->hasObject( pDoomed ) )
-                    pSelection->selectObject( pDoomed, SelectionMode::Remove );
-            }
-        }
-
-        EditorTransaction::beginTransaction( "Destroy GameObject" );
-        for ( GameObject* pDoomed : listSubtree )
-        {
-            transaction.recordDestruction( pDoomed, "Destroy GameObject" );
-        }
-        EditorTransaction::endTransaction();
-        pManager->destroyGameObject( pObj );
+        EditorSceneCommandsInternal::removeFromSelection( *pManager, listSubtree );
+        EditorSceneCommandsInternal::recordAndDestroySubtree( transaction, *pManager, listSubtree, 0, listSubtree.size() );
         return true;
     }
 
@@ -403,11 +418,7 @@ namespace sw::editor
             workspace.clearSelection();
             return 0;
         }
-        workspace.selectGameObject( listObject[0], SelectionMode::Replace );
-        for ( size_t index = 1; index < listObject.size(); ++index )
-        {
-            workspace.selectGameObject( listObject[index], SelectionMode::Add );
-        }
+        workspace.selectGameObjects( listObject, SelectionMode::Replace );
         return static_cast<uint32>( listObject.size() );
     }
 
@@ -676,12 +687,6 @@ namespace sw::editor
         // 붙여 넣은 것은 그 씬의 선택에 놓는다. 미리보기 창에 붙이면 창의 선택에 놓는다.
         EditorSelection* pSelection = editor::findSelectionOf( *pManager );
         if ( pSelection != nullptr )
-        {
-            pSelection->clearObjectSelection();
-            for ( GameObject* pRoot : outListCreated )
-            {
-                pSelection->selectObject( pRoot, SelectionMode::Add );
-            }
-        }
+            pSelection->selectObjects( outListCreated, SelectionMode::Replace );
     }
 } // namespace sw::editor

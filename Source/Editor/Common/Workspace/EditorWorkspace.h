@@ -84,6 +84,8 @@ namespace sw::editor
         void        clearSelection();
 
         void selectGameObject( GameObject* pObj, SelectionMode mode = SelectionMode::Replace );
+        /** @brief 여러 오브젝트를 한 번에 고릅니다(`EditorSelection::selectObjects` — 알림 한 번). 행마다 `selectGameObject` 를 부르면 제곱이다. */
+        void selectGameObjects( const vector<GameObject*>& listObj, SelectionMode mode = SelectionMode::Replace );
         void selectComponent( GameObject* pObj, Component* pComp );
         void remapSelectionByObjectName( GameObjectManager* pGameObjectManager );
 
