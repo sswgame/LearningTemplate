@@ -106,10 +106,7 @@ namespace sw
             }
         }
         flushCollision(); // 이번 틱까지 칠한 칸의 청크 바디를 한 번에(칸마다 맵 전체를 다시 만들지 않는다)
-        if ( _listChunkBatch.empty() )
-            return;
-        _elapsedSeconds += context.getDeltaTime();
-        // 오브젝트가 움직였으면 모든 칸을 다시 놓는다. 타일맵은 대개 서 있다 — 장면 컴포넌트와 월드 변경 번호가 그대로면 행렬도 읽지 않는다.
+        // 오브젝트가 움직였는지 본다. 타일맵은 대개 서 있다 — 장면 컴포넌트와 월드 변경 번호가 그대로면 행렬도 읽지 않는다.
         // 번호가 바뀌어도 행렬이 같으면(같은 값으로 다시 합성) 칸을 다시 놓지 않도록 행렬 비교는 남긴다.
         const GameObject*     pOwner         = getOwner();
         const SceneComponent* pRoot          = ( pOwner != nullptr ) ? pOwner->getPrimarySceneComponent() : nullptr;
@@ -118,14 +115,22 @@ namespace sw
         _pLastOwnerRoot                      = pRoot;
         _lastOwnerVersion                    = version;
         const float4x4 ownerWorld            = bSameTransform ? _lastOwnerWorld : getOwnerWorld();
-        if ( bSameTransform == false && Memory::compare( &ownerWorld, &_lastOwnerWorld, sizeof( ownerWorld ) ) != 0 )
+        const bool     bOwnerMoved           = bSameTransform == false && Memory::compare( &ownerWorld, &_lastOwnerWorld, sizeof( ownerWorld ) ) != 0;
+        if ( bOwnerMoved )
         {
             _lastOwnerWorld = ownerWorld;
+            // 충돌은 그리기 배치와 따로 오너를 따른다(그림 없는 서버에서도) — 예전에는 만들 때의 월드 자리에 남았다(감사 P0-14).
+            followOwnerTransform();
+        }
+        if ( _listChunkBatch.empty() )
+            return;
+        _elapsedSeconds += context.getDeltaTime();
+        if ( bOwnerMoved )
+        {
             for ( int32 chunkIndex = 0; chunkIndex < _chunkGrid.getChunkCount(); ++chunkIndex )
             {
                 refreshChunkCells( chunkIndex );
             }
-            followOwnerTransform(); // 충돌도 그림과 함께 옮긴다(예전에는 만들 때의 월드 자리에 남았다 — 감사 P0-14)
             return;
         }
         for ( const uint32 cellIndex : _listAnimatedCell )
@@ -227,10 +232,12 @@ namespace sw
 
     bool TileMapRendererComponent::rebuild()
     {
-        if ( rebuildChunks() == false )
+        if ( _bLoaded == SW_FALSE )
             return false;
+        // 충돌은 그리기 배치를 못 만들어도(그림 없는 서버 · 머티리얼 실패) 짓는다 — 그림 실패는 반환값으로 알린다.
+        const bool bDrawn = rebuildChunks();
         refreshCollision();
-        return true;
+        return bDrawn;
     }
 
     bool TileMapRendererComponent::rebuildChunks()
@@ -361,8 +368,9 @@ namespace sw
                         refreshCellEntry( cellX, cellY );
                 }
             }
-            markCollisionDirty( _chunkGrid.computeChunkIndex( x, y ) ); // 단단함은 그 칸의 브러시만 본다 — 이웃 청크는 그대로다
         }
+        // 충돌은 그리기 배치와 따로 표시한다. 단단함은 그 칸의 브러시만 보므로 이웃 청크는 그대로다(바디를 아직 짓지 않았으면 표시는 아무것도 하지 않는다).
+        markCollisionDirty( _chunkGrid.computeChunkIndex( x, y ) );
         return true;
     }
 
@@ -475,17 +483,6 @@ namespace sw
         pBatch->setEntry( entry, world, uv, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
     }
 
-    uint32 TileMapRendererComponent::getPhysicsBodyCount() const
-    {
-        uint32 count = 0;
-        for ( const PhysicsBodyHandle& body : _listChunkBody )
-        {
-            if ( body.isValid() )
-                ++count;
-        }
-        return count;
-    }
-
     void TileMapRendererComponent::refreshCollision()
     {
         _listChunkDirty.assign( static_cast<size_t>( _chunkGrid.getChunkCount() ), 1u );
@@ -569,7 +566,8 @@ namespace sw
             // 셰이프는 맵 원점(오브젝트 자리) 기준이다 — 칸 (x, y) 는 오른쪽 · 아래(-Y)로 간다. 바디는 배율을 갖지 않아 축 배율을 곱한다.
             PhysicsShapeDesc2D shape;
             shape._type          = PhysicsShapeType2D::Box;
-            shape._halfExtents   = float2{ static_cast<float32>( rect._width ) * size * 0.5f * _colliderScale._x, static_cast<float32>( rect._height ) * size * 0.5f * _colliderScale._y };
+            shape._halfExtents   = float2{ static_cast<float32>( rect._width ) * size * 0.5f * MathUtil::abs( _colliderScale._x ),
+                                         static_cast<float32>( rect._height ) * size * 0.5f * MathUtil::abs( _colliderScale._y ) };
             shape._localPosition = float2{ ( static_cast<float32>( chunk._x + rect._x ) + static_cast<float32>( rect._width ) * 0.5f ) * size * _colliderScale._x,
                                            -( static_cast<float32>( chunk._y + rect._y ) + static_cast<float32>( rect._height ) * 0.5f ) * size * _colliderScale._y };
             desc._listShape.push_back( shape );
@@ -609,7 +607,10 @@ namespace sw
         const float3   axisY  = float3::transform( float3{ 0.0f, 1.0f, 0.0f }, world ) - origin;
         outOrigin             = float2{ origin._x, origin._y };
         outAngle              = MathUtil::atan2( axisX._y, axisX._x );
-        outScale              = float2{ MathUtil::sqrt( axisX._x * axisX._x + axisX._y * axisX._y ), MathUtil::sqrt( axisY._x * axisY._x + axisY._y * axisY._y ) };
+        // 거울(음수 배율)은 회전으로 담지 못한다 — Y 배율의 부호로 실어 셰이프 자리를 뒤집는다(Godot 은 변환 행렬째, 유니티는 셰이프를 다시 굽는다).
+        const float32 handedness = axisX._x * axisY._y - axisX._y * axisY._x;
+        const float32 lengthY    = MathUtil::sqrt( axisY._x * axisY._x + axisY._y * axisY._y );
+        outScale                 = float2{ MathUtil::sqrt( axisX._x * axisX._x + axisX._y * axisX._y ), handedness < 0.0f ? -lengthY : lengthY };
     }
 
     void TileMapRendererComponent::removePhysicsBodies()

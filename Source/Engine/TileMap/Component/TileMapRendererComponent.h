@@ -78,7 +78,7 @@ namespace sw
         [[nodiscard]] bool loadTileMap();
         /** @brief 이미 읽은 데이터로 맵을 쓰게 합니다(테스트 · 절차 생성). @p pTileSet 이 nullptr 이면 맵을 쓰지 않습니다. */
         void setTileMapData( const TileMapXMLData& map, shared_ptr<const TileSetAsset> pTileSet );
-        /** @brief 청크마다의 스프라이트 배치를 (다시) 만들고 모든 칸 · 바디 · 외곽선을 맞춥니다. 오브젝트 관리자가 없으면 false 입니다. */
+        /** @brief 청크마다의 스프라이트 배치를 (다시) 만들고 모든 칸 · 바디 · 외곽선을 맞춥니다. 바디는 그리기 배치와 따로 짓습니다. 읽지 않았거나 그리기 배치를 못 만들면 false 입니다. */
         bool rebuild();
         /** @brief 칸에 브러시를 칠합니다(빈 이름은 지우기). 그 칸과 이웃의 모습 · 바디 · 외곽선을 다시 맞춥니다. 모르는 브러시 · 맵 밖은 false 입니다. */
         bool setTileBrush( int32 x, int32 y, string_view brushName );
@@ -95,8 +95,8 @@ namespace sw
         void computeWorldOutline( vector<float4>& outListSegment, vector<float2>& outListOutward ) const;
         /** @brief 칸마다 이동 비용(`NavGrid` 와 같은 값)을 만듭니다. */
         void computeNavCosts( vector<uint8>& outListCost ) const;
-        /** @brief 물리 바디 수입니다(병합한 사각형 수와 같습니다). */
-        uint32 getPhysicsBodyCount() const;
+        /** @brief 청크마다 정적 바디입니다(청크 번호 순, 단단한 칸이 없는 청크는 무효 핸들). 바디 하나에 그 청크의 병합 사각형마다 셰이프 하나입니다. */
+        const vector<PhysicsBodyHandle>& getChunkBodies() const { return _listChunkBody; }
         /** @brief 청크 수입니다(배치를 만들지 않은 빈 청크 포함). */
         uint32 getChunkCount() const { return static_cast<uint32>( _listChunkBatch.size() ); }
         /** @brief 그리기 배치를 만든 청크 수입니다. */
