@@ -68,7 +68,7 @@ namespace sw
             const bool                             bWrongLength = pSequence != nullptr && pSequence->isFixedSize() && field.size() != pSequence->getSize( prop.getRawPtr( pInstance ) );
             if ( bWrongLength || JSONSerializer::readField( field, prop, pInstance, context ) != FieldReadResult::Read )
             {
-                SW_LOG_ERROR_ID( "JSONFields.ValueUnreadable", "%#: '%#' = %# cannot be read as %#", sourceName, key, field.dump(), prop._typeName.c_str() );
+                SW_LOG_ERROR_ID( "JSONFields.ValueUnreadable", "%#: '%#' = %# cannot be read as %#", sourceName, key, field.describe(), prop._typeName.c_str() );
                 bOk = false;
                 continue;
             }

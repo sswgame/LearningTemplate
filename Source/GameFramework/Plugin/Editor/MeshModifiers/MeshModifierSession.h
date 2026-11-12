@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -236,7 +237,7 @@ namespace sw::editor
         MeshAssetData               _sourceData;
         vector<float3>              _listSourcePosition; ///< 원본 정점 위치(스택 입력 위치 · 원본 상자)
         EditSnapshotHistory<string> _history;            ///< 스택 글(JSON) 되돌리기
-        string                      _savedStackText;     ///< 마지막으로 읽거나 쓴 사이드카의 스택 저장 글(`isStackUnsaved` 의 기준)
+        expected<string>            _savedStackText;     ///< 마지막으로 읽거나 쓴 사이드카의 스택 저장 글(`isStackUnsaved` 의 기준). 못 만들었으면 오류 값이다
         string                      _meshPath;
         MeshModifierBounds          _sourceBounds;
         GameObjectHandle            _target;

@@ -230,7 +230,7 @@ namespace sw
     {
         if ( prepareValue() == false )
             return;
-        append( value.dump() );
+        append( value.describe() ); // 이 작성기의 규칙대로 잘못된 UTF-8 은 U+FFFD 다(`JSONStringUtil` 과 같은 바꿈)
     }
 
     bool JSONWriter::isComplete() const

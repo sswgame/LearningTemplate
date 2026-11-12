@@ -332,7 +332,14 @@ namespace sw
         outListJSON.reserve( _listEvent.size() );
         for ( const LiveEventDef& definition : _listEvent )
         {
-            outListJSON.push_back( LiveOpsProtocol::writeEventJSON( definition ) );
+            expected<string> text = LiveOpsProtocol::writeEventJSON( definition );
+            if ( text.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "LiveOpsService.EventNotWritable", "Live event '%#' could not be written as JSON: %# (%#) - left out of the list", definition._eventID, text.error().message(),
+                                 text.error().detail() );
+                continue;
+            }
+            outListJSON.push_back( std::move( *text ) );
         }
     }
 

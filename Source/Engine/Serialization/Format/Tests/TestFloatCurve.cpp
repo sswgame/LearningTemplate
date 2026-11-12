@@ -91,7 +91,7 @@ SW_TEST_CASE( FloatCurveTest, JSONRoundTrip )
     FloatCurve source                 = TestFloatCurveInternal::makeTwoKeys( CurveInterpolation::Linear );
     source._listKey[1]._bAutoTangent  = false;
     source._listKey[1]._arriveTangent = -3.5f;
-    const string json                 = JSONSerializer::serialize( &source, *FloatCurve::StaticType() );
+    const string json                 = JSONSerializer::serialize( &source, *FloatCurve::StaticType() ).value();
     SW_EXPECT_TRUE( json.find( "\"_listKey\":[" ) != string::npos );
     FloatCurve parsed;
     SW_REQUIRE_TRUE( JSONSerializer::deserialize( &parsed, *FloatCurve::StaticType(), json ) );

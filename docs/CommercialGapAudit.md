@@ -368,13 +368,6 @@
 - 제안: 쿠킹이 문화권마다 `cookBinaryTable` 을 부르고 배포는 조회 사슬의 표만 읽는다. 쓰지 않을 것이면 형식과 등록을 지운다.
 - 확인: 키 20 만 × 문화권 15 합성 프로젝트로 `Localization.mount` · 메모리 비교.
 
-#### A-17 `JSONDocument::dump` 가 잘못된 UTF-8 에서 예외를 던지고 받는 곳이 없다
-- 분류: 결함(프로세스 종료) · 확신: 메커니즘 확인, 실제 입력은 추정
-- 근거: `Source/Engine/Serialization/JSON/JSONDocument.cpp:58-63` — `value.dump()` 를 기본 인자로 부른다. nlohmann 기본은 `error_handler_t::strict` 라 잘린 UTF-8 바이트에서 `type_error 316` 을 던진다. `JSON_NOEXCEPTION` 정의도 `catch` 도 없다(Grep 0 건). `setString` 은 바이트를 검사하지 않고, 같은 폴더의 `JSONWriter` 는 U+FFFD 로 바꾼다고 계약해 두 작성기의 규칙이 갈려 있다. 닿는 길: 사용자 설정 저장(`UserSettingsFileEntry.cpp:168`), 텔레메트리, 프리팹 JSON.
-- 상용 엔진: 언리얼 `TJsonWriter` 와 Godot `JSON.stringify` 는 쓰기에서 예외로 끝나지 않는다.
-- 제안: `dumpValue` 한 곳에서 `error_handler_t::replace` 를 넘긴다. 거절하려면 `setString` 이 UTF-8 을 검사해 오류로 돌려준다.
-- 확인: 단위 `JSONDocumentTest.DumpSurvivesInvalidUTF8`.
-
 ### 물리 · 캐릭터 · 애니메이션 · 내비 · 오디오
 
 #### S-1 접촉 이벤트에 opt-in 이 없어, 거의 아무도 듣지 않는 Stay 를 매 스텝 만들고 배달한다

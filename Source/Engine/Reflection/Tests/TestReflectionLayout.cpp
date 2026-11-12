@@ -336,7 +336,7 @@ SW_TEST_CASE( ReflectionInnerTypesTest, InnerStructSerializationRoundtrip )
     src._innerData = "SerializationTest";
     src._score     = 12.34f;
 
-    sw::string json = sw::JSONSerializer::serialize( &src, *typeInfo );
+    sw::string json = sw::JSONSerializer::serialize( &src, *typeInfo ).value();
     SW_EXPECT_TRUE( json.empty() == false );
 
     sw::InnerNamespaceForTest::OuterStruct::InnerStruct dstJSON;
@@ -443,7 +443,7 @@ SW_TEST_CASE( ReflectionBitfieldTest, BitfieldSerializationRoundtrip )
     source._score         = 777;
 
     // 1) JSON 직렬화 & 역직렬화
-    const sw::string json = sw::JSONSerializer::serialize( &source, *pType );
+    const sw::string json = sw::JSONSerializer::serialize( &source, *pType ).value();
     SW_EXPECT_TRUE( json.find( "_bActive" ) != sw::string::npos );
     SW_EXPECT_TRUE( json.find( "_bCanJump" ) != sw::string::npos );
 
@@ -556,7 +556,7 @@ SW_TEST_CASE( ReflectionBitfieldTest, WideBitfieldSerializationRoundtrip )
     source._bFlag64_B = SW_TRUE;
 
     // 1) JSON 직렬화 & 역직렬화
-    const sw::string          json = sw::JSONSerializer::serialize( &source, *pType );
+    const sw::string          json = sw::JSONSerializer::serialize( &source, *pType ).value();
     sw::WideBitfieldTestActor jsonTarget;
     SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &jsonTarget, *pType, json ) );
     SW_EXPECT_EQUAL( SW_TRUE, jsonTarget._bFlag16_A );

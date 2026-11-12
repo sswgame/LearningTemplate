@@ -263,7 +263,7 @@ namespace sw::editor
                 return false;
             }
 
-            static void writeModifier( const MeshModifier& modifier, const JSONValue& object )
+            [[nodiscard]] static expected<void> writeModifier( const MeshModifier& modifier, const JSONValue& object )
             {
                 object.setObject();
                 object.set( "type" ).setString( modifier.getTypeID() );
@@ -283,7 +283,7 @@ namespace sw::editor
                 }
                 const JSONValue extra = object.set( "extra" );
                 extra.setObject();
-                modifier.writeExtraJSON( extra );
+                return modifier.writeExtraJSON( extra );
             }
 
             /**
@@ -326,7 +326,7 @@ namespace sw::editor
                         const utf8* pName = modifier.getParamDefs()[paramIndex]._pName;
                         if ( params.has( pName ) && readParam( modifier, paramIndex, params.get( pName ) ) == false )
                         {
-                            SW_LOG_ERROR_ID( "MeshModifierStack.MeshModifierParameterDoes", "Mesh modifier '%#' parameter '%#' does not have the shape of its kind: %#", typeID.c_str(), pName, params.get( pName ).dump() );
+                            SW_LOG_ERROR_ID( "MeshModifierStack.MeshModifierParameterDoes", "Mesh modifier '%#' parameter '%#' does not have the shape of its kind: %#", typeID.c_str(), pName, params.get( pName ).describe() );
                             return false;
                         }
                     }
@@ -444,7 +444,7 @@ namespace sw::editor
             MeshModifierUtil::recomputeFaceNormals( inoutMesh._listPosition, inoutMesh._listNormal );
     }
 
-    string MeshModifierStack::makeJSONText( int32 indent ) const
+    expected<string> MeshModifierStack::makeJSONText( int32 indent ) const
     {
         JSONDocument    document;
         const JSONValue root = document.makeObject();
@@ -454,19 +454,23 @@ namespace sw::editor
         modifiers.setArray();
         for ( const unique_ptr<MeshModifier>& modifier : _listModifier )
         {
-            MeshModifierStackInternal::writeModifier( *modifier, modifiers.pushBack() );
+            const expected<void> written = MeshModifierStackInternal::writeModifier( *modifier, modifiers.pushBack() );
+            if ( written.has_value() == false )
+                return unexpected( written.error() );
         }
         return document.dump( indent );
     }
 
-    string MeshModifierStack::makePrefixJSONText( int32 endIndex ) const
+    expected<string> MeshModifierStack::makePrefixJSONText( int32 endIndex ) const
     {
         JSONDocument    document;
         const JSONValue modifiers = document.makeArray();
         const int32     end       = MathUtil::min( endIndex, getModifierCount() );
         for ( int32 index = 0; index < end; ++index )
         {
-            MeshModifierStackInternal::writeModifier( *_listModifier[static_cast<size_t>( index )], modifiers.pushBack() );
+            const expected<void> written = MeshModifierStackInternal::writeModifier( *_listModifier[static_cast<size_t>( index )], modifiers.pushBack() );
+            if ( written.has_value() == false )
+                return unexpected( written.error() );
         }
         return document.dump( -1 );
     }
@@ -503,8 +507,14 @@ namespace sw::editor
 
     bool MeshModifierStack::saveToFile( const AbsolutePath& absPath ) const
     {
-        const string text = makeJSONText( 2 );
-        return FileUtil::writeFile( absPath.str(), reinterpret_cast<const uint8*>( text.data() ), text.size() );
+        const expected<string> text = makeJSONText( 2 );
+        if ( text.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "MeshModifierStack.NotWritable", "Mesh modifier stack could not be written as JSON: %# (%#) - %# was not written", text.error().message(), text.error().detail(),
+                             absPath.str() );
+            return false;
+        }
+        return FileUtil::writeFile( absPath.str(), reinterpret_cast<const uint8*>( text->data() ), text->size() );
     }
 
     bool MeshModifierStack::loadFromFile( string_view absolutePath )

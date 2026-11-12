@@ -50,9 +50,14 @@ namespace sw
             }
         }
         SavedAttributeFile file;
-        file._listValue   = listValue;
-        const string text = JSONSerializer::serialize( &file, *SavedAttributeFile::StaticType() );
-        outBytes.assign( reinterpret_cast<const uint8*>( text.c_str() ), reinterpret_cast<const uint8*>( text.c_str() ) + text.size() );
+        file._listValue             = listValue;
+        const expected<string> text = JSONSerializer::serialize( &file, *SavedAttributeFile::StaticType() );
+        if ( text.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "AbilityAttributeSave.NotWritable", "writeBytes: attributes could not be written: %# (%#)", text.error().message(), text.error().detail() );
+            return false;
+        }
+        outBytes.assign( reinterpret_cast<const uint8*>( text->c_str() ), reinterpret_cast<const uint8*>( text->c_str() ) + text->size() );
         return true;
     }
 

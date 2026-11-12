@@ -36,7 +36,7 @@ namespace
         const JSONValue window = document.getRoot().get( "_window" );
         window.set( "_width" ).setUint( width );
         window.set( "_height" ).setUint( height );
-        return document.dump();
+        return document.dump().value_or( string() ); // 못 쓰면 빈 글 - 부르는 쪽의 읽기가 실패한다
     }
 } // namespace
 
@@ -184,8 +184,10 @@ SW_TEST_CASE_EACH( ConfigManagerTest, InvalidFileStopsAndNamesTheKey, kArrInvali
     JSONDocument document;
     SW_REQUIRE_TRUE( openEngineConfigDocument( document ) );
     document.getRoot().set( param._pKey ).setFloat( param._value );
-    const string path = test::makeScratchPath( "InvalidEngineConfig.json" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, document.dump() ) );
+    const string           path = test::makeScratchPath( "InvalidEngineConfig.json" );
+    const expected<string> text = document.dump();
+    SW_REQUIRE_TRUE( text.has_value() );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, *text ) );
 
     SW_EXPECT_LOG( param._pExpectedID );
     ConfigManager manager;
@@ -203,7 +205,9 @@ SW_TEST_CASE( ConfigManagerTest, ValidFileWithNestedStructLoads )
     SW_REQUIRE_TRUE( document.parse( makeEngineConfigJSON( 800, 600 ) ) );
     document.getRoot().get( "_window" ).set( "_defaultRHI" ).setString( "Vulkan" );
     document.getRoot().set( "_fixedDeltaTime" ).setFloat( 0.02 );
-    SW_REQUIRE_TRUE( manager.loadConfigFromJSON<EngineConfig>( document.dump(), "test" ) );
+    const expected<string> text = document.dump();
+    SW_REQUIRE_TRUE( text.has_value() );
+    SW_REQUIRE_TRUE( manager.loadConfigFromJSON<EngineConfig>( *text, "test" ) );
     SW_REQUIRE_NOT_NULL( manager.getConfig<EngineConfig>() );
     SW_EXPECT_EQUAL( 800u, manager.getConfig<EngineConfig>()->_window._width );
     SW_EXPECT_TRUE( manager.getConfig<EngineConfig>()->_window._defaultRHI == RHIBackend::Vulkan );

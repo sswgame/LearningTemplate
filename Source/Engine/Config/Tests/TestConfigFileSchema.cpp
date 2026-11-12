@@ -92,7 +92,7 @@ namespace
             sw::JSONDocument fileDocument;
             sw::JSONDocument shapeDocument;
             const T          shape{};
-            if ( fileDocument.parse( text ) == false || shapeDocument.parse( sw::JSONSerializer::serialize( &shape, *T::StaticType() ) ) == false )
+            if ( fileDocument.parse( text ) == false || shapeDocument.parse( sw::JSONSerializer::serialize( &shape, *T::StaticType() ).value() ) == false )
                 return false;
             sw::vector<sw::string> listMissingKey;
             collectMissingKeys( shapeDocument.getRoot(), fileDocument.getRoot(), sw::string(), listMissingKey );
