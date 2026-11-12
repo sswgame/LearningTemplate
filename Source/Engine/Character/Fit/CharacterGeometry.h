@@ -189,9 +189,6 @@ namespace sw
         static float4x4 blendTransforms( const float4x4& from, const float4x4& to, float32 weight );
         /** @brief 삼각형 위에서 @p point 에 가장 가까운 점의 무게중심 좌표를 구합니다(@p outU 는 두 번째 가중치, @p outV 는 세 번째 가중치입니다). */
         static float3 findClosestPointOnTriangle( const float3& point, const float3& a, const float3& b, const float3& c, float32& outU, float32& outV );
-        /** @brief 광선과 삼각형(양면)의 교차를 검사합니다. 맞으면 true 와 함께 거리, 무게중심 좌표, 앞면 여부를 반환합니다. */
-        static bool intersectRayTriangle( const float3& origin, const float3& direction, const float3& a, const float3& b, const float3& c, float32& outDistance,
-                                          float32& outU, float32& outV, bool& outFrontFace );
         /** @brief 무게중심 좌표로 세 값을 섞습니다. */
         static float3 interpolateBarycentric( const float3& a, const float3& b, const float3& c, float32 u, float32 v );
         /** @brief 0..1 을 부드럽게 1 → 0 으로 내리는 감쇠입니다(0 이하 1, 1 이상 0, 사이는 smoothstep 의 반대). */

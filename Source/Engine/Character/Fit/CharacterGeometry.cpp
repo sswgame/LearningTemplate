@@ -217,39 +217,6 @@ namespace sw
         return a + ab * outU + ac * outV;
     }
 
-    bool CharacterGeometryUtil::intersectRayTriangle( const float3& origin, const float3& direction, const float3& a, const float3& b, const float3& c,
-                                                      float32& outDistance, float32& outU, float32& outV, bool& outFrontFace )
-    {
-        // Möller-Trumbore 알고리즘이며 양면을 검사한다. 무게중심 경계에 작은 여유를 둔다. 광선이 두 삼각형이 나누는 모서리를 정확히 지나면 부동소수 오차로
-        // 양쪽 다 빗나갈 수 있다(같은 각도로 나뉜 원기둥 두 겹에서 실제로 났다). 여유 안의 값은 경계로 묶는다.
-        constexpr float32 kBarycentricSlack = 1.0e-5f;
-        const float3      edge1             = b - a;
-        const float3      edge2             = c - a;
-        const float3      pVector           = direction.cross( edge2 );
-        const float32     determinant       = edge1.dot( pVector );
-        if ( MathUtil::abs( determinant ) < 1.0e-12f )
-            return false;
-        const float32 inverseDeterminant = 1.0f / determinant;
-        const float3  tVector            = origin - a;
-        float32       u                  = tVector.dot( pVector ) * inverseDeterminant;
-        if ( u < -kBarycentricSlack || u > 1.0f + kBarycentricSlack )
-            return false;
-        const float3 qVector = tVector.cross( edge1 );
-        float32      v       = direction.dot( qVector ) * inverseDeterminant;
-        if ( v < -kBarycentricSlack || u + v > 1.0f + kBarycentricSlack )
-            return false;
-        u                      = MathUtil::saturate( u );
-        v                      = MathUtil::clamp( v, 0.0f, 1.0f - u );
-        const float32 distance = edge2.dot( qVector ) * inverseDeterminant;
-        if ( distance < 0.0f )
-            return false;
-        outDistance  = distance;
-        outU         = u;
-        outV         = v;
-        outFrontFace = direction.dot( edge1.cross( edge2 ) ) < 0.0f;
-        return true;
-    }
-
     float3 CharacterGeometryUtil::interpolateBarycentric( const float3& a, const float3& b, const float3& c, float32 u, float32 v )
     {
         return a * ( 1.0f - u - v ) + b * u + c * v;

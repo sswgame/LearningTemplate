@@ -153,10 +153,10 @@ namespace sw::editor
                     const float32* pA = listVertex[listIndex[index]]._arrPosition;
                     const float32* pB = listVertex[listIndex[index + 1]]._arrPosition;
                     const float32* pC = listVertex[listIndex[index + 2]]._arrPosition;
-                    float32        t  = 0.0f;
-                    if ( Ray::intersectTriangle( localRay, float3{ pA[0], pA[1], pA[2] }, float3{ pB[0], pB[1], pB[2] }, float3{ pC[0], pC[1], pC[2] }, bestLocal, t ) )
+                    RayTriangleHit hit{};
+                    if ( Ray::intersectTriangle( localRay, float3{ pA[0], pA[1], pA[2] }, float3{ pB[0], pB[1], pB[2] }, float3{ pC[0], pC[1], pC[2] }, bestLocal, hit ) )
                     {
-                        bestLocal = t;
+                        bestLocal = hit._distance;
                         bHit      = true;
                     }
                 }
