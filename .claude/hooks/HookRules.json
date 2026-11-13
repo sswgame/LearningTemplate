@@ -1,5 +1,5 @@
 {
-  "_comment": "ReplyGuard.py(Stop) · AgentBrief.py(PreToolUse Agent) 가 읽는 표. 사용자가 여러 번 고친 것을 기억 대신 훅으로 강제한다(2026-11-13 \"메모리도 최적화해. 매번 말해봤자 너가 잊잖아\").",
+  "_comment": "reply_guard.py(Stop) · agent_prompt_check.py(PreToolUse Agent) 가 읽는 표. 사용자가 여러 번 고친 것을 기억 대신 훅으로 강제한다(2026-11-13 \"메모리도 최적화해. 매번 말해봤자 너가 잊잖아\").",
   "reply": {
     "_comment": "턴을 끝내는 마지막 답. 코드 블록 · `코드` · 경로 · 링크를 뺀 글자 가운데 한글 비율이 minHangulRatio 보다 낮으면(글자가 minLetters 이상일 때) 다시 쓰게 한다. bannedTerms 는 내가 지어낸 말 — 업계 용어나 풀어 쓴 말로.",
     "minLetters": 40,

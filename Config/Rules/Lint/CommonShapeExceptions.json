@@ -1,5 +1,5 @@
 {
-    "_comment": "Scripts/lint/CommonShapes.py 의 예외. 규칙마다 '자리' → 까닭이다.",
+    "_comment": "Scripts/lint/common_shapes.py 의 예외. 규칙마다 '자리' → 까닭이다.",
     "enumNameSwitch": {
         "Source/Engine/Serialization/Fixed/FixedLayout.cpp|FixedReadResult": "리플렉션 생성 코드(ReflectGenerated.h)가 이 헤더를 끌어 ENUM() 을 달 수 없는 아래 층이다",
         "Source/Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.cpp|?": "바깥 표준 철자(VkResult 상수)다",

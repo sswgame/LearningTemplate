@@ -20,7 +20,7 @@
           },
           {
             "type": "command",
-            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/ReplyGuard.py\""
+            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/reply_guard.py\""
           }
         ]
       }
@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/ToolGate.py\""
+            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/tool_policy.py\""
           }
         ]
       },
@@ -40,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/AgentBrief.py\""
+            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/agent_prompt_check.py\""
           }
         ]
       }
@@ -51,7 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/ToolGate.py\""
+            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/tool_policy.py\""
           }
         ]
       }

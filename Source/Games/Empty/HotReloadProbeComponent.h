@@ -1,6 +1,6 @@
 /**
  * @file HotReloadProbeComponent.h
- * @brief 핫 리로드 디버그 확인(`Scripts/dev/HotReloadDebugCheck.py`)이 고쳐 다시 짓는 컴포넌트입니다 — 디버거가 붙은 채 모듈을 다시 링크 · 리로드해도
+ * @brief 핫 리로드 디버그 확인(`Scripts/dev/hot_reload_debug_check.py`)이 고쳐 다시 짓는 컴포넌트입니다 — 디버거가 붙은 채 모듈을 다시 링크 · 리로드해도
  *        브레이크포인트가 새 모듈에서 잡히는지, 헤더(칸 추가 · 생성자 기본값)가 바뀌어도 리로드가 상태를 옮기는지 본다.
  * @details 스크립트가 고치는 자리는 두 곳이다 — `.cpp` 의 `kProbeVersion`(코드만 바뀜)과 이 헤더의 `HOTRELOAD-LAYOUT` 줄(칸 하나와 그 생성자 값을 더함).
  *          바꾼 뒤에는 원래대로 되돌린다. 시나리오는 `game/empty/automation/debugger/hotreloadbreakpoint.scenario.xml`(검증 체인 밖 — 스크립트가 띄운다).

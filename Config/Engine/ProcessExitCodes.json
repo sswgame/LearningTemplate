@@ -1,7 +1,7 @@
 {
     "$schema_note": [
         "App · 시나리오 실행이 밖으로 내는 프로세스 종료 코드 표의 단일 출처(SSOT)다.",
-        "C++ 은 configure 때 Scripts/generate/ProcessExitCodes.py 가 만든 sw/config/ProcessExitCodes.gen.h 의 열거형 ProcessExitCode 와 이름 함수로 읽고",
+        "C++ 은 configure 때 Scripts/generate/process_exit_codes.py 가 만든 sw/config/ProcessExitCodes.gen.h 의 열거형 ProcessExitCode 와 이름 함수로 읽고",
         "(AutomationExitCode.h · RHIInitResult.h · AutomationBackendMatrix), CMake 는 generated/sw/config/ProcessExitCodes.cmake 의 SW_EXIT_CODE_<name> 으로 읽는다",
         "(Test/Scenario 의 SKIP_RETURN_CODE). 숫자는 이 파일에만 쓴다.",
         "",

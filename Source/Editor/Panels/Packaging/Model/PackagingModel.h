@@ -66,7 +66,7 @@ namespace sw::editor
         uint32                getTargetIndex() const { return _targetIndex; }
         uint32&               editRHIIndex() { return _rhiIndex; }
         uint32                getRHIIndex() const { return _rhiIndex; }
-        /** @brief 비면 진입점의 기본 산출 폴더입니다(`Pack.py --output` 의 기본값이 원본이다). 바뀐 값은 다음 Package 가 쓴다. */
+        /** @brief 비면 진입점의 기본 산출 폴더입니다(`pack.py --output` 의 기본값이 원본이다). 바뀐 값은 다음 Package 가 쓴다. */
         string& editOutputFolder() { return _outputFolder; }
         bool&   editSkipBuild() { return _bSkipBuild; }
         bool&   editSkipCook() { return _bSkipCook; }

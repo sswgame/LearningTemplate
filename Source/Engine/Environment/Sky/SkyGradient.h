@@ -115,7 +115,7 @@ namespace sw
         float3        _sunColor{};                         ///< 해 색(선형 RGB, 세기 곱하기 전). 0 이면 해가 없다
         hashed_string _hdriTexture{};                      ///< HDRI 모드의 등장방형 텍스처 경로
         float32       _hdriRotation{ 0.0f };               ///< HDRI 모드에서 하늘을 Y 축으로 돌리는 각(라디안)
-        SH9Color      _hdriAmbient{};                      ///< HDRI 모드의 저주파 빛(원본의 SH9 투영, `Scripts/dev/MakeSkyHdriPrefabs.py`). CPU 는 텍스처를 읽지 않는다
+        SH9Color      _hdriAmbient{};                      ///< HDRI 모드의 저주파 빛(원본의 SH9 투영, `Scripts/dev/make_sky_hdri_prefabs.py`). CPU 는 텍스처를 읽지 않는다
 
         /**
          * @brief 해(방향광)를 정합니다. @p lightTravelDirection 은 빛이 나아가는 방향(방향광의 `getLightDirection`)이고 해 쪽은 그 반대다. 길이가 0 이면 해가 없다(색 0).

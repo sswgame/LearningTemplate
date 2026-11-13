@@ -1,5 +1,5 @@
 {
-  "_comment": "이름 대조 표(Scripts/lint/NamingWords.py). 함수 앞 단어 · 형식 끝 단어 허용 표, 금지 동사(_banned — 함수 첫 단어) · 금지 명사(_bannedTerms — 모든 이름의 모든 단어), 표준 합성어 예외(_keepTerms), bool 술어 첫 단어(_predicateWords), For · Of 게터의 조회 동사(_lookupWords). 새 단어는 언리얼 · 유니티 · Godot 과 대조한 뒤 올린다. 낱말 표(_words · _scopedWords · _externalPatterns)는 모든 이름의 모든 낱말을 본다(word 규칙, 전수 집계는 py -3 -m Scripts naming-census).",
+  "_comment": "이름 대조 표(Scripts/lint/naming_words.py). 함수 앞 단어 · 형식 끝 단어 허용 표, 금지 동사(_banned — 함수 첫 단어) · 금지 명사(_bannedTerms — 모든 이름의 모든 단어), 표준 합성어 예외(_keepTerms), bool 술어 첫 단어(_predicateWords), For · Of 게터의 조회 동사(_lookupWords). 새 단어는 언리얼 · 유니티 · Godot 과 대조한 뒤 올린다. 낱말 표(_words · _scopedWords · _externalPatterns)는 모든 이름의 모든 낱말을 본다(word 규칙, 전수 집계는 py -3 -m Scripts naming-census).",
   "_banned": {
     "drain": "flush(쌓인 일을 끝낼 때까지 막는다) · poll(큐를 꺼내 처리한다) · take(꺼내 넘긴다). 서버 드레인 · 게임 수치 소모만 예외",
     "note": "동사는 record",
@@ -781,9 +781,12 @@
     "AnnotationFields": "도구 이름 — 칸 이름 표 자체를 다룬다(파생 이름은 _keepTerms)",
     "JSONLogFields": "도구 이름 — 칸 이름 표 자체를 다룬다(파생 이름은 _keepTerms)",
     "PackPathFields": "도구 이름 — 칸 이름 표 자체를 다룬다(파생 이름은 _keepTerms)",
-    "log_message": "http.server.BaseHTTPRequestHandler 덮어쓰기",
-    "end_headers": "http.server.BaseHTTPRequestHandler 덮어쓰기",
-    "findFields": "RequiredNameFields 린트가 PROPERTY 칸 자체를 찾는다(NamingCpp.md: Fields 는 칸을 다루는 도구 이름만)"
+    "find_fields": "RequiredNameFields 린트가 PROPERTY 칸 자체를 찾는다(NamingCpp.md: Fields 는 칸을 다루는 도구 이름만)",
+    "do_POST": "http.server.BaseHTTPRequestHandler 덮어쓰기(표준 라이브러리 이름)",
+    "setUp": "unittest.TestCase 덮어쓰기(표준 라이브러리 이름)",
+    "tearDown": "unittest.TestCase 덮어쓰기(표준 라이브러리 이름)",
+    "SW_KIT_API": "new_online_kit.py 의 C++ 틀 글(class SW_KIT_API …) — 파이썬 클래스가 아니다",
+    "SW_KIT_SERVER_API": "new_online_kit.py 의 C++ 틀 글(class SW_KIT_SERVER_API …) — 파이썬 클래스가 아니다"
   },
   "_functionWords": [
     "abandon",
@@ -3687,6 +3690,7 @@
       "binpad",
       "bio",
       "biquad",
+      "bisect",
       "bit",
       "bitangent",
       "bitfield",
@@ -4555,6 +4559,7 @@
       "debounce",
       "debouncing",
       "debris",
+      "debs",
       "debt",
       "debug",
       "debugger",
@@ -4855,6 +4860,7 @@
       "distortion",
       "distribute",
       "distribution",
+      "distro",
       "dither",
       "div",
       "diver",
@@ -6725,9 +6731,11 @@
       "merger",
       "merging",
       "mermaid",
+      "mesa",
       "mesh",
       "mesher",
       "meshes",
+      "meson",
       "message",
       "messages",
       "messenger",
@@ -10584,24 +10592,24 @@
     "notice": {
       "paths": [
         "Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres",
-        "Scripts/generate/ThirdPartyNotices.py",
-        "Scripts/package/Pack.py"
+        "Scripts/generate/third_party_notices.py",
+        "Scripts/package/pack.py"
       ],
       "hint": "libpq NOTICE · 라이선스 NOTICE 파일(Apache NOTICE)만 — 운영 공지는 Announcement, 플레이어 알림은 Notification, 엔진 · 망 사건 값은 Event(NamingCpp.md 알림 줄). 관용구 ShutdownNotice 는 _keepTerms"
     },
     "noticed": {
       "paths": [
         "Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres",
-        "Scripts/generate/ThirdPartyNotices.py",
-        "Scripts/package/Pack.py"
+        "Scripts/generate/third_party_notices.py",
+        "Scripts/package/pack.py"
       ],
       "hint": "libpq NOTICE · 라이선스 NOTICE 파일(Apache NOTICE)만 — 운영 공지는 Announcement, 플레이어 알림은 Notification, 엔진 · 망 사건 값은 Event(NamingCpp.md 알림 줄). 관용구 ShutdownNotice 는 _keepTerms"
     },
     "notices": {
       "paths": [
         "Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres",
-        "Scripts/generate/ThirdPartyNotices.py",
-        "Scripts/package/Pack.py"
+        "Scripts/generate/third_party_notices.py",
+        "Scripts/package/pack.py"
       ],
       "hint": "libpq NOTICE · 라이선스 NOTICE 파일(Apache NOTICE)만 — 운영 공지는 Announcement, 플레이어 알림은 Notification, 엔진 · 망 사건 값은 Event(NamingCpp.md 알림 줄). 관용구 ShutdownNotice 는 _keepTerms"
     },

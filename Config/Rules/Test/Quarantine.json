@@ -1,4 +1,4 @@
 {
-    "_comment": "격리한 테스트(ctest 이름) — 묶음 검증이 빼고 돈다(`py -3 Scripts/dev/TestHistory.py quarantine --ctest-exclude`). 항목마다 사유(reason)와 만료(expires, YYYY-MM-DD)가 필수이고, 지난 만료는 검사가 실패한다 — 고쳐서 빼거나 사유와 새 만료를 적는다. 흔들림 근거는 `TestHistory.py report`.",
+    "_comment": "격리한 테스트(ctest 이름) — 묶음 검증이 빼고 돈다(`py -3 Scripts/dev/test_history.py quarantine --ctest-exclude`). 항목마다 사유(reason)와 만료(expires, YYYY-MM-DD)가 필수이고, 지난 만료는 검사가 실패한다 — 고쳐서 빼거나 사유와 새 만료를 적는다. 흔들림 근거는 `test_history.py report`.",
     "_quarantined": []
 }

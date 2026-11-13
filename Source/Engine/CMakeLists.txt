@@ -145,12 +145,12 @@ else()
 endif()
 add_custom_command(
 	OUTPUT "${swCookCodeHeader}"
-	COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/CookCodeFingerprint.py"
+	COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/cook_code_fingerprint.py"
 		--root "${CMAKE_SOURCE_DIR}" --inputs "${CMAKE_SOURCE_DIR}/Config/Dev/CookCodeInputs.json"
 		--vcpkg-status "${swCookVcpkgStatus}" --out "${swCookCodeHeader}"
 		--cache "${CMAKE_BINARY_DIR}/generated/engineabi/CookCodeFingerprint.cache.json" # 파일 지문 캐시 — 바뀐 소스만 다시 읽는다
 	DEPENDS ${swCookCodeInputs} "${CMAKE_SOURCE_DIR}/Config/Dev/CookCodeInputs.json" "${swCookVcpkgStatus}"
-		"${CMAKE_SOURCE_DIR}/Scripts/generate/CookCodeFingerprint.py"
+		"${CMAKE_SOURCE_DIR}/Scripts/generate/cook_code_fingerprint.py"
 	COMMENT "Fingerprinting cooker code"
 	VERBATIM
 )

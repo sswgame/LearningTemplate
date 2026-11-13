@@ -72,11 +72,11 @@ build_preset() {
 }
 
 # 격리 표(Config/Rules/Test/Quarantine.json)의 테스트를 ctest -E 로 뺀다. 만료가 지났거나 칸이 빠진 표는 검증 실패다(격리가 말없이 늘어지지 않게).
-QUARANTINE_EXCLUDE=$(py -3 Scripts/dev/TestHistory.py quarantine --ctest-exclude) || { echo "$QUARANTINE_EXCLUDE"; windows_failed "quarantine table"; }
+QUARANTINE_EXCLUDE=$(py -3 Scripts/dev/test_history.py quarantine --ctest-exclude) || { echo "$QUARANTINE_EXCLUDE"; windows_failed "quarantine table"; }
 QUARANTINE_EXCLUDE=${QUARANTINE_EXCLUDE//$'\r'/}   # Windows 파이썬의 print 는 CRLF 를 쓴다 — 정규식 끝에 CR 이 붙으면 아무것도 빼지 못한다
 [ -z "$QUARANTINE_EXCLUDE" ] || echo "격리로 뺀다: $QUARANTINE_EXCLUDE"
 
-# run_ctest <프리셋> <로그 이름> [ctest 거르기 인자…] — 돌리고 이력에 쌓는다(진 실행도 — 흔들림 · p95 추세는 여러 묶음을 모아야 보인다, TestHistory.py report).
+# run_ctest <프리셋> <로그 이름> [ctest 거르기 인자…] — 돌리고 이력에 쌓는다(진 실행도 — 흔들림 · p95 추세는 여러 묶음을 모아야 보인다, test_history.py report).
 # 통과면 0, 아니면 1 을 돌려준다(뒤에서 도는 갈래가 부르므로 여기서 끝내지 않는다).
 run_ctest() {
   local P=$1 NAME=$2; shift 2
@@ -87,7 +87,7 @@ run_ctest() {
   local RC=$?
   echo "$P ctest $NAME exit=$RC"
   [ $DRY -eq 1 ] || grep -E "tests passed|tests failed|\*\*\*Failed|Timeout|Not Run" build/$P/Testing/Logs/verify.ctest.$NAME.log | head -30
-  run "" py -3 Scripts/dev/TestHistory.py ingest build/$P/Bin/Saved/Automation --commit "$SHA" || { echo "$P test history ingest 실패"; return 1; }
+  run "" py -3 Scripts/dev/test_history.py ingest build/$P/Bin/Saved/Automation --commit "$SHA" || { echo "$P test history ingest 실패"; return 1; }
   return $RC
 }
 
@@ -112,7 +112,7 @@ wait_lanes() {
 }
 
 lane_lint() {
-  # 커밋 훅은 스테이지된 파일만 본다(Scripts/lint/LintScope.py) — 낡은 예외 · 기준선 같은 저장소 전체 판정은 여기서 한 번 낸다.
+  # 커밋 훅은 스테이지된 파일만 본다(Scripts/lint/lint_scope.py) — 낡은 예외 · 기준선 같은 저장소 전체 판정은 여기서 한 번 낸다.
   echo "== lint --all $(date +%T)"
   run build/verify.lint.log py -3 -m Scripts lint --all
   local RC=$?
@@ -183,17 +183,17 @@ if [ $NO_LINUX -eq 1 ]; then
   exit 0
 fi
 echo "== WINDOWS_OK, linux 시작 $(date +%T)"
-PYTHONUTF8=1 run build/verify.linux.log py -3 Scripts/dev/LinuxScenarios.py all "${RECORD[@]}"
+PYTHONUTF8=1 run build/verify.linux.log py -3 Scripts/dev/linux_scenarios.py all "${RECORD[@]}"
 RC=$?
 [ $DRY -eq 1 ] || tail -n 40 build/verify.linux.log
 # 새니타이저(ASan + UBSan, Linux-Debug-ASan 단위 테스트) — 묶음마다 한 번(linux-verify 스킬). 체인과 CPU 를 다투지 않게 all 뒤에 차례로 돌고, 지면 끝 줄에 적는다(push 는 WINDOWS_OK 로 이미 정해졌다).
 # --record 실행은 건너뛴다: sanitize 도 클론을 HEAD 로 되돌려(reset --hard · clean) 아직 옮기지 않은 기록 골든을 지운다 — goldens 로 옮긴 뒤 따로 돌린다.
 SAN_RC=0
 case " ${RECORD[*]} " in
-  *" --record "*) echo "== sanitize 건너뜀(--record — goldens 로 옮긴 뒤 LinuxScenarios.py sanitize 를 따로 돌린다)"; SAN_RC=skip ;;
+  *" --record "*) echo "== sanitize 건너뜀(--record — goldens 로 옮긴 뒤 linux_scenarios.py sanitize 를 따로 돌린다)"; SAN_RC=skip ;;
   *)
     echo "== sanitize address $(date +%T)"
-    PYTHONUTF8=1 run build/verify.sanitize.log py -3 Scripts/dev/LinuxScenarios.py sanitize address
+    PYTHONUTF8=1 run build/verify.sanitize.log py -3 Scripts/dev/linux_scenarios.py sanitize address
     SAN_RC=$?
     [ $DRY -eq 1 ] || tail -n 20 build/verify.sanitize.log
     ;;

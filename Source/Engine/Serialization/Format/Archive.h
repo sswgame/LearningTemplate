@@ -126,7 +126,7 @@ namespace sw
         /**
          * @brief 원소 개수(uint32)를 읽습니다. 원소마다 적어도 @p minBytesPerElement 바이트를 쓰므로, 남은 바이트로 담을 수 없는 개수면 오류를 남기고 false 입니다.
          * @details 파일 · 세이브가 적은 개수는 이 함수로 읽은 뒤에만 할당한다 — 깨진 개수 하나가 `reserve` 로 수십 기가를 요구하지 않게 한다(`ByteReader::canHoldCount` 와 한 계산).
-         *          린트(`Scripts/lint/ByteReadShape.py`)가 다른 길을 막는다.
+         *          린트(`Scripts/lint/byte_read_shape.py`)가 다른 길을 막는다.
          */
         [[nodiscard]] bool readCount( uint32 minBytesPerElement, uint32& outCount );
         /**

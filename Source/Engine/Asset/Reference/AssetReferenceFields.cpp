@@ -1,6 +1,6 @@
 /**
  * @file AssetReferenceFields.cpp
- * @brief 에셋 참조 칸 목록의 읽기 · 뽑기 · 있음 판정 · 고쳐 쓰기를 구현합니다. 뽑기는 `Scripts/lint/AssetReferences.py` 의 `_extract*` 와 같은 규칙이다.
+ * @brief 에셋 참조 칸 목록의 읽기 · 뽑기 · 있음 판정 · 고쳐 쓰기를 구현합니다. 뽑기는 `Scripts/lint/asset_references.py` 의 `_extract*` 와 같은 규칙이다.
  */
 #include "pch.h"
 

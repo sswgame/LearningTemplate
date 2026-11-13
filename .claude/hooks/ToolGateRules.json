@@ -1,5 +1,5 @@
 {
-  "_comment": "도구 게이트 규칙(.claude/hooks/ToolGate.py). 각 줄: 이 도구 · 경로 · 셸 명령을 쓰기 전에 requiresAny 중 하나를 이 에이전트가 먼저 했어야 한다. 표지는 skill:<이름>(Skill 도구), graph(graphify query · path · explain 또는 mcp__graphify__), context7(이름에 context7 가 든 도구). windowMinutes 가 있으면 그 시간 안에 한 것만 센다.",
+  "_comment": "도구 게이트 규칙(.claude/hooks/tool_policy.py). 각 줄: 이 도구 · 경로 · 셸 명령을 쓰기 전에 requiresAny 중 하나를 이 에이전트가 먼저 했어야 한다. 표지는 skill:<이름>(Skill 도구), graph(graphify query · path · explain 또는 mcp__graphify__), context7(이름에 context7 가 든 도구). windowMinutes 가 있으면 그 시간 안에 한 것만 센다.",
   "_rules": [
     {
       "name": "graph-before-reading-source",
@@ -99,7 +99,7 @@
         "Bash",
         "PowerShell"
       ],
-      "shell": "LinuxScenarios\\.py",
+      "shell": "linux_scenarios\\.py",
       "requiresAny": [
         "skill:linux-verify"
       ],

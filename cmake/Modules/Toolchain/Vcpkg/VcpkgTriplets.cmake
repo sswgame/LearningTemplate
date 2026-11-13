@@ -37,7 +37,7 @@ function(sw_vcpkgResolveWindowsPortTools OUT_PREFIX)
 	sw_findLlvmBin(swLlvmBin)
 	foreach(swTool IN ITEMS clang-cl lld-link llvm-lib llvm-rc)
 		if(NOT EXISTS "${swLlvmBin}/${swTool}.exe")
-			message(FATAL_ERROR "[VcpkgTriplets] ${swLlvmBin}/${swTool}.exe is missing — the pinned LLVM kit builds the ports (py -3 Scripts/setup/Llvm.py --install)")
+			message(FATAL_ERROR "[VcpkgTriplets] ${swLlvmBin}/${swTool}.exe is missing — the pinned LLVM kit builds the ports (py -3 Scripts/setup/llvm.py --install)")
 		endif()
 	endforeach()
 

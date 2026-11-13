@@ -27,7 +27,7 @@ namespace sw
             writer.endArray();
         }
 
-        /** @brief `"goldenSamples": [ { golden, 측정값 셋, 상한 셋 } ]` 을 씁니다. 읽는 쪽은 `Scripts/dev/ScenarioCulprit.py --golden-margins` 다(키 이름을 바꾸지 않는다). */
+        /** @brief `"goldenSamples": [ { golden, 측정값 셋, 상한 셋 } ]` 을 씁니다. 읽는 쪽은 `Scripts/dev/scenario_bisect.py --golden-margins` 다(키 이름을 바꾸지 않는다). */
         void writeAutomationGoldenSamples( JSONWriter& writer, const vector<AutomationGoldenSample>* pListSample )
         {
             writer.key( "goldenSamples" );

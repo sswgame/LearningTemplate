@@ -23,7 +23,7 @@
 
 ## 보조 도구
 
-훅이 강제한다(`.claude/hooks/ToolGate.py`, 규칙 데이터 `ToolGateRules.json`, 테스트 `py -3 .claude/hooks/TestToolGate.py`): 요구한 스킬 · graphify 를 먼저 하지 않으면 호출이 거절되고 할 일이 안내된다. 새 스킬을 들이면 아래에 쓸 자리를 한 줄 더한다.
+훅이 강제한다(`.claude/hooks/tool_policy.py`, 규칙 데이터 `ToolGateRules.json`, 테스트 `py -3 .claude/hooks/test_tool_policy.py`): 요구한 스킬 · graphify 를 먼저 하지 않으면 호출이 거절되고 할 일이 안내된다. 새 스킬을 들이면 아래에 쓸 자리를 한 줄 더한다.
 
 | 언제 | 무엇 |
 | --- | --- |

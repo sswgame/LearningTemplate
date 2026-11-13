@@ -2,7 +2,7 @@
 # @file cmake/Modules/Platform/Web.cmake
 # @brief 웹(Emscripten) 플랫폼 정의 — 매크로 · 이름, 링크 옵션.
 # @note Emscripten 은 POSIX 층을 흉내 낸다(파일 · 시계 · pthread). 소켓 · 프로세스처럼 없는 것은 그 자리의 `#elif` 가 오류로 알린다.
-#       구성: `cmake --preset Web-Shipping` — 프리셋이 `Tools/emsdk`(설치 `py -3 Scripts/setup/PlatformSdk.py web`)의 Emscripten 툴체인을 가리킨다(docs/PlatformTargets.md).
+#       구성: `cmake --preset Web-Shipping` — 프리셋이 `Tools/emsdk`(설치 `py -3 Scripts/setup/platform_sdk.py web`)의 Emscripten 툴체인을 가리킨다(docs/PlatformTargets.md).
 # ==============================================================================
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")

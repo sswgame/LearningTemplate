@@ -65,12 +65,12 @@ namespace sw
         [[nodiscard]] bool writeFlagOpsUmbrella() const;
         /**
          * @brief 대상의 타입 · 열거형을 `<FQN>\t<모듈>` 줄로 `ReflectedTypes.list` 에 씁니다(정렬, 내용이 같으면 쓰지 않음).
-         * @details 타입이 어느 모듈인지를 아는 곳은 CMake(`--module`) 하나다 - 콘텐츠 검사(`Scripts/generate/ContentModules.py`)가 이 목록을 읽는다.
+         * @details 타입이 어느 모듈인지를 아는 곳은 CMake(`--module`) 하나다 - 콘텐츠 검사(`Scripts/generate/content_modules.py`)가 이 목록을 읽는다.
          */
         [[nodiscard]] bool writeReflectedTypesList() const;
         /**
          * @brief 대상의 경로 칸(`AssetRef<T>` · `DataPath` · `PROPERTY( AssetPath )`)을 `<이름>\t<대상>` 줄로 `AssetReferenceFields.list` 에 씁니다(정렬, 내용이 같으면 쓰지 않음).
-         * @details 끊어진 경로 검사 · 옮기기 도구가 어느 칸이 경로인지 아는 근거다. 손으로 맞추던 이름 표를 대신한다(`Scripts/generate/AssetReferenceFieldList.py` 가 모은다).
+         * @details 끊어진 경로 검사 · 옮기기 도구가 어느 칸이 경로인지 아는 근거다. 손으로 맞추던 이름 표를 대신한다(`Scripts/generate/asset_reference_field_list.py` 가 모은다).
          */
         [[nodiscard]] bool writeAssetFieldList() const;
         /** @brief 대상의 `.gen.cpp` 들에서 고정 배치형 정규 문자열 줄을 모아 `FixedSchemas.gen.txt` 를 씁니다. */

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  핫 리로드 디버그 확인 — 코드만 바뀐 판. 검증 체인 밖이다(`debugger/` 는 체인이 집지 않는다): `py -3 Scripts/dev/HotReloadDebugCheck.py --variant code` 가 lldb 아래에서 띄운다.
+  핫 리로드 디버그 확인 — 코드만 바뀐 판. 검증 체인 밖이다(`debugger/` 는 체인이 집지 않는다): `py -3 Scripts/dev/hot_reload_debug_check.py --variant code` 가 lldb 아래에서 띄운다.
   `Remember` 가 판을 읽는 순간(HotReloadProbeComponent::computeVersion) 디버거가 멈추고, 그동안 스크립트가 판 숫자를 바꿔 SWGame 만 다시 짓는다(디버거가 PDB 를 쥔 채 링크가 되는지).
   이어서 module.reload 가 새 모듈을 올리고, 디버거는 같은 브레이크포인트가 새 모듈에서 멈추는지 본다. 이 시나리오는 판이 바뀌었는지 · 씬 값이 건넜는지를 본다.
 -->

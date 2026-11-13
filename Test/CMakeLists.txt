@@ -134,7 +134,7 @@ if(TARGET EditorModule)
 	set_tests_properties(ToolCheckText PROPERTIES LABELS nogpu TIMEOUT 300)
 
 	# 에셋 참조 — 에셋은 경로 하나로 가리키므로(.meta · GUID 없음) 글 에셋 · 이 파일의 경로 칸이 모두 있는 것을 가리키는지, 리플렉션 `AssetPath` 프로퍼티가 모두
-	# 칸 목록(`Config/Dev/AssetReferenceFields.json`)에 있는지 본다. 커밋 전 검사(`Scripts/lint/AssetReferences.py`)와 같은 목록이다. 임포트 산출물을 보므로 임포트 뒤에 돈다.
+	# 칸 목록(`Config/Dev/AssetReferenceFields.json`)에 있는지 본다. 커밋 전 검사(`Scripts/lint/asset_references.py`)와 같은 목록이다. 임포트 산출물을 보므로 임포트 뒤에 돈다.
 	add_test(NAME ToolCheckAssetRefs
 		COMMAND $<TARGET_FILE:App> --check-asset-refs -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/ToolCheckAssetRefs.log
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
@@ -155,32 +155,32 @@ endif()
 # 생성 표 동시 갱신 — 빌드 폴더 여럿이 저장소의 참조 칸 표(`Config/Dev/AssetReferenceFields.generated.json`)를 함께 고쳐도 주인 줄을 잃지 않는다(잠금 + 원자 교체).
 # 표의 사본을 임시 폴더에 두고 자식 프로세스 열둘이 서로 다른 주인을 동시에 갈아 끼운다.
 add_test(NAME Scripts.AssetReferenceFieldList
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/Tests/TestAssetReferenceFieldList.py")
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_asset_reference_field_list.py")
 set_tests_properties(Scripts.AssetReferenceFieldList PROPERTIES LABELS nogpu TIMEOUT 120)
 
 # 빌드 지문 생성기(ABI 스탬프 · 쿠커 코드 지문)의 파일 지문 캐시 — 캐시가 있든 없든 같은 지문, 바뀐 파일만 다시 읽기, 지운 파일 줄 정리.
 add_test(NAME Scripts.FileDigestCache
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/Tests/TestFileDigestCache.py")
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_file_digest_cache.py")
 set_tests_properties(Scripts.FileDigestCache PROPERTIES LABELS nogpu TIMEOUT 60)
 
-# 배포 패키지의 모드 스테이징 — 묶은 모드만 담고, 형식이 틀린 id · 묶지 않은 모드는 실패다(Scripts/package/Pack.py --mods).
+# 배포 패키지의 모드 스테이징 — 묶은 모드만 담고, 형식이 틀린 id · 묶지 않은 모드는 실패다(Scripts/package/pack.py --mods).
 add_test(NAME Scripts.PackMods
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/Tests/TestPackMods.py")
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/tests/test_pack_mods.py")
 set_tests_properties(Scripts.PackMods PROPERTIES LABELS nogpu TIMEOUT 60)
 
-# Android APK 패키징 값 — 매니페스트 틀이 다 채워지고, 게임 덮기 · 프리셋 최소 API 를 읽고, 틀린 값은 멈춘다(Scripts/package/AndroidApk.py, 도구는 부르지 않는다).
+# Android APK 패키징 값 — 매니페스트 틀이 다 채워지고, 게임 덮기 · 프리셋 최소 API 를 읽고, 틀린 값은 멈춘다(Scripts/package/android_apk.py, 도구는 부르지 않는다).
 add_test(NAME Scripts.AndroidApk
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/Tests/TestAndroidApk.py")
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/tests/test_android_apk.py")
 set_tests_properties(Scripts.AndroidApk PROPERTIES LABELS nogpu TIMEOUT 60)
 
-# 웹 패키징 — 빌드 산출물이 없으면 멈추고, 페이지가 캔버스 → 로더 → App.js 순서이고, 로컬 서버가 교차 출처 격리 헤더를 준다(Scripts/package/WebPackage.py, file_packager 는 부르지 않는다).
+# 웹 패키징 — 빌드 산출물이 없으면 멈추고, 페이지가 캔버스 → 로더 → App.js 순서이고, 로컬 서버가 교차 출처 격리 헤더를 준다(Scripts/package/web_package.py, file_packager 는 부르지 않는다).
 add_test(NAME Scripts.WebPackage
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/Tests/TestWebPackage.py")
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/tests/test_web_package.py")
 set_tests_properties(Scripts.WebPackage PROPERTIES LABELS nogpu TIMEOUT 60)
 
 # vcpkg 설치 보호 — 사용자가 끈 설치 · 소스 트리 밖 설치 폴더는 읽기 전용이다(cmake/Modules/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake).
 add_test(NAME Scripts.VcpkgInstallPolicy
-	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/setup/Tests/TestVcpkgInstallPolicy.py" "${CMAKE_COMMAND}")
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/setup/tests/test_vcpkg_install_policy.py" "${CMAKE_COMMAND}")
 set_tests_properties(Scripts.VcpkgInstallPolicy PROPERTIES LABELS nogpu TIMEOUT 60)
 
 # 온라인 부하 봇의 짧은 시나리오 — 같은 프로세스 서버(`--local-server=0`, OS 가 고른 포트라 나란히 돌아도 다투지 않는다)에 봇 여덟이 붙어

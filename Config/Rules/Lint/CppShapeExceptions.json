@@ -1,5 +1,5 @@
 {
-    "_comment": "Scripts/lint/CppShape.py 의 예외. 규칙마다 '경로|클래스' → 까닭이다. stateMutatorMinFunctions 는 규칙 10 의 문턱(.cpp 상태의 공개 칸을 바꾸는 …Internal static 함수 수)이다.",
+    "_comment": "Scripts/lint/cpp_shape.py 의 예외. 규칙마다 '경로|클래스' → 까닭이다. stateMutatorMinFunctions 는 규칙 10 의 문턱(.cpp 상태의 공개 칸을 바꾸는 …Internal static 함수 수)이다.",
     "stateMutatorMinFunctions": 2,
     "stateMutator": {
         "Source/Editor/Common/Asset/Model/MeshFracture.cpp|CapState": "규칙 10 전 코드 — 단면 메움 단계(묶기 · 고리 · 표시 · 다시 짓기)가 CapState 를 차례로 바꾼다. CapState 의 멤버로 옮길 때 지운다",

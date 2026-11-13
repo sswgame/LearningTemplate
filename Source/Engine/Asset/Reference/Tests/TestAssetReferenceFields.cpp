@@ -1,5 +1,5 @@
 // AssetReferenceFields — 경로 칸 목록으로 뽑기 · 있음 판정 · 고쳐 쓰기. 저장소의 칸 목록(Config/Dev/AssetReferenceFields.json)을 그대로 읽는다.
-// 같은 규칙의 파이썬 쪽(Scripts/lint/AssetReferences.py)이 같은 글에서 같은 경로를 뽑아야 한다 — 둘을 고치면 이 글로 함께 본다.
+// 같은 규칙의 파이썬 쪽(Scripts/lint/asset_references.py)이 같은 글에서 같은 경로를 뽑아야 한다 — 둘을 고치면 이 글로 함께 본다.
 #include "pch.h"
 
 #include "Core/File/ProcessRoots.h"

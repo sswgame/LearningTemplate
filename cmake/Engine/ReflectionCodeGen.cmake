@@ -221,7 +221,7 @@ function(sw_claimReflectionStem STEM TARGET_NAME HEADER)
 endfunction()
 
 # 생성 TU 묶음 하나에 넣는 헤더 수(NEXT 5-4 W-R5). 헤더당 TU 하나면 PCH 를 헤더 수만큼 열고 같은 템플릿을 TU 마다 인스턴스화한다 —
-# 생성 TU 가 Debug 컴파일 CPU 의 약 30 % 였다(BuildTimeReport.py). 언리얼 UHT 가 모듈의 .gen.cpp 를 Module.<이름>.N.cpp 묶음으로 짓는 자리와 같다.
+# 생성 TU 가 Debug 컴파일 CPU 의 약 30 % 였다(build_time_report.py). 언리얼 UHT 가 모듈의 .gen.cpp 를 Module.<이름>.N.cpp 묶음으로 짓는 자리와 같다.
 # 크게 잡을수록 TU 수가 줄지만 한 헤더 변경이 다시 짓는 양이 는다 — 8~16 의 가운데.
 set(SW_REFLECTION_BUNDLE_SIZE 12)
 
@@ -527,8 +527,8 @@ function(sw_addContentModuleCheck)
 	set(swStamp "${CMAKE_BINARY_DIR}/generated/ContentModules.stamp")
 	add_custom_command(
 		OUTPUT "${swStamp}"
-		COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/ContentModules.py" --inputs "${swInputs}" --stamp "${swStamp}"
-		DEPENDS ${listTypeList} "${swInputs}" "${CMAKE_SOURCE_DIR}/Scripts/generate/ContentModules.py"
+		COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/content_modules.py" --inputs "${swInputs}" --stamp "${swStamp}"
+		DEPENDS ${listTypeList} "${swInputs}" "${CMAKE_SOURCE_DIR}/Scripts/generate/content_modules.py"
 		COMMENT "[Reflection] Checking that content uses only modules its domain has"
 		VERBATIM
 	)
@@ -571,8 +571,8 @@ function(sw_addAssetReferenceFieldList)
 	set(swStamp "${CMAKE_BINARY_DIR}/generated/AssetReferenceFieldList.stamp")
 	add_custom_command(
 		OUTPUT "${swStamp}"
-		COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/AssetReferenceFieldList.py" --inputs "${swInputs}" --output "${CMAKE_SOURCE_DIR}/Config/Dev/AssetReferenceFields.generated.json" --stamp "${swStamp}"
-		DEPENDS ${listFieldList} "${swInputs}" "${CMAKE_SOURCE_DIR}/Scripts/generate/AssetReferenceFieldList.py"
+		COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/asset_reference_field_list.py" --inputs "${swInputs}" --output "${CMAKE_SOURCE_DIR}/Config/Dev/AssetReferenceFields.generated.json" --stamp "${swStamp}"
+		DEPENDS ${listFieldList} "${swInputs}" "${CMAKE_SOURCE_DIR}/Scripts/generate/asset_reference_field_list.py"
 		COMMENT "[Reflection] Collecting asset reference fields"
 		VERBATIM
 	)

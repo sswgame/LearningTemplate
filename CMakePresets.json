@@ -50,7 +50,7 @@
     {
       "name": "Linux-Debug-ASan",
       "displayName": "Linux Ninja Debug + AddressSanitizer/UBSan (Clang)",
-      "description": "수명 · 경계 · 미정의 동작 그물 — `py -3 Scripts/dev/LinuxScenarios.py sanitize address` 가 단위 테스트를 돌린다(감사 P-8, Godot CI 의 ASan 빌드 · 언리얼 -EnableASan 자리)",
+      "description": "수명 · 경계 · 미정의 동작 그물 — `py -3 Scripts/dev/linux_scenarios.py sanitize address` 가 단위 테스트를 돌린다(감사 P-8, Godot CI 의 ASan 빌드 · 언리얼 -EnableASan 자리)",
       "inherits": "Linux-Debug",
       "cacheVariables": {
         "SW_ENABLE_SANITIZER": "ON",
@@ -60,7 +60,7 @@
     {
       "name": "Linux-Debug-TSan",
       "displayName": "Linux Ninja Debug + ThreadSanitizer (Clang)",
-      "description": "데이터 경쟁 그물 — vcpkg 는 x64-linux-tsan 트리플릿(원자로 스스로 동기화하는 포트 계측). `py -3 Scripts/dev/LinuxScenarios.py sanitize thread`",
+      "description": "데이터 경쟁 그물 — vcpkg 는 x64-linux-tsan 트리플릿(원자로 스스로 동기화하는 포트 계측). `py -3 Scripts/dev/linux_scenarios.py sanitize thread`",
       "inherits": "Linux-Debug",
       "cacheVariables": {
         "SW_ENABLE_SANITIZER": "ON",
@@ -149,7 +149,7 @@
     {
       "name": "Web-Shipping",
       "displayName": "Web Shipping (Emscripten, WebGPU)",
-      "description": "브라우저 배포(Emscripten + vcpkg dawn 의 emdawnwebgpu). 툴체인은 저장소의 Tools/emsdk(설치 py -3 Scripts/setup/PlatformSdk.py web — 판은 Config/Environment/search_paths.defaults.json)",
+      "description": "브라우저 배포(Emscripten + vcpkg dawn 의 emdawnwebgpu). 툴체인은 저장소의 Tools/emsdk(설치 py -3 Scripts/setup/platform_sdk.py web — 판은 Config/Environment/search_paths.defaults.json)",
       "inherits": [
         "base-vcpkg",
         "base-shipping"
@@ -169,7 +169,7 @@
     {
       "name": "Android-Shipping",
       "displayName": "Android Shipping (NDK, Vulkan, arm64)",
-      "description": "Android 배포(API 29, arm64-v8a). NDK 는 저장소의 Tools/Android/ndk/<판>(설치 py -3 Scripts/setup/PlatformSdk.py android — 판은 Config/Environment/search_paths.defaults.json 의 android_ndk_version, 이 경로와 같은지 설치 스크립트가 본다) — APK 는 빌드 뒤 py -3 -m Scripts android-apk --game <게임>(서명한 디버그 APK, build/Android-Shipping/Apk)",
+      "description": "Android 배포(API 29, arm64-v8a). NDK 는 저장소의 Tools/Android/ndk/<판>(설치 py -3 Scripts/setup/platform_sdk.py android — 판은 Config/Environment/search_paths.defaults.json 의 android_ndk_version, 이 경로와 같은지 설치 스크립트가 본다) — APK 는 빌드 뒤 py -3 -m Scripts android-apk --game <게임>(서명한 디버그 APK, build/Android-Shipping/Apk)",
       "inherits": [
         "base-vcpkg",
         "base-shipping"

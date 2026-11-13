@@ -108,7 +108,7 @@ SW_REGISTER_ARGUMENT( VERIFY_SHADERS, false, false, "verify-shaders" )
 SW_REGISTER_ARGUMENT( SERVER_CONFIG, CommandLineDiskPath{}, false, "server-config" )
 
 // 전용 서버가 설정(`-server-config`)을 읽고 칸 사이 규칙(운영 포트 바인드 · 토큰, 관리 채널 토큰, 크래시 동의)을 본 뒤 포트를 열지 않고 끝낸다.
-// 맞으면 종료 0, 틀리면 종료 11(`LoadError`) — 배포 이미지 빌드(`Scripts/package/ServerImage.py`)와 CI 가 돌린다
+// 맞으면 종료 0, 틀리면 종료 11(`LoadError`) — 배포 이미지 빌드(`Scripts/package/server_image.py`)와 CI 가 돌린다
 SW_REGISTER_ARGUMENT( CHECK_CONFIG, false, false, "check-config" )
 
 // 돌릴 게임(Dev 만) — `Source/Games/<이름>`. 비우면 빌드의 활성 게임(`SW_ACTIVE_GAME`), 다른 게임은 같은 빌드가 함께 지은 것(`SW_GAMES`, `Bin/Games/<이름>/`)이어야 한다.
