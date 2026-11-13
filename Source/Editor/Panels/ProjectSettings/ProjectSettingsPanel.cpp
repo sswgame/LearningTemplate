@@ -194,8 +194,10 @@ namespace sw::editor
             }
             ImGui::TextUnformatted( page._entry._relativePath.c_str() );
             ImGui::SameLine();
-            if ( table.isReadOnly() )
+            if ( table.getReadOnlyReason() == ProjectSettingsReadOnlyReason::Generated )
                 EditorWidgets::drawChip( "Generated - read only", SW_THEME_COLOR( "Signal", "Warning" ) );
+            else if ( table.getReadOnlyReason() == ProjectSettingsReadOnlyReason::LayoutNotPreserved )
+                EditorWidgets::drawChip( "Hand layout - read only", SW_THEME_COLOR( "Signal", "Warning" ) );
             else
                 EditorWidgets::drawChip( "Table", SW_THEME_COLOR( "Base", "Accent" ) );
             drawPageActions( page );

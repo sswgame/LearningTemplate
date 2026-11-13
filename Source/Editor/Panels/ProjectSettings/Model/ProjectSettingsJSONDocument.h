@@ -15,6 +15,17 @@
 namespace sw::editor
 {
     /**
+     * @enum ProjectSettingsReadOnlyReason
+     * @brief 표 페이지가 파일을 고치지 않는 까닭입니다. `None` 이면 고칠 수 있다.
+     */
+    enum class ProjectSettingsReadOnlyReason : uint8
+    {
+        None,               ///< 고칠 수 있다
+        Generated,          ///< 도구가 만든 파일(`*.generated.json`) — 고쳐도 다음 생성이 덮는다
+        LayoutNotPreserved, ///< 쓰기가 읽은 글을 그대로 되살리지 못한다(손으로 맞춘 한 줄 객체 등) — 저장하면 파일 모양이 바뀌므로 고치지 않는다
+    };
+
+    /**
      * @struct ProjectSettingsJSONNode
      * @brief 편집 트리의 값 하나입니다. 자식은 문서의 노드 배열 번호로 든다(뺀 노드는 배열에 남지만 어느 부모도 가리키지 않아 쓰이지 않는다).
      */
@@ -51,8 +62,10 @@ namespace sw::editor
 
         /** @brief 열려 있으면 true 입니다. */
         [[nodiscard]] bool isOpen() const { return _listNode.empty() == false; }
-        /** @brief 도구가 만든 파일(`*.generated.json`)이라 고치지 않으면 true 입니다 — 고쳐도 다음 생성이 덮는다. */
-        [[nodiscard]] bool isReadOnly() const { return _bReadOnly != 0; }
+        /** @brief 고치지 않는 파일이면 true 입니다(까닭은 `getReadOnlyReason`). */
+        [[nodiscard]] bool isReadOnly() const { return _readOnlyReason != ProjectSettingsReadOnlyReason::None; }
+        /** @brief 고치지 않는 까닭입니다. */
+        [[nodiscard]] ProjectSettingsReadOnlyReason getReadOnlyReason() const { return _readOnlyReason; }
         /** @brief 지금 트리를 쓴 글이 마지막으로 읽거나 쓴 글과 다르면 true 입니다. */
         [[nodiscard]] bool isModified() const;
         /** @brief 파일에 쓸 글입니다(들여쓰기 · 끝 줄바꿈은 읽은 파일을 따른다). 열려 있지 않으면 빈 글입니다. */
@@ -83,7 +96,7 @@ namespace sw::editor
         string                          _absolutePath;
         EditorDocumentState<string>     _state; ///< 마지막으로 읽거나 저장한 글
         int32                           _indent;
+        ProjectSettingsReadOnlyReason   _readOnlyReason;
         uint8                           _bTrailingNewLine : 1;
-        uint8                           _bReadOnly        : 1;
     };
 } // namespace sw::editor
