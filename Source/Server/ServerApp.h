@@ -74,7 +74,7 @@ namespace sw
         [[nodiscard]] bool loadServerConfig();
         /**
          * @brief 읽은 설정의 칸 사이 규칙을 서비스를 세우지 않고 봅니다(`--check-config` · 기동이 같은 검사를 지난다). 어긴 규칙마다 오류를 남기고, 하나라도 있으면 false 입니다.
-         * @details 운영 포트 바인드 · 토큰, 관리 채널 토큰, 크래시 보고 동의. 배포 전에 CI · 이미지 빌드(`Scripts/package/ServerImage.py`)가 돌린다(언리얼 `-run=` 커맨드릿 · 서버 `-validate` 자리).
+         * @details 운영 포트 바인드 · 토큰, 관리 채널 토큰, 크래시 보고 동의. 배포 전에 CI · 이미지 빌드(`Scripts/package/server_image.py`)가 돌린다(언리얼 `-run=` 커맨드릿 · 서버 `-validate` 자리).
          */
         [[nodiscard]] static bool checkServerConfig( const ServerConfig& config );
         /** @brief 호스트 서비스 하나를 세웁니다(`kArrServerHostService` — 순서는 `HostService` 의 의존 선언이 정한다). */

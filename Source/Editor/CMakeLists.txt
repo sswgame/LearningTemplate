@@ -13,7 +13,7 @@ sw_globSourceTree(listEditorSource RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 set(listEditorAllSource ${listEditorSource})
 
 # 에디터 폴더는 층이고 아래 층은 위 층의 헤더를 include 하지 못한다. 층과 티어의 표는 `Config/Rules/Layers/EditorLayers.toml` 이고
-# configure 가 `EditorLayers.cmake` 로 옮긴다(`Scripts/generate/EditorLayers.py` — 표와 폴더가 어긋나면 거기서 멈춘다).
+# configure 가 `EditorLayers.cmake` 로 옮긴다(`Scripts/generate/editor_layers.py` — 표와 폴더가 어긋나면 거기서 멈춘다).
 # 2) 가 티어마다 부분(OBJECT 라이브러리)을 짓고, 부분마다 자기 티어보다 위 층의 모든 헤더 자리에 `#error` 껍데기를 먼저 놓는다.
 # EditorModule 자신은 `Source/Editor` 바로 아래 파일(셸 · 모든 매니저를 만드는 조립 파일)만 가진다.
 include("${CMAKE_BINARY_DIR}/generated/sw/config/EditorLayers.cmake")

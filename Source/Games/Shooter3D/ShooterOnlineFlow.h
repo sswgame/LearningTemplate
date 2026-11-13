@@ -5,7 +5,7 @@
  * @details 게임이 쓰는 것은 세션 하나와 키트 클라이언트의 `call<>` 뿐입니다. 연결 · 틱 · 키트 묶기는 세션이 맡습니다.
  *          우편 수령으로 바뀐 잔액은 서버가 잔액 변경 알림으로 보내 지갑(`EconomyClient`)이 스스로 맞는다 — 게임은 응답의 잔액을 옮기지 않습니다.
  *          매칭은 혼자 서는 모드(`arena_solo`, `shooter3d.matchmodes.xml`)에 줄을 서고 배정 알림(`MatchAssignment`)을 받는다. 배정된 게임 서버 접속(계정 키트의 접속 티켓 → UDP)은
- *          두 프로세스 접속 시나리오(`Scripts/net/NetPairRun.py`)의 몫이라 여기서는 배정까지 본다. 한 판의 처치 수는 순위표 `arena_kills` 에 내고 상위 목록을 받는다.
+ *          두 프로세스 접속 시나리오(`Scripts/net/net_pair_run.py`)의 몫이라 여기서는 배정까지 본다. 한 판의 처치 수는 순위표 `arena_kills` 에 내고 상위 목록을 받는다.
  *          화면은 아직 없고 개발 명령(`shooter.online.*`)과 감시 값(`Shooter3D.Online*`)으로 시나리오가 끝단을 판정합니다(`automation/onlinesession.scenario.xml` · `onlinematch.scenario.xml`).
  */
 #pragma once

@@ -1,5 +1,5 @@
 {
-    "_comment": "약어 목록(docs/agents/NamingCpp.md Acronyms — 약어는 어디서나 모두 대문자). 린트 Scripts/lint/Acronyms.py 가 식별자의 낱말이 이 약어를 첫 글자만 대문자로 쓴 것(Json · Id · Gpu)을 막는다. 새 약어는 여기에 더하고 같은 커밋에서 전수로 고친다. 바깥 이름(서드파티 · OS API)과 데이터 철자(직렬화 키 · 테스트 이름)는 _keep 에 까닭과 함께.",
+    "_comment": "약어 목록(docs/agents/NamingCpp.md Acronyms — 약어는 어디서나 모두 대문자). 린트 Scripts/lint/acronyms.py 가 식별자의 낱말이 이 약어를 첫 글자만 대문자로 쓴 것(Json · Id · Gpu)을 막는다. 새 약어는 여기에 더하고 같은 커밋에서 전수로 고친다. 바깥 이름(서드파티 · OS API)과 데이터 철자(직렬화 키 · 테스트 이름)는 _keep 에 까닭과 함께.",
     "_acronyms": [
         "AABB",
         "ABI",

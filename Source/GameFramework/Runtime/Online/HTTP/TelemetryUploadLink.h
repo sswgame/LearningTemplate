@@ -5,7 +5,7 @@
  *            팩 gamesettings 의 끝점(`GameSettings::_telemetryUploadEndpoint` · `_crashUploadEndpoint`)을 읽어 `BlockingHTTPClient` 를 업로더에 넘긴다.
  *          - 끝점을 적지 않으면 아무것도 하지 않는다 — 동의해도 기계 밖으로 나가지 않는다(엔진 기본). 끝점은 운영자의 값이라 저장소의 팩은 적지 않고,
  *            로컬 확인은 개발 구성의 `-gv_telemetryUploadEndpoint` · `-gv_crashUploadEndpoint`(게임 인스턴스가 gamesettings 에 넣는다 — `IGameSettingsOverride`)로
- *            루프백 수신기를 가리킨다(`Scripts/net/TelemetryLocalRun.py`).
+ *            루프백 수신기를 가리킨다(`Scripts/net/telemetry_local_run.py`).
  *          - 동의 · 표본 · 묶음 · 상한은 엔진 서비스가 지킨다. 텔레메트리는 서비스의 스풀 워커 스레드(`TelemetrySpool`)가 보내고, 크래시 보고는 기동 때 전용 스레드 하나가
  *            보낼 줄의 묶음을 올린다(`CrashReportService::runReporter`). 묶음은 지난 실행의 크래시를 이번 기동이 묶은 것이라 크래시 난 프로세스가 보낼 일이 없다.
  *          - 종료 때 텔레메트리 업로더를 떼며 지금 스풀 파일을 닫아 보낸다(`TelemetryService::releaseUploader` — 워커가 그 업로더로 보내는 중인 것이 끝날 때까지 기다린다) — 빌린 참조가 엔진 서비스에 남지 않는다.

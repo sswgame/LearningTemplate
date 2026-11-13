@@ -42,7 +42,7 @@ namespace sw
 {
     /**
      * @brief `-gv_userSettingsFile=<경로>`: 사용자 설정 파일 자리입니다(비면 사용자 폴더의 usersettings.json, 무인 실행은 실행마다 새 자리).
-     * @details 실행 짝(`Scripts/net/LockstepPairRun.py`) · 순서 시나리오(`Test/Scenario/RunStateDirPair.cmake`)가 한 파일을 이어 쓰거나 사람의 파일을 피할 때 쓴다.
+     * @details 실행 짝(`Scripts/net/lockstep_pair_run.py`) · 순서 시나리오(`Test/Scenario/RunStateDirPair.cmake`)가 한 파일을 이어 쓰거나 사람의 파일을 피할 때 쓴다.
      *          배포본에는 없다 — 배포본의 자리를 가를 때는 환경 변수 `SW_USER_DATA_ROOT`(`Core/File/UserDataPath.h`)다.
      */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_userSettingsFile, "", "사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json)" );

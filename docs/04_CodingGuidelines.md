@@ -176,7 +176,7 @@ Foo::Foo()
 | 대상 | 예 |
 | :--- | :--- |
 | CMake 옵션 · 함수 · 정의 · 타깃 | `option( SW_ENABLE_PCH … )` · `sw_configurePCH()` · `SW_PLATFORM_WINDOWS` · `App` · `SWGame` |
-| Python 함수 · 헬퍼 · 상수 · 파일 | `setupEnvironment()` · `safeCallInternal()` · `kRepoRoot` · `SetupEnvironment.py` |
+| Python 함수 · 비공개 헬퍼 · 상수 · 클래스 · 파일(PEP 8) | `setup_environment()` · `_safe_call()` · `REPO_ROOT` · `EnvironmentSetup` · `setup_environment.py` |
 | 리소스 이름 | `Content/game/<게임 소문자>/maps/0.title.scene.xml`(대문자는 `README.md` 만) |
 | 텍스처 · 모델 원본 | `textures_raw/hero.png` → `App --import-textures` → `textures/hero.dds` + `textures_raw/import.stamp` |
 

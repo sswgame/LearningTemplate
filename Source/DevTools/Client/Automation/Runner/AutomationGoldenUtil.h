@@ -70,7 +70,7 @@ namespace sw
     /**
      * @struct AutomationGoldenSample
      * @brief 골든 비교 한 번의 측정값과 그때의 상한입니다. 기록 모드가 아닌 실행이 보고 `goldenSamples[]` 에 남기고,
-     *        `Scripts/dev/ScenarioCulprit.py --golden-margins` 가 여러 보고를 모아 골든마다 실행 사이 흔들림(최대값)과 여유(상한 / 최대값)를 낸다.
+     *        `Scripts/dev/scenario_bisect.py --golden-margins` 가 여러 보고를 모아 골든마다 실행 사이 흔들림(최대값)과 여유(상한 / 최대값)를 낸다.
      */
     struct AutomationGoldenSample
     {

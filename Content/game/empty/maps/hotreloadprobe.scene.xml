@@ -1,5 +1,5 @@
 <Scene formatVersion="2" name="HotReloadProbe">
-	<!-- 핫 리로드 디버그 확인(Scripts/dev/HotReloadDebugCheck.py, 시나리오 automation/debugger/*)의 무대 — 확인용 컴포넌트 하나가 리로드를 건너야 하는 값 42 를 든다. -->
+	<!-- 핫 리로드 디버그 확인(Scripts/dev/hot_reload_debug_check.py, 시나리오 automation/debugger/*)의 무대 — 확인용 컴포넌트 하나가 리로드를 건너야 하는 값 42 를 든다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

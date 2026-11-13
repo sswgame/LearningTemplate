@@ -57,7 +57,7 @@
 
 ## 5. 배포 구성 확인
 
-`py -3 -m Scripts shipping-check` — `Ninja-Shipping` · `Ninja-Shipping-Server` 를 짓고(쿠킹 포함) 배포 App · 서버를 몇 초 돌려 0 종료, 배포 App 의 `-scenario` 가 기동 오류인지 보고 로그의 [Error] · [Warning] 을 모은다. 프리셋마다 빌드 폴더가 달라 CTest 가 아니다. 통합에서 한 번(bundle-verify).
+`py -3 -m Scripts shipping-check` — `Ninja-Shipping` · `Ninja-Shipping-Server` 를 짓고(쿠킹 포함) 배포 App · 서버를 몇 초 돌려 0 종료, 배포 App 의 `-scenario` 가 기동 오류인지 보고 로그의 [Error] · [Warning] 을 모은다. 프리셋마다 빌드 폴더가 달라 CTest 가 아니다. 통합에서 한 번(preflight).
 
 ## 7. SOLID 점검 — Core · Engine
 

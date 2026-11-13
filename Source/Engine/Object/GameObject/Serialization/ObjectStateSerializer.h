@@ -403,7 +403,7 @@ namespace sw
 
 /*
  * 전용 서버가 짓지 않는 소스(런타임 UI · `Client/`)의 리플렉션 형식 이름 표입니다 — 서버가 씬에서 그 컴포넌트를 만나면 `MissingComponent` 가 아니라 조용히 건너뜁니다.
- * 표는 생성 파일 `Config/Engine/ClientOnlyTypes.generated.json`(`Scripts/generate/ClientOnlyTypes.py`, 커밋 훅이 낡음을 잡는다)이다. 서버는 그 형식을 모르므로
+ * 표는 생성 파일 `Config/Engine/ClientOnlyTypes.generated.json`(`Scripts/generate/client_only_types.py`, 커밋 훅이 낡음을 잡는다)이다. 서버는 그 형식을 모르므로
  *          이름 바꾸기 · 빠진 모듈(오류 — 경고를 남기고 원문을 지킨다)과 클라이언트 전용(정상 — 서버에는 할 일이 없다)을 이 표로 가른다.
  *          언리얼은 클래스를 서버도 지어 두고 HUD 를 띄우지 않지만, 여기는 클래스를 짓지 않으니 이름만 싣는다(기억). 클라이언트 구성은 표를 읽지 않는다.
  */

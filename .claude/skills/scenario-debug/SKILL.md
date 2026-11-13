@@ -15,7 +15,7 @@ description: "이 저장소의 자동화 시나리오 실패를 추적하는 절
 # Windows Debug (빠르다, 먼저 시도). 백엔드는 하나로. 로그는 dbg.<백엔드>.log
 build/Ninja-Debug/Bin/App.exe -EnableEditor -scenario=<경로,경로> -scenario-keep-going -unattended -scenario-backends=dx12 -log-file=dbg.log
 # Linux
-py -3 Scripts/dev/LinuxScenarios.py stages 이름 앞단계,이름
+py -3 Scripts/dev/linux_scenarios.py stages 이름 앞단계,이름
 ```
 
 - 에디터 자체 테스트는 케이스 하나만: `-scenario=engine/automation/editor/selftests.scenario.xml -gv_editorSelfTestPattern=hierarchy.tagFilter` (시나리오 사본을 만들지 않는다).
@@ -28,7 +28,7 @@ py -3 Scripts/dev/LinuxScenarios.py stages 이름 앞단계,이름
 
 ## 2. 앞 단계 찾기
 
-Windows: `py -3 Scripts/dev/ScenarioCulprit.py <체인> <단계> [--preset Ninja-Debug] [--backend dx12] [--show]`, Linux: `py -3 Scripts/dev/LinuxScenarios.py culprit <단계> [체인]` — 같은 함수로 앞 단계들을 이분 탐색한다(단계 목록 · 인자는 ctest 명령에서 가져오므로 게임 체인도 된다, 그 백엔드의 체인 로그가 있어야 한다). 단독 쌍으로 지지 않으면 뒤 단계와 함께 만드는 상태다. 그때는 묶음을 직접 좁힌 뒤, 범인 시나리오의 구간을 빼 가며 돌린다.
+Windows: `py -3 Scripts/dev/scenario_bisect.py <체인> <단계> [--preset Ninja-Debug] [--backend dx12] [--show]`, Linux: `py -3 Scripts/dev/linux_scenarios.py bisect <단계> [체인]` — 같은 함수로 앞 단계들을 이분 탐색한다(단계 목록 · 인자는 ctest 명령에서 가져오므로 게임 체인도 된다, 그 백엔드의 체인 로그가 있어야 한다). 단독 쌍으로 지지 않으면 뒤 단계와 함께 만드는 상태다. 그때는 묶음을 직접 좁힌 뒤, 범인 시나리오의 구간을 빼 가며 돌린다.
 
 자주 나온 상태: 눌린 채 끝난 입력(단계 초기화 `EditorAutomationStageReset`), 그리지 않는 위젯의 마지막 값(ImGuizmo), 숨긴 창(무인 실행의 `showWindow( false )` — 최소화가 아니다), 포커스.
 

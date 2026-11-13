@@ -157,7 +157,7 @@ namespace sw
         }
         if ( _launch.initializeHostScope( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleLibraries, this ), "ServerApp", std::move( pDevLayer ) ) == false )
             return false;
-        // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. 빌드(CookAssets 타깃) · `Pack.py` 가 이 코드를 본다.
+        // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. 빌드(CookAssets 타깃) · `pack.py` 가 이 코드를 본다.
         const HostEngineStart engineStart = _launch.initializeEngine( argc, pArgv, EngineHostRole::DedicatedServer );
         if ( engineStart != HostEngineStart::Ready )
             return engineStart == HostEngineStart::Headless;

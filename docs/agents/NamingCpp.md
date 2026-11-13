@@ -152,7 +152,7 @@ A reader who knows one of these names must be able to guess the rest. Use a bann
 
 폴더 · 형식 · 함수 이름의 낱말 뜻이다. 새 이름이 같은 낱말을 다른 뜻으로 쓰면 이름을 바꾼다. 새 낱말은 `Config/Rules/Lint/NamingWords.json` 에 먼저 올린다 — 함수 앞 단어(`_functionWords`) · 형식 끝 단어(`_typeSuffixes`)뿐 아니라 모든 이름(멤버 · 상수 · 매크로 · 열거자 · 스크립트)과 파일 · 폴더 이름의 **모든 낱말**이 `_words` 에 있어야 하고, 문맥마다 갈리는 낱말은 `_scopedWords`(린트 `naming-words`, 커밋 훅), 옛 이름은 그 `_bannedNames` 에 둔다.
 
-이름 · 경로는 도구로 바꾼다(`py -3 -m Scripts rename-symbol` · `move-source`, 여러 쌍은 `Scripts/dev/RenameIdentifier.py`) — 코드와 문서(`docs/agents` 포함)를 함께 고친다. 옛 이름을 일부러 적는 줄("쓰지 않는 것" 예, 이력)에는 표지 `keep-old-name` 를 단다(Markdown 은 `<!-- keep-old-name -->`, 규칙은 `Scripts/common/RenameScope.py`).
+이름 · 경로는 도구로 바꾼다(`py -3 -m Scripts rename-symbol` · `move-source`, 여러 쌍은 `Scripts/dev/rename_identifier.py`) — 코드와 문서(`docs/agents` 포함)를 함께 고친다. 옛 이름을 일부러 적는 줄("쓰지 않는 것" 예, 이력)에는 표지 `keep-old-name` 를 단다(Markdown 은 `<!-- keep-old-name -->`, 규칙은 `Scripts/common/rename_scope.py`).
 
 | 규칙 | 근거 |
 |---|---|
@@ -167,7 +167,7 @@ A reader who knows one of these names must be able to guess the rest. Use a bann
 | 낮은 층 · 높은 층이 서로 알아야 하면 위가 아래에 건다(엔진 범위에 건 `PackManager` · `IMeshDerivedCache`, 위 층의 의존 칸) | 언리얼 FPlatformFileManager |
 | 키트 하나의 에디터 확장은 그 키트의 `Editor/`(런타임 · 서버로 나뉜 키트는 `<기능>/Editor/`). `Plugin/Editor` 는 GameFramework 자체와 여러 키트를 잇는 확장만 | 언리얼 플러그인 <X>Editor 모듈 |
 | 폴더 · 파일 이름은 내용으로(자리는 [FolderLayout](FolderLayout.md)). 에셋 파일 형식은 `*Asset`, XML 정의는 `*Def` | |
-| 콘텐츠(씬 · 프리팹)가 쓰는 형식의 모듈은 그 도메인이 가진다 — `game/<팩>` 은 그 게임 매니페스트 의존, `common/` 은 모든 게임, `editor/` 는 엔진 · EditorModule, `engine/` 은 엔진만. configure 가 맞대고 멈춘다(`Scripts/generate/ContentModules.py`) | 언리얼 .uproject Plugins |
+| 콘텐츠(씬 · 프리팹)가 쓰는 형식의 모듈은 그 도메인이 가진다 — `game/<팩>` 은 그 게임 매니페스트 의존, `common/` 은 모든 게임, `editor/` 는 엔진 · EditorModule, `engine/` 은 엔진만. configure 가 맞대고 멈춘다(`Scripts/generate/content_modules.py`) | 언리얼 .uproject Plugins |
 | 한 판의 규칙 · 상태 컴포넌트는 `GameMode`(`<게임>GameModeComponent`). `Director` 는 페이싱 감독 · 카메라 연출만. 차지할 수 있는 슬롯은 `SmartObject`, 장비는 `Equipment`(동사 `equip`) | 언리얼 AGameModeBase · Smart Objects, Lyra |
 | Def 여러 개를 담은 파일은 `<X>Catalog`(XML 루트도 클래스 이름). `Table` 은 가중 추첨 · 구간 표와 StringTable 만, `Set` 은 GAS 이름과 한 에셋 안의 이름 → 항목 묶음만, 코드 등록 표는 `Registry` | 한 이름 |
 | 쌓인 일을 끝낼 때까지 막기 `flush`, 큐를 꺼내 처리 `poll`, 꺼내 넘기기 `take`. `drain` 은 서버 드레인 · 게임 수치 소모만 | 언리얼 FlushRenderingCommands |

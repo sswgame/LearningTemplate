@@ -3,7 +3,7 @@
 # @brief vcpkg 통합 모듈: root 탐색 · triplet · manifest hash/stamp · install gate · INTERFACE
 #
 # VcpkgGate.cmake(project() 전)에서 include. 역할:
-# 1. vcpkg 루트 탐색 (Vcpkg.py / 환경 변수)
+# 1. vcpkg 루트 탐색 (vcpkg.py / 환경 변수)
 # 2. VCPKG_TARGET_TRIPLET 자동 결정
 # 3. install 게이트 — 읽기 전용(사용자가 끈 설치 · 소스 트리 밖 설치 폴더, VcpkgInstallPolicy.cmake)이면 설치 · 스탬프 쓰기를 하지 않는다.
 #    그 밖에는 스탬프(매니페스트 해시)가 같으면 바로 skip, 다르면 `vcpkg install --dry-run` 계획으로:
@@ -242,7 +242,7 @@ endfunction()
 
 # ------------------------------------------------------------------------------
 # 3) vcpkg 루트 탐색
-# 우선순위: Vcpkg.py → VCPKG_ROOT → VCPKG_INSTALLATION_ROOT
+# 우선순위: vcpkg.py → VCPKG_ROOT → VCPKG_INSTALLATION_ROOT
 # ------------------------------------------------------------------------------
 if(NOT DEFINED sw_vcpkg_root OR sw_vcpkg_root STREQUAL "")
     set(swFindVcpkgArgs "")
@@ -528,14 +528,14 @@ if(SW_USE_VCPKG AND swToolchainFile AND NOT EXISTS "${swToolchainFile}")
             "  ${swToolchainFile}\n"
             "Auto-bootstrap was enabled but Tools/vcpkg is still missing.\n"
             "  Check that Git is installed, then reconfigure, or run:\n"
-            "    py -3 Scripts/setup/Vcpkg.py --install"
+            "    py -3 Scripts/setup/vcpkg.py --install"
         )
     else()
         message(FATAL_ERROR
             "[vcpkg] CMAKE_TOOLCHAIN_FILE does not exist:\n"
             "  ${swToolchainFile}\n"
             "Enable SW_VCPKG_AUTO_BOOTSTRAP / search_paths.vcpkg_auto_bootstrap, or run:\n"
-            "    py -3 Scripts/setup/Vcpkg.py --install"
+            "    py -3 Scripts/setup/vcpkg.py --install"
         )
     endif()
 endif()

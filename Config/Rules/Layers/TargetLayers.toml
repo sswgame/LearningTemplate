@@ -1,4 +1,4 @@
-# 타깃 경계 표 — 읽는 곳은 Scripts/generate/TargetLayers.py. `Source/` 가 모든 타깃의 include 루트라, 폴더 층 표(EngineLayers · EditorLayers)가 보지 못하는 타깃 사이 include 는
+# 타깃 경계 표 — 읽는 곳은 Scripts/generate/target_layers.py. `Source/` 가 모든 타깃의 include 루트라, 폴더 층 표(EngineLayers · EditorLayers)가 보지 못하는 타깃 사이 include 는
 # 헤더만 쓰면 컴파일 · 링크가 된다. 그래서 타깃마다 "보면 안 되는 경로" 를 적고 그 헤더마다 같은 경로의 #error 껍데기를 include 자리 맨 앞에 놓는다(EngineLayers 와 같은 틀).
 # 언리얼 Build.cs 가 선언한 모듈 폴더만 include 경로에 싣는 것과 같은 자리다(기억).
 #

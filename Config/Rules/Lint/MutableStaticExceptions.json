@@ -1,5 +1,5 @@
 {
-    "_description": "Scripts/lint/MutableStatics.py 의 예외입니다. 주인 객체의 멤버로 둘 수 없는 가변 정적 저장소(정적 등록 틀과 서비스 표의 뿌리 · OS 와 외부 라이브러리 콜백이 문맥 없이 부르는 프로세스 바닥)와 그 까닭입니다. 항목은 파일 + 변수 이름이고 까닭이 필수입니다.",
+    "_description": "Scripts/lint/mutable_statics.py 의 예외입니다. 주인 객체의 멤버로 둘 수 없는 가변 정적 저장소(정적 등록 틀과 서비스 표의 뿌리 · OS 와 외부 라이브러리 콜백이 문맥 없이 부르는 프로세스 바닥)와 그 까닭입니다. 항목은 파일 + 변수 이름이고 까닭이 필수입니다.",
     "_listEntry": [
         {
             "_path": "Source/App/AppEntry.cpp",

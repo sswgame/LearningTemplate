@@ -4,12 +4,12 @@
  * @details 칸 이름은 파서가 낸 표(`kGeneratedFile`) 하나다 — 경로 칸은 모두 리플렉션 선언(`PROPERTY( AssetPath )` · `AssetRef<T>` · `DataPath`)이고 손으로 적는 이름 표는 없다
  *          (손으로 읽던 XML 칸은 `XMLFields` 로 읽는 스키마 구조체로 옮겼다 — 언리얼이 `FSoftObjectPath` 칸만 참조로 보는 것과 같다).
  *          에셋은 경로 하나로 가리킨다(식별자 표 · `.meta` 는 없다 — 언리얼 소프트 경로와 같다). 그래서 끊어진 경로를 잡는 규칙이 참조의 정본이고, 같은 데이터 파일을
- *          다섯 곳이 읽는다: 커밋 전 검사(`Scripts/lint/AssetReferences.py`), `py -3 -m Scripts move-asset`, 헤드리스 검사(`App --check-asset-refs` — ctest
+ *          다섯 곳이 읽는다: 커밋 전 검사(`Scripts/lint/asset_references.py`), `py -3 -m Scripts move-asset`, 헤드리스 검사(`App --check-asset-refs` — ctest
  *          `ToolCheckAssetRefs`), 에디터 이름 바꾸기 · 옮기기(`EditorAssetFileCommands::moveAsset`), 팩 쿠킹의 참조 따라가기(`PackReachResult` — 쓰는 것만 담는다).
- *          뽑기 규칙은 파이썬 쪽(`AssetReferences.py` 의 `_extract*`)과 같은 것이다 — 하나를 고치면 다른 하나도 고친다(언어가 달라 코드를 나눌 수 없는 자리라 둘이다).
+ *          뽑기 규칙은 파이썬 쪽(`asset_references.py` 의 `_extract*`)과 같은 것이다 — 하나를 고치면 다른 하나도 고친다(언어가 달라 코드를 나눌 수 없는 자리라 둘이다).
  *          글 모양을 짐작해 찾지 않는다: 목록에 든 이름의 XML 속성 · XML 요소 글(`<_listX><item>…</item></_listX>` 포함) · JSON 키 · CMake 인자의 값만 보고,
  *          그 안에서도 도메인(`engine/` …)으로 시작하는 낱말만 경로다. 팩 쿠커가 쓰므로 엔진(`Engine/Asset/Reference`)에 둔다 — 배포 실행 파일도 패키징 때
- *          쿠커다(`Pack.py` 의 `--cook-all`). 예전에는 에디터 모듈에 있어 쿠커가 참조를 볼 수 없었다.
+ *          쿠커다(`pack.py` 의 `--cook-all`). 예전에는 에디터 모듈에 있어 쿠커가 참조를 볼 수 없었다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -78,7 +78,7 @@ namespace sw
         bool _bGeneratedReferrers{ false }; ///< 산출물 안의 글 에셋(임포터가 쓴 머티리얼 · 프리팹)은 참조자로 훑지 않는다 — 임포터의 몫이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
-    /** @brief 칸 목록 파일(`AssetReferenceFields::kConfigFile`)의 스키마입니다. `Scripts/lint/AssetReferences.py` 도 같은 키를 읽는다. */
+    /** @brief 칸 목록 파일(`AssetReferenceFields::kConfigFile`)의 스키마입니다. `Scripts/lint/asset_references.py` 도 같은 키를 읽는다. */
     REFLECT()
     struct AssetReferenceFieldsConfig
     {
@@ -105,7 +105,7 @@ namespace sw
     public:
         /** @brief 칸 목록 파일(프로젝트 루트 기준)입니다. 개발 정책이라 `Config/Dev` 에 둔다. */
         static constexpr const utf8* kConfigFile = "Config/Dev/AssetReferenceFields.json";
-        /** @brief 리플렉션 파서가 낸 경로 칸 표(프로젝트 루트 기준)입니다. 손으로 고치지 않는다(`Scripts/generate/AssetReferenceFieldList.py`). 칸 이름은 이 표뿐이다(`kConfigFile` 에는 칸 이름이 없다). */
+        /** @brief 리플렉션 파서가 낸 경로 칸 표(프로젝트 루트 기준)입니다. 손으로 고치지 않는다(`Scripts/generate/asset_reference_field_list.py`). 칸 이름은 이 표뿐이다(`kConfigFile` 에는 칸 이름이 없다). */
         static constexpr const utf8* kGeneratedFile = "Config/Dev/AssetReferenceFields.generated.json";
 
         /** @brief 프로젝트 루트의 칸 목록을 읽습니다. 없거나 칸이 빠지면 오류를 남기고 false 입니다(기본 목록으로 대신하지 않는다). */
@@ -135,7 +135,7 @@ namespace sw
 
         /**
          * @brief @p oldID 를 @p newID 로 옮길 때의 규칙입니다 — 그것 자신(폴더면 그 아래 전부)과, 원본(`models_raw/x.glb`)이면 그 산출물 자리(`models/x…`).
-         * @details `move-asset`(`Scripts/dev/MoveAsset.py` 의 `makeRules`)과 같은 규칙이다.
+         * @details `move-asset`(`Scripts/dev/move_asset.py` 의 `make_rules`)과 같은 규칙이다.
          */
         vector<AssetReferenceRewriteRule> makeRewriteRules( string_view oldID, string_view newID, bool bFolder ) const;
         /** @brief @p inoutText 의 참조 가운데 규칙에 맞는 것만 바꿉니다(칸 밖의 글은 그대로). 반환은 바꾼 수입니다. */

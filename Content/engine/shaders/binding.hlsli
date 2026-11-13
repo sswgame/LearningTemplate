@@ -851,7 +851,7 @@ static float4x4 InstanceData::loadPreviousWorld( uint instanceSlot, float4x4 cur
 //      쓰는 셰이더: VS 출력 구조체에 `SW_APPEARANCE_VARYING`, VS 끝에 `SW_APPEARANCE_WRITE( output, instance )`, PS 의 출력을 다 만든 **뒤**(반환 직전)에
 //      `SW_APPEARANCE_CLIP( input )`. Vulkan 1.2 타깃의 `clip` 은 OpKill 이라 버린 픽셀이 쿼드 이웃의 미분(ddx · Sample 의 밉)에서 빠진다 — 텍스처 읽기 앞에서
 //      버리면 이웃의 밉이 틀린다. 1.3 의 demote(도움 호출로 남기기)를 요구하지 않으려고 순서로 막는다(constant::render::kVulkanRequiredMinor).
-//      순서는 커밋 훅의 린트(Scripts/lint/ShaderKillOrder.py)가 본다 — 버리기 뒤에 미분을 쓰는 읽기 · 호출이 있는 함수는 커밋되지 않는다.
+//      순서는 커밋 훅의 린트(Scripts/lint/shader_kill_order.py)가 본다 — 버리기 뒤에 미분을 쓰는 읽기 · 호출이 있는 함수는 커밋되지 않는다.
 //      변형이 아니면 셋 다 비어 바이트코드가 그대로다.
 // ------------------------------------------------------------------------------
 

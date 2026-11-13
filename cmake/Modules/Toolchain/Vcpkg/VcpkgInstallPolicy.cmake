@@ -6,7 +6,7 @@
 # 게이트가 VCPKG_MANIFEST_INSTALL 을 자기 판단으로 FORCE 해 덮고, 워크트리의 vcpkg 가 본 트리 설치(포트 49 → 10)를 지웠다.
 # 그래서 두 경우는 판단 없이 읽기 전용이다 — 사용자가 끈 설치, 그리고 구성하는 소스 트리 밖의 설치 폴더(남의 트리는 빌려 읽기만 한다).
 # 게이트(Vcpkg.cmake 5 절)는 읽기 전용이면 설치 · 스탬프 쓰기를 하지 않고, 트리가 없거나 강제 설치를 부탁받으면 멈춘다.
-# `cmake -P` 로도 부를 수 있게 함수만 둔다(Scripts/setup/Tests/TestVcpkgInstallPolicy.py).
+# `cmake -P` 로도 부를 수 있게 함수만 둔다(Scripts/setup/tests/test_vcpkg_install_policy.py).
 # ==============================================================================
 include_guard(GLOBAL)
 

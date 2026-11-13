@@ -16,7 +16,7 @@ Rules:
 
 - **Platform chains** end in `#else` + `#error "Unsupported platform"` and name the platform in every branch (`SW_PLATFORM_WINDOWS` · `_LINUX` · `_ANDROID` · `_WEB`, or `SW_PLATFORM_POSIX` for the three non-Windows). Never `#if Windows #else` or `!defined( SW_PLATFORM_* )`: a new platform must fail to compile, not run the wrong branch (Unreal `PLATFORM_*`). Lint `platform-chains`, exemptions in `Config/Rules/Lint/PlatformChains.json`.
   - CMake: a chain whose first condition is only platform tests (`WIN32`, `UNIX`, `CMAKE_SYSTEM_NAME STREQUAL`, `sw_platform_name STREQUAL`, `CMAKE_HOST_*`) ends in `else()` + `message(FATAL_ERROR …)`; `if(NOT WIN32)` is only a guard that returns or stops.
-  - Scripts read the host OS only from `Scripts/common/HostPlatform.py` (`isWindowsHost`, `kHost`, `executableName`).
+  - Scripts read the host OS only from `Scripts/common/host_platform.py` (`is_windows_host`, `kHost`, `executableName`).
   - Modules run on every platform unless the manifest's `_listExcludedPlatform` says otherwise.
 - **No file-name switches** (`*DevCommands.cpp`, `*Reload.cpp`, `*Shipping.cpp`). Self-registering dev code stays in the feature's `.cpp`; the registration macro does not register in Shipping and holds the handler in a `[[maybe_unused]]` constant. Code that needs headers Shipping does not build lives in a `Dev/` folder listed in `Config/Rules/Layers/DevFolders.json` (`SW_DEV_ONLY_SOURCE_PATTERNS`; an unlisted `Dev/` stops configure). The only other dev-only pattern is `Tests/`.
 - **No stub implementation files** (`<Name>Shipping.cpp` / `<Name>Off.cpp` with empty bodies): the host would call a feature that does not exist. The feature attaches to the host, not the other way.

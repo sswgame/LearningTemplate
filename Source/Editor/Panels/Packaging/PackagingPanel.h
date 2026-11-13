@@ -1,6 +1,6 @@
 /**
  * @file PackagingPanel.h
- * @brief 패키징 창입니다. 타깃 · 게임 · 백엔드 · 산출 폴더를 고르고 `Scripts/package/Pack.py` 를 새 프로세스로 띄웁니다(언리얼 Package Project).
+ * @brief 패키징 창입니다. 타깃 · 게임 · 백엔드 · 산출 폴더를 고르고 `Scripts/package/pack.py` 를 새 프로세스로 띄웁니다(언리얼 Package Project).
  * @details 설정 · 게임 목록 · 실행 잡 · 진행 · 로그 줄은 `PackagingModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기만 한다.
  */
 #pragma once

@@ -42,7 +42,7 @@ namespace sw
         PROPERTY()
         bool _bLightPasswordHash{ false };
         /**
-         * @brief 개발 · 두 프로세스 시나리오(`Scripts/net/NetPairRun.py`)용 시드 계정입니다. **DevOnline 단위만** — 그 단위가 없는 구성(배포)은 기동 실패입니다.
+         * @brief 개발 · 두 프로세스 시나리오(`Scripts/net/net_pair_run.py`)용 시드 계정입니다. **DevOnline 단위만** — 그 단위가 없는 구성(배포)은 기동 실패입니다.
          * @details 비밀번호를 설정 파일에 적어 두는 길을 운영에 남기지 않습니다. 상용 엔진의 테스트 계정 시드(언리얼 서버의 `-ini` 계정 · 유니티 UGS 의 테스트 플레이어)와 같은 자리입니다(기억에 의존).
          */
         PROPERTY()

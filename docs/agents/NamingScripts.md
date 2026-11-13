@@ -1,6 +1,6 @@
 > 질문: CMake · Python · HLSL · 리소스 에셋의 이름과 모양은?
 > 독자: CMake, 파이썬, 셰이더를 쓰거나 리소스 에셋을 더하는 사람.
-> 결론: CMake 옵션은 `SW_*`, 함수는 `sw_camelCase`. 파이썬은 `camelCase` 함수에 타입 힌트 필수. HLSL 은 C++ 규칙을 따르되 공유 헤더 함수는 구조체 멤버. 리소스 이름은 소문자.
+> 결론: CMake 옵션은 `SW_*`, 함수는 `sw_camelCase`. 파이썬은 PEP 8(모듈 · 함수 `snake_case`, 클래스 `PascalCase`, 상수 `UPPER_CASE`)에 타입 힌트 필수. HLSL 은 C++ 규칙을 따르되 공유 헤더 함수는 구조체 멤버. 리소스 이름은 소문자.
 
 ## Naming — CMake · Python · HLSL · Resource Assets
 
@@ -15,14 +15,22 @@
 
 ### Python
 
+PEP 8 — the same rule the Unreal Python API, Godot tooling and Blender add-ons follow (user decision 2026-11-13, "follow the industry standard"). Python names do not mirror C++ names; a JSON key or C++ name read as data stays a string.
+
 | Thing | Form |
 | --- | --- |
-| Public functions | `camelCase` — PEP 8 의 snake_case 가 아니다: C++ · Python · JSON 이 한 이름 체계를 나눈다(PEP 8 도 프로젝트 안 일관성을 앞세운다). 섞인 snake_case 는 `naming-words` 가 막는다(표준 라이브러리 덮어쓰기 `log_message` 는 `_keep`) |
-| Private helpers | `camelCaseInternal` |
-| Module constants | `kPascalCase` or `_kPascalCase` |
-| Module / file names | `PascalCase.py` |
+| Module / package (file and folder) names | `snake_case` (`naming_words.py`, `Scripts/package/tests/`); never a standard-library module name |
+| Functions, methods, variables, parameters, attributes | `snake_case` (`collect_declarations`, `list_problem`); a flag drops the C++ `b` prefix (`dry_run`, `is_folder`, like Unreal Python's `bHidden` → `hidden`) |
+| Private (module- or class-only) helpers | leading `_` (`_parse_rule`) — not an `Internal` suffix |
+| Classes, exceptions, `TypeVar`s | `PascalCase` (`LintScope`, `GeneratorError`, `TItem`) |
+| Module and class-level constants, enum members | `UPPER_CASE` (`CONFIG_PATH`, `_SUBCOMMAND`, `ExitCode.PASSED`); a function-local constant is an ordinary `snake_case` local |
+| Overrides of an outside API | the outside spelling (`setUp`, `do_POST`), listed in `NamingWords.json` `_keep` |
+| CLI subcommands (`py -3 -m Scripts <name>`) and lint rule ids | `kebab-case` (`api-diff`, `naming-words`) |
 | JSON keys of Python-owned contracts (`Config/Engine/CookContract.json`, hand-read import configs) | `snake_case` |
 | JSON keys read through reflection | the C++ member name (`_width`) |
+| Shell scripts | `snake_case.sh` (`Scripts/dev/preflight.sh`); shell functions `snake_case` |
+
+`naming-words` checks the PEP 8 shapes (functions, classes, module constants, module files and folders) with the word table; `ProjectConstants` constants become CMake variables as `SW_<NAME>`.
 
 Shape (examples in `docs/04_CodingGuidelines.md` 8). Code must run on Python 3.10.
 
@@ -88,5 +96,5 @@ C++ binds globals and cbuffer members **by name** (`shaderslot::resname` / `cbna
   - PBR glTF materials: a static glTF material with a base-color texture gets `models/<name>/materials/<material>.material` from `engine/materials/pbrmaterial.material` (`pbr_lit.hlsl`: albedo · OpenGL normal · glTF ORM). Scenes reference that path. Images under `textures_raw/` are used in place; embedded images go to the shared folder below.
 - **Shared import results** are merged by content (Unreal DDC, Unity Library; `ImportedAssetStore`): the key mixes the result bytes with the settings that made them. Layout: `<domain>/models/_shared/materials/<key>.material` (only fields that differ from the parent; `parent` = the `EngineDefaultAssets` template) · `<domain>/models/_shared/clips/<key>.animclip` · `<domain>/textures_raw/_shared/<lowercase rule name>/<key>.<ext>` (rule from `TextureImportConfig::findMatchingRule`). No `models_raw/_shared.*` source. Never reference `_shared` paths from hand-written data — reference the material slot or a clip set. A full import removes unreferenced shared files; editing or deleting one is drift.
 - **Animation sets**: `*.animset.xml` is a name → clip table (`AnimationSet`). The import writes `models/<name>/<name>.animset.xml`; a hand-written set derives with `_base="<set>"` (`DataInheritance`; `_op="Replace"` turns a `path` line into a `set` line) and borrows with `<clip name set [source]/>`, never a `path`. Animators (`_animationSetPath`), graphs and characters look clips up by name; a name holding `/` is a clip file (clip preview only).
-- **Domains and packs**: `engine` · `common` · `game/<pack>` · `dlc/<name>` each cook into their own pack, and an import writes only into its own domain. A game may reference `common/` and `engine/`; `common/` never references a game, nor one game another. Two domains needing one source → move it up to `common/` with `Scripts/dev/MoveAsset.py`, and its `credits.md` line with it. `Scripts/package/Pack.py` always stages `engine.pack` and `common.pack`; a game independent of `common` copies the sources into its own domain.
+- **Domains and packs**: `engine` · `common` · `game/<pack>` · `dlc/<name>` each cook into their own pack, and an import writes only into its own domain. A game may reference `common/` and `engine/`; `common/` never references a game, nor one game another. Two domains needing one source → move it up to `common/` with `Scripts/dev/move_asset.py`, and its `credits.md` line with it. `Scripts/package/pack.py` always stages `engine.pack` and `common.pack`; a game independent of `common` copies the sources into its own domain.
 - **Scanned assets (Poly Haven, CC0)**: `models_raw/polyhaven/` and `textures_raw/polyhaven/<asset>/`, binaries in Git LFS (`.gitattributes`), each recorded in the pack's `credits.md`. Tiling surfaces use a `pbr_lit` material with `_worldTileSize` (world-aligned UV) instead of stretched mesh UVs.

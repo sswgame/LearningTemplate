@@ -3,7 +3,7 @@
  * @brief ReflectionParser — 어노테이션/CLI/템플릿 계약 상수
  * @details clang 인자·SDK 상대경로·lookback·컴포넌트 베이스 타입 등은
  *          Config/Environment/parser_config.defaults.json 에서 로드합니다. 산출물 확장자 · 스탬프 · 머리 글처럼 CMake 와 함께 지키는 생성 계약은
- *          `sw::config`(Scripts/common/ProjectConstants.py 한 곳)에 있습니다.
+ *          `sw::config`(Scripts/common/project_constants.py 한 곳)에 있습니다.
  *          여기에는 ReflectionMacros / 생성 코드와 맞춰야 하는 컴파일 타임 계약만 둡니다.
  */
 #pragma once

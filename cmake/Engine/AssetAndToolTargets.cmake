@@ -36,7 +36,7 @@ endif()
 # 쿠킹하는 호스트가 정한다(Server 가 구우면 서버 팩이다). 팩 설정은 Config/Engine/PackConfig.json 이다.
 # 셰이더도 같은 스테이징에 굽고(바뀐 것만) 소스와 맞는지 본 뒤 팩에 담는다(`cookShadersForPack`) — 따로 주는 인자가 없다.
 # 쿠킹 로그는 고정 자리(`<빌드>/Testing/Logs/Cook.log`)에 남긴다 — 빌드 출력에 섞이면 첫 굽기만 틀린 일(팩에 빠진 셰이더 바이너리)을 나중에 볼 수 없었다.
-# `Scripts/dev/ShippingCheck.py` 가 실패할 때 이 로그의 오류 · 경고를 함께 찍는다(같은 자리 이름 `kCookLogName`).
+# `Scripts/dev/shipping_check.py` 가 실패할 때 이 로그의 오류 · 경고를 함께 찍는다(같은 자리 이름 `COOK_LOG_NAME`).
 set(swCookArgs --cook-all "--cooked-dir=${CMAKE_BINARY_DIR}/Cooked" "--pack-dir=${swPackOutputDir}" "-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Cook.log")
 # Shipping 은 활성 게임(SW_ACTIVE_GAME)의 팩만 굽는다 — 쓰지 않는 게임 팩에 쿠킹 시간을 들이지 않는다(`Pack` 도 그 게임의 팩만 고른다).
 # Dev 프리셋은 실행할 때 `-game=` 으로 게임을 고르므로 어느 팩이 필요할지 몰라 모두 굽는다.
@@ -97,11 +97,11 @@ if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET AND EXISTS "${VC
 	file(GLOB swVendoredLicenses CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/ThirdParty/*/LICENSE.md")
 	add_custom_command(
 		OUTPUT "${swThirdPartyNotices}"
-		COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/ThirdPartyNotices.py"
+		COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/third_party_notices.py"
 			--manifest "${CMAKE_SOURCE_DIR}/vcpkg.json" --installed "${VCPKG_INSTALLED_DIR}"
 			--triplet "${VCPKG_TARGET_TRIPLET}" --out "${swThirdPartyNotices}" --vendored-root "${CMAKE_SOURCE_DIR}/ThirdParty"
 		DEPENDS "${CMAKE_SOURCE_DIR}/vcpkg.json" "${VCPKG_INSTALLED_DIR}/vcpkg/status"
-			"${CMAKE_SOURCE_DIR}/Scripts/generate/ThirdPartyNotices.py" ${swVendoredLicenses}
+			"${CMAKE_SOURCE_DIR}/Scripts/generate/third_party_notices.py" ${swVendoredLicenses}
 		COMMENT "Collecting third-party license notices..."
 		VERBATIM
 	)

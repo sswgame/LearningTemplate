@@ -62,7 +62,7 @@ namespace sw
      *          - 형식 안의 형식은 `io.value( _child )` 로 부른다. 바깥 사본 하나로 원자성이 끝나 안쪽은 사본을 또 만들지 않는다.
      *
      *          바이트 약속: 칸은 `Archive` 의 `<<` · `>>` 그대로 놓이고 개수는 uint32 다. 이름은 길이가 붙은 글자이고 빈 이름은 빈 글이다.
-     *          손으로 `writeState` · `readState` 를 짝지어 쓰는 모양은 린트(`Scripts/lint/StateShape.py`)가 막는다.
+     *          손으로 `writeState` · `readState` 를 짝지어 쓰는 모양은 린트(`Scripts/lint/state_shape.py`)가 막는다.
      */
     class SW_API StateIO final
     {

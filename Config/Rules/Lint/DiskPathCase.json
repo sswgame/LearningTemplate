@@ -1,5 +1,5 @@
 {
-    "_comment": "경로 포함 · 같음 판정 함수에 소문자로 접은 글을 넘겨도 되는 자리(Scripts/lint/DiskPathCase.py) — 디스크 경로가 아니라 리소스 id(늘 소문자)끼리 견주는 곳이다. 키는 경로::식별자, 값은 까닭이다.",
+    "_comment": "경로 포함 · 같음 판정 함수에 소문자로 접은 글을 넘겨도 되는 자리(Scripts/lint/disk_path_case.py) — 디스크 경로가 아니라 리소스 id(늘 소문자)끼리 견주는 곳이다. 키는 경로::식별자, 값은 까닭이다.",
     "_exceptions": {
         "Source/Editor/Common/Commands/Asset/EditorAutomationAssetCommands.cpp::normalized": "임포트 대상 폴더는 리소스 id(`scratch/import/…`)라 id 규칙(소문자)으로 견준다 — 디스크 경로는 그 뒤에 joinPath 로 만든다"
     }

@@ -1,5 +1,5 @@
 {
-    "_comment": "C++ 기본값을 가져도 되는 이름 · 경로 PROPERTY 칸(Scripts/lint/RequiredNameFields.py). _types · _typePrefixes 는 검사할 형식, _exceptions 의 키는 헤더경로::타입::칸, 값은 까닭이다. 들일 수 있는 까닭은 셋이다 — (1) 엔진 데이터가 정의하는 표의 이름이고 모르는 이름이 검증 · 오류 id 로 드러난다, (2) 다른 데이터를 가리키지 않는 자기 값(주소 · 모드 · 자기 이름표), (3) 쓰는 게임 데이터가 없는 장르 킷의 규칙 기본값(게임이 킷을 들일 때 그 카탈로그에 적고 Required 로 바꾼다).",
+    "_comment": "C++ 기본값을 가져도 되는 이름 · 경로 PROPERTY 칸(Scripts/lint/required_name_fields.py). _types · _typePrefixes 는 검사할 형식, _exceptions 의 키는 헤더경로::타입::칸, 값은 까닭이다. 들일 수 있는 까닭은 셋이다 — (1) 엔진 데이터가 정의하는 표의 이름이고 모르는 이름이 검증 · 오류 id 로 드러난다, (2) 다른 데이터를 가리키지 않는 자기 값(주소 · 모드 · 자기 이름표), (3) 쓰는 게임 데이터가 없는 장르 킷의 규칙 기본값(게임이 킷을 들일 때 그 카탈로그에 적고 Required 로 바꾼다).",
     "_types": ["string", "hashed_string", "DataPath", "AssetID", "TagID", "vector<string>", "vector<hashed_string>", "vector<DataPath>"],
     "_typePrefixes": ["AssetRef<"],
     "_exceptions": {

@@ -1,0 +1,157 @@
+{
+  "_comment": "도구 정책 규칙(.claude/hooks/tool_policy.py). 각 줄: 이 도구 · 경로 · 셸 명령을 쓰기 전에 requiresAny 중 하나를 이 에이전트가 먼저 했어야 한다. 표지는 skill:<이름>(Skill 도구), graph(graphify query · path · explain 또는 mcp__graphify__), context7(이름에 context7 가 든 도구). windowMinutes 가 있으면 그 시간 안에 한 것만 센다.",
+  "_rules": [
+    {
+      "name": "graph-before-reading-source",
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash",
+        "PowerShell"
+      ],
+      "path": "/Source(/|$)",
+      "shell": "\\b(sed|cat|head|tail|grep|rg|awk|less)\\b[^|;&]*Source/",
+      "requiresAny": [
+        "graph"
+      ],
+      "windowMinutes": 60,
+      "hint": "graphify 로 범위를 먼저 좁힌다: 저장소 루트에서 `graphify explain \"<심볼>\"` · `graphify query \"<질문>\" --budget 4000`(워크트리에서는 `--graph \"$(git rev-parse --path-format=absolute --git-common-dir)/../graphify-out/graph.json\"`), 또는 mcp__graphify__query_graph · get_node · get_neighbors."
+    },
+    {
+      "name": "ponytail-before-editing-code",
+      "tools": [
+        "Edit",
+        "Write",
+        "NotebookEdit"
+      ],
+      "path": "/(Source|Scripts|cmake|Content|Test|Config)/",
+      "requiresAny": [
+        "skill:ponytail"
+      ],
+      "hint": "코드를 고치기 전에 `Skill` 로 ponytail 을 부른다(구조 개편이면 장기 이득인 구조 변경은 과감히)."
+    },
+    {
+      "name": "taste-before-editor-ui",
+      "tools": [
+        "Edit",
+        "Write"
+      ],
+      "path": "/(Source/Editor/(Panels|Common/GUI|Common/Widgets|Viewport)|Content/editor/theme)/",
+      "requiresAny": [
+        "skill:taste-skill"
+      ],
+      "hint": "에디터 UI 를 고치기 전에 `Skill` 로 taste-skill 을 부르고 references/app-screens.md 를 따른다."
+    },
+    {
+      "name": "security-before-online-server",
+      "tools": [
+        "Edit",
+        "Write"
+      ],
+      "path": "/(Kits/Feature/Online|Runtime/Online|Source/Server|Core/Network/Security)/",
+      "requiresAny": [
+        "skill:security-and-hardening"
+      ],
+      "hint": "온라인 · 서버 · 보안 코드를 고치기 전에 `Skill` 로 security-and-hardening 을 부른다(입력 검증 · 인증 · 비밀 값)."
+    },
+    {
+      "name": "docs-before-external-api",
+      "tools": [
+        "Edit",
+        "Write"
+      ],
+      "path": "/Source/Engine/(Graphics/RHI/(Vulkan|DX11|DX12|OpenGL|WebGPU)|Platform/(Android|Web))/",
+      "requiresAny": [
+        "context7",
+        "skill:source-driven-development"
+      ],
+      "hint": "외부 API(Vulkan · D3D · GL · WebGPU · Android · Emscripten)를 쓰는 코드를 고치기 전에 그 판의 문서를 찾는다: context7 도구, 또는 `Skill` 로 source-driven-development."
+    },
+    {
+      "name": "perf-skill-before-perf-work",
+      "tools": [
+        "Bash",
+        "PowerShell"
+      ],
+      "shell": "-gv_profile(Frames|Seconds)|Benchmark|benchmark\\.scenario",
+      "requiresAny": [
+        "skill:performance-optimization"
+      ],
+      "hint": "성능을 재거나 바꾸기 전에 `Skill` 로 performance-optimization 을 부른다(측정 먼저)."
+    },
+    {
+      "name": "scenario-debug-before-manual-scenario",
+      "tools": [
+        "Bash",
+        "PowerShell"
+      ],
+      "shell": "App(\\.exe)?\\b[^|;&]*-scenario=",
+      "requiresAny": [
+        "skill:scenario-debug",
+        "skill:debugging-and-error-recovery"
+      ],
+      "hint": "시나리오를 손으로 돌리는 것은 실패 추적이다 — `Skill` 로 scenario-debug(또는 debugging-and-error-recovery)를 먼저 부른다."
+    },
+    {
+      "name": "linux-verify-before-linux",
+      "tools": [
+        "Bash",
+        "PowerShell"
+      ],
+      "shell": "linux_scenarios\\.py",
+      "requiresAny": [
+        "skill:linux-verify"
+      ],
+      "hint": "Linux 빌드 · 시나리오 전에 `Skill` 로 linux-verify 를 부른다."
+    },
+    {
+      "name": "preflight-before-push",
+      "tools": [
+        "Bash",
+        "PowerShell"
+      ],
+      "shell": "\\bgit\\s+push\\b|preflight\\.sh",
+      "requiresAny": [
+        "skill:preflight"
+      ],
+      "hint": "묶음 검증 · push 전에 `Skill` 로 preflight 를 부른다."
+    },
+    {
+      "name": "review-before-integrating-worker",
+      "tools": [
+        "Bash",
+        "PowerShell"
+      ],
+      "shell": "\\bgit\\s+cherry-pick\\b|pick\\.sh",
+      "requiresAny": [
+        "skill:code-review-and-quality"
+      ],
+      "hint": "작업자 커밋을 합치기 전에 `Skill` 로 code-review-and-quality 를 부른다."
+    },
+    {
+      "name": "no-polling-wait",
+      "tools": [
+        "Bash",
+        "PowerShell"
+      ],
+      "shell": "\\buntil\\b[^\\n]*;\\s*do\\s+(sleep\\b|:\\s*;)|\\bwhile\\b[^\\n]*;\\s*do\\s+sleep\\b|do\\s+:\\s*;\\s*done",
+      "requiresAny": [
+        "never"
+      ],
+      "hint": "폴링 루프(until/while … sleep, do :; done)는 쓰지 않는다 — 끝날 수 없는 조건이면 셸이 영원히 남고 작업자가 '백그라운드 대기'로 묶인다(2026-11-12 사용자 지적). 긴 명령은 run_in_background 로 돌리고 완료 알림을 기다린다."
+    },
+    {
+      "name": "one-build-in-main-tree",
+      "tools": [
+        "Bash",
+        "PowerShell"
+      ],
+      "shell": "(cmake\\s+(--build|--preset)|\\bninja\\b|\\bctest\\b)[^\\n]*\\.claude.worktrees|\\.claude.worktrees[^\\n]*(cmake\\s+(--build|--preset)|\\bninja\\b|\\bctest\\b)",
+      "requiresAny": [
+        "never"
+      ],
+      "hint": "워크트리에서 빌드 · 구성 · ctest 를 돌리지 않는다 — 빌드는 본 트리에서 하나만(디스크 · 공용 vcpkg 충돌, 2026-11-12 사용자 지시). 작업자는 코드 → 린트 → 커밋만 하고 컴파일 · 실행은 통합이 본 트리 빌드에서 한다."
+    }
+  ]
+}

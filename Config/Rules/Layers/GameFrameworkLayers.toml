@@ -1,4 +1,4 @@
-# GameFramework 런타임 층 표 — 읽는 곳은 Scripts/generate/ModuleLayers.py(→ GameFrameworkLayers.cmake). 엔진 층 표(EngineLayers.toml)와 같은 틀이다:
+# GameFramework 런타임 층 표 — 읽는 곳은 Scripts/generate/module_layers.py(→ GameFrameworkLayers.cmake). 엔진 층 표(EngineLayers.toml)와 같은 틀이다:
 # Source/GameFramework/CMakeLists.txt 가 층마다 부분(OBJECT, 오브젝트는 GameFramework 이미지 안)을 짓고 위 층 헤더 자리에 #error 껍데기를 놓아,
 # 위 층 헤더 include 가 컴파일에서 멈춘다(헤더를 거쳐 닿는 전이 include 도 같다).
 # 범위는 Source/GameFramework/Runtime 뿐이다 — Client · Kits · Plugin(그리고 서버 조립)은 Runtime 위라 이 표가 다루지 않는다(Kits 경계는 TargetLayers.toml).

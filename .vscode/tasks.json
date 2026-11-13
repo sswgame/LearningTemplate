@@ -64,7 +64,7 @@
         {
             "label": "Setup: Environment",
             "type": "shell",
-            "command": "py -3 Scripts/setup/Environment.py"
+            "command": "py -3 Scripts/setup/environment.py"
         }
     ]
 }
