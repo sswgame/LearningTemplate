@@ -17,6 +17,9 @@ Scripts/dev/rename_identifier.py
 - `"scope": "cmake"` — CMake 파일(`*.cmake` · `CMakeLists.txt`)만 바꾼다. CMake 지역 변수처럼 C++ · 파이썬에 같은 철자가 있어도 다른 이름인 것.
   CMake 안의 낙타 이름 · 밑줄 이름은 모두 우리 식별자라 흔한 이름 검사 대신 그 꼴을 본다.
 - `"ban": false` — 옛 이름을 `_bannedNames` 에 올리지 않는다(지역 변수: 옛 철자가 다른 뜻으로 다시 쓰일 수 있다).
+- 리플렉션 프로퍼티(`PROPERTY(...)` 가 붙은 `_` 멤버)는 데이터에 직렬화 이름(`_bWaitForStability` → `waitForStability`,
+  `XMLFields::getAttributeName` 규칙)으로 적힌다 — 그 쌍도 속성 · 요소 · 따옴표 키 자리에서 함께 바꾼다. 같은 직렬화 이름을 다른 멤버도 쓰거나
+  흔한 낱말이면 겹친 자리를 알리고 멈춘다. 그 데이터를 손으로 옮긴 뒤 `"serializedName": false` 로 멤버 이름만 바꾼다.
 - `--reapply` — 다른 갈래를 병합한 뒤 같은 쌍 표(`Config/Rules/Renames/`)를 다시 돌린다. 새 이름이 이미 있는 것이 정상이라 겹침 검사를 건너뛴다.
 """
 
@@ -35,7 +38,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.git import run_git_or_raise  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
-from common.rename_scope import check_rewrite_unmarked_lines, rewrite_rename_target  # noqa: E402
+from common.rename_scope import (  # noqa: E402
+    check_rewrite_unmarked_lines, check_serialized_rename, collect_reflected_properties, plan_serialized_rename, replace_serialized_name, rewrite_rename_target,
+)
 
 ROOTS = ("Source", "Content", "Config", "docs", "Scripts", "Test", "cmake", ".claude/skills", "AGENTS.md", "CLAUDE.md", "CMakeLists.txt", "CMakePresets.json", "ThirdParty")
 TEXT_SUFFIXES = {".h", ".cpp", ".inl", ".hlsl", ".hlsli", ".py", ".md", ".json", ".xml", ".txt", ".cmake", ".material", ".ini", ".toml", ".yaml", ".yml",
@@ -133,12 +138,22 @@ def rename_all(root: Path, list_pair: Sequence[dict], dry_run: bool, reapply: bo
     list_file = list_text_files(root)
     texts = {path: path.read_text(encoding="utf-8", errors="strict") for path in list_file}
     problems = 0
+    relative_texts = {path.relative_to(root).as_posix(): text for path, text in texts.items()}
+    properties = collect_reflected_properties({relative: text for relative, text in relative_texts.items() if relative.startswith("Source/") and relative.endswith(".h")})
+    serialized_pairs: dict[str, tuple[str, str]] = {}   # 옛 멤버 이름 → 데이터에서 함께 바꿀 직렬화 이름 쌍
     for pair in list_pair:
         reason = check_pair(pair["old"], pair["new"], pair.get("scope"))
         if reason is not None:
             print(f"[거절] {pair['old']} → {pair['new']}: {reason}")
             problems += 1
             continue
+        if pair.get("scope") is None and pair.get("serializedName", True):
+            serialized, list_reason = plan_serialized_rename(properties, relative_texts, pair["old"], pair["new"])
+            for reason in list_reason:
+                print(f"[거절] {pair['old']} → {pair['new']}: {reason}. 데이터를 손으로 옮긴 뒤 \"serializedName\": false")
+            problems += len(list_reason)
+            if serialized is not None:
+                serialized_pairs[pair["old"]] = serialized
         if reapply:
             continue
         clash = [path for path, text in texts.items() if is_clash_file(path, pair) and replace_word(text, pair["new"], pair["new"])[1] > 0]
@@ -157,11 +172,23 @@ def rename_all(root: Path, list_pair: Sequence[dict], dry_run: bool, reapply: bo
             if not is_in_scope(path, pair):
                 continue
             changed, count = replace_word_outside_marked_lines(texts[path], old, new, path.relative_to(root).as_posix())
+            if old in serialized_pairs:
+                serialized_count = 0
+
+                def rewrite_serialized(part: str) -> str:
+                    nonlocal serialized_count
+                    rewritten, part_count = replace_serialized_name(part, *serialized_pairs[old])
+                    serialized_count += part_count
+                    return rewritten
+
+                changed = rewrite_rename_target(path.relative_to(root).as_posix(), changed, rewrite_serialized)
+                count += serialized_count
             if count:
                 texts[path] = changed
                 touched.append((path.relative_to(root).as_posix(), count))
         data = [entry for entry in touched if entry[0].startswith("Content/")]
-        print(f"{old} → {new}: 파일 {len(touched)} · 바꿈 {sum(count for _, count in touched)}" + (f" · 데이터 {len(data)}" if data else ""))
+        print(f"{old} → {new}: 파일 {len(touched)} · 바꿈 {sum(count for _, count in touched)}" + (f" · 데이터 {len(data)}" if data else "")
+              + (" · 직렬화 이름 {} → {}".format(*serialized_pairs[old]) if old in serialized_pairs else ""))
         for path, count in data[:20]:
             print(f"    데이터 {path} ({count})")
         if dry_run or not touched:
@@ -198,6 +225,7 @@ def self_check() -> None:
     text, count = replace_word_outside_marked_lines("`oldHelperName`\nnot `oldHelperName` <!-- keep-old-name -->\n", "oldHelperName", "newHelperName")
     assert count == 1 and text == "`newHelperName`\nnot `oldHelperName` <!-- keep-old-name -->\n", (text, count)
     check_rewrite_unmarked_lines()
+    check_serialized_rename()
     assert check_pair("swText", "text", CMAKE_SCOPE) is None, "CMake 낙타 지역 변수는 짧아도 받는다"
     assert check_pair("target", "goal", CMAKE_SCOPE) is not None, "CMake 소문자 한 낱말은 명령 · 키워드와 겹친다"
     assert is_cmake_file(Path("cmake/A.cmake")) and is_cmake_file(Path("Source/CMakeLists.txt")) and not is_cmake_file(Path("Source/A.cpp"))

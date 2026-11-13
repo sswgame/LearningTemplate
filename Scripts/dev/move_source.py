@@ -11,7 +11,7 @@ move-source: 경로는 `Source/` 기준(폴더면 안의 파일 전부, 하위 �
      폴더 접두어(`Engine/X/` — CMake 정규식 · 주석)를 새 경로로
   3. 같은 폴더 짧은 include(`#include "Y.h"`)가 옮긴 뒤 다른 폴더를 가리키게 되면 전체 경로로
   4. 고친 C++ 파일의 include 순서를 include-order 규칙으로(`format` 의 첫 단계와 같은 픽서)
-rename-symbol: 낱말 경계로 바꾼다(부분 일치 없음, 코드 · 문서 .md · 데이터 Content · 설정 Config — 린트 예외 표 포함, 금지 이름 표의 키와 이름 기준선은 지킨다). 옛 이름을 일부러 적은 줄은 `keep-old-name` 표지로 남는다. 새 이름이 이미 쓰이고 있으면 겹친 파일을 알리고 멈춘다(`--force` 로 강행).
+rename-symbol: 낱말 경계로 바꾼다(부분 일치 없음, 코드 · 문서 .md · 데이터 Content · 설정 Config — 린트 예외 표 포함, 금지 이름 표의 키와 이름 기준선은 지킨다). 옛 이름을 일부러 적은 줄은 `keep-old-name` 표지로 남는다. 새 이름이 이미 쓰이고 있으면 겹친 파일을 알리고 멈춘다(`--force` 로 강행). 리플렉션 프로퍼티(`PROPERTY` 가 붙은 `_` 멤버)는 데이터의 직렬화 이름(`_bFooBar` → `fooBar`)도 함께 바꾸고, 그 이름을 다른 멤버도 쓰면 멈춘다.
   C 계열 소스(C++ · HLSL)의 문자열 리터럴 안은 기본으로 건너뛰고 그 파일을 알린다(`--include-strings` 로 함께 바꾼다).
 """
 
@@ -28,7 +28,10 @@ from pathlib import Path
 from common.exit_code import ExitCode
 from common.git import run_git
 from common.paths import get_project_root
-from common.rename_scope import check_rewrite_unmarked_lines, rewrite_rename_target, rewrite_unmarked_lines
+from common.rename_scope import (
+    check_rewrite_unmarked_lines, check_serialized_rename, collect_reflected_properties, plan_serialized_rename, replace_serialized_name, rewrite_rename_target,
+    rewrite_unmarked_lines,
+)
 
 TEXT_SUFFIX = {".h", ".hpp", ".inl", ".cpp", ".c", ".cmake", ".txt", ".md", ".json", ".in", ".py", ".toml", ".xxx", ".natvis", ".hlsl", ".hlsli", ".xml", ".po", ".tpl",
                ".manifest", ".sh"}
@@ -307,6 +310,7 @@ def main_rename(argv: list[str]) -> int:
     check_rewrite_outside_strings()
     check_path_rule_single_pass()
     check_rewrite_unmarked_lines()
+    check_serialized_rename()
 
     root = get_project_root()
     list_pair = [pair.partition("=")[::2] for pair in args.pair]
@@ -360,8 +364,25 @@ def main_rename(argv: list[str]) -> int:
         if list_clash and not args.force:
             clash = True
             print(f"[rename-symbol] '{new}' 이 이미 쓰인다: " + ", ".join(str(path.relative_to(root)) for path in list_clash[:5]), file=sys.stderr)
+    # 리플렉션 프로퍼티는 데이터에 직렬화 이름으로 적힌다 — 그 쌍도 함께 바꾸고, 어느 멤버 것인지 가릴 수 없으면 멈춘다(`rename_scope.plan_serialized_rename`).
+    map_relative = {path.relative_to(root).as_posix(): text for path, text in map_text.items()}
+    properties = collect_reflected_properties({relative: text for relative, text in map_relative.items() if relative.startswith("Source/") and relative.endswith(".h")})
+    list_serialized: list[tuple[str, str]] = []
+    for old, new in list_pair:
+        serialized, list_reason = plan_serialized_rename(properties, map_relative, old, new)
+        for reason in list_reason if not args.force else []:
+            clash = True
+            print(f"[rename-symbol] {old}: {reason}. 데이터를 손으로 옮긴 뒤 --force", file=sys.stderr)
+        if serialized is not None:
+            list_serialized.append(serialized)
     if clash:
         return ExitCode.VIOLATION
+
+    def rewrite_serialized(part: str) -> str:
+        for serialized_old, serialized_new in list_serialized:
+            part = replace_serialized_name(part, serialized_old, serialized_new)[0]
+        return part
+
     list_word_rule = [(re.compile(rf"\b{re.escape(old)}\b"), new) for old, new in list_pair]
 
     def rewrite_words(part: str) -> str:
@@ -373,12 +394,15 @@ def main_rename(argv: list[str]) -> int:
     list_changed = []
     for path, text in map_text.items():
         rewritten = rewrite_file(path, text, rewrite_words)
+        if list_serialized:   # 직렬화 이름은 문자열 · 데이터 안에 산다 — 문자열 건너뛰기와 따로 건다
+            rewritten = rewrite_rename_target(path.relative_to(root).as_posix(), rewritten, rewrite_serialized)
         if rewritten != text:
             changed_count += 1
             list_changed.append(path)
             if not args.dry_run:
                 write_text(path, rewritten)
-    print(f"[rename-symbol] {changed_count} 파일" + (" (dry-run)" if args.dry_run else ""))
+    print(f"[rename-symbol] {changed_count} 파일" + (" (dry-run)" if args.dry_run else "")
+          + "".join(f" · 직렬화 이름 {serialized_old} → {serialized_new}" for serialized_old, serialized_new in list_serialized))
     report_skipped()
     return ExitCode.PASSED if args.dry_run else format_changed(root, list_changed)
 
