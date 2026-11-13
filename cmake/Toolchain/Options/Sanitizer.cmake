@@ -10,7 +10,7 @@ endif()
 add_library(sw_sanitizer INTERFACE)
 
 # 리눅스 Clang 은 새니타이저 런타임을 공유 라이브러리로 링크한다(GCC 는 원래 그렇다). 기본(정적)이면 런타임이 App 에 들어가는데, 리눅스 심볼 숨김의
-# `--exclude-libs,ALL`(cmake/Engine/BuildLayout.cmake)이 그 심볼까지 가려 모듈 .so 가 __asan_* · __tsan_* 을 찾지 못하고 링크에서 진다.
+# `--exclude-libs,ALL`(cmake/Modules/Build/BuildLayout.cmake)이 그 심볼까지 가려 모듈 .so 가 __asan_* · __tsan_* 을 찾지 못하고 링크에서 진다.
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	target_link_options(sw_sanitizer INTERFACE -shared-libsan -frtlib-add-rpath)
 endif()
