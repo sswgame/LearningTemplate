@@ -598,8 +598,11 @@ namespace sw
         _launch.getEngine().update( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
         getModuleManager()->endEditorFrame();
 
+        // 프레임 경계의 장치 교체 · 다시 만들기 — 개발 구성은 교체기(메뉴 · 콘솔 교체 + 실패 집계)를 거치고, 배포는 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)만 예약한다.
         if constexpr ( build::kShipping == false )
             _pBackendSwitcher->applyIfPending();
+        else if ( const RHI* pRHI = _launch.getEngine().getRHI(); pRHI != nullptr && pRHI->hasPendingBackendChange() )
+            (void)getModuleManager()->applyPendingBackendChange( _launch.getEngine() ); // 실패하면 렌더 드라이버가 종료(DeviceLost)를 이미 요청했다
 
         _launch.getEngine().endFrame();
         onStartupFrameEnded();

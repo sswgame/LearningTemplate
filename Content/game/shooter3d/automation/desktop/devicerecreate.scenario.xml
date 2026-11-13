@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  렌더 장치 분실 → 다시 만들기(감사 R-2) — 장치 분실 정책을 Recreate 로 덮고(gv_deviceLostPolicy=2, 설정 파일은 Quit 그대로) rhi.removeDevice 로 DX12 장치를 제거한다.
+  엔진은 끝내지 않고 프레임 끝에서 같은 백엔드로 장치를 다시 만들어(모듈 내리기 → 장치 → 자원 다시 올리기 → 모듈 세우기 — 백엔드 교체와 같은 길) 장면을 다시 묶어야 한다.
+  다시 만든 횟수(Render.DeviceRecreateCount)가 1 이 되고, 백엔드가 그대로이며, 씬이 남아 있고, 그 뒤 화면을 실제로 그려 사진이 써지는지(Screenshot 이 끝나야 Pass) 본다.
+  백엔드는 DX12 로 묶는다(OpenGL · WebGPU 는 다시 만들 수 없어 Quit 로 답한다 — RHI::canRecreateAfterDeviceLost). 장치를 제거하므로 체인에 넣지 않고 desktop/ 에 둔다.
+  실행: App -scenario=game/shooter3d/automation/desktop/devicerecreate.scenario.xml -unattended (ctest -R Scenario.shooter3d.desktop.devicerecreate)
+-->
+<Scenario name="game.shooter3d.devicerecreate" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_rhiBackend" value="1"/>
+	<Launch variable="gv_deviceLostPolicy" value="2"/>
+	<AllowLog id="D3D12.RemovingD3D12DeviceRequest" reason="rhi.removeDevice 가 일부러 장치를 제거한다"/>
+	<AllowLog id="D3D12.D3D12DeviceLostWhile" reason="제거된 장치의 다음 GPU 호출이 손실을 본다"/>
+	<AllowLog id="GPUBreadcrumbs.DeviceLostLastPass" reason="손실을 처음 본 백엔드의 브레드크럼 보고"/>
+	<AllowLog id="GPUBreadcrumbs.DeviceLostLastCompleted" reason="손실을 처음 본 백엔드의 브레드크럼 보고"/>
+	<AllowLog id="GPUBreadcrumbs.DeviceLostGPUBreadcrumb" reason="손실을 처음 본 백엔드의 브레드크럼 보고"/>
+	<AllowLog id="GPUBreadcrumbs.DeviceLostGPULast" reason="손실을 처음 본 백엔드의 브레드크럼 보고"/>
+	<AllowLog id="GPUBreadcrumbs.DeviceLostBackendLeaves" reason="손실을 처음 본 백엔드의 브레드크럼 보고"/>
+	<AllowLog id="Render.DeviceLostRecreate" reason="Recreate 정책이 장치를 다시 만든다 — 이 시나리오가 보는 것"/>
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<Wait frames="30"/>
+	<Expect watch="Render.DeviceRecreateCount" equals="0"/>
+	<DevCommand line="rhi.removeDevice"/>
+	<WaitUntil watch="Render.DeviceRecreateCount" equals="1" timeoutFrames="600"/>
+	<Expect watch="RHI.Backend" equals="1"/>
+	<Expect watch="Scene.ObjectCount" atLeast="1"/>
+	<ExpectLog id="Render.DeviceLostQuit" count="0"/>
+	<!-- 다시 만든 장치로 계속 그린다 — 사진이 써져야 Pass 가 끝난다 -->
+	<Wait frames="30"/>
+	<Screenshot file="devicerecreate.ppm"/>
+	<Pass/>
+</Scenario>

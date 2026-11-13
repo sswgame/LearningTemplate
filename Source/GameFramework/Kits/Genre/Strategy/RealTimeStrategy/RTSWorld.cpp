@@ -6,6 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/TimeRollover.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -498,6 +499,14 @@ namespace sw
     void RTSWorld::stepFixed( float32 deltaTime )
     {
         _time += deltaTime;
+        // 시각은 알림 간격(차이)만 본다 — float32 걸음을 지키려 기준을 옮기고, 비교하는 알림 시각도 같이 옮긴다(감사 K-5).
+        if ( TimeRolloverUtil::rebase( _time ) )
+        {
+            for ( RTSPlayer& player : _listPlayer )
+            {
+                player._nextUnderAttackTime = MathUtil::max( player._nextUnderAttackTime - TimeRolloverUtil::kRebaseSeconds, 0.0f );
+            }
+        }
         _flowParams.refreshStale( _grid );
         recomputeSupply();
         rebuildBuckets();

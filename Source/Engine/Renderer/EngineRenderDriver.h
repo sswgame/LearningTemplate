@@ -58,11 +58,13 @@ namespace sw
         void                        setScenarioCaptureEnabled( bool bEnabled ) override;
         void                        setPresentInterval( uint32 interval ) override;
         [[nodiscard]] uint32        countPendingCaptureJobs( const GameObjectManager* pManager ) const override;
+        void                        overrideDeviceLostPolicy( RHIDeviceLostPolicy policy ) override;
+        [[nodiscard]] uint32        getDeviceRecreateCount() const override { return _deviceRecreateCount; }
 
         /**
          * @brief 장치 분실에 대한 답입니다. 잃지 않았으면 비고, 잃었으면 지금 할 일(`Quit` 또는 `Recreate`)입니다(`submitFrame` 이 프레임마다 묻는다).
          * @details 브레드크럼 보고는 손실을 처음 본 백엔드가 이미 했다(`GPUBreadcrumbs::reportDeviceLost`) — 여기서는 끝낼지 다시 만들지만 정한다.
-         *          `Recreate` 정책도 다시 만드는 길이 없는 배포 구성(백엔드 교체기는 `App/Dev/`)이나 다시 만들 수 없는 @p backend(`RHI::canRecreateAfterDeviceLost`)면 `Quit` 다.
+         *          `Recreate` 정책도 다시 만들 수 없는 @p backend(`RHI::canRecreateAfterDeviceLost`)면 `Quit` 다. 다시 만드는 길은 개발 · 배포 공통이다(`EditorModuleManager::applyPendingBackendChange`).
          */
         [[nodiscard]] static optional<RHIDeviceLostPolicy> decideDeviceLostResponse( const IRHIDevice& device, RHIBackend backend, RHIDeviceLostPolicy policy );
 
@@ -97,8 +99,10 @@ namespace sw
         FontService*            _pFontService;                 ///< 캔버스가 글리프 캐시를 싣는다
         Subscription            _mainWindowResizeSubscription; ///< 주 창 크기 칸의 구독입니다(RHI 가 선 클라이언트만). `onShutdownBegin` 이 창보다 먼저 놓는다
         Subscription            _mainWindowLifecycleSubscription;
-        RHIDeviceLostPolicy     _deviceLostPolicy;       ///< `onStartupFinished` 가 `EngineConfig::_deviceLostPolicy` 에서 읽는다
-        uint8                   _bDeviceLostHandled : 1; ///< 분실을 한 번 처리했다(로그 · 종료 요청을 프레임마다 되풀이하지 않는다)
+        RHIDeviceLostPolicy     _deviceLostPolicy;         ///< `onStartupFinished` 가 `EngineConfig::_deviceLostPolicy` 에서 읽는다
+        RHIDeviceLostPolicy     _deviceLostPolicyOverride; ///< `overrideDeviceLostPolicy` 가 덮은 값(`None` 이면 덮지 않았다 — 설정 값을 쓴다)
+        uint32                  _deviceRecreateCount;      ///< 잃은 장치를 다시 만들어 장면을 다시 묶은 횟수
+        uint8                   _bDeviceLostHandled : 1;   ///< 분실을 한 번 처리했다(로그 · 종료 요청을 프레임마다 되풀이하지 않는다)
     };
 
     /**
