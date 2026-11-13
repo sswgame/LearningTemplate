@@ -335,12 +335,15 @@ if(NOT DEFINED VCPKG_TARGET_TRIPLET OR VCPKG_TARGET_TRIPLET STREQUAL "")
 
     # 대상 OS 는 이름으로 고른다 — `else()` 에 Linux 를 두면 Android · Emscripten 툴체인도 조용히 linux 패키지를 받는다.
     # `project()` 앞이라 교차 툴체인이 없으면 CMAKE_SYSTEM_NAME 이 비어 있다 — 그때는 호스트와 같은 대상이다.
-    if(WIN32 OR (CMAKE_SYSTEM_NAME STREQUAL "" AND CMAKE_HOST_WIN32))
+    # 정의되지 않은 변수를 따옴표 없이 비교하면 이름 글자 그대로 비교된다(`if(CMAKE_SYSTEM_NAME STREQUAL "")` 는 늘 거짓) — 값을 지역에 받아 비교한다.
+    # 그 틀린 비교가 새 빌드 폴더의 첫 구성(Linux-Debug-ASan)만 멈췄다. 있는 폴더는 캐시의 VCPKG_TARGET_TRIPLET 로 이 길을 지나지 않는다.
+    set(sw_vcpkg_target_system "${CMAKE_SYSTEM_NAME}")
+    if(WIN32 OR (sw_vcpkg_target_system STREQUAL "" AND CMAKE_HOST_WIN32))
         set(sw_vcpkg_triplet "${sw_vcpkg_arch}-windows")
-    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR (CMAKE_SYSTEM_NAME STREQUAL "" AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux"))
+    elseif(sw_vcpkg_target_system STREQUAL "Linux" OR (sw_vcpkg_target_system STREQUAL "" AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux"))
         set(sw_vcpkg_triplet "${sw_vcpkg_arch}-linux")
     else()
-        message(FATAL_ERROR "[vcpkg] no default triplet for target '${CMAKE_SYSTEM_NAME}' (host '${CMAKE_HOST_SYSTEM_NAME}') - set VCPKG_TARGET_TRIPLET in the preset (arm64-android, wasm32-emscripten-pthread)")
+        message(FATAL_ERROR "[vcpkg] no default triplet for target '${sw_vcpkg_target_system}' (host '${CMAKE_HOST_SYSTEM_NAME}') - set VCPKG_TARGET_TRIPLET in the preset (arm64-android, wasm32-emscripten-pthread)")
     endif()
 
     set(VCPKG_TARGET_TRIPLET "${sw_vcpkg_triplet}" CACHE STRING "" FORCE)
