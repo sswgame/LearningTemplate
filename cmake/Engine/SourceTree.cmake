@@ -13,7 +13,7 @@
 # 캐시(DirectoryItem)한 것을 나눠 쓴다. 대가는 뿌리 아래 아무 파일(.md 등)을 더하거나 지워도 다시 구성한다는 것이다.
 #
 # 뿌리는 `Source/` · `Test/` 와, 부르는 쪽이 `sw_addSourceTreeRoot` 로 더한 폴더(시나리오의 `Content/<팩>/automation` — `Content/` 전체는
-# 에셋이라 훑지 않는다)다. `Source/` 는 include 때 훑고(UnbuiltSources 가 목록을 바로 읽는다) 나머지는 처음 걸러 낼 때 훑는다.
+# 에셋이라 훑지 않는다)다. `Source/` 는 include 때 훑고(ExcludedSources 가 목록을 바로 읽는다) 나머지는 처음 걸러 낼 때 훑는다.
 # 이 뿌리들 아래를 `file(GLOB … CONFIGURE_DEPENDS)` 로 직접 훑는 코드는 빌드가 멈춘다(`sw_checkConfigureGlobs` — 생성된 VerifyGlobs.cmake 를 본다).
 # ------------------------------------------------------------------------------
 include_guard(GLOBAL)

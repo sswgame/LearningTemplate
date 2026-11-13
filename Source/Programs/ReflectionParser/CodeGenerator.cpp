@@ -939,7 +939,7 @@ namespace sw
 
     void CodeGenerator::emitTickBatchRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
     {
-        // 등록 줄 모양은 틱 런타임(5-3)이 정한 `SW_REGISTER_TICK_TYPE( 타입, 레인 )` 하나다 — 손 등록과 같은 줄. 메타데이터가 없으면 Batch.
+        // 등록 줄 모양은 틱 런타임(5-3)이 정한 `SW_REGISTER_TICK_TYPE( 타입, 모드 )` 하나다 — 손 등록과 같은 줄. 메타데이터가 없으면 Batch.
         if ( typeInfo.requiresTickRegistration() == false )
             return;
         const string mode = typeInfo._tickMode.empty() ? string( "Batch" ) : typeInfo._tickMode;

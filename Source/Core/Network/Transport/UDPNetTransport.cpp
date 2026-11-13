@@ -10,8 +10,8 @@ namespace sw
     {
         struct UDPNetTransportInternal
         {
-            static constexpr int32 kWakeDrainLimit = 64; ///< 한 번 깰 때 비우는 깨우기 데이터그램 상한 — 다른 로컬 프로세스가 쏟아부어도 여기서 묶이지 않는다
-            static constexpr uint8 kWakeByte       = 1;  ///< 깨우기 데이터그램의 한 바이트(값은 보지 않는다)
+            static constexpr int32 kWakePollLimit = 64; ///< 한 번 깰 때 비우는 깨우기 데이터그램 상한 — 다른 로컬 프로세스가 쏟아부어도 여기서 묶이지 않는다
+            static constexpr uint8 kWakeByte      = 1;  ///< 깨우기 데이터그램의 한 바이트(값은 보지 않는다)
         };
     } // namespace
 
@@ -135,7 +135,7 @@ namespace sw
         uint8      arrByte[sizeof( uint64 )]{};
         NetAddress from{};
         int32      size = 0;
-        for ( int32 attempt = 0; attempt < UDPNetTransportInternal::kWakeDrainLimit; ++attempt )
+        for ( int32 attempt = 0; attempt < UDPNetTransportInternal::kWakePollLimit; ++attempt )
         {
             if ( PlatformSocketUtil::receiveFrom( _wakeSocketHandle, from, arrByte, static_cast<int32>( sizeof( arrByte ) ), size ) != SocketReceiveResult::Received )
                 break;

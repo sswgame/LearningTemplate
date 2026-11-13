@@ -14,14 +14,14 @@ namespace sw
         struct PlacementRuleInternal
         {
             /** @brief 후보 하나가 꺼내는 난수 슬롯입니다. 슬롯을 추가할 때는 끝에 붙입니다. 앞 슬롯의 값이 바뀌면 같은 시드의 배치가 바뀝니다. */
-            enum Lane : uint32
+            enum HashStream : uint32
             {
-                kLaneU = 0,
-                kLaneV,
-                kLaneDensity,
-                kLaneEntry,
-                kLaneScale,
-                kLaneYaw,
+                kStreamU = 0,
+                kStreamV,
+                kStreamDensity,
+                kStreamEntry,
+                kStreamScale,
+                kStreamYaw,
             };
 
             /**
@@ -115,8 +115,8 @@ namespace sw
             static float2 computeCandidatePosition( const PlacementRule& rule, const PlacementRegion& region, uint32 candidateIndex )
             {
                 const float2 size{ region._max._x - region._min._x, region._max._y - region._min._y };
-                return float2{ region._min._x + PlacementScatter::toUnit( PlacementScatter::hashCandidate( rule._seed, candidateIndex, kLaneU ) ) * size._x,
-                               region._min._y + PlacementScatter::toUnit( PlacementScatter::hashCandidate( rule._seed, candidateIndex, kLaneV ) ) * size._y };
+                return float2{ region._min._x + PlacementScatter::toUnit( PlacementScatter::hashCandidate( rule._seed, candidateIndex, kStreamU ) ) * size._x,
+                               region._min._y + PlacementScatter::toUnit( PlacementScatter::hashCandidate( rule._seed, candidateIndex, kStreamV ) ) * size._y };
             }
 
             /** @brief 후보 하나를 최소 거리 앞까지 판정합니다. 통과하지 못하면 `_bPassed` 만 끈다. */
@@ -140,7 +140,7 @@ namespace sw
                 if ( bLayerFilter && sample._layerWeight.get( static_cast<uint32>( rule._layerIndex ) ) < rule._layerMinWeight )
                     return;
                 const bool bDensityLayer = 0 <= rule._densityLayerIndex && rule._densityLayerIndex < static_cast<int32>( SurfaceLayerWeights::kLayerCount );
-                if ( bDensityLayer && PlacementScatter::toUnit( PlacementScatter::hashCandidate( rule._seed, candidateIndex, kLaneDensity ) ) >= sample._layerWeight.get( static_cast<uint32>( rule._densityLayerIndex ) ) )
+                if ( bDensityLayer && PlacementScatter::toUnit( PlacementScatter::hashCandidate( rule._seed, candidateIndex, kStreamDensity ) ) >= sample._layerWeight.get( static_cast<uint32>( rule._densityLayerIndex ) ) )
                     return;
                 outCandidate._normal  = sample._normal;
                 outCandidate._height  = sample._height;
@@ -174,10 +174,10 @@ namespace sw
 
 namespace sw
 {
-    uint32 PlacementScatter::hashCandidate( uint32 seed, uint32 candidateIndex, uint32 lane )
+    uint32 PlacementScatter::hashCandidate( uint32 seed, uint32 candidateIndex, uint32 stream )
     {
         // murmur3 의 마무리 섞기를 세 값에 차례로 적용한다. 이웃한 번호와 셀이 이웃한 값을 받지 않는다.
-        uint32 hash = seed * 0x9E3779B1u ^ candidateIndex * 0x85EBCA77u ^ lane * 0xC2B2AE3Du;
+        uint32 hash = seed * 0x9E3779B1u ^ candidateIndex * 0x85EBCA77u ^ stream * 0xC2B2AE3Du;
         hash ^= hash >> 16;
         hash *= 0x85EBCA6Bu;
         hash ^= hash >> 13;
@@ -311,7 +311,7 @@ namespace sw
             if ( bPoisson && grid.isTooClose( position ) )
                 continue;
 
-            const optional<int32> entryIndex = pickEntry( listEntryWeight, toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kLaneEntry ) ) );
+            const optional<int32> entryIndex = pickEntry( listEntryWeight, toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kStreamEntry ) ) );
             if ( entryIndex.has_value() == false )
                 return; // 비중 합이 0 이면 놓을 것이 없다.
 
@@ -322,8 +322,8 @@ namespace sw
             instance._planePosition = position;
             instance._height        = candidate._height + rule._heightOffset;
             instance._normal        = candidate._normal;
-            instance._scale         = scaleMin + toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kLaneScale ) ) * ( scaleMax - scaleMin );
-            instance._yaw           = rule._yawMin + toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kLaneYaw ) ) * ( rule._yawMax - rule._yawMin );
+            instance._scale         = scaleMin + toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kStreamScale ) ) * ( scaleMax - scaleMin );
+            instance._yaw           = rule._yawMin + toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kStreamYaw ) ) * ( rule._yawMax - rule._yawMin );
             instance._alignToNormal = MathUtil::saturate( rule._alignToNormal );
             instance._hash          = hashCandidate( rule._seed, candidateIndex, 0xA5A5A5A5u );
             instance._entryIndex    = *entryIndex;

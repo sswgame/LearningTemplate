@@ -8,49 +8,49 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus catalog_editor"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.CatalogFileCount" atLeast="1" timeoutFrames="800"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="catalog.filter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="common/data/items.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="catalog.file.first"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.CatalogRowCount" atLeast="1" timeoutFrames="300"/>
-	<EditorWaitSettled/>
-	<Remember watch="Editor.CatalogTextBytes" as="openedBytes"/>
+	<EditorWaitStable/>
+	<Store watch="Editor.CatalogTextBytes" as="openedBytes"/>
 	<EditorClick mark="catalog.children.open.variant"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 첫 칸은 물려받은 Stats 의 armor 다(helmet_knight_merged). 다른 값을 적으면 원문이 늘어난다 -->
 	<EditorClick mark="catalog.children.cell"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="9"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Catalog.TableEdited" contains="Edited child of Item.armor" count="1"/>
 	<Expect watch="Editor.CatalogTextBytes" differsFrom="openedBytes"/>
 	<!-- 부모와 같은 값을 적으면 그 칸과 빈 원소를 지워 원문이 처음과 같다 -->
 	<EditorClick mark="catalog.children.cell"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="3"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Catalog.TableEdited" contains="Edited child of Item.armor" count="2"/>
 	<Expect watch="Editor.CatalogTextBytes" sameAs="openedBytes"/>
 	<EditorClick mark="catalog.children.close"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 고친 것은 저장하지 않았다 -->
 	<EditorClick mark="catalog.revert"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

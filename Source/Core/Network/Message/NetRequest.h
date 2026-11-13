@@ -146,7 +146,7 @@ namespace sw
     /**
      * @class NetRequestClient
      * @brief 요청을 보내고, 응답, 시한, 취소, 연결 끊김, 과부하를 콜백 하나로 정확히 한 번 알립니다.
-     * @details 콜백은 `handleFrame`, `update`, `onConnectionClosed` 를 부른 스레드(`pump` 스레드)에서 실행됩니다. 보내지 못한 경우만 `sendRequest` 를 부른 스레드에서 실행됩니다.
+     * @details 콜백은 `handleFrame`, `update`, `onConnectionClosed` 를 부른 스레드(`poll` 스레드)에서 실행됩니다. 보내지 못한 경우만 `sendRequest` 를 부른 스레드에서 실행됩니다.
      * @code
      *     const uint64 requestID = _requestClient.sendRequest( handle, LoginMethod::kLogin, body.data(), size, options,
      *                                                           Delegate<void( const NetResponse& )>::create<&LoginClient::onLoginResponse>( this ) );

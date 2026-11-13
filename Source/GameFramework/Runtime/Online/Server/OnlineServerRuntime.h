@@ -106,7 +106,7 @@ namespace sw
         /** @brief 키트들의 진행 중인 일 수 합입니다(`IOnlineServerKit::getOpenJobCount`). 종료 드레인이 0 이 될 때까지 기다린다. */
         int32 getOpenJobCount() const;
         /** @brief 종료 드레인 시작을 키트마다 알립니다(초기화 순서). */
-        void beginShutdown( const ServerShutdownNotice& notice );
+        void beginShutdown( const ServerShutdownNotice& notification );
         /** @brief 붙은 키트 이름입니다(시작 순서). */
         void collectKitNames( vector<string>& outListName ) const;
         /** @brief 키트가 내놓은 인터페이스와 기반을 가진 문맥입니다(테스트와 진단). */

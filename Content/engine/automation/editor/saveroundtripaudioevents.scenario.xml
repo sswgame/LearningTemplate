@@ -9,23 +9,23 @@
 <Scenario name="editor.saveroundtripaudioevents" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<Scratch from="game/empty/audio" as="scratch/saveroundtripaudioevents"/>
 	<Variable name="gv_editorWatchPanel" value="audioevents"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus audioevents"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/saveroundtripaudioevents/empty.audioevents.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.AudioEventEditCount" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.PanelDirty" equals="0"/>
 	<DevCommand line="panel.saveDocument audioevents"/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtripaudioevents/empty.audioevents.xml"/>
 	<DevCommand line="panel.reloadDocument audioevents"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.AudioEventEditCount" equals="1"/>
 	<DevCommand line="panel.saveDocument audioevents"/>
 	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripaudioevents/empty.audioevents.xml"/>
 	<Expect watch="Editor.PanelDirty" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

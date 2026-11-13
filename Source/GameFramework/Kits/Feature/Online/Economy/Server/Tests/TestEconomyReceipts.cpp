@@ -125,11 +125,11 @@ namespace
         /** @brief @p connection 으로 회수 정책 @p recovery 의 환불을 처리합니다. */
         EconomyServiceResult refundVia( IServiceStoreConnection& connection, EconomyRefundRecoveryMode recovery, string_view transactionID = "tx1", vector<EconomyBalanceChange>* pOutListChange = nullptr )
         {
-            ReceiptRefundNotification notice;
-            notice._storeName     = "fake";
-            notice._transactionID = string( transactionID );
+            ReceiptRefundNotification notification;
+            notification._storeName     = "fake";
+            notification._transactionID = string( transactionID );
             vector<EconomyBalanceChange> listChange;
-            const EconomyServiceResult   result = EconomyStoreLogic::revokeRefund( connection, _currencies, notice, recovery, kNowMs, listChange );
+            const EconomyServiceResult   result = EconomyStoreLogic::revokeRefund( connection, _currencies, notification, recovery, kNowMs, listChange );
             if ( pOutListChange != nullptr )
                 *pOutListChange = listChange;
             return result;
@@ -234,7 +234,7 @@ namespace
         }
         void update( UnixMilliseconds now ) override { (void)now; }
         void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override { (void)outListResult; }
-        void pollRefunds( vector<ReceiptRefundNotification>& outListNotice ) override { (void)outListNotice; }
+        void pollRefunds( vector<ReceiptRefundNotification>& outListNotification ) override { (void)outListNotification; }
         bool usesRefundCursor() const override { return true; }
         void restoreRefundCursor( int64 lastReadMs ) override { _listRestored.push_back( lastReadMs ); }
         bool takeRefundCursor( int64& outLastReadMs ) override
@@ -280,14 +280,14 @@ namespace
             outListResult.insert( outListResult.end(), _listResult.begin(), _listResult.end() );
             _listResult.clear();
         }
-        void pollRefunds( vector<ReceiptRefundNotification>& outListNotice ) override { (void)outListNotice; }
+        void pollRefunds( vector<ReceiptRefundNotification>& outListNotification ) override { (void)outListNotification; }
         bool usesDeliveryConfirmation() const override { return true; }
         void confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now ) override
         {
             (void)now;
             _listAsked.push_back( task );
         }
-        void pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListServiceResult ) override
+        void pollDeliveryResults( vector<ReceiptDeliveryResult>& outListServiceResult ) override
         {
             outListServiceResult.insert( outListServiceResult.end(), _listServiceResult.begin(), _listServiceResult.end() );
             _listServiceResult.clear();
@@ -347,7 +347,7 @@ namespace
             _registry.shutdown();
         }
 
-        void pump()
+        void poll()
         {
             for ( int32 round = 0; round < 4; ++round )
             {
@@ -365,7 +365,7 @@ namespace
             call._method     = method;
             call._accountID  = accountID;
             _service.submitCall( call, EconomyService::ReplyDelegate::create<&EconomyReplySink::onReply>( &_sink ) );
-            pump();
+            poll();
             SW_EXPECT_EQUAL( size_t( 1 ), _sink._listReply.size() );
             const OnlineResult<EconomyCallReply> result = _sink._listReply.empty() ? OnlineResult<EconomyCallReply>{} : _sink._listReply.back();
             _sink._listReply.clear();
@@ -417,7 +417,7 @@ namespace
             _registry.shutdown();
         }
 
-        void pump()
+        void poll()
         {
             for ( int32 round = 0; round < 4; ++round )
             {
@@ -436,7 +436,7 @@ namespace
             call._redeem._storeName = "fake";
             call._redeem._payload   = string( payload );
             _service.submitCall( call, EconomyService::ReplyDelegate::create<&EconomyReplySink::onReply>( &_sink ) );
-            pump();
+            poll();
             SW_EXPECT_EQUAL( size_t( 1 ), _sink._listReply.size() );
             const EconomyServiceResult result = _sink._listReply.empty() ? EconomyServiceResult::fail( OnlineError::kUnavailable ) : EconomyReplySink::toResult( _sink._listReply.back() );
             _sink._listReply.clear();
@@ -877,7 +877,7 @@ SW_TEST_CASE( EconomyReceiptsTest, ServiceRevokesPushedRefunds )
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "fake|com.x.gem100|tx1|ok" )._result == EconomyResult::Ok );
     rig._validator.pushRefund( "tx1", kNowMs );
     rig._validator.pushRefund( "tx1", kNowMs ); // 스토어는 다시 보낼 수 있다
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( int64( 0 ), rig._data.getBalanceOf( kBuyer ) );
 }
 
@@ -888,9 +888,9 @@ SW_TEST_CASE( EconomyReceiptsTest, LedgerAuditStaysBalanced )
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "fake|com.x.gem100|tx1|ok" )._result == EconomyResult::Ok );
     rig._data.spend( kBuyer, 70 );
     rig._validator.pushRefund( "tx1", kNowMs );
-    rig.pump();
+    rig.poll();
     rig._service.requestLedgerAudit();
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._service.wasLastAuditBalanced() );
 }
 
@@ -908,7 +908,7 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliveryIsConfirmedAfterTheGrant )
     SW_EXPECT_EQUAL( size_t( 1 ), DeliveryTestUtil::countRecords( data ) );
 
     rig._validator.answer( 0, ReceiptDeliveryStatus::Confirmed );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 0 ), DeliveryTestUtil::countRecords( data ) );
 }
 
@@ -918,7 +918,7 @@ SW_TEST_CASE( EconomyReceiptsTest, FailedGrantIsNotConfirmed )
     ReceiptFixture         data;
     MemoryServiceStore     store{ &data._database };
     DeliveryServiceFixture rig( data, store );
-    rig.pump(); // 기동 직후의 훑기를 먼저 끝낸다
+    rig.poll(); // 기동 직후의 훑기를 먼저 끝낸다
 
     data._database.armFault( ServiceStoreFault::RejectCommit );
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ).hasError( OnlineError::kUnavailable ) );
@@ -948,19 +948,19 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliveryRetriesUntilAnswered )
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
 
     rig._nowMs += 1000;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._validator._listAsked.size() ); // 아직 날아가는 중이다
 
     rig._validator.answer( 0, ReceiptDeliveryStatus::Retry );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), DeliveryTestUtil::countRecords( data ) );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._validator._listAsked.size() ); // 간격 전이다
 
     rig._nowMs += 1000;
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 2 ), rig._validator._listAsked.size() );
     rig._validator.answer( 1, ReceiptDeliveryStatus::Refused );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 0 ), DeliveryTestUtil::countRecords( data ) );
 }
 
@@ -974,7 +974,7 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliverySurvivesARestart )
         SW_EXPECT_TRUE( before.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
     }
     DeliveryServiceFixture after( data, store );
-    after.pump();
+    after.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), after._validator._listAsked.size() );
     SW_EXPECT_EQUAL( string( "key.tx1" ), after._validator._listAsked[0]._deliveryKey );
     SW_EXPECT_EQUAL( kFarDeadlineMs, after._validator._listAsked[0]._deadlineMs );
@@ -989,7 +989,7 @@ SW_TEST_CASE( EconomyReceiptsTest, ReplayedGrantIsConfirmedAgain )
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
     rig._validator.answer( 0, ReceiptDeliveryStatus::Confirmed );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 0 ), DeliveryTestUtil::countRecords( data ) );
 
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
@@ -1009,11 +1009,11 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliveryNearTheDeadlineAlarmsOnce )
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
     rig._validator.answer( 0, ReceiptDeliveryStatus::Retry );
     rig._nowMs += 1000; // 기한이 경고 폭(100) 안으로 왔다
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 2 ), rig._validator._listAsked.size() );
     rig._validator.answer( 1, ReceiptDeliveryStatus::Retry );
     rig._nowMs += 1000;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 3 ), rig._validator._listAsked.size() ); // 기한이 지나도 스토어가 거절할 때까지 보낸다
 }
 
@@ -1054,7 +1054,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundCursorSurvivesARestart )
         settings._refundRecovery   = EconomyRefundRecoveryMode::Debt;
         return settings;
     };
-    const auto pump = [&store]( EconomyService& service, int64 nowMs )
+    const auto poll = [&store]( EconomyService& service, int64 nowMs )
     {
         for ( int32 round = 0; round < 4; ++round )
         {
@@ -1070,11 +1070,11 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundCursorSurvivesARestart )
         SW_EXPECT_TRUE( registry.registerValidator( &validator ) );
         EconomyService service;
         SW_EXPECT_TRUE( service.initialize( &store, makeSettings( registry ) ) );
-        pump( service, kNowMs );
+        poll( service, kNowMs );
         SW_REQUIRE_EQUAL( size_t( 1 ), validator._listRestored.size() );
         SW_EXPECT_EQUAL( int64( 0 ), validator._listRestored[0] ); // 첫 기동이라 기준이 없다
         validator._movedMs = kNowMs + 5;
-        pump( service, kNowMs );
+        poll( service, kNowMs );
         service.shutdown();
     }
     CursorRecordingValidator validator;
@@ -1082,7 +1082,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundCursorSurvivesARestart )
     SW_EXPECT_TRUE( registry.registerValidator( &validator ) );
     EconomyService service;
     SW_EXPECT_TRUE( service.initialize( &store, makeSettings( registry ) ) );
-    pump( service, kNowMs + 100 );
+    poll( service, kNowMs + 100 );
     SW_REQUIRE_EQUAL( size_t( 1 ), validator._listRestored.size() ); // 한 번만 넘긴다
     SW_EXPECT_EQUAL( kNowMs + 5, validator._listRestored[0] );
     service.shutdown();

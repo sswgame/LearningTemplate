@@ -8,7 +8,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 후보 위치(레인 0 · 1 해시)를 다시 구해 최소 거리 다트 던지기를 O(n²) 로 그대로 돌린 기준 결과입니다. */
+    /** @brief 후보 위치(스트림 0 · 1 해시)를 다시 구해 최소 거리 다트 던지기를 O(n²) 로 그대로 돌린 기준 결과입니다. */
     vector<float2> resolveByBruteForce( const PlacementRule& rule, const PlacementRegion& region, const vector<PlacementCandidate>& listCandidate )
     {
         const float2   size{ region._max._x - region._min._x, region._max._y - region._min._y };

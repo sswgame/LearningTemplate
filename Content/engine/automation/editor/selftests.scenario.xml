@@ -7,7 +7,7 @@
 -->
 <Scenario name="editor.selftests" fixedDelta="0.0166667" timeoutFrames="30000" startAfter="Immediately" input="exclusive">
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorSelfTest pattern="*"/>
 	<Pass/>
 </Scenario>

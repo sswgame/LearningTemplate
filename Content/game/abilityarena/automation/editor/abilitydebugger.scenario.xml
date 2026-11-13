@@ -12,36 +12,36 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_arenaAutoPlay" value="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- ① 창 · 플레이 -->
 	<DevCommand line="panel.focus ability_debugger"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="play"/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- ② 대상 고르기 — 어트리뷰트 · 어빌리티 줄 -->
 	<EditorClick mark="abilityDebug.target"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="abilityDebug.candidate.ArenaPlayer"/>
 	<WaitUntil watch="Editor.AbilityDebugAttributeCount" atLeast="2" timeoutFrames="60"/>
 	<Expect watch="Editor.AbilityDebugAbilityCount" atLeast="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- ②-1 적용 출처 · 기록: 시험 조작으로 대시 이펙트를 건다(건 길 devcommand). 기록 표에 Applied 한 줄 이상, 런타임 HUD 섹션도 같은 줄 -->
 	<DevCommand line="debug.target ArenaPlayer"/>
 	<DevCommand line="ability.apply GE_Dash"/>
 	<WaitUntil watch="Editor.AbilityDebugLogCount" atLeast="1" timeoutFrames="60"/>
 	<DevCommand line="hud.print ability"/>
 	<ExpectLog id="DebugHUD.PrintLine" contains="Applied GE_Dash from devcommand" atLeast="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="abilitydebugger/log.png" maxMagentaFraction="0"/>
 	<DevCommand line="debug.target clear"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- ③ 멈춤 -->
 	<DevCommand line="stop"/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

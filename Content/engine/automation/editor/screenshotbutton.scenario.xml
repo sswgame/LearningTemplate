@@ -6,21 +6,21 @@
 -->
 <Scenario name="editor.screenshotbutton" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus game_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="gameView.screenshot"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Screenshot.Saved" count="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus scene_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="sceneView.screenshot"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Screenshot.Saved" count="2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="screenshot {out}/devcommand.png"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Screenshot.Saved" contains="{out}/devcommand.png" count="1"/>
 	<ExpectLog id="Screenshot.NotWritten" count="0"/>
 	<Pass/>

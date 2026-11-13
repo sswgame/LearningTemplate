@@ -773,7 +773,7 @@
 		       text="생성: {spawnedCount}  CPU 살아 있음: {subject}"
 		       sourceHash="ea235214a1f7fe99" />
 		<entry key="EdFormat.SpriteFrame" text="스프라이트 프레임: {spriteFrame}" sourceHash="74c4687529532bbd" />
-		<entry key="EdFormat.StateBuiltBodiesSettled"
+		<entry key="EdFormat.StateBuiltBodiesAsleep"
 		       text="상태 {state}  만든 바디 {bodyCount}  안정 {settled, select, yes {예} other {아니오}}"
 		       sourceHash="07e2ba02c38ad6a9" />
 		<entry key="EdFormat.StateHoldS"

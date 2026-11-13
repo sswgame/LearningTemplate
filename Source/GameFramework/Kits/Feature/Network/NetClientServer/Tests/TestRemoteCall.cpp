@@ -61,7 +61,7 @@ namespace
         }
 
         /** @brief 클라이언트를 거치지 않고 손으로 짠 호출을 서버에 넘깁니다(조작한 클라이언트의 흉내). */
-        NetHandleResult forgeCall( uint32 targetID, string_view functionName, const vector<string>& listArgText, NetChannelType channel )
+        NetHandleResult craftCall( uint32 targetID, string_view functionName, const vector<string>& listArgText, NetChannelType channel )
         {
             NetMessageWriter messageWriter;
             BitWriter&       writer = messageWriter.begin( NetRemoteCallMessage::kCall );
@@ -112,7 +112,7 @@ SW_TEST_CASE( RemoteCallTest, FailedValidationDisconnects )
     SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
     SW_EXPECT_LOG( "RemoteCall.ValidationFailed" );
     // 정직한 클라이언트도 이 호출을 보낼 수 있다(검증은 서버 몫) — 망을 더 돌리지 않고 서버 쪽만 본다.
-    SW_EXPECT_TRUE( rig.forgeCall( kAvatarID, "attackTarget", { "7", "99" }, NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { "7", "99" }, NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
     SW_EXPECT_EQUAL( 0, rig._serverAvatar._totalPower );
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._validationFailedCount );
     SW_EXPECT_EQUAL( uint64{ 0 }, rig._server.getStats()._invokedCount );
@@ -125,7 +125,7 @@ SW_TEST_CASE( RemoteCallTest, NonOwnerIsDisconnected )
     RemoteCallTestRig rig;
     SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID + 1000 ) );
     SW_EXPECT_LOG( "RemoteCall.Violation" );
-    SW_EXPECT_TRUE( rig.forgeCall( kAvatarID, "attackTarget", { "7", "20" }, NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { "7", "20" }, NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
     SW_EXPECT_EQUAL( 0, rig._serverAvatar._totalPower );
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._violationCount );
 }
@@ -138,7 +138,7 @@ SW_TEST_CASE( RemoteCallTest, OnlyServerFunctionsAreCallable )
     SW_EXPECT_LOG( "RemoteCall.ServerCallRefused" );
     SW_EXPECT_EQUAL( 0u, rig._client.callServer( kAvatarID, *RemoteCallTestAvatar::StaticType(), "applyLocal", { ReflectedValue::make( int32{ 5 } ) } ) );
     SW_EXPECT_LOG( "RemoteCall.Violation" );
-    SW_EXPECT_TRUE( rig.forgeCall( kAvatarID, "applyLocal", { "5" }, NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "applyLocal", { "5" }, NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
     SW_EXPECT_EQUAL( 0, rig._serverAvatar._localApplyCount );
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._violationCount );
 }
@@ -149,7 +149,7 @@ SW_TEST_CASE( RemoteCallTest, ReliableFunctionOnUnreliableChannelIsRefused )
     RemoteCallTestRig rig;
     SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
     SW_EXPECT_LOG( "RemoteCall.Violation" );
-    SW_EXPECT_TRUE( rig.forgeCall( kAvatarID, "attackTarget", { "7", "20" }, NetChannelType::Unreliable ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { "7", "20" }, NetChannelType::Unreliable ) == NetHandleResult::Handled );
     SW_EXPECT_EQUAL( 0, rig._serverAvatar._totalPower );
 }
 
@@ -161,17 +161,17 @@ SW_TEST_CASE( RemoteCallTest, UnknownTargetAndBadArgumentsAreRejected )
     const uint32 sequence = rig._client.callServer( 999, *RemoteCallTestAvatar::StaticType(), "moveStep", { ReflectedValue::make( 1.0f ) } );
     SW_REQUIRE_TRUE( sequence != 0u );
     rig.pollUntilDelivered();
-    SW_EXPECT_TRUE( rig.forgeCall( kAvatarID, "attackTarget", { "seven", "20" }, NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
-    SW_EXPECT_TRUE( rig.forgeCall( kAvatarID, "noSuchFunction", {}, NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { "seven", "20" }, NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
+    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "noSuchFunction", {}, NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
     rig.pollUntilDelivered();
 
-    vector<RemoteCallRejectNotice> listNotice;
-    rig._client.pollRejections( listNotice );
-    SW_REQUIRE_EQUAL( size_t{ 3 }, listNotice.size() );
-    SW_EXPECT_EQUAL( sequence, listNotice[0]._sequence );
-    SW_EXPECT_TRUE( listNotice[0]._error == RemoteCallError::UnknownTarget );
-    SW_EXPECT_TRUE( listNotice[1]._error == RemoteCallError::ArgumentMismatch );
-    SW_EXPECT_TRUE( listNotice[2]._error == RemoteCallError::UnknownFunction );
+    vector<RemoteCallRejectNotification> listNotification;
+    rig._client.pollRejections( listNotification );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listNotification.size() );
+    SW_EXPECT_EQUAL( sequence, listNotification[0]._sequence );
+    SW_EXPECT_TRUE( listNotification[0]._error == RemoteCallError::UnknownTarget );
+    SW_EXPECT_TRUE( listNotification[1]._error == RemoteCallError::ArgumentMismatch );
+    SW_EXPECT_TRUE( listNotification[2]._error == RemoteCallError::UnknownFunction );
     SW_EXPECT_EQUAL( uint64{ 0 }, rig._server.getStats()._violationCount );
     SW_EXPECT_EQUAL( uint64{ 3 }, rig._server.getStats()._rejectedCount );
 }
@@ -182,7 +182,7 @@ SW_TEST_CASE( RemoteCallTest, TooManyArgumentsAreMalformed )
     RemoteCallTestRig rig;
     SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
     vector<string> listText( static_cast<size_t>( NetRemoteCallMessage::kMaxArgumentCount + 1 ), string( "1" ) );
-    SW_EXPECT_TRUE( rig.forgeCall( kAvatarID, "attackTarget", listText, NetChannelType::ReliableOrdered ) == NetHandleResult::Malformed );
+    SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", listText, NetChannelType::ReliableOrdered ) == NetHandleResult::Malformed );
 }
 
 /** @brief [RemoteCallTest] 서버가 주인 클라이언트의 `Client` 함수를 부른다. 서버는 `Server` 함수를 클라이언트에 보내지 않는다. */

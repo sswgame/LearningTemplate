@@ -175,7 +175,7 @@ SW_TEST_CASE( MeshAssetFormatBytesTest, EveryTruncatedLengthIsRefused )
 }
 
 /** @brief [MeshAssetFormatBytesTest] 머리와 덩어리의 꾸민 개수는 할당 전에 거절한다(잡으면 이 테스트가 메모리에서 멈춘다) */
-SW_TEST_CASE( MeshAssetFormatBytesTest, ForgedCountsAreRefused )
+SW_TEST_CASE( MeshAssetFormatBytesTest, CraftedCountsAreRefused )
 {
     SW_EXPECT_LOG( "MeshAssetFormat.MeshAssetDeclaresVertices" );
     SW_EXPECT_LOG( "MeshAssetFormat.MeshAssetMalformedSection" );
@@ -187,9 +187,9 @@ SW_TEST_CASE( MeshAssetFormatBytesTest, ForgedCountsAreRefused )
     const vector<uint8> plain = XTestUtil::makeBytes( XTestUtil::makeQuad() );
     for ( const size_t offset : { XTestUtil::kOffsetVertexCount, XTestUtil::kOffsetIndexCount } )
     {
-        vector<uint8> forged = plain;
-        XTestUtil::patch( forged, offset, kHuge );
-        XTestUtil::expectRefused( forged );
+        vector<uint8> crafted = plain;
+        XTestUtil::patch( crafted, offset, kHuge );
+        XTestUtil::expectRefused( crafted );
     }
 
     MeshAssetData withSection = XTestUtil::makeQuad();
@@ -251,8 +251,8 @@ SW_TEST_CASE( MeshAssetFormatBytesTest, NonFiniteValuesAreRefused )
     const vector<uint8> plain = XTestUtil::makeBytes( XTestUtil::makeQuad() );
     for ( const size_t offset : { size_t{ XTestUtil::kOffsetRadius }, size_t{ XTestUtil::kOffsetUVBounds }, size_t{ MeshAssetFormat::kHeaderSize } } )
     {
-        vector<uint8> forged = plain;
-        XTestUtil::patch( forged, offset, kNaN );
-        XTestUtil::expectRefused( forged );
+        vector<uint8> crafted = plain;
+        XTestUtil::patch( crafted, offset, kNaN );
+        XTestUtil::expectRefused( crafted );
     }
 }

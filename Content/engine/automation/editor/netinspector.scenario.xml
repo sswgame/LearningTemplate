@@ -10,20 +10,20 @@
 	<WaitUntil watch="Editor.NetPlayProcessCount" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.NetPlayInspectorObjects" equals="0"/>
 	<DevCommand line="netplay.start dedicated 1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="netplay.wait 1 120"/>
 	<WaitUntil watch="Editor.NetPlayConnectedClients" equals="1" timeoutFrames="60"/>
 	<DevCommand line="netplay.inspect"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="DevCommand.Reply" contains="inspector read" atLeast="1"/>
 	<Expect watch="Editor.NetPlayInspectorObjects" atLeast="1"/>
 	<DevCommand line="netplay.inspect pause"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="netplay.inspect scene.tree 1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="DevCommand.Reply" contains="paused tick" atLeast="1"/>
 	<DevCommand line="netplay.inspect resume"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="netplay.stop"/>
 	<WaitUntil watch="Editor.NetPlayStopping" equals="0" timeoutWallSeconds="20"/>
 	<Expect watch="Editor.NetPlayProcessCount" equals="0"/>

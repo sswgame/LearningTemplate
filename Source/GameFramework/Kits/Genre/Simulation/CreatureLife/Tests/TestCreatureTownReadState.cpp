@@ -27,7 +27,7 @@ namespace
 </CreatureLifeCatalog>)";
 
     /** @brief 서식지 하나에 생물 하나가 머물고 집 하나에 사는 마을을 꾸밉니다. */
-    struct CreatureTownForged
+    struct CreatureTownFixture
     {
         sw::vector<sw::HabitatInstance> _listHabitat{};
         sw::vector<sw::TownCreature>    _listCreature{};
@@ -36,7 +36,7 @@ namespace
         int32                           _nextHabitatID{ 2 };
         int32                           _lastAttractKey{ -1 };
 
-        CreatureTownForged()
+        CreatureTownFixture()
         {
             sw::HabitatInstance habitat;
             habitat._habitatID = "grove";
@@ -134,7 +134,7 @@ namespace
 /**
  * @brief [CreatureTownReadStateTest] 서식지 · 생물 · 집이 있는 실제 마을은 왕복하고, 형식에 맞게 꾸민 마을도 읽힌다
  */
-SW_TEST_CASE_F( CreatureTownReadStateTest, RealAndForgedStatesRead )
+SW_TEST_CASE_F( CreatureTownReadStateTest, RealAndCraftedStatesRead )
 {
     SW_REQUIRE_TRUE( _town.setObject( 0, 0, "tree" ) );
     SW_REQUIRE_EQUAL( 1, _town.attractVisitorsAt( 0, 8, sw::DayPhase::Day, "sunny" ) );
@@ -150,7 +150,7 @@ SW_TEST_CASE_F( CreatureTownReadStateTest, RealAndForgedStatesRead )
     SW_EXPECT_EQUAL( size_t( 1 ), restored.getCreatures().size() );
     SW_EXPECT_EQUAL( 0, restored.getCreatures()[0]._house );
 
-    SW_REQUIRE_TRUE( CreatureTownForged{}.readInto( restored ) );
+    SW_REQUIRE_TRUE( CreatureTownFixture{}.readInto( restored ) );
     SW_EXPECT_EQUAL( size_t( 1 ), restored.getHabitats().size() );
 }
 
@@ -159,49 +159,49 @@ SW_TEST_CASE_F( CreatureTownReadStateTest, RealAndForgedStatesRead )
  */
 SW_TEST_CASE_F( CreatureTownReadStateTest, RefusesBrokenHabitats )
 {
-    SW_REQUIRE_TRUE( CreatureTownForged{}.readInto( _town ) );
+    SW_REQUIRE_TRUE( CreatureTownFixture{}.readInto( _town ) );
 
-    CreatureTownForged unknown;
+    CreatureTownFixture unknown;
     unknown._listHabitat[0]._habitatID = "swamp";
     SW_EXPECT_FALSE( unknown.readInto( _town ) );
 
-    CreatureTownForged noTiles;
+    CreatureTownFixture noTiles;
     noTiles._listHabitat[0]._listTile.clear();
     SW_EXPECT_FALSE( noTiles.readInto( _town ) );
 
-    CreatureTownForged tileOutside;
+    CreatureTownFixture tileOutside;
     tileOutside._listHabitat[0]._listTile = { kTownSize * kTownSize };
     SW_EXPECT_FALSE( tileOutside.readInto( _town ) );
 
-    CreatureTownForged originOutside;
+    CreatureTownFixture originOutside;
     originOutside._listHabitat[0]._origin = sw::int2{ kTownSize, 0 };
     SW_EXPECT_FALSE( originOutside.readInto( _town ) );
 
-    CreatureTownForged rotationOutside;
+    CreatureTownFixture rotationOutside;
     rotationOutside._listHabitat[0]._rotation = 4;
     SW_EXPECT_FALSE( rotationOutside.readInto( _town ) );
 
-    CreatureTownForged idZero;
+    CreatureTownFixture idZero;
     idZero._listHabitat[0]._id = 0;
     SW_EXPECT_FALSE( idZero.readInto( _town ) );
 
-    CreatureTownForged idAhead;
+    CreatureTownFixture idAhead;
     idAhead._nextHabitatID = 1;
     SW_EXPECT_FALSE( idAhead.readInto( _town ) );
 
-    CreatureTownForged idRepeated;
+    CreatureTownFixture idRepeated;
     idRepeated._listHabitat.push_back( idRepeated._listHabitat[0] );
     idRepeated._listHabitat[1]._listTile = { 1 };
     SW_EXPECT_FALSE( idRepeated.readInto( _town ) );
 
-    CreatureTownForged tileShared;
+    CreatureTownFixture tileShared;
     tileShared._listHabitat.push_back( tileShared._listHabitat[0] );
     tileShared._listHabitat[1]._id = 2;
     tileShared._nextHabitatID      = 3;
     SW_EXPECT_FALSE( tileShared.readInto( _town ) );
 
-    CreatureTownForged overCapacity;
-    sw::TownCreature   second;
+    CreatureTownFixture overCapacity;
+    sw::TownCreature    second;
     second._speciesID = "moss";
     second._habitat   = 1;
     overCapacity._listCreature.push_back( second );
@@ -216,43 +216,43 @@ SW_TEST_CASE_F( CreatureTownReadStateTest, RefusesBrokenHabitats )
  */
 SW_TEST_CASE_F( CreatureTownReadStateTest, RefusesBrokenCreatures )
 {
-    SW_REQUIRE_TRUE( CreatureTownForged{}.readInto( _town ) );
+    SW_REQUIRE_TRUE( CreatureTownFixture{}.readInto( _town ) );
 
-    CreatureTownForged unknown;
+    CreatureTownFixture unknown;
     unknown._listCreature[0]._speciesID = "ghost";
     unknown._listHouse[0]._listResident = { "ghost" };
     SW_EXPECT_FALSE( unknown.readInto( _town ) );
 
-    CreatureTownForged repeated;
+    CreatureTownFixture repeated;
     repeated._listCreature.push_back( repeated._listCreature[0] );
     repeated._listCreature[1]._habitat = -1;
     SW_EXPECT_FALSE( repeated.readInto( _town ) );
 
-    CreatureTownForged useNegative;
+    CreatureTownFixture useNegative;
     useNegative._listCreature[0]._listAbilityUse = { -1 };
     SW_EXPECT_FALSE( useNegative.readInto( _town ) );
 
-    CreatureTownForged useOver;
+    CreatureTownFixture useOver;
     useOver._listCreature[0]._listAbilityUse = { 3 }; // 하루 둘이다
     SW_EXPECT_FALSE( useOver.readInto( _town ) );
 
-    CreatureTownForged useSlots;
+    CreatureTownFixture useSlots;
     useSlots._listCreature[0]._listAbilityUse = { 0, 0 };
     SW_EXPECT_FALSE( useSlots.readInto( _town ) );
 
-    CreatureTownForged habitatMissing;
+    CreatureTownFixture habitatMissing;
     habitatMissing._listCreature[0]._habitat = 9;
     SW_EXPECT_FALSE( habitatMissing.readInto( _town ) );
 
-    CreatureTownForged habitatBroken;
+    CreatureTownFixture habitatBroken;
     habitatBroken._listCreature[0]._habitat = -2;
     SW_EXPECT_FALSE( habitatBroken.readInto( _town ) );
 
-    CreatureTownForged talkBroken;
+    CreatureTownFixture talkBroken;
     talkBroken._listCreature[0]._lastTalkDay = -2;
     SW_EXPECT_FALSE( talkBroken.readInto( _town ) );
 
-    CreatureTownForged arrivalBroken;
+    CreatureTownFixture arrivalBroken;
     arrivalBroken._listCreature[0]._arrivalDay = -1;
     SW_EXPECT_FALSE( arrivalBroken.readInto( _town ) );
 
@@ -265,47 +265,47 @@ SW_TEST_CASE_F( CreatureTownReadStateTest, RefusesBrokenCreatures )
  */
 SW_TEST_CASE_F( CreatureTownReadStateTest, RefusesBrokenHousesAndRequests )
 {
-    SW_REQUIRE_TRUE( CreatureTownForged{}.readInto( _town ) );
+    SW_REQUIRE_TRUE( CreatureTownFixture{}.readInto( _town ) );
 
-    CreatureTownForged houseMissing;
+    CreatureTownFixture houseMissing;
     houseMissing._listCreature[0]._house = 1;
     SW_EXPECT_FALSE( houseMissing.readInto( _town ) );
 
-    CreatureTownForged notResident;
+    CreatureTownFixture notResident;
     notResident._listHouse[0]._listResident.clear();
     SW_EXPECT_FALSE( notResident.readInto( _town ) );
 
-    CreatureTownForged residentElsewhere;
+    CreatureTownFixture residentElsewhere;
     residentElsewhere._listCreature[0]._house = -1;
     SW_EXPECT_FALSE( residentElsewhere.readInto( _town ) );
 
-    CreatureTownForged residentUnknown;
+    CreatureTownFixture residentUnknown;
     residentUnknown._listHouse[0]._capacity     = 2;
     residentUnknown._listHouse[0]._listResident = { "sprout", "moss" };
     SW_EXPECT_FALSE( residentUnknown.readInto( _town ) );
 
-    CreatureTownForged residentRepeated;
+    CreatureTownFixture residentRepeated;
     residentRepeated._listHouse[0]._capacity     = 2;
     residentRepeated._listHouse[0]._listResident = { "sprout", "sprout" };
     SW_EXPECT_FALSE( residentRepeated.readInto( _town ) );
 
-    CreatureTownForged overFull;
+    CreatureTownFixture overFull;
     overFull._listHouse[0]._capacity = 0;
     SW_EXPECT_FALSE( overFull.readInto( _town ) );
 
-    CreatureTownForged houseOutside;
+    CreatureTownFixture houseOutside;
     houseOutside._listHouse[0]._tile = sw::int2{ kTownSize, 0 };
     SW_EXPECT_FALSE( houseOutside.readInto( _town ) );
 
-    CreatureTownForged requestEmpty;
+    CreatureTownFixture requestEmpty;
     requestEmpty._listOpenRequest = { sw::hashed_string{} };
     SW_EXPECT_FALSE( requestEmpty.readInto( _town ) );
 
-    CreatureTownForged requestRepeated;
+    CreatureTownFixture requestRepeated;
     requestRepeated._listOpenRequest = { "quest", "quest" };
     SW_EXPECT_FALSE( requestRepeated.readInto( _town ) );
 
-    CreatureTownForged attractBroken;
+    CreatureTownFixture attractBroken;
     attractBroken._lastAttractKey = -2;
     SW_EXPECT_FALSE( attractBroken.readInto( _town ) );
 

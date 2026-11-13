@@ -4,20 +4,20 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/inspectorrename.scenario.xml -unattended
 -->
 <Scenario name="editor.inspectorrename" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor scene.new"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.create"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.name"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="Blurred"/>
 	<!-- Enter 없이 다른 칸(Hierarchy 검색)을 눌러 떠난다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.filter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="Blurred"/>
 	<Expect watch="Editor.UndoCount" equals="2"/>
 	<Pass/>

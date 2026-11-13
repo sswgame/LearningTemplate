@@ -8,20 +8,20 @@
 <Scenario name="editor.camerapresets" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="Immediately" input="exclusive" requiresModule="GF_EditorPlugin_CameraPresets">
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus camerapreset_preview"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+P"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="default.cameras.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.CameraPresetCount" equals="4" timeoutFrames="600"/>
 	<EditorClick mark="camerapreset.row.follow"/>
 	<WaitUntil watch="Editor.CameraPresetSelected" equals="2" timeoutFrames="60"/>
 	<EditorClick mark="camerapreset.row.topdown"/>
 	<WaitUntil watch="Editor.CameraPresetSelected" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

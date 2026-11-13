@@ -283,7 +283,7 @@ namespace sw::editor
                     if ( phase == 0 )
                     {
                         editorContext.getSubsystem<EditorWorkspace>().requestOpenPanelByID( item._id );
-                        return EditorSelfTestStep::WaitSettled; // 도킹 · 첫 그리기 · 패널이 부른 에셋까지 — 프레임 수를 어림하지 않는다
+                        return EditorSelfTestStep::WaitStable; // 도킹 · 첫 그리기 · 패널이 부른 에셋까지 — 프레임 수를 어림하지 않는다
                     }
                     // 앞으로 꺼낸 뒤 정지한 화면에 그 창이 그려졌다(지난 프레임에 살아 있고 그린 정점이 있다) — 탭 뒤에 숨거나 바인더가 틀려 다른 ImGui 컨텍스트로 가면 없다.
                     const ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( item._title.c_str() ).c_str() );
@@ -381,11 +381,11 @@ namespace sw::editor
                 }
                 static EditorSelfTestStep runDockFollowsWindowSize( EditorSelfTestContext& context )
                 {
-                    constexpr uint32 kMaxSettleSteps = 60; // 크기 바꾸기가 닿기를 기다리는 시한(단계)
-                    constexpr uint32 kWideWidth      = 1600;
-                    constexpr uint32 kWideHeight     = 900;
-                    constexpr uint32 kNarrowWidth    = 640; // 에디터 최소 크기보다 작다. 창은 최소 크기에서 멈춰야 한다
-                    constexpr uint32 kNarrowHeight   = 360;
+                    constexpr uint32 kMaxStabilitySteps = 60; // 크기 바꾸기가 닿기를 기다리는 시한(단계)
+                    constexpr uint32 kWideWidth         = 1600;
+                    constexpr uint32 kWideHeight        = 900;
+                    constexpr uint32 kNarrowWidth       = 640; // 에디터 최소 크기보다 작다. 창은 최소 크기에서 멈춰야 한다
+                    constexpr uint32 kNarrowHeight      = 360;
 
                     MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
                     IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
@@ -402,7 +402,7 @@ namespace sw::editor
                         return EditorSelfTestStep::Continue;
                     }
                     // 단계마다 크기 바꾸기가 다 닿을 때까지 기다린다(프레임 수를 어림하지 않는다). 시한을 넘기면 실패로 적고 다음 단계로 간다.
-                    if ( isWindowSizeApplied( *pWindow ) == false && stepIndex - probe._phaseStartStep < kMaxSettleSteps )
+                    if ( isWindowSizeApplied( *pWindow ) == false && stepIndex - probe._phaseStartStep < kMaxStabilitySteps )
                         return EditorSelfTestStep::Continue;
                     (void)context.expect( isWindowSizeApplied( *pWindow ), "the window size did not reach the editor viewport and dockspace" );
                     probe._phaseStartStep = stepIndex;
@@ -526,7 +526,7 @@ namespace sw::editor
                         probe._xmlBefore = ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Snapshot } );
                         (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<InspectorPanel>( true );
                         editorContext.getSubsystem<EditorWorkspace>().selectGameObject( pObj );
-                        return EditorSelfTestStep::WaitSettled; // 정지는 같은 배치를 두 번 연속 본 뒤라 인스펙터가 적어도 두 번 그렸다
+                        return EditorSelfTestStep::WaitStable; // 정지는 같은 배치를 두 번 연속 본 뒤라 인스펙터가 적어도 두 번 그렸다
                     }
 
                     GameObjectManager* pManager = editor::getActiveObjectManager();
@@ -909,7 +909,7 @@ namespace sw::editor
                         probe._baseScale = EditorThemeUtil::getDPIScale();
                         probe._fakeScale = probe._baseScale + 0.5f;
                         probe.installFake( platformIO, &fakeWindowDPIScale );
-                        return EditorSelfTestStep::WaitSettled; // NewFrame 이 뷰포트 DPI 를 다시 읽고, 다음 프레임에 테마가 따른다
+                        return EditorSelfTestStep::WaitStable; // NewFrame 이 뷰포트 DPI 를 다시 읽고, 다음 프레임에 테마가 따른다
                     }
                     if ( stepIndex == kCheckScaleStep )
                     {
@@ -937,7 +937,7 @@ namespace sw::editor
                             SendMessageW( hWnd, WM_DPICHANGED, MAKEWPARAM( static_cast<WORD>( 96.0f * probe._fakeScale ), static_cast<WORD>( 96.0f * probe._fakeScale ) ), reinterpret_cast<LPARAM>( &probe._suggestedRect ) );
                         }
 #endif
-                        return EditorSelfTestStep::WaitSettled;
+                        return EditorSelfTestStep::WaitStable;
                     }
                     if ( stepIndex == kCheckWindowStep )
                     {
@@ -961,7 +961,7 @@ namespace sw::editor
                             SendMessageW( hWnd, WM_DPICHANGED, MAKEWPARAM( static_cast<WORD>( 96.0f * probe._baseScale ), static_cast<WORD>( 96.0f * probe._baseScale ) ), reinterpret_cast<LPARAM>( &probe._originalRect ) );
                         }
 #endif
-                        return EditorSelfTestStep::WaitSettled;
+                        return EditorSelfTestStep::WaitStable;
                     }
                     // 실제 DPI 로 돌아왔으므로 테마도 따라 돌아와야 한다. 모니터를 옮겼다가 돌아오는 것과 같다.
                     (void)context.expect( isNear( EditorThemeUtil::getDPIScale(), probe._baseScale, 0.001f ), "the theme scale did not follow the DPI back" );
@@ -1007,7 +1007,7 @@ namespace sw::editor
                 if ( stepIndex == 0 )
                 {
                     (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, true );
-                    return EditorSelfTestStep::WaitSettled;
+                    return EditorSelfTestStep::WaitStable;
                 }
 
                 // 홀수 단계는 탭을 선택하고, 짝수 단계는 그 탭의 테이블이 이 프레임에 그려졌는지 확인한다.

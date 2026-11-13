@@ -412,12 +412,12 @@ namespace sw
                             link._arrCloseReason[side]  = StreamCloseReason::RemoteClose;
                         }
                     }
-                    settleLinkLocked( link );
+                    completeLinkLocked( link );
                 } );
             }
 
             /** @brief 두 쪽 EOF 가 모두 넘어갔으면 각 쪽에 닫힘을 한 번 냅니다. */
-            static void settleLinkLocked( LoopbackLink& link )
+            static void completeLinkLocked( LoopbackLink& link )
             {
                 if ( link._arrFinDelivered[0] == SW_FALSE || link._arrFinDelivered[1] == SW_FALSE )
                     return;

@@ -361,7 +361,7 @@ namespace sw
         void      freeDeadUnits();
         void      beginOrder( RTSUnit& unit );
         void      releaseOrder( RTSUnit& unit, RTSOrder& order );
-        void      nudgeToWalkable( RTSUnit& unit );
+        void      snapToWalkable( RTSUnit& unit );
         float32   computeRectDistance( const float3& position, const int2& cell, int32 footprint ) const;
         RTSUnitID allocateUnit();
         void      stepFixed( float32 deltaTime );

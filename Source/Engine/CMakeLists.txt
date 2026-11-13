@@ -33,7 +33,7 @@ endforeach()
 
 # 플랫폼 폴더(`Windows/` · `Linux/` · `Android/` · `Web/`)는 그 플랫폼에서만 짓는다(Core · DevTools 와 같은 규칙) — 파일 안 플랫폼 `#if` 로 빈 TU 를
 # 모든 플랫폼에서 컴파일하지 않는다(언리얼 UBT 가 `Windows/` · `Linux/` 폴더를 플랫폼마다 고르는 것과 같다). 전용 서버의 차이도 폴더가 맡는다 —
-# 서버가 짓지 않는 폴더(`SW_UNBUILT_ENGINE_FOLDERS` — 창 · 입력의 `Linux/` 포함)와 서버만 짓는 `Headless/`(아래).
+# 서버가 짓지 않는 폴더(`SW_EXCLUDED_ENGINE_FOLDERS` — 창 · 입력의 `Linux/` 포함)와 서버만 짓는 `Headless/`(아래).
 sw_filterPlatformSources(ENGINE_SOURCES)
 
 # RHI 백엔드 장치 소스는 Engine 이 짓지 않는다 — Dev 는 RHI_* 모듈이, Shipping 은 아래 5) 가 고른 하나를 가져간다.
@@ -44,21 +44,21 @@ list(REMOVE_ITEM ENGINE_SOURCES ${listRHIBackendSource})
 # 엔진에 남는 것은 런타임 코드가 선언하는 얇은 창구다: 감시 값(`Watch/`), 단계 · 차단 조건 · 단계 초기화 등록과 시나리오 형식(`Scenario/`), 실행기 창구 `IAutomationRuntime`.
 # 등록 매크로는 `SW_SHIPPING` 에서 빈 선언이 된다(`AutomationStepRegistry.h` · `AutomationWatch.h` · `AutomationStageReset.h`).
 
-# 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Engine/BuildLayout.cmake 의 `SW_UNBUILT_ENGINE_FOLDERS`).
+# 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Engine/BuildLayout.cmake 의 `SW_EXCLUDED_ENGINE_FOLDERS`).
 # 그 폴더의 헤더는 타깃 게이트 `serverbuild` 가 막는다(서버는 `IEngineRenderDriver` 만 본다). 리플렉션 헤더도 아래 8) 에서 뺀다.
-set(swUnbuiltFolderRegex "")
-foreach(swUnbuiltFolder IN LISTS SW_UNBUILT_ENGINE_FOLDERS)
-	sw_excludeUnbuiltSources(ENGINE_SOURCES "/Source/Engine/${swUnbuiltFolder}/.*\\.(c|cpp)$")
-	if(swUnbuiltFolderRegex)
-		string(APPEND swUnbuiltFolderRegex "|")
+set(swExcludedFolderRegex "")
+foreach(swExcludedFolder IN LISTS SW_EXCLUDED_ENGINE_FOLDERS)
+	sw_removeExcludedSources(ENGINE_SOURCES "/Source/Engine/${swExcludedFolder}/.*\\.(c|cpp)$")
+	if(swExcludedFolderRegex)
+		string(APPEND swExcludedFolderRegex "|")
 	endif()
-	string(APPEND swUnbuiltFolderRegex "/Source/Engine/${swUnbuiltFolder}/")
-	message(STATUS "[Engine] ${SW_TARGET_TYPE} target: Engine/${swUnbuiltFolder} is not built")
+	string(APPEND swExcludedFolderRegex "/Source/Engine/${swExcludedFolder}/")
+	message(STATUS "[Engine] ${SW_TARGET_TYPE} target: Engine/${swExcludedFolder} is not built")
 endforeach()
 
 # 오디오를 짓는 구성(클라이언트 · 에디터)은 플랫폼 장치 백엔드(`Audio/<플랫폼>/*AudioBackend.cpp`)를 정확히 하나 담는다 — 없으면 기동에서 `IAudioService::create` 가
 # 치명 오류로 섰다(감사 P0-11). 구성에서 멈춰 빌드 오류로 옮긴다. 언리얼 AudioMixer 는 플랫폼마다 백엔드 모듈이 있고 없는 플랫폼은 패키징 대상이 아니다.
-if(NOT "Audio" IN_LIST SW_UNBUILT_ENGINE_FOLDERS)
+if(NOT "Audio" IN_LIST SW_EXCLUDED_ENGINE_FOLDERS)
 	set(listAudioBackendSource ${ENGINE_SOURCES})
 	list(FILTER listAudioBackendSource INCLUDE REGEX "/Source/Engine/Audio/[^/]+/[^/]+AudioBackend\\.cpp$")
 	list(LENGTH listAudioBackendSource audioBackendCount)
@@ -71,16 +71,16 @@ endif()
 # 창 없는 서버의 창 · 입력 · 클립보드(`Window/Headless` · `Input/Headless`)는 서버만 짓는다 — 클라이언트는 플랫폼 폴더(`Window/Linux` …)가 같은 함수를 정의한다.
 # 구성으로 파일 안을 가르지 않고(그런 매크로는 없다 — `BuildInfo.h`) 폴더째 고른다(언리얼 `UE_SERVER` 대신 모듈 · 폴더를 빼는 쪽과 같다).
 if(NOT SW_TARGET_TYPE STREQUAL "Server")
-	sw_excludeUnbuiltSources(ENGINE_SOURCES "/Source/Engine/(Window|Input)/Headless/.*\\.(c|cpp)$")
+	sw_removeExcludedSources(ENGINE_SOURCES "/Source/Engine/(Window|Input)/Headless/.*\\.(c|cpp)$")
 endif()
 # 서버 전용 소스(`Server` — 운영 HTTP 끝점 · 관리 채널 · 서버 서비스 레지스트리, `Config/Server` — 서버 비밀)는 클라이언트 구성이 짓지 않는다(`SW_SERVER_ONLY_SOURCE_PATTERNS`, 헤더는 게이트 `clientbuild`).
 if(SW_TARGET_TYPE STREQUAL "Client")
-	sw_excludeUnbuiltSources(ENGINE_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS})
+	sw_removeExcludedSources(ENGINE_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS})
 endif()
 
 # 개발 전용 소스(기능 폴더의 단위 테스트 · 개발 명령)는 배포 구성이 짓지 않는다.
 if(SW_SHIPPING_BUILD)
-	sw_excludeUnbuiltSources(ENGINE_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
+	sw_removeExcludedSources(ENGINE_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
 
 # 개발 · 배포 차이가 값뿐인 곳은 `build::kShipping`(Core/Foundation/BuildInfo.h)을 읽는다 — 규칙은 docs/agents/BuildConfigSwitch.md.
@@ -95,10 +95,10 @@ set(listEngineLayerSource "")
 foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
 	# 이 구성이 짓는 것(ENGINE_SOURCES — 짓지 않는 폴더 · RHI 백엔드 · Jolt 를 뺀 것)만 남긴다.
 	list(TRANSFORM SW_ENGINE_TIER_${tier}_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" OUTPUT_VARIABLE listTierSource)
-	set(listTierUnbuilt ${listTierSource})
-	list(REMOVE_ITEM listTierUnbuilt ${ENGINE_SOURCES})
-	if(listTierUnbuilt)
-		list(REMOVE_ITEM listTierSource ${listTierUnbuilt})
+	set(listTierExcluded ${listTierSource})
+	list(REMOVE_ITEM listTierExcluded ${ENGINE_SOURCES})
+	if(listTierExcluded)
+		list(REMOVE_ITEM listTierSource ${listTierExcluded})
 	endif()
 	set(swEngineTierSource_${tier} ${listTierSource})
 	list(APPEND listEngineLayerSource ${listTierSource})
@@ -117,7 +117,7 @@ sw_findEngineCompressionLibraries(listEngineCompressionLib)
 # ReflectionParser는 Core STATIC만 링크해 Engine.dll 순환을 피함
 # ------------------------------------------------------------------------------
 add_library(Engine ${coreLibType} ${ENGINE_SOURCES})
-sw_applyTargetLayerGate(Engine engine) # 타깃 경계 — Engine 은 GameFramework · Editor · 호스트를 보지 못한다. 층 부분 · Jolt 오브젝트는 이 include 자리를 복사한다
+sw_applyTargetLayerGuard(Engine engine) # 타깃 경계 — Engine 은 GameFramework · Editor · 호스트를 보지 못한다. 층 부분 · Jolt 오브젝트는 이 include 자리를 복사한다
 sw_requireTemplateDefinitions(Engine) # `.inl` 누락을 링크가 아니라 컴파일에서 — 층 부분 · Jolt 오브젝트도 이 옵션을 복사한다
 
 # 핫 리로드 ABI 스탬프 — Engine 이 자기 헤더 지문을 박는다(`Engine/Module/EngineABIStamp.cpp`). 모듈도 같은 값을 박는다.
@@ -236,7 +236,7 @@ endif()
 # ------------------------------------------------------------------------------
 if(SW_SHIPPING_BUILD AND SW_TARGET_TYPE STREQUAL "Server")
 	message(STATUS "[Engine] Dedicated server: no RHI backend linked")
-	sw_declareUnbuiltSources(${listRHIBackendSource})
+	sw_declareExcludedSources(${listRHIBackendSource})
 elseif(SW_SHIPPING_BUILD)
 	# 이름 · 별칭은 쿠킹 표(`Config/Engine/CookContract.json` `rhi_backends`)가 풀고, 이 플랫폼에 없는 백엔드면 구성을 세운다(sw_resolveShippingRHIBackend).
 	# 주의: 여기서 백엔드를 못 고른 채 지나가면 Engine 은 백엔드 없이 링크되고 실행에서야 "백엔드 없음" 으로 진다(실행하면 등록표가 "백엔드 없음 · 있는 것" 을 알린다).
@@ -256,9 +256,9 @@ elseif(SW_SHIPPING_BUILD)
 	target_compile_definitions(Engine PUBLIC ${SW_RHI_BACKEND_${swShippingBackend}_SHIPPING_DEFINE})
 
 	# 고르지 않은 백엔드는 이 구성에서 아무도 짓지 않는다 — 소스 검사 게이트가 알도록 적는다.
-	set(listUnbuiltRHISource ${listRHIBackendSource})
-	list(REMOVE_ITEM listUnbuiltRHISource ${listShippingRHISource})
-	sw_declareUnbuiltSources(${listUnbuiltRHISource})
+	set(listExcludedRHISource ${listRHIBackendSource})
+	list(REMOVE_ITEM listExcludedRHISource ${listShippingRHISource})
+	sw_declareExcludedSources(${listExcludedRHISource})
 endif()
 
 # ------------------------------------------------------------------------------
@@ -321,7 +321,7 @@ sw_markDeterministicSources(Engine ${swDeterministicPhysicsSources} Environment/
 sw_addReflectionStep(Engine
 	MODULE Engine
 	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
-	EXCLUDE_REGEX "${swUnbuiltFolderRegex}"
+	EXCLUDE_REGEX "${swExcludedFolderRegex}"
 )
 sw_addReflectBuiltinsGen(Engine)
 
@@ -398,7 +398,7 @@ endforeach()
 foreach(backendName IN LISTS SW_RHI_BACKEND_NAMES)
 	set(swBackendModuleDir "Graphics/RHI/${SW_RHI_BACKEND_${backendName}_SOURCE_FOLDER}/Module")
 	if(SW_SHIPPING_BUILD)
-		sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}/${swBackendModuleDir}")
+		sw_declareExcludedDirectory("${CMAKE_CURRENT_SOURCE_DIR}/${swBackendModuleDir}")
 	else()
 		add_subdirectory(${swBackendModuleDir})
 	endif()

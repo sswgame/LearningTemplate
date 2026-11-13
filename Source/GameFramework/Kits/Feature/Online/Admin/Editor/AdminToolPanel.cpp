@@ -49,15 +49,15 @@ namespace sw::editor
         , _auditSubjectText{}
         , _scopeText{ "all" }
         , _maintenanceKeyText{ "maintenance.default" }
-        , _noticeText{}
+        , _announcementText{}
         , _eventJSONText{}
         , _eventIDText{}
         , _amount{ AdminToolPanelInternal::kDefaultAmount }
         , _sanctionSeconds{ AdminToolPanelInternal::kDefaultSanctionSeconds }
         , _maintenanceSeconds{ AdminToolPanelInternal::kDefaultWindowSeconds }
-        , _noticeSeconds{ AdminToolPanelInternal::kDefaultWindowSeconds }
-        , _noticeID{ 1 }
-        , _noticePriority{ 0 }
+        , _announcementSeconds{ AdminToolPanelInternal::kDefaultWindowSeconds }
+        , _announcementID{ 1 }
+        , _announcementPriority{ 0 }
         , _sanctionKind{ ServiceSanctionKind::ChatMute }
         , _bRefund{ SW_FALSE }
     {
@@ -376,7 +376,7 @@ namespace sw::editor
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
-        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "MaintenanceNotice" ) );
+        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "MaintenanceAnnouncement" ) );
 
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "ScopeAllOrServerKind" ), "Scope (all or server kind)" ), _scopeText, 160.0f * EditorThemeUtil::getDPIScale() );
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "MessageKey" ), "Message key" ), _maintenanceKeyText, 200.0f * EditorThemeUtil::getDPIScale() );
@@ -392,24 +392,24 @@ namespace sw::editor
             session.requestClearMaintenance( _scopeText, _memoText );
         ImGui::EndDisabled();
 
-        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "NoticeId" ) );
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "AnnouncementId" ) );
         EditorChrome::setNextItemWidthColumns( 16.0f );
-        EditorWidgets::inputScalar( SW_WIDGET_ID( "##Noticeid" ), ImGuiDataType_S64, &_noticeID );
+        EditorWidgets::inputScalar( SW_WIDGET_ID( "##Noticeid" ), ImGuiDataType_S64, &_announcementID );
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "Priority" ) );
         EditorChrome::setNextItemWidthColumns( 16.0f );
-        EditorWidgets::inputInt( SW_WIDGET_ID( "##Priority" ), &_noticePriority );
-        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "NoticeSeconds0UntilRemoved" ) );
+        EditorWidgets::inputInt( SW_WIDGET_ID( "##Priority" ), &_announcementPriority );
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "AnnouncementSeconds0UntilRemoved" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        EditorWidgets::inputScalar( SW_WIDGET_ID( "##Noticeseconds0untilremoved" ), ImGuiDataType_S64, &_noticeSeconds );
-        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "NoticeText" ), "Notice text" ), _noticeText, 360.0f * EditorThemeUtil::getDPIScale() );
-        const bool bNoticeReady = _memoText.empty() == false && _noticeID > 0;
-        ImGui::BeginDisabled( bNoticeReady == false );
-        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "PostNotice" ) ) )
-            session.requestPostNotice( static_cast<uint64>( _noticeID ), _noticeText, _noticePriority, _noticeSeconds, _memoText );
+        EditorWidgets::inputScalar( SW_WIDGET_ID( "##Noticeseconds0untilremoved" ), ImGuiDataType_S64, &_announcementSeconds );
+        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "AnnouncementText" ), "Notice text" ), _announcementText, 360.0f * EditorThemeUtil::getDPIScale() );
+        const bool bAnnouncementReady = _memoText.empty() == false && _announcementID > 0;
+        ImGui::BeginDisabled( bAnnouncementReady == false );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "PostAnnouncement" ) ) )
+            session.requestPostAnnouncement( static_cast<uint64>( _announcementID ), _announcementText, _announcementPriority, _announcementSeconds, _memoText );
         EditorSelfTestMarks::record( "admin.notice.post" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "RemoveNotice" ) ) );
-        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "RemoveNotice" ) ) )
-            session.requestRemoveNotice( static_cast<uint64>( _noticeID ), _memoText );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "RemoveAnnouncement" ) ) );
+        if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "RemoveAnnouncement" ) ) )
+            session.requestRemoveAnnouncement( static_cast<uint64>( _announcementID ), _memoText );
         ImGui::EndDisabled();
     }
 

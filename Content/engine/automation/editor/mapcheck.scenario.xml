@@ -8,19 +8,19 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_editorWatchPanel" value="map_check"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open engine/automation/editor/mapcheck/mapcheck_expect_error.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="ZeroRadiusLight"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<ExpectLog id="ObjectValidation.Issue" atLeast="1"/>
 	<!-- 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="statusBar.mapCheck" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="statusBar.mapCheck" state="Up"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="66"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="mapCheck.row.0" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="mapCheck.row.0" state="Up"/>
@@ -28,9 +28,9 @@
 	<EditorExpectObject name="ZeroRadiusLight" selected="1"/>
 	<CaptureEditorUI file="mapcheck.png"/>
 	<!-- 오류를 심은 씬을 열어 둔 채 끝내면 상태줄의 검사 수와 토스트가 다음 시나리오까지 남는다 — 깨끗한 씬으로 돌아가고 끝낸다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

@@ -16,27 +16,27 @@
 -->
 <Scenario name="editor.assetmove" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/assetmove" as="scratch/assetmove"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_editorWatchAsset" value="scratch/assetmove/pack/probe.material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus content_browser"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>
 	<DevCommand line="content.open scratch/assetmove"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- ① 폴더째 옮기기 -->
 	<EditorDrag mark="contentBrowser.asset.pack" toMark="contentBrowser.asset.target"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="assetmove/confirm.png" maxMagentaFraction="0"/>
 	<EditorClick mark="contentBrowser.move.confirm" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.move.confirm" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Asset.MovedSet" contains="Moved 2 asset(s)" count="1"/>
 	<ExpectLog id="Asset.MovedSet" contains="fixed 1 referencing file(s)" count="1"/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
@@ -45,37 +45,37 @@
 	<Variable name="gv_editorWatchAsset" value="scratch/assetmove/target/pack/detail/probe_detail.material"/>
 	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>
 	<!-- ② 경로 칸 밖(주석)에서 적힌 에셋이 든 폴더는 옮기지 않는다 — 고치지 못한 참조를 남기지 않는다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorDrag mark="contentBrowser.asset.refuse" toMark="contentBrowser.asset.target"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="assetmove/refused.png" maxMagentaFraction="0"/>
 	<EditorClick mark="contentBrowser.move.cancel" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.move.cancel" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Asset.MovedSet" count="1"/>
 	<Variable name="gv_editorWatchAsset" value="scratch/assetmove/refuse/noted.material"/>
 	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>
 	<!-- ③ 미저장으로 연 머티리얼의 이름을 바꾸면 문서 경로가 따라가고, 저장은 새 자리에 쓴다 -->
 	<DevCommand line="panel.focus material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/assetmove/target/keep.material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorWatchAsset" value="scratch/assetmove/target/keep.material"/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="material.propertyFilter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="rough"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="material.property._roughness" mods="ctrl"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="0.9"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.MaterialModifiedPropertyCount" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="1"/>
@@ -85,16 +85,16 @@
 	<Variable name="gv_editorWatchAsset" value="scratch/assetmove/target/kept.material"/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="60"/>
 	<DevCommand line="panel.saveDocument material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
 	<DevCommand line="asset.expectScratchMissing scratch/assetmove/target/keep.material"/>
 	<DevCommand line="asset.expectScratchContains scratch/assetmove/target/kept.material 0.9"/>
 	<!-- ④ 미저장 씬이 적은 에셋은 옮기지 않는다("먼저 저장"). 씬 파일 자신은 옮겨지고 Ctrl+S 가 새 자리에 쓴다 -->
 	<DevCommand line="scene.open scratch/assetmove/assetmove.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="select.type MeshComponent"/>
 	<DevCommand line="component.add PointLightComponent"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.SceneDirty" equals="1" timeoutFrames="60"/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
 	<DevCommand line="asset.expectScratchMoveRefused scratch/assetmove/target/pack/probe.material scratch/assetmove/target/pack/probe_moved.material unsaved"/>

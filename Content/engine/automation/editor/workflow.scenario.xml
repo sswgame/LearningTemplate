@@ -7,67 +7,67 @@
 -->
 <Scenario name="editor.workflow" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<!-- 에디터가 첫 씬을 다 열고 패널을 한 번씩 그릴 때까지 기다린 뒤 빈 씬에서 시작한다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor scene.new"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="GameObject" count="0"/>
 	<Expect watch="Editor.PlayState" equals="0"/>
 	<!-- 1) 오브젝트 만들기 — 만든 오브젝트가 선택된다 -->
 	<EditorClick mark="hierarchy.create"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="GameObject" selected="1"/>
 	<!-- 2) 컴포넌트 붙이기 — 선택한 줄을 오른쪽 클릭 → Add Component → 검색 → 항목 -->
 	<EditorClick mark="hierarchy.selectedRow" button="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorHover mark="menu.scene.object.addComponent"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.addComponent.search"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="PointLight"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.addComponent.PointLightComponent"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="GameObject" component="PointLightComponent"/>
 	<!-- 3) 인스펙터에서 값 고치기 — 이름 칸을 눌러 전부 고르고 새 이름 + Enter -->
 	<EditorClick mark="inspector.name"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="Lamp"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="Lamp" component="PointLightComponent"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
 	<!-- 4) 되돌리기(단축키) · 다시 실행(커맨드) -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+Z"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="Lamp" count="0"/>
 	<EditorExpectObject name="GameObject" component="PointLightComponent"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.redo"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="Lamp" component="PointLightComponent"/>
 	<!-- 5) 저장 → 새 씬 → 다시 열기 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.saveAs {out}/workflow.scene.xml"/>
 	<WaitUntil watch="Editor.SceneDirty" equals="0" timeoutFrames="60"/>
 	<DevCommand line="editor scene.new"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="Lamp" count="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open {out}/workflow.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="Lamp" component="PointLightComponent"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>
 	<!-- 6) 에디터 안 플레이 시작 · 정지 — 정지하면 편집 씬이 그대로다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="play"/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="150"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="stop"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PlayState" equals="0"/>
 	<EditorExpectObject name="Lamp" component="PointLightComponent"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>

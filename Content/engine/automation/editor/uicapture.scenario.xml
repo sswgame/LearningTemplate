@@ -7,81 +7,81 @@
 -->
 <Scenario name="editor.uicapture" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<ResizeWindow width="1600" height="900"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="ui_dark.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor.theme light"/>
 	<WaitUntil watch="Editor.ThemeName" is="light" timeoutFrames="60"/>
 	<CaptureEditorUI file="ui_light.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor.theme highcontrast"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="ui_highcontrast.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor.theme dark"/>
 	<!-- 작업 안전 창(S3): 빈 상태 글이 이유와 할 일을 한 문장으로 말하는지 본다 — Recovered Work(복구할 것 없음) · Changes(git 목록) · Map Check(고침 열) -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus recovered_work"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="ui_recovered_work.png" maxMagentaFraction="0"/>
 	<DevCommand line="panel.close recovered_work"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus source_control_changes"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="ui_changes.png" maxMagentaFraction="0"/>
 	<DevCommand line="panel.close source_control_changes"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus map_check"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="ui_map_check.png" maxMagentaFraction="0"/>
 	<DevCommand line="panel.close map_check"/>
 	<!-- 시각 저작 창(7 차 S4) — 빈 문서 상태에서도 틀 · 안내 글이 잘리지 않는지 본다(체크리스트로 눈으로 본다). 찍은 뒤 닫아 다음 창을 가리지 않는다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus tileset_editor"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="ui_tileset_editor.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close tileset_editor"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus volumetric_fog"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="ui_volumetric_fog.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close volumetric_fog"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus ability_catalog"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="ui_ability_catalog.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close ability_catalog"/>
 	<!-- 연출 패널 — 시퀀서(바인딩 · 컷 차선 · 키 띠)와 컷씬 디버거(플레이어가 없으면 빈 안내)를 띄워 찍는다(S5) -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus sequencer"/>
 	<DevCommand line="panel.focus sequence_debugger"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="ui_sequencer.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close sequence_debugger"/>
 	<DevCommand line="panel.close sequencer"/>
 	<!-- 지역 볼륨 인스펙터(8 차 T1) — 모래 함몰 구역(Quicksand, 프로필 sand.zone.xml)의 모듈 구역: 줄마다 출처(물려받음 · 바꿈 · 더함 · 뺌)가 흐린 글로, 강조색 없이 보이는지 눈으로 본다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open game/empty/maps/surfaceinteraction.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.ObjectCount" atLeast="5" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="select.type ZoneVolumeComponent"/>
 	<DevCommand line="panel.focus inspector"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="ui_zone_inspector.png" maxMagentaFraction="0"/>
 	<!-- 대화 그래프 — 인스펙터 아래 화자 목록(이름 칸 · 지우기 · 화자 추가)과 노드 머리의 화자 이름(id 로 푼다)을 찍는다(T7) -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus dialogue_graph"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="ui_dialogue_graph.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close dialogue_graph"/>
 	<!-- 에디터 문구가 키 이름(EditorConsole.FilterHint 등)으로 보이지 않는다 — 에디터 지역화 프로젝트가 탑재됐다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Localization.MissingKey" count="0"/>
 	<Pass/>
 </Scenario>

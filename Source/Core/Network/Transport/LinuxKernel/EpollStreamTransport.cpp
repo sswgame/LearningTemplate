@@ -186,8 +186,8 @@ namespace sw
                     result._sentBytes += static_cast<uint64>( sent );
                     ++result._sendCallCount;
                 }
-                const bool bClosingQueueDrained = _fd >= 0 && _sendQueue.isEmpty() && _state == EpollConnectionState::Closing;
-                if ( bClosingQueueDrained )
+                const bool bClosingQueueEmpty = _fd >= 0 && _sendQueue.isEmpty() && _state == EpollConnectionState::Closing;
+                if ( bClosingQueueEmpty )
                 {
                     if ( _bShutdownSent == SW_FALSE )
                     {

@@ -3,7 +3,7 @@
  * @brief 프레임 시스템(`ISceneFrameSystem`)이 씬 데이터의 어떤 종류를 읽고 쓰는지 말하는 선언의 형식입니다. 종류는 표(`SceneDataKindList.xxx`)의 줄입니다.
  * @details 프레임 시스템은 붙인 순서가 의미입니다(겹치는 접근은 그 순서로 돈다). 그 순서가 뜻을 갖는 곳(쓰는 시스템이 먼저, 읽는 시스템이 나중)을 코드로 말하는 것이 이 선언이고,
  *          `GameObjectManager::addFrameSystem` 이 읽는 시스템 뒤에 쓰는 시스템을 붙이는 등록을 거절합니다. 같은 선언이 나중에 시스템을 병렬로 돌릴 때
- *          "서로 겹치는 접근이 없는 것끼리만 같이 돈다" 의 입력입니다(`FrameSystemLanePlan` 이 파도로 묶고 `runFrameStepFrameSystems` 가 레인 시스템(`ISceneLaneFrameSystem`)을 워커로 보낸다 — 워커에서 돌지는 선언이 아니라 서명이 정한다).
+ *          "서로 겹치는 접근이 없는 것끼리만 같이 돈다" 의 입력입니다(`FrameSystemParallelPlan` 이 파도로 묶고 `runFrameStepFrameSystems` 가 병렬 시스템(`ISceneParallelFrameSystem`)을 워커로 보낸다 — 워커에서 돌지는 선언이 아니라 서명이 정한다).
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -86,7 +86,7 @@ namespace sw
 {
     /**
      * @struct SceneFrameAccess
-     * @brief 프레임 시스템 하나가 `runMain` · `runLane` 에서 하는 일의 접근 선언입니다. 시스템 밖(컴포넌트 틱 · 다른 단계)이 하는 일은 적지 않습니다.
+     * @brief 프레임 시스템 하나가 `runMain` · `runOnAnyThread` 에서 하는 일의 접근 선언입니다. 시스템 밖(컴포넌트 틱 · 다른 단계)이 하는 일은 적지 않습니다.
      * @details 세 집합은 이렇게 가릅니다. 어느 집합에도 없는 종류는 그 시스템이 건드리지 않는다는 선언입니다.
      *          - `_writes`: 바꾸는 종류. 만들고 지우는 것(`Structure`)도 쓰기입니다. 확신이 없으면 쓰기로 적습니다(읽기보다 보수적).
      *          - `_reads`: **이번 프레임에 앞서 붙은 시스템이 쓴 값을 본 뒤여야 하는** 읽기. 이 종류를 쓰는 시스템이 자기보다 **뒤에** 붙으면 등록을 거절합니다.

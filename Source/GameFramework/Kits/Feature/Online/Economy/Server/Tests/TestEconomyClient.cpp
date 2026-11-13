@@ -110,11 +110,11 @@ namespace
             _rig._server.start();
             _clientIndex = _rig._clients.connect( _rig._server._port, { &_economy } );
             _economy.initialize( &_rig._clients.getClient( _clientIndex ) );
-            pump();
+            poll();
             SW_EXPECT_TRUE( _rig._clients.getClient( _clientIndex ).isReady() );
         }
 
-        void pump() { test::updateAll( { &_rig._server }, _rig._clients, kNowMs ); }
+        void poll() { test::updateAll( { &_rig._server }, _rig._clients, kNowMs ); }
     };
 
     /** @brief 받은 답 하나입니다. 메서드마다 응답 형식이 달라 공통 칸만 옮겨 적는다. */
@@ -194,10 +194,10 @@ namespace
 
         void onReport( const StorePurchaseReport& report ) { _listReport.push_back( report ); }
 
-        void pump()
+        void poll()
         {
             _flow.update();
-            _client.pump();
+            _client.poll();
         }
     };
 
@@ -220,7 +220,7 @@ SW_TEST_CASE( EconomyClientTest, RepliesUpdateTheCache )
         LedgerBalance{ "cur.gem",  5}
     };
     (void)rig._economy.call<EconomyMethod::GetWallet>( recorder.makeDelegate<EconomyMethod::GetWallet>() );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), recorder._listReply.size() );
     SW_EXPECT_EQUAL( int64( 10 ), rig._economy.getBalance( "cur.gold" ) );
     SW_EXPECT_EQUAL( int64( 5 ), rig._economy.getBalance( "cur.gem" ) );
@@ -232,7 +232,7 @@ SW_TEST_CASE( EconomyClientTest, RepliesUpdateTheCache )
     EconomyPurchaseRequest purchase;
     purchase._offerID = "offer";
     (void)rig._economy.call<EconomyMethod::Purchase>( purchase, recorder.makeDelegate<EconomyMethod::Purchase>(), NetIdempotencyKey{} );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( int64( 3 ), rig._economy.getBalance( "cur.gold" ) );
     SW_EXPECT_EQUAL( int64( 5 ), rig._economy.getBalance( "cur.gem" ) ); // 답에 없는 자산은 그대로다
     SW_EXPECT_NOT_EQUAL( revision, rig._economy.getRevision() );
@@ -241,7 +241,7 @@ SW_TEST_CASE( EconomyClientTest, RepliesUpdateTheCache )
         LedgerBalance{ "cur.gold", 1 }
     };
     (void)rig._economy.call<EconomyMethod::GetWallet>( recorder.makeDelegate<EconomyMethod::GetWallet>() );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( int64( 0 ), rig._economy.getBalance( "cur.gem" ) ); // 스냅샷에 없으면 없다
 }
 
@@ -257,7 +257,7 @@ SW_TEST_CASE( EconomyClientTest, FailedReplyChangesNothing )
     EconomyPurchaseRequest purchase;
     purchase._offerID = "offer";
     (void)rig._economy.call<EconomyMethod::Purchase>( purchase, recorder.makeDelegate<EconomyMethod::Purchase>(), NetIdempotencyKey{} );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), recorder._listReply.size() );
     SW_EXPECT_TRUE( recorder._listReply[0]._result == EconomyResult::InsufficientFunds );
     SW_EXPECT_EQUAL( int64( 0 ), rig._economy.getBalance( "cur.gold" ) );
@@ -272,7 +272,7 @@ SW_TEST_CASE( EconomyClientTest, IdempotencyKeyIsKeptForRetries )
     redeem._storeName = "google";
     redeem._payload   = "p|t";
     (void)rig._economy.call<EconomyMethod::RedeemReceipt>( redeem, recorder.makeDelegate<EconomyMethod::RedeemReceipt>(), NetIdempotencyKey{} );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), recorder._listReply.size() );
     const NetIdempotencyKey first = recorder._listReply[0]._idempotencyKey;
     SW_EXPECT_TRUE( first.isValid() );
@@ -280,13 +280,13 @@ SW_TEST_CASE( EconomyClientTest, IdempotencyKeyIsKeptForRetries )
     SW_EXPECT_TRUE( rig._service._listKey[0] == first );
 
     (void)rig._economy.call<EconomyMethod::RedeemReceipt>( redeem, recorder.makeDelegate<EconomyMethod::RedeemReceipt>(), first );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 2 ), recorder._listReply.size() );
     SW_EXPECT_TRUE( recorder._listReply[1]._idempotencyKey == first );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._service._listKey.size() ); // 다른 키를 보냈다면 서비스가 다시 불렸다
 
     (void)rig._economy.call<EconomyMethod::RedeemReceipt>( redeem, recorder.makeDelegate<EconomyMethod::RedeemReceipt>(), NetIdempotencyKey{} );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 2 ), rig._service._listKey.size() );
     SW_EXPECT_FALSE( rig._service._listKey[1] == first );
 }
@@ -426,7 +426,7 @@ SW_TEST_CASE( StorePurchaseFlowTest, PurchasedIsRedeemedThenFinished )
 {
     PurchaseFlowFixture rig;
     rig._bridge.pushPurchased( "gem100|TOKEN" );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._client._service._listRedeem.size() );
     SW_EXPECT_EQUAL( string( "google" ), rig._client._service._listRedeem[0]._storeName );
     SW_EXPECT_EQUAL( string( "gem100|TOKEN" ), rig._client._service._listRedeem[0]._payload );
@@ -443,7 +443,7 @@ SW_TEST_CASE( StorePurchaseFlowTest, PendingRedeemRetriesWithTheSameKey )
     PurchaseFlowFixture rig;
     rig._client._service._reply._result = EconomyResult::ReceiptPending;
     rig._bridge.pushPurchased( "gem100|TOKEN" );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._listReport.size() );
     SW_EXPECT_TRUE( rig._listReport[0]._bRetryable == SW_TRUE );
     SW_EXPECT_TRUE( rig._bridge._listFinished.empty() );
@@ -451,13 +451,13 @@ SW_TEST_CASE( StorePurchaseFlowTest, PendingRedeemRetriesWithTheSameKey )
     rig._client._service._reply._result = EconomyResult::Ok;
     const StorePurchaseReport pending   = rig._listReport[0];
     rig._flow.retryRedeem( pending );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 2 ), rig._client._service._listKey.size() );
     SW_EXPECT_TRUE( rig._client._service._listKey[0] == rig._client._service._listKey[1] );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._bridge._listFinished.size() );
 
     rig._flow.retryRedeem( rig._listReport[1] ); // 끝난 결과는 다시 내지 않는다
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 2 ), rig._client._service._listKey.size() );
 }
 
@@ -470,14 +470,14 @@ SW_TEST_CASE( StorePurchaseFlowTest, RefusedPurchaseStaysOpen )
     {
         rig._client._service._reply._result = result;
         rig._bridge.pushPurchased( "gem100|TOKEN" );
-        rig.pump();
+        rig.poll();
         SW_EXPECT_TRUE( rig._bridge._listFinished.empty() );
         SW_EXPECT_TRUE( rig._listReport.back()._result == result );
         SW_EXPECT_TRUE( rig._listReport.back()._bRetryable == SW_FALSE );
     }
     rig._client._service._reply._result = EconomyResult::ReceiptRefunded;
     rig._bridge.pushPurchased( "gem100|TOKEN" );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._bridge._listFinished.size() );
 }
 
@@ -491,7 +491,7 @@ SW_TEST_CASE( StorePurchaseFlowTest, UnpaidResultsNeverReachTheServer )
         result._status             = status;
         result._failureText        = "text";
     }
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._client._service._listMethod.empty() );
     SW_REQUIRE_EQUAL( size_t( 3 ), rig._listReport.size() );
     SW_EXPECT_TRUE( rig._listReport[0]._billing == StoreBillingStatus::Cancelled );

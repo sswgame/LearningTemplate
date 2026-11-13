@@ -51,13 +51,13 @@ namespace sw
              *        그린 화소를 보는 단계와, GPU 수명 결함을 백엔드 검증 레이어(Vulkan)의 로그로만 드러내는 에디터 자체 테스트(`EditorSelfTest`)와,
              *        백엔드 사이에 같아야 하는 값을 남기는 `Record`(부모가 자식 보고의 `records[]` 를 견준다 — `findRecordMismatches`, 한 백엔드에서만 돌면 견줄 것이 없다)다.
              */
-            struct BackendJudgingStep
+            struct BackendEvaluationStep
             {
                 string_view _kind;
                 string_view _attribute;
             };
             // `CaptureEditorUI` 는 마젠타 문턱이 있을 때만 화소를 본다 — 문턱 없는 캡처는 사람 · 리뷰가 볼 그림을 남기고, 잘린 창 수는 레이아웃이라 백엔드와 무관하다.
-            static constexpr BackendJudgingStep kArrBackendJudgingStep[] = {
+            static constexpr BackendEvaluationStep kArrBackendEvaluationStep[] = {
                 {       "ExpectImage",                   {}},
                 {"ExpectImagesDiffer",                   {}},
                 {   "CaptureEditorUI", "maxMagentaFraction"},
@@ -67,8 +67,8 @@ namespace sw
 
             static bool isEvaluatedPerBackend( const AutomationStep& step )
             {
-                return std::any_of( std::begin( kArrBackendJudgingStep ), std::end( kArrBackendJudgingStep ), [&step]( const BackendJudgingStep& judging )
-                { return step._kind == judging._kind && ( judging._attribute.empty() || step.findAttribute( judging._attribute ) != nullptr ); } );
+                return std::any_of( std::begin( kArrBackendEvaluationStep ), std::end( kArrBackendEvaluationStep ), [&step]( const BackendEvaluationStep& evaluation )
+                { return step._kind == evaluation._kind && ( evaluation._attribute.empty() || step.findAttribute( evaluation._attribute ) != nullptr ); } );
             }
 
             /** @brief 자식 하나의 상태입니다. 출력 파이프는 스레드 하나가 끝까지 비운다 — 비우지 않으면 파이프가 찬 자식이 멈춘다. */

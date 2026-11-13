@@ -234,7 +234,7 @@ namespace sw
                 }
                 if ( mail._message._expiresMs > 0 )
                     inoutTransaction.erase( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( mail._message._expiresMs, record._key ) );
-                inoutTransaction.erase( ServiceMail::getNoticeTable(), ServiceMail::makeExpiryKey( mail._message._createdMs, record._key ) ); // 알림 키는 만든 시각 + 우편 키다
+                inoutTransaction.erase( ServiceMail::getNotificationTable(), ServiceMail::makeExpiryKey( mail._message._createdMs, record._key ) ); // 알림 키는 만든 시각 + 우편 키다
                 const bool bEscrowed = mail._state != ServiceMailState::Claimed && mail._message._fundingHolder._kind != LedgerHolderKind::Mint && mail._message._listAttachment.empty() == false;
                 if ( bEscrowed == false )
                     return true;

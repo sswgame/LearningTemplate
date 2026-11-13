@@ -13,68 +13,68 @@
 -->
 <Scenario name="editor.animgraphedit" fixedDelta="0.0166667" timeoutFrames="1100" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/animgraphedit" as="scratch/animgraphedit"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus animation_graph"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/animgraphedit/animgraphedit.animgraph.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.AnimationGraphLinkCount" equals="2"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="2" timeoutFrames="90"/>
 	<Expect watch="Editor.AnimationGraphLinkCount" equals="2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animGraph.canvas" button="1" anchor="0.06,0.9"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="att"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="3" timeoutFrames="75"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.node.Walk"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.node.Attack" mods="ctrl"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.linkSelected"/>
 	<WaitUntil watch="Editor.AnimationGraphLinkCount" equals="3" timeoutFrames="60"/>
 	<Expect watch="Editor.AnimationGraphConditionCount" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.link.2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.condition.param"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="Speed"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.condition.op"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.condition.op.1"/>
 	<WaitUntil watch="Editor.AnimationGraphConditionCount" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.save"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.link.2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.condition.op"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.condition.op.0"/>
 	<WaitUntil watch="Editor.AnimationGraphConditionCount" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.load"/>
 	<WaitUntil watch="Editor.AnimationGraphConditionCount" equals="1" timeoutFrames="75"/>
 	<Expect watch="Editor.AnimationGraphLinkCount" equals="3"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.node.Attack"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Delete"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.AnimationGraphLinkCount" equals="2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.save"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

@@ -94,14 +94,14 @@ run_ctest() {
 # 겹쳐 도는 갈래 — 뒤에서 띄우고 pid 를 모은다. --dry-run 은 차례로 찍는다(출력이 섞이지 않게).
 LANE_PIDS=()
 LANE_NAMES=()
-start_lane() {
+start_job() {
   local NAME=$1; shift
   if [ $DRY -eq 1 ]; then echo "[dry] -- 갈래 $NAME (겹쳐 돈다)"; "$@"; return; fi
   "$@" &
   LANE_PIDS+=($!)
   LANE_NAMES+=("$NAME")
 }
-wait_lanes() {
+wait_jobs() {
   local FAILED=""
   for i in "${!LANE_PIDS[@]}"; do
     wait "${LANE_PIDS[$i]}" || FAILED="$FAILED ${LANE_NAMES[$i]}"
@@ -111,7 +111,7 @@ wait_lanes() {
   [ -z "$FAILED" ] || windows_failed "${FAILED# }"
 }
 
-lane_lint() {
+job_lint() {
   # 커밋 훅은 스테이지된 파일만 본다(Scripts/lint/lint_scope.py) — 낡은 예외 · 기준선 같은 저장소 전체 판정은 여기서 한 번 낸다.
   echo "== lint --all $(date +%T)"
   run build/verify.lint.log py -3 -m Scripts lint --all
@@ -121,14 +121,14 @@ lane_lint() {
   return $RC
 }
 
-lane_debug_nogpu() {
+job_debug_cpu() {
   run_ctest Ninja-Debug nogpu -L nogpu || return 1
   # App --test 의 케이스 수(보고에 적는다) — 보고 JSON 에서 읽는다(엔진 로그 파일에는 요약 줄이 없다). 보고 줄은 판정을 바꾸지 않는다.
   [ $DRY -eq 1 ] || py -3 -c "import json; d=json.load(open('build/Ninja-Debug/Testing/Reports/UnitTests.json', encoding='utf-8')); print(f\"App --test: {d['runCount']} case run(s), {d['failedCount']} failed\")" || true
   return 0
 }
 
-lane_server_tools() {
+job_server_tools() {
   echo "== server unit $(date +%T)"
   run build/Ninja-Debug-Server/Testing/Logs/verify.unit.log build/Ninja-Debug-Server/Bin/Server.exe --test -unattended
   local RC=$?
@@ -155,19 +155,19 @@ lane_server_tools() {
 
 mkdir -p build
 if [ $STAGE -le 1 ]; then
-  start_lane "lint --all" lane_lint
+  start_job "lint --all" job_lint
   build_preset Ninja-Debug
   build_preset Ninja-Release
   build_preset Ninja-Debug-Server
-  wait_lanes
+  wait_jobs
 fi
 
 if [ $STAGE -le 2 ]; then
   # 임포트를 먼저 끝낸다 — 낡은 산출물을 Content 에 다시 쓰는 일이라 배포 빌드의 쿠킹이 그 파일을 읽는 동안 돌지 않게(ctest 의 고정 단계 ImportedAssets 는 아래에서 곧바로 끝난다).
   run_ctest Ninja-Debug import -L import || windows_failed "Ninja-Debug import"
-  start_lane "Debug nogpu" lane_debug_nogpu
-  start_lane "server · tools · shipping" lane_server_tools
-  wait_lanes
+  start_job "Debug nogpu" job_debug_cpu
+  start_job "server · tools · shipping" job_server_tools
+  wait_jobs
 fi
 
 if [ $STAGE -le 3 ]; then

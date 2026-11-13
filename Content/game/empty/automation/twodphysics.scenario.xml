@@ -28,11 +28,11 @@
 	<WaitUntil watch="Fracture.Fractured" target="Crate" equals="1" timeoutFrames="240"/>
 	<WaitUntil watch="Fracture.DynamicBodies" target="Crate" atLeast="1" timeoutFrames="30"/>
 	<!-- 다각형 빛: 밝힌 자리(오른쪽 위)의 벽이 빛을 치우면 달라진다 -->
-	<Screenshot file="freeform_on.ppm" waitForSettle="false"/>
+	<Screenshot file="freeform_on.ppm" waitForStability="false"/>
 	<Wait frames="1"/>
 	<DevCommand line="teleport WindowLight 100 100 0"/>
 	<Wait frames="2"/>
-	<Screenshot file="freeform_off.ppm" waitForSettle="false"/>
+	<Screenshot file="freeform_off.ppm" waitForStability="false"/>
 	<Wait frames="1"/>
 	<ExpectImagesDiffer first="freeform_on.ppm" second="freeform_off.ppm" region="0.6,0.05,0.95,0.45" minDiffering="0.05"/>
 	<Pass/>

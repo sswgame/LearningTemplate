@@ -20,7 +20,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGame.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/SaveGate.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 
 namespace sw
@@ -125,7 +125,7 @@ namespace sw
         /** @brief 이 인스턴스에서 성공한 세이브 슬롯 쓰기 · 읽기 수입니다. */
         const SaveSlotCounts& getSaveSlotCounts() const { return _saveSlotCounts; }
         /** @brief 세이브 막기 문입니다 — 씬 전환 · 연출 · 깨진 복원이 범위형 막기를 들고, 들린 동안 세이브 목적 캡처가 거절된다. 게임 범위에도 걸려 있다. */
-        SaveGate& getSaveGate() { return _saveGate; }
+        SaveLock& getSaveLock() { return _saveLock; }
         /**
          * @brief 지금 도는 인스턴스입니다(없으면 nullptr). 게임 스레드에서만 부른다.
          * @details 인스턴스를 들지 않은 창구 — 세이브 메뉴 자리의 개발 명령(`game.save` · `game.load`)과 감시 값 — 가 세이브 슬롯을 부르는 자리다. 프로세스당 하나라 뜻이 하나다.
@@ -326,7 +326,7 @@ namespace sw
 
     private:
         GameStateSnapshot                 _stateSnapshot;       ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입
-        SaveGate                          _saveGate;            ///< 세이브 막기 문 — 게임 범위(씬 흐름이 빌린다)보다 먼저 서고 늦게 진다
+        SaveLock                          _saveLock;            ///< 세이브 막기 문 — 게임 범위(씬 흐름이 빌린다)보다 먼저 서고 늦게 진다
         SubsystemScope                    _gameScope;           ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
         shared_ptr<const ItemCatalog>     _pItemCatalog;        ///< `<RequiredData kind="items">` 를 적은 게임의 아이템 카탈로그(공유 캐시의 한 벌, 게임 범위 서비스)
         unique_ptr<AppearanceDatabase>    _pAppearanceDatabase; ///< `<RequiredData kind="appearance">` 를 적은 게임의 외형 데이터(게임 범위 서비스)
@@ -347,7 +347,7 @@ namespace sw
         /**
          * @brief 마지막 복원이 교체 중에 졌다 — 씬은 비워져 일부만 섰다. 다음 성공한 복원까지 세이브를 막는다(감사 P0-6).
          * @details 예전에는 실패를 경고만 하고 간격 자동 저장(예: 300 초 · 슬롯 셋)이 깨진 씬을 15 분 안에 모든 슬롯에 썼다. 수동 · 간격 · 종료 저장이 모두
-         *          `captureSnapshot( SaveGame )` 한 곳을 지나므로 거기서 문(`_saveGate`)을 본다.
+         *          `captureSnapshot( SaveGame )` 한 곳을 지나므로 거기서 문(`_saveLock`)을 본다.
          */
         Subscription _brokenRestoreBlock;
         uint8        _bStarted        : 1; ///< `initialize` 가 끝까지 섰다 — 종료 저장 · 세션 명령은 이때만

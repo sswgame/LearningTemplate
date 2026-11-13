@@ -8,22 +8,22 @@
 <Scenario name="editor.saveroundtripbehaviortree" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<Scratch from="game/empty/data/vocabulary" as="scratch/saveroundtripbehaviortree"/>
 	<Variable name="gv_editorWatchPanel" value="behavior_tree"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus behavior_tree"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutSeconds="10"/>
 	<DevCommand line="asset.openScratch scratch/saveroundtripbehaviortree/guard.bt.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.saveDocument behavior_tree"/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtripbehaviortree/guard.bt.xml"/>
 	<DevCommand line="panel.reloadDocument behavior_tree"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.saveDocument behavior_tree"/>
 	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripbehaviortree/guard.bt.xml"/>
 	<Expect watch="Editor.PanelDirty" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

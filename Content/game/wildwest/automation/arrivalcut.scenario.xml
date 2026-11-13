@@ -24,11 +24,11 @@
 	<WaitUntil watch="CameraManager.PendingCamera" target="GameCamera" is="none" timeoutFrames="4"/>
 	<Expect watch="Cinematic.CutCamera" target="ArrivalDirector" is="ArrivalCutA"/>
 	<Wait frames="8"/>
-	<Screenshot file="wildwest/arrival_a.ppm" waitForSettle="false"/>
+	<Screenshot file="wildwest/arrival_a.ppm" waitForStability="false"/>
 	<WaitUntil watch="Camera.FrameObject" is="ArrivalCutB" timeoutSeconds="2"/>
 	<Expect watch="Cinematic.CutCamera" target="ArrivalDirector" is="ArrivalCutB"/>
 	<Wait frames="8"/>
-	<Screenshot file="wildwest/arrival_b.ppm" waitForSettle="false"/>
+	<Screenshot file="wildwest/arrival_b.ppm" waitForStability="false"/>
 
 	<WaitUntil watch="Camera.FrameObject" is="GameCamera" timeoutSeconds="3"/>
 	<Expect watch="Cinematic.CutCamera" target="ArrivalDirector" is="none"/>

@@ -243,7 +243,7 @@ def report_file(path):
     failed = 0
     reasons = []
     for line in open(path, errors='replace'):
-        if 'Automation.JudgeWarning' in line:
+        if 'Automation.EvaluationWarning' in line:
             reasons.append(line[line.find('[Scenario]') + 11:].strip()[:190])
         elif 'AutomationSession.ChainStage' in line:
             stage = re.search(r'chain stage (\d+)/(\d+) (\w+) \(([\w.]+)\)', line)
@@ -394,7 +394,7 @@ def goldens():
     return 0
 
 
-def run_lane(steps):
+def run_job(steps):
     """(제목, 셸 명령) 묶음을 차례로 돌리고 첫 실패 코드를 돌려준다(뒤 단계는 앞 단계를 기다린다 — 서버 기동은 서버 빌드 뒤다). 출력은 단계마다 한 덩어리로 찍는다."""
     for title, command in steps:
         result = shell(command, capture_output=True, text=True)
@@ -415,12 +415,12 @@ def verify_all(arguments):
     server_dir = f'{CLONE}/build/Linux-Server'
     # 시간을 판정하지 않는 CPU 일 두 갈래를 겹친다(Release 단위 ‖ 서버 빌드 → 기동 → 단위) — 묶음 검증(preflight.sh 의 cpu 단계)과 같은 원칙이다.
     # 체인(시간 · 그림 판정)은 이것들이 끝난 뒤 혼자 돈다.
-    lanes = [[('Release 단위', f'cd {RELEASE} && ./Bin/App --test -unattended > /tmp/lt.unit.log 2>&1; rc=$?; grep -E "case run|FAILED" /tmp/lt.unit.log | tail -n 5 | cut -c1-160; exit $rc')],
+    jobs = [[('Release 단위', f'cd {RELEASE} && ./Bin/App --test -unattended > /tmp/lt.unit.log 2>&1; rc=$?; grep -E "case run|FAILED" /tmp/lt.unit.log | tail -n 5 | cut -c1-160; exit $rc')],
              [('서버 빌드', f'cmake --build {server_dir} -j8 > /tmp/srv.build.log 2>&1; rc=$?; grep -E "error:|FAILED:|undefined reference" /tmp/srv.build.log | head -n 20 | cut -c1-220; exit $rc'),
               ('서버 기동', f'cd {server_dir} && timeout 120 ./Bin/Server -gv_serverExitAfterTicks=60 > /tmp/srv.run.log 2>&1'),
               ('서버 단위', f'cd {server_dir} && timeout 400 ./Bin/Server --test > /tmp/srv.unit.log 2>&1; rc=$?; grep -E "case run|NO TESTS" /tmp/srv.unit.log | cut -c1-140; exit $rc')]]
-    with concurrent.futures.ThreadPoolExecutor(len(lanes)) as pool:
-        list_code = list(pool.map(run_lane, lanes))
+    with concurrent.futures.ThreadPoolExecutor(len(jobs)) as pool:
+        list_code = list(pool.map(run_job, jobs))
     code = next((rc for rc in list_code if rc != 0), 0)
     if code != 0:
         return code

@@ -47,7 +47,7 @@ namespace sw
         /** @brief 환불 회수 한 번이 완료로 넘기는 값입니다. */
         struct EconomyRefundResult
         {
-            ReceiptRefundNotification    _notice{};
+            ReceiptRefundNotification    _notification{};
             vector<EconomyBalanceChange> _listChange{};
             EconomyServiceResult         _serviceResult{ EconomyServiceResult::fail( OnlineError::kUnavailable ) };
         };
@@ -75,7 +75,7 @@ namespace sw
         , _presenceFinds{}
         , _uniqueSetDeliveryInFlight{}
         , _uniqueSetDeliveryAlarmed{}
-        , _balanceNotice{ *this }
+        , _balanceNotification{ *this }
         , _pHost{ nullptr }
         , _pMetricRegistry{ nullptr }
         , _auditJob{}
@@ -245,7 +245,7 @@ namespace sw
         if ( _settings._pReceiptRegistry == nullptr || _settings._pReceiptRegistry->usesDeliveryConfirmation() == false )
             return;
         vector<ReceiptDeliveryResult> listServiceResult;
-        _settings._pReceiptRegistry->pollDeliveryOutcomes( listServiceResult );
+        _settings._pReceiptRegistry->pollDeliveryResults( listServiceResult );
         for ( ReceiptDeliveryResult& serviceResult : listServiceResult )
         {
             _uniqueSetDeliveryInFlight.erase( serviceResult._recordKey );
@@ -572,7 +572,7 @@ namespace sw
         BitWriter body;
         if ( EconomyProtocol::MessageTypes::write( body, changed ) == false )
         {
-            SW_LOG_WARNING_ID( "EconomyService.EconomyServiceBalanceNoticeAccount", "EconomyService: a balance notice for account %# is too large to send", accountID );
+            SW_LOG_WARNING_ID( "EconomyService.EconomyServiceBalanceNotificationAccount", "EconomyService: a balance notice for account %# is too large to send", accountID );
             return;
         }
         if ( _pHost->sendPush( accountID, EconomyMethod::BalanceChanged::kKind, body ) )
@@ -589,25 +589,25 @@ namespace sw
     {
         if ( _settings._pReceiptRegistry == nullptr )
             return;
-        vector<ReceiptRefundNotification> listNotice;
-        _settings._pReceiptRegistry->pollRefunds( listNotice );
-        for ( ReceiptRefundNotification& notice : listNotice )
+        vector<ReceiptRefundNotification> listNotification;
+        _settings._pReceiptRegistry->pollRefunds( listNotification );
+        for ( ReceiptRefundNotification& notification : listNotification )
         {
             const CurrencyCatalog*          pCurrencies = _settings._pCurrencyCatalog;
             const int64                     nowMs       = _nowMs.count();
             const EconomyRefundRecoveryMode recovery    = _settings._refundRecovery;
-            _store.submit( [pCurrencies, nowMs, recovery, notice = std::move( notice )]( IServiceStoreConnection& connection )
+            _store.submit( [pCurrencies, nowMs, recovery, notification = std::move( notification )]( IServiceStoreConnection& connection )
             {
                 EconomyRefundResult done;
-                done._notice        = notice;
-                done._serviceResult = EconomyStoreLogic::revokeRefund( connection, *pCurrencies, notice, recovery, nowMs, done._listChange );
+                done._notification  = notification;
+                done._serviceResult = EconomyStoreLogic::revokeRefund( connection, *pCurrencies, notification, recovery, nowMs, done._listChange );
                 return done;
             }, [this]( const EconomyRefundResult& done, ServiceStoreCompletion completion )
-            { completeRefund( done._notice, done._serviceResult, done._listChange, completion ); } );
+            { completeRefund( done._notification, done._serviceResult, done._listChange, completion ); } );
         }
     }
 
-    void EconomyService::completeRefund( const ReceiptRefundNotification& notice, EconomyServiceResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion )
+    void EconomyService::completeRefund( const ReceiptRefundNotification& notification, EconomyServiceResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion )
     {
         for ( const EconomyBalanceChange& change : listChange )
         {
@@ -620,7 +620,7 @@ namespace sw
                              static_cast<int32>( result._result ), static_cast<int32>( result._errorCode ) );
             // 제공자의 겹침 거름이 이 거래를 기억하면 겹친 조회가 다시 알리지 않아 회수할 기회가 없어진다.
             if ( _settings._pReceiptRegistry != nullptr )
-                _settings._pReceiptRegistry->removeRefund( notice );
+                _settings._pReceiptRegistry->removeRefund( notification );
         }
         if ( _pMetricRegistry == nullptr )
             return;

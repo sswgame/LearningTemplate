@@ -170,16 +170,16 @@ namespace sw
     void AssetLoadOperation::executeCompletion( bool bBlocking )
     {
         const ScopedMemoryTag memoryScope{ _memoryTag };
-        settleCompletionStep( beginCompletion( bBlocking ) );
+        advanceCompletionStep( beginCompletion( bBlocking ) );
     }
 
     void AssetLoadOperation::executeUploadPoll( bool bBlocking )
     {
         const ScopedMemoryTag memoryScope{ _memoryTag };
-        settleCompletionStep( pollCompletion( bBlocking ) );
+        advanceCompletionStep( pollCompletion( bBlocking ) );
     }
 
-    void AssetLoadOperation::settleCompletionStep( const expected<AssetCompletionStep>& step )
+    void AssetLoadOperation::advanceCompletionStep( const expected<AssetCompletionStep>& step )
     {
         if ( step.has_value() == false )
         {

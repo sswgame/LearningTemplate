@@ -82,7 +82,7 @@ namespace sw
         [[nodiscard]] bool beginRecording( string_view outputPath, string_view watchList );
         /**
          * @brief 지금 단계 시나리오의 로그 선언 · 허용(`<ExpectLog>` · `<AllowLog>`)입니다. 세션 수명이고 안에서 잠가 아무 스레드에서나 읽는다 — 에디터 콘솔이 받는 순간
-         *        `classify` 로 묻고 선언한 줄을 흐리게 그린다. 단계의 판정(`AutomationJudge`)은 같은 객체를 빌려 게이트를 판정한다. 받는 쪽은 이 세션보다 오래 들어도 된다.
+         *        `classify` 로 묻고 선언한 줄을 흐리게 그린다. 단계의 판정(`AutomationEvaluator`)은 같은 객체를 빌려 게이트를 판정한다. 받는 쪽은 이 세션보다 오래 들어도 된다.
          */
         shared_ptr<const AutomationLogPolicy> getLogPolicy() const { return _pLogPolicy; }
         /** @brief 시나리오나 녹화가 돌고 있으면 true 입니다(무인 실행 페이싱 · 재생기의 겹침 거절이 본다). */

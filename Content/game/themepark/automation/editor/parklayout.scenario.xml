@@ -12,36 +12,36 @@
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- ① 창 열기 — 놀이기구 표 -->
 	<DevCommand line="panel.focus themepark.layout"/>
 	<WaitUntil watch="Editor.ParkLayoutRideCount" equals="6" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- ② Reload — 다시 읽어도 같은 배치 -->
 	<EditorClick mark="themepark.layout.reload"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="ParkLayoutPanel.ParkLayoutReloadedRequest" count="1"/>
 	<Expect watch="Editor.ParkLayoutRideCount" equals="6"/>
 	<!-- ③ 더블클릭 — 씬 뷰 카메라가 놀이기구로 -->
-	<Remember watch="Editor.SceneViewCameraX" as="startX"/>
+	<Store watch="Editor.SceneViewCameraX" as="startX"/>
 	<EditorClick mark="themepark.layout.ride.1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="themepark.layout.ride.1"/>
 	<WaitUntil watch="Editor.SceneViewCameraX" differsFrom="startX" timeoutFrames="60"/>
-	<EditorWaitSettled/>
-	<Remember watch="Editor.SceneViewCameraX" as="cupsX"/>
+	<EditorWaitStable/>
+	<Store watch="Editor.SceneViewCameraX" as="cupsX"/>
 	<EditorClick mark="themepark.layout.ride.2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="themepark.layout.ride.2"/>
 	<WaitUntil watch="Editor.SceneViewCameraX" differsFrom="cupsX" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- ④ 정문 보기 — Sky Drop(x -28) 에서 정문(x 20)으로 -->
-	<Remember watch="Editor.SceneViewCameraX" as="dropX"/>
+	<Store watch="Editor.SceneViewCameraX" as="dropX"/>
 	<EditorClick mark="themepark.layout.gate"/>
 	<WaitUntil watch="Editor.SceneViewCameraX" differsFrom="dropX" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

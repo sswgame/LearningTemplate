@@ -819,7 +819,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ParentTypePointerIsResolvedAfterBatch 
  *          폴백해 같은 답을 낸다 (3) 재등록으로 부모가 바뀌면 옛 표로 답하지 않는다 (4) 모듈 해제 뒤 남은
  *          타입은 표를 다시 세워 답한다.
  */
-SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRechain )
+SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesTraversalAndFollowsRechain )
 {
     const sw::test::ScopedTestModule scopedModule( "TestAncestorDisplay" );
 

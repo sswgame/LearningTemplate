@@ -7,14 +7,14 @@
 <Scenario name="editor.emptyscene" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
 	<!-- 그림 판정의 크기는 UI 배율에 달렸다 — 모니터 DPI 와 상관없이 같게 둔다 -->
 	<Variable name="gv_editorUiScale" value="1.5"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor scene.new"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
 	<Screenshot file="emptyscene.ppm"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectImage file="emptyscene.ppm" golden="emptyscene"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

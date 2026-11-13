@@ -8,41 +8,41 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.row.GameCamera"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.row.TestGameCamera" mods="ctrl"/>
 	<WaitUntil watch="Editor.SelectionCount" equals="2" timeoutFrames="60"/>
 	<Variable name="gv_editorWatchProperty" value="CameraComponent._priority"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SelectedPropertySum" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.property.CameraComponent._priority" mods="ctrl"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="5"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.SelectedPropertySum" equals="10" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.SelectedPropertySum" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 기본값 되돌리기도 선택 전부를 되돌린다(예전에는 주 선택만 찍어 Ctrl+Z 뒤 합이 5 였다). -->
 	<DevCommand line="editor edit.redo"/>
 	<WaitUntil watch="Editor.SelectedPropertySum" equals="10" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.reset.CameraComponent._priority"/>
 	<WaitUntil watch="Editor.SelectedPropertySum" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.SelectedPropertySum" equals="10" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.SelectedPropertySum" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

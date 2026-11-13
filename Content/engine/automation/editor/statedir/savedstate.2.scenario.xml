@@ -5,9 +5,9 @@
   실행: savedstate.1 다음에 같은 -gv_editorStateDir 로 App.exe -EnableEditor -scenario=engine/automation/editor/savedstate.2.scenario.xml -dx12
 -->
 <Scenario name="editor.savedstate.2" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewDrawn" equals="0"/>
 	<Expect watch="Editor.AccentColor" equals="10902002"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

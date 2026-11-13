@@ -8,22 +8,22 @@
 <Scenario name="editor.clippreview" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus animation_clip_preview"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+P"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="cheer_"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="clip.bodyField"/>
 	<EditorText value="common/prefabs/kaykit/knight_merged.prefab.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="clip.spawn"/>
 	<WaitUntil watch="Editor.ClipPreviewDuration" near="1.6667" tolerance="0.05" timeoutFrames="600"/>
 	<WaitUntil watch="Editor.ClipPreviewSceneFrames" atLeast="60" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

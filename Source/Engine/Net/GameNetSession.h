@@ -267,7 +267,7 @@ namespace sw
          *        네트워크 컴포넌트는 전역 세션이 아니라 자기 씬의 링크를 읽는다. 세션이 열려 있지 않으면(`isActive` 거짓) 쓰면 안 됩니다.
          */
         [[nodiscard]] NetLinkValue makeNetLink() { return NetLinkValue{ &_peers, &_router, _role == GameNetRole::Server ? NetLinkRole::Server : NetLinkRole::Client }; }
-        /** @brief 키트와 게임이 메시지 처리기를 다는 라우터입니다. `update` 가 모든 샤드를 pump 합니다. */
+        /** @brief 키트와 게임이 메시지 처리기를 다는 라우터입니다. `update` 가 모든 샤드를 poll 합니다. */
         NetMessageRouter& getRouter() { return _router; }
         /**
          * @brief 샤드 전송을 감싸는 데코레이터를 겁니다. 다음 `initialize` 가 샤드마다 부르고, 돌려준 전송을 그 샤드의 호스트가 쓴다(샤드가 소유 — 소켓보다 먼저 사라진다).
@@ -291,9 +291,9 @@ namespace sw
          * @brief 서버가 내려가기 시작함을 모든 클라이언트에 알립니다(신뢰 순서 — 서버 종료 드레인 O3). 서버가 아니면 아무 일도 없습니다.
          * @details 연결이 끊기기 전에 "왜" 를 전하는 길이다 — 끊김 패킷에는 사유가 실리지 않는다. 클라이언트는 `tryGetShutdownNotice` 로 읽고 사유에 맞게(재접속 · 점검 안내) 움직인다.
          */
-        void sendShutdownNotice( const GameShutdownNotice& notice );
+        void sendShutdownNotice( const GameShutdownNotice& notification );
         /** @brief 클라이언트가 받은 서버 종료 통지입니다. 받지 못했거나 클라이언트가 아니면 false 입니다. 다시 접속하면 지워집니다. */
-        [[nodiscard]] bool tryGetShutdownNotice( GameShutdownNotice& outNotice ) const;
+        [[nodiscard]] bool tryGetShutdownNotice( GameShutdownNotice& outNotification ) const;
         /** @brief 클라이언트가 받은 가장 새 서버 틱 번호입니다. 아직 받지 못했거나 클라이언트가 아니면 false 입니다. */
         [[nodiscard]] bool tryGetServerTick( uint64& outTick ) const;
         /**

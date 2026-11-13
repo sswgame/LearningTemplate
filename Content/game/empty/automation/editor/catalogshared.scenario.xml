@@ -7,28 +7,28 @@
 -->
 <Scenario name="editor.catalogshared" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="Immediately" input="exclusive">
 	<Scratch from="game/empty/automation/editor/catalogshared" as="scratch/catalogshared"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open scratch/catalogshared/catalogshared.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="play"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 같은 경로를 쥔 둘은 같은 정의 객체를 읽는다(사본이면 주소가 다르다) -->
 	<Expect watch="Interaction.HeldMaxDistance" target="Left" equals="3"/>
 	<Expect watch="Interaction.HeldMaxDistance" target="Right" equals="3"/>
-	<Remember watch="Interaction.HeldDefinition" target="Left" as="leftBefore"/>
+	<Store watch="Interaction.HeldDefinition" target="Left" as="leftBefore"/>
 	<Expect watch="Interaction.HeldDefinition" target="Right" sameAs="leftBefore"/>
 	<DevCommand line="asset.overwriteScratch scratch/catalogshared/table_edited.interactions.xml scratch/catalogshared/table.interactions.xml"/>
 	<!-- 파일 감시는 바깥 일이라 벽시계로 기다린다 -->
 	<WaitUntil watch="Interaction.HeldMaxDistance" target="Left" equals="7" timeoutWallSeconds="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Interaction.HeldMaxDistance" target="Right" equals="7"/>
 	<Expect watch="Interaction.HeldDefinition" target="Left" differsFrom="leftBefore"/>
-	<Remember watch="Interaction.HeldDefinition" target="Left" as="leftAfter"/>
+	<Store watch="Interaction.HeldDefinition" target="Left" as="leftAfter"/>
 	<Expect watch="Interaction.HeldDefinition" target="Right" sameAs="leftAfter"/>
 	<DevCommand line="stop"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
 	<Pass/>
 </Scenario>

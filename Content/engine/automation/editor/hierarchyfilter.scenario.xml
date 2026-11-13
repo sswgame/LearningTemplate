@@ -5,40 +5,40 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/hierarchyfilter.scenario.xml -unattended   (CTest Scenario.editor 가 백엔드마다 돈다 — 그린 화소를 판정한다)
 -->
 <Scenario name="editor.hierarchyfilter" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor scene.new"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.create"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="tag.add GameObject Scenario.Probe.Child"/>
 	<!-- 부모 태그로 자식 태그를 찾는다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.filter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="tag:Scenario.Probe"/>
 	<WaitUntil watch="Editor.HierarchyVisibleRoots" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="0"/>
 	<!-- 지우고 소문자로 — 대소문자를 가리지 않는다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Backspace"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="tag:scenario.probe.child"/>
 	<WaitUntil watch="Editor.HierarchyVisibleRoots" equals="1" timeoutFrames="60"/>
 	<!-- 없는 태그 — 루트가 없고 0 건 안내를 그린다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Backspace"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="tag:Scenario.Missing"/>
 	<WaitUntil watch="Editor.HierarchyVisibleRoots" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="1"/>
 	<!-- 칸을 비우면 다시 보인다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Backspace"/>
 	<WaitUntil watch="Editor.HierarchyVisibleRoots" atLeast="1" timeoutFrames="60"/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="0"/>

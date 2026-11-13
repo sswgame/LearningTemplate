@@ -196,7 +196,7 @@ SW_TEST_CASE( VoxelWorldTest, StateRoundTripsAndBumpsRevisions )
     SW_EXPECT_TRUE( VoxelFixture::save( restored._world ) == listSaved );
 }
 
-SW_TEST_CASE( VoxelWorldTest, ForgedStateLeavesTheWorldAlone )
+SW_TEST_CASE( VoxelWorldTest, CraftedStateLeavesTheWorldAlone )
 {
     VoxelFixture        rig;
     const vector<uint8> listSaved = VoxelFixture::save( rig._world );

@@ -172,7 +172,7 @@ namespace sw
          * @brief 이 수 이상이면 비용을 재지 않고 바로 나눈다. 가장 가벼운 항목(~10 ns)이라도 이만큼이면 직렬이 `kSerialBudgetNanos` 를 넘는다.
          *        큰 씬에서는 직렬로 측정하는 약 3 us 가 병렬 시작을 늦추기만 한다(무버 8000 의 틱 90 us 대 98 us).
          */
-        constexpr uint32 kObviouslyParallelCount = 4096;
+        constexpr uint32 kParallelThresholdCount = 4096;
 
         /** @brief 병렬 그룹을 어떻게 나눌지(청크 크기와 큐에 넣을 티켓 수)입니다. */
         struct ParallelSplit
@@ -717,7 +717,7 @@ namespace sw
             return;
         }
 
-        if ( count >= kObviouslyParallelCount )
+        if ( count >= kParallelThresholdCount )
         {
             runParallelRange( 0, count, body );
             return;

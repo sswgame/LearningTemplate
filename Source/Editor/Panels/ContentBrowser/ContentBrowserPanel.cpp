@@ -1199,9 +1199,9 @@ namespace sw::editor
 
             if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )
             {
-                vector<ContentBrowserCrumb> listCrumb;
-                ContentBrowserCrumb::makeFavoriteTrail( kArrFavorites[favIdx]._pLabel, fullFavPath, listCrumb );
-                _model.selectFolder( fullFavPath, listCrumb );
+                vector<ContentBrowserBreadcrumb> listBreadcrumb;
+                ContentBrowserBreadcrumb::makeFavoriteTrail( kArrFavorites[favIdx]._pLabel, fullFavPath, listBreadcrumb );
+                _model.selectFolder( fullFavPath, listBreadcrumb );
             }
         }
 
@@ -1316,47 +1316,47 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawBreadcrumbs()
     {
-        const vector<ContentBrowserCrumb>& listCrumb = _model.getCrumbs();
-        if ( listCrumb.empty() )
+        const vector<ContentBrowserBreadcrumb>& listBreadcrumb = _model.getBreadcrumbs();
+        if ( listBreadcrumb.empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorContentBrowser", "SelectFolder" ) );
             return;
         }
 
         // 조각마다 절대 경로를 가진다. 누르면 그 조각까지의 브레드크럼 경로와 함께 그 폴더로 이동한다. 경로가 비어 있는 조각("Favorites")은 누를 수 없다.
-        size_t clickedIndex = listCrumb.size();
-        for ( size_t crumbIndex = 0; crumbIndex < listCrumb.size(); ++crumbIndex )
+        size_t clickedIndex = listBreadcrumb.size();
+        for ( size_t breadcrumbIndex = 0; breadcrumbIndex < listBreadcrumb.size(); ++breadcrumbIndex )
         {
-            const ContentBrowserCrumb& crumb = listCrumb[crumbIndex];
-            if ( crumbIndex > 0 )
+            const ContentBrowserBreadcrumb& breadcrumb = listBreadcrumb[breadcrumbIndex];
+            if ( breadcrumbIndex > 0 )
             {
                 ImGui::SameLine();
                 ImGui::TextUnformatted( "/" );
                 ImGui::SameLine();
             }
 
-            ImGui::PushID( static_cast<int32>( crumbIndex ) );
-            const bool bIsLast = ( crumbIndex + 1 == listCrumb.size() );
+            ImGui::PushID( static_cast<int32>( breadcrumbIndex ) );
+            const bool bIsLast = ( breadcrumbIndex + 1 == listBreadcrumb.size() );
             if ( bIsLast )
             {
                 const Color accentColor = SW_THEME_COLOR( "Base", "Accent" );
                 ImGui::TextColored( EditorColorUtil::toImVec4( accentColor.withAlpha( 1.0f ) ), "%s", SW_EDITOR_ICON( "FolderOpen" ) );
                 ImGui::SameLine();
-                ImGui::TextUnformatted( crumb._label.c_str() );
+                ImGui::TextUnformatted( breadcrumb._label.c_str() );
             }
-            else if ( crumb._absolutePath.empty() )
+            else if ( breadcrumb._absolutePath.empty() )
             {
-                ImGui::TextDisabled( "%s", crumb._label.c_str() );
+                ImGui::TextDisabled( "%s", breadcrumb._label.c_str() );
             }
-            else if ( ImGui::SmallButton( crumb._label.c_str() ) )
+            else if ( ImGui::SmallButton( breadcrumb._label.c_str() ) )
             {
-                clickedIndex = crumbIndex;
+                clickedIndex = breadcrumbIndex;
             }
             ImGui::PopID();
         }
 
-        if ( clickedIndex < listCrumb.size() )
-            _model.selectCrumb( clickedIndex ); // 그리기가 끝난 뒤라 listCrumb 가 바뀌어도 된다
+        if ( clickedIndex < listBreadcrumb.size() )
+            _model.selectBreadcrumb( clickedIndex ); // 그리기가 끝난 뒤라 listBreadcrumb 가 바뀌어도 된다
     }
 
     void ContentBrowserPanel::drawTilesView( const vector<const AssetEntry*>& listVisible )

@@ -57,8 +57,8 @@ namespace sw
 
     AutomationLogResult AutomationLogPolicy::classify( LogLevel level, string_view id, string_view message ) const
     {
-        if ( isGatedLevel( level ) == false || isExemptMessage( message ) )
-            return AutomationLogResult::NotGated;
+        if ( isCheckedLevel( level ) == false || isExemptMessage( message ) )
+            return AutomationLogResult::NotChecked;
         ScopedLock<mutex> lock{ _mutex };
         // 선언은 id 로만 한다(문장은 다른 줄까지 가리거나 문구를 고치면 낡는다).
         if ( isDeclaredIDLocked( id ) )
@@ -68,7 +68,7 @@ namespace sw
         return VectorUtil::contains( _listAllowedID, string( id ) ) ? AutomationLogResult::Allowed : AutomationLogResult::NotAllowed;
     }
 
-    void AutomationLogPolicy::judge( LogLevel level, string_view id, string_view message, AutomationLogCheckResult& inoutResult ) const
+    void AutomationLogPolicy::evaluate( LogLevel level, string_view id, string_view message, AutomationLogCheckResult& inoutResult ) const
     {
         const AutomationLogResult result = classify( level, id, message );
         if ( result == AutomationLogResult::Allowed )

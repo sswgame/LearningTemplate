@@ -18,7 +18,7 @@ namespace sw
         , _listFoundScratch{}
         , _pTradeService{ nullptr }
         , _pDirectory{ nullptr }
-        , _pBalanceNotice{ nullptr }
+        , _pBalanceNotification{ nullptr }
         , _presenceFinds{}
         , _nowMs{ 0 }
     {
@@ -183,8 +183,8 @@ namespace sw
         {
             if ( kind == TradeMethod::Invited::kKind && sideIndex == 0 )
                 continue; // 신청한 쪽은 응답으로 알게 된다
-            const AccountID accountID = snapshot._arrSide[sideIndex]._accountID;
-            TradeNotice     push;
+            const AccountID   accountID = snapshot._arrSide[sideIndex]._accountID;
+            TradeNotification push;
             push._snapshot = snapshot;
             if ( ledgerIt != _mapTradeToLedger.end() )
                 collectBalances( ledgerIt->second, accountID, push._listBalance );
@@ -205,7 +205,7 @@ namespace sw
 
     void TradeServer::notifySettledBalances( const LedgerTransferResult& ledger )
     {
-        if ( _pBalanceNotice == nullptr )
+        if ( _pBalanceNotification == nullptr )
             return;
         unordered_map<AccountID, vector<LedgerBalance>> mapAccountToBalance;
         for ( const LedgerTransferResult::HolderBalance& holderBalance : ledger._listHolderBalance )
@@ -215,7 +215,7 @@ namespace sw
         }
         for ( const auto& [accountID, listBalance] : mapAccountToBalance )
         {
-            _pBalanceNotice->notifyBalancesChanged( accountID, listBalance ); // 지갑은 서버의 잔액 변경 알림으로 맞는다 — 게임이 정산 잔액을 옮기지 않는다
+            _pBalanceNotification->notifyBalancesChanged( accountID, listBalance ); // 지갑은 서버의 잔액 변경 알림으로 맞는다 — 게임이 정산 잔액을 옮기지 않는다
         }
     }
 
@@ -232,7 +232,7 @@ namespace sw
 namespace sw
 {
     // 다른 서버에 접속한 계정에게 가는 알림이다. 받는 서버가 이 항목으로 자기 빌드의 번호와 B 를 만든다(OnlinePushRelay.h).
-    const OnlinePushRelayEntry kTradeInvitedRelay{ "Trade.Invited", TradeMethod{}, TradePushName::Invited, TradeSessionRecord::MessageTypes{}, OnlinePushBody<TradeNotice>{} };
-    const OnlinePushRelayEntry kTradeUpdateRelay{ "Trade.Update", TradeMethod{}, TradePushName::Update, TradeSessionRecord::MessageTypes{}, OnlinePushBody<TradeNotice>{} };
-    const OnlinePushRelayEntry kTradeClosedRelay{ "Trade.Closed", TradeMethod{}, TradePushName::Closed, TradeSessionRecord::MessageTypes{}, OnlinePushBody<TradeNotice>{} };
+    const OnlinePushRelayEntry kTradeInvitedRelay{ "Trade.Invited", TradeMethod{}, TradePushName::Invited, TradeSessionRecord::MessageTypes{}, OnlinePushBody<TradeNotification>{} };
+    const OnlinePushRelayEntry kTradeUpdateRelay{ "Trade.Update", TradeMethod{}, TradePushName::Update, TradeSessionRecord::MessageTypes{}, OnlinePushBody<TradeNotification>{} };
+    const OnlinePushRelayEntry kTradeClosedRelay{ "Trade.Closed", TradeMethod{}, TradePushName::Closed, TradeSessionRecord::MessageTypes{}, OnlinePushBody<TradeNotification>{} };
 } // namespace sw

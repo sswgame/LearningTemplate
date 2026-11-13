@@ -21,10 +21,10 @@
 	<WaitUntil watch="Killcam.Playing" equals="1" timeoutFrames="10"/>
 	<WaitUntil watch="Camera.FrameObject" is="Killcam" timeoutFrames="10"/>
 	<Expect watch="Killcam.Phase" equals="0"/>
-	<Screenshot file="pierce_killcam_follow.ppm" waitForSettle="false"/>
+	<Screenshot file="pierce_killcam_follow.ppm" waitForStability="false"/>
 	<WaitUntil watch="Killcam.Phase" equals="1" timeoutSeconds="4"/>
 	<Wait frames="6"/>
-	<Screenshot file="pierce_killcam_hold.ppm" waitForSettle="false"/>
+	<Screenshot file="pierce_killcam_hold.ppm" waitForStability="false"/>
 	<WaitUntil watch="Killcam.Playing" equals="0" timeoutSeconds="5"/>
 	<Wait frames="2"/>
 	<ExpectImagesDiffer first="pierce_killcam_follow.ppm" second="pierce_killcam_hold.ppm" minDiffering="0.05"/>

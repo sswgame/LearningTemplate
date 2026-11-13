@@ -7,7 +7,7 @@
  *          3. 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 없는 줄은 허용할 수 없다 — 소스에 id 를 붙인다(`MissingID`).
  *          4. id 가 있으면 그 시나리오의 `<AllowLog id="…" reason="…"/>` 가 허용한다. 없으면 `NotAllowed` 다.
  *          허용은 시나리오 파일 안에 사유와 함께 둔다 — 예전의 전역 허용 목록(모든 시나리오의 허용이 한 파일에 모이고 범위 · 계획 칸을 손으로 맞추던 것)은 없다.
- *          한 벌을 세션(`AutomationSession`)이 들고 단계의 판정(`AutomationJudge`)과 에디터 콘솔이 함께 읽는다 — 선언한 줄을 게이트는 통과시키고 콘솔은 흐리게 그린다.
+ *          한 벌을 세션(`AutomationSession`)이 들고 단계의 판정(`AutomationEvaluator`)과 에디터 콘솔이 함께 읽는다 — 선언한 줄을 게이트는 통과시키고 콘솔은 흐리게 그린다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -24,14 +24,14 @@ namespace sw
     /** @brief 로그 줄 하나의 판정입니다. */
     enum class AutomationLogResult : uint8
     {
-        NotGated,   ///< 게이트가 보지 않는 줄(Info 이하, 실행기 줄)
+        NotChecked, ///< 게이트가 보지 않는 줄(Info 이하, 실행기 줄)
         Declared,   ///< 시나리오의 `<ExpectLog>` 가 선언한 줄
         Allowed,    ///< 시나리오의 `<AllowLog>` 가 허용한 id 의 줄
         NotAllowed, ///< id 는 있으나 허용하지 않은 줄
         MissingID,  ///< id 가 없는 줄 — 허용할 수 없다
     };
 
-    /** @struct AutomationLogCheckResult @brief 한 실행에서 `judge` 가 모은 결과입니다. 처리하지 않은 줄이 하나라도 있으면 실패입니다. */
+    /** @struct AutomationLogCheckResult @brief 한 실행에서 `evaluate` 가 모은 결과입니다. 처리하지 않은 줄이 하나라도 있으면 실패입니다. */
     struct AutomationLogCheckResult
     {
         vector<string> _listUnhandled{}; ///< 처리하지 않은 줄 — `[Error] [호출자] (id=…) 본문` · `[Warning] [호출자] (no log id) 본문`
@@ -69,14 +69,14 @@ namespace sw
         void clear();
 
         /** @brief 게이트가 보는 수준(Warning · Error)이면 true 입니다. */
-        static bool isGatedLevel( LogLevel level ) { return level == LogLevel::Error || level == LogLevel::Warning; }
+        static bool isCheckedLevel( LogLevel level ) { return level == LogLevel::Error || level == LogLevel::Warning; }
         /** @brief 게이트가 보지 않는 줄(실행기 줄)이면 true 입니다. @p message 는 로그 본문입니다. */
         static bool isExemptMessage( string_view message );
 
         /** @brief 줄 하나를 판정합니다. @p id 가 비었으면 id 없는 줄입니다. 아무 스레드에서나 부를 수 있다(에디터 콘솔은 `Declared` 를 흐리게 그린다). */
         AutomationLogResult classify( LogLevel level, string_view id, string_view message ) const;
         /** @brief 줄 하나를 판정해 처리하지 않은 줄이면 @p inoutJudgement 에 더하고, 허용이 맞았으면 그 id 를 적습니다. */
-        void judge( LogLevel level, string_view id, string_view message, AutomationLogCheckResult& inoutResult ) const;
+        void evaluate( LogLevel level, string_view id, string_view message, AutomationLogCheckResult& inoutResult ) const;
 
     private:
         /** @brief @p id 가 `<ExpectLog id>` 선언 하나와 같으면 true 입니다. 빈 id(id 없는 줄)는 항상 false 입니다. */

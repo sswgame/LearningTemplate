@@ -7,7 +7,7 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
-// 스트림 엔드포인트 — 조각나 들어와도 메시지 경계 · 순서, 깨진 프레임은 ProtocolError 로 끊기, 받은 줄 상한에서 읽기 멈춤 → pump 뒤 다시, 핑 RTT, 연결 실패도 닫힘 한 번
+// 스트림 엔드포인트 — 조각나 들어와도 메시지 경계 · 순서, 깨진 프레임은 ProtocolError 로 끊기, 받은 줄 상한에서 읽기 멈춤 → poll 뒤 다시, 핑 RTT, 연결 실패도 닫힘 한 번
 
 using namespace sw;
 
@@ -83,9 +83,9 @@ SW_TEST_CASE( StreamEndpointTest, MalformedFrameClosesWithProtocolError )
 }
 
 /**
- * @brief [StreamEndpointTest] 받은 줄이 상한을 넘으면 읽기를 멈춘다 — pump 하지 않는 동안 보낸 쪽 줄이 쌓이고, pump 하면 다시 흐른다
+ * @brief [StreamEndpointTest] 받은 줄이 상한을 넘으면 읽기를 멈춘다 — poll 하지 않는 동안 보낸 쪽 줄이 쌓이고, poll 하면 다시 흐른다
  */
-SW_TEST_CASE( StreamEndpointTest, PendingReceiveCapPausesTransportUntilPumped )
+SW_TEST_CASE( StreamEndpointTest, PendingReceiveCapPausesTransportUntilPolled )
 {
     StreamEndpointConfig settings;
     settings._maxPendingReceiveBytes = 4096;
@@ -99,7 +99,7 @@ SW_TEST_CASE( StreamEndpointTest, PendingReceiveCapPausesTransportUntilPumped )
     {
         (void)pair._client.sendMessage( pair._clientHandle, body.data(), 1000 );
     }
-    for ( int32 index = 0; index < 20; ++index ) // 서버는 pump 하지 않고 전송만 돈다
+    for ( int32 index = 0; index < 20; ++index ) // 서버는 poll 하지 않고 전송만 돈다
     {
         (void)pair._serverTransport->pollIO( 0 );
         (void)pair._clientTransport->pollIO( 0 );

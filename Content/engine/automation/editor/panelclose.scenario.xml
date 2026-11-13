@@ -11,68 +11,68 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<Variable name="gv_editorWatchPanel" value="input_map"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus input_map"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="300"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<Expect watch="Editor.PanelDirty" equals="0"/>
 	<!-- ① 편집 -->
 	<EditorClick mark="inputMap.filter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="Confirm"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inputMap.action.Confirm"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inputMap.binding.0.trigger"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inputMap.trigger.4"/>
 	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="4" timeoutFrames="60"/>
 	<Expect watch="Editor.PanelDirty" equals="1"/>
 	<CaptureEditorUI file="panelclose/edited.png"/>
 	<!-- ② 메뉴 토글 경로 → 확인 → Cancel -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close input_map"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<CaptureEditorUI file="panelclose/confirm.png"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="unsaved.cancel"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<Expect watch="Editor.PanelDirty" equals="1"/>
 	<Expect watch="Editor.InputMapSelectedTrigger" equals="4"/>
 	<!-- ③ 창을 줄인 뒤 X → 확인 → Don't Save. 확인은 창 크기가 바뀌어도 그때의 가운데에 뜬다(처음 위치를 붙들고 있지 않는다). -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1600" height="900"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="panel.close.Input Map Editor"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<CaptureEditorUI file="panelclose/confirmX.png"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="unsaved.discard"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PanelOpen" equals="0" timeoutFrames="300"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<!-- ④ 다시 열면 깨끗하다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus input_map"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="300"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<Expect watch="Editor.PanelDirty" equals="0"/>
 	<CaptureEditorUI file="panelclose/reopened.png"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close input_map"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PanelOpen" equals="0" timeoutFrames="300"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

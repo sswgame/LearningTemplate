@@ -406,11 +406,11 @@ SW_TEST_CASE( ProjectileTest, StateRoundTripIsDeterministic )
     original.writeState( again );
     vector<uint8> listByte;
     again.writeData( listByte );
-    const uint32 forgedNextID = 1; // 다음 id 가 1 이면 id 1 인 탄은 있을 수 없다
-    std::memcpy( listByte.data(), &forgedNextID, sizeof( forgedNextID ) );
+    const uint32 craftedNextID = 1; // 다음 id 가 1 이면 id 1 인 탄은 있을 수 없다
+    std::memcpy( listByte.data(), &craftedNextID, sizeof( craftedNextID ) );
     ProjectileSimulation refused;
-    Archive              forgedReading( listByte.data(), listByte.size() );
-    SW_EXPECT_FALSE( refused.readState( forgedReading ) );
+    Archive              readingFixture( listByte.data(), listByte.size() );
+    SW_EXPECT_FALSE( refused.readState( readingFixture ) );
     SW_EXPECT_TRUE( refused.getProjectiles().empty() );
 }
 

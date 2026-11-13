@@ -1,7 +1,7 @@
 /**
  * @file Engine/Presentation/ISubtitleSink.h
  * @brief 말하는 이와 줄을 자막으로 보이는 창구입니다 — 대화 진행 같은 게임 코드가 자막 화면(UI)을 모르고 줄을 냅니다. 구현은 `UISubtitleService` 이고, 없으면(전용 서버 · UI 를 넣지 않은 하네스) 칸이 비어 보이지 않습니다.
- * @details 서비스 칸의 정의는 이 폴더에 있어 UI 폴더를 짓지 않는 구성에서도 칸을 읽는 쪽이 링크됩니다(`IPlayerNoticeSink` 와 같은 모양).
+ * @details 서비스 칸의 정의는 이 폴더에 있어 UI 폴더를 짓지 않는 구성에서도 칸을 읽는 쪽이 링크됩니다(`IPlayerNotificationSink` 와 같은 모양).
  */
 #pragma once
 #include "Core/Container/string.h"

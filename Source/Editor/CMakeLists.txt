@@ -183,7 +183,7 @@ endforeach()
 function(sw_applyEditorCoreSettings TARGET_NAME)
 	target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"Editor\"" "SW_REGISTRAR_MODULE=\"${SW_TARGET_EDITOR_MODULE}\"" SW_MODULE_EXPORTS SW_EDITOR_EXPORTS)
 	target_include_directories(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source")
-	sw_applyTargetLayerGate(${TARGET_NAME} editor)
+	sw_applyTargetLayerGuard(${TARGET_NAME} editor)
 	target_link_libraries(${TARGET_NAME} PRIVATE Engine DevTools ModuleAPI Microsoft::DirectXTex cgltf meshoptimizer stb sw_global_options)
 	set_target_properties(${TARGET_NAME} PROPERTIES
 		FOLDER "Source/Editor"
@@ -275,9 +275,9 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_SHIPPING_BUILD)
 	endif()
 endif()
 
-# 배포는 에디터(코어 포함)를 짓지 않는다 — 소스 검사 게이트가 알도록 적는다(`sw_declareUnbuiltSources`).
+# 배포는 에디터(코어 포함)를 짓지 않는다 — 소스 검사 게이트가 알도록 적는다(`sw_declareExcludedSources`).
 if(SW_SHIPPING_BUILD)
-	sw_declareUnbuiltSources(${listEditorAllSource})
+	sw_declareExcludedSources(${listEditorAllSource})
 	return()
 endif()
 

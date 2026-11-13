@@ -156,7 +156,7 @@ namespace sw
         void forEachGameObject( Func&& func ) const
         {
             ScopedSharedLock<shared_mutex> lock{ _mutex };
-            const IterationScope           walkScope{};
+            const IterationScope           iterationScope{};
             for ( GameObject* pObj : _listGameObject )
             {
                 if ( pObj != nullptr && pObj->isPendingDestroy() == false )
@@ -187,7 +187,7 @@ namespace sw
             if ( pToType == nullptr )
                 return;
             ScopedSharedLock<shared_mutex> lock{ _mutex };
-            const IterationScope           walkScope{};
+            const IterationScope           iterationScope{};
             for ( const ComponentPoolEntry* pEntry : _listComponentPoolEntry )
             {
                 if ( isTypeDerivedFrom( pEntry->_pType, pToType ) == false )
@@ -390,7 +390,7 @@ namespace sw
         mutable shared_mutex _mutex;
 
         uint8                                         _bProcessingDestruction : 1;      ///< 지연 파괴를 처리하는 중이다. 소멸자에서 다시 들어오면 단언한다
-        vector<GameObject*>                           _listPlayWalk;                    ///< beginPlay 와 endPlay 가 잠금 없이 순회할 오브젝트 목록이다(할당 재사용)
+        vector<GameObject*>                           _listPlayIteration;               ///< beginPlay 와 endPlay 가 잠금 없이 순회할 오브젝트 목록이다(할당 재사용)
         atomic<bool>                                  _bHasBegunPlay;                   ///< 플레이 중(`hasBegunPlay`)
         mutex _beginPlayMutex                         SW_ACQUIRED_AFTER( _mutex );      ///< 시작 대기열을 보호한다(비동기 씬 로드는 워커에서 컴포넌트를 붙인다)
         vector<ComponentHandle> _listPendingBeginPlay SW_GUARDED_BY( _beginPlayMutex ); ///< 플레이 중에 붙어 onBeginPlay 를 기다리는 컴포넌트

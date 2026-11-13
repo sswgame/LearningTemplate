@@ -19,7 +19,7 @@
 	<DevCommand line="object.place Actor 3 0 0"/>
 	<Wait frames="8"/>
 	<Expect watch="Afterimage.Visible" atLeast="2"/>
-	<Screenshot file="afterimage_moved.ppm" waitForSettle="false"/>
+	<Screenshot file="afterimage_moved.ppm" waitForStability="false"/>
 	<Wait frames="2"/>
 	<ExpectImagesDiffer first="afterimage_still.ppm" second="afterimage_moved.ppm" minDiffering="0.02"/>
 	<Pass/>

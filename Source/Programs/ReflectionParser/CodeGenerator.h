@@ -82,7 +82,7 @@ namespace sw
         void emitTypeInfoAccessors( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
         /** @brief EnumRegistrar 본문을 출력합니다. */
         void emitEnumRegistrar( CodeEmitBuffer& outBuffer, const ParsedEnumInfo& enumInfo ) const;
-        /** @brief 틱 레인 등록 줄(`SW_REGISTER_TICK_TYPE( 타입, 레인 )`)을 냅니다(NEXT 5-4 W-R3 c · 5-3 1c). 대상은 `ParsedTypeInfo::requiresTickRegistration`. */
+        /** @brief 틱 모드 등록 줄(`SW_REGISTER_TICK_TYPE( 타입, 모드 )`)을 냅니다(NEXT 5-4 W-R3 c · 5-3 1c). 대상은 `ParsedTypeInfo::requiresTickRegistration`. */
         void emitTickBatchRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
         /** @brief 물리 훅 등록 줄(`SW_REGISTER_PHYSICS_HOOKS( 타입 )`)을 냅니다(NEXT 5-3 물리 훅 배치). 대상은 `ParsedTypeInfo::requiresPhysicsHookRegistration`. */
         void emitPhysicsHookRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;

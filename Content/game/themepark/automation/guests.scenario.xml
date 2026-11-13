@@ -12,7 +12,7 @@
 	<Expect watch="Object.Property" target="ParkGuest[0]" key="ParkGuestComponent._guestIndex" equals="0"/>
 	<Expect watch="Object.Property" target="ParkGuest[3]" key="ParkGuestComponent._guestIndex" equals="3"/>
 	<Expect watch="Object.Property" target="ParkGuest_2" key="ParkGuestComponent._guestIndex" equals="1"/>
-	<Remember watch="Object.X" target="ParkGuest[0]" as="gateX"/>
+	<Store watch="Object.X" target="ParkGuest[0]" as="gateX"/>
 	<!-- 첫 손님이 들어와 0 번 뷰가 정문에서 움직인다. -->
 	<WaitUntil watch="ThemePark.GuestCount" atLeast="1" timeoutSeconds="30"/>
 	<WaitUntil watch="Object.X" target="ParkGuest[0]" differsFrom="gateX" timeoutSeconds="20"/>

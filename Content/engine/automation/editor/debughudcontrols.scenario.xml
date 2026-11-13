@@ -7,51 +7,51 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/debughudcontrols.scenario.xml -unattended
 -->
 <Scenario name="editor.debughudcontrols" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="hud off"/>
 	<DevCommand line="hud physics off"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus game_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.DebugHUDEnabled" equals="0"/>
 	<Expect watch="Editor.DebugHUDShownSections" equals="4"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="gameView.hud"/>
 	<WaitUntil watch="Editor.DebugHUDEnabled" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="gameView.hud" button="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="debugHUD.section.physics"/>
 	<WaitUntil watch="Editor.DebugHUDShownSections" equals="5" timeoutFrames="60"/>
 	<EditorKey key="Escape"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus scene_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewHUDSections" equals="0"/>
 	<EditorClick mark="viewport.hud"/>
 	<WaitUntil watch="Editor.SceneViewHUDSections" atLeast="2" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.hud"/>
 	<WaitUntil watch="Editor.SceneViewHUDSections" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.hud"/>
 	<WaitUntil watch="Editor.SceneViewHUDSections" atLeast="2" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor editor.preferences"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus preferences"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="preferences.search"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="Debug HUD"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="preferences.debugHUD.shown"/>
 	<WaitUntil watch="Editor.DebugHUDEnabled" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="hud off"/>
 	<DevCommand line="hud physics off"/>
 	<WaitUntil watch="Editor.DebugHUDShownSections" equals="4" timeoutFrames="60"/>

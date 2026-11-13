@@ -170,7 +170,7 @@ namespace sw
                 _writer.alignToByte();
                 if ( bodySize > 0 )
                     _writer.writeBytes( pBody, bodySize );
-                // 줄에 먼저 넣는다 — 같은 연결의 응답이 다른 스레드의 pump 로 보내기보다 먼저 올 수 있다.
+                // 줄에 먼저 넣는다 — 같은 연결의 응답이 다른 스레드의 poll 로 보내기보다 먼저 올 수 있다.
                 _mapPending.emplace( requestID, std::move( pending ) );
                 const StreamSendResult result = _pEndpoint->sendFrame( handle, StreamFrameKind::Request, _writer.getBytes().data(), _writer.getByteCount() );
                 if ( result == StreamSendResult::Closed || result == StreamSendResult::QueueFull )

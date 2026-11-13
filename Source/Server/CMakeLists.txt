@@ -6,17 +6,17 @@
 sw_globSourceTree(SERVER_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 
 if(SW_TARGET_TYPE STREQUAL "Client")
-	sw_declareUnbuiltSources(${SERVER_SOURCES})
+	sw_declareExcludedSources(${SERVER_SOURCES})
 	return()
 endif()
 
 # 개발 전용(`Tests/` · `Dev/`)은 배포가 짓지 않는다. 서버 개발 조종(`ModuleManager/Host/ServerDebugControl` — 구현은 DevTools 의 `Host/`)과 개발 계층은 `ServerApp` 이 `build::kShipping` 이 아닐 때만 만든다.
 if(SW_SHIPPING_BUILD)
-	sw_excludeUnbuiltSources(SERVER_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
+	sw_removeExcludedSources(SERVER_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
 
 sw_addExecutable(Server ${SERVER_SOURCES})
-sw_applyTargetLayerGate(Server server)
+sw_applyTargetLayerGuard(Server server)
 set_target_properties(Server PROPERTIES FOLDER "Source/Server")
 
 target_link_libraries(Server

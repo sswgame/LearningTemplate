@@ -63,7 +63,7 @@ namespace
         ScavengerFacilityTest() { SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kScavengerXML, "ScavengerTest" ) ); }
 
         /** @brief 바닥 고철과 번호를 손으로 쓴 상태를 읽습니다. */
-        bool readForged( sw::ScavengerFacility& facility, uint32 seed, const sw::ScavengerScrap& scrap, int32 nextUid )
+        bool readFixture( sw::ScavengerFacility& facility, uint32 seed, const sw::ScavengerScrap& scrap, int32 nextUid )
         {
             sw::Archive written;
             sw::StateIO::writeName( written, "rust" );
@@ -172,7 +172,7 @@ namespace
         }
 
         /** @brief 궤도 상태의 상태 바이트를 손으로 씁니다. 사람 0 이 @p carried 를 듭니다. */
-        bool readForged( const sw::ScavengerScrap& carried, float32 hoursOnMoon )
+        bool readFixture( const sw::ScavengerScrap& carried, float32 hoursOnMoon )
         {
             sw::ScavengerCarry carry;
             carry.initialize( _catalog.getCarrySettings() );
@@ -323,23 +323,23 @@ SW_TEST_CASE( ScavengerQuotaTest, ReadStateChecksRange )
     SW_EXPECT_EQUAL( 30, restored.getFulfilled() );
     SW_EXPECT_EQUAL( 2, restored.getDaysLeft() );
 
-    const auto readForged = [&restored]( int32 quotaValue, int32 fulfilled, int32 daysLeft, int32 cycle, uint8 bGameOver )
+    const auto readFixture = [&restored]( int32 quotaValue, int32 fulfilled, int32 daysLeft, int32 cycle, uint8 bGameOver )
     {
-        sw::Archive forged;
-        forged << quotaValue;
-        forged << fulfilled;
-        forged << daysLeft;
-        forged << cycle;
-        forged << bGameOver;
-        sw::Archive forgedReading( forged.getData(), forged.getSize() );
-        return restored.readState( forgedReading );
+        sw::Archive fixture;
+        fixture << quotaValue;
+        fixture << fulfilled;
+        fixture << daysLeft;
+        fixture << cycle;
+        fixture << bGameOver;
+        sw::Archive readingFixture( fixture.getData(), fixture.getSize() );
+        return restored.readState( readingFixture );
     };
-    SW_EXPECT_FALSE( readForged( -1, 0, 0, 0, 0 ) );
-    SW_EXPECT_FALSE( readForged( 0, 0, 0, 0, 0 ) );
-    SW_EXPECT_FALSE( readForged( 10, -1, 0, 0, 0 ) );
-    SW_EXPECT_FALSE( readForged( 10, 0, -1, 0, 0 ) );
-    SW_EXPECT_FALSE( readForged( 10, 0, 0, -1, 0 ) );
-    SW_EXPECT_FALSE( readForged( 10, 0, 0, 0, 2 ) );
+    SW_EXPECT_FALSE( readFixture( -1, 0, 0, 0, 0 ) );
+    SW_EXPECT_FALSE( readFixture( 0, 0, 0, 0, 0 ) );
+    SW_EXPECT_FALSE( readFixture( 10, -1, 0, 0, 0 ) );
+    SW_EXPECT_FALSE( readFixture( 10, 0, -1, 0, 0 ) );
+    SW_EXPECT_FALSE( readFixture( 10, 0, 0, -1, 0 ) );
+    SW_EXPECT_FALSE( readFixture( 10, 0, 0, 0, 2 ) );
     SW_EXPECT_EQUAL( 100, restored.getQuota() );
 }
 
@@ -404,27 +404,27 @@ SW_TEST_CASE( ScavengerCarryTest, SpeedAndState )
     SW_EXPECT_EQUAL( 2, restored.getCount() );
     SW_EXPECT_NEAR( 1025.0f, restored.computeWeight(), kScavengerTolerance );
 
-    const auto readForged = [&restored]( const sw::vector<sw::ScavengerScrap>& listScrap )
+    const auto readFixture = [&restored]( const sw::vector<sw::ScavengerScrap>& listScrap )
     {
-        sw::Archive forged;
-        forged << static_cast<uint32>( listScrap.size() );
+        sw::Archive fixture;
+        fixture << static_cast<uint32>( listScrap.size() );
         for ( const sw::ScavengerScrap& scrap : listScrap )
         {
             {
                 sw::ScavengerScrap scrapCopy = scrap;
-                sw::StateIO        io( forged );
+                sw::StateIO        io( fixture );
                 sw::ScavengerFacility::serializeScrap( io, scrapCopy );
             }
         }
-        sw::Archive forgedReading( forged.getData(), forged.getSize() );
-        return restored.readState( forgedReading );
+        sw::Archive readingFixture( fixture.getData(), fixture.getSize() );
+        return restored.readState( readingFixture );
     };
     const sw::ScavengerScrap good = ScavengerTestUtil::makeScrap( 1, 10, 5.0f, false );
-    SW_EXPECT_TRUE( readForged( { good } ) );
-    SW_EXPECT_FALSE( readForged( { good, good, good } ) ); // 슬롯 둘
-    SW_EXPECT_FALSE( readForged( { ScavengerTestUtil::makeScrap( 1, 10, std::numeric_limits<float32>::quiet_NaN(), false ) } ) );
-    SW_EXPECT_FALSE( readForged( { ScavengerTestUtil::makeScrap( 1, 10, -1.0f, false ) } ) );
-    SW_EXPECT_FALSE( readForged( { ScavengerTestUtil::makeScrap( 1, -10, 5.0f, false ) } ) );
+    SW_EXPECT_TRUE( readFixture( { good } ) );
+    SW_EXPECT_FALSE( readFixture( { good, good, good } ) ); // 슬롯 둘
+    SW_EXPECT_FALSE( readFixture( { ScavengerTestUtil::makeScrap( 1, 10, std::numeric_limits<float32>::quiet_NaN(), false ) } ) );
+    SW_EXPECT_FALSE( readFixture( { ScavengerTestUtil::makeScrap( 1, 10, -1.0f, false ) } ) );
+    SW_EXPECT_FALSE( readFixture( { ScavengerTestUtil::makeScrap( 1, -10, 5.0f, false ) } ) );
     SW_EXPECT_EQUAL( 1, restored.getCount() );
 }
 
@@ -592,14 +592,14 @@ SW_TEST_CASE_F( ScavengerFacilityTest, ReadStateRefusesBrokenScrap )
     sw::ScavengerFacility restored;
     restored.bindCatalog( &_catalog );
     const sw::ScavengerScrap good = ScavengerTestUtil::makeScrap( 4, 10, 5.0f, false );
-    SW_REQUIRE_TRUE( readForged( restored, 7u, good, 5 ) ); // 형식은 맞다
+    SW_REQUIRE_TRUE( readFixture( restored, 7u, good, 5 ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 10, restored.computeGroundValue() );
 
-    SW_EXPECT_FALSE( readForged( restored, 7u, good, 4 ) );
-    SW_EXPECT_FALSE( readForged( restored, 7u, ScavengerTestUtil::makeScrap( 0, 10, 5.0f, false ), 5 ) );
-    SW_EXPECT_FALSE( readForged( restored, 7u, ScavengerTestUtil::makeScrap( 4, -10, 5.0f, false ), 5 ) );
-    SW_EXPECT_FALSE( readForged( restored, 7u, ScavengerTestUtil::makeScrap( 4, 10, -5.0f, false ), 5 ) );
-    SW_EXPECT_FALSE( readForged( restored, 0u, good, 5 ) );
+    SW_EXPECT_FALSE( readFixture( restored, 7u, good, 4 ) );
+    SW_EXPECT_FALSE( readFixture( restored, 7u, ScavengerTestUtil::makeScrap( 0, 10, 5.0f, false ), 5 ) );
+    SW_EXPECT_FALSE( readFixture( restored, 7u, ScavengerTestUtil::makeScrap( 4, -10, 5.0f, false ), 5 ) );
+    SW_EXPECT_FALSE( readFixture( restored, 7u, ScavengerTestUtil::makeScrap( 4, 10, -5.0f, false ), 5 ) );
+    SW_EXPECT_FALSE( readFixture( restored, 0u, good, 5 ) );
     SW_EXPECT_EQUAL( 10, restored.computeGroundValue() );
 }
 
@@ -925,18 +925,18 @@ SW_TEST_CASE_F( ScavengerExpeditionTest, ReadStateRefusesBrokenBodiesAndTime )
 {
     sw::ScavengerScrap body = ScavengerTestUtil::makeScrap( 5, 0, 60.0f, true );
     body._bodyOf            = 1;
-    SW_REQUIRE_TRUE( readForged( body, 0.0f ) ); // 형식은 맞다
+    SW_REQUIRE_TRUE( readFixture( body, 0.0f ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 1, _expedition.findCrewMember( 0 )->_carry.getCount() );
 
     sw::ScavengerScrap stray = body;
     stray._bodyOf            = 2;
-    SW_EXPECT_FALSE( readForged( stray, 0.0f ) );
+    SW_EXPECT_FALSE( readFixture( stray, 0.0f ) );
     stray._bodyOf = 9999;
-    SW_EXPECT_FALSE( readForged( stray, 0.0f ) );
+    SW_EXPECT_FALSE( readFixture( stray, 0.0f ) );
     stray._bodyOf = -2;
-    SW_EXPECT_FALSE( readForged( stray, 0.0f ) );
-    SW_EXPECT_FALSE( readForged( body, std::numeric_limits<float32>::quiet_NaN() ) );
-    SW_EXPECT_FALSE( readForged( body, -1.0f ) );
+    SW_EXPECT_FALSE( readFixture( stray, 0.0f ) );
+    SW_EXPECT_FALSE( readFixture( body, std::numeric_limits<float32>::quiet_NaN() ) );
+    SW_EXPECT_FALSE( readFixture( body, -1.0f ) );
     SW_EXPECT_NEAR( 0.0f, _expedition.getHoursOnMoon(), kScavengerTolerance );
 }
 

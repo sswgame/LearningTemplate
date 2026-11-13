@@ -107,7 +107,7 @@ namespace sw
             };
 
             /** @brief 한 번의 훑기 상태입니다. 담은 집합과 읽을 차례(글 에셋)를 든다. */
-            struct Walker
+            struct ReachTraversal
             {
                 const AssetReferenceFields&     _params;
                 const PackCookRules&            _rules;
@@ -129,8 +129,8 @@ namespace sw
                 unordered_set<string>                           _setExistingFolder; ///< 있는 파일이 아래에 있는 폴더
                 uint8                                           _bFailed : 1;
 
-                Walker( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source, unordered_set<string>& setIncluded,
-                        unordered_set<string>& setReferencedExcluded )
+                ReachTraversal( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const IPackReachSource& source, unordered_set<string>& setIncluded,
+                                unordered_set<string>& setReferencedExcluded )
                     : _params{ params }
                     , _rules{ rules }
                     , _files{ files }
@@ -572,12 +572,12 @@ namespace sw
         outResult._setIncluded.clear();
         outResult._setReferencedExcluded.clear();
         outResult._rootCount = 0;
-        PackReachabilityInternal::Walker walker( params, rules, files, source, outResult._setIncluded, outResult._setReferencedExcluded );
-        outResult._rootCount += walker.addCodeRoots();
-        outResult._rootCount += walker.addAlwaysCookRoots();
-        outResult._rootCount += walker.addRequiredDataRoots();
-        walker.run();
-        return walker._bFailed == false;
+        PackReachabilityInternal::ReachTraversal traversal( params, rules, files, source, outResult._setIncluded, outResult._setReferencedExcluded );
+        outResult._rootCount += traversal.addCodeRoots();
+        outResult._rootCount += traversal.addAlwaysCookRoots();
+        outResult._rootCount += traversal.addRequiredDataRoots();
+        traversal.run();
+        return traversal._bFailed == false;
     }
 
     void PackStagedSelection::build( const vector<PackDomainSources>& listSources, const PackReachResult& reach )

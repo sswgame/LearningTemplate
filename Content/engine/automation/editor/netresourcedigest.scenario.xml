@@ -17,11 +17,11 @@
 	<WaitUntil watch="Editor.NetPlayProcessCount" equals="2" timeoutFrames="60"/>
 	<DevCommand line="netplay.wait 1 120"/>
 	<WaitUntil watch="Editor.NetPlayConnectedClients" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 같은 합성이면 유예가 지나도 붙어 있다. netplay.profile 7 은 벽시계 7 초 동안 이 프레임을 붙잡는다(기본 유예 5 초보다 길다).
 	     프레임은 실시간보다 빨리 돌아 게임 초로는 다른 프로세스의 시간을 재지 못한다 -->
 	<DevCommand line="netplay.profile 7"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.NetPlayConnectedClients" equals="1"/>
 	<DevCommand line="netplay.command client1 scene.layer Night on"/>
 	<WaitUntil watch="Editor.NetPlayConnectedClients" equals="0" timeoutWallSeconds="30"/>

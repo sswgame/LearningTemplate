@@ -9,47 +9,47 @@
 -->
 <Scenario name="editor.spriteclipregion" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/spriteclipregion" as="scratch/spriteclipregion"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus sprite_clip"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/spriteclipregion/hero.sprite.xml"/>
 	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="2" timeoutFrames="120"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="spriteClip.frame.0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 시트 가운데 근처에서 40 × 50 px 를 끈다 — 고른 프레임 0 이 그 사각형이 된다 -->
 	<EditorDrag mark="spriteClip.atlas" anchor="0.55,0.55" dx="40" dy="50"/>
 	<WaitUntil watch="Editor.SpriteClipSelectedFrameWidthPx" atLeast="36" timeoutFrames="60"/>
 	<Expect watch="Editor.SpriteClipSelectedFrameWidthPx" atMost="50"/>
 	<Expect watch="Editor.SpriteClipSelectedFrameOnPixels" equals="1"/>
 	<Expect watch="Editor.SpriteClipFrameCount" equals="2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="spriteregion/region.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 오른쪽 가장자리를 20 px 끈다 -->
-	<Remember watch="Editor.SpriteClipSelectedFrameWidthPx" as="regionWidth"/>
+	<Store watch="Editor.SpriteClipSelectedFrameWidthPx" as="regionWidth"/>
 	<EditorDrag mark="spriteClip.frameEdge.right" dx="20" dy="0"/>
 	<WaitUntil watch="Editor.SpriteClipSelectedFrameWidthPx" differsFrom="regionWidth" timeoutFrames="60"/>
 	<Expect watch="Editor.SpriteClipSelectedFrameWidthPx" atLeast="54"/>
 	<Expect watch="Editor.SpriteClipSelectedFrameOnPixels" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="spriteregion/edge.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
-	<Remember watch="Editor.SpriteClipSelectedFrameWidthPx" as="edgeWidth"/>
+	<EditorWaitStable/>
+	<Store watch="Editor.SpriteClipSelectedFrameWidthPx" as="edgeWidth"/>
 	<EditorClick mark="spriteClip.save"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="spriteClip.load"/>
 	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="2" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="spriteClip.frame.0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SpriteClipSelectedFrameWidthPx" sameAs="edgeWidth"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

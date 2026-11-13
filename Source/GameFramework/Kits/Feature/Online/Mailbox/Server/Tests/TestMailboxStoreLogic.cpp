@@ -234,7 +234,7 @@ SW_TEST_CASE( MailboxStoreLogicTest, AccountDeletionErasesTheMailbox )
     SW_EXPECT_EQUAL( size_t{ 0 }, countRecords( database, ServiceMail::getMailTable() ) );
     SW_EXPECT_EQUAL( size_t{ 0 }, countRecords( database, ServiceMail::getSentTable() ) );
     SW_EXPECT_EQUAL( size_t{ 0 }, countRecords( database, ServiceMail::getExpiryTable() ) );
-    SW_EXPECT_EQUAL( size_t{ 0 }, countRecords( database, ServiceMail::getNoticeTable() ) );
+    SW_EXPECT_EQUAL( size_t{ 0 }, countRecords( database, ServiceMail::getNotificationTable() ) );
     vector<LedgerBalance> listEscrow;
     SW_REQUIRE_TRUE( Ledger::listBalances( database, ServiceMail::makeEscrowHolder( playerMail ), listEscrow ) == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( listEscrow.empty() );

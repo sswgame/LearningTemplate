@@ -11,9 +11,9 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus multiplayer"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="multiplayer.tab.inprocess" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="multiplayer.tab.inprocess" state="Up"/>
@@ -22,9 +22,9 @@
 	<EditorClick mark="multiplayer.inprocess.start" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="multiplayer.inprocess.start" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.NetSimTick" atLeast="120"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="NetSim.PlayStarted" contains="Sample: avatars with 2 client(s)" count="1"/>
 	<Expect watch="Editor.NetSimRunning" equals="1"/>
 	<Expect watch="Editor.NetSimWorldCount" equals="3"/>
@@ -39,15 +39,15 @@
 	<Expect watch="Editor.NetSimObjectX" target="2" key="Avatar2" near="-1" tolerance="0.01"/>
 	<CaptureEditorUI file="netsim/start.png"/>
 	<!-- 클라이언트 1 에 초점 — D 를 누르면 아바타 1 만 오른쪽으로 간다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Tap slot="Key.D" hold="20"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.NetSimTick" atLeast="400"/>
 	<WaitUntil watch="Editor.NetSimObjectX" target="0" key="Avatar1" atLeast="-2" timeoutFrames="60"/>
 	<Expect watch="Editor.NetSimObjectX" target="0" key="Avatar1" atMost="7"/>
 	<Expect watch="Editor.NetSimObjectX" target="0" key="Avatar2" near="-1" tolerance="0.01"/>
 	<Expect watch="Editor.NetSimObjectZ" target="0" key="Avatar1" near="0" tolerance="0.01"/>
-	<Remember watch="Editor.NetSimObjectX" target="0" key="Avatar1" as="avatar1X"/>
+	<Store watch="Editor.NetSimObjectX" target="0" key="Avatar1" as="avatar1X"/>
 	<Expect watch="Editor.NetSimObjectX" target="1" key="Avatar1" sameAs="avatar1X"/>
 	<Expect watch="Editor.NetSimObjectX" target="2" key="Avatar1" sameAs="avatar1X"/>
 	<Expect watch="Editor.NetSimObjectX" target="1" key="Avatar2" near="-1" tolerance="0.01"/>
@@ -58,12 +58,12 @@
 	<EditorClick mark="multiplayer.inprocess.world2" state="Up"/>
 	<WaitUntil watch="Editor.NetSimInputFocus" equals="2" timeoutFrames="60"/>
 	<Tap slot="Key.W" hold="20"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.NetSimTick" atLeast="700"/>
 	<WaitUntil watch="Editor.NetSimObjectZ" target="0" key="Avatar2" atLeast="1" timeoutFrames="60"/>
 	<Expect watch="Editor.NetSimObjectZ" target="0" key="Avatar1" near="0" tolerance="0.01"/>
 	<Expect watch="Editor.NetSimObjectX" target="0" key="Avatar1" sameAs="avatar1X"/>
-	<Remember watch="Editor.NetSimObjectZ" target="0" key="Avatar2" as="avatar2Z"/>
+	<Store watch="Editor.NetSimObjectZ" target="0" key="Avatar2" as="avatar2Z"/>
 	<Expect watch="Editor.NetSimObjectZ" target="1" key="Avatar2" sameAs="avatar2Z"/>
 	<Expect watch="Editor.NetSimObjectZ" target="2" key="Avatar2" sameAs="avatar2Z"/>
 	<CaptureEditorUI file="netsim/focus2.png"/>

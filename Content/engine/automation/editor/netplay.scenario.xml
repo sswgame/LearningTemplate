@@ -13,7 +13,7 @@
 	<WaitUntil watch="Editor.NetPlayProcessCount" equals="2" timeoutFrames="60"/>
 	<DevCommand line="netplay.wait 1 120"/>
 	<WaitUntil watch="Editor.NetPlayConnectedClients" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="netplay.stop"/>
 	<WaitUntil watch="Editor.NetPlayStopping" equals="0" timeoutWallSeconds="20"/>
 	<Expect watch="Editor.NetPlayProcessCount" equals="0"/>

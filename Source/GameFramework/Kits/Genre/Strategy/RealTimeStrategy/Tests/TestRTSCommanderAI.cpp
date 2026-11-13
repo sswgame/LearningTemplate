@@ -122,7 +122,7 @@ namespace
     struct RTSCommanderAITestUtil
     {
         /** @brief `writeState` 와 같은 모양의 바이트를 @p inoutAI 로 읽습니다. */
-        static bool readForged( RTSCommanderAI& inoutAI, float32 thinkTimer, int32 attackWaveCount )
+        static bool readFixture( RTSCommanderAI& inoutAI, float32 thinkTimer, int32 attackWaveCount )
         {
             Archive written;
             written << thinkTimer;
@@ -465,7 +465,7 @@ SW_TEST_CASE( RTSCommanderAITest, StateRoundTripKeepsTimerAndWaveCount )
     Rig rig;
     SW_REQUIRE_TRUE( rig.setUp() );
     rig.start( &Rig::taskCountThink );
-    SW_REQUIRE_TRUE( RTSCommanderAITestUtil::readForged( rig._ai, 0.4f, 3 ) );
+    SW_REQUIRE_TRUE( RTSCommanderAITestUtil::readFixture( rig._ai, 0.4f, 3 ) );
     SW_EXPECT_EQUAL( 3, rig._ai.getAttackWaveCount() );
 
     Archive written;
@@ -492,11 +492,11 @@ SW_TEST_CASE( RTSCommanderAITest, ReadStateRefusesCorruptBytes )
     Rig rig;
     SW_REQUIRE_TRUE( rig.setUp() );
     rig.start( &Rig::taskCountThink );
-    SW_REQUIRE_TRUE( RTSCommanderAITestUtil::readForged( rig._ai, 0.0f, 2 ) );
+    SW_REQUIRE_TRUE( RTSCommanderAITestUtil::readFixture( rig._ai, 0.0f, 2 ) );
 
-    SW_EXPECT_FALSE( RTSCommanderAITestUtil::readForged( rig._ai, 0.5f, -1 ) );
-    SW_EXPECT_FALSE( RTSCommanderAITestUtil::readForged( rig._ai, std::numeric_limits<float32>::infinity(), 5 ) );
-    SW_EXPECT_FALSE( RTSCommanderAITestUtil::readForged( rig._ai, std::numeric_limits<float32>::quiet_NaN(), 5 ) );
+    SW_EXPECT_FALSE( RTSCommanderAITestUtil::readFixture( rig._ai, 0.5f, -1 ) );
+    SW_EXPECT_FALSE( RTSCommanderAITestUtil::readFixture( rig._ai, std::numeric_limits<float32>::infinity(), 5 ) );
+    SW_EXPECT_FALSE( RTSCommanderAITestUtil::readFixture( rig._ai, std::numeric_limits<float32>::quiet_NaN(), 5 ) );
 
     Archive written;
     written << 0.5f; // 횟수가 없다

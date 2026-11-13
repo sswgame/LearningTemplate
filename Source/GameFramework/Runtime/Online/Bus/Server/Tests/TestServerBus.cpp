@@ -242,9 +242,9 @@ SW_TEST_CASE( ServerBusTest, EphemeralBusCarriesEnvelopeAcrossServers )
 
     sw::ServerBus bus( busA );
     SW_REQUIRE_TRUE( sw::ServerBusTopic<sw::ServiceSanctionChanged>( "test.cache" ).publish( bus, makeChanged( 77 ) ) );
-    (void)routerA.pump(); // 발행 답(받은 수)은 주인 없이 버린다
+    (void)routerA.poll(); // 발행 답(받은 수)은 주인 없이 버린다
     SW_EXPECT_EQUAL( 0, routerA.getPendingCount() );
-    (void)routerB.pump();
+    (void)routerB.poll();
 
     sw::vector<sw::ServerBusMessage> listMessage;
     SW_REQUIRE_EQUAL( 1, busB.pollMessages( listMessage ) );
@@ -260,14 +260,14 @@ SW_TEST_CASE( ServerBusTest, EphemeralBusCarriesEnvelopeAcrossServers )
     sw::vector<uint8> listWrongVersion( 17, 0 );
     listWrongVersion[0] = 2;
     (void)storeA.submit( sw::EphemeralRequest::makePublish( "bus:test.cache", listWrongVersion ) );
-    (void)routerB.pump();
+    (void)routerB.poll();
     SW_EXPECT_EQUAL( uint64( 2 ), busB.getDroppedCount() );
     sw::vector<sw::ServerBusMessage> listAfterDrop;
     SW_EXPECT_EQUAL( 0, busB.pollMessages( listAfterDrop ) );
 
     busB.unsubscribe( "test.cache" );
     SW_REQUIRE_TRUE( sw::ServerBusTopic<sw::ServiceSanctionChanged>( "test.cache" ).publish( bus, makeChanged( 78 ) ) );
-    (void)routerB.pump();
+    (void)routerB.poll();
     SW_EXPECT_EQUAL( 0, busB.pollMessages( listAfterDrop ) );
 }
 
@@ -293,7 +293,7 @@ SW_TEST_CASE( ServerBusTest, EphemeralBusBindsRouterOnlyBeforeSubscribing )
     bus.subscribe( "test.late" );
     SW_EXPECT_FALSE( bus.bindRouter( &otherRouter ) ); // 구독이 라우터에 걸려 있다
     bus.publish( "test.late", arrPayload, 1 );
-    (void)router.pump();
+    (void)router.poll();
 
     sw::vector<sw::ServerBusMessage> listMessage;
     SW_REQUIRE_EQUAL( 1, bus.pollMessages( listMessage ) );

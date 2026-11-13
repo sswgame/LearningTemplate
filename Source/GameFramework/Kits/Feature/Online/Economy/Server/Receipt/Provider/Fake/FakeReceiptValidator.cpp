@@ -57,11 +57,11 @@ namespace sw
     {
     }
 
-    void FakeReceiptValidator::pollRefunds( vector<ReceiptRefundNotification>& outListNotice )
+    void FakeReceiptValidator::pollRefunds( vector<ReceiptRefundNotification>& outListNotification )
     {
-        for ( ReceiptRefundNotification& notice : _listRefund )
+        for ( ReceiptRefundNotification& notification : _listRefund )
         {
-            outListNotice.push_back( std::move( notice ) );
+            outListNotification.push_back( std::move( notification ) );
         }
         _listRefund.clear();
     }

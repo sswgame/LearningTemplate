@@ -421,7 +421,7 @@ namespace sw
         _listDeliveryDone.push_back( ReceiptDeliveryResult{ getStoreName(), call._recordKey, status } );
     }
 
-    void StoreReceiptValidator::pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListServiceResult )
+    void StoreReceiptValidator::pollDeliveryResults( vector<ReceiptDeliveryResult>& outListServiceResult )
     {
         for ( ReceiptDeliveryResult& serviceResult : _listDeliveryDone )
         {
@@ -536,11 +536,11 @@ namespace sw
         _listDone.clear();
     }
 
-    void StoreReceiptValidator::pollRefunds( vector<ReceiptRefundNotification>& outListNotice )
+    void StoreReceiptValidator::pollRefunds( vector<ReceiptRefundNotification>& outListNotification )
     {
-        for ( ReceiptRefundNotification& notice : _listRefund )
+        for ( ReceiptRefundNotification& notification : _listRefund )
         {
-            outListNotice.push_back( std::move( notice ) );
+            outListNotification.push_back( std::move( notification ) );
         }
         _listRefund.clear();
     }

@@ -1,5 +1,5 @@
 /**
- * @file AutomationJudge.h
+ * @file AutomationEvaluator.h
  * @brief 자동화 시나리오의 판정을 소유합니다 — 감시 값 비교 · 방문 이력 · 기억 값 · 로그 · 이미지 지표와 실패 · 미확정 · 처리하지 않은 로그 목록.
  */
 #pragma once
@@ -23,22 +23,22 @@
 namespace sw
 {
     /**
-     * @class AutomationJudge
+     * @class AutomationEvaluator
      * @brief 단언 단계의 비교와 결과 판정에 필요한 상태를 모두 쥡니다. 시간 · 입력 · 대기는 모릅니다(그것은 `AutomationStepTimeline` 과 실행기의 일).
      * @details 판정이 읽는 바깥 값(시나리오 프레임 · 산출물 경로 · 오브젝트 매니저)은 단계 문맥(`AutomationStepContext`)에서 호출마다 받는다 — 판정이 실행기를 알지 못한다.
      *          실패는 `addFailure` 로만 쌓이고, 결과를 정하는 것(`Passed` → `Failed` · `UnhandledLog`)은 실행기의 끝맺음이다.
      *          상용 엔진 비교: 언리얼 Automation Test 의 `FAutomationTestBase`(테스트 기록 · 오류 목록)가 실행기와 갈라진 모양과 같다. 게임 스레드에서만 쓴다.
      */
-    class SW_DEVTOOLS_API AutomationJudge
+    class SW_DEVTOOLS_API AutomationEvaluator
     {
     public:
         /** @param pLogPolicy 세션 수명의 로그 판정(`AutomationSession` 이 든다 — 콘솔도 같은 것을 읽는다). 비면 부른 쪽의 잘못이다. */
-        explicit AutomationJudge( shared_ptr<AutomationLogPolicy> pLogPolicy );
+        explicit AutomationEvaluator( shared_ptr<AutomationLogPolicy> pLogPolicy );
         /** @brief 이 단계의 선언 · 허용을 지운다 — 단계 사이의 줄은 어느 시나리오의 선언도 아니다. */
-        ~AutomationJudge();
+        ~AutomationEvaluator();
 
-        AutomationJudge( const AutomationJudge& )            = delete;
-        AutomationJudge& operator=( const AutomationJudge& ) = delete;
+        AutomationEvaluator( const AutomationEvaluator& )            = delete;
+        AutomationEvaluator& operator=( const AutomationEvaluator& ) = delete;
 
         /**
          * @brief 시나리오가 시작하는 프레임에 판정을 준비합니다 — 로그 허용 정책을 올리고, 감시 값 이력을 만들고, 로그 수집을 시작합니다.
@@ -69,10 +69,10 @@ namespace sw
         void runExpect( AutomationStepContext& context, const AutomationStep& step );
         void runExpectVisited( AutomationStepContext& context, const AutomationStep& step );
         void runRecord( AutomationStepContext& context, const AutomationStep& step );
-        void runRemember( AutomationStepContext& context, const AutomationStep& step );
+        void runStore( AutomationStepContext& context, const AutomationStep& step );
         void runExpectLog( AutomationStepContext& context, const AutomationStep& step );
         /**
-         * @brief `<ExpectImage>` 를 미뤄 둡니다 - 인자와 그때의 백엔드(골든이 백엔드마다 따로다)만 지금 읽고, 비교는 시나리오 끝(`judgeDeferredImages`)에서 한다.
+         * @brief `<ExpectImage>` 를 미뤄 둡니다 - 인자와 그때의 백엔드(골든이 백엔드마다 따로다)만 지금 읽고, 비교는 시나리오 끝(`evaluateDeferredImages`)에서 한다.
          * @details 판정은 다음 단계 진행에 쓰이지 않는다(실패를 적을 뿐). 예전에는 단계마다 스크린샷 쓰기를 기다려 프레임을 붙잡았다. 같은 파일을 두 번 찍는 시나리오는
          *          읽을 때 거절한다(`AutomationStepValidation::validateScreenshotFiles`) - 미룬 비교가 덮어쓴 그림을 보지 않게.
          */
@@ -91,7 +91,7 @@ namespace sw
          *          빠진 현지화 키는 `LocalizationManager::getMissingKeys` 로 프로세스 전체를 본다(키마다 경고를 한 번만 남기므로 시나리오 앞 기동 구간에 남은 줄도
          *          여기서 잡는다 — id 가 없는 줄이라 `<ExpectLog>` 로만 가릴 수 있다). 허용 항목이 맞은 id 는 `getAllowedLogIDs` 에 남아 보고에 적힌다.
          */
-        [[nodiscard]] optional<string> applyLogGate( AutomationResult result );
+        [[nodiscard]] optional<string> applyLogCheck( AutomationResult result );
 
         const vector<string>& getFailures() const { return _listFailure; }
         /** @brief `-scenario-update-golden` 으로 이 실행이 새로 쓰거나 바꾼 골든 파일(리소스 id)입니다. 리뷰할 목록이다. */
@@ -129,11 +129,11 @@ namespace sw
         };
 
         /**
-         * @struct RememberedValue
-         * @brief `<Remember as="이름">` 이 남긴 감시 값 값(끝의 0 을 정리한 글)입니다. 경계(플레이 · 백엔드 교체 · 모듈 리로드)를 넘긴 뒤 `sameAs` · `differsFrom` 이 비교합니다.
+         * @struct StoredValue
+         * @brief `<Store as="이름">` 이 남긴 감시 값 값(끝의 0 을 정리한 글)입니다. 경계(플레이 · 백엔드 교체 · 모듈 리로드)를 넘긴 뒤 `sameAs` · `differsFrom` 이 비교합니다.
          * @details 판정은 엔진 쪽이라 모듈 리로드와 백엔드 교체를 넘어 남는다. 시나리오가 시작할 때 비운다.
          */
-        struct RememberedValue
+        struct StoredValue
         {
             string _name{};
             string _text{};
@@ -157,7 +157,7 @@ namespace sw
 
         /** @brief 시작할 때 `<ExpectVisited>` 가 보는 감시 값마다 이력을 만듭니다. */
         void prepareWatches( const AutomationScenario& scenario );
-        /** @brief 미룬 `<ExpectImage>` 하나를 판정합니다(@p backendTag 는 단언한 때의 백엔드). 판정은 `AutomationGoldenUtil::judge` · `decide` 한 식이다. */
+        /** @brief 미룬 `<ExpectImage>` 하나를 판정합니다(@p backendTag 는 단언한 때의 백엔드). 판정은 `AutomationGoldenUtil::evaluate` · `decide` 한 식이다. */
         void evaluateImage( AutomationStepContext& context, const AutomationStep& step, string_view backendTag );
         /** @brief 기록 모드에서 골든 @p goldenID 와 그 메타(`*.golden.json`)를 씁니다. @p pPrevious 는 쓰기 전 골든과의 차이(견주지 못했으면 nullptr)입니다. */
         void writeGolden( AutomationStepContext& context, const AutomationStep& step, const AutomationImage& image, const string& goldenID, string_view backendTag, const utf8* pReason,
@@ -185,6 +185,6 @@ namespace sw
         vector<string>                   _listMetricLine;           ///< 보고에 적는 지표 값
         vector<string>                   _listRecordLine;           ///< 보고에 적는 기록 값(결정성 대조)
         vector<WatchHistory>             _listWatch;                ///< `<ExpectVisited>` 가 보는 감시 값 이력
-        vector<RememberedValue>          _listRemembered;           ///< `<Remember>` 가 남긴 값
+        vector<StoredValue>              _listStored;               ///< `<Store>` 가 남긴 값
     };
 } // namespace sw

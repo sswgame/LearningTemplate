@@ -9,52 +9,52 @@
 -->
 <Scenario name="editor.animgraphlayers" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/animgraphlayers" as="scratch/animgraphlayers"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus animation_graph"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/animgraphlayers/animgraphlayers.animgraph.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.AnimationGraphLayerCount" equals="1"/>
 	<WaitUntil watch="Editor.AnimationGraphBoneMaskCount" equals="1" timeoutFrames="90"/>
 	<Expect watch="Editor.AnimationGraphLinkCount" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.tab.layers" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="animationGraph.tab.layers" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.layer.add"/>
 	<WaitUntil watch="Editor.AnimationGraphLayerCount" equals="2" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.mask.add"/>
 	<WaitUntil watch="Editor.AnimationGraphBoneMaskCount" equals="2" timeoutFrames="60"/>
 	<CaptureEditorUI file="animgraphlayers/layers.png"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.save"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.layer.remove"/>
 	<WaitUntil watch="Editor.AnimationGraphLayerCount" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.load"/>
 	<WaitUntil watch="Editor.AnimationGraphLayerCount" equals="2" timeoutFrames="75"/>
 	<Expect watch="Editor.AnimationGraphBoneMaskCount" equals="2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.layer.1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.layer.remove"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.mask.1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.mask.remove"/>
 	<WaitUntil watch="Editor.AnimationGraphLayerCount" equals="1" timeoutFrames="60"/>
 	<WaitUntil watch="Editor.AnimationGraphBoneMaskCount" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.save"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

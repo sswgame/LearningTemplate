@@ -1140,7 +1140,7 @@ namespace sw
         pBuilding->_hp            = pDef->_hp * _settings._constructionStartRatio;
         pBuilding->_builder       = worker._id;
         order._targetUnit         = buildingID;
-        nudgeToWalkable( worker );
+        snapToWalkable( worker );
     }
 
     void RTSWorld::updateBuild( RTSUnit& unit, RTSOrder& order, float32 deltaTime )
@@ -1564,11 +1564,11 @@ namespace sw
             if ( job._result == GridPathResult::Found || job._result == GridPathResult::Partial )
                 unit._agent.followPath( job._listPoint );
             else
-                nudgeToWalkable( unit );
+                snapToWalkable( unit );
         }
     }
 
-    void RTSWorld::nudgeToWalkable( RTSUnit& unit )
+    void RTSWorld::snapToWalkable( RTSUnit& unit )
     {
         const int2 cell = _grid.computeCell( unit._position );
         int2       freeCell{};

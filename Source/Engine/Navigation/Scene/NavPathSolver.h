@@ -41,10 +41,10 @@ namespace sw
         {
         }
 
-        /** @brief 일마다 종류의 내비메시 · 범위 · 거름을 적습니다(게임 스레드, 넘기기 직전 — 그 사이 타일 교체가 없다). 레인 스크래치는 쓰지 않습니다(질의 객체는 내비메시가 스레드마다 둔다). */
-        void prepareBatch( vector<NavPathJob>& inoutListJob, uint32 laneCount ) const;
+        /** @brief 일마다 종류의 내비메시 · 범위 · 거름을 적습니다(게임 스레드, 넘기기 직전 — 그 사이 타일 교체가 없다). 구간 스크래치는 쓰지 않습니다(질의 객체는 내비메시가 스레드마다 둔다). */
+        void prepareBatch( vector<NavPathJob>& inoutListJob, uint32 chunkCount ) const;
         /** @brief 경로 하나를 구합니다(워커). 내비메시가 없으면 `Failed` 입니다. */
-        void solve( NavPathJob& inoutJob, uint32 laneIndex ) const;
+        void solve( NavPathJob& inoutJob, uint32 chunkIndex ) const;
 
     private:
         const SceneNavigation* _pNavigation;

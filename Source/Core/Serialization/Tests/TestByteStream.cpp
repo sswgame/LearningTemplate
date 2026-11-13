@@ -57,7 +57,7 @@ SW_TEST_CASE( ByteStreamTest, CountChecksDoNotOverflow )
 /**
  * @brief [ByteStreamTest] 목록 읽기는 위조된 개수를 할당 전에 거르고, 잘리거나 원소가 거절되면 빈 목록과 실패를 남긴다
  */
-SW_TEST_CASE( ByteStreamTest, ListReadsRefuseForgedCountsAndTruncation )
+SW_TEST_CASE( ByteStreamTest, ListReadsRefuseCraftedCountsAndTruncation )
 {
     vector<uint8> bytes;
     ByteWriter    writer{ bytes };
@@ -91,11 +91,11 @@ SW_TEST_CASE( ByteStreamTest, ListReadsRefuseForgedCountsAndTruncation )
     }
     // 위조된 개수: 원소를 부르기 전에 멈춘다(할당하지 않는다).
     {
-        vector<uint8> forged;
-        ByteWriter    forgedWriter{ forged };
-        forgedWriter.writeUint32( 0xFFFFFFFFu );
-        forgedWriter.writeUint32( 1 );
-        ByteReader     reader{ forged.data(), forged.size() };
+        vector<uint8> crafted;
+        ByteWriter    craftedWriter{ crafted };
+        craftedWriter.writeUint32( 0xFFFFFFFFu );
+        craftedWriter.writeUint32( 1 );
+        ByteReader     reader{ crafted.data(), crafted.size() };
         vector<uint64> listValue;
         uint32         callCount = 0;
         SW_EXPECT_FALSE( reader.readCountedList( listValue, sizeof( uint64 ), [&]( uint64& )

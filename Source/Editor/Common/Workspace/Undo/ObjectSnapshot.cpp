@@ -120,7 +120,7 @@ namespace sw
             /** @brief 이 단계를 실행하는 스택에 알립니다. */
             static void notify( editor::UndoStepContext& context, uint64 objectID, ObjectEditKind kind )
             {
-                context._stack.notifyObjectEdit( CommandStack::ObjectEditNotice{ objectID, kind } );
+                context._stack.notifyObjectEdit( CommandStack::ObjectEditEvent{ objectID, kind } );
             }
 
             /** @brief 기록한 씬에서 @p objectID 를 찾아 @p snapshot 을 다시 읽습니다. 없으면 아무것도 하지 않습니다(데이터 단계). */

@@ -9,59 +9,59 @@
 	<!-- 그림 판정의 크기는 UI 배율에 달렸다 — 모니터 DPI 와 상관없이 같게 둔다 -->
 	<Variable name="gv_editorUiScale" value="1.5"/>
 	<!-- 1) 뷰 스크린샷 — 까만 빈 그림이 아니다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Screenshot file="gameview.ppm"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectImage file="gameview.ppm" golden="gameview"/>
 	<!-- 2) 창을 단계별로 줄인다 — 마지막(640x360)은 에디터 최소 크기보다 작아 거기서 멈춰야 한다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1600" height="900"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectDockLayout/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1280" height="720"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectDockLayout/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1024" height="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectDockLayout/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="640" height="360"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectDockLayout/>
 	<!-- 3) UI 배율 1.5 — 큰 창에서 칸이 그대로 화면 안에 들고, 뷰가 그대로 그려진다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1600" height="900"/>
 	<Variable name="gv_editorUiScale" value="1.5"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.UIScale" near="1.5" tolerance="0.01"/>
 	<EditorExpectDockLayout/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Screenshot file="gameview_scaled.ppm"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectImage file="gameview_scaled.ppm" golden="gameview_scaled"/>
 	<!-- 4) 테마 — 토큰 벌을 바꾸고, 라이트에서 테마 대화상자를 열어 셋째 스와치(Neon Violet 0xA65AF2)를 누른다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor.theme midnight"/>
 	<WaitUntil watch="Editor.ThemeName" is="midnight" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor.theme light"/>
 	<WaitUntil watch="Editor.ThemeName" is="light" timeoutFrames="60"/>
 	<DevCommand line="editor editor.themeSettings"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="theme.swatch.violet"/>
 	<WaitUntil watch="Editor.AccentColor" equals="10902002" timeoutFrames="60"/>
 	<Expect watch="Editor.ThemeName" is="light"/>
 	<EditorExpectDockLayout/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Screenshot file="gameview_light.ppm"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectImage file="gameview_light.ppm" golden="gameview_light"/>
 	<!-- 되돌리기 — 같은 상태 폴더를 이어 쓰는 묶음이 아니어도 배율 · 테마를 기본으로 둔다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor.theme dark"/>
 	<Variable name="gv_editorUiScale" value="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

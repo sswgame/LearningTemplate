@@ -86,7 +86,7 @@ namespace sw
          */
         virtual int32 getOpenJobCount() const { return 0; }
         /** @brief 종료 드레인이 시작될 때 한 번 불립니다. 새 일을 받지 않고 진행 중인 일을 마무리하며 클라이언트에 사유를 알립니다. 기본은 아무 일도 하지 않습니다. */
-        virtual void beginShutdown( const ServerShutdownNotice& notice ) { (void)notice; }
+        virtual void beginShutdown( const ServerShutdownNotice& notification ) { (void)notification; }
     };
 } // namespace sw
 

@@ -203,10 +203,10 @@ namespace sw
         // IOnlineServerService
         void onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         void onHostShutdown( OnlineServiceHost& host ) override;
-        /** @brief 잔액 변경을 계정에 알립니다. 이 서버에 붙은 계정이면 바로, 다른 서버에 붙었으면 접속 상태를 찾아 중계한다. `getBalanceNotice` 가 이 함수로 넘깁니다. */
+        /** @brief 잔액 변경을 계정에 알립니다. 이 서버에 붙은 계정이면 바로, 다른 서버에 붙었으면 접속 상태를 찾아 중계한다. `getBalanceNotification` 가 이 함수로 넘깁니다. */
         void notifyBalancesChanged( AccountID accountID, const vector<LedgerBalance>& listBalance );
         /** @brief 다른 키트(GM · 우편함)에 거는 잔액 변경 알림 창구입니다. 이 서비스와 수명이 같습니다. */
-        IBalanceChangedListener& getBalanceNotice() { return _balanceNotice; }
+        IBalanceChangedListener& getBalanceNotification() { return _balanceNotification; }
         // 예약 작업 — 보존 검사 회차를 차지했다
         void onScheduledRun( const ScheduledRun& run );
         /** @brief 보존 검사 한 번을 맡깁니다. 예약 회차와 테스트가 부릅니다. 이미 도는 중이면 무시합니다. */
@@ -265,7 +265,7 @@ namespace sw
         /** @brief 보존 검사의 완료입니다. 지표와 로그를 남기고 예약 회차를 마칩니다. */
         void completeLedgerAudit( ServiceStoreResult result, const LedgerAuditReport& report, ServiceStoreCompletion completion );
         /** @brief 환불 회수의 완료입니다. 지표와 로그를 남기고 회수로 바뀐 잔액을 계정에 알립니다. 회수를 끝내지 못했으면 제공자가 그 환불을 잊어 겹친 조회가 다시 알립니다. */
-        void completeRefund( const ReceiptRefundNotification& notice, EconomyServiceResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion );
+        void completeRefund( const ReceiptRefundNotification& notification, EconomyServiceResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion );
         /** @brief 기준 시각 읽기의 완료입니다. 읽었으면 제공자에 넘기고, 못 읽었으면 다시 읽게 합니다. */
         void completeRefundCursorRead( const vector<EconomyRefundCursor>& listCursor, ServiceStoreResult result, ServiceStoreCompletion completion );
         /** @brief 기준 시각 쓰기의 완료입니다. */
@@ -292,7 +292,7 @@ namespace sw
         AccountPresenceTracker                    _presenceFinds;             ///< 다른 서버에 붙은 계정을 찾는 잔액 변경 알림(`initialize` 가 묶고 `shutdown` 이 푼다)
         unordered_set<string>                     _uniqueSetDeliveryInFlight; ///< 제공자에 맡겨 결과를 기다리는 지급 알림의 레코드 키
         unordered_set<string>                     _uniqueSetDeliveryAlarmed;  ///< 기한 오류 로그를 이미 남긴 레코드 키
-        BalanceChangedListener                    _balanceNotice;             ///< 잔액 변경 알림 창구(`getBalanceNotice`)
+        BalanceChangedListener                    _balanceNotification;       ///< 잔액 변경 알림 창구(`getBalanceNotification`)
         OnlineServiceHost*                        _pHost;                     ///< `onServiceTick` 이 붙잡는다. 알림을 이 서버에 붙은 계정에 바로 보낸다
         MetricRegistry*                           _pMetricRegistry;           ///< 환불 결과 지표를 센다(설정에서 복사)
         ServicePeriodicJob                        _auditJob;                  ///< 원장 보존 검사이다. 주기 없이 예약 회차와 `requestLedgerAudit` 로 돈다

@@ -10,56 +10,56 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<Variable name="gv_editorWatchPanel" value="admin.tool"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+Shift+P"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="Open the GM"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="60"/>
 	<ExpectLog id="Admin.PanelOpened" count="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus admin.tool"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="admin.lookup"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Admin.CommandResult" contains="LookupAccount: Ok" count="1"/>
 	<!-- 메모 없는 지급은 거절된다 -->
 	<EditorClick mark="admin.grant"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Admin.CommandResult" contains="AdjustAsset: InvalidRequest" count="1"/>
 	<!-- 메모를 적으면 들어가고, 성공한 뒤 같은 계정을 다시 조회한다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="admin.memo"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="ticket-42"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="admin.grant"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Admin.CommandResult" contains="AdjustAsset: Ok" count="1"/>
 	<ExpectLog id="Admin.CommandResult" contains="LookupAccount: Ok" count="2"/>
 	<!-- 잔액(200)보다 큰 회수는 거절된다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="admin.amount"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="1000"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="admin.revoke"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Admin.CommandResult" contains="AdjustAsset: InsufficientFunds" count="1"/>
 	<EditorClick mark="admin.sanction.apply"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Admin.CommandResult" contains="SetSanction: Ok" count="1"/>
 	<EditorClick mark="admin.audit.list"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Admin.CommandResult" contains="ListAudit: Ok" count="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

@@ -10,119 +10,119 @@
 	<ResizeWindow width="1900" height="1200"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_editorWatchPanel" value="charactereditor.main"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<EditorKey key="Ctrl+Shift+P"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="Character Editor"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<!-- 팔레트가 연 것을 본다 - panel.focus 는 닫힌 패널도 열어 팔레트 글자를 잃어도 통과한다 -->
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus charactereditor.main"/>
 	<WaitUntil watch="Editor.CharacterEditorSocketCount" atLeast="3" timeoutFrames="135"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.loadSockets"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.CharacterEditorSocketCount" atLeast="3"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.socket.first"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="charactereditor/sockets.png"/>
 	<EditorClick mark="charactereditor.tab.skeleton" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.skeleton" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.loadSkeleton"/>
 	<WaitUntil watch="Editor.CharacterEditorBoneCount" atLeast="30" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.bone.root"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="charactereditor/skeleton.png"/>
 	<EditorClick mark="charactereditor.tab.appearance" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.appearance" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.loadData"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.basePreset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.basePreset.first"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.equipSet"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.equipSet.first"/>
 	<WaitUntil watch="Editor.CharacterEditorEquippedSlotCount" atLeast="1" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="charactereditor/appearance.png"/>
 	<EditorClick mark="charactereditor.tab.preview" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.preview" state="Up"/>
 	<WaitUntil watch="Editor.CharacterEditorPreviewAssembleCount" atLeast="1" timeoutFrames="177"/>
 	<!-- 스켈레톤 탭에서 고른 본(root)에 기즈모 표식이 놓인다 — 뷰포트에서 끌면 포즈 편집이 된다(눈으로 본다). 관통 점은 피팅 데이터가 겹치는 차림에서만 찍힌다(감시 값 Editor.CharacterEditorPenetrationMarks) -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.CharacterEditorBoneGizmoPlaced" atLeast="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 미리보기가 소켓 축을 그린 뒤 상태 줄에 편집 오류가 없다 — 스켈레톤을 읽기 전의 빈 뼈대에 소켓을 대 보면 모든 소켓이 "모르는 부모 본" 으로 남았다 -->
 	<Expect watch="Editor.CharacterEditorStatusSet" near="0" tolerance="0.5"/>
 	<CaptureEditorUI file="charactereditor/preview.png"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.clip"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.clip.first"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.playClip"/>
 	<WaitUntil watch="Editor.CharacterEditorPreviewClipPlaying" atLeast="1" timeoutFrames="135"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="charactereditor/clip.png"/>
 	<!-- 꾸미기 슬라이더(스키마가 있는 프리셋이면 뷰포트 아래에 나온다): 눌러 값을 바꾸고 놓으면 몸이 다시 입혀진다 — 눈으로 본다 -->
 	<!-- 슬라이더 칸은 창 아래로 넘친다 — 창 위쪽(클립 고르기)에 커서를 두고 휠로 창을 내린다 -->
 	<EditorHover mark="charactereditor.clip" anchor="0.5,0.5"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorWheel dy="-10"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorHover release="true"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.slider.first"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="charactereditor/slider.png"/>
 	<!-- 제약 리그 미리보기(팩 데이터의 rig): 켜면 몸에 후처리 리그가 걸린다 — 눈으로 본다 -->
 	<EditorClick mark="charactereditor.rigPreview"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="charactereditor/rig.png"/>
 	<!-- 미리보기 뷰포트의 휠 줌: 씬 뷰와 같은 dolly 라 거리가 바뀐다(EditorOrbitMath) -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorHover mark="charactereditor.previewScene" anchor="0.5,0.5"/>
-	<EditorWaitSettled/>
-	<Remember watch="Editor.PreviewViewportOrbitDistance" as="previewDistance"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
+	<Store watch="Editor.PreviewViewportOrbitDistance" as="previewDistance"/>
+	<EditorWaitStable/>
 	<EditorWheel dy="2"/>
 	<WaitUntil watch="Editor.PreviewViewportOrbitDistance" differsFrom="previewDistance" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorHover release="true"/>
 	<!-- 사용자 프리셋 · 썸네일: 에디터 쪽 로컬 저장소(CharacterEditorLocalStore - 사용자 데이터 폴더 editor/)의 슬롯에 쓴다. 콘텐츠 트리에는 쓰지 않는다.
 	     썸네일은 위에서 그린 미리보기 렌더 타깃을 캡처한다. 프리셋 줄은 외형 탭 맨 아래라 휠로 내린다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.tab.appearance" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.appearance" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorHover mark="charactereditor.loadData" anchor="0.5,0.5"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorWheel dy="-80"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorHover release="true"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.savePreset"/>
 	<WaitUntil watch="Editor.CharacterEditorPresetCount" atLeast="1" timeoutFrames="120"/>
 	<ExpectLog id="CharacterEditor.PresetsSaved" contains="charactereditor/presets" count="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.saveThumbnail"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="CharacterEditor.ThumbnailStored" contains="charactereditor/thumb.mylook" count="1"/>
 	<ExpectLog id="CharacterEditor.PresetsSaved" contains="charactereditor/presets" count="2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

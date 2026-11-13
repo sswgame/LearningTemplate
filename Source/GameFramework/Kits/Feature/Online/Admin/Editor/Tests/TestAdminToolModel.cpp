@@ -109,7 +109,7 @@ SW_TEST_CASE( AdminToolModelTest, MethodNames )
     SW_EXPECT_EQUAL( string( "SetSanction" ), string( AdminToolModel::getMethodName( AdminMethod::SetSanction::kID ) ) );
     SW_EXPECT_EQUAL( string( "ListAudit" ), string( AdminToolModel::getMethodName( AdminMethod::ListAudit::kID ) ) );
     SW_EXPECT_EQUAL( string( "Report" ), string( AdminToolModel::getMethodName( AdminMethod::ResolveReport::kID ) ) );
-    SW_EXPECT_EQUAL( string( "ServerDirectory" ), string( AdminToolModel::getMethodName( AdminMethod::PostNotice::kID ) ) );
+    SW_EXPECT_EQUAL( string( "ServerDirectory" ), string( AdminToolModel::getMethodName( AdminMethod::PostAnnouncement::kID ) ) );
     SW_EXPECT_EQUAL( string( "LiveEvent" ), string( AdminToolModel::getMethodName( AdminMethod::PutLiveEvent::kID ) ) );
     SW_EXPECT_EQUAL( string( "Command" ), string( AdminToolModel::getMethodName( AdminMethod::SendMail::kID ) ) );
 }

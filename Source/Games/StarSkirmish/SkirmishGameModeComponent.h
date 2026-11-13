@@ -175,7 +175,7 @@ namespace sw
         PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between match status log lines", Min = 0.1, Units = s )
         float32 _statusLogInterval;
         PROPERTY( Category = "Input", DisplayName = "Click Slop", Tooltip = "A drag shorter than this counts as a click", Min = 0.0, Units = m )
-        float32 _clickSlop;
+        float32 _clickDragThreshold;
         PROPERTY( Category = "Input", DisplayName = "Max Selection", Tooltip = "Most units one selection holds", Min = 1 )
         int32 _maxSelectionCount;
         // ---- 입력 액션 — 이름은 입력 맵(data/skirmish.input.xml)의 액션이다. 판을 열 때 모두 있는지 본다(hasValidNames) ----

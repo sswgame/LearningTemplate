@@ -27,19 +27,19 @@ namespace sw::editor
         return pending.empty() ? focused : pending;
     }
 
-    bool EditorDocumentOpenUtil::applyAssetMove( const EditorAssetMoveNotice& notice, string& inoutLoaded, vector<string>& inoutListRecent )
+    bool EditorDocumentOpenUtil::applyAssetMove( const EditorAssetMoveEvent& event, string& inoutLoaded, vector<string>& inoutListRecent )
     {
-        for ( size_t index = 0; index < notice._listOldID.size() && index < notice._listNewID.size(); ++index )
+        for ( size_t index = 0; index < event._listOldID.size() && index < event._listNewID.size(); ++index )
         {
-            if ( inoutLoaded == notice._listOldID[index] )
-                inoutLoaded = notice._listNewID[index];
+            if ( inoutLoaded == event._listOldID[index] )
+                inoutLoaded = event._listNewID[index];
             for ( string& recentPath : inoutListRecent )
             {
-                if ( recentPath == notice._listOldID[index] )
-                    recentPath = notice._listNewID[index];
+                if ( recentPath == event._listOldID[index] )
+                    recentPath = event._listNewID[index];
             }
         }
-        return inoutLoaded.empty() == false && VectorUtil::contains( notice._listRewrittenID, inoutLoaded );
+        return inoutLoaded.empty() == false && VectorUtil::contains( event._listRewrittenID, inoutLoaded );
     }
 
     void EditorDocumentOpenUtil::restoreFocusAfterCancel( EditorWorkspace& workspace, const string& loaded )

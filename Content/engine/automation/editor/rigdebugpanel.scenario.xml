@@ -11,44 +11,44 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor scene.new"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="prefab.spawn engine/automation/editor/knight/knight.prefab.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="TestKnight" component="PoseModifierComponent" selected="1"/>
 	<DevCommand line="panel.focus rig_debug"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 새 씬은 저장하지 않았다 — 툴바 Play 가 묻고 Play Anyway 로 띄운다(undosurvivesplay 와 같다) -->
 	<EditorClick mark="toolbar.play"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="toolbar.playAnyway"/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.RigDebugNodeCount" equals="2" timeoutFrames="120"/>
 	<Expect watch="Editor.RigDebugEnabledNodeCount" equals="2"/>
 	<Expect watch="Editor.RigDebugWeightSum" near="1.5" tolerance="0.001"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- On 칸 — 끄고 다시 켠다 -->
 	<EditorClick mark="rigdebug.node.0.on"/>
 	<WaitUntil watch="Editor.RigDebugEnabledNodeCount" equals="1" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="rigdebug.node.0.on"/>
 	<WaitUntil watch="Editor.RigDebugEnabledNodeCount" equals="2" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- Weight 칸 — ShrinkHead 를 1 로 -->
 	<EditorClick mark="rigdebug.node.1.weight" mods="ctrl"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.RigDebugWeightSum" near="2" tolerance="0.001" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="toolbar.stop"/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

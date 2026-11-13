@@ -5,7 +5,7 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/editorstartup.scenario.xml -unattended
 -->
 <Scenario name="editor.editorstartup" fixedDelta="0.0166667" timeoutFrames="200" startAfter="Immediately" input="exclusive">
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.HasPanel" key="hierarchy" equals="1"/>
 	<Expect watch="Editor.HasPanel" key="inspector" equals="1"/>
 	<Expect watch="Editor.HasPanel" key="test_runner" equals="1"/>
@@ -13,6 +13,6 @@
 	<Expect watch="Editor.HasPanel" key="behavior_tree" equals="1"/>
 	<Expect watch="Editor.HasPanel" key="charactereditor.main" equals="1"/>
 	<Expect watch="Editor.HasPanel" key="meshmodifiers.stack" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

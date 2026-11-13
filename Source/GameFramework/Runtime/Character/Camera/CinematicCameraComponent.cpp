@@ -19,7 +19,7 @@
 #include "GameFramework/Runtime/Character/Camera/CameraManagerComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/SaveGate.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
 
 namespace sw
 {
@@ -210,8 +210,8 @@ namespace sw
             return;
         _currentCutCamera = pTarget->getHandle();
         // 연출 동안 세이브를 막는다(언리얼 · 유니티 게임도 컷신 중 세이브를 받지 않는다). 게임 인스턴스가 없는 씬(에디터 미리보기)에는 막을 세이브가 없다.
-        if ( SaveGate* const pSaveGate = game::findSubsystem<SaveGate>() )
-            _saveBlock = pSaveGate->block( "cinematic" );
+        if ( SaveLock* const pSaveLock = game::findSubsystem<SaveLock>() )
+            _saveBlock = pSaveLock->block( "cinematic" );
         if ( signal._blendSeconds <= 0.0f )
             return;
         // 게임 카메라 화면에서 첫 컷으로 섞어 들어간다(언리얼 시퀀스 Blend In). 디렉터가 없는 컷 카메라는 섞을 수 없어 끊어 바꾼다.

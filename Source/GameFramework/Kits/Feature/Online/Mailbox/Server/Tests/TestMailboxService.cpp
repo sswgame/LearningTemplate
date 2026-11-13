@@ -120,8 +120,8 @@ namespace
         static MailboxServiceConfig makeQuietSettings()
         {
             MailboxServiceConfig settings;
-            settings._noticeIntervalMs   = 0;
-            settings._claimedRetentionMs = kClaimedRetentionMs;
+            settings._notificationIntervalMs = 0;
+            settings._claimedRetentionMs     = kClaimedRetentionMs;
             return settings;
         }
 
@@ -360,8 +360,8 @@ SW_TEST_CASE( MailboxServiceTest, RetryableCategoryReachesTheServiceAgain )
 /** @brief [MailboxServiceTest] 알림: 접속한 계정의 새 우편은 표에 적은 알림으로 클라이언트에 닿는다 */
 SW_TEST_CASE( MailboxServiceTest, NewMailPushReachesTheClient )
 {
-    MailboxServiceConfig settings = MailboxServiceTestUtil::makeQuietSettings();
-    settings._noticeIntervalMs    = 1;
+    MailboxServiceConfig settings    = MailboxServiceTestUtil::makeQuietSettings();
+    settings._notificationIntervalMs = 1;
     MailboxFixture rig( settings );
     const string   mailKey = rig.sendMail( 5 );
     rig.tick( kNowMs + 10 );
@@ -378,9 +378,9 @@ SW_TEST_CASE( MailboxServiceTest, NewMailPushReachesTheClient )
 SW_TEST_CASE( MailboxServiceTest, NewMailGoesToOfflinePushWhenAway )
 {
     FakeOfflinePush      offlinePush;
-    MailboxServiceConfig settings = MailboxServiceTestUtil::makeQuietSettings();
-    settings._noticeIntervalMs    = 1;
-    settings._pOfflinePush        = &offlinePush;
+    MailboxServiceConfig settings    = MailboxServiceTestUtil::makeQuietSettings();
+    settings._notificationIntervalMs = 1;
+    settings._pOfflinePush           = &offlinePush;
     MailboxFixture rig( settings, false );
     (void)rig.sendMail( 5 );
     rig.tick( kNowMs + 10 );

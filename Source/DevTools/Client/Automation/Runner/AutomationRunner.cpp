@@ -75,7 +75,7 @@ namespace sw
         , _bFinishWaiting{ SW_FALSE }
         , _bClockHeld{ SW_FALSE }
         , _reserved{ 0 }
-        , _assetSettledFrameCount{ 0 }
+        , _assetStableFrameCount{ 0 }
         , _pHeldStepState{}
         , _pHeldStateStep{ nullptr }
         , _holdFrameCount{ 0 }
@@ -150,7 +150,7 @@ namespace sw
     AutomationRunner::AutomationRunner( shared_ptr<AutomationLogPolicy> pLogPolicy )
         : _scenario{}
         , _inputScript{}
-        , _judge{ std::move( pLogPolicy ) }
+        , _evaluator{ std::move( pLogPolicy ) }
         , _run{}
         , _reportWriter{}
         , _wallProfile{}
@@ -160,7 +160,7 @@ namespace sw
         , _bStarted{ SW_FALSE }
         , _bEnded{ SW_FALSE }
         , _bHangWatchArmed{ SW_FALSE }
-        , _bWriteGateHeld{ SW_FALSE }
+        , _bWriteFilterHeld{ SW_FALSE }
         , _reserved{ 0 }
         , _startedAt{}
         , _reproduceInput{}
@@ -176,10 +176,10 @@ namespace sw
     {
     }
 
-    // 로그 리스너 해제는 `_judge` 가 가진 `AutomationLogCapture` 의 소멸자가 맡는다.
+    // 로그 리스너 해제는 `_evaluator` 가 가진 `AutomationLogCapture` 의 소멸자가 맡는다.
     AutomationRunner::~AutomationRunner()
     {
-        releaseWriteGate();
+        releaseWriteFilter();
     }
 
     void AutomationRunner::forwardPendingScreenshot()
@@ -190,20 +190,20 @@ namespace sw
             (void)pMailbox->putForNextPacket( path ); // 칸이 비어 있음을 방금 봤다 — 같은 게임 스레드만 채우고 꺼낸다
     }
 
-    void AutomationRunner::acquireWriteGate()
+    void AutomationRunner::acquireWriteFilter()
     {
-        if ( _bWriteGateHeld == SW_TRUE )
+        if ( _bWriteFilterHeld == SW_TRUE )
             return;
-        AutomationScratchWorkspace::acquireWriteGate();
-        _bWriteGateHeld = SW_TRUE;
+        AutomationScratchWorkspace::acquireWriteFilter();
+        _bWriteFilterHeld = SW_TRUE;
     }
 
-    void AutomationRunner::releaseWriteGate()
+    void AutomationRunner::releaseWriteFilter()
     {
-        if ( _bWriteGateHeld == SW_FALSE )
+        if ( _bWriteFilterHeld == SW_FALSE )
             return;
-        AutomationScratchWorkspace::releaseWriteGate();
-        _bWriteGateHeld = SW_FALSE;
+        AutomationScratchWorkspace::releaseWriteFilter();
+        _bWriteFilterHeld = SW_FALSE;
     }
 
     void AutomationRunner::startFromPath( const AssetID& assetID, string_view reportPath )
@@ -226,7 +226,7 @@ namespace sw
                         static_cast<uint32>( _scenario.getSteps().size() ), _scenario.getFixedDelta() );
         if ( _scenario.getInputMode() == VirtualInputMode::Mixed )
             SW_LOG_WARNING_ID( "Automation.UsesMixedInputDo", "[Scenario] %# uses mixed input - do not touch the keyboard or mouse while it runs", _scenario.getName().c_str() );
-        _judge.startLogCapture(); // 시작을 기다리는 동안(시작 씬 로드)의 줄도 이 시나리오의 것이다 — 위의 실행기 자신의 안내는 빼고
+        _evaluator.startLogCapture(); // 시작을 기다리는 동안(시작 씬 로드)의 줄도 이 시나리오의 것이다 — 위의 실행기 자신의 안내는 빼고
         startHangWatchdog();
     }
 
@@ -287,7 +287,7 @@ namespace sw
         const bool bReady = skipIfThisBuildCannotRun() == false && prepareScratchFolders();
         if ( bReady )
         {
-            _judge.startLogCapture(); // 시작을 기다리는 동안(시작 씬 로드)의 줄도 이 시나리오의 것이다
+            _evaluator.startLogCapture(); // 시작을 기다리는 동안(시작 씬 로드)의 줄도 이 시나리오의 것이다
             startHangWatchdog();
         }
         return bReady;
@@ -310,7 +310,7 @@ namespace sw
             }
             SW_LOG_INFO_ID( "Automation.CopiedFreshRun", "[Scenario] %#: %# copied to %# (fresh for this run)", _scenario.getName().c_str(), folder._sourceID.c_str(), folder._scratchID.c_str() );
         }
-        acquireWriteGate(); // 사본을 만든 뒤부터 `scratch/` 밖의 리소스 원본 쓰기를 오류로 만든다
+        acquireWriteFilter(); // 사본을 만든 뒤부터 `scratch/` 밖의 리소스 원본 쓰기를 오류로 만든다
         return true;
     }
 
@@ -334,25 +334,25 @@ namespace sw
         return true;
     }
 
-    void AutomationRunner::rememberText( string_view name, string text )
+    void AutomationRunner::storeText( string_view name, string text )
     {
-        for ( RememberedText& remembered : _listRememberedText )
+        for ( StoredText& stored : _listStoredText )
         {
-            if ( string_view{ remembered._name } == name )
+            if ( string_view{ stored._name } == name )
             {
-                remembered._text = std::move( text );
+                stored._text = std::move( text );
                 return;
             }
         }
-        _listRememberedText.push_back( RememberedText{ string( name ), std::move( text ) } );
+        _listStoredText.push_back( StoredText{ string( name ), std::move( text ) } );
     }
 
-    const string* AutomationRunner::findRememberedText( string_view name ) const
+    const string* AutomationRunner::findStoredText( string_view name ) const
     {
-        for ( const RememberedText& remembered : _listRememberedText )
+        for ( const StoredText& stored : _listStoredText )
         {
-            if ( string_view{ remembered._name } == name )
-                return &remembered._text;
+            if ( string_view{ stored._name } == name )
+                return &stored._text;
         }
         return nullptr;
     }
@@ -445,7 +445,7 @@ namespace sw
         {
             return; // 이 프레임은 단계를 돌리지 않는다(`onFrameEnd` 도 `_run._bClockHeld` 를 본다)
         }
-        _judge.setFrameIndex( _run._frameIndex );
+        _evaluator.setFrameIndex( _run._frameIndex );
         // 액션 계층 단계(레지스트리의 `_bBeforeInput`)는 그 프레임의 입력 재생과 게임 틱 전에 넣는다.
         const vector<AutomationStep>& listStep = _scenario.getSteps();
         for ( size_t stepIndex = _run._nextStepIndex; stepIndex < listStep.size() && listStep[stepIndex]._frameIndex == _run._frameIndex; ++stepIndex )
@@ -470,7 +470,7 @@ namespace sw
         const bool bRunsSteps = _result == AutomationResult::Running && _bStarted == SW_TRUE && _run._bClockHeld == SW_FALSE; // 시계 잡기 조건이 붙잡은 프레임은 단계를 돌리지 않는다
         if ( bRunsSteps )
         {
-            _judge.sampleWatches( *this );
+            _evaluator.sampleWatches( *this );
             const vector<AutomationStep>& listStep = _scenario.getSteps();
             // `<=` 이므로 스크린샷을 기다리느라 밀린 단계는 다음 프레임에 이어서 돈다.
             while ( true )
@@ -859,7 +859,7 @@ namespace sw
 
     void AutomationRunner::recordFailure( const AutomationStep& step, string_view message )
     {
-        _judge.addFailure( step, message );
+        _evaluator.addFailure( step, message );
     }
 
     void AutomationRunner::endScenario( AutomationStepEnd end, string_view reason )
@@ -889,7 +889,7 @@ namespace sw
     {
         if ( _result != AutomationResult::Running )
             return;
-        _result       = ( result == AutomationResult::Passed && _judge.getFailures().empty() == false ) ? AutomationResult::Failed : result;
+        _result       = ( result == AutomationResult::Passed && _evaluator.getFailures().empty() == false ) ? AutomationResult::Failed : result;
         _finishReason = string( reason );
     }
 
@@ -924,7 +924,7 @@ namespace sw
             if ( prepared.has_value() == false )
                 return unexpected( step.describeError( prepared.error() ) );
         }
-        _judge.prepare( _scenario );
+        _evaluator.prepare( _scenario );
         return {};
     }
 
@@ -1007,7 +1007,7 @@ namespace sw
     {
         bool                                                    bMatched = false;
         string                                                  message;
-        const bool                                              bHasValue     = _judge.compareWatch( *this, step, bMatched, message );
+        const bool                                              bHasValue     = _evaluator.compareWatch( *this, step, bMatched, message );
         const bool                                              bReady        = bHasValue && bMatched;
         const expected<AutomationStepArgsUtil::WaitTimeoutArgs> parsedTimeout = AutomationStepArgsUtil::parseWaitTimeout( step );
         if ( parsedTimeout.has_value() == false )
@@ -1053,19 +1053,19 @@ namespace sw
         _bEnded              = SW_TRUE;
         _run._wallEndSeconds = AutomationRunnerInternal::readNowSeconds();
         _run.clearHeldStepState(); // 붙잡힌 채 끝난 단계의 상태(요청한 씬 로드 …)를 이 실행과 함께 걷는다
-        releaseWriteGate();
+        releaseWriteFilter();
         _hangWatchdog.stop(); // 정상 끝맺음이 보고를 쓴다 — 감시가 같은 보고를 덮거나 프로세스를 끝내지 못하게 먼저 내린다
         if ( pInput != nullptr && pInput->getVirtualInput() == &_inputScript )
             pInput->detachVirtualInput();
-        _judge.stopLogCapture();
+        _evaluator.stopLogCapture();
         // 시작한 시나리오는 결과와 상관없이 로그 게이트를 지난다 — 시작하지 못한 실행은 허용 목록도 로그 수집도 준비되지 않았다.
         if ( _bStarted == SW_TRUE )
         {
-            optional<string> gateReason = _judge.applyLogGate( _result );
-            if ( gateReason.has_value() )
+            optional<string> filterReason = _evaluator.applyLogCheck( _result );
+            if ( filterReason.has_value() )
             {
                 _result       = AutomationResult::UnhandledLog;
-                _finishReason = std::move( *gateReason );
+                _finishReason = std::move( *filterReason );
             }
         }
         if ( _result == AutomationResult::Passed )
@@ -1084,16 +1084,16 @@ namespace sw
         else
         {
             string detail = _finishReason;
-            for ( const string& failure : _judge.getFailures() )
+            for ( const string& failure : _evaluator.getFailures() )
             {
                 detail += "\n    ";
                 detail += failure;
             }
             // 진 실행의 처리하지 않은 줄은 `failures` 에 섞지 않고 보고의 `unhandledLogs` 에 둔다 — 로그에는 있다는 사실만 적는다.
-            if ( _result != AutomationResult::UnhandledLog && _judge.getUnhandledLogs().empty() == false )
+            if ( _result != AutomationResult::UnhandledLog && _evaluator.getUnhandledLogs().empty() == false )
             {
                 StringBuilder<constant::buffer::kMax256> detailPart;
-                detailPart.appendFormat( "\n    (%# unhandled Warning/Error log line(s) also remain - see unhandledLogs in the report)", static_cast<uint32>( _judge.getUnhandledLogs().size() ) );
+                detailPart.appendFormat( "\n    (%# unhandled Warning/Error log line(s) also remain - see unhandledLogs in the report)", static_cast<uint32>( _evaluator.getUnhandledLogs().size() ) );
                 detail += detailPart.c_str();
             }
             SW_LOG_ERROR_ID( "Automation.Finished", "[Scenario] %# %# at frame %#: %#", getEnumName( _result ), _scenario.getName().c_str(), _run._frameIndex, detail.c_str() );
@@ -1107,14 +1107,14 @@ namespace sw
         report._exitCode             = getAutomationExitStatus( _result );
         report._frameCount           = _run._frameIndex;
         report._reason               = _finishReason;
-        report._pListFailure         = &_judge.getFailures();
-        report._pListUpdatedGolden   = &_judge.getUpdatedGoldens();
-        report._pListNearLimitGolden = &_judge.getNearLimitGoldens();
-        report._pListGoldenSample    = &_judge.getGoldenSamples();
-        report._pListUnhandledLog    = &_judge.getUnhandledLogs();
-        report._pListAllowedLog      = &_judge.getAllowedLogIDs();
-        report._pListMetric          = &_judge.getMetricLines();
-        report._pListRecord          = &_judge.getRecordLines();
+        report._pListFailure         = &_evaluator.getFailures();
+        report._pListUpdatedGolden   = &_evaluator.getUpdatedGoldens();
+        report._pListNearLimitGolden = &_evaluator.getNearLimitGoldens();
+        report._pListGoldenSample    = &_evaluator.getGoldenSamples();
+        report._pListUnhandledLog    = &_evaluator.getUnhandledLogs();
+        report._pListAllowedLog      = &_evaluator.getAllowedLogIDs();
+        report._pListMetric          = &_evaluator.getMetricLines();
+        report._pListRecord          = &_evaluator.getRecordLines();
         // 실행 환경 — 이 보고만으로 어디서 어떻게 돌았고 어떻게 다시 돌리는지 알게 한다.
         const string  backendName        = findBackendName();
         const string  lastStep           = describeRunPosition();

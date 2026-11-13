@@ -31,7 +31,7 @@ namespace sw::editor
          * @brief 두 프레임 연속 같은 자리에 그려졌으면 true 입니다 — 입력 단계가 이때까지 시계를 붙잡는다(창이 열리며 자리를 잡는 중이면 기다린다).
          * @details 예전에는 그려지기만 하면 눌러, 시나리오마다 앞에 고정 대기(10 프레임 이상)를 두어 도킹 · 팝업이 자리 잡기를 기다렸다. Playwright 의 "stable" 확인과 같다.
          */
-        [[nodiscard]] bool isSettled() const { return _frame > _stableStartFrame; }
+        [[nodiscard]] bool isStable() const { return _frame > _stableStartFrame; }
     };
 } // namespace sw::editor
 
@@ -139,22 +139,22 @@ namespace sw::editor
          * @brief 키 · 글 입력을 받을 곳(초점 창과 그 사각형, 활성 · 내비 위젯, 열린 팝업 수)이 두 프레임 연속 같으면 true 입니다.
          * @details 키 · 글 단계에는 누를 레이블이 없다 — 그 대상은 키보드 초점이다. 클릭이 연 팝업 · 입력 칸이 초점을 잡는 데 한두 프레임이 걸린다.
          */
-        [[nodiscard]] static bool isKeyboardTargetSettled();
+        [[nodiscard]] static bool isKeyboardTargetStable();
         /**
-         * @brief 화면이 자리 잡기를 기다리기 시작합니다. 돌려준 번호를 `isLayoutSettledAfter` 에 넘깁니다.
+         * @brief 화면이 자리 잡기를 기다리기 시작합니다. 돌려준 번호를 `isLayoutStableAfter` 에 넘깁니다.
          * @details 번호는 에디터가 다음에 여는 프레임에 찍힌다(`flushIntoImGui`). 앞 단계(개발 명령 · 입력 · 변수)는 이 호출 전에 다 돌았고, 그 요청은 다음 프레임이 열릴 때
          *          받아들여지므로, 이 번호 이상이 찍힌 프레임은 앞 단계를 모두 반영해 그린 화면이다 — 효과가 몇 프레임 뒤에 나오는지 세지 않는다.
          */
-        [[nodiscard]] static uint32 beginSettleWait();
-        /** @brief 마지막 `beginSettleWait` 의 번호입니다. 상태가 새로 만들어졌으면(에디터 컨텍스트를 다시 세움) 0 부터 다시 센다. */
-        [[nodiscard]] static uint32 getSettleWaitSerial();
+        [[nodiscard]] static uint32 beginStabilityWait();
+        /** @brief 마지막 `beginStabilityWait` 의 번호입니다. 상태가 새로 만들어졌으면(에디터 컨텍스트를 다시 세움) 0 부터 다시 센다. */
+        [[nodiscard]] static uint32 getStabilityWaitSerial();
         /**
-         * @brief `beginSettleWait` 가 준 @p waitSerial 이상이 찍힌 프레임 둘이 연속으로 같은 배치면 true 입니다 — 보이는 창 모두의 자리(위치 · 크기 · 도크 노드 · 뷰포트 · 접힘),
+         * @brief `beginStabilityWait` 가 준 @p waitSerial 이상이 찍힌 프레임 둘이 연속으로 같은 배치면 true 입니다 — 보이는 창 모두의 자리(위치 · 크기 · 도크 노드 · 뷰포트 · 접힘),
          *        메인 뷰포트 크기, 열린 팝업 수.
-         * @details 창 크기 바꾸기 · 레이아웃 재설정 · 패널 열기 뒤 도킹이 자리를 잡는 데 몇 프레임이 걸린다 — 시나리오가 그것을 고정 대기로 때우지 않게 한다(`EditorWaitSettled`).
-         *          위젯 하나의 자리(`EditorSelfTestMark::isSettled`)를 창 전체로 넓힌 것이다. 기록이 꺼져 있으면(표본이 없다) false 다.
+         * @details 창 크기 바꾸기 · 레이아웃 재설정 · 패널 열기 뒤 도킹이 자리를 잡는 데 몇 프레임이 걸린다 — 시나리오가 그것을 고정 대기로 때우지 않게 한다(`EditorWaitStable`).
+         *          위젯 하나의 자리(`EditorSelfTestMark::isStable`)를 창 전체로 넓힌 것이다. 기록이 꺼져 있으면(표본이 없다) false 다.
          */
-        [[nodiscard]] static bool isLayoutSettledAfter( uint32 waitSerial );
+        [[nodiscard]] static bool isLayoutStableAfter( uint32 waitSerial );
         /** @brief 창 배치 서명이 마지막으로 바뀐 까닭입니다(움직인 창 이름 등) — 자리 잡기 시한 초과를 알릴 때 붙인다. 표본이 없으면 빈 글입니다. */
         [[nodiscard]] static string describeLastLayoutChange();
         /** @brief 큐를 ImGuiIO 에 넣고 비웁니다. `ImGuiEditor::beginFrame` 이 플랫폼 newFrame 뒤에 호출합니다. 넣기 전에 키보드 대상을 표본으로 남긴다. */

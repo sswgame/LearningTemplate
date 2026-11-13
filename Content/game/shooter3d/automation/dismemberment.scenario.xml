@@ -14,7 +14,7 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Wait frames="10"/>
 	<Expect watch="Dismemberment.SeveredCount" target="SkeletonMinion" equals="0"/>
-	<Remember watch="Dismemberment.MeshLODCount" target="SkeletonMinion" as="bodyLODs"/>
+	<Store watch="Dismemberment.MeshLODCount" target="SkeletonMinion" as="bodyLODs"/>
 	<Wait frames="1"/>
 
 	<DevCommand line="combat.hit SkeletonMinion upperarm.l 1"/>

@@ -17,7 +17,7 @@ namespace sw::editor
     {
         struct EditorSelectionSyncInternal
         {
-            /** @brief 문맥 @p context 칸의 번호입니다(감시 값 — 시나리오가 "이 문맥이 바뀌었나" 를 Remember · sameAs 로 본다). 채널이 없으면 값을 내지 않습니다. */
+            /** @brief 문맥 @p context 칸의 번호입니다(감시 값 — 시나리오가 "이 문맥이 바뀌었나" 를 Store · sameAs 로 본다). 채널이 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readSequence( EditorSelectionContext context, float64& outValue )
             {
                 const EditorSelectionSync* pSync = editor::findSubsystem<EditorSelectionSync>();

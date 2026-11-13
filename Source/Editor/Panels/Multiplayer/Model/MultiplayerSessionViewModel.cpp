@@ -36,7 +36,7 @@ namespace sw::editor
 
             /**
              * @brief 감시 값 `Editor.NetPlayObjectHashReports` — 세션의 프로세스들에게서 받은 `state.objectline` 답의 합입니다.
-             * @details 답은 다른 프로세스에서 비동기로 온다 — 시나리오는 보내기 전 값을 `Remember` 하고 바뀔 때까지 기다린다(예전에는 답이 올 틈을 프레임 수로 두었다).
+             * @details 답은 다른 프로세스에서 비동기로 온다 — 시나리오는 보내기 전 값을 `Store` 하고 바뀔 때까지 기다린다(예전에는 답이 올 틈을 프레임 수로 두었다).
              */
             [[nodiscard]] static bool readObjectHashReports( const GameObjectManager* /*pManager*/, float64& outValue )
             {

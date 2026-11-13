@@ -1,4 +1,4 @@
-// EditorDocumentPanelStackTest — 문서 패널마다 되돌리기 스택이 하나다(감사 E-3): 문서 편집은 그 문서의 스택에만 쌓여 메인(씬) 스택의 플레이 경계(`parkHistory`)와 무관하고,
+// EditorDocumentPanelStackTest — 문서 패널마다 되돌리기 스택이 하나다(감사 E-3): 문서 편집은 그 문서의 스택에만 쌓여 메인(씬) 스택의 플레이 경계(`suspendHistory`)와 무관하고,
 // 그 스택으로 되돌리면 글과 dirty 가 돌아오며, 문서를 다시 읽으면 앞 글의 기록을 비운다.
 #include "pch.h"
 
@@ -67,7 +67,7 @@ SW_TEST_CASE( EditorDocumentPanelStackTest, EditGoesToTheDocumentStack )
     panel.edit( "ab" );
 
     CommandStack& stack = panel.getDocumentCommandStack();
-    SW_REQUIRE_TRUE( &stack != pMain ); // 플레이 경계(`parkHistory`)는 메인 스택만 맡는다 — 문서 스택은 다른 객체라 넘는다
+    SW_REQUIRE_TRUE( &stack != pMain ); // 플레이 경계(`suspendHistory`)는 메인 스택만 맡는다 — 문서 스택은 다른 객체라 넘는다
     SW_REQUIRE_EQUAL( 1u, stack.getCommandCount() );
     SW_EXPECT_TRUE( panel.isDocumentDirty() );
     if ( pMain != nullptr )

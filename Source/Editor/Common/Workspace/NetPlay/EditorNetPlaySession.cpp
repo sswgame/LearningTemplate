@@ -53,7 +53,7 @@ namespace sw::editor
         uint64                  _objectHashTick{ 0 }; ///< 그 답이 단 틱
         uint32                  _objectHashReportCount{ 0 };
         uint64                  _objectHashMinTick{ 0 };    ///< `requestObjectHashes` 가 바란 가장 이른 틱 — 이보다 이른 답은 받지 않고 다시 묻는다
-        uint32                  _objectHashReaskCount{ 0 }; ///< 그 요청에서 다시 물은 수(`kMaxObjectHashReask` 에서 멈춘다)
+        uint32                  _objectHashRetryCount{ 0 }; ///< 그 요청에서 다시 물은 수(`kMaxObjectHashRetry` 에서 멈춘다)
         atomic<int32>           _exitCode{ 0 };
         atomic<uint32>          _exited{ 0 };            ///< 읽기 스레드가 파이프 끝을 봤다 — 1 이면 종료 코드를 거뒀고(`_exitCode`), 2 면 기다리지 못했다(까닭은 마지막 출력 줄)
         int32                   _processID{ 0 };         ///< 띄울 때의 pid(회수한 뒤에도 패널에 보인다)
@@ -599,10 +599,10 @@ namespace sw::editor
             {
                 // 바란 틱보다 이른 답(서버는 멈췄고 클라이언트가 아직 따라오는 중)은 답으로 세지 않고 다시 묻는다 — 비교는 두 쪽이 같은 틱이어야 한다.
                 // 상한에 닿으면 이른 답을 그대로 넘긴다: 비교가 "틱이 다르다" 로 실패해 드러난다(숨기지 않는다).
-                const bool bEarly = child._objectHashTick < child._objectHashMinTick && child._objectHashReaskCount < EditorNetPlaySession::kMaxObjectHashReask;
+                const bool bEarly = child._objectHashTick < child._objectHashMinTick && child._objectHashRetryCount < EditorNetPlaySession::kMaxObjectHashRetry;
                 if ( bEarly && child._process.writeInput( string( EditorNetPlaySession::kObjectHashCommand ) + "\n" ) )
                 {
-                    ++child._objectHashReaskCount;
+                    ++child._objectHashRetryCount;
                     continue;
                 }
                 child._objectHashMinTick = 0;
@@ -655,7 +655,7 @@ namespace sw::editor
             return false;
         ChildProcess& child         = *_listProcess[static_cast<size_t>( processIndex )];
         child._objectHashMinTick    = minTick;
-        child._objectHashReaskCount = 0;
+        child._objectHashRetryCount = 0;
         return sendProcessCommand( processIndex, kObjectHashCommand );
     }
 

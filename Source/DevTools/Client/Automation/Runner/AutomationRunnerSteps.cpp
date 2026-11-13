@@ -50,7 +50,7 @@ namespace sw
              * @brief 에셋 일이 0 이 된 뒤 스크린샷 전에 더 기다리는 프레임 수입니다. 올린 텍스처의 새 SRV 는 다음 씬 빌드가 머티리얼에 넣고(`Material::refreshTextureBindings`),
              *        그 스냅샷이 렌더 큐를 지나야 화면에 나온다 — 씬 빌드 한 프레임 + 큐에 쌓이는 패킷 수(링 칸 수 − 1, `RenderThread::submit` 은 한 칸을 비워 둔다).
              */
-            static constexpr uint32 kAssetSettleTrailFrames = 1u + ( constant::render::kRenderFrameQueueDepth - 1u );
+            static constexpr uint32 kAssetStabilityTrailFrames = 1u + ( constant::render::kRenderFrameQueueDepth - 1u );
 
             // --- 단계 인자: 검사 함수와 준비 · 실행 함수가 같은 읽기(`parse*`) 하나를 쓴다 -----------------------------------------
             //     검사가 읽어 본 뒤 실행이 결과를 버리며 다시 읽던 것을 없앤다. 실행 때 읽기가 실패하면(핫 리로드로 바뀐 단계) 버리지 않고 오류로 끝낸다.
@@ -236,10 +236,10 @@ namespace sw
                 { return validateWatchReference( step ); } );
             }
 
-            /** @brief `Remember` 입니다. 감시 값 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 비교한다). */
-            static expected<void> validateRemember( const AutomationStep& step )
+            /** @brief `Store` 입니다. 감시 값 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 비교한다). */
+            static expected<void> validateStore( const AutomationStep& step )
             {
-                AutomationRememberParams params;
+                AutomationStoreParams params;
                 return step.readProperties( params ).and_then( [&]()
                 { return validateWatchReference( step ); } );
             }
@@ -258,13 +258,13 @@ namespace sw
             }
 
             /**
-             * @brief `<Screenshot waitForSettle="false">` 면 true 입니다 — 그 프레임을 바로 찍는다.
+             * @brief `<Screenshot waitForStability="false">` 면 true 입니다 — 그 프레임을 바로 찍는다.
              * @details 찍는 프레임이 정해져야 하는 시나리오(디더 등장의 중간 단계, 프레임마다 움직이는 카메라)가 쓴다. 자리 잡기를 기다리면 등장이 끝나거나 카메라가 멈춘 뒤를 찍는다.
              *          그런 시나리오는 앞에서 `<WaitUntil watch="Assets.Pending" equals="0">` 로 로드를 끝내 둔다.
              */
-            [[nodiscard]] static bool shouldCaptureWithoutSettling( const AutomationStep& step )
+            [[nodiscard]] static bool shouldCaptureWithoutStabilizing( const AutomationStep& step )
             {
-                return step.readValidatedProperties<AutomationScreenshotParams>()._bWaitForSettle == false;
+                return step.readValidatedProperties<AutomationScreenshotParams>()._bWaitForStability == false;
             }
 
             static expected<void> validateExpectImagesDiffer( const AutomationStep& step )
@@ -466,35 +466,35 @@ namespace sw
         static bool runExpect( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runExpect( runner, step );
+            runner._evaluator.runExpect( runner, step );
             return true;
         }
 
         static bool runExpectVisited( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runExpectVisited( runner, step );
+            runner._evaluator.runExpectVisited( runner, step );
             return true;
         }
 
         static bool runRecord( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runRecord( runner, step );
+            runner._evaluator.runRecord( runner, step );
             return true;
         }
 
-        static bool runRemember( AutomationStepContext& context, const AutomationStep& step )
+        static bool runStore( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runRemember( runner, step );
+            runner._evaluator.runStore( runner, step );
             return true;
         }
 
         static bool runExpectLog( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runExpectLog( runner, step );
+            runner._evaluator.runExpectLog( runner, step );
             return true;
         }
 
@@ -513,13 +513,13 @@ namespace sw
         static bool runExpectImage( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.deferExpectImage( runner, step );
+            runner._evaluator.deferExpectImage( runner, step );
             return true;
         }
 
         static bool runExpectImagesDiffer( AutomationStepContext& context, const AutomationStep& step )
         {
-            asRunner( context )._judge.deferExpectImagesDiffer( step );
+            asRunner( context )._evaluator.deferExpectImagesDiffer( step );
             return true;
         }
 
@@ -551,7 +551,7 @@ namespace sw
         static bool runPass( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.evaluateDeferred( runner ); // 스크린샷 · 끝 차단 조건의 뒤의 일은 `holdPass` 가 다 끝난 뒤에 놓는다
+            runner._evaluator.evaluateDeferred( runner ); // 스크린샷 · 끝 차단 조건의 뒤의 일은 `holdPass` 가 다 끝난 뒤에 놓는다
             (void)step;
             runner.finish( AutomationResult::Passed, "<Pass/>" );
             return true;
@@ -597,7 +597,7 @@ namespace sw
             AutomationRunner&    runner = asRunner( context );
             AutomationWatchValue value{};
             string               message;
-            if ( runner._judge.readWatchValue( context, step, value, message ) == false || value._bText )
+            if ( runner._evaluator.readWatchValue( context, step, value, message ) == false || value._bText )
             {
                 const string reason = "<SkipUnless> could not read a number: " + message;
                 runner.recordFailure( step, reason );
@@ -631,16 +631,16 @@ namespace sw
         static AutomationStepHold holdScreenshot( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
             AutomationRunner& runner = asRunner( context );
-            if ( AutomationRunnerStepsInternal::shouldCaptureWithoutSettling( step ) )
+            if ( AutomationRunnerStepsInternal::shouldCaptureWithoutStabilizing( step ) )
                 return AutomationStepHold::Run;
-            const bool bSettled                 = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
-            runner._run._assetSettledFrameCount = bSettled ? runner._run._assetSettledFrameCount + 1 : 0;
-            const bool               bReady     = runner._run._assetSettledFrameCount > AutomationRunnerStepsInternal::kAssetSettleTrailFrames;
-            const utf8* const        pCover     = AutomationStepRegistry::findCaptureBlocker();
-            const AutomationStepHold hold       = runner.holdUntilReady( step, input, bReady, AutomationTimeLimits::kMaxAssetSettleFrames,
-                                                                         string( "the screen to settle before the screenshot (" ) +
-                                                                             ( pCover != nullptr ? string( "covered by " ) + pCover : string( bSettled ? "trailing frames" : "assets pending" ) ) +
-                                                                             ")" );
+            const bool bStable                 = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
+            runner._run._assetStableFrameCount = bStable ? runner._run._assetStableFrameCount + 1 : 0;
+            const bool               bReady    = runner._run._assetStableFrameCount > AutomationRunnerStepsInternal::kAssetStabilityTrailFrames;
+            const utf8* const        pCover    = AutomationStepRegistry::findCaptureBlocker();
+            const AutomationStepHold hold      = runner.holdUntilReady( step, input, bReady, AutomationTimeLimits::kMaxAssetStabilityFrames,
+                                                                        string( "the screen to settle before the screenshot (" ) +
+                                                                            ( pCover != nullptr ? string( "covered by " ) + pCover : string( bStable ? "trailing frames" : "assets pending" ) ) +
+                                                                            ")" );
             if ( hold == AutomationStepHold::Run )
             {
                 if ( bReady == false )
@@ -648,7 +648,7 @@ namespace sw
                     runner.recordFailure( step, pCover != nullptr ? string( "the screen did not settle before the screenshot was due (still covered by " ) + pCover + ")"
                                                                   : string( "assets were still loading when the screenshot was due (Assets.Pending never reached 0)" ) );
                 }
-                runner._run._assetSettledFrameCount = 0;
+                runner._run._assetStableFrameCount = 0;
             }
             return hold;
         }
@@ -673,7 +673,7 @@ namespace sw
     SW_AUTOMATION_STEP( runnerWaitUntil, "WaitUntil", nullptr, &AutomationRunnerStepsInternal::validateWaitUntil, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareWaitUntil ).withHold( &AutomationRunnerEngineSteps::holdWaitUntil ) );
     SW_AUTOMATION_STEP( runnerExpectVisited, "ExpectVisited", &AutomationRunnerEngineSteps::runExpectVisited, &AutomationRunnerStepsInternal::validateExpectVisited, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerRecord, "Record", &AutomationRunnerEngineSteps::runRecord, &AutomationRunnerStepsInternal::validateRecord, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerRemember, "Remember", &AutomationRunnerEngineSteps::runRemember, &AutomationRunnerStepsInternal::validateRemember, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( runnerStore, "Store", &AutomationRunnerEngineSteps::runStore, &AutomationRunnerStepsInternal::validateStore, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerExpectLog, "ExpectLog", &AutomationRunnerEngineSteps::runExpectLog, &AutomationRunnerStepsInternal::validateExpectLog, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationStep::validateProperties<AutomationScreenshotParams>, AutomationStepOptions{}.withHold( &AutomationRunnerEngineSteps::holdScreenshot ) );
     SW_AUTOMATION_STEP( runnerExpectImage, "ExpectImage", &AutomationRunnerEngineSteps::runExpectImage, &AutomationRunnerStepsInternal::validateExpectImage, AutomationStepOptions{} );

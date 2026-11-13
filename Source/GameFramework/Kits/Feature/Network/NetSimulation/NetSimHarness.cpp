@@ -152,7 +152,7 @@ namespace sw
     {
         _listUnhandled.clear();
         _listEvent.clear();
-        (void)_router.pump( _host, &_listUnhandled, &_listEvent );
+        (void)_router.poll( _host, &_listUnhandled, &_listEvent );
         if ( _pSession != nullptr )
         {
             for ( const NetEndpointEvent& event : _listEvent )

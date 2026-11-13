@@ -31,7 +31,7 @@ namespace
     const sw::hashed_string kTomatoSeed{ "tomato_seed" };
 
     /** @brief `FarmField::writeState` 의 타일 한 칸짜리 밭을 꾸밉니다. 깃발은 갈았음 1, 물 2, 다 자람 4, 시듦 8 입니다. */
-    struct FarmForgedTile
+    struct FarmFixtureTile
     {
         sw::hashed_string _cropID{};
         int32             _growth{ 0 };
@@ -264,21 +264,21 @@ SW_TEST_CASE( FarmingTest, FieldStateRefusesImpossibleTiles )
     sw::FarmField field;
     field.initialize( 1, 1, &catalog );
 
-    SW_REQUIRE_TRUE( ( FarmForgedTile{ kTurnip, 1, 1 } ).readInto( field ) ); // 형식은 맞다
+    SW_REQUIRE_TRUE( ( FarmFixtureTile{ kTurnip, 1, 1 } ).readInto( field ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 1, field.findTile( 0, 0 )->_growth );
-    SW_REQUIRE_TRUE( ( FarmForgedTile{ kTurnip, 2, 1 | 4 } ).readInto( field ) ); // 다 자랐다
-    SW_REQUIRE_TRUE( ( FarmForgedTile{ kTurnip, 1, 1 } ).readInto( field ) );
+    SW_REQUIRE_TRUE( ( FarmFixtureTile{ kTurnip, 2, 1 | 4 } ).readInto( field ) ); // 다 자랐다
+    SW_REQUIRE_TRUE( ( FarmFixtureTile{ kTurnip, 1, 1 } ).readInto( field ) );
 
-    SW_EXPECT_FALSE( ( FarmForgedTile{ sw::hashed_string( "rock" ), 0, 1 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, -1, 1 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, 3, 1 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, 1, 1 | 4 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, 2, 1 | 4 | 8 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, 1, 0 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ {}, 0, 2 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ {}, 1, 1 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ {}, 0, 1 | 4 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ {}, 0, 16 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ sw::hashed_string( "rock" ), 0, 1 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ kTurnip, -1, 1 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ kTurnip, 3, 1 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ kTurnip, 1, 1 | 4 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ kTurnip, 2, 1 | 4 | 8 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ kTurnip, 1, 0 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ {}, 0, 2 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ {}, 1, 1 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ {}, 0, 1 | 4 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ {}, 0, 16 } ).readInto( field ) );
     SW_EXPECT_EQUAL( kTurnip, field.findTile( 0, 0 )->_cropID );
     SW_EXPECT_EQUAL( 1, field.findTile( 0, 0 )->_growth );
 }

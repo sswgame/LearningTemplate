@@ -432,7 +432,7 @@ namespace sw
          * @details 링이 차 있으면 끝난 펜스를 한 번 모아(컨텍스트를 잠깐 빌린다) 다시 시도한다 — 프레임을 돌리지 않는 동기 대기(`submitWhileBusy`)도 링을 비우게 한다(계약 7).
          *          링보다 큰 한 장은 할당기가 단독 구간을 내주면 그 크기의 일회성 영속 매핑 버퍼를 만든다(`attachSoloBuffer`, 컨텍스트를 잠깐 빌린다).
          * @return 잡았으면 `Accepted`, 지금 차 있으면 `Busy`, 링이 없거나 링과 단독 상한을 모두 넘거나 장치를 잃었으면 이유를 로그로 남기고 `Rejected` 입니다
-         *         (옮기고 놓고 남기는 일은 `RHIStagingRingUtil::settleAllocation` 한 곳).
+         *         (옮기고 놓고 남기는 일은 `RHIStagingRingUtil::completeAllocation` 한 곳).
          */
         [[nodiscard]] RHISubmitResult allocateStagingSpan( uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan );
         /**
@@ -453,7 +453,7 @@ namespace sw
          * @details 되읽기 구간은 GPU 완료가 아니라 CPU 가 다 읽었을 때(`takeTextureReadback`) 돌아온다. 버린 읽기의 구간만 펜스가 지나면 돌아오므로, 차 있으면 펜스를 한 번 모은 뒤 다시 본다.
          *          링보다 큰 한 장은 업로드와 같이 단독 구간과 일회성 버퍼로 받는다.
          * @return 잡았으면 `Accepted`, 앞선 되읽기를 아직 가져가지 않아 차 있으면 `Busy`, 링이 없거나 링과 단독 상한을 모두 넘거나 장치를 잃었으면 이유를 로그로 남기고 `Rejected` 입니다
-         *         (옮기는 곳은 업로드와 같은 `RHIStagingRingUtil::settleAllocation`).
+         *         (옮기는 곳은 업로드와 같은 `RHIStagingRingUtil::completeAllocation`).
          */
         [[nodiscard]] RHISubmitResult allocateReadbackSpan( uint64 sizeBytes, RHIStagingSpan& outSpan );
         /**

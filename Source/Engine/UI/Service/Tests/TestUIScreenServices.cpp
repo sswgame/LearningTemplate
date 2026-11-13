@@ -71,7 +71,7 @@ SW_TEST_CASE( UIScreenServicesTest, TooltipPlacement )
 }
 
 /** @brief [UIScreenServicesTest] 커서와 툴팁 주인은 경로의 잎에서 루트 쪽으로 처음 정한 위젯을 따른다. 모두 부모를 따르면 화살표 · 주인 없음이다 */
-SW_TEST_CASE( UIScreenServicesTest, CursorAndTooltipOwnerWalkThePath )
+SW_TEST_CASE( UIScreenServicesTest, CursorAndTooltipOwnerTraverseThePath )
 {
     WidgetTree   tree;
     CanvasPanel& root  = UITestUtil::setRoot<CanvasPanel>( tree );

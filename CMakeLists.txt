@@ -37,12 +37,12 @@ sw_vcpkgWriteManifestStamp()
 # ------------------------------------------------------------------------------
 # 3) 컴파일 플래그 · 모듈 빌드 규칙 · 런타임 DLL 복사 · 리플렉션 코드젠 · 에셋/도구 타겟
 # ------------------------------------------------------------------------------
-# BuildLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 타깃 규칙(UnbuiltSources · ModuleTargets)보다 먼저다.
+# BuildLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 타깃 규칙(ExcludedSources · ModuleTargets)보다 먼저다.
 # RuntimeDependencies 는 BuildLayout 의 sw_queueRuntimeCopy 를 쓴다. 나머지는 함수만 정의한다(파일마다 맡는 일은 cmake/README.md).
 include(cmake/Engine/SourceTree.cmake) # `Source/` 를 한 번 훑은 목록 — 소스 목록은 모두 여기서 거른다(Web.cmake 가 먼저 쓴다)
 include(cmake/Modules/LoadCompileFlags.cmake)
 include(cmake/Engine/BuildLayout.cmake)
-include(cmake/Engine/UnbuiltSources.cmake)
+include(cmake/Engine/ExcludedSources.cmake)
 include(cmake/Engine/TargetCompileRules.cmake)
 include(cmake/Engine/EngineABIStamp.cmake)
 include(cmake/Engine/ModuleRegistry.cmake)
@@ -98,13 +98,13 @@ add_subdirectory(Source/Server)
 if(SW_BUILD_GAMEFRAMEWORK OR SW_BUILD_GAME)
 	add_subdirectory(Source/GameFramework)
 else()
-	sw_declareUnbuiltDirectory("${CMAKE_SOURCE_DIR}/Source/GameFramework")
+	sw_declareExcludedDirectory("${CMAKE_SOURCE_DIR}/Source/GameFramework")
 endif()
 
 if(SW_BUILD_GAME)
 	add_subdirectory(Source/Games)
 else()
-	sw_declareUnbuiltDirectory("${CMAKE_SOURCE_DIR}/Source/Games")
+	sw_declareExcludedDirectory("${CMAKE_SOURCE_DIR}/Source/Games")
 endif()
 
 # 온라인 부하 테스트 봇 — 개발 도구. 클라이언트 · 서버 키트가 함께 있는 개발 구성(Game 타깃)에서만 짓는다(배포물 · Client · Server 타깃에 없다).
@@ -132,7 +132,7 @@ sw_configureAppDependencies(App)
 sw_configureAppDependencies(Server)
 
 # 이 구성이 일부러 짓지 않는 소스(배포의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드 …)를 빌드 트리에 적는다 — 구성 끝에 목록 파일로 쓴다.
-sw_writeUnbuiltSourceList()
+sw_writeExcludedSourceList()
 
 # 모든 타깃이 선 뒤 — `Source/` 아래 폴더를 include 경로로 준 타깃이 있으면 구성을 세운다(접두 없는 include 가 층 게이트를 비껴가는 길).
 sw_verifySourceIncludeRoots()

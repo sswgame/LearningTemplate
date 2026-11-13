@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.git import run_git_or_raise  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
-from common.rename_scope import check_rewrite_unmarked_lines, rewrite_unmarked_lines  # noqa: E402
+from common.rename_scope import check_rewrite_unmarked_lines, rewrite_rename_target  # noqa: E402
 
 ROOTS = ("Source", "Content", "Config", "docs", "Scripts", "Test", ".claude/skills", "AGENTS.md", "CLAUDE.md")
 TEXT_SUFFIXES = {".h", ".cpp", ".inl", ".hlsl", ".hlsli", ".py", ".md", ".json", ".xml", ".txt", ".cmake", ".material", ".ini", ".toml", ".yaml", ".yml"}
@@ -78,8 +78,8 @@ def replace_word(text: str, old: str, new: str) -> tuple[str, int]:
     return pattern.subn(new, text)
 
 
-def replace_word_outside_marked_lines(text: str, old: str, new: str) -> tuple[str, int]:
-    """`replace_word` 와 같되 옛 이름을 일부러 적은 줄(`keep-old-name` 표지)은 남긴다."""
+def replace_word_outside_marked_lines(text: str, old: str, new: str, relative_path: str = "") -> tuple[str, int]:
+    """`replace_word` 와 같되 옛 이름을 일부러 적은 줄(`keep-old-name` 표지) · 표(금지 이름 표의 키 · 이름 기준선)는 남긴다."""
     count = 0
 
     def rewrite(part: str) -> str:
@@ -88,7 +88,7 @@ def replace_word_outside_marked_lines(text: str, old: str, new: str) -> tuple[st
         count += part_count
         return changed
 
-    return rewrite_unmarked_lines(text, rewrite), count
+    return rewrite_rename_target(relative_path, text, rewrite), count
 
 
 def find_files_named(root: Path, stem: str) -> list[Path]:
@@ -123,7 +123,7 @@ def rename_all(root: Path, list_pair: Sequence[dict], dry_run: bool) -> int:
         old, new = pair["old"], pair["new"]
         touched: list[tuple[str, int]] = []
         for path in list_file:
-            changed, count = replace_word_outside_marked_lines(texts[path], old, new)
+            changed, count = replace_word_outside_marked_lines(texts[path], old, new, path.relative_to(root).as_posix())
             if count:
                 texts[path] = changed
                 touched.append((path.relative_to(root).as_posix(), count))

@@ -156,8 +156,8 @@ namespace sw
         if ( bForwardToLiveOps && forwardLiveEventCall( callID, pending, serviceResult, inoutReply ) )
             return; // 라이브 운영 키트의 완료가 응답한다
         const bool bBalanceChanged = pending._method == AdminMethod::AdjustAsset::kID && serviceResult == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
-        if ( bBalanceChanged && _settings._pBalanceNotice != nullptr )
-            _settings._pBalanceNotice->notifyBalancesChanged( pending._targetID, inoutReply._listBalance ); // 대상 계정이 접속해 있으면 지갑이 바로 맞는다
+        if ( bBalanceChanged && _settings._pBalanceNotification != nullptr )
+            _settings._pBalanceNotification->notifyBalancesChanged( pending._targetID, inoutReply._listBalance ); // 대상 계정이 접속해 있으면 지갑이 바로 맞는다
         const bool bSanctionChanged = pending._method == AdminMethod::SetSanction::kID && serviceResult == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
         if ( bSanctionChanged && _settings._pBus != nullptr )
             (void)ServiceSanctionBus::kChangedTopic.publish( *_settings._pBus, ServiceSanctionChanged{ pending._targetID } ); // 실패는 발행이 로그로 남겼다. 채팅은 묵힘 시한 안에 다시 읽는다
@@ -203,21 +203,21 @@ namespace sw
                 pControl->clearMaintenance( request._scope, pending._adminID, request._memo, pending._nowMs, callID );
                 return true;
             }
-            case AdminMethod::PostNotice::kID:
+            case AdminMethod::PostAnnouncement::kID:
             {
-                ServerDirectoryNoticeChange change;
-                change._text         = request._body;
-                change._noticeID     = request._noticeID;
-                change._startMs      = request._startMs;
-                change._endMs        = request._endMs;
-                change._priority     = request._priority;
-                change._bLiteralText = request._bLiteralText;
-                pControl->postNotice( change, pending._adminID, pending._nowMs, callID );
+                ServerDirectoryAnnouncementChange change;
+                change._text           = request._body;
+                change._announcementID = request._announcementID;
+                change._startMs        = request._startMs;
+                change._endMs          = request._endMs;
+                change._priority       = request._priority;
+                change._bLiteralText   = request._bLiteralText;
+                pControl->postAnnouncement( change, pending._adminID, pending._nowMs, callID );
                 return true;
             }
-            case AdminMethod::RemoveNotice::kID:
+            case AdminMethod::RemoveAnnouncement::kID:
             {
-                pControl->removeNotice( request._noticeID, pending._adminID, pending._nowMs, callID );
+                pControl->removeAnnouncement( request._announcementID, pending._adminID, pending._nowMs, callID );
                 return true;
             }
             default:

@@ -76,7 +76,7 @@ namespace
         static ReceiptValidationResult validate( TRig& rig, string_view storeName, string_view payload )
         {
             rig._pValidator->submitValidation( makeRequest( storeName, payload ), UnixMilliseconds{ rig._nowMs } );
-            rig.pump();
+            rig.poll();
             vector<ReceiptValidationResult> listResult;
             rig._pValidator->pollCompletions( listResult );
             SW_EXPECT_EQUAL( size_t( 1 ), listResult.size() );
@@ -156,7 +156,7 @@ namespace
             outResponse._bodyBytes.assign( body.begin(), body.end() );
         }
 
-        void pump()
+        void poll()
         {
             for ( int32 round = 0; round < 40; ++round )
             {
@@ -175,9 +175,9 @@ namespace
             task._recordKey   = "rcpt.google/rec";
             task._deliveryKey = string( deliveryKey );
             _pValidator->confirmDelivery( task, UnixMilliseconds{ _nowMs } );
-            pump();
+            poll();
             vector<ReceiptDeliveryResult> listServiceResult;
-            _pValidator->pollDeliveryOutcomes( listServiceResult );
+            _pValidator->pollDeliveryResults( listServiceResult );
             SW_EXPECT_EQUAL( size_t( 1 ), listServiceResult.size() );
             if ( listServiceResult.empty() )
                 return ReceiptDeliveryStatus::Retry;
@@ -188,9 +188,9 @@ namespace
 
         vector<ReceiptRefundNotification> takeRefunds()
         {
-            vector<ReceiptRefundNotification> listNotice;
-            _pValidator->pollRefunds( listNotice );
-            return listNotice;
+            vector<ReceiptRefundNotification> listNotification;
+            _pValidator->pollRefunds( listNotification );
+            return listNotification;
         }
     };
 
@@ -259,7 +259,7 @@ namespace
             outResponse._bodyBytes.assign( body.begin(), body.end() );
         }
 
-        void pump()
+        void poll()
         {
             for ( int32 round = 0; round < 40; ++round )
             {
@@ -272,9 +272,9 @@ namespace
 
         vector<ReceiptRefundNotification> takeRefunds()
         {
-            vector<ReceiptRefundNotification> listNotice;
-            _pValidator->pollRefunds( listNotice );
-            return listNotice;
+            vector<ReceiptRefundNotification> listNotification;
+            _pValidator->pollRefunds( listNotification );
+            return listNotification;
         }
 
         /** @brief 서명한 거래 본문을 담은 답을 정합니다. */
@@ -461,14 +461,14 @@ SW_TEST_CASE( StoreReceiptValidatorTest, PollWindowRestoresAndKnowsWhatIsLost )
 SW_TEST_CASE( GoogleReceiptValidatorTest, RefundQueryWaitsForTheStoredCursor )
 {
     GoogleFixture rig( false );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._listVoidedStart.empty() );
 
     int64 cursorMs = 0;
     SW_EXPECT_FALSE( rig._pValidator->takeRefundCursor( cursorMs ) );
     const int64 storedMs = kNowMs - kPollMs * 5; // 다섯 주기 동안 꺼져 있었다 — 겹침(두 주기)보다 길다
     rig._pValidator->restoreRefundCursor( storedMs );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._listVoidedStart.size() );
     SW_EXPECT_EQUAL( to_string( storedMs - kLookbackMs ), rig._listVoidedStart[0] );
 
@@ -484,7 +484,7 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, GapBeyondTheStoreLimitWarns )
     constexpr int64 kDayMs = 24ll * 60 * 60 * 1000;
     GoogleFixture   rig( false );
     rig._pValidator->restoreRefundCursor( kNowMs - 40 * kDayMs );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._listVoidedStart.size() );
     SW_EXPECT_EQUAL( to_string( kNowMs - 29 * kDayMs ), rig._listVoidedStart[0] );
 }
@@ -545,7 +545,7 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, PurchasedIsValidAndWaitsForTheGrant )
     SW_EXPECT_EQUAL( kBuyer, result._accountID );
     SW_EXPECT_EQUAL( string( "gem100|TOKEN" ), result._deliveryKey );
     SW_EXPECT_EQUAL( kNowMs + GoogleReceiptSettings::kAcknowledgeWindowMs, result._deliveryDeadlineMs );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( 0, rig._acknowledgeCount );
 
     SW_EXPECT_TRUE( rig.confirmDelivery() == ReceiptDeliveryStatus::Confirmed );
@@ -665,7 +665,7 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, StatusSplitsRetryFromInvalidAndDropsTh
 SW_TEST_CASE( GoogleReceiptValidatorTest, MalformedReceiptNeverReachesGoogle )
 {
     GoogleFixture rig;
-    rig.pump();
+    rig.poll();
     for ( const utf8* pPayload : { "", "gem100", "gem100|", "|TOKEN", "gem/100|TOKEN", "gem100|TO KEN" } )
     {
         const ReceiptValidationResult result = rig.validate( pPayload );
@@ -681,20 +681,20 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, VoidedFollowsPagesThenMovesTheWindow )
     GoogleFixture rig;
     rig._listVoidedBody.push_back( R"({"tokenPagination":{"nextPageToken":"P2"},"voidedPurchases":[{"orderId":"A","voidedTimeMillis":"1700000000000"},{"voidedTimeMillis":"1"}]})" );
     rig._listVoidedBody.push_back( R"({"voidedPurchases":[{"orderId":"B"},{"orderId":"A"}]})" );
-    rig.pump();
-    const vector<ReceiptRefundNotification> listNotice = rig.takeRefunds();
-    SW_REQUIRE_EQUAL( size_t( 2 ), listNotice.size() );
-    SW_EXPECT_EQUAL( string( "A" ), listNotice[0]._transactionID );
-    SW_EXPECT_EQUAL( kNowMs, listNotice[0]._refundedMs );
-    SW_EXPECT_EQUAL( string( "B" ), listNotice[1]._transactionID );
-    SW_EXPECT_EQUAL( kNowMs, listNotice[1]._refundedMs ); // 시각이 없으면 지금이다
+    rig.poll();
+    const vector<ReceiptRefundNotification> listNotification = rig.takeRefunds();
+    SW_REQUIRE_EQUAL( size_t( 2 ), listNotification.size() );
+    SW_EXPECT_EQUAL( string( "A" ), listNotification[0]._transactionID );
+    SW_EXPECT_EQUAL( kNowMs, listNotification[0]._refundedMs );
+    SW_EXPECT_EQUAL( string( "B" ), listNotification[1]._transactionID );
+    SW_EXPECT_EQUAL( kNowMs, listNotification[1]._refundedMs ); // 시각이 없으면 지금이다
     SW_REQUIRE_EQUAL( size_t( 2 ), rig._listVoidedToken.size() );
     SW_EXPECT_TRUE( rig._listVoidedToken[0].empty() );
     SW_EXPECT_EQUAL( string( "P2" ), rig._listVoidedToken[1] );
 
     const int64 firstStartMs = kNowMs;
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 3 ), rig._listVoidedStart.size() );
     SW_EXPECT_EQUAL( to_string( firstStartMs - kLookbackMs ), rig._listVoidedStart[2] );
 }
@@ -704,16 +704,16 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, FailedVoidedKeepsTheWindow )
 {
     SW_EXPECT_LOG( "StoreReceiptValidator.RefundQueryFailed" );
     GoogleFixture rig;
-    rig.pump();
+    rig.poll();
     rig._voidedStatus = 500;
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     rig._voidedStatus = HTTPConstant::kStatusOk;
     rig._listVoidedBody.push_back( "not json" );
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 4 ), rig._listVoidedStart.size() );
     for ( const string& start : rig._listVoidedStart )
     {
@@ -815,12 +815,12 @@ SW_TEST_CASE( AppleReceiptValidatorTest, RefundHistoryFilters )
     using Body = AppleBodyTestUtil;
     rig._listHistoryBody.push_back( Body::makeHistory( Body::makeRefundItem( "1" ) + "," + Body::makeRefundItem( "2", "Sandbox" ) + "," + Body::makeRefundItem( "3", "Production", "com.other" ) + "," +
                                                        Body::makeRefundItem( "4", "Production", kBundle, "com.other" ) + "," + Body::makeRefundItem( "x5" ) + "," + Body::makeRefundItem( "1" ) ) );
-    rig.pump();
-    const vector<ReceiptRefundNotification> listNotice = rig.takeRefunds();
-    SW_REQUIRE_EQUAL( size_t( 1 ), listNotice.size() );
-    SW_EXPECT_EQUAL( string( "apple" ), listNotice[0]._storeName );
-    SW_EXPECT_EQUAL( string( "1" ), listNotice[0]._transactionID );
-    SW_EXPECT_EQUAL( kNowMs, listNotice[0]._refundedMs );
+    rig.poll();
+    const vector<ReceiptRefundNotification> listNotification = rig.takeRefunds();
+    SW_REQUIRE_EQUAL( size_t( 1 ), listNotification.size() );
+    SW_EXPECT_EQUAL( string( "apple" ), listNotification[0]._storeName );
+    SW_EXPECT_EQUAL( string( "1" ), listNotification[0]._transactionID );
+    SW_EXPECT_EQUAL( kNowMs, listNotification[0]._refundedMs );
 }
 
 /** @brief [AppleReceiptValidatorTest] 확인하지 못한 환불 알림이 있으면 구간을 옮기지 않아 다음 조회가 다시 읽는다 — 전에는 건너뛰고 구간을 옮겨 그 환불을 영영 놓쳤다 */
@@ -831,20 +831,20 @@ SW_TEST_CASE( AppleReceiptValidatorTest, UnverifiedNotificationKeepsTheWindow )
     using Body              = AppleBodyTestUtil;
     rig._security._bChainOk = SW_FALSE;
     rig._listHistoryBody.push_back( Body::makeHistory( Body::makeRefundItem( "1" ) ) );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.takeRefunds().empty() );
 
     rig._security._bChainOk = SW_TRUE;
     rig._listHistoryBody.push_back( Body::makeHistory( Body::makeRefundItem( "1" ) ) );
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), rig.takeRefunds().size() );
     SW_REQUIRE_EQUAL( size_t( 2 ), rig._listHistoryStart.size() );
     SW_EXPECT_EQUAL( kNowMs - kLookbackMs, rig._listHistoryStart[1] ); // 그대로다
 
     const int64 readAtMs = rig._nowMs;
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 3 ), rig._listHistoryStart.size() );
     SW_EXPECT_EQUAL( readAtMs - kLookbackMs, rig._listHistoryStart[2] ); // 다 읽은 뒤에 옮겨진다
 }
@@ -862,14 +862,14 @@ SW_TEST_CASE( AppleReceiptValidatorTest, RefundHistoryFollowsEveryPage )
     }
     for ( int32 round = 0; round < kPageCount; ++round )
     {
-        rig.pump();
+        rig.poll();
     }
     SW_EXPECT_EQUAL( static_cast<size_t>( kPageCount ), rig.takeRefunds().size() );
     SW_REQUIRE_EQUAL( static_cast<size_t>( kPageCount ), rig._listHistoryToken.size() );
     SW_EXPECT_EQUAL( string( "11" ), rig._listHistoryToken[11] );
 
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( static_cast<size_t>( kPageCount + 1 ), rig._listHistoryStart.size() );
     SW_EXPECT_EQUAL( kNowMs - kLookbackMs, rig._listHistoryStart[kPageCount] ); // 끝까지 읽은 조회가 시작한 시각이 기준이다
 }
@@ -879,11 +879,11 @@ SW_TEST_CASE( AppleReceiptValidatorTest, MoreWithoutTokenKeepsTheWindow )
 {
     AppleFixture rig;
     rig._listHistoryBody.push_back( R"({"hasMore":true,"notificationHistory":[]})" );
-    rig.pump();
+    rig.poll();
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 3 ), rig._listHistoryStart.size() );
     SW_EXPECT_EQUAL( kNowMs - kLookbackMs, rig._listHistoryStart[1] );
     SW_EXPECT_EQUAL( kNowMs + kPollMs - kLookbackMs, rig._listHistoryStart[2] );
@@ -902,9 +902,9 @@ SW_TEST_CASE( AppleReceiptValidatorTest, HistoryLimitFollowsTheEnvironment )
 
     AppleFixture rig( true );
     rig._historyStatus = 500;
-    rig.pump();
+    rig.poll();
     rig._nowMs += 40 * kDayMs; // 샌드박스 한계를 넘은 중단
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 2 ), rig._listHistoryStart.size() );
     SW_EXPECT_EQUAL( rig._nowMs - 29 * kDayMs, rig._listHistoryStart[1] );
 }
@@ -914,10 +914,10 @@ SW_TEST_CASE( AppleReceiptValidatorTest, ShutdownFinishesInFlightAsRetry )
 {
     AppleFixture rig;
     rig.setTransaction( AppleBodyTestUtil::kGoodTransaction );
-    rig.pump();
+    rig.poll();
     rig._pValidator->submitValidation( StoreTestUtil::makeRequest( "apple", "1234" ), UnixMilliseconds{ rig._nowMs } );
     rig._pValidator->shutdown();
-    rig.pump();
+    rig.poll();
     vector<ReceiptValidationResult> listResult;
     rig._pValidator->pollCompletions( listResult );
     SW_REQUIRE_EQUAL( size_t( 1 ), listResult.size() );
@@ -925,6 +925,6 @@ SW_TEST_CASE( AppleReceiptValidatorTest, ShutdownFinishesInFlightAsRetry )
     SW_EXPECT_EQUAL( string( "1234" ), listResult[0]._transactionID );
     const size_t polled = rig._listHistoryStart.size();
     rig._nowMs += kPollMs * 2;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( polled, rig._listHistoryStart.size() );
 }

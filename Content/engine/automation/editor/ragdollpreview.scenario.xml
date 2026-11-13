@@ -9,28 +9,28 @@
 <Scenario name="editor.ragdollpreview" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus ragdoll_preview"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+P"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="skeleton_warrior.physics.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.RagdollPreviewDocumentBodies" atLeast="2" timeoutFrames="600"/>
 	<EditorClick mark="ragdoll.bodyField"/>
 	<EditorText value="common/prefabs/kaykit/skeleton_warrior.prefab.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="ragdoll.spawn"/>
 	<WaitUntil watch="Editor.RagdollPreviewBuiltBodies" atLeast="2" timeoutFrames="600"/>
 	<Expect watch="Editor.RagdollPreviewState" equals="0"/>
 	<EditorClick mark="ragdoll.drop"/>
 	<WaitUntil watch="Editor.RagdollPreviewState" equals="1" timeoutFrames="120"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="ragdoll.reset"/>
 	<WaitUntil watch="Editor.RagdollPreviewState" equals="0" timeoutFrames="300"/>
 	<WaitUntil watch="Editor.RagdollPreviewSceneFrames" atLeast="60" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

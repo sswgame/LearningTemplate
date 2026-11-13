@@ -425,15 +425,15 @@ SW_TEST_CASE( GuildServiceTest, RoleChangesAndMasterTransfer )
 }
 
 /** @brief [GuildServiceTest] 공지: 임원 이상이 바꾸고 멤버가 읽는다. 상한을 넘으면 저장하지 않는다(깨진 UTF-8 은 요청 코덱이 막는다) */
-SW_TEST_CASE( GuildServiceTest, NoticeIsValidatedAndShared )
+SW_TEST_CASE( GuildServiceTest, AnnouncementIsValidatedAndShared )
 {
     GuildFixture rig;
     (void)rig.makeGuild();
-    SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kMember, kInvalidAccountID, "hi" )._result == SocialResult::NotAllowed );
-    SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kOfficer, kInvalidAccountID, "hello\nworld" )._result == SocialResult::Ok );
-    SW_EXPECT_EQUAL( string( "hello\nworld" ), rig.run( GuildOperation::Get, kMember )._info._notice );
-    SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kOfficer, kInvalidAccountID, string( static_cast<size_t>( GuildLimit::kMaxNoticeSize ) + 1, 'x' ) )._result.hasError( OnlineError::kInvalidRequest ) );
-    SW_EXPECT_EQUAL( string( "hello\nworld" ), rig.run( GuildOperation::Get, kMember )._info._notice );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::SetAnnouncement, kMember, kInvalidAccountID, "hi" )._result == SocialResult::NotAllowed );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::SetAnnouncement, kOfficer, kInvalidAccountID, "hello\nworld" )._result == SocialResult::Ok );
+    SW_EXPECT_EQUAL( string( "hello\nworld" ), rig.run( GuildOperation::Get, kMember )._info._announcement );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::SetAnnouncement, kOfficer, kInvalidAccountID, string( static_cast<size_t>( GuildLimit::kMaxAnnouncementSize ) + 1, 'x' ) )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_EQUAL( string( "hello\nworld" ), rig.run( GuildOperation::Get, kMember )._info._announcement );
 }
 
 /** @brief [GuildServiceTest] 창고: 맡기기는 누구나, 꺼내기는 임원 이상. 잔액이 모자라면 InsufficientFunds, 분개 키가 없으면 Invalid, 같은 키로 다시 와도 한 번만 움직인다 */

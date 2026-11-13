@@ -16,13 +16,13 @@
 	<Wait frames="10"/>
 	<DevCommand line="teleport Player -1.5 0.5 -0.2"/>
 	<Wait frames="20"/>
-	<Screenshot file="outline.ppm" waitForSettle="false"/>
+	<Screenshot file="outline.ppm" waitForStability="false"/>
 
 	<!-- HideCube 앞(벽 너머) — 감각 모드 -->
 	<Wait frames="10"/>
 	<DevCommand line="teleport Player 2 0.5 0.8"/>
 	<Wait frames="20"/>
-	<Screenshot file="sense.ppm" waitForSettle="false"/>
+	<Screenshot file="sense.ppm" waitForStability="false"/>
 
 	<Wait frames="10"/>
 	<ExpectImage file="outline.ppm" golden="outline" region="0.26,0.38,0.42,0.64"/>

@@ -40,7 +40,7 @@ namespace
             _service.initialize( &_store, &_policy, nullptr, kServer, _settings );
         }
 
-        void pump()
+        void poll()
         {
             while ( _store.pollCompletions() > 0 )
             {
@@ -49,7 +49,7 @@ namespace
 
         TradeCompletion take( uint64 tag )
         {
-            pump();
+            poll();
             vector<TradeCompletion> listCompletion;
             _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
@@ -113,7 +113,7 @@ namespace
 
         vector<TradeSnapshot> takeUpdates()
         {
-            pump();
+            poll();
             vector<TradeSnapshot> listUpdate;
             _service.pollUpdates( listUpdate );
             return listUpdate;

@@ -9,41 +9,41 @@
 -->
 <Scenario name="editor.flowimport" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<DevCommand line="asset.removeImportFolder scratch/import/editor.flowimport"/>
 	<!-- ① 임포트 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.import common/prefabs/gimmicks/horror/flickerlight.prefab.xml scratch/import/editor.flowimport"/>
 	<!-- ② 가져온 리소스 id 로 스폰 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="prefab.spawn scratch/import/editor.flowimport/flickerlight.prefab.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="FlickerLight" component="PointLightComponent" selected="1"/>
 	<Expect watch="Object.Property" target="FlickerLight" key="PointLightComponent._radius" equals="6"/>
 	<!-- ③ 저장 → 새 씬 → 다시 열기 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.saveAs {out}/flowimport.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor scene.new"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="FlickerLight" count="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open {out}/flowimport.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="FlickerLight" component="PointLightComponent" count="1"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor scene.new"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.removeImportFolder scratch/import/editor.flowimport"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

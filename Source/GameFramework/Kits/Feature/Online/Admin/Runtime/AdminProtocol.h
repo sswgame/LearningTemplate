@@ -43,8 +43,8 @@ namespace sw
         ResolveReport,
         SetMaintenance,
         ClearMaintenance,
-        PostNotice,
-        RemoveNotice,
+        PostAnnouncement,
+        RemoveAnnouncement,
         ListLiveEvents,
         PutLiveEvent,
         RemoveLiveEvent,
@@ -145,9 +145,9 @@ namespace sw
         PROPERTY()
         ServiceSanctionKind _sanctionKind{ ServiceSanctionKind::ChatMute };
         PROPERTY()
-        uint64 _noticeID{ 0 }; ///< PostNotice, RemoveNotice 의 공지 id 이다
+        uint64 _announcementID{ 0 }; ///< PostAnnouncement, RemoveAnnouncement 의 공지 id 이다
         PROPERTY()
-        int32 _priority{ 0 }; ///< PostNotice 의 우선순위이며 큰 것이 위에 온다
+        int32 _priority{ 0 }; ///< PostAnnouncement 의 우선순위이며 큰 것이 위에 온다
         PROPERTY()
         AdminRole _role{ AdminRole::None };
         PROPERTY()
@@ -155,7 +155,7 @@ namespace sw
         PROPERTY( Min = 0, Max = 1 )
         uint8 _bRefund{ SW_FALSE }; ///< AdjustAsset 회수에서 환불이나 결제 취소로 회수하는 경우이다. 잔액이 모자라면 빚으로 남기며 사유는 "refund.revoke" 이다
         PROPERTY( Min = 0, Max = 1 )
-        uint8 _bLiteralText{ SW_FALSE }; ///< PostNotice 의 `_body` 가 GM 이 쓴 문구면 1, 로컬라이제이션 키면 0 이다
+        uint8 _bLiteralText{ SW_FALSE }; ///< PostAnnouncement 의 `_body` 가 GM 이 쓴 문구면 1, 로컬라이제이션 키면 0 이다
     };
 } // namespace sw
 
@@ -238,23 +238,23 @@ namespace sw
     /** @brief Admin 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct AdminMethod : OnlineMethodTable<AdminMethodName, OnlineMethodRange::kAdmin, OnlineNoPushName>
     {
-        using LookupAccount    = Method<MethodName::LookupAccount, AdminRequest, AdminReply>;
-        using AdjustAsset      = Method<MethodName::AdjustAsset, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using SetSanction      = Method<MethodName::SetSanction, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using SendMail         = Method<MethodName::SendMail, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using BulkMail         = Method<MethodName::BulkMail, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using CreateCampaign   = Method<MethodName::CreateCampaign, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using ListAudit        = Method<MethodName::ListAudit, AdminRequest, AdminReply>;
-        using SetRole          = Method<MethodName::SetRole, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using ListReports      = Method<MethodName::ListReports, AdminRequest, AdminReply>;                                                ///< 신고 목록(`_reportStatus` 가 Open 이면 열린 것, 아니면 닫힌 것)을 최근 것부터
-        using ResolveReport    = Method<MethodName::ResolveReport, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;    ///< 열린 신고 `_reportKey` 를 `_reportStatus` 로 닫는다. 메모가 처리 메모다
-        using SetMaintenance   = Method<MethodName::SetMaintenance, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;   ///< 점검 창 `_scope` 를 건다(`_messageKey`, `_startMs`, `_endMs`, 허용 계정 `_listAccountID`)
-        using ClearMaintenance = Method<MethodName::ClearMaintenance, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 점검 창 `_scope` 를 푼다
-        using PostNotice       = Method<MethodName::PostNotice, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;       ///< 공지 `_noticeID` 를 게시한다(`_body`, `_startMs`, `_endMs`, `_priority`, `_bLiteralText`)
-        using RemoveNotice     = Method<MethodName::RemoveNotice, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;     ///< 공지 `_noticeID` 를 삭제한다
-        using ListLiveEvents   = Method<MethodName::ListLiveEvents, AdminRequest, AdminReply>;                                             ///< 라이브 이벤트 정의를 JSON 글로 돌려준다(`_listLiveEvent`)
-        using PutLiveEvent     = Method<MethodName::PutLiveEvent, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;     ///< `_eventJSON` 정의 하나를 올리거나 덮어쓴다
-        using RemoveLiveEvent  = Method<MethodName::RemoveLiveEvent, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;  ///< 이벤트 `_eventID` 를 지운다
+        using LookupAccount      = Method<MethodName::LookupAccount, AdminRequest, AdminReply>;
+        using AdjustAsset        = Method<MethodName::AdjustAsset, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using SetSanction        = Method<MethodName::SetSanction, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using SendMail           = Method<MethodName::SendMail, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using BulkMail           = Method<MethodName::BulkMail, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using CreateCampaign     = Method<MethodName::CreateCampaign, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using ListAudit          = Method<MethodName::ListAudit, AdminRequest, AdminReply>;
+        using SetRole            = Method<MethodName::SetRole, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using ListReports        = Method<MethodName::ListReports, AdminRequest, AdminReply>;                                                  ///< 신고 목록(`_reportStatus` 가 Open 이면 열린 것, 아니면 닫힌 것)을 최근 것부터
+        using ResolveReport      = Method<MethodName::ResolveReport, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;      ///< 열린 신고 `_reportKey` 를 `_reportStatus` 로 닫는다. 메모가 처리 메모다
+        using SetMaintenance     = Method<MethodName::SetMaintenance, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;     ///< 점검 창 `_scope` 를 건다(`_messageKey`, `_startMs`, `_endMs`, 허용 계정 `_listAccountID`)
+        using ClearMaintenance   = Method<MethodName::ClearMaintenance, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;   ///< 점검 창 `_scope` 를 푼다
+        using PostAnnouncement   = Method<MethodName::PostAnnouncement, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;   ///< 공지 `_announcementID` 를 게시한다(`_body`, `_startMs`, `_endMs`, `_priority`, `_bLiteralText`)
+        using RemoveAnnouncement = Method<MethodName::RemoveAnnouncement, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 공지 `_announcementID` 를 삭제한다
+        using ListLiveEvents     = Method<MethodName::ListLiveEvents, AdminRequest, AdminReply>;                                               ///< 라이브 이벤트 정의를 JSON 글로 돌려준다(`_listLiveEvent`)
+        using PutLiveEvent       = Method<MethodName::PutLiveEvent, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;       ///< `_eventJSON` 정의 하나를 올리거나 덮어쓴다
+        using RemoveLiveEvent    = Method<MethodName::RemoveLiveEvent, AdminRequest, AdminReply, OnlineMethodFlag::RequiresIdempotencyKey>;    ///< 이벤트 `_eventID` 를 지운다
 
         /** @brief 상태를 바꾸는 명령이면 true 입니다. 이 경우 멱등 키와 메모가 필수입니다. 멱등 키는 서술자의 호출 규칙과 같습니다. */
         static constexpr bool isMutating( uint16 method )
@@ -264,7 +264,7 @@ namespace sw
         /** @brief 서버 디렉터리 키트(`IServerDirectoryControl`)가 효과를 쓰는 명령이면 true 입니다. GM 키트는 등급만 확인하고 넘깁니다. */
         static constexpr bool isDirectoryMethod( uint16 method )
         {
-            return method == SetMaintenance::kID || method == ClearMaintenance::kID || method == PostNotice::kID || method == RemoveNotice::kID;
+            return method == SetMaintenance::kID || method == ClearMaintenance::kID || method == PostAnnouncement::kID || method == RemoveAnnouncement::kID;
         }
         /** @brief 라이브 운영 키트(`ILiveEventControl`)가 처리하는 명령이면 true 입니다. GM 키트는 등급만 확인하고 넘깁니다. */
         static constexpr bool isLiveEventMethod( uint16 method ) { return method == ListLiveEvents::kID || method == PutLiveEvent::kID || method == RemoveLiveEvent::kID; }
@@ -281,7 +281,7 @@ namespace sw
      */
     struct SW_KIT_API AdminProtocol
     {
-        using Table        = OnlineProtocolTable<AdminMethod, OnlineMethodList<AdminMethod::LookupAccount, AdminMethod::AdjustAsset, AdminMethod::SetSanction, AdminMethod::SendMail, AdminMethod::BulkMail, AdminMethod::CreateCampaign, AdminMethod::ListAudit, AdminMethod::SetRole, AdminMethod::ListReports, AdminMethod::ResolveReport, AdminMethod::SetMaintenance, AdminMethod::ClearMaintenance, AdminMethod::PostNotice, AdminMethod::RemoveNotice, AdminMethod::ListLiveEvents, AdminMethod::PutLiveEvent, AdminMethod::RemoveLiveEvent>, OnlinePushList<>>;
+        using Table        = OnlineProtocolTable<AdminMethod, OnlineMethodList<AdminMethod::LookupAccount, AdminMethod::AdjustAsset, AdminMethod::SetSanction, AdminMethod::SendMail, AdminMethod::BulkMail, AdminMethod::CreateCampaign, AdminMethod::ListAudit, AdminMethod::SetRole, AdminMethod::ListReports, AdminMethod::ResolveReport, AdminMethod::SetMaintenance, AdminMethod::ClearMaintenance, AdminMethod::PostAnnouncement, AdminMethod::RemoveAnnouncement, AdminMethod::ListLiveEvents, AdminMethod::PutLiveEvent, AdminMethod::RemoveLiveEvent>, OnlinePushList<>>;
         using MessageTypes = Table::MessageTypes;
         using ResultName   = AdminResult;
 

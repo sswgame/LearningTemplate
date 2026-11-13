@@ -206,8 +206,8 @@ namespace sw::editor
                 }
                 bool                        bResumed = false;
                 const EditorAutosaveSession session  = takeOrMakeSession( bResumed );
-                vector<string>              listAdoptedFolder;
-                if ( session.open( folder, listAdoptedFolder ) == false )
+                vector<string>              listRecoveredFolder;
+                if ( session.open( folder, listRecoveredFolder ) == false )
                 {
                     SW_LOG_ERROR_ID( "EditorAutosaveCommands.SessionNotOpened", "Autosave: could not write the session folder or lock under '%#' - autosave is off for this session", folder );
                     return;
@@ -215,9 +215,9 @@ namespace sw::editor
                 state._sessionFolder = session.makeFolder( folder );
                 if ( bResumed )
                     SW_LOG_INFO_ID( "EditorAutosaveCommands.SessionResumed", "Autosave: resumed session '%#' after a module reload", FileUtil::getFileNamePart( state._sessionFolder ) );
-                if ( listAdoptedFolder.empty() == false )
+                if ( listRecoveredFolder.empty() == false )
                 {
-                    scanRecoverable( listAdoptedFolder, state._listRecoverable );
+                    scanRecoverable( listRecoveredFolder, state._listRecoverable );
                     // 리로드로 이었으면 같은 후보를 앞선 인스턴스가 이미 알렸다 — 창을 다시 열지 않는다
                     if ( state._listRecoverable.empty() == false && bResumed == false )
                     {
@@ -498,9 +498,9 @@ namespace sw::editor
                StringUtil::parseInt64( EditorAutosaveCommandsInternal::readMetaValue( lockText, "start" ), outSession._startTicks );
     }
 
-    bool EditorAutosaveSession::open( string_view root, vector<string>& outListAdoptedFolder ) const
+    bool EditorAutosaveSession::open( string_view root, vector<string>& outListRecoveredFolder ) const
     {
-        outListAdoptedFolder.clear();
+        outListRecoveredFolder.clear();
         StringBuilder<constant::buffer::kMax64> lockBuilder;
         lockBuilder.appendFormat( "pid=%#\nstart=%#\n", _processID, _startTicks );
         const string   ownFolder = makeFolder( root );
@@ -517,7 +517,7 @@ namespace sw::editor
             if ( bDead && FileUtil::writeTextFile( FileUtil::joinPath( sessionFolder, kLockFileName ), lockBuilder.view() ) == false )
                 continue; // 넘겨받지 못하면 다음 기동이 다시 묻는다
             if ( bSelf || bDead )
-                outListAdoptedFolder.push_back( sessionFolder );
+                outListRecoveredFolder.push_back( sessionFolder );
         }
         return FileUtil::ensureDirectoryExists( ownFolder ) && FileUtil::writeTextFile( FileUtil::joinPath( ownFolder, kLockFileName ), lockBuilder.view() );
     }

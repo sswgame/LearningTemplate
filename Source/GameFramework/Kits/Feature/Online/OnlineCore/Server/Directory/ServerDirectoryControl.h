@@ -29,10 +29,10 @@ namespace sw
 namespace sw
 {
     /** @brief 공지 하나의 변경입니다. 같은 id 를 다시 올리면 덮어씁니다. */
-    struct ServerDirectoryNoticeChange
+    struct ServerDirectoryAnnouncementChange
     {
         string _text{}; ///< `_bLiteralText` 가 false 이면 로컬라이제이션 키이고, true 이면 GM 이 쓴 문구이다
-        uint64 _noticeID{ 0 };
+        uint64 _announcementID{ 0 };
         int64  _startMs{ 0 };
         int64  _endMs{ 0 }; ///< 0이면 내릴 때까지이다
         int32  _priority{ 0 };
@@ -76,8 +76,8 @@ namespace sw
 
         virtual void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) = 0;
         virtual void clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )                            = 0;
-        virtual void postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )                            = 0;
-        virtual void removeNotice( uint64 noticeID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )                                                    = 0;
+        virtual void postAnnouncement( const ServerDirectoryAnnouncementChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )                = 0;
+        virtual void removeAnnouncement( uint64 announcementID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )                                        = 0;
         /** @brief 끝난 변경을 @p outListCompletion 뒤에 붙입니다. */
         virtual void takeControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) = 0;
     };

@@ -520,11 +520,11 @@ namespace sw
         for ( uint32 slotRow = 0; slotRow < slotRowCount; ++slotRow )
         {
             uint32 arrSlot[Internal::kWordsPerRow]{ SW_VFX_INVALID_SLOT, SW_VFX_INVALID_SLOT, SW_VFX_INVALID_SLOT, SW_VFX_INVALID_SLOT };
-            for ( uint32 lane = 0; lane < Internal::kWordsPerRow; ++lane )
+            for ( uint32 wordIndex = 0; wordIndex < Internal::kWordsPerRow; ++wordIndex )
             {
-                const uint32 poolIndex = slotRow * Internal::kWordsPerRow + lane;
+                const uint32 poolIndex = slotRow * Internal::kWordsPerRow + wordIndex;
                 if ( poolIndex < listSlot.size() )
-                    arrSlot[lane] = listSlot[poolIndex];
+                    arrSlot[wordIndex] = listSlot[poolIndex];
             }
             Internal::appendRow( _listParamWord, arrSlot[0], arrSlot[1], arrSlot[2], arrSlot[3] );
         }

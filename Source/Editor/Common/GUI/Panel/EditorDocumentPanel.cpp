@@ -192,9 +192,9 @@ namespace sw::editor
         if ( pWorkspace != nullptr )
         {
             _assetsMovedSubscription = pWorkspace->onAssetsMoved().add(
-                SW_DELEGATE_LAMBDA( EditorAssetsMovedDelegate, [this]( const EditorAssetMoveNotice& notice )
+                SW_DELEGATE_LAMBDA( EditorAssetsMovedDelegate, [this]( const EditorAssetMoveEvent& event )
             {
-                const bool bRewrittenReferrer = EditorDocumentOpenUtil::applyAssetMove( notice, _loadedAssetPath, _listRecentPath );
+                const bool bRewrittenReferrer = EditorDocumentOpenUtil::applyAssetMove( event, _loadedAssetPath, _listRecentPath );
                 // 깨끗한 참조 문서는 디스크에서 고친 글을 다시 읽는다 — 옛 id 를 든 채 두면 다음 저장이 고친 참조를 옛 id 로 덮는다. 읽기는 다음 그리기의
                 // `ensureDocumentLoaded` 가 한다(옮기기는 다른 창의 그리기 안에서 돈다). 미저장 참조자는 계획이 거절해 여기 오지 않는다.
                 if ( bRewrittenReferrer && isDocumentDirty() == false && _bLoadFailed == SW_FALSE )

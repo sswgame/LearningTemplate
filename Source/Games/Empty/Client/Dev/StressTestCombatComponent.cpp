@@ -235,7 +235,7 @@ namespace sw
             else if ( pCombat->_stage == 3 && pCombat->_frame >= 900 )
             {
                 RagdollComponent* pRagdoll        = pEnemyObject->getComponent<RagdollComponent>();
-                const bool        bRagdollSettled = pRagdoll != nullptr && pRagdoll->isSettled() && pRagdoll->getUp();
+                const bool        bRagdollSettled = pRagdoll != nullptr && pRagdoll->isAsleep() && pRagdoll->getUp();
                 if ( bRagdollSettled )
                     SW_LOG_INFO_ID( "StressTestCombat.TRagdollSettledGet", "[StressTestCombat] t=%# ragdoll settled -> get up", pCombat->_elapsed );
                 pCombat->_stage = 4;

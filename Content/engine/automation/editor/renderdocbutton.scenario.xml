@@ -7,17 +7,17 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/renderdocbutton.scenario.xml -unattended
 -->
 <Scenario name="editor.renderdocbutton" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 넘침을 툴바 길이에 맡기지 않는다 — 툴바 단추가 줄면(예: Cam 체크 상자 → 아이콘) 1280 폭에 다 들어가 넘침이 사라졌다. 좁은 창이면 늘 넘친다. -->
 	<ResizeWindow width="900" height="720"/>
 	<Variable name="gv_editorUiScale" value="1.5"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.RenderDocAvailable" equals="0"/>
 	<EditorClick mark="toolbar.overflow"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="toolbar.renderDoc"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="RenderDoc.CaptureRequested" count="0"/>
 	<Expect watch="Editor.RenderDocAvailable" equals="0"/>
 	<Variable name="gv_editorUiScale" value="0"/>

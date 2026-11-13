@@ -14,7 +14,7 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<Variable name="gv_editorWatchPanel" value="material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Engine.FramePacingState" equals="3"/>
 	<Variable name="gv_framePacing" value="WindowState"/>
 	<!-- 기동 알림이 사라지고 조용한 프레임이 쌓이면 유휴에 든다. 유휴 중의 프레임은 최대 100 ms 라, 유휴에 든 뒤에는 고정 대기를 두지 않는다(유휴는 아래 조건 대기가 확인한다) -->
@@ -25,13 +25,13 @@
 	<EditorKey key="Ctrl+P"/>
 	<Wait frames="1"/>
 	<Expect watch="Engine.FramePacingState" atMost="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="previewred.material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
 	<!-- 미리보기 창은 틱하는 씬을 그려 연속 프레임을 청한다 — 닫으면 다시 조용해진다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close material"/>
 	<WaitUntil watch="Engine.FramePacingState" equals="6" timeoutFrames="600"/>
 	<!-- ② 마우스 이동: 유휴 중의 이동이 바로 깨운다 -->

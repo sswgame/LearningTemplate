@@ -90,22 +90,22 @@ namespace sw
         return count;
     }
 
-    void TradeClient::onPush( TradeMethod::Invited, const TradeNotice& body )
+    void TradeClient::onPush( TradeMethod::Invited, const TradeNotification& body )
     {
         recordUpdate( TradeMethod::Invited::kKind, body );
     }
 
-    void TradeClient::onPush( TradeMethod::Update, const TradeNotice& body )
+    void TradeClient::onPush( TradeMethod::Update, const TradeNotification& body )
     {
         recordUpdate( TradeMethod::Update::kKind, body );
     }
 
-    void TradeClient::onPush( TradeMethod::Closed, const TradeNotice& body )
+    void TradeClient::onPush( TradeMethod::Closed, const TradeNotification& body )
     {
         recordUpdate( TradeMethod::Closed::kKind, body );
     }
 
-    void TradeClient::recordUpdate( uint16 kind, const TradeNotice& body )
+    void TradeClient::recordUpdate( uint16 kind, const TradeNotification& body )
     {
         TradeClientUpdate update;
         update._kind        = kind;

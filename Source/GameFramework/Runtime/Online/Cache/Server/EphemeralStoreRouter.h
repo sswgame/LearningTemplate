@@ -2,13 +2,13 @@
  * @file EphemeralStoreRouter.h
  * @brief 캐시 프런트(`IEphemeralStore`) 하나를 여러 서비스가 나눠 씁니다. 요청마다 답 델리게이트를, 채널마다 구독자 목록을 둡니다.
  *        프런트의 답과 메시지를 꺼내는 쪽은 이 라우터 하나뿐이어야 합니다.
- * @details - 서비스 스레드 하나에서 쓴다(`submit`, `subscribe`, 구독의 해제, `pump` 모두). 델리게이트는 `pump` 안에서 불린다.
+ * @details - 서비스 스레드 하나에서 쓴다(`submit`, `subscribe`, 구독의 해제, `poll` 모두). 델리게이트는 `poll` 안에서 불린다.
  *          - 채널 구독은 `subscribe` 가 돌려준 구독(`Subscription`)이 소유한다. 구독이 사라지면 빠지고, 라우터가 먼저 내려가면(`shutdown`) 무효가 된다.
  *          - 델리게이트 안에서 `submit`, `subscribe`, 구독의 해제를 해도 된다(지금 나눠 주는 목록은 복사본이다).
  *          - 같은 채널을 둘이 구독하면 프런트에는 한 번만 구독하고, 마지막 구독자가 나갈 때 해제한다.
  *          - `shutdown` 은 답을 기다리는 요청마다 `Unavailable` 답을 한 번 부른다. 델리게이트는 언제나 정확히 한 번 불린다(주인 몫을 놓은 것은 제외).
  *          - 답을 받는 요청은 주인 몫(`openReplyOwner` 의 구독)과 함께 맡긴다. 주인이 그 구독을 놓으면 맡긴 요청의 델리게이트가 모두 지워진다 —
- *            주인이 라우터보다 먼저 내려가도 뒤의 `pump` 나 `shutdown` 이 사라진 객체를 부르지 않는다. 답을 보지 않는 쓰기는 주인 없이 맡긴다.
+ *            주인이 라우터보다 먼저 내려가도 뒤의 `poll` 나 `shutdown` 이 사라진 객체를 부르지 않는다. 답을 보지 않는 쓰기는 주인 없이 맡긴다.
  *          `IEphemeralStore::pollReplies` 와 `pollMessages` 는 프런트 전체의 것을 꺼내므로, 서비스 둘이 직접 부르면 서로의 답을 가져간다.
  *          gRPC 와 Nakama 런타임처럼 런타임이 나눠 주는 구조다.
  */
@@ -49,7 +49,7 @@ namespace sw
         void shutdown();
 
         /** @brief 앞의 답 · 메시지를 꺼내 델리게이트에 나눠 줍니다. 나눠 준 수입니다. */
-        int32 pump();
+        int32 poll();
 
         /** @brief 답을 보지 않는 요청(발행 · 지우기처럼 결과를 보지 않는 쓰기)을 맡깁니다. 답은 버립니다. */
         void submit( const EphemeralRequest& request );

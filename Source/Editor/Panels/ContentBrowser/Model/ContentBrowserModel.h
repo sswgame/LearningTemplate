@@ -12,7 +12,7 @@
 #include "Editor/Common/Commands/Asset/EditorFolderListingEntry.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Panels/ContentBrowser/Model/ContentBrowserCrumb.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserBreadcrumb.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserReferenceSearch.h"
 
@@ -138,10 +138,10 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 2) 루트와 폴더
         // ------------------------------------------------------------------------------
-        const vector<ContentBrowserRoot>&  getRoots() const { return _listRoot; }
-        const vector<AssetEntry>&          getEntries() const { return _listEntry; }
-        const string&                      getSelectedFolderPath() const { return _selectedFolderAbs; }
-        const vector<ContentBrowserCrumb>& getCrumbs() const { return _listCrumb; }
+        const vector<ContentBrowserRoot>&       getRoots() const { return _listRoot; }
+        const vector<AssetEntry>&               getEntries() const { return _listEntry; }
+        const string&                           getSelectedFolderPath() const { return _selectedFolderAbs; }
+        const vector<ContentBrowserBreadcrumb>& getBreadcrumbs() const { return _listBreadcrumb; }
         /** @brief 폴더 트리의 하위 폴더입니다. 처음 볼 때 한 번 디스크에서 읽는다. 참조는 재귀 중에도 유효하다. */
         const vector<string>& getOrScanChildFolders( string_view folderAbs ) { return _folderCache.getOrScanChildFolders( folderAbs ); }
         /** @brief 폴더 트리 캐시를 비웁니다. 다음 그리기에서 디스크를 다시 읽는다. */
@@ -153,12 +153,12 @@ namespace sw::editor
 
         /** @brief 폴더로 이동합니다. 그 폴더가 속한 콘텐츠 루트에서 브레드크럼 경로도 함께 만듭니다. */
         void openFolder( string_view absolutePath );
-        /** @brief 폴더를 고르고 목록을 다시 읽게 합니다. @p listCrumb 는 그 폴더의 브레드크럼 경로입니다. */
-        void selectFolder( string_view absolutePath, const vector<ContentBrowserCrumb>& listCrumb, bool bRecordHistory = true );
-        /** @brief 지금 브레드크럼 경로의 @p crumbIndex 번째 조각까지로 이동합니다. */
-        void selectCrumb( size_t crumbIndex );
+        /** @brief 폴더를 고르고 목록을 다시 읽게 합니다. @p listBreadcrumb 는 그 폴더의 브레드크럼 경로입니다. */
+        void selectFolder( string_view absolutePath, const vector<ContentBrowserBreadcrumb>& listBreadcrumb, bool bRecordHistory = true );
+        /** @brief 지금 브레드크럼 경로의 @p breadcrumbIndex 번째 조각까지로 이동합니다. */
+        void selectBreadcrumb( size_t breadcrumbIndex );
         /** @brief 폴더가 속한 콘텐츠 루트에서 그 폴더까지의 브레드크럼 경로를 만듭니다. */
-        void makeTrailForFolder( string_view folderAbs, vector<ContentBrowserCrumb>& outListCrumb ) const;
+        void makeTrailForFolder( string_view folderAbs, vector<ContentBrowserBreadcrumb>& outListBreadcrumb ) const;
         bool canNavigateBack() const { return _history.canNavigateBack(); }
         bool canNavigateForward() const { return _history.canNavigateForward(); }
         void navigateBack();
@@ -279,29 +279,29 @@ namespace sw::editor
         void applyPendingMove();
 
     private:
-        vector<ContentBrowserRoot>    _listRoot;
-        vector<AssetEntry>            _listEntry;
-        string                        _selectedFolderAbs;
-        vector<ContentBrowserCrumb>   _listCrumb; /**< 지금 폴더의 브레드크럼 경로. 예: "Favorites / Shaders / bin" */
-        string                        _selectedAssetAbs;
-        string                        _importFolderAbs;      /**< 임포트 대화상자를 연 때의 폴더 */
-        ContentBrowserHistory         _history;              /**< 뒤로 가기 · 앞으로 가기 이력 */
-        ContentBrowserFileActions     _fileActions;          /**< 이름 바꾸기와 삭제 확인을 기다리는 상태, 디스크를 바꾸는 작업 */
-        ContentBrowserMoveQueue       _pendingMoves;         /**< 역색인이 따라오기를 기다리는 옮기기(`commitRename` · `moveAssetToFolder`) */
-        string                        _moveRequestSourceAbs; /**< 확인을 기다리는 끌어 놓기의 원본(파일 · 폴더). 비었으면 없다 */
-        string                        _moveRequestFolderAbs; /**< 그 대상 폴더 */
-        EditorAssetMovePlan           _moveRequestPlan;      /**< 그 계획(미리보기) */
-        ContentBrowserReferenceSearch _referenceSearch;      /**< 마지막 참조 찾기의 결과(색인은 `AssetHotReload` 의 것) */
-        ContentBrowserImportQueue     _importQueue;          /**< 파일 대화상자가 고른 임포트 경로. 메인 스레드가 꺼내 임포트한다 */
-        ContentBrowserTypeFilter      _typeFilter;           /**< 종류 필터 목록과 고른 필터. 종류 등록이 바뀌면 다시 만든다 */
-        EditorFolderListingJob        _folderJob;
-        ContentBrowserFolderCache     _folderCache;             /**< 폴더 트리의 하위 폴더. 그릴 때마다 디스크를 읽지 않도록 캐시한다 */
-        uint64                        _seenContentChangeSerial; /**< 마지막으로 반영한 `AssetHotReload::getContentChangeSerial` */
-        uint8                         _bRootsDirty              : 1;
-        uint8                         _bFolderDirty             : 1;
-        uint8                         _bShowAllPacks            : 1; /**< 게임 팩을 모두 보인다. 끄면 활성 팩 하나만 보인다 */
-        uint8                         _bShowAllPacksInitialized : 1; /**< 환경설정의 기본값을 한 번 읽었다. 그 뒤에는 툴바가 정한다 */
-        uint8                         _bListingRecursive        : 1; /**< 지금 목록에 하위 폴더의 파일까지 포함한다(검색 중) */
-        uint8                         _bMoveRequestPlanned      : 1; /**< 확인을 기다리는 옮기기의 계획을 세웠다(역색인이 따라온 뒤) */
+        vector<ContentBrowserRoot>       _listRoot;
+        vector<AssetEntry>               _listEntry;
+        string                           _selectedFolderAbs;
+        vector<ContentBrowserBreadcrumb> _listBreadcrumb; /**< 지금 폴더의 브레드크럼 경로. 예: "Favorites / Shaders / bin" */
+        string                           _selectedAssetAbs;
+        string                           _importFolderAbs;      /**< 임포트 대화상자를 연 때의 폴더 */
+        ContentBrowserHistory            _history;              /**< 뒤로 가기 · 앞으로 가기 이력 */
+        ContentBrowserFileActions        _fileActions;          /**< 이름 바꾸기와 삭제 확인을 기다리는 상태, 디스크를 바꾸는 작업 */
+        ContentBrowserMoveQueue          _pendingMoves;         /**< 역색인이 따라오기를 기다리는 옮기기(`commitRename` · `moveAssetToFolder`) */
+        string                           _moveRequestSourceAbs; /**< 확인을 기다리는 끌어 놓기의 원본(파일 · 폴더). 비었으면 없다 */
+        string                           _moveRequestFolderAbs; /**< 그 대상 폴더 */
+        EditorAssetMovePlan              _moveRequestPlan;      /**< 그 계획(미리보기) */
+        ContentBrowserReferenceSearch    _referenceSearch;      /**< 마지막 참조 찾기의 결과(색인은 `AssetHotReload` 의 것) */
+        ContentBrowserImportQueue        _importQueue;          /**< 파일 대화상자가 고른 임포트 경로. 메인 스레드가 꺼내 임포트한다 */
+        ContentBrowserTypeFilter         _typeFilter;           /**< 종류 필터 목록과 고른 필터. 종류 등록이 바뀌면 다시 만든다 */
+        EditorFolderListingJob           _folderJob;
+        ContentBrowserFolderCache        _folderCache;             /**< 폴더 트리의 하위 폴더. 그릴 때마다 디스크를 읽지 않도록 캐시한다 */
+        uint64                           _seenContentChangeSerial; /**< 마지막으로 반영한 `AssetHotReload::getContentChangeSerial` */
+        uint8                            _bRootsDirty              : 1;
+        uint8                            _bFolderDirty             : 1;
+        uint8                            _bShowAllPacks            : 1; /**< 게임 팩을 모두 보인다. 끄면 활성 팩 하나만 보인다 */
+        uint8                            _bShowAllPacksInitialized : 1; /**< 환경설정의 기본값을 한 번 읽었다. 그 뒤에는 툴바가 정한다 */
+        uint8                            _bListingRecursive        : 1; /**< 지금 목록에 하위 폴더의 파일까지 포함한다(검색 중) */
+        uint8                            _bMoveRequestPlanned      : 1; /**< 확인을 기다리는 옮기기의 계획을 세웠다(역색인이 따라온 뒤) */
     };
 } // namespace sw::editor

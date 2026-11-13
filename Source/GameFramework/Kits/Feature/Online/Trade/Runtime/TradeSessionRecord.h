@@ -150,7 +150,7 @@ namespace sw
 
     /** @brief 거래 알림(초대 · 바뀜 · 닫힘)의 본문입니다. 스냅샷과, 정산이면 이 계정의 이동 뒤 잔액입니다. 알림에는 결과가 없다. */
     REFLECT()
-    struct SW_KIT_API TradeNotice
+    struct SW_KIT_API TradeNotification
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전
@@ -172,9 +172,9 @@ namespace sw
         using Lock     = Method<MethodName::Lock, TradeIDRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
         using Confirm  = Method<MethodName::Confirm, TradeConfirmRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 내가 본 내 제시 버전, 내가 본 상대 제시 버전을 받는다
         using Cancel   = Method<MethodName::Cancel, TradeIDRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using Invited  = Push<PushName::Invited, TradeNotice>; ///< 초대받았다는 알림이며 스냅샷을 싣는다
-        using Update   = Push<PushName::Update, TradeNotice>;  ///< 바뀌었다는 알림이며 스냅샷을 싣는다
-        using Closed   = Push<PushName::Closed, TradeNotice>;  ///< 닫혔다는 알림이며 스냅샷을 싣고 정산이면 잔액도 싣는다
+        using Invited  = Push<PushName::Invited, TradeNotification>; ///< 초대받았다는 알림이며 스냅샷을 싣는다
+        using Update   = Push<PushName::Update, TradeNotification>;  ///< 바뀌었다는 알림이며 스냅샷을 싣는다
+        using Closed   = Push<PushName::Closed, TradeNotification>;  ///< 닫혔다는 알림이며 스냅샷을 싣고 정산이면 잔액도 싣는다
     };
 } // namespace sw
 

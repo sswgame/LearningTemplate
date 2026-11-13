@@ -1,6 +1,6 @@
 /**
  * @file CaptureReadiness.h
- * @brief 지금 읽으면 다 그려진 그림인지 정하는 한 곳입니다 — 모든 캡처(시나리오 `<Screenshot>` · `-gv_screenshotSettledFrames` · 화면 밖 캡처 `SceneCapture`)가 이 판정만 씁니다.
+ * @brief 지금 읽으면 다 그려진 그림인지 정하는 한 곳입니다 — 모든 캡처(시나리오 `<Screenshot>` · `-gv_screenshotStableFrames` · 화면 밖 캡처 `SceneCapture`)가 이 판정만 씁니다.
  * @details 판정은 두 쪽의 남은 일입니다. 씬 쪽(게임 스레드): 읽거나 애니메이션을 기다리거나 디더로 나타나는 중인 메시, 메시를 기다리는 내비메시, 읽거나 올리는 중인 텍스처.
  *          렌더 쪽: 렌더러가 지난 프레임에 머티리얼 PSO 를 아직 만드는 중이라 빠뜨린 배치(`FrameRenderer::getLastPendingPSOBatchCount`).
  *          예전에는 입구마다 "몇 프레임 뒤면 다 그려졌겠지" 를 따로 어림했다(초상화 · 반사 프로브 3 장, 시작 인자 10 장, 시나리오는 씬 쪽만) — DX11 에서 PSO 를 만드는

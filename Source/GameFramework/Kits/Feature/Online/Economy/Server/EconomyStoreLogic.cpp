@@ -637,7 +637,7 @@ namespace sw
         return connection.commit( transaction );
     }
 
-    EconomyServiceResult EconomyStoreLogic::revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotification& notice,
+    EconomyServiceResult EconomyStoreLogic::revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotification& notification,
                                                           EconomyRefundRecoveryMode recovery, int64 nowMs, vector<EconomyBalanceChange>& outListChange )
     {
         using Internal = EconomyStoreLogicInternal;
@@ -645,7 +645,7 @@ namespace sw
         if ( recovery >= EconomyRefundRecoveryMode::Count )
             return EconomyServiceResult::fail( OnlineError::kInvalidRequest ); // 서비스가 기동 때 거절한다 — 바로 부른 쪽의 실수이므로 회수하지 않는다
         string redeemKey;
-        if ( Internal::makeRedeemKey( notice._storeName, notice._transactionID, redeemKey ) == false )
+        if ( Internal::makeRedeemKey( notification._storeName, notification._transactionID, redeemKey ) == false )
             return EconomyServiceResult::fail( OnlineError::kInvalidRequest );
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
@@ -678,7 +678,7 @@ namespace sw
             if ( found != ServiceStoreResult::Ok )
                 return EconomyServiceResult::fail( OnlineError::kUnavailable );
             LedgerTransferRequest request;
-            if ( LedgerJournalKey::makeFromToken( string( Internal::kRefundScopePrefix ) + notice._storeName, notice._transactionID, request._journalKey ) == false )
+            if ( LedgerJournalKey::makeFromToken( string( Internal::kRefundScopePrefix ) + notification._storeName, notification._transactionID, request._journalKey ) == false )
                 return EconomyServiceResult::fail( OnlineError::kInvalidRequest );
             request._reason     = "refund.revoke";
             request._memo       = redeem._memo;

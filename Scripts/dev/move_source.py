@@ -10,7 +10,7 @@ move-source: 경로는 `Source/` 기준(폴더면 안의 파일 전부, 하위 �
      폴더 접두어(`Engine/X/` — CMake 정규식 · 주석)를 새 경로로
   3. 같은 폴더 짧은 include(`#include "Y.h"`)가 옮긴 뒤 다른 폴더를 가리키게 되면 전체 경로로
   4. 고친 C++ 파일의 include 순서를 include-order 규칙으로(`format` 의 첫 단계와 같은 픽서)
-rename-symbol: 낱말 경계로 바꾼다(부분 일치 없음, 코드와 문서 .md). 옛 이름을 일부러 적은 줄은 `keep-old-name` 표지로 남는다. 새 이름이 이미 쓰이고 있으면 겹친 파일을 알리고 멈춘다(`--force` 로 강행).
+rename-symbol: 낱말 경계로 바꾼다(부분 일치 없음, 코드 · 문서 .md · 데이터 Content · 설정 Config — 린트 예외 표 포함, 금지 이름 표의 키와 이름 기준선은 지킨다). 옛 이름을 일부러 적은 줄은 `keep-old-name` 표지로 남는다. 새 이름이 이미 쓰이고 있으면 겹친 파일을 알리고 멈춘다(`--force` 로 강행).
   C 계열 소스(C++ · HLSL)의 문자열 리터럴 안은 기본으로 건너뛰고 그 파일을 알린다(`--include-strings` 로 함께 바꾼다).
 """
 
@@ -27,7 +27,7 @@ from pathlib import Path
 from common.exit_code import ExitCode
 from common.git import run_git
 from common.paths import get_project_root
-from common.rename_scope import check_rewrite_unmarked_lines, rewrite_unmarked_lines
+from common.rename_scope import check_rewrite_unmarked_lines, rewrite_rename_target, rewrite_unmarked_lines
 
 TEXT_SUFFIX = {".h", ".hpp", ".inl", ".cpp", ".c", ".cmake", ".txt", ".md", ".json", ".in", ".py", ".toml", ".xxx", ".natvis", ".hlsl", ".hlsli", ".xml", ".po", ".tpl"}
 CPP_SUFFIX = {".h", ".hpp", ".inl", ".cpp"}
@@ -35,10 +35,8 @@ SCAN_ROOT = ["Source", "Content", "Source/Programs/ReflectionParser", "Source/Pr
 BARE_INCLUDE = re.compile(r'^(\s*#\s*include\s*")([^"/]+)(")', re.M)
 
 
-# 문서(docs/agents 포함)도 바꾼다. 옛 이름을 일부러 적은 줄은 표지로 남긴다(`common/rename_scope.py`).
-# 이름 바꾸기만 건너뛰는 곳: 린트의 금지 · 옛 이름 표(데이터)는 옛 이름을 일부러 적는다. 파일 옮기기(경로 표)는 그대로 고친다.
+# 문서(docs/agents 포함) · 데이터 · 설정도 바꾼다. 옛 이름을 일부러 적은 줄 · 표는 `common/rename_scope.py` 가 지킨다(`rename_identifier.py` 와 같은 함수).
 # 스크립트의 시험 글은 폴더가 아니라 형식으로 지킨다 — Python 은 코드 토큰만 바꾼다(`rewrite_python_code`).
-NEVER_RENAME = ("Config/Rules/Lint/",)
 
 # C 계열 소스의 주석 · 문자열 · 문자 리터럴. rename-symbol 은 문자열 안을 기본으로 건너뛴다 — 문자열은 파일 매직("OggS") · JSON 키 · 내보내기
 # 기호 · 데이터 이름처럼 바깥이 정한 철자가 많아, 약어 일괄 변경(1dafbae0c9)이 그 안까지 바꿔 .ogg 디코드 · 구매 응답 · 머티리얼 깃발을 깨뜨렸다.
@@ -119,11 +117,6 @@ def list_tracked_text(root: Path) -> list[Path]:
         raise RuntimeError(f"git ls-files 실패: {result.stderr.strip()}")
     return [root / line for line in result.stdout.splitlines()
             if Path(line).suffix.lower() in TEXT_SUFFIX and (root / line).is_file()]
-
-
-def list_rename_files(root: Path) -> list[Path]:
-    """이름 바꾸기가 고칠 파일 — `NEVER_RENAME`(린트 자체 시험 · 금지 이름 표) 밖."""
-    return [path for path in list_tracked_text(root) if not path.relative_to(root).as_posix().startswith(NEVER_RENAME)]
 
 
 def read_text(path: Path) -> str:
@@ -308,7 +301,7 @@ def main_rename(argv: list[str]) -> int:
     def rewrite_file(path: Path, text: str, rewrite) -> str:
         suffix = path.suffix.lower()
         if args.include_strings or (suffix not in C_LIKE_SUFFIX and suffix != ".py"):
-            return rewrite_unmarked_lines(text, rewrite)
+            return rewrite_rename_target(path.relative_to(root).as_posix(), text, rewrite)
         rewritten, skipped_count = (rewrite_python_code if suffix == ".py" else rewrite_outside_strings)(text, rewrite)
         if skipped_count:
             list_skipped.append(f"{path.relative_to(root).as_posix()}({skipped_count})")
@@ -329,7 +322,7 @@ def main_rename(argv: list[str]) -> int:
 
         changed_count = 0
         list_changed: list[Path] = []
-        for path in list_rename_files(root):
+        for path in list_tracked_text(root):
             text = read_text(path)
             rewritten = rewrite_file(path, text, rewrite_regex)
             if rewritten != text:
@@ -340,9 +333,10 @@ def main_rename(argv: list[str]) -> int:
         print(f"[rename-symbol] {changed_count} 파일" + (" (dry-run)" if args.dry_run else ""))
         report_skipped()
         return ExitCode.PASSED if args.dry_run else format_changed(root, list_changed)
-    # 문서(.md)도 함께 바꾼다 — 빼면 개명마다 규칙 문서의 예시 이름이 낡는다. 겹침 검사는 코드만 본다(문서는 새 이름을 미리 적을 수 있다).
+    # 문서 · 데이터 · 설정도 함께 바꾼다 — 빼면 개명마다 규칙 문서의 예시 이름 · 데이터의 칸 이름 · 린트 예외 표가 낡는다.
+    # 겹침 검사는 코드만 본다(문서는 새 이름을 미리 적을 수 있다).
     code_suffix = CPP_SUFFIX | {".xxx", ".natvis", ".txt", ".cmake"}
-    list_file = [path for path in list_rename_files(root) if path.suffix.lower() in code_suffix | {".md"}]
+    list_file = list_tracked_text(root)
     map_text = {path: read_text(path) for path in list_file}
     clash = False
     for old, new in list_pair:

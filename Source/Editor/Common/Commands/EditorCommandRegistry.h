@@ -125,7 +125,7 @@ namespace sw::editor
         /** @brief @p edit 명령을 레지스트리가 거래 구간 안에서 부르면(동작이 `EditorSceneCommandActionFn`) true 입니다. */
         static constexpr bool isTransacted( EditorCommandEdit edit ) { return edit == EditorCommandEdit::Scene || edit == EditorCommandEdit::SceneDuringPlay; }
         /** @brief @p edit 명령이 편집 허용 답(플레이 중 · 베이크 중이면 꺼짐)을 물으면 true 입니다. */
-        static constexpr bool isGatedByEditLock( EditorCommandEdit edit ) { return edit == EditorCommandEdit::Scene || edit == EditorCommandEdit::SceneUnrecorded; }
+        static constexpr bool isBlockedByEditLock( EditorCommandEdit edit ) { return edit == EditorCommandEdit::Scene || edit == EditorCommandEdit::SceneUnrecorded; }
 
         /** @brief 등록 줄의 동작 칸입니다. 거래를 받는 명령(`isTransacted`)은 씬 동작 칸(`getSceneActionFor`)에 들고 이 칸은 비운다. */
         template <auto TFunction, EditorCommandEdit TEdit>

@@ -7,25 +7,25 @@
 <Scenario name="editor.testrunner" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<DevCommand line="layout.reset"/>
 	<ResizeWindow width="1600" height="900"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus test_runner"/>
 	<!-- 목록이 길어 그 테스트가 창 밖에 있다 — 검색 칸에 이름을 넣어 앞으로 가져온다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.TestRunnerPassCount" equals="0"/>
 	<EditorClick mark="testRunner.filter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="hierarchy.tagFilter"/>
 	<!-- 체크 · 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="testRunner.select.hierarchy.tagFilter" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="testRunner.select.hierarchy.tagFilter" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="testRunner.runSelected" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="testRunner.runSelected" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.TestRunnerPassCount" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

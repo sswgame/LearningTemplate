@@ -8,104 +8,104 @@
 -->
 <Scenario name="editor.uipreviewdesigner" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/uipreview" as="scratch/uipreviewdesigner"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 1) 슬롯 손잡이 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+P"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="pause.ui.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="9" timeoutFrames="900"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewTextureReady" equals="1" timeoutFrames="900"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.widget.Window"/>
 	<WaitUntil watch="Editor.UIPreviewSlotEditable" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UIPreviewPaletteCount" atLeast="10"/>
 	<!-- 되돌리기 감시 값 · edit.undo 는 포커스 창(UI 미리보기 문서)의 스택이다 -->
 	<DevCommand line="panel.focus ui_preview"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
-	<Remember watch="Editor.UIPreviewSlotEditCount" as="slotEdits"/>
-	<EditorWaitSettled/>
+	<Store watch="Editor.UIPreviewSlotEditCount" as="slotEdits"/>
+	<EditorWaitStable/>
 	<EditorDrag mark="uipreview.handle.move" dx="40" dy="0"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOffsetMinX" atLeast="20" timeoutFrames="90"/>
 	<!-- 끄는 동안 자리가 먼저 바뀌고, 고침 · 되돌리기 기록은 끌기를 놓을 때 선다 -->
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="1" timeoutFrames="60"/>
 	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UIPreviewSlotEditCount" differsFrom="slotEdits"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOffsetMinX" near="0" tolerance="0.5" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.redo"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOffsetMinX" atLeast="20" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOffsetMinX" near="0" tolerance="0.5" timeoutFrames="60"/>
 	<!-- 2) 팔레트 · 끌어 놓기 · 지우기 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/uipreviewdesigner/save_probe.ui.xml"/>
 	<!-- 1) 에서 고치고 되돌린 문서는 되돌려도 고친 표시(dirty)가 남는다 — 문서 기반(EditorDocumentPanel)이 다른 문서로 바꾸기 전에 묻고, 저장하지 않고 바꾼다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="unsaved.discard"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="900"/>
 	<Expect watch="Editor.UIPreviewDirty" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.palette.filter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 칸이 글자를 받아 거르는지 본다 - 끌 줄은 거르지 않아도 보여 끌기만으로는 글자를 잃어도 통과한다 -->
 	<EditorText value="zzz"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="1"/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="TextWidget"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="0"/>
 	<EditorDrag mark="uipreview.palette.TextWidget" toMark="uipreview.row.0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="2" timeoutFrames="180"/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="1" timeoutFrames="60"/>
 	<DevCommand line="panel.focus ui_preview"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.delete"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="2" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.redo"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="2" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="60"/>
 	<!-- 정리: 거름 칸을 비우고 문서 값을 되찾는다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.palette.filter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Backspace"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.reload"/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="75"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close ui_preview"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

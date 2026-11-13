@@ -8,7 +8,7 @@
  *             서버는 관찰자 둘레의 셀만 올리므로(`feedStreamingSources` → `SceneStreamingSubsystem::setExternalSources`) 나가는 반경이
  *             격자의 로딩 반경보다 크면 보이는 엔티티가 올라 있지 않은 셀에 있을 수 있다. 그 설정은 `initialize` 가 거절한다.
  *          2. 전송: 틱마다 새로 보이는 엔티티를 신뢰 메시지 하나에 묶어 전체 상태로 보낸다(Core 가 64 KB까지 조각으로 나눠 전송한다). 갱신은 비신뢰 메시지로 보낸다.
- *             갱신은 전달 통지(`INetPeers::sendNotifiedMessage`, 값은 서버 틱)를 달아 보내고, 연결 계층의 패킷 확인이 그 판정을 돌려준다(`onDeliveryNotice`).
+ *             갱신은 전달 통지(`INetPeers::sendNotifiedMessage`, 값은 서버 틱)를 달아 보내고, 연결 계층의 패킷 확인이 그 판정을 돌려준다(`onDeliveryNotification`).
  *             클라이언트가 확인 메시지를 따로 보내지 않는다(언리얼의 패킷 ACK · NAK 와 같다).
  *             갱신을 잃은 엔티티는 우선도와 "바뀜" 가중치를 되돌려서 곧 다시 보낸다.
  *             보이지 않게 된 엔티티는 조각나지 않는 크기(1 KB)의 메시지 여러 개로 나눠 알리고, 보낸 것만 보이는 목록에서 뺀다.
@@ -147,7 +147,7 @@ namespace sw
 {
     /**
      * @brief 서버 쪽 복제기입니다. 관찰자는 연결과 그 연결이 조종하는 엔티티이며, 그 엔티티의 위치가 관심의 중심입니다.
-     * @details 받는 메시지는 없다. 갱신(`kUpdate`)의 전달 판정을 라우터에서 받는다(`getNotifiedKindMask` · `onDeliveryNotice`).
+     * @details 받는 메시지는 없다. 갱신(`kUpdate`)의 전달 판정을 라우터에서 받는다(`getNotifiedKindMask` · `onDeliveryNotification`).
      *          라우터에 등록하면 연결이 닫힐 때 그 관찰자를 스스로 지운다(`onConnectionClosed`).
      */
     class SW_KIT_API MMOReplicator : public INetMessageHandler
@@ -161,7 +161,7 @@ namespace sw
         /** @brief 받는 종류가 없으므로 라우터는 부르지 않는다. 직접 전달하면 NotMine 이다. */
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         /** @brief 갱신 하나(값 = 그 틱)의 판정을 그 관찰자의 판정 테이블에 적습니다. 다음 `update` 가 전송 중인 갱신을 판정할 때 읽는다. */
-        void onDeliveryNotice( const NetDeliveryNotice& notice ) override;
+        void onDeliveryNotification( const NetDeliveryNotification& notification ) override;
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
         /**

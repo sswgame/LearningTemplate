@@ -10,11 +10,11 @@
 	<DevCommand line="layout.reset"/>
 	<ResizeWindow width="1600" height="900"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus render_targets"/>
 	<WaitUntil watch="Editor.RenderTargetSnapshotReady" equals="1" timeoutWallSeconds="10"/>
 	<!-- 2) 깊이 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="renderTargets.row.SceneDepth"/>
 	<WaitUntil watch="Editor.RenderTargetSelectedDepth" equals="1" timeoutFrames="105"/>
 	<!-- 고른 타깃의 스냅샷은 고른 뒤에 다시 읽는다 - 고름이 먼저 서고 스냅샷이 뒤에 선다 -->
@@ -22,33 +22,33 @@
 	<Expect watch="Editor.RenderTargetLinearized" equals="1"/>
 	<!-- 생산자 · 소비자: 깊이는 깊이를 쓰는 패스(프리패스 · G 버퍼)와 읽는 패스(조명 · 안개 …)가 있다 — 둘 이상 -->
 	<Expect watch="Editor.RenderTargetPassUses" atLeast="2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorHover mark="renderTargets.preview" anchor="0.5,0.6"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.RenderTargetPixelRed" atLeast="0"/>
 	<Expect watch="Editor.RenderTargetPixelRed" atMost="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="renderTargets.linearize"/>
 	<WaitUntil watch="Editor.RenderTargetLinearized" equals="0" timeoutFrames="60"/>
 	<EditorClick mark="renderTargets.refresh"/>
 	<WaitUntil watch="Editor.RenderTargetSnapshotReady" equals="1" timeoutWallSeconds="10"/>
 	<!-- 3) 채널 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="renderTargets.row.SceneColor"/>
 	<WaitUntil watch="Editor.RenderTargetSelectedDepth" equals="0" timeoutFrames="90"/>
 	<WaitUntil watch="Editor.RenderTargetSnapshotReady" equals="1" timeoutWallSeconds="10"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="renderTargets.channel.G"/>
 	<WaitUntil watch="Editor.RenderTargetChannel" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.RenderTargetPassUses" atLeast="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="rendertargetview/passes.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorHover mark="renderTargets.preview" anchor="0.5,0.5"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.RenderTargetPixelRed" atLeast="0"/>
 	<Expect watch="Editor.RenderTargetPixelRed" atMost="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

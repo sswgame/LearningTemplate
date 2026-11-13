@@ -30,7 +30,7 @@ namespace sw
         {
             /** @brief 물리 뒤 단계의 첫 그룹입니다. 같은 단계의 그룹끼리는 그 사이에 틱 결과 적용이 없습니다. */
             static constexpr uint8 kPostPhysicsGroup = static_cast<uint8>( TickGroup::PostPhysics );
-            /** @brief 파도 키의 오브젝트 안 순번(`TickItem::_waveOrdinal`, uint8)의 상한입니다. 넘는 오브젝트는 파도 대신 칸(Task 레인)으로 간다. */
+            /** @brief 파도 키의 오브젝트 안 순번(`TickItem::_waveOrdinal`, uint8)의 상한입니다. 넘는 오브젝트는 파도 대신 칸(Task 모드)으로 간다. */
             static constexpr uint8 kMaxWaveOrdinal = std::numeric_limits<uint8>::max();
 
             /** @brief 선행 조건 스테이지를 지을 때의 후보 하나입니다(선행 조건을 가진 항목 + 그 선행 목록). */
@@ -1012,39 +1012,39 @@ namespace sw
         auto            found = _mapTypeDispatch.find( pType );
         if ( found != _mapTypeDispatch.end() )
             return found->second;
-        // 표가 없는 매니저(엔진 없는 테스트)는 모든 타입이 Batch 레인의 가상 호출 함수다.
-        TickTypeDispatch lane = ( pBatchRegistry != nullptr && pType != nullptr ) ? pBatchRegistry->findDispatch( pType ) : TickTypeDispatch{};
-        if ( lane._pFunction == nullptr )
-            lane._pFunction = &tickBatchVirtual;
-        _mapTypeDispatch.insert_or_assign( pType, lane );
-        return lane;
+        // 표가 없는 매니저(엔진 없는 테스트)는 모든 타입이 Batch 모드의 가상 호출 함수다.
+        TickTypeDispatch dispatch = ( pBatchRegistry != nullptr && pType != nullptr ) ? pBatchRegistry->findDispatch( pType ) : TickTypeDispatch{};
+        if ( dispatch._pFunction == nullptr )
+            dispatch._pFunction = &tickBatchVirtual;
+        _mapTypeDispatch.insert_or_assign( pType, dispatch );
+        return dispatch;
     }
 
     void TickRegistry::addMembership( TickBatchRegistry* pBatchRegistry, GameObject* pObj, uint32 group, uint32 begin, uint32 end )
     {
         TickItemList& listItem = pObj->_listTickItem;
-        // 레인은 그 오브젝트 그룹 항목의 가장 큰 선언이다 — 오브젝트 안 순서를 한 스레드(Task) · 게임 스레드(Main)가 지키게.
-        TickMode lane = _bBatchPathEnabled == SW_TRUE ? TickMode::Batch : TickMode::Task;
-        for ( uint32 index = begin; index < end && lane == TickMode::Batch; ++index )
+        // 모드는 그 오브젝트 그룹 항목의 가장 큰 선언이다 — 오브젝트 안 순서를 한 스레드(Task) · 게임 스레드(Main)가 지키게.
+        TickMode objectMode = _bBatchPathEnabled == SW_TRUE ? TickMode::Batch : TickMode::Task;
+        for ( uint32 index = begin; index < end && objectMode == TickMode::Batch; ++index )
         {
             const TickMode mode = resolveTypeDispatch( pBatchRegistry, listItem[index]._pComponent )._mode;
-            if ( mode > lane )
-                lane = mode;
+            if ( mode > objectMode )
+                objectMode = mode;
             // 파도 키의 순번은 uint8 이다 — 같은 순서 키 항목이 256 개를 넘는 오브젝트는 파도 대신 칸으로 간다(순서는 그대로다).
             const bool bOrdinalOverflow  = index > begin && listItem[index - 1]._orderKey == listItem[index]._orderKey && listItem[index - 1]._waveOrdinal == TickRegistryInternal::kMaxWaveOrdinal;
             listItem[index]._waveOrdinal = ( index > begin && listItem[index - 1]._orderKey == listItem[index]._orderKey ) ? static_cast<uint8>( listItem[index - 1]._waveOrdinal + 1 ) : 0;
             if ( bOrdinalOverflow )
-                lane = TickMode::Task;
+                objectMode = TickMode::Task;
         }
 
-        if ( lane != TickMode::Batch )
+        if ( objectMode != TickMode::Batch )
         {
             TickObjectEntry entry{};
             entry._pObject                = pObj;
             entry._firstItem              = listItem[begin];
             entry._pItem                  = listItem.data() + begin;
             entry._itemCount              = end - begin;
-            vector<TickObjectEntry>& list = lane == TickMode::Main ? _arrListMainEntry[group] : _arrListEntry[group];
+            vector<TickObjectEntry>& list = objectMode == TickMode::Main ? _arrListMainEntry[group] : _arrListEntry[group];
             pObj->_arrTickIndex[group]    = static_cast<uint32>( list.size() );
             list.push_back( entry );
             return;
@@ -1165,7 +1165,7 @@ namespace sw
 
     void TickRegistry::refreshStageBatches( TickBatchRegistry* pBatchRegistry )
     {
-        // 스테이지 항목도 레인의 일괄 함수로 돈다(가상 호출 대신). 자리 키가 같은 타입 · 서브틱을 붙여 두었으므로 이웃한 같은 (함수, 서브틱 id) 를 한 목록으로
+        // 스테이지 항목도 모드의 일괄 함수로 돈다(가상 호출 대신). 자리 키가 같은 타입 · 서브틱을 붙여 두었으므로 이웃한 같은 (함수, 서브틱 id) 를 한 목록으로
         // 묶으면 디스패치가 파도와 같은 잡으로 목록 하나를 함수 한 번에 넘긴다. 한 스테이지에 한 오브젝트의 항목은 하나라 묶어도 오브젝트 안 순서는 그대로다.
         // 순서만 간선이 있는 스테이지는 항목마다 목록 하나다 — 디스패치가 목록마다 태스크를 띄우고 간선(항목 번호)을 그대로 건다.
         for ( TickStage& stage : _listStage )

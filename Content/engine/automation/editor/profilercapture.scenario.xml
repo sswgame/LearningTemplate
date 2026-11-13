@@ -12,48 +12,48 @@
 	<DevCommand line="layout.reset"/>
 	<ResizeWindow width="1600" height="900"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus profiler"/>
 	<WaitUntil watch="Editor.ProfilerCapturedFrames" atLeast="30" timeoutFrames="240"/>
 	<Expect watch="Editor.ProfilerSelectedFrame" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="profiler.graph.GT.Frame" anchor="0.5,0.5"/>
 	<WaitUntil watch="Editor.ProfilerSelectedFrame" atLeast="1" timeoutFrames="60"/>
 	<!-- 2) Pause · Save · Clear · Load -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="profiler.capture.pause"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.ProfilerCapturePaused" equals="1" timeoutFrames="300"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.ProfilerCapturePaused" equals="1"/>
 	<EditorClick mark="profiler.capture.save"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="profiler.capture.clear"/>
 	<WaitUntil watch="Editor.ProfilerCapturedFrames" equals="0" timeoutFrames="60"/>
 	<EditorClick mark="profiler.capture.load"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.ProfilerCapturedFrames" atLeast="30" timeoutFrames="300"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.ProfilerCapturedFrames" atLeast="30"/>
 	<Expect watch="Editor.ProfilerCapturePaused" equals="1"/>
 	<ExpectLog id="Profiler.CaptureLoaded" atLeast="1"/>
 	<!-- 3) Pause on spike -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="profiler.capture.pauseOnSpike"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="profiler.capture.spikeMs" mods="ctrl"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="250"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="profiler.capture.pause"/>
 	<WaitUntil watch="Editor.ProfilerCapturePaused" equals="0" timeoutFrames="60"/>
 	<!-- 친 문턱이 먹었는지 본다 - 글자를 잃으면 기본 33.3 ms 라 100 ms 에서 멈춘다. 400 ms 만 보면 어느 문턱이든 멈춰 통과한다 -->
 	<DevCommand line="profile.stall 100"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.ProfilerCapturePaused" equals="0"/>
 	<DevCommand line="profile.stall 400"/>
 	<WaitUntil watch="Editor.ProfilerCapturePaused" equals="1" timeoutFrames="120"/>
@@ -62,12 +62,12 @@
 	<EditorClick mark="profiler.callTree.tab" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="profiler.callTree.tab" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="profiler.callTree.record"/>
 	<WaitUntil watch="Editor.ProfilerCallTreeNodes" atLeast="3" timeoutFrames="225"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="profiler.callTree.record"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 5) 메모리 태그 개발 명령 — 상태를 묻고(바꾸지 않는다: 체인의 다음 단계가 구성 기본 추적으로 돈다) 태그 표를 로그로 남긴다 -->
 	<DevCommand line="memory.tracking"/>
 	<DevCommand line="memory.report"/>

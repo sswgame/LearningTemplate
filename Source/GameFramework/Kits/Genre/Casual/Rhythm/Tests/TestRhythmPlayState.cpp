@@ -21,7 +21,7 @@ namespace
     </Chart>)";
 
     /** @brief 머리를 맞혀 롱노트를 누르고 있는 판을 꾸밉니다. 칸마다 맞는 값을 기본으로 두고 한 칸씩 망가뜨립니다. */
-    struct RhythmForged
+    struct RhythmFixture
     {
         float64 _accuracyWeightSum{ 1.0 };
         int64   _score{ 100 };
@@ -92,7 +92,7 @@ namespace
 /**
  * @brief [RhythmPlayStateTest] 실제 판은 왕복한다(롱노트를 누른 채로 이어진다). 형식에 맞게 꾸민 판도 읽힌다
  */
-SW_TEST_CASE_F( RhythmPlayStateTest, RealAndForgedStatesRead )
+SW_TEST_CASE_F( RhythmPlayStateTest, RealAndCraftedStatesRead )
 {
     _session.press( 0, 2.0f );
     SW_REQUIRE_TRUE( _session.isHolding( 0 ) );
@@ -107,7 +107,7 @@ SW_TEST_CASE_F( RhythmPlayStateTest, RealAndForgedStatesRead )
     SW_EXPECT_EQUAL( _session.getScore(), restored.getScore() );
     SW_EXPECT_EQUAL( _session.getJudgedCount(), restored.getJudgedCount() );
 
-    SW_REQUIRE_TRUE( RhythmForged{}.readInto( restored ) );
+    SW_REQUIRE_TRUE( RhythmFixture{}.readInto( restored ) );
     SW_EXPECT_EQUAL( int64( 100 ), restored.getScore() );
 }
 
@@ -116,32 +116,32 @@ SW_TEST_CASE_F( RhythmPlayStateTest, RealAndForgedStatesRead )
  */
 SW_TEST_CASE_F( RhythmPlayStateTest, RefusesHoldingWhatWasNotPressed )
 {
-    SW_REQUIRE_TRUE( RhythmForged{}.readInto( _session ) );
+    SW_REQUIRE_TRUE( RhythmFixture{}.readInto( _session ) );
 
-    RhythmForged notYetPressed;
+    RhythmFixture notYetPressed;
     notYetPressed._cursor0 = 0;
     SW_EXPECT_FALSE( notYetPressed.readInto( _session ) );
 
-    RhythmForged shortNote;
+    RhythmFixture shortNote;
     shortNote._cursor0      = 0;
     shortNote._holdingNote0 = -1;
     shortNote._cursor1      = 1;
     shortNote._holdingNote1 = 1;
     SW_EXPECT_FALSE( shortNote.readInto( _session ) );
 
-    RhythmForged otherLane;
+    RhythmFixture otherLane;
     otherLane._holdingNote0 = 1;
     SW_EXPECT_FALSE( otherLane.readInto( _session ) );
 
-    RhythmForged brokenIndex;
+    RhythmFixture brokenIndex;
     brokenIndex._holdingNote0 = -2;
     SW_EXPECT_FALSE( brokenIndex.readInto( _session ) );
 
-    RhythmForged cursorOver;
+    RhythmFixture cursorOver;
     cursorOver._cursor0 = 2;
     SW_EXPECT_FALSE( cursorOver.readInto( _session ) );
 
-    RhythmForged otherChart;
+    RhythmFixture otherChart;
     otherChart._noteCount = 3;
     SW_EXPECT_FALSE( otherChart.readInto( _session ) );
 
@@ -154,47 +154,47 @@ SW_TEST_CASE_F( RhythmPlayStateTest, RefusesHoldingWhatWasNotPressed )
  */
 SW_TEST_CASE_F( RhythmPlayStateTest, RefusesCountsThatDoNotAddUp )
 {
-    SW_REQUIRE_TRUE( RhythmForged{}.readInto( _session ) );
+    SW_REQUIRE_TRUE( RhythmFixture{}.readInto( _session ) );
 
-    RhythmForged gradeNegative;
+    RhythmFixture gradeNegative;
     gradeNegative._gradeCount = -1;
     SW_EXPECT_FALSE( gradeNegative.readInto( _session ) );
 
-    RhythmForged missNegative;
+    RhythmFixture missNegative;
     missNegative._missCount = -1;
     SW_EXPECT_FALSE( missNegative.readInto( _session ) );
 
-    RhythmForged gradeMismatch;
+    RhythmFixture gradeMismatch;
     gradeMismatch._gradeCount = 2;
     SW_EXPECT_FALSE( gradeMismatch.readInto( _session ) );
 
-    RhythmForged skippedNotes;
+    RhythmFixture skippedNotes;
     skippedNotes._cursor1 = 1;
     SW_EXPECT_FALSE( skippedNotes.readInto( _session ) );
 
-    RhythmForged overChart;
+    RhythmFixture overChart;
     overChart._gradeCount  = 4;
     overChart._judgedCount = 4;
     SW_EXPECT_FALSE( overChart.readInto( _session ) );
 
-    RhythmForged comboOver;
+    RhythmFixture comboOver;
     comboOver._combo    = 2;
     comboOver._maxCombo = 2;
     SW_EXPECT_FALSE( comboOver.readInto( _session ) );
 
-    RhythmForged comboNegative;
+    RhythmFixture comboNegative;
     comboNegative._combo = -1;
     SW_EXPECT_FALSE( comboNegative.readInto( _session ) );
 
-    RhythmForged accuracyOver;
+    RhythmFixture accuracyOver;
     accuracyOver._accuracyWeightSum = 1.5;
     SW_EXPECT_FALSE( accuracyOver.readInto( _session ) );
 
-    RhythmForged accuracyNegative;
+    RhythmFixture accuracyNegative;
     accuracyNegative._accuracyWeightSum = -0.5;
     SW_EXPECT_FALSE( accuracyNegative.readInto( _session ) );
 
-    RhythmForged scoreNegative;
+    RhythmFixture scoreNegative;
     scoreNegative._score = -1;
     SW_EXPECT_FALSE( scoreNegative.readInto( _session ) );
 
@@ -207,33 +207,33 @@ SW_TEST_CASE_F( RhythmPlayStateTest, RefusesCountsThatDoNotAddUp )
  */
 SW_TEST_CASE_F( RhythmPlayStateTest, RefusesLifeStateAndRecordsOutOfRange )
 {
-    SW_REQUIRE_TRUE( RhythmForged{}.readInto( _session ) );
+    SW_REQUIRE_TRUE( RhythmFixture{}.readInto( _session ) );
 
-    RhythmForged lifeOver;
+    RhythmFixture lifeOver;
     lifeOver._life = 100.5f;
     SW_EXPECT_FALSE( lifeOver.readInto( _session ) );
 
-    RhythmForged lifeNegative;
+    RhythmFixture lifeNegative;
     lifeNegative._life = -1.0f;
     SW_EXPECT_FALSE( lifeNegative.readInto( _session ) );
 
-    RhythmForged fakeClear;
+    RhythmFixture fakeClear;
     fakeClear._state = static_cast<uint8>( sw::RhythmPlayState::Cleared );
     SW_EXPECT_FALSE( fakeClear.readInto( _session ) );
 
-    RhythmForged fakeFail;
+    RhythmFixture fakeFail;
     fakeFail._state = static_cast<uint8>( sw::RhythmPlayState::Failed );
     SW_EXPECT_FALSE( fakeFail.readInto( _session ) );
 
-    RhythmForged brokenState;
+    RhythmFixture brokenState;
     brokenState._state = 9;
     SW_EXPECT_FALSE( brokenState.readInto( _session ) );
 
-    RhythmForged recordOutside;
+    RhythmFixture recordOutside;
     recordOutside._recordLane = 2;
     SW_EXPECT_FALSE( recordOutside.readInto( _session ) );
 
-    RhythmForged recordNegative;
+    RhythmFixture recordNegative;
     recordNegative._recordLane = -1;
     SW_EXPECT_FALSE( recordNegative.readInto( _session ) );
 

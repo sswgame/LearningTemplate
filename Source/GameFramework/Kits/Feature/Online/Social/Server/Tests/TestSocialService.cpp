@@ -88,7 +88,7 @@ namespace
 
         ~SocialFixture()
         {
-            pump();
+            poll();
             _service.shutdown();
             _router.shutdown();
         }
@@ -105,17 +105,17 @@ namespace
             }
         }
 
-        void pump()
+        void poll()
         {
             pollBus();
-            while ( _store.pollCompletions() + _router.pump() > 0 )
+            while ( _store.pollCompletions() + _router.poll() > 0 )
             {
             }
         }
 
         vector<SocialCompletion> takeAll()
         {
-            pump();
+            poll();
             vector<SocialCompletion> listCompletion;
             _service.takeCompletions( listCompletion );
             return listCompletion;
@@ -142,7 +142,7 @@ namespace
 
         vector<SocialNotification> takeNotifications()
         {
-            pump();
+            poll();
             vector<SocialNotification> listNotification;
             _service.pollNotifications( listNotification );
             return listNotification;
@@ -279,7 +279,7 @@ SW_TEST_CASE( SocialServiceTest, BusChangeReloadsEvenDuringALoad )
     SW_EXPECT_EQUAL( 0, rigA._service.getPendingCount() );
 
     SW_EXPECT_TRUE( rigB.change( SocialLinkOperation::Unblock, kAlice, kBob ) == SocialResult::Ok ); // 평소의 길
-    rigA.pump();
+    rigA.poll();
     SW_EXPECT_FALSE( rigA._service.isBlockedLocal( kAlice, kBob ) );
 }
 
@@ -309,7 +309,7 @@ SW_TEST_CASE( SocialServiceTest, PresenceReachesFriends )
     SocialFixture& rigA = world._rig;
     rigA.befriend( kAlice, kBob );
     (void)rigA.links( kAlice );
-    rigB.pump();
+    rigB.poll();
     (void)rigB.links( kBob );
     (void)rigA.takeNotifications();
     (void)rigB.takeNotifications();
@@ -425,7 +425,7 @@ SW_TEST_CASE( SocialServiceTest, PresenceExpiresWithoutRefresh )
 
     world._clock.advanceMilliseconds( kTTLMs - 1000 );
     rig._service.update( UnixMilliseconds{ kNowMs + kTTLMs - 1000 } ); // 연장한다
-    rig.pump();
+    rig.poll();
     world._clock.advanceMilliseconds( 2000 );
     SW_REQUIRE_EQUAL( size_t( 1 ), other.queryPresence( kBob ).size() );
     SW_EXPECT_TRUE( other.queryPresence( kBob )[0]._status == SocialPresenceStatus::Online );

@@ -114,7 +114,7 @@ namespace sw
      * @brief 전달 통지 하나입니다(언리얼 `PacketNotify` 의 ACK · NAK 자리). 패킷 확인을 메시지 단위로 돌려준다 — 키트가 확인 메시지를 따로 주고받지 않는다.
      * @details 종류(`_kind`)는 메시지 첫 바이트다. 라우터가 그 종류를 보내는 처리기(`INetMessageHandler::getNotifiedKindMask`)에게 넘긴다.
      */
-    struct NetDeliveryNotice
+    struct NetDeliveryNotification
     {
         uint32            _tag{ 0 };                                        ///< 보낼 때 단 값(키트가 정한다 — MMO 는 서버 틱).
         int32             _connectionID{ constant::invalid_index::kInt32 }; ///< 보낸 연결. 연결 하나(`NetConnection`)는 모르므로 엔드포인트가 채운다.
@@ -250,7 +250,7 @@ namespace sw
 {
     /**
      * @class NetMessageKindStatsTable
-     * @brief 메시지 종류(첫 바이트) 256 개의 누적 셈 표입니다. 받은 쪽(`NetMessageRouter::pump`)과 보낸 쪽(`NetEndpoint::sendMessage`)이 같은 표를 써서
+     * @brief 메시지 종류(첫 바이트) 256 개의 누적 셈 표입니다. 받은 쪽(`NetMessageRouter::poll`)과 보낸 쪽(`NetEndpoint::sendMessage`)이 같은 표를 써서
      *        `NetStatsReport` 가 두 방향을 같은 규칙으로 싣습니다. 스레드 보호는 들고 있는 쪽이 합니다.
      */
     class NetMessageKindStatsTable

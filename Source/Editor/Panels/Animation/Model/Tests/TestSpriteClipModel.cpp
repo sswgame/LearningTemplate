@@ -347,7 +347,7 @@ SW_TEST_CASE( SpriteClipModelTest, AnimationRangeIsClampedToTheFrames )
 
 // ---------------------------------------------------------------------- 미리보기
 
-SW_TEST_CASE( SpriteClipModelTest, PreviewWalksFrameDurationsAndLoops )
+SW_TEST_CASE( SpriteClipModelTest, PreviewAdvancesFrameDurationsAndLoops )
 {
     SpriteClipModel model;
     Util::fillFrames( model, 3 );

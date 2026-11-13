@@ -147,5 +147,5 @@ namespace sw::editor
     SW_AUTOMATION_STEP_SCHEMA( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, EditorDockLayoutParams );
     SW_AUTOMATION_STEP_VALIDATOR( editorCaptureUI, EditorScenarioStepValidation::kCaptureKind, &EditorScenarioStepValidation::validateCapture );
     SW_AUTOMATION_STEP_SCHEMA( editorSelfTest, EditorScenarioStepValidation::kSelfTestKind, EditorSelfTestParams );
-    SW_AUTOMATION_STEP_SCHEMA( editorWaitSettled, EditorScenarioStepValidation::kWaitSettledKind, EditorNoParams );
+    SW_AUTOMATION_STEP_SCHEMA( editorWaitStable, EditorScenarioStepValidation::kWaitStableKind, EditorNoParams );
 } // namespace sw::editor

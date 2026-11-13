@@ -12,184 +12,184 @@
 -->
 <Scenario name="editor.uipreview" fixedDelta="0.0166667" timeoutFrames="4000" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/uipreview" as="scratch/uipreview"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<!-- 1) 에셋 열기: 기본 문서(pause)가 아닌 문서를 열어 작업공간 포커스가 패널에 전해지는지 본다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+P"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="confirm_unsaved.ui.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="11" timeoutFrames="900"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atMost="11" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+P"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="pause.ui.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<!-- pause 는 위젯 16 개, 앞 문서(confirm_unsaved)는 11 개다 — 글 감시 값만 기다리면 앞 문서의 글로 지나가 버린다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="12" timeoutFrames="900"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewFirstTextBytes" atLeast="1" timeoutFrames="900"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="9" timeoutFrames="60"/>
 	<!-- 2) 언어 -->
 	<EditorClick mark="uipreview.language"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.language.en"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewFirstTextBytes" equals="6" timeoutFrames="600"/>
 	<WaitUntil watch="Editor.UIPreviewRightToLeft" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.language"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.language.qps_ploc"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewFirstTextBytes" atLeast="9" timeoutFrames="600"/>
 	<WaitUntil watch="Editor.UIPreviewRightToLeft" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.language"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.language.qps_plocm"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewRightToLeft" equals="1" timeoutFrames="600"/>
 	<WaitUntil watch="Editor.UIPreviewFirstTextBytes" atLeast="9" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.language"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.language.game"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewRightToLeft" equals="0" timeoutFrames="600"/>
 	<WaitUntil watch="Editor.UIPreviewLanguageIndex" equals="0" timeoutFrames="60"/>
 	<!-- 3) 속성 편집: Window 의 _opacity 를 0.5 로 — 되돌리기 항목 하나, Undo 로 1, Redo 로 0.5 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.widget.Window"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.inspector.search"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 칸이 글자를 받아 거르는지 본다 - 고칠 줄은 거르지 않아도 보여 값 고치기만으로는 글자를 잃어도 통과한다 -->
 	<EditorText value="zzz"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="1"/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="opacity"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="0"/>
 	<EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="0.5"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001" timeoutFrames="60"/>
 	<Expect watch="Editor.UIPreviewDirty" equals="1"/>
 	<!-- 되돌리기 감시 값 · edit.undo 는 포커스 창(UI 미리보기 문서)의 스택이다 -->
 	<DevCommand line="panel.focus ui_preview"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.redo"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001" timeoutFrames="60"/>
 	<!-- 4) 입력 흉내 -->
 	<WaitUntil watch="Editor.UIPreviewHoveredOrdinal" equals="-1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.interact"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewTextureReady" equals="1" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorHover mark="uipreview.image" anchor="0.04,0.04"/>
 	<WaitUntil watch="Editor.UIPreviewHoveredOrdinal" atLeast="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorHover release="true"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewHoveredFocusable" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.nav.down"/>
 	<WaitUntil watch="Editor.UIPreviewFocusedOrdinal" atLeast="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.nav.accept"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="UI.CommandNotWired" atLeast="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.interact"/>
 	<!-- 5) 애니메이션: Play 가 Open 을 끝까지 틀고, 시간 막대는 그 시각에서 멈춘다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.widget.Window"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.animation.play"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewAnimationPlaying" equals="1" timeoutFrames="120"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" atMost="0.95" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewAnimationPlaying" equals="0" timeoutFrames="300"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.01" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorDrag mark="uipreview.animationtime" dx="-3000" dy="0"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" atMost="0.01" timeoutFrames="75"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorDrag mark="uipreview.animationtime" dx="3000" dy="0"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" atLeast="0.99" timeoutFrames="75"/>
 	<Expect watch="Editor.UIPreviewAnimationTime" atLeast="0.1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.reload"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="9" timeoutFrames="600"/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="60"/>
 	<!-- 6) 저장: 작은 문서의 _opacity 를 0.5 로 저장하고 핫 리로드가 파일에서 읽어 오면, 1 로 되돌려 저장한다(사본이라 원본은 바뀌지 않는다) -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/uipreview/save_probe.ui.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="900"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.widget.Card"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="0.5"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.save"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="300"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001" timeoutFrames="60"/>
 	<EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="uipreview.save"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="300"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close ui_preview"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

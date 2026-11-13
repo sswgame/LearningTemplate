@@ -224,7 +224,7 @@ SW_TEST_CASE( OverworldTileMoverTest, StateRoundTripsMidStep )
 }
 
 // 결함: 꾸민 바이트의 워프 대기 + 빈 맵 경로를 받아 게임이 빈 경로로 맵을 옮기려 했다.
-SW_TEST_CASE( OverworldTileMoverTest, ForgedPendingWarpWithoutAMapIsRefused )
+SW_TEST_CASE( OverworldTileMoverTest, CraftedPendingWarpWithoutAMapIsRefused )
 {
     OverworldFixture rig;
     vector<uint8>    listBytes                 = OverworldFixture::save( rig._mover );

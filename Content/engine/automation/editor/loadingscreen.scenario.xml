@@ -7,11 +7,11 @@
 <Scenario name="editor.loadingscreen" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
 	<!-- 그림 판정의 크기는 UI 배율에 달렸다 — 모니터 DPI 와 상관없이 같게 둔다 -->
 	<Variable name="gv_editorUiScale" value="1.5"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Screenshot file="stopped.ppm"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectImage file="stopped.ppm" golden="stopped" region="0.3,0.3,0.9,0.9"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

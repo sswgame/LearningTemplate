@@ -30,7 +30,7 @@ namespace sw::editor
                 if ( context.getStepIndex() == 0 )
                 {
                     context.expect( pContext->getSubsystem<EditorPanelManager>().setPanelOpen<GimmickGraphPanel>( true ), "gimmick graph panel is not registered" );
-                    return EditorSelfTestStep::WaitSettled; // 열린 패널이 도킹 · 그리기를 마칠 때까지
+                    return EditorSelfTestStep::WaitStable; // 열린 패널이 도킹 · 그리기를 마칠 때까지
                 }
                 const ImGuiWindow* pWindow = ImGui::FindWindowByName( GimmickGraphPanel::kPanelTitle );
                 context.expect( pWindow != nullptr && pWindow->DrawList->VtxBuffer.Size > 0, "gimmick graph panel drew nothing in the editor's ImGui context" );

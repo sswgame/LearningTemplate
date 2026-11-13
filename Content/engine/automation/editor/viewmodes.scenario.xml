@@ -13,64 +13,64 @@
 	<ResizeWindow width="1600" height="900"/>
 	<DevCommand line="layout.reset"/>
 	<!-- ① 게임 뷰 Lit 기준 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus game_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>
 	<Expect watch="Editor.GameViewMode" equals="0"/>
 	<Screenshot file="viewmodes_game_lit.ppm"/>
 	<!-- ② 씬 뷰 Lit 과 보기 모드마다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus scene_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
 	<Expect watch="Editor.SceneViewMode" equals="0"/>
 	<Screenshot file="viewmodes_scene_lit.ppm"/>
 	<EditorClick mark="viewport.viewMode"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.unlit"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="1" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_unlit.ppm"/>
 	<EditorClick mark="viewport.viewMode"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.wireframe"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="2" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_wireframe.ppm"/>
 	<EditorClick mark="viewport.viewMode"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.depth"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="4" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_depth.ppm"/>
 	<EditorClick mark="viewport.viewMode"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.overdraw"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="5" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_overdraw.ppm"/>
 	<EditorClick mark="viewport.viewMode"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.normals"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="3" timeoutFrames="90"/>
 	<Expect watch="Editor.GameViewMode" equals="0"/>
 	<Screenshot file="viewmodes_scene_normals.ppm"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectImage file="viewmodes_scene_unlit.ppm" golden="viewmodes_scene_unlit"/>
 	<ExpectImage file="viewmodes_scene_wireframe.ppm" golden="viewmodes_scene_wireframe"/>
 	<ExpectImage file="viewmodes_scene_depth.ppm" golden="viewmodes_scene_depth"/>
 	<ExpectImage file="viewmodes_scene_overdraw.ppm" golden="viewmodes_scene_overdraw"/>
 	<ExpectImage file="viewmodes_scene_normals.ppm" golden="viewmodes_scene_normals"/>
 	<!-- ③ 씬 뷰가 Normals 여도 게임 뷰는 Lit 그대로 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus game_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>
 	<Expect watch="Editor.SceneViewMode" equals="3"/>
 	<Expect watch="Editor.GameViewMode" equals="0"/>
 	<Screenshot file="viewmodes_game_after.ppm"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectImage file="viewmodes_game_after.ppm" golden="viewmodes_game_after"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus scene_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

@@ -408,9 +408,9 @@ namespace sw
     void TelemetryService::onSettingEvent( const UserSettingEvent& event )
     {
         // 보류 값(메뉴에서 바꾸는 중)은 동의가 아니다 — 적용 · 되돌리기 · 로드 뒤의 확정 값만 본다.
-        const bool bSettled = event._kind != UserSettingEventKind::PendingChanged && event._kind != UserSettingEventKind::ConfirmStarted;
-        const bool bOurs    = event._settingID.empty() || event._settingID == hashed_string( kConsentSettingID );
-        if ( bSettled && bOurs )
+        const bool bCompleted = event._kind != UserSettingEventKind::PendingChanged && event._kind != UserSettingEventKind::ConfirmStarted;
+        const bool bOurs      = event._settingID.empty() || event._settingID == hashed_string( kConsentSettingID );
+        if ( bCompleted && bOurs )
             refreshConsentFromSetting();
     }
 

@@ -10,42 +10,42 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus user_settings"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.UserSettingsPending" equals="0"/>
 	<ExpectVariable name="gv_debugHUD" value="false"/>
 	<!-- 탭은 누른 채 한 프레임을 지나야 고른다 — 누르고(state="down") 다음 프레임에 그 자리에서 뗀다(state="up") -->
 	<EditorClick mark="userSettings.tab.debug" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="userSettings.tab.debug" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 바꾸면 보류 — 즉시 적용 설정이라 대상이 미리 바뀐다 -->
 	<EditorClick mark="userSettings.value.debug.hud"/>
 	<WaitUntil watch="Editor.UserSettingsPending" equals="1" timeoutFrames="60"/>
 	<ExpectVariable name="gv_debugHUD" value="true"/>
 	<!-- 되돌리기 — 보류를 버린다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="userSettings.revert"/>
 	<WaitUntil watch="Editor.UserSettingsPending" equals="0" timeoutFrames="60"/>
 	<ExpectVariable name="gv_debugHUD" value="false"/>
 	<!-- 적용 — 보류 없이 남는다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="userSettings.value.debug.hud"/>
 	<WaitUntil watch="Editor.UserSettingsPending" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="userSettings.apply"/>
 	<WaitUntil watch="Editor.UserSettingsPending" equals="0" timeoutFrames="60"/>
 	<ExpectVariable name="gv_debugHUD" value="true"/>
 	<!-- 탭 기본값 — 보류로 기본값을 걸고 적용한다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="userSettings.resetTab"/>
 	<WaitUntil watch="Editor.UserSettingsPending" equals="1" timeoutFrames="60"/>
 	<ExpectVariable name="gv_debugHUD" value="false"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="userSettings.apply"/>
 	<WaitUntil watch="Editor.UserSettingsPending" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

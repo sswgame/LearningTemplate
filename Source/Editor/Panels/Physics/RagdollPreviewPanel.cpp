@@ -194,7 +194,7 @@ namespace sw::editor
             EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "ImpulseNS" ) );
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.5f );
             (void)EditorWidgets::sliderFloat( SW_WIDGET_ID( "##ImpulseNs" ), &_model.editImpulse(), 0.0f, RagdollPreviewPanelInternal::kMaxImpulse );
-            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StateBuiltBodiesSettled", TextArgumentList().addText( "state", _ragdollState._pStateName ).addInteger( "bodyCount", static_cast<int64>( _ragdollState._listBuiltBody.size() ) ).addText( "settled", _ragdollState._bSettled != SW_FALSE ? "yes" : "no" ) ).c_str() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StateBuiltBodiesAsleep", TextArgumentList().addText( "state", _ragdollState._pStateName ).addInteger( "bodyCount", static_cast<int64>( _ragdollState._listBuiltBody.size() ) ).addText( "settled", _ragdollState._bAsleep != SW_FALSE ? "yes" : "no" ) ).c_str() );
         }
         else
         {

@@ -90,11 +90,11 @@ namespace sw
         return count;
     }
 
-    void ServerServiceManager::beginShutdown( const ServerShutdownNotice& notice )
+    void ServerServiceManager::beginShutdown( const ServerShutdownNotice& notification )
     {
         for ( RunningService& running : _listRunning )
         {
-            running._service->beginShutdown( notice );
+            running._service->beginShutdown( notification );
         }
     }
 } // namespace sw

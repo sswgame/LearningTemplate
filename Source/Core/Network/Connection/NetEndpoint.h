@@ -159,16 +159,16 @@ namespace sw
     /** @brief `NetEndpoint::pollInbound` 가 잠금 한 번에 꺼낸 연결 사건과 받은 메시지입니다. 다시 쓰면 할당하지 않으며, 바이트는 아레나 하나에 모읍니다. */
     struct NetInbound
     {
-        vector<NetEndpointEvent>  _listEvent{};
-        vector<NetInboundMessage> _listMessage{};
-        vector<NetDeliveryNotice> _listDeliveryNotice{}; ///< 판정이 난 전달 통지(`INetPeers::sendNotifiedMessage`). 연결 ID 가 채워져 있다
-        vector<uint8>             _bytes{};
+        vector<NetEndpointEvent>        _listEvent{};
+        vector<NetInboundMessage>       _listMessage{};
+        vector<NetDeliveryNotification> _listDeliveryNotification{}; ///< 판정이 난 전달 통지(`INetPeers::sendNotifiedMessage`). 연결 ID 가 채워져 있다
+        vector<uint8>                   _bytes{};
 
         void clear()
         {
             _listEvent.clear();
             _listMessage.clear();
-            _listDeliveryNotice.clear();
+            _listDeliveryNotification.clear();
             _bytes.clear();
         }
     };
@@ -180,7 +180,7 @@ namespace sw
      * @class INetPeers
      * @brief 키트 · 라우터가 연결에 보내고 연결을 묻는 창구입니다. 엔드포인트 하나(`NetEndpoint`)도, 포트 샤드 여럿을 묶은 것(`NetEndpointShardSet`)도 이 모양입니다.
      * @details 키트는 엔드포인트가 몇 개인지 모른다 — 연결 ID 만 다룬다. 샤드 묶음은 연결 ID 에 샤드 번호를 접어 넣으므로(`NetEndpointShardSet`) 같은 ID 가 두 샤드에서 겹치지 않는다.
-     *          스레드: 구현은 모든 함수를 어느 스레드에서나 부를 수 있게 한다(`NetEndpoint` 의 잠금 약속과 같다). `pollInbound` 만 한 스레드(라우터를 pump 하는 게임 스레드)가 부른다.
+     *          스레드: 구현은 모든 함수를 어느 스레드에서나 부를 수 있게 한다(`NetEndpoint` 의 잠금 약속과 같다). `pollInbound` 만 한 스레드(라우터를 poll 하는 게임 스레드)가 부른다.
      */
     class SW_API INetPeers
     {
@@ -208,7 +208,7 @@ namespace sw
             return trySendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
         /**
-         * @brief 비신뢰 메시지를 전달 통지 @p tag 를 달아 보냅니다(`NetConnection::sendNotifiedMessage`). 판정은 `pollInbound` 의 `_listDeliveryNotice` 로 옵니다.
+         * @brief 비신뢰 메시지를 전달 통지 @p tag 를 달아 보냅니다(`NetConnection::sendNotifiedMessage`). 판정은 `pollInbound` 의 `_listDeliveryNotification` 로 옵니다.
          * @details 키트가 "받았다" 확인 메시지를 따로 주고받지 않게 하는 창구다(언리얼 `PacketNotify`). 연결이 없거나 메시지가 틀리면 false 이고 통지도 나지 않는다.
          */
         [[nodiscard]] virtual bool sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) = 0;
@@ -339,7 +339,7 @@ namespace sw
          * @brief 쌓인 연결 사건과 받은 메시지를 **잠금 한 번에** 모두 꺼냅니다. @p outInbound 를 비운 뒤 채우며, 사건이 메시지보다 앞에 옵니다.
          * @details 닫힌 연결의 받은 메시지는 연결을 닫을 때 지워지므로, 꺼낸 메시지는 모두 지금 그 슬롯에 있는 연결의 것이다.
          *          사건을 먼저 처리하면 같은 슬롯에 새로 연결된 클라이언트의 메시지를 옛 연결의 상태로 읽지 않는다.
-         *          `receiveMessage` 나 `pollEvents` 와 섞어 쓰지 않는다(`NetMessageRouter::pump` 가 이 함수를 쓴다).
+         *          `receiveMessage` 나 `pollEvents` 와 섞어 쓰지 않는다(`NetMessageRouter::poll` 가 이 함수를 쓴다).
          */
         void pollInbound( NetInbound& outInbound ) SW_EXCLUDES_LOCK( _mutex ) override;
 

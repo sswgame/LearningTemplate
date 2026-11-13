@@ -4,14 +4,14 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/devcommands.scenario.xml -unattended
 -->
 <Scenario name="editor.devcommands" fixedDelta="0.0166667" timeoutFrames="200" startAfter="Immediately" input="exclusive">
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 쉬는 에디터에는 임포트가 없다 -->
 	<WaitUntil watch="Editor.AssetImportBusy" equals="0" timeoutWallSeconds="30"/>
 	<DevCommand line="debugdraw.demo 1"/>
 	<ExpectLog id="DevCommand.Reply" contains="debug draw demo for 1 s" atLeast="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="select.tag Automation.NoSuchTag"/>
 	<ExpectLog id="DevCommand.Reply" contains="selected 0" atLeast="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

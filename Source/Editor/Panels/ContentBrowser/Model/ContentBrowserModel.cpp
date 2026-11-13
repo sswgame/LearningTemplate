@@ -146,7 +146,7 @@ namespace sw::editor
         : _listRoot{}
         , _listEntry{}
         , _selectedFolderAbs{}
-        , _listCrumb{}
+        , _listBreadcrumb{}
         , _selectedAssetAbs{}
         , _importFolderAbs{}
         , _history{}
@@ -304,44 +304,44 @@ namespace sw::editor
 
     void ContentBrowserModel::openFolder( string_view absolutePath )
     {
-        vector<ContentBrowserCrumb> listCrumb;
-        makeTrailForFolder( absolutePath, listCrumb );
-        selectFolder( absolutePath, listCrumb );
+        vector<ContentBrowserBreadcrumb> listBreadcrumb;
+        makeTrailForFolder( absolutePath, listBreadcrumb );
+        selectFolder( absolutePath, listBreadcrumb );
     }
 
-    void ContentBrowserModel::selectFolder( string_view absolutePath, const vector<ContentBrowserCrumb>& listCrumb, bool bRecordHistory )
+    void ContentBrowserModel::selectFolder( string_view absolutePath, const vector<ContentBrowserBreadcrumb>& listBreadcrumb, bool bRecordHistory )
     {
         const string normalizedPath = FileUtil::normalizeSeparators( absolutePath );
         if ( bRecordHistory )
-            _history.record( normalizedPath, listCrumb );
+            _history.record( normalizedPath, listBreadcrumb );
 
         // 탐색과 I/O 는 실제 파일 시스템의 대소문자를 쓰고, 새로 만드는 파일 이름은 소문자다(리소스 id 규칙).
         _selectedFolderAbs = normalizedPath;
-        _listCrumb         = listCrumb;
+        _listBreadcrumb    = listBreadcrumb;
         _selectedAssetAbs.clear();
         _bFolderDirty = SW_TRUE;
     }
 
-    void ContentBrowserModel::selectCrumb( size_t crumbIndex )
+    void ContentBrowserModel::selectBreadcrumb( size_t breadcrumbIndex )
     {
-        if ( crumbIndex >= _listCrumb.size() )
+        if ( breadcrumbIndex >= _listBreadcrumb.size() )
             return;
-        // 조각까지 잘라 둔 사본을 넘긴다 — selectFolder 가 `_listCrumb` 를 덮어쓴다.
-        const vector<ContentBrowserCrumb> listCrumb( _listCrumb.begin(), _listCrumb.begin() + static_cast<std::ptrdiff_t>( crumbIndex + 1 ) );
-        selectFolder( listCrumb.back()._absolutePath, listCrumb );
+        // 조각까지 잘라 둔 사본을 넘긴다 — selectFolder 가 `_listBreadcrumb` 를 덮어쓴다.
+        const vector<ContentBrowserBreadcrumb> listBreadcrumb( _listBreadcrumb.begin(), _listBreadcrumb.begin() + static_cast<std::ptrdiff_t>( breadcrumbIndex + 1 ) );
+        selectFolder( listBreadcrumb.back()._absolutePath, listBreadcrumb );
     }
 
-    void ContentBrowserModel::makeTrailForFolder( string_view folderAbs, vector<ContentBrowserCrumb>& outListCrumb ) const
+    void ContentBrowserModel::makeTrailForFolder( string_view folderAbs, vector<ContentBrowserBreadcrumb>& outListBreadcrumb ) const
     {
         for ( const ContentBrowserRoot& root : _listRoot )
         {
             if ( FileUtil::isPathAtOrUnderRoot( root._absolutePath, folderAbs ) )
             {
-                ContentBrowserCrumb::makeFolderTrail( root._displayName, root._absolutePath, folderAbs, outListCrumb );
+                ContentBrowserBreadcrumb::makeFolderTrail( root._displayName, root._absolutePath, folderAbs, outListBreadcrumb );
                 return;
             }
         }
-        ContentBrowserCrumb::makeFolderTrail( {}, {}, folderAbs, outListCrumb );
+        ContentBrowserBreadcrumb::makeFolderTrail( {}, {}, folderAbs, outListBreadcrumb );
     }
 
     void ContentBrowserModel::navigateBack()
@@ -349,14 +349,14 @@ namespace sw::editor
         // 이력을 적지 않고 고르므로 항목 포인터는 selectFolder 안에서도 유효하다.
         const ContentBrowserHistoryEntry* pEntry = _history.stepBack();
         if ( pEntry != nullptr )
-            selectFolder( pEntry->_folderPathAbs, pEntry->_listCrumb, false );
+            selectFolder( pEntry->_folderPathAbs, pEntry->_listBreadcrumb, false );
     }
 
     void ContentBrowserModel::navigateForward()
     {
         const ContentBrowserHistoryEntry* pEntry = _history.stepForward();
         if ( pEntry != nullptr )
-            selectFolder( pEntry->_folderPathAbs, pEntry->_listCrumb, false );
+            selectFolder( pEntry->_folderPathAbs, pEntry->_listBreadcrumb, false );
     }
 
     void ContentBrowserModel::collectVisibleEntries( string_view searchText, vector<const AssetEntry*>& outListVisible ) const
@@ -412,9 +412,9 @@ namespace sw::editor
     {
         if ( entry._bIsDirectory )
         {
-            vector<ContentBrowserCrumb> listCrumb = _listCrumb;
-            ContentBrowserCrumb::appendChildCrumb( entry._absolutePath, listCrumb );
-            selectFolder( entry._absolutePath, listCrumb );
+            vector<ContentBrowserBreadcrumb> listBreadcrumb = _listBreadcrumb;
+            ContentBrowserBreadcrumb::appendChildBreadcrumb( entry._absolutePath, listBreadcrumb );
+            selectFolder( entry._absolutePath, listBreadcrumb );
             return;
         }
 

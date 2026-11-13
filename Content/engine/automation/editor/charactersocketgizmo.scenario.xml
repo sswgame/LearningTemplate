@@ -10,36 +10,36 @@
 	<DevCommand line="layout.reset"/>
 	<ResizeWindow width="1900" height="1200"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus charactereditor.main"/>
 	<WaitUntil watch="Editor.CharacterEditorSocketCount" atLeast="3" timeoutFrames="135"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 스켈레톤을 읽어 소켓 부모 본이 몸에 맞는다 -->
 	<EditorClick mark="charactereditor.tab.skeleton" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.skeleton" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.loadSkeleton"/>
 	<WaitUntil watch="Editor.CharacterEditorBoneCount" atLeast="30" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 미리보기 몸은 외형 데이터를 읽어야 선다 -->
 	<EditorClick mark="charactereditor.tab.appearance" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.appearance" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.loadData"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.basePreset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.basePreset.first"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 소켓을 마지막에 고른다 — 기즈모의 주인이 된다 -->
 	<EditorClick mark="charactereditor.tab.sockets" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.sockets" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.socket.first"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.tab.preview" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.preview" state="Up"/>
@@ -47,20 +47,20 @@
 	<WaitUntil watch="Editor.CharacterEditorSocketGizmoPlaced" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.CharacterEditorBoneGizmoPlaced" equals="0"/>
 	<Expect watch="Editor.CharacterEditorStatusSet" near="0" tolerance="0.5"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="socketgizmo/before.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
-	<Remember watch="Editor.CharacterEditorSelectedSocketX" as="socketX"/>
+	<EditorWaitStable/>
+	<Store watch="Editor.CharacterEditorSelectedSocketX" as="socketX"/>
 	<EditorDrag mark="charactereditor.gizmoCenter" dx="60" dy="0"/>
 	<WaitUntil watch="Editor.CharacterEditorSelectedSocketX" differsFrom="socketX" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="socketgizmo/dragged.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 되돌리기 한 번이 끌기 전체다 -->
 	<EditorClick mark="charactereditor.socketUndo"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.CharacterEditorSelectedSocketX" sameAs="socketX" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

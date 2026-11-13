@@ -316,13 +316,13 @@ endfunction()
 # 타깃 경계 게이트 — 위 층 껍데기와 같은 틀을 타깃 단위로 넓힌다. `Source/` 가 모든 타깃의 include 루트라 층 표 밖(Core → Engine, Engine → GameFramework, 키트 → 매니페스트 밖 키트)은
 # 헤더만 쓰면 컴파일 · 링크가 되었다. 껍데기는 configure 의 `Scripts/generate/target_layers.py` 가 표(`Config/Rules/Layers/TargetLayers.toml`)와 매니페스트로 쓴다.
 #
-# sw_applyTargetLayerGate: 타깃의 include 자리 맨 앞에 게이트 폴더들을 둔다. 부분(`sw_addModulePart`)은 소유 타깃의 include 자리를 복사하므로 부분을 만들기 전에 부른다.
-# sw_applyModuleLayerGate: 모듈 종류의 공통 게이트와 모듈별 게이트(`module/<이름>` — 매니페스트 전이 폐쇄 밖 모듈의 헤더)를 건다.
+# sw_applyTargetLayerGuard: 타깃의 include 자리 맨 앞에 게이트 폴더들을 둔다. 부분(`sw_addModulePart`)은 소유 타깃의 include 자리를 복사하므로 부분을 만들기 전에 부른다.
+# sw_applyModuleLayerGuard: 모듈 종류의 공통 게이트와 모듈별 게이트(`module/<이름>` — 매니페스트 전이 폐쇄 밖 모듈의 헤더)를 건다.
 # ------------------------------------------------------------------------------
 include("${CMAKE_BINARY_DIR}/generated/sw/config/TargetLayers.cmake")
 set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/TargetLayers.toml")
 
-function(sw_applyTargetLayerGate TARGET_NAME)
+function(sw_applyTargetLayerGuard TARGET_NAME)
 	set(listGate ${ARGN})
 	if(SW_TARGET_TYPE STREQUAL "Server")
 		list(APPEND listGate serverbuild) # 전용 서버 구성은 렌더러 · `Client/` 헤더를 읽지 않는다
@@ -330,8 +330,8 @@ function(sw_applyTargetLayerGate TARGET_NAME)
 		list(APPEND listGate clientbuild) # 클라이언트 구성은 `Server/` 헤더를 읽지 않는다
 	endif()
 	foreach(gate IN LISTS listGate)
-		if(NOT gate IN_LIST SW_TARGET_LAYER_GATES)
-			message(FATAL_ERROR "sw_applyTargetLayerGate(${TARGET_NAME}): unknown gate '${gate}' (Config/Rules/Layers/TargetLayers.toml, or a module without a manifest)")
+		if(NOT gate IN_LIST SW_TARGET_LAYER_GUARDS)
+			message(FATAL_ERROR "sw_applyTargetLayerGuard(${TARGET_NAME}): unknown gate '${gate}' (Config/Rules/Layers/TargetLayers.toml, or a module without a manifest)")
 		endif()
 		target_include_directories(${TARGET_NAME} BEFORE PRIVATE "${SW_TARGET_LAYER_STUB_DIR}/${gate}")
 	endforeach()
@@ -349,20 +349,20 @@ function(sw_requireTemplateDefinitions TARGET_NAME)
 	endif()
 endfunction()
 
-function(sw_applyModuleLayerGate TARGET_NAME KIND MODULE_NAME CONTENT_OWNER)
+function(sw_applyModuleLayerGuard TARGET_NAME KIND MODULE_NAME CONTENT_OWNER)
 	if(KIND STREQUAL "rhi")
-		sw_applyTargetLayerGate(${TARGET_NAME} engine)
+		sw_applyTargetLayerGuard(${TARGET_NAME} engine)
 	elseif(KIND STREQUAL "gameframework")
-		sw_applyTargetLayerGate(${TARGET_NAME} gameframework)
+		sw_applyTargetLayerGuard(${TARGET_NAME} gameframework)
 	elseif(KIND STREQUAL "editor")
-		sw_applyTargetLayerGate(${TARGET_NAME} editor)
+		sw_applyTargetLayerGuard(${TARGET_NAME} editor)
 	elseif(KIND STREQUAL "kit" OR KIND STREQUAL "editorextension")
-		sw_applyTargetLayerGate(${TARGET_NAME} ${KIND} module/${MODULE_NAME})
+		sw_applyTargetLayerGuard(${TARGET_NAME} ${KIND} module/${MODULE_NAME})
 	elseif(KIND STREQUAL "game")
 		# 게임 모듈은 이름이 모두 SWGame 이라 콘텐츠 주인(`game:<폴더>`)으로 가른다.
-		string(REPLACE "game:" "SWGame_" gameGate "${CONTENT_OWNER}")
-		sw_applyTargetLayerGate(${TARGET_NAME} game module/${gameGate})
+		string(REPLACE "game:" "SWGame_" gameGuard "${CONTENT_OWNER}")
+		sw_applyTargetLayerGuard(${TARGET_NAME} game module/${gameGuard})
 	else()
-		message(FATAL_ERROR "sw_applyModuleLayerGate(${TARGET_NAME}): unknown module kind '${KIND}'")
+		message(FATAL_ERROR "sw_applyModuleLayerGuard(${TARGET_NAME}): unknown module kind '${KIND}'")
 	endif()
 endfunction()

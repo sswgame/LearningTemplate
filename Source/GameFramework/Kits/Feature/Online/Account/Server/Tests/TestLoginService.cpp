@@ -84,13 +84,13 @@ namespace
 
         ~LoginFixture()
         {
-            pump();
+            poll();
             _store.shutdown();
             (void)_store.pollCompletions();
             _service.shutdown();
         }
 
-        void pump()
+        void poll()
         {
             for ( int32 round = 0; round < 4; ++round )
             {
@@ -103,7 +103,7 @@ namespace
 
         LoginCompletion take( uint64 tag )
         {
-            pump();
+            poll();
             vector<LoginCompletion> listCompletion;
             _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
@@ -136,7 +136,7 @@ namespace
 
         vector<LoginEvent> takeEvents()
         {
-            pump();
+            poll();
             vector<LoginEvent> listEvent;
             _service.pollEvents( listEvent );
             return listEvent;
@@ -211,7 +211,7 @@ SW_TEST_CASE( LoginServiceTest, ClientBuildIsChecked )
         audit._subject = "config";
         audit._timeMs  = version;
         config.submitSet( rig._store, key, value, audit );
-        rig.pump();
+        rig.poll();
     };
     setText( "account.minimum_build.windows", "1.2.0", 1 );
     setText( "account.recommended_build.windows", "1.4.0", 2 );
@@ -325,7 +325,7 @@ SW_TEST_CASE( LoginServiceTest, DisconnectThenResume )
 }
 
 /** @brief [LoginServiceTest] 서버 둘: 다른 서버의 로그인이 민 세션은 버스 알림(또는 주기 읽기)으로 알아채 접속 테이블에서 뺀다. 지난 세션의 늦은 알림은 새 세션을 건드리지 않는다 */
-SW_TEST_CASE( LoginServiceTest, RevocationOnAnotherServerIsNoticed )
+SW_TEST_CASE( LoginServiceTest, RevocationOnAnotherServerIsNotified )
 {
     MemoryServiceDatabase database;
     LoginFixture          rigA( database );
@@ -362,7 +362,7 @@ SW_TEST_CASE( LoginServiceTest, RefreshFindsMissedRevocation )
     SW_EXPECT_TRUE( rigA._service.isAccountOnline( accountID ) );
 
     rigA._service.refreshOnlineSessions( UnixMilliseconds{ kNowMs }, 10 );
-    rigA.pump();
+    rigA.poll();
     SW_EXPECT_FALSE( rigA._service.isAccountOnline( accountID ) );
     SW_EXPECT_TRUE( rigB._service.isAccountOnline( accountID ) );
 }

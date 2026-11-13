@@ -288,7 +288,7 @@ namespace sw
             setPauseMenuDocument( PackEngineSettings::resolve( packSettings._uiPauseMenu, defaultAssets._uiPauseMenu ) );
         // 모듈을 내리기 전에 그 모듈 타입의 화면을 닫는다(타입의 모듈 이름으로 고른다 — 코드 주소가 아니다).
         _moduleUnloadingSubscription = engine::getSubsystem<TypeRegistry>().subscribeModuleUnloading(
-            TypeRegistry::ModuleUnloadingDelegate::create<&UISystem::onModuleUnloadingNotice>( this ) );
+            TypeRegistry::ModuleUnloadingDelegate::create<&UISystem::onModuleUnloadingNotification>( this ) );
         return SubsystemInitResult::Succeeded;
     }
 

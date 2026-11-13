@@ -7,19 +7,19 @@
 <Scenario name="editor.toastreveal" fixedDelta="0.0166667" timeoutFrames="200" startAfter="Immediately" input="exclusive">
 	<ResizeWindow width="1600" height="900"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="explorer.dryRun 1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="notify.reveal /tmp/reveal/shot.png"/>
 	<!-- 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="notification.showInExplorer" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="notification.showInExplorer" state="Up"/>
 	<WaitUntil watch="Editor.ExplorerLaunchCount" atLeast="1" timeoutFrames="60"/>
 	<Expect watch="Editor.ExplorerCommandWellFormed" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="explorer.dryRun 0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

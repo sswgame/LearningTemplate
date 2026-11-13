@@ -9,7 +9,7 @@
 <Scenario name="editor.focusloss" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
 	<DevCommand line="layout.reset"/>
 	<ResizeWindow width="1600" height="900"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
 	<!-- 오른쪽 단추 + D 로 날아가는 한가운데서 포커스를 잃었다가 얻는다 -->
 	<EditorClick mark="sceneView.canvas" button="1" state="Down"/>
@@ -21,8 +21,8 @@
 	<Wait frames="20"/>
 	<EditorKey key="D" state="Up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewCameraX" atLeast="3"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

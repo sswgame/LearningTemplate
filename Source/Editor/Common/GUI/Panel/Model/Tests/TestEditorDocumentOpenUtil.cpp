@@ -131,29 +131,29 @@ SW_TEST_CASE( EditorDocumentOpenUtilTest, CancelWithNoOpenDocumentDoesNotAskAgai
 // 결함(감사 P0-4): 옮김 방송이 연 문서 경로만 고치고, 디스크에서 글을 고친 깨끗한 참조 문서는 옛 id 를 든 채 남아 다음 저장이 고친 참조를 덮었다.
 SW_TEST_CASE( EditorDocumentOpenUtilTest, AssetMoveRemapsAndFindsRewrittenReferrer )
 {
-    EditorAssetMoveNotice notice;
-    notice._listOldID       = { "game/a/textures/rock.png", "game/a/materials/rock.material" };
-    notice._listNewID       = { "game/a/textures/stone.png", "game/b/materials/rock.material" };
-    notice._listRewrittenID = { "game/a/maps/level.scene.xml", "game/b/materials/rock.material" }; // 옮긴 참조자는 새 id 로 온다
+    EditorAssetMoveEvent event;
+    event._listOldID       = { "game/a/textures/rock.png", "game/a/materials/rock.material" };
+    event._listNewID       = { "game/a/textures/stone.png", "game/b/materials/rock.material" };
+    event._listRewrittenID = { "game/a/maps/level.scene.xml", "game/b/materials/rock.material" }; // 옮긴 참조자는 새 id 로 온다
 
     // 옮긴 에셋 자신(참조자가 아니다): 경로만 따라가고 다시 읽지 않는다
     string         loaded = "game/a/textures/rock.png";
     vector<string> listRecent{ "game/a/textures/rock.png", "game/a/other.xml" };
-    SW_EXPECT_FALSE( EditorDocumentOpenUtil::applyAssetMove( notice, loaded, listRecent ) );
+    SW_EXPECT_FALSE( EditorDocumentOpenUtil::applyAssetMove( event, loaded, listRecent ) );
     SW_EXPECT_EQUAL( string( "game/a/textures/stone.png" ), loaded );
     SW_EXPECT_TRUE( ( listRecent == vector<string>{ "game/a/textures/stone.png", "game/a/other.xml" } ) );
 
     // 옮기지 않은 참조 문서: 글을 고쳤으니 다시 읽는다
     loaded = "game/a/maps/level.scene.xml";
-    SW_EXPECT_TRUE( EditorDocumentOpenUtil::applyAssetMove( notice, loaded, listRecent ) );
+    SW_EXPECT_TRUE( EditorDocumentOpenUtil::applyAssetMove( event, loaded, listRecent ) );
     SW_EXPECT_EQUAL( string( "game/a/maps/level.scene.xml" ), loaded );
 
     // 함께 옮긴 참조 문서: 새 id 로 바꾼 뒤 그 id 로 찾는다
     loaded = "game/a/materials/rock.material";
-    SW_EXPECT_TRUE( EditorDocumentOpenUtil::applyAssetMove( notice, loaded, listRecent ) );
+    SW_EXPECT_TRUE( EditorDocumentOpenUtil::applyAssetMove( event, loaded, listRecent ) );
     SW_EXPECT_EQUAL( string( "game/b/materials/rock.material" ), loaded );
 
     // 연 문서가 없으면 다시 읽을 것도 없다
     loaded.clear();
-    SW_EXPECT_FALSE( EditorDocumentOpenUtil::applyAssetMove( notice, loaded, listRecent ) );
+    SW_EXPECT_FALSE( EditorDocumentOpenUtil::applyAssetMove( event, loaded, listRecent ) );
 }

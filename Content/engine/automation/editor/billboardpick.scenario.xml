@@ -9,22 +9,22 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorWatchProperty" value="CameraComponent._priority"/>
 	<Variable name="gv_editorWatchVisualizer" value="billboard"/>
 	<Expect watch="Editor.VisualizerOn" equals="1"/>
 	<Expect watch="Editor.SelectionCount" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.billboard.GameCamera"/>
 	<WaitUntil watch="Editor.SelectionCount" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.SelectedProperty" equals="0"/>
 	<Expect watch="Editor.SelectedIsEditorCamera" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.visualizer.billboard"/>
 	<WaitUntil watch="Editor.VisualizerOn" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.visualizer.billboard"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

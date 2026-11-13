@@ -12,25 +12,25 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus content_browser"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="content.open game/empty/models"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.ContentSavedSearchCount" equals="0"/>
 	<!-- ① 저장 검색 -->
 	<EditorClick mark="contentBrowser.search"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="crate"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.saveSearch" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.saveSearch" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.collectionName"/>
 	<EditorKey key="Ctrl+A"/>
 	<EditorText value="Crates"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.collectionName.confirm" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.collectionName.confirm" state="Up"/>
@@ -38,25 +38,25 @@
 	<EditorClick mark="contentBrowser.search"/>
 	<EditorKey key="Ctrl+A"/>
 	<EditorKey key="Delete"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.savedSearch.Crates"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- ② 컬렉션 -->
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.newCollection" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.newCollection" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.collectionName"/>
 	<EditorText value="Level Kit"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.collectionName.confirm" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.collectionName.confirm" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.collection.Level Kit"/>
 	<WaitUntil watch="Editor.ContentCollectionItemCount" equals="1" timeoutFrames="60"/>
 	<CaptureEditorUI file="savedsearch/collections.png" maxMagentaFraction="0"/>
@@ -65,14 +65,14 @@
 	<EditorClick mark="contentBrowser.collection.close" state="Up"/>
 	<WaitUntil watch="Editor.ContentCollectionItemCount" equals="-1" timeoutFrames="60"/>
 	<!-- ③ 팔레트도 에셋을 찾는다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+Shift+P"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="crate_medium.mesh"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="savedsearch/palette.png" maxMagentaFraction="0"/>
 	<EditorKey key="Escape"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

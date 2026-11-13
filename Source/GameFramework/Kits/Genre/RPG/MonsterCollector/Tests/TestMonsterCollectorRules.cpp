@@ -65,7 +65,7 @@ namespace
     };
 
     /** @brief 전투 상태 바이트를 손으로 씁니다. 플레이어 편의 칸만 망칩니다(같은 규칙을 두 편에 쓴다). */
-    struct MonsterForgedBattle
+    struct MonsterFixtureBattle
     {
         sw::vector<sw::MonsterInstance> _listPlayer{};
         sw::MonsterInstance             _foe{};
@@ -200,18 +200,18 @@ namespace
         int32 countGrowth( sw::MonsterGrowthEvent::Kind kind ) const { return sw::VectorUtil::countBy<&sw::MonsterGrowthEvent::_kind>( _listGrowth, kind ); }
 
         /** @brief 맞는 전투 상태(플레이어 하나가 strike, 상대 하나, 야생)입니다. */
-        MonsterForgedBattle makeForged()
+        MonsterFixtureBattle makeFixture()
         {
-            MonsterForgedBattle forged;
-            forged._listPlayer.push_back( make( "normie", 50, "strike" ) );
-            forged._foe = make( "normie", 50, "strike" );
-            return forged;
+            MonsterFixtureBattle fixture;
+            fixture._listPlayer.push_back( make( "normie", 50, "strike" ) );
+            fixture._foe = make( "normie", 50, "strike" );
+            return fixture;
         }
 
-        bool readForged( const MonsterForgedBattle& forged )
+        bool readFixture( const MonsterFixtureBattle& fixture )
         {
             sw::Archive written;
-            forged.write( written );
+            fixture.write( written );
             sw::Archive reading( written.getData(), written.getSize() );
             return _battle.readState( reading );
         }
@@ -613,16 +613,16 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, StorageState )
 
     const auto refuses = [this]( const sw::MonsterInstance& monster, uint32 partyCount )
     {
-        sw::Archive forged;
-        forged << partyCount;
+        sw::Archive fixture;
+        fixture << partyCount;
         for ( uint32 index = 0; index < partyCount; ++index )
         {
-            monster.writeState( forged );
+            monster.writeState( fixture );
         }
-        forged << static_cast<uint32>( 0 );
-        sw::Archive        readingForged( forged.getData(), forged.getSize() );
+        fixture << static_cast<uint32>( 0 );
+        sw::Archive        readingFixture( fixture.getData(), fixture.getSize() );
         sw::MonsterStorage target;
-        return target.initialize( &_catalog, 8 ) && target.readState( readingForged ) == false && target.getParty().empty();
+        return target.initialize( &_catalog, 8 ) && target.readState( readingFixture ) == false && target.getParty().empty();
     };
     const sw::MonsterInstance good = make( "normie", 5, "strike" );
     SW_EXPECT_FALSE( refuses( good, 6 ) );
@@ -1240,109 +1240,109 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleStateRefusals )
 
     const auto refuses = [this, &snapshot]( auto mutate )
     {
-        MonsterForgedBattle forged = makeForged();
-        mutate( forged );
-        return readForged( forged ) == false && MonsterTestUtil::isSameState( snapshot, _battle );
+        MonsterFixtureBattle fixture = makeFixture();
+        mutate( fixture );
+        return readFixture( fixture ) == false && MonsterTestUtil::isSameState( snapshot, _battle );
     };
     const auto moveKind   = static_cast<uint8>( sw::MonsterActionKind::Move );
     const auto switchKind = static_cast<uint8>( sw::MonsterActionKind::Switch );
     const auto ballKind   = static_cast<uint8>( sw::MonsterActionKind::Ball );
 
-    SW_EXPECT_TRUE( refuses( [&]( MonsterForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( [&]( MonsterFixtureBattle& fixture )
     {
-        forged._actionKind  = moveKind;
-        forged._actionIndex = 9; // 배열을 넘는다
+        fixture._actionKind  = moveKind;
+        fixture._actionIndex = 9; // 배열을 넘는다
     } ) );
-    SW_EXPECT_TRUE( refuses( [&]( MonsterForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( [&]( MonsterFixtureBattle& fixture )
     {
-        forged._actionKind  = moveKind;
-        forged._actionIndex = -1;
+        fixture._actionKind  = moveKind;
+        fixture._actionIndex = -1;
     } ) );
-    SW_EXPECT_TRUE( refuses( [&]( MonsterForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( [&]( MonsterFixtureBattle& fixture )
     {
-        forged._actionKind  = moveKind;
-        forged._actionIndex = 3; // 빈 슬롯
+        fixture._actionKind  = moveKind;
+        fixture._actionIndex = 3; // 빈 슬롯
     } ) );
-    SW_EXPECT_TRUE( refuses( [&]( MonsterForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( [&]( MonsterFixtureBattle& fixture )
     {
-        forged._actionKind  = switchKind;
-        forged._actionIndex = 0; // 나선 개체
+        fixture._actionKind  = switchKind;
+        fixture._actionIndex = 0; // 나선 개체
     } ) );
-    SW_EXPECT_TRUE( refuses( [&]( MonsterForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( [&]( MonsterFixtureBattle& fixture )
     {
-        forged._actionKind = ballKind;
-        forged._wild       = 0;
+        fixture._actionKind = ballKind;
+        fixture._wild       = 0;
     } ) );
-    SW_EXPECT_TRUE( refuses( [&]( MonsterForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( [&]( MonsterFixtureBattle& fixture )
     {
-        forged._actionKind     = ballKind;
-        forged._ballMultiplier = 0.0f;
+        fixture._actionKind     = ballKind;
+        fixture._ballMultiplier = 0.0f;
     } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._actionKind = 9; } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._stage = sw::MonsterBattle::kMaxStage + 1; } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._stage = sw::MonsterBattle::kMinStage - 1; } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._activeIndex = 1; } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._activeIndex = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._needsSwitch = 2; } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._wild = 2; } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._result = 9; } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._escapeAttempts = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._listPlayer[0]._hp = 0; } ) ); // 진행 중인데 쓰러진 개체가 교체를 기다리지 않는다
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._actionKind = 9; } ) );
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._stage = sw::MonsterBattle::kMaxStage + 1; } ) );
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._stage = sw::MonsterBattle::kMinStage - 1; } ) );
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._activeIndex = 1; } ) );
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._activeIndex = -1; } ) );
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._needsSwitch = 2; } ) );
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._wild = 2; } ) );
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._result = 9; } ) );
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._escapeAttempts = -1; } ) );
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._listPlayer[0]._hp = 0; } ) ); // 진행 중인데 쓰러진 개체가 교체를 기다리지 않는다
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
     {
-        forged._listPlayer[0]._hp = 0;
-        forged._needsSwitch       = 1; // 대신 나설 개체가 없다
+        fixture._listPlayer[0]._hp = 0;
+        fixture._needsSwitch       = 1; // 대신 나설 개체가 없다
     } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._listPlayer[0]._speciesID = "nope"; } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._listPlayer[0]._natureID = "nope"; } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._listPlayer[0]._arrMove[1]._moveID = "nope"; } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._foe._speciesID = "nope"; } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._listPlayer[0]._speciesID = "nope"; } ) );
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._listPlayer[0]._natureID = "nope"; } ) );
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._listPlayer[0]._arrMove[1]._moveID = "nope"; } ) );
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._foe._speciesID = "nope"; } ) );
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
     {
-        forged._weatherID    = "nope";
-        forged._weatherTurns = 2;
+        fixture._weatherID    = "nope";
+        fixture._weatherTurns = 2;
     } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._weatherTurns = 2; } ) ); // 날씨가 없는데 턴이 있다
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._weatherID = "Rain"; } ) ); // 턴 0 인 날씨는 없다
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._weatherTurns = 2; } ) ); // 날씨가 없는데 턴이 있다
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._weatherID = "Rain"; } ) ); // 턴 0 인 날씨는 없다
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
     {
-        forged._weatherID    = "Rain";
-        forged._weatherTurns = -2;
+        fixture._weatherID    = "Rain";
+        fixture._weatherTurns = -2;
     } ) );
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._result = static_cast<uint8>( sw::MonsterBattleResult::Captured ); } ) ); // 잡은 개체가 없다
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
-    { forged._captured._speciesID = "nope"; } ) );
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._result = static_cast<uint8>( sw::MonsterBattleResult::Captured ); } ) ); // 잡은 개체가 없다
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
+    { fixture._captured._speciesID = "nope"; } ) );
 
     // 빈 파티의 행동은 시작 전 전투에 없다.
-    SW_EXPECT_TRUE( refuses( []( MonsterForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( MonsterFixtureBattle& fixture )
     {
-        forged._listPlayer.clear();
-        forged._actionKind = 1;
+        fixture._listPlayer.clear();
+        fixture._actionKind = 1;
     } ) );
 
     // 맞는 상태는 읽히고, 그대로 쓸 수 있다.
-    MonsterForgedBattle valid = makeForged();
-    valid._actionKind         = moveKind;
-    valid._weatherID          = "Rain";
-    valid._weatherTurns       = -1;
-    SW_REQUIRE_TRUE( readForged( valid ) );
+    MonsterFixtureBattle valid = makeFixture();
+    valid._actionKind          = moveKind;
+    valid._weatherID           = "Rain";
+    valid._weatherTurns        = -1;
+    SW_REQUIRE_TRUE( readFixture( valid ) );
     SW_EXPECT_EQUAL( 110, _battle.getActive( player )._hp );
     SW_EXPECT_EQUAL( -1, _battle.getWeatherTurns() );
     SW_EXPECT_TRUE( _battle.isWild() );

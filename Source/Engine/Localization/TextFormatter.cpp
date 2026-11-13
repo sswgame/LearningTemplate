@@ -61,9 +61,9 @@ namespace sw
             void bindMap( TextLiteralMapFunc pfnMap ) { _pfnMap = pfnMap; }
 
             /** @brief 최상위 메시지를 훑습니다. 구문 오류가 없으면 true 입니다(인자 오류는 `_error` 에만 남긴다). */
-            bool walk( string& outText )
+            bool visit( string& outText )
             {
-                const bool bParsed = walkMessage( 0, false, true, outText );
+                const bool bParsed = parseMessage( 0, false, true, outText );
                 if ( bParsed && _position < _pattern.size() )
                     return fail( "unmatched '}'" );
                 return bParsed;
@@ -142,7 +142,7 @@ namespace sw
              * @brief 메시지 하나(최상위 또는 분기 본문)를 `}` 또는 끝까지 훑습니다.
              * @param bInPlural `#` 이 숫자 위치인지(복수형 분기 안)를 나타냅니다.
              */
-            bool walkMessage( uint32 depth, bool bInPlural, bool bEmit, string& outText )
+            bool parseMessage( uint32 depth, bool bInPlural, bool bEmit, string& outText )
             {
                 if ( depth > kMaxDepth )
                     return fail( "message nesting is too deep" );
@@ -162,7 +162,7 @@ namespace sw
                         emitLiteral( bEmit, rawRun, resolvedRun, outText );
                         rawRun.clear();
                         resolvedRun.clear();
-                        if ( walkArgument( depth, bEmit, outText ) == false )
+                        if ( parseArgument( depth, bEmit, outText ) == false )
                             return false;
                         continue;
                     }
@@ -182,7 +182,7 @@ namespace sw
                     if ( character == '\'' )
                     {
                         const size_t start = _position;
-                        walkQuote( bInPlural, resolvedRun );
+                        parseQuote( bInPlural, resolvedRun );
                         rawRun.append( _pattern.substr( start, _position - start ) );
                         continue;
                     }
@@ -195,7 +195,7 @@ namespace sw
             }
 
             /** @brief 작은따옴표 하나를 처리합니다. 해석한 텍스트는 @p inoutResolved 에 붙습니다. */
-            void walkQuote( bool bInPlural, string& inoutResolved )
+            void parseQuote( bool bInPlural, string& inoutResolved )
             {
                 const size_t next = _position + 1;
                 if ( next < _pattern.size() && _pattern[next] == '\'' )
@@ -231,7 +231,7 @@ namespace sw
             }
 
             /** @brief `{` 에서 시작하는 인자 하나를 짝 `}` 뒤까지 훑습니다. */
-            bool walkArgument( uint32 depth, bool bEmit, string& outText )
+            bool parseArgument( uint32 depth, bool bEmit, string& outText )
             {
                 const size_t openPos = _position;
                 ++_position; // '{'
@@ -266,7 +266,7 @@ namespace sw
                         return fail( "',' expected after plural/select" );
                     ++_position;
                     const TextChoiceKind kind = type == "plural" ? TextChoiceKind::Plural : ( type == "select" ? TextChoiceKind::Select : TextChoiceKind::Ordinal );
-                    return walkOptions( depth, name, kind, openPos, bEmit, outText );
+                    return parseOptions( depth, name, kind, openPos, bEmit, outText );
                 }
 
                 string_view style;
@@ -291,7 +291,7 @@ namespace sw
             }
 
             /** @brief plural · selectordinal · select 의 분기들을 훑고, Format 이면 맞는 분기 하나만 씁니다. */
-            bool walkOptions( uint32 depth, string_view name, TextChoiceKind kind, size_t openPos, bool bEmit, string& outText )
+            bool parseOptions( uint32 depth, string_view name, TextChoiceKind kind, size_t openPos, bool bEmit, string& outText )
             {
                 const bool          bPlural   = kind != TextChoiceKind::Select;
                 const bool          bOrdinal  = kind == TextChoiceKind::Ordinal;
@@ -352,7 +352,7 @@ namespace sw
                     listBodyStart.push_back( _position );
                     if ( bRebuild )
                         outText.append( selector ).append( " {" );
-                    if ( walkMessage( depth + 1, bPlural, bRebuild, outText ) == false )
+                    if ( parseMessage( depth + 1, bPlural, bRebuild, outText ) == false )
                         return false;
                     if ( _position >= _pattern.size() || _pattern[_position] != '}' )
                         return fail( "'}' expected to close a branch" );
@@ -386,7 +386,7 @@ namespace sw
                 _position                = listBodyStart[chosen];
                 if ( bPlural )
                     _listPluralNumber.push_back( formatPluralNumber( *pArgument, value - offset ) );
-                const bool bWritten = walkMessage( depth + 1, bPlural, true, outText );
+                const bool bWritten = parseMessage( depth + 1, bPlural, true, outText );
                 if ( bPlural )
                     _listPluralNumber.pop_back();
                 _position = endPosition;
@@ -622,39 +622,39 @@ namespace sw
     expected<void> TextFormatter::format( string_view pattern, const TextArgumentList& arguments, const CultureInfo& culture, string& outText )
     {
         outText.clear();
-        TextFormatParser walker( pattern, TextParseMode::Format );
-        walker.bindFormat( &arguments, &culture );
-        const bool bParsed = walker.walk( outText );
+        TextFormatParser traversal( pattern, TextParseMode::Format );
+        traversal.bindFormat( &arguments, &culture );
+        const bool bParsed = traversal.visit( outText );
         if ( bParsed == false )
             outText = string( pattern ); // 구문이 틀린 번역은 원문 그대로 쓴다. 반쯤 해석된 텍스트보다 낫다
-        if ( bParsed && walker.getError().empty() )
+        if ( bParsed && traversal.getError().empty() )
             return {};
-        return unexpected( Error{ ErrorKind::InvalidArgument, "the text pattern cannot be formatted", walker.getError() } );
+        return unexpected( Error{ ErrorKind::InvalidArgument, "the text pattern cannot be formatted", traversal.getError() } );
     }
 
     expected<void> TextFormatter::validatePattern( string_view pattern )
     {
         string           ignored;
-        TextFormatParser walker( pattern, TextParseMode::Validate );
-        if ( walker.walk( ignored ) )
+        TextFormatParser traversal( pattern, TextParseMode::Validate );
+        if ( traversal.visit( ignored ) )
             return {};
-        return unexpected( Error{ ErrorKind::InvalidArgument, "the text pattern is not valid", walker.getError() } );
+        return unexpected( Error{ ErrorKind::InvalidArgument, "the text pattern is not valid", traversal.getError() } );
     }
 
     void TextFormatter::collectArgumentNames( string_view pattern, vector<string>& outListName )
     {
         string           ignored;
-        TextFormatParser walker( pattern, TextParseMode::Validate );
-        (void)walker.walk( ignored );
-        outListName.assign( walker.getNames().begin(), walker.getNames().end() );
+        TextFormatParser traversal( pattern, TextParseMode::Validate );
+        (void)traversal.visit( ignored );
+        outListName.assign( traversal.getNames().begin(), traversal.getNames().end() );
     }
 
     string TextFormatter::mapLiteralText( string_view pattern, TextLiteralMapFunc pfnMap )
     {
         string           rebuilt;
-        TextFormatParser walker( pattern, TextParseMode::Rebuild );
-        walker.bindMap( pfnMap );
-        if ( walker.walk( rebuilt ) == false )
+        TextFormatParser traversal( pattern, TextParseMode::Rebuild );
+        traversal.bindMap( pfnMap );
+        if ( traversal.visit( rebuilt ) == false )
             rebuilt = string( pattern );
         return rebuilt;
     }

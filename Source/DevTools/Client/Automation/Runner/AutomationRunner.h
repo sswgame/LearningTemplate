@@ -10,8 +10,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskFuture.h"
 
+#include "DevTools/Client/Automation/Runner/AutomationEvaluator.h"
 #include "DevTools/Client/Automation/Runner/AutomationHangWatch.h"
-#include "DevTools/Client/Automation/Runner/AutomationJudge.h"
 #include "DevTools/Client/Automation/Runner/AutomationReportWriter.h"
 #include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
 #include "DevTools/Client/Automation/Scenario/AutomationFrameStats.h"
@@ -29,7 +29,7 @@ namespace sw
     class BusyClock;
     /**
      * @class AutomationStepTimeline
-     * @brief 실행기가 "지금 몇 번째 프레임 · 단계이고 무엇을 기다리는가" 를 적어 두는 칸입니다. 판정(`AutomationJudge`)은 이 값을 직접 읽지 않고 단계 문맥으로만 받는다.
+     * @brief 실행기가 "지금 몇 번째 프레임 · 단계이고 무엇을 기다리는가" 를 적어 두는 칸입니다. 판정(`AutomationEvaluator`)은 이 값을 직접 읽지 않고 단계 문맥으로만 받는다.
      * @details 벽시계가 프레임 종류별로 어디에 쓰였는지 모으는 `AutomationTimeline`(보고의 `timeline`)과 다르다 — 그쪽은 잰 값의 합계이고 이쪽은 진행 상태다.
      *          멤버는 게임 스레드가 `AutomationRunner` 와 엔진 단계(`AutomationRunnerSteps.cpp`)에서 직접 읽고 쓴다(진행 상태라 소유자는 하나, 접근 규칙이 따로 없다).
      *          상용 엔진 비교: 언리얼 `FAutomationTestBase` 의 `LatentCommands` 대기열이 프레임 · 대기 상태를 한 곳에 두는 것과 같다.
@@ -59,14 +59,14 @@ namespace sw
         uint8                            _bFinishWaiting : 1; ///< 이 프레임에 `<Pass/>` 가 뒤의 일을 기다린다 - 시나리오 시한에 세지 않는다(그 대기는 `kMaxFinishWaitFrames` 가 따로 묶는다)
         uint8                            _bClockHeld     : 1; ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
         [[maybe_unused]] uint8           _reserved       : 7;
-        uint32                           _assetSettledFrameCount; ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다
-        unique_ptr<IAutomationStepState> _pHeldStepState;         ///< 붙잡은 단계가 맡긴 상태(`setHeldStepState`). 그 단계가 놓이면 지운다
-        const AutomationStep*            _pHeldStateStep;         ///< `_pHeldStepState` 를 맡긴 단계(없으면 nullptr)
-        uint32                           _holdFrameCount;         ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(그동안 `_frameIndex` 는 그대로다)
-        float64                          _holdStartSeconds;       ///< 지금 단계가 붙잡기 시작한 컴파일을 뺀 시계 초(`readNowSecondsWithoutCompile`, `<WaitUntil timeoutWallSeconds>` 의 시한 기준)
-        uint32                           _clockHoldFrameCount;    ///< 시계 잡기 조건이 이어서 붙잡은 프레임
-        uint32                           _seenFrameCount;         ///< `onFrameEnd` 가 불린 횟수(붙잡힌 프레임도 센다 — 크래시 자리를 갱신하는 박자)
-        float64                          _waitReportedSeconds;    ///< 지금 대기를 마지막으로 로그에 찍은 단조 시계 초(아직 찍지 않았으면 0 — `reportOngoingWait`)
+        uint32                           _assetStableFrameCount; ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다
+        unique_ptr<IAutomationStepState> _pHeldStepState;        ///< 붙잡은 단계가 맡긴 상태(`setHeldStepState`). 그 단계가 놓이면 지운다
+        const AutomationStep*            _pHeldStateStep;        ///< `_pHeldStepState` 를 맡긴 단계(없으면 nullptr)
+        uint32                           _holdFrameCount;        ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(그동안 `_frameIndex` 는 그대로다)
+        float64                          _holdStartSeconds;      ///< 지금 단계가 붙잡기 시작한 컴파일을 뺀 시계 초(`readNowSecondsWithoutCompile`, `<WaitUntil timeoutWallSeconds>` 의 시한 기준)
+        uint32                           _clockHoldFrameCount;   ///< 시계 잡기 조건이 이어서 붙잡은 프레임
+        uint32                           _seenFrameCount;        ///< `onFrameEnd` 가 불린 횟수(붙잡힌 프레임도 센다 — 크래시 자리를 갱신하는 박자)
+        float64                          _waitReportedSeconds;   ///< 지금 대기를 마지막으로 로그에 찍은 단조 시계 초(아직 찍지 않았으면 0 — `reportOngoingWait`)
         AutomationStepTimeline();
 
         /** @brief 스크린샷 경로를 대기열에 더합니다(`<Screenshot>`). 렌더 패킷이 한 장씩 꺼내 간다. */
@@ -100,7 +100,7 @@ namespace sw
      *          가상 입력 원천(`VirtualInputScript`)으로 옮겨 `InputManager` 에 붙이므로, 입력 단계의 프레임 번호는 가상 입력 프레임 번호와 같다.
      *          단언과 환경 단계는 그 프레임의 씬 틱 뒤(`onFrameEnd`)에 돈다. 단언 실패는 적어 두고 계속 가며, 끝에서 `Failed` 가 된다.
      *          끝나면 가상 입력을 떼고 `[Scenario]` 요약 줄과 (요청됐으면) JSON 보고를 쓴다. 게임 스레드에서만 쓴다.
-     *          판정(비교 · 실패 · 로그 게이트)은 `AutomationJudge`, 진행 상태(프레임 · 단계 순번 · 대기 · 시한)는 `AutomationStepTimeline`, 보고 쓰기는 `AutomationReportWriter` 가 값 멤버로 맡는다 —
+     *          판정(비교 · 실패 · 로그 게이트)은 `AutomationEvaluator`, 진행 상태(프레임 · 단계 순번 · 대기 · 시한)는 `AutomationStepTimeline`, 보고 쓰기는 `AutomationReportWriter` 가 값 멤버로 맡는다 —
      *          실행기는 시작 · 프레임 · 끝맺음을 잇는 얇은 몸통이다.
      */
     class SW_DEVTOOLS_API AutomationRunner final : public AutomationStepContext
@@ -162,7 +162,7 @@ namespace sw
         /** @brief 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수입니다(Engine 가 `onFrameEnd` 전에 넘긴다). `<ExpectImage>` 는 이것이 오를 때까지 기다린다. */
         void setCompletedScreenshotCount( uint32 completedCount ) { _run._screenshotCompletedCount = completedCount; }
         /** @brief 지표 값 줄들입니다(`darkFraction(0,0,1,0.12) park.ppm = 0.034`). 보고에 적습니다. */
-        const vector<string>& getMetricLines() const { return _judge.getMetricLines(); }
+        const vector<string>& getMetricLines() const { return _evaluator.getMetricLines(); }
 
         // --- 단계 문맥(`AutomationStepContext`): 단계 함수가 쓰는 좁은 면입니다 ---
 
@@ -192,13 +192,13 @@ namespace sw
         IAutomationStepState& setHeldStepState( const AutomationStep& step, unique_ptr<IAutomationStepState> state ) override;
         /** @brief 단계가 시나리오를 끝냅니다. `Pass` · `Fail` · `Skip` 을 종료 코드(`Passed` · `Failed` · `Skipped`)로 번역해 `finish` 를 부릅니다. */
         void endScenario( AutomationStepEnd end, string_view reason ) override;
-        /** @brief 워커가 낼 값의 상한 판정을 `<Pass/>` 로 미룹니다(`AutomationJudge::deferExpectAtMost`). */
+        /** @brief 워커가 낼 값의 상한 판정을 `<Pass/>` 로 미룹니다(`AutomationEvaluator::deferExpectAtMost`). */
         void deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue ) override
         {
-            _judge.deferExpectAtMost( step, std::move( description ), limit, std::move( pValue ) );
+            _evaluator.deferExpectAtMost( step, std::move( description ), limit, std::move( pValue ) );
         }
-        void                        rememberText( string_view name, string text ) override;
-        [[nodiscard]] const string* findRememberedText( string_view name ) const override;
+        void                        storeText( string_view name, string text ) override;
+        [[nodiscard]] const string* findStoredText( string_view name ) const override;
         /** @brief 이 시나리오의 산출물 폴더(`Saved/Automation/<이름>/`)입니다. */
         const string& getOutputDirectory() const override { return _outputDirectory; }
         /** @brief 상대 경로면 산출물 폴더 아래로 둡니다(단계 처리기가 파일을 쓸 때). */
@@ -233,20 +233,20 @@ namespace sw
         bool                      hasEnded() const { return _bEnded == SW_TRUE; }
         AutomationResult          getResult() const { return _result; }
         const AutomationScenario& getScenario() const { return _scenario; }
-        const vector<string>&     getFailures() const { return _judge.getFailures(); }
+        const vector<string>&     getFailures() const { return _evaluator.getFailures(); }
         /** @brief `-scenario-update-golden` 으로 이 실행이 쓴 골든(리소스 id)입니다. */
-        const vector<string>& getUpdatedGoldens() const { return _judge.getUpdatedGoldens(); }
+        const vector<string>& getUpdatedGoldens() const { return _evaluator.getUpdatedGoldens(); }
         /** @brief 로그 게이트가 처리하지 않았다고 본 줄입니다. 비어 있지 않으면 실패가 없어도 결과는 `UnhandledLog` 입니다. */
-        const vector<string>& getUnhandledLogs() const { return _judge.getUnhandledLogs(); }
+        const vector<string>& getUnhandledLogs() const { return _evaluator.getUnhandledLogs(); }
         /** @brief 지금까지 모은 Warning · Error 줄 수입니다(허용 판정 전 — 진행 표시용, 판정은 끝의 로그 게이트). */
-        uint32        getCapturedWarningErrorCount() const { return _judge.getCapturedWarningErrorCount(); }
+        uint32        getCapturedWarningErrorCount() const { return _evaluator.getCapturedWarningErrorCount(); }
         const string& getFinishReason() const { return _finishReason; }
         /** @brief 활성 씬 대신 @p pManager 를 봅니다(테스트와 도구용이며, 씬 없이 매니저를 손으로 돌릴 때 씁니다). nullptr 이면 활성 씬입니다. */
         void setObjectManager( GameObjectManager* pManager ) { _pObjectManagerOverride = pManager; }
 
         /** @brief 감시 값 값 한 줄을 보고의 `records` 에 남깁니다(`<Record>`). 백엔드끼리 같아야 하는 값이다(AppScenarioTest 가 비교한다). */
-        void                  addRecordLine( string line ) { _judge.addRecordLine( std::move( line ) ); }
-        const vector<string>& getRecordLines() const { return _judge.getRecordLines(); }
+        void                  addRecordLine( string line ) { _evaluator.addRecordLine( std::move( line ) ); }
+        const vector<string>& getRecordLines() const { return _evaluator.getRecordLines(); }
 
     private:
         /** @brief 엔진 단계(`AutomationRunnerSteps.cpp`, 레지스트리에 등록)는 가상 입력 원천 · 판정 · 진행 상태(스크린샷 대기열 · 종료 시한)를 직접 만진다. */
@@ -308,27 +308,27 @@ namespace sw
          */
         void startHangWatchdog();
         /** @brief 쓰기 입구 게이트를 쥡니다(이미 쥐었으면 아무것도 하지 않습니다). 시나리오가 `scratch/` 밖의 리소스 원본에 쓰면 거절된다. */
-        void acquireWriteGate();
+        void acquireWriteFilter();
         /** @brief 쥔 쓰기 입구 게이트를 놓습니다. 쥐지 않았으면 아무것도 하지 않습니다. */
-        void releaseWriteGate();
+        void releaseWriteFilter();
         /** @brief 감시 스레드가 읽을 스냅샷을 갱신합니다(@p position 은 `describeRunPosition`). 감시가 돌고 있지 않으면 아무것도 하지 않습니다. */
         void publishHangSnapshot( string_view position );
 
     private:
         AutomationScenario       _scenario;
         VirtualInputScript       _inputScript;
-        AutomationJudge          _judge;        ///< 판정 상태 · 비교(실패 · 미확정 · 로그 게이트 · 감시 값 이력). 시간 · 입력은 모른다
+        AutomationEvaluator      _evaluator;    ///< 판정 상태 · 비교(실패 · 미확정 · 로그 게이트 · 감시 값 이력). 시간 · 입력은 모른다
         AutomationStepTimeline   _run;          ///< 진행 상태(프레임 · 단계 순번 · 대기 · 시한 · 스크린샷 대기열). 판정은 읽지 않는다
         AutomationReportWriter   _reportWriter; ///< 보고 경로 · JSON 보고 쓰기
         AutomationTimeline       _wallProfile;  ///< 벽시계가 프레임 종류(고정 대기 · 조건 대기 · 단계 …)별로 어디에 쓰였는지(보고의 `timeline`)
         string                   _outputDirectory;
         string                   _finishReason;
-        uint8                    _bSkippedByBuild : 1; ///< 시나리오가 선언한 빌드 구성(없는 모듈 · 빠진 개발 명령)으로 건너뛰었다 - 환경 탓의 건너뜀과 달리 경고가 아니다
-        uint8                    _bStarted        : 1;
-        uint8                    _bEnded          : 1;
-        uint8                    _bHangWatchArmed : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
-        uint8                    _bWriteGateHeld  : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratchWorkspace::acquireWriteGate` — `endRun` 이나 소멸자가 놓는다)
-        [[maybe_unused]] uint8   _reserved        : 4;
+        uint8                    _bSkippedByBuild  : 1; ///< 시나리오가 선언한 빌드 구성(없는 모듈 · 빠진 개발 명령)으로 건너뛰었다 - 환경 탓의 건너뜀과 달리 경고가 아니다
+        uint8                    _bStarted         : 1;
+        uint8                    _bEnded           : 1;
+        uint8                    _bHangWatchArmed  : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
+        uint8                    _bWriteFilterHeld : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratchWorkspace::acquireWriteFilter` — `endRun` 이나 소멸자가 놓는다)
+        [[maybe_unused]] uint8   _reserved         : 4;
         string                   _startedAt;              ///< 벽시계 시작 지역 시각 글(`2026-10-26 14:03:11`). 얻지 못하면 빈 글
         AutomationReproduceInput _reproduceInput;         ///< 보고의 재현 명령 재료(`setReproduceInput`). 이 시나리오의 `<Launch>` 변수는 보고를 쓸 때 더한다
         AutomationHangPayload    _hangPayload;            ///< 감시 스레드에 넘기는 스냅샷의 게임 스레드 쪽 사본(바뀌지 않는 칸은 시작할 때 한 번 채운다)
@@ -341,12 +341,12 @@ namespace sw
         TaskFuture<Scene*>       _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
         AutomationResult         _result;
         AutomationFrameStats     _frameStats{}; ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
-        /** @brief 이 실행 안에서 이름 붙여 기억한 글(`rememberText`) — 한 시나리오에 몇 개뿐이라 선형으로 찾는다. */
-        struct RememberedText
+        /** @brief 이 실행 안에서 이름 붙여 기억한 글(`storeText`) — 한 시나리오에 몇 개뿐이라 선형으로 찾는다. */
+        struct StoredText
         {
             string _name{};
             string _text{};
         };
-        vector<RememberedText> _listRememberedText{};
+        vector<StoredText> _listStoredText{};
     };
 } // namespace sw

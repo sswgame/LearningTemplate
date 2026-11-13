@@ -1,6 +1,6 @@
 /**
  * @file StreamMessageEndpoint.h
- * @brief 스트림 전송 위에서 프레임을 주고받는 엔드포인트를 정의합니다. I/O 스레드에서 프레임을 잘라 연결별 수신 큐에 쌓고, 게임(서비스) 스레드의 `pump` 가 한 번의 잠금으로 꺼내 줍니다.
+ * @brief 스트림 전송 위에서 프레임을 주고받는 엔드포인트를 정의합니다. I/O 스레드에서 프레임을 잘라 연결별 수신 큐에 쌓고, 게임(서비스) 스레드의 `poll` 가 한 번의 잠금으로 꺼내 줍니다.
  */
 #pragma once
 #include "Core/Concurrency/OnceInit.h"
@@ -33,7 +33,7 @@ namespace sw
     struct StreamEndpointConfig
     {
         int32                _maxFrameBodySize{ StreamFrameConstant::kDefaultMaxFrameSize };
-        int32                _maxPendingReceiveBytes{ StreamLimit::kDefaultMaxPendingReceiveBytes }; ///< 연결 하나가 `pump` 를 기다리며 쌓아 둘 수 있는 바이트. 넘으면 읽기를 멈춘다.
+        int32                _maxPendingReceiveBytes{ StreamLimit::kDefaultMaxPendingReceiveBytes }; ///< 연결 하나가 `poll` 를 기다리며 쌓아 둘 수 있는 바이트. 넘으면 읽기를 멈춘다.
         float64              _pingIntervalSeconds{ 15.0 };                                           ///< 0이면 끈다. 전송의 유휴 시한보다 짧게 잡는다.
         float64              _handshakeTimeoutSeconds{ 10.0 };                                       ///< 열림(TLS 핸드셰이크 끝)까지의 상한. 0이면 끈다 — 1 바이트씩 흘려 유휴 시한을 넘기지 않는 연결이 슬롯을 쥐지 못하게(감사 N-10)
         NetCompressionConfig _compression{};                                                         ///< 보내는 프레임 본문의 압축(기본값은 꺼짐). 받는 쪽은 설정과 상관없이 레지스트리에 있는 코덱이면 푼다.
@@ -45,7 +45,7 @@ namespace sw
 {
     /**
      * @class IStreamEndpointListener
-     * @brief `pump` 가 호출하는 리스너입니다. 모두 `pump` 를 부른 스레드에서 호출되며, 연결마다 열림, 프레임, 닫힘 순서입니다.
+     * @brief `poll` 가 호출하는 리스너입니다. 모두 `poll` 를 부른 스레드에서 호출되며, 연결마다 열림, 프레임, 닫힘 순서입니다.
      * @details 연결 실패처럼 **열린 적 없는 연결도 닫힘은 한 번 온다**(`connect` 한 쪽이 결과를 알 수 있게).
      */
     class SW_API IStreamEndpointListener
@@ -69,7 +69,7 @@ namespace sw
 {
     /**
      * @class StreamMessageEndpoint
-     * @brief 스트림 전송 위의 프레임 엔드포인트입니다. 전송의 처리기가 되어 I/O 스레드에서 프레임을 잘라 연결별 수신 큐에 쌓고, `pump` 가 한 번의 잠금으로 꺼내 줍니다.
+     * @brief 스트림 전송 위의 프레임 엔드포인트입니다. 전송의 처리기가 되어 I/O 스레드에서 프레임을 잘라 연결별 수신 큐에 쌓고, `poll` 가 한 번의 잠금으로 꺼내 줍니다.
      * @details 수신 큐가 `_maxPendingReceiveBytes` 를 넘으면 읽기를 멈춘다(TCP 윈도우가 닫혀 상대가 멈춘다). 핑과 퐁은 엔드포인트가 I/O 스레드에서 스스로 응답한다.
      *          송신 큐가 넘치면 메시지를 버리지 않고 연결을 끊는다(SendQueueOverflow). 버리면 그 위 계층의 순서가 깨지기 때문이다. 보내기는 어느 스레드에서나 가능하다.
      *          `_security._pTLSContext` 가 있으면 연결마다 TLS 세션을 두고 모든 바이트가 그 세션을 지난다.
@@ -82,7 +82,7 @@ namespace sw
      *     (void)transport->initialize( &endpoint, transportSettings );
      *     (void)transport->listen( NetAddress::makeAnyInterface( 7100 ) );
      *     // 게임 스레드 틱:
-     *     endpoint.pump( *this );                                           // onEndpointOpened · onEndpointFrame · onEndpointClosed
+     *     endpoint.poll( *this );                                           // onEndpointOpened · onEndpointFrame · onEndpointClosed
      *     (void)endpoint.sendMessage( handle, writer.getBytes().data(), writer.getByteCount() );
      * @endcode
      */
@@ -100,13 +100,13 @@ namespace sw
         void shutdown();
 
         /** @brief 쌓인 사건과 프레임을 @p listener 에 넘깁니다. 핑도 여기서 처리합니다. 반환값은 넘긴 프레임 수입니다. */
-        int32 pump( IStreamEndpointListener& listener );
+        int32 poll( IStreamEndpointListener& listener );
 
         /** @brief Message 프레임을 보냅니다(어느 스레드에서나 가능). */
         StreamSendResult sendMessage( StreamConnectionHandle handle, const uint8* pBody, int32 bodySize );
         /** @brief 종류를 지정해 보냅니다. `NetRequestClient` 와 `NetRequestServer` 가 씁니다. */
         StreamSendResult sendFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize );
-        /** @brief 클라이언트로서 연결합니다. 결과는 `pump` 의 열림과 닫힘으로 알립니다. */
+        /** @brief 클라이언트로서 연결합니다. 결과는 `poll` 의 열림과 닫힘으로 알립니다. */
         StreamConnectionHandle connect( const NetAddress& remote );
         /** @brief 연결을 닫습니다. 우아하게 닫으면 쌓인 것을 다 보낸 뒤 닫습니다. 리스너가 받는 이유는 LocalClose 입니다. */
         void close( StreamConnectionHandle handle, StreamCloseMode mode );
@@ -145,10 +145,10 @@ namespace sw
         mutable mutex                                                _inboxMutex;
         vector<Event> _listInbox                                     SW_GUARDED_BY( _inboxMutex ); ///< I/O 스레드가 쌓는다.
         vector<uint8> _inboxBytes                                    SW_GUARDED_BY( _inboxMutex ); ///< 프레임 본문을 담는 아레나.
-        ThreadRole                                                   _pumpThread;                  ///< `pump` 를 도는 스레드 역할 — 아래 둘은 그 스레드만 잠금 밖에서 읽는다(잠금이 아니라 분석용 능력)
-        vector<Event> _listPumping                                   SW_GUARDED_BY( _pumpThread ); ///< pump 스레드 전용. 맞바꿔서 꺼낸다.
-        vector<uint8> _pumpingBytes                                  SW_GUARDED_BY( _pumpThread );
-        unordered_map<uint64, int64>                                 _mapLastPingTime; ///< pump 스레드 전용. 열린 연결의 마지막 핑 시각(나노초).
+        ThreadRole                                                   _pollThread;                  ///< `poll` 를 도는 스레드 역할 — 아래 둘은 그 스레드만 잠금 밖에서 읽는다(잠금이 아니라 분석용 능력)
+        vector<Event> _listPolling                                   SW_GUARDED_BY( _pollThread ); ///< poll 스레드 전용. 맞바꿔서 꺼낸다.
+        vector<uint8> _pollingBytes                                  SW_GUARDED_BY( _pollThread );
+        unordered_map<uint64, int64>                                 _mapLastPingTime; ///< poll 스레드 전용. 열린 연결의 마지막 핑 시각(나노초).
         OnceInit<StreamEndpointConfig>                               _settings;
         OnceInit<IStreamTransport*>                                  _pTransport;
     };

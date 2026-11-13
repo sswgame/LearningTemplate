@@ -192,7 +192,7 @@ namespace sw
         float32 powerSum      = 0.0f;
         float32 rightPowerSum = 0.0f;
         float32 frontPowerSum = 0.0f;
-        float32 openestHz     = 0.0f;
+        float32 maxLowPassHz  = 0.0f;
         float32 nearest       = pResult[0]._distance;
         bool    bAnyAudible   = false;
         for ( uint32 index = 0; index < count; ++index )
@@ -205,8 +205,8 @@ namespace sw
             nearest = MathUtil::min( nearest, result._distance );
             if ( 0.0f < result._gain )
             {
-                openestHz   = bAnyAudible ? MathUtil::max( openestHz, result._lowPassHz ) : result._lowPassHz;
-                bAnyAudible = true;
+                maxLowPassHz = bAnyAudible ? MathUtil::max( maxLowPassHz, result._lowPassHz ) : result._lowPassHz;
+                bAnyAudible  = true;
             }
         }
         AudioSpatialResult combined = pResult[loudest];
@@ -218,7 +218,7 @@ namespace sw
         }
         combined._distance = nearest;
         if ( bAnyAudible )
-            combined._lowPassHz = openestHz;
+            combined._lowPassHz = maxLowPassHz;
         return combined;
     }
 

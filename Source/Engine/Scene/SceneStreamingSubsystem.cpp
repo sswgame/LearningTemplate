@@ -164,9 +164,9 @@ namespace sw
                     continue; // 엔티티가 없는 셀이다
                 for ( const uint32 slotIndex : indexIt->second )
                 {
-                    const CellSlot& slot     = _listCell[slotIndex];
-                    const bool      bSettled = slot._bLoaded || slot._bFailed || areSlotLayersActive( slot ) == false; // 이미 올라 있거나 짓지 못한 셀이거나 레이어가 꺼졌다
-                    if ( bSettled )
+                    const CellSlot& slot    = _listCell[slotIndex];
+                    const bool      bStable = slot._bLoaded || slot._bFailed || areSlotLayersActive( slot ) == false; // 이미 올라 있거나 짓지 못한 셀이거나 레이어가 꺼졌다
+                    if ( bStable )
                         continue;
                     _listScratchLoad.push_back( slotIndex ); // 원점 반경이 겹치면 같은 셀이 여럿 들어온다 — 아래에서 한 번에 거른다
                 }

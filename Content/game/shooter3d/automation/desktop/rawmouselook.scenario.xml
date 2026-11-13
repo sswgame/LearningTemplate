@@ -13,8 +13,8 @@
 	<!-- 1인칭 카메라가 첫 틱에 잠금을 켠다 — 전경이면 바로 잡고 원시 입력을 등록한다 -->
 	<Wait frames="10"/>
 	<ExpectCursorClip state="Locked"/>
-	<Remember watch="Input.RawMouseEvents" as="rawBefore"/>
-	<Remember watch="Scene.CameraYaw" as="yawBefore"/>
+	<Store watch="Input.RawMouseEvents" as="rawBefore"/>
+	<Store watch="Scene.CameraYaw" as="yawBefore"/>
 	<!-- 오른쪽으로 10 번 x 40 — 원시 보고가 오고 시선이 돈다 -->
 	<SendInput dx="40" dy="0" count="10"/>
 	<WaitUntil watch="Input.RawMouseEvents" differsFrom="rawBefore" timeoutFrames="60"/>

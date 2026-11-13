@@ -56,10 +56,10 @@ namespace
     };
 
     /** @brief 문이 열릴 때까지 워커를 잡아 두는 일입니다. */
-    class PoolGateJob final : public ISQLJob
+    class PoolLatchJob final : public ISQLJob
     {
     public:
-        PoolGateJob( atomic<bool>& bEntered, atomic<bool>& bRelease )
+        PoolLatchJob( atomic<bool>& bEntered, atomic<bool>& bRelease )
             : _bEntered{ bEntered }
             , _bRelease{ bRelease }
         {
@@ -281,7 +281,7 @@ SW_TEST_CASE( SQLConnectionPoolTest, ShutdownCancelsQueuedJobsAndCanRestart )
 
     atomic<bool> bEntered{ false };
     atomic<bool> bRelease{ false };
-    pool.submit( sw::make_unique<PoolGateJob>( bEntered, bRelease ) );
+    pool.submit( sw::make_unique<PoolLatchJob>( bEntered, bRelease ) );
     SW_REQUIRE_TRUE( test::waitUntil( [&bEntered]()
     { return bEntered.load(); } ) );
 

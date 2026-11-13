@@ -223,7 +223,7 @@ namespace sw
         , _arrivedRadius{ 10.0f }
         , _startMinerals{ 50 }
         , _statusLogInterval{ 30.0f }
-        , _clickSlop{ 0.6f }
+        , _clickDragThreshold{ 0.6f }
         , _maxSelectionCount{ 12 }
         , _selectAction{}
         , _orderAction{}
@@ -721,7 +721,7 @@ namespace sw
         _bDragging            = SW_FALSE;
         const float3  end     = bPointValid ? point : _dragStart;
         const float32 dragged = MathUtil::max( MathUtil::abs( end._x - _dragStart._x ), MathUtil::abs( end._z - _dragStart._z ) );
-        if ( dragged < _clickSlop )
+        if ( dragged < _clickDragThreshold )
         {
             const RTSUnitID pickedID = world.pickUnit( end );
             if ( pickedID.isValid() )

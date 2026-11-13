@@ -113,11 +113,11 @@ namespace sw
         }
         /**
          * @brief 영역 안에서 이 처리기가 전달 통지를 달아 보내는(`INetPeers::sendNotifiedMessage`) 종류의 마스크입니다. 비트 n 이 (영역 + n)입니다.
-         * @details 라우터는 그 종류의 판정을 이 처리기의 `onDeliveryNotice` 에 넘긴다. 받는 종류 마스크와 따로 세며, 한 종류를 둘이 보내겠다고 하면 나중 것을 받지 않는다.
+         * @details 라우터는 그 종류의 판정을 이 처리기의 `onDeliveryNotification` 에 넘긴다. 받는 종류 마스크와 따로 세며, 한 종류를 둘이 보내겠다고 하면 나중 것을 받지 않는다.
          */
         virtual uint16 getNotifiedKindMask() const { return 0; }
-        /** @brief 이 처리기가 보낸 전달 통지 메시지 하나의 판정입니다(라우터 `pump` 가 사건 뒤, 메시지 앞에 부른다). */
-        virtual void onDeliveryNotice( const NetDeliveryNotice& notice ) { (void)notice; }
+        /** @brief 이 처리기가 보낸 전달 통지 메시지 하나의 판정입니다(라우터 `poll` 가 사건 뒤, 메시지 앞에 부른다). */
+        virtual void onDeliveryNotification( const NetDeliveryNotification& notification ) { (void)notification; }
 
         /** @brief @p kind 가 이 처리기의 영역과 마스크 안이면 true 를 반환합니다. */
         bool isMessageKindHandled( uint8 kind ) const;
@@ -151,13 +151,13 @@ namespace sw
      * @brief 받은 메시지를 종류(첫 바이트)마다 맡은 처리기 하나에게 바로 전달합니다(종류 256개짜리 테이블). 연결 사건은 메시지보다 먼저 모든 처리기에 알립니다.
      * @details - 처리기는 빌려 쓴다. 등록은 `registerHandler` 가 돌려주는 구독(`Subscription`)이 소유한다 — 처리기와 같은 수명의 객체(보통 처리기를 가진 쪽)가 들고,
      *            구독이 사라지면 처리기가 빠진다. 라우터가 먼저 사라지면 구독은 무효가 된다. 한 종류를 둘이 맡으려 하면 나중 것을 받지 않는다(빈 구독).
-     *          - `pump` 는 엔드포인트에서 사건과 메시지를 잠금 한 번에 꺼내(`INetPeers::pollInbound` — 엔드포인트 하나든 포트 샤드 묶음이든) 잠금 밖에서 나눠 준다. 처리기는 그 안에서 보내도 된다.
+     *          - `poll` 는 엔드포인트에서 사건과 메시지를 잠금 한 번에 꺼내(`INetPeers::pollInbound` — 엔드포인트 하나든 포트 샤드 묶음이든) 잠금 밖에서 나눠 준다. 처리기는 그 안에서 보내도 된다.
      *          - 깨진 메시지(처리기가 Malformed 를 반환)는 세고(`getMalformedCount`) 버린다.
-     *          - 등록과 구독의 해제는 `pump` 를 부르는 스레드에서 한다(구독 목록에 잠금이 없다).
+     *          - 등록과 구독의 해제는 `poll` 를 부르는 스레드에서 한다(구독 목록에 잠금이 없다).
      * @code
      *     _replicationSubscription = router.registerHandler( &replicationServer );
      *     _gameSubscription        = router.registerHandler( &gameMessages );     // 0x80..0x8F
-     *     router.pump( host, &listUnhandled );                                    // 매 틱 host.update 뒤
+     *     router.poll( host, &listUnhandled );                                    // 매 틱 host.update 뒤
      * @endcode
      */
     class SW_API NetMessageRouter
@@ -186,7 +186,7 @@ namespace sw
          * @param pOutUnhandled 처리기가 없는 메시지를 뒤에 붙입니다(nullptr 이면 버립니다).
          * @param pOutListEvent 꺼낸 사건을 뒤에 붙입니다(처리기 말고도 게임이 알아야 할 때 씁니다).
          */
-        int32 pump( INetPeers& peers, vector<NetReceivedMessage>* pOutUnhandled = nullptr, vector<NetEndpointEvent>* pOutListEvent = nullptr );
+        int32 poll( INetPeers& peers, vector<NetReceivedMessage>* pOutUnhandled = nullptr, vector<NetEndpointEvent>* pOutListEvent = nullptr );
         /**
          * @brief 서버가 받은 메시지를 보낸 연결을 뺀 모두에게 **받은 채널 그대로** 다시 보냅니다. 클라이언트에서는 하지 않고 0을 반환합니다. 반환값은 보낸 수입니다.
          * @details 처리기 안에서 부른다(@p context 의 메시지 바이트는 처리기 호출 동안만 유효하다).
@@ -194,8 +194,8 @@ namespace sw
         static int32 relayToOtherPeers( INetPeers& peers, const NetMessageContext& context );
         uint64       getMalformedCount() const { return _malformedCount; }
         /** @brief 그 종류를 보낸다고 등록한 처리기가 없어 버린 전달 통지 수입니다(첫 번째는 오류 로그도 남긴다 — 보낸 쪽이 처리기를 등록하지 않았다). */
-        uint64 getUnclaimedNoticeCount() const { return _unclaimedNoticeCount; }
-        /** @brief `pump` 가 지금까지 꺼낸 종류별 메시지 수와 바이트입니다(받은 쪽 셈 — 처리기가 없는 메시지도 센다. 보낸 쪽은 `INetPeers::addSentKindStats`). */
+        uint64 getUnclaimedNotificationCount() const { return _unclaimedNotificationCount; }
+        /** @brief `poll` 가 지금까지 꺼낸 종류별 메시지 수와 바이트입니다(받은 쪽 셈 — 처리기가 없는 메시지도 센다. 보낸 쪽은 `INetPeers::addSentKindStats`). */
         const NetMessageKindStatsTable& getKindStats() const { return _kindStats; }
 
     private:
@@ -203,16 +203,16 @@ namespace sw
         void releaseHandler( INetMessageHandler* pHandler );
         void rebuildKindTable();
         /** @brief 전달 통지 하나를 그 종류를 보내는 처리기에 넘깁니다. 없으면 세고 버립니다. */
-        void dispatchNotice( const NetDeliveryNotice& notice );
+        void dispatchNotification( const NetDeliveryNotification& notification );
 
     private:
         vector<INetMessageHandler*> _listHandler; ///< 등록 순서대로 보관한다. 사건만 받는 처리기는 등록마다 하나씩 오르므로(중복 허용) `RegistrationList` 가 아니다.
         INetMessageHandler*         _arrKindHandler[kKindCount];
-        INetMessageHandler*         _arrNoticeHandler[kKindCount]; ///< 종류마다 그 종류를 전달 통지로 보내는 처리기(`getNotifiedKindMask`).
-        NetMessageKindStatsTable    _kindStats;                    ///< `pump` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
-        NetInbound                  _inbound;                      ///< `pump` 가 다시 쓰는 버퍼.
+        INetMessageHandler*         _arrNotificationHandler[kKindCount]; ///< 종류마다 그 종류를 전달 통지로 보내는 처리기(`getNotifiedKindMask`).
+        NetMessageKindStatsTable    _kindStats;                          ///< `poll` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
+        NetInbound                  _inbound;                            ///< `poll` 가 다시 쓰는 버퍼.
         uint64                      _malformedCount;
-        uint64                      _unclaimedNoticeCount;
+        uint64                      _unclaimedNotificationCount;
         /** @brief 이 객체가 내준 처리기 등록 구독입니다. 풀리면 `releaseHandler` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<INetMessageHandler> _subscriptions{ ItemSubscriptionList<INetMessageHandler>::ReleaseFunction::create<&NetMessageRouter::releaseHandler>( this ) };
     };

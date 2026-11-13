@@ -69,10 +69,10 @@ namespace sw
         NetAddress              _remote{};
         StreamConnectionHandle  _handle{};
         atomic<int64>           _roundTripNanoseconds{ constant::invalid_index::kInt64 };
-        atomic<int32>           _pendingBytes{ 0 };                      ///< 큐에 쌓였지만 아직 pump 가 넘기지 않은 본문 바이트.
+        atomic<int32>           _pendingBytes{ 0 };                      ///< 큐에 쌓였지만 아직 poll 가 넘기지 않은 본문 바이트.
         StreamCloseReason       _errorReason{ StreamCloseReason::None }; ///< 엔드포인트가 연결을 끊은 이유(ProtocolError, SendQueueOverflow, SecurityFailure). 전송이 알려 주는 이유보다 우선한다.
         uint8                   _bAccepted{ SW_FALSE };
-        atomic<bool>            _bOpenAnnounced{ false };      ///< 쓰기는 연결 잠금 안 — pump 의 핸드셰이크 시한이 잠금 없이 먼저 걸러 본다
+        atomic<bool>            _bOpenAnnounced{ false };      ///< 쓰기는 연결 잠금 안 — poll 의 핸드셰이크 시한이 잠금 없이 먼저 걸러 본다
         int64                   _streamOpenedNanoseconds{ 0 }; ///< 전송이 연 시각 — 이때부터 `_handshakeTimeoutSeconds` 안에 열림이 알려져야 한다
         uint8                   _bReceivePaused{ SW_FALSE };
         /** @brief 잠금 안에서 모은 로그(사건, 글)입니다. `_mutex` 가 지키고 잠금을 놓은 뒤 `flushDeferredLog` 가 쓴다 — 잠금은 잎이라 쥔 채 로그를 쓰지 않는다. */
@@ -91,7 +91,7 @@ namespace sw
         }
     };
 
-    /** @brief pump 로 넘길 사건 하나입니다. 프레임 본문은 아레나의 [_offset, _offset + _size) 범위입니다. */
+    /** @brief poll 로 넘길 사건 하나입니다. 프레임 본문은 아레나의 [_offset, _offset + _size) 범위입니다. */
     struct StreamMessageEndpoint::Event
     {
         NetAddress             _remote{};
@@ -113,9 +113,9 @@ namespace sw
         , _inboxMutex{}
         , _listInbox{}
         , _inboxBytes{}
-        , _pumpThread{}
-        , _listPumping{}
-        , _pumpingBytes{}
+        , _pollThread{}
+        , _listPolling{}
+        , _pollingBytes{}
         , _mapLastPingTime{}
         , _settings{}
         , _pTransport{}
@@ -467,20 +467,20 @@ namespace sw
         return nanoseconds >= 0 ? static_cast<float64>( nanoseconds ) * 1.0e-9 : -1.0;
     }
 
-    // ---- pump 스레드 ----
+    // ---- poll 스레드 ----
 
-    int32 StreamMessageEndpoint::pump( IStreamEndpointListener& listener )
+    int32 StreamMessageEndpoint::poll( IStreamEndpointListener& listener )
     {
-        _pumpThread.assumeHeld(); // 받은 것을 꺼내 알리는 스레드는 하나다(엔드포인트 계약) — 꺼낸 목록은 그 스레드 것이다
+        _pollThread.assumeHeld(); // 받은 것을 꺼내 알리는 스레드는 하나다(엔드포인트 계약) — 꺼낸 목록은 그 스레드 것이다
         {
             ScopedLock<mutex> lock{ _inboxMutex };
-            _listPumping.clear();
-            _pumpingBytes.clear();
-            _listPumping.swap( _listInbox );
-            _pumpingBytes.swap( _inboxBytes );
+            _listPolling.clear();
+            _pollingBytes.clear();
+            _listPolling.swap( _listInbox );
+            _pollingBytes.swap( _inboxBytes );
         }
         int32 frameCount = 0;
-        for ( const Event& event : _listPumping )
+        for ( const Event& event : _listPolling )
         {
             switch ( event._kind )
             {
@@ -493,7 +493,7 @@ namespace sw
                 case EndpointEventKind::Frame:
                 {
                     ++frameCount;
-                    listener.onEndpointFrame( event._handle, event._frameKind, _pumpingBytes.data() + event._offset, event._size );
+                    listener.onEndpointFrame( event._handle, event._frameKind, _pollingBytes.data() + event._offset, event._size );
                     const shared_ptr<Connection> connection = findConnection( event._handle );
                     if ( connection != nullptr )
                     {

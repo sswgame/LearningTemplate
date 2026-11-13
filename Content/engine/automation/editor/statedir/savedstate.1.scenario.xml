@@ -6,15 +6,15 @@
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/savedstate.1.scenario.xml -dx12
 -->
 <Scenario name="editor.savedstate.1" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus prefab_editor"/>
 	<WaitUntil watch="Editor.SceneViewDrawn" equals="0" timeoutFrames="75"/>
 	<DevCommand line="editor editor.themeSettings"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="theme.swatch.violet"/>
 	<WaitUntil watch="Editor.AccentColor" equals="10902002" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

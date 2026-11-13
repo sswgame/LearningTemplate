@@ -11,17 +11,17 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_editorWatchPanel" value="map_check"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open engine/automation/editor/mapcheck/mapcheck_expect_error.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus map_check"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="66"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.MapCheckIssueCount" equals="1"/>
 	<WaitUntil watch="Editor.MapCheckFixableRows" equals="1" timeoutFrames="60"/>
-	<Remember watch="Editor.UndoIndex" as="undoBefore"/>
+	<Store watch="Editor.UndoIndex" as="undoBefore"/>
 	<CaptureEditorUI file="mapcheckfix/before.png" maxMagentaFraction="0"/>
 	<!-- ① 줄 고침 -->
 	<EditorClick mark="mapCheck.fix.0" state="Down"/>
@@ -31,26 +31,26 @@
 	<Expect watch="Editor.UndoIndex" differsFrom="undoBefore"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
 	<ExpectLog id="MapCheckFixCommands.Applied" contains="applied 1 fix(es)" count="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="mapcheckfix/after.png" maxMagentaFraction="0"/>
 	<!-- ② 되돌리기 · 다시 실행 -->
 	<DevCommand line="editor edit.undo"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="mapCheck.checkMap" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="mapCheck.checkMap" state="Up"/>
 	<WaitUntil watch="Editor.MapCheckIssueCount" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoIndex" sameAs="undoBefore"/>
 	<DevCommand line="editor edit.redo"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="mapCheck.checkMap" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="mapCheck.checkMap" state="Up"/>
 	<WaitUntil watch="Editor.MapCheckIssueCount" equals="0" timeoutFrames="60"/>
 	<!-- 오류를 심은 씬을 열어 둔 채 끝내지 않는다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 심은 오류는 씬을 열 때 · 되돌린 뒤 · Check Map 이 다시 검증할 때 한 줄씩 알린다 -->
 	<ExpectLog id="ObjectValidation.Issue" contains="ZeroRadiusLight" count="3"/>
 	<Variable name="gv_editorUiScale" value="0"/>

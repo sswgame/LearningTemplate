@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file cmake/Engine/UnbuiltSources.cmake
+# @file cmake/Engine/ExcludedSources.cmake
 # @brief 이 구성이 일부러 짓지 않는 소스 목록 — 빼는 자리가 적고(sw_declare* · sw_exclude* · 플랫폼 폴더 규칙) 구성 끝에 파일로 쓴다
 # ==============================================================================
 
@@ -8,12 +8,12 @@
 #
 # 그 게이트는 디스크의 소스와 compile_commands.json 을 맞춘다. 배포 구성은 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드를 **일부러**
 # 짓지 않는데, 게이트는 그것을 CMake 와 따로 몰라 Shipping 트리에서 늘 졌다("compile_commands 에 없음" 95 개 — 그래서 Shipping 은
-# `-L hostgpu` 만 돌려 왔다). 빼는 규칙은 여기 CMake 에 있으므로 빼는 자리가 직접 적고(`sw_declareUnbuiltSources` ·
-# `sw_excludeUnbuiltSources`), 구성 끝에 `sw_writeUnbuiltSourceList` 가 빌드 트리에 목록을 쓴다 — 게이트는 그 목록만 읽는다.
+# `-L hostgpu` 만 돌려 왔다). 빼는 규칙은 여기 CMake 에 있으므로 빼는 자리가 직접 적고(`sw_declareExcludedSources` ·
+# `sw_removeExcludedSources`), 구성 끝에 `sw_writeExcludedSourceList` 가 빌드 트리에 목록을 쓴다 — 게이트는 그 목록만 읽는다.
 # **다른 타겟으로 옮겨 짓는 것(키트 폴더 · RHI 모듈)은 적지 않는다** — 지어지지 않으면 게이트가 잡아야 한다.
 # ------------------------------------------------------------------------------
-# 게이트는 빌드 트리 기준 같은 상대 경로(`generated/sw/config/UnbuiltSources.txt`)를 읽는다.
-set(SW_UNBUILT_SOURCE_LIST "${CMAKE_BINARY_DIR}/generated/sw/config/UnbuiltSources.txt")
+# 게이트는 빌드 트리 기준 같은 상대 경로(`generated/sw/config/ExcludedSources.txt`)를 읽는다.
+set(SW_EXCLUDED_SOURCE_LIST "${CMAKE_BINARY_DIR}/generated/sw/config/ExcludedSources.txt")
 
 # 배포 구성이 짓지 않는 개발 전용 소스 — 기능 폴더의 단위 테스트(`Tests/`)와 개발 전용 단위 폴더(`Dev/` — 호스트의 개발 계층 · 서버 개발 조종 · 에디터 모듈 개발 경로).
 # 파일 이름 꼬리로 빼지 않는다: 개발 명령 · 캐시 리로드 · 온라인 개발 대체물은 기능 파일에 두고 등록 매크로가 배포에서 등록하지 않는다(`docs/agents/BuildConfigSwitch.md`).
@@ -78,22 +78,22 @@ set(SW_CLIENT_ONLY_SOURCE_PATTERNS "/Client/")
 set(SW_SERVER_ONLY_SOURCE_PATTERNS "/Server/")
 
 # 이 구성이 짓지 않는 소스를 적는다(절대 경로). 헤더도 받아 두지만 목록에는 `.c` · `.cpp` 만 쓴다.
-function(sw_declareUnbuiltSources)
-	set_property(GLOBAL APPEND PROPERTY SW_UNBUILT_SOURCES ${ARGN})
+function(sw_declareExcludedSources)
+	set_property(GLOBAL APPEND PROPERTY SW_EXCLUDED_SOURCES ${ARGN})
 endfunction()
 
 # 폴더(ARGN, 절대 경로) 아래의 .c · .cpp 를 전부 "이 구성이 짓지 않는 소스" 로 적는다 — 통째로 빼는 폴더(고르지 않은 게임 팩 ·
 # 끈 GameFramework)에 쓴다.
-function(sw_declareUnbuiltDirectory)
+function(sw_declareExcludedDirectory)
 	foreach(directory IN LISTS ARGN)
 		sw_globSourceTree(listSource RECURSE "${directory}/*.c" "${directory}/*.cpp")
-		sw_declareUnbuiltSources(${listSource})
+		sw_declareExcludedSources(${listSource})
 	endforeach()
 endfunction()
 
 # 목록 변수 LIST_VAR 에서 정규식(ARGN)에 맞는 소스를 빼고, 뺀 것을 "이 구성이 짓지 않는 소스" 로 적는다.
 # 빼기와 적기가 한 호출이라 한쪽만 하는 일이 없다. 다른 타겟으로 옮겨 짓는 것에는 쓰지 않는다(그때는 `list(FILTER)`).
-function(sw_excludeUnbuiltSources LIST_VAR)
+function(sw_removeExcludedSources LIST_VAR)
 	set(listKept ${${LIST_VAR}})
 	foreach(pattern IN LISTS ARGN)
 		list(FILTER listKept EXCLUDE REGEX "${pattern}")
@@ -103,7 +103,7 @@ function(sw_excludeUnbuiltSources LIST_VAR)
 	if(listKept)
 		list(REMOVE_ITEM listRemoved ${listKept})
 	endif()
-	sw_declareUnbuiltSources(${listRemoved})
+	sw_declareExcludedSources(${listRemoved})
 
 	set(${LIST_VAR} "${listKept}" PARENT_SCOPE)
 endfunction()
@@ -132,7 +132,7 @@ function(sw_excludeSourcesIncludingPrefix LIST_VAR)
 		endif()
 	endforeach()
 	if(listDropped)
-		sw_declareUnbuiltSources(${listDropped})
+		sw_declareExcludedSources(${listDropped})
 	endif()
 	set(${LIST_VAR} ${listKept} PARENT_SCOPE)
 endfunction()
@@ -167,14 +167,14 @@ function(sw_filterPlatformSources LIST_VAR)
 		endif()
 	endforeach()
 	if(listDropped)
-		sw_declareUnbuiltSources(${listDropped})
+		sw_declareExcludedSources(${listDropped})
 	endif()
 	set(${LIST_VAR} ${listKept} PARENT_SCOPE)
 endfunction()
 
 # 구성 끝(모든 소스 타겟을 만든 뒤)에 한 번 — 적어 둔 것을 빌드 트리에 쓴다. 내용이 같으면 파일을 다시 쓰지 않는다.
-function(sw_writeUnbuiltSourceList)
-	get_property(listSource GLOBAL PROPERTY SW_UNBUILT_SOURCES)
+function(sw_writeExcludedSourceList)
+	get_property(listSource GLOBAL PROPERTY SW_EXCLUDED_SOURCES)
 	list(FILTER listSource INCLUDE REGEX "\\.(c|cpp)$")
 	set(listRelative "")
 	foreach(source IN LISTS listSource)
@@ -187,7 +187,7 @@ function(sw_writeUnbuiltSourceList)
 	endif()
 
 	string(JOIN "\n" content ${listRelative})
-	file(CONFIGURE OUTPUT "${SW_UNBUILT_SOURCE_LIST}" CONTENT "${content}\n" @ONLY)
-	list(LENGTH listRelative unbuiltCount)
-	message(STATUS "[Build] Sources this configuration does not build: ${unbuiltCount} (${SW_UNBUILT_SOURCE_LIST})")
+	file(CONFIGURE OUTPUT "${SW_EXCLUDED_SOURCE_LIST}" CONTENT "${content}\n" @ONLY)
+	list(LENGTH listRelative excludedCount)
+	message(STATUS "[Build] Sources this configuration does not build: ${excludedCount} (${SW_EXCLUDED_SOURCE_LIST})")
 endfunction()

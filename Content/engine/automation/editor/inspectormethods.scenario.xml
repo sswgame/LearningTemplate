@@ -10,62 +10,62 @@
 -->
 <Scenario name="editor.inspectormethods" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="2300" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<Variable name="gv_editorWatchProperty" value="TypedHandleTestComponent._target"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close prefab_editor"/>
 	<!-- ① 기본 목록 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.create"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="component.add TypedHandleTestComponent"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SelectedHandle" is="(none)"/>
 	<WaitUntil watch="Editor.InspectorMethodRows" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.InspectorHiddenMethods" equals="1"/>
 	<Expect watch="Editor.InspectorFilledRows" atLeast="1"/>
 	<CaptureEditorUI file="inspectormethods/default.png" maxMagentaFraction="0"/>
 	<!-- ② CallInEditor 호출은 되돌리기 한 단계 -->
-	<Remember watch="Editor.UndoIndex" as="undoBefore"/>
-	<EditorWaitSettled/>
+	<Store watch="Editor.UndoIndex" as="undoBefore"/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.method.arg.assignTarget.0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorHover mark="inspector.handle.choice.TestMesh / MeshComponent#0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.handle.choice.TestMesh / MeshComponent#0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.method.invoke.assignTarget"/>
 	<WaitUntil watch="Editor.SelectedHandle" is="TestMesh / MeshComponent#0" timeoutFrames="75"/>
 	<Expect watch="Editor.UndoIndex" differsFrom="undoBefore"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.SelectedHandle" is="(none)" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoIndex" sameAs="undoBefore"/>
 	<!-- ③ 진단 보기 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.viewOptions"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.viewOptions.allFunctions"/>
 	<WaitUntil watch="Editor.InspectorMethodRows" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.InspectorHiddenMethods" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.method.invoke.assignTarget"/>
 	<WaitUntil watch="Editor.SelectedHandle" is="TestMesh / MeshComponent#0" timeoutFrames="75"/>
 	<CaptureEditorUI file="inspectormethods/diagnostic.png" maxMagentaFraction="0"/>
-	<Remember watch="Editor.UndoIndex" as="undoAssigned"/>
-	<EditorWaitSettled/>
+	<Store watch="Editor.UndoIndex" as="undoAssigned"/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.method.invoke.clearTarget"/>
 	<WaitUntil watch="Editor.SelectedHandle" is="(none)" timeoutFrames="75"/>
 	<Expect watch="Editor.UndoIndex" differsFrom="undoAssigned"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.viewOptions"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.viewOptions.allFunctions"/>
 	<WaitUntil watch="Editor.InspectorHiddenMethods" equals="1" timeoutFrames="60"/>
 	<Variable name="gv_editorUiScale" value="0"/>

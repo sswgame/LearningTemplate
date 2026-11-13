@@ -1,8 +1,8 @@
 /**
- * @file TickLaneTestComponents.h
- * @brief 틱 레인 동등성 단위 테스트(`TestTickLanes.cpp`)가 다는 컴포넌트입니다 — 개발 구성만 코드젠하고 "Add Component" 메뉴에 나오지 않는다.
+ * @file TickModeTestComponents.h
+ * @brief 틱 모드 동등성 단위 테스트(`TestTickModes.cpp`)가 다는 컴포넌트입니다 — 개발 구성만 코드젠하고 "Add Component" 메뉴에 나오지 않는다.
  * @details 순서에 민감한 상태(곱 · 덧셈을 섞은 값)를 주 틱 · 서브틱 · 틱 중 서브틱 등록 · 해제 · 남의 오브젝트 쓰기로 바꿔, 순서가 하나라도 틀리면
- *          값이 달라지게 한다. 일괄 경로(파도 · 레인)와 기준 길(오브젝트 칸)이 같은 값을 내는지 본다.
+ *          값이 달라지게 한다. 일괄 경로(파도 · 모드)와 기준 길(오브젝트 칸)이 같은 값을 내는지 본다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -21,7 +21,7 @@ namespace sw
      * @details 이른 → 주 → 늦은 순서가 지켜져야 `_value` 가 맞는다. 주 틱과 늦은 서브틱은 같은 남의 오브젝트(`_pShared`)에 잇따라 쓴다 — 늦은 쪽이 이겨야 한다.
      */
     REFLECT( HideInMenu )
-    struct TickLaneMoverTestComponent : public Component
+    struct TickModeMoverTestComponent : public Component
     {
         REFLECT_BODY();
 
@@ -85,14 +85,14 @@ namespace sw
 
     /** @brief 리더의 주 틱을 선행 조건으로 기다리는 서브틱 하나로, 같은 프레임에 리더가 옮긴 자리를 읽는 컴포넌트입니다(선행 조건 스테이지). */
     REFLECT( HideInMenu )
-    struct TickLaneFollowerTestComponent : public Component
+    struct TickModeFollowerTestComponent : public Component
     {
         REFLECT_BODY();
 
         static constexpr uint32 kFollowSubTick = 7;
 
         SceneComponent*             _pLeaderRoot{ nullptr };
-        TickLaneMoverTestComponent* _pLeader{ nullptr };
+        TickModeMoverTestComponent* _pLeader{ nullptr };
         float32                     _value           = 0.0f;
         uint32                      _followSubTickID = kFollowSubTick; ///< 이 팔로워의 서브틱 id(파생 타입이 바꿔 스테이지의 이웃 묶음을 가른다)
 
@@ -119,13 +119,13 @@ namespace sw
 
     /** @brief 다른 타입 · 다른 서브틱 id 의 팔로워입니다 — 스테이지에서 팔로워와 섞여 들어, 자리 키가 같은 타입 · 서브틱의 이웃을 붙이는지 본다. */
     REFLECT( HideInMenu )
-    struct TickLaneFollowerAltTestComponent : public TickLaneFollowerTestComponent
+    struct TickModeFollowerAltTestComponent : public TickModeFollowerTestComponent
     {
         REFLECT_BODY();
 
         static constexpr uint32 kAltFollowSubTick = 8;
 
-        TickLaneFollowerAltTestComponent() { _followSubTickID = kAltFollowSubTick; }
+        TickModeFollowerAltTestComponent() { _followSubTickID = kAltFollowSubTick; }
     };
 
     /**
@@ -133,13 +133,13 @@ namespace sw
      * @details 값은 그 프레임의 앞 고리 값만으로 정해진다 — 순서가 하나라도 틀리면(앞 고리보다 먼저 돌면) 지난 프레임 값을 읽어 기대값과 달라진다.
      */
     REFLECT( HideInMenu )
-    struct TickLaneChainTestComponent : public Component
+    struct TickModeChainTestComponent : public Component
     {
         REFLECT_BODY();
 
         static constexpr uint32 kChainSubTick = 9;
 
-        TickLaneChainTestComponent* _pPrev{ nullptr }; ///< 앞 고리(없으면 사슬의 머리 — 선행 조건 없이 파도에서 돈다)
+        TickModeChainTestComponent* _pPrev{ nullptr }; ///< 앞 고리(없으면 사슬의 머리 — 선행 조건 없이 파도에서 돈다)
         float32                     _value = 0.0f;
         float32                     _gain  = 1.0f;
         uint32                      _frame = 0;
@@ -160,9 +160,9 @@ namespace sw
         }
     };
 
-    /** @brief 메인 레인으로 등록하는(테스트의 지역 줄) 컴포넌트입니다 — 틱한 스레드를 적는다. */
+    /** @brief Main 모드로 등록하는(테스트의 지역 줄) 컴포넌트입니다 — 틱한 스레드를 적는다. */
     REFLECT( HideInMenu )
-    struct TickLaneMainTestComponent : public Component
+    struct TickModeMainTestComponent : public Component
     {
         REFLECT_BODY();
 
@@ -176,9 +176,9 @@ namespace sw
         }
     };
 
-    /** @brief 등록 없이 메인 레인을 기반에서 물려받는 파생 컴포넌트입니다. */
+    /** @brief 등록 없이 Main 모드를 기반에서 물려받는 파생 컴포넌트입니다. */
     REFLECT( HideInMenu )
-    struct TickLaneMainDerivedTestComponent : public TickLaneMainTestComponent
+    struct TickModeMainDerivedTestComponent : public TickModeMainTestComponent
     {
         REFLECT_BODY();
     };

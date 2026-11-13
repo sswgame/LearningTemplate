@@ -953,7 +953,7 @@ namespace sw::editor
     {
         if ( _bNeedsContentFit == false )
             return;
-        if ( isCanvasSizeSettled( _previousCanvasSize, _canvasSize ) == false )
+        if ( isCanvasSizeStable( _previousCanvasSize, _canvasSize ) == false )
             return; // 크기가 정해진 다음 프레임에 맞춘다(노드 위치 시드도 그때까지 매 프레임 같은 값으로 걸린다)
 
         ed::NavigateToContent( 0.1f, 1.0f ); // 작은 그래프는 1:1 에서 가운데로 — 맞추기가 노드를 화면 가득 키우지 않는다(오버레이 포트 패치)

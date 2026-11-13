@@ -249,12 +249,12 @@ namespace sw
         }
         if ( host.getServerBus() != nullptr && message.getOriginServerID() == host.getServerBus()->getServerID() )
             return; // 이 서버가 보낸 알림이므로 이미 끊었다
-        AccountRevoked notice;
-        if ( AccountBus::kRevokeTopic.read( message, notice ) != ServerBusReadResult::Read )
+        AccountRevoked notification;
+        if ( AccountBus::kRevokeTopic.read( message, notification ) != ServerBusReadResult::Read )
             return; // 읽기가 (타입, 결과, 버전)마다 한 번 오류 로그와 카운터를 남겼다 — 그 세션은 영속 레코드 다시 읽기로 끊긴다
-        if ( notice._reasonCode.empty() == false && findSessionID( notice._accountID ) == notice._sessionID )
-            _mapAccountToReasonCode[notice._accountID] = notice._reasonCode;
-        _pLoginService->recordRevokedElsewhere( notice._accountID, notice._sessionID, notice._reason );
+        if ( notification._reasonCode.empty() == false && findSessionID( notification._accountID ) == notification._sessionID )
+            _mapAccountToReasonCode[notification._accountID] = notification._reasonCode;
+        _pLoginService->recordRevokedElsewhere( notification._accountID, notification._sessionID, notification._reason );
     }
 
     void AccountServer::revokeAccountSessions( AccountID accountID, string_view reasonCode, UnixMilliseconds nowMs )

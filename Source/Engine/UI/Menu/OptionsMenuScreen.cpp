@@ -27,15 +27,15 @@ namespace sw
     {
         struct OptionsMenuScreenInternal
         {
-            static constexpr utf8 kTabsName[]          = "Tabs";
-            static constexpr utf8 kRowsName[]          = "Rows";
-            static constexpr utf8 kRestartNoticeName[] = "RestartNotice";
-            static constexpr utf8 kValueName[]         = "Value";
-            static constexpr utf8 kValueTextName[]     = "ValueText";
-            static constexpr utf8 kLabelName[]         = "Label";
-            static constexpr utf8 kGlyphName[]         = "Glyph";
-            static constexpr utf8 kTabClass[]          = "tab";
-            static constexpr utf8 kSelectedTabClass[]  = "tab selected";
+            static constexpr utf8 kTabsName[]                = "Tabs";
+            static constexpr utf8 kRowsName[]                = "Rows";
+            static constexpr utf8 kRestartNotificationName[] = "RestartNotification";
+            static constexpr utf8 kValueName[]               = "Value";
+            static constexpr utf8 kValueTextName[]           = "ValueText";
+            static constexpr utf8 kLabelName[]               = "Label";
+            static constexpr utf8 kGlyphName[]               = "Glyph";
+            static constexpr utf8 kTabClass[]                = "tab";
+            static constexpr utf8 kSelectedTabClass[]        = "tab selected";
 
             /** @brief 설정 종류 하나의 행 UI — 행 문서(엔진 UI 문서 묶음의 칸)와 값 위젯에 연결하는 필드(설정 바인딩 규약)입니다. */
             struct RowWidgetDef
@@ -200,7 +200,7 @@ namespace sw
     {
         (void)deltaSeconds;
         refreshGlyphs();
-        refreshRestartNotice();
+        refreshRestartNotification();
     }
 
     void OptionsMenuScreen::onTreeRebuilt()
@@ -251,13 +251,13 @@ namespace sw
             _promptScreen = SettingsConfirmScreen::open( *pUI, *_pSettings, pUI->getEngineDocuments()._settingsConfirm );
         if ( result._bNeedsRestart && pUI != nullptr )
         {
-            UINotificationDef notice{};
-            notice._text            = SW_LOCTEXT( "Notification", "RestartRequired", "Some changes take effect after a restart." );
-            notice._durationSeconds = 6.0f;
-            notice._kind            = UINotificationKind::Warning;
-            engine::getSubsystem<UINotificationService>().post( notice );
+            UINotificationDef notification{};
+            notification._text            = SW_LOCTEXT( "Notification", "RestartRequired", "Some changes take effect after a restart." );
+            notification._durationSeconds = 6.0f;
+            notification._kind            = UINotificationKind::Warning;
+            engine::getSubsystem<UINotificationService>().post( notification );
         }
-        refreshRestartNotice();
+        refreshRestartNotification();
     }
 
     void OptionsMenuScreen::requestClose()
@@ -399,11 +399,11 @@ namespace sw
         }
     }
 
-    void OptionsMenuScreen::refreshRestartNotice()
+    void OptionsMenuScreen::refreshRestartNotification()
     {
-        Widget* pNotice = getTree().findWidgetByName( OptionsMenuScreenInternal::kRestartNoticeName );
-        if ( pNotice != nullptr && _pSettings != nullptr )
-            pNotice->setVisibility( _pSettings->isRestartRequired() ? WidgetVisibility::Visible : WidgetVisibility::Collapsed );
+        Widget* pNotification = getTree().findWidgetByName( OptionsMenuScreenInternal::kRestartNotificationName );
+        if ( pNotification != nullptr && _pSettings != nullptr )
+            pNotification->setVisibility( _pSettings->isRestartRequired() ? WidgetVisibility::Visible : WidgetVisibility::Collapsed );
     }
 
     void OptionsMenuScreen::openUnsavedPrompt()

@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Event/ConsumerGate.h"
+#include "Core/Event/ConsumerLock.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -26,7 +26,7 @@ namespace sw
     {
     public:
         EventBuffer() = default;
-        // 복사 · 이동은 쌓인 알림만 옮긴다 — 꺼내기 권한 표(`_gate`)는 복사본에 따라가지 않는다(복사본은 아무도 안 쥔 새 큐).
+        // 복사 · 이동은 쌓인 알림만 옮긴다 — 꺼내기 권한 표(`_consumerLock`)는 복사본에 따라가지 않는다(복사본은 아무도 안 쥔 새 큐).
         EventBuffer( const EventBuffer& other )
             : _listPending{ other._listPending } {}
         EventBuffer( EventBuffer&& other ) noexcept
@@ -49,19 +49,19 @@ namespace sw
          * @brief 꺼내는 쪽을 @p outLease 하나로 정합니다. 이미 다른 표가 쥐고 있으면 false 입니다(어서션도 남깁니다). 표를 쥔 큐는 표 없는 `moveAllTo` 가 어서션에 걸립니다.
          * @details 여러 화면 · 시스템이 같은 규칙 모델을 붙일 수 있는 큐는 이 표로 막는다. 소유 컴포넌트 하나가 비우는 큐는 표 없는 `moveAllTo` 를 그대로 쓴다.
          */
-        [[nodiscard]] bool claim( ConsumerLease& outLease ) { return _gate.claim( outLease ); }
+        [[nodiscard]] bool claim( ConsumerLease& outLease ) { return _consumerLock.claim( outLease ); }
 
         /** @brief 표를 쥔 쪽이 꺼냅니다. @p lease 가 이 큐의 표가 아니면 어서션입니다. 나머지는 표 없는 `moveAllTo` 와 같습니다. */
         void moveAllTo( [[maybe_unused]] const ConsumerLease& lease, vector<T>& outList )
         {
-            SW_ASSERT( _gate.isHeldBy( lease ) && "Claim the drain queue before draining it" );
+            SW_ASSERT( _consumerLock.isHeldBy( lease ) && "Claim the drain queue before draining it" );
             moveTo( outList );
         }
 
         /** @brief 쌓인 알림을 @p outList 끝에 넘기고 비웁니다. @p outList 가 비어 있으면 저장소를 맞바꿉니다(복사 없음). 표를 쥔 큐에는 쓸 수 없습니다. */
         void moveAllTo( vector<T>& outList )
         {
-            SW_ASSERT( _gate.hasHolder() == false && "This drain queue is gated; drain it with the lease" );
+            SW_ASSERT( _consumerLock.hasHolder() == false && "This drain queue is gated; drain it with the lease" );
             moveTo( outList );
         }
 
@@ -71,7 +71,7 @@ namespace sw
          */
         [[nodiscard]] const vector<T>& takeAll()
         {
-            SW_ASSERT( _gate.hasHolder() == false && "This drain queue is gated; drain it with the lease" );
+            SW_ASSERT( _consumerLock.hasHolder() == false && "This drain queue is gated; drain it with the lease" );
             _listTaken.clear();
             _listTaken.swap( _listPending );
             return _listTaken;
@@ -101,6 +101,6 @@ namespace sw
     private:
         vector<T>    _listPending;
         vector<T>    _listTaken; ///< `takeAll` 이 돌려준 목록. 복사 · 이동에 따라가지 않는다(지난 꺼냄의 것이다)
-        ConsumerGate _gate;
+        ConsumerLock _consumerLock;
     };
 } // namespace sw

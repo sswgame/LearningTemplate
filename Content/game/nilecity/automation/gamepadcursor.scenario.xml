@@ -12,8 +12,8 @@
 	<WaitUntil watch="Input.VirtualCursorEnabled" equals="1" timeoutFrames="60"/>
 	<MousePosition x="0.1" y="0.5"/>
 	<Wait frames="4"/>
-	<Remember watch="Input.MouseX" as="before"/>
-	<Remember watch="Input.MouseY" as="beforeY"/>
+	<Store watch="Input.MouseX" as="before"/>
+	<Store watch="Input.MouseY" as="beforeY"/>
 	<!-- 왼쪽 스틱 X(축 0)를 30 프레임 끝까지 민다 -->
 	<Wait frames="1"/>
 	<GamepadAxis axis="0" value="1"/>
@@ -26,7 +26,7 @@
 	<Expect watch="Input.MouseY" sameAs="beforeY"/>
 	<!-- 스틱을 놓으면 커서가 선다 — 움직이지 않는 것을 보므로 고정 대기다 -->
 	<Wait frames="4"/>
-	<Remember watch="Input.MouseX" as="stopped"/>
+	<Store watch="Input.MouseX" as="stopped"/>
 	<Wait frames="20"/>
 	<Expect watch="Input.MouseX" sameAs="stopped"/>
 	<Pass/>

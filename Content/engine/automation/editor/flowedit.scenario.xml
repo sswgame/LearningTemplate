@@ -10,114 +10,114 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.resetOptional"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UndoCount" equals="0" timeoutFrames="600"/>
 	<!-- ① 배치 — 콘텐츠 브라우저에서 메시를 찾아 씬 뷰로 끌어 놓는다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus content_browser"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="content.open game/empty/models"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.search"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="crate_medium.mesh"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorDrag mark="contentBrowser.asset.crate_medium.mesh" toMark="sceneView.canvas"/>
 	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="90"/>
 	<Expect watch="Editor.SelectionCount" equals="1"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
 	<!-- ② 메시 모디파이어 — 고른 것을 대상으로 휘기 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus meshmodifiers.stack"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="meshmodifiers.useSelection"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="meshmodifiers.add"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="meshmodifiers.category.Deform"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="meshmodifiers.item.bend"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="meshmodifiers.param.Angle" mods="ctrl"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="80"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="MeshModifiers.ModifierCount" equals="1"/>
 	<Expect watch="MeshModifiers.GPUPreviewActive" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close meshmodifiers.stack"/>
 	<!-- ③ 인스펙터로 이름 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus inspector"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.name"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="PlacedCrate"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="PlacedCrate" component="MeshComponent" selected="1"/>
 	<Expect watch="Editor.SelectedNames" is="PlacedCrate"/>
 	<!-- ④ 저장 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.saveAs {out}/flowedit.scene.xml"/>
 	<WaitUntil watch="Editor.SceneDirty" equals="0" timeoutFrames="60"/>
-	<Remember watch="Editor.SceneHash" as="saved"/>
-	<Remember watch="Editor.UndoState" as="savedUndo"/>
-	<Remember watch="Editor.StateHash" as="savedState"/>
+	<Store watch="Editor.SceneHash" as="saved"/>
+	<Store watch="Editor.UndoState" as="savedUndo"/>
+	<Store watch="Editor.StateHash" as="savedState"/>
 	<!-- ⑤ 플레이 인 → 플레이 아웃 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="play"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="stop"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneHash" sameAs="saved"/>
 	<Expect watch="Editor.UndoState" sameAs="savedUndo"/>
 	<Expect watch="Editor.SelectedNames" is="PlacedCrate"/>
 	<Expect watch="Editor.StateHash" sameAs="savedState"/>
 	<Expect watch="MeshModifiers.GPUPreviewActive" equals="1"/>
 	<!-- ⑥ 되돌리기 · 다시 실행 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="PlacedCrate" count="0"/>
 	<Expect watch="Editor.SceneHash" differsFrom="saved"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.redo"/>
 	<WaitUntil watch="Editor.SceneHash" sameAs="saved" timeoutFrames="60"/>
 	<EditorExpectObject name="PlacedCrate" selected="1"/>
 	<!-- ⑦ 다른 씬 → 저장한 씬 다시 열기(되돌리기 · 다시 실행으로 변경 표시가 켜져 있어 scene.new 는 확인 상자를 띄운다 — 확인 없이 여는 scene.open 을 쓴다) -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="PlacedCrate" count="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open {out}/flowedit.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="PlacedCrate" component="MeshComponent"/>
 	<Expect watch="Editor.SceneHash" sameAs="saved"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

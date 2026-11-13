@@ -1,6 +1,6 @@
 /**
  * @file SceneLoadLeakProbe.h
- * @brief 진짜 씬 로드를 되풀이해 누수 곡선(`LeakCurveCriteria::judge`)을 재는 감시 값입니다(누수 탐지 L3).
+ * @brief 진짜 씬 로드를 되풀이해 누수 곡선(`LeakCurveCriteria::evaluate`)을 재는 감시 값입니다(누수 탐지 L3).
  * @details 언리얼의 `memreport` 를 로드 전후로 되풀이해 보는 일, 유니티 메모리 프로파일러의 스냅샷 비교에 해당하는 일을 한 명령으로 묶는다.
  *          한 회차는 "창 열기 → 씬 로드 → 빈 씬으로 교체(로드한 씬 언로드) → 몇 프레임 기다림 → 창 닫기" 이고, 창이 닫힐 때 아직 살아 있는 블록이 그 회차의 남은 양이다.
  *          빈 씬 자체도 창 안에서 태어나므로 로드 없이 빈 씬만 만든 **대조 회차**를 먼저 재어 그 양을 뺀다. 점은 대조를 뺀 남은 양의 누적 합이라 회차마다 같은 양이 새면
@@ -45,8 +45,8 @@ namespace sw
         enum class Phase : uint8
         {
             Idle,
-            Loading,  ///< 씬 로드 요청이 끝나기를 기다린다(대조 회차는 건너뛴다)
-            Settling, ///< 빈 씬으로 바꾼 뒤 지연 해제가 다 돌 프레임(`SceneLoadLeakProbeInternal::kSettleFrames`)을 기다린다
+            Loading,     ///< 씬 로드 요청이 끝나기를 기다린다(대조 회차는 건너뛴다)
+            Stabilizing, ///< 빈 씬으로 바꾼 뒤 지연 해제가 다 돌 프레임(`SceneLoadLeakProbeInternal::kStabilityFrames`)을 기다린다
         };
 
         /** @brief 회차 하나를 시작합니다 — 창을 열고(대조 회차가 아니면) 로드를 요청합니다. */
@@ -59,13 +59,13 @@ namespace sw
     private:
         Phase                  _phase;
         string                 _scenePath;
-        uint32                 _totalRounds;   ///< 워밍업 + 측정 회차 수(대조 회차는 따로)
-        uint32                 _round;         ///< 지금 회차(0 이 대조 회차, 1 부터 로드 회차)
-        uint32                 _settleFrames;  ///< `Settling` 에서 지난 프레임 수
-        uint64                 _controlBytes;  ///< 대조 회차에서 남은 바이트(빈 씬 몫)
-        uint64                 _controlBlocks; ///< 대조 회차에서 남은 블록 수
-        uint64                 _sumBytes;      ///< 대조를 뺀 남은 바이트의 누적 합
-        uint64                 _sumBlocks;     ///< 대조를 뺀 남은 블록 수의 누적 합
+        uint32                 _totalRounds;     ///< 워밍업 + 측정 회차 수(대조 회차는 따로)
+        uint32                 _round;           ///< 지금 회차(0 이 대조 회차, 1 부터 로드 회차)
+        uint32                 _stabilityFrames; ///< `Stabilizing` 에서 지난 프레임 수
+        uint64                 _controlBytes;    ///< 대조 회차에서 남은 바이트(빈 씬 몫)
+        uint64                 _controlBlocks;   ///< 대조 회차에서 남은 블록 수
+        uint64                 _sumBytes;        ///< 대조를 뺀 남은 바이트의 누적 합
+        uint64                 _sumBlocks;       ///< 대조를 뺀 남은 블록 수의 누적 합
         TaskFuture<Scene*>     _loadFuture;
         vector<LeakCurvePoint> _listPoint;
         LeakCurveResult        _result;

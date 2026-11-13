@@ -6,16 +6,16 @@
 -->
 <Scenario name="editor.bugreportpanel" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<ResizeWindow width="1600" height="900"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus bug_it"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="bugReport.note"/>
 	<EditorText value="panel scenario note"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="bugReport.capture"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="BugReport.Saved" contains="panel scenario note" count="1"/>
 	<DevCommand line="panel.close bug_it"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

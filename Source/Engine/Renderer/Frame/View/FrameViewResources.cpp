@@ -525,8 +525,8 @@ namespace sw
         }
         // 화면에 나가는 첨부 표시(`_bPresented`)가 가리키는 곳을 따라가므로 가리키는 곳이 바뀌어도 렌더러가 목록을 다시 싣는다. 놓은 타깃도 목록에서 뺀다(죽은 핸들을 남기지 않는다).
         PassSelectionResult result{};
-        result._bTargetsRepointed = bForwardSet ? SW_TRUE : SW_FALSE;
-        result._bTargetsChanged   = ( bAllocated || bReleased ) ? SW_TRUE : SW_FALSE;
+        result._bTargetsRebound = bForwardSet ? SW_TRUE : SW_FALSE;
+        result._bTargetsChanged = ( bAllocated || bReleased ) ? SW_TRUE : SW_FALSE;
         return result;
     }
 } // namespace sw

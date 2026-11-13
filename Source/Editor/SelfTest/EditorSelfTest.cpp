@@ -11,7 +11,7 @@
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/SelfTest/EditorSettleWait.h"
+#include "Editor/SelfTest/EditorStabilityWait.h"
 
 #include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Foundation/QuitRequest.h"
@@ -75,7 +75,7 @@ namespace sw::editor
                 _bQuitWhenDone = bQuitWhenDone ? SW_TRUE : SW_FALSE;
                 _bActive       = SW_TRUE;
                 // 기동 직후 패널이 처음 그려지고 기본 도킹이 자리 잡는다 — 예전의 워밍업 5 프레임을 대신한다.
-                _settleWait.emplace();
+                _stabilityWait.emplace();
             }
 
             /** @brief 사람이 읽는 진행 상태입니다(`EditorSelfTestRunner::describeProgress`). */
@@ -90,8 +90,8 @@ namespace sw::editor
                 else
                     textBuilder.append( "starting" );
                 string text{ textBuilder.view() };
-                if ( _settleWait.has_value() )
-                    text += ", waiting for " + _settleWait->describeWait();
+                if ( _stabilityWait.has_value() )
+                    text += ", waiting for " + _stabilityWait->describeWait();
                 return text;
             }
 
@@ -116,15 +116,15 @@ namespace sw::editor
                     SW_LOG_INFO_ID( "EditorSelfTest.RunningEditorSelfTests", "Running %# editor self tests matching '%#'", static_cast<uint32>( _listSelectedIndex.size() ), _pattern.c_str() );
                 }
 
-                // 정지를 기다리는 동안은 테스트를 부르지 않는다. 진행 중인 일에는 시한이 없고(`EditorSettleState`), 할 일 없이 화면이 계속 움직이면 그 테스트의 실패다. 정지 판정의 화면 표본은 레이블 기록이 켜져 있어야 쌓인다(위에서 켰다).
-                if ( _settleWait.has_value() )
+                // 정지를 기다리는 동안은 테스트를 부르지 않는다. 진행 중인 일에는 시한이 없고(`EditorStabilityState`), 할 일 없이 화면이 계속 움직이면 그 테스트의 실패다. 정지 판정의 화면 표본은 레이블 기록이 켜져 있어야 쌓인다(위에서 켰다).
+                if ( _stabilityWait.has_value() )
                 {
-                    const EditorSettleResult evaluation = _settleWait->advance( editor::getActiveObjectManager() );
-                    if ( evaluation == EditorSettleResult::Waiting )
+                    const EditorStabilityResult evaluation = _stabilityWait->advance( editor::getActiveObjectManager() );
+                    if ( evaluation == EditorStabilityResult::Waiting )
                         return;
-                    if ( evaluation == EditorSettleResult::Oscillating )
-                        (void)_context.expect( false, _settleWait->describeOscillation().c_str() );
-                    _settleWait.reset();
+                    if ( evaluation == EditorStabilityResult::Oscillating )
+                        (void)_context.expect( false, _stabilityWait->describeOscillation().c_str() );
+                    _stabilityWait.reset();
                 }
 
                 if ( _cursor < _listSelectedIndex.size() )
@@ -132,8 +132,8 @@ namespace sw::editor
                     const EditorSelfTestRegistration& registration = Registry::getAt( _listSelectedIndex[_cursor] );
                     const EditorSelfTestStep          step         = registration._pfnRun( _context );
                     _context.advanceStep();
-                    if ( step == EditorSelfTestStep::WaitSettled )
-                        _settleWait.emplace();
+                    if ( step == EditorSelfTestStep::WaitStable )
+                        _stabilityWait.emplace();
 
                     const bool bTimedOut = step != EditorSelfTestStep::Done && _context.getStepIndex() >= kMaxStepCount;
                     if ( bTimedOut )
@@ -210,24 +210,24 @@ namespace sw::editor
             }
 
         private:
-            EditorSelfTestContext        _context;
-            optional<EditorSettleWait>   _settleWait; ///< 테스트가 `WaitSettled` 를 돌려 정지를 기다리는 중이면 있다(그동안 테스트를 부르지 않는다)
-            vector<uint32>               _listSelectedIndex;
-            vector<EditorSelfTestResult> _listResult;
-            string                       _pattern;
-            string                       _report;
-            uint32                       _cursor;
-            uint32                       _passedCount;
-            uint32                       _failedCount;
-            uint8                        _bActive           : 1; ///< 실행이 있다(시작 전 워밍업 포함)
-            uint8                        _bStarted          : 1;
-            uint8                        _bQuitWhenDone     : 1;
-            uint8                        _bMarksWereEnabled : 1; ///< 시작 전 레이블 기록 상태(끝나면 되돌린다)
+            EditorSelfTestContext         _context;
+            optional<EditorStabilityWait> _stabilityWait; ///< 테스트가 `WaitStable` 를 돌려 정지를 기다리는 중이면 있다(그동안 테스트를 부르지 않는다)
+            vector<uint32>                _listSelectedIndex;
+            vector<EditorSelfTestResult>  _listResult;
+            string                        _pattern;
+            string                        _report;
+            uint32                        _cursor;
+            uint32                        _passedCount;
+            uint32                        _failedCount;
+            uint8                         _bActive           : 1; ///< 실행이 있다(시작 전 워밍업 포함)
+            uint8                         _bStarted          : 1;
+            uint8                         _bQuitWhenDone     : 1;
+            uint8                         _bMarksWereEnabled : 1; ///< 시작 전 레이블 기록 상태(끝나면 되돌린다)
         };
 
         EditorSelfTestRun::EditorSelfTestRun()
             : _context{}
-            , _settleWait{}
+            , _stabilityWait{}
             , _listSelectedIndex{}
             , _listResult{}
             , _pattern{}

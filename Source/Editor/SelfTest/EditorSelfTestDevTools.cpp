@@ -300,7 +300,7 @@ namespace sw::editor
                                           "the saved layout has no docking section or no hierarchy window" );
                     (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
                     (void)context.expect( pDock->requestLoadNamedLayout( kLayoutName, folder ), "could not load the named layout" );
-                    return EditorSelfTestStep::WaitSettled; // 다음 프레임 시작에 적용되고 그 프레임에 창이 다시 만들어진다 — 정지(도크 적용 끝)까지
+                    return EditorSelfTestStep::WaitStable; // 다음 프레임 시작에 적용되고 그 프레임에 창이 다시 만들어진다 — 정지(도크 적용 끝)까지
                 }
 
                 const IEditorPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanelByID( kPanelID );
@@ -362,7 +362,7 @@ namespace sw::editor
                             ->setLocalPosition( pCamera->getWorldPosition() + pCamera->getCameraForward() * 6.0f );
                         pManager->flushSceneTransforms();
                         probe._startPosition = static_cast<SceneComponent*>( pObj->getPrimarySceneComponent() )->getWorldPosition();
-                        return EditorSelfTestStep::WaitSettled; // 선택과 기즈모가 그려지게 한다
+                        return EditorSelfTestStep::WaitStable; // 선택과 기즈모가 그려지게 한다
                     }
                     GameObject* pObj = pManager->findGameObjectByID( probe._objectID );
                     if ( context.expect( pObj != nullptr, "the probe object vanished" ) == false )

@@ -98,7 +98,7 @@ namespace sw
         , _buildStampPath{}
         , _seenBuildToken{}
         , _buildMutex{}
-        , _buildNotice{}
+        , _buildEvent{}
         , _onBeforeCommitBatch{}
         , _reloadHolds{}
         , _flushWorkers{}
@@ -321,29 +321,29 @@ namespace sw
     void LiveReloadManager::notifyBuildStarted()
     {
         ScopedLock<mutex> lock{ _buildMutex };
-        _buildNotice._bInProgress = true;
+        _buildEvent._bInProgress = true;
     }
 
     void LiveReloadManager::notifyBuildFinished( bool bSucceeded, string_view targetName )
     {
         ScopedLock<mutex> lock{ _buildMutex };
-        _buildNotice._bInProgress      = false;
-        _buildNotice._bFinishedPending = true;
-        _buildNotice._bSucceeded       = bSucceeded;
-        _buildNotice._targetName       = string( targetName );
+        _buildEvent._bInProgress      = false;
+        _buildEvent._bFinishedPending = true;
+        _buildEvent._bSucceeded       = bSucceeded;
+        _buildEvent._targetName       = string( targetName );
     }
 
-    bool LiveReloadManager::consumeBuildNotice()
+    bool LiveReloadManager::consumeBuildEvent()
     {
-        BuildNotice notice;
+        BuildEvent event;
         {
             ScopedLock<mutex> lock{ _buildMutex };
-            notice                         = _buildNotice;
-            _buildNotice._bFinishedPending = false;
+            event                         = _buildEvent;
+            _buildEvent._bFinishedPending = false;
         }
-        if ( notice._bFinishedPending )
+        if ( event._bFinishedPending )
         {
-            if ( notice._bSucceeded == false )
+            if ( event._bSucceeded == false )
             {
                 // 실패한 빌드가 다시 쓴 모듈은 반쯤 완성된 집합일 수 있으므로 로드하지 않는다. 파일은 그대로라 다음에 성공한 빌드의 변경과 함께 로드된다.
                 for ( auto& [name, pContext] : _mapModule )
@@ -355,12 +355,12 @@ namespace sw
                     context._bForceReload     = false;
                 }
             }
-            else if ( notice._targetName.empty() == false && _mapModule.find( notice._targetName ) != _mapModule.end() )
+            else if ( event._targetName.empty() == false && _mapModule.find( event._targetName ) != _mapModule.end() )
             {
-                triggerReload( notice._targetName );
+                triggerReload( event._targetName );
             }
         }
-        return notice._bInProgress;
+        return event._bInProgress;
     }
 
     void LiveReloadManager::update()
@@ -392,7 +392,7 @@ namespace sw
         }
 
         // 이 프로세스가 시작한 빌드가 도는 동안은 변경을 모아 두기만 한다. 연쇄 빌드의 반쯤 완성된 집합을 로드하지 않기 위해서다(`notifyBuildStarted`).
-        const bool bBuildInProgress = consumeBuildNotice();
+        const bool bBuildInProgress = consumeBuildEvent();
         if ( _bBuildStampPending == SW_TRUE && bBuildInProgress == false )
         {
             _bBuildStampPending = SW_FALSE;
@@ -432,7 +432,7 @@ namespace sw
             const bool bForce         = context._bForceReload.exchange( false );
             if ( bForce || sourceStamp != context._loadedSourceStamp )
             {
-                SW_LOG_TRACE_ID( "LiveReloadManager.FileWatcherSettledQueuingReload", "FileWatcher settled — queuing reload for %#", context._moduleName );
+                SW_LOG_TRACE_ID( "LiveReloadManager.FileWatcherStableQueuingReload", "FileWatcher settled — queuing reload for %#", context._moduleName );
                 context._bPendingReload = true;
             }
         }
@@ -944,7 +944,7 @@ namespace sw
 
     bool LiveReloadManager::flushTasksBeforeUnload()
     {
-        const bool bDrained = flushWorkersBeforeUnload();
+        const bool bFlushed = flushWorkersBeforeUnload();
         // 큐에 든 이벤트는 그것을 넣은 모듈의 vtable(소멸자 · 타입)을 가진다 — 워커를 비운 지금 배달하고 비워, 내려간 코드를 가리키는 이벤트가 남지 않게 한다.
         // 그 모듈의 구독자는 인스턴스와 함께 이미 풀렸으므로 남은 구독자(엔진 · 다른 모듈)만 받는다.
         if ( engine::areEngineServicesBound() )
@@ -952,7 +952,7 @@ namespace sw
             if ( EventDispatcher* const pEventDispatcher = engine::findSubsystem<EventDispatcher>() )
                 pEventDispatcher->processEvents();
         }
-        return bDrained;
+        return bFlushed;
     }
 
     bool LiveReloadManager::flushWorkersBeforeUnload()

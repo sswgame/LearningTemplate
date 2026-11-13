@@ -14,18 +14,18 @@
 # ------------------------------------------------------------------------------
 sw_globSourceTree(DEVTOOLS_SOURCES RECURSE "*.cpp" "*.h")
 sw_filterPlatformSources(DEVTOOLS_SOURCES) # OS 파일 감시기(`FileWatch/Windows` · `FileWatch/Linux`)
-# 클라이언트 전용 부분(Client/ — 셰이더 라이브 리로드 · 디버그 HUD · 콘솔 오버레이, `IDevToolsClientPart`)은 전용 서버가 짓지 않는다(cmake/Engine/UnbuiltSources.cmake).
+# 클라이언트 전용 부분(Client/ — 셰이더 라이브 리로드 · 디버그 HUD · 콘솔 오버레이, `IDevToolsClientPart`)은 전용 서버가 짓지 않는다(cmake/Engine/ExcludedSources.cmake).
 # 자동화 시나리오 실행기(`Client/Automation` — 언리얼 Automation 컨트롤러 · Gauntlet 이 Developer 모듈인 자리)도 여기다. 창 · RHI · 렌더러 사진을 모는 클라이언트 구동기라 서버는 짓지 않고,
 # 엔진 창구 `IAutomationRuntime` 에 모듈 서브시스템으로 스스로 선다(`SW_MODULE_SUBSYSTEM` — 호스트 라이브러리 등록이 "Engine" 이름으로 걷는다).
 # 설정 리로드 · 콘솔의 입력 · 시작 명령은 서버에도 선다.
 if(SW_TARGET_TYPE STREQUAL "Server")
-	sw_excludeUnbuiltSources(DEVTOOLS_SOURCES ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
+	sw_removeExcludedSources(DEVTOOLS_SOURCES ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
 elseif(SW_TARGET_TYPE STREQUAL "Client")
-	sw_excludeUnbuiltSources(DEVTOOLS_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS}) # 서버 전용 부분(Server/)은 클라이언트 구성이 짓지 않는다
+	sw_removeExcludedSources(DEVTOOLS_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS}) # 서버 전용 부분(Server/)은 클라이언트 구성이 짓지 않는다
 endif()
 
 add_library(DevTools SHARED ${DEVTOOLS_SOURCES})
-sw_applyTargetLayerGate(DevTools devtools)
+sw_applyTargetLayerGuard(DevTools devtools)
 set_target_properties(DevTools PROPERTIES
 	FOLDER "Source/DevTools"
 	EXCLUDE_FROM_ALL ON)

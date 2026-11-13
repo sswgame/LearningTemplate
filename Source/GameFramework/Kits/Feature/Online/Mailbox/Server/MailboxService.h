@@ -50,11 +50,11 @@ namespace sw
         ServiceScheduler*        _pScheduler{ nullptr };    ///< 서버 조립의 예약 테이블이다. 없으면(테스트, 서버 한 대 도구) 틱 주기로 정리한다
         int64                    _campaignRefreshMs{ 60000 };
         int32                    _sweepBatchCount{ 256 };
-        int64                    _noticeIntervalMs{ 1000 };  ///< 새 우편 알림을 가져가는 주기이다. 0 이면 알림을 보내지 않는다(다른 서버가 맡는다)
-        int32                    _noticeBatchCount{ 32 };    ///< 한 번에 가져가는 알림 수이다(트랜잭션 상한 64 안)
-        IAccountPresence*        _pPresence{ nullptr };      ///< 다른 서버에 붙은 계정을 찾고 알림을 넘긴다. 서버가 하나면 null 이다
-        IBalanceChangedListener* _pBalanceNotice{ nullptr }; ///< 수령 · 만료 반환으로 바뀐 잔액을 그 계정에 알린다. 경제 키트가 없으면 null 이다
-        IOfflinePushSender*      _pOfflinePush{ nullptr };   ///< 접속하지 않은 계정의 기기 푸시이다(라이브 운영 키트). 없으면 오프라인 계정에는 알리지 않는다
+        int64                    _notificationIntervalMs{ 1000 };  ///< 새 우편 알림을 가져가는 주기이다. 0 이면 알림을 보내지 않는다(다른 서버가 맡는다)
+        int32                    _notificationBatchCount{ 32 };    ///< 한 번에 가져가는 알림 수이다(트랜잭션 상한 64 안)
+        IAccountPresence*        _pPresence{ nullptr };            ///< 다른 서버에 붙은 계정을 찾고 알림을 넘긴다. 서버가 하나면 null 이다
+        IBalanceChangedListener* _pBalanceNotification{ nullptr }; ///< 수령 · 만료 반환으로 바뀐 잔액을 그 계정에 알린다. 경제 키트가 없으면 null 이다
+        IOfflinePushSender*      _pOfflinePush{ nullptr };         ///< 접속하지 않은 계정의 기기 푸시이다(라이브 운영 키트). 없으면 오프라인 계정에는 알리지 않는다
     };
 } // namespace sw
 
@@ -100,7 +100,7 @@ namespace sw
         /** @brief 만료 정리의 완료입니다. 지표 `mailbox_expired_total{action}` 을 갱신하며 `_bMore` 이면 다음 틱에 바로 다시 정리합니다. */
         void completeSweep( const MailboxSweepStats& stats, ServiceStoreCompletion completion );
         /** @brief 새 우편 알림의 완료입니다. 이 서버의 계정에는 알림을, 다른 서버의 계정에는 중계를, 접속하지 않은 계정에는 기기 푸시를 보냅니다. */
-        void completeNotices( ServiceStoreResult result, vector<ServiceMailNotification>& inoutListNotice );
+        void completeNotifications( ServiceStoreResult result, vector<ServiceMailNotification>& inoutListNotification );
         /** @brief 캠페인 다시 읽기의 완료입니다. 활성 캠페인과 곧 열릴 캠페인만 남겨 캐시를 바꿉니다. */
         void completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign, ServiceStoreCompletion completion );
         /** @brief 요청 하나의 저장소 작업을 맡깁니다. 내려가는 중이면 일시 장애로 답합니다. */
@@ -119,8 +119,8 @@ namespace sw
         OnlineServiceHost*          _pHost;                ///< 알림을 보낼 호스트이다. 첫 틱에 받는다
         MetricCounter*              _arrExpiredCounter[3]; ///< discarded · returned · removed
         UnixMilliseconds            _nowMs;
-        ServicePeriodicJob          _sweepJob;    ///< 만료 정리이다. 예약 테이블이 있으면 주기 없이 회차로만 돈다
-        ServicePeriodicJob          _campaignJob; ///< 캠페인 다시 읽기이다
-        ServicePeriodicJob          _noticeJob;   ///< 새 우편 알림 가져가기이다
+        ServicePeriodicJob          _sweepJob;        ///< 만료 정리이다. 예약 테이블이 있으면 주기 없이 회차로만 돈다
+        ServicePeriodicJob          _campaignJob;     ///< 캠페인 다시 읽기이다
+        ServicePeriodicJob          _notificationJob; ///< 새 우편 알림 가져가기이다
     };
 } // namespace sw

@@ -4,8 +4,8 @@
  * @details 내비메시 경로(`SceneNavigation::requestPath`)와 격자 A*(GameFramework `GridPathSolver` — RTS 유닛 경로)가 함께 쓰는 한 벌입니다. 바뀌는 것(무엇을 어떻게 구하는가)은
  *          풀이 타입 `TSolver` 하나가 갖습니다:
  *          - `using Job = …;` — 질의와 결과를 함께 담는 값(기본 생성 · 이동 가능). 요청자가 질의 칸을 채워 넘기고, 받을 때 결과 칸을 읽는다.
- *          - `void prepareBatch( vector<Job>& inoutListJob, uint32 laneCount )` — 게임 스레드, 워커에 넘기기 직전. 질의가 가리키는 자원을 풀고(에이전트 종류 → 내비메시) 레인마다의 스크래치를 마련한다.
- *          - `void solve( Job& inoutJob, uint32 laneIndex )` — 워커. 자기 일과 자기 레인의 스크래치만 만진다(레인 하나는 태스크 하나라 레인 스크래치를 둘이 함께 쓰지 않는다).
+ *          - `void prepareBatch( vector<Job>& inoutListJob, uint32 chunkCount )` — 게임 스레드, 워커에 넘기기 직전. 질의가 가리키는 자원을 풀고(에이전트 종류 → 내비메시) 구간마다의 스크래치를 마련한다.
+ *          - `void solve( Job& inoutJob, uint32 chunkIndex )` — 워커. 자기 일과 자기 구간의 스크래치만 만진다(구간 하나는 태스크 하나라 구간 스크래치를 둘이 함께 쓰지 않는다).
  *
  *          **언제 무엇이 도는가**(형식이 정한다):
  *          - `request` · `cancel` · `takeResult` 는 아무 스레드에서 부릅니다(병렬 틱). 칸 표 · 대기 줄만 잠금 아래 만집니다.
@@ -72,7 +72,7 @@ namespace sw
             , _listPending{}
             , _listInFlightJob{}
             , _listInFlightHandle{}
-            , _listLane{}
+            , _listChunk{}
             , _stage{}
             , _pSolver{ &solver }
             , _completedCount{ 0 }
@@ -155,38 +155,38 @@ namespace sw
             const uint32 jobCount = static_cast<uint32>( _listInFlightJob.size() );
             if ( jobCount == 0 )
                 return;
-            const bool   bWorkers  = pTaskManager != nullptr;
-            const uint32 laneLimit = bWorkers ? pTaskManager->getWorkerCount() + 1 : 1;
-            const uint32 laneCount = MathUtil::max( 1u, MathUtil::min( jobCount, laneLimit ) );
-            _pSolver->prepareBatch( _listInFlightJob, laneCount );
-            _listLane.resize( laneCount );
-            // 레인마다 이어진 구간 — 일이 서로 독립이라 나누는 모양은 결과에 영향이 없다.
-            for ( uint32 laneIndex = 0; laneIndex < laneCount; ++laneIndex )
+            const bool   bWorkers   = pTaskManager != nullptr;
+            const uint32 chunkLimit = bWorkers ? pTaskManager->getWorkerCount() + 1 : 1;
+            const uint32 chunkCount = MathUtil::max( 1u, MathUtil::min( jobCount, chunkLimit ) );
+            _pSolver->prepareBatch( _listInFlightJob, chunkCount );
+            _listChunk.resize( chunkCount );
+            // 구간마다 이어진 범위 — 일이 서로 독립이라 나누는 모양은 결과에 영향이 없다.
+            for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
             {
-                LaneTask&    lane  = _listLane[laneIndex];
-                const uint32 start = static_cast<uint32>( ( static_cast<uint64>( jobCount ) * laneIndex ) / laneCount );
-                const uint32 end   = static_cast<uint32>( ( static_cast<uint64>( jobCount ) * ( laneIndex + 1 ) ) / laneCount );
-                lane._pSolver      = _pSolver;
-                lane._pJob         = _listInFlightJob.data() + start; // 워커는 컨테이너를 만지지 않는다 — 자기 구간의 포인터만 받는다
-                lane._jobCount     = end - start;
-                lane._laneIndex    = laneIndex;
+                ChunkTask&   chunk = _listChunk[chunkIndex];
+                const uint32 start = static_cast<uint32>( ( static_cast<uint64>( jobCount ) * chunkIndex ) / chunkCount );
+                const uint32 end   = static_cast<uint32>( ( static_cast<uint64>( jobCount ) * ( chunkIndex + 1 ) ) / chunkCount );
+                chunk._pSolver     = _pSolver;
+                chunk._pJob        = _listInFlightJob.data() + start; // 워커는 컨테이너를 만지지 않는다 — 자기 구간의 포인터만 받는다
+                chunk._jobCount    = end - start;
+                chunk._chunkIndex  = chunkIndex;
             }
             if ( bWorkers == false )
             {
-                for ( LaneTask& lane : _listLane )
+                for ( ChunkTask& chunk : _listChunk )
                 {
-                    lane.run();
+                    chunk.run();
                 }
                 return;
             }
             TaskManager& taskManager = *pTaskManager;
-            for ( LaneTask& lane : _listLane )
+            for ( ChunkTask& chunk : _listChunk )
             {
-                TaskHandle task = taskManager.emplaceTask( taskName, SW_DELEGATE_METHOD( TaskDelegate, &LaneTask::run, &lane ) );
+                TaskHandle task = taskManager.emplaceTask( taskName, SW_DELEGATE_METHOD( TaskDelegate, &ChunkTask::run, &chunk ) );
                 taskManager.addToStage( _stage, task, taskName );
                 taskManager.submitWithoutWake( task );
             }
-            taskManager.wakeSleepingWorkers( laneCount );
+            taskManager.wakeSleepingWorkers( chunkCount );
             _pLaunchedTaskManager = pTaskManager;
         }
 
@@ -244,18 +244,18 @@ namespace sw
         };
 
         /** @brief 워커 태스크 하나가 맡는 비행 줄의 이어진 구간입니다. 비행 줄 · 풀이는 `launch` ~ `complete` 사이에 바뀌지 않는다. */
-        struct LaneTask
+        struct ChunkTask
         {
             TSolver* _pSolver{ nullptr };
-            Job*     _pJob{ nullptr }; ///< 비행 줄에서 이 레인의 첫 일(주인이 `launch` 에서 잡는다)
+            Job*     _pJob{ nullptr }; ///< 비행 줄에서 이 구간의 첫 일(주인이 `launch` 에서 잡는다)
             uint32   _jobCount{ 0 };
-            uint32   _laneIndex{ 0 };
+            uint32   _chunkIndex{ 0 };
 
             void run()
             {
                 for ( uint32 jobIndex = 0; jobIndex < _jobCount; ++jobIndex )
                 {
-                    _pSolver->solve( _pJob[jobIndex], _laneIndex );
+                    _pSolver->solve( _pJob[jobIndex], _chunkIndex );
                 }
             }
         };
@@ -274,7 +274,7 @@ namespace sw
         vector<PathRequestHandle> _listPending                    SW_GUARDED_BY( _lock ); ///< 요청 순서 — 워커에 넘기는 순서다
         vector<Job>                                               _listInFlightJob;       ///< 주인 스레드가 `launch` 에서 채우고 `complete` 에서 비운다. 그 사이 워커만 원소를 쓴다
         vector<PathRequestHandle>                                 _listInFlightHandle;    ///< `_listInFlightJob` 과 같은 순서의 핸들
-        vector<LaneTask>                                          _listLane;
+        vector<ChunkTask>                                         _listChunk;
         TaskStageHandle                                           _stage; ///< 이 줄이 낸 태스크 전부(주인 하나가 묶는다 — `NavMeshRuntime::_bakeStage` 와 같은 모양)
         TSolver*                                                  _pSolver;
         uint64 _completedCount                                    SW_GUARDED_BY( _lock );

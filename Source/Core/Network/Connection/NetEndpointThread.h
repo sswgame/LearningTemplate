@@ -42,7 +42,7 @@ namespace sw
      *     host.initialize( &transport, settings );
      *     (void)host.listen();
      *     (void)netThread.start( &host );
-     *     // 게임 스레드: host.sendMessage( … ) · router.pump( host ) — update 는 부르지 않는다
+     *     // 게임 스레드: host.sendMessage( … ) · router.poll( host ) — update 는 부르지 않는다
      *     netThread.stop();
      *     host.disconnectAll();
      * @endcode

@@ -115,15 +115,15 @@ namespace sw
     CommandStack::CommandStack()
         : _listCommand{}
         , _listPendingTransactionCommand{}
-        , _listParkedCommand{}
+        , _listSuspendedCommand{}
         , _objectEditListener{}
         , _transactionLabel{}
         , _empty{}
         , _index{ 0 }
-        , _parkedIndex{ 0 }
+        , _suspendedIndex{ 0 }
         , _transactionDepth{ 0 }
         , _bIsExecuting{ SW_FALSE }
-        , _bHistoryParked{ SW_FALSE }
+        , _bHistorySuspended{ SW_FALSE }
         , _listOwnerWatch{}
     {
     }
@@ -270,16 +270,16 @@ namespace sw
         _bIsExecuting = SW_FALSE;
     }
 
-    void CommandStack::notifyObjectEdit( const ObjectEditNotice& notice ) const
+    void CommandStack::notifyObjectEdit( const ObjectEditEvent& event ) const
     {
         if ( _objectEditListener.isBound() )
-            _objectEditListener.get()( notice );
+            _objectEditListener.get()( event );
     }
 
     uint32 CommandStack::removeOwnedBy( uint64 ownerID )
     {
         uint32 droppedCount = dropOwnedBy( _listCommand, _index, ownerID );
-        droppedCount += dropOwnedBy( _listParkedCommand, _parkedIndex, ownerID );
+        droppedCount += dropOwnedBy( _listSuspendedCommand, _suspendedIndex, ownerID );
         size_t keptPendingCount{ 0 };
         for ( size_t pendingIndex = 0; pendingIndex < _listPendingTransactionCommand.size(); ++pendingIndex )
         {
@@ -377,29 +377,29 @@ namespace sw
     {
         outArchive << CommandStackInternal::kSaveVersion;
         CommandStackInternal::writeList( outArchive, _listCommand, _index, &CommandStack::isPersistable );
-        outArchive << _bHistoryParked;
-        CommandStackInternal::writeList( outArchive, _listParkedCommand, _parkedIndex, &CommandStack::isPersistable );
+        outArchive << _bHistorySuspended;
+        CommandStackInternal::writeList( outArchive, _listSuspendedCommand, _suspendedIndex, &CommandStack::isPersistable );
     }
 
     bool CommandStack::load( Archive& archive )
     {
         clear();
-        _listParkedCommand.clear();
-        _parkedIndex    = 0;
-        _bHistoryParked = SW_FALSE;
+        _listSuspendedCommand.clear();
+        _suspendedIndex    = 0;
+        _bHistorySuspended = SW_FALSE;
         uint32 version{ 0 };
         archive >> version;
-        bool       bParked{ false };
+        bool       bSuspended{ false };
         const bool bLoaded = archive.isOk() && version == CommandStackInternal::kSaveVersion && CommandStackInternal::readList( archive, _listCommand, _index ) &&
-                             ( archive >> bParked ).isOk() && CommandStackInternal::readList( archive, _listParkedCommand, _parkedIndex );
+                             ( archive >> bSuspended ).isOk() && CommandStackInternal::readList( archive, _listSuspendedCommand, _suspendedIndex );
         if ( bLoaded == false )
         {
             clear();
-            _listParkedCommand.clear();
-            _parkedIndex = 0;
+            _listSuspendedCommand.clear();
+            _suspendedIndex = 0;
             return false;
         }
-        _bHistoryParked = bParked;
+        _bHistorySuspended = bSuspended;
         return true;
     }
 
@@ -419,24 +419,24 @@ namespace sw
         _transactionDepth = 0;
     }
 
-    void CommandStack::parkHistory()
+    void CommandStack::suspendHistory()
     {
-        _listParkedCommand = std::move( _listCommand );
-        _parkedIndex       = _index;
-        _bHistoryParked    = SW_TRUE;
+        _listSuspendedCommand = std::move( _listCommand );
+        _suspendedIndex       = _index;
+        _bHistorySuspended    = SW_TRUE;
         clear();
     }
 
-    void CommandStack::unparkHistory()
+    void CommandStack::resumeHistory()
     {
         clear();
-        if ( _bHistoryParked == false )
+        if ( _bHistorySuspended == false )
             return;
-        _listCommand = std::move( _listParkedCommand );
-        _index       = _parkedIndex;
-        _listParkedCommand.clear();
-        _parkedIndex    = 0;
-        _bHistoryParked = SW_FALSE;
+        _listCommand = std::move( _listSuspendedCommand );
+        _index       = _suspendedIndex;
+        _listSuspendedCommand.clear();
+        _suspendedIndex    = 0;
+        _bHistorySuspended = SW_FALSE;
     }
 
     const string& CommandStack::peekUndoLabel() const

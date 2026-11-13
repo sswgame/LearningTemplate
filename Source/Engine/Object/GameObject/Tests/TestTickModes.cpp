@@ -1,5 +1,5 @@
-// TickLanesTest — 일괄 경로(파도 · 레인)가 기준 길(오브젝트 칸, 한 오브젝트 = 한 스레드)과 같은 상태를 내는지(서브틱 · 선행 조건 · 틱 중 서브틱
-// 등록 · 해제 · 남의 오브젝트 쓰기를 섞어), 타입이 선언한 레인(`TickMode`)대로 가는지, 선행 조건 종류(순서만 · 쓰기를 봄)가 태스크 간선 · 레벨 장벽으로
+// TickModesTest — 일괄 경로(파도 · 모드)가 기준 길(오브젝트 칸, 한 오브젝트 = 한 스레드)과 같은 상태를 내는지(서브틱 · 선행 조건 · 틱 중 서브틱
+// 등록 · 해제 · 남의 오브젝트 쓰기를 섞어), 타입이 선언한 모드(`TickMode`)대로 가는지, 선행 조건 종류(순서만 · 쓰기를 봄)가 태스크 간선 · 레벨 장벽으로
 // 갈리는지 본다(NEXT 5-3 1 · 1b · 1c).
 #include "pch.h"
 
@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
-#include "Engine/Object/GameObject/Tests/TickLaneTestComponents.h"
+#include "Engine/Object/GameObject/Tests/TickModeTestComponents.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
@@ -19,20 +19,20 @@ using namespace sw;
 
 namespace
 {
-    constexpr utf8 kMoverBatchScopeName[] = "GT.Scene.tickBatch.TickLaneMoverTestComponent";
+    constexpr utf8 kMoverBatchScopeName[] = "GT.Scene.tickBatch.TickModeMoverTestComponent";
 
     /** @brief 무버 여럿(일부는 남의 오브젝트에 쓰고 일부는 팔로워가 기다린다)을 둔 씬입니다. 병렬 분배 임계값(16)을 넘게 둔다. */
-    struct TickLaneRig
+    struct TickModeRig
     {
         static constexpr uint32  kMoverCount = 40;
         static constexpr float32 kDeltaTime  = 1.0f / 60.0f;
 
         GameObjectManager                      _manager;
-        vector<TickLaneMoverTestComponent*>    _listMover;
+        vector<TickModeMoverTestComponent*>    _listMover;
         vector<SceneComponent*>                _listMoverRoot;
-        vector<TickLaneFollowerTestComponent*> _listFollower;
+        vector<TickModeFollowerTestComponent*> _listFollower;
 
-        TickLaneRig( const SceneEngineServices& services, bool bBatchPath )
+        TickModeRig( const SceneEngineServices& services, bool bBatchPath )
             : _manager{ services }
         {
             _manager.getTickRegistry().setBatchPathEnabled( bBatchPath );
@@ -41,7 +41,7 @@ namespace
             {
                 GameObject*                 pMoverObject = _manager.createGameObject( hashed_string( "Mover" ) );
                 SceneComponent*             pMoverRoot   = pMoverObject->addComponent<SceneComponent>();
-                TickLaneMoverTestComponent* pMover       = pMoverObject->addComponent<TickLaneMoverTestComponent>();
+                TickModeMoverTestComponent* pMover       = pMoverObject->addComponent<TickModeMoverTestComponent>();
                 pMover->_speed                           = 1.0f + static_cast<float32>( index ) * 0.125f;
                 pMover->_pShared                         = ( index % 4 == 0 ) ? pShared : nullptr;
                 _listMover.push_back( pMover );
@@ -58,8 +58,8 @@ namespace
         {
             GameObject* pFollowerObject = _manager.createGameObject( hashed_string( "Follower" ) );
             (void)pFollowerObject->addComponent<SceneComponent>();
-            TickLaneFollowerTestComponent* pFollower = bAlt ? pFollowerObject->addComponent<TickLaneFollowerAltTestComponent>()
-                                                            : pFollowerObject->addComponent<TickLaneFollowerTestComponent>();
+            TickModeFollowerTestComponent* pFollower = bAlt ? pFollowerObject->addComponent<TickModeFollowerAltTestComponent>()
+                                                            : pFollowerObject->addComponent<TickModeFollowerTestComponent>();
             pFollower->_pLeader                      = _listMover[leaderIndex];
             pFollower->_pLeaderRoot                  = _listMoverRoot[leaderIndex];
             _listFollower.push_back( pFollower );
@@ -79,11 +79,11 @@ namespace
             StateHashBuilder builder;
             const uint64     sceneHash = SceneObjectHash::compute( SceneIterationTestAccess::getKey(), _manager );
             builder.addBytes( &sceneHash, sizeof( sceneHash ) );
-            for ( const TickLaneMoverTestComponent* pMover : _listMover )
+            for ( const TickModeMoverTestComponent* pMover : _listMover )
             {
                 builder.addFloat( pMover->_value );
             }
-            for ( const TickLaneFollowerTestComponent* pFollower : _listFollower )
+            for ( const TickModeFollowerTestComponent* pFollower : _listFollower )
             {
                 builder.addFloat( pFollower->_value );
             }
@@ -118,13 +118,13 @@ namespace
 } // namespace
 
 /**
- * @brief [TickLanesTest] 파도 길(서브틱 · 여러 항목 오브젝트까지 일괄)이 기준 길과 같은 상태를 낸다 — 서브틱 · 선행 조건 · 틱 중 등록 · 해제 · 남의 오브젝트 쓰기를 섞어
+ * @brief [TickModesTest] 파도 길(서브틱 · 여러 항목 오브젝트까지 일괄)이 기준 길과 같은 상태를 낸다 — 서브틱 · 선행 조건 · 틱 중 등록 · 해제 · 남의 오브젝트 쓰기를 섞어
  */
-SW_TEST_CASE( TickLanesTest, WavePathMatchesObjectEntryPath )
+SW_TEST_CASE( TickModesTest, WavePathMatchesObjectEntryPath )
 {
     const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
-    TickLaneRig               batched{ services, true };
-    TickLaneRig               reference{ services, false };
+    TickModeRig               batched{ services, true };
+    TickModeRig               reference{ services, false };
     batched.run( 12 );
     reference.run( 12 );
     SW_EXPECT_EQUAL( reference.computeHash(), batched.computeHash() );
@@ -133,28 +133,28 @@ SW_TEST_CASE( TickLanesTest, WavePathMatchesObjectEntryPath )
     const TickRegistry& registry = batched._manager.getTickRegistry();
     const uint32        group    = static_cast<uint32>( TickGroup::DuringPhysics );
     SW_EXPECT_TRUE( registry.getEntries( group ).empty() );
-    SW_EXPECT_TRUE( countWaveElements( registry, group ) >= TickLaneRig::kMoverCount * 3 );
+    SW_EXPECT_TRUE( countWaveElements( registry, group ) >= TickModeRig::kMoverCount * 3 );
     SW_EXPECT_TRUE( reference._manager.getTickRegistry().getWaves( group ).empty() );
 }
 
 /**
- * @brief [TickLanesTest] 등록한 타입은 자기 일괄 함수로, 메인 레인 타입(과 등록 없는 파생)은 게임 스레드에서 돈다 — 상태는 기준 길과 같다
+ * @brief [TickModesTest] 등록한 타입은 자기 일괄 함수로, Main 모드 타입(과 등록 없는 파생)은 게임 스레드에서 돈다 — 상태는 기준 길과 같다
  */
-SW_TEST_CASE( TickLanesTest, DeclaredLanesRunWhereDeclared )
+SW_TEST_CASE( TickModesTest, DeclaredModesRunWhereDeclared )
 {
     TickBatchRegistry        tickBatchRegistry;
-    TickBatchRegistry::Entry moverEntry{ &TickLaneMoverTestComponent::StaticType, &TickBatchOf<TickLaneMoverTestComponent, kMoverBatchScopeName>::tickRange,
+    TickBatchRegistry::Entry moverEntry{ &TickModeMoverTestComponent::StaticType, &TickBatchOf<TickModeMoverTestComponent, kMoverBatchScopeName>::tickRange,
                                          TickMode::Batch };
-    TickBatchRegistry::Entry mainEntry{ &TickLaneMainTestComponent::StaticType, nullptr, TickMode::Main };
+    TickBatchRegistry::Entry mainEntry{ &TickModeMainTestComponent::StaticType, nullptr, TickMode::Main };
     SW_REQUIRE_TRUE( tickBatchRegistry.registerEntry( moverEntry ) );
     SW_REQUIRE_TRUE( tickBatchRegistry.registerEntry( mainEntry ) );
 
     SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
     services._pTickBatchRegistry = &tickBatchRegistry;
     {
-        TickLaneRig                       batched{ services, true };
-        TickLaneMainTestComponent*        pMain    = batched._manager.createGameObject( hashed_string( "Main" ) )->addComponent<TickLaneMainTestComponent>();
-        TickLaneMainDerivedTestComponent* pDerived = batched._manager.createGameObject( hashed_string( "Derived" ) )->addComponent<TickLaneMainDerivedTestComponent>();
+        TickModeRig                       batched{ services, true };
+        TickModeMainTestComponent*        pMain    = batched._manager.createGameObject( hashed_string( "Main" ) )->addComponent<TickModeMainTestComponent>();
+        TickModeMainDerivedTestComponent* pDerived = batched._manager.createGameObject( hashed_string( "Derived" ) )->addComponent<TickModeMainDerivedTestComponent>();
         batched.run( 6 );
 
         const TickRegistry& registry = batched._manager.getTickRegistry();
@@ -169,14 +169,14 @@ SW_TEST_CASE( TickLanesTest, DeclaredLanesRunWhereDeclared )
         {
             for ( const TickBatchList& batchList : wave._listBatch )
             {
-                bTypedList = bTypedList || batchList._pFunction == &TickBatchOf<TickLaneMoverTestComponent, kMoverBatchScopeName>::tickRange;
+                bTypedList = bTypedList || batchList._pFunction == &TickBatchOf<TickModeMoverTestComponent, kMoverBatchScopeName>::tickRange;
             }
         }
         SW_EXPECT_TRUE( bTypedList );
 
-        TickLaneRig reference{ SceneEngineServices::makeFromBoundEngine(), false };
-        (void)reference._manager.createGameObject( hashed_string( "Main" ) )->addComponent<TickLaneMainTestComponent>();
-        (void)reference._manager.createGameObject( hashed_string( "Derived" ) )->addComponent<TickLaneMainDerivedTestComponent>();
+        TickModeRig reference{ SceneEngineServices::makeFromBoundEngine(), false };
+        (void)reference._manager.createGameObject( hashed_string( "Main" ) )->addComponent<TickModeMainTestComponent>();
+        (void)reference._manager.createGameObject( hashed_string( "Derived" ) )->addComponent<TickModeMainDerivedTestComponent>();
         reference.run( 6 );
         SW_EXPECT_EQUAL( reference.computeHash(), batched.computeHash() );
     }
@@ -185,9 +185,9 @@ SW_TEST_CASE( TickLanesTest, DeclaredLanesRunWhereDeclared )
 }
 
 /**
- * @brief [TickLanesTest] 미룬 일은 (디스패치 순번, 쓴 오브젝트, 넣은 순서) 순으로 돈다 — 틱 밖의 일이 맨 앞, 같은 디스패치 안은 쓴 오브젝트 id 순(워커 순이 아니다)
+ * @brief [TickModesTest] 미룬 일은 (디스패치 순번, 쓴 오브젝트, 넣은 순서) 순으로 돈다 — 틱 밖의 일이 맨 앞, 같은 디스패치 안은 쓴 오브젝트 id 순(워커 순이 아니다)
  */
-SW_TEST_CASE( TickLanesTest, DeferredQueueMergesThreadBuffersByKey )
+SW_TEST_CASE( TickModesTest, DeferredQueueMergesThreadBuffersByKey )
 {
     GameObjectManager     manager;
     const GameObject*     pFirst  = manager.createGameObject( hashed_string( "First" ) );
@@ -216,19 +216,19 @@ SW_TEST_CASE( TickLanesTest, DeferredQueueMergesThreadBuffersByKey )
 
 namespace
 {
-    /** @brief 잡 컨텍스트로 도는 레인 시스템입니다 — 씬을 바꾸는 일은 틱 뒤 큐로만 낸다. */
-    class LaneProbeSystem final : public ISceneLaneFrameSystem
+    /** @brief 잡 컨텍스트로 도는 병렬 시스템입니다 — 씬을 바꾸는 일은 틱 뒤 큐로만 낸다. */
+    class ParallelProbeSystem final : public ISceneParallelFrameSystem
     {
     public:
         uint32 _runCount      = 0;
         uint32 _deferredCount = 0;
 
-        explicit LaneProbeSystem( bool bWritesStructure )
+        explicit ParallelProbeSystem( bool bWritesStructure )
             : _bWritesStructure{ bWritesStructure }
         {
         }
 
-        void runLane( SceneJobContext& context ) override
+        void runOnAnyThread( SceneJobContext& context ) override
         {
             ++_runCount;
             uint32* pDeferredCount = &_deferredCount;
@@ -250,32 +250,32 @@ namespace
 } // namespace
 
 /**
- * @brief [TickLanesTest] 레인 시스템은 잡 컨텍스트로 돌고 씬을 바꾸는 일은 틱 뒤 큐로 간다 — 구조를 쓴다고 선언한 레인 시스템은 붙지 않는다
+ * @brief [TickModesTest] 병렬 시스템은 잡 컨텍스트로 돌고 씬을 바꾸는 일은 틱 뒤 큐로 간다 — 구조를 쓴다고 선언한 병렬 시스템은 붙지 않는다
  */
-SW_TEST_CASE( TickLanesTest, LaneFrameSystemRunsThroughJobContext )
+SW_TEST_CASE( TickModesTest, ParallelFrameSystemRunsThroughJobContext )
 {
     GameObjectManager manager;
-    SW_EXPECT_LOG( "FrameSystem.LaneStructure" );
-    SW_EXPECT_TRUE( manager.addFrameSystem( hashed_string( "LaneStructure" ), make_unique<LaneProbeSystem>( true ) ) == false );
-    SW_REQUIRE_TRUE( manager.addFrameSystem( hashed_string( "LaneProbe" ), make_unique<LaneProbeSystem>( false ) ) );
+    SW_EXPECT_LOG( "FrameSystem.ParallelStructure" );
+    SW_EXPECT_TRUE( manager.addFrameSystem( hashed_string( "ParallelStructure" ), make_unique<ParallelProbeSystem>( true ) ) == false );
+    SW_REQUIRE_TRUE( manager.addFrameSystem( hashed_string( "ParallelProbe" ), make_unique<ParallelProbeSystem>( false ) ) );
     (void)manager.createGameObject( hashed_string( "Anchor" ) );
     manager.beginPlay();
     manager.update( 1.0f / 60.0f );
-    const LaneProbeSystem* pProbe = static_cast<const LaneProbeSystem*>( manager.findFrameSystem( hashed_string( "LaneProbe" ) ) );
+    const ParallelProbeSystem* pProbe = static_cast<const ParallelProbeSystem*>( manager.findFrameSystem( hashed_string( "ParallelProbe" ) ) );
     SW_REQUIRE_TRUE( pProbe != nullptr );
     SW_EXPECT_EQUAL( uint32{ 1 }, pProbe->_runCount );
     SW_EXPECT_EQUAL( uint32{ 1 }, pProbe->_deferredCount ); // 같은 프레임의 `ApplyPrePhysics` 가 돌렸다
 }
 
 /**
- * @brief [TickLanesTest] 선행 조건 스테이지는 같은 (타입, 서브틱) 이웃을 한 일괄 목록으로 묶고 옛 순서(순서 키, 오브젝트 id — 기준 길)와 같은 상태를 낸다 —
+ * @brief [TickModesTest] 선행 조건 스테이지는 같은 (타입, 서브틱) 이웃을 한 일괄 목록으로 묶고 옛 순서(순서 키, 오브젝트 id — 기준 길)와 같은 상태를 낸다 —
  *        전체 재구축 뒤에도, 플레이 중 스폰한 팔로워를 증분으로 끼운 뒤(`flushStageEdits`)에도 같은 규칙이다(NEXT 5-3 1b)
  */
-SW_TEST_CASE( TickLanesTest, StageNeighborBatchesMatchOldOrder )
+SW_TEST_CASE( TickModesTest, StageNeighborBatchesMatchOldOrder )
 {
     const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
-    TickLaneRig               batched{ services, true };
-    TickLaneRig               reference{ services, false };
+    TickModeRig               batched{ services, true };
+    TickModeRig               reference{ services, false };
     batched.run( 4 );
     reference.run( 4 );
     SW_EXPECT_EQUAL( reference.computeHash(), batched.computeHash() );
@@ -317,8 +317,8 @@ namespace
         static constexpr float32 kDeltaTime       = 1.0f / 60.0f;
 
         GameObjectManager                   _manager;
-        vector<TickLaneChainTestComponent*> _listLink;
-        TickLaneChainTestComponent*         _pSecond{ nullptr }; ///< 2 번 오브젝트의 둘째 고리(3 번을 기다린다)
+        vector<TickModeChainTestComponent*> _listLink;
+        TickModeChainTestComponent*         _pSecond{ nullptr }; ///< 2 번 오브젝트의 둘째 고리(3 번을 기다린다)
 
         TickChainRig( const SceneEngineServices& services, bool bBatchPath )
             : _manager{ services }
@@ -326,12 +326,12 @@ namespace
             _manager.getTickRegistry().setBatchPathEnabled( bBatchPath );
             for ( uint32 index = 0; index < kLinkCount; ++index )
             {
-                TickLaneChainTestComponent* pLink = _manager.createGameObject( hashed_string( "Link" ) )->addComponent<TickLaneChainTestComponent>();
+                TickModeChainTestComponent* pLink = _manager.createGameObject( hashed_string( "Link" ) )->addComponent<TickModeChainTestComponent>();
                 pLink->_gain                      = 1.0f + static_cast<float32>( index ) * 0.25f;
                 pLink->_pPrev                     = index > 0 ? _listLink[index - 1] : nullptr;
                 _listLink.push_back( pLink );
             }
-            _pSecond         = _listLink[2]->getOwner()->addComponent<TickLaneChainTestComponent>();
+            _pSecond         = _listLink[2]->getOwner()->addComponent<TickModeChainTestComponent>();
             _pSecond->_gain  = 7.0f;
             _pSecond->_pPrev = _listLink[3];
             _manager.beginPlay();
@@ -339,9 +339,9 @@ namespace
             for ( uint32 index = 1; index < kLinkCount; ++index )
             {
                 const TickPrerequisiteKind kind = index == kReadsWritesLink ? TickPrerequisiteKind::ReadsWrites : TickPrerequisiteKind::OrderOnly;
-                SW_EXPECT_TRUE( _listLink[index]->addSubTickPrerequisite( TickLaneChainTestComponent::kChainSubTick, _listLink[index - 1]->_chainHandle, kind ) );
+                SW_EXPECT_TRUE( _listLink[index]->addSubTickPrerequisite( TickModeChainTestComponent::kChainSubTick, _listLink[index - 1]->_chainHandle, kind ) );
             }
-            SW_EXPECT_TRUE( _pSecond->addSubTickPrerequisite( TickLaneChainTestComponent::kChainSubTick, _listLink[3]->_chainHandle, TickPrerequisiteKind::OrderOnly ) );
+            SW_EXPECT_TRUE( _pSecond->addSubTickPrerequisite( TickModeChainTestComponent::kChainSubTick, _listLink[3]->_chainHandle, TickPrerequisiteKind::OrderOnly ) );
         }
 
         void run( uint32 frameCount )
@@ -368,10 +368,10 @@ namespace
 } // namespace
 
 /**
- * @brief [TickLanesTest] 순서만 선행 조건은 같은 레벨 스테이지의 태스크 간선(`runAfter`)이 되고 쓰기를 보는 선행 조건만 레벨 장벽 · 적용을 넘는다 —
+ * @brief [TickModesTest] 순서만 선행 조건은 같은 레벨 스테이지의 태스크 간선(`runAfter`)이 되고 쓰기를 보는 선행 조건만 레벨 장벽 · 적용을 넘는다 —
  *        순서는 사슬 그대로이고 일괄 길과 기준 길이 같은 값을 낸다(NEXT 5-3 선행 조건 간선 종류)
  */
-SW_TEST_CASE( TickLanesTest, OrderOnlyPrerequisitesBecomeTaskEdges )
+SW_TEST_CASE( TickModesTest, OrderOnlyPrerequisitesBecomeTaskEdges )
 {
     const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
     TickChainRig              batched{ services, true };
@@ -411,10 +411,10 @@ SW_TEST_CASE( TickLanesTest, OrderOnlyPrerequisitesBecomeTaskEdges )
     // 종류를 바꾸면 스테이지가 다시 갈린다 — 모두 쓰기를 보면 고리마다 레벨 하나(간선 없는 스테이지, 2b 는 4 와 같은 레벨).
     for ( uint32 index = 1; index < TickChainRig::kLinkCount; ++index )
     {
-        SW_REQUIRE_TRUE( batched._listLink[index]->addSubTickPrerequisite( TickLaneChainTestComponent::kChainSubTick, batched._listLink[index - 1]->_chainHandle,
+        SW_REQUIRE_TRUE( batched._listLink[index]->addSubTickPrerequisite( TickModeChainTestComponent::kChainSubTick, batched._listLink[index - 1]->_chainHandle,
                                                                            TickPrerequisiteKind::ReadsWrites ) );
     }
-    SW_REQUIRE_TRUE( batched._pSecond->addSubTickPrerequisite( TickLaneChainTestComponent::kChainSubTick, batched._listLink[3]->_chainHandle, TickPrerequisiteKind::ReadsWrites ) );
+    SW_REQUIRE_TRUE( batched._pSecond->addSubTickPrerequisite( TickModeChainTestComponent::kChainSubTick, batched._listLink[3]->_chainHandle, TickPrerequisiteKind::ReadsWrites ) );
     batched.run( 2 );
     batched.expectChainValues();
     uint32 maxLevel = 0;

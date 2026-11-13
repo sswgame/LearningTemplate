@@ -187,7 +187,7 @@ namespace sw
         pending.put( getSentExpiryTable(), ServiceTTLRule::makeTTLIndexKey( message._createdMs, sentKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
         if ( message._expiresMs > 0 )
             pending.put( getExpiryTable(), makeExpiryKey( message._expiresMs, mailKey ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
-        pending.put( getNoticeTable(), makeExpiryKey( message._createdMs, mailKey ), // 키 모양(시각 16 진 + 우편 키)이 TTL 색인과 같다
+        pending.put( getNotificationTable(), makeExpiryKey( message._createdMs, mailKey ), // 키 모양(시각 16 진 + 우편 키)이 TTL 색인과 같다
                      vector<uint8>( reinterpret_cast<const uint8*>( message._titleKey.data() ), reinterpret_cast<const uint8*>( message._titleKey.data() ) + message._titleKey.size() ),
                      ServiceRecord::kAbsentVersion );
 
@@ -199,37 +199,37 @@ namespace sw
         return LedgerResult::Ok;
     }
 
-    const hashed_string& ServiceMail::getNoticeTable()
+    const hashed_string& ServiceMail::getNotificationTable()
     {
         static const hashed_string s_table{ "mail_notice" };
         return s_table;
     }
 
-    ServiceStoreResult ServiceMail::claimNotices( IServiceStoreConnection& connection, int32 maxCount, vector<ServiceMailNotification>& outListNotice )
+    ServiceStoreResult ServiceMail::claimNotifications( IServiceStoreConnection& connection, int32 maxCount, vector<ServiceMailNotification>& outListNotification )
     {
-        outListNotice.clear();
+        outListNotification.clear();
         const int32              batchCount = maxCount < ServiceTransaction::kMaxWriteCount ? maxCount : ServiceTransaction::kMaxWriteCount;
         vector<ServiceRecord>    listRecord;
-        const ServiceStoreResult listed = connection.listRecords( getNoticeTable(), string_view{}, string_view{}, batchCount, false, listRecord );
+        const ServiceStoreResult listed = connection.listRecords( getNotificationTable(), string_view{}, string_view{}, batchCount, false, listRecord );
         if ( listed != ServiceStoreResult::Ok || listRecord.empty() )
             return listed;
         ServiceTransaction              transaction;
-        vector<ServiceMailNotification> listNotice;
+        vector<ServiceMailNotification> listNotification;
         for ( const ServiceRecord& record : listRecord )
         {
             const size_t separator = record._key.find( '/' );
             if ( separator == string::npos || record._bytes.size() > static_cast<size_t>( ServiceMailConstant::kMaxTitleSize ) )
                 return ServiceStoreResult::Invalid;
-            ServiceMailNotification& notice = listNotice.emplace_back();
-            notice._mailKey                 = record._key.substr( separator + 1 );
-            notice._titleKey.assign( reinterpret_cast<const utf8*>( record._bytes.data() ), record._bytes.size() );
-            if ( parseRecipient( notice._mailKey, notice._recipientAccountID ) == false )
+            ServiceMailNotification& notification = listNotification.emplace_back();
+            notification._mailKey                 = record._key.substr( separator + 1 );
+            notification._titleKey.assign( reinterpret_cast<const utf8*>( record._bytes.data() ), record._bytes.size() );
+            if ( parseRecipient( notification._mailKey, notification._recipientAccountID ) == false )
                 return ServiceStoreResult::Invalid;
-            transaction.erase( getNoticeTable(), record._key, record._version );
+            transaction.erase( getNotificationTable(), record._key, record._version );
         }
         const ServiceStoreResult committed = connection.commit( transaction );
         if ( committed == ServiceStoreResult::Ok )
-            outListNotice = std::move( listNotice );
+            outListNotification = std::move( listNotification );
         return committed;
     }
 

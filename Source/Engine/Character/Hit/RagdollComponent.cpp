@@ -91,8 +91,8 @@ namespace sw
         , _getUpExitState{}
         , _flinchClip{}
         , _blendBackSeconds{ 0.5f }
-        , _settleSpeed{ 0.15f }
-        , _settleSeconds{ 0.5f }
+        , _sleepSpeed{ 0.15f }
+        , _sleepSeconds{ 0.5f }
         , _hitReactionSeconds{ 0.35f }
         , _hitReactionWeight{ 0.6f }
         , _flinchSeconds{ 0.4f }
@@ -124,12 +124,12 @@ namespace sw
         , _assetReload{}
         , _flinchLayer{}
         , _partialWeight{ 1.0f }
-        , _settleElapsed{ 0.0f }
+        , _sleepElapsed{ 0.0f }
         , _blendBackElapsed{ 0.0f }
         , _flinchElapsed{ 0.0f }
         , _lastDeltaSeconds{ 0.0f }
         , _bHasPhysicsPose{ false }
-        , _bSettled{ false }
+        , _bAsleep{ false }
         , _bRebuild{ false }
         , _bGettingUp{ false }
         , _bMotorsDriven{ false }
@@ -335,10 +335,10 @@ namespace sw
 
     void RagdollComponent::startRagdoll( const float3& impulse, optional<uint32> bodyIndex )
     {
-        _state         = RagdollState::Ragdoll;
-        _settleElapsed = 0.0f;
-        _bSettled      = false;
-        _bGettingUp    = false;
+        _state        = RagdollState::Ragdoll;
+        _sleepElapsed = 0.0f;
+        _bAsleep      = false;
+        _bGettingUp   = false;
         if ( bodyIndex.has_value() && impulse.getLengthSquared() > 0.0f )
             _listPendingImpulse.push_back( PendingImpulse{ impulse, float3{}, *bodyIndex } );
         setControllerActive( false );
@@ -802,9 +802,9 @@ namespace sw
         {
             maxSpeed = MathUtil::max( maxSpeed, pScene->getLinearVelocity( body ).getLength() );
         }
-        _settleElapsed = maxSpeed < _settleSpeed ? _settleElapsed + _lastDeltaSeconds : 0.0f;
-        _bSettled      = _settleElapsed >= _settleSeconds;
-        if ( _bSettled && _bAutoGetUp )
+        _sleepElapsed = maxSpeed < _sleepSpeed ? _sleepElapsed + _lastDeltaSeconds : 0.0f;
+        _bAsleep      = _sleepElapsed >= _sleepSeconds;
+        if ( _bAsleep && _bAutoGetUp )
             (void)getUp();
     }
 

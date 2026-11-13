@@ -61,7 +61,7 @@ namespace sw
             manager.removeFrameSystem( hashed_string( kFrameSystemKey ) );
     }
 
-    void MeleeSweepHistory::runLane( SceneJobContext& context )
+    void MeleeSweepHistory::runOnAnyThread( SceneJobContext& context )
     {
         (void)context;
         ++_frame;

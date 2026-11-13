@@ -5,17 +5,17 @@
 -->
 <Scenario name="editor.windowtitle" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor scene.new"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.saveAs {out}/windowtitle.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.WindowTitleDirty" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.create"/>
 	<WaitUntil watch="Editor.WindowTitleDirty" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+S"/>
 	<WaitUntil watch="Editor.WindowTitleDirty" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>

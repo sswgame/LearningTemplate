@@ -50,7 +50,7 @@ namespace sw::editor
                 uint64 _hash{ 0 };
             };
 
-            /** @brief 키 · 글 입력을 받을 곳입니다(`EditorSelfTestInput::isKeyboardTargetSettled`). */
+            /** @brief 키 · 글 입력을 받을 곳입니다(`EditorSelfTestInput::isKeyboardTargetStable`). */
             struct KeyboardTarget
             {
                 float2 _pos{};
@@ -89,8 +89,8 @@ namespace sw::editor
                 uint64               _layoutSignature{ 0 };           ///< 바로 앞 프레임이 끝난 뒤의 창 배치 서명(`sampleLayoutSignature`)
                 uint32               _layoutFrame{ 0 };               ///< `_layoutSignature` 를 뜬 ImGui 프레임(그 서명은 이 바로 앞 프레임의 것이다)
                 uint32               _layoutTag{ 0 };                 ///< `_layoutSignature` 가 그린 프레임이 열릴 때 찍힌 기다림 번호
-                uint32               _stablePairTag{ 0 };             ///< 지금 서명이 바로 앞 표본과 같으면 그 앞 표본의 번호, 다르면 0(`isLayoutSettledAfter`)
-                uint32               _settleWaitSerial{ 0 };          ///< 마지막 `beginSettleWait` 의 번호
+                uint32               _stablePairTag{ 0 };             ///< 지금 서명이 바로 앞 표본과 같으면 그 앞 표본의 번호, 다르면 0(`isLayoutStableAfter`)
+                uint32               _stabilityWaitSerial{ 0 };       ///< 마지막 `beginStabilityWait` 의 번호
                 uint32               _openFrameTag{ 0 };              ///< 지금 열린 프레임에 찍은 기다림 번호
                 vector<WindowPlace>  _listWindowPlace;                ///< 바로 앞 표본의 창마다 자리 해시(`_layoutSignature` 의 재료) — 바뀐 창을 이름으로 알린다
                 string               _lastLayoutChange;               ///< 서명이 마지막으로 바뀐 까닭(창 이름 · 메인 뷰포트 · 팝업, `describeLastLayoutChange`)
@@ -588,7 +588,7 @@ namespace sw::editor
         return pState != nullptr && pState->_listEvent.empty() == false;
     }
 
-    bool EditorSelfTestInput::isKeyboardTargetSettled()
+    bool EditorSelfTestInput::isKeyboardTargetStable()
     {
         const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
         if ( pState == nullptr )
@@ -598,21 +598,21 @@ namespace sw::editor
         return bFresh && pState->_keyboardTargetFrame > pState->_keyboardTargetStableStart;
     }
 
-    uint32 EditorSelfTestInput::beginSettleWait()
+    uint32 EditorSelfTestInput::beginStabilityWait()
     {
         EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
         if ( pState == nullptr )
             return 0;
-        return ++pState->_settleWaitSerial;
+        return ++pState->_stabilityWaitSerial;
     }
 
-    uint32 EditorSelfTestInput::getSettleWaitSerial()
+    uint32 EditorSelfTestInput::getStabilityWaitSerial()
     {
         const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
-        return pState != nullptr ? pState->_settleWaitSerial : 0;
+        return pState != nullptr ? pState->_stabilityWaitSerial : 0;
     }
 
-    bool EditorSelfTestInput::isLayoutSettledAfter( uint32 waitSerial )
+    bool EditorSelfTestInput::isLayoutStableAfter( uint32 waitSerial )
     {
         const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
         // 같은 두 표본 중 앞 것의 번호가 기다림 번호 이상이면 뒤 것도 그렇다(번호는 줄지 않는다).
@@ -675,7 +675,7 @@ namespace sw::editor
             state._layoutSignature = signature;
             state._layoutFrame     = frame;
             state._layoutTag       = state._openFrameTag;
-            state._openFrameTag    = state._settleWaitSerial;
+            state._openFrameTag    = state._stabilityWaitSerial;
         }
         if ( state._bHoldMouse )
         {

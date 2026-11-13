@@ -9,7 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Event/ConsumerGate.h"
+#include "Core/Event/ConsumerLock.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/StreamFrame.h"
 #include "Core/Network/Transport/StreamTypes.h"

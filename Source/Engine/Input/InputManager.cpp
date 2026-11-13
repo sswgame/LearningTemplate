@@ -323,14 +323,14 @@ namespace sw
         {
             if ( pRemaining == nullptr )
                 continue;
-            const bool bAdoptAsMouse    = bWasMouse && _pMouse == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Mouse;
-            const bool bAdoptAsGamepad  = bWasGamepad && _pGamepad == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Gamepad;
+            const bool bAssignAsMouse   = bWasMouse && _pMouse == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Mouse;
+            const bool bAssignAsGamepad = bWasGamepad && _pGamepad == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Gamepad;
             const bool bReplaceKeyboard = bWasKeyboard && _pKeyboard == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Keyboard;
             if ( bReplaceKeyboard )
                 _pKeyboard = static_cast<KeyboardDevice*>( pRemaining.get() );
-            else if ( bAdoptAsMouse )
+            else if ( bAssignAsMouse )
                 _pMouse = static_cast<MouseDevice*>( pRemaining.get() );
-            else if ( bAdoptAsGamepad )
+            else if ( bAssignAsGamepad )
                 _pGamepad = static_cast<GamepadDevice*>( pRemaining.get() );
         }
     }

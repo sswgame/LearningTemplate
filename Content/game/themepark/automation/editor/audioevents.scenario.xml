@@ -12,37 +12,37 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_editorWatchPanel" value="audioevents"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- ① 목록 · 고르기 -->
 	<DevCommand line="panel.focus audioevents"/>
 	<WaitUntil watch="Editor.AudioEventCount" atLeast="3" timeoutFrames="60"/>
 	<Expect watch="Editor.AudioEventSelected" equals="0"/>
 	<EditorClick mark="audioevents.event.Built"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.AudioEventSelected" equals="1"/>
 	<!-- ② Post Event — 오디오 스레드가 받는다 -->
-	<Remember watch="Editor.AudioEventsPlayed" as="played"/>
+	<Store watch="Editor.AudioEventsPlayed" as="played"/>
 	<EditorClick mark="audioevents.postEvent"/>
 	<WaitUntil watch="Editor.AudioEventsPlayed" differsFrom="played" timeoutWallSeconds="10"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- ③ 고치기 — 사본에 복제를 더했다 지우고 버린다 -->
 	<Expect watch="Editor.AudioEventEditCount" equals="0"/>
 	<EditorClick mark="audioevents.edit"/>
 	<WaitUntil watch="Editor.AudioEventEditCount" equals="3" timeoutFrames="30"/>
 	<Expect watch="Editor.PanelDirty" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="audioevents.duplicate"/>
 	<WaitUntil watch="Editor.AudioEventEditCount" equals="4" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PanelDirty" equals="1"/>
 	<EditorClick mark="audioevents.delete"/>
 	<WaitUntil watch="Editor.AudioEventEditCount" equals="3" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="audioevents.stopEditing"/>
 	<WaitUntil watch="Editor.AudioEventEditCount" equals="0" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PanelDirty" equals="0"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

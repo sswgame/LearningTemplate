@@ -35,9 +35,9 @@ SW_TEST_CASE( ArchiveTest, ReadCountRefusesCountsThatDoNotFit )
         SW_EXPECT_TRUE( reader.isError() );
     }
     {
-        sw::Archive forged;
-        forged << 0xFFFFFFFFu << uint32{ 1 };
-        sw::Archive reader( forged.getData(), forged.getSize() );
+        sw::Archive crafted;
+        crafted << 0xFFFFFFFFu << uint32{ 1 };
+        sw::Archive reader( crafted.getData(), crafted.getSize() );
         uint32      count = 0;
         SW_EXPECT_FALSE( reader.readCount( 8, count ) );
         SW_EXPECT_TRUE( reader.isError() );

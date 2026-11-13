@@ -170,14 +170,14 @@ namespace sw::editor
         outState._listBuiltBody.clear();
         outState._pStateName                   = "";
         outState._state                        = 0;
-        outState._bSettled                     = SW_FALSE;
+        outState._bAsleep                      = SW_FALSE;
         const RagdollComponent* const pRagdoll = findRagdoll( pScene );
         outState._bHasRagdoll                  = pRagdoll != nullptr ? SW_TRUE : SW_FALSE;
         if ( pRagdoll == nullptr )
             return;
         outState._pStateName    = getEnumName( pRagdoll->getState() );
         outState._state         = static_cast<uint32>( pRagdoll->getState() );
-        outState._bSettled      = pRagdoll->isSettled() ? SW_TRUE : SW_FALSE;
+        outState._bAsleep       = pRagdoll->isAsleep() ? SW_TRUE : SW_FALSE;
         const size_t builtCount = pRagdoll->getRagdoll()._listBody.size();
         for ( size_t bodyIndex = 0; bodyIndex < builtCount; ++bodyIndex )
         {

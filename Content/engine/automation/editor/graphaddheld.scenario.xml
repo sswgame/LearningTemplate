@@ -7,7 +7,7 @@
 <Scenario name="editor.graphaddheld" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
 	<DevCommand line="layout.reset"/>
 	<ResizeWindow width="1600" height="900"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="sceneView.canvas" button="1" state="Down"/>
 	<EditorKey key="D" state="Down"/>
 	<Wait frames="5"/>

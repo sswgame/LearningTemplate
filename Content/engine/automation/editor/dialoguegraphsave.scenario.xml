@@ -11,40 +11,40 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.open {out}/temp.dialogue.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus dialogue_graph"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
 	<Expect watch="Editor.TempAssetExists" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="dialogueGraph.addMenu"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="dialogueGraph.add.Dialogue"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="dialogueGraph.save"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.TempAssetExists" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.removeTemp {out}/temp.dialogue.xml"/>
 	<WaitUntil watch="Editor.TempAssetExists" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="dialogueGraph.addMenu"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="dialogueGraph.add.End"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus dialogue_graph"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor asset.save"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.TempAssetExists" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.removeTemp {out}/temp.dialogue.xml"/>
 	<WaitUntil watch="Editor.TempAssetExists" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

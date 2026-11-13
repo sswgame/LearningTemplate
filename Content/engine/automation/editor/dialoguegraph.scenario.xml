@@ -8,12 +8,12 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/dialoguegraph.scenario.xml -unattended
 -->
 <Scenario name="editor.dialoguegraph" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorWatchPanel" value="dialogue_graph"/>
 	<DevCommand line="panel.focus dialogue_graph"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="5" timeoutFrames="150"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<CaptureEditorUI file="open.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

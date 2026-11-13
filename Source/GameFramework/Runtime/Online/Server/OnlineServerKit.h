@@ -135,7 +135,7 @@ namespace sw
          */
         virtual int32 getOpenJobCount() const { return 0; }
         /** @brief 종료 드레인이 시작될 때 한 번 불립니다. 새 일을 받지 않고 진행 중인 일을 마무리하며 접속한 클라이언트에 사유를 알립니다(`ServerShutdownNotice`). 기본은 아무 일도 하지 않습니다. */
-        virtual void beginShutdown( const ServerShutdownNotice& notice ) { (void)notice; }
+        virtual void beginShutdown( const ServerShutdownNotice& notification ) { (void)notification; }
 
         /**
          * @brief 탈퇴한 계정의 이 키트 레코드를 지우는 훅입니다. 계정 id 를 키나 값으로 두는 표가 없으면 nullptr 를 반환합니다.

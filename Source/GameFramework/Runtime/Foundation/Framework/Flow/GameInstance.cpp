@@ -89,7 +89,7 @@ namespace sw
                 GameInstance* const pInstance = GameInstance::findRunningInstance();
                 if ( pInstance == nullptr )
                     return false;
-                outValue = pInstance->getSaveGate().isBlocked() ? 1.0 : 0.0;
+                outValue = pInstance->getSaveLock().isBlocked() ? 1.0 : 0.0;
                 return true;
             }
 
@@ -121,7 +121,7 @@ namespace sw
         : _packConfig{}
         , _pWindow{ nullptr }
         , _stateSnapshot{}
-        , _saveGate{}
+        , _saveLock{}
         , _gameScope{}
         , _pItemCatalog{}
         , _pAppearanceDatabase{}
@@ -143,7 +143,7 @@ namespace sw
         IGameInstanceClientHook* const pClientHook    = IGameInstanceClientHook::find();
         ILoadingScreen* const          pLoadingScreen = pClientHook != nullptr ? pClientHook->emplaceLoadingScreen( _gameScope ) : nullptr;
         // 씬 흐름은 이 인스턴스의 gamesettings(`_packConfig` — 범위보다 먼저 선 멤버)와 두 형제를 빌려 든다.
-        _gameScope.emplaceSubsystem<GameSceneFlow>( _packConfig._data, screenTransition, pLoadingScreen, _saveGate );
+        _gameScope.emplaceSubsystem<GameSceneFlow>( _packConfig._data, screenTransition, pLoadingScreen, _saveLock );
         // 로컬 저장소(세이브 슬롯)는 게임 범위 하나다 - 게임 상태 세이브 · 자동 저장 · 계정 장치 비밀이 함께 쓴다.
         (void)_gameScope.addSubsystem( std::move( localStore ) );
         // 온라인 세션은 키트 클라이언트를 묶을 뿐 연결은 게임이 연다 - 온라인을 쓰지 않는 게임에는 비용이 없다.
@@ -254,7 +254,7 @@ namespace sw
             _gameScope.setParentScope( game::findGameScope() );
         game::setGameScope( &_gameScope );
         // 자신도 건다 — 도는 인스턴스(`findRunningInstance`)는 지금 게임 범위에서 찾는다.
-        if ( bindScopedService( this ) == false || bindScopedService( &_packConfig._data ) == false || bindScopedService( &_saveGate ) == false || applyPackConfig() == false )
+        if ( bindScopedService( this ) == false || bindScopedService( &_packConfig._data ) == false || bindScopedService( &_saveLock ) == false || applyPackConfig() == false )
             return false;
         // 인스턴스 서브시스템을 onInitialize 앞에 세운다(의존 순서: 화면 전환 · 로딩 화면 → 씬 흐름) — 씬 흐름이 씬 로드 받아들임 알림을 걸어 첫 씬 요청(onInitialize 안)이
         // 로딩 화면을 띄우고, 파생이 네트워크 역할을 보고 키트 처리기를 단다. 하나라도 서지 않으면(로딩 팁 파일을 못 읽었다) 게임을 띄우지 않는다 — 파생 초기화도 부르지 않는다.
@@ -413,7 +413,7 @@ namespace sw
             return false;
         }
         _pAutosave = make_unique<AutosaveManager>();
-        if ( _pAutosave->initialize( settings, getSubsystem<GameLocalStore>(), _saveGate,
+        if ( _pAutosave->initialize( settings, getSubsystem<GameLocalStore>(), _saveLock,
                                      AutosaveManager::SaveDelegate::create( [this]( vector<uint8>& outBytes )
         { return captureSnapshot( SerializePurpose::SaveGame, outBytes ); } ),
                                      AutosaveManager::LoadDelegate::create( [this]( const string& slot, const vector<uint8>& bytes, const AutosaveManager::RestoreCompletedFunction& onCompleted )
@@ -503,9 +503,9 @@ namespace sw
 
     bool GameInstance::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
     {
-        if ( purpose == SerializePurpose::SaveGame && _saveGate.isBlocked() )
+        if ( purpose == SerializePurpose::SaveGame && _saveLock.isBlocked() )
         {
-            SW_LOG_WARNING_ID( "GameInstance.SaveBlocked", "Saving is blocked ('%#') - nothing is written", _saveGate.findBlockReason()->c_str() );
+            SW_LOG_WARNING_ID( "GameInstance.SaveBlocked", "Saving is blocked ('%#') - nothing is written", _saveLock.findBlockReason()->c_str() );
             return false;
         }
         // 순서: 올린 타입의 상태를 싣고 걷기 → 파생 훅(그 밖의 상태를 싣는다) → 봉투(파생의 리플렉션 상태 포함).
@@ -524,7 +524,7 @@ namespace sw
             if ( result.error() == SnapshotRestoreFailure::SceneBroken )
             {
                 SW_LOG_ERROR_ID( "GameInstance.RestoreBrokeScene", "The restore failed after the scene was cleared - saving is blocked until a restore succeeds or the scene is reopened" );
-                _brokenRestoreBlock = _saveGate.block( "restore.broken" );
+                _brokenRestoreBlock = _saveLock.block( "restore.broken" );
                 // 세이브 불러오기(슬롯 · 자동 저장)는 씬을 디스크에서 다시 연다 — 핫 리로드 스냅샷은 저장하지 않은 편집이 든 씬이라 다시 열지 않고 막기만 둔다.
                 if ( purpose == SerializePurpose::SaveGame )
                     reopenBrokenScene();

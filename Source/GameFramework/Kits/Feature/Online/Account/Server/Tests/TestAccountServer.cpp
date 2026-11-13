@@ -117,7 +117,7 @@ namespace
             account->initialize( &_pRig->_clients.getClient( index ), clientInfo );
             if ( pToken != nullptr )
                 account->setToken( *pToken );
-            pump();
+            poll();
             return index;
         }
 
@@ -125,11 +125,11 @@ namespace
         OnlineServiceClient& getClient( int32 index ) { return _pRig->_clients.getClient( index ); }
         OnlineServiceHost&   getHost() { return _pRig->_server._host; }
 
-        void pump() { test::updateAll( { &_pRig->_server }, _pRig->_clients, kNowMs, 12 ); }
+        void poll() { test::updateAll( { &_pRig->_server }, _pRig->_clients, kNowMs, 12 ); }
 
         vector<AccountClientReply> takeAll( int32 index )
         {
-            pump();
+            poll();
             vector<AccountClientReply> listReply;
             (void)getAccount( index ).pollReplies( listReply );
             return listReply;
@@ -144,7 +144,7 @@ namespace
 
         vector<AccountClientEvent> takeEvents( int32 index )
         {
-            pump();
+            poll();
             vector<AccountClientEvent> listEvent;
             (void)getAccount( index ).pollEvents( listEvent );
             return listEvent;
@@ -175,7 +175,7 @@ namespace
         {
             RawResponseSink sink;
             (void)getClient( index ).sendRequest( method, body, options, OnlineResponseDelegate::create<&RawResponseSink::onResponse>( &sink ) );
-            pump();
+            poll();
             SW_EXPECT_EQUAL( 1, sink._count );
             return sink;
         }
@@ -316,7 +316,7 @@ SW_TEST_CASE( AccountServerTest, BoundConnectionWithoutSessionIsRefused )
     AccountServerFixture rig;
     const int32          client = rig.addClient();
     rig._pRig->_clients.login( client, 77 );
-    rig.pump();
+    rig.poll();
 
     (void)rig.getAccount( client ).listLinks();
     SW_EXPECT_EQUAL( OnlineError::kUnauthenticated, rig.take( client )._errorCode );
@@ -402,7 +402,7 @@ SW_TEST_CASE( AccountServerTest, DisconnectThenResumeOnANewConnection )
     const LoginSessionToken token     = rig.getAccount( first ).getToken();
 
     rig._pRig->_clients.drop( first );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( uint64( 0 ), rig._accountServer.findSessionID( accountID ) );
     SW_EXPECT_FALSE( rig._loginService.isAccountOnline( accountID ) );
     StreamConnectionHandle connection;
@@ -420,20 +420,20 @@ SW_TEST_CASE( AccountServerTest, DisconnectThenResumeOnANewConnection )
 }
 
 /** @brief [AccountServerTest] 위조 토큰: 비밀이 다르거나 없는 세션이면 InvalidToken 이고 연결을 묶지 않으며, 진짜 세션을 건드리지 않는다 */
-SW_TEST_CASE( AccountServerTest, ForgedResumeTokenIsRefused )
+SW_TEST_CASE( AccountServerTest, CraftedResumeTokenIsRefused )
 {
     AccountServerFixture rig;
     const int32          owner     = rig.addClient();
     const AccountID      accountID = rig.signIn( owner, "alice_01" );
     const uint64         sessionID = rig._accountServer.findSessionID( accountID );
 
-    LoginSessionToken wrongSecret   = rig.getAccount( owner ).getToken();
-    wrongSecret._arrSecret[0]       = static_cast<uint8>( wrongSecret._arrSecret[0] + 1 );
-    const int32              forger = rig.addClient( &wrongSecret );
-    const AccountClientReply forged = rig.take( forger );
-    SW_EXPECT_TRUE( forged._result == LoginResult::InvalidToken );
-    SW_EXPECT_TRUE( rig.getAccount( forger ).getToken().isEmpty() );
-    SW_EXPECT_FALSE( rig.getAccount( forger ).isLoggedIn() );
+    LoginSessionToken wrongSecret     = rig.getAccount( owner ).getToken();
+    wrongSecret._arrSecret[0]         = static_cast<uint8>( wrongSecret._arrSecret[0] + 1 );
+    const int32              attacker = rig.addClient( &wrongSecret );
+    const AccountClientReply crafted  = rig.take( attacker );
+    SW_EXPECT_TRUE( crafted._result == LoginResult::InvalidToken );
+    SW_EXPECT_TRUE( rig.getAccount( attacker ).getToken().isEmpty() );
+    SW_EXPECT_FALSE( rig.getAccount( attacker ).isLoggedIn() );
     SW_EXPECT_EQUAL( sessionID, rig._accountServer.findSessionID( accountID ) );
     SW_EXPECT_TRUE( rig.getAccount( owner ).isLoggedIn() );
 
@@ -465,7 +465,7 @@ SW_TEST_CASE( AccountServerTest, AdministrativeRevokeCarriesTheReasonCode )
 }
 
 /** @brief [AccountServerTest] 다른 서버의 끊기 알림(버스): 그 세션이 이 서버에 있을 때만 끊고 사유 코드를 싣는다. 옛 세션 알림 · 자기가 낸 알림은 무시한다 */
-SW_TEST_CASE( AccountServerTest, RevokeNoticeFromAnotherServer )
+SW_TEST_CASE( AccountServerTest, RevokeNotificationFromAnotherServer )
 {
     AccountServerFixture rig;
     const int32          client    = rig.addClient();
@@ -479,22 +479,22 @@ SW_TEST_CASE( AccountServerTest, RevokeNoticeFromAnotherServer )
     { test::updateAll( { &world._server, &other }, world._clients, kNowMs, 12 ); };
     pollBoth();
 
-    AccountRevoked notice;
-    notice._reasonCode = "gm.kick";
-    notice._accountID  = accountID;
-    notice._reason     = LoginRevokeReason::Administrative;
+    AccountRevoked notification;
+    notification._reasonCode = "gm.kick";
+    notification._accountID  = accountID;
+    notification._reason     = LoginRevokeReason::Administrative;
 
-    notice._sessionID = sessionID + 1; // 이미 바뀐 세션의 알림
-    SW_REQUIRE_TRUE( AccountBus::kRevokeTopic.publish( *other._host.getServerBus(), notice ) );
+    notification._sessionID = sessionID + 1; // 이미 바뀐 세션의 알림
+    SW_REQUIRE_TRUE( AccountBus::kRevokeTopic.publish( *other._host.getServerBus(), notification ) );
     pollBoth();
     SW_EXPECT_EQUAL( sessionID, rig._accountServer.findSessionID( accountID ) );
 
-    notice._sessionID = sessionID; // 이 서버가 낸 알림은 이미 처리했다
-    SW_REQUIRE_TRUE( AccountBus::kRevokeTopic.publish( *world._server._host.getServerBus(), notice ) );
+    notification._sessionID = sessionID; // 이 서버가 낸 알림은 이미 처리했다
+    SW_REQUIRE_TRUE( AccountBus::kRevokeTopic.publish( *world._server._host.getServerBus(), notification ) );
     pollBoth();
     SW_EXPECT_EQUAL( sessionID, rig._accountServer.findSessionID( accountID ) );
 
-    SW_REQUIRE_TRUE( AccountBus::kRevokeTopic.publish( *other._host.getServerBus(), notice ) );
+    SW_REQUIRE_TRUE( AccountBus::kRevokeTopic.publish( *other._host.getServerBus(), notification ) );
     pollBoth();
     SW_EXPECT_EQUAL( uint64( 0 ), rig._accountServer.findSessionID( accountID ) );
     vector<AccountClientEvent> listEvent;
@@ -554,7 +554,7 @@ SW_TEST_CASE( AccountServerTest, UpdateRequiredCarriesTheStoreURL )
         audit._subject = "config";
         audit._timeMs  = version;
         config.submitSet( rig._pRig->_server._store, key, value, audit );
-        rig.pump();
+        rig.poll();
     };
     setText( "account.minimum_build.windows", "2.0.0", 1 );
     setText( "account.store_url.windows", "https://store.example/x", 2 );

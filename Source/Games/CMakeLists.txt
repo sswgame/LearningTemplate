@@ -52,7 +52,7 @@ foreach(_swGameName IN LISTS _swListGameFolder)
 	if(_swGameName IN_LIST _swListGamePack)
 		add_subdirectory(${_swGameName})
 	else()
-		sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}/${_swGameName}")
+		sw_declareExcludedDirectory("${CMAKE_CURRENT_SOURCE_DIR}/${_swGameName}")
 	endif()
 endforeach()
 

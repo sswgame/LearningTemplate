@@ -94,7 +94,7 @@ namespace
                     checkValue( name == "item" ? parentName : name, node.getText() ); // 목록 원소(`<_listX><item>id</item></_listX>`)의 칸은 목록이다
             }
 
-            void walk( const XMLNode& node, string_view parentName, bool bEntry, bool bRoot ) const
+            void traverse( const XMLNode& node, string_view parentName, bool bEntry, bool bRoot ) const
             {
                 visit( node, parentName, bEntry );
                 for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
@@ -102,7 +102,7 @@ namespace
                     if ( StringUtil::isNullOrEmpty( child.getName() ) )
                         continue;
                     const bool bChildEntry = bRoot && _pRule != nullptr && StringUtil::equals( child.getName(), string_view( _pRule->_entryElement ) );
-                    walk( child, node.getName(), bChildEntry, false );
+                    traverse( child, node.getName(), bChildEntry, false );
                 }
             }
         };
@@ -193,7 +193,7 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
             continue; // 읽지 못하는 글은 런타임 검증의 몫이다
         scan._relativePath = string( relativePath );
         scan._pRule        = Util::findRule( rules, relativePath );
-        scan.walk( doc.getRoot(), {}, false, true );
+        scan.traverse( doc.getRoot(), {}, false, true );
         ++scannedCount;
     }
     SW_EXPECT_TRUE_MSG( scannedCount > 100u, "only " + sw::to_string( scannedCount ) + " data files were read - the content root is wrong and this test saw nothing" );

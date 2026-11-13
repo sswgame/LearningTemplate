@@ -463,7 +463,7 @@ namespace sw
                 bCursorFrameUsed = false;
                 continue;
             }
-            // 기다리기만 하는 단계(`<WaitUntil>` · `<EditorWaitSettled>`)는 조건이 설 때까지 시계를 붙잡는다 — 붙잡힌 프레임의 다른 단계(입력 · 입력 전 단계)가 다시 돌지
+            // 기다리기만 하는 단계(`<WaitUntil>` · `<EditorWaitStable>`)는 조건이 설 때까지 시계를 붙잡는다 — 붙잡힌 프레임의 다른 단계(입력 · 입력 전 단계)가 다시 돌지
             // 않게 제 프레임을 혼자 갖는다. 앞 단계가 이 프레임에 있으면 다음 프레임으로 가고, 뒤 단계는 그다음 프레임에서 돈다(적은 순서는 그대로다 — 쓰는 사람이 프레임을 셀
             // 일이 없다). 등록 모양으로 가린다(`isWaitOnly`) — 단계를 등록한 모듈이 없는 프로세스에서는 모르는 단계라 시작 검사가 먼저 막는다.
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( elementName );

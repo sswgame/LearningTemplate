@@ -53,7 +53,7 @@ namespace sw
         void handleCall( OnlineServerCall<SocialMethod::GuildLeave> call, const OnlineCallContext& context, const OnlineNoBody& request );
         void handleCall( OnlineServerCall<SocialMethod::GuildKick> call, const OnlineCallContext& context, const SocialAccountRequest& request );
         void handleCall( OnlineServerCall<SocialMethod::GuildSetRole> call, const OnlineCallContext& context, const GuildRoleRequest& request );
-        void handleCall( OnlineServerCall<SocialMethod::GuildSetNotice> call, const OnlineCallContext& context, const SocialTextRequest& request );
+        void handleCall( OnlineServerCall<SocialMethod::GuildSetAnnouncement> call, const OnlineCallContext& context, const SocialTextRequest& request );
         void handleCall( OnlineServerCall<SocialMethod::GuildGet> call, const OnlineCallContext& context, const OnlineNoBody& request );
         void handleCall( OnlineServerCall<SocialMethod::GuildDeposit> call, const OnlineCallContext& context, const GuildAssetRequest& request );
         void handleCall( OnlineServerCall<SocialMethod::GuildWithdraw> call, const OnlineCallContext& context, const GuildAssetRequest& request );

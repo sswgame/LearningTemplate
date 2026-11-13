@@ -288,14 +288,14 @@ namespace sw::editor
         return applyToPrefab( pOuter, AssetID{ outerPath } );
     }
 
-    EditorInspectorCommands::AdoptResult EditorInspectorCommands::attachChildPrefabInstances( GameObject* pRoot )
+    EditorInspectorCommands::AttachResult EditorInspectorCommands::attachChildPrefabInstances( GameObject* pRoot )
     {
         // 참조 검사에 필요한 것을 얻지 못하면 검사를 건너뛰고 옮기지 않는다 — 거절 사유와 오류 로그로 멈춘다.
         GameObjectManager* pManager = pRoot != nullptr ? pRoot->getManager() : nullptr;
         const Scene*       pScene   = pManager != nullptr ? editor::findSceneOf( pManager ) : nullptr;
         if ( pManager == nullptr || pScene == nullptr )
         {
-            AdoptResult rejected;
+            AttachResult rejected;
             rejected._rejectReason = "cannot check scene object references: the object or its scene is missing";
             SW_LOG_WARNING_ID( "EditorInspectorCommands.PrefabCreationRefused", "Prefab creation refused: %#", rejected._rejectReason.c_str() );
             return rejected;
@@ -306,7 +306,7 @@ namespace sw::editor
 
         // 부모를 먼저 기록한다. 프리팹 쓰기는 기록 순서(스폰 순서)로 돌며 부모 노드가 자식 노드보다 앞에 있다고 가정한다.
         // 먼저 옮길 오브젝트를 모두 모으고(아직 아무것도 바꾸지 않는다), 씬 파일을 넘는 참조가 가리키는 것이 있으면 거절한다.
-        vector<GameObject*> listAdopt;
+        vector<GameObject*> listAttach;
         vector<GameObject*> listPending{ pRoot };
         vector<GameObject*> listChild;
         while ( listPending.empty() == false )
@@ -320,13 +320,13 @@ namespace sw::editor
                     continue;
                 if ( workspace.getPlacedPrefabPath( *pChild ).empty() )
                     continue; // 프리팹 인스턴스가 아니므로 프리팹 본문에 들어가지 않는다
-                listAdopt.push_back( pChild );
+                listAttach.push_back( pChild );
                 listPending.push_back( pChild );
             }
         }
 
-        AdoptResult result;
-        for ( const GameObject* pChild : listAdopt )
+        AttachResult result;
+        for ( const GameObject* pChild : listAttach )
         {
             string holder;
             if ( SceneObjectReference::findReferenceTo( sceneManager, editor::getSubsystem<TypeRegistry>(), *pScene, pChild->getObjectID(), holder ) == false )
@@ -336,15 +336,15 @@ namespace sw::editor
             return result;
         }
 
-        for ( GameObject* pChild : listAdopt )
+        for ( GameObject* pChild : listAttach )
         {
             const string childPrefab{ workspace.getPlacedPrefabPath( *pChild ) };
             registry.registerNestedPart( pChild->getObjectID(), pRoot->getObjectID(), childPrefab, {} ); // 노드는 프리팹을 쓸 때 생기므로 키는 다음 로드에서 얻는다
             workspace.setPlacedPrefabPath( *pChild, "" );
         }
-        result._adoptedCount = static_cast<uint32>( listAdopt.size() );
-        if ( result._adoptedCount > 0 )
-            SW_LOG_INFO_ID( "Prefab.NestedAdopted", "'%#' took %# child prefab instance(s) as nested prefabs", pRoot->getName().c_str(), result._adoptedCount );
+        result._attachedCount = static_cast<uint32>( listAttach.size() );
+        if ( result._attachedCount > 0 )
+            SW_LOG_INFO_ID( "Prefab.NestedAttached", "'%#' took %# child prefab instance(s) as nested prefabs", pRoot->getName().c_str(), result._attachedCount );
         return result;
     }
 } // namespace sw::editor

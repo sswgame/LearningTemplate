@@ -8,52 +8,52 @@
 -->
 <Scenario name="editor.previewhidden" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<Variable name="gv_editorWatchPanel" value="material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Engine.FramePacingState" equals="3"/>
 	<!-- 머티리얼 창을 열어 미리보기가 그려지고 틱하게 한다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+P"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="previewred.material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" atLeast="40" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PreviewTickCount" atLeast="1" timeoutFrames="60"/>
 	<!-- 같은 도킹 노드의 씬 뷰 탭을 앞에 두어 가린 동안 틱 수가 그대로다 — 창은 열려 있고(씬이 남는다) 그리지 않는다(프레임 수 그대로) -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus scene_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
-	<Remember watch="Editor.PreviewTickCount" as="hiddenTicks"/>
-	<Remember watch="Editor.MaterialPreviewSceneFrames" as="hiddenFrames"/>
-	<EditorWaitSettled/>
+	<Store watch="Editor.PreviewTickCount" as="hiddenTicks"/>
+	<Store watch="Editor.MaterialPreviewSceneFrames" as="hiddenFrames"/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PreviewTickCount" sameAs="hiddenTicks"/>
 	<Expect watch="Editor.MaterialPreviewSceneFrames" sameAs="hiddenFrames"/>
 	<!-- 다시 앞에 두면 다시 틱한다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PreviewTickCount" differsFrom="hiddenTicks" timeoutFrames="300"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Engine.FramePacingState" equals="3"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

@@ -71,7 +71,7 @@ namespace sw
             return;
         if ( _deathTimer >= 0.0f || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
         {
-            updateDeath( context.getDeltaTime(), *pMesh, pGameMode->getDeathLinger() );
+            updateDeath( context.getDeltaTime(), *pMesh, pGameMode->getDeathLifeSpan() );
             return;
         }
 
@@ -151,16 +151,16 @@ namespace sw
         }
     }
 
-    void ArenaUnitComponent::updateDeath( float32 deltaTime, MeshComponent& mesh, float32 deathLinger )
+    void ArenaUnitComponent::updateDeath( float32 deltaTime, MeshComponent& mesh, float32 deathLifeSpan )
     {
         // 쓰러진 유닛은 납작해지다가 디렉터가 걷는다(같은 시간 — 디렉터의 Death Linger).
         if ( _deathTimer < 0.0f )
         {
-            _deathTimer = deathLinger;
+            _deathTimer = deathLifeSpan;
             _deathScale = mesh.getLocalScale();
         }
         _deathTimer          = MathUtil::max( 0.0f, _deathTimer - deltaTime );
-        const float32 squash = MathUtil::max( 0.05f, _deathTimer / deathLinger );
+        const float32 squash = MathUtil::max( 0.05f, _deathTimer / deathLifeSpan );
         mesh.setLocalScale( float3{ _deathScale._x, _deathScale._y * squash, _deathScale._z } );
     }
 } // namespace sw

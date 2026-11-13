@@ -813,13 +813,13 @@ namespace sw
             if ( _bodies.take( body.getSlot(), record ) == false )
                 continue;
             // Box2D 가 바디에 붙은 관절을 함께 지운다. 엔진 쪽 관절 기록도 지운다.
-            vector<PhysicsJointHandle> listDoomed;
+            vector<PhysicsJointHandle> listPendingDestroy;
             _joints.forEachHandle( [&]( SlotHandle slot, const JointRecord& joint )
             {
                 if ( joint._bodyA == body || joint._bodyB == body )
-                    listDoomed.push_back( PhysicsJointHandle::fromSlot( slot ) );
+                    listPendingDestroy.push_back( PhysicsJointHandle::fromSlot( slot ) );
             } );
-            for ( const PhysicsJointHandle& joint : listDoomed )
+            for ( const PhysicsJointHandle& joint : listPendingDestroy )
             {
                 _joints.erase( joint.getSlot() );
             }

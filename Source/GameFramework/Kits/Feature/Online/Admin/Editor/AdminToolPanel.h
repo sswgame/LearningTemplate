@@ -54,15 +54,15 @@ namespace sw::editor
         string              _auditSubjectText;
         string              _scopeText;
         string              _maintenanceKeyText;
-        string              _noticeText;
+        string              _announcementText;
         string              _eventJSONText;
         string              _eventIDText;
         int64               _amount;
         int64               _sanctionSeconds;
         int64               _maintenanceSeconds;
-        int64               _noticeSeconds;
-        int64               _noticeID;
-        int32               _noticePriority;
+        int64               _announcementSeconds;
+        int64               _announcementID;
+        int32               _announcementPriority;
         ServiceSanctionKind _sanctionKind;
         bool                _bRefund; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };

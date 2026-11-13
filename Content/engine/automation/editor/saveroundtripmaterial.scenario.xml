@@ -8,21 +8,21 @@
 -->
 <Scenario name="editor.saveroundtripmaterial" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/materialpreview" as="scratch/saveroundtripmaterial"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/saveroundtripmaterial/previewblue.material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.saveDocument material"/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtripmaterial/previewblue.material"/>
 	<DevCommand line="panel.reloadDocument material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.saveDocument material"/>
 	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripmaterial/previewblue.material"/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

@@ -15,7 +15,7 @@
 namespace
 {
     /** @brief 놀이기구 하나, 줄 선 손님 1 번, 타고 있는 손님 2 번인 공원을 꾸밉니다. */
-    struct ThemeParkForged
+    struct ThemeParkFixture
     {
         sw::vector<sw::ParkRide>  _listRide{};
         sw::vector<sw::ParkGuest> _listGuest{};
@@ -27,7 +27,7 @@ namespace
         uint32                    _nextGuestID{ 3 };
         uint32                    _totalVisitorCount{ 2 };
 
-        ThemeParkForged()
+        ThemeParkFixture()
         {
             sw::ParkRide ride;
             ride._id = "wheel";
@@ -125,7 +125,7 @@ namespace
 /**
  * @brief [ThemeParkReadStateTest] 돌아간 실제 공원은 왕복하고, 형식에 맞게 꾸민 공원도 읽힌다
  */
-SW_TEST_CASE_F( ThemeParkReadStateTest, RealAndForgedStatesRead )
+SW_TEST_CASE_F( ThemeParkReadStateTest, RealAndCraftedStatesRead )
 {
     sw::ParkRide ride;
     ride._id        = "wheel";
@@ -152,7 +152,7 @@ SW_TEST_CASE_F( ThemeParkReadStateTest, RealAndForgedStatesRead )
     SW_EXPECT_EQUAL( _park.getGuests().size(), restored.getGuests().size() );
     SW_EXPECT_EQUAL( _park.getTotalVisitorCount(), restored.getTotalVisitorCount() );
 
-    SW_REQUIRE_TRUE( ThemeParkForged{}.readInto( _park ) );
+    SW_REQUIRE_TRUE( ThemeParkFixture{}.readInto( _park ) );
     SW_EXPECT_EQUAL( size_t( 2 ), _park.getGuests().size() );
 }
 
@@ -161,50 +161,50 @@ SW_TEST_CASE_F( ThemeParkReadStateTest, RealAndForgedStatesRead )
  */
 SW_TEST_CASE_F( ThemeParkReadStateTest, RefusesBrokenLinks )
 {
-    SW_REQUIRE_TRUE( ThemeParkForged{}.readInto( _park ) );
+    SW_REQUIRE_TRUE( ThemeParkFixture{}.readInto( _park ) );
 
-    ThemeParkForged queuingNoTarget;
+    ThemeParkFixture queuingNoTarget;
     queuingNoTarget._listGuest[0]._targetRideIndex = -1;
     SW_EXPECT_FALSE( queuingNoTarget.readInto( _park ) );
 
-    ThemeParkForged targetOutside;
+    ThemeParkFixture targetOutside;
     targetOutside._listGuest[0]._targetRideIndex = 1;
     SW_EXPECT_FALSE( targetOutside.readInto( _park ) );
 
-    ThemeParkForged queueMissing;
+    ThemeParkFixture queueMissing;
     queueMissing._listRide[0]._listQueue = { 7 };
     SW_EXPECT_FALSE( queueMissing.readInto( _park ) );
 
-    ThemeParkForged queueRepeated;
+    ThemeParkFixture queueRepeated;
     queueRepeated._listRide[0]._listQueue = { 1, 1 };
     SW_EXPECT_FALSE( queueRepeated.readInto( _park ) );
 
-    ThemeParkForged queueAndRider;
+    ThemeParkFixture queueAndRider;
     queueAndRider._listRide[0]._listQueue = { 2 };
     SW_EXPECT_FALSE( queueAndRider.readInto( _park ) );
 
-    ThemeParkForged notInQueue;
+    ThemeParkFixture notInQueue;
     notInQueue._listRide[0]._listQueue.clear();
     SW_EXPECT_FALSE( notInQueue.readInto( _park ) );
 
-    ThemeParkForged notRiding;
+    ThemeParkFixture notRiding;
     notRiding._listRide[0]._listRider.clear();
     SW_EXPECT_FALSE( notRiding.readInto( _park ) );
 
-    ThemeParkForged walkingInQueue;
+    ThemeParkFixture walkingInQueue;
     walkingInQueue._listGuest[0]._state = sw::ParkGuestState::Walking;
     SW_EXPECT_FALSE( walkingInQueue.readInto( _park ) );
 
-    ThemeParkForged guestsUnsorted;
+    ThemeParkFixture guestsUnsorted;
     guestsUnsorted._listGuest[0]._id = 2;
     guestsUnsorted._listGuest[1]._id = 1;
     SW_EXPECT_FALSE( guestsUnsorted.readInto( _park ) );
 
-    ThemeParkForged guestsRepeated;
+    ThemeParkFixture guestsRepeated;
     guestsRepeated._listGuest[1]._id = 1;
     SW_EXPECT_FALSE( guestsRepeated.readInto( _park ) );
 
-    ThemeParkForged guestAhead;
+    ThemeParkFixture guestAhead;
     guestAhead._nextGuestID = 2;
     SW_EXPECT_FALSE( guestAhead.readInto( _park ) );
 
@@ -217,84 +217,84 @@ SW_TEST_CASE_F( ThemeParkReadStateTest, RefusesBrokenLinks )
  */
 SW_TEST_CASE_F( ThemeParkReadStateTest, RefusesOutOfRangeValues )
 {
-    SW_REQUIRE_TRUE( ThemeParkForged{}.readInto( _park ) );
+    SW_REQUIRE_TRUE( ThemeParkFixture{}.readInto( _park ) );
 
-    ThemeParkForged capacityZero;
+    ThemeParkFixture capacityZero;
     capacityZero._listRide[0]._capacity = 0;
     SW_EXPECT_FALSE( capacityZero.readInto( _park ) );
 
-    ThemeParkForged ridersOver;
+    ThemeParkFixture ridersOver;
     ridersOver._listRide[0]._capacity = 1;
     ridersOver._listGuest[0]._state   = sw::ParkGuestState::Riding;
     ridersOver._listRide[0]._listQueue.clear();
     ridersOver._listRide[0]._listRider = { 1, 2 };
     SW_EXPECT_FALSE( ridersOver.readInto( _park ) );
 
-    ThemeParkForged cycleZero;
+    ThemeParkFixture cycleZero;
     cycleZero._listRide[0]._cycleTime = 0.0f;
     SW_EXPECT_FALSE( cycleZero.readInto( _park ) );
 
-    ThemeParkForged priceNegative;
+    ThemeParkFixture priceNegative;
     priceNegative._listRide[0]._price = -1;
     SW_EXPECT_FALSE( priceNegative.readInto( _park ) );
 
-    ThemeParkForged runningNegative;
+    ThemeParkFixture runningNegative;
     runningNegative._listRide[0]._runningCostPerMinute = -1;
     SW_EXPECT_FALSE( runningNegative.readInto( _park ) );
 
-    ThemeParkForged ratingNegative;
+    ThemeParkFixture ratingNegative;
     ratingNegative._listRide[0]._excitement = -1.0f;
     SW_EXPECT_FALSE( ratingNegative.readInto( _park ) );
 
-    ThemeParkForged openBroken;
+    ThemeParkFixture openBroken;
     openBroken._listRide[0]._bOpen = 2;
     SW_EXPECT_FALSE( openBroken.readInto( _park ) );
 
-    ThemeParkForged rideNoName;
+    ThemeParkFixture rideNoName;
     rideNoName._listRide[0]._id = sw::hashed_string{};
     SW_EXPECT_FALSE( rideNoName.readInto( _park ) );
 
-    ThemeParkForged feeNegative;
+    ThemeParkFixture feeNegative;
     feeNegative._entryFee = -1;
     SW_EXPECT_FALSE( feeNegative.readInto( _park ) );
 
-    ThemeParkForged cashNegative;
+    ThemeParkFixture cashNegative;
     cashNegative._listGuest[0]._cash = -1;
     SW_EXPECT_FALSE( cashNegative.readInto( _park ) );
 
-    ThemeParkForged happinessOver;
+    ThemeParkFixture happinessOver;
     happinessOver._listGuest[0]._happiness = 1.5f;
     SW_EXPECT_FALSE( happinessOver.readInto( _park ) );
 
-    ThemeParkForged nauseaNegative;
+    ThemeParkFixture nauseaNegative;
     nauseaNegative._listGuest[0]._nausea = -0.5f;
     SW_EXPECT_FALSE( nauseaNegative.readInto( _park ) );
 
-    ThemeParkForged energyOver;
+    ThemeParkFixture energyOver;
     energyOver._listGuest[0]._energy = 1.5f;
     SW_EXPECT_FALSE( energyOver.readInto( _park ) );
 
-    ThemeParkForged intensityFlipped;
+    ThemeParkFixture intensityFlipped;
     intensityFlipped._listGuest[0]._minIntensity = 7.0f;
     SW_EXPECT_FALSE( intensityFlipped.readInto( _park ) );
 
-    ThemeParkForged parkRatingOver;
+    ThemeParkFixture parkRatingOver;
     parkRatingOver._parkRating = 1000;
     SW_EXPECT_FALSE( parkRatingOver.readInto( _park ) );
 
-    ThemeParkForged elapsedNegative;
+    ThemeParkFixture elapsedNegative;
     elapsedNegative._elapsedTime = -1.0f;
     SW_EXPECT_FALSE( elapsedNegative.readInto( _park ) );
 
-    ThemeParkForged arrivalNegative;
+    ThemeParkFixture arrivalNegative;
     arrivalNegative._arrival = -1.0f;
     SW_EXPECT_FALSE( arrivalNegative.readInto( _park ) );
 
-    ThemeParkForged costHuge;
+    ThemeParkFixture costHuge;
     costHuge._runningCost = 1.0e20f;
     SW_EXPECT_FALSE( costHuge.readInto( _park ) );
 
-    ThemeParkForged visitorsFewer;
+    ThemeParkFixture visitorsFewer;
     visitorsFewer._totalVisitorCount = 1;
     SW_EXPECT_FALSE( visitorsFewer.readInto( _park ) );
 

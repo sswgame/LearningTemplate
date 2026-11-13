@@ -10,17 +10,17 @@
 	<DevCommand line="layout.reset"/>
 	<Variable name="gv_editorWatchVisualizer" value="camera_frustum"/>
 	<Expect watch="Editor.VisualizerOn" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.visualizer.camera_frustum"/>
 	<WaitUntil watch="Editor.VisualizerOn" equals="0" timeoutFrames="60"/>
 	<Variable name="gv_editorWatchVisualizer" value="box_collider_2d"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.VisualizerOn" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorWatchVisualizer" value="camera_frustum"/>
 	<EditorClick mark="viewport.visualizer.camera_frustum"/>
 	<WaitUntil watch="Editor.VisualizerOn" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

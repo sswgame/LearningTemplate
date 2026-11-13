@@ -12,29 +12,29 @@
 -->
 <Scenario name="editor.undocoverage" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="Immediately" input="exclusive">
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 되돌리기 감시 값은 포커스 창의 스택이다 — 씬 뷰에 두어 메인(씬) 스택을 읽는다(배치를 되돌린 뒤 문서 창이 포커스일 수 있다) -->
 	<DevCommand line="panel.focus scene_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UndoCount" equals="0" timeoutFrames="600"/>
 	<DevCommand line="select.type MeshComponent"/>
 	<WaitUntil watch="Editor.SelectionCount" atLeast="1" timeoutFrames="30"/>
 	<DevCommand line="editor scene.object.createChild"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 새 자식이 고른 것이 된다 — 주 씬 컴포넌트 밖 컴포넌트 둘을 달아 컴포넌트 위아래 옮기기가 켜지게 한다 -->
 	<DevCommand line="component.add PointLightComponent"/>
 	<DevCommand line="component.add TypedHandleTestComponent"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="select.type SceneComponent"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SelectionCount" atLeast="2"/>
-	<Remember watch="Editor.SceneHash" as="start"/>
+	<Store watch="Editor.SceneHash" as="start"/>
 	<DevCommand line="editor.undoCoverage prefab.applyOverrides play.keepChanges"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Editor.UndoCoverageResult" count="1"/>
 	<ExpectLog id="Editor.UndoCoverageUnrecorded" count="0"/>
 	<ExpectLog id="Editor.UndoCoverageSteps" count="0"/>

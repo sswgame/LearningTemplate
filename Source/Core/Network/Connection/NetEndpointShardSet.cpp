@@ -124,10 +124,10 @@ namespace sw
                 message._offset += byteBase;
                 outInbound._listMessage.push_back( message );
             }
-            for ( NetDeliveryNotice notice : _shardInbound._listDeliveryNotice )
+            for ( NetDeliveryNotification notification : _shardInbound._listDeliveryNotification )
             {
-                notice._connectionID = makeConnectionID( shardIndex, notice._connectionID );
-                outInbound._listDeliveryNotice.push_back( notice );
+                notification._connectionID = makeConnectionID( shardIndex, notification._connectionID );
+                outInbound._listDeliveryNotification.push_back( notification );
             }
         }
     }

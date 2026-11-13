@@ -74,7 +74,7 @@ namespace sw
                 _service.initialize( context._pStore, &_policy, context._kits.find<const ILedgerPolicy>(), context._serverID, TradeServiceConfig{} );
                 // 상대 찾기는 필수 키트라 정렬이 없으면 기동 오류로 막았다.
                 _server.initialize( &_service, &context._kits.get<IAccountDirectory>(), context._kits.find<IAccountPresence>(), context._pMetricRegistry );
-                _server.setBalanceNotice( context._kits.find<IBalanceChangedListener>() ); // 경제 키트(정산 잔액 변경 알림)
+                _server.setBalanceNotification( context._kits.find<IBalanceChangedListener>() ); // 경제 키트(정산 잔액 변경 알림)
                 return {};
             }
 
@@ -87,10 +87,10 @@ namespace sw
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 정산을 맡긴 요청과 열려 있는 거래(재시작 복구가 마무리하지만 서버가 비는 동안 끝나는 편이 낫다). */
             int32 getOpenJobCount() const override { return _service.getPendingCount() + _service.getOpenTradeCount(); }
 
-            void beginShutdown( const ServerShutdownNotice& notice ) override
+            void beginShutdown( const ServerShutdownNotice& notification ) override
             {
                 // 새 일을 막는 길은 없고(클라이언트는 `kShutdownNotice` 로 먼저 사유를 받는다) 드레인이 끝나기를 기다리는 일의 수만 남긴다 — 운영자가 왜 오래 걸리는지 로그로 본다.
-                SW_LOG_INFO_ID( "TradeOnlineServerKit.TradeKitShutdownDrain", "Trade kit: shutdown drain starts with %# open job(s), grace %# s", getOpenJobCount(), notice._graceSeconds );
+                SW_LOG_INFO_ID( "TradeOnlineServerKit.TradeKitShutdownDrain", "Trade kit: shutdown drain starts with %# open job(s), grace %# s", getOpenJobCount(), notification._graceSeconds );
             }
 
             void stop() override
