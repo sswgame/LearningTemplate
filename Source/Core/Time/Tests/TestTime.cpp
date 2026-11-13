@@ -60,14 +60,14 @@ SW_TEST_CASE( TimeTest, ShaderTimeFoldKeepsMillisecondsAfterTenHours )
  */
 SW_TEST_CASE( TimeTest, SimulationTimeRebaseKeepsQuarterSecondSteps )
 {
-    sw::float32 stalled = 4194304.0f; // 2^22 초
+    float32 stalled = 4194304.0f; // 2^22 초
     stalled += 0.25f;
     SW_EXPECT_TRUE_MSG( stalled == 4194304.0f, "an unrebased float32 clock stops at 2^22 s (the defect)" );
 
-    sw::float32 time        = 0.0f;
-    sw::float64 total       = 0.0;
-    sw::uint32  rebaseCount = 0;
-    for ( sw::uint32 step = 0; step < 40000; ++step )
+    float32 time        = 0.0f;
+    float64 total       = 0.0;
+    uint32  rebaseCount = 0;
+    for ( uint32 step = 0; step < 40000; ++step )
     {
         time += 0.25f;
         total += 0.25;
@@ -76,7 +76,7 @@ SW_TEST_CASE( TimeTest, SimulationTimeRebaseKeepsQuarterSecondSteps )
     }
     SW_EXPECT_EQUAL( 2u, rebaseCount );
     SW_EXPECT_TRUE( time < sw::TimeRolloverUtil::kRebaseSeconds );
-    SW_EXPECT_NEAR( total - 2.0 * sw::TimeRolloverUtil::kRebaseSeconds, static_cast<sw::float64>( time ), 1e-9 );
+    SW_EXPECT_NEAR( total - 2.0 * sw::TimeRolloverUtil::kRebaseSeconds, static_cast<float64>( time ), 1e-9 );
 }
 
 /**
