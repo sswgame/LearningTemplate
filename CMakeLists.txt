@@ -11,12 +11,12 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # 1) project() 이전 — 옵션·상수·개발환경·vcpkg 연동
 # (Ninja 링크 잡풀은 BuildOptions.cmake 5)에서 컴파일 풀과 함께 설정)
 # ------------------------------------------------------------------------------
-include(cmake/Config/BuildOptions.cmake)
-include(cmake/Config/GenerateConfigConstants.cmake)
-include(cmake/Environment/DetectToolchain.cmake)
+include(cmake/Modules/Config/BuildOptions.cmake)
+include(cmake/Modules/Config/GenerateConfigConstants.cmake)
+include(cmake/Modules/Environment/DetectToolchain.cmake)
 # vcpkg 매니페스트 게이트 — 실제 툴체인은 그 안에서 CMAKE_TOOLCHAIN_FILE 로 확정한다(project() 전이어야 한다).
 if(SW_USE_VCPKG)
-	include(cmake/Modules/Toolchain/Vcpkg/Vcpkg.cmake)
+	include(cmake/Toolchain/Vcpkg/Vcpkg.cmake)
 endif()
 
 project(
@@ -28,8 +28,8 @@ project(
 # ------------------------------------------------------------------------------
 # 2) project() 직후 — Windows 빌드 도구 사후 바인딩, vcpkg 스탬프
 # ------------------------------------------------------------------------------
-include(cmake/Environment/ToolchainBinaries.cmake)
-include(cmake/Environment/FindWindowsTools.cmake)
+include(cmake/Modules/Environment/ToolchainBinaries.cmake)
+include(cmake/Modules/Environment/FindWindowsTools.cmake)
 sw_bind_clang_cl_windows_tools()
 sw_bind_pinned_archiver()
 sw_vcpkg_write_manifest_stamp()
@@ -39,21 +39,21 @@ sw_vcpkg_write_manifest_stamp()
 # ------------------------------------------------------------------------------
 # BuildLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 타깃 규칙(ExcludedSources · ModuleTargets)보다 먼저다.
 # RuntimeDependencies 는 BuildLayout 의 sw_queue_runtime_copy 를 쓴다. 나머지는 함수만 정의한다(파일마다 맡는 일은 cmake/README.md).
-include(cmake/Engine/SourceTree.cmake) # `Source/` 를 한 번 훑은 목록 — 소스 목록은 모두 여기서 거른다(Web.cmake 가 먼저 쓴다)
-include(cmake/Modules/LoadCompileFlags.cmake)
-include(cmake/Engine/BuildLayout.cmake)
-include(cmake/Engine/ExcludedSources.cmake)
-include(cmake/Engine/TargetCompileRules.cmake)
-include(cmake/Engine/EngineABIStamp.cmake)
-include(cmake/Engine/ModuleRegistry.cmake)
-include(cmake/Engine/ModuleTargets.cmake)
-include(cmake/Engine/ExecutableTargets.cmake)
-include(cmake/Engine/ModuleManifest.cmake)
-include(cmake/Engine/ModuleActivation.cmake)
-include(cmake/Engine/ThirdPartyLibs.cmake)
-include(cmake/Engine/RuntimeDependencies.cmake)
-include(cmake/Engine/ReflectionCodeGen.cmake)
-include(cmake/Engine/RHIBackends.cmake)
+include(cmake/Modules/Build/SourceTree.cmake) # `Source/` 를 한 번 훑은 목록 — 소스 목록은 모두 여기서 거른다(Web.cmake 가 먼저 쓴다)
+include(cmake/Toolchain/LoadCompileFlags.cmake)
+include(cmake/Modules/Build/BuildLayout.cmake)
+include(cmake/Modules/Build/ExcludedSources.cmake)
+include(cmake/Modules/Build/TargetCompileRules.cmake)
+include(cmake/Modules/Build/EngineABIStamp.cmake)
+include(cmake/Modules/Build/ModuleRegistry.cmake)
+include(cmake/Modules/Build/ModuleTargets.cmake)
+include(cmake/Modules/Build/ExecutableTargets.cmake)
+include(cmake/Modules/Build/ModuleManifest.cmake)
+include(cmake/Modules/Build/ModuleActivation.cmake)
+include(cmake/Modules/Build/ThirdPartyLibs.cmake)
+include(cmake/Modules/Build/RuntimeDependencies.cmake)
+include(cmake/Modules/Build/ReflectionCodeGen.cmake)
+include(cmake/Modules/Build/RHIBackends.cmake)
 
 # 모든 엔진 타겟이 공유하는 include 루트 (Source/, Content/, generated/)
 add_library(sw_third_party_includes INTERFACE)
@@ -71,14 +71,14 @@ endif()
 # 교차 빌드는 호스트 빌드의 도구(ReflectionParser · 쿠킹하는 App)를 쓴다 — 쿠킹 타깃(AssetAndToolTargets)이 호스트 폴더(SW_HOST_BUILD_DIR)를 읽기 전에 정한다.
 # 예전에는 이 줄이 아래(Source/Core 뒤)에 있어 첫 구성에서 CookAssets 가 빈 경로(`cmake --build ""`)로 섰다 — 캐시가 생긴 두 번째 구성부터만 맞았다.
 if(CMAKE_CROSSCOMPILING)
-	include(cmake/Engine/HostTools.cmake)
+	include(cmake/Modules/Build/HostTools.cmake)
 endif()
-include(cmake/Engine/AssetAndToolTargets.cmake)
+include(cmake/Modules/Build/AssetAndToolTargets.cmake)
 
 # ------------------------------------------------------------------------------
 # 4) 서브디렉터리 빌드 및 의존성 구성
 # ------------------------------------------------------------------------------
-# 모듈 매니페스트를 먼저 해석한다 — 모듈을 만드는 함수가 "켜져 있는가" 를 묻는다(`cmake/Engine/ModuleManifest.cmake`).
+# 모듈 매니페스트를 먼저 해석한다 — 모듈을 만드는 함수가 "켜져 있는가" 를 묻는다(`cmake/Modules/Build/ModuleManifest.cmake`).
 sw_resolve_module_manifests()
 
 # 순서: Core → ReflectionParser(Core 를 링크한다) → Engine(파서가 있어야 리플렉션 단계가 선다) → ModuleAPI → Editor → ModuleManager → App · Server → GameFramework/Games.

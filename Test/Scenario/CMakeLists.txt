@@ -23,7 +23,7 @@ endif()
 list(LENGTH SW_RHI_BACKEND_NAMES scenario_backend_count) # `-scenario-backends=all` 이 띄우는 자식 수
 
 set(scenario_root "${CMAKE_SOURCE_DIR}/Content")
-sw_add_source_tree_root("${scenario_root}/engine/automation") # 시나리오 폴더만 뿌리로 훑는다(`Content/` 전체는 에셋 — cmake/Engine/SourceTree.cmake)
+sw_add_source_tree_root("${scenario_root}/engine/automation") # 시나리오 폴더만 뿌리로 훑는다(`Content/` 전체는 에셋 — cmake/Modules/Build/SourceTree.cmake)
 # 시나리오의 `<Launch>` 를 명령줄 인자(`-이름=값` 목록)로 읽는다.
 function(sw_read_scenario_launch scenario_path out)
 	file(STRINGS "${scenario_root}/${scenario_path}" list_launch_line REGEX "^[ 	]*<Launch ")

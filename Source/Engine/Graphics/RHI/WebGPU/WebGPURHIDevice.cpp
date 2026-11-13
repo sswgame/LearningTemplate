@@ -436,7 +436,7 @@ namespace sw
         waitInfo.future = future;
         if ( wgpuInstanceWaitAny( _instance, 1, &waitInfo, MathUtil::kMaxUInt64 ) != WGPUWaitStatus_Success || waitInfo.completed == false )
         {
-            SW_LOG_ERROR_ID( "WebGPU.WaitFailed", "WebGPU: waiting for %# failed (the web build needs ASYNCIFY or JSPI - cmake/Modules/Platform/Web.cmake)", pWhat );
+            SW_LOG_ERROR_ID( "WebGPU.WaitFailed", "WebGPU: waiting for %# failed (the web build needs ASYNCIFY or JSPI - cmake/Toolchain/Platform/Web.cmake)", pWhat );
             return false;
         }
         return true;

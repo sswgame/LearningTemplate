@@ -34,7 +34,7 @@ namespace
 
 /**
  * @brief 실행 파일의 빌드 id 는 16진 열쇠다(Windows 는 GUID 32 자리 + age, PDB 경로 포함).
- * @details 모든 구성이 서명을 적는다 — Windows 는 /DEBUG 의 PE CodeView RSDS, 리눅스는 --build-id 의 ELF 노트(cmake/Modules/Compiler/Clang.cmake).
+ * @details 모든 구성이 서명을 적는다 — Windows 는 /DEBUG 의 PE CodeView RSDS, 리눅스는 --build-id 의 ELF 노트(cmake/Toolchain/Compiler/Clang.cmake).
  */
 SW_TEST_CASE( ModuleBuildIDTest, ExecutableHasASymbolKey )
 {

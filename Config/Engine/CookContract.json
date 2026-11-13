@@ -15,7 +15,7 @@
         "    DX11 128 = D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT. null = 텍스처가 고정 칸이 아니다 — DX12 · Vulkan 은 무제한 bindless 배열 하나(서술자 한도는 장치가 본다).",
         "    WebGPU 16 = 명세의 maxSampledTexturesPerShaderStage 기본 한도(모든 어댑터가 준다 — https://www.w3.org/TR/webgpu/#limits). 장치 생성이 어댑터 한도를 이 값과 대조해",
         "    모자라면 멈춘다(WebGPURHIDevice, shaderslot::wgpu::kStageTextureBudget). 텍스처와 샘플러는 따로 센다(WGSL 은 결합 샘플러가 아니다).",
-        "  graphics_libs = 플랫폼 그래픽 라이브러리 INTERFACE 타깃(cmake/Modules/Platform), shipping_define = 배포 빌드가 백엔드 하나를 Engine 에 넣을 때 붙이는 매크로.",
+        "  graphics_libs = 플랫폼 그래픽 라이브러리 INTERFACE 타깃(cmake/Toolchain/Platform), shipping_define = 배포 빌드가 백엔드 하나를 Engine 에 넣을 때 붙이는 매크로.",
         "  CMake 는 configure 가 쓴 generated/sw/config/CookContract.cmake 로 읽는다. 백엔드가 어느 플랫폼에 있는지는 모듈 매니페스트 _listExcludedPlatform 이 정본이다.",
         "platform_rhi_backends: 플랫폼마다 이 빌드가 만들 수 있는 백엔드와 건너갈 순서. 맨 앞이 그 플랫폼의 기본이다. 웹은 WebGPU 하나다(없는 플랫폼은 컴파일 오류). 데스크톱의 WebGPU 는 맨 끝이다 — vcpkg Dawn 위에서 웹 백엔드를 돌려 보는 길이고 기본으로 고르지 않는다(ThirdParty/dawn).",
         "  scenario_backends: 검증 체인(-scenario-backends=all)이 묶음마다 도는 백엔드 — backends 의 부분집합. 새 백엔드는 골든을 갖춘 뒤 든다(데스크톱 WebGPU 는 만들 수 있지만 아직 아니다).",

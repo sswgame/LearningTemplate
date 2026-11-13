@@ -178,7 +178,7 @@ add_test(NAME Scripts.WebPackage
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/tests/test_web_package.py")
 set_tests_properties(Scripts.WebPackage PROPERTIES LABELS nogpu TIMEOUT 60)
 
-# vcpkg 설치 보호 — 사용자가 끈 설치 · 소스 트리 밖 설치 폴더는 읽기 전용이다(cmake/Modules/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake).
+# vcpkg 설치 보호 — 사용자가 끈 설치 · 소스 트리 밖 설치 폴더는 읽기 전용이다(cmake/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake).
 add_test(NAME Scripts.VcpkgInstallPolicy
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/setup/tests/test_vcpkg_install_policy.py" "${CMAKE_COMMAND}")
 set_tests_properties(Scripts.VcpkgInstallPolicy PROPERTIES LABELS nogpu TIMEOUT 60)

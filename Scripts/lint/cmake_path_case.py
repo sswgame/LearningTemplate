@@ -5,7 +5,7 @@ Scripts/lint/cmake_path_case.py
 
 CMake 의 `include()` · `add_subdirectory()` 경로가 저장소의 실제 이름과 대소문자까지 같은지 본다.
 
-왜 린트인가: C++ include 는 컴파일러가 본다(`-Werror=nonportable-include-path`, cmake/Modules/Compiler/Clang.cmake). CMake 경로는 컴파일러 · clang-tidy 가
+왜 린트인가: C++ include 는 컴파일러가 본다(`-Werror=nonportable-include-path`, cmake/Toolchain/Compiler/Clang.cmake). CMake 경로는 컴파일러 · clang-tidy 가
 보지 않고, Windows 는 대소문자를 가리지 않아 Linux 구성에서야 "없는 파일" 로 선다(`RhiBackends.cmake` 를 `RHIBackends.cmake` 로 부르던 결함). 형식으로 막을 수 없는 틈이다.
 CMake 파일만이 아니라 이름 바꾸기도 참조를 깨므로 판정은 CMake 파일 전부의 색인(`index_cache`, 바뀐 파일만 다시 읽는다)으로 낸다.
 
@@ -93,10 +93,10 @@ def evaluate_paths(list_file: Sequence[str], map_fact: dict[str, dict[str, list[
 
 
 def run_self_check() -> None:
-    list_file = ["CMakeLists.txt", "cmake/Engine/BuildLayout.cmake", "Source/Engine/CMakeLists.txt", "Source/Engine/Audio/CMakeLists.txt"]
-    text = 'include(${CMAKE_SOURCE_DIR}/cmake/engine/BuildLayout.cmake)\nadd_subdirectory(Audio)\nadd_subdirectory(audio)\nadd_subdirectory(${X})\n'
+    list_file = ["CMakeLists.txt", "cmake/Modules/Build/BuildLayout.cmake", "Source/Engine/CMakeLists.txt", "Source/Engine/Audio/CMakeLists.txt"]
+    text = 'include(${CMAKE_SOURCE_DIR}/cmake/modules/build/BuildLayout.cmake)\nadd_subdirectory(Audio)\nadd_subdirectory(audio)\nadd_subdirectory(${X})\n'
     list_violation = evaluate_paths(list_file, {"Source/Engine/CMakeLists.txt": extract_paths(text)})
-    assert list_violation == ["Source/Engine/CMakeLists.txt: 'cmake/engine/BuildLayout.cmake' → 실제 이름 'cmake/Engine/BuildLayout.cmake'",
+    assert list_violation == ["Source/Engine/CMakeLists.txt: 'cmake/modules/build/BuildLayout.cmake' → 실제 이름 'cmake/Modules/Build/BuildLayout.cmake'",
                              "Source/Engine/CMakeLists.txt: 'audio' → 실제 이름 'Source/Engine/Audio'"], list_violation
     assert evaluate_paths(list_file, {"CMakeLists.txt": extract_paths("add_subdirectory(Source/Engine)\n")}) == [], "맞는 대소문자는 통과한다"
     fact = extract_paths("add_subdirectory(b)\nadd_subdirectory(a)\nadd_subdirectory(b)\n")

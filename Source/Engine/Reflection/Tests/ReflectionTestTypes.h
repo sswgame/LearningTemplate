@@ -1,7 +1,7 @@
 /**
  * @file ReflectionTestTypes.h
  * @brief 리플렉션 단위 테스트(`Engine/Reflection/Tests`)가 쓰는 반사 타입입니다 — 코드젠을 거쳐 Engine 모듈에 오른다.
- * @details 개발 구성만 코드젠한다(배포 구성은 `Tests/` 의 반사 헤더를 훑지 않는다 — cmake/Engine/ReflectionCodeGen.cmake). 컴포넌트가 아닌 값 타입만 둔다
+ * @details 개발 구성만 코드젠한다(배포 구성은 `Tests/` 의 반사 헤더를 훑지 않는다 — cmake/Modules/Build/ReflectionCodeGen.cmake). 컴포넌트가 아닌 값 타입만 둔다
  *          (컴포넌트는 "Add Component" 메뉴에 오르고, 이 층(1)은 컴포넌트 모델(5)을 include 하지 못한다).
  */
 #pragma once

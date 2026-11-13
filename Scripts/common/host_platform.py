@@ -8,7 +8,7 @@ Scripts/common/host_platform.py
 **왜 한 자리인가.** 스크립트마다 `sys.platform == "win32"` · `os.name` · `platform.system()` 을 따로 물으면 `else` 가 "Windows 가 아니면 Linux" 를
 가정해, 표에 없는 호스트(macOS 등)에서 Linux 가지를 조용히 탔다. 호스트는 이 표의 줄만 될 수 있고 없으면 들여올 때 멈춘다 —
 그래서 `is_windows_host()` 의 `else` 는 표의 나머지 줄(지금 Linux)이다. 다른 곳에서 OS 를 직접 물으면 린트(`platform_chains.py`)가 막는다.
-CMake 쪽의 같은 자리는 `cmake/Engine/BuildLayout.cmake` 의 `SW_PLATFORM_NAME` 이다(대상 플랫폼).
+CMake 쪽의 같은 자리는 `cmake/Modules/Build/BuildLayout.cmake` 의 `SW_PLATFORM_NAME` 이다(대상 플랫폼).
 """
 
 from __future__ import annotations

@@ -40,8 +40,8 @@
 ## 플랫폼 코드의 자리
 
 1. **WebGPU RHI 백엔드** — `Source/Engine/Graphics/RHI/WebGPU/`. 셰이더 대상 `WGSL_WebGPU`(DXC SPIR-V → Tint → WGSL, 바인딩 표를 앞에 붙인 바이너리), 고정 슬롯 모델.
-2. **Emscripten 빌드** — `cmake/Modules/Platform/Web.cmake`(링크 옵션 · 포트), 메인 루프는 브라우저 프레임 콜백(`emscripten_set_main_loop_arg`), canvas 창.
-3. **Android Vulkan** — `cmake/Modules/Platform/Android.cmake`(NDK 라이브러리), `android_main` 진입 · `ANativeWindow` 창, `VK_KHR_android_surface`.
+2. **Emscripten 빌드** — `cmake/Toolchain/Platform/Web.cmake`(링크 옵션 · 포트), 메인 루프는 브라우저 프레임 콜백(`emscripten_set_main_loop_arg`), canvas 창.
+3. **Android Vulkan** — `cmake/Toolchain/Platform/Android.cmake`(NDK 라이브러리), `android_main` 진입 · `ANativeWindow` 창, `VK_KHR_android_surface`.
 4. **Android 내용 읽기** — `AndroidMain` 이 앱 전용 폴더(`internalDataPath`)를 `SW_ANDROID_APP_FOLDER` 로 넘겨 `ProcessRoots` 의 바이너리 · 프로젝트 폴더로 쓰고, 팩 폴더 경로(`<앱 폴더>/Packs`)를 APK 의 `assets/Packs` 로 옮기는 `BundledContentFileSource` + `AndroidAssetFileReader`(AAssetManager)를 건다. 팩은 압축하지 않고 저장돼 `AAsset_openFileDescriptor64` 의 fd + 구간으로 바로 읽는다(`AsyncFileHandle::openNativeRange`) — 압축된 파일은 오류다.
 5. **교차 빌드 쿠킹** — Android · 웹의 `CookAssets` 는 호스트 개발 빌드(`SW_HOST_BUILD_DIR`, 기본 `build/Ninja-Release` — 굽기 앞에 다시 짓는다)의 App 이 `--cook-texture-variants` 뒤 `--cook-all -<배포 백엔드의 명령줄 이름>` 으로 `<교차 빌드>/Bin/Packs` 에 굽는다 — `android-apk` 의 기본 `--packs-dir` 이다.
 
@@ -54,7 +54,7 @@
 - 손가락: 터치 장치의 첫 손가락이 UI 포인터가 되고, 조작을 비켜 짚으면 `_minTouchTargetSize`(48)까지 넓혀 고른다(`UIEventRouter::hitTestTouch`).
 - 품질 등급: `engine.settings.xml` 의 `<AutoDetect platform=… requireNativeBindless=…>` — 플랫폼 기본 RHI 의 정적 능력과 시스템 메모리로 고른다.
 - 에디터: UI 미리보기 견본(`uiresolutions.xml`)이 기기 여백 · density 를 싣고 "돌리기" 로 가로를 본다. 미리보기 화면은 자기 뷰포트의 화면 태그를 그 화면에만 바꿔 끼운다(`ResourceContext::withTagOverride` — 엔진 태그 · 게임 UI 는 그대로, 변형은 캐시에 따로, 저장은 같은 태그로 조건을 되돌린다). 같은 조건의 시나리오는 `engine/automation/screenadapt`(단계 `Touch`).
-- APK: `py -3 -m Scripts android-apk --game <게임>` 이 Android-Shipping 빌드의 `libApp.so` 와 쿠킹한 팩(`assets/Packs`, 압축하지 않는다)을 서명한 디버그 APK(`build/Android-Shipping/Apk/<게임>-debug.apk`)로 묶는다 — Gradle 없이 aapt2 · zipalign(16KB 페이지) · apksigner. 매니페스트 틀은 `cmake/Modules/Platform/AndroidManifest.xml`, 값(앱 id · 방향 · 판)은 `Config/Environment/android_package.json`.
+- APK: `py -3 -m Scripts android-apk --game <게임>` 이 Android-Shipping 빌드의 `libApp.so` 와 쿠킹한 팩(`assets/Packs`, 압축하지 않는다)을 서명한 디버그 APK(`build/Android-Shipping/Apk/<게임>-debug.apk`)로 묶는다 — Gradle 없이 aapt2 · zipalign(16KB 페이지) · apksigner. 매니페스트 틀은 `cmake/Templates/AndroidManifest.xml`, 값(앱 id · 방향 · 판)은 `Config/Environment/android_package.json`.
 
 ## 남은 일(코드를 붙여 보지 못한 것)
 

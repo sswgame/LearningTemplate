@@ -9,7 +9,7 @@ Scripts/lint/folder_layout.py
 
 **왜 린트인가.** 폴더 자리는 형식이 말하지 못한다. 기준표 없이 "처음 쓰는 쪽" · 이름 낱말로 자리를 정해 RegistrationList(String 폴더) · StringUtil(Container) 같은
 어긋남이 쌓였다(FolderMoves 13 절, 2026-11-08 전수 조사). 경로만 본다.
-`Dev/` 폴더 자리는 린트가 아니라 configure 가 막는다(`cmake/Engine/ExcludedSources.cmake`, 표 `Config/Rules/Layers/DevFolders.json`) — 배포가 빼는 개발 폴더 목록과 한 표다.
+`Dev/` 폴더 자리는 린트가 아니라 configure 가 막는다(`cmake/Modules/Build/ExcludedSources.cmake`, 표 `Config/Rules/Layers/DevFolders.json`) — 배포가 빼는 개발 폴더 목록과 한 표다.
 """
 
 from __future__ import annotations

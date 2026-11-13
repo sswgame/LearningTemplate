@@ -461,7 +461,7 @@ def sanitize(arguments):
         return 1
     # 누수는 처음에는 끈다 — 기준선을 만든 뒤 켠다(감사 P-8 "detect_leaks=0 으로 시작"). 첫 오류에서 멈춰 보고를 읽게 한다.
     options = ('ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1' if kind == 'address'
-               else 'TSAN_OPTIONS=halt_on_error=1:second_deadlock_stack=1')
+               else f'TSAN_OPTIONS=halt_on_error=1:second_deadlock_stack=1:suppressions={CLONE}/Config/Build/TsanSuppressions.txt')
     rc = shell(f'cd {build_dir} && {options} ./Bin/App --test -unattended > /tmp/lt.sanitize.log 2>&1; rc=$?; '
                f'grep -E "case run|FAILED|ERROR: (Address|Thread)Sanitizer|runtime error|WARNING: ThreadSanitizer" /tmp/lt.sanitize.log | head -n 20 | cut -c1-200; exit $rc').returncode
     if rc != 0:

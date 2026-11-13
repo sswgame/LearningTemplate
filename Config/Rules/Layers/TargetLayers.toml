@@ -24,7 +24,7 @@ game = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Programs", "Gam
 # (`EditorPreviewViewport::requestImageFile` · `EditorViewSurface::registerImage`)로만 닿는다(언리얼 에디터 플러그인이 RHI 모듈 대신 에디터 모듈을 의존하는 자리).
 editorextension = ["ModuleManager", "App", "Server", "Games", "Programs", "Engine/Graphics/RHI", "Engine/Graphics/Shader"]
 # 전용 서버 구성은 오디오 · 렌더러 · 런타임 UI · 클라이언트 전용 소스 헤더를 읽지 않는다 — 이음매는 `IEngineAudioDriver` · `ISoundPlayer` · `IEngineRenderDriver` · `IEngineUIDriver` 와 게임 코드의 창구다.
-# Server 타깃 구성의 모든 타깃이 더 받는다(`sw_apply_target_layer_guard`). 엔진 폴더는 `cmake/Engine/BuildLayout.cmake` 의 `SW_EXCLUDED_ENGINE_FOLDERS`(서버)와 같아야 한다 —
+# Server 타깃 구성의 모든 타깃이 더 받는다(`sw_apply_target_layer_guard`). 엔진 폴더는 `cmake/Modules/Build/BuildLayout.cmake` 의 `SW_EXCLUDED_ENGINE_FOLDERS`(서버)와 같아야 한다 —
 # 생성기가 대조해 빠지면 configure 가 멈춘다. 클라이언트 전용 소스 폴더(`Client/`)는 모듈 · 게임마다 있어 아래 `[gatefolder]` 가 이름으로 막는다.
 serverbuild = ["Engine/Audio", "Engine/Renderer", "Engine/UI", "Engine/Window/Linux", "Engine/Input/Linux"]
 # 클라이언트 구성(Client 타깃)의 모든 타깃이 더 받는다 — 위의 반대쪽. 서버 전용 소스 폴더(`Server/`)가 Engine · GameFramework · 게임마다 있어 아래 `[gatefolder]` 가 이름으로 막고,

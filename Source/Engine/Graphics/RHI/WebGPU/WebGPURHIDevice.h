@@ -325,7 +325,7 @@ namespace sw
         [[nodiscard]] bool           acquireSwapChainImageInternal( IRHISwapChain& swapChain ) override;
 
     private:
-        /** @brief 비동기 요청(어댑터 · 장치)을 기다립니다. 브라우저는 ASYNCIFY · JSPI 로 링크해야 이 대기가 된다(cmake/Modules/Platform/Web.cmake). */
+        /** @brief 비동기 요청(어댑터 · 장치)을 기다립니다. 브라우저는 ASYNCIFY · JSPI 로 링크해야 이 대기가 된다(cmake/Toolchain/Platform/Web.cmake). */
         [[nodiscard]] bool waitForFuture( WGPUFuture future, const utf8* pWhat ) const;
         /** @brief 어댑터를 받고 필수 기능 · 한도를 대조해 장치를 만듭니다. 필수 기능이 없으면 `DriverUnsupported` 로 멈춘다. */
         [[nodiscard]] bool createDeviceInternal( const RHISwapChainDesc& desc );

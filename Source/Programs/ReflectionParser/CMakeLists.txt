@@ -22,9 +22,9 @@ target_sources(ReflectionSchema INTERFACE
 target_link_libraries(ReflectionSchema INTERFACE sw_public_source_includes)
 
 # ------------------------------------------------------------------------------
-# 1) libclang — 못 찾으면 파서를 짓지 않는다(SW_REQUIRE_REFLECTION 이면 구성이 선다). 찾는 순서는 cmake/Environment/FindLibclang.cmake.
+# 1) libclang — 못 찾으면 파서를 짓지 않는다(SW_REQUIRE_REFLECTION 이면 구성이 선다). 찾는 순서는 cmake/Modules/Environment/FindLibclang.cmake.
 # ------------------------------------------------------------------------------
-include("${CMAKE_SOURCE_DIR}/cmake/Environment/FindLibclang.cmake")
+include("${CMAKE_SOURCE_DIR}/cmake/Modules/Environment/FindLibclang.cmake")
 sw_find_libclang(libclang_lib libclang_include_dir libclang_dll)
 if(NOT libclang_lib)
 	return()

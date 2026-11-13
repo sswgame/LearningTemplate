@@ -177,7 +177,7 @@ foreach(header IN LISTS list_editor_all_source)
 	endif()
 endforeach()
 
-# 코어(EditorCoreReflect)와 EditorModule 의 gen 이름 중복은 `sw_add_reflection_step` 의 전역 stem 레지스트리가 구성에서 막는다(cmake/Engine/ReflectionCodeGen.cmake).
+# 코어(EditorCoreReflect)와 EditorModule 의 gen 이름 중복은 `sw_add_reflection_step` 의 전역 stem 레지스트리가 구성에서 막는다(cmake/Modules/Build/ReflectionCodeGen.cmake).
 
 # 코어 부분 하나가 받는 공통 설정. EditorModule 과 같은 정의 · 로그 태그 · 유니티 묶음을 받아 DLL 에 들어가도 달라지지 않는다.
 function(sw_apply_editor_core_settings TARGET_NAME)

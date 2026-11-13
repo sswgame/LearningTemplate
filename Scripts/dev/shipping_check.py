@@ -69,7 +69,7 @@ class SmokeResult:
     list_expected_error: list[str] = field(default_factory=list)
 
 
-# 빌드의 쿠킹 단계(CookAssets — cmake/Engine/AssetAndToolTargets.cmake 의 `-log-file`)가 남기는 로그 이름이다. 두 곳이 같은 이름을 쓴다.
+# 빌드의 쿠킹 단계(CookAssets — cmake/Modules/Build/AssetAndToolTargets.cmake 의 `-log-file`)가 남기는 로그 이름이다. 두 곳이 같은 이름을 쓴다.
 COOK_LOG_NAME = "Cook.log"
 
 

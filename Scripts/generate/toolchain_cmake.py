@@ -14,7 +14,7 @@ Scripts/generate/toolchain_cmake.py
 `environment.py` 가 키를 하나 더하면 CMake 에서 바로 쓸 수 있다.
 
 (`FindLlvmBin.cmake` 는 그대로 둔다 — vcpkg 오버레이 생성(`VcpkgTriplets.cmake`)이 `project()` 앞에서 불러
-이 생성 파일이 아직 없을 때도 성립해야 한다. 그래서 저장소 루트의 JSON 을 `sw_require_json_value`(`cmake/Config/JsonValue.cmake`)로
+이 생성 파일이 아직 없을 때도 성립해야 한다. 그래서 저장소 루트의 JSON 을 `sw_require_json_value`(`cmake/Modules/Config/JsonValue.cmake`)로
 직접 읽는 코드가 거기 있는 것이다.)
 
 Usage:

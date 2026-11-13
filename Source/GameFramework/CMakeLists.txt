@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1) GameFramework — 모듈 라이브러리 기본값은 sw_add_module_library(cmake/Engine/ModuleTargets.cmake). Kits/ 는 키트마다 따로 짓는다.
+# 1) GameFramework — 모듈 라이브러리 기본값은 sw_add_module_library(cmake/Modules/Build/ModuleTargets.cmake). Kits/ 는 키트마다 따로 짓는다.
 # ------------------------------------------------------------------------------
 sw_skip_inactive_module(GameFramework skip_game_framework)
 if(skip_game_framework)
@@ -15,7 +15,7 @@ sw_glob_source_tree(list_game_framework_source RECURSE "*.cpp" "*.c" "*.h" "*.hp
 list(FILTER list_game_framework_source EXCLUDE REGEX "Kits/")
 # 에디터 확장(Plugin/Editor/)은 따로 짓는 모듈이다(GF_EditorPlugin_<이름>) - GameFramework DLL(배포본 포함)에 섞지 않는다.
 list(FILTER list_game_framework_source EXCLUDE REGEX "Plugin/")
-# 클라이언트 전용 소스(Client/ — HUD · 마커 · 로딩 화면)는 전용 서버가 짓지 않는다(cmake/Engine/ExcludedSources.cmake).
+# 클라이언트 전용 소스(Client/ — HUD · 마커 · 로딩 화면)는 전용 서버가 짓지 않는다(cmake/Modules/Build/ExcludedSources.cmake).
 # 서버 전용 소스(Server/ — 온라인 서버 조립, 서비스 호스트 · 메모리 저장소 · 캐시 · 버스 구현)는 클라이언트 구성이 짓지 않는다.
 if(SW_TARGET_TYPE STREQUAL "Server")
 	sw_remove_excluded_sources(list_game_framework_source ${SW_CLIENT_ONLY_SOURCE_PATTERNS})

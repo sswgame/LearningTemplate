@@ -6,7 +6,7 @@
     #include <poll.h>
     #include <wayland-client.h>
 
-    // 구성 때 wayland-scanner 가 만든다(cmake/Modules/Platform/Linux.cmake 의 프로토콜 XML 목록)
+    // 구성 때 wayland-scanner 가 만든다(cmake/Toolchain/Platform/Linux.cmake 의 프로토콜 XML 목록)
     #include "xdg-shell-client-protocol.h"
 
 namespace sw

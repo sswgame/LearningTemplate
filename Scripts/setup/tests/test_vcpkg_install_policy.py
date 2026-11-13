@@ -1,6 +1,6 @@
 """
 vcpkg 설치 보호 검사 — 사용자가 끈 설치와 소스 트리 밖 설치 폴더는 읽기 전용이고, 소스 트리 안 설치 폴더만 설치할 수 있다
-(cmake/Modules/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake 를 `cmake -P` 로 부른다).
+(cmake/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake 를 `cmake -P` 로 부른다).
 
 실행: python -X utf8 Scripts/setup/tests/test_vcpkg_install_policy.py <cmake 실행 파일> (CTest `Scripts.VcpkgInstallPolicy`).
 """
@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-POLICY_FILE = Path(__file__).resolve().parents[3] / "cmake/Modules/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake"
+POLICY_FILE = Path(__file__).resolve().parents[3] / "cmake/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake"
 CMAKE = ""
 
 

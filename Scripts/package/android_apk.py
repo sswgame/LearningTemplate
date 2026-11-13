@@ -10,7 +10,7 @@ Java 코드가 없는 NativeActivity 앱이라 Gradle · d8 을 쓰지 않는다
 
 | 단계 | 도구 | 하는 일 |
 | --- | --- | --- |
-| manifest | (이 스크립트) | `cmake/Modules/Platform/AndroidManifest.xml` 틀을 `Config/Environment/android_package.json` 값으로 채운다 |
+| manifest | (이 스크립트) | `cmake/Templates/AndroidManifest.xml` 틀을 `Config/Environment/android_package.json` 값으로 채운다 |
 | link | aapt2 | 이진 매니페스트 + `assets/Packs/*.pack`(압축하지 않는다 — AAsset 으로 바로 읽는다) |
 | native | (zipfile) | `lib/<ABI>/lib<이름>.so` 를 압축하지 않고 넣는다(`extractNativeLibs=false` — 설치가 풀지 않고 APK 에서 바로 연다) |
 | align | zipalign | 압축하지 않은 항목 4 바이트, .so 는 페이지(`page_size_kb`, Android 15 의 16KB 페이지 기기) 경계 |
@@ -49,7 +49,7 @@ from package.pack import PackageError, PACK_FOLDER_NAME, select_staged_packs  # 
 
 #: 패키징 값 파일과 매니페스트 틀(저장소 기준).
 PACKAGE_CONFIG_PATH = Path("Config") / "Environment" / "android_package.json"
-MANIFEST_TEMPLATE_PATH = Path("cmake") / "Modules" / "Platform" / "AndroidManifest.xml"
+MANIFEST_TEMPLATE_PATH = Path("cmake/Templates/AndroidManifest.xml")   # 한 글로 적는다 — 조각으로 쪼개면 경로 옮기기(move-source)가 찾지 못한다
 PRESET_FILE_NAME = "CMakePresets.json"
 PRESET_NAME = "Android-Shipping"
 #: 팩 확장자 — aapt2 가 압축하지 않게 한다(AAsset 이 오프셋으로 바로 읽는다).
@@ -221,7 +221,7 @@ def make_apk(game: str, build_dir: Path, packs_dir: Path, project_root: Path) ->
         raise ApkError(str(error)) from error
     settings = resolve_settings(config, game, min_sdk, tools.target_sdk, abi, project_root)
 
-    library = build_dir / "Lib" / f"lib{settings.lib_name}.so"  # 공유 라이브러리는 CMAKE_LIBRARY_OUTPUT_DIRECTORY(cmake/Engine/BuildLayout.cmake 의 Lib)로 간다
+    library = build_dir / "Lib" / f"lib{settings.lib_name}.so"  # 공유 라이브러리는 CMAKE_LIBRARY_OUTPUT_DIRECTORY(cmake/Modules/Build/BuildLayout.cmake 의 Lib)로 간다
     if not library.is_file():
         raise ApkError(f"{library} not found - build the {PRESET_NAME} preset first")
     try:

@@ -11,7 +11,7 @@
 # ------------------------------------------------------------------------------
 # 1) 라이브러리 종류 · 소스 목록
 # Dev: SHARED / Shipping: STATIC
-# RHI MODULE 엔트리(백엔드 폴더의 Module/)와 백엔드 장치 .cpp 는 항상 Engine GLOB 에서 뺀다(장치 소스는 cmake/Engine/RHIBackends.cmake 가 백엔드 폴더로 안다).
+# RHI MODULE 엔트리(백엔드 폴더의 Module/)와 백엔드 장치 .cpp 는 항상 Engine GLOB 에서 뺀다(장치 소스는 cmake/Modules/Build/RHIBackends.cmake 가 백엔드 폴더로 안다).
 # Dev 는 RHI_* MODULE 이, Shipping 은 아래 5) 가 고른 백엔드 하나를 같은 함수로 가져다 짓는다.
 # ------------------------------------------------------------------------------
 if(SW_SHIPPING_BUILD)
@@ -44,7 +44,7 @@ list(REMOVE_ITEM ENGINE_SOURCES ${list_rhi_backend_source})
 # 엔진에 남는 것은 런타임 코드가 선언하는 얇은 창구다: 감시 값(`Watch/`), 단계 · 차단 조건 · 단계 초기화 등록과 시나리오 형식(`Scenario/`), 실행기 창구 `IAutomationRuntime`.
 # 등록 매크로는 `SW_SHIPPING` 에서 빈 선언이 된다(`AutomationStepRegistry.h` · `AutomationWatch.h` · `AutomationStageReset.h`).
 
-# 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Engine/BuildLayout.cmake 의 `SW_EXCLUDED_ENGINE_FOLDERS`).
+# 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Modules/Build/BuildLayout.cmake 의 `SW_EXCLUDED_ENGINE_FOLDERS`).
 # 그 폴더의 헤더는 타깃 게이트 `serverbuild` 가 막는다(서버는 `IEngineRenderDriver` 만 본다). 리플렉션 헤더도 아래 8) 에서 뺀다.
 set(excluded_folder_regex "")
 foreach(excluded_folder IN LISTS SW_EXCLUDED_ENGINE_FOLDERS)
@@ -106,7 +106,7 @@ endforeach()
 list(REMOVE_ITEM ENGINE_SOURCES ${list_engine_layer_source})
 
 # ------------------------------------------------------------------------------
-# 2) 압축 코덱(zlib · LZ4 · Zstd) — Engine 에만 붙인다. 찾기 · 진단 · 링크 항목은 `sw_find_engine_compression_libraries`(cmake/Engine/ThirdPartyLibs.cmake).
+# 2) 압축 코덱(zlib · LZ4 · Zstd) — Engine 에만 붙인다. 찾기 · 진단 · 링크 항목은 `sw_find_engine_compression_libraries`(cmake/Modules/Build/ThirdPartyLibs.cmake).
 # ------------------------------------------------------------------------------
 sw_find_engine_compression_libraries(list_engine_compression_lib)
 
@@ -293,7 +293,7 @@ endif()
 # 다시 넣고 싶어지면 먼저 `SW_ENABLE_UNITY_BUILD` 를 켠 빌드로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.
 #
 # 매크로는 이름 규칙으로 못 막는다. X11 을 include 하는 .cpp(`Convex` · `None` … 매크로)는 리눅스에서 `sw_set_unity_build` 가
-# include 줄을 보고 저절로 묶음에서 뺀다 — 이것도 목록이 아니다(`cmake/Modules/Options/UnityBuild.cmake`).
+# include 줄을 보고 저절로 묶음에서 뺀다 — 이것도 목록이 아니다(`cmake/Toolchain/Options/UnityBuild.cmake`).
 # ------------------------------------------------------------------------------
 sw_set_unity_build(Engine)
 
