@@ -1248,17 +1248,17 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPlugin.RemoveAnnouncement" source="Remove notice">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPlugin.RemoveBrokenWires" source="Remove broken wires">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.RemoveLiveEvent" source="Remove live event">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.RemoveAnnouncement" source="Remove notice">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
@@ -1477,6 +1477,16 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPluginField.AnnouncementId" source="Notice id">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.AnnouncementSeconds0UntilRemoved" source="Notice seconds (0 = until removed)">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPluginField.BasePreset" source="Base preset">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
@@ -1538,16 +1548,6 @@
 			</origins>
 		</entry>
 		<entry key="EdPluginField.MaintenanceSeconds0UntilCleared" source="Maintenance seconds (0 = until cleared)">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginField.AnnouncementId" source="Notice id">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginField.AnnouncementSeconds0UntilRemoved" source="Notice seconds (0 = until removed)">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
@@ -1951,6 +1951,11 @@
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPluginWidget.AnnouncementText" source="Notice text">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPluginWidget.AssetId" source="Asset id">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
@@ -2038,11 +2043,6 @@
 			</origins>
 		</entry>
 		<entry key="EdPluginWidget.MessageKey" source="Message key">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.AnnouncementText" source="Notice text">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
