@@ -58,7 +58,8 @@
         "Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp|source": "사람이 옮기거나 복사하려고 고른 폴더 하나의 내용이다 — 그 폴더를 통째로 다룬다",
         "Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp|path": "옮기거나 지우려고 고른 폴더 하나의 모든 파일이다 — 그 폴더를 통째로 다루니 남의 사본까지 읽기 전용을 본다",
         "Source/Editor/Common/Commands/Asset/EditorDataTableCommands.cpp|dataFolder": "데이터 표 폴더 하나(재귀 아님)다 — scratch 를 지나지 않는다",
-        "Source/Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.cpp|sourceAbs": "사람이 옮기려고 고른 폴더 하나에 남은 파일이다 — 그 폴더를 통째로 다룬다"
+        "Source/Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.cpp|sourceAbs": "사람이 옮기려고 고른 폴더 하나에 남은 파일이다 — 그 폴더를 통째로 다룬다",
+        "Source/Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.cpp|configFolder": "프로젝트 설정 창이 표 페이지로 여는 `Config/` 다 — 리소스 트리(Content) 밖이라 다른 프로세스의 시나리오 사본이 없다"
     },
     "nameHashKey": {
         "Source/Engine/Reflection/TypeRegistry.cpp": "기반 자신이다 — 해시 표는 NameHashIndex(find 로 종류 · 지운 이름을 먼저 본다)이고, tryFindNameHashClash 는 열거자 해시 충돌을 찾는 검사 표다",

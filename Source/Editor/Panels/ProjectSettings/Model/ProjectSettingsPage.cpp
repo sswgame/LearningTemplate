@@ -22,7 +22,17 @@ namespace sw::editor
 {
     void ProjectSettingsPage::open()
     {
-        _bOpened              = true;
+        _bOpened = true;
+        _bDirty  = false;
+        if ( _entry.isTable() )
+        {
+            const expected<void> opened = _tableDocument.open( _absolutePath );
+            _bTypeFound                 = opened.has_value();
+            if ( opened.has_value() == false )
+                SW_LOG_WARNING_ID( "ProjectSettingsPanel.ProjectSettingsTableCouldNot", "Project settings: %# could not be opened - %# (%#)", _absolutePath.c_str(), opened.error().message(),
+                                   opened.error().detail() );
+            return;
+        }
         const TypeInfo* pType = editor::getSubsystem<TypeRegistry>().findType( hashed_string( _entry._typeName.c_str() ) );
         if ( pType == nullptr )
         {
@@ -37,7 +47,7 @@ namespace sw::editor
     void ProjectSettingsPage::refreshDirty()
     {
         if ( _bOpened )
-            _bDirty = _document.isModified();
+            _bDirty = _entry.isTable() ? _tableDocument.isModified() : _document.isModified();
     }
 
     bool ProjectSettingsPage::saveDocument( bool& outApplied )
@@ -46,7 +56,8 @@ namespace sw::editor
         // 페이지별 Save 단추는 패널 저장(`saveDocumentAndClearDirty`)을 지나지 않는다 — 같은 확인을 여기서도 한다.
         if ( EditorContentWrite::warnIfReadOnly( _absolutePath, EditorContentWriteKind::Save ) )
             return false;
-        if ( _document.saveDocument() == false )
+        const bool bSaved = _entry.isTable() ? _tableDocument.saveDocument() : _document.saveDocument();
+        if ( bSaved == false )
             return false;
         _bDirty = false;
         // 호스트가 파일에서 읽은 설정(EngineConfig · GameConfig …)이면 제자리에서 다시 읽는다.
@@ -58,14 +69,31 @@ namespace sw::editor
 
     void ProjectSettingsPage::revert()
     {
-        (void)_document.revert(); // 결과는 창의 칩과 오류 줄이 보인다
+        if ( _entry.isTable() )
+        {
+            const expected<void> reverted = _tableDocument.revert();
+            _bTypeFound                   = reverted.has_value(); // 디스크에서 깨졌으면 목록에서 고를 수 없게 한다 — 이유는 open 이 로그로 남긴다
+        }
+        else
+        {
+            (void)_document.revert(); // 결과는 창의 칩과 오류 줄이 보인다
+        }
         _bDirty = false;
     }
 
     void ProjectSettingsPage::resetToDefault()
     {
+        if ( _entry.isTable() )
+            return; // 형식이 없어 기본값을 모른다
         _document.resetToDefault();
         _bDirty = _document.isModified();
+    }
+
+    uint32 ProjectSettingsPage::countKeys() const
+    {
+        if ( _bOpened == false )
+            return 0;
+        return _entry.isTable() ? _tableDocument.countLeaves() : _document.countNonDefaultKeys();
     }
 
     bool ProjectSettingsPage::hasDirty( const vector<unique_ptr<ProjectSettingsPage>>& listPage )
@@ -111,12 +139,16 @@ namespace sw::editor
         }
         vector<ProjectSettingsEntry> listEntry;
         ProjectSettingsEntry::collectLoaded( *pConfigManager, ProcessRoots::get()._project.str(), listEntry );
+        vector<ProjectSettingsEntry> listTable;
+        (void)ProjectSettingsEntry::collectTables( ProcessRoots::get()._project.str(), listEntry, listTable ); // 못 훑으면 오류를 남겼다 — 형식 페이지는 그대로 보인다
+        for ( ProjectSettingsEntry& table : listTable )
+            listEntry.push_back( std::move( table ) );
         for ( ProjectSettingsEntry& entry : listEntry )
         {
             unique_ptr<ProjectSettingsPage> pPage = make_unique<ProjectSettingsPage>();
             pPage->_entry                         = std::move( entry );
             pPage->_absolutePath                  = pPage->_entry._absolutePath;
-            pPage->_bTypeFound                    = registry.findType( hashed_string( pPage->_entry._typeName.c_str() ) ) != nullptr;
+            pPage->_bTypeFound                    = pPage->_entry.isTable() || registry.findType( hashed_string( pPage->_entry._typeName.c_str() ) ) != nullptr;
             outListPage.push_back( std::move( pPage ) );
         }
     }

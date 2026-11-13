@@ -1,6 +1,6 @@
 /**
  * @file ProjectSettingsPanel.h
- * @brief 프로젝트 설정 창입니다(Edit > Project Settings). `Config/` 와 팩의 설정 JSON, 활성 팩 `gamesettings.xml` 의 `<Engine>` 요소를 프로퍼티 그리드로 고칩니다.
+ * @brief 프로젝트 설정 창입니다(Edit > Project Settings). `Config/` 와 팩의 설정 JSON, 활성 팩 `gamesettings.xml` 의 `<Engine>` 요소를 프로퍼티 그리드로, 반사 형식이 없는 `Config/` 표(린트 · 격리 · 환경 · 개발 표)를 범용 JSON 행으로 고칩니다.
  * @details JSON 호스트 설정은 저장하면 실행 중인 호스트가 다시 읽습니다. 팩의 `<Engine>` 요소(`PackEngineSettings`)는 다음 기동부터 반영됩니다.
  */
 #pragma once
@@ -13,6 +13,7 @@
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsPage.h"
+#include "Editor/Panels/ProjectSettings/ProjectSettingsTableView.h"
 
 namespace sw
 {
@@ -63,10 +64,13 @@ namespace sw::editor
         void refreshDirtyState();
         void drawPageList();
         void drawPageDetail( Page& page );
+        void drawPageActions( Page& page );
+        void selectPage( Page& page );
 
     private:
         vector<unique_ptr<Page>> _listPage;
         EditorPropertyGrid       _grid;
+        ProjectSettingsTableView _tableView;
         Page*                    _pSelected;
         string                   _statusText;
         uint8                    _bCatalogLoaded : 1;
