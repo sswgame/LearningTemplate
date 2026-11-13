@@ -25,7 +25,7 @@
 
 namespace sw
 {
-    class ISceneLaneFrameSystem;
+    class ISceneParallelFrameSystem;
 
     /**
      * @brief 앞 시스템(@p earlier, 붙은 순서가 앞)과 뒤 시스템(@p later)이 같이 돌 수 없는지 돌려줍니다.
@@ -40,14 +40,14 @@ namespace sw
     };
 
     /** @brief 한 파도에서 워커로 보낼 프레임 시스템 하나입니다 — 구간 값을 함께 복사해 든다(같은 파도의 시스템이 시스템을 붙이면 매니저의 시스템 목록이 옮겨진다). */
-    struct FrameSystemLaneEntry
+    struct FrameSystemParallelEntry
     {
-        ISceneLaneFrameSystem* _pSystem;
-        ProfileScopeID         _scopeID; ///< 그 시스템의 `runLane` 구간
+        ISceneParallelFrameSystem* _pSystem;
+        ProfileScopeID             _scopeID; ///< 그 시스템의 `runOnAnyThread` 구간
     };
 
     /** @brief 파도의 순서 목록입니다. 호출처가 재사용해도 됩니다(`build` 가 비우고 채운다). */
-    struct FrameSystemLanePlan
+    struct FrameSystemParallelPlan
     {
         vector<FrameSystemWave> _listWave;
         /** @brief 만드는 중 쓰는 칸 — 시스템마다 정해진 파도 번호입니다(프레임 사이에 용량을 둔다). */
@@ -58,7 +58,7 @@ namespace sw
      * @brief 접근 선언의 목록(붙인 순서)으로 파도 계획을 만듭니다. `outPlan` 의 시스템 번호는 @p listAccess 의 번호입니다.
      * @details 시스템 j 의 파도는 "앞 시스템 중 j 와 겹치는 것의 가장 늦은 파도 + 1" 이다. 겹침이 없으면 0.
      */
-    SW_API void buildFrameSystemLanePlan( span<const SceneFrameAccess> listAccess, FrameSystemLanePlan& outPlan );
+    SW_API void buildFrameSystemParallelPlan( span<const SceneFrameAccess> listAccess, FrameSystemParallelPlan& outPlan );
 } // namespace sw
 
 namespace sw
@@ -105,9 +105,9 @@ namespace sw
     class SW_API GameObjectManager
     {
         friend class GameObject;
-        friend class StructuralChangeBuffer; ///< `drain` 이 틱 뒤 시작 줄(`dispatchPendingBeginPlay`)을 돌린다
-        friend class ISceneLaneFrameSystem;  ///< 게임 스레드에서 도는 레인 시스템도 같은 잡 컨텍스트(명령 버퍼 = 틱 뒤 큐)로 돈다
-        friend class TickContext;            ///< 주 틱의 잡 컨텍스트도 같은 명령 버퍼(틱 뒤 큐)를 문다
+        friend class StructuralChangeBuffer;    ///< `drain` 이 틱 뒤 시작 줄(`dispatchPendingBeginPlay`)을 돌린다
+        friend class ISceneParallelFrameSystem; ///< 게임 스레드에서 도는 병렬 시스템도 같은 잡 컨텍스트(명령 버퍼 = 틱 뒤 큐)로 돈다
+        friend class TickContext;               ///< 주 틱의 잡 컨텍스트도 같은 명령 버퍼(틱 뒤 큐)를 문다
 
     public:
         /**
@@ -619,7 +619,7 @@ namespace sw
         {
             hashed_string                 _key;
             unique_ptr<ISceneFrameSystem> _pSystem;
-            ProfileScopeID                _scopeID; ///< `runMain` · `runLane` 구간(`GT.Scene.frameSystem.<키>`) — 붙일 때 한 번 받는다
+            ProfileScopeID                _scopeID; ///< `runMain` · `runOnAnyThread` 구간(`GT.Scene.frameSystem.<키>`) — 붙일 때 한 번 받는다
         };
 
         // 프레임 단계 본문 — 표(`SceneFrameStepList.xxx`)의 줄마다 하나. `tick` 이 줄 순서대로 부른다.
@@ -669,9 +669,9 @@ namespace sw
         /** @brief `FrameSystems` 단계가 붙인 순서대로 부르는 시스템입니다. 오브젝트보다 먼저 비웁니다(시스템이 컴포넌트를 가리킬 수 있다). */
         vector<FrameSystemEntry> _listFrameSystem;
         /** @brief `FrameSystems` 단계의 파도 계획과 그 계산용 칸입니다 — 프레임마다 다시 만들고(선언은 늘 같은 답이다) 용량만 둡니다. */
-        FrameSystemLanePlan          _frameSystemLanePlan;
-        vector<SceneFrameAccess>     _listFrameAccess;
-        vector<FrameSystemLaneEntry> _listLaneJob;
+        FrameSystemParallelPlan          _frameSystemParallelPlan;
+        vector<SceneFrameAccess>         _listFrameAccess;
+        vector<FrameSystemParallelEntry> _listParallelJob;
         /** @brief 단계가 도는 동안 뗀 시스템입니다 — 그 단계가 끝난 뒤 놓습니다. */
         vector<unique_ptr<ISceneFrameSystem>> _listRetiredFrameSystem;
         /** @brief 생성자로 받은 엔진 서비스 묶음(빌린 포인터들)입니다(`getSceneEngineServices` · `findAssetManager`). */

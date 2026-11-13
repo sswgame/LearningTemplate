@@ -55,7 +55,7 @@ namespace sw
      * @class MeleeSweepHistory
      * @brief 씬 하나의 서버 근접 스윕 기록입니다. 서버가 `findOrCreate` 로 켜고 `release` 로 끕니다. 파일 머리말 참고.
      */
-    class SW_API MeleeSweepHistory final : public ISceneLaneFrameSystem
+    class SW_API MeleeSweepHistory final : public ISceneParallelFrameSystem
     {
     public:
         /** @brief 매니저의 프레임 시스템 키입니다. */
@@ -76,7 +76,7 @@ namespace sw
         /** @brief 장부를 끕니다. 없으면 아무 일도 없습니다. */
         static void release( GameObjectManager& manager );
 
-        void runLane( SceneJobContext& context ) override;
+        void runOnAnyThread( SceneJobContext& context ) override;
         /** @brief 프레임 번호를 올리고 보관 밖의 기록을 버립니다(`HitRecord` 쓰기). 씬 데이터는 읽지 않습니다. 스윕 기록(`record`)은 틱에서 부르므로 이 선언 밖입니다. */
         SceneFrameAccess getFrameAccess() const override;
 

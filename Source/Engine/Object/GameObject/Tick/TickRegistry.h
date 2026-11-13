@@ -28,7 +28,7 @@
  * 읽는 간선(`ReadsWrites`)만 레벨 장벽을 넘고, 순서만인 간선(`OrderOnly`)은 같은 레벨 · 같은 스테이지 안의 태스크 간선(`TickStage::_listEdge` →
  * `TaskHandle::runAfter`)이 됩니다(언리얼은 쓰기가 즉시라 간선 하나로 됩니다).
  *
- * **레인은 타입이 선언한 성격(`TickMode`)으로 가릅니다(5-3 1c — 상용 엔진처럼 측정한 비용이 아니라 선언).** 그룹마다 오브젝트는 셋 중 한 레인에 듭니다.
+ * **모드는 타입이 선언한 성격(`TickMode`)으로 가릅니다(5-3 1c — 상용 엔진처럼 측정한 비용이 아니라 선언).** 그룹마다 오브젝트는 셋 중 한 모드에 듭니다.
  * - **Batch(기본) — 파도:** 항목마다 파도 키(순서 키, 같은 키끼리의 오브젝트 안 순번)의 파도(`TickWave`)에 들고, 파도 안에서는 (정확한 타입, 서브틱 id)
  *   별 연속 목록(`TickBatchList`)을 그 타입의 함수 하나에 넘깁니다(가상 호출 없음). 파도 사이는 장벽이라 오브젝트 안 순서가 스레드 대신 파도로 지켜지고,
  *   한 오브젝트의 두 항목은 다른 파도에만 들어 형제 컴포넌트를 잠금 없이 만지는 규칙이 그대로입니다. 서브틱 · 여러 항목 오브젝트도 이 길을 탑니다(1b).
@@ -62,8 +62,8 @@ namespace sw
 
     /**
      * @enum TickMode
-     * @brief 타입이 선언한 틱의 레인입니다(리플렉션 메타데이터 `REFLECT( TickMode = Batch|Task|Main )` — 생성기가 `SW_REGISTER_TICK_TYPE` 로 등록한다).
-     * @details 순서가 곧 우선입니다 — 한 오브젝트의 그룹 항목 중 가장 큰 값이 그 오브젝트의 레인입니다. 선언과 실제 일의 어긋남은 5-3 2 단계(잡 컨텍스트 형식)가 막는다.
+     * @brief 타입이 선언한 틱의 모드입니다(리플렉션 메타데이터 `REFLECT( TickMode = Batch|Task|Main )` — 생성기가 `SW_REGISTER_TICK_TYPE` 로 등록한다).
+     * @details 순서가 곧 우선입니다 — 한 오브젝트의 그룹 항목 중 가장 큰 값이 그 오브젝트의 모드입니다. 선언과 실제 일의 어긋남은 5-3 2 단계(잡 컨텍스트 형식)가 막는다.
      */
     enum class TickMode : uint8
     {
@@ -88,7 +88,7 @@ namespace sw
      */
     using TickBatchFunction = void ( * )( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, uint32 subTickID, float32 deltaTime );
 
-    /** @struct TickTypeDispatch @brief 컴포넌트 타입 하나의 레인과 일괄 함수입니다(`TickBatchRegistry::findDispatch`). 함수가 비면 그 타입의 등록이 없다(Batch 레인은 가상 호출 함수로 돈다). */
+    /** @struct TickTypeDispatch @brief 컴포넌트 타입 하나의 모드과 일괄 함수입니다(`TickBatchRegistry::findDispatch`). 함수가 비면 그 타입의 등록이 없다(Batch 모드는 가상 호출 함수로 돈다). */
     struct TickTypeDispatch
     {
         TickBatchFunction _pFunction{ nullptr };
@@ -109,7 +109,7 @@ namespace sw
         uint8      _group{ 0 };                                     ///< `TickGroup`
         uint8      _orderKey{ 64 };                                 ///< `TickPhase` + 우선순위(0..63)
         uint8      _bHasPrerequisite{ SW_FALSE };                   ///< 선행 조건을 가진 서브틱이다. 기본 경로가 아니라 스테이지에서 처리한다
-        uint8      _waveOrdinal{ 0 };                               ///< 같은 그룹 · 같은 순서 키인 앞 항목의 수(파도 키의 둘째 칸) — Batch 레인에서만 쓴다
+        uint8      _waveOrdinal{ 0 };                               ///< 같은 그룹 · 같은 순서 키인 앞 항목의 수(파도 키의 둘째 칸) — Batch 모드에서만 쓴다
         uint32     _batchIndex{ constant::invalid_index::kUint32 }; ///< 파도의 일괄 목록 안 위치다. 파도에 없으면 무효 값이다(레지스트리만 쓴다)
     };
 } // namespace sw
@@ -153,7 +153,7 @@ namespace sw
     {
         TickBatchFunction        _pFunction{ nullptr }; ///< 이 목록 타입의 일괄 틱 함수(목록 키의 첫 칸)
         uint32                   _subTickID{ 0 };       ///< 목록 키의 둘째 칸 — 0 은 주 틱
-        vector<TickBatchElement> _listElement;          ///< 계층에서 켜진 Batch 레인 오브젝트의 그 항목
+        vector<TickBatchElement> _listElement;          ///< 계층에서 켜진 Batch 모드 오브젝트의 그 항목
     };
 
     /**
@@ -255,14 +255,14 @@ namespace sw
         /** @brief 목록과 더티 표시를 비웁니다(매니저의 clear). */
         void clear();
 
-        /** @brief 이 그룹의 Task 레인 오브젝트 칸입니다(일괄 경로를 끄면 모든 오브젝트). 칸마다 태스크 하나가 그 오브젝트의 항목을 순서대로 돕니다. */
+        /** @brief 이 그룹의 Task 모드 오브젝트 칸입니다(일괄 경로를 끄면 모든 오브젝트). 칸마다 태스크 하나가 그 오브젝트의 항목을 순서대로 돕니다. */
         const vector<TickObjectEntry>& getEntries( uint32 group ) const { return _arrListEntry[group]; }
-        /** @brief 이 그룹의 Main 레인 오브젝트 칸입니다. 게임 스레드가 차례로 돕니다. */
+        /** @brief 이 그룹의 Main 모드 오브젝트 칸입니다. 게임 스레드가 차례로 돕니다. */
         const vector<TickObjectEntry>& getMainEntries( uint32 group ) const { return _arrListMainEntry[group]; }
-        /** @brief 이 그룹의 파도(Batch 레인)입니다. 파도 키 순이며, 디스패치는 파도마다 한 번의 포크-조인(사이가 장벽)으로 돕니다. 빈 파도 · 목록은 `refresh` 가 걷는다. */
+        /** @brief 이 그룹의 파도(Batch 모드)입니다. 파도 키 순이며, 디스패치는 파도마다 한 번의 포크-조인(사이가 장벽)으로 돕니다. 빈 파도 · 목록은 `refresh` 가 걷는다. */
         const vector<TickWave>& getWaves( uint32 group ) const { return _arrListWave[group]; }
         /**
-         * @brief 일괄 경로(파도 · 레인)를 켜고 끕니다. 끄면 모든 오브젝트가 오브젝트 칸(한 오브젝트 = 한 스레드)으로 갑니다 — 동등성 테스트의 기준 길입니다.
+         * @brief 일괄 경로(파도 · 모드)를 켜고 끕니다. 끄면 모든 오브젝트가 오브젝트 칸(한 오브젝트 = 한 스레드)으로 갑니다 — 동등성 테스트의 기준 길입니다.
          * @details 바뀌면 다음 `refresh` 가 모두 다시 훑고 스테이지도 다시 짓는다(자리 키가 바뀐다 — `TickStageOrder`). 게임 코드는 부르지 않는다(측정 · 테스트).
          */
         void setBatchPathEnabled( bool bEnabled );
@@ -329,9 +329,9 @@ namespace sw
          *          `rebuildStages` 는 쌓인 편집을 버린다.
          */
         void flushStageEdits();
-        /** @brief 오브젝트를 모든 그룹의 레인(파도 원소 · 칸)에서 뺍니다. 지금 항목 버퍼(`_listTickItem`)의 위치로 찾으므로 버퍼를 다시 짓기 전에 부릅니다. */
+        /** @brief 오브젝트를 모든 그룹의 모드(파도 원소 · 칸)에서 뺍니다. 지금 항목 버퍼(`_listTickItem`)의 위치로 찾으므로 버퍼를 다시 짓기 전에 부릅니다. */
         void removeMembership( GameObject* pObj );
-        /** @brief 오브젝트의 이 그룹 항목 [@p begin, @p end) 를 그 레인(파도 · Task 칸 · Main 칸)에 넣습니다. 계층에서 켜진 오브젝트만 부릅니다. */
+        /** @brief 오브젝트의 이 그룹 항목 [@p begin, @p end) 를 그 모드(파도 · Task 칸 · Main 칸)에 넣습니다. 계층에서 켜진 오브젝트만 부릅니다. */
         void addMembership( TickBatchRegistry* pBatchRegistry, GameObject* pObj, uint32 group, uint32 begin, uint32 end );
         /** @brief 칸 목록에서 오브젝트 칸을 뺍니다(끝 칸을 그 자리로 옮기고 옮긴 오브젝트의 위치를 고친다). */
         static void removeEntry( vector<TickObjectEntry>& listEntry, uint32 group, uint32 index );
@@ -349,14 +349,14 @@ namespace sw
         TickStageOrder makeStageOrder( const TickItem& item, uint64 objectID ) const;
         /** @brief 빈 일괄 목록 · 빈 파도를 걷습니다(모듈이 내려간 타입의 함수를 들고 있지 않게). 목록 안의 위치는 바뀌지 않는다. */
         void removeEmptyBatchLists();
-        /** @brief 컴포넌트 타입의 레인 · 일괄 함수입니다. 타입마다 한 번 표에 묻고 기억합니다(표 세대가 바뀌면 `refresh` 가 비운다). */
+        /** @brief 컴포넌트 타입의 모드 · 일괄 함수입니다. 타입마다 한 번 표에 묻고 기억합니다(표 세대가 바뀌면 `refresh` 가 비운다). */
         TickTypeDispatch resolveTypeDispatch( TickBatchRegistry* pBatchRegistry, const Component* pComp );
 
     private:
-        vector<TickObjectEntry>                          _arrListEntry[kGroupCount];     ///< 그룹마다 Task 레인 오브젝트 칸이다(일괄 경로를 끄면 모든 오브젝트). 오브젝트를 소유하지 않는다
-        vector<TickObjectEntry>                          _arrListMainEntry[kGroupCount]; ///< 그룹마다 Main 레인 오브젝트 칸이다
-        vector<TickWave>                                 _arrListWave[kGroupCount];      ///< 그룹마다 Batch 레인의 파도다(키 순). 오브젝트는 그룹마다 세 레인 중 한 곳에만 있다
-        unordered_map<const TypeInfo*, TickTypeDispatch> _mapTypeDispatch;               ///< 타입 → 레인 · 함수 기억(`resolveTypeDispatch`)
+        vector<TickObjectEntry>                          _arrListEntry[kGroupCount];     ///< 그룹마다 Task 모드 오브젝트 칸이다(일괄 경로를 끄면 모든 오브젝트). 오브젝트를 소유하지 않는다
+        vector<TickObjectEntry>                          _arrListMainEntry[kGroupCount]; ///< 그룹마다 Main 모드 오브젝트 칸이다
+        vector<TickWave>                                 _arrListWave[kGroupCount];      ///< 그룹마다 Batch 모드의 파도다(키 순). 오브젝트는 그룹마다 세 모드 중 한 곳에만 있다
+        unordered_map<const TypeInfo*, TickTypeDispatch> _mapTypeDispatch;               ///< 타입 → 모드 · 함수 기억(`resolveTypeDispatch`)
         uint8                                            _bBatchPathEnabled;             ///< 일괄 경로를 쓰는지(`setBatchPathEnabled`)
         uint32                                           _batchGeneration;               ///< 마지막으로 본 `TickBatchRegistry::getGeneration`(표가 없으면 0) — 바뀌면 모두 다시 훑는다
         vector<uint64> _listDirtyObjectID                SW_GUARDED_BY( _dirtyMutex );   ///< 다시 훑을 오브젝트 id 다. 사라졌으면 해석 결과가 비어 건너뛴다

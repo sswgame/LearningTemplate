@@ -1042,7 +1042,32 @@
     "bHashless": "bUnhashed(2026-11-13)",
     "bTold": "bNotified — 알림은 notify(2026-11-13)",
     "unturn": "unrotate — 언리얼 FQuat::UnrotateVector(2026-11-13)",
-    "rememberText": "storeText — Selenium IDE storeText(2026-11-13)"
+    "rememberText": "storeText — Selenium IDE storeText(2026-11-13)",
+    "ISceneLaneFrameSystem": "ISceneParallelFrameSystem — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "runLane": "runOnAnyThread — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "findLaneSystem": "findParallelSystem — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "FrameSystemLanePlan": "FrameSystemParallelPlan — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "buildFrameSystemLanePlan": "buildFrameSystemParallelPlan — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "_frameSystemLanePlan": "_frameSystemParallelPlan — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "FrameSystemLaneEntry": "FrameSystemParallelEntry — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "FrameSystemLaneJob": "FrameSystemParallelJob — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "_listLaneJob": "_listParallelJob — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "pLaneSystem": "pParallelSystem — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "laneAccess": "parallelAccess — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "tickLanes": "tickGroupModes — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "TestTickLanes": "TestTickModes — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "TickLaneTestComponents": "TickModeTestComponents — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "TickLaneMoverTestComponent": "TickModeMoverTestComponent — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "TickLaneFollowerTestComponent": "TickModeFollowerTestComponent — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "TickLaneFollowerAltTestComponent": "TickModeFollowerAltTestComponent — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "TickLaneChainTestComponent": "TickModeChainTestComponent — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "TickLaneMainTestComponent": "TickModeMainTestComponent — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "TickLaneMainDerivedTestComponent": "TickModeMainDerivedTestComponent — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "TickLaneRig": "TickModeRig — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "TickLanesTest": "TickModesTest — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "DeclaredLanesRunWhereDeclared": "DeclaredModesRunWhereDeclared — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "LaneFrameSystemRunsThroughJobContext": "ParallelFrameSystemRunsThroughJobContext — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)",
+    "LaneProbeSystem": "ParallelProbeSystem — 틱 실행 자리는 메인 스레드 · 병렬(언리얼 game thread · bRunOnAnyThread, 유니티 Run · ScheduleParallel)(2026-11-13)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",
@@ -6641,8 +6666,6 @@
       "landmarks",
       "lands",
       "landscape",
-      "lane",
-      "lanes",
       "lang",
       "language",
       "languages",
@@ -11021,6 +11044,30 @@
         "Source/Core/Diagnostics"
       ],
       "hint": "걷기(게임 · 물리) · 디렉터리 걷기(Python os.walk · Go filepath.Walk) · 스택 워크(Win32 StackWalk64)만 — 씬 · 그래프 순회는 iterate · traverse(언리얼 TActorIterator), 재귀 방문은 visit, 글 해석은 parse"
+    },
+    "lane": {
+      "paths": [
+        "Source/GameFramework/Kits/Genre",
+        "Source/Games",
+        "Source/Editor/Panels/Profiler",
+        "Source/Editor/Panels/Animation",
+        "Source/GameFramework/Runtime/Online/Security/OpenSSL",
+        "Source/GameFramework/Plugin/Editor/MeshModifiers",
+        "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterSurfaceBinding.cpp"
+      ],
+      "hint": "게임 차선 · 리듬 레인 · 프로파일러 · 시퀀서 타임라인의 줄, GPU SIMD lane(셰이더 · float4 칸 채우기) · 외부 상수만 — 틱 실행 자리는 메인 스레드 · 병렬(runMain · runOnAnyThread, TickMode), 워커 몫은 chunk"
+    },
+    "lanes": {
+      "paths": [
+        "Source/GameFramework/Kits/Genre",
+        "Source/Games",
+        "Source/Editor/Panels/Profiler",
+        "Source/Editor/Panels/Animation",
+        "Source/GameFramework/Runtime/Online/Security/OpenSSL",
+        "Source/GameFramework/Plugin/Editor/MeshModifiers",
+        "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterSurfaceBinding.cpp"
+      ],
+      "hint": "게임 차선 · 리듬 레인 · 프로파일러 · 시퀀서 타임라인의 줄, GPU SIMD lane(셰이더 · float4 칸 채우기) · 외부 상수만 — 틱 실행 자리는 메인 스레드 · 병렬(runMain · runOnAnyThread, TickMode), 워커 몫은 chunk"
     }
   },
   "_externalPatterns": [

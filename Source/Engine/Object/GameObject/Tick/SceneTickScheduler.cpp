@@ -1,6 +1,6 @@
 /**
  * @file SceneTickScheduler.cpp
- * @brief 컴포넌트 틱 디스패치 — 그룹마다 레인(Task 태스크 · Batch 파도 · Main 게임 스레드) · 선행 조건 스테이지 · 스테이지 경계의 트랜스폼 적용입니다.
+ * @brief 컴포넌트 틱 디스패치 — 그룹마다 모드(Task 태스크 · Batch 파도 · Main 게임 스레드) · 선행 조건 스테이지 · 스테이지 경계의 트랜스폼 적용입니다.
  */
 #include "pch.h"
 
@@ -103,7 +103,7 @@ namespace sw
             };
 
             /**
-             * @brief 오브젝트 칸 목록 [start, end) 를 도는 잡 본문입니다(일괄 경로를 끈 기준 길 · Main 레인). 한 칸 = 한 오브젝트라 나눠지지 않는다.
+             * @brief 오브젝트 칸 목록 [start, end) 를 도는 잡 본문입니다(일괄 경로를 끈 기준 길 · Main 모드). 한 칸 = 한 오브젝트라 나눠지지 않는다.
              */
             struct EntryTick
             {
@@ -211,7 +211,7 @@ namespace sw
         _pStructuralChangeBuffer->freeze();
 
         {
-            // **씬 틱은 자기가 낸 일만 기다린다.** 틱의 병렬 일은 `runParallel` 이 합류까지, Task 레인은 자기 스테이지(`waitStage`)를 기다린다.
+            // **씬 틱은 자기가 낸 일만 기다린다.** 틱의 병렬 일은 `runParallel` 이 합류까지, Task 모드는 자기 스테이지(`waitStage`)를 기다린다.
             // 주의: `TaskManager::waitAll()` 은 엔진 **전체의** 태스크 — 렌더 스레드의 패스 기록, 에셋 스트리밍, 비동기 씬 로드, 오디오 재생 — 가 빌 때까지
             // 게임 스레드를 세운다. onTick 이 낸 태스크가 틱 뒤 단계 전에 끝나야 하면 자기 스테이지를 만들어 `waitStage` 로 기다린다.
             SW_PROFILE_SCOPE( "GT.Scene.tick.components" );
@@ -229,12 +229,12 @@ namespace sw
             (void)_tickRegistry.refresh( *_pManager ); // 다시 지은 횟수는 레지스트리의 계측(`GT.Scene.tick.stageRebuilds`)이 센다
         }
 
-        // 그룹마다: Task 레인 태스크를 띄움 → 파도(Batch 레인)를 키 순으로, 파도마다 한 번의 포크-조인 → Task 레인을 기다림 → Main 레인(게임 스레드)
-        // → 그 그룹의 선행 조건 스테이지. 오브젝트 안 순서는 파도 장벽(Batch) · 한 태스크(Task) · 게임 스레드(Main)가 지키고, 스테이지는 앞 레인이 모두
-        // 끝난 뒤라 선행 조건이 어느 레인의 항목이어도 순서가 맞다. 일괄 경로를 끄면 모든 오브젝트가 칸 목록 한 번의 포크-조인이다(기준 길).
+        // 그룹마다: Task 모드 태스크를 띄움 → 파도(Batch 모드)를 키 순으로, 파도마다 한 번의 포크-조인 → Task 모드를 기다림 → Main 모드(게임 스레드)
+        // → 그 그룹의 선행 조건 스테이지. 오브젝트 안 순서는 파도 장벽(Batch) · 한 태스크(Task) · 게임 스레드(Main)가 지키고, 스테이지는 앞 모드가 모두
+        // 끝난 뒤라 선행 조건이 어느 모드의 항목이어도 순서가 맞다. 일괄 경로를 끄면 모든 오브젝트가 칸 목록 한 번의 포크-조인이다(기준 길).
         const vector<TickStage>& listStage  = _tickRegistry.getStages();
         size_t                   stageIndex = 0;
-        // 그룹마다 구간 하나(레인 + 그 그룹의 스테이지) — 두 단계가 같은 `GT.Scene.tick.components` 에 섞여 PrePhysics 와 PostPhysics 가 갈리지 않았다.
+        // 그룹마다 구간 하나(모드 + 그 그룹의 스테이지) — 두 단계가 같은 `GT.Scene.tick.components` 에 섞여 PrePhysics 와 PostPhysics 가 갈리지 않았다.
         static_assert( TickRegistry::kGroupCount == 4, "tick group scope names follow TickGroup" );
         static const ProfileScopeID kArrGroupScopeID[TickRegistry::kGroupCount] = {
             FrameProfiler::registerEngineScopeSite( "GT.Scene.tick.group.PrePhysics", __func__, __FILE__, __LINE__ ),
@@ -245,7 +245,7 @@ namespace sw
         for ( uint32 group = firstGroup; group < endGroup && group < TickRegistry::kGroupCount; ++group )
         {
             const ScopedFrameProfile groupScope{ kArrGroupScopeID[group] };
-            tickLanes( deltaTime, group );
+            tickGroupModes( deltaTime, group );
 
             // 스테이지는 그룹 순서로 지어진다(한 스테이지 = 한 그룹).
             while ( stageIndex < listStage.size() && listStage[stageIndex]._group < group )
@@ -257,7 +257,7 @@ namespace sw
                 const TickStage& stage = listStage[stageIndex];
                 if ( stage._listItem.empty() ) // 증분 갱신이 비워 둔 스테이지는 돌 것도 적용할 것도 없다
                     continue;
-                // 앞에서 돈 선행 조건(앞 스테이지 · 레인)이 쓴 트랜스폼을 이 스테이지가 같은 프레임에 읽게 한다. 기다리는 스테이지 앞에서만.
+                // 앞에서 돈 선행 조건(앞 스테이지 · 모드)이 쓴 트랜스폼을 이 스테이지가 같은 프레임에 읽게 한다. 기다리는 스테이지 앞에서만.
                 if ( stage._bApplyBefore == SW_TRUE )
                     applyStageTransforms();
                 // 순서만 간선이 있으면 항목마다 태스크(간선 = runAfter), 없으면 파도와 같은 잡이다 — 이웃한 같은 (타입 함수, 서브틱 id) 항목은 함수 한 번에 넘어간다
@@ -271,7 +271,7 @@ namespace sw
         }
     }
 
-    void SceneTickScheduler::tickLanes( float32 deltaTime, uint32 group )
+    void SceneTickScheduler::tickGroupModes( float32 deltaTime, uint32 group )
     {
         const vector<TickObjectEntry>& listTask  = _tickRegistry.getEntries( group );
         const vector<TickObjectEntry>& listMain  = _tickRegistry.getMainEntries( group );
@@ -293,7 +293,7 @@ namespace sw
             return;
         }
 
-        // Task 레인: 오브젝트마다 태스크 하나를 먼저 띄운다 — 파도 장벽에 묶이지 않고 파도와 겹쳐 돈다. 작업 풀이 없으면(엔진 없는 테스트) 파도 뒤에 차례로 돈다.
+        // Task 모드: 오브젝트마다 태스크 하나를 먼저 띄운다 — 파도 장벽에 묶이지 않고 파도와 겹쳐 돈다. 작업 풀이 없으면(엔진 없는 테스트) 파도 뒤에 차례로 돈다.
         const bool      bAsyncTask  = taskCount > 0 && engine::areEngineServicesBound() && engine::getSubsystem<TaskManager>().getWorkerCount() > 0;
         const uint32    taskOrdinal = ++_dispatchOrdinal;
         TaskStageHandle taskStage{};
@@ -316,7 +316,7 @@ namespace sw
             }
         }
 
-        // Batch 레인: 파도 키 순으로 파도마다 한 번의 포크-조인 — 사이가 장벽이라 한 오브젝트의 앞 파도 항목이 다음 파도 항목보다 먼저다.
+        // Batch 모드: 파도 키 순으로 파도마다 한 번의 포크-조인 — 사이가 장벽이라 한 오브젝트의 앞 파도 항목이 다음 파도 항목보다 먼저다.
         uint32 elementCount = 0;
         for ( const TickWave& wave : listWave )
         {
@@ -343,7 +343,7 @@ namespace sw
         }
         SW_PROFILE_COUNT( "GT.Scene.tick.taskEntries", taskCount );
 
-        // Main 레인: 게임 스레드에서 차례로 — 메인 전용 API 를 만지는 틱이 워커로 새지 않는다.
+        // Main 모드: 게임 스레드에서 차례로 — 메인 전용 API 를 만지는 틱이 워커로 새지 않는다.
         const uint32 mainCount = static_cast<uint32>( listMain.size() );
         if ( mainCount > 0 )
         {

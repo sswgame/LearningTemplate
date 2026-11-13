@@ -35,7 +35,7 @@ string.Tooltip = Tooltip
 string.Meta = Meta, meta, CustomMeta
 # 타입 검증 함수 — 같은 타입의 void fn( ValidationContext& context ) [const]. 로드 · 저장 · 인스펙터 편집 뒤에 불린다(ReflectionValidation)
 string.Validate = Validate
-# 컴포넌트 틱 레인 선언(NEXT 5-3 1c): Batch(기본 — 타입별 일괄) · Task(선행 조건 · 일의 양이 큰 개별 태스크) · Main(메인 스레드 전용 API). 컴포넌트만 받는다. 레인은 등록이 없는 파생이 물려받는다(TickBatchRegistry::findDispatch)
+# 컴포넌트 틱 모드 선언(NEXT 5-3 1c): Batch(기본 — 타입별 일괄) · Task(선행 조건 · 일의 양이 큰 개별 태스크) · Main(메인 스레드 전용 API). 컴포넌트만 받는다. 모드는 등록이 없는 파생이 물려받는다(TickBatchRegistry::findDispatch)
 string.TickMode = TickMode
 
 [ENUM]

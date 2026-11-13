@@ -38,10 +38,10 @@ namespace sw
 
     TickTypeDispatch TickBatchRegistry::findDispatch( const TypeInfo* pType )
     {
-        TickTypeDispatch      lane{};
+        TickTypeDispatch      dispatch{};
         ScopedLock<mutex>     lock{ _mutex };
         const vector<Entry*>& listEntry = _listEntry.getItems();
-        // 정확한 타입의 줄이 함수와 레인을, 없으면 가장 가까운 조상의 줄이 레인만 준다.
+        // 정확한 타입의 줄이 함수와 모드를, 없으면 가장 가까운 조상의 줄이 모드만 준다.
         for ( const TypeInfo* pCursor : pType != nullptr ? pType->getTypeChain() : TypeChain{} )
         {
             for ( size_t index = listEntry.size(); index > 0; --index )
@@ -50,12 +50,12 @@ namespace sw
                 const Entry* const pEntry = listEntry[index - 1];
                 if ( pEntry->_pStaticType() != pCursor )
                     continue;
-                lane._mode      = pEntry->_mode;
-                lane._pFunction = pCursor == pType ? pEntry->_pFunction : nullptr;
-                return lane;
+                dispatch._mode      = pEntry->_mode;
+                dispatch._pFunction = pCursor == pType ? pEntry->_pFunction : nullptr;
+                return dispatch;
             }
         }
-        return lane;
+        return dispatch;
     }
 
     void tickBatchVirtual( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, uint32 subTickID, float32 deltaTime )

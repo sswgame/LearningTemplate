@@ -9,12 +9,12 @@
  * `IJobEntity` 가 같은 종류를 한 번에 도는 것과 같은 자리이고, 타입이 자기 데이터를 연속 배열로 옮기는 다음 단계(SoA)의 입구입니다.
  *
  * [규약 — 리플렉션 생성기(5-4)와 맞춘 등록 API]
- * - 등록 한 줄은 `SW_REGISTER_TICK_TYPE( 타입, 레인 )` 입니다(레인은 `TickMode` 의 `Batch` · `Task` · `Main`). 생성기가 `onTick` 을 재정의한 타입과
+ * - 등록 한 줄은 `SW_REGISTER_TICK_TYPE( 타입, 모드 )` 입니다(모드는 `TickMode` 의 `Batch` · `Task` · `Main`). 생성기가 `onTick` 을 재정의한 타입과
  *   `REFLECT( TickMode = … )` 를 단 타입마다 생성 `.cpp` 의 `namespace sw` 안에 냅니다(메타데이터가 없으면 `Batch`). 손으로 쓸 때도 같은 줄이다.
  *   `TickBatchOf<타입>` 이 `onTick` · `onSubTick` 을 한정 이름으로 부르므로 둘이 그 템플릿에 보여야 한다(공개, 또는 `REFLECT_BODY` 가 친구로 연다).
  * - **함수는 정확한 타입만** 씁니다. 파생 타입은 기반의 함수를 물려받지 않습니다(파생의 `onTick` 을 건너뛰지 않게) — 등록이 없는 타입은 가상 호출
- *   함수(`tickBatchVirtual`)로 같은 파도를 탑니다. **레인은 물려받습니다** — 등록이 없는 파생은 가장 가까운 등록된 조상의 레인이다(Main 기반의 파생이 워커로 새지 않게).
- * - 서브틱 · 여러 항목 오브젝트도 파도로 일괄합니다(`TickRegistry` 머리말). 선행 조건을 건 항목만 레인과 무관하게 스테이지로 갑니다.
+ *   함수(`tickBatchVirtual`)로 같은 파도를 탑니다. **모드는 물려받습니다** — 등록이 없는 파생은 가장 가까운 등록된 조상의 모드이다(Main 기반의 파생이 워커로 새지 않게).
+ * - 서브틱 · 여러 항목 오브젝트도 파도로 일괄합니다(`TickRegistry` 머리말). 선행 조건을 건 항목만 모드과 무관하게 스테이지로 갑니다.
  * - 오브젝트 사이의 순서는 정하지 않습니다(병렬). 같은 입력이면 같은 목록이 지어집니다(목록은 등록 · 해제 순서로만 바뀐다).
  *
  * [컴포넌트 틱의 잡 컨텍스트(NEXT 5-3)]
@@ -73,8 +73,8 @@ namespace sw
         struct Entry
         {
             StaticTypeFunction _pStaticType; ///< 타입의 `StaticType`
-            TickBatchFunction  _pFunction;   ///< 그 타입의 일괄 틱 함수(Batch 레인이 쓴다)
-            TickMode           _mode;        ///< 그 타입이 선언한 레인
+            TickBatchFunction  _pFunction;   ///< 그 타입의 일괄 틱 함수(Batch 모드가 쓴다)
+            TickMode           _mode;        ///< 그 타입이 선언한 모드
         };
 
         // ISubsystem — 세울 것이 없다(줄은 모듈을 올리는 길이 붙인다).
@@ -87,8 +87,8 @@ namespace sw
         /** @brief 자기 줄의 등록을 지웁니다(모듈 해제). 오르지 않은 줄이면 아무것도 하지 않습니다. 세대를 올립니다. */
         void unregisterEntry( Entry& entry ) SW_EXCLUDES_LOCK( _mutex );
         /**
-         * @brief @p pType 컴포넌트의 레인과 일괄 함수입니다. 나중에 오른 줄이 먼저다(테스트의 지역 줄이 정적 등록을 덮는다).
-         * @details 함수는 정확히 @p pType 의 줄에서만 온다. 레인은 @p pType 부터 조상으로 올라가 처음 등록된 타입의 것이고, 아무도 없으면 Batch 다.
+         * @brief @p pType 컴포넌트의 모드과 일괄 함수입니다. 나중에 오른 줄이 먼저다(테스트의 지역 줄이 정적 등록을 덮는다).
+         * @details 함수는 정확히 @p pType 의 줄에서만 온다. 모드는 @p pType 부터 조상으로 올라가 처음 등록된 타입의 것이고, 아무도 없으면 Batch 다.
          */
         TickTypeDispatch findDispatch( const TypeInfo* pType ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 등록 · 해제마다 오르는 세대입니다. `TickRegistry` 가 바뀐 것을 보고 항목을 다시 짓습니다. */
@@ -157,17 +157,17 @@ namespace sw
     };
 
     /**
-     * @brief 일괄 함수가 등록되지 않은 타입(생성기가 아직 내지 않은 타입 · 테스트 타입 · 레인만 물려받은 파생)의 Batch 레인 함수입니다 — 원소마다 가상 호출합니다.
+     * @brief 일괄 함수가 등록되지 않은 타입(생성기가 아직 내지 않은 타입 · 테스트 타입 · 모드만 물려받은 파생)의 Batch 모드 함수입니다 — 원소마다 가상 호출합니다.
      * @details Debug 카운터 `GT.Scene.tick.virtualTicks` 를 센다(5-3 측정 기반 — 생성기가 덮을수록 줄어든다).
      */
     SW_API void tickBatchVirtual( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, uint32 subTickID, float32 deltaTime );
 } // namespace sw
 
 /**
- * @brief 컴포넌트 타입의 틱 레인과 일괄 함수를 올립니다 — 리플렉션 생성기가 부르는 등록 함수입니다(`REFLECT( TickMode = Batch|Task|Main )`, 없으면 Batch).
+ * @brief 컴포넌트 타입의 틱 모드과 일괄 함수를 올립니다 — 리플렉션 생성기가 부르는 등록 함수입니다(`REFLECT( TickMode = Batch|Task|Main )`, 없으면 Batch).
  * @details 그 타입의 생성 `.cpp`(또는 손으로 쓸 때 그 타입의 `.cpp`)의 `namespace sw` 안에 `SW_REGISTER_TICK_TYPE( 타입, Batch );` 로 한 번 씁니다.
  *          정적 등록 객체가 모듈을 올릴 때 등록되고 내리기 전에 지워집니다(`TickBatchRegistrar`). 등록한 함수는 타입 이름의 계측 구간
- *          (`GT.Scene.tickBatch.<타입>`)을 엽니다(`TickBatchOf`). Task · Main 레인 줄도 같은 함수를 든다(레인이 바뀌어도 줄 모양이 같게).
+ *          (`GT.Scene.tickBatch.<타입>`)을 엽니다(`TickBatchOf`). Task · Main 모드 줄도 같은 함수를 든다(모드가 바뀌어도 줄 모양이 같게).
  */
 #define SW_REGISTER_TICK_TYPE( Type, Mode )                                                                         \
     static constexpr utf8           kTickBatchScopeName##Type[] = "GT.Scene.tickBatch." #Type;                      \

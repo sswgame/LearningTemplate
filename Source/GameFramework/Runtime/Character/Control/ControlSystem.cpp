@@ -158,7 +158,7 @@ namespace sw
         access._writes        = { SceneDataKind::ControlIntent, SceneDataKind::Navigation, SceneDataKind::Structure };
         access._reads         = { SceneDataKind::ControlIntent };
         access._readsPrevious = { SceneDataKind::Navigation, SceneDataKind::Structure, SceneDataKind::Transform };
-        // 감사(레인 불안전): 조종자를 만들고(`createGameObject` — 게임 스레드 전용), 입력 · UI 싱글턴을 읽고, 조종자의 `produceIntent`(AI · 게임 코드)를 부른다. 게임 스레드 시스템(`ISceneMainFrameSystem`)이다(레인 시스템이 Structure 를 쓰면 등록이 거절된다).
+        // 감사(병렬 불안전): 조종자를 만들고(`createGameObject` — 게임 스레드 전용), 입력 · UI 싱글턴을 읽고, 조종자의 `produceIntent`(AI · 게임 코드)를 부른다. 게임 스레드 시스템(`ISceneMainFrameSystem`)이다(병렬 시스템이 Structure 를 쓰면 등록이 거절된다).
         return access;
     }
 

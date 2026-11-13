@@ -32,6 +32,8 @@
     "kServerGateName",
     "kUnbuiltFolderLine",
     "lane_debug_nogpu",
+    "lane_lint",
+    "lane_server_tools",
     "makeGameGateName",
     "readLastAssistantText",
     "readServerUnbuiltFolders",
@@ -43,6 +45,7 @@
     "run_stage_set",
     "scenario_env",
     "setup_dzn",
+    "start_lane",
     "sync_clone",
     "testJudgeCountsErrorsAndMissingReports",
     "test_cachedDigestMatchesFreshAndRereadsOnlyChangedFiles",
@@ -51,6 +54,7 @@
     "to_wsl_path",
     "unfoldPaths",
     "verify_all",
+    "wait_lanes",
     "window_arguments",
     "writeGateStubs"
   ]
