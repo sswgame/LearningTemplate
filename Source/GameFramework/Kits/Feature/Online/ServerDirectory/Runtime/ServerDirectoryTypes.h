@@ -41,13 +41,13 @@ namespace sw
     /** @brief 상한 값들입니다. */
     struct ServerDirectoryLimit
     {
-        static constexpr int32 kMaxAllowedAccountCount = 64;
-        static constexpr int32 kMaxNoticeCount         = 32;
-        static constexpr int32 kMaxNoticeTextSize      = 1024;
-        static constexpr int32 kMaxMessageKeySize      = 64;
-        static constexpr int32 kMaxWindowCount         = 16;
-        static constexpr int32 kMaxServerListCount     = 256;
-        static constexpr int32 kMaxSeatCount           = 64;
+        static constexpr int32 kMaxAllowedAccountCount  = 64;
+        static constexpr int32 kMaxAnnouncementCount    = 32;
+        static constexpr int32 kMaxAnnouncementTextSize = 1024;
+        static constexpr int32 kMaxMessageKeySize       = 64;
+        static constexpr int32 kMaxWindowCount          = 16;
+        static constexpr int32 kMaxServerListCount      = 256;
+        static constexpr int32 kMaxSeatCount            = 64;
     };
 } // namespace sw
 
@@ -110,10 +110,10 @@ namespace sw
     struct ServiceAnnouncement
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = ServerDirectoryLimit::kMaxNoticeTextSize )
-        string _text{}; ///< `_bLiteralText` 가 false 이면 로컬라이제이션 키이고, true 이면 GM 이 쓴 문구이다. 상한은 `ServerDirectoryLimit::kMaxNoticeTextSize` 와 같다
+        PROPERTY( MaxCount = ServerDirectoryLimit::kMaxAnnouncementTextSize )
+        string _text{}; ///< `_bLiteralText` 가 false 이면 로컬라이제이션 키이고, true 이면 GM 이 쓴 문구이다. 상한은 `ServerDirectoryLimit::kMaxAnnouncementTextSize` 와 같다
         PROPERTY()
-        uint64 _noticeID{ 0 };
+        uint64 _announcementID{ 0 };
         PROPERTY()
         int64 _startMs{ 0 };
         PROPERTY()
@@ -138,8 +138,8 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = ServerDirectoryLimit::kMaxWindowCount )
         vector<MaintenanceView> _listMaintenance{}; ///< 상한은 `ServerDirectoryLimit::kMaxWindowCount` 와 같다
-        PROPERTY( MaxCount = ServerDirectoryLimit::kMaxNoticeCount )
-        vector<ServiceAnnouncement> _listNotice{}; ///< 상한은 `ServerDirectoryLimit::kMaxNoticeCount` 와 같다
+        PROPERTY( MaxCount = ServerDirectoryLimit::kMaxAnnouncementCount )
+        vector<ServiceAnnouncement> _listNotice{}; ///< 상한은 `ServerDirectoryLimit::kMaxAnnouncementCount` 와 같다
     };
 } // namespace sw
 

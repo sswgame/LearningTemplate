@@ -287,7 +287,7 @@ namespace
             (void)now;
             _listAsked.push_back( task );
         }
-        void pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListServiceResult ) override
+        void pollDeliveryResults( vector<ReceiptDeliveryResult>& outListServiceResult ) override
         {
             outListServiceResult.insert( outListServiceResult.end(), _listServiceResult.begin(), _listServiceResult.end() );
             _listServiceResult.clear();

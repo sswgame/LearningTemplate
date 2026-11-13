@@ -227,7 +227,7 @@ namespace sw
             [[nodiscard]] static bool isConditionName( string_view name ) { return name == DataInheritance::kIfAttribute || name == DataInheritance::kOpAttribute; }
 
             /** @brief @p element 의 조건을 지금 태그로 풀어 적힌 차례로 모읍니다. 틀린 조건은 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool readWhens( const XMLNode& element, string_view id, const ResourceTagSet& tags, vector<When>& outListWhen )
+            [[nodiscard]] static bool readWhenElements( const XMLNode& element, string_view id, const ResourceTagSet& tags, vector<When>& outListWhen )
             {
                 for ( XMLNode node = element.findChild( DataInheritance::kWhenElement ); node.isValid(); node = node.findNextSibling( DataInheritance::kWhenElement ) )
                 {
@@ -382,7 +382,7 @@ namespace sw
             [[nodiscard]] static bool writeRestored( const XMLNode& source, const XMLNode& target, const XMLNode& out, string_view id, const ResourceTagSet& tags, bool bDelta )
             {
                 vector<When> listWhen;
-                if ( readWhens( source, id, tags, listWhen ) == false )
+                if ( readWhenElements( source, id, tags, listWhen ) == false )
                     return false;
                 // 1. 칸: 참인 조건이 정한 칸은 원본의 값으로 되돌린다.
                 for ( XMLAttribute attribute = target.getFirstAttribute(); attribute; attribute = attribute.getNext() )
@@ -423,7 +423,7 @@ namespace sw
                     if ( Stage::isElement( child ) == false || Stage::isWhen( child ) )
                         continue;
                     vector<When> listChildWhen;
-                    if ( readWhens( child, id, tags, listChildWhen ) == false )
+                    if ( readWhenElements( child, id, tags, listChildWhen ) == false )
                         return false;
                     SourceChild& entry = listSource.emplace_back();
                     entry._node        = child;

@@ -340,7 +340,7 @@ namespace sw
     private:
         /** @brief 문서를 캐시에서 찾아 위젯 트리를 생성합니다. 스타일 시트는 문서와 조각(끼워 넣은 순서)의 것을 모읍니다. 실패하면 오류를 로그에 남기고 nullptr 를 반환합니다. */
         /** @brief 모듈 내림 알림(`TypeRegistry::subscribeModuleUnloading`)입니다 — `closeScreensOfModule` 을 부릅니다. */
-        void onModuleUnloadingNotice( string_view moduleName ) { (void)closeScreensOfModule( moduleName ); }
+        void onModuleUnloadingNotification( string_view moduleName ) { (void)closeScreensOfModule( moduleName ); }
         /** @param tagOverride 문서 · 조각을 찾을 변형의 태그입니다(빈 집합이면 엔진 판). */
         unique_ptr<Widget> instantiateDocument( string_view documentPath, const ResourceTagSet& tagOverride, UIScreenDef& outDesc, vector<UIBindingDef>& outListBinding,
                                                 vector<string>& outListStyleSheet );

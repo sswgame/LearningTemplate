@@ -209,12 +209,12 @@ namespace sw::editor
             {
                 static EditorSelfTestStep runTreeDoesNotReadTheDiskEveryFrame( EditorSelfTestContext& context )
                 {
-                    constexpr uint32 kPhaseSettle       = 0; ///< `Content/` 변경 번호가 멈추기를 기다린다
-                    constexpr uint32 kPhaseWarmUp       = 1; ///< 캐시를 비우고 트리가 다시 그려지기를 기다린다(정지 대기)
-                    constexpr uint32 kPhaseSteady       = 2; ///< 그 뒤의 프레임들은 디스크를 읽지 않아야 한다
-                    constexpr uint32 kSettleStepCount   = 10;
-                    constexpr uint32 kSteadyStepCount   = 10;
-                    constexpr uint32 kMaxTotalStepCount = 600;
+                    constexpr uint32 kPhaseStability     = 0; ///< `Content/` 변경 번호가 멈추기를 기다린다
+                    constexpr uint32 kPhaseWarmUp        = 1; ///< 캐시를 비우고 트리가 다시 그려지기를 기다린다(정지 대기)
+                    constexpr uint32 kPhaseSteady        = 2; ///< 그 뒤의 프레임들은 디스크를 읽지 않아야 한다
+                    constexpr uint32 kStabilityStepCount = 10;
+                    constexpr uint32 kSteadyStepCount    = 10;
+                    constexpr uint32 kMaxTotalStepCount  = 600;
 
                     FolderTreeProbe&     probe         = context.getTestState<FolderTreeProbe>();
                     const uint32         stepIndex     = context.getStepIndex();
@@ -233,7 +233,7 @@ namespace sw::editor
                     if ( stepIndex == 0 || contentSerial != probe._contentSerial )
                     {
                         probe._contentSerial  = contentSerial;
-                        probe._phase          = kPhaseSettle;
+                        probe._phase          = kPhaseStability;
                         probe._phaseStartStep = stepIndex;
                         return EditorSelfTestStep::Continue;
                     }
@@ -241,15 +241,15 @@ namespace sw::editor
                     const uint32 phaseStepCount = stepIndex - probe._phaseStartStep;
                     switch ( probe._phase )
                     {
-                        case kPhaseSettle:
+                        case kPhaseStability:
                         {
-                            if ( phaseStepCount < kSettleStepCount )
+                            if ( phaseStepCount < kStabilityStepCount )
                                 return EditorSelfTestStep::Continue;
                             pPanel->clearFolderTreeCache();
                             probe._scanCountAtStart = EditorFolderListing::getChildFolderScanCount();
                             probe._phase            = kPhaseWarmUp;
                             probe._phaseStartStep   = stepIndex;
-                            return EditorSelfTestStep::WaitSettled;
+                            return EditorSelfTestStep::WaitStable;
                         }
                         case kPhaseWarmUp:
                         {
@@ -300,7 +300,7 @@ namespace sw::editor
                     {
                         context.getTestState<ActivePackProbe>()._bWasShowingAllPacks = pPanel->isShowingAllPacks() ? SW_TRUE : SW_FALSE;
                         pPanel->setShowAllPacks( false );
-                        return EditorSelfTestStep::WaitSettled; // 루트는 다음 그리기에서 다시 만든다
+                        return EditorSelfTestStep::WaitStable; // 루트는 다음 그리기에서 다시 만든다
                     }
                     if ( stepIndex == 1 )
                     {
@@ -308,7 +308,7 @@ namespace sw::editor
                         (void)context.expect( pPanel->hasRoot( packRoot ), "the active game pack is not a content root" );
                         (void)context.expect( pPanel->getGameRootCount() == 1, "the content browser lists game packs other than the active one" );
                         pPanel->setShowAllPacks( true );
-                        return EditorSelfTestStep::WaitSettled;
+                        return EditorSelfTestStep::WaitStable;
                     }
 
                     vector<string> listPackDomain;
@@ -357,7 +357,7 @@ namespace sw::editor
                         editor::getMainSceneSelection().clearObjectSelection();
                         (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( MapCheckPanel::kPanelID, true );
                         editorContext.getSubsystem<EditorWorkspace>().requestOpenPanel<MapCheckPanel>();
-                        return EditorSelfTestStep::WaitSettled; // 패널이 열리고 줄을 다시 만든다
+                        return EditorSelfTestStep::WaitStable; // 패널이 열리고 줄을 다시 만든다
                     }
 
                     // 오류가 먼저 나오고 이 테스트의 결과는 오류 하나다. 첫 오류 행들 중에서 이 오브젝트의 행을 누른다.
@@ -481,12 +481,12 @@ namespace sw::editor
 
                 static EditorSelfTestStep runToolWindowsOpenAtAUsableSize( EditorSelfTestContext& context )
                 {
-                    constexpr uint32  kPanelCount      = static_cast<uint32>( sizeof( kArrFloatingToolPanelID ) / sizeof( kArrFloatingToolPanelID[0] ) );
-                    constexpr uint32  kSettleStepCount = 3; ///< 연 뒤 창이 만들어지고 크기가 자리 잡기까지
-                    constexpr float32 kMinUsableWidth  = 400.0f;
-                    constexpr float32 kMinUsableHeight = 300.0f;
-                    constexpr float32 kViewportRatio   = 0.9f; ///< `EditorChrome::setNextPanelSize` 가 자르는 비율
-                    constexpr float32 kEdgeTolerancePx = 1.0f;
+                    constexpr uint32  kPanelCount         = static_cast<uint32>( sizeof( kArrFloatingToolPanelID ) / sizeof( kArrFloatingToolPanelID[0] ) );
+                    constexpr uint32  kStabilityStepCount = 3; ///< 연 뒤 창이 만들어지고 크기가 자리 잡기까지
+                    constexpr float32 kMinUsableWidth     = 400.0f;
+                    constexpr float32 kMinUsableHeight    = 300.0f;
+                    constexpr float32 kViewportRatio      = 0.9f; ///< `EditorChrome::setNextPanelSize` 가 자르는 비율
+                    constexpr float32 kEdgeTolerancePx    = 1.0f;
 
                     ToolWindowProbe&     probe         = context.getTestState<ToolWindowProbe>();
                     EditorContext&       editorContext = editor::getSubsystem<EditorContext>();
@@ -528,7 +528,7 @@ namespace sw::editor
                         (void)panelManager.setPanelOpen( pPanelID, true );
                         return EditorSelfTestStep::Continue;
                     }
-                    if ( stepIndex + 1 - probe._openStep < kSettleStepCount )
+                    if ( stepIndex + 1 - probe._openStep < kStabilityStepCount )
                         return EditorSelfTestStep::Continue;
 
                     const float32      dpiScale  = EditorThemeUtil::getDPIScale();

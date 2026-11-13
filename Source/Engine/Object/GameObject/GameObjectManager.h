@@ -639,7 +639,7 @@ namespace sw
             /** @brief 남은 것을 @p maxCount 개까지 부릅니다(0 은 한도 없음). 다 불렀으면 true 입니다. */
             [[nodiscard]] bool pump( GameObjectManager& manager, uint32 maxCount );
         };
-        /** @brief 줄에 선 것과 나누다 만 묶음을 합쳐 @p maxCount 개까지 부릅니다(0 은 한도 없음). 다 불렀으면 true 이고, 남았으면 `_pumpBatch` 에 둡니다. */
+        /** @brief 줄에 선 것과 나누다 만 묶음을 합쳐 @p maxCount 개까지 부릅니다(0 은 한도 없음). 다 불렀으면 true 이고, 남았으면 `_pollBatch` 에 둡니다. */
         [[nodiscard]] bool processQueuedRegistration( uint32 maxCount );
 
     private:
@@ -692,6 +692,6 @@ namespace sw
         vector<ComponentHandle> _listDeferredRegister;
         vector<ComponentHandle> _listDeferredPostLoad;
         /** @brief `processDeferredRegistration` 이 나눠 부르는 중인 묶음입니다. 비어 있으면 나누는 중이 아닙니다. */
-        DeferredRegistrationBatch _pumpBatch;
+        DeferredRegistrationBatch _pollBatch;
     };
 } // namespace sw

@@ -10,7 +10,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Event/ConsumerGate.h"
+#include "Core/Event/ConsumerLock.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 
@@ -30,12 +30,12 @@ namespace sw
         SocialClient();
 
         /** @brief 알림 버퍼를 꺼낼 권한을 @p outLease 에 받습니다. 클라이언트마다 한 곳만 받을 수 있어 이미 다른 표가 있으면 false 입니다(알림을 서로 가져가는 일을 막는다). */
-        [[nodiscard]] bool claimNotifications( ConsumerLease& outLease ) { return _notificationGate.claim( outLease ); }
+        [[nodiscard]] bool claimNotifications( ConsumerLease& outLease ) { return _notificationConsumerLock.claim( outLease ); }
         /** @brief 쌓인 알림을 꺼냅니다. @p lease 는 `claimNotifications` 로 받은 표여야 합니다(아니면 어서션이고 꺼내지 않습니다). */
         void pollNotifications( const ConsumerLease& lease, vector<SocialNotification>& outListNotification )
         {
-            SW_ASSERT( _notificationGate.isHeldBy( lease ) );
-            if ( _notificationGate.isHeldBy( lease ) )
+            SW_ASSERT( _notificationConsumerLock.isHeldBy( lease ) );
+            if ( _notificationConsumerLock.isHeldBy( lease ) )
                 _notificationBuffer.moveAllTo( outListNotification );
         }
 
@@ -43,7 +43,7 @@ namespace sw
         void onPush( SocialMethod::Notification, const SocialNotification& body );
 
     private:
-        ConsumerGate                    _notificationGate;
+        ConsumerLock                    _notificationConsumerLock;
         EventBuffer<SocialNotification> _notificationBuffer;
     };
 } // namespace sw

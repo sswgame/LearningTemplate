@@ -14,7 +14,7 @@
 
 namespace
 {
-    /** @brief 모든 쓰기를 거절하는 쓰기 게이트입니다(`FileUtil::setWriteGate`). */
+    /** @brief 모든 쓰기를 거절하는 쓰기 게이트입니다(`FileUtil::setWriteFilter`). */
     sw::expected<void> refuseEveryWrite( sw::string_view path )
     {
         return sw::unexpected( sw::Error{ sw::ErrorKind::Unsupported, "test gate refuses every write", path } );
@@ -690,12 +690,12 @@ SW_TEST_CASE( FileTest, WriteGateRefusesEveryMutatingEntry )
     bool bRemoved  = true;
     {
         SW_EXPECT_LOG( "File.WriteRefused" ); // 게이트가 거절한 쓰기는 오류로 남는다
-        sw::FileUtil::setWriteGate( &refuseEveryWrite );
+        sw::FileUtil::setWriteFilter( &refuseEveryWrite );
         bWritten  = sw::FileUtil::writeTextFile( path, "changed" );
         bAppended = sw::FileUtil::appendTextFile( path, "more" );
         bTrashed  = sw::FileUtil::moveToRecycleBin( sw::vector<sw::string>{ path } );
         bRemoved  = sw::FileUtil::removeFile( path );
-        sw::FileUtil::setWriteGate( nullptr );
+        sw::FileUtil::setWriteFilter( nullptr );
     }
 
     SW_EXPECT_FALSE( bWritten );

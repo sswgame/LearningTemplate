@@ -131,7 +131,7 @@ SW_TEST_CASE( EditorDocumentOpenUtilTest, CancelWithNoOpenDocumentDoesNotAskAgai
 // 결함(감사 P0-4): 옮김 방송이 연 문서 경로만 고치고, 디스크에서 글을 고친 깨끗한 참조 문서는 옛 id 를 든 채 남아 다음 저장이 고친 참조를 덮었다.
 SW_TEST_CASE( EditorDocumentOpenUtilTest, AssetMoveRemapsAndFindsRewrittenReferrer )
 {
-    EditorAssetMoveNotice notice;
+    EditorAssetMoveEvent notice;
     notice._listOldID       = { "game/a/textures/rock.png", "game/a/materials/rock.material" };
     notice._listNewID       = { "game/a/textures/stone.png", "game/b/materials/rock.material" };
     notice._listRewrittenID = { "game/a/maps/level.scene.xml", "game/b/materials/rock.material" }; // 옮긴 참조자는 새 id 로 온다

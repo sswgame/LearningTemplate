@@ -55,10 +55,10 @@ namespace sw::editor
         string makeFolder( string_view root ) const;
         /**
          * @brief 이 세션을 엽니다 — 자기 폴더와 잠금을 쓰고, 잠금 pid 가 죽은 세션 폴더를 넘겨받는다(잠금을 이 세션으로 고쳐 쓴다).
-         * @param outListAdoptedFolder 넘겨받은 폴더(앞서 이 세션이 넘겨받은 것 포함 — 리로드 뒤에도 복구 후보를 다시 보인다). 살아 있는 다른 세션은 넣지 않는다.
+         * @param outListRecoveredFolder 넘겨받은 폴더(앞서 이 세션이 넘겨받은 것 포함 — 리로드 뒤에도 복구 후보를 다시 보인다). 살아 있는 다른 세션은 넣지 않는다.
          * @return 자기 폴더 · 잠금을 쓰지 못하면 false 입니다.
          */
-        [[nodiscard]] bool open( string_view root, vector<string>& outListAdoptedFolder ) const;
+        [[nodiscard]] bool open( string_view root, vector<string>& outListRecoveredFolder ) const;
         /** @brief 편집기 종료입니다 — 잠금 pid 가 @p processID 인 폴더(자기 것 + 넘겨받은 것)만 지운다. 다른 에디터의 폴더는 그대로다. */
         static void removeOwned( string_view root, int32 processID );
         /** @brief 세션 폴더 @p sessionFolder 의 잠금을 읽습니다. 없거나 깨졌으면 false 입니다. */

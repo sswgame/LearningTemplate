@@ -1173,7 +1173,7 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPlugin.PostNotice" source="Post notice">
+		<entry key="EdPlugin.PostAnnouncement" source="Post notice">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
@@ -1258,7 +1258,7 @@
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPlugin.RemoveNotice" source="Remove notice">
+		<entry key="EdPlugin.RemoveAnnouncement" source="Remove notice">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>

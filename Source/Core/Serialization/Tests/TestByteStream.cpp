@@ -92,9 +92,9 @@ SW_TEST_CASE( ByteStreamTest, ListReadsRefuseForgedCountsAndTruncation )
     // 위조된 개수: 원소를 부르기 전에 멈춘다(할당하지 않는다).
     {
         vector<uint8> forged;
-        ByteWriter    forgedWriter{ forged };
-        forgedWriter.writeUint32( 0xFFFFFFFFu );
-        forgedWriter.writeUint32( 1 );
+        ByteWriter    craftedWriter{ forged };
+        craftedWriter.writeUint32( 0xFFFFFFFFu );
+        craftedWriter.writeUint32( 1 );
         ByteReader     reader{ forged.data(), forged.size() };
         vector<uint64> listValue;
         uint32         callCount = 0;

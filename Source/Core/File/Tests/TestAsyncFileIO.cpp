@@ -73,10 +73,10 @@ namespace
     }
 
     /**
-     * @struct IOGate
+     * @struct IOLatch
      * @brief 첫 요청의 완료 콜백을 IO 스레드에서 붙잡아 백엔드를 막는 문입니다. 문이 닫힌 동안 들어온 요청은 큐에서 기다린다.
      */
-    struct IOGate
+    struct IOLatch
     {
         sw::atomic<bool> _bEntered{ SW_FALSE };
         sw::atomic<bool> _bOpen{ false };
@@ -229,7 +229,7 @@ SW_TEST_CASE( AsyncFileIOTest, BackloggedRequestsCompleteInPriorityOrder )
         sw::AsyncFileIO io;
         SW_REQUIRE_TRUE( startSerialIO( io, kind ) );
 
-        IOGate        gate;
+        IOLatch       gate;
         CompletionLog log;
         // 핸들은 버린다 — 완료는 콜백이 게이트로 알린다
         (void)io.readRange( path, 0, 16, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&gate]( sw::AsyncReadResult& )
@@ -280,7 +280,7 @@ SW_TEST_CASE( AsyncFileIOTest, CancelingAQueuedRequestCompletesItAsCanceled )
         sw::AsyncFileIO io;
         SW_REQUIRE_TRUE( startSerialIO( io, kind ) );
 
-        IOGate gate;
+        IOLatch gate;
         // 핸들은 버린다 — 완료는 콜백이 게이트로 알린다
         (void)io.readRange( path, 0, 16, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&gate]( sw::AsyncReadResult& )
         {
@@ -330,7 +330,7 @@ SW_TEST_CASE( AsyncFileIOTest, ShutdownCancelsBacklogAndRejectsLateRequests )
         sw::AsyncFileIO io;
         SW_REQUIRE_TRUE( startSerialIO( io, kind ) );
 
-        IOGate gate;
+        IOLatch gate;
         // 핸들은 버린다 — 완료는 콜백이 게이트로 알린다
         (void)io.readRange( path, 0, 16, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&gate]( sw::AsyncReadResult& )
         {
@@ -457,7 +457,7 @@ SW_TEST_CASE( AsyncFileIOTest, RequestWaitWakesOnItsOwnCompletionAndTimesOut )
         sw::AsyncFileIO io;
         SW_REQUIRE_TRUE( startSerialIO( io, kind ) );
 
-        IOGate              gate;
+        IOLatch             gate;
         sw::AsyncReadHandle held = io.readRange( path, 0, 16, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&gate]( sw::AsyncReadResult& )
         {
             gate.holdInCallback();

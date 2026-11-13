@@ -49,16 +49,16 @@ namespace sw
             expected<void> start( OnlineServerKitContext& context ) override
             {
                 AdminServiceConfig settings;
-                SubsystemScope&    kits     = context._kits;
-                settings._pDirectory        = kits.find<IAccountDirectory>();
-                settings._pSessionControl   = kits.find<IAccountSessionControl>();
-                settings._pBus              = context._pBus;
-                settings._pPolicy           = kits.find<const ILedgerPolicy>();
-                settings._pBalanceNotice    = kits.find<IBalanceChangedListener>(); // 경제 키트(지급 · 회수 뒤 잔액 변경 알림)
-                settings._pMetricRegistry   = context._pMetricRegistry;
-                settings._pDirectoryControl = kits.find<IServerDirectoryControl>();
-                settings._pNameIndex        = kits.find<const IAccountNameIndex>(); // 접속하지 않은 계정도 이름으로 찾는다
-                settings._pLiveEventControl = kits.find<ILiveEventControl>();
+                SubsystemScope&    kits        = context._kits;
+                settings._pDirectory           = kits.find<IAccountDirectory>();
+                settings._pSessionControl      = kits.find<IAccountSessionControl>();
+                settings._pBus                 = context._pBus;
+                settings._pPolicy              = kits.find<const ILedgerPolicy>();
+                settings._pBalanceNotification = kits.find<IBalanceChangedListener>(); // 경제 키트(지급 · 회수 뒤 잔액 변경 알림)
+                settings._pMetricRegistry      = context._pMetricRegistry;
+                settings._pDirectoryControl    = kits.find<IServerDirectoryControl>();
+                settings._pNameIndex           = kits.find<const IAccountNameIndex>(); // 접속하지 않은 계정도 이름으로 찾는다
+                settings._pLiveEventControl    = kits.find<ILiveEventControl>();
                 if ( _service.initialize( context._pStore, settings ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the admin service needs a store" } );
                 for ( const AdminSeedEntry& seed : _listSeed )

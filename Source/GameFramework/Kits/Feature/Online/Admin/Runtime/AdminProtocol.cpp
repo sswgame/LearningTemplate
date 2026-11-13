@@ -37,8 +37,8 @@ namespace sw
             case AdminMethod::SendMail::kID:
             case AdminMethod::SetMaintenance::kID:
             case AdminMethod::ClearMaintenance::kID:
-            case AdminMethod::PostNotice::kID:
-            case AdminMethod::RemoveNotice::kID:
+            case AdminMethod::PostAnnouncement::kID:
+            case AdminMethod::RemoveAnnouncement::kID:
             case AdminMethod::PutLiveEvent::kID:
             case AdminMethod::RemoveLiveEvent::kID:
             {

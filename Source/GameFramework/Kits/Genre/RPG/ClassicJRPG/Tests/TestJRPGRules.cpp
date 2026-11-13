@@ -85,7 +85,7 @@ namespace
     };
 
     /** @brief 전투 상태 바이트를 손으로 씁니다. 초기값은 맞는 상태(적 하나, 멤버 하나)이고 케이스가 칸 하나를 망칩니다. */
-    struct JRPGForgedBattle
+    struct JRPGFixtureBattle
     {
         sw::hashed_string _enemyID{ "slime" };
         sw::hashed_string _commandID{};
@@ -220,7 +220,7 @@ namespace
             return listDamage;
         }
 
-        bool readForged( const JRPGForgedBattle& forged )
+        bool readForged( const JRPGFixtureBattle& forged )
         {
             sw::Archive written;
             forged.write( written );
@@ -1005,69 +1005,69 @@ SW_TEST_CASE_F( JRPGRulesTest, BattleStateRefusals )
 
     const auto refuses = [this]( auto mutate )
     {
-        JRPGForgedBattle forged;
+        JRPGFixtureBattle forged;
         mutate( forged );
         return readForged( forged ) == false && _battle.getEnemies()[0]._hp == 1000;
     };
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._hp = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._hp = 1001; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._enemyID = "nope"; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._castTurnsLeft = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._turnsTaken = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._lockTotal = -1; } ) ); // 0 으로 나누는 값
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._lockTotal = 1; } ) ); // 슬라임은 잠금이 없다
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     {
         forged._enemyID       = "wyrd";
         forged._castTurnsLeft = 3; // 이 적의 시전은 2 차례다
         forged._lockTotal     = 2;
     } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     {
         forged._enemyID   = "wyrd";
         forged._lockCount = 2; // 시전 중이 아닌데 잠금이 남았다
         forged._lockTotal = 2;
     } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._commandCount = 2; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._commandKind = 9; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._defending = 2; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     {
         forged._commandKind = static_cast<uint8>( sw::JRPGCommandKind::Spell );
         forged._commandID   = "nope";
     } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     {
         forged._commandKind = static_cast<uint8>( sw::JRPGCommandKind::Combo );
         forged._commandID   = "nope";
     } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._comboPoints = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._comboPoints = 10; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._round = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._fleeAttempts = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._rewardExp = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._rewardGold = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGForgedBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
     { forged._result = 9; } ) );
 
     // 맞는 시전 상태는 읽히고, 다음 라운드에 터진다.
-    JRPGForgedBattle casting;
+    JRPGFixtureBattle casting;
     casting._enemyID       = "wyrd";
     casting._lockCount     = 1;
     casting._lockTotal     = 2;
@@ -1140,8 +1140,8 @@ SW_TEST_CASE_F( JRPGRulesTest, StepEncounterState )
         sw::StateIO::writeRandom( forged, random );
         forged << stepsSince;
         forged << total;
-        sw::Archive readingForged( forged.getData(), forged.getSize() );
-        return restored.readState( readingForged ) == false;
+        sw::Archive readingFixture( forged.getData(), forged.getSize() );
+        return restored.readState( readingFixture ) == false;
     };
     SW_EXPECT_TRUE( refuses( -1, 0 ) );
     SW_EXPECT_TRUE( refuses( 0, -1 ) );

@@ -95,7 +95,7 @@ namespace sw::editor
 {
     /**
      * @class EditorObjectEditBindings
-     * @brief 데이터 명령의 알림(`CommandStack::ObjectEditNotice`)을 이 모듈이 받게 거는 주인입니다 — 선택을 맞추고 씬을 dirty 로 표시합니다.
+     * @brief 데이터 명령의 알림(`CommandStack::ObjectEditEvent`)을 이 모듈이 받게 거는 주인입니다 — 선택을 맞추고 씬을 dirty 로 표시합니다.
      * @details 스택의 알림 칸은 주인이 하나다(`DelegateSlot`). 이 서브시스템(에디터 범위)이 스택마다의 구독을 쥐고, 범위가 내려가면 함께 놓는다.
      *          에디터가 설 때 전역 스택에, 오브젝트 편집을 기록할 때 그 스택(미리보기 창의 스택 포함)에 겁니다. 모듈 언로드 훑기가 칸을 비웠으면 다시 겁니다 —
      *          리로드 전에 기록한 명령도 새 모듈의 처리기로 알린다. 에디터 컨텍스트 없이 도는 테스트는 커맨드 스택 서비스와 함께 이것을 범위에 둔다.

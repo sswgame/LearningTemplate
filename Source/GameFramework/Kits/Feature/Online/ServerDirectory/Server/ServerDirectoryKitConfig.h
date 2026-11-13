@@ -23,6 +23,6 @@ namespace sw
         vector<string> _listServerKind{ "game" };
         /** @brief 끝난 공지 · 점검 창의 TTL 입니다. 끝난 뒤 이 기간이 지나면 TTL 쓸기가 지웁니다(끝이 없는 것은 남긴다). */
         PROPERTY( Required )
-        ServiceTTLConfig _endedNoticeTTL{};
+        ServiceTTLConfig _endedAnnouncementTTL{};
     };
 } // namespace sw

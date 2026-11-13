@@ -705,7 +705,7 @@ namespace sw::editor
         if ( pWorkspace != nullptr )
         {
             // 열린 문서 · 씬 · 포커스 · 선택이 새 id 를 따르고, 깨끗한 참조 문서는 고친 글을 다시 읽는다. 리다이렉트 표(`referrerRewriteCount` 뒤)는 문서가 아니다.
-            EditorAssetMoveNotice notice{ outPlan._listOldID, outPlan._listNewID, {} };
+            EditorAssetMoveEvent notice{ outPlan._listOldID, outPlan._listNewID, {} };
             notice._listRewrittenID.reserve( referrerRewriteCount );
             for ( size_t index = 0; index < referrerRewriteCount; ++index )
                 notice._listRewrittenID.push_back( listRewrite[index]._referrerID );

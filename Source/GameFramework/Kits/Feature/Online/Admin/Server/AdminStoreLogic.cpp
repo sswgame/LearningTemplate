@@ -323,9 +323,9 @@ namespace sw
                     case AdminMethod::SetMaintenance::kID:
                     case AdminMethod::ClearMaintenance::kID:
                         return request._scope.empty() == false;
-                    case AdminMethod::PostNotice::kID:
-                    case AdminMethod::RemoveNotice::kID:
-                        return request._noticeID != 0;
+                    case AdminMethod::PostAnnouncement::kID:
+                    case AdminMethod::RemoveAnnouncement::kID:
+                        return request._announcementID != 0;
                     case AdminMethod::PutLiveEvent::kID:
                         return request._eventJSON.empty() == false;
                     case AdminMethod::RemoveLiveEvent::kID:

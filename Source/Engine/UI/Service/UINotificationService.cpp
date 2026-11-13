@@ -63,7 +63,7 @@ namespace sw
     } // namespace
 
     UINotificationService::UINotificationService()
-        : _noticeSink{ *this }
+        : _notificationSink{ *this }
         , _listVisible{}
         , _listQueued{}
         , _listFading{}
@@ -94,12 +94,12 @@ namespace sw
         return kArrDependency;
     }
 
-    void UINotificationService::postNotice( const string& text, const float32 durationSeconds, const PlayerNoticeKind kind )
+    void UINotificationService::postNotice( const string& text, const float32 durationSeconds, const PlayerNotificationKind kind )
     {
         UINotificationDef notice{};
         notice._text            = text;
         notice._durationSeconds = durationSeconds;
-        if ( kind == PlayerNoticeKind::Hint )
+        if ( kind == PlayerNotificationKind::Hint )
         {
             notice._kind     = UINotificationKind::Hint;
             notice._priority = 1; // 힌트는 지금 할 일이라 쌓인 알림보다 먼저
@@ -347,7 +347,7 @@ namespace sw
     {
         (void)build;
         UINotificationService& service  = scope.emplaceSubsystem<UINotificationService>();
-        const bool             bExposed = scope.exposeMember<IPlayerNoticeSink>( service, service.getPlayerNoticeSink() );
+        const bool             bExposed = scope.exposeMember<IPlayerNotificationSink>( service, service.getPlayerNotificationSink() );
         SW_ASSERT( bExposed );
         (void)bExposed;
     } );

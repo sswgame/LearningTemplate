@@ -28,7 +28,7 @@ namespace sw
         struct GameObjectStoreInternal
         {
             /** @brief 이 스레드가 들어가 있는 `forEachGameObject` 의 깊이입니다(`IterationScope`). Engine 의 이 TU 하나에만 있습니다. */
-            inline static thread_local uint32 s_walkDepth = 0;
+            inline static thread_local uint32 s_iterationDepth = 0;
         };
     } // namespace
 } // namespace sw
@@ -58,7 +58,7 @@ namespace sw
         , _listProcessingDestroyComponent{}
         , _mutex{}
         , _bProcessingDestruction{ SW_FALSE }
-        , _listPlayWalk{}
+        , _listPlayIteration{}
         , _bHasBegunPlay{ false }
         , _beginPlayMutex{}
         , _listPendingBeginPlay{}
@@ -69,17 +69,17 @@ namespace sw
 
     GameObjectStore::IterationScope::IterationScope()
     {
-        ++GameObjectStoreInternal::s_walkDepth;
+        ++GameObjectStoreInternal::s_iterationDepth;
     }
 
     GameObjectStore::IterationScope::~IterationScope()
     {
-        --GameObjectStoreInternal::s_walkDepth;
+        --GameObjectStoreInternal::s_iterationDepth;
     }
 
     bool GameObjectStore::IterationScope::isIterating()
     {
-        return GameObjectStoreInternal::s_walkDepth != 0;
+        return GameObjectStoreInternal::s_iterationDepth != 0;
     }
 
     GameObject* GameObjectStore::createGameObject( hashed_string name )
@@ -325,13 +325,13 @@ namespace sw
         // 태그를 붙일 때(`addTag` → `addComponent<TagComponent>` → 풀 맵의 배타 잠금) 같은 스레드가 자기 공유 잠금을 기다려
         // 에디터 Play 가 멈춘다. 목록을 받아 잠금 없이 순회한다. 활성 여부와 무관하게
         // 시작한다(언리얼과 같다. 짝은 컴포넌트의 "시작됨" 비트가 맞춘다). 순회하는 동안 생긴 오브젝트는 아래 대기열 처리가 시작한다.
-        getAllGameObjects( _listPlayWalk );
-        for ( GameObject* pObj : _listPlayWalk )
+        getAllGameObjects( _listPlayIteration );
+        for ( GameObject* pObj : _listPlayIteration )
         {
             if ( pObj != nullptr && pObj->isPendingDestroy() == false )
                 pObj->beginPlay();
         }
-        _listPlayWalk.clear();
+        _listPlayIteration.clear();
         dispatchPendingBeginPlay();
     }
 
@@ -342,13 +342,13 @@ namespace sw
             ScopedLock<mutex> lock{ _beginPlayMutex };
             _listPendingBeginPlay.clear();
         }
-        getAllGameObjects( _listPlayWalk );
-        for ( GameObject* pObj : _listPlayWalk )
+        getAllGameObjects( _listPlayIteration );
+        for ( GameObject* pObj : _listPlayIteration )
         {
             if ( pObj != nullptr && pObj->isPendingDestroy() == false )
                 pObj->endPlay();
         }
-        _listPlayWalk.clear();
+        _listPlayIteration.clear();
     }
 
     void GameObjectStore::queueBeginPlay( ComponentHandle handle )

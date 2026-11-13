@@ -46,10 +46,10 @@ namespace
     };
 
     /** @brief 문이 열릴 때까지 `upload` 안에서 막히는 업로더입니다. 부른 스레드와 받은 묶음을 기억합니다. */
-    class GatedTelemetryUploader final : public ITelemetryUploader
+    class LatchedTelemetryUploader final : public ITelemetryUploader
     {
     public:
-        GatedTelemetryUploader()
+        LatchedTelemetryUploader()
             : _mutex{}
             , _changed{}
             , _listBatch{}
@@ -131,8 +131,8 @@ namespace
  */
 SW_TEST_CASE( TelemetryServiceTest, UploadDoesNotBlockRecordOrFrame )
 {
-    TelemetryServiceTest   fixture;
-    GatedTelemetryUploader uploader;
+    TelemetryServiceTest     fixture;
+    LatchedTelemetryUploader uploader;
     fixture._service.setUploader( uploader );
 
     SW_EXPECT_TRUE( fixture._service.record( TelemetryEvent{ hashed_string( "test.ping" ) } ) == TelemetryRecordResult::Recorded );
@@ -171,8 +171,8 @@ SW_TEST_CASE( TelemetryServiceTest, UploadDoesNotBlockRecordOrFrame )
  */
 SW_TEST_CASE( TelemetryServiceTest, FailedUploadBacksOff )
 {
-    TelemetryServiceTest   fixture;
-    GatedTelemetryUploader uploader;
+    TelemetryServiceTest     fixture;
+    LatchedTelemetryUploader uploader;
     uploader.open();
     uploader.setResult( TelemetryUploadResult::Failed );
     fixture._service.setUploader( uploader );

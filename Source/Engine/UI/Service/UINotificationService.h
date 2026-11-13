@@ -13,7 +13,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
-#include "Engine/Presentation/IPlayerNoticeSink.h"
+#include "Engine/Presentation/IPlayerNotificationSink.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
@@ -82,10 +82,10 @@ namespace sw
 
         /** @brief 알림을 올립니다(보일 자리가 있으면 다음 `update` 에 보이고, 없으면 기다립니다). */
         void post( const UINotificationDef& desc );
-        /** @brief 게임 코드의 알림을 올립니다(`IPlayerNoticeSink`). 힌트는 종류 Hint · 우선순위 1 로 쌓인 알림보다 먼저 보인다. */
-        void postNotice( const string& text, float32 durationSeconds, PlayerNoticeKind kind );
-        /** @brief 게임 코드의 알림을 받는 자리(`IPlayerNoticeSink`)입니다. 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). */
-        IPlayerNoticeSink& getPlayerNoticeSink() { return _noticeSink; }
+        /** @brief 게임 코드의 알림을 올립니다(`IPlayerNotificationSink`). 힌트는 종류 Hint · 우선순위 1 로 쌓인 알림보다 먼저 보인다. */
+        void postNotice( const string& text, float32 durationSeconds, PlayerNotificationKind kind );
+        /** @brief 게임 코드의 알림을 받는 자리(`IPlayerNotificationSink`)입니다. 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). */
+        IPlayerNotificationSink& getPlayerNotificationSink() { return _notificationSink; }
         /** @brief 보이는 알림의 시간을 재고, 끝난 것을 내리고, 기다리는 것을 올립니다(UI 갱신의 화면 틱 뒤 칸이 부른다). */
         void update( float32 deltaSeconds );
         /** @brief 모두 버리고 화면을 닫습니다. */
@@ -138,23 +138,23 @@ namespace sw
         void removeEntryWidget( WidgetID widget );
 
     private:
-        /** @class NoticeSink @brief `postNotice` 로 넘기는 `IPlayerNoticeSink` 입니다. 서비스가 그 인터페이스를 상속하지 않고 이 멤버를 건다(수명은 서비스와 같다). */
-        class NoticeSink final : public IPlayerNoticeSink
+        /** @class NotificationSink @brief `postNotice` 로 넘기는 `IPlayerNotificationSink` 입니다. 서비스가 그 인터페이스를 상속하지 않고 이 멤버를 건다(수명은 서비스와 같다). */
+        class NotificationSink final : public IPlayerNotificationSink
         {
         public:
-            explicit NoticeSink( UINotificationService& owner )
+            explicit NotificationSink( UINotificationService& owner )
                 : _owner{ owner }
             {
             }
 
-            void postNotice( const string& text, float32 durationSeconds, PlayerNoticeKind kind ) override { _owner.postNotice( text, durationSeconds, kind ); }
+            void postNotice( const string& text, float32 durationSeconds, PlayerNotificationKind kind ) override { _owner.postNotice( text, durationSeconds, kind ); }
 
         private:
             UINotificationService& _owner;
         };
 
     private:
-        NoticeSink          _noticeSink;
+        NotificationSink    _notificationSink;
         vector<Entry>       _listVisible;        ///< 보이는 알림입니다(위부터).
         vector<Entry>       _listQueued;         ///< 기다리는 알림입니다.
         vector<FadingEntry> _listFading;         ///< 사라지는 중인 항목의 위젯입니다.

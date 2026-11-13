@@ -165,7 +165,7 @@ SW_TEST_CASE( RemoteCallTest, UnknownTargetAndBadArgumentsAreRejected )
     SW_EXPECT_TRUE( rig.forgeCall( kAvatarID, "noSuchFunction", {}, NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
     rig.pollUntilDelivered();
 
-    vector<RemoteCallRejectNotice> listNotice;
+    vector<RemoteCallRejectNotification> listNotice;
     rig._client.pollRejections( listNotice );
     SW_REQUIRE_EQUAL( size_t{ 3 }, listNotice.size() );
     SW_EXPECT_EQUAL( sequence, listNotice[0]._sequence );

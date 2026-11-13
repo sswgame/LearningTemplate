@@ -63,7 +63,7 @@ namespace sw
             /** @brief 최상위 메시지를 훑습니다. 구문 오류가 없으면 true 입니다(인자 오류는 `_error` 에만 남긴다). */
             bool walk( string& outText )
             {
-                const bool bParsed = walkMessage( 0, false, true, outText );
+                const bool bParsed = parseMessage( 0, false, true, outText );
                 if ( bParsed && _position < _pattern.size() )
                     return fail( "unmatched '}'" );
                 return bParsed;
@@ -142,7 +142,7 @@ namespace sw
              * @brief 메시지 하나(최상위 또는 분기 본문)를 `}` 또는 끝까지 훑습니다.
              * @param bInPlural `#` 이 숫자 위치인지(복수형 분기 안)를 나타냅니다.
              */
-            bool walkMessage( uint32 depth, bool bInPlural, bool bEmit, string& outText )
+            bool parseMessage( uint32 depth, bool bInPlural, bool bEmit, string& outText )
             {
                 if ( depth > kMaxDepth )
                     return fail( "message nesting is too deep" );
@@ -162,7 +162,7 @@ namespace sw
                         emitLiteral( bEmit, rawRun, resolvedRun, outText );
                         rawRun.clear();
                         resolvedRun.clear();
-                        if ( walkArgument( depth, bEmit, outText ) == false )
+                        if ( parseArgument( depth, bEmit, outText ) == false )
                             return false;
                         continue;
                     }
@@ -182,7 +182,7 @@ namespace sw
                     if ( character == '\'' )
                     {
                         const size_t start = _position;
-                        walkQuote( bInPlural, resolvedRun );
+                        parseQuote( bInPlural, resolvedRun );
                         rawRun.append( _pattern.substr( start, _position - start ) );
                         continue;
                     }
@@ -195,7 +195,7 @@ namespace sw
             }
 
             /** @brief 작은따옴표 하나를 처리합니다. 해석한 텍스트는 @p inoutResolved 에 붙습니다. */
-            void walkQuote( bool bInPlural, string& inoutResolved )
+            void parseQuote( bool bInPlural, string& inoutResolved )
             {
                 const size_t next = _position + 1;
                 if ( next < _pattern.size() && _pattern[next] == '\'' )
@@ -231,7 +231,7 @@ namespace sw
             }
 
             /** @brief `{` 에서 시작하는 인자 하나를 짝 `}` 뒤까지 훑습니다. */
-            bool walkArgument( uint32 depth, bool bEmit, string& outText )
+            bool parseArgument( uint32 depth, bool bEmit, string& outText )
             {
                 const size_t openPos = _position;
                 ++_position; // '{'
@@ -266,7 +266,7 @@ namespace sw
                         return fail( "',' expected after plural/select" );
                     ++_position;
                     const TextChoiceKind kind = type == "plural" ? TextChoiceKind::Plural : ( type == "select" ? TextChoiceKind::Select : TextChoiceKind::Ordinal );
-                    return walkOptions( depth, name, kind, openPos, bEmit, outText );
+                    return parseOptions( depth, name, kind, openPos, bEmit, outText );
                 }
 
                 string_view style;
@@ -291,7 +291,7 @@ namespace sw
             }
 
             /** @brief plural · selectordinal · select 의 분기들을 훑고, Format 이면 맞는 분기 하나만 씁니다. */
-            bool walkOptions( uint32 depth, string_view name, TextChoiceKind kind, size_t openPos, bool bEmit, string& outText )
+            bool parseOptions( uint32 depth, string_view name, TextChoiceKind kind, size_t openPos, bool bEmit, string& outText )
             {
                 const bool          bPlural   = kind != TextChoiceKind::Select;
                 const bool          bOrdinal  = kind == TextChoiceKind::Ordinal;
@@ -352,7 +352,7 @@ namespace sw
                     listBodyStart.push_back( _position );
                     if ( bRebuild )
                         outText.append( selector ).append( " {" );
-                    if ( walkMessage( depth + 1, bPlural, bRebuild, outText ) == false )
+                    if ( parseMessage( depth + 1, bPlural, bRebuild, outText ) == false )
                         return false;
                     if ( _position >= _pattern.size() || _pattern[_position] != '}' )
                         return fail( "'}' expected to close a branch" );
@@ -386,7 +386,7 @@ namespace sw
                 _position                = listBodyStart[chosen];
                 if ( bPlural )
                     _listPluralNumber.push_back( formatPluralNumber( *pArgument, value - offset ) );
-                const bool bWritten = walkMessage( depth + 1, bPlural, true, outText );
+                const bool bWritten = parseMessage( depth + 1, bPlural, true, outText );
                 if ( bPlural )
                     _listPluralNumber.pop_back();
                 _position = endPosition;

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/Client/Automation/Runner/AutomationJudge.h"
+#include "DevTools/Client/Automation/Runner/AutomationEvaluator.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
@@ -46,7 +46,7 @@
 
 namespace sw
 {
-    AutomationJudge::AutomationJudge( shared_ptr<AutomationLogPolicy> pLogPolicy )
+    AutomationEvaluator::AutomationEvaluator( shared_ptr<AutomationLogPolicy> pLogPolicy )
         : _logCapture{}
         , _pLogPolicy{ std::move( pLogPolicy ) }
         , _listFailure{}
@@ -66,12 +66,12 @@ namespace sw
         SW_ASSERT( _pLogPolicy != nullptr );
     }
 
-    AutomationJudge::~AutomationJudge()
+    AutomationEvaluator::~AutomationEvaluator()
     {
         _pLogPolicy->clear();
     }
 
-    void AutomationJudge::runExpect( AutomationStepContext& context, const AutomationStep& step )
+    void AutomationEvaluator::runExpect( AutomationStepContext& context, const AutomationStep& step )
     {
         bool   bMatched = false;
         string message;
@@ -81,7 +81,7 @@ namespace sw
             context.recordFailure( step, "Expect " + message );
     }
 
-    bool AutomationJudge::readWatchValue( const AutomationStepContext& context, const AutomationStep& step, AutomationWatchValue& outValue, string& outMessage ) const
+    bool AutomationEvaluator::readWatchValue( const AutomationStepContext& context, const AutomationStep& step, AutomationWatchValue& outValue, string& outMessage ) const
     {
         const string&                      watchName     = *step.findAttribute( "watch" );
         const AutomationWatchRegistration* pRegistration = AutomationWatchRegistry::find( watchName );
@@ -110,7 +110,7 @@ namespace sw
         return true;
     }
 
-    bool AutomationJudge::compareWatch( const AutomationStepContext& context, const AutomationStep& step, bool& outMatched, string& outMessage ) const
+    bool AutomationEvaluator::compareWatch( const AutomationStepContext& context, const AutomationStep& step, bool& outMatched, string& outMessage ) const
     {
         using Internal = AutomationStepArgsUtil;
         AutomationWatchValue value{};
@@ -169,13 +169,13 @@ namespace sw
         return true;
     }
 
-    void AutomationJudge::addRecordLine( string line )
+    void AutomationEvaluator::addRecordLine( string line )
     {
         SW_LOG_INFO_ID( "Automation.Record", "[Scenario] record %#", line.c_str() );
         _listRecordLine.push_back( std::move( line ) );
     }
 
-    void AutomationJudge::prepareWatches( const AutomationScenario& scenario )
+    void AutomationEvaluator::prepareWatches( const AutomationScenario& scenario )
     {
         _listWatch.clear();
         for ( const AutomationStep& step : scenario.getSteps() )
@@ -198,7 +198,7 @@ namespace sw
         }
     }
 
-    void AutomationJudge::sampleWatches( AutomationStepContext& context )
+    void AutomationEvaluator::sampleWatches( AutomationStepContext& context )
     {
         for ( WatchHistory& watch : _listWatch )
         {
@@ -221,7 +221,7 @@ namespace sw
         }
     }
 
-    void AutomationJudge::runExpectVisited( AutomationStepContext& context, const AutomationStep& step )
+    void AutomationEvaluator::runExpectVisited( AutomationStepContext& context, const AutomationStep& step )
     {
         const AutomationExpectVisitedParams params = step.readValidatedProperties<AutomationExpectVisitedParams>();
         const string_view                   watch  = params._watch;
@@ -278,7 +278,7 @@ namespace sw
                                          "'), saw: " + ( seen.empty() ? string( "no value" ) : seen ) );
     }
 
-    void AutomationJudge::runRecord( AutomationStepContext& context, const AutomationStep& step )
+    void AutomationEvaluator::runRecord( AutomationStepContext& context, const AutomationStep& step )
     {
         AutomationWatchValue value{};
         string               message;
@@ -290,7 +290,7 @@ namespace sw
         addRecordLine( "frame " + to_string( context.getFrameIndex() ) + " " + message + " = " + AutomationStepArgsUtil::makeValueText( value ) );
     }
 
-    void AutomationJudge::runRemember( AutomationStepContext& context, const AutomationStep& step )
+    void AutomationEvaluator::runRemember( AutomationStepContext& context, const AutomationStep& step )
     {
         AutomationWatchValue value{};
         string               message;
@@ -313,7 +313,7 @@ namespace sw
         _listRemembered.push_back( RememberedValue{ name, std::move( text ) } );
     }
 
-    void AutomationJudge::runExpectLog( AutomationStepContext& context, const AutomationStep& step )
+    void AutomationEvaluator::runExpectLog( AutomationStepContext& context, const AutomationStep& step )
     {
         const AutomationExpectLogParams params     = step.readValidatedProperties<AutomationExpectLogParams>();
         const string                    target     = params._contains.empty() ? params._id : string( params._id + "' containing '" + params._contains );
@@ -336,7 +336,7 @@ namespace sw
         }
     }
 
-    void AutomationJudge::deferExpectImage( AutomationStepContext& context, const AutomationStep& step )
+    void AutomationEvaluator::deferExpectImage( AutomationStepContext& context, const AutomationStep& step )
     {
         const expected<AutomationStepArgsUtil::ExpectImageArgs> args = AutomationStepArgsUtil::parseExpectImage( step );
         if ( args.has_value() == false )
@@ -363,12 +363,12 @@ namespace sw
         _listDeferredImage.push_back( DeferredImageCheck{ &step, string( *backendTag ) } );
     }
 
-    void AutomationJudge::deferExpectImagesDiffer( const AutomationStep& step )
+    void AutomationEvaluator::deferExpectImagesDiffer( const AutomationStep& step )
     {
         _listDeferredImagesDiffer.push_back( &step );
     }
 
-    void AutomationJudge::evaluateImagesDiffer( AutomationStepContext& context, const AutomationStep& step )
+    void AutomationEvaluator::evaluateImagesDiffer( AutomationStepContext& context, const AutomationStep& step )
     {
         const AutomationExpectImagesDifferParams params = step.readValidatedProperties<AutomationExpectImagesDifferParams>();
         if ( _goldenPolicy.has_value() == false )
@@ -406,13 +406,13 @@ namespace sw
             context.recordFailure( step, "the field changed the picture more than allowed (at most " + AutomationStepArgsUtil::formatNumber( static_cast<float64>( params._maxDiffering ) * 100.0 ) + "%) - " + line );
     }
 
-    void AutomationJudge::deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue )
+    void AutomationEvaluator::deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue )
     {
         SW_ASSERT( pValue != nullptr );
         _listDeferredAtMost.push_back( DeferredAtMostCheck{ &step, std::move( pValue ), std::move( description ), limit } );
     }
 
-    void AutomationJudge::evaluateDeferred( AutomationStepContext& context )
+    void AutomationEvaluator::evaluateDeferred( AutomationStepContext& context )
     {
         for ( const DeferredImageCheck& check : _listDeferredImage )
         {
@@ -440,7 +440,7 @@ namespace sw
         _listDeferredAtMost.clear();
     }
 
-    void AutomationJudge::evaluateImage( AutomationStepContext& context, const AutomationStep& step, string_view backendTag )
+    void AutomationEvaluator::evaluateImage( AutomationStepContext& context, const AutomationStep& step, string_view backendTag )
     {
         const expected<AutomationStepArgsUtil::ExpectImageArgs> parsedArgs = AutomationStepArgsUtil::parseExpectImage( step );
         if ( parsedArgs.has_value() == false )
@@ -529,8 +529,8 @@ namespace sw
         }
     }
 
-    void AutomationJudge::writeGolden( AutomationStepContext& context, const AutomationStep& step, const AutomationImage& image, const string& goldenID, string_view backendTag, const utf8* pReason,
-                                       const AutomationImageDifference* pPrevious, const AutomationGoldenLimits& limits )
+    void AutomationEvaluator::writeGolden( AutomationStepContext& context, const AutomationStep& step, const AutomationImage& image, const string& goldenID, string_view backendTag, const utf8* pReason,
+                                           const AutomationImageDifference* pPrevious, const AutomationGoldenLimits& limits )
     {
         // 골든 쓰기는 이 모드에서만 연다(`AutomationScratch` 의 쓰기 문 — 평소에는 리소스 루트에 쓰지 못한다). 쓴 파일은 보고에 남아 리뷰한다.
         if ( _recordingCommit.empty() )
@@ -569,7 +569,7 @@ namespace sw
         _listUpdatedGolden.push_back( goldenID );
     }
 
-    optional<string> AutomationJudge::applyLogGate( AutomationResult result )
+    optional<string> AutomationEvaluator::applyLogCheck( AutomationResult result )
     {
         AutomationLogCheckResult evaluation = _logCapture.evaluateLines( *_pLogPolicy );
         if ( engine::areEngineServicesBound() )
@@ -602,14 +602,14 @@ namespace sw
                " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)";
     }
 
-    void AutomationJudge::addFailure( const AutomationStep& step, string_view message )
+    void AutomationEvaluator::addFailure( const AutomationStep& step, string_view message )
     {
         string line = step.describe() + ": " + string( message );
         SW_LOG_WARNING_ID( "Automation.JudgeWarning", "[Scenario] %#", line.c_str() );
         _listFailure.push_back( std::move( line ) );
     }
 
-    void AutomationJudge::prepare( const AutomationScenario& scenario )
+    void AutomationEvaluator::prepare( const AutomationScenario& scenario )
     {
         _pLogPolicy->prepare( scenario );
         prepareWatches( scenario );

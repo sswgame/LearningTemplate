@@ -50,7 +50,7 @@ namespace sw
              * @brief 에셋 일이 0 이 된 뒤 스크린샷 전에 더 기다리는 프레임 수입니다. 올린 텍스처의 새 SRV 는 다음 씬 빌드가 머티리얼에 넣고(`Material::refreshTextureBindings`),
              *        그 스냅샷이 렌더 큐를 지나야 화면에 나온다 — 씬 빌드 한 프레임 + 큐에 쌓이는 패킷 수(링 칸 수 − 1, `RenderThread::submit` 은 한 칸을 비워 둔다).
              */
-            static constexpr uint32 kAssetSettleTrailFrames = 1u + ( constant::render::kRenderFrameQueueDepth - 1u );
+            static constexpr uint32 kAssetStabilityTrailFrames = 1u + ( constant::render::kRenderFrameQueueDepth - 1u );
 
             // --- 단계 인자: 검사 함수와 준비 · 실행 함수가 같은 읽기(`parse*`) 하나를 쓴다 -----------------------------------------
             //     검사가 읽어 본 뒤 실행이 결과를 버리며 다시 읽던 것을 없앤다. 실행 때 읽기가 실패하면(핫 리로드로 바뀐 단계) 버리지 않고 오류로 끝낸다.
@@ -262,9 +262,9 @@ namespace sw
              * @details 찍는 프레임이 정해져야 하는 시나리오(디더 등장의 중간 단계, 프레임마다 움직이는 카메라)가 쓴다. 자리 잡기를 기다리면 등장이 끝나거나 카메라가 멈춘 뒤를 찍는다.
              *          그런 시나리오는 앞에서 `<WaitUntil watch="Assets.Pending" equals="0">` 로 로드를 끝내 둔다.
              */
-            [[nodiscard]] static bool shouldCaptureWithoutSettling( const AutomationStep& step )
+            [[nodiscard]] static bool shouldCaptureWithoutStabilizing( const AutomationStep& step )
             {
-                return step.readValidatedProperties<AutomationScreenshotParams>()._bWaitForSettle == false;
+                return step.readValidatedProperties<AutomationScreenshotParams>()._bWaitForStability == false;
             }
 
             static expected<void> validateExpectImagesDiffer( const AutomationStep& step )
@@ -631,16 +631,16 @@ namespace sw
         static AutomationStepHold holdScreenshot( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
             AutomationRunner& runner = asRunner( context );
-            if ( AutomationRunnerStepsInternal::shouldCaptureWithoutSettling( step ) )
+            if ( AutomationRunnerStepsInternal::shouldCaptureWithoutStabilizing( step ) )
                 return AutomationStepHold::Run;
-            const bool bSettled                 = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
-            runner._run._assetSettledFrameCount = bSettled ? runner._run._assetSettledFrameCount + 1 : 0;
-            const bool               bReady     = runner._run._assetSettledFrameCount > AutomationRunnerStepsInternal::kAssetSettleTrailFrames;
-            const utf8* const        pCover     = AutomationStepRegistry::findCaptureBlocker();
-            const AutomationStepHold hold       = runner.holdUntilReady( step, input, bReady, AutomationTimeLimits::kMaxAssetSettleFrames,
-                                                                         string( "the screen to settle before the screenshot (" ) +
-                                                                             ( pCover != nullptr ? string( "covered by " ) + pCover : string( bSettled ? "trailing frames" : "assets pending" ) ) +
-                                                                             ")" );
+            const bool bSettled                = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
+            runner._run._assetStableFrameCount = bSettled ? runner._run._assetStableFrameCount + 1 : 0;
+            const bool               bReady    = runner._run._assetStableFrameCount > AutomationRunnerStepsInternal::kAssetStabilityTrailFrames;
+            const utf8* const        pCover    = AutomationStepRegistry::findCaptureBlocker();
+            const AutomationStepHold hold      = runner.holdUntilReady( step, input, bReady, AutomationTimeLimits::kMaxAssetStabilityFrames,
+                                                                        string( "the screen to settle before the screenshot (" ) +
+                                                                            ( pCover != nullptr ? string( "covered by " ) + pCover : string( bSettled ? "trailing frames" : "assets pending" ) ) +
+                                                                            ")" );
             if ( hold == AutomationStepHold::Run )
             {
                 if ( bReady == false )
@@ -648,7 +648,7 @@ namespace sw
                     runner.recordFailure( step, pCover != nullptr ? string( "the screen did not settle before the screenshot was due (still covered by " ) + pCover + ")"
                                                                   : string( "assets were still loading when the screenshot was due (Assets.Pending never reached 0)" ) );
                 }
-                runner._run._assetSettledFrameCount = 0;
+                runner._run._assetStableFrameCount = 0;
             }
             return hold;
         }

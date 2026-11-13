@@ -421,7 +421,7 @@ namespace sw
         _listDeliveryDone.push_back( ReceiptDeliveryResult{ getStoreName(), call._recordKey, status } );
     }
 
-    void StoreReceiptValidator::pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListServiceResult )
+    void StoreReceiptValidator::pollDeliveryResults( vector<ReceiptDeliveryResult>& outListServiceResult )
     {
         for ( ReceiptDeliveryResult& serviceResult : _listDeliveryDone )
         {

@@ -396,12 +396,12 @@ SW_TEST_CASE( RHIConstantBufferMirrorTest, FillsStaleSlotsOnceAndForgets )
     // 부순 버퍼는 채우지 않는다.
     shadow.remove( 7 );
     SW_EXPECT_EQUAL( 0u, shadow.getPendingBufferCount() );
-    const uint32 writeCountBeforeForget = writeCount;
+    const uint32 writeCountBeforeRemove = writeCount;
     for ( uint32 slot = 0; slot < kSlotCount; ++slot )
     {
         shadow.fillSlot( slot, writeSlot );
     }
-    SW_EXPECT_EQUAL( writeCountBeforeForget, writeCount );
+    SW_EXPECT_EQUAL( writeCountBeforeRemove, writeCount );
 }
 
 /**

@@ -70,7 +70,7 @@ SW_TEST_CASE( GridPathSolverTest, QueuedPathsMatchSynchronousPaths )
 }
 
 /**
- * @brief [GridPathSolverTest] 막힌 칸에서 시작하면 경로가 없다(`InvalidStart`) — 요청자는 그 결과로 걸을 수 있는 칸으로 민다(RTS `nudgeToWalkable`)
+ * @brief [GridPathSolverTest] 막힌 칸에서 시작하면 경로가 없다(`InvalidStart`) — 요청자는 그 결과로 걸을 수 있는 칸으로 민다(RTS `snapToWalkable`)
  */
 SW_TEST_CASE( GridPathSolverTest, BlockedStartReportsNoPath )
 {

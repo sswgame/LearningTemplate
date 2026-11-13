@@ -432,7 +432,7 @@ SW_TEST_CASE( GuildServiceTest, NoticeIsValidatedAndShared )
     SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kMember, kInvalidAccountID, "hi" )._result == SocialResult::NotAllowed );
     SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kOfficer, kInvalidAccountID, "hello\nworld" )._result == SocialResult::Ok );
     SW_EXPECT_EQUAL( string( "hello\nworld" ), rig.run( GuildOperation::Get, kMember )._info._notice );
-    SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kOfficer, kInvalidAccountID, string( static_cast<size_t>( GuildLimit::kMaxNoticeSize ) + 1, 'x' ) )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kOfficer, kInvalidAccountID, string( static_cast<size_t>( GuildLimit::kMaxAnnouncementSize ) + 1, 'x' ) )._result.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( string( "hello\nworld" ), rig.run( GuildOperation::Get, kMember )._info._notice );
 }
 

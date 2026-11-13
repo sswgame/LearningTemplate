@@ -7,7 +7,7 @@
 namespace sw
 {
     SocialClient::SocialClient()
-        : _notificationGate{}
+        : _notificationConsumerLock{}
         , _notificationBuffer{}
     {
     }

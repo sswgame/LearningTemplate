@@ -162,7 +162,7 @@ namespace sw::editor
             _selectedComponentID = 0;
     }
 
-    void EditorWorkspace::notifyAssetsMoved( const EditorAssetMoveNotice& notice )
+    void EditorWorkspace::notifyAssetsMoved( const EditorAssetMoveEvent& notice )
     {
         const vector<string>& listOldID = notice._listOldID;
         const vector<string>& listNewID = notice._listNewID;

@@ -39,7 +39,7 @@ namespace sw
         void initialize( TradeService* pTradeService, const IAccountDirectory* pDirectory, IAccountPresence* pPresence, MetricRegistry* pMetricRegistry = nullptr );
         void shutdown();
         /** @brief 정산으로 바뀐 잔액을 알릴 창구(경제 키트)를 겁니다. 빌려 쓰며 없으면 알리지 않는다. */
-        void setBalanceNotice( IBalanceChangedListener* pBalanceNotice ) { _pBalanceNotice = pBalanceNotice; }
+        void setBalanceNotification( IBalanceChangedListener* pBalanceNotification ) { _pBalanceNotification = pBalanceNotification; }
 
         // 프로토콜 표의 메서드 - 결과는 호출 번호로 `takeCompletions` 에서 받는다.
         void handleCall( OnlineServerCall<TradeMethod::Invite> call, const OnlineCallContext& context, const TradeInviteRequest& request );
@@ -87,8 +87,8 @@ namespace sw
         vector<FoundLookup>                         _listFoundScratch;
         TradeService*                               _pTradeService;
         const IAccountDirectory*                    _pDirectory;
-        IBalanceChangedListener*                    _pBalanceNotice; ///< 정산 잔액을 두 당사자의 지갑에 알린다(`setBalanceNotice`)
-        AccountPresenceTracker                      _presenceFinds;  ///< 상대 이름 찾기 · 다른 서버로의 알림(서버 여러 대일 때만 묶인다)
+        IBalanceChangedListener*                    _pBalanceNotification; ///< 정산 잔액을 두 당사자의 지갑에 알린다(`setBalanceNotification`)
+        AccountPresenceTracker                      _presenceFinds;        ///< 상대 이름 찾기 · 다른 서버로의 알림(서버 여러 대일 때만 묶인다)
         UnixMilliseconds                            _nowMs;
     };
 } // namespace sw

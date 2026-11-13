@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Event/ConsumerGate.h"
+#include "Core/Event/ConsumerLock.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -1233,8 +1233,8 @@ SW_TEST_CASE( SRPGRunMapTest, ReadStateChecksCells )
         forged << static_cast<int32>( 1 );
         forged << static_cast<int32>( 1 );
         forged << current;
-        sw::Archive forgedReading( forged.getData(), forged.getSize() );
-        return restored.readState( forgedReading );
+        sw::Archive readingFixture( forged.getData(), forged.getSize() );
+        return restored.readState( readingFixture );
     };
     SW_EXPECT_FALSE( readForged( 0, 0, 5, sw::RunMap::kStart ) );
     SW_EXPECT_FALSE( readForged( 0, 0, -2, sw::RunMap::kStart ) );
@@ -1389,8 +1389,8 @@ SW_TEST_CASE_F( SRPGRulesTest, CampaignState )
         forged << static_cast<uint32>( 5 );
         forged << bInMission;
         forged << bFailed;
-        sw::Archive forgedReading( forged.getData(), forged.getSize() );
-        return restored.readState( forgedReading );
+        sw::Archive readingFixture( forged.getData(), forged.getSize() );
+        return restored.readState( readingFixture );
     };
     SW_EXPECT_FALSE( readForged( 2, 0 ) );
     SW_EXPECT_FALSE( readForged( 0, 2 ) );

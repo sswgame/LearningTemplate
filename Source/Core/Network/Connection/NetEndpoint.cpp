@@ -1479,11 +1479,11 @@ namespace sw
             NetEndpointSlot& slot  = _slotTable.get( index );
             if ( slot._state != NetConnectionState::Connected )
                 continue;
-            const size_t firstNotice = outInbound._listDeliveryNotice.size();
-            slot._connection->pollDeliveryNotices( outInbound._listDeliveryNotice );
-            for ( size_t noticeIndex = firstNotice; noticeIndex < outInbound._listDeliveryNotice.size(); ++noticeIndex )
+            const size_t firstNotification = outInbound._listDeliveryNotification.size();
+            slot._connection->pollDeliveryNotifications( outInbound._listDeliveryNotification );
+            for ( size_t notificationIndex = firstNotification; notificationIndex < outInbound._listDeliveryNotification.size(); ++notificationIndex )
             {
-                outInbound._listDeliveryNotice[noticeIndex]._connectionID = index;
+                outInbound._listDeliveryNotification[notificationIndex]._connectionID = index;
             }
             for ( int32 channel = 0; channel < static_cast<int32>( NetChannelType::Count ); ++channel )
             {

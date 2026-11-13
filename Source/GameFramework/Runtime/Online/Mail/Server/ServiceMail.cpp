@@ -205,7 +205,7 @@ namespace sw
         return s_table;
     }
 
-    ServiceStoreResult ServiceMail::claimNotices( IServiceStoreConnection& connection, int32 maxCount, vector<ServiceMailNotification>& outListNotice )
+    ServiceStoreResult ServiceMail::claimNotifications( IServiceStoreConnection& connection, int32 maxCount, vector<ServiceMailNotification>& outListNotice )
     {
         outListNotice.clear();
         const int32              batchCount = maxCount < ServiceTransaction::kMaxWriteCount ? maxCount : ServiceTransaction::kMaxWriteCount;

@@ -147,11 +147,11 @@ SW_TEST_CASE( NetConnectionTest, NotifiedMessagesReportDeliveredOrLostExactlyOnc
         BitReader ackReader( ackWriter.getBytes().data(), ackWriter.getByteCount() );
         (void)sender.readPacket( time + 0.02, ackReader ); // 확인만 받으면 된다 — 결과는 아래 통지로 본다
     }
-    vector<NetDeliveryNotice> listNotice;
-    sender.pollDeliveryNotices( listNotice );
+    vector<NetDeliveryNotification> listNotice;
+    sender.pollDeliveryNotifications( listNotice );
     int32 lostCount      = 0;
     int32 deliveredCount = 0;
-    for ( const NetDeliveryNotice& notice : listNotice )
+    for ( const NetDeliveryNotification& notice : listNotice )
     {
         SW_EXPECT_EQUAL( int32( kKind ), int32( notice._kind ) );
         SW_EXPECT_EQUAL( -1, notice._connectionID ); // 연결 하나는 자기 ID 를 모른다 — 호스트가 채운다
@@ -169,7 +169,7 @@ SW_TEST_CASE( NetConnectionTest, NotifiedMessagesReportDeliveredOrLostExactlyOnc
     SW_EXPECT_EQUAL( 1, lostCount );
     SW_EXPECT_EQUAL( 7, deliveredCount );
     listNotice.clear();
-    sender.pollDeliveryNotices( listNotice );
+    sender.pollDeliveryNotifications( listNotice );
     SW_EXPECT_TRUE( listNotice.empty() ); // 한 번만 낸다
 
     // 싣지 못한 채 나이 상한을 넘기면 잃은 것이다.
@@ -180,7 +180,7 @@ SW_TEST_CASE( NetConnectionTest, NotifiedMessagesReportDeliveredOrLostExactlyOnc
     saturated.writePacket( 0.0, tinyPacket, 12 ); // 머리만 들어가는 크기라 메시지는 남는다
     BitWriter latePacket;
     saturated.writePacket( 1.0, latePacket, 300 );
-    saturated.pollDeliveryNotices( listNotice );
+    saturated.pollDeliveryNotifications( listNotice );
     SW_REQUIRE_EQUAL( size_t( 1 ), listNotice.size() );
     SW_EXPECT_EQUAL( uint32( 9 ), listNotice[0]._tag );
     SW_EXPECT_TRUE( listNotice[0]._result == NetDeliveryResult::Lost );

@@ -15,14 +15,14 @@
 sw_globSourceTree(MODULE_HOST_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 
 if(SW_SHIPPING_BUILD)
-	sw_excludeUnbuiltSources(MODULE_HOST_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
+	sw_removeExcludedSources(MODULE_HOST_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 	set(swModuleManagerLibType STATIC)
 else()
 	set(swModuleManagerLibType SHARED)
 endif()
 
 add_library(ModuleManager ${swModuleManagerLibType} ${MODULE_HOST_SOURCES})
-sw_applyTargetLayerGate(ModuleManager modulemanager)
+sw_applyTargetLayerGuard(ModuleManager modulemanager)
 set_target_properties(ModuleManager PROPERTIES FOLDER "Source/ModuleManager")
 target_link_libraries(ModuleManager
 	PUBLIC

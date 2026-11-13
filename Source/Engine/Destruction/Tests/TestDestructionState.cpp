@@ -105,14 +105,14 @@ namespace
         }
 
         /** @brief 꾸민 스냅샷의 그룹 하나입니다. 활성 노드는 앞 노드와의 간격으로 씁니다. */
-        struct ForgedGroup
+        struct CraftedGroup
         {
             uint32         _id;
             vector<uint64> _listNodeStep;
         };
 
         /** @brief 끊김 없음 · 변형 없음에 그룹만 정해 쓴 스냅샷입니다. 첫 값은 `writeSnapshot` 과 같은 순서입니다. */
-        static vector<uint8> forgeSnapshot( const FractureGraph& graph, uint32 nextGroupID, const vector<ForgedGroup>& listGroup, float32 nodeStrain = 0.0f )
+        static vector<uint8> forgeSnapshot( const FractureGraph& graph, uint32 nextGroupID, const vector<CraftedGroup>& listGroup, float32 nodeStrain = 0.0f )
         {
             BitWriter writer;
             writer.writeUint32( FourCCUtil::make( "SWDS" ) );
@@ -134,7 +134,7 @@ namespace
             }
             writer.writeVarUint( 0 );
             writer.writeVarUint( listGroup.size() );
-            for ( const ForgedGroup& group : listGroup )
+            for ( const CraftedGroup& group : listGroup )
             {
                 writer.writeVarUint( group._id );
                 writer.writeVarUint( 0 );

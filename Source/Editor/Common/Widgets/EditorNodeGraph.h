@@ -219,7 +219,7 @@ namespace sw::editor
         /** @brief 캔버스를 열어도 되는 크기인지 확인합니다. 한 변이라도 `kMinCanvasExtent` 보다 작으면 false 입니다. */
         static bool isCanvasRegionUsable( const float2& available ) { return available._x >= kMinCanvasExtent && available._y >= kMinCanvasExtent; }
         /** @brief 뷰 맞추기를 해도 되는 크기인지 확인합니다. 0 이 아니고 앞 프레임과 같아야 합니다. */
-        static bool isCanvasSizeSettled( const float2& previousSize, const float2& currentSize )
+        static bool isCanvasSizeStable( const float2& previousSize, const float2& currentSize )
         {
             return currentSize._x > 0.0f && currentSize._y > 0.0f && previousSize._x == currentSize._x && previousSize._y == currentSize._y;
         }

@@ -91,7 +91,7 @@ namespace sw
         /** @brief 키 바인딩 행의 글리프를 지금 입력 방식으로 다시 씁니다(바뀐 것만). */
         void refreshGlyphs();
         /** @brief 다시 시작 알림 줄을 `isRestartRequired` 에 맞춥니다. */
-        void refreshRestartNotice();
+        void refreshRestartNotification();
         /** @brief 확인 창을 엽니다(이미 열려 있으면 그대로 둡니다). 무효 핸들이면 열지 못한 것입니다. */
         void openUnsavedPrompt();
         /** @brief 이 메뉴가 연 확인 창이 아직 떠 있으면 true 입니다. */

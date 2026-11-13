@@ -210,8 +210,8 @@ namespace sw
         vector<GuildMember> _listMember{}; ///< 상한은 `GuildLimit::kMaxMember` 와 같다
         PROPERTY( MaxCount = GuildLimit::kMaxNameSize )
         string _name{}; ///< 상한은 `GuildLimit::kMaxNameSize` 와 같다
-        PROPERTY( MaxCount = GuildLimit::kMaxNoticeSize )
-        string _notice{}; ///< 상한은 `GuildLimit::kMaxNoticeSize` 와 같다
+        PROPERTY( MaxCount = GuildLimit::kMaxAnnouncementSize )
+        string _notice{}; ///< 상한은 `GuildLimit::kMaxAnnouncementSize` 와 같다
         PROPERTY()
         uint64 _guildID{ 0 };
         PROPERTY()
@@ -270,7 +270,7 @@ namespace sw
         static constexpr int32 kMaxStorageItem        = 128; ///< 창고 목록 응답의 자산 수 상한이다(공용 창고와 맡긴 사람별 몫을 합친 수)
         static constexpr int32 kMaxMember             = 100;
         static constexpr int32 kMaxNameSize           = 24;                               ///< UTF-8 바이트 수이다
-        static constexpr int32 kMaxNoticeSize         = 256;                              ///< UTF-8 바이트 수이다
+        static constexpr int32 kMaxAnnouncementSize   = 256;                              ///< UTF-8 바이트 수이다
         static constexpr int64 kInviteLifetimeMs      = 604800000;                        ///< 7일이다
         static constexpr int64 kApplicationLifetimeMs = 604800000;                        ///< 가입 신청이 남는 기간이며 7일이다
         static constexpr int32 kMaxApplication        = 50;                               ///< 길드 하나가 쌓아 두는 살아 있는 신청 수이다

@@ -268,7 +268,7 @@ namespace sw
         , _deferredRegistrationDepth{ 0 }
         , _listDeferredRegister{}
         , _listDeferredPostLoad{}
-        , _pumpBatch{}
+        , _pollBatch{}
     {
         // 기능 서비스는 기능 폴더가 정적 초기화에서 올린 줄로 만든다 — 코어는 그 타입을 모른다(`ISceneService.h`). 씬 범위가 소유하고 의존 순서로 세운다.
         const vector<const SceneServiceRegistration*>& listRegistration = SceneServiceRegistry::getAll();
@@ -1133,15 +1133,15 @@ namespace sw
     bool GameObjectManager::processQueuedRegistration( uint32 maxCount )
     {
         // 묶음을 꺼내 들고 부른다 — 훅이 프리팹을 지으면 이 함수가 다시 불리는데, 그 안쪽 미루기는 제 묶음만 끝내야 한다.
-        DeferredRegistrationBatch batch = std::move( _pumpBatch );
-        _pumpBatch                      = DeferredRegistrationBatch{};
+        DeferredRegistrationBatch batch = std::move( _pollBatch );
+        _pollBatch                      = DeferredRegistrationBatch{};
         batch._listRegister.insert( batch._listRegister.end(), _listDeferredRegister.begin(), _listDeferredRegister.end() );
         batch._listPostLoad.insert( batch._listPostLoad.end(), _listDeferredPostLoad.begin(), _listDeferredPostLoad.end() );
         _listDeferredRegister.clear();
         _listDeferredPostLoad.clear();
         if ( batch.pump( *this, maxCount ) )
             return true;
-        _pumpBatch = std::move( batch );
+        _pollBatch = std::move( batch );
         return false;
     }
 

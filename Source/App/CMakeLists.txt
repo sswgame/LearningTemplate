@@ -9,7 +9,7 @@ sw_globSourceTree(APP_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 # 1) App — 플레이어 실행 파일(창 · 렌더러). 전용 서버 타깃은 짓지 않는다.
 # ------------------------------------------------------------------------------
 if(SW_TARGET_TYPE STREQUAL "Server")
-	sw_declareUnbuiltSources(${APP_SOURCES})
+	sw_declareExcludedSources(${APP_SOURCES})
 	return()
 endif()
 
@@ -17,11 +17,11 @@ set(swAppDir "${CMAKE_CURRENT_SOURCE_DIR}")
 # 개발 전용 소스(`Tests/` · `Dev/`)는 다른 타깃과 같은 규칙으로 뺀다(`SW_DEV_ONLY_SOURCE_PATTERNS`). 에디터 모듈의 개발 경로는 `EditorModuleManager.cpp` 안의 `#if` 구역이다.
 # 부르는 자리는 `build::kShipping` 으로 가르고 배포에서는 이유를 남기고 멈춘다.
 if(SW_SHIPPING_BUILD)
-	sw_excludeUnbuiltSources(APP_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
+	sw_removeExcludedSources(APP_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
 
 sw_addExecutable(App ${APP_SOURCES})
-sw_applyTargetLayerGate(App app)
+sw_applyTargetLayerGuard(App app)
 if(WIN32)
 	# 실행 파일 아이콘(.rc). RC 컴파일러는 DetectToolchain 이 llvm-rc 로 정해 둔다. 리눅스에는 RC 가 없어 WIN32 안에서만 켠다.
 	enable_language(RC)

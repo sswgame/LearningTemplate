@@ -2,7 +2,7 @@
  * @file Engine/Presentation/IUILayerVisibility.h
  * @brief 게임 창 위 UI 레이어를 숨겨 달라고 거는 창구입니다 — 포토 모드처럼 "UI 없이 보기" 를 거는 게임 코드가 UI 시스템을 모르고 겁니다.
  * @details 구현은 `UISystem` 이고, 없으면(전용 서버 · UI 를 넣지 않은 하네스) 칸이 비어 가릴 화면도 없다. 언리얼 `AHUD::bShowHUD` · Godot `CanvasLayer.visible` 자리입니다(기억).
- *          서비스 칸의 정의는 이 폴더에 있어 UI 폴더를 짓지 않는 구성에서도 칸을 읽는 쪽이 링크됩니다(`IInputCaptureQuery` · `IPlayerNoticeSink` 와 같은 모양).
+ *          서비스 칸의 정의는 이 폴더에 있어 UI 폴더를 짓지 않는 구성에서도 칸을 읽는 쪽이 링크됩니다(`IInputCaptureQuery` · `IPlayerNotificationSink` 와 같은 모양).
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

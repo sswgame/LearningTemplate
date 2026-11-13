@@ -6,7 +6,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/SaveGate.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
 
 // AutosaveTest — 자동 저장 정책(순환 슬롯 · 요청 합치기 · 최소 간격 · 막기 문 · 종료 · 체크포인트 되돌리기 · 깨진 복원). 슬롯은 메모리 로컬 저장소에 쓴다(nogpu, 디스크 없음).
 
@@ -20,7 +20,7 @@ namespace
     {
         sw::vector<sw::string>                        _listSavedState{};
         sw::string                                    _loadedState{};
-        sw::SaveGate                                  _saveGate{};
+        sw::SaveLock                                  _saveLock{};
         sw::Subscription                              _brokenRestoreBlock{};
         sw::vector<uint8>                             _deferredBytes{};
         sw::AutosaveManager::RestoreCompletedFunction _deferredCompleted{};
@@ -65,7 +65,7 @@ namespace
         {
             if ( _bBreakRestore == SW_TRUE )
             {
-                _brokenRestoreBlock = _saveGate.block( sw::hashed_string( "restore.broken" ) );
+                _brokenRestoreBlock = _saveLock.block( sw::hashed_string( "restore.broken" ) );
                 return false;
             }
             _brokenRestoreBlock.reset();
@@ -114,7 +114,7 @@ SW_TEST_CASE( AutosaveTest, RotatesSlotsAndContinuesAcrossRuns )
     {
         sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
         sw::AutosaveManager                manager;
-        SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
+        SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
         SW_EXPECT_TRUE( manager.isScanning() );
         store->update();
         SW_REQUIRE_FALSE( manager.isScanning() );
@@ -132,7 +132,7 @@ SW_TEST_CASE( AutosaveTest, RotatesSlotsAndContinuesAcrossRuns )
 
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     sw::AutosaveManager                next;
-    SW_REQUIRE_TRUE( next.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( next.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
     store->update();
     SW_REQUIRE_TRUE( next.findLatestSlot() != nullptr );
     SW_EXPECT_EQUAL( uint64( 4 ), next.findLatestSlot()->_sequence );
@@ -157,7 +157,7 @@ SW_TEST_CASE( AutosaveTest, MergesWaitsAndBlocks )
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     FakeGame                           game;
     sw::AutosaveManager                manager;
-    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
     store->update();
 
     manager.notifyAreaChanged( sw::hashed_string( "forest" ) );
@@ -174,7 +174,7 @@ SW_TEST_CASE( AutosaveTest, MergesWaitsAndBlocks )
     step( manager, *store, 25.0f );
     SW_EXPECT_EQUAL( 2u, manager.getSaveCount() );
 
-    sw::Subscription cinematicBlock = game._saveGate.block( sw::hashed_string( "cinematic" ) );
+    sw::Subscription cinematicBlock = game._saveLock.block( sw::hashed_string( "cinematic" ) );
     manager.notifyBeforeBoss( sw::hashed_string( "dragon" ) );
     step( manager, *store, 60.0f );
     SW_EXPECT_EQUAL( 2u, manager.getSaveCount() );
@@ -199,7 +199,7 @@ SW_TEST_CASE( AutosaveTest, RestoresTheLatestCheckpoint )
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     FakeGame                           game;
     sw::AutosaveManager                manager;
-    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
     store->update();
 
     manager.reachCheckpoint( sw::hashed_string( "gate" ) );
@@ -234,7 +234,7 @@ SW_TEST_CASE( AutosaveTest, FailedWriteLeavesNoStaleSlotInfo )
     {
         sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
         sw::AutosaveManager                manager;
-        SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
+        SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
         store->update();
         database.failNextWrite(); // 상태 슬롯 쓰기가 도중에 꺼진다
         SW_REQUIRE_TRUE( manager.saveNow( sw::AutosaveTrigger::Manual ) );
@@ -245,7 +245,7 @@ SW_TEST_CASE( AutosaveTest, FailedWriteLeavesNoStaleSlotInfo )
     }
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     sw::AutosaveManager                next;
-    SW_REQUIRE_TRUE( next.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( next.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
     store->update();
     SW_EXPECT_TRUE( next.findLatestSlot() == nullptr );
 }
@@ -263,7 +263,7 @@ SW_TEST_CASE( AutosaveTest, FailedRestoreBlocksSaving )
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     FakeGame                           game;
     sw::AutosaveManager                manager;
-    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
     store->update();
     SW_REQUIRE_TRUE( manager.saveNow( sw::AutosaveTrigger::Manual ) );
     store->update();
@@ -304,7 +304,7 @@ SW_TEST_CASE( AutosaveTest, DeferredRestoreMarksCheckpointOnCompletion )
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     FakeGame                           game;
     sw::AutosaveManager                manager;
-    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveGate, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
     store->update();
     manager.reachCheckpoint( sw::hashed_string( "gate" ) );
     step( manager, *store, 1.0f );

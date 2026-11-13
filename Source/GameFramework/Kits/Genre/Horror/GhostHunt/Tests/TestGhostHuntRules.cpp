@@ -50,7 +50,7 @@ namespace
     constexpr float32 kGhostTolerance = 1.0e-3f;
 
     /** @brief 싸움의 상태 바이트를 손으로 씁니다. 기본값은 숨은 유령 하나인 정상 상태입니다. */
-    struct GhostForgedEncounter
+    struct GhostFixtureEncounter
     {
         hashed_string _kind{ "goob" };
         float3        _flee{};
@@ -97,7 +97,7 @@ namespace
     };
 
     /** @brief 부 하나의 상태 바이트입니다. 기본값은 가구에 숨은 `booA` 입니다. */
-    struct GhostForgedBoo
+    struct GhostFixtureBoo
     {
         hashed_string _room{ "foyer" };
         hashed_string _furniture{ "dresser" };
@@ -207,7 +207,7 @@ namespace
         }
 
         /** @brief 저택의 상태 바이트를 손으로 쓴 뒤 읽습니다. 싸움은 지금 것을 그대로 싣습니다. */
-        bool readForged( const GhostForgedBoo& boo, const hashed_string& currentRoom, uint32 booCount = 2u, uint32 searchedCount = 3u, uint8 searched = SW_FALSE )
+        bool readForged( const GhostFixtureBoo& boo, const hashed_string& currentRoom, uint32 booCount = 2u, uint32 searchedCount = 3u, uint8 searched = SW_FALSE )
         {
             Archive written;
             _mansion.getEncounter().writeState( written );
@@ -217,7 +217,7 @@ namespace
             boo.write( written );
             for ( uint32 index = 1; index < booCount; ++index )
             {
-                GhostForgedBoo other;
+                GhostFixtureBoo other;
                 other._room      = "hall";
                 other._furniture = hashed_string{};
                 other._hp        = 10.0f;
@@ -677,12 +677,12 @@ SW_TEST_CASE_F( GhostHuntTest, EncounterStateRoundTrip )
  */
 SW_TEST_CASE_F( GhostHuntTest, EncounterReadRefusesForgedBytes )
 {
-    GhostForgedEncounter good;
+    GhostFixtureEncounter good;
     SW_REQUIRE_TRUE( good.read( _encounter ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 1, _encounter.countRemaining() );
 
-    GhostForgedEncounter forged = good;
-    forged._kind                = "nobody";
+    GhostFixtureEncounter forged = good;
+    forged._kind                 = "nobody";
     SW_EXPECT_FALSE( forged.read( _encounter ) );
 
     forged     = good;
@@ -1009,7 +1009,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, MansionStateRoundTrip )
  */
 SW_TEST_CASE_F( GhostHuntRulesTest, MansionReadRefusesForgedBytes )
 {
-    const GhostForgedBoo good;
+    const GhostFixtureBoo good;
     SW_REQUIRE_TRUE( readForged( good, "foyer" ) ); // 형식은 맞다
     SW_EXPECT_TRUE( _mansion.getCurrentRoom() == hashed_string( "foyer" ) );
     SW_EXPECT_TRUE( readForged( good, hashed_string{} ) ); // 아직 방에 들어가지 않았다
@@ -1017,8 +1017,8 @@ SW_TEST_CASE_F( GhostHuntRulesTest, MansionReadRefusesForgedBytes )
 
     SW_EXPECT_FALSE( readForged( good, "nowhere" ) );
 
-    GhostForgedBoo forged = good;
-    forged._hp            = 31.0f;
+    GhostFixtureBoo forged = good;
+    forged._hp             = 31.0f;
     SW_EXPECT_FALSE( readForged( forged, "foyer" ) );
     forged._hp = -1.0f;
     SW_EXPECT_FALSE( readForged( forged, "foyer" ) );

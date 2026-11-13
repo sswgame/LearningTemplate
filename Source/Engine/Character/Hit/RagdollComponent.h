@@ -114,7 +114,7 @@ namespace sw
         void startPartialRagdoll( float32 weight );
         /** @brief 부분 래그돌을 끝내고 `_blendBackSeconds` 동안 애니메이션으로 섞어 돌아갑니다. */
         void stopPartialRagdoll();
-        /** @brief 바디가 가라앉았는지입니다(래그돌 상태에서 모든 바디가 `_settleSpeed` 보다 느리게 `_settleSeconds` 동안). */
+        /** @brief 바디가 가라앉았는지입니다(래그돌 상태에서 모든 바디가 `_sleepSpeed` 보다 느리게 `_settleSeconds` 동안). */
         bool isSettled() const { return _bSettled; }
         /** @brief 치명 표시가 달린 맞음(`HitInfo::_bFatal`)에서 래그돌로 넘어가는지입니다. 쓰러짐을 치명 신호로 넘기는 쪽(체력 원천)이 데이터를 확인할 때 씁니다. */
         bool isRagdollOnFatalHit() const { return _bRagdollOnFatalHit; }
@@ -186,7 +186,7 @@ namespace sw
         PROPERTY( Category = "Ragdoll", DisplayName = "Blend Back Seconds", Min = 0.0, Max = 3.0, Units = s )
         float32 _blendBackSeconds;
         PROPERTY( Category = "Ragdoll", DisplayName = "Settle Speed", Min = 0.0, Tooltip = "Bodies slower than this count as resting", Units = "m/s" )
-        float32 _settleSpeed;
+        float32 _sleepSpeed;
         PROPERTY( Category = "Ragdoll", DisplayName = "Settle Seconds", Min = 0.0, Units = s )
         float32 _settleSeconds;
         PROPERTY( Category = "Hit Reaction", DisplayName = "Reaction Seconds", Min = 0.0, Max = 3.0, Units = s )

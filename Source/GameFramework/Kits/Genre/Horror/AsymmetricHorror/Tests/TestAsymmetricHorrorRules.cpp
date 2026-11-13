@@ -15,7 +15,7 @@
 #include <cstring>
 
 // 비대칭 공포 키트의 규칙: 카탈로그, 공격과 빈사, 들기와 갈고리, 치료, 발전기와 스킬 체크, 판자, 창틀, 사물함, 탈출구와 해치, 결과, 상태 왕복과 꾸민 바이트 거절. 키트 GF_AsymmetricHorror(nogpu).
-// 꾸민 바이트는 `writeState` 의 정상 바이트에서 칸 하나만 바꿔 넣는다. 칸의 자리는 `AsymmetricForgedBytes` 가 형식대로 세고, 정상 값을 먼저 읽어 자리가 맞는지 본다.
+// 꾸민 바이트는 `writeState` 의 정상 바이트에서 칸 하나만 바꿔 넣는다. 칸의 자리는 `AsymmetricFixtureBytes` 가 형식대로 세고, 정상 값을 먼저 읽어 자리가 맞는지 본다.
 
 using namespace sw;
 
@@ -72,14 +72,14 @@ namespace
     };
 
     /** @brief 정상 상태 바이트입니다. 칸 하나를 바꿔 읽어 봅니다. */
-    struct AsymmetricForgedBytes
+    struct AsymmetricFixtureBytes
     {
         // 살인마 칸의 뒤에서부터의 자리이다(점수가 비어 있을 때, 칸 전체 69 바이트).
         static constexpr size_t kKillerBytes = 69;
         vector<uint8>           _listByte{};
         size_t                  _stageBase{ 0 }; ///< 판 다음의 완료 수 자리이다
 
-        explicit AsymmetricForgedBytes( const AsymmetricHorrorMatch& match )
+        explicit AsymmetricFixtureBytes( const AsymmetricHorrorMatch& match )
         {
             Archive written;
             match.writeState( written );
@@ -1326,9 +1326,9 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, ReadRefusesForgedBytes )
     SW_REQUIRE_TRUE( _match.addGate( float3{} ) == 0 );
     _match.start();
 
-    const AsymmetricForgedBytes forged( _match );
-    const size_t                size = forged.getSize();
-    const size_t                base = forged._stageBase;
+    const AsymmetricFixtureBytes forged( _match );
+    const size_t                 size = forged.getSize();
+    const size_t                 base = forged._stageBase;
 
     // 자리가 맞는지 정상 값으로 본다.
     SW_REQUIRE_EQUAL( 0, forged.readAt<int32>( base ) );

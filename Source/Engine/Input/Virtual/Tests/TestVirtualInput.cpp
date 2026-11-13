@@ -270,7 +270,7 @@ SW_TEST_CASE( InputReplayTest, BrokenFilesAreRefused )
     vector<uint8> nanDelta  = good;
     Memory::copy( nanDelta.data() + 20, &nanBits, sizeof( nanBits ) );
     refuses( nanDelta );
-    vector<uint8> forgedEvents = good;
-    Memory::copy( forgedEvents.data() + 24, &hugeEvent, sizeof( hugeEvent ) );
-    refuses( forgedEvents );
+    vector<uint8> craftedEvents = good;
+    Memory::copy( craftedEvents.data() + 24, &hugeEvent, sizeof( hugeEvent ) );
+    refuses( craftedEvents );
 }

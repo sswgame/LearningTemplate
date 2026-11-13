@@ -91,7 +91,7 @@ namespace sw
         , _getUpExitState{}
         , _flinchClip{}
         , _blendBackSeconds{ 0.5f }
-        , _settleSpeed{ 0.15f }
+        , _sleepSpeed{ 0.15f }
         , _settleSeconds{ 0.5f }
         , _hitReactionSeconds{ 0.35f }
         , _hitReactionWeight{ 0.6f }
@@ -802,7 +802,7 @@ namespace sw
         {
             maxSpeed = MathUtil::max( maxSpeed, pScene->getLinearVelocity( body ).getLength() );
         }
-        _settleElapsed = maxSpeed < _settleSpeed ? _settleElapsed + _lastDeltaSeconds : 0.0f;
+        _settleElapsed = maxSpeed < _sleepSpeed ? _settleElapsed + _lastDeltaSeconds : 0.0f;
         _bSettled      = _settleElapsed >= _settleSeconds;
         if ( _bSettled && _bAutoGetUp )
             (void)getUp();

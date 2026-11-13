@@ -73,7 +73,7 @@ namespace sw
 namespace sw
 {
     /** @brief 서버가 돌려준 거절 하나입니다(`RemoteCallClient::pollRejections`). */
-    struct RemoteCallRejectNotice
+    struct RemoteCallRejectNotification
     {
         uint32          _sequence{ 0 }; ///< `callServer` 가 돌려준 순번
         RemoteCallError _error{ RemoteCallError::UnknownTarget };
@@ -218,17 +218,17 @@ namespace sw
         NetHandleResult receive( NetRemoteCallMessage::Rejected, const NetMessageContext& context, BitReader& body );
 
         /** @brief 쌓인 거절 알림을 @p outListNotice 뒤에 옮깁니다. */
-        void   pollRejections( vector<RemoteCallRejectNotice>& outListNotice );
+        void   pollRejections( vector<RemoteCallRejectNotification>& outListNotice );
         uint64 getInvokedCount() const { return _invokedCount; }
 
     private:
-        RemoteCallTargets                   _targets;
-        EventBuffer<RemoteCallRejectNotice> _rejections;
-        NetMessageWriter                    _messageWriter;
-        vector<string>                      _listReceivedScratch; ///< 받은 호출의 인자 글. 함수 몸이 다시 보내도(`callSession` · `callServer`) 덮이지 않게 보내기와 따로 둔다
-        vector<string>                      _listSendScratch;
-        INetPeers*                          _pPeers;
-        uint64                              _invokedCount;
-        uint32                              _nextSequence;
+        RemoteCallTargets                         _targets;
+        EventBuffer<RemoteCallRejectNotification> _rejections;
+        NetMessageWriter                          _messageWriter;
+        vector<string>                            _listReceivedScratch; ///< 받은 호출의 인자 글. 함수 몸이 다시 보내도(`callSession` · `callServer`) 덮이지 않게 보내기와 따로 둔다
+        vector<string>                            _listSendScratch;
+        INetPeers*                                _pPeers;
+        uint64                                    _invokedCount;
+        uint32                                    _nextSequence;
     };
 } // namespace sw

@@ -72,7 +72,7 @@ namespace sw
          */
         [[nodiscard]] static expected<void> validateDesktopSteps( const AutomationScenario& scenario );
         /**
-         * @brief 같은 파일을 두 번 찍는 `<Screenshot>` 을 거절합니다. `<ExpectImage>` 는 시나리오 끝에서 판정하므로(`AutomationJudge::deferExpectImage`)
+         * @brief 같은 파일을 두 번 찍는 `<Screenshot>` 을 거절합니다. `<ExpectImage>` 는 시나리오 끝에서 판정하므로(`AutomationEvaluator::deferExpectImage`)
          *        앞 사진을 덮으면 앞 단언이 뒤 그림을 본다.
          */
         [[nodiscard]] static expected<void> validateScreenshotFiles( const AutomationScenario& scenario );

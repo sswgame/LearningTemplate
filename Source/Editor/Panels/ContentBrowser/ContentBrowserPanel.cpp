@@ -1199,8 +1199,8 @@ namespace sw::editor
 
             if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )
             {
-                vector<ContentBrowserCrumb> listCrumb;
-                ContentBrowserCrumb::makeFavoriteTrail( kArrFavorites[favIdx]._pLabel, fullFavPath, listCrumb );
+                vector<ContentBrowserBreadcrumb> listCrumb;
+                ContentBrowserBreadcrumb::makeFavoriteTrail( kArrFavorites[favIdx]._pLabel, fullFavPath, listCrumb );
                 _model.selectFolder( fullFavPath, listCrumb );
             }
         }
@@ -1316,7 +1316,7 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawBreadcrumbs()
     {
-        const vector<ContentBrowserCrumb>& listCrumb = _model.getCrumbs();
+        const vector<ContentBrowserBreadcrumb>& listCrumb = _model.getBreadcrumbs();
         if ( listCrumb.empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorContentBrowser", "SelectFolder" ) );
@@ -1325,18 +1325,18 @@ namespace sw::editor
 
         // 조각마다 절대 경로를 가진다. 누르면 그 조각까지의 브레드크럼 경로와 함께 그 폴더로 이동한다. 경로가 비어 있는 조각("Favorites")은 누를 수 없다.
         size_t clickedIndex = listCrumb.size();
-        for ( size_t crumbIndex = 0; crumbIndex < listCrumb.size(); ++crumbIndex )
+        for ( size_t breadcrumbIndex = 0; breadcrumbIndex < listCrumb.size(); ++breadcrumbIndex )
         {
-            const ContentBrowserCrumb& crumb = listCrumb[crumbIndex];
-            if ( crumbIndex > 0 )
+            const ContentBrowserBreadcrumb& crumb = listCrumb[breadcrumbIndex];
+            if ( breadcrumbIndex > 0 )
             {
                 ImGui::SameLine();
                 ImGui::TextUnformatted( "/" );
                 ImGui::SameLine();
             }
 
-            ImGui::PushID( static_cast<int32>( crumbIndex ) );
-            const bool bIsLast = ( crumbIndex + 1 == listCrumb.size() );
+            ImGui::PushID( static_cast<int32>( breadcrumbIndex ) );
+            const bool bIsLast = ( breadcrumbIndex + 1 == listCrumb.size() );
             if ( bIsLast )
             {
                 const Color accentColor = SW_THEME_COLOR( "Base", "Accent" );
@@ -1350,13 +1350,13 @@ namespace sw::editor
             }
             else if ( ImGui::SmallButton( crumb._label.c_str() ) )
             {
-                clickedIndex = crumbIndex;
+                clickedIndex = breadcrumbIndex;
             }
             ImGui::PopID();
         }
 
         if ( clickedIndex < listCrumb.size() )
-            _model.selectCrumb( clickedIndex ); // 그리기가 끝난 뒤라 listCrumb 가 바뀌어도 된다
+            _model.selectBreadcrumb( clickedIndex ); // 그리기가 끝난 뒤라 listCrumb 가 바뀌어도 된다
     }
 
     void ContentBrowserPanel::drawTilesView( const vector<const AssetEntry*>& listVisible )

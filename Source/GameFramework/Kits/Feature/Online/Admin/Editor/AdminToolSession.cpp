@@ -193,30 +193,30 @@ namespace sw::editor
         send( AdminMethod::ClearMaintenance::kID, request, NetIdempotencyKey::makeRandom() );
     }
 
-    void AdminToolSession::requestPostNotice( uint64 noticeID, string_view text, int32 priority, int64 durationSeconds, string_view memo )
+    void AdminToolSession::requestPostAnnouncement( uint64 announcementID, string_view text, int32 priority, int64 durationSeconds, string_view memo )
     {
         const int64  nowMs = WallClock::nowUnixMilliseconds().count();
         AdminRequest request;
-        request._noticeID     = noticeID;
-        request._body         = string( text );
-        request._priority     = priority;
-        request._bLiteralText = SW_TRUE;
-        request._startMs      = nowMs;
-        request._memo         = string( memo );
+        request._announcementID = announcementID;
+        request._body           = string( text );
+        request._priority       = priority;
+        request._bLiteralText   = SW_TRUE;
+        request._startMs        = nowMs;
+        request._memo           = string( memo );
         if ( AdminToolModel::tryMakeEndMs( nowMs, durationSeconds, request._endMs ) == false )
         {
-            rejectLocally( AdminMethod::PostNotice::kID );
+            rejectLocally( AdminMethod::PostAnnouncement::kID );
             return;
         }
-        send( AdminMethod::PostNotice::kID, request, NetIdempotencyKey::makeRandom() );
+        send( AdminMethod::PostAnnouncement::kID, request, NetIdempotencyKey::makeRandom() );
     }
 
-    void AdminToolSession::requestRemoveNotice( uint64 noticeID, string_view memo )
+    void AdminToolSession::requestRemoveAnnouncement( uint64 announcementID, string_view memo )
     {
         AdminRequest request;
-        request._noticeID = noticeID;
-        request._memo     = string( memo );
-        send( AdminMethod::RemoveNotice::kID, request, NetIdempotencyKey::makeRandom() );
+        request._announcementID = announcementID;
+        request._memo           = string( memo );
+        send( AdminMethod::RemoveAnnouncement::kID, request, NetIdempotencyKey::makeRandom() );
     }
 
     void AdminToolSession::requestLiveEvents()

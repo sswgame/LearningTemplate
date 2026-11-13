@@ -21,7 +21,7 @@ namespace sw
              * @brief 빈 씬으로 바꾼 뒤 재기 전에 기다리는 프레임 수입니다 — 옛 씬의 마지막 패킷이 렌더 큐를 지나고(쌓이는 패킷 수 = 링 칸 수 − 1)
              *        GPU 가 그 프레임을 끝내 펜스 해제가 도는 수다(앞서가기 상한 = 프레임 인 플라이트 수).
              */
-            static constexpr uint32 kSettleFrames = ( constant::render::kRenderFrameQueueDepth - 1u ) + constant::render::kMaxFrameCountInFlight;
+            static constexpr uint32 kStabilityFrames = ( constant::render::kRenderFrameQueueDepth - 1u ) + constant::render::kMaxFrameCountInFlight;
         };
     } // namespace
 
@@ -30,7 +30,7 @@ namespace sw
         , _scenePath{}
         , _totalRounds{ 0 }
         , _round{ 0 }
-        , _settleFrames{ 0 }
+        , _stabilityFrames{ 0 }
         , _controlBytes{ 0 }
         , _controlBlocks{ 0 }
         , _sumBytes{ 0 }
@@ -76,8 +76,8 @@ namespace sw
         _listPoint.clear();
         _result = LeakCurveResult{};
         SW_LOG_INFO_ID( "SceneLoadLeakProbe.SceneLeakProbeControl", "Scene leak probe: '%#', 1 control round + %# warmup + %# measured rounds", _scenePath, LeakCurveCriteria::kDefaultWarmupRounds, measuredRounds );
-        _phase        = Phase::Settling; // `update` 의 첫 호출이 대조 회차를 연다
-        _settleFrames = SceneLoadLeakProbeInternal::kSettleFrames;
+        _phase           = Phase::Settling; // `update` 의 첫 호출이 대조 회차를 연다
+        _stabilityFrames = SceneLoadLeakProbeInternal::kStabilityFrames;
         return true;
     }
 
@@ -101,13 +101,13 @@ namespace sw
                     break;
                 }
                 manager.createEmptyActiveScene( SceneLoadLeakProbeInternal::kEmptySceneName );
-                _settleFrames = 0;
-                _phase        = Phase::Settling;
+                _stabilityFrames = 0;
+                _phase           = Phase::Settling;
                 break;
             }
             case Phase::Settling:
             {
-                if ( ++_settleFrames < SceneLoadLeakProbeInternal::kSettleFrames )
+                if ( ++_stabilityFrames < SceneLoadLeakProbeInternal::kStabilityFrames )
                     break;
                 // 처음 호출(`start` 직후)은 아직 열린 창이 없어 회차를 연다. 그 뒤에는 열린 창을 닫는다.
                 MemoryProfiler* pProfiler = engine::findSubsystem<MemoryProfiler>();
@@ -129,7 +129,7 @@ namespace sw
     {
         MemoryProfiler* pProfiler = engine::findSubsystem<MemoryProfiler>();
         pProfiler->getLeakWindow().open( LeakWindowDetail::TagTotals );
-        _settleFrames = 0;
+        _stabilityFrames = 0;
         if ( _round == 0 )
         {
             // 대조 회차: 로드 없이 빈 씬만 만든다. 이 양이 로드 회차마다 들어 있는 빈 씬 몫이다.
@@ -177,8 +177,8 @@ namespace sw
             return;
         }
         ++_round;
-        _settleFrames = SceneLoadLeakProbeInternal::kSettleFrames; // 다음 프레임에 `update` 가 회차를 연다(열린 창이 없으니 `beginRound` 로 간다)
-        _phase        = Phase::Settling;
+        _stabilityFrames = SceneLoadLeakProbeInternal::kStabilityFrames; // 다음 프레임에 `update` 가 회차를 연다(열린 창이 없으니 `beginRound` 로 간다)
+        _phase           = Phase::Settling;
     }
 
     void SceneLoadLeakProbe::finish()

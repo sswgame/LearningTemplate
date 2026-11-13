@@ -88,7 +88,7 @@ namespace sw
         , _nowMs{ 0 }
         , _sweepJob{}
         , _campaignJob{}
-        , _noticeJob{}
+        , _notificationJob{}
     {
     }
 
@@ -113,7 +113,7 @@ namespace sw
         _settings = settings;
         _sweepJob.setPeriod( settings._pScheduler == nullptr ? settings._sweepIntervalMs : 0 ); // 예약 테이블이 있으면 회차가 부른다
         _campaignJob.setPeriod( settings._campaignRefreshMs );
-        _noticeJob.setPeriod( settings._noticeIntervalMs ); // 0 이면 알림을 보내지 않는다
+        _notificationJob.setPeriod( settings._notificationIntervalMs ); // 0 이면 알림을 보내지 않는다
         _presenceFinds.bind( settings._pPresence );
         initializeCalls( settings._pMetricRegistry, "mailbox" );
         if ( settings._pMetricRegistry != nullptr )
@@ -177,29 +177,29 @@ namespace sw
             }, [this]( const MailboxSweepStats& stats, ServiceStoreCompletion completion )
             { completeSweep( stats, completion ); } );
         }
-        if ( _pHost != nullptr && _noticeJob.tryStart( nowMs ) )
+        if ( _pHost != nullptr && _notificationJob.tryStart( nowMs ) )
         {
-            const int32 batchCount = _settings._noticeBatchCount;
+            const int32 batchCount = _settings._notificationBatchCount;
             _store.submit( [batchCount]( IServiceStoreConnection& connection )
             {
                 ServiceStoreRead<vector<ServiceMailNotification>> read;
-                read._result = ServiceMail::claimNotices( connection, batchCount, read._value );
+                read._result = ServiceMail::claimNotifications( connection, batchCount, read._value );
                 return read;
             }, [this]( ServiceStoreRead<vector<ServiceMailNotification>>& read )
-            { completeNotices( read._result, read._value ); } );
+            { completeNotifications( read._result, read._value ); } );
         }
         _calls.publishPendingCount();
     }
 
-    void MailboxService::completeNotices( ServiceStoreResult result, vector<ServiceMailNotification>& inoutListNotice )
+    void MailboxService::completeNotifications( ServiceStoreResult result, vector<ServiceMailNotification>& inoutListNotice )
     {
-        _noticeJob.finish();
+        _notificationJob.finish();
         if ( result == ServiceStoreResult::Invalid )
             SW_LOG_ERROR_ID( "MailboxService.MailboxServiceNewMailNotice", "MailboxService: a new-mail notice record is corrupt - notices stop until it is fixed" );
         if ( result != ServiceStoreResult::Ok || _pHost == nullptr )
             return; // Conflict 는 다른 서버가 가져갔다. 그 밖은 다음 주기에 다시 한다
-        if ( static_cast<int32>( inoutListNotice.size() ) == _settings._noticeBatchCount )
-            _noticeJob.request(); // 더 있을 수 있으므로 다음 틱에 바로 다시 가져간다
+        if ( static_cast<int32>( inoutListNotice.size() ) == _settings._notificationBatchCount )
+            _notificationJob.request(); // 더 있을 수 있으므로 다음 틱에 바로 다시 가져간다
         for ( ServiceMailNotification& notice : inoutListNotice )
         {
             const AccountID accountID = notice._recipientAccountID;
@@ -217,10 +217,10 @@ namespace sw
 
     void MailboxService::notifyClaimedBalances( AccountID accountID, const MailboxServiceResult& serviceResult, const MailboxClaimReply& reply )
     {
-        const bool bNothingChanged = serviceResult.isFailed() || reply._listBalance.empty() || _settings._pBalanceNotice == nullptr;
+        const bool bNothingChanged = serviceResult.isFailed() || reply._listBalance.empty() || _settings._pBalanceNotification == nullptr;
         if ( bNothingChanged )
             return;
-        _settings._pBalanceNotice->notifyBalancesChanged( accountID, reply._listBalance ); // 지갑은 서버의 잔액 변경 알림으로 맞는다 — 게임이 응답의 잔액을 옮기지 않는다
+        _settings._pBalanceNotification->notifyBalancesChanged( accountID, reply._listBalance ); // 지갑은 서버의 잔액 변경 알림으로 맞는다 — 게임이 응답의 잔액을 옮기지 않는다
     }
 
     void MailboxService::handleMailPresenceResult( const AccountPresenceResult& result, const MailboxNewMail& newMail )
@@ -318,11 +318,11 @@ namespace sw
             if ( _arrExpiredCounter[actionIndex] != nullptr && arrCount[actionIndex] > 0 )
                 _arrExpiredCounter[actionIndex]->add( static_cast<uint64>( arrCount[actionIndex] ) );
         }
-        if ( _settings._pBalanceNotice != nullptr )
+        if ( _settings._pBalanceNotification != nullptr )
         {
             for ( const MailboxBalanceChange& change : stats._listChange )
             {
-                _settings._pBalanceNotice->notifyBalancesChanged( change._accountID, vector<LedgerBalance>{ change._balance } ); // 돌려받은 계정이 접속해 있으면 지갑이 바로 맞는다
+                _settings._pBalanceNotification->notifyBalancesChanged( change._accountID, vector<LedgerBalance>{ change._balance } ); // 돌려받은 계정이 접속해 있으면 지갑이 바로 맞는다
             }
         }
         if ( stats._failedCount > 0 && completion.isCancelled() == false ) // 종료 때문에 취소된 정리는 경고하지 않는다

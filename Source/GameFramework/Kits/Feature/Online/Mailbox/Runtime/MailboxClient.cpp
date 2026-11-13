@@ -10,7 +10,7 @@ namespace sw
 {
     MailboxClient::MailboxClient()
         : _listMail{}
-        , _newMailGate{}
+        , _newMailConsumerLock{}
         , _newMailBuffer{}
         , _revision{ 0 }
     {

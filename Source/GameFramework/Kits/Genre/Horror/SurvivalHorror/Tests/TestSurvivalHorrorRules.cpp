@@ -55,7 +55,7 @@ namespace
     constexpr float32 kHorrorTolerance = 1.0e-3f;
 
     /** @brief 세션의 상태 바이트를 손으로 씁니다. 게이지는 지금 세션의 것을 그대로 싣습니다. 기본값은 정상 상태입니다. */
-    struct SurvivalForgedSession
+    struct SurvivalFixtureSession
     {
         vector<hashed_string>                   _listMonster{};
         vector<hashed_string>                   _listDocument{};
@@ -959,7 +959,7 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, ResetSequenceWritesSameBytesAsUntouched
  */
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionReadRefusesForgedBytes )
 {
-    SurvivalForgedSession good;
+    SurvivalFixtureSession good;
     good._listMonster  = { "zombie" };
     good._listDocument = { "diary" };
     good._listClue     = { "gloves", "knife" };
@@ -975,8 +975,8 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionReadRefusesForgedBytes )
     SW_REQUIRE_TRUE( good.read( _session ) ); // 형식은 맞다
     SW_EXPECT_NEAR( 50.0f, _session.getHealth(), kHorrorTolerance );
 
-    SurvivalForgedSession forged = good;
-    forged._health               = 101.0f;
+    SurvivalFixtureSession forged = good;
+    forged._health                = 101.0f;
     SW_EXPECT_FALSE( forged.read( _session ) );
     forged._health = -1.0f;
     SW_EXPECT_FALSE( forged.read( _session ) );
@@ -1064,7 +1064,7 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionReadRefusesSavesOverLimit )
         rules._saveMode = SurvivalHorrorSaveMode::Limited;
         rules._maxSaves = 2;
     } ) );
-    SurvivalForgedSession forged;
+    SurvivalFixtureSession forged;
     forged._saveCount = 2;
     SW_EXPECT_TRUE( forged.read( _session ) );
     forged._saveCount = 3;
@@ -1344,17 +1344,17 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterReadRefusesForgedBytes )
  */
 SW_TEST_CASE( SurvivalHorrorTest, TurnOrderReadRefusesForgedBytes )
 {
-    struct ForgedActor
+    struct FixtureActor
     {
         float32 _speed{ 1.0f };
         float32 _gauge{ 0.0f };
         int32   _actorID{ 1 };
     };
-    const auto read = []( const vector<ForgedActor>& listActor, const vector<int32>& listQueue, int32 round )
+    const auto read = []( const vector<FixtureActor>& listActor, const vector<int32>& listQueue, int32 round )
     {
         Archive written;
         written << static_cast<uint32>( listActor.size() );
-        for ( const ForgedActor& actor : listActor )
+        for ( const FixtureActor& actor : listActor )
         {
             written << actor._speed;
             written << actor._gauge;
@@ -1375,13 +1375,13 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnOrderReadRefusesForgedBytes )
         TurnOrder order;
         return order.readState( reading );
     };
-    const ForgedActor actor;
+    const FixtureActor actor;
     SW_EXPECT_TRUE( read( { actor }, { 1 }, 1 ) ); // 형식은 맞다
     SW_EXPECT_FALSE( read( { actor, actor }, {}, 1 ) );
     SW_EXPECT_FALSE( read( { actor }, { 2 }, 1 ) );
     SW_EXPECT_FALSE( read( { actor }, {}, -1 ) );
-    ForgedActor forged = actor;
-    forged._speed      = 0.0f;
+    FixtureActor forged = actor;
+    forged._speed       = 0.0f;
     SW_EXPECT_FALSE( read( { forged }, {}, 1 ) );
     forged        = actor;
     forged._gauge = -1.0f;

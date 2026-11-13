@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Event/ConsumerGate.h"
+#include "Core/Event/ConsumerLock.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -101,6 +101,6 @@ namespace sw
     private:
         vector<T>    _listPending;
         vector<T>    _listTaken; ///< `takeAll` 이 돌려준 목록. 복사 · 이동에 따라가지 않는다(지난 꺼냄의 것이다)
-        ConsumerGate _gate;
+        ConsumerLock _gate;
     };
 } // namespace sw

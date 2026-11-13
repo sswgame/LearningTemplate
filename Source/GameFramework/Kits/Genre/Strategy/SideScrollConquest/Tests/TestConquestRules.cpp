@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Event/ConsumerGate.h"
+#include "Core/Event/ConsumerLock.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -85,7 +85,7 @@ namespace
     };
 
     /** @brief 판 상태 바이트를 손으로 씁니다(`kConquestXML` 기준). 초기값은 맞는 상태이고 케이스가 칸 하나를 망칩니다. */
-    struct ConquestForgedWorld
+    struct ConquestFixtureWorld
     {
         sw::hashed_string _firstSiteID{ "home" };
         sw::hashed_string _buildingID{ "mill" };
@@ -238,7 +238,7 @@ namespace
 
         int32 spawn( const sw::hashed_string& unitID, sw::ConquestTeam team, float32 x, sw::ConquestOrder order = sw::ConquestOrder::Hold ) { return _world.spawnUnit( unitID, team, x, order ); }
 
-        bool readForged( const ConquestForgedWorld& forged )
+        bool readForged( const ConquestFixtureWorld& forged )
         {
             sw::Archive written;
             forged.write( written, _catalog );
@@ -769,129 +769,129 @@ SW_TEST_CASE_F( ConquestRulesTest, StateRefusals )
     const sw::ConquestWorld snapshot = _world;
     const auto              refuses  = [this, &snapshot]( auto mutate )
     {
-        ConquestForgedWorld forged;
+        ConquestFixtureWorld forged;
         mutate( forged );
         return readForged( forged ) == false && ConquestTestUtil::isSameState( snapshot, _world );
     };
 
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._firstSiteID = "keep"; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._firstSiteID = "nope"; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._keepGate = -1.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._keepGate = 51.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._keepGate = std::numeric_limits<float32>::quiet_NaN(); } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._keepWall = -1.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._keepWall = 31.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._keepCapture = -1.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._keepCapture = 2.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._keepOwner = 9; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._keepCaptureTeam = 9; } ) );
 
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._buildingID = "nope"; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._queueUnit = "nope"; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._queueUnit = "spear"; } ) ); // 제재소는 훈련하지 않는다
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._cycle = -1.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._train = -1.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._siteIndex = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._siteIndex = 9; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._siteIndex = 2; } ) ); // 적 거점의 건물에 일꾼이 있다
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._workers = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._workers = 4; } ) ); // 슬롯 3
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._buildingCount = 3; } ) ); // 거점 슬롯 2
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     {
         forged._buildingCount = 2;
         forged._workers       = 3; // 일꾼 넷을 넘는다
     } ) );
 
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._unitName = "nope"; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._unitHealth = 0.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._unitHealth = 41.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._unitID = 0; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._unitID = 2; } ) ); // 다음 번호와 겹친다
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._unitCount = 2; } ) ); // 겹친 번호
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._squadSlot = -2; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._team = 0; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._team = 9; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._team = static_cast<uint8>( sw::ConquestTeam::Enemy ); } ) ); // 적의 부대 슬롯
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._order = 9; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._alive = 0; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._alive = 2; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._planted = 2; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._planted = 1; } ) ); // 창병은 사다리가 아니다
 
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._gold = -1.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._commanderHealth = 101.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._commanderHealth = 0.0f; } ) ); // 살아 있는데 체력 0
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._commanderAlive = 0; } ) ); // 쓰러졌는데 체력이 있다
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._commanderAlive = 2; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._moveAxis = 2.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._facing = 0.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._accumulator = -1.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._elapsed = -1.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._incomeTimer = -1.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._waveTimer = -1.0f; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._nextUnitID = 0; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._victory = 2; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     { forged._defeat = 2; } ) );
-    SW_EXPECT_TRUE( refuses( []( ConquestForgedWorld& forged )
+    SW_EXPECT_TRUE( refuses( []( ConquestFixtureWorld& forged )
     {
         forged._victory = 1;
         forged._defeat  = 1;
     } ) );
 
     // 맞는 상태는 읽힌다: 걸친 사다리, 훈련 건물의 대기열.
-    ConquestForgedWorld valid;
+    ConquestFixtureWorld valid;
     valid._buildingID = "barracks";
     valid._queueUnit  = "spear";
     valid._workers    = 0;

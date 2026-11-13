@@ -41,7 +41,7 @@ namespace sw
         GuildLeave,
         GuildKick,
         GuildSetRole,
-        GuildSetNotice,
+        GuildSetAnnouncement,
         GuildGet,
         GuildDeposit,
         GuildWithdraw,
@@ -81,8 +81,8 @@ namespace sw
     struct SocialTextRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = GuildLimit::kMaxNoticeSize )
-        string _text{}; ///< 상한은 가장 긴 공지(`GuildLimit::kMaxNoticeSize`)와 같다
+        PROPERTY( MaxCount = GuildLimit::kMaxAnnouncementSize )
+        string _text{}; ///< 상한은 가장 긴 공지(`GuildLimit::kMaxAnnouncementSize`)와 같다
     };
 
     /** @brief 친구 신청 응답(`RespondFriend`)의 요청입니다. */
@@ -101,7 +101,7 @@ namespace sw
     struct SocialPresenceRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = GuildLimit::kMaxNoticeSize )
+        PROPERTY( MaxCount = GuildLimit::kMaxAnnouncementSize )
         string _text{}; ///< 활동 문구이다. 상한은 로직이 검사한다
         PROPERTY()
         SocialPresenceStatus _status{ SocialPresenceStatus::Offline };
@@ -275,7 +275,7 @@ namespace sw
         using GuildLeave            = Method<MethodName::GuildLeave, OnlineNoBody, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;
         using GuildKick             = Method<MethodName::GuildKick, SocialAccountRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;                    ///< 더 높은 역할만 부를 수 있다
         using GuildSetRole          = Method<MethodName::GuildSetRole, GuildRoleRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;                     ///< 길드장만 부를 수 있다. 역할이 Master 이면 길드장을 넘기는 것이다
-        using GuildSetNotice        = Method<MethodName::GuildSetNotice, SocialTextRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;                  ///< 임원 이상만 부를 수 있다
+        using GuildSetAnnouncement  = Method<MethodName::GuildSetAnnouncement, SocialTextRequest, SocialResultReply, OnlineMethodFlag::RequiresIdempotencyKey>;            ///< 임원 이상만 부를 수 있다
         using GuildGet              = Method<MethodName::GuildGet, OnlineNoBody, GuildInfoReply>;                                                                          ///< 내 길드를 멤버 목록까지 돌려준다
         using GuildDeposit          = Method<MethodName::GuildDeposit, GuildAssetRequest, GuildStorageReply, OnlineMethodFlag::RequiresIdempotencyKey>;                    ///< 내 계정에서 길드 창고로 옮긴다
         using GuildWithdraw         = Method<MethodName::GuildWithdraw, GuildAssetRequest, GuildStorageReply, OnlineMethodFlag::RequiresIdempotencyKey>;                   ///< 길드 창고에서 내 계정으로 옮긴다. 공용 창고는 임원 이상, 맡긴 사람별 몫은 본인이나 허용을 받은 멤버
@@ -300,7 +300,7 @@ namespace sw
      */
     struct SW_KIT_API SocialProtocol
     {
-        using Table        = OnlineProtocolTable<SocialMethod, OnlineMethodList<SocialMethod::RequestFriend, SocialMethod::RequestFriendByName, SocialMethod::RespondFriend, SocialMethod::RemoveFriend, SocialMethod::Block, SocialMethod::Unblock, SocialMethod::ListLinks, SocialMethod::SetPresence, SocialMethod::FriendPresence, SocialMethod::GuildCreate, SocialMethod::GuildInvite, SocialMethod::GuildAccept, SocialMethod::GuildLeave, SocialMethod::GuildKick, SocialMethod::GuildSetRole, SocialMethod::GuildSetNotice, SocialMethod::GuildGet, SocialMethod::GuildDeposit, SocialMethod::GuildWithdraw, SocialMethod::GuildStorage, SocialMethod::GuildSetJoinPolicy, SocialMethod::GuildApply, SocialMethod::GuildApplications, SocialMethod::GuildApprove, SocialMethod::GuildReject, SocialMethod::GuildGrantWithdrawal, SocialMethod::GuildRevokeWithdrawal>, OnlinePushList<SocialMethod::Notification>>;
+        using Table        = OnlineProtocolTable<SocialMethod, OnlineMethodList<SocialMethod::RequestFriend, SocialMethod::RequestFriendByName, SocialMethod::RespondFriend, SocialMethod::RemoveFriend, SocialMethod::Block, SocialMethod::Unblock, SocialMethod::ListLinks, SocialMethod::SetPresence, SocialMethod::FriendPresence, SocialMethod::GuildCreate, SocialMethod::GuildInvite, SocialMethod::GuildAccept, SocialMethod::GuildLeave, SocialMethod::GuildKick, SocialMethod::GuildSetRole, SocialMethod::GuildSetAnnouncement, SocialMethod::GuildGet, SocialMethod::GuildDeposit, SocialMethod::GuildWithdraw, SocialMethod::GuildStorage, SocialMethod::GuildSetJoinPolicy, SocialMethod::GuildApply, SocialMethod::GuildApplications, SocialMethod::GuildApprove, SocialMethod::GuildReject, SocialMethod::GuildGrantWithdrawal, SocialMethod::GuildRevokeWithdrawal>, OnlinePushList<SocialMethod::Notification>>;
         using MessageTypes = Table::MessageTypes;
         using ResultName   = SocialResult;
 

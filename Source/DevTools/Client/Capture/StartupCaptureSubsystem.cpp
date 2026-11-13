@@ -26,9 +26,9 @@ namespace sw
             /** @brief 첫 장까지 최소로 기다리는 프레임 수입니다. 첫 프레임에는 GPUScene 업로드가 아직이라 그릴 것이 없다. */
             static constexpr uint32 kMinWarmupFrames = 10;
             /** @brief 자리 잡음을 기다리는 벽시계 시한(초)입니다. Debug 빌드가 큰 씬을 읽고 셰이더를 처음 만드는 시간보다 넉넉하다. */
-            static constexpr uint32 kSettleTimeoutSeconds = 120;
+            static constexpr uint32 kStabilityTimeoutSeconds = 120;
             /** @brief 같은 시한(마이크로초)입니다 — 단조 시계와 견준다. */
-            static constexpr int64 kSettleTimeoutMicroseconds = static_cast<int64>( kSettleTimeoutSeconds ) * constant::time::kMicrosecondsPerSecond;
+            static constexpr int64 kStabilityTimeoutMicroseconds = static_cast<int64>( kStabilityTimeoutSeconds ) * constant::time::kMicrosecondsPerSecond;
 
             /** @brief 렌더 타깃 목록에서 @p name 인 첨부를 찾습니다. 없으면 false 입니다. */
             static bool findAttachment( string_view name, RenderTargetInfo& outInfo )
@@ -70,7 +70,7 @@ namespace sw
      * @brief `-gv_screenshotSettledFrames=<N>` 입니다. 1 이상이면 `-gv_screenshotFrame` 대신, 화면이 자리 잡은 프레임부터 N 프레임을 이어 센 뒤 찍습니다.
      * @details 자리 잡음은 활성 씬이 플레이를 시작했고 로딩 화면 · 화면 페이드 · 에셋 읽기가 끝난 것이다. 로딩 화면의 최소 표시 시간과 페이드는 실제 시간이라,
      *          프레임이 빠른 기계에서는 고정 프레임 번호가 로딩 화면을 찍는다(골든 이미지). 다 세기 전에 자리 잡음이 풀리면 처음부터 다시 센다.
-     *          시한(`kSettleTimeoutSeconds`) 안에 다 세지 못하면 오류로 적고 찍지 않는다(`-gv_screenshotQuit` 은 `CaptureWriteFailed` 로 끝난다).
+     *          시한(`kStabilityTimeoutSeconds`) 안에 다 세지 못하면 오류로 적고 찍지 않는다(`-gv_screenshotQuit` 은 `CaptureWriteFailed` 로 끝난다).
      *          언리얼 자동화 스크린샷이 로드 · 스트리밍이 끝나기를 기다린 뒤 지연을 두고 찍는 것과 같다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_screenshotSettledFrames, 0, "1 이상이면 화면이 자리 잡은(로딩 화면 · 페이드 · 에셋 읽기 끝) 뒤 이 프레임 수만큼 지나 찍는다 (0=gv_screenshotFrame)" );
@@ -158,17 +158,17 @@ namespace sw
         }
 
         // 첫 장 전에 자리 잡음이 풀리면 처음부터 다시 센다 — N 프레임 내내 자리 잡은 그림을 찍는다. 시한을 넘기면 찍지 않고 실패로 끝낸다.
-        const bool   bCountFromSettled = gv_screenshotSettledFrames > 0;
-        const uint32 firstFrame        = bCountFromSettled                                                                   ? static_cast<uint32>( gv_screenshotSettledFrames )
-                                       : gv_screenshotFrame > static_cast<int32>( StartupCaptureInternal::kMinWarmupFrames ) ? static_cast<uint32>( gv_screenshotFrame )
-                                                                                                                             : StartupCaptureInternal::kMinWarmupFrames;
-        if ( bCountFromSettled && _shotCount == 0u && _frameCounter < firstFrame && isScreenSettled() == false )
+        const bool   bCountFromStable = gv_screenshotSettledFrames > 0;
+        const uint32 firstFrame       = bCountFromStable                                                                    ? static_cast<uint32>( gv_screenshotSettledFrames )
+                                      : gv_screenshotFrame > static_cast<int32>( StartupCaptureInternal::kMinWarmupFrames ) ? static_cast<uint32>( gv_screenshotFrame )
+                                                                                                                            : StartupCaptureInternal::kMinWarmupFrames;
+        if ( bCountFromStable && _shotCount == 0u && _frameCounter < firstFrame && isScreenStable() == false )
         {
             _frameCounter = 0;
-            if ( MonotonicClock::nowMicroseconds() - _waitStartMicroseconds > StartupCaptureInternal::kSettleTimeoutMicroseconds )
+            if ( MonotonicClock::nowMicroseconds() - _waitStartMicroseconds > StartupCaptureInternal::kStabilityTimeoutMicroseconds )
             {
                 SW_LOG_ERROR_ID( "StartupCapture.ScreenNotSettled", "Screenshot was not taken: the screen did not settle within %# s (loading screen, screen fade or asset loads never finished) - %#",
-                                 StartupCaptureInternal::kSettleTimeoutSeconds, gv_screenshot.c_str() );
+                                 StartupCaptureInternal::kStabilityTimeoutSeconds, gv_screenshot.c_str() );
                 _bGameViewFailed = SW_TRUE;
                 finishGameView();
             }
@@ -181,7 +181,7 @@ namespace sw
             requestNextShot( shotTotal );
     }
 
-    bool StartupCaptureSubsystem::isScreenSettled()
+    bool StartupCaptureSubsystem::isScreenStable()
     {
         const SceneManager* const      pSceneManager = engine::findSubsystem<SceneManager>();
         const Scene* const             pActiveScene  = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;

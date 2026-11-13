@@ -191,7 +191,7 @@ namespace
             return listEvent;
         }
 
-        static bool readForgedInvestigation( sw::MonsterHuntInvestigation& investigation, const sw::hashed_string& contractID, int32 stepIndex, const sw::vector<sw::hashed_string>& listFound )
+        static bool readFixtureInvestigation( sw::MonsterHuntInvestigation& investigation, const sw::hashed_string& contractID, int32 stepIndex, const sw::vector<sw::hashed_string>& listFound )
         {
             sw::Archive written;
             sw::StateIO::writeName( written, contractID );
@@ -205,7 +205,7 @@ namespace
             return investigation.readState( reading );
         }
 
-        static bool readForgedHaggle( sw::MonsterHuntHaggle& haggle, const sw::hashed_string& contractID, float32 anger, int32 offer, int32 finalReward, uint8 bClosed )
+        static bool readFixtureHaggle( sw::MonsterHuntHaggle& haggle, const sw::hashed_string& contractID, float32 anger, int32 offer, int32 finalReward, uint8 bClosed )
         {
             sw::Archive written;
             sw::StateIO::writeName( written, contractID );
@@ -558,8 +558,8 @@ SW_TEST_CASE( MonsterHuntBestiaryTest, StateRoundTripsAndRefusesBadEntries )
         sw::StateIO::writeName( forged, monsterID );
         forged << knowledge;
         forged << kills;
-        sw::Archive forgedReading( forged.getData(), forged.getSize() );
-        return restored.readState( forgedReading );
+        sw::Archive readingFixture( forged.getData(), forged.getSize() );
+        return restored.readState( readingFixture );
     };
     SW_EXPECT_FALSE( readForged( "nobody", 1, 1 ) );
     SW_EXPECT_FALSE( readForged( "ghoul", -1, 1 ) );
@@ -850,19 +850,19 @@ SW_TEST_CASE_F( MonsterHuntContractTest, InvestigationReadStateChecksFoundClues 
 {
     sw::MonsterHuntInvestigation investigation;
     SW_REQUIRE_TRUE( investigation.initialize( &_catalog, "griffin", nullptr ) );
-    SW_REQUIRE_TRUE( readForgedInvestigation( investigation, "griffin", 0, { "blood" } ) ); // 형식은 맞다
+    SW_REQUIRE_TRUE( readFixtureInvestigation( investigation, "griffin", 0, { "blood" } ) ); // 형식은 맞다
     SW_EXPECT_TRUE( investigation.isClueFound( "blood" ) );
 
-    SW_EXPECT_FALSE( readForgedInvestigation( investigation, "griffin", 0, { "blood", "feather" } ) ); // 단계를 다 찾았다
-    SW_EXPECT_FALSE( readForgedInvestigation( investigation, "griffin", 0, { "eggs" } ) );             // 다른 단계의 단서
-    SW_EXPECT_FALSE( readForgedInvestigation( investigation, "griffin", 2, { "eggs" } ) );             // 끝난 조사에 남은 단서
-    SW_EXPECT_FALSE( readForgedInvestigation( investigation, "griffin", 3, {} ) );                     // 단계 밖
-    SW_EXPECT_FALSE( readForgedInvestigation( investigation, "griffin", -1, {} ) );
-    SW_EXPECT_FALSE( readForgedInvestigation( investigation, "nothing", 0, {} ) );
+    SW_EXPECT_FALSE( readFixtureInvestigation( investigation, "griffin", 0, { "blood", "feather" } ) ); // 단계를 다 찾았다
+    SW_EXPECT_FALSE( readFixtureInvestigation( investigation, "griffin", 0, { "eggs" } ) );             // 다른 단계의 단서
+    SW_EXPECT_FALSE( readFixtureInvestigation( investigation, "griffin", 2, { "eggs" } ) );             // 끝난 조사에 남은 단서
+    SW_EXPECT_FALSE( readFixtureInvestigation( investigation, "griffin", 3, {} ) );                     // 단계 밖
+    SW_EXPECT_FALSE( readFixtureInvestigation( investigation, "griffin", -1, {} ) );
+    SW_EXPECT_FALSE( readFixtureInvestigation( investigation, "nothing", 0, {} ) );
     SW_EXPECT_EQUAL( 0, investigation.getStepIndex() );
     SW_EXPECT_TRUE( investigation.isClueFound( "blood" ) ); // 거절은 상태를 바꾸지 않는다
 
-    SW_REQUIRE_TRUE( readForgedInvestigation( investigation, "griffin", 2, {} ) );
+    SW_REQUIRE_TRUE( readFixtureInvestigation( investigation, "griffin", 2, {} ) );
     SW_EXPECT_TRUE( investigation.isSolved() );
 }
 
@@ -971,12 +971,12 @@ SW_TEST_CASE_F( MonsterHuntContractTest, HaggleReadStateChecksRange )
     SW_EXPECT_EQUAL( 125, restored.getOffer() );
     SW_EXPECT_NEAR( haggle.getAnger(), restored.getAnger(), kMonsterHuntTolerance );
 
-    SW_EXPECT_FALSE( readForgedHaggle( restored, "griffin", 0.0f, -1, 0, 0 ) );
-    SW_EXPECT_FALSE( readForgedHaggle( restored, "griffin", 0.0f, 100, -1, 1 ) );
-    SW_EXPECT_FALSE( readForgedHaggle( restored, "griffin", -1.0f, 100, 0, 0 ) );
-    SW_EXPECT_FALSE( readForgedHaggle( restored, "griffin", std::numeric_limits<float32>::quiet_NaN(), 100, 0, 0 ) );
-    SW_EXPECT_FALSE( readForgedHaggle( restored, "griffin", 0.0f, 100, 0, 2 ) );
-    SW_EXPECT_FALSE( readForgedHaggle( restored, "nothing", 0.0f, 100, 0, 0 ) );
+    SW_EXPECT_FALSE( readFixtureHaggle( restored, "griffin", 0.0f, -1, 0, 0 ) );
+    SW_EXPECT_FALSE( readFixtureHaggle( restored, "griffin", 0.0f, 100, -1, 1 ) );
+    SW_EXPECT_FALSE( readFixtureHaggle( restored, "griffin", -1.0f, 100, 0, 0 ) );
+    SW_EXPECT_FALSE( readFixtureHaggle( restored, "griffin", std::numeric_limits<float32>::quiet_NaN(), 100, 0, 0 ) );
+    SW_EXPECT_FALSE( readFixtureHaggle( restored, "griffin", 0.0f, 100, 0, 2 ) );
+    SW_EXPECT_FALSE( readFixtureHaggle( restored, "nothing", 0.0f, 100, 0, 0 ) );
     SW_EXPECT_EQUAL( 125, restored.getOffer() );
 }
 

@@ -21,7 +21,7 @@ namespace sw
     struct LocalStoreCompletion;
 
     class GameLocalStore;
-    class SaveGate;
+    class SaveLock;
     class XMLCatalogRoot;
     class XMLNode;
 
@@ -111,7 +111,7 @@ namespace sw
      *          언리얼과 유니티에는 자동 저장 정책이 없어서 게임마다 만든다. 이 클래스는 그 정책을 장르와 무관하게 줄인 것이다.
      *          - 요청(`requestSave`, `notifyAreaChanged`, `reachCheckpoint`, `notifyBeforeBoss`)은 쌓였다가 `update` 에서 하나로 합쳐 저장한다.
      *            한 프레임에 지역 이동과 체크포인트가 겹쳐도 저장은 한 번이며, 더 중요한 까닭(체크포인트, 보스, 지역, 간격 순)이 슬롯 기록에 남는다.
-     *          - 세이브 막기 문(`SaveGate` — 씬 전환, 연출, 깨진 복원이 범위형으로 건다)이 막혀 있으면 요청은 기다렸다가 풀린 뒤 저장한다.
+     *          - 세이브 막기 문(`SaveLock` — 씬 전환, 연출, 깨진 복원이 범위형으로 건다)이 막혀 있으면 요청은 기다렸다가 풀린 뒤 저장한다.
      *            종료(`notifyQuit`)는 기다리지 않으므로 막혀 있으면 저장하지 않는다 — 반쯤 선 씬을 쓰느니 마지막 좋은 슬롯을 남긴다.
      *          - 순환 슬롯: 새 저장은 가장 새 슬롯의 **다음** 슬롯에 쓴다. 슬롯 쓰기가 원자적이고 가장 새 슬롯은 건드리지 않으므로, 저장 도중 꺼져도 마지막 좋은 저장이 남는다.
      *            슬롯 기록(`.info`)은 상태 슬롯 바로 뒤에 맡긴다(저장소가 맡은 순서로 쓴다 - 끝낼 때 맡긴 종료 저장도 기록까지 남는다).
@@ -140,11 +140,11 @@ namespace sw
         /**
          * @brief 정책, 로컬 저장소, 막기 문, 델리게이트를 두고 슬롯 기록 읽기를 맡겨 순번을 잇습니다. 타이머와 요청은 비웁니다.
          * @param store 빌려 쓴다(이 관리자보다 오래 산다 - 보통 게임 인스턴스의 `GameLocalStore`). 맡긴 요청의 구독은 이 관리자가 들어, 먼저 사라지면 콜백이 불리지 않는다.
-         * @param saveGate 빌려 쓴다(이 관리자보다 오래 산다 - 게임 인스턴스의 `SaveGate`). 막혀 있는 동안 저장하지 않는다.
+         * @param saveLock 빌려 쓴다(이 관리자보다 오래 산다 - 게임 인스턴스의 `SaveLock`). 막혀 있는 동안 저장하지 않는다.
          * @return 슬롯 수가 1..64 밖이거나 간격 · 최소 간격이 음수이거나 그룹 · 접두사가 슬롯 이름 규칙을 어기면 오류를 남기고 false 입니다(가까운 값으로 맞추지 않는다).
          *         그러면 상태는 그대로입니다. XML 읽기(`loadFromXML`)는 같은 범위를 읽을 때 이미 거절한다.
          */
-        [[nodiscard]] bool initialize( const AutosaveSettings& settings, GameLocalStore& store, const SaveGate& saveGate, const SaveDelegate& onSave, const LoadDelegate& onLoad );
+        [[nodiscard]] bool initialize( const AutosaveSettings& settings, GameLocalStore& store, const SaveLock& saveLock, const SaveDelegate& onSave, const LoadDelegate& onLoad );
         /** @brief 플레이 시간을 넘기고(간격 저장), 쌓인 요청을 막기가 없을 때 하나로 저장합니다. 게임 업데이트에서 부릅니다. */
         void update( float32 deltaTime );
 
@@ -159,7 +159,7 @@ namespace sw
         /** @brief 지금 저장을 맡깁니다. 최소 간격과 정책은 무시하고 막기는 지킵니다. 맡겼으면 true 입니다. */
         [[nodiscard]] bool saveNow( AutosaveTrigger trigger, const hashed_string& label = hashed_string{} );
 
-        /** @brief 막기 문이 막혀 있으면 true 입니다 — 요청은 기다린다. 막기는 문(`SaveGate::block`)에 범위형으로 건다. */
+        /** @brief 막기 문이 막혀 있으면 true 입니다 — 요청은 기다린다. 막기는 문(`SaveLock::block`)에 범위형으로 건다. */
         bool isBlocked() const;
 
         /** @brief 가장 새 슬롯 읽기를 맡깁니다. 슬롯이 없거나 기록을 읽는 중이거나 앞 되돌리기가 끝나지 않았으면 false 입니다. 읽은 바이트는 불러오기 델리게이트가 받고, 실패는 알립니다. */
@@ -209,7 +209,7 @@ namespace sw
         SaveDelegate             _onSave;
         LoadDelegate             _onLoad;
         GameLocalStore*          _pStore;     ///< 빌려 쓴다(`initialize`)
-        const SaveGate*          _pSaveGate;  ///< 빌려 쓴다(`initialize`)
+        const SaveLock*          _pSaveLock;  ///< 빌려 쓴다(`initialize`)
         vector<AutosaveSlotInfo> _listSlot;   ///< 슬롯 번호마다 하나다. 기록이 없으면 `_sequence` 가 0 이다
         AutosaveSlotInfo         _savingSlot; ///< 쓰기를 맡긴 저장의 기록(완료에서 `_listSlot` 에 오른다)
         hashed_string            _pendingLabel;

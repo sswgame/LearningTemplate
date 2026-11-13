@@ -205,7 +205,7 @@ namespace sw
             {
                 BitReader  reader( bytes.data(), static_cast<int32>( bytes.size() ) );
                 const bool bHeadOk = reader.readBits( 8 ) == kGuildFormatVersion && ServiceKeyUtil::readString( reader, GuildLimit::kMaxNameSize, outInfo._name ) &&
-                                     ServiceKeyUtil::readString( reader, GuildLimit::kMaxNoticeSize, outInfo._notice );
+                                     ServiceKeyUtil::readString( reader, GuildLimit::kMaxAnnouncementSize, outInfo._notice );
                 if ( bHeadOk == false )
                     return false;
                 outInfo._guildID      = guildID;
@@ -611,7 +611,7 @@ namespace sw
                     {
                         if ( selfMember._role < GuildRole::Officer )
                             return fail( SocialResult::NotAllowed );
-                        if ( _request._text.size() > static_cast<size_t>( GuildLimit::kMaxNoticeSize ) )
+                        if ( _request._text.size() > static_cast<size_t>( GuildLimit::kMaxAnnouncementSize ) )
                             return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
                         info._notice = _request._text;
                         transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );

@@ -315,7 +315,7 @@
 		<entry key="EdPlugin.PickCancel" text="집기 끄기" sourceHash="ea93412d8284f2ae" />
 		<entry key="EdPlugin.PickPlaceLayer" text="미리보기에서 배치" sourceHash="05eac8bfa956f1ab" />
 		<entry key="EdPlugin.PickSection" text="미리보기에서 구간 집기" sourceHash="a88a406ac7c8db0e" />
-		<entry key="EdPlugin.PostNotice" text="공지 올리기" sourceHash="37e6931da5f87431" />
+		<entry key="EdPlugin.PostAnnouncement" text="공지 올리기" sourceHash="37e6931da5f87431" />
 		<entry key="EdPlugin.PresetsUserData" text="프리셋(사용자 데이터)" sourceHash="5f4339cfe94334b7" />
 		<entry key="EdPlugin.Preview" text="미리보기" sourceHash="417b90913e05bc17" />
 		<entry key="EdPlugin.PreviewConstraintRig" text="제약 리그 미리보기" sourceHash="ca9d7f72602ecd10" />
@@ -335,7 +335,7 @@
 		<entry key="EdPlugin.Remove" text="제거" sourceHash="ea4f08110bb8f15d" />
 		<entry key="EdPlugin.RemoveBrokenWires" text="끊어진 선 지우기" sourceHash="56ba420ceb30c42c" />
 		<entry key="EdPlugin.RemoveLiveEvent" text="라이브 이벤트 지우기" sourceHash="286ec822b6f1b615" />
-		<entry key="EdPlugin.RemoveNotice" text="공지 지우기" sourceHash="9d6cadb063f5b14f" />
+		<entry key="EdPlugin.RemoveAnnouncement" text="공지 지우기" sourceHash="9d6cadb063f5b14f" />
 		<entry key="EdPlugin.RemoveSkinLayer" text="지우기" sourceHash="ea4f08110bb8f15d" />
 		<entry key="EdPlugin.Rename" text="이름 바꾸기" sourceHash="60320a18282b2b33" />
 		<entry key="EdPlugin.ResetBone" text="뼈 초기화" sourceHash="559f9c3dcb23c44e" />

@@ -73,7 +73,7 @@ namespace
         {
         }
 
-        bool isAdmitted( AccountID accountID ) const override { return accountID == _accountID; }
+        bool isAccepted( AccountID accountID ) const override { return accountID == _accountID; }
 
     private:
         AccountID _accountID;

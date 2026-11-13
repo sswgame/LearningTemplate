@@ -288,14 +288,14 @@ namespace sw::editor
         return applyToPrefab( pOuter, AssetID{ outerPath } );
     }
 
-    EditorInspectorCommands::AdoptResult EditorInspectorCommands::attachChildPrefabInstances( GameObject* pRoot )
+    EditorInspectorCommands::AttachResult EditorInspectorCommands::attachChildPrefabInstances( GameObject* pRoot )
     {
         // 참조 검사에 필요한 것을 얻지 못하면 검사를 건너뛰고 옮기지 않는다 — 거절 사유와 오류 로그로 멈춘다.
         GameObjectManager* pManager = pRoot != nullptr ? pRoot->getManager() : nullptr;
         const Scene*       pScene   = pManager != nullptr ? editor::findSceneOf( pManager ) : nullptr;
         if ( pManager == nullptr || pScene == nullptr )
         {
-            AdoptResult rejected;
+            AttachResult rejected;
             rejected._rejectReason = "cannot check scene object references: the object or its scene is missing";
             SW_LOG_WARNING_ID( "EditorInspectorCommands.PrefabCreationRefused", "Prefab creation refused: %#", rejected._rejectReason.c_str() );
             return rejected;
@@ -325,7 +325,7 @@ namespace sw::editor
             }
         }
 
-        AdoptResult result;
+        AttachResult result;
         for ( const GameObject* pChild : listAdopt )
         {
             string holder;
@@ -342,9 +342,9 @@ namespace sw::editor
             registry.registerNestedPart( pChild->getObjectID(), pRoot->getObjectID(), childPrefab, {} ); // 노드는 프리팹을 쓸 때 생기므로 키는 다음 로드에서 얻는다
             workspace.setPlacedPrefabPath( *pChild, "" );
         }
-        result._adoptedCount = static_cast<uint32>( listAdopt.size() );
-        if ( result._adoptedCount > 0 )
-            SW_LOG_INFO_ID( "Prefab.NestedAdopted", "'%#' took %# child prefab instance(s) as nested prefabs", pRoot->getName().c_str(), result._adoptedCount );
+        result._attachedCount = static_cast<uint32>( listAdopt.size() );
+        if ( result._attachedCount > 0 )
+            SW_LOG_INFO_ID( "Prefab.NestedAdopted", "'%#' took %# child prefab instance(s) as nested prefabs", pRoot->getName().c_str(), result._attachedCount );
         return result;
     }
 } // namespace sw::editor

@@ -31,7 +31,7 @@ namespace sw
              * @brief 도착 단계(`PrimitiveRegistry::updateAssetWaiters`)에 한 번에 넘기는 시간(초)입니다. 메시 등장 디더 시간의 상한(`MeshComponent::_appearSeconds` 최대 5 초)보다 길다.
              * @details 스튜디오는 시간을 흘리지 않는다 — 도착한 메시는 등장 비율 0 에서 오르는데 그대로 두면 0 이라 그려지지 않는다. 사진에는 다 나타난 모습을 찍는다.
              */
-            static constexpr float32 kSettleSeconds = 10.0f;
+            static constexpr float32 kStabilitySeconds = 10.0f;
 
             /** @brief 첫 픽셀(구석 — 배경)과 RGB 가 다른 픽셀이 하나라도 있으면 true 입니다. 캡처는 계약 포맷 RGBA8 이고 행 사이에 빈틈이 있을 수 있다. */
             static bool hasVisibleSubject( const PortraitCapture& capture )
@@ -138,7 +138,7 @@ namespace sw
         // 도착한 메시를 컴포넌트에 넣고(씬 프레임의 `AssetArrival` 단계), 경로로 얻은 머티리얼을 초기화한다(게임 스레드 — 상수 버퍼는 렌더 스레드의 프록시가 만든다).
         // 예전에는 앞의 둘이 빠져 비동기 메시(`.mesh` 경로)를 쓰는 프리팹은 "그릴 메시 없음" 으로 실패했다(그 길을 도는 테스트가 없었다 — `Bake.Portraits`).
         assetManager.finishPendingAssetJobs();
-        pManager->getPrimitiveRegistry().updateAssetWaiters( PortraitStudioInternal::kSettleSeconds );
+        pManager->getPrimitiveRegistry().updateAssetWaiters( PortraitStudioInternal::kStabilitySeconds );
         assetManager.getAssetCache<MaterialCache>().initializePending( _capture.getDevice() );
         float3  center{};
         float32 radius = 1.0f;

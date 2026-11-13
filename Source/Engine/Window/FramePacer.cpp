@@ -36,7 +36,7 @@ namespace sw
             return FramePacingState::Server;
         if ( inputs._bMinimized )
             return FramePacingState::Minimized;
-        if ( editorQuietFrames >= kEditorIdleSettleFrames )
+        if ( editorQuietFrames >= kEditorIdleStabilityFrames )
             return FramePacingState::EditorIdle;
         return inputs._bFocused ? FramePacingState::Foreground : FramePacingState::Background;
     }
@@ -55,7 +55,7 @@ namespace sw
 
     void FramePacer::beginFrame( const FramePacingInputs& inputs )
     {
-        _editorQuietFrames = inputs._bEditorQuiet ? MathUtil::min( _editorQuietFrames + 1, kEditorIdleSettleFrames ) : 0;
+        _editorQuietFrames = inputs._bEditorQuiet ? MathUtil::min( _editorQuietFrames + 1, kEditorIdleStabilityFrames ) : 0;
         _state             = resolve( inputs, gv_framePacing, _editorQuietFrames );
     }
 

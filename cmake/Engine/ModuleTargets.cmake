@@ -118,7 +118,7 @@ function(sw_addModuleLibrary TARGET_NAME)
 	endif()
 	# 개발 전용 소스(단위 테스트 · 개발 명령)는 배포 구성이 짓지 않는다(GameFramework · 키트 · 게임 · 에디터 확장 모두).
 	if(SW_SHIPPING_BUILD)
-		sw_excludeUnbuiltSources(ARG_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
+		sw_removeExcludedSources(ARG_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 	endif()
 	add_library(${TARGET_NAME} ${libType} ${ARG_SOURCES})
 	sw_requireDeterministicMarkForRollback(${TARGET_NAME} ${ARG_SOURCES})
@@ -131,7 +131,7 @@ function(sw_addModuleLibrary TARGET_NAME)
 		set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME "${ARG_MODULE_NAME}")
 	endif()
 	# 모듈 폴더는 include 경로로 내보내지 않는다 — 키트 · 게임 헤더도 `Source/` 기준 전체 경로로 쓴다(`sw_verifySourceIncludeRoots`).
-	sw_applyModuleLayerGate(${TARGET_NAME} ${ARG_KIND} ${ARG_MODULE_NAME} "${ARG_CONTENT_OWNER}")
+	sw_applyModuleLayerGuard(${TARGET_NAME} ${ARG_KIND} ${ARG_MODULE_NAME} "${ARG_CONTENT_OWNER}")
 	if(ARG_KIND MATCHES "^(gameframework|kit|game)$")
 		sw_requireTemplateDefinitions(${TARGET_NAME}) # 부분(GameFramework 층)보다 먼저 — 부분이 옵션을 복사한다
 	endif()
@@ -250,7 +250,7 @@ function(sw_addRHIBackendModule BACKEND_NAME)
 	sw_skipInactiveModule(${moduleName} swSkip)
 	if(swSkip)
 		# 장치 소스는 모듈 폴더 밖(Graphics/RHI/<폴더>)에 있다 — 그것도 이 구성이 짓지 않는다.
-		sw_declareUnbuiltSources(${listDeviceSource})
+		sw_declareExcludedSources(${listDeviceSource})
 		return()
 	endif()
 	sw_addModuleLibrary(${moduleName}
@@ -360,12 +360,12 @@ function(sw_addGameModule MODULE_NAME)
 	sw_globSourceTree(listGameSource RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 	# 게임의 에디터 확장(Editor/)은 따로 짓는 모듈이다(SWGameEditor).
 	list(FILTER listGameSource EXCLUDE REGEX "/Editor/")
-	# 게임의 클라이언트 전용 소스(Client/ — 그리는 벤치 · UI 시연)는 전용 서버가 짓지 않는다(cmake/Engine/UnbuiltSources.cmake).
+	# 게임의 클라이언트 전용 소스(Client/ — 그리는 벤치 · UI 시연)는 전용 서버가 짓지 않는다(cmake/Engine/ExcludedSources.cmake).
 	# 게임의 서버 전용 소스(Server/)는 클라이언트 구성이 짓지 않는다.
 	if(SW_TARGET_TYPE STREQUAL "Server")
-		sw_excludeUnbuiltSources(listGameSource ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
+		sw_removeExcludedSources(listGameSource ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
 	elseif(SW_TARGET_TYPE STREQUAL "Client")
-		sw_excludeUnbuiltSources(listGameSource ${SW_SERVER_ONLY_SOURCE_PATTERNS})
+		sw_removeExcludedSources(listGameSource ${SW_SERVER_ONLY_SOURCE_PATTERNS})
 	endif()
 	sw_addModuleLibrary(${targetName}
 		KIND game
@@ -402,7 +402,7 @@ function(sw_addGameModule MODULE_NAME)
 	sw_addModuleEngineStamp(${targetName} MODULE_NAME ${MODULE_NAME})
 	set_property(GLOBAL APPEND PROPERTY SW_GAME_PACK_TARGETS ${targetName})
 	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor")
-		sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}/Editor")
+		sw_declareExcludedDirectory("${CMAKE_CURRENT_SOURCE_DIR}/Editor")
 	endif()
 endfunction()
 
@@ -426,7 +426,7 @@ function(sw_addEditorExtension TARGET_NAME)
 		list(APPEND listPanelViewSource "${viewPath}")
 	endforeach()
 	if(SW_SHIPPING_BUILD)
-		sw_declareUnbuiltSources(${listExtensionSource})
+		sw_declareExcludedSources(${listExtensionSource})
 		return()
 	endif()
 	sw_skipInactiveModule(${TARGET_NAME} swSkip)

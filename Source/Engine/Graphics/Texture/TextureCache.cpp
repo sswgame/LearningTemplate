@@ -554,7 +554,7 @@ namespace sw
             return 0;
         uint32 upgradedCount = 0;
         // 항목의 올리는 중 표시를 내리고 결과를 반영한다 — 마지막 참조가 그사이 놓였으면 표에서 지우고 잠금 밖에서 내린다(`reload` 와 같다).
-        const auto settleUpgrade = [this, pDevice, &upgradedCount]( const string& key, bool bUpgraded, const Texture2DRetiredResource& retired )
+        const auto completeUpgrade = [this, pDevice, &upgradedCount]( const string& key, bool bUpgraded, const Texture2DRetiredResource& retired )
         {
             unique_ptr<Texture2D> pErased;
             {
@@ -605,7 +605,7 @@ namespace sw
                 listStillPending.push_back( key );
                 continue;
             }
-            settleUpgrade( key, status == Texture2DUploadStatus::Ready, retired );
+            completeUpgrade( key, status == Texture2DUploadStatus::Ready, retired );
         }
         if ( listStillPending.empty() == false )
         {
@@ -667,7 +667,7 @@ namespace sw
                 _impl->_listUpgrading.push_back( upgrade._key );
                 continue;
             }
-            settleUpgrade( upgrade._key, false, Texture2DRetiredResource{} );
+            completeUpgrade( upgrade._key, false, Texture2DRetiredResource{} );
             if ( step != Texture2DUploadStep::Busy )
                 continue; // 실패했다(오류를 남겼다) — 아래쪽 밉 그대로 둔다
             // 스테이징이 찼다 — 이 프레임의 나머지도 같은 이유로 못 내므로 순서를 지켜 줄 앞에 되돌려 놓고 멈춘다(다음 프레임에 다시 낸다).
@@ -1156,7 +1156,7 @@ namespace sw
         pCache->_listUploading.push_back( shared_from_this() );
     }
 
-    void TextureLoadOperation::removeFromPumpLists( TextureCache::Impl& cache )
+    void TextureLoadOperation::removeFromPollLists( TextureCache::Impl& cache )
     {
         // 펌프가 아닌 쪽(`wait`)이 먼저 올렸으면 목록에서 뺀다 — 목록이 로드 작업(곧 참조)을 쥔 채 남지 않게(렌더가 없는 테스트는 펌프가 돌지 않는다).
         ScopedLock<mutex> lock{ cache._awaitingMutex };
@@ -1174,7 +1174,7 @@ namespace sw
 
     expected<AssetCompletionStep> TextureLoadOperation::concludeCompletion( TextureCache::Impl& cache, bool bReady )
     {
-        removeFromPumpLists( cache );
+        removeFromPollLists( cache );
         if ( bReady == false && _loadError.empty() )
             _loadError = "the GPU upload failed";
         // 위쪽 밉이 남았으면 읽은 이미지를 스트리밍 줄로 넘긴다 — 다시 읽지 않고 렌더 스레드가 프레임 예산 안에서 업로드한다.
@@ -1198,7 +1198,7 @@ namespace sw
         {
             return unexpected( Error{ ErrorKind::NotFound, "the texture cache was shut down before the upload" } );
         }
-        removeFromPumpLists( *pCache );
+        removeFromPollLists( *pCache );
         if ( _loadError.empty() == false )
             return concludeCompletion( *pCache, false );
 

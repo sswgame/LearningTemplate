@@ -225,7 +225,7 @@ namespace sw
         PROPERTY( Required )
         string _file{};
         PROPERTY()
-        bool _bWaitForSettle{ true }; ///< NOLINT(sw-bool-flag): 집합체다
+        bool _bWaitForStability{ true }; ///< NOLINT(sw-bool-flag): 집합체다
     };
 
     /** @brief `ExpectImage` 의 인자입니다. */

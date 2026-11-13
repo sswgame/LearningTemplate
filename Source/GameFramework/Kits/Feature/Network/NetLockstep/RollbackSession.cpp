@@ -269,8 +269,8 @@ namespace sw
         if ( bIgnoreInput )
             return NetHandleResult::Handled; // 시작 전이거나 다른 판의 메시지이다
         // 서버는 클라이언트가 자기 번호로만 보내게 한다. 다른 플레이어의 입력을 위조하지 못하게 하려는 것이다.
-        const bool bForgedPlayerNumber = _pHost != nullptr && _pHost->isServer() && player != context._connectionID + 1;
-        if ( bForgedPlayerNumber )
+        const bool bSpoofedPlayerNumber = _pHost != nullptr && _pHost->isServer() && player != context._connectionID + 1;
+        if ( bSpoofedPlayerNumber )
             return NetHandleResult::Handled;
         int32 ackedLocalFrame = constant::invalid_index::kInt32;
         int32 advantage       = 0;

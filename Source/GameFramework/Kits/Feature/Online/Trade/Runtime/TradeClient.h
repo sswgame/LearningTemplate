@@ -82,16 +82,16 @@ namespace sw
         const TradeSnapshot& getSnapshot() const { return _snapshot; }
 
         // OnlineProtocolClient 의 훅
-        void onPush( TradeMethod::Invited, const TradeNotice& body );
-        void onPush( TradeMethod::Update, const TradeNotice& body );
-        void onPush( TradeMethod::Closed, const TradeNotice& body );
+        void onPush( TradeMethod::Invited, const TradeNotification& body );
+        void onPush( TradeMethod::Update, const TradeNotification& body );
+        void onPush( TradeMethod::Closed, const TradeNotification& body );
 
     private:
         /** @brief 메서드 @p TMethod 를 보냅니다. 응답은 `pollReplies` 로 꺼냅니다. 이 클래스의 `.cpp` 안에서만 부릅니다. */
         template <typename TMethod>
         uint64 send( const typename TMethod::Request& request, const NetIdempotencyKey& key );
         void   onReply( const OnlineResult<TradeReply>& result );
-        void   recordUpdate( uint16 kind, const TradeNotice& body );
+        void   recordUpdate( uint16 kind, const TradeNotification& body );
         void   observe( const TradeSnapshot& snapshot );
 
     private:

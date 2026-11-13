@@ -145,7 +145,7 @@ namespace sw
         submitGuild( call._callID, context, GuildOperation::SetRole, guildRequest );
     }
 
-    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildSetNotice> call, const OnlineCallContext& context, const SocialTextRequest& request )
+    void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildSetAnnouncement> call, const OnlineCallContext& context, const SocialTextRequest& request )
     {
         GuildRequest guildRequest;
         guildRequest._text = request._text;

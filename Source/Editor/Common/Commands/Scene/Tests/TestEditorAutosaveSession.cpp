@@ -40,14 +40,14 @@ SW_TEST_CASE( EditorAutosaveSessionTest, OtherSessionEndKeepsLiveSessionCopies )
     const sw::string root = sw::test::makeScratchPath( "Autosave" );
 
     const Session          sessionA{ sw::Process::getCurrentProcessID(), 1 };
-    sw::vector<sw::string> listAdoptedFolder;
-    SW_REQUIRE_TRUE( sessionA.open( root, listAdoptedFolder ) );
-    SW_EXPECT_TRUE( listAdoptedFolder.empty() );
+    sw::vector<sw::string> listRecoveredFolder;
+    SW_REQUIRE_TRUE( sessionA.open( root, listRecoveredFolder ) );
+    SW_EXPECT_TRUE( listRecoveredFolder.empty() );
     const sw::string copyA = Internal::writeCopy( root, sessionA );
 
     const Session sessionB{ Internal::kOtherEditorPID, 2 };
-    SW_REQUIRE_TRUE( sessionB.open( root, listAdoptedFolder ) );
-    SW_EXPECT_TRUE( listAdoptedFolder.empty() ); // A 는 살아 있다 — 복구 후보가 아니다
+    SW_REQUIRE_TRUE( sessionB.open( root, listRecoveredFolder ) );
+    SW_EXPECT_TRUE( listRecoveredFolder.empty() ); // A 는 살아 있다 — 복구 후보가 아니다
     Session::removeOwned( root, sessionB._processID );
 
     SW_EXPECT_TRUE( sw::FileUtil::exists( copyA ) );
@@ -64,16 +64,16 @@ SW_TEST_CASE( EditorAutosaveSessionTest, DeadSessionIsAdoptedAndRemovedWithAdopt
     const sw::string root = sw::test::makeScratchPath( "Autosave" );
 
     const Session          deadSession{ Internal::kDeadPID, 3 };
-    sw::vector<sw::string> listAdoptedFolder;
-    SW_REQUIRE_TRUE( deadSession.open( root, listAdoptedFolder ) );
+    sw::vector<sw::string> listRecoveredFolder;
+    SW_REQUIRE_TRUE( deadSession.open( root, listRecoveredFolder ) );
     const sw::string deadCopy = Internal::writeCopy( root, deadSession );
 
     const Session adopter{ Internal::kOtherEditorPID, 4 };
-    SW_REQUIRE_TRUE( adopter.open( root, listAdoptedFolder ) );
-    SW_REQUIRE_TRUE( listAdoptedFolder.size() == 1 );
-    SW_EXPECT_TRUE( sw::FileUtil::isSameDiskPath( listAdoptedFolder[0], deadSession.makeFolder( root ) ) );
+    SW_REQUIRE_TRUE( adopter.open( root, listRecoveredFolder ) );
+    SW_REQUIRE_TRUE( listRecoveredFolder.size() == 1 );
+    SW_EXPECT_TRUE( sw::FileUtil::isSameDiskPath( listRecoveredFolder[0], deadSession.makeFolder( root ) ) );
     Session owner{};
-    SW_REQUIRE_TRUE( Session::readLock( listAdoptedFolder[0], owner ) );
+    SW_REQUIRE_TRUE( Session::readLock( listRecoveredFolder[0], owner ) );
     SW_EXPECT_TRUE( owner._processID == adopter._processID && owner._startTicks == adopter._startTicks );
     SW_EXPECT_TRUE( sw::FileUtil::exists( deadCopy ) ); // 넘겨받기는 사본을 지우지 않는다 — 복구 후보다
 

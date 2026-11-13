@@ -75,7 +75,7 @@ namespace sw
         , _bFinishWaiting{ SW_FALSE }
         , _bClockHeld{ SW_FALSE }
         , _reserved{ 0 }
-        , _assetSettledFrameCount{ 0 }
+        , _assetStableFrameCount{ 0 }
         , _pHeldStepState{}
         , _pHeldStateStep{ nullptr }
         , _holdFrameCount{ 0 }
@@ -160,7 +160,7 @@ namespace sw
         , _bStarted{ SW_FALSE }
         , _bEnded{ SW_FALSE }
         , _bHangWatchArmed{ SW_FALSE }
-        , _bWriteGateHeld{ SW_FALSE }
+        , _bWriteFilterHeld{ SW_FALSE }
         , _reserved{ 0 }
         , _startedAt{}
         , _reproduceInput{}
@@ -179,7 +179,7 @@ namespace sw
     // 로그 리스너 해제는 `_judge` 가 가진 `AutomationLogCapture` 의 소멸자가 맡는다.
     AutomationRunner::~AutomationRunner()
     {
-        releaseWriteGate();
+        releaseWriteFilter();
     }
 
     void AutomationRunner::forwardPendingScreenshot()
@@ -190,20 +190,20 @@ namespace sw
             (void)pMailbox->putForNextPacket( path ); // 칸이 비어 있음을 방금 봤다 — 같은 게임 스레드만 채우고 꺼낸다
     }
 
-    void AutomationRunner::acquireWriteGate()
+    void AutomationRunner::acquireWriteFilter()
     {
-        if ( _bWriteGateHeld == SW_TRUE )
+        if ( _bWriteFilterHeld == SW_TRUE )
             return;
-        AutomationScratchWorkspace::acquireWriteGate();
-        _bWriteGateHeld = SW_TRUE;
+        AutomationScratchWorkspace::acquireWriteFilter();
+        _bWriteFilterHeld = SW_TRUE;
     }
 
-    void AutomationRunner::releaseWriteGate()
+    void AutomationRunner::releaseWriteFilter()
     {
-        if ( _bWriteGateHeld == SW_FALSE )
+        if ( _bWriteFilterHeld == SW_FALSE )
             return;
-        AutomationScratchWorkspace::releaseWriteGate();
-        _bWriteGateHeld = SW_FALSE;
+        AutomationScratchWorkspace::releaseWriteFilter();
+        _bWriteFilterHeld = SW_FALSE;
     }
 
     void AutomationRunner::startFromPath( const AssetID& assetID, string_view reportPath )
@@ -310,7 +310,7 @@ namespace sw
             }
             SW_LOG_INFO_ID( "Automation.CopiedFreshRun", "[Scenario] %#: %# copied to %# (fresh for this run)", _scenario.getName().c_str(), folder._sourceID.c_str(), folder._scratchID.c_str() );
         }
-        acquireWriteGate(); // 사본을 만든 뒤부터 `scratch/` 밖의 리소스 원본 쓰기를 오류로 만든다
+        acquireWriteFilter(); // 사본을 만든 뒤부터 `scratch/` 밖의 리소스 원본 쓰기를 오류로 만든다
         return true;
     }
 
@@ -1053,7 +1053,7 @@ namespace sw
         _bEnded              = SW_TRUE;
         _run._wallEndSeconds = AutomationRunnerInternal::readNowSeconds();
         _run.clearHeldStepState(); // 붙잡힌 채 끝난 단계의 상태(요청한 씬 로드 …)를 이 실행과 함께 걷는다
-        releaseWriteGate();
+        releaseWriteFilter();
         _hangWatchdog.stop(); // 정상 끝맺음이 보고를 쓴다 — 감시가 같은 보고를 덮거나 프로세스를 끝내지 못하게 먼저 내린다
         if ( pInput != nullptr && pInput->getVirtualInput() == &_inputScript )
             pInput->detachVirtualInput();
@@ -1061,11 +1061,11 @@ namespace sw
         // 시작한 시나리오는 결과와 상관없이 로그 게이트를 지난다 — 시작하지 못한 실행은 허용 목록도 로그 수집도 준비되지 않았다.
         if ( _bStarted == SW_TRUE )
         {
-            optional<string> gateReason = _judge.applyLogGate( _result );
-            if ( gateReason.has_value() )
+            optional<string> filterReason = _judge.applyLogCheck( _result );
+            if ( filterReason.has_value() )
             {
                 _result       = AutomationResult::UnhandledLog;
-                _finishReason = std::move( *gateReason );
+                _finishReason = std::move( *filterReason );
             }
         }
         if ( _result == AutomationResult::Passed )

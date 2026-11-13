@@ -46,14 +46,14 @@ namespace
         return window;
     }
 
-    ServiceAnnouncement makeNotice( uint64 noticeID = 1, int64 startMs = kNowMs - 1, int64 endMs = kNowMs + 1000, int32 priority = 0 )
+    ServiceAnnouncement makeAnnouncement( uint64 announcementID = 1, int64 startMs = kNowMs - 1, int64 endMs = kNowMs + 1000, int32 priority = 0 )
     {
         ServiceAnnouncement notice;
-        notice._text     = "notice.key";
-        notice._noticeID = noticeID;
-        notice._startMs  = startMs;
-        notice._endMs    = endMs;
-        notice._priority = priority;
+        notice._text           = "notice.key";
+        notice._announcementID = announcementID;
+        notice._startMs        = startMs;
+        notice._endMs          = endMs;
+        notice._priority       = priority;
         return notice;
     }
 
@@ -278,11 +278,11 @@ SW_TEST_CASE( ServerDirectoryServiceTest, InvalidChangesTouchNothing )
     rig._service.clearMaintenance( "Bad.Scope", 7, "memo", UnixMilliseconds{ kNowMs }, 1 );
     SW_EXPECT_TRUE( rig.finishOne().hasError( OnlineError::kInvalidRequest ) );
 
-    SW_EXPECT_TRUE( rig.postNotice( makeNotice( 0 ) ).hasError( OnlineError::kInvalidRequest ) );
-    ServiceAnnouncement emptyText = makeNotice();
+    SW_EXPECT_TRUE( rig.postNotice( makeAnnouncement( 0 ) ).hasError( OnlineError::kInvalidRequest ) );
+    ServiceAnnouncement emptyText = makeAnnouncement();
     emptyText._text.clear();
     SW_EXPECT_TRUE( rig.postNotice( emptyText ).hasError( OnlineError::kInvalidRequest ) );
-    SW_EXPECT_TRUE( rig.postNotice( makeNotice( 1, 10, 5 ) ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.postNotice( makeAnnouncement( 1, 10, 5 ) ).hasError( OnlineError::kInvalidRequest ) );
 
     SW_EXPECT_EQUAL( hashBefore, rig._database.computeContentHash() );
 }
@@ -291,13 +291,13 @@ SW_TEST_CASE( ServerDirectoryServiceTest, InvalidChangesTouchNothing )
 SW_TEST_CASE( ServerDirectoryServiceTest, RemoveAndAudit )
 {
     DirectoryServiceFixture rig;
-    rig._service.removeNotice( 9, 7, UnixMilliseconds{ kNowMs }, 1 );
+    rig._service.removeAnnouncement( 9, 7, UnixMilliseconds{ kNowMs }, 1 );
     SW_EXPECT_TRUE( rig.finishOne() == ServerDirectoryResult::NotFound );
     rig._service.clearMaintenance( "game", 7, "memo", UnixMilliseconds{ kNowMs }, 2 );
     SW_EXPECT_TRUE( rig.finishOne() == ServerDirectoryResult::NotFound );
 
-    SW_REQUIRE_TRUE( rig.postNotice( makeNotice( 9 ) ) == ServerDirectoryResult::Ok );
-    rig._service.removeNotice( 9, 7, UnixMilliseconds{ kNowMs }, 3 );
+    SW_REQUIRE_TRUE( rig.postNotice( makeAnnouncement( 9 ) ) == ServerDirectoryResult::Ok );
+    rig._service.removeAnnouncement( 9, 7, UnixMilliseconds{ kNowMs }, 3 );
     SW_EXPECT_TRUE( rig.finishOne() == ServerDirectoryResult::Ok );
 
     vector<ServiceAuditEntry> listEntry;
@@ -368,16 +368,16 @@ SW_TEST_CASE( ServerDirectoryServiceTest, ReloadOnNotifyAndPeriod )
 SW_TEST_CASE( ServerDirectoryServiceTest, StatusShowsActiveByPriority )
 {
     DirectoryServiceFixture rig;
-    SW_REQUIRE_TRUE( rig.postNotice( makeNotice( 1, kNowMs - 1, 0, 1 ) ) == ServerDirectoryResult::Ok );
-    SW_REQUIRE_TRUE( rig.postNotice( makeNotice( 2, kNowMs - 1, 0, 9 ) ) == ServerDirectoryResult::Ok );
-    SW_REQUIRE_TRUE( rig.postNotice( makeNotice( 3, kNowMs + 500, 0, 99 ) ) == ServerDirectoryResult::Ok ); // 아직 시작 전이다
+    SW_REQUIRE_TRUE( rig.postNotice( makeAnnouncement( 1, kNowMs - 1, 0, 1 ) ) == ServerDirectoryResult::Ok );
+    SW_REQUIRE_TRUE( rig.postNotice( makeAnnouncement( 2, kNowMs - 1, 0, 9 ) ) == ServerDirectoryResult::Ok );
+    SW_REQUIRE_TRUE( rig.postNotice( makeAnnouncement( 3, kNowMs + 500, 0, 99 ) ) == ServerDirectoryResult::Ok ); // 아직 시작 전이다
     SW_REQUIRE_TRUE( rig.setMaintenance( makeWindow() ) == ServerDirectoryResult::Ok );
     rig.tick( kNowMs );
 
     const ServerDirectoryStatus status = rig._service.makeStatus( UnixMilliseconds{ kNowMs } );
     SW_REQUIRE_EQUAL( size_t( 2 ), status._listNotice.size() );
-    SW_EXPECT_EQUAL( uint64( 2 ), status._listNotice[0]._noticeID );
-    SW_EXPECT_EQUAL( uint64( 1 ), status._listNotice[1]._noticeID );
+    SW_EXPECT_EQUAL( uint64( 2 ), status._listNotice[0]._announcementID );
+    SW_EXPECT_EQUAL( uint64( 1 ), status._listNotice[1]._announcementID );
     SW_REQUIRE_EQUAL( size_t( 1 ), status._listMaintenance.size() );
     SW_EXPECT_EQUAL( string( "game" ), status._listMaintenance[0]._scope );
 }
@@ -389,7 +389,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StatusChangeMarksOnVisibleChange )
     rig.tick( kNowMs );
     SW_EXPECT_FALSE( rig._service.takeStatusChange() );
 
-    SW_REQUIRE_TRUE( rig.postNotice( makeNotice( 1, kNowMs + 100, kNowMs + 200 ) ) == ServerDirectoryResult::Ok );
+    SW_REQUIRE_TRUE( rig.postNotice( makeAnnouncement( 1, kNowMs + 100, kNowMs + 200 ) ) == ServerDirectoryResult::Ok );
     rig.tick( kNowMs );
     SW_EXPECT_FALSE( rig._service.takeStatusChange() ); // 아직 기간 전이라 보이지 않는다
 
@@ -407,20 +407,20 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StatusChangeMarksOnVisibleChange )
 SW_TEST_CASE( ServerDirectoryServiceTest, StatusChangeCoversEveryVisibleField )
 {
     DirectoryServiceFixture rig;
-    SW_REQUIRE_TRUE( rig.postNotice( makeNotice( 1, kNowMs - 1, kNowMs + 1000 ) ) == ServerDirectoryResult::Ok );
+    SW_REQUIRE_TRUE( rig.postNotice( makeAnnouncement( 1, kNowMs - 1, kNowMs + 1000 ) ) == ServerDirectoryResult::Ok );
     SW_REQUIRE_TRUE( rig.setMaintenance( makeWindow() ) == ServerDirectoryResult::Ok );
     rig.tick( kNowMs );
     SW_EXPECT_TRUE( rig._service.takeStatusChange() );
 
-    SW_REQUIRE_TRUE( rig.postNotice( makeNotice( 1, kNowMs - 1, kNowMs + 2000 ) ) == ServerDirectoryResult::Ok ); // 끝 시각만 늘렸다
+    SW_REQUIRE_TRUE( rig.postNotice( makeAnnouncement( 1, kNowMs - 1, kNowMs + 2000 ) ) == ServerDirectoryResult::Ok ); // 끝 시각만 늘렸다
     rig.tick( kNowMs );
     SW_EXPECT_TRUE( rig._service.takeStatusChange() );
 
-    SW_REQUIRE_TRUE( rig.postNotice( makeNotice( 1, kNowMs - 2, kNowMs + 2000 ) ) == ServerDirectoryResult::Ok ); // 시작 시각만 바꿨다
+    SW_REQUIRE_TRUE( rig.postNotice( makeAnnouncement( 1, kNowMs - 2, kNowMs + 2000 ) ) == ServerDirectoryResult::Ok ); // 시작 시각만 바꿨다
     rig.tick( kNowMs );
     SW_EXPECT_TRUE( rig._service.takeStatusChange() );
 
-    ServiceAnnouncement literal = makeNotice( 1, kNowMs - 2, kNowMs + 2000 );
+    ServiceAnnouncement literal = makeAnnouncement( 1, kNowMs - 2, kNowMs + 2000 );
     literal._bLiteralText       = SW_TRUE;
     SW_REQUIRE_TRUE( rig.postNotice( literal ) == ServerDirectoryResult::Ok );
     rig.tick( kNowMs );
@@ -446,13 +446,13 @@ SW_TEST_CASE( ServerDirectoryServiceTest, ControlInterfaceMapsResults )
     ServerDirectoryMaintenanceChange badScope;
     badScope._scope = "Bad.Scope";
     control.setMaintenance( badScope, 7, "memo", nowMs, 12 );
-    control.removeNotice( 77, 7, nowMs, 13 );
-    ServerDirectoryNoticeChange notice;
-    notice._text         = "literal";
-    notice._noticeID     = 3;
-    notice._startMs      = kNowMs - 1;
-    notice._priority     = 2;
-    notice._bLiteralText = SW_TRUE;
+    control.removeAnnouncement( 77, 7, nowMs, 13 );
+    ServerDirectoryAnnouncementChange notice;
+    notice._text           = "literal";
+    notice._announcementID = 3;
+    notice._startMs        = kNowMs - 1;
+    notice._priority       = 2;
+    notice._bLiteralText   = SW_TRUE;
     control.postNotice( notice, 7, nowMs, 14 );
     rig._database.armFault( ServiceStoreFault::RejectCommit );
     control.clearMaintenance( "game", 7, "memo", nowMs, 15 );

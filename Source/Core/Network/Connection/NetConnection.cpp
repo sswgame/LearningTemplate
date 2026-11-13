@@ -87,7 +87,7 @@ namespace sw
         , _listSequencedReceive{}
         , _listReliableAssembly{}
         , _listSpareBuffer{}
-        , _listDeliveryNotice{}
+        , _listDeliveryNotification{}
         , _stats{}
         , _lastStatsTime{ 0.0 }
         , _lastAckRequestTime{ -1.0e9 }
@@ -122,8 +122,8 @@ namespace sw
         _listOutgoingUnreliable.clear();
         _listSequencedReceive.clear();
         _listSequencedSend.clear();
-        _listReliableAssembly.clear(); // 끊긴 연결의 반쪽 메시지가 같은 슬롯의 새 연결 메시지 앞에 붙지 않게 한다.
-        _listDeliveryNotice.clear();   // 끊긴 연결의 판정은 내지 않는다 — 처리기는 연결 닫힘(`onConnectionClosed`)으로 그 연결의 상태를 지운다.
+        _listReliableAssembly.clear();     // 끊긴 연결의 반쪽 메시지가 같은 슬롯의 새 연결 메시지 앞에 붙지 않게 한다.
+        _listDeliveryNotification.clear(); // 끊긴 연결의 판정은 내지 않는다 — 처리기는 연결 닫힘(`onConnectionClosed`)으로 그 연결의 상태를 지운다.
         _stats                   = NetConnectionStats{};
         _lastStatsTime           = 0.0;
         _lastAckRequestTime      = -1.0e9;
@@ -216,25 +216,25 @@ namespace sw
         QueuedUnreliable& queued = _listOutgoingUnreliable.emplace_back();
         queued._buffer           = acquireBuffer();
         queued._buffer.assign( pData, pData + size );
-        queued._noticeTag = tag;
-        queued._bNotified = SW_TRUE;
+        queued._notificationTag = tag;
+        queued._bNotified       = SW_TRUE;
         return true;
     }
 
-    void NetConnection::pollDeliveryNotices( vector<NetDeliveryNotice>& inoutListNotice )
+    void NetConnection::pollDeliveryNotifications( vector<NetDeliveryNotification>& inoutListNotice )
     {
-        inoutListNotice.insert( inoutListNotice.end(), _listDeliveryNotice.begin(), _listDeliveryNotice.end() );
-        _listDeliveryNotice.clear();
+        inoutListNotice.insert( inoutListNotice.end(), _listDeliveryNotification.begin(), _listDeliveryNotification.end() );
+        _listDeliveryNotification.clear();
     }
 
-    void NetConnection::settleNotices( SentPacket& sent, NetDeliveryResult result )
+    void NetConnection::completeNotifications( SentPacket& sent, NetDeliveryResult result )
     {
-        if ( sent._bNoticeSettled == SW_TRUE )
+        if ( sent._bNotificationCompleted == SW_TRUE )
             return;
-        sent._bNoticeSettled = SW_TRUE;
+        sent._bNotificationCompleted = SW_TRUE;
         for ( int32 index = 0; index < sent._notifiedCount; ++index )
         {
-            _listDeliveryNotice.push_back( NetDeliveryNotice{ sent._arrNotifiedTag[index], constant::invalid_index::kInt32, sent._arrNotifiedKind[index], result } );
+            _listDeliveryNotification.push_back( NetDeliveryNotification{ sent._arrNotifiedTag[index], constant::invalid_index::kInt32, sent._arrNotifiedKind[index], result } );
         }
     }
 
@@ -450,7 +450,7 @@ namespace sw
                 break;
             QueuedUnreliable& expired = _listOutgoingUnreliable.front();
             if ( expired._bNotified == SW_TRUE )
-                _listDeliveryNotice.push_back( NetDeliveryNotice{ expired._noticeTag, constant::invalid_index::kInt32, expired._buffer[0], NetDeliveryResult::Lost } ); // 싣지도 못했다
+                _listDeliveryNotification.push_back( NetDeliveryNotification{ expired._notificationTag, constant::invalid_index::kInt32, expired._buffer[0], NetDeliveryResult::Lost } ); // 싣지도 못했다
             recycleBuffer( expired._buffer );
             _listOutgoingUnreliable.pop_front();
             ++_stats._expiredUnreliableCount;
@@ -512,9 +512,9 @@ namespace sw
         SentPacket& sent = *body._pSent;
         while ( _listOutgoingUnreliable.empty() == false )
         {
-            QueuedUnreliable& front           = _listOutgoingUnreliable.front();
-            const bool        bNoticeSlotFull = front._bNotified == SW_TRUE && sent._notifiedCount >= kMaxNotifiedPerPacket;
-            if ( bNoticeSlotFull )
+            QueuedUnreliable& front                 = _listOutgoingUnreliable.front();
+            const bool        bNotificationSlotFull = front._bNotified == SW_TRUE && sent._notifiedCount >= kMaxNotifiedPerPacket;
+            if ( bNotificationSlotFull )
                 break; // 순서를 지키려고 뒤의 메시지도 다음 패킷으로 미룬다
             if ( body.tryWriteMessage( NetChannelType::Unreliable, 0, front._buffer, false ) == false )
                 break;
@@ -522,7 +522,7 @@ namespace sw
                         false );
             if ( front._bNotified == SW_TRUE )
             {
-                sent._arrNotifiedTag[sent._notifiedCount]  = front._noticeTag;
+                sent._arrNotifiedTag[sent._notifiedCount]  = front._notificationTag;
                 sent._arrNotifiedKind[sent._notifiedCount] = front._buffer[0];
                 ++sent._notifiedCount;
             }
@@ -545,12 +545,12 @@ namespace sw
         // 이 슬롯을 쓰던 옛 패킷(창 하나 앞)이 확인도 손실 판정도 없이 밀려나면 그 전달 통지는 잃은 것이다.
         SentPacket* pEvicted = _sentPackets.find( static_cast<uint16>( sequence - kPacketWindow ) );
         if ( pEvicted != nullptr )
-            settleNotices( *pEvicted, NetDeliveryResult::Lost );
-        SentPacket* pSent      = _sentPackets.insert( sequence );
-        pSent->_time           = time;
-        pSent->_reliableCount  = 0;
-        pSent->_notifiedCount  = 0;
-        pSent->_bNoticeSettled = SW_FALSE;
+            completeNotifications( *pEvicted, NetDeliveryResult::Lost );
+        SentPacket* pSent              = _sentPackets.insert( sequence );
+        pSent->_time                   = time;
+        pSent->_reliableCount          = 0;
+        pSent->_notifiedCount          = 0;
+        pSent->_bNotificationCompleted = SW_FALSE;
 
         // 메시지 수를 먼저 쓰지 않고, 메시지마다 "더 있다" 1비트를 앞에 둔다. 몇 개가 들어갈지는 쓰면서 정한다.
         PacketBody body;
@@ -771,7 +771,7 @@ namespace sw
                 continue;
             pSent->_bAcked = SW_TRUE;
             ++_stats._ackedPacketCount;
-            settleNotices( *pSent, NetDeliveryResult::Delivered );
+            completeNotifications( *pSent, NetDeliveryResult::Delivered );
             // RTT 표본은 확인을 요청한 패킷이 가장 새 확인으로 돌아왔을 때만 잡는다. ack 비트로 늦게 확인된 패킷이나 답 패킷은 상대가 기다렸다가 보냈을 수 있기 때문이다.
             if ( bitIndex < 0 && pSent->_bAckRequested )
             {
@@ -804,7 +804,7 @@ namespace sw
             if ( bSkipSentPacket )
                 continue;
             pSent->_bLossDetected = SW_TRUE;
-            settleNotices( *pSent, NetDeliveryResult::Lost );
+            completeNotifications( *pSent, NetDeliveryResult::Lost );
             for ( int32 index = 0; index < pSent->_reliableCount; ++index )
             {
                 OutgoingReliable* pMessage = _outgoingReliable.find( pSent->_arrReliableID[index] );

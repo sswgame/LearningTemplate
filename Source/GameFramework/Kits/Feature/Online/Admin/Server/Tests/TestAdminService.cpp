@@ -34,7 +34,7 @@ namespace
     };
 
     /** @brief 잔액 알림 호출을 셉니다. */
-    class FakeBalanceNotice final : public IBalanceChangedListener
+    class FakeBalanceNotification final : public IBalanceChangedListener
     {
     public:
         vector<AccountID> _listAccount{};
@@ -79,9 +79,9 @@ namespace
         vector<ServerDirectoryControlCompletion> _listCompletion{};
         vector<uint64>                           _listTag{};
         ServerDirectoryMaintenanceChange         _maintenance{};
-        ServerDirectoryNoticeChange              _notice{};
+        ServerDirectoryAnnouncementChange        _notice{};
         string                                   _clearedScope{};
-        uint64                                   _removedNoticeID{ 0 };
+        uint64                                   _removedAnnouncementID{ 0 };
 
         void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID /*actorID*/, string_view /*memo*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
         {
@@ -95,15 +95,15 @@ namespace
             _listTag.push_back( requestTag );
         }
 
-        void postNotice( const ServerDirectoryNoticeChange& change, AccountID /*actorID*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
+        void postNotice( const ServerDirectoryAnnouncementChange& change, AccountID /*actorID*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
         {
             _notice = change;
             _listTag.push_back( requestTag );
         }
 
-        void removeNotice( uint64 noticeID, AccountID /*actorID*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
+        void removeAnnouncement( uint64 announcementID, AccountID /*actorID*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
         {
-            _removedNoticeID = noticeID;
+            _removedAnnouncementID = announcementID;
             _listTag.push_back( requestTag );
         }
 
@@ -170,17 +170,17 @@ namespace
 
     struct AdminFixture
     {
-        MemoryServiceDatabase _database;
-        MemoryServiceStore    _store;
-        FakeSessionControl    _sessions;
-        FakeBalanceNotice     _balances;
-        FakeDirectory         _directory;
-        FakeNameIndex         _nameIndex;
-        FakeDirectoryControl  _directoryControl;
-        FakeLiveEventControl  _liveControl;
-        AdminReplySink        _sink;
-        AdminService          _service;
-        uint64                _nextKey{ 1 };
+        MemoryServiceDatabase   _database;
+        MemoryServiceStore      _store;
+        FakeSessionControl      _sessions;
+        FakeBalanceNotification _balances;
+        FakeDirectory           _directory;
+        FakeNameIndex           _nameIndex;
+        FakeDirectoryControl    _directoryControl;
+        FakeLiveEventControl    _liveControl;
+        AdminReplySink          _sink;
+        AdminService            _service;
+        uint64                  _nextKey{ 1 };
 
         explicit AdminFixture( bool bPorts = true )
             : _database{}
@@ -200,12 +200,12 @@ namespace
             AdminServiceConfig settings;
             if ( bPorts )
             {
-                settings._pDirectory        = &_directory;
-                settings._pNameIndex        = &_nameIndex;
-                settings._pSessionControl   = &_sessions;
-                settings._pDirectoryControl = &_directoryControl;
-                settings._pBalanceNotice    = &_balances;
-                settings._pLiveEventControl = &_liveControl;
+                settings._pDirectory           = &_directory;
+                settings._pNameIndex           = &_nameIndex;
+                settings._pSessionControl      = &_sessions;
+                settings._pDirectoryControl    = &_directoryControl;
+                settings._pBalanceNotification = &_balances;
+                settings._pLiveEventControl    = &_liveControl;
             }
             SW_EXPECT_TRUE( _service.initialize( &_store, settings ) );
         }
@@ -387,12 +387,12 @@ SW_TEST_CASE( AdminServiceTest, DirectoryCommandsForwardAndFinishOnCompletion )
     rig.tick();
     SW_EXPECT_TRUE( rig.take()._serviceResult == AdminResult::Ok );
 
-    AdminRequest notice  = makeRequest();
-    notice._noticeID     = 5;
-    notice._body         = "hello";
-    notice._priority     = 3;
-    notice._bLiteralText = SW_TRUE;
-    rig.send( kOperator, AdminMethod::PostNotice::kID, notice );
+    AdminRequest notice    = makeRequest();
+    notice._announcementID = 5;
+    notice._body           = "hello";
+    notice._priority       = 3;
+    notice._bLiteralText   = SW_TRUE;
+    rig.send( kOperator, AdminMethod::PostAnnouncement::kID, notice );
     SW_EXPECT_EQUAL( string( "hello" ), rig._directoryControl._notice._text );
     SW_EXPECT_EQUAL( 3, rig._directoryControl._notice._priority );
     SW_EXPECT_EQUAL( SW_TRUE, rig._directoryControl._notice._bLiteralText );
@@ -400,8 +400,8 @@ SW_TEST_CASE( AdminServiceTest, DirectoryCommandsForwardAndFinishOnCompletion )
     rig.tick();
     SW_EXPECT_TRUE( rig.take()._serviceResult.hasError( OnlineError::kInvalidRequest ) );
 
-    rig.send( kOperator, AdminMethod::RemoveNotice::kID, notice );
-    SW_EXPECT_EQUAL( uint64( 5 ), rig._directoryControl._removedNoticeID );
+    rig.send( kOperator, AdminMethod::RemoveAnnouncement::kID, notice );
+    SW_EXPECT_EQUAL( uint64( 5 ), rig._directoryControl._removedAnnouncementID );
     rig._directoryControl.finishLast( ServerDirectoryControlResult::NotFound );
     rig.tick();
     SW_EXPECT_TRUE( rig.take()._serviceResult == AdminResult::NotFound );

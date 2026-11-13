@@ -7,7 +7,7 @@
 namespace sw
 {
     LeaderboardClient::LeaderboardClient()
-        : _unlockGate{}
+        : _unlockConsumerLock{}
         , _unlockBuffer{}
     {
     }

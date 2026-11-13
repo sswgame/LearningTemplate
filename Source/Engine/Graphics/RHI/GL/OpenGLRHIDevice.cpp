@@ -1294,7 +1294,7 @@ namespace sw
             result = _stagingRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
         // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다 — 장치를 잃었으면(펜스 확인이 GL_WAIT_FAILED) 링이 다시 비지 않으므로 Full 도 Rejected 다(계약 2).
         // Busy 는 앞선 전송이 끝나면 비므로 호출자가 다시 제출한다.
-        const RHISubmitResult submitResult = RHIStagingRingUtil::settleAllocation( _stagingRing, _transferSerials, result, sizeBytes, "GL", pCaller, outSpan );
+        const RHISubmitResult submitResult = RHIStagingRingUtil::completeAllocation( _stagingRing, _transferSerials, result, sizeBytes, "GL", pCaller, outSpan );
         if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
             return submitResult;
         return attachSoloBuffer( _stagingRing, _stagingSolo, outSpan, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, pCaller );
@@ -1313,7 +1313,7 @@ namespace sw
             result = _readbackRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
         // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 업로드 쪽과 같은 한 곳이다 — 잃은 장치의 Full 은 Rejected 다. Busy 는 앞선 되읽기를 가져가거나 버리면 비므로 호출자가 다시 제출한다(계약 2).
         const utf8* const     pCaller      = "submitTextureReadback";
-        const RHISubmitResult submitResult = RHIStagingRingUtil::settleAllocation( _readbackRing, _transferSerials, result, sizeBytes, "GL", pCaller, outSpan );
+        const RHISubmitResult submitResult = RHIStagingRingUtil::completeAllocation( _readbackRing, _transferSerials, result, sizeBytes, "GL", pCaller, outSpan );
         if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
             return submitResult;
         return attachSoloBuffer( _readbackRing, _readbackSolo, outSpan, GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, pCaller );

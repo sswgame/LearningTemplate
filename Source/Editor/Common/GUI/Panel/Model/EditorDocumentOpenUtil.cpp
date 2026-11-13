@@ -27,7 +27,7 @@ namespace sw::editor
         return pending.empty() ? focused : pending;
     }
 
-    bool EditorDocumentOpenUtil::applyAssetMove( const EditorAssetMoveNotice& notice, string& inoutLoaded, vector<string>& inoutListRecent )
+    bool EditorDocumentOpenUtil::applyAssetMove( const EditorAssetMoveEvent& notice, string& inoutLoaded, vector<string>& inoutListRecent )
     {
         for ( size_t index = 0; index < notice._listOldID.size() && index < notice._listNewID.size(); ++index )
         {

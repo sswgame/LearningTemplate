@@ -156,7 +156,7 @@ namespace sw::editor
     bool EditorCommandRegistry::isEnabled( const EditorCommandDesc& desc, const EditorCommandTarget& target )
     {
         // 씬을 바꾸는 커맨드는 편집 허용 답을 먼저 묻는다 — 플레이 중 · 편집을 막는 작업(베이크) 중이면 꺼진다.
-        if ( EditorCommandTargetUtil::isGatedByEditLock( desc._edit ) && EditorPlaySession::areSceneEditsAllowed() == false )
+        if ( EditorCommandTargetUtil::isBlockedByEditLock( desc._edit ) && EditorPlaySession::areSceneEditsAllowed() == false )
             return false;
         if ( desc._enabledPredicate.isBound() == false )
             return true;

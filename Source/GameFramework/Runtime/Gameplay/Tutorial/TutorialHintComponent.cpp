@@ -3,7 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Tutorial/TutorialHintComponent.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Presentation/IPlayerNoticeSink.h"
+#include "Engine/Presentation/IPlayerNotificationSink.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -19,7 +19,7 @@ namespace sw
     } // namespace
 
     TutorialHintComponent::TutorialHintComponent()
-        : _pNoticeSink{ nullptr }
+        : _pNotificationSink{ nullptr }
         , _text{}
         , _durationSeconds{ 6.0f }
     {
@@ -45,10 +45,10 @@ namespace sw
             if ( showTutorialsKey.has_value() == false || pSettings->getBoolValue( *showTutorialsKey ) == false )
                 return false;
         }
-        IPlayerNoticeSink* pNotices = _pNoticeSink != nullptr ? _pNoticeSink : game::findSubsystem<IPlayerNoticeSink>();
+        IPlayerNotificationSink* pNotices = _pNotificationSink != nullptr ? _pNotificationSink : game::findSubsystem<IPlayerNotificationSink>();
         if ( pNotices == nullptr )
             return false; // 서버처럼 알림 화면이 없다
-        pNotices->postNotice( _text, _durationSeconds, PlayerNoticeKind::Hint );
+        pNotices->postNotice( _text, _durationSeconds, PlayerNotificationKind::Hint );
         return true;
     }
 } // namespace sw

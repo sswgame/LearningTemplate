@@ -301,7 +301,7 @@ namespace sw
         void                                        onAwaitingCompletion() override;
         void                                        onUploadSubmitted() override;
         /** @brief 두 대기 목록에서 이 로드 작업을 뺍니다(다른 스레드가 먼저 집었거나 끝났을 때). */
-        void removeFromPumpLists( TextureCache::Impl& cache );
+        void removeFromPollLists( TextureCache::Impl& cache );
         /** @brief 업로드가 끝난(또는 실패한) 뒤의 마무리입니다 — 항목을 공개하고 결과를 단계 결과로 바꿉니다. */
         [[nodiscard]] expected<AssetCompletionStep> concludeCompletion( TextureCache::Impl& cache, bool bReady );
 

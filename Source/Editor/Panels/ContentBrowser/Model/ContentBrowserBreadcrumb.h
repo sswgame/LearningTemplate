@@ -1,5 +1,5 @@
 /**
- * @file ContentBrowserCrumb.h
+ * @file ContentBrowserBreadcrumb.h
  * @brief 콘텐츠 브라우저 패널(`ContentBrowserPanel`)의 판단 로직입니다. 브레드크럼 조각, 폴더 트리 캐시, 탐색 이력을 담당하며, ImGui 에 의존하지 않으므로 EditorTest 가 테스트합니다.
  */
 #pragma once
@@ -12,28 +12,28 @@
 namespace sw::editor
 {
     /**
-     * @struct ContentBrowserCrumb
+     * @struct ContentBrowserBreadcrumb
      * @brief 브레드크럼의 조각 하나입니다. 보이는 이름과 누르면 이동할 폴더를 함께 가집니다.
      * @details 브레드크럼을 문자열 하나("Favorites / Shaders / bin")로 보관하고 누를 때 다시 쪼개면, 루트가 아닌 첫 조각("Favorites")에서 절대 경로가
      *          끊겨 다음 조각이 상대 경로가 된다. 그래서 조각마다 절대 경로를 처음부터 함께 둔다.
      */
-    struct ContentBrowserCrumb
+    struct ContentBrowserBreadcrumb
     {
         string _label;        ///< 보이는 이름
         string _absolutePath; ///< 누르면 이동할 폴더다. 비어 있으면 누를 수 없는 그룹 이름이다("Favorites")
 
         // 콘텐츠 브라우저가 호출하는 순수 함수 모음입니다. 언리얼 Content Browser 의 브레드크럼에 해당합니다.
         /** @brief 즐겨찾기에서 들어간 폴더의 브레드크럼을 만듭니다. `{ "Favorites", "" }, { @p label, @p absolutePath }` 입니다. */
-        static void makeFavoriteTrail( string_view label, string_view absolutePath, vector<ContentBrowserCrumb>& outListCrumb );
+        static void makeFavoriteTrail( string_view label, string_view absolutePath, vector<ContentBrowserBreadcrumb>& outListCrumb );
 
         /**
          * @brief 루트 아래 폴더의 브레드크럼을 만듭니다. 루트 조각과, 루트에서 @p folderAbs 까지의 폴더마다 한 조각을 둡니다.
          * @details @p folderAbs 가 루트 아래가 아니면 루트 조각 없이 그 폴더 한 조각만 둔다.
          */
-        static void makeFolderTrail( string_view rootLabel, string_view rootAbs, string_view folderAbs, vector<ContentBrowserCrumb>& outListCrumb );
+        static void makeFolderTrail( string_view rootLabel, string_view rootAbs, string_view folderAbs, vector<ContentBrowserBreadcrumb>& outListCrumb );
 
         /** @brief 현재 브레드크럼 끝에 하위 폴더 조각 하나를 추가합니다. 이름은 폴더 이름입니다. */
-        static void appendChildCrumb( string_view childAbs, vector<ContentBrowserCrumb>& inoutListCrumb );
+        static void appendChildBreadcrumb( string_view childAbs, vector<ContentBrowserBreadcrumb>& inoutListCrumb );
     };
 } // namespace sw::editor
 
@@ -75,8 +75,8 @@ namespace sw::editor
     /** @brief 폴더 이동 이력의 항목 하나입니다. 돌아갈 때 브레드크럼도 그때 형태 그대로 복원합니다. */
     struct ContentBrowserHistoryEntry
     {
-        string                      _folderPathAbs;
-        vector<ContentBrowserCrumb> _listCrumb;
+        string                           _folderPathAbs;
+        vector<ContentBrowserBreadcrumb> _listCrumb;
     };
 } // namespace sw::editor
 
@@ -102,7 +102,7 @@ namespace sw::editor
          * @brief 새로 연 폴더를 적습니다. 지금 위치 뒤의 앞으로 가기 이력은 버립니다.
          * @param folderAbs 구분자를 `/` 로 맞춘 절대 경로입니다. 지금 폴더와 같으면(대소문자 · 구분자 무시) 적지 않습니다.
          */
-        void record( string_view folderAbs, const vector<ContentBrowserCrumb>& listCrumb );
+        void record( string_view folderAbs, const vector<ContentBrowserBreadcrumb>& listCrumb );
         /** @brief 이전 폴더로 돌아갈 수 있으면 true 입니다. */
         bool canNavigateBack() const { return _currentIndex > 0; }
         /** @brief 다음 폴더로 나아갈 수 있으면 true 입니다. */

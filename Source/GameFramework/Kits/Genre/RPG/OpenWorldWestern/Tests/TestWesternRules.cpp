@@ -125,7 +125,7 @@ namespace
             return count;
         }
 
-        bool readForgedRecords( float32 unseenTime, int32 bounty, int32 wantedLevel, bool bTwice )
+        bool readFixtureRecords( float32 unseenTime, int32 bounty, int32 wantedLevel, bool bTwice )
         {
             sw::Archive written;
             written << static_cast<uint32>( bTwice ? 2 : 1 );
@@ -144,7 +144,7 @@ namespace
             return _law.readState( reading );
         }
 
-        bool readForgedPending( uint32 incidentID, uint32 nextIncidentID )
+        bool readFixturePending( uint32 incidentID, uint32 nextIncidentID )
         {
             sw::Archive written;
             written << static_cast<uint32>( 0 );
@@ -499,22 +499,22 @@ SW_TEST_CASE_F( WesternLawTest, UnknownRegionDoesNotPoisonState )
  */
 SW_TEST_CASE_F( WesternLawTest, ReadStateRefusesBrokenRecords )
 {
-    SW_REQUIRE_TRUE( readForgedRecords( 1.0f, 8, 2, false ) ); // 형식은 맞다
+    SW_REQUIRE_TRUE( readFixtureRecords( 1.0f, 8, 2, false ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 8, _law.getBounty( _region ) );
 
-    SW_EXPECT_FALSE( readForgedRecords( std::numeric_limits<float32>::quiet_NaN(), 9, 2, false ) );
-    SW_EXPECT_FALSE( readForgedRecords( -1.0f, 9, 2, false ) );
-    SW_EXPECT_FALSE( readForgedRecords( 1.0f, -9, 2, false ) );
-    SW_EXPECT_FALSE( readForgedRecords( 1.0f, 9, -2, false ) );
-    SW_EXPECT_FALSE( readForgedRecords( 1.0f, 9, 4, false ) ); // 지역의 최대 수배(3)를 넘는다
-    SW_EXPECT_FALSE( readForgedRecords( 1.0f, 9, 2, true ) );
+    SW_EXPECT_FALSE( readFixtureRecords( std::numeric_limits<float32>::quiet_NaN(), 9, 2, false ) );
+    SW_EXPECT_FALSE( readFixtureRecords( -1.0f, 9, 2, false ) );
+    SW_EXPECT_FALSE( readFixtureRecords( 1.0f, -9, 2, false ) );
+    SW_EXPECT_FALSE( readFixtureRecords( 1.0f, 9, -2, false ) );
+    SW_EXPECT_FALSE( readFixtureRecords( 1.0f, 9, 4, false ) ); // 지역의 최대 수배(3)를 넘는다
+    SW_EXPECT_FALSE( readFixtureRecords( 1.0f, 9, 2, true ) );
     SW_EXPECT_EQUAL( 8, _law.getBounty( _region ) );
 
-    SW_EXPECT_TRUE( readForgedPending( 4, 5 ) );
+    SW_EXPECT_TRUE( readFixturePending( 4, 5 ) );
     SW_EXPECT_EQUAL( 1, _law.countPendingReports() );
-    SW_EXPECT_FALSE( readForgedPending( 5, 5 ) );
-    SW_EXPECT_FALSE( readForgedPending( 0, 5 ) );
-    SW_EXPECT_FALSE( readForgedPending( 1, 0 ) );
+    SW_EXPECT_FALSE( readFixturePending( 5, 5 ) );
+    SW_EXPECT_FALSE( readFixturePending( 0, 5 ) );
+    SW_EXPECT_FALSE( readFixturePending( 1, 0 ) );
     SW_EXPECT_EQUAL( 1, _law.countPendingReports() );
 }
 

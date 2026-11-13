@@ -92,7 +92,7 @@ namespace sw
                                              .and_then( [&]
                 { return exposeInterface<const ILedgerPolicy>( context, entry, _pCurrencyCatalog->getLedgerPolicy() ); } )
                                              .and_then( [&]
-                { return exposeInterface<IBalanceChangedListener>( context, entry, _service.getBalanceNotice() ); } );
+                { return exposeInterface<IBalanceChangedListener>( context, entry, _service.getBalanceNotification() ); } );
                 if ( exposed.has_value() == false )
                 {
                     stop();

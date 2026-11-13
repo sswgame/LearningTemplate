@@ -333,9 +333,9 @@ namespace sw
         _buildNotice._targetName       = string( targetName );
     }
 
-    bool LiveReloadManager::consumeBuildNotice()
+    bool LiveReloadManager::consumeBuildEvent()
     {
-        BuildNotice notice;
+        BuildEvent notice;
         {
             ScopedLock<mutex> lock{ _buildMutex };
             notice                         = _buildNotice;
@@ -392,7 +392,7 @@ namespace sw
         }
 
         // 이 프로세스가 시작한 빌드가 도는 동안은 변경을 모아 두기만 한다. 연쇄 빌드의 반쯤 완성된 집합을 로드하지 않기 위해서다(`notifyBuildStarted`).
-        const bool bBuildInProgress = consumeBuildNotice();
+        const bool bBuildInProgress = consumeBuildEvent();
         if ( _bBuildStampPending == SW_TRUE && bBuildInProgress == false )
         {
             _bBuildStampPending = SW_FALSE;

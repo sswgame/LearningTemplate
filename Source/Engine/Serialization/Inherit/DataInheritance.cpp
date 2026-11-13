@@ -39,7 +39,7 @@ namespace sw
             }
 
             /** @brief 부모의 조건 원소 다음에 자식의 조건 원소를 붙입니다 — 조건은 바꾸지 않고 쌓는다(합친 결과에서 위에서 아래로 얹는다). */
-            static void appendWhens( const XMLNode& parent, const XMLNode& child, const XMLNode& out )
+            static void appendWhenElements( const XMLNode& parent, const XMLNode& child, const XMLNode& out )
             {
                 for ( const XMLNode& source : { parent, child } )
                 {
@@ -197,7 +197,7 @@ namespace sw
                             return false;
                     }
                 }
-                appendWhens( parent, child, out );
+                appendWhenElements( parent, child, out );
                 return true;
             }
 
@@ -209,7 +209,7 @@ namespace sw
                 for ( XMLNode element = parent.findChild(); element.isValid(); element = element.findNextSibling() )
                 {
                     if ( isElement( element ) == false || isWhen( element ) )
-                        continue; // 조건 원소는 목록 원소가 아니다 — 목록 원소 자신에 얹는 차이다(`appendWhens`)
+                        continue; // 조건 원소는 목록 원소가 아니다 — 목록 원소 자신에 얹는 차이다(`appendWhenElements`)
                     const utf8* pKey = element.findAttribute( schema._keyAttribute.c_str() );
                     if ( pKey == nullptr )
                     {
@@ -327,7 +327,7 @@ namespace sw
                             return false;
                     }
                 }
-                appendWhens( parent, child, out );
+                appendWhenElements( parent, child, out );
                 for ( const ListEntry& entry : listEntry )
                 {
                     if ( entry._childNode.isValid() == false )

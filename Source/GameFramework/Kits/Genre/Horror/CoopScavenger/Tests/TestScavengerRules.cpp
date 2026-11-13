@@ -331,8 +331,8 @@ SW_TEST_CASE( ScavengerQuotaTest, ReadStateChecksRange )
         forged << daysLeft;
         forged << cycle;
         forged << bGameOver;
-        sw::Archive forgedReading( forged.getData(), forged.getSize() );
-        return restored.readState( forgedReading );
+        sw::Archive readingFixture( forged.getData(), forged.getSize() );
+        return restored.readState( readingFixture );
     };
     SW_EXPECT_FALSE( readForged( -1, 0, 0, 0, 0 ) );
     SW_EXPECT_FALSE( readForged( 0, 0, 0, 0, 0 ) );
@@ -416,8 +416,8 @@ SW_TEST_CASE( ScavengerCarryTest, SpeedAndState )
                 sw::ScavengerFacility::serializeScrap( io, scrapCopy );
             }
         }
-        sw::Archive forgedReading( forged.getData(), forged.getSize() );
-        return restored.readState( forgedReading );
+        sw::Archive readingFixture( forged.getData(), forged.getSize() );
+        return restored.readState( readingFixture );
     };
     const sw::ScavengerScrap good = ScavengerTestUtil::makeScrap( 1, 10, 5.0f, false );
     SW_EXPECT_TRUE( readForged( { good } ) );

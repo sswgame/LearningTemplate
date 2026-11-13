@@ -1168,7 +1168,7 @@ msgid "Pick section in Preview"
 msgstr "미리보기에서 구간 집기"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.PostNotice"
+msgctxt "EdPlugin.PostAnnouncement"
 msgid "Post notice"
 msgstr "공지 올리기"
 
@@ -1253,7 +1253,7 @@ msgid "Remove live event"
 msgstr "라이브 이벤트 지우기"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.RemoveNotice"
+msgctxt "EdPlugin.RemoveAnnouncement"
 msgid "Remove notice"
 msgstr "공지 지우기"
 

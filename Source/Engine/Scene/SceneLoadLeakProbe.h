@@ -46,7 +46,7 @@ namespace sw
         {
             Idle,
             Loading,  ///< 씬 로드 요청이 끝나기를 기다린다(대조 회차는 건너뛴다)
-            Settling, ///< 빈 씬으로 바꾼 뒤 지연 해제가 다 돌 프레임(`SceneLoadLeakProbeInternal::kSettleFrames`)을 기다린다
+            Settling, ///< 빈 씬으로 바꾼 뒤 지연 해제가 다 돌 프레임(`SceneLoadLeakProbeInternal::kStabilityFrames`)을 기다린다
         };
 
         /** @brief 회차 하나를 시작합니다 — 창을 열고(대조 회차가 아니면) 로드를 요청합니다. */
@@ -59,13 +59,13 @@ namespace sw
     private:
         Phase                  _phase;
         string                 _scenePath;
-        uint32                 _totalRounds;   ///< 워밍업 + 측정 회차 수(대조 회차는 따로)
-        uint32                 _round;         ///< 지금 회차(0 이 대조 회차, 1 부터 로드 회차)
-        uint32                 _settleFrames;  ///< `Settling` 에서 지난 프레임 수
-        uint64                 _controlBytes;  ///< 대조 회차에서 남은 바이트(빈 씬 몫)
-        uint64                 _controlBlocks; ///< 대조 회차에서 남은 블록 수
-        uint64                 _sumBytes;      ///< 대조를 뺀 남은 바이트의 누적 합
-        uint64                 _sumBlocks;     ///< 대조를 뺀 남은 블록 수의 누적 합
+        uint32                 _totalRounds;     ///< 워밍업 + 측정 회차 수(대조 회차는 따로)
+        uint32                 _round;           ///< 지금 회차(0 이 대조 회차, 1 부터 로드 회차)
+        uint32                 _stabilityFrames; ///< `Settling` 에서 지난 프레임 수
+        uint64                 _controlBytes;    ///< 대조 회차에서 남은 바이트(빈 씬 몫)
+        uint64                 _controlBlocks;   ///< 대조 회차에서 남은 블록 수
+        uint64                 _sumBytes;        ///< 대조를 뺀 남은 바이트의 누적 합
+        uint64                 _sumBlocks;       ///< 대조를 뺀 남은 블록 수의 누적 합
         TaskFuture<Scene*>     _loadFuture;
         vector<LeakCurvePoint> _listPoint;
         LeakCurveResult        _result;

@@ -1,5 +1,5 @@
 /**
- * @file AutomationJudge.h
+ * @file AutomationEvaluator.h
  * @brief 자동화 시나리오의 판정을 소유합니다 — 감시 값 비교 · 방문 이력 · 기억 값 · 로그 · 이미지 지표와 실패 · 미확정 · 처리하지 않은 로그 목록.
  */
 #pragma once
@@ -23,22 +23,22 @@
 namespace sw
 {
     /**
-     * @class AutomationJudge
+     * @class AutomationEvaluator
      * @brief 단언 단계의 비교와 결과 판정에 필요한 상태를 모두 쥡니다. 시간 · 입력 · 대기는 모릅니다(그것은 `AutomationStepTimeline` 과 실행기의 일).
      * @details 판정이 읽는 바깥 값(시나리오 프레임 · 산출물 경로 · 오브젝트 매니저)은 단계 문맥(`AutomationStepContext`)에서 호출마다 받는다 — 판정이 실행기를 알지 못한다.
      *          실패는 `addFailure` 로만 쌓이고, 결과를 정하는 것(`Passed` → `Failed` · `UnhandledLog`)은 실행기의 끝맺음이다.
      *          상용 엔진 비교: 언리얼 Automation Test 의 `FAutomationTestBase`(테스트 기록 · 오류 목록)가 실행기와 갈라진 모양과 같다. 게임 스레드에서만 쓴다.
      */
-    class SW_DEVTOOLS_API AutomationJudge
+    class SW_DEVTOOLS_API AutomationEvaluator
     {
     public:
         /** @param pLogPolicy 세션 수명의 로그 판정(`AutomationSession` 이 든다 — 콘솔도 같은 것을 읽는다). 비면 부른 쪽의 잘못이다. */
-        explicit AutomationJudge( shared_ptr<AutomationLogPolicy> pLogPolicy );
+        explicit AutomationEvaluator( shared_ptr<AutomationLogPolicy> pLogPolicy );
         /** @brief 이 단계의 선언 · 허용을 지운다 — 단계 사이의 줄은 어느 시나리오의 선언도 아니다. */
-        ~AutomationJudge();
+        ~AutomationEvaluator();
 
-        AutomationJudge( const AutomationJudge& )            = delete;
-        AutomationJudge& operator=( const AutomationJudge& ) = delete;
+        AutomationEvaluator( const AutomationEvaluator& )            = delete;
+        AutomationEvaluator& operator=( const AutomationEvaluator& ) = delete;
 
         /**
          * @brief 시나리오가 시작하는 프레임에 판정을 준비합니다 — 로그 허용 정책을 올리고, 감시 값 이력을 만들고, 로그 수집을 시작합니다.
@@ -91,7 +91,7 @@ namespace sw
          *          빠진 현지화 키는 `LocalizationManager::getMissingKeys` 로 프로세스 전체를 본다(키마다 경고를 한 번만 남기므로 시나리오 앞 기동 구간에 남은 줄도
          *          여기서 잡는다 — id 가 없는 줄이라 `<ExpectLog>` 로만 가릴 수 있다). 허용 항목이 맞은 id 는 `getAllowedLogIDs` 에 남아 보고에 적힌다.
          */
-        [[nodiscard]] optional<string> applyLogGate( AutomationResult result );
+        [[nodiscard]] optional<string> applyLogCheck( AutomationResult result );
 
         const vector<string>& getFailures() const { return _listFailure; }
         /** @brief `-scenario-update-golden` 으로 이 실행이 새로 쓰거나 바꾼 골든 파일(리소스 id)입니다. 리뷰할 목록이다. */

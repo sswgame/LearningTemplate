@@ -11,7 +11,7 @@ sw_globSourceTree(listCoreSource RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 sw_filterPlatformSources(listCoreSource)
 # 단위 테스트(틀 `Testing/` 과 기능 폴더의 `Tests/`)는 배포 구성이 짓지 않는다 — 배포본에 테스트 코드가 없다(구성마다 다른 케이스 수가 아니라 0).
 if(SW_SHIPPING_BUILD)
-	sw_excludeUnbuiltSources(listCoreSource "/Source/Core/Testing/" ${SW_DEV_ONLY_SOURCE_PATTERNS})
+	sw_removeExcludedSources(listCoreSource "/Source/Core/Testing/" ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
 
 # ------------------------------------------------------------------------------
@@ -159,7 +159,7 @@ foreach(tier IN LISTS listCoreTier)
 		FOLDER "Source/Core"
 	)
 	target_include_directories(${partName} PRIVATE "${pchEntryDir}") # `Source/Core` 자체는 include 경로가 아니다 — `#include "pch.h"` 만 이 생성 헤더로 푼다
-	sw_applyTargetLayerGate(${partName} core) # 타깃 경계 — Core 는 Engine 과 그 위를 보지 못한다
+	sw_applyTargetLayerGuard(${partName} core) # 타깃 경계 — Core 는 Engine 과 그 위를 보지 못한다
 	sw_writeCoreTierStubs(${partName} ${tier})
 	target_link_libraries(${partName} PUBLIC sw_public_source_includes)
 	target_link_libraries(${partName} PUBLIC sw_third_party_includes)

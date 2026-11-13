@@ -4,7 +4,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "DevTools/Client/Automation/Runner/AutomationJudge.h"
+#include "DevTools/Client/Automation/Runner/AutomationEvaluator.h"
 #include "DevTools/Client/Automation/Runner/AutomationLogPolicy.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -42,8 +42,8 @@ SW_TEST_CASE( AutomationLogPolicyTest, ExpectLogDeclaresButZeroCountAndAllowDoNo
     SW_EXPECT_FALSE( Util::isDeclared( policy, "Test.Absent" ) );
     SW_EXPECT_FALSE( Util::isDeclared( policy, "Test.Allowed" ) );
     SW_EXPECT_TRUE( policy.classify( LogLevel::Warning, "Test.Allowed", "some warning" ) == AutomationLogResult::Allowed );
-    SW_EXPECT_TRUE( policy.classify( LogLevel::Info, "Test.Declared", "some info" ) == AutomationLogResult::NotGated ); // 게이트가 보지 않는 수준은 흐리게 할 것도 없다
-    SW_EXPECT_FALSE( Util::isDeclared( policy, "" ) );                                                                  // id 없는 줄은 선언할 수 없다
+    SW_EXPECT_TRUE( policy.classify( LogLevel::Info, "Test.Declared", "some info" ) == AutomationLogResult::NotChecked ); // 게이트가 보지 않는 수준은 흐리게 할 것도 없다
+    SW_EXPECT_FALSE( Util::isDeclared( policy, "" ) );                                                                    // id 없는 줄은 선언할 수 없다
 }
 
 // 단계가 바뀌면(다음 시나리오의 `prepare`) 앞 단계의 선언은 거짓이다. 단계의 판정이 사라져도 선언은 지워진다 — 세션이 든 한 벌을 판정이 빌린다.
@@ -59,7 +59,7 @@ SW_TEST_CASE( AutomationLogPolicyTest, NextStageAndEndedJudgeDropDeclarations )
     SW_EXPECT_TRUE( Util::isDeclared( *pLog, "Test.Second" ) );
 
     {
-        AutomationJudge judge{ pLog };
+        AutomationEvaluator judge{ pLog };
         SW_EXPECT_TRUE( Util::isDeclared( *pLog, "Test.Second" ) );
     }
     SW_EXPECT_FALSE( Util::isDeclared( *pLog, "Test.Second" ) );

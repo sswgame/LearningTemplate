@@ -12,7 +12,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/SaveGate.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 
 namespace sw
@@ -25,11 +25,11 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE( sw::string, gv_firstScene, "", "팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)" );
 
-    GameSceneFlow::GameSceneFlow( const GameSettings& settings, ScreenTransitionManager& screenTransition, ILoadingScreen* pLoadingScreen, SaveGate& saveGate )
+    GameSceneFlow::GameSceneFlow( const GameSettings& settings, ScreenTransitionManager& screenTransition, ILoadingScreen* pLoadingScreen, SaveLock& saveLock )
         : _settings{ settings }
         , _screenTransition{ screenTransition }
         , _pLoadingScreen{ pLoadingScreen }
-        , _saveGate{ saveGate }
+        , _saveLock{ saveLock }
         , _listPendingSceneLoad{}
         , _sceneLoadRequestedSubscription{}
         , _returnToTitleRegistration{}
@@ -162,7 +162,7 @@ namespace sw
         if ( kind != SceneLoadKind::Travel )
             return; // 도구가 연 씬(편집기 · 진단)은 게임 흐름이 아니다
         // 로드가 끝날 때까지 세이브를 막는다 — 언리얼 게임도 로딩 화면 동안 세이브를 받지 않는다(맵이 반쯤 섰다).
-        _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, future, _saveGate.block( "scene.loading" ), SceneLoadedFunction{} } );
+        _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, future, _saveLock.block( "scene.loading" ), SceneLoadedFunction{} } );
         if ( _pLoadingScreen != nullptr && _pLoadingScreen->hasLoadingScreenDocument() )
             (void)_pLoadingScreen->beginLoading();
 

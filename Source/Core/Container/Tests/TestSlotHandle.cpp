@@ -206,13 +206,13 @@ SW_TEST_CASE( SlotHandleTableTest, ForgedGenerationDoesNotAliasTheOccupiedBit )
     SW_REQUIRE_NOT_NULL( table.get( handle ) );
 
     // 슬롯의 상태 워드에서 점유 비트가 켜지는 자리(최상위)를 세대에 얹은 핸들.
-    const SlotHandle forgedHigh = SlotHandle::make( handle.index(), handle.generation() | 0x80000000u );
-    SW_EXPECT_TRUE_MSG( table.get( forgedHigh ) == nullptr,
+    const SlotHandle craftedHigh = SlotHandle::make( handle.index(), handle.generation() | 0x80000000u );
+    SW_EXPECT_TRUE_MSG( table.get( craftedHigh ) == nullptr,
                         "최상위 비트를 켠 세대가 점유 비트와 겹쳐 통과했습니다" );
 
     // 최상위 비트만 켠 것도 마찬가지다.
-    const SlotHandle forgedOnlyBit = SlotHandle::make( handle.index(), 0x80000000u );
-    SW_EXPECT_TRUE( table.get( forgedOnlyBit ) == nullptr );
+    const SlotHandle craftedOnlyBit = SlotHandle::make( handle.index(), 0x80000000u );
+    SW_EXPECT_TRUE( table.get( craftedOnlyBit ) == nullptr );
 
     // 진짜 핸들은 그대로 읽힌다.
     int32* pValue = table.get( handle );

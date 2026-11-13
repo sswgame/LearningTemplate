@@ -39,7 +39,7 @@ sw_addExecutable(ReflectionParser ${PARSER_SOURCES})
 
 # 헤더는 같은 폴더면 짧은 이름, 아니면 `Source/` 기준 전체 경로다 — 이 폴더를 include 경로에 두지 않는다(`sw_verifySourceIncludeRoots`).
 target_link_libraries(ReflectionParser PRIVATE ReflectionSchema)
-sw_applyTargetLayerGate(ReflectionParser reflectionparser) # 목록(ReflectionSchema) 밖 Engine · 위 타깃 헤더를 막는다
+sw_applyTargetLayerGuard(ReflectionParser reflectionparser) # 목록(ReflectionSchema) 밖 Engine · 위 타깃 헤더를 막는다
 sw_addPCHEntryDirectory(ReflectionParser PRIVATE core "Core/pch.h")
 # 외부 헤더는 SYSTEM 으로 — 우리 경고 규칙(-Werror=covered-switch-default 등)이 그 안에 걸리지 않는다.
 target_include_directories(ReflectionParser SYSTEM PRIVATE "${swLibclangIncludeDir}" "${CMAKE_SOURCE_DIR}/ThirdParty/nlohmann-json")

@@ -24,7 +24,7 @@ namespace
 </CityCatalog>)";
 
     /** @brief 도로 (0,0) (1,0), 집 (1,1), 집에서 나온 일꾼 하나인 도시를 꾸밉니다. */
-    struct CityForged
+    struct CityFixture
     {
         sw::vector<sw::CityTile>     _listTile{};
         sw::vector<sw::CityBuilding> _listBuilding{};
@@ -38,7 +38,7 @@ namespace
 
         static size_t toIndex( int32 x, int32 y ) { return static_cast<size_t>( y * kCitySize + x ); }
 
-        explicit CityForged( const sw::CityCatalog& catalog )
+        explicit CityFixture( const sw::CityCatalog& catalog )
             : _listTile( static_cast<size_t>( kCitySize * kCitySize ), sw::CityTile{} )
         {
             _listTile[toIndex( 0, 0 )]._bRoad         = SW_TRUE;
@@ -185,7 +185,7 @@ SW_TEST_CASE_F( CityReadStateTest, RealAndForgedStatesRead )
     SW_EXPECT_EQUAL( _city.getPopulation(), restored.getPopulation() );
     SW_EXPECT_EQUAL( size_t( 1 ), restored.getBuildings().size() );
 
-    SW_REQUIRE_TRUE( CityForged( _catalog ).readInto( restored ) );
+    SW_REQUIRE_TRUE( CityFixture( _catalog ).readInto( restored ) );
     SW_EXPECT_EQUAL( 3, restored.getPopulation() );
 }
 
@@ -194,61 +194,61 @@ SW_TEST_CASE_F( CityReadStateTest, RealAndForgedStatesRead )
  */
 SW_TEST_CASE_F( CityReadStateTest, RefusesTilesAndBuildingsThatDoNotMatch )
 {
-    SW_REQUIRE_TRUE( CityForged( _catalog ).readInto( _city ) );
+    SW_REQUIRE_TRUE( CityFixture( _catalog ).readInto( _city ) );
 
-    CityForged indexOutside( _catalog );
-    indexOutside._listTile[0]                                          = sw::CityTile{};
-    indexOutside._listTile[CityForged::toIndex( 2, 2 )]._buildingIndex = 1;
+    CityFixture indexOutside( _catalog );
+    indexOutside._listTile[0]                                           = sw::CityTile{};
+    indexOutside._listTile[CityFixture::toIndex( 2, 2 )]._buildingIndex = 1;
     SW_EXPECT_FALSE( indexOutside.readInto( _city ) );
 
-    CityForged indexBroken( _catalog );
-    indexBroken._listTile[CityForged::toIndex( 2, 2 )]._buildingIndex = -2;
+    CityFixture indexBroken( _catalog );
+    indexBroken._listTile[CityFixture::toIndex( 2, 2 )]._buildingIndex = -2;
     SW_EXPECT_FALSE( indexBroken.readInto( _city ) );
 
-    CityForged tileToDead( _catalog );
+    CityFixture tileToDead( _catalog );
     tileToDead._listWalker.clear();
     tileToDead._listBuilding[0]._bAlive = SW_FALSE;
     SW_EXPECT_FALSE( tileToDead.readInto( _city ) );
 
-    CityForged footprintMissing( _catalog );
-    footprintMissing._listTile[CityForged::toIndex( 1, 1 )]._buildingIndex = -1;
+    CityFixture footprintMissing( _catalog );
+    footprintMissing._listTile[CityFixture::toIndex( 1, 1 )]._buildingIndex = -1;
     SW_EXPECT_FALSE( footprintMissing.readInto( _city ) );
 
-    CityForged strayTile( _catalog );
-    strayTile._listTile[CityForged::toIndex( 3, 3 )]._buildingIndex = 0;
+    CityFixture strayTile( _catalog );
+    strayTile._listTile[CityFixture::toIndex( 3, 3 )]._buildingIndex = 0;
     SW_EXPECT_FALSE( strayTile.readInto( _city ) );
 
-    CityForged roadUnderBuilding( _catalog );
-    roadUnderBuilding._listTile[CityForged::toIndex( 1, 1 )]._bRoad = SW_TRUE;
+    CityFixture roadUnderBuilding( _catalog );
+    roadUnderBuilding._listTile[CityFixture::toIndex( 1, 1 )]._bRoad = SW_TRUE;
     SW_EXPECT_FALSE( roadUnderBuilding.readInto( _city ) );
 
-    CityForged roadBroken( _catalog );
+    CityFixture roadBroken( _catalog );
     roadBroken._listTile[0]._bRoad = 2;
     SW_EXPECT_FALSE( roadBroken.readInto( _city ) );
 
-    CityForged componentBroken( _catalog );
+    CityFixture componentBroken( _catalog );
     componentBroken._listTile[0]._roadComponent = -2;
     SW_EXPECT_FALSE( componentBroken.readInto( _city ) );
 
-    CityForged aliveNoDef( _catalog );
+    CityFixture aliveNoDef( _catalog );
     aliveNoDef._listBuilding[0]._pDef = nullptr;
     SW_EXPECT_FALSE( aliveNoDef.readInto( _city ) );
 
-    CityForged originOutside( _catalog );
+    CityFixture originOutside( _catalog );
     originOutside._listBuilding[0]._origin = sw::int2{ kCitySize, 0 };
     SW_EXPECT_FALSE( originOutside.readInto( _city ) );
 
-    CityForged footprintOver( _catalog );
+    CityFixture footprintOver( _catalog );
     footprintOver._listBuilding[0]._pDef       = _catalog.findBuilding( "garden" );
     footprintOver._listBuilding[0]._origin     = sw::int2{ 3, 3 }; // 두 칸짜리가 격자 끝을 넘는다
     footprintOver._listBuilding[0]._population = 0;
     SW_EXPECT_FALSE( footprintOver.readInto( _city ) );
 
-    CityForged accessOutside( _catalog );
+    CityFixture accessOutside( _catalog );
     accessOutside._listBuilding[0]._accessTile = sw::int2{ kCitySize, 0 };
     SW_EXPECT_FALSE( accessOutside.readInto( _city ) );
 
-    CityForged accessBroken( _catalog );
+    CityFixture accessBroken( _catalog );
     accessBroken._listBuilding[0]._accessTile = sw::int2{ -2, 0 };
     SW_EXPECT_FALSE( accessBroken.readInto( _city ) );
 
@@ -261,45 +261,45 @@ SW_TEST_CASE_F( CityReadStateTest, RefusesTilesAndBuildingsThatDoNotMatch )
  */
 SW_TEST_CASE_F( CityReadStateTest, RefusesBuildingValuesOutOfRange )
 {
-    SW_REQUIRE_TRUE( CityForged( _catalog ).readInto( _city ) );
+    SW_REQUIRE_TRUE( CityFixture( _catalog ).readInto( _city ) );
 
-    CityForged efficiencyOver( _catalog );
+    CityFixture efficiencyOver( _catalog );
     efficiencyOver._listBuilding[0]._efficiency = 1.5f;
     SW_EXPECT_FALSE( efficiencyOver.readInto( _city ) );
 
-    CityForged efficiencyNegative( _catalog );
+    CityFixture efficiencyNegative( _catalog );
     efficiencyNegative._listBuilding[0]._efficiency = -0.5f;
     SW_EXPECT_FALSE( efficiencyNegative.readInto( _city ) );
 
-    CityForged timerNegative( _catalog );
+    CityFixture timerNegative( _catalog );
     timerNegative._listBuilding[0]._walkerTimer = -1.0f;
     SW_EXPECT_FALSE( timerNegative.readInto( _city ) );
 
-    CityForged productionNegative( _catalog );
+    CityFixture productionNegative( _catalog );
     productionNegative._listBuilding[0]._productionProgress = -1.0f;
     SW_EXPECT_FALSE( productionNegative.readInto( _city ) );
 
-    CityForged assignedOver( _catalog );
+    CityFixture assignedOver( _catalog );
     assignedOver._listBuilding[0]._assignedWorkers = 1; // 집은 일꾼이 필요 없다
     SW_EXPECT_FALSE( assignedOver.readInto( _city ) );
 
-    CityForged activeNegative( _catalog );
+    CityFixture activeNegative( _catalog );
     activeNegative._listBuilding[0]._activeWalkerCount = -1;
     SW_EXPECT_FALSE( activeNegative.readInto( _city ) );
 
-    CityForged levelOver( _catalog );
+    CityFixture levelOver( _catalog );
     levelOver._listBuilding[0]._level = 1;
     SW_EXPECT_FALSE( levelOver.readInto( _city ) );
 
-    CityForged levelNegative( _catalog );
+    CityFixture levelNegative( _catalog );
     levelNegative._listBuilding[0]._level = -1;
     SW_EXPECT_FALSE( levelNegative.readInto( _city ) );
 
-    CityForged populationNegative( _catalog );
+    CityFixture populationNegative( _catalog );
     populationNegative._listBuilding[0]._population = -1;
     SW_EXPECT_FALSE( populationNegative.readInto( _city ) );
 
-    CityForged aliveBroken( _catalog );
+    CityFixture aliveBroken( _catalog );
     aliveBroken._listBuilding[0]._bAlive = 2;
     SW_EXPECT_FALSE( aliveBroken.readInto( _city ) );
 
@@ -311,69 +311,69 @@ SW_TEST_CASE_F( CityReadStateTest, RefusesBuildingValuesOutOfRange )
  */
 SW_TEST_CASE_F( CityReadStateTest, RefusesBrokenWalkers )
 {
-    SW_REQUIRE_TRUE( CityForged( _catalog ).readInto( _city ) );
+    SW_REQUIRE_TRUE( CityFixture( _catalog ).readInto( _city ) );
 
-    CityForged targetOutside( _catalog );
+    CityFixture targetOutside( _catalog );
     targetOutside._listWalker[0]._targetBuilding = 1;
     SW_EXPECT_FALSE( targetOutside.readInto( _city ) );
 
-    CityForged homeless( _catalog );
+    CityFixture homeless( _catalog );
     homeless._listWalker[0]._homeBuilding = -1;
     SW_EXPECT_FALSE( homeless.readInto( _city ) );
 
-    CityForged homeOutside( _catalog );
+    CityFixture homeOutside( _catalog );
     homeOutside._listWalker[0]._homeBuilding = 1;
     SW_EXPECT_FALSE( homeOutside.readInto( _city ) );
 
-    CityForged       homeDead( _catalog );
+    CityFixture      homeDead( _catalog );
     sw::CityBuilding dead;
     dead._bAlive = SW_FALSE;
     homeDead._listBuilding.push_back( dead );
     homeDead._listWalker[0]._homeBuilding = 1;
     SW_EXPECT_FALSE( homeDead.readInto( _city ) );
 
-    CityForged targetDead( _catalog );
+    CityFixture targetDead( _catalog );
     targetDead._listBuilding.push_back( dead );
     targetDead._listWalker[0]._targetBuilding = 1;
     SW_EXPECT_FALSE( targetDead.readInto( _city ) );
 
-    CityForged progressHuge( _catalog );
+    CityFixture progressHuge( _catalog );
     progressHuge._listWalker[0]._progress = 1.0e30f;
     SW_EXPECT_FALSE( progressHuge.readInto( _city ) );
 
-    CityForged progressNegative( _catalog );
+    CityFixture progressNegative( _catalog );
     progressNegative._listWalker[0]._progress = -1.0f;
     SW_EXPECT_FALSE( progressNegative.readInto( _city ) );
 
-    CityForged tileOutside( _catalog );
+    CityFixture tileOutside( _catalog );
     tileOutside._listWalker[0]._tile = sw::int2{ kCitySize, 0 };
     SW_EXPECT_FALSE( tileOutside.readInto( _city ) );
 
-    CityForged nextOutside( _catalog );
+    CityFixture nextOutside( _catalog );
     nextOutside._listWalker[0]._nextTile = sw::int2{ 0, -1 };
     SW_EXPECT_FALSE( nextOutside.readInto( _city ) );
 
-    CityForged previousOutside( _catalog );
+    CityFixture previousOutside( _catalog );
     previousOutside._listWalker[0]._previousTile = sw::int2{ kCitySize, 0 };
     SW_EXPECT_FALSE( previousOutside.readInto( _city ) );
 
-    CityForged pathOutside( _catalog );
+    CityFixture pathOutside( _catalog );
     pathOutside._listWalker[0]._listPath = {
         sw::int2{ kCitySize, 0 }
     };
     SW_EXPECT_FALSE( pathOutside.readInto( _city ) );
 
-    CityForged visitedOutside( _catalog );
+    CityFixture visitedOutside( _catalog );
     visitedOutside._listWalker[0]._listVisited = {
         sw::int2{ -1, 0 }
     };
     SW_EXPECT_FALSE( visitedOutside.readInto( _city ) );
 
-    CityForged cargoNegative( _catalog );
+    CityFixture cargoNegative( _catalog );
     cargoNegative._listWalker[0]._cargoAmount = -1;
     SW_EXPECT_FALSE( cargoNegative.readInto( _city ) );
 
-    CityForged returningBroken( _catalog );
+    CityFixture returningBroken( _catalog );
     returningBroken._listWalker[0]._bReturning = 2;
     SW_EXPECT_FALSE( returningBroken.readInto( _city ) );
 
@@ -386,34 +386,34 @@ SW_TEST_CASE_F( CityReadStateTest, RefusesBrokenWalkers )
  */
 SW_TEST_CASE_F( CityReadStateTest, RefusesCityValuesOutOfRange )
 {
-    SW_REQUIRE_TRUE( CityForged( _catalog ).readInto( _city ) );
+    SW_REQUIRE_TRUE( CityFixture( _catalog ).readInto( _city ) );
 
-    CityForged timeNegative( _catalog );
+    CityFixture timeNegative( _catalog );
     timeNegative._time = -1.0f;
     SW_EXPECT_FALSE( timeNegative.readInto( _city ) );
 
-    CityForged fertilityOver( _catalog );
+    CityFixture fertilityOver( _catalog );
     fertilityOver._floodFertility = 1.5f;
     SW_EXPECT_FALSE( fertilityOver.readInto( _city ) );
 
-    CityForged debtNegative( _catalog );
+    CityFixture debtNegative( _catalog );
     debtNegative._wageDebt = -1.0f;
     SW_EXPECT_FALSE( debtNegative.readInto( _city ) );
 
-    CityForged debtHuge( _catalog );
+    CityFixture debtHuge( _catalog );
     debtHuge._wageDebt = 1.0e20f;
     SW_EXPECT_FALSE( debtHuge.readInto( _city ) );
 
-    CityForged workforceNegative( _catalog );
+    CityFixture workforceNegative( _catalog );
     workforceNegative._workforce = -1;
     workforceNegative._employed  = -1;
     SW_EXPECT_FALSE( workforceNegative.readInto( _city ) );
 
-    CityForged employedOver( _catalog );
+    CityFixture employedOver( _catalog );
     employedOver._employed = 3;
     SW_EXPECT_FALSE( employedOver.readInto( _city ) );
 
-    CityForged dirtyBroken( _catalog );
+    CityFixture dirtyBroken( _catalog );
     dirtyBroken._bRoadsDirty = 2;
     SW_EXPECT_FALSE( dirtyBroken.readInto( _city ) );
 

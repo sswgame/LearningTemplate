@@ -18,7 +18,7 @@ namespace sw
 {
     class Archive;
 
-    /** @brief 되돌리기와 다시 하기가 오브젝트에 한 일입니다(`CommandStack::ObjectEditNotice`). */
+    /** @brief 되돌리기와 다시 하기가 오브젝트에 한 일입니다(`CommandStack::ObjectEditEvent`). */
     enum class ObjectEditKind : uint8
     {
         Modified = 0, ///< 상태를 다시 읽었다
@@ -51,16 +51,16 @@ namespace sw
         };
 
         /**
-         * @struct ObjectEditNotice
+         * @struct ObjectEditEvent
          * @brief 데이터 명령이 오브젝트에 무엇을 했는지 알리는 내용입니다.
          */
-        struct ObjectEditNotice
+        struct ObjectEditEvent
         {
             uint64         _objectID{ 0 };
             ObjectEditKind _kind{ ObjectEditKind::Modified };
         };
         /** @brief 에디터가 등록하는 알림 처리기입니다(선택 갱신, 씬 dirty). 모듈 코드라 그 모듈이 언로드될 때 분리됩니다. */
-        using ObjectEditListener = Delegate<void( const ObjectEditNotice& )>;
+        using ObjectEditListener = Delegate<void( const ObjectEditEvent& )>;
 
         /** @brief 빈 스택으로 시작합니다. */
         CommandStack();
@@ -88,18 +88,18 @@ namespace sw
         void undo();
         /** @brief 취소한 명령을 다시 실행합니다. */
         void redo();
-        /** @brief 스택을 비웁니다. 알림 처리기는 그대로 둡니다. 보관해 둔 내역(`parkHistory`)도 그대로입니다. */
+        /** @brief 스택을 비웁니다. 알림 처리기는 그대로 둡니다. 보관해 둔 내역(`suspendHistory`)도 그대로입니다. */
         void clear();
         /**
          * @brief 현재 내역(명령과 위치)을 보관해 두고 스택을 비웁니다. 이미 보관한 것이 있으면 버리고 새로 보관합니다.
          * @details 에디터가 Play 를 시작할 때 부른다. 플레이 중 편집은 Stop 이 스냅샷으로 되돌리므로 그 동안의 기록은 쓰지 않지만, Play 전 편집은
          *          Stop 뒤에도 되돌릴 수 있어야 한다(유니티, 언리얼과 같다). 보관한 명령도 주인이 사라질 때 같은 규칙(`removeOwnedBy`)으로 정리한다.
          */
-        void parkHistory();
+        void suspendHistory();
         /** @brief 보관한 내역을 되돌려 놓습니다(현재 내역은 버립니다). 보관한 것이 없으면 비우기만 합니다. Stop 이 씬을 되돌린 뒤 부릅니다. */
-        void unparkHistory();
+        void resumeHistory();
         /** @brief 보관한 내역이 있으면 true 입니다. */
-        bool hasParkedHistory() const { return _bHistoryParked; }
+        bool hasSuspendedHistory() const { return _bHistorySuspended; }
         /** @brief 취소할 명령의 레이블을 반환합니다. */
         const string& peekUndoLabel() const;
         /** @brief 다시 실행할 명령의 레이블을 반환합니다. */
@@ -119,7 +119,7 @@ namespace sw
         /** @brief 알림 처리기가 걸려 있으면 true 입니다(모듈 언로드 훑기가 비웠으면 false — 새 모듈이 다시 건다). */
         bool hasObjectEditListener() const { return _objectEditListener.isBound(); }
         /** @brief 데이터 명령이 오브젝트에 한 일을 처리기에 알립니다. 처리기가 없으면 아무것도 하지 않습니다. */
-        void notifyObjectEdit( const ObjectEditNotice& notice ) const;
+        void notifyObjectEdit( const ObjectEditEvent& notice ) const;
 
         /**
          * @brief 주인이 @p ownerID 인 코드 단계를 가진 명령을 빼고 뺀 수를 반환합니다. 트랜잭션 묶음은 안쪽에 하나라도 있으면 **통째로** 뺀다.
@@ -157,16 +157,16 @@ namespace sw
     private:
         vector<Command>                  _listCommand;
         vector<Command>                  _listPendingTransactionCommand;
-        vector<Command>                  _listParkedCommand; ///< 보관한 내역(`parkHistory`)
+        vector<Command>                  _listSuspendedCommand; ///< 보관한 내역(`suspendHistory`)
         DelegateSlot<ObjectEditListener> _objectEditListener;
         string                           _transactionLabel;
         string                           _empty;
         size_t                           _index;
-        size_t                           _parkedIndex; ///< 보관한 내역의 위치
+        size_t                           _suspendedIndex; ///< 보관한 내역의 위치
         /** @brief 중첩 트랜잭션 깊이입니다. 가장 바깥(0 으로 돌아올 때)에서만 하나의 복합 커맨드로 커밋합니다. */
         uint32 _transactionDepth;
-        uint8  _bIsExecuting   : 1;
-        uint8  _bHistoryParked : 1; ///< 보관한 내역이 있다
+        uint8  _bIsExecuting      : 1;
+        uint8  _bHistorySuspended : 1; ///< 보관한 내역이 있다
         /** @struct OwnerWatch @brief 코드 단계를 받은 주인 하나의 사라짐 구독입니다. */
         struct OwnerWatch
         {

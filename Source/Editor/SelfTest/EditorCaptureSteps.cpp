@@ -2,7 +2,7 @@
  * @file EditorCaptureSteps.cpp
  * @brief 자동화 시나리오 단계 `CaptureEditorUI` 를 구현합니다. 에디터 UI 전체(패널 + 플로팅 창)를 PNG 로 찍고 튼튼한 지표를 단언합니다.
  * @details `<CaptureEditorUI file="ui/hierarchy.png" maxMagentaFraction="0" maxClippedWindows="0"/>`. 경로는 시나리오 출력 폴더 기준이다(`<Screenshot>` 과 같다).
- *          단계는 차례가 오면 **에디터가 멈출 때까지**(`EditorSettleWait` — `<EditorWaitSettled/>` 와 같은 판정: 창 배치 · 씬 · 에셋 · 에디터 백그라운드 잡 · 뒤에 끝날 일),
+ *          단계는 차례가 오면 **에디터가 멈출 때까지**(`EditorStabilityWait` — `<EditorWaitSettled/>` 와 같은 판정: 창 배치 · 씬 · 에셋 · 에디터 백그라운드 잡 · 뒤에 끝날 일),
  *          이어서 **창 내용이 자리 잡을 때까지**(보이는 창의 위치 · 크기 · 내용 크기 · 스크롤이 연속 `kLayoutStableFrames` 프레임 같을 때까지) 기다린 뒤
  *          캡처를 요청하고, 파일이 써질 때까지 시나리오 시계를 붙잡는다(`holdUntilReady`). 그래서 시나리오가 패널을 연 뒤 고정 프레임을 기다리지 않는다 —
  *          예전에는 패널마다 `<Wait frames="20"/>` 를 두어 uiaudit 하나가 Debug 에서 2 분을 넘겼다(언리얼 Automation Driver · Playwright 의 자동 대기와 같은 자리).
@@ -22,7 +22,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorScenarioStepValidation.h"
-#include "Editor/SelfTest/EditorSettleWait.h"
+#include "Editor/SelfTest/EditorStabilityWait.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
@@ -45,7 +45,7 @@ namespace sw::editor
             struct PendingCapture
             {
                 const AutomationStep* _pStep{ nullptr };
-                EditorSettleWait      _settle{};               ///< 먼저 에디터가 멈추기를 기다린다(패널이 "Loading..." 을 그리는 동안 찍지 않는다)
+                EditorStabilityWait   _settle{};               ///< 먼저 에디터가 멈추기를 기다린다(패널이 "Loading..." 을 그리는 동안 찍지 않는다)
                 bool                  _bSettled{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 uint32                _phaseFrameCount{ 0 };   ///< 정지 뒤 지금 단계(내용 자리 잡기 · 결과 기다리기)에서 붙잡은 프레임 — 정지 대기는 시한이 없어 실행기의 붙잡기 수와 따로 센다
                 uint64                _layoutHash{ 0 };        ///< 지난 프레임의 레이아웃 지문
@@ -129,10 +129,10 @@ namespace sw::editor
                 }
                 if ( pPending->_bSettled == false )
                 {
-                    const EditorSettleResult evaluation = pPending->_settle.advance( runner.findActiveObjectManager() );
-                    if ( evaluation == EditorSettleResult::Oscillating )
+                    const EditorStabilityResult evaluation = pPending->_settle.advance( runner.findActiveObjectManager() );
+                    if ( evaluation == EditorStabilityResult::Oscillating )
                         runner.recordFailure( step, pPending->_settle.describeOscillation() ); // 그래도 찍는다 — 움직이는 화면이 결과 파일에 남는다
-                    if ( evaluation == EditorSettleResult::Waiting )
+                    if ( evaluation == EditorStabilityResult::Waiting )
                         return runner.holdUntilReady( step, input, false, std::numeric_limits<uint32>::max(), pPending->_settle.describeWait() + " before the UI capture" );
                     pPending->_bSettled = true;
                 }

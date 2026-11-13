@@ -439,7 +439,7 @@ namespace sw
         }
         _listRejectScratch.clear();
         _remoteCalls.pollRejections( _listRejectScratch );
-        for ( const RemoteCallRejectNotice& notice : _listRejectScratch )
+        for ( const RemoteCallRejectNotification& notice : _listRejectScratch )
         {
             SW_LOG_WARNING_ID( "LanternVale.CallRejected", "[LanternVale] the server did not take call %# (%#)", notice._sequence, static_cast<int32>( notice._error ) );
         }

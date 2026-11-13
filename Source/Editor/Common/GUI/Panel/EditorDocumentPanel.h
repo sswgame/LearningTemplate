@@ -147,7 +147,7 @@ namespace sw::editor
         void notifyDocumentEdited( string_view label );
         /**
          * @brief 이 문서의 되돌리기 스택입니다 — 문서 패널마다 하나(감사 E-3). 문서 글 편집 · 미리보기 씬 편집 · 패널 모델의 명령이 모두 여기 간다.
-         * @details 예전에는 미리보기 없는 문서 패널(시퀀서 · 타일맵 · 대화 · UI 미리보기 …)이 씬과 전역 스택 하나를 써서, 플레이 경계(`parkHistory`)가 그 기록을
+         * @details 예전에는 미리보기 없는 문서 패널(시퀀서 · 타일맵 · 대화 · UI 미리보기 …)이 씬과 전역 스택 하나를 써서, 플레이 경계(`suspendHistory`)가 그 기록을
          *          함께 버렸다 — 플레이 중 고친 뒤 Stop 하면 문서는 dirty 인데 되돌릴 수 없었다. 이제 플레이 경계는 메인(씬) 스택만 맡는다.
          *          언리얼은 전역 트랜잭션 버퍼 하나(에셋 편집도 같은 버퍼), 유니티 Undo 도 전역 하나, Godot 은 씬 · 리소스마다 history 를 두고 편집한 대상이 고른다 —
          *          에셋 문서를 씬과 따로 되돌리는 Godot 쪽을 따르고, 포커스 창이 스택을 고른다(`findPanelCommandStack`).

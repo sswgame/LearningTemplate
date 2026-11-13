@@ -24,14 +24,14 @@ Core folders are tiers (`Config/Rules/Layers/CoreLayers.toml`, sub-folder tiers 
 
 ### Target gates
 
-`Source/` is the include root of every target, so include direction across targets is enforced by `#error` stubs first on the include path (`Config/Rules/Layers/TargetLayers.toml`, `sw_applyTargetLayerGate`). Fix a gate error by changing the dependency, not by adding an exception.
+`Source/` is the include root of every target, so include direction across targets is enforced by `#error` stubs first on the include path (`Config/Rules/Layers/TargetLayers.toml`, `sw_applyTargetLayerGuard`). Fix a gate error by changing the dependency, not by adding an exception.
 
 - Core sees nothing above it; Engine sees no GameFramework · Editor · host; GameFramework base sees no kit; the reflection parser sees only the Engine headers in `[allow] reflectionparser`.
 - A kit, editor extension or game sees another module's headers only if that module is in its manifest's `_listDependency` closure. Files with no owning module (`Kits/Feature/Network/NetKitMessageRange.h`) are shared.
 - **Dedicated server** (gate `serverbuild`) sees no `Engine/Renderer` · `Engine/UI` · `Engine/Audio` header, no folder named `Client` (`SW_CLIENT_ONLY_SOURCE_PATTERNS`, `[gatefolder]`), and nothing in `SW_UNBUILT_ENGINE_FOLDERS` (configure checks the gate lists them all). Platform implementations swap by folder (`Window/Headless` · `Input/Headless` instead of `Window/Linux` · `Input/Linux`). Shared code reaches client work only through interfaces:
   - engine loop: `IEngineRenderDriver` · `IEngineUIDriver` · `IEngineAudioDriver`; scene rendering `ISceneRenderBinding`; a render feature contributes through its scene service (`ISceneService::contributeLights` …), never named in the renderer;
   - sound `ISoundPlayer` (`GameSound`), lip-sync voice `IVoiceDecoder`, ability cues `IAbilityCueSink`, audio user settings self-register (`SW_USER_SETTINGS_HANDLER_SET`);
-  - game code asks `IInputCaptureQuery` · `IPlayerNoticeSink` · `ISubtitleSink` · `IUILayerVisibility` · `IHUDViewModelBinder` · `IDamageNumberSink` · `IGameInstanceClientHook`, not `UISystem`; a game's client-only part is `IGameClientPart`; tooling `IShaderCookService` · `IDevToolsClientPart`.
+  - game code asks `IInputCaptureQuery` · `IPlayerNotificationSink` · `ISubtitleSink` · `IUILayerVisibility` · `IHUDViewModelBinder` · `IDamageNumberSink` · `IGameInstanceClientHook`, not `UISystem`; a game's client-only part is `IGameClientPart`; tooling `IShaderCookService` · `IDevToolsClientPart`.
   - Scenes on a dedicated server skip client-only component types instead of keeping a `MissingComponent` (`Config/Engine/ClientOnlyTypes.generated.json`, regenerate with `py -3 -m Scripts client-only-types`).
 - **Client target** (gate `clientbuild`) builds no folder named `Server` (`SW_SERVER_ONLY_SOURCE_PATTERNS` — `GameFramework/Runtime/Online/Server`, server secrets `Engine/Config/Server`); shared code starts an in-process server only through `IOnlineLocalServerFactory`.
 - There is no client/server macro — only `build::kWithClientCode` · `kWithServerCode` (`BuildInfo.h`), whose `if constexpr` branches compile in every configuration so the gates still see them. GCC and Clang poison the old `SW_WITH_CLIENT_CODE` · `SW_WITH_SERVER_CODE`.

@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Panels/ContentBrowser/Model/ContentBrowserCrumb.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserBreadcrumb.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.h"
 
 using namespace sw;
@@ -84,8 +84,8 @@ SW_TEST_CASE( ContentBrowserMoveQueueTest, RenameIsSingleAndDiscardable )
 
 SW_TEST_CASE( ContentBrowserLogicTest, FolderTrailHasOneCrumbPerFolderBelowTheRoot )
 {
-    vector<ContentBrowserCrumb> listCrumb;
-    ContentBrowserCrumb::makeFolderTrail( "Content", "D:/Project/Content/", "D:\\Project\\Content\\game\\maps", listCrumb );
+    vector<ContentBrowserBreadcrumb> listCrumb;
+    ContentBrowserBreadcrumb::makeFolderTrail( "Content", "D:/Project/Content/", "D:\\Project\\Content\\game\\maps", listCrumb );
     SW_REQUIRE_EQUAL( size_t{ 3 }, listCrumb.size() );
     SW_EXPECT_TRUE( listCrumb[0]._label == "Content" );
     SW_EXPECT_TRUE( listCrumb[0]._absolutePath == "D:/Project/Content" );
@@ -97,8 +97,8 @@ SW_TEST_CASE( ContentBrowserLogicTest, FolderTrailHasOneCrumbPerFolderBelowTheRo
 
 SW_TEST_CASE( ContentBrowserLogicTest, TheRootItselfIsOneCrumb )
 {
-    vector<ContentBrowserCrumb> listCrumb;
-    ContentBrowserCrumb::makeFolderTrail( "Content", "D:/Project/Content", "D:/Project/Content/", listCrumb );
+    vector<ContentBrowserBreadcrumb> listCrumb;
+    ContentBrowserBreadcrumb::makeFolderTrail( "Content", "D:/Project/Content", "D:/Project/Content/", listCrumb );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listCrumb.size() );
     SW_EXPECT_TRUE( listCrumb[0]._label == "Content" );
 }
@@ -106,27 +106,27 @@ SW_TEST_CASE( ContentBrowserLogicTest, TheRootItselfIsOneCrumb )
 // 이름 앞부분만 같은 형제 폴더는 루트 아래가 아니다.
 SW_TEST_CASE( ContentBrowserLogicTest, FolderOutsideTheRootIsASingleCrumb )
 {
-    vector<ContentBrowserCrumb> listCrumb;
-    ContentBrowserCrumb::makeFolderTrail( "Content", "D:/Project/Content", "D:/Project/Content2/x", listCrumb );
+    vector<ContentBrowserBreadcrumb> listCrumb;
+    ContentBrowserBreadcrumb::makeFolderTrail( "Content", "D:/Project/Content", "D:/Project/Content2/x", listCrumb );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listCrumb.size() );
     SW_EXPECT_TRUE( listCrumb[0]._label == "x" );
     SW_EXPECT_TRUE( listCrumb[0]._absolutePath == "D:/Project/Content2/x" );
 
-    ContentBrowserCrumb::makeFolderTrail( "Content", "", "D:/Project/y", listCrumb );
+    ContentBrowserBreadcrumb::makeFolderTrail( "Content", "", "D:/Project/y", listCrumb );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listCrumb.size() );
     SW_EXPECT_TRUE( listCrumb[0]._label == "y" );
 }
 
 SW_TEST_CASE( ContentBrowserLogicTest, FavoriteTrailStartsWithAnInertGroup )
 {
-    vector<ContentBrowserCrumb> listCrumb;
-    ContentBrowserCrumb::makeFavoriteTrail( "Maps", "D:/Project/Content/maps/", listCrumb );
+    vector<ContentBrowserBreadcrumb> listCrumb;
+    ContentBrowserBreadcrumb::makeFavoriteTrail( "Maps", "D:/Project/Content/maps/", listCrumb );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listCrumb.size() );
     SW_EXPECT_TRUE( listCrumb[0]._absolutePath.empty() ); // 누를 수 없다
     SW_EXPECT_TRUE( listCrumb[1]._label == "Maps" );
     SW_EXPECT_TRUE( listCrumb[1]._absolutePath == "D:/Project/Content/maps" );
 
-    ContentBrowserCrumb::appendChildCrumb( "D:\\Project\\Content\\maps\\town\\", listCrumb );
+    ContentBrowserBreadcrumb::appendChildBreadcrumb( "D:\\Project\\Content\\maps\\town\\", listCrumb );
     SW_REQUIRE_EQUAL( size_t{ 3 }, listCrumb.size() );
     SW_EXPECT_TRUE( listCrumb[2]._label == "town" );
     SW_EXPECT_TRUE( listCrumb[2]._absolutePath == "D:/Project/Content/maps/town" );

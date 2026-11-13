@@ -9,7 +9,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Localization/LocText.h"
-#include "Engine/Presentation/IPlayerNoticeSink.h"
+#include "Engine/Presentation/IPlayerNotificationSink.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -20,7 +20,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStore.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/SaveGate.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogRoot.h"
 
@@ -103,7 +103,7 @@ namespace sw
         , _onSave{}
         , _onLoad{}
         , _pStore{ nullptr }
-        , _pSaveGate{ nullptr }
+        , _pSaveLock{ nullptr }
         , _listSlot{}
         , _savingSlot{}
         , _pendingLabel{}
@@ -126,7 +126,7 @@ namespace sw
     {
     }
 
-    bool AutosaveManager::initialize( const AutosaveSettings& settings, GameLocalStore& store, const SaveGate& saveGate, const SaveDelegate& onSave, const LoadDelegate& onLoad )
+    bool AutosaveManager::initialize( const AutosaveSettings& settings, GameLocalStore& store, const SaveLock& saveLock, const SaveDelegate& onSave, const LoadDelegate& onLoad )
     {
         const bool bRangesValid = SerializerUtil::isWithinDeclaredRanges( *AutosaveSettings::StaticType(), ObjectAddress{ &settings } ); // AutosaveSettings 의 PROPERTY( Min · Max )
         // 가장 긴 이름(마지막 슬롯의 기록)이 규칙을 지키면 모든 슬롯 이름이 지킨다.
@@ -139,7 +139,7 @@ namespace sw
         }
         _settings              = settings;
         _pStore                = &store;
-        _pSaveGate             = &saveGate;
+        _pSaveLock             = &saveLock;
         _onSave                = onSave;
         _onLoad                = onLoad;
         _pendingLabel          = hashed_string{};
@@ -218,7 +218,7 @@ namespace sw
         // 종료는 기다릴 수 없다 — 막혀 있으면(씬 전환 · 연출 · 깨진 복원) 쓰지 않고 마지막 좋은 슬롯을 남긴다.
         if ( isBlocked() )
         {
-            SW_LOG_INFO_ID( "Autosave.QuitSaveSkippedBlocked", "Quit autosave skipped - saving is blocked ('%#'), the latest slot is kept", _pSaveGate->findBlockReason()->c_str() );
+            SW_LOG_INFO_ID( "Autosave.QuitSaveSkippedBlocked", "Quit autosave skipped - saving is blocked ('%#'), the latest slot is kept", _pSaveLock->findBlockReason()->c_str() );
             return false;
         }
         _bPending = SW_FALSE;
@@ -235,7 +235,7 @@ namespace sw
 
     bool AutosaveManager::isBlocked() const
     {
-        return _pSaveGate != nullptr && _pSaveGate->isBlocked(); // 초기화 전에는 저장할 델리게이트도 없다
+        return _pSaveLock != nullptr && _pSaveLock->isBlocked(); // 초기화 전에는 저장할 델리게이트도 없다
     }
 
     bool AutosaveManager::restoreLatest()
@@ -419,11 +419,11 @@ namespace sw
         _intervalTimer = 0.0f;
         SW_LOG_INFO_ID( "Autosave.Autosaved", "Autosaved (%#%#%#) to %#", getEnumName( info._trigger ), info._label.empty() ? "" : " ", info._label.c_str(), info._slotName.c_str() );
         // 플레이어에게 알린다(UI 가 없는 서버 · 테스트는 건너뛴다) — 같은 알림이 떠 있으면 센다.
-        if ( IPlayerNoticeSink* const pNotices = game::findSubsystem<IPlayerNoticeSink>() )
+        if ( IPlayerNotificationSink* const pNotices = game::findSubsystem<IPlayerNotificationSink>() )
         {
             string text;
             text = SW_LOCTEXT( "Notification", "GameSaved", "Game saved" );
-            pNotices->postNotice( text, 3.0f, PlayerNoticeKind::Info );
+            pNotices->postNotice( text, 3.0f, PlayerNotificationKind::Info );
         }
     }
 

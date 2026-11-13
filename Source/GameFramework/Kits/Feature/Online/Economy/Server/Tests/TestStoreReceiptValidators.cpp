@@ -177,7 +177,7 @@ namespace
             _pValidator->confirmDelivery( task, UnixMilliseconds{ _nowMs } );
             pump();
             vector<ReceiptDeliveryResult> listServiceResult;
-            _pValidator->pollDeliveryOutcomes( listServiceResult );
+            _pValidator->pollDeliveryResults( listServiceResult );
             SW_EXPECT_EQUAL( size_t( 1 ), listServiceResult.size() );
             if ( listServiceResult.empty() )
                 return ReceiptDeliveryStatus::Retry;

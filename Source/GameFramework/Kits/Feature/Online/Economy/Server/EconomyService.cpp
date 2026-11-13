@@ -75,7 +75,7 @@ namespace sw
         , _presenceFinds{}
         , _uniqueSetDeliveryInFlight{}
         , _uniqueSetDeliveryAlarmed{}
-        , _balanceNotice{ *this }
+        , _balanceNotification{ *this }
         , _pHost{ nullptr }
         , _pMetricRegistry{ nullptr }
         , _auditJob{}
@@ -245,7 +245,7 @@ namespace sw
         if ( _settings._pReceiptRegistry == nullptr || _settings._pReceiptRegistry->usesDeliveryConfirmation() == false )
             return;
         vector<ReceiptDeliveryResult> listServiceResult;
-        _settings._pReceiptRegistry->pollDeliveryOutcomes( listServiceResult );
+        _settings._pReceiptRegistry->pollDeliveryResults( listServiceResult );
         for ( ReceiptDeliveryResult& serviceResult : listServiceResult )
         {
             _uniqueSetDeliveryInFlight.erase( serviceResult._recordKey );

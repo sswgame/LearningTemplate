@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/ContentBrowser/Model/ContentBrowserCrumb.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserBreadcrumb.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
@@ -23,14 +23,14 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void ContentBrowserCrumb::makeFavoriteTrail( string_view label, string_view absolutePath, vector<ContentBrowserCrumb>& outListCrumb )
+    void ContentBrowserBreadcrumb::makeFavoriteTrail( string_view label, string_view absolutePath, vector<ContentBrowserBreadcrumb>& outListCrumb )
     {
         outListCrumb.clear();
-        outListCrumb.push_back( ContentBrowserCrumb{ string{ ContentBrowserLogicInternal::kFavoritesLabel }, string{} } );
-        outListCrumb.push_back( ContentBrowserCrumb{ string{ label }, ContentBrowserLogicInternal::makeFolderPath( absolutePath ) } );
+        outListCrumb.push_back( ContentBrowserBreadcrumb{ string{ ContentBrowserLogicInternal::kFavoritesLabel }, string{} } );
+        outListCrumb.push_back( ContentBrowserBreadcrumb{ string{ label }, ContentBrowserLogicInternal::makeFolderPath( absolutePath ) } );
     }
 
-    void ContentBrowserCrumb::makeFolderTrail( string_view rootLabel, string_view rootAbs, string_view folderAbs, vector<ContentBrowserCrumb>& outListCrumb )
+    void ContentBrowserBreadcrumb::makeFolderTrail( string_view rootLabel, string_view rootAbs, string_view folderAbs, vector<ContentBrowserBreadcrumb>& outListCrumb )
     {
         outListCrumb.clear();
         const string root       = ContentBrowserLogicInternal::makeFolderPath( rootAbs );
@@ -38,11 +38,11 @@ namespace sw::editor
         const bool   bUnderRoot = root.empty() == false && FileUtil::isPathAtOrUnderRoot( root, folder );
         if ( bUnderRoot == false )
         {
-            outListCrumb.push_back( ContentBrowserCrumb{ FileUtil::getFileNamePart( folder ), folder } );
+            outListCrumb.push_back( ContentBrowserBreadcrumb{ FileUtil::getFileNamePart( folder ), folder } );
             return;
         }
 
-        outListCrumb.push_back( ContentBrowserCrumb{ string{ rootLabel }, root } );
+        outListCrumb.push_back( ContentBrowserBreadcrumb{ string{ rootLabel }, root } );
         // 루트 뒤의 폴더마다 한 조각 — 조각의 경로는 원래 경로의 그 위치까지다(대소문자 · 구분자 그대로).
         const string_view folderView{ folder };
         size_t            start = root.size() + 1;
@@ -51,15 +51,15 @@ namespace sw::editor
             size_t slash = folderView.find( '/', start );
             if ( slash == string_view::npos )
                 slash = folderView.size();
-            outListCrumb.push_back( ContentBrowserCrumb{ string{ folderView.substr( start, slash - start ) }, string{ folderView.substr( 0, slash ) } } );
+            outListCrumb.push_back( ContentBrowserBreadcrumb{ string{ folderView.substr( start, slash - start ) }, string{ folderView.substr( 0, slash ) } } );
             start = slash + 1;
         }
     }
 
-    void ContentBrowserCrumb::appendChildCrumb( string_view childAbs, vector<ContentBrowserCrumb>& inoutListCrumb )
+    void ContentBrowserBreadcrumb::appendChildBreadcrumb( string_view childAbs, vector<ContentBrowserBreadcrumb>& inoutListCrumb )
     {
         const string child = ContentBrowserLogicInternal::makeFolderPath( childAbs );
-        inoutListCrumb.push_back( ContentBrowserCrumb{ FileUtil::getFileNamePart( child ), child } );
+        inoutListCrumb.push_back( ContentBrowserBreadcrumb{ FileUtil::getFileNamePart( child ), child } );
     }
 } // namespace sw::editor
 
@@ -96,7 +96,7 @@ namespace sw::editor
     {
     }
 
-    void ContentBrowserHistory::record( string_view folderAbs, const vector<ContentBrowserCrumb>& listCrumb )
+    void ContentBrowserHistory::record( string_view folderAbs, const vector<ContentBrowserBreadcrumb>& listCrumb )
     {
         const bool bSameAsCurrent = 0 <= _currentIndex && _currentIndex < static_cast<int32>( _listEntry.size() ) &&
                                     FileUtil::isSameDiskPath( _listEntry[static_cast<size_t>( _currentIndex )]._folderPathAbs, folderAbs );

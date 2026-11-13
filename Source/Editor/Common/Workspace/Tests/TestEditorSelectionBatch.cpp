@@ -218,8 +218,8 @@ SW_TEST_CASE( EditorSelectionTest, AssetMoveRemapsPreviewSelection )
     selection.bindPreviewScope( scene, stack );
     selection.selectAssets( { "scratch/p04/old.material", "scratch/p04/keep.material" }, sw::editor::SelectionMode::Replace );
 
-    sw::editor::EditorWorkspace       workspace{ nullptr };
-    sw::editor::EditorAssetMoveNotice notice;
+    sw::editor::EditorWorkspace      workspace{ nullptr };
+    sw::editor::EditorAssetMoveEvent notice;
     notice._listOldID = { "scratch/p04/old.material" };
     notice._listNewID = { "scratch/p04/new.material" };
     workspace.notifyAssetsMoved( notice );

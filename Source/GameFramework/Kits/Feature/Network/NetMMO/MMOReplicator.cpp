@@ -171,7 +171,7 @@ namespace sw
         return NetHandleResult::NotMine;
     }
 
-    void MMOReplicator::onDeliveryNotice( const NetDeliveryNotice& notice )
+    void MMOReplicator::onDeliveryNotification( const NetDeliveryNotification& notice )
     {
         // 메시지 펌프(게임 스레드)에서 불린다. 같은 스레드에서 차례로 실행되므로 `update` 의 병렬 본문과 겹치지 않는다.
         const bool bUnknownConnection = notice._connectionID < 0 || notice._connectionID >= static_cast<int32>( _listObserver.size() );

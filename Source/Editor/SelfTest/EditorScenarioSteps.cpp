@@ -19,7 +19,7 @@
 #include "Editor/SelfTest/EditorScenarioStepValidation.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/SelfTest/EditorSettleWait.h"
+#include "Editor/SelfTest/EditorStabilityWait.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
@@ -131,7 +131,7 @@ namespace sw::editor
             }
 
             /** @brief 입력 단계가 대상이 자리 잡기를 기다리는 최대 프레임 수입니다. 넘기면 단계가 돌며 실패를 적는다. */
-            static constexpr uint32 kSettleWaitFrames = 60;
+            static constexpr uint32 kStabilityWaitFrames = 60;
 
             /** @brief 레이블 @p pMark 가 그려졌는지 · 자리 잡았는지 봅니다. 잘려 있으면 그 창을 스크롤해 보이게 하고 자리 잡지 않은 것으로 센다. nullptr(적지 않은 칸)는 둘 다 참입니다. */
             static void checkMark( const string* pMark, bool& inoutDrawn, bool& inoutSettled )
@@ -154,13 +154,13 @@ namespace sw::editor
             }
 
             /**
-             * @brief 단계가 누를 레이블(`mark` · `toMark`)이 두 프레임 연속 같은 자리에 그려지고 앞 단계의 입력이 다 들어갈 때까지 시나리오 시계를 붙잡습니다(최대 `kSettleWaitFrames`).
+             * @brief 단계가 누를 레이블(`mark` · `toMark`)이 두 프레임 연속 같은 자리에 그려지고 앞 단계의 입력이 다 들어갈 때까지 시나리오 시계를 붙잡습니다(최대 `kStabilityWaitFrames`).
              * @details 레이블은 직전 프레임에 그려져야 하고, 창이 열리거나 도킹 · 팝업이 자리를 잡는 중이면 움직인다. 예전에는 그려지기만 보아 시나리오가 입력 앞에 고정 대기(10 프레임 이상)를
              *          두었고(약 260 곳), 부하가 걸린 기계에서는 그것도 모자랐다. 언리얼 Automation Driver 의 "보일 때까지" · Playwright 의 actionability("stable") 확인과 같다.
              *          기다린 프레임은 `[Scenario] … held the clock` 로그로 남는다. 다 기다려도 그려졌는데 움직이면 실패로 적는다(그려지지 않았으면 단계가 "no editor widget" 을 적는다).
              *          기록을 쓰는 단계가 직접 다시 켠다. 백엔드 교체 · 모듈 리로드가 에디터 컨텍스트를 새로 만들면 새 저장소는 꺼져 있고, 시나리오 준비는 한 번뿐이라 다시 오지 않는다.
              */
-            static AutomationStepHold holdUntilMarkSettled( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
+            static AutomationStepHold holdUntilMarkStable( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
                 if ( EditorSelfTestMarks::setEnabled( true ) == false )
                     return AutomationStepHold::Run; // 에디터 컨텍스트가 없다 — 단계가 돌며 실패를 적는다
@@ -172,13 +172,13 @@ namespace sw::editor
                 checkMark( pMark, bDrawn, bSettled );
                 checkMark( step.findAttribute( "toMark" ), bDrawn, bSettled );
                 const bool               bReady = bSettled && EditorSelfTestInput::hasPendingEvents() == false;
-                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames,
+                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kStabilityWaitFrames,
                                                                          "editor widget '" + *pMark + ( bDrawn ? "' to settle (same rect two frames in a row, no pending input)" : "' to be drawn" ) );
                 if ( hold == AutomationStepHold::Run && bReady == false && bDrawn )
                 {
                     StringBuilder<constant::buffer::kMax256> textBuilder;
                     textBuilder.appendFormat( "editor widget '%#' did not settle (same rect two frames in a row, no pending input) within %# frame(s)", pMark->c_str(),
-                                              kSettleWaitFrames );
+                                              kStabilityWaitFrames );
                     runner.recordFailure( step, textBuilder.view() );
                 }
                 return hold;
@@ -195,7 +195,7 @@ namespace sw::editor
             static AutomationStepHold holdUntilHoverReady( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
                 if ( isRelease( step ) )
-                    return holdUntilMarkSettled( runner, step, input );
+                    return holdUntilMarkStable( runner, step, input );
                 if ( EditorSelfTestMarks::setEnabled( true ) == false )
                     return AutomationStepHold::Run; // 에디터 컨텍스트가 없다 — 단계가 돌며 실패를 적는다
                 const TParams params   = step.readValidatedProperties<TParams>();
@@ -203,64 +203,64 @@ namespace sw::editor
                 bool          bSettled = true;
                 checkMark( &params._mark, bDrawn, bSettled );
                 checkMark( step.findAttribute( "toMark" ), bDrawn, bSettled );
-                const bool bInputDrained = EditorSelfTestInput::hasPendingEvents() == false;
+                const bool bInputFlushed = EditorSelfTestInput::hasPendingEvents() == false;
                 // 플랫폼이 다음 프레임에 실제 커서를 다시 넣으므로 옮기기 한 번으로는 머물지 않는다 - 입구가 프레임마다 붙잡는다. 단계가 놓는다.
                 string                   coverName;
                 const EditorMarkHit      hit    = EditorSelfTestInput::hoverMark( params._mark, params._anchor, coverName );
-                const bool               bReady = bSettled && bInputDrained && hit != EditorMarkHit::Pending && hit != EditorMarkHit::Missing;
-                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames,
+                const bool               bReady = bSettled && bInputFlushed && hit != EditorMarkHit::Pending && hit != EditorMarkHit::Missing;
+                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kStabilityWaitFrames,
                                                                          "the pointer to reach editor widget '" + params._mark + ( bDrawn ? "' and it to settle" : "' (not drawn yet)" ) );
                 if ( hold == AutomationStepHold::Run && bReady == false && bDrawn )
                 {
                     StringBuilder<constant::buffer::kMax256> textBuilder;
-                    textBuilder.appendFormat( "editor widget '%#' did not settle under the pointer within %# frame(s)", params._mark, kSettleWaitFrames );
+                    textBuilder.appendFormat( "editor widget '%#' did not settle under the pointer within %# frame(s)", params._mark, kStabilityWaitFrames );
                     runner.recordFailure( step, textBuilder.view() );
                 }
                 return hold;
             }
 
-            /** @brief `EditorWaitSettled` 가 붙잡은 동안의 상태입니다(`EditorSettleWait` — 자체 테스트의 정지 대기와 같은 재료 · 판정). */
-            struct SettleWaitState final : IAutomationStepState
+            /** @brief `EditorWaitSettled` 가 붙잡은 동안의 상태입니다(`EditorStabilityWait` — 자체 테스트의 정지 대기와 같은 재료 · 판정). */
+            struct StabilityWaitState final : IAutomationStepState
             {
-                EditorSettleWait _wait;
+                EditorStabilityWait _wait;
             };
 
             /**
-             * @brief 에디터가 멈출 때까지(정지 상태) 시나리오 시계를 붙잡습니다 — 앞 단계가 낳은 일이 다 끝나 새 입력 없이는 더 바뀔 것이 없는 상태(`EditorSettleWait`).
+             * @brief 에디터가 멈출 때까지(정지 상태) 시나리오 시계를 붙잡습니다 — 앞 단계가 낳은 일이 다 끝나 새 입력 없이는 더 바뀔 것이 없는 상태(`EditorStabilityWait`).
              * @details 고정 대기(`<Wait frames>`)를 대신한다 — "N 프레임 동안 바뀌지 않았다" 는 N 을 어떻게 잡든 증명이 아니고, 정지 상태에서 본 값이 곧 그 답이다(일어나지 않음을
              *          보는 단언도 이 뒤에 둔다). 배경 일(시계 잡기 조건)은 실행기가 단계 전에 이미 붙잡는다.
              */
-            static AutomationStepHold holdUntilScreenSettled( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
+            static AutomationStepHold holdUntilScreenStable( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
                 if ( EditorSelfTestMarks::setEnabled( true ) == false )
                     return AutomationStepHold::Run; // 에디터 컨텍스트가 없다 — 준비가 이미 막았다
-                SettleWaitState* pState = static_cast<SettleWaitState*>( runner.findHeldStepState( step ) );
+                StabilityWaitState* pState = static_cast<StabilityWaitState*>( runner.findHeldStepState( step ) );
                 if ( pState == nullptr )
-                    pState = static_cast<SettleWaitState*>( &runner.setHeldStepState( step, make_unique<SettleWaitState>() ) );
-                const EditorSettleResult evaluation = pState->_wait.advance( runner.findActiveObjectManager() );
-                if ( evaluation == EditorSettleResult::Oscillating )
+                    pState = static_cast<StabilityWaitState*>( &runner.setHeldStepState( step, make_unique<StabilityWaitState>() ) );
+                const EditorStabilityResult evaluation = pState->_wait.advance( runner.findActiveObjectManager() );
+                if ( evaluation == EditorStabilityResult::Oscillating )
                     runner.recordFailure( step, pState->_wait.describeOscillation() );
-                // 진행 중인 일에는 시한이 없다(`EditorSettleState`) — 끝나지 않으면 시나리오 벽시계 상한이 까닭과 함께 잡는다.
+                // 진행 중인 일에는 시한이 없다(`EditorStabilityState`) — 끝나지 않으면 시나리오 벽시계 상한이 까닭과 함께 잡는다.
                 // Run 이면 실행기가 상태를 지운다 — 까닭을 먼저 복사해 넘긴다.
                 const string waitingFor = pState->_wait.describeWait();
-                return runner.holdUntilReady( step, input, evaluation == EditorSettleResult::Ready,
-                                              evaluation == EditorSettleResult::Oscillating ? 0u : std::numeric_limits<uint32>::max(), waitingFor );
+                return runner.holdUntilReady( step, input, evaluation == EditorStabilityResult::Ready,
+                                              evaluation == EditorStabilityResult::Oscillating ? 0u : std::numeric_limits<uint32>::max(), waitingFor );
             }
 
             /**
-             * @brief 키 · 글 단계는 받을 곳(키보드 초점)이 두 프레임 연속 같고 앞 단계의 입력이 다 들어갈 때까지 시나리오 시계를 붙잡습니다(최대 `kSettleWaitFrames`).
+             * @brief 키 · 글 단계는 받을 곳(키보드 초점)이 두 프레임 연속 같고 앞 단계의 입력이 다 들어갈 때까지 시나리오 시계를 붙잡습니다(최대 `kStabilityWaitFrames`).
              * @details 클릭이 연 입력 칸 · 팝업이 초점을 잡는 데 한두 프레임이 걸려, 예전에는 시나리오가 키 앞에 고정 대기를 두었다. 놓기(`state="Up"`)는 기다리지 않는다.
              */
-            static AutomationStepHold holdUntilKeyboardSettled( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
+            static AutomationStepHold holdUntilKeyboardStable( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
                 if ( EditorSelfTestMarks::setEnabled( true ) == false || isRelease( step ) )
                     return AutomationStepHold::Run;
-                const bool               bReady = EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isKeyboardTargetSettled();
-                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames, "the keyboard focus to settle (no pending input)" );
+                const bool               bReady = EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isKeyboardTargetStable();
+                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kStabilityWaitFrames, "the keyboard focus to settle (no pending input)" );
                 if ( hold == AutomationStepHold::Run && bReady == false )
                 {
                     StringBuilder<constant::buffer::kMax256> textBuilder;
-                    textBuilder.appendFormat( "the keyboard focus did not settle within %# frame(s)", kSettleWaitFrames );
+                    textBuilder.appendFormat( "the keyboard focus did not settle within %# frame(s)", kStabilityWaitFrames );
                     runner.recordFailure( step, textBuilder.view() );
                 }
                 return hold;
@@ -275,12 +275,12 @@ namespace sw::editor
             {
                 if ( EditorSelfTestMarks::setEnabled( true ) == false )
                     return AutomationStepHold::Run;
-                const bool               bReady = EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isKeyboardTargetSettled() && ImGui::GetIO().WantTextInput;
-                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames, "a text field to take the keyboard focus (no pending input)" );
+                const bool               bReady = EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isKeyboardTargetStable() && ImGui::GetIO().WantTextInput;
+                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kStabilityWaitFrames, "a text field to take the keyboard focus (no pending input)" );
                 if ( hold == AutomationStepHold::Run && bReady == false )
                 {
                     StringBuilder<constant::buffer::kMax256> textBuilder;
-                    textBuilder.appendFormat( "no text field took the keyboard focus within %# frame(s) - the text would be lost", kSettleWaitFrames );
+                    textBuilder.appendFormat( "no text field took the keyboard focus within %# frame(s) - the text would be lost", kStabilityWaitFrames );
                     runner.recordFailure( step, textBuilder.view() );
                 }
                 return hold;
@@ -691,10 +691,10 @@ namespace sw::editor
     SW_AUTOMATION_STEP( editorDrag, EditorScenarioStepValidation::kDragKind, &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepValidation::validateDrag, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilHoverReady<EditorDragParams> ) );
     SW_AUTOMATION_STEP( editorHover, EditorScenarioStepValidation::kHoverKind, &EditorScenarioStepsInternal::runHover, &EditorScenarioStepValidation::validateHover, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilHoverReady<EditorHoverParams> ) );
     SW_AUTOMATION_STEP( editorText, EditorScenarioStepValidation::kTextKind, &EditorScenarioStepsInternal::runText, &AutomationStep::validateProperties<EditorTextParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilTextTarget ) );
-    SW_AUTOMATION_STEP( editorKey, EditorScenarioStepValidation::kKeyKind, &EditorScenarioStepsInternal::runKey, &EditorScenarioStepValidation::validateKey, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareKey ).withHold( &EditorScenarioStepsInternal::holdUntilKeyboardSettled ) );
+    SW_AUTOMATION_STEP( editorKey, EditorScenarioStepValidation::kKeyKind, &EditorScenarioStepsInternal::runKey, &EditorScenarioStepValidation::validateKey, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareKey ).withHold( &EditorScenarioStepsInternal::holdUntilKeyboardStable ) );
     SW_AUTOMATION_STEP( editorExpectObject, EditorScenarioStepValidation::kExpectObjectKind, &EditorScenarioStepsInternal::runExpectObject, &AutomationStep::validateProperties<EditorExpectObjectParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareExpectObject ) );
     SW_AUTOMATION_STEP( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, &EditorScenarioStepsInternal::runDockLayout, &AutomationStep::validateProperties<EditorDockLayoutParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ) );
-    SW_AUTOMATION_STEP( editorWaitSettled, EditorScenarioStepValidation::kWaitSettledKind, nullptr, &AutomationStep::validateProperties<EditorNoParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilScreenSettled ) );
+    SW_AUTOMATION_STEP( editorWaitSettled, EditorScenarioStepValidation::kWaitStableKind, nullptr, &AutomationStep::validateProperties<EditorNoParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilScreenStable ) );
     SW_AUTOMATION_STEP( editorSelfTest, EditorScenarioStepValidation::kSelfTestKind, &EditorScenarioStepsInternal::runSelfTest, &AutomationStep::validateProperties<EditorSelfTestParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilSelfTestsEnd ) );
 
 } // namespace sw::editor

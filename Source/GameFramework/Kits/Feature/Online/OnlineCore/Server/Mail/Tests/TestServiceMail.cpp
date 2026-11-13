@@ -79,9 +79,9 @@ SW_TEST_CASE( ServiceMailTest, RewardMailIsSentOnce )
     SW_EXPECT_EQUAL( mailCount, database.countRecords( sw::ServiceMail::getMailTable() ) );
 
     sw::vector<sw::ServiceMailNotification> listNotice;
-    SW_REQUIRE_TRUE( sw::ServiceMail::claimNotices( database, 10, listNotice ) == sw::ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( sw::ServiceMail::claimNotifications( database, 10, listNotice ) == sw::ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( size_t( 1 ), listNotice.size() );
-    SW_REQUIRE_TRUE( sw::ServiceMail::claimNotices( database, 10, listNotice ) == sw::ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( sw::ServiceMail::claimNotifications( database, 10, listNotice ) == sw::ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( listNotice.empty() );
 }
 

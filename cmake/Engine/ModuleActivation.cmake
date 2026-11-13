@@ -26,7 +26,7 @@ function(sw_skipInactiveModule NAME OUT_VAR)
 
 	get_property(swReason GLOBAL PROPERTY SW_MODULE_${NAME}_REASON)
 	message(STATUS "[Module] ${NAME} is not built — ${swReason}")
-	sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}")
+	sw_declareExcludedDirectory("${CMAKE_CURRENT_SOURCE_DIR}")
 	set(${OUT_VAR} ON PARENT_SCOPE)
 endfunction()
 

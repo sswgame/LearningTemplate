@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # 이 파일은 함수만 정의하지 않는다. include 되는 순간 출력 경로와 sw_global_options 가 정해진다.
-# 그래서 타깃 규칙(UnbuiltSources · TargetCompileRules · ModuleTargets · TestTargets …)보다 먼저 include 해야 한다.
+# 그래서 타깃 규칙(ExcludedSources · TargetCompileRules · ModuleTargets · TestTargets …)보다 먼저 include 해야 한다.
 
 # ------------------------------------------------------------------------------
 # 플랫폼 · 구성 이름 — 매니페스트(_listExcludedPlatform · _listConfiguration) · 모듈 해석 · 배포 백엔드 확인이 같은 낱말을 쓴다(런타임 ModuleCatalog 와 같은 표).
@@ -74,7 +74,7 @@ target_compile_definitions(sw_global_options INTERFACE "SW_TARGET_NAME=\"${SW_TA
 message(STATUS "[BuildConfig] Target type: ${SW_TARGET_TYPE}")
 
 # 이 타깃이 짓지 않는 Engine 폴더(`Source/Engine/` 기준) — 정본은 이 목록 하나다.
-# Engine 은 그 폴더의 소스 · 리플렉션 헤더를 뺀다(Source/Engine/CMakeLists.txt). 헤더도 읽지 못한다 — 타깃 게이트 `serverbuild`(`sw_applyTargetLayerGate`)가 막는다.
+# Engine 은 그 폴더의 소스 · 리플렉션 헤더를 뺀다(Source/Engine/CMakeLists.txt). 헤더도 읽지 못한다 — 타깃 게이트 `serverbuild`(`sw_applyTargetLayerGuard`)가 막는다.
 # 전용 서버는 렌더러를 짓지 않는다. 엔진 루프 · 호스트는 `IEngineRenderDriver`(Engine/Graphics/View)만 보고, 뷰 요청 값(`FrameViewports`)도 그 폴더에 있다.
 # 리눅스도 Windows 처럼 표시한 것(`SW_API` 등)만 공개한다. 켜 두지 않아 공개 매크로가 아무 일도 하지 않고 모든 모듈이 전부를 공개했다 - 확장 모듈의 링커가 자기 ImGui 사본 대신
 # 에디터 모듈의 심볼을 잡아, 확장의 결속기가 에디터의 할당자를 덮어쓰고 확장이 내려간 뒤 없는 코드로 뛰었다. 정적 라이브러리(vcpkg)는 숨김으로 짓지 않아 링크에서 따로 가린다.

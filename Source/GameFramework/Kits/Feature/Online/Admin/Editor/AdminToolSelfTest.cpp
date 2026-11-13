@@ -58,7 +58,7 @@ namespace sw::editor
                 {
                     context.expect( findSubsystem<AdminToolSession>() != nullptr, "the extension subsystem AdminToolSession is not bound in the editor scope" );
                     context.expect( pContext->getSubsystem<EditorPanelManager>().setPanelOpen<AdminToolPanel>( true ), "GM tool panel is not registered" );
-                    return EditorSelfTestStep::WaitSettled; // 열린 패널이 도킹 · 그리기를 마칠 때까지
+                    return EditorSelfTestStep::WaitStable; // 열린 패널이 도킹 · 그리기를 마칠 때까지
                 }
                 const ImGuiWindow* pWindow = ImGui::FindWindowByName( AdminToolPanel::kPanelTitle );
                 context.expect( pWindow != nullptr && pWindow->DrawList->VtxBuffer.Size > 0, "GM tool panel drew nothing in the editor's ImGui context" );

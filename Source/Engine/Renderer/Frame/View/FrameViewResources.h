@@ -44,8 +44,8 @@ namespace sw
         /** @brief `applyViewPassSelection` 이 이번 프레임에 바꾼 것입니다. 렌더 타깃 목록을 다시 싣고 메모리를 다시 보고할지 정할 때 씁니다. */
         struct PassSelectionResult
         {
-            uint8 _bTargetsRepointed{ SW_FALSE }; ///< 꺼진 효과의 출력이 가리키는 곳이 바뀌었다(화면에 나가는 첨부 표시가 따라간다)
-            uint8 _bTargetsChanged{ SW_FALSE };   ///< 처음 도는 패스의 타깃을 만들었거나 오래 빠진 패스의 타깃을 놓았다
+            uint8 _bTargetsRebound{ SW_FALSE }; ///< 꺼진 효과의 출력이 가리키는 곳이 바뀌었다(화면에 나가는 첨부 표시가 따라간다)
+            uint8 _bTargetsChanged{ SW_FALSE }; ///< 처음 도는 패스의 타깃을 만들었거나 오래 빠진 패스의 타깃을 놓았다
         };
 
         FrameViewResources( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameAutoExposure& autoExposure, FrameUpscale& upscale );

@@ -269,7 +269,7 @@ namespace sw
         static constexpr int32 kMtimeDebounceMs = 300;
 
         /** @brief 빌드 쪽(`notifyBuildStarted` · `notifyBuildFinished`, 빌드 스레드)이 쓰고 `update` 가 읽는 상태입니다. `_buildMutex` 가 지킵니다. */
-        struct BuildNotice
+        struct BuildEvent
         {
             string _targetName;                ///< 끝난 빌드의 타깃(비면 전체 빌드)
             bool   _bInProgress{ false };      ///< 빌드가 도는 중이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -332,7 +332,7 @@ namespace sw
         void clearRecords();
 
         /** @brief 끝난 빌드를 게임 스레드에서 처리합니다. 빌드가 도는 중이면 true 입니다(그동안 변경을 올리지 않는다). */
-        bool consumeBuildNotice();
+        bool consumeBuildEvent();
 
     private:
         unordered_map<string, unique_ptr<ModuleRecord>>  _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateRecord` · `clearRecords`). 값을 `unique_ptr` 로 들어 맵이 자라도 컨텍스트 주소가 고정이다(언리얼 `TMap<FName, TUniquePtr<…>>` 와 같은 모양)
@@ -342,7 +342,7 @@ namespace sw
         string                                           _buildStampPath;   ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
         string                                           _seenBuildToken;   ///< 마지막으로 본 스탬프 내용(빌드마다 새 시각 글을 쓴다). 이것과 달라지면 바깥 빌드가 끝난 것이다 — 쓰기 시각이 아니라 내용으로 본다
         mutable mutex                                    _buildMutex;
-        BuildNotice _buildNotice                         SW_GUARDED_BY( _buildMutex ); ///< 빌드 스레드(모듈 컴파일러)가 적고 게임 스레드의 `update` 가 꺼낸다
+        BuildEvent _buildNotice                          SW_GUARDED_BY( _buildMutex ); ///< 빌드 스레드(모듈 컴파일러)가 적고 게임 스레드의 `update` 가 꺼낸다
         MulticastDelegate<bool( const vector<string>& )> _onBeforeCommitBatch;         ///< 배치 직전 콜백(더한 순서 — 부를 때는 거꾸로, `broadcastUntilReverse`)
         MulticastDelegate<bool()>                        _reloadHolds;                 ///< 리로드 잡음(`addReloadHold`)
         FlushWorkersDelegate                             _flushWorkers;

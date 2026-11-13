@@ -449,7 +449,7 @@ namespace sw
     NetHandleResult RemoteCallClient::receive( NetRemoteCallMessage::Rejected, const NetMessageContext& context, BitReader& body )
     {
         (void)context;
-        RemoteCallRejectNotice notice;
+        RemoteCallRejectNotification notice;
         notice._sequence       = body.readVarUint32();
         const uint32 errorByte = body.readBits( 8 );
         if ( body.hasOverflowed() || errorByte > static_cast<uint32>( RemoteCallError::ArgumentMismatch ) )
@@ -459,7 +459,7 @@ namespace sw
         return NetHandleResult::Handled;
     }
 
-    void RemoteCallClient::pollRejections( vector<RemoteCallRejectNotice>& outListNotice )
+    void RemoteCallClient::pollRejections( vector<RemoteCallRejectNotification>& outListNotice )
     {
         _rejections.moveAllTo( outListNotice );
     }

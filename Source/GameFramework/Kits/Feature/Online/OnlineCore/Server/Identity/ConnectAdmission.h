@@ -26,7 +26,7 @@ namespace sw
         IConnectAdmission& operator=( const IConnectAdmission& ) = delete;
 
         /** @brief 티켓이 맞는 @p accountID 를 이 서버가 받아들이면 true 입니다. 아무 스레드에서나 불립니다. */
-        virtual bool isAdmitted( AccountID accountID ) const = 0;
+        virtual bool isAccepted( AccountID accountID ) const = 0;
     };
 } // namespace sw
 
@@ -39,7 +39,7 @@ namespace sw
     class AllowEveryAccount final : public IConnectAdmission
     {
     public:
-        bool isAdmitted( AccountID accountID ) const override
+        bool isAccepted( AccountID accountID ) const override
         {
             (void)accountID;
             return true;

@@ -74,7 +74,7 @@ namespace sw
                 _service.initialize( context._pStore, &_policy, context._kits.find<const ILedgerPolicy>(), context._serverID, TradeServiceConfig{} );
                 // 상대 찾기는 필수 키트라 정렬이 없으면 기동 오류로 막았다.
                 _server.initialize( &_service, &context._kits.get<IAccountDirectory>(), context._kits.find<IAccountPresence>(), context._pMetricRegistry );
-                _server.setBalanceNotice( context._kits.find<IBalanceChangedListener>() ); // 경제 키트(정산 잔액 변경 알림)
+                _server.setBalanceNotification( context._kits.find<IBalanceChangedListener>() ); // 경제 키트(정산 잔액 변경 알림)
                 return {};
             }
 

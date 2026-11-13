@@ -38,10 +38,10 @@ namespace sw
             }
 
             /** @brief 공지의 끝 시각을 읽습니다. 끝이 없는 공지(0)는 false 라 지우지 않는다. */
-            [[nodiscard]] static bool readNoticeEndMs( const ServiceRecord& record, int64& outTimeMs )
+            [[nodiscard]] static bool readAnnouncementEndMs( const ServiceRecord& record, int64& outTimeMs )
             {
                 ServiceAnnouncement notice;
-                if ( ServerDirectoryProtocol::decodeNotice( record._key, record._bytes, notice ) == false || notice._endMs == 0 )
+                if ( ServerDirectoryProtocol::decodeAnnouncement( record._key, record._bytes, notice ) == false || notice._endMs == 0 )
                     return false;
                 outTimeMs = notice._endMs;
                 return true;
@@ -68,17 +68,17 @@ namespace sw
             }
 
             /** @brief 공지 규칙입니다. 운영 쓰기와 저장소에서 읽은 레코드가 같은 규칙을 지납니다. */
-            static bool isValidNotice( const ServiceAnnouncement& notice )
+            static bool isValidAnnouncement( const ServiceAnnouncement& notice )
             {
-                const bool bTextOk   = notice._text.empty() == false && static_cast<int32>( notice._text.size() ) <= ServerDirectoryLimit::kMaxNoticeTextSize;
+                const bool bTextOk   = notice._text.empty() == false && static_cast<int32>( notice._text.size() ) <= ServerDirectoryLimit::kMaxAnnouncementTextSize;
                 const bool bWindowOk = notice._endMs == 0 || notice._startMs < notice._endMs;
-                return notice._noticeID != 0 && bTextOk && bWindowOk;
+                return notice._announcementID != 0 && bTextOk && bWindowOk;
             }
 
             static uint64 combineText( uint64 hash, string_view text ) { return HashUtil::combine( hash, HashUtil::computeStringHash64( text.data(), text.size(), false ) ); }
 
             /** @brief 공지 정렬 기준입니다. 우선순위 내림차순, 같으면 시작 시각 내림차순, 그래도 같으면 id 오름차순이며 결과가 결정적입니다. */
-            struct NoticeOrder
+            struct AnnouncementOrder
             {
                 bool operator()( const ServiceAnnouncement& left, const ServiceAnnouncement& right ) const
                 {
@@ -86,7 +86,7 @@ namespace sw
                         return left._priority > right._priority;
                     if ( left._startMs != right._startMs )
                         return left._startMs > right._startMs;
-                    return left._noticeID < right._noticeID;
+                    return left._announcementID < right._announcementID;
                 }
             };
         };
@@ -127,16 +127,16 @@ namespace sw
                 read._value._listMaintenance.push_back( std::move( window ) );
             }
             listRecord.clear();
-            read._result = connection.listRecords( Internal::getNoticeTable(), "", "", ServerDirectoryLimit::kMaxNoticeCount * 4, false, listRecord );
+            read._result = connection.listRecords( Internal::getNoticeTable(), "", "", ServerDirectoryLimit::kMaxAnnouncementCount * 4, false, listRecord );
             if ( read._result != ServiceStoreResult::Ok )
                 return read;
             for ( const ServiceRecord& record : listRecord )
             {
                 ServiceAnnouncement notice;
-                const bool          bDecoded = ServerDirectoryProtocol::decodeNotice( record._key, record._bytes, notice );
-                if ( bDecoded && Internal::isValidNotice( notice ) == false )
+                const bool          bDecoded = ServerDirectoryProtocol::decodeAnnouncement( record._key, record._bytes, notice );
+                if ( bDecoded && Internal::isValidAnnouncement( notice ) == false )
                     SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryNoticeRecord", "Server directory notice record '%#' breaks the write rules", record._key );
-                if ( bDecoded == false || Internal::isValidNotice( notice ) == false )
+                if ( bDecoded == false || Internal::isValidAnnouncement( notice ) == false )
                 {
                     read._result = ServiceStoreResult::Invalid;
                     return read;
@@ -225,7 +225,7 @@ namespace sw
             return; // 저장소에 문제가 있으므로 이전 값을 두고 다음 주기에 다시 읽는다
         _listMaintenance = std::move( listMaintenance );
         _listNotice      = std::move( listNotice );
-        VectorUtil::sort( _listNotice, ServerDirectoryServiceInternal::NoticeOrder{} );
+        VectorUtil::sort( _listNotice, ServerDirectoryServiceInternal::AnnouncementOrder{} );
         markStatusIfChanged( nowMs );
     }
 
@@ -258,7 +258,7 @@ namespace sw
         {
             if ( notice.isActive( nowMs.count() ) == false )
                 continue;
-            hash = HashUtil::combine( hash, notice._noticeID );
+            hash = HashUtil::combine( hash, notice._announcementID );
             hash = Internal::combineText( hash, notice._text );
             hash = HashUtil::combine( hash, static_cast<uint64>( static_cast<int64>( notice._priority ) ) );
             hash = HashUtil::combine( hash, static_cast<uint64>( notice._startMs ) );
@@ -289,7 +289,7 @@ namespace sw
         }
         for ( const ServiceAnnouncement& notice : _listNotice )
         {
-            if ( notice.isActive( nowMs.count() ) && static_cast<int32>( status._listNotice.size() ) < ServerDirectoryLimit::kMaxNoticeCount )
+            if ( notice.isActive( nowMs.count() ) && static_cast<int32>( status._listNotice.size() ) < ServerDirectoryLimit::kMaxAnnouncementCount )
                 status._listNotice.push_back( notice );
         }
         return status;
@@ -437,19 +437,19 @@ namespace sw
     void ServerDirectoryService::postNotice( const ServiceAnnouncement& notice, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         using Internal = ServerDirectoryServiceInternal;
-        if ( Internal::isValidNotice( notice ) == false )
+        if ( Internal::isValidAnnouncement( notice ) == false )
         {
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
         ServiceAuditedWrite pendingJob;
-        if ( ServerDirectoryProtocol::encodeNotice( notice, pendingJob._bytes ) == false )
+        if ( ServerDirectoryProtocol::encodeAnnouncement( notice, pendingJob._bytes ) == false )
         {
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
         pendingJob._table               = Internal::getNoticeTable();
-        pendingJob._key                 = ServiceKeyUtil::makeHex64( notice._noticeID );
+        pendingJob._key                 = ServiceKeyUtil::makeHex64( notice._announcementID );
         pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
         pendingJob._auditEntry._action  = "sd.notice.post";
         pendingJob._auditEntry._subject = "sd/notice/" + pendingJob._key;
@@ -458,13 +458,13 @@ namespace sw
         submitWrite( std::move( pendingJob ), requestTag );
     }
 
-    ServiceTTLRule ServerDirectoryService::makeNoticeTTLRule( int64 expireAfterMs )
+    ServiceTTLRule ServerDirectoryService::makeAnnouncementTTLRule( int64 expireAfterMs )
     {
         // 표가 작아 색인 없이 커서로 훑는다(liveops_push 와 같다). 읽기가 앞 128 줄만 보므로, 끝난 공지가 쌓이면 새 공지가 목록에서 빠졌다
         ServiceTTLRule rule;
         rule._table         = ServerDirectoryServiceInternal::getNoticeTable();
         rule._expireAfterMs = expireAfterMs;
-        rule._pfnReadTime   = &ServerDirectoryServiceInternal::readNoticeEndMs;
+        rule._pfnReadTime   = &ServerDirectoryServiceInternal::readAnnouncementEndMs;
         return rule;
     }
 
@@ -477,12 +477,12 @@ namespace sw
         return rule;
     }
 
-    void ServerDirectoryService::removeNotice( uint64 noticeID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
+    void ServerDirectoryService::removeAnnouncement( uint64 announcementID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         using Internal = ServerDirectoryServiceInternal;
         ServiceAuditedWrite pendingJob;
         pendingJob._table               = Internal::getNoticeTable();
-        pendingJob._key                 = ServiceKeyUtil::makeHex64( noticeID );
+        pendingJob._key                 = ServiceKeyUtil::makeHex64( announcementID );
         pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
         pendingJob._auditEntry._action  = "sd.notice.remove";
         pendingJob._auditEntry._subject = "sd/notice/" + pendingJob._key;
@@ -501,15 +501,15 @@ namespace sw
         setMaintenance( window, actorID, memo, nowMs, requestTag );
     }
 
-    void ServerDirectoryService::postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
+    void ServerDirectoryService::postNotice( const ServerDirectoryAnnouncementChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         ServiceAnnouncement notice;
-        notice._text         = change._text;
-        notice._noticeID     = change._noticeID;
-        notice._startMs      = change._startMs;
-        notice._endMs        = change._endMs;
-        notice._priority     = change._priority;
-        notice._bLiteralText = change._bLiteralText;
+        notice._text           = change._text;
+        notice._announcementID = change._announcementID;
+        notice._startMs        = change._startMs;
+        notice._endMs          = change._endMs;
+        notice._priority       = change._priority;
+        notice._bLiteralText   = change._bLiteralText;
         postNotice( notice, actorID, nowMs, requestTag );
     }
 

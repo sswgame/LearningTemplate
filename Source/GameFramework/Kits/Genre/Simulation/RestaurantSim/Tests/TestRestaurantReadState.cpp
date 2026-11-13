@@ -25,14 +25,14 @@ namespace
 </RestaurantCatalog>)";
 
     /** @brief 스테이션 한 줄입니다(`RestaurantSimulation::StationSlot` 은 비공개라 형식만 맞춥니다). */
-    struct ForgedStation
+    struct FixtureStation
     {
         sw::hashed_string _name{};
         int32             _count{ 0 };
     };
 
     /** @brief 재료 배치 한 줄입니다. */
-    struct ForgedBatch
+    struct FixtureBatch
     {
         sw::hashed_string _itemID{ "noodle" };
         int64             _unitCost{ 1 };
@@ -41,21 +41,21 @@ namespace
     };
 
     /** @brief 요리사 하나, 앉아 요리를 기다리는 손님 하나, 조리 중인 주문 하나인 식당을 꾸밉니다. */
-    struct RestaurantForged
+    struct RestaurantFixture
     {
         sw::vector<sw::StaffMember>        _listStaff{};
         sw::vector<sw::RestaurantCustomer> _listCustomer{};
         sw::vector<sw::KitchenOrder>       _listOrder{};
         sw::vector<sw::MenuEntry>          _listMenu{};
-        sw::vector<ForgedStation>          _listStation{};
+        sw::vector<FixtureStation>         _listStation{};
         sw::vector<float32>                _listSatisfaction{ 0.5f };
-        sw::vector<ForgedBatch>            _listBatch{ ForgedBatch{} };
+        sw::vector<FixtureBatch>           _listBatch{ FixtureBatch{} };
         sw::RestaurantDaySummary           _today{};
         float32                            _minutes{ 5.0f };
         int64                              _pendingSpoilageCost{ 0 };
         int32                              _nextCustomerID{ 2 };
 
-        RestaurantForged()
+        RestaurantFixture()
         {
             sw::StaffMember cook;
             cook._name         = "cook";
@@ -83,7 +83,7 @@ namespace
 
             _listMenu.push_back( sw::MenuEntry{ "ramen", 40, SW_TRUE } );
             _listMenu.push_back( sw::MenuEntry{ "soup", 20, SW_TRUE } );
-            _listStation.push_back( ForgedStation{ "stove", 1 } );
+            _listStation.push_back( FixtureStation{ "stove", 1 } );
         }
 
         void write( sw::Archive& outArchive, const sw::ShopManager& market ) const
@@ -134,7 +134,7 @@ namespace
                 outArchive << entry._bOnMenu;
             }
             outArchive << static_cast<uint32>( _listStation.size() );
-            for ( const ForgedStation& station : _listStation )
+            for ( const FixtureStation& station : _listStation )
             {
                 sw::StateIO::writeName( outArchive, station._name );
                 outArchive << station._count;
@@ -145,7 +145,7 @@ namespace
                 outArchive << satisfaction;
             }
             outArchive << static_cast<uint32>( _listBatch.size() );
-            for ( const ForgedBatch& batch : _listBatch )
+            for ( const FixtureBatch& batch : _listBatch )
             {
                 sw::StateIO::writeName( outArchive, batch._itemID );
                 outArchive << batch._unitCost;
@@ -192,7 +192,7 @@ namespace
             _simulation.initialize( &_catalog, nullptr, nullptr, nullptr, nullptr, sw::SessionStateRefs{}, _pantry, sw::RestaurantSettings{} );
         }
 
-        bool read( const RestaurantForged& forged )
+        bool read( const RestaurantFixture& forged )
         {
             sw::Archive written;
             forged.write( written, _simulation.getMarket() );
@@ -221,7 +221,7 @@ SW_TEST_CASE_F( RestaurantReadStateTest, RealAndForgedStatesRead )
     SW_EXPECT_EQUAL( size_t( 1 ), _simulation.getCustomers().size() );
     SW_EXPECT_EQUAL( int64( 55 ), _simulation.getMenuPrice( "ramen" ) );
 
-    SW_REQUIRE_TRUE( read( RestaurantForged{} ) );
+    SW_REQUIRE_TRUE( read( RestaurantFixture{} ) );
     SW_EXPECT_EQUAL( size_t( 1 ), _simulation.getOrders().size() );
     SW_EXPECT_EQUAL( 1, _simulation.countOccupiedSeats() );
 }
@@ -231,73 +231,73 @@ SW_TEST_CASE_F( RestaurantReadStateTest, RealAndForgedStatesRead )
  */
 SW_TEST_CASE_F( RestaurantReadStateTest, RefusesNegativeValues )
 {
-    SW_REQUIRE_TRUE( read( RestaurantForged{} ) );
+    SW_REQUIRE_TRUE( read( RestaurantFixture{} ) );
 
-    RestaurantForged wage;
+    RestaurantFixture wage;
     wage._listStaff[0]._dailyWage = -1;
     SW_EXPECT_FALSE( read( wage ) );
 
-    RestaurantForged busy;
+    RestaurantFixture busy;
     busy._listStaff[0]._busyMinutes = -1.0f;
     SW_EXPECT_FALSE( read( busy ) );
 
-    RestaurantForged customerPrice;
+    RestaurantFixture customerPrice;
     customerPrice._listCustomer[0]._price = -1;
     SW_EXPECT_FALSE( read( customerPrice ) );
 
-    RestaurantForged waited;
+    RestaurantFixture waited;
     waited._listCustomer[0]._waited = -1.0f;
     SW_EXPECT_FALSE( read( waited ) );
 
-    RestaurantForged patience;
+    RestaurantFixture patience;
     patience._listCustomer[0]._patience = -1.0f;
     SW_EXPECT_FALSE( read( patience ) );
 
-    RestaurantForged menuPrice;
+    RestaurantFixture menuPrice;
     menuPrice._listMenu[0]._price = 0;
     SW_EXPECT_FALSE( read( menuPrice ) );
 
-    RestaurantForged stationCount;
+    RestaurantFixture stationCount;
     stationCount._listStation[0]._count = -1;
     SW_EXPECT_FALSE( read( stationCount ) );
 
-    RestaurantForged stationName;
+    RestaurantFixture stationName;
     stationName._listStation[0]._name = sw::hashed_string{};
     SW_EXPECT_FALSE( read( stationName ) );
 
-    RestaurantForged satisfactionOver;
+    RestaurantFixture satisfactionOver;
     satisfactionOver._listSatisfaction[0] = 1.5f;
     SW_EXPECT_FALSE( read( satisfactionOver ) );
 
-    RestaurantForged satisfactionNegative;
+    RestaurantFixture satisfactionNegative;
     satisfactionNegative._listSatisfaction[0] = -0.5f;
     SW_EXPECT_FALSE( read( satisfactionNegative ) );
 
-    RestaurantForged satisfactionLong;
+    RestaurantFixture satisfactionLong;
     satisfactionLong._listSatisfaction = { 0.5f, 0.5f, 0.5f }; // 별점 창은 둘이다
     SW_EXPECT_FALSE( read( satisfactionLong ) );
 
-    RestaurantForged revenue;
+    RestaurantFixture revenue;
     revenue._today._revenue = -1;
     SW_EXPECT_FALSE( read( revenue ) );
 
-    RestaurantForged arrivals;
+    RestaurantFixture arrivals;
     arrivals._today._arrivals = -1;
     SW_EXPECT_FALSE( read( arrivals ) );
 
-    RestaurantForged rating;
+    RestaurantFixture rating;
     rating._today._rating = 6.0f;
     SW_EXPECT_FALSE( read( rating ) );
 
-    RestaurantForged minutes;
+    RestaurantFixture minutes;
     minutes._minutes = -1.0f;
     SW_EXPECT_FALSE( read( minutes ) );
 
-    RestaurantForged pending;
+    RestaurantFixture pending;
     pending._pendingSpoilageCost = -1;
     SW_EXPECT_FALSE( read( pending ) );
 
-    RestaurantForged nextID;
+    RestaurantFixture nextID;
     nextID._nextCustomerID = 0;
     SW_EXPECT_FALSE( read( nextID ) );
 
@@ -311,104 +311,104 @@ SW_TEST_CASE_F( RestaurantReadStateTest, RefusesNegativeValues )
  */
 SW_TEST_CASE_F( RestaurantReadStateTest, RefusesBrokenLinks )
 {
-    SW_REQUIRE_TRUE( read( RestaurantForged{} ) );
+    SW_REQUIRE_TRUE( read( RestaurantFixture{} ) );
 
-    RestaurantForged idRepeated;
+    RestaurantFixture idRepeated;
     idRepeated._listCustomer.push_back( idRepeated._listCustomer[0] );
     idRepeated._listCustomer[1]._seat = 1;
     SW_EXPECT_FALSE( read( idRepeated ) );
 
-    RestaurantForged seatRepeated;
+    RestaurantFixture seatRepeated;
     seatRepeated._listCustomer.push_back( seatRepeated._listCustomer[0] );
     seatRepeated._listCustomer[1]._id = 2;
     seatRepeated._nextCustomerID      = 3;
     SW_EXPECT_FALSE( read( seatRepeated ) );
 
-    RestaurantForged seatOutside;
+    RestaurantFixture seatOutside;
     seatOutside._listCustomer[0]._seat = 4; // 설정의 자리는 넷이다
     SW_EXPECT_FALSE( read( seatOutside ) );
 
-    RestaurantForged seatedNowhere;
+    RestaurantFixture seatedNowhere;
     seatedNowhere._listCustomer[0]._seat = -1;
     SW_EXPECT_FALSE( read( seatedNowhere ) );
 
-    RestaurantForged queuedOnSeat;
+    RestaurantFixture queuedOnSeat;
     queuedOnSeat._listOrder.clear();
     queuedOnSeat._listStaff[0]._taskCustomer = -1;
     queuedOnSeat._listCustomer[0]._state     = sw::CustomerState::Queued;
     SW_EXPECT_FALSE( read( queuedOnSeat ) );
 
-    RestaurantForged typeUnknown;
+    RestaurantFixture typeUnknown;
     typeUnknown._listCustomer[0]._typeID = "ghost";
     SW_EXPECT_FALSE( read( typeUnknown ) );
 
-    RestaurantForged dishUnknown;
+    RestaurantFixture dishUnknown;
     dishUnknown._listCustomer[0]._dishID = "stone";
     SW_EXPECT_FALSE( read( dishUnknown ) );
 
-    RestaurantForged idAhead;
+    RestaurantFixture idAhead;
     idAhead._nextCustomerID = 1;
     SW_EXPECT_FALSE( read( idAhead ) );
 
-    RestaurantForged qualityOver;
+    RestaurantFixture qualityOver;
     qualityOver._listCustomer[0]._quality = 3; // 라멘의 품질은 둘까지다
     SW_EXPECT_FALSE( read( qualityOver ) );
 
-    RestaurantForged taskMissing;
+    RestaurantFixture taskMissing;
     taskMissing._listStaff[0]._taskCustomer = 7;
     SW_EXPECT_FALSE( read( taskMissing ) );
 
-    RestaurantForged taskBroken;
+    RestaurantFixture taskBroken;
     taskBroken._listStaff[0]._taskCustomer = -2;
     SW_EXPECT_FALSE( read( taskBroken ) );
 
-    RestaurantForged firedWorking;
+    RestaurantFixture firedWorking;
     firedWorking._listStaff[0]._bHired = SW_FALSE;
     SW_EXPECT_FALSE( read( firedWorking ) );
 
-    RestaurantForged orderMissing;
+    RestaurantFixture orderMissing;
     orderMissing._listOrder[0]._customerID = 7;
     SW_EXPECT_FALSE( read( orderMissing ) );
 
-    RestaurantForged orderOfPaid;
+    RestaurantFixture orderOfPaid;
     orderOfPaid._listCustomer[0]._state = sw::CustomerState::Paid;
     orderOfPaid._listCustomer[0]._seat  = -1;
     SW_EXPECT_FALSE( read( orderOfPaid ) );
 
-    RestaurantForged orderDish;
+    RestaurantFixture orderDish;
     orderDish._listOrder[0]._dishID = "stone";
     SW_EXPECT_FALSE( read( orderDish ) );
 
-    RestaurantForged orderQuality;
+    RestaurantFixture orderQuality;
     orderQuality._listOrder[0]._quality = 3;
     SW_EXPECT_FALSE( read( orderQuality ) );
 
-    RestaurantForged orderCookOutside;
+    RestaurantFixture orderCookOutside;
     orderCookOutside._listOrder[0]._cook = 1;
     SW_EXPECT_FALSE( read( orderCookOutside ) );
 
-    RestaurantForged orderServer;
+    RestaurantFixture orderServer;
     orderServer._listStaff[0]._role = sw::StaffRole::Server;
     SW_EXPECT_FALSE( read( orderServer ) );
 
-    RestaurantForged orderReadyCooking;
+    RestaurantFixture orderReadyCooking;
     orderReadyCooking._listOrder[0]._bReady = SW_TRUE;
     SW_EXPECT_FALSE( read( orderReadyCooking ) );
 
-    RestaurantForged orderRemaining;
+    RestaurantFixture orderRemaining;
     orderRemaining._listOrder[0]._remaining = -1.0f;
     SW_EXPECT_FALSE( read( orderRemaining ) );
 
     // 카탈로그에 없는 요리의 메뉴 항목은 빠진 요리의 설정이다 — 버리고 읽는다(감사 A-6, 메뉴는 요리 id 로 짝짓는다)
-    RestaurantForged menuUnknown;
+    RestaurantFixture menuUnknown;
     menuUnknown._listMenu[1]._dishID = "stone";
     SW_EXPECT_TRUE( read( menuUnknown ) );
 
-    RestaurantForged menuRepeated;
+    RestaurantFixture menuRepeated;
     menuRepeated._listMenu[1]._dishID = "ramen";
     SW_EXPECT_FALSE( read( menuRepeated ) );
 
-    RestaurantForged stationRepeated;
+    RestaurantFixture stationRepeated;
     stationRepeated._listStation.push_back( stationRepeated._listStation[0] );
     SW_EXPECT_FALSE( read( stationRepeated ) );
 
@@ -422,29 +422,29 @@ SW_TEST_CASE_F( RestaurantReadStateTest, RefusesBrokenLinks )
  */
 SW_TEST_CASE_F( RestaurantReadStateTest, RefusesBrokenBatches )
 {
-    SW_REQUIRE_TRUE( read( RestaurantForged{} ) );
+    SW_REQUIRE_TRUE( read( RestaurantFixture{} ) );
 
-    RestaurantForged nameEmpty;
+    RestaurantFixture nameEmpty;
     nameEmpty._listBatch[0]._itemID = sw::hashed_string{};
     SW_EXPECT_FALSE( read( nameEmpty ) );
 
-    RestaurantForged costNegative;
+    RestaurantFixture costNegative;
     costNegative._listBatch[0]._unitCost = -1;
     SW_EXPECT_FALSE( read( costNegative ) );
 
-    RestaurantForged countNegative;
+    RestaurantFixture countNegative;
     countNegative._listBatch[0]._count = -1;
     SW_EXPECT_FALSE( read( countNegative ) );
 
-    RestaurantForged daysZero;
+    RestaurantFixture daysZero;
     daysZero._listBatch[0]._daysLeft = 0;
     SW_EXPECT_FALSE( read( daysZero ) );
 
-    RestaurantForged daysBroken;
+    RestaurantFixture daysBroken;
     daysBroken._listBatch[0]._daysLeft = -2;
     SW_EXPECT_FALSE( read( daysBroken ) );
 
-    RestaurantForged neverSpoils;
+    RestaurantFixture neverSpoils;
     neverSpoils._listBatch[0]._daysLeft = -1;
     SW_REQUIRE_TRUE( read( neverSpoils ) );
     SW_EXPECT_FALSE( _simulation.getStock().findEarliestExpiry( "noodle" ).has_value() );

@@ -170,7 +170,7 @@ namespace sw
         void               restoreRefundCursor( int64 lastReadMs ) final;
         [[nodiscard]] bool takeRefundCursor( int64& outLastReadMs ) final;
         void               confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now ) final;
-        void               pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListServiceResult ) final;
+        void               pollDeliveryResults( vector<ReceiptDeliveryResult>& outListServiceResult ) final;
         void               shutdown() final;
 
     protected:

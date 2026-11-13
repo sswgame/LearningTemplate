@@ -141,8 +141,8 @@ SW_TEST_CASE( AdminToolSessionTest, BadDurationsAreRefusedBeforeSending )
     session.requestSetMaintenance( "all", "maintenance.default", -5, "ticket" );
     SW_EXPECT_EQUAL( AdminMethod::SetMaintenance::kID, session.getLastMethod() );
     SW_EXPECT_TRUE( session.getLastResult().hasError( OnlineError::kInvalidRequest ) );
-    session.requestPostNotice( 1, "text", 0, -5, "ticket" );
-    SW_EXPECT_EQUAL( AdminMethod::PostNotice::kID, session.getLastMethod() );
+    session.requestPostAnnouncement( 1, "text", 0, -5, "ticket" );
+    SW_EXPECT_EQUAL( AdminMethod::PostAnnouncement::kID, session.getLastMethod() );
     SW_EXPECT_TRUE( session.getLastResult().hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( completedBefore, session.getCompletedCount() );
 }
@@ -173,7 +173,7 @@ SW_TEST_CASE( AdminToolSessionTest, ServerOnlyCommandsReportUnavailable )
 {
     AdminToolSession session;
     session.requestLookup( AdminToolSessionTestUtil::kPlayer );
-    session.requestPostNotice( 1, "text", 0, 60, "ticket" );
+    session.requestPostAnnouncement( 1, "text", 0, 60, "ticket" );
     SW_EXPECT_TRUE( session.getLastResult().hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( string( "ServerDirectory: Unavailable" ), session.getStatusLine() );
     session.requestReports( true );

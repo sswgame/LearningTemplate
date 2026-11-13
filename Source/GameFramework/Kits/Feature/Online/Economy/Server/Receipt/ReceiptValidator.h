@@ -170,14 +170,14 @@ namespace sw
         }
         /** @brief 지급 뒤 스토어에 알려야 하는 제공자이면 true 입니다(구글의 구매 확인). 서비스가 남은 알림을 주기적으로 읽어 다시 보냅니다. */
         virtual bool usesDeliveryConfirmation() const { return false; }
-        /** @brief 지급을 마쳤다고 스토어에 알립니다. 결과는 정확히 한 번 `pollDeliveryOutcomes` 로 나옵니다(종료 때 날아가던 것은 나오지 않고 저장소의 레코드가 다음 기동에 다시 보낸다). */
+        /** @brief 지급을 마쳤다고 스토어에 알립니다. 결과는 정확히 한 번 `pollDeliveryResults` 로 나옵니다(종료 때 날아가던 것은 나오지 않고 저장소의 레코드가 다음 기동에 다시 보낸다). */
         virtual void confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now )
         {
             (void)task;
             (void)now;
         }
         /** @brief 끝난 지급 알림을 @p outListOutcome 뒤에 붙입니다. */
-        virtual void pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListServiceResult ) { (void)outListServiceResult; }
+        virtual void pollDeliveryResults( vector<ReceiptDeliveryResult>& outListServiceResult ) { (void)outListServiceResult; }
         virtual void shutdown() {}
     };
 } // namespace sw
@@ -210,7 +210,7 @@ namespace sw
         bool usesDeliveryConfirmation() const;
         /** @brief 그 스토어의 제공자에 지급 알림을 맡깁니다. 모르는 스토어이면 false 입니다. */
         [[nodiscard]] bool confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now );
-        void               pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListServiceResult );
+        void               pollDeliveryResults( vector<ReceiptDeliveryResult>& outListServiceResult );
         void               shutdown();
 
     private:

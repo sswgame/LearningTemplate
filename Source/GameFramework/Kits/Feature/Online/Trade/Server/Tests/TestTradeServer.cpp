@@ -131,13 +131,13 @@ namespace
     class TradePushSink final : public IOnlineClientService
     {
     public:
-        vector<uint16>      _listKind{};
-        vector<TradeNotice> _listReply{};
+        vector<uint16>            _listKind{};
+        vector<TradeNotification> _listReply{};
 
         const OnlineProtocolEntry& getProtocol() const override { return TradeSessionRecord::kOnlineEntry; }
         void                       onServicePush( uint16 kind, BitReader& body ) override
         {
-            TradeNotice reply;
+            TradeNotification reply;
             SW_EXPECT_TRUE( TradeSessionRecord::MessageTypes::read( body, reply ) == FixedReadResult::Ok );
             _listKind.push_back( kind );
             _listReply.push_back( std::move( reply ) );
@@ -514,7 +514,7 @@ SW_TEST_CASE( TradeServerTest, SettlementCarriesOwnBalances )
 
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kAliceSlot]._listKind.size() );
     SW_EXPECT_EQUAL( TradeMethod::Closed::kKind, rig._arrSink[kAliceSlot]._listKind[0] );
-    const TradeNotice& alicePush = rig._arrSink[kAliceSlot]._listReply[0];
+    const TradeNotification& alicePush = rig._arrSink[kAliceSlot]._listReply[0];
     SW_EXPECT_TRUE( alicePush._snapshot._state == TradeState::Settled );
     SW_EXPECT_TRUE( TradeServerTestUtil::findBalance( alicePush._listBalance, "cur.gold" ) == int64( 60 ) );
     SW_EXPECT_TRUE( TradeServerTestUtil::findBalance( alicePush._listBalance, "cur.gem" ) == int64( 20 ) );

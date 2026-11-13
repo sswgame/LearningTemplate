@@ -156,7 +156,7 @@ namespace
     }
 
     /** @brief `RTSWorld::writeState` 의 형식으로 작은 판(8x8, 플레이어 하나, 슬롯 하나 또는 둘)을 꾸밉니다. 칸마다 맞는 값을 기본으로 두고 한 칸씩 망가뜨립니다. */
-    struct RTSForged
+    struct RTSFixture
     {
         static constexpr int32 kSize = 8;
 
@@ -349,63 +349,63 @@ SW_TEST_CASE( RTSWorldTest, ReadStateRefusesOutOfRangeIndices )
     sw::RTSCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnitXML, "RTSWorldTest" ) );
     sw::RTSWorld world;
-    SW_REQUIRE_TRUE( world.initialize( &catalog, RTSForged::kSize, RTSForged::kSize, sw::RTSSettings{} ) );
+    SW_REQUIRE_TRUE( world.initialize( &catalog, RTSFixture::kSize, RTSFixture::kSize, sw::RTSSettings{} ) );
     sw::Wallet wallet;
     SW_REQUIRE_EQUAL( 0, world.addPlayer( 0, &wallet, sw::float3{} ) );
 
-    const RTSForged     valid;
+    const RTSFixture    valid;
     const sw::RTSUnitID unitID = sw::RTSUnitID::make( 0, 1 );
     SW_REQUIRE_TRUE( valid.readInto( world ) );
     SW_REQUIRE_TRUE( world.findUnit( unitID ) != nullptr );
 
-    RTSForged ownerOutside = valid;
-    ownerOutside._owner    = 1;
+    RTSFixture ownerOutside = valid;
+    ownerOutside._owner     = 1;
     SW_EXPECT_FALSE( ownerOutside.readInto( world ) );
 
-    RTSForged ownerNegative = valid;
-    ownerNegative._owner    = -2;
+    RTSFixture ownerNegative = valid;
+    ownerNegative._owner     = -2;
     SW_EXPECT_FALSE( ownerNegative.readInto( world ) );
 
-    RTSForged teamOutside = valid;
-    teamOutside._team     = 1;
+    RTSFixture teamOutside = valid;
+    teamOutside._team      = 1;
     SW_EXPECT_FALSE( teamOutside.readInto( world ) );
 
-    RTSForged teamNegative = valid;
-    teamNegative._team     = -1;
+    RTSFixture teamNegative = valid;
+    teamNegative._team      = -1;
     SW_EXPECT_FALSE( teamNegative.readInto( world ) );
 
-    RTSForged winnerOutside    = valid;
+    RTSFixture winnerOutside   = valid;
     winnerOutside._winningTeam = 1;
     SW_EXPECT_FALSE( winnerOutside.readInto( world ) );
 
-    RTSForged winnerNegative    = valid;
+    RTSFixture winnerNegative   = valid;
     winnerNegative._winningTeam = -2;
     SW_EXPECT_FALSE( winnerNegative.readInto( world ) );
 
-    RTSForged freeAlive     = valid;
+    RTSFixture freeAlive    = valid;
     freeAlive._listFreeSlot = { 0 };
     SW_EXPECT_FALSE( freeAlive.readInto( world ) );
 
-    RTSForged freeOutside     = valid;
+    RTSFixture freeOutside    = valid;
     freeOutside._listFreeSlot = { 1 };
     SW_EXPECT_FALSE( freeOutside.readInto( world ) );
 
-    RTSForged freeRepeated        = valid;
+    RTSFixture freeRepeated       = valid;
     freeRepeated._bDeadSecondSlot = SW_TRUE;
     freeRepeated._listFreeSlot    = { 1, 1 };
     SW_EXPECT_FALSE( freeRepeated.readInto( world ) );
 
-    RTSForged freeDead        = valid;
+    RTSFixture freeDead       = valid;
     freeDead._bDeadSecondSlot = SW_TRUE;
     freeDead._listFreeSlot    = { 1 };
     SW_EXPECT_TRUE( freeDead.readInto( world ) ); // 죽어 비운 슬롯은 내줄 수 있다
 
-    RTSForged idElsewhere = valid;
-    idElsewhere._idPacked = sw::RTSUnitID::make( 3, 1 ).packed();
+    RTSFixture idElsewhere = valid;
+    idElsewhere._idPacked  = sw::RTSUnitID::make( 3, 1 ).packed();
     SW_EXPECT_FALSE( idElsewhere.readInto( world ) );
 
-    RTSForged idOldGeneration = valid;
-    idOldGeneration._idPacked = sw::RTSUnitID::make( 0, 2 ).packed();
+    RTSFixture idOldGeneration = valid;
+    idOldGeneration._idPacked  = sw::RTSUnitID::make( 0, 2 ).packed();
     SW_EXPECT_FALSE( idOldGeneration.readInto( world ) );
 
     SW_EXPECT_TRUE( world.findUnit( unitID ) != nullptr );
@@ -421,92 +421,92 @@ SW_TEST_CASE( RTSWorldTest, ReadStateRefusesOutOfRangeValues )
     sw::RTSCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnitXML, "RTSWorldTest" ) );
     sw::RTSWorld world;
-    SW_REQUIRE_TRUE( world.initialize( &catalog, RTSForged::kSize, RTSForged::kSize, sw::RTSSettings{} ) );
+    SW_REQUIRE_TRUE( world.initialize( &catalog, RTSFixture::kSize, RTSFixture::kSize, sw::RTSSettings{} ) );
     sw::Wallet wallet;
     SW_REQUIRE_EQUAL( 0, world.addPlayer( 0, &wallet, sw::float3{} ) );
 
-    RTSForged valid;
+    RTSFixture valid;
     valid._bWithOrder     = SW_TRUE;
     valid._orderBuildID   = kSupply;
     valid._arriveRadius   = 1.0f;
     valid._listProduction = { kMarine };
     SW_REQUIRE_TRUE( valid.readInto( world ) );
 
-    RTSForged hpOver = valid;
-    hpOver._hp       = 41.0f;
+    RTSFixture hpOver = valid;
+    hpOver._hp        = 41.0f;
     SW_EXPECT_FALSE( hpOver.readInto( world ) );
 
-    RTSForged hpNegative = valid;
-    hpNegative._hp       = -1.0f;
+    RTSFixture hpNegative = valid;
+    hpNegative._hp        = -1.0f;
     SW_EXPECT_FALSE( hpNegative.readInto( world ) );
 
-    RTSForged progressOver      = valid;
+    RTSFixture progressOver     = valid;
     progressOver._buildProgress = 1.5f;
     SW_EXPECT_FALSE( progressOver.readInto( world ) );
 
-    RTSForged progressNegative      = valid;
+    RTSFixture progressNegative     = valid;
     progressNegative._buildProgress = -0.5f;
     SW_EXPECT_FALSE( progressNegative.readInto( world ) );
 
-    RTSForged resourceNegative     = valid;
+    RTSFixture resourceNegative    = valid;
     resourceNegative._resourceLeft = -1;
     SW_EXPECT_FALSE( resourceNegative.readInto( world ) );
 
-    RTSForged cargoNegative    = valid;
+    RTSFixture cargoNegative   = valid;
     cargoNegative._cargoAmount = -1;
     SW_EXPECT_FALSE( cargoNegative.readInto( world ) );
 
-    RTSForged supplyNegative       = valid;
+    RTSFixture supplyNegative      = valid;
     supplyNegative._supplyReserved = -1;
     SW_EXPECT_FALSE( supplyNegative.readInto( world ) );
 
-    RTSForged gatherNegative    = valid;
+    RTSFixture gatherNegative   = valid;
     gatherNegative._gatherTimer = -1.0f;
     SW_EXPECT_FALSE( gatherNegative.readInto( world ) );
 
-    RTSForged buildingOutside = valid;
-    buildingOutside._defID    = kSupply;
-    buildingOutside._hp       = 100.0f;
-    buildingOutside._cell     = sw::int2{ 99, 0 };
+    RTSFixture buildingOutside = valid;
+    buildingOutside._defID     = kSupply;
+    buildingOutside._hp        = 100.0f;
+    buildingOutside._cell      = sw::int2{ 99, 0 };
     SW_EXPECT_FALSE( buildingOutside.readInto( world ) );
 
-    RTSForged orderUnknown     = valid;
+    RTSFixture orderUnknown    = valid;
     orderUnknown._orderBuildID = "nothing";
     SW_EXPECT_FALSE( orderUnknown.readInto( world ) );
 
-    RTSForged orderRadius     = valid;
+    RTSFixture orderRadius    = valid;
     orderRadius._arriveRadius = -1.0f;
     SW_EXPECT_FALSE( orderRadius.readInto( world ) );
 
-    RTSForged orderFlowField   = valid;
+    RTSFixture orderFlowField  = valid;
     orderFlowField._bFlowField = 2;
     SW_EXPECT_FALSE( orderFlowField.readInto( world ) );
 
-    RTSForged productionUnknown       = valid;
+    RTSFixture productionUnknown      = valid;
     productionUnknown._listProduction = { "nothing" };
     SW_EXPECT_FALSE( productionUnknown.readInto( world ) );
 
-    RTSForged productionOver       = valid;
+    RTSFixture productionOver      = valid;
     productionOver._listProduction = sw::vector<sw::hashed_string>( 6, kMarine ); // 설정의 상한은 5 이다
     SW_EXPECT_FALSE( productionOver.readInto( world ) );
 
-    RTSForged visibilityBroken   = valid;
+    RTSFixture visibilityBroken  = valid;
     visibilityBroken._visibility = 3;
     SW_EXPECT_FALSE( visibilityBroken.readInto( world ) );
 
-    RTSForged terrainBroken = valid;
-    terrainBroken._terrain  = 2;
+    RTSFixture terrainBroken = valid;
+    terrainBroken._terrain   = 2;
     SW_EXPECT_FALSE( terrainBroken.readInto( world ) );
 
-    RTSForged supplyUsedNegative   = valid;
+    RTSFixture supplyUsedNegative  = valid;
     supplyUsedNegative._supplyUsed = -1;
     SW_EXPECT_FALSE( supplyUsedNegative.readInto( world ) );
 
-    RTSForged timeNegative = valid;
-    timeNegative._time     = -1.0f;
+    RTSFixture timeNegative = valid;
+    timeNegative._time      = -1.0f;
     SW_EXPECT_FALSE( timeNegative.readInto( world ) );
 
-    RTSForged attackTimeNegative            = valid;
+    RTSFixture attackTimeNegative           = valid;
     attackTimeNegative._nextUnderAttackTime = -1.0f;
     SW_EXPECT_FALSE( attackTimeNegative.readInto( world ) );
 

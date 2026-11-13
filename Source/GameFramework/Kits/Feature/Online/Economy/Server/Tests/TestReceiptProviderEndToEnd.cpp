@@ -303,7 +303,7 @@ SW_TEST_CASE_F( ReceiptEndToEndTest, GoogleReachesTheEndpoint )
     SW_REQUIRE_TRUE( test::pollUntil( [this]()
     { pump(); }, [this, &listServiceResult]()
     {
-        _registry.pollDeliveryOutcomes( listServiceResult );
+        _registry.pollDeliveryResults( listServiceResult );
         return listServiceResult.empty() == false;
     } ) );
     SW_EXPECT_TRUE( listServiceResult[0]._status == ReceiptDeliveryStatus::Confirmed );

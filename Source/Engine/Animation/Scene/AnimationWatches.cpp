@@ -14,7 +14,7 @@ namespace sw
 {
     namespace
     {
-        struct AnimationWatchsInternal
+        struct AnimationWatchesInternal
         {
             /** @brief 지난 프레임에 일한 유닛 가운데 군중 방식이 @p mode 인 수를 담습니다. 씬이 없으면 false 입니다. */
             [[nodiscard]] static bool readCrowdModeCount( const GameObjectManager* pManager, AnimationCrowdMode mode, float64& outValue )
@@ -81,16 +81,16 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_WATCH( animationCrowdSharedMeshes, "Animation.CrowdSharedMeshes", "Units that shared a crowd bucket's pose last frame", &AnimationWatchsInternal::readCrowdSharedMeshes );
+    SW_AUTOMATION_WATCH( animationCrowdSharedMeshes, "Animation.CrowdSharedMeshes", "Units that shared a crowd bucket's pose last frame", &AnimationWatchesInternal::readCrowdSharedMeshes );
     SW_AUTOMATION_WATCH( animationCrowdSoloMeshes, "Animation.CrowdSoloMeshes", "Crowd-sharing skeletalMeshes that evaluated alone last frame (a state that cannot be shared)",
-                         &AnimationWatchsInternal::readCrowdSoloMeshes );
+                         &AnimationWatchesInternal::readCrowdSoloMeshes );
     SW_AUTOMATION_WATCH( animationCrowdVertexAnimationMeshes, "Animation.CrowdVertexAnimationMeshes", "Units drawn with vertex animation last frame (very far crowd skeletalMeshes)",
-                         &AnimationWatchsInternal::readCrowdVertexAnimationMeshes );
-    SW_AUTOMATION_WATCH( animationActiveUnits, "Animation.ActiveSkeletalMeshes", "Skeletal skeletalMeshes that worked last frame (not resting)", &AnimationWatchsInternal::readActiveUnits );
+                         &AnimationWatchesInternal::readCrowdVertexAnimationMeshes );
+    SW_AUTOMATION_WATCH( animationActiveUnits, "Animation.ActiveSkeletalMeshes", "Skeletal skeletalMeshes that worked last frame (not resting)", &AnimationWatchesInternal::readActiveUnits );
     SW_AUTOMATION_WATCH( animationPoseEvaluatedUnits, "Animation.PoseEvaluatedSkeletalMeshes", "Skeletal skeletalMeshes that built their own pose last frame (crowd-shared skeletalMeshes do not)",
-                         &AnimationWatchsInternal::readPoseEvaluatedUnits );
+                         &AnimationWatchesInternal::readPoseEvaluatedUnits );
     SW_AUTOMATION_WATCH( animationEvaluatedBones, "Animation.EvaluatedBones", "Bones the skeletalMeshes that built their own pose evaluated last frame (bone LOD skips the rest)",
-                         &AnimationWatchsInternal::readEvaluatedBones );
+                         &AnimationWatchesInternal::readEvaluatedBones );
     SW_AUTOMATION_SCENE_WATCH( animationBlendSpaceActiveSamples, "Animation.BlendSpaceActiveSamples", "Blend space samples the scene's animators sample now (a 2D triangulation uses at most three each)",
-                               &AnimationWatchsInternal::readBlendSpaceActiveSamples );
+                               &AnimationWatchesInternal::readBlendSpaceActiveSamples );
 } // namespace sw
