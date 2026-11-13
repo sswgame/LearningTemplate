@@ -48,7 +48,7 @@ def find_key(map_tier: dict[str, int], relative: str) -> str | None:
 
 
 def find_includes(module: str, text: str) -> list[str]:
-    """글 하나가 include 하는 `<module>/` 아래 경로(모듈 기준) — 색인(`FactCache`)에 두는 사실이다."""
+    """글 하나가 include 하는 `<module>/` 아래 경로(모듈 기준) — 색인(`index_cache`)에 두는 사실이다."""
     return re.findall(r'^\s*#\s*include\s*"' + re.escape(module) + r'/([^"]+)"', text, re.M)
 
 
@@ -84,7 +84,7 @@ def count_pairs(map_tier: dict[str, int], module: str, list_source: Iterable[tup
 
 
 def read_pairs(project_root: Path, module: str, map_tier: dict[str, int]) -> Counter[tuple[str, str]]:
-    """같은 층 키 사이 include 수(`count_include_pairs`) — 파일마다의 include 는 색인(`FactCache`)에 두고, 판정은 파일마다 접은 쌍의 수(요약)만 읽는다."""
+    """같은 층 키 사이 include 수(`count_include_pairs`) — 파일마다의 include 는 색인(`index_cache`)에 두고, 판정은 파일마다 접은 쌍의 수(요약)만 읽는다."""
     head = f"Source/{module}/"
     list_path = [path for path in list_repo_files(project_root) if path.startswith(head) and path.endswith(EXTENSIONS)]
     facts = open_facts(project_root, f"layer-cycles-{module}", [__file__, str(project_root / "Config" / "Rules" / "Layers" / f"{module}Layers.toml")], list_path,

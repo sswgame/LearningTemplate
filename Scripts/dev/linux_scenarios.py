@@ -10,7 +10,7 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
   build                  본 저장소 HEAD 를 클론으로 옮겨 Linux-Release 를 짓고 임포트 결과를 복사한다
   chain [--record] 이름… Scenario.<이름> 체인을 돌리고 진 단계와 까닭을 낸다(--record 는 .linux 골든 기록)
   stages [--record] 묶음… 쉼표로 이은 단계 묶음을 부분 체인으로 돌린다(예: focusloss,graphaddnode — 게임 단계는 리소스 경로로)
-  culprit 단계 [체인]    체인에서만 지는 단계의 앞 단계를 이분 탐색한다(체인 기본값 editor, 먼저 chain 을 돌려 로그가 있어야 한다)
+  bisect 단계 [체인]     체인에서만 지는 단계의 앞 단계를 이분 탐색한다(체인 기본값 editor, 먼저 chain 을 돌려 로그가 있어야 한다)
   report [체인]          마지막 체인 로그에서 진 단계와 까닭을 다시 낸다
   goldens                클론의 .linux 골든을 본 저장소로 복사하고 한 색인 사진을 알린다
   stop                   돌고 있는 실행을 끝낸다(체인 · 게임 · Xvfb). 게임 프로세스는 이름이 GameThread 로 바뀌어 있다
@@ -324,15 +324,15 @@ def stages(arguments):
     return code
 
 
-def culprit(arguments):
-    """이분 탐색은 ScenarioCulprit.findCulprit(Windows 와 같은 함수) — 여기는 Xvfb · 드라이버(scenario_env) 실행기와 ctest 목록만 댄다."""
+def bisect(arguments):
+    """이분 탐색은 scenario_bisect.find_first_bad_step(Windows 와 같은 함수) — 여기는 Xvfb · 드라이버(scenario_env) 실행기와 ctest 목록만 댄다."""
     target = arguments[0]
     pack = arguments[1] if len(arguments) > 1 else 'editor'
     with Xvfb():
         env = scenario_env(99)
         command = app_arguments.find_chain_command(pathlib.Path(RELEASE), pack, env)
         paths = app_arguments.read_chain_stages(command)
-        # 단계 이름은 시나리오 파일의 name 속성, 판정은 실행마다 비운 보고 폴더의 JSON(ScenarioCulprit 과 같은 함수) — 로그 문구를 읽지 않는다.
+        # 단계 이름은 시나리오 파일의 name 속성, 판정은 실행마다 비운 보고 폴더의 JSON(scenario_bisect 과 같은 함수) — 로그 문구를 읽지 않는다.
         target_index, target_name = scenario_bisect.resolve_target({index: scenario_bisect.read_scenario_name(path) for index, path in enumerate(paths)}, target)
         base = app_arguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report')
         run_counter = [0]
@@ -343,13 +343,13 @@ def culprit(arguments):
             run_dir = scenario_bisect.make_run_report_folder(pathlib.Path(RELEASE), run_counter[0])
             subprocess.run(['timeout', '1200', *base, app_arguments.option('scenario', listed), app_arguments.flag('scenario-keep-going'), app_arguments.option('scenario-backends', 'vk'),
                             app_arguments.option('scenario-report', run_dir / 'report.json'),
-                            *window_arguments(), app_arguments.option('log-file', 'x_culprit.log')], cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                            *window_arguments(), app_arguments.option('log-file', 'x_bisect.log')], cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             bad = scenario_bisect.stage_failed_in_reports(scenario_bisect.read_run_reports(run_dir), target_name)
             print(len(prefix), prefix[0] if prefix else '-', '짐' if bad else '통과', flush=True)
             return bad
 
         before = paths[:target_index]
-        found_index = scenario_bisect.find_culprit(before, fails)
+        found_index = scenario_bisect.find_first_bad_step(before, fails)
         if found_index is None:
             print('재현 안 됨 - 체인의 다른 인자(--record) · 앞 체인 상태를 본다')
             return 1
@@ -413,7 +413,7 @@ def verify_all(arguments):
         return code
     head = run_git_or_raise(['rev-parse', 'HEAD'], cwd=pathlib.Path(CLONE)).strip()
     server_dir = f'{CLONE}/build/Linux-Server'
-    # 시간을 판정하지 않는 CPU 일 두 갈래를 겹친다(Release 단위 ‖ 서버 빌드 → 기동 → 단위) — 묶음 검증(VerifyBundle.sh 의 cpu 단계)과 같은 원칙이다.
+    # 시간을 판정하지 않는 CPU 일 두 갈래를 겹친다(Release 단위 ‖ 서버 빌드 → 기동 → 단위) — 묶음 검증(preflight.sh 의 cpu 단계)과 같은 원칙이다.
     # 체인(시간 · 그림 판정)은 이것들이 끝난 뒤 혼자 돈다.
     lanes = [[('Release 단위', f'cd {RELEASE} && ./Bin/App --test -unattended > /tmp/lt.unit.log 2>&1; rc=$?; grep -E "case run|FAILED" /tmp/lt.unit.log | tail -n 5 | cut -c1-160; exit $rc')],
              [('서버 빌드', f'cmake --build {server_dir} -j8 > /tmp/srv.build.log 2>&1; rc=$?; grep -E "error:|FAILED:|undefined reference" /tmp/srv.build.log | head -n 20 | cut -c1-220; exit $rc'),
@@ -543,8 +543,8 @@ def main(argv):
         return chain(arguments)
     if command == 'stages' and arguments:
         return stages(arguments)
-    if command == 'culprit' and arguments:
-        return culprit(arguments)
+    if command == 'bisect' and arguments:
+        return bisect(arguments)
     if command == 'report':
         return report(arguments[0] if arguments else 'editor')
     if command == 'goldens':

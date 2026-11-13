@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"hookSpecificOutput\": {\"hookEventName\": \"UserPromptSubmit\", \"additionalContext\": \"이 저장소 규칙(CLAUDE.md 보조 도구): 작업을 시작하면 Skill 로 ponytail 을 먼저 부른다(구조 개편이면 장기 이득인 구조 변경은 과감히). 도구 게이트(.claude/hooks/ToolGateRules.json)가 graphify · ponytail · taste-skill · security-and-hardening · source-driven-development · scenario-debug · linux-verify · bundle-verify · code-review-and-quality 를 그 일 앞에서 요구한다 — 거절되면 안내대로 먼저 하고 다시 한다. 코드를 읽기 전에 저장소 루트에서 graphify query/path/explain \\\"...\\\" 로 범위를 좁힌다 — 그래프는 본 저장소 루트의 graphify-out/graph.json 하나다(워크트리에서는 --graph \\\"$(git rev-parse --path-format=absolute --git-common-dir)/../graphify-out/graph.json\\\"). 턴이 끝나면 Stop 훅이 Source 트리가 마지막 그래프와 다르거나(커밋 포함) 미커밋 변경이 있을 때 GRAPHIFY_OUT=<루트>/graphify-out graphify update Source 를 돌린다.\"}}'"
+            "command": "echo '{\"hookSpecificOutput\": {\"hookEventName\": \"UserPromptSubmit\", \"additionalContext\": \"이 저장소 규칙(CLAUDE.md 보조 도구): 작업을 시작하면 Skill 로 ponytail 을 먼저 부른다(구조 개편이면 장기 이득인 구조 변경은 과감히). 도구 정책(.claude/hooks/ToolPolicyRules.json)가 graphify · ponytail · taste-skill · security-and-hardening · source-driven-development · scenario-debug · linux-verify · preflight · code-review-and-quality 를 그 일 앞에서 요구한다 — 거절되면 안내대로 먼저 하고 다시 한다. 코드를 읽기 전에 저장소 루트에서 graphify query/path/explain \\\"...\\\" 로 범위를 좁힌다 — 그래프는 본 저장소 루트의 graphify-out/graph.json 하나다(워크트리에서는 --graph \\\"$(git rev-parse --path-format=absolute --git-common-dir)/../graphify-out/graph.json\\\"). 턴이 끝나면 Stop 훅이 Source 트리가 마지막 그래프와 다르거나(커밋 포함) 미커밋 변경이 있을 때 GRAPHIFY_OUT=<루트>/graphify-out graphify update Source 를 돌린다.\"}}'"
           }
         ]
       }

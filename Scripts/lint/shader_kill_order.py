@@ -97,7 +97,7 @@ def find_problems(list_source: Iterable[tuple[str, str]]) -> list[str]:
     return find_problems_in_functions([function for path, text in list_source for function in collect_functions(path, text)])
 
 
-def judge_function(path: str, name: str, body: str, set_kill: set[str], set_derivative: set[str]) -> str | None:
+def evaluate_function(path: str, name: str, body: str, set_kill: set[str], set_derivative: set[str]) -> str | None:
     """함수 하나의 위반 줄(없으면 None) — 버리기 · 미분 닫힘(`set_kill` · `set_derivative`)과 그 함수 본문만 본다."""
     kill_index = find_first_kill(body, set_kill)
     if kill_index < 0:
@@ -116,7 +116,7 @@ def find_problems_in_functions(list_function: list[tuple[str, str, str]]) -> lis
     """(경로, 이름, 몸) 목록 — 버리기 · 미분을 부르는 함수 닫힘은 파일을 건너므로 셰이더 전체를 넘긴다(자체 검사의 입구)."""
     set_derivative = close_over(list_function, DERIVATIVE_PATTERN)
     set_kill = close_over(list_function, KILL_PATTERN)
-    return [problem for path, name, body in list_function if (problem := judge_function(path, name, body, set_kill, set_derivative)) is not None]
+    return [problem for path, name, body in list_function if (problem := evaluate_function(path, name, body, set_kill, set_derivative)) is not None]
 
 
 def fold_functions(path: str, list_function: list[list[str]]) -> list[str]:
@@ -158,7 +158,7 @@ def close_over_rows(list_row: list[FunctionRow], is_direct: Callable[[FunctionRo
     return setName
 
 
-def judge_incremental(list_row: list[FunctionRow], map_cached: dict[str, str], read_bodies: Callable[[list[str]], dict[str, list[list[str]]]],
+def evaluate_incremental(list_row: list[FunctionRow], map_cached: dict[str, str], read_bodies: Callable[[list[str]], dict[str, list[list[str]]]],
                      list_path_order: Sequence[str]) -> tuple[list[str], dict[str, str]]:
     """
     요약(함수마다의 행)으로 닫힘을 내고, 버리기에 닿는 함수(직접 버리거나 버리는 이름을 부른다)만 판정한다. 판정은 (경로, 차례, 이름, 본문 해시, 부르는 이름 중 닫힘에 든 것)을
@@ -179,7 +179,7 @@ def judge_incremental(list_row: list[FunctionRow], map_cached: dict[str, str], r
             map_result[key] = map_cached[key]
         else:
             name, body = map_body[row.path][row.index]
-            map_result[key] = judge_function(row.path, name, body, set_kill, set_derivative) or ""
+            map_result[key] = evaluate_function(row.path, name, body, set_kill, set_derivative) or ""
     map_order = {path: order for order, path in enumerate(list_path_order)}
     list_problem = [map_result[key] for key, row in sorted(map_key.items(), key=lambda item: (map_order.get(item[1].path, len(map_order)), item[1].path, item[1].index))
                    if map_result[key]]
@@ -189,7 +189,7 @@ def judge_incremental(list_row: list[FunctionRow], map_cached: dict[str, str], r
 def check_shader_kill_order(project_root: Path, scope: LintScope) -> list[str]:
     """
     Content · Source 의 셰이더 함수 — 함수마다의 요약 행(`fold_functions`)만 읽어 버리기 · 미분 닫힘을 내고(역방향 간선), 버리기에 닿는 함수의 판정은
-    `judgement.json` 에 둔다. 본문 조각은 판정이 없는(바뀐 파일 · 닫힘 소속이 바뀐 이름을 부르는) 함수의 파일만 읽는다(`judge_incremental`).
+    `judgement.json` 에 둔다. 본문 조각은 판정이 없는(바뀐 파일 · 닫힘 소속이 바뀐 이름을 부르는) 함수의 파일만 읽는다(`evaluate_incremental`).
     """
     if not scope.whole_repo and not scope.touches(("Content", "Source"), EXTENSIONS):
         return []
@@ -208,7 +208,7 @@ def check_shader_kill_order(project_root: Path, scope: LintScope) -> list[str]:
         map_cached = document["results"] if document.get("version") == version else {}
     except (OSError, ValueError, KeyError):
         map_cached = {}
-    list_problem, map_result = judge_incremental(list_row, map_cached, lambda list_miss: open_functions(list_miss).map_fact, list_path)
+    list_problem, map_result = evaluate_incremental(list_row, map_cached, lambda list_miss: open_functions(list_miss).map_fact, list_path)
     if map_result != map_cached:
         judgement_path.parent.mkdir(parents=True, exist_ok=True)
         write_json(judgement_path, {"version": version, "results": map_result})
@@ -235,7 +235,7 @@ def run_self_check() -> None:
         map_fact = {path: [[name, body] for _, name, body in collect_functions(path, text)] for path, text in map_text.items()}
         list_read: list[str] = []
         list_row = [parse_row(token) for path in sorted(map_fact) for token in fold_functions(path, map_fact[path])]
-        list_problem, map_result = judge_incremental(list_row, map_cached, lambda list_miss: (list_read.extend(list_miss), {path: map_fact[path] for path in list_miss})[1], sorted(map_text))
+        list_problem, map_result = evaluate_incremental(list_row, map_cached, lambda list_miss: (list_read.extend(list_miss), {path: map_fact[path] for path in list_miss})[1], sorted(map_text))
         assert list_problem == find_problems(sorted(map_text.items())), (list_problem, find_problems(sorted(map_text.items())))
         return list_problem, map_result, list_read
 

@@ -29,22 +29,22 @@ from common.exit_code import ExitCode  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from lint.index_cache import open_facts  # noqa: E402
 from lint.lint_scope import LintScope, list_repo_files, make_whole_scope  # noqa: E402
-from generate.target_layers import read_server_unbuilt_folders  # noqa: E402 — 짓지 않는 엔진 폴더의 정본은 BuildLayout.cmake 한 곳이다
+from generate.target_layers import read_server_excluded_folders  # noqa: E402 — 짓지 않는 엔진 폴더의 정본은 BuildLayout.cmake 한 곳이다
 
 TABLE_PATH = "Config/Engine/ClientOnlyTypes.generated.json"
 REFLECTED_TYPE = re.compile(r"^\s*REFLECT\s*\([^\n]*\)\s*\n\s*(?:class|struct)\s+(?:SW_\w+\s+)?(\w+)", re.M)
 
 
-def is_client_only_source(relative_path: str, list_unbuilt_folder: list[str]) -> bool:
+def is_client_only_source(relative_path: str, list_excluded_folder: list[str]) -> bool:
     """전용 서버가 짓지 않는 소스인가(`SW_UNBUILT_ENGINE_FOLDERS` 의 엔진 폴더 · `SW_CLIENT_ONLY_SOURCE_PATTERNS` 의 `/Client/`)."""
-    return any(relative_path.startswith(f"Source/Engine/{folder}/") for folder in list_unbuilt_folder) or "/Client/" in relative_path
+    return any(relative_path.startswith(f"Source/Engine/{folder}/") for folder in list_excluded_folder) or "/Client/" in relative_path
 
 
 def collect_type_names(project_root: Path) -> list[str]:
     """클라이언트 전용 헤더의 리플렉션 형식 이름 — 내용이 바뀐 헤더만 다시 읽는다(`lint/index_cache.py`, 못 읽는 글은 include-order 가 막는다)."""
-    list_unbuilt_folder = read_server_unbuilt_folders(project_root)
+    list_excluded_folder = read_server_excluded_folders(project_root)
     list_path = [path for path in list_repo_files(project_root)
-                if path.startswith("Source/") and path.endswith(".h") and "/Tests/" not in path and is_client_only_source(path, list_unbuilt_folder)]
+                if path.startswith("Source/") and path.endswith(".h") and "/Tests/" not in path and is_client_only_source(path, list_excluded_folder)]
     facts = open_facts(project_root, "client-only-types", [__file__], list_path, lambda _, text: REFLECTED_TYPE.findall(text), contribute=lambda _, list_name: list_name)
     return sorted(facts.summary)   # 요약(이름 → 그 이름을 정의한 파일 수)만 읽는다
 

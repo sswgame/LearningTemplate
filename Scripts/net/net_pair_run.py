@@ -183,14 +183,14 @@ _MMO_SERVER_NAME = "lanternvale"
 _MMO_GAME_PORT = 17877
 _MMO_SERVICE_PORT = 17880
 _MMO_SCENARIOS = ("game/lanternvale/automation/netpair/first.scenario.xml", "game/lanternvale/automation/netpair/return.scenario.xml")
-_MMO_ADMITTED = re.compile(r"entered the vale as avatar \d+ on connection \d+ \(level (\d+), (new account|stored progress)\)")
+_MMO_ACCEPTED = re.compile(r"entered the vale as avatar \d+ on connection \d+ \(level (\d+), (new account|stored progress)\)")
 _MMO_SAVED = re.compile(r"\[LanternVale\] profile of account \d+ saved")
 
 
 def check_mmo_logs(server_text: str, list_client_text: list[str]) -> CheckResult:
     """MMO 두 프로세스 로그를 판정한다 — 서버가 첫 접속을 새 계정으로, 재접속을 저장된 진행(레벨 2)으로 들였고 그 사이 진행을 저장했으며, 어느 로그에도 오류 · 경고가 없다."""
     result = CheckResult()
-    list_admitted = _MMO_ADMITTED.findall(server_text)
+    list_admitted = _MMO_ACCEPTED.findall(server_text)
     if len(list_admitted) != 2:
         result.problems.append(f"the server admitted {len(list_admitted)} sessions - expected the first login and the return")
     else:

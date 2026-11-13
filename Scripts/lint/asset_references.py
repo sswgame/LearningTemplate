@@ -14,7 +14,7 @@ Scripts/lint/asset_references.py
 - 옮긴 에셋의 옛 id(도메인 뿌리의 `redirects.xml`, 런타임 `AssetRedirect`)는 엔진이 풀어 읽지만, 저장소 안의 참조는 새 id 로 고친다 — 남은 옛 참조를
   보고한다(언리얼 "Fix Up Redirectors" 자리). 리다이렉트는 저장소 밖(세이브 · 서버 · 배포된 팩)에 적힌 옛 경로를 살리려고 있다.
 - 검사 범위는 인덱스의 모든 참조 파일(Content 의 글 에셋 + `listCMakeFile`)이다 — 지우거나 옮긴 에셋을 가리키던 다른 파일(역참조)도 같은 판정에서 잡힌다.
-  참조 파일마다 뽑은 경로는 블롭 id 키 색인(`FactCache`)에 두어 커밋마다 바뀐 파일만 다시 읽는다. 저장소가 깨끗해야 하므로(ctest 가 지킨다) 걸린 것은 모두 이 커밋이 고칠 몫이다.
+  참조 파일마다 뽑은 경로는 블롭 id 키 색인(`index_cache`)에 두어 커밋마다 바뀐 파일만 다시 읽는다. 저장소가 깨끗해야 하므로(ctest 가 지킨다) 걸린 것은 모두 이 커밋이 고칠 몫이다.
 """
 
 from __future__ import annotations
@@ -448,7 +448,7 @@ def list_meta_problems(list_index: list[str]) -> list[str]:
 def check_asset_references(project_root: Path, scope: LintScope) -> list[str]:
     """
     린트 규칙(`rules.py`): 인덱스 전체의 끊어진 참조 — 지우거나 옮긴 에셋을 가리키던 다른 파일(역참조)까지 잡으려고 판정은 늘 전체로 낸다.
-    참조 파일마다 뽑은 경로는 블롭 id 를 키로 한 색인(`FactCache`)에 두어 바뀐 파일만 다시 읽는다. 커밋 훅은 Content · CMake 참조 파일이 바뀌었을 때만 돈다
+    참조 파일마다 뽑은 경로는 블롭 id 를 키로 한 색인(`index_cache`)에 두어 바뀐 파일만 다시 읽는다. 커밋 훅은 Content · CMake 참조 파일이 바뀌었을 때만 돈다
     (칸 목록이 바뀌면 `Rule.inputs` 가 저장소 전체로 돌린다).
     """
     config = load_config(project_root)

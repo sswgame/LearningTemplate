@@ -6,15 +6,15 @@ Scripts/lint/pre_commit.py
 린트 입구 하나 — 규칙은 `rules.py` 의 표 한 곳에 있다.
 
   py -3 -m Scripts lint                 # 커밋 훅: 모든 규칙이 스테이지된 파일만 본다(LintScope) + clang-format
-  py -3 -m Scripts lint --all           # 묶음 검증: 모든 규칙이 저장소 전체를 본다 + clang-format(VerifyBundle.sh 첫 단계)
+  py -3 -m Scripts lint --all           # 묶음 검증: 모든 규칙이 저장소 전체를 본다 + clang-format(preflight.sh 첫 단계)
   py -3 -m Scripts lint --list          # 규칙 표(갈래 · 막는 것 · 왜 린트인가 · 예외 파일)
   py -3 -m Scripts lint <id> [인자…]    # 규칙 하나의 단독 실행(`--all` · `--self-check` 등은 그 모듈의 인자)
 
-커밋 훅은 저장소 크기에 비례하지 않는다: 규칙은 스테이지된 파일만 보고, 여러 파일을 보는 규칙은 내용 해시 색인(`FactCache`)을 바뀐 파일만
+커밋 훅은 저장소 크기에 비례하지 않는다: 규칙은 스테이지된 파일만 보고, 여러 파일을 보는 규칙은 내용 해시 색인(`index_cache`)을 바뀐 파일만
 다시 계산해 쓴다. 규칙의 표 · 예외 · 모듈(그 규칙만 쓰는 도우미 포함)이 스테이지에 있으면 그 규칙만 저장소 전체를 보고(`Rule.listOwnInputs`),
 여러 규칙이 함께 쓰는 도우미만 바뀌었으면 그것을 쓰는 규칙의 자체 검사를 돈다(`Rule.listInputs`). `--all` 은 모든 규칙의 자체 검사도 돈다.
 이 모양은 시간이 아니라 연 파일 수로 지킨다(`check_read_bound` — 린트 코드가 바뀐 커밋과 `--all` 이 돈다): 파일 하나를 스테이지하면 모든 규칙을 통틀어
-그 파일을 한 번만 연다. 규칙은 파일 글을 `lint_scope.read_text` · `read_texts` 나 `FactCache` 로만 얻는다.
+그 파일을 한 번만 연다. 규칙은 파일 글을 `lint_scope.read_text` · `read_texts` 나 `index_cache` 로만 얻는다.
 **통과한 것은 찍지 않는다.** 통과는 한 줄, 실패만 상세를 찍는다. 고치는 것은 `py -3 -m Scripts format` 하나다(include 순서 + clang-format).
 """
 
@@ -120,7 +120,7 @@ def list_probe_files(project_root: Path) -> list[str]:
 def check_read_bound(project_root: Path) -> list[str]:
     """
     커밋 훅이 저장소 크기에 비례하지 않는다는 것을 형식으로 지킨다(시간을 재지 않는다): 파일 하나를 스테이지한 범위로 **모든 규칙을 차례로** 돌 때
-    연 파일이 그 파일 한 번뿐이어야 한다. 사실 캐시(`FactCache`)를 먼저 데우므로 캐시 미스는 0 이다 — 넘으면 어떤 규칙이 스테이지 밖 파일을 읽거나
+    연 파일이 그 파일 한 번뿐이어야 한다. 사실 캐시(`index_cache`)를 먼저 데우므로 캐시 미스는 0 이다 — 넘으면 어떤 규칙이 스테이지 밖 파일을 읽거나
     (색인 없이 저장소 · 폴더 · 짝을 읽는다) 같은 파일을 따로 읽은 것이다(`lint_scope.read_bytes` 를 거치지 않았다).
 
     사실 캐시 파일(`Saved/Lint/<저장소>/`)도 센다: 저장소마다 manifest 하나와 조각 하나까지 — 판정에 전체가 필요한 규칙은 요약(manifest)만 읽어야 한다.
@@ -166,7 +166,7 @@ def check_read_bound(project_root: Path) -> list[str]:
             if any(relative == table or relative.startswith(table.rstrip("/") + "/") for table in rule.list_tables()):
                 continue
             if relative != probe:
-                list_problem.append(f"{rule_id}: 스테이지 '{probe}' 하나에 스테이지 밖 '{relative}' 를 읽는다 — 여러 파일을 보는 판정은 `FactCache` 색인으로")
+                list_problem.append(f"{rule_id}: 스테이지 '{probe}' 하나에 스테이지 밖 '{relative}' 를 읽는다 — 여러 파일을 보는 판정은 `index_cache` 색인으로")
             elif any(other == relative for _, other in list_opened[:index]):
                 list_problem.append(f"{rule_id}: 스테이지 '{probe}' 를 다른 규칙과 따로 다시 읽는다 — `lint_scope.read_text` · `readTexts` 로")
         for (rule_id, store), list_shard in sorted(map_store_files.items()):

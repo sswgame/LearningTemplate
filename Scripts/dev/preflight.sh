@@ -12,7 +12,7 @@
 #   gpu-debug   Debug ctest -LE nogpu — 체인은 시나리오마다 백엔드 하나(-scenario-backend-split=all)로 Debug 단언만 지난다(Test/Scenario/CMakeLists.txt).
 # 예전(2026-11-13 측정 53 분)은 단계가 모두 차례였고, 같은 체인을 두 구성에서 네 백엔드로 다 돌았고, 셰이더 다시 굽기가 두 구성에서 혼자(RUN_SERIAL) 돌았고, Debug 단위를 ctest 밖에서 한 번 더 돌았다.
 cd "$(dirname "$0")/../.." || exit 2
-source Scripts/common/Git.sh
+source Scripts/common/git.sh
 SHA=$(sw_git rev-parse HEAD)
 FROM=build
 DRY=0

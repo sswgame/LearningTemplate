@@ -10,7 +10,7 @@ Scripts/lint/mutable_statics.py
 함수 정적을 익명 이름공간 · atomic 전역으로 옮기는 것은 자리만 바꾼 같은 싱글턴이다): 런타임 상태 · 정책 · 신호 · 번호 발급기가 엔진 · 에디터 범위 밖에
 숨어 엔진을 다시 세워도 남고, 테스트가 서로 섞이고, 누가 쓰는지 보이지 않는다. 그런 값은 주인 객체(서비스 · 매니저 · 디바이스 · 레지스트리)의 멤버다.
 한 번 알리는 깃발은 `SW_LOG_*_ONCE_ID`. 다른 TU · DLL 의 정적 등록자가 범위보다 먼저 쓰는 정적 등록 목록 · 칸만 공통 틀로 쓴다(언리얼 compiled-in 등록과
-같은 자리). 그 매크로들은 함수 정적을 `#define` 안에 두므로 이 검사에 잡히지 않는다 — 다른 매크로가 같은 일을 하지 않게 매크로 본문은 `MACRO_HOMES` 만 허용한다.
+같은 자리). 그 매크로들은 함수 정적을 `#define` 안에 두므로 이 검사에 잡히지 않는다 — 다른 매크로가 같은 일을 하지 않게 매크로 본문은 `MACRO_ALLOWED_FILES` 만 허용한다.
 
 허용(가변이 아니다): `const` · `constexpr` 값(포인터면 포인터 자체가 const), 참조, `thread_local`(스레드 자기 칸 — 공유 상태가 아니다), 함수 선언, `extern` 선언(정의 쪽을 본다).
 예외 표는 까닭(`_why`)이 필수다 — 할당 · 엔진보다 먼저 도는 침입형 등록 머리도 틀(`SW_DEFINE_REGISTRATION_CHAIN`)로 두므로, 정말 프로세스 수명인 바닥(크래시 처리기 버퍼 ·
@@ -36,7 +36,7 @@ from lint.lint_scope import LintScope, make_whole_scope, read_text  # noqa: E402
 
 EXTENSIONS = (".h", ".cpp", ".inl")
 # 함수 정적을 매크로 본문에 둘 수 있는 곳(세 틀의 정의 매크로)
-MACRO_HOMES = ("Source/Core/Registry/RegistrationList.h", "Source/Core/Registry/RegistrationSlot.h", "Source/Core/Registry/RegistrationChain.h")
+MACRO_ALLOWED_FILES = ("Source/Core/Registry/RegistrationList.h", "Source/Core/Registry/RegistrationSlot.h", "Source/Core/Registry/RegistrationChain.h")
 EXCEPTION_FILE = "Config/Rules/Lint/MutableStaticExceptions.json"
 NAMESPACE_HEAD = re.compile(r"(?:\bnamespace\b[^;{}()]*|extern\s+\"C\"\s*)$")
 CLASS_HEAD = re.compile(r"\b(?:class|struct|union)\b[^;{}()]*$")
@@ -243,7 +243,7 @@ def check_mutable_statics(project_root: Path, scope: LintScope) -> list[str]:
                 used.add((rel_path, name))
                 continue
             list_problem.append(f"{rel_path}:{line}: {WHERE_TEXT[where]} 가변 변수 `{statement}` — 주인 객체(서비스 · 매니저 · 디바이스 · 레지스트리)의 멤버로, 정적 등록이면 SW_DEFINE_REGISTRATION_LIST · SLOT · CHAIN 으로, 정말 프로세스 바닥이면 {EXCEPTION_FILE} 에 까닭과 함께")
-        if rel_path not in MACRO_HOMES:
+        if rel_path not in MACRO_ALLOWED_FILES:
             for m in re.finditer(r"(?m)^[ \t]*#\s*define\b(?:.*\\\n)*.*", text):
                 if re.search(r"\bstatic\b(?!_assert|_cast)\s+(?!constexpr|const\b|inline\b)[\w:<>]+[^;\\]*\bs_\w+", m.group(0)) and "{" in m.group(0):
                     line = text.count("\n", 0, m.start()) + 1

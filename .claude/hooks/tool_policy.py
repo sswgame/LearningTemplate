@@ -1,7 +1,7 @@
-"""도구 사용 게이트(PreToolUse · PostToolUse 훅) — 설치한 스킬 · graphify 를 그 일 앞에서 반드시 쓰게 한다.
+"""도구 사용 정책(PreToolUse · PostToolUse 훅) — 설치한 스킬 · graphify 를 그 일 앞에서 반드시 쓰게 한다.
 
 CLAUDE.md 의 "보조 도구" 는 글로만 있어 세션마다 지켜지지 않았다(2026-11-08 사용자 지적). 에이전트의 행동은 형식으로 막을 수 없어
-게이트로 둔다: 규칙 표(`ToolGateRules.json` — 규칙은 데이터, 이 파일은 판정만)의 조건을 채우지 않은 호출은 거절하고 먼저 할 일을 알린다.
+정책으로 둔다: 규칙 표(`ToolPolicyRules.json` — 규칙은 데이터, 이 파일은 판정만)의 조건을 채우지 않은 호출은 거절하고 먼저 할 일을 알린다.
 
 PostToolUse 는 표지를 남긴다: `skill:<이름>`(Skill 도구), `graph`(graphify query · path · explain, mcp__graphify__ 도구),
 `context7`(이름에 context7 가 든 도구). 상태는 에이전트마다(하위 에이전트는 agent_id, 아니면 session_id) 임시 폴더의 JSON 에 둔다.
@@ -14,11 +14,11 @@ import tempfile
 import time
 
 STATE_DIR = os.path.join(tempfile.gettempdir(), "claude-toolgate")
-RULES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ToolGateRules.json")
+RULES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ToolPolicyRules.json")
 GRAPH_COMMAND = re.compile(r"\bgraphify\s+(query|path|explain)\b")
 
 
-class ToolGate:
+class ToolPolicy:
     """한 훅 호출의 입력을 읽어 표지를 남기거나, 규칙에 걸리면 거절을 낸다."""
 
     def __init__(self, payload: dict) -> None:
@@ -84,7 +84,7 @@ class ToolGate:
             window = rule.get("windowMinutes")
             satisfied = any(marker in state and (window is None or now - state[marker] <= window * 60) for marker in rule["requiresAny"])
             if not satisfied:
-                reason = f"[도구 게이트 {rule['name']}] {rule['hint']} 그 뒤에 이 호출을 다시 한다(CLAUDE.md 보조 도구, 규칙 .claude/hooks/ToolGateRules.json)."
+                reason = f"[도구 정책 {rule['name']}] {rule['hint']} 그 뒤에 이 호출을 다시 한다(CLAUDE.md 보조 도구, 규칙 .claude/hooks/ToolPolicyRules.json)."
                 return {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": reason}}
         return None
 
@@ -94,7 +94,7 @@ def main() -> int:
         payload = json.loads(sys.stdin.buffer.read().decode("utf-8"))
     except ValueError:
         return 0
-    gate = ToolGate(payload)
+    gate = ToolPolicy(payload)
     event = payload.get("hook_event_name")
     if event == "PostToolUse":
         gate.on_post_tool_use()

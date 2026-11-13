@@ -551,7 +551,7 @@ def check_shared_temp_in_tests(code: str, relative: str) -> list[tuple[int, str]
     return [(get_line_of(code, index), "테스트는 공용 임시 폴더 대신 test::makeScratchPath 를 쓴다")]
 
 
-HAND_DEPLETION = re.compile(r"\b(_\w*(?:hp|health|durability|sanity)\w*)\s*(?:-=|=\s*MathUtil::max\(\s*0(?:\.0f)?\s*,\s*[\w.\->]*\1\s*-)", re.IGNORECASE)
+MANUAL_DEPLETION = re.compile(r"\b(_\w*(?:hp|health|durability|sanity)\w*)\s*(?:-=|=\s*MathUtil::max\(\s*0(?:\.0f)?\s*,\s*[\w.\->]*\1\s*-)", re.IGNORECASE)
 
 
 INLINE_BROWSER_JS = re.compile(r"\b(EM_JS|EM_ASYNC_JS|EM_ASM\w*|MAIN_THREAD_(?:ASYNC_)?EM_ASM\w*)\s*\(")
@@ -562,12 +562,12 @@ def check_inline_browser_js(code: str) -> list[tuple[int, str]]:
     return [(get_line_of(code, match.start()), f"`{match.group(1)}` — 브라우저 JS 는 기능 옆 Web/*.js(addToLibrary)에 두고 C++ 는 extern \"C\" 로 선언한다") for match in INLINE_BROWSER_JS.finditer(code)]
 
 
-def check_hand_depletion(code: str, relative: str) -> list[tuple[int, str]]:
+def check_manual_depletion(code: str, relative: str) -> list[tuple[int, str]]:
     """게임 수치(체력 · 내구도 · 정신력)는 `DepletingValue::take` 로 깎는다 — 0 고정과 소진 판정을 손으로 적으면 곳마다 갈린다(음수 체력이 저장 검사에 걸린다)."""
     is_game_code = relative.startswith(("Source/GameFramework/", "Source/Games/")) and "/Tests/" not in relative
     if not is_game_code:
         return []
-    return [(get_line_of(code, match.start()), f"`{match.group(1)}` 를 손으로 깎는다 — DepletingValue::take 를 쓴다") for match in HAND_DEPLETION.finditer(code)]
+    return [(get_line_of(code, match.start()), f"`{match.group(1)}` 를 손으로 깎는다 — DepletingValue::take 를 쓴다") for match in MANUAL_DEPLETION.finditer(code)]
 
 
 def check_online_protocol_table(raw: str, code: str, relative: str) -> list[tuple[int, str]]:
@@ -583,7 +583,7 @@ def check_online_protocol_table(raw: str, code: str, relative: str) -> list[tupl
 
 
 NET_MESSAGE_FOLDERS = ("Source/GameFramework/Kits/Feature/Network/", "Source/Engine/Net/", "Source/Games/")
-HAND_NET_MESSAGE_PATTERNS = (
+MANUAL_NET_MESSAGE_PATTERNS = (
     (re.compile(r"NetKitMessageRange::k\w+\s*\+\s*\d"), "손으로 적은 메시지 종류 — 표의 서술자(`NetMessageDef`)와 `Table::getKindOf` 를 쓴다"),
     (re.compile(r"1u\s*<<\s*\(\s*\w*Message::k"), "손으로 쓴 종류 마스크 — `NetTableHandler` 나 `Table::makeMask` 를 쓴다"),
     (re.compile(r"context\._kind\s*=="), "종류 손 디스패치 — `NetTableHandler` 의 `receive` 오버로드(표가 나눈다)를 쓴다"),
@@ -596,7 +596,7 @@ def check_net_message_table(code: str, relative: str) -> list[tuple[int, str]]:
     if normalized.startswith(NET_MESSAGE_FOLDERS) is False or "/Tests/" in normalized:
         return []
     list_problem: list[tuple[int, str]] = []
-    for pattern, message in HAND_NET_MESSAGE_PATTERNS:
+    for pattern, message in MANUAL_NET_MESSAGE_PATTERNS:
         for match in pattern.finditer(code):
             list_problem.append((get_line_of(code, match.start()), message))
     return list_problem
@@ -736,7 +736,7 @@ def inspect_file(path: Path, relative: str) -> list[str]:
     list_problem += check_static_owner(code, relative, load_static_owner_exceptions(str(Path(__file__).resolve().parents[2])))
     list_problem += check_includes_inside_braces(raw, code)
     list_problem += check_shared_temp_in_tests(code, relative)
-    list_problem += check_hand_depletion(code, relative)
+    list_problem += check_manual_depletion(code, relative)
     list_problem += check_inline_browser_js(code)
     list_problem += check_online_protocol_table(raw, code, relative)
     list_problem += check_net_message_table(code, relative)

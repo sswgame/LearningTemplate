@@ -11,7 +11,7 @@
   py -3 Scripts/dev/scenario_bisect.py --golden-margins [보고 폴더…]                # 흔들리는 골든: 보고의 goldenSamples[] 를 모아 골든별 최대 · 여유
   py -3 Scripts/dev/scenario_bisect.py --golden-coverage                            # 플랫폼 · 백엔드마다 골든 수(체인 백엔드 표와 대조)
 
-Linux 는 `linux_scenarios.py culprit` 가 같은 함수(`find_culprit`)를 자기 실행기(Xvfb · lavapipe)로 부른다.
+Linux 는 `linux_scenarios.py bisect` 가 같은 함수(`find_first_bad_step`)를 자기 실행기(Xvfb · lavapipe)로 부른다.
 """
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def resolve_target(names: dict[int, str], target: str) -> tuple[int, str]:
 
 
 
-def find_culprit(before: Sequence[str], fails: Callable[[list[str]], bool]) -> int | None:
+def find_first_bad_step(before: Sequence[str], fails: Callable[[list[str]], bool]) -> int | None:
     """@p before (진 단계 앞의 단계들) 중 범인의 순번. @p fails(앞 단계 묶음) 는 그 묶음 + 진 단계를 돌려 졌는지 돌려준다.
 
     before[low:] 는 지고 before[high:] 는 통과하는 경계를 좁힌다. 앞 단계 전부를 붙여도 지지 않으면 None(재현 안 됨).
@@ -239,15 +239,15 @@ def self_check() -> int:
     assert rows[1]['margin'] == float('inf'), rows[1]
 
     stages = [f's{i}' for i in range(10)]
-    for culprit in range(10):
+    for first_bad in range(10):
         calls: list[list[str]] = []
 
-        def fails(prefix: list[str], culprit: int = culprit) -> bool:
+        def fails(prefix: list[str], first_bad: int = first_bad) -> bool:
             calls.append(prefix)
-            return stages[culprit] in prefix
-        assert find_culprit(stages, fails) == culprit, culprit
+            return stages[first_bad] in prefix
+        assert find_first_bad_step(stages, fails) == first_bad, first_bad
         assert len(calls) <= 1 + 4, len(calls)   # log2(10) 올림 + 처음 한 번
-    assert find_culprit(stages, lambda prefix: False) is None
+    assert find_first_bad_step(stages, lambda prefix: False) is None
     sample_log = '\n'.join(['x loaded from engine/a.scenario.xml (3 step(s))', 'y loaded from engine/b.scenario.xml', 'z loaded from engine/a.scenario.xml'])
     assert read_backend_chain_order(sample_log) == ['engine/a.scenario.xml', 'engine/b.scenario.xml']
     assert minimize_stages(stages, lambda prefix: 's0' in prefix and 's4' in prefix and 's7' in prefix) == ['s0', 's4', 's7']
@@ -311,20 +311,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     before = paths[:target_index]
     print(f'{options.chain}: {target_name} (단계 {target_index + 1}/{len(paths)}) · {options.preset} {options.backend}', flush=True)
     if options.start:
-        culprit = next((index for index, path in enumerate(before) if path == options.start or read_scenario_name(path) == options.start), None)
-        if culprit is None:
+        first_bad = next((index for index, path in enumerate(before) if path == options.start or read_scenario_name(path) == options.start), None)
+        if first_bad is None:
             parser.error(f'{options.start} 는 {target_name} 앞 단계가 아니다')
     else:
-        culprit = find_culprit(before, fails)
-    if culprit is None:
+        first_bad = find_first_bad_step(before, fails)
+    if first_bad is None:
         print('재현 안 됨 — 단독으로 지는지(단계만 -scenario= 로) · 다른 백엔드 · 체인 밖 상태를 본다')
         return 1
-    print('시작 단계:', before[culprit])
+    print('시작 단계:', before[first_bad])
     print('단독 쌍으로도 지는가(아니면 뒤 단계들과 함께 만드는 상태다):')
-    if fails([before[culprit]]):
+    if fails([before[first_bad]]):
         return 0
     print('뒤 단계와 함께 만드는 상태다 — 빼도 지는 단계를 하나씩 버린다:')
-    kept = minimize_stages(before[culprit:], fails)
+    kept = minimize_stages(before[first_bad:], fails)
     print('지는 최소 묶음:', ', '.join(kept))
     return 0
 

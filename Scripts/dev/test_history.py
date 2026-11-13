@@ -15,7 +15,7 @@ Scripts/dev/test_history.py
   py -3 Scripts/dev/test_history.py quarantine [--ctest-exclude]              # 표를 검사한다(만료 · 빠진 칸은 실패), --ctest-exclude 는 ctest -E 정규식을 찍는다
   py -3 Scripts/dev/test_history.py --self-check
 
-묶음 검증(`Scripts/dev/VerifyBundle.sh`)이 ctest 마다 보고 폴더를 ingest 하고, ctest 에 격리 표를 `-E` 로 넘긴다.
+묶음 검증(`Scripts/dev/preflight.sh`)이 ctest 마다 보고 폴더를 ingest 하고, ctest 에 격리 표를 `-E` 로 넘긴다.
 """
 
 from __future__ import annotations

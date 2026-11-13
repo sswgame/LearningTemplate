@@ -21,7 +21,7 @@ Scripts/lint/naming_words.py
   (`SceneWalkKey` · `aimAtMark` · `parkHistory`)가 들어왔다(2026-11-13). 문맥에 따라 맞기도 틀리기도 한 낱말은 `_scopedWords` 가 쓸 경로를 정한다
   (게임의 walk 는 맞고 엔진의 walk 는 순회다). 바깥 철자(`PFN_` · `VK_` · ImGui 깃발)는 `_externalPatterns`, 받아 온 스킬은 `_externalPaths` 가 뺀다.
   파이썬 이름의 PEP 8 꼴(모듈 · 함수 snake_case, 클래스 PascalCase, 상수 UPPER_CASE — docs/agents/NamingScripts.md)도 여기서 막는다. 전수 집계는 `py -3 -m Scripts naming-census`.
-- 이름 하나씩의 예외는 `_keep`, 전수 개명한 옛 이름은 `_bannedNames`(주석 · 문자열 밖 코드만 본다).
+- 이름 하나씩의 예외는 `_keep`, 전수 개명한 옛 이름은 `_bannedNames`(C++ 는 주석 · 문자열 밖 코드, 스크립트는 선언 · 파일 · CLI 명령 이름을 본다).
 
 verb · term · predicate · lookup · word 는 기준선(`Config/Rules/Lint/NamingBaseline.json`)을 둔다 — 지금 있는 이름만 적혀 있고 **줄기만 한다**:
 새 위반은 실패, 고쳐 사라진 이름이 기준선에 남아도 실패(`--lower-baseline` 으로 뺀다). 영역별 이전이 기준선을 0 으로 줄인다.
@@ -326,9 +326,13 @@ def classify_words(list_name: Iterable[tuple[str, str, str]], table: dict) -> di
     keep_terms = [re.compile(re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_?", re.escape(term)), re.I) for term in table.get("_keepTerms", [])]
     keep = table["_keep"]
     external_paths = table["_externalPaths"]
+    banned_names = table.get("_bannedNames", {})
     found: dict[str, str] = {}
     for kind, name, path in list_name:
         if name in keep or name in found or is_external_name(name, externals) or is_under(path, external_paths):
+            continue
+        if name in banned_names and not path.startswith("Source/"):   # C++ 의 옛 이름은 classify_names 가 코드 전체에서 본다
+            found[name] = f"{path}: 옛 이름 '{name}' — {banned_names[name]}"
             continue
         shape = PYTHON_SHAPES.get(kind) if path.endswith(".py") else None
         if shape is not None and shape[0].fullmatch(name) is None:
@@ -405,6 +409,9 @@ def run_self_check() -> None:
     found = classify_words([(kind, name, "Scripts/lint/scene_key.py") for kind, name in collect_script_declarations("Scripts/lint/scene_key.py", script)]
                            + [("file", "SceneKey", "Scripts/lint/SceneKey.py"), ("file", "SceneKey", "cmake/SceneKey.cmake")], table_words | {"_words": {"a": ["max", "scene", "key", "hover", "mark"], "b": []}})
     assert set(found) == {"kSceneKey", "hoverScene", "SceneKey"} and "Scripts/lint/SceneKey.py" in found["SceneKey"], found   # PEP 8 꼴 — CMake 파일 이름은 보지 않는다
+    found = classify_words([("file", "scene_key", "Scripts/dev/scene_key.py"), ("command", "scene-key", "Scripts/__main__.py")],
+                           table_words | {"_words": {"a": ["scene", "key"], "b": []}, "_bannedNames": {"scene_key": "key_scene", "scene-key": "key-scene"}})
+    assert set(found) == {"scene_key", "scene-key"} and "key_scene" in found["scene_key"], found   # 스크립트의 옛 이름
 
 
 def main(argv: Sequence[str] | None = None) -> int:

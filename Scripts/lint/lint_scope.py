@@ -10,7 +10,7 @@ Scripts/lint/lint_scope.py
 - `--all`(묶음 검증): git 이 아는 저장소 전체(추적 + 무시되지 않은 새 파일). `whole_repo` 가 참이다.
 
 저장소 전체를 봐야만 내릴 수 있는 판정(낡은 예외 · 기준선 줄)은 `whole_repo` 일 때만 낸다 — 바뀐 파일만 보고 "더는 안 쓰인다" 고 말할 수 없다.
-여러 파일의 관계를 보는 규칙은 `FactCache` 로 저장소 전체 색인을 바뀐 파일만 다시 계산해 쓴다.
+여러 파일의 관계를 보는 규칙은 `index_cache` 로 저장소 전체 색인을 바뀐 파일만 다시 계산해 쓴다.
 """
 
 from __future__ import annotations
@@ -123,7 +123,7 @@ def _read_bytes(key: str) -> bytes | None:
 
 def read_bytes(path: Path | str) -> bytes | None:
     """
-    파일 바이트(없으면 None, 그 밖의 OSError 는 올린다). **규칙은 파일 내용을 이것(`readText` · `read_texts`)이나 `FactCache` 로만 얻는다** — 커밋 훅은
+    파일 바이트(없으면 None, 그 밖의 OSError 는 올린다). **규칙은 파일 내용을 이것(`readText` · `read_texts`)이나 `index_cache` 로만 얻는다** — 커밋 훅은
     규칙 스물 몇 개가 같은 스테이지 파일을 보므로 한 번 읽어 함께 쓴다. `pre_commit.check_read_bound` 가 스테이지 파일 하나에 모든 규칙이 연 파일이 그 파일
     한 번뿐인지 본다(직접 `read_text` 하면 두 번째 열기로 걸린다). 크기 한도는 `--all` 이 저장소 전체를 붙잡지 않게 둔다(커밋 훅의 스테이지는 다 담는다).
     """

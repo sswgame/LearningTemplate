@@ -7,7 +7,7 @@ CMake 의 `include()` · `add_subdirectory()` 경로가 저장소의 실제 이�
 
 왜 린트인가: C++ include 는 컴파일러가 본다(`-Werror=nonportable-include-path`, cmake/Modules/Compiler/Clang.cmake). CMake 경로는 컴파일러 · clang-tidy 가
 보지 않고, Windows 는 대소문자를 가리지 않아 Linux 구성에서야 "없는 파일" 로 선다(`RhiBackends.cmake` 를 `RHIBackends.cmake` 로 부르던 결함). 형식으로 막을 수 없는 틈이다.
-CMake 파일만이 아니라 이름 바꾸기도 참조를 깨므로 판정은 CMake 파일 전부의 색인(`FactCache`, 바뀐 파일만 다시 읽는다)으로 낸다.
+CMake 파일만이 아니라 이름 바꾸기도 참조를 깨므로 판정은 CMake 파일 전부의 색인(`index_cache`, 바뀐 파일만 다시 읽는다)으로 낸다.
 
   python Scripts/lint/cmake_path_case.py    (= `py -3 -m Scripts lint cmake-path-case`)
 
@@ -37,7 +37,7 @@ _ROOT_PATH_RE = re.compile(r'\$\{CMAKE_SOURCE_DIR\}/([^\s"$)<]+)')
 
 
 def extract_paths(text: str) -> dict[str, list[str]]:
-    """CMake 글 하나가 적은 경로 — 저장소 루트 기준(`${CMAKE_SOURCE_DIR}/…`)과 `include()` · `add_subdirectory()` 인자. 색인(`FactCache`)에 둔다."""
+    """CMake 글 하나가 적은 경로 — 저장소 루트 기준(`${CMAKE_SOURCE_DIR}/…`)과 `include()` · `add_subdirectory()` 인자. 색인(`index_cache`)에 둔다."""
     return {"root": [match.group(1) for match in _ROOT_PATH_RE.finditer(text)],
             "call": [match.group(1) for match in _PATH_CALL_RE.finditer(text) if "$" not in match.group(1) and "<" not in match.group(1)]}   # 변수 · 생성기 식은 구성 때에만 풀린다
 
@@ -51,7 +51,7 @@ def check_cmake_path_case(project_root: Path, scope: LintScope) -> list[str]:
     list_cmake = [file for file in list_file if file.endswith(".cmake") or file.endswith("CMakeLists.txt")]
     facts = open_facts(project_root, "cmake-path-case", [__file__], list_cmake, lambda _, text: extract_paths(text), errors="ignore",
                       contribute=lambda file, fact: [json.dumps([file, kind, index, written]) for kind in ("root", "call") for index, written in enumerate(fact[kind])])
-    return judge_paths(list_file, unfold_paths(list_cmake, facts.summary))
+    return evaluate_paths(list_file, unfold_paths(list_cmake, facts.summary))
 
 
 def unfold_paths(list_cmake: Sequence[str], summary: Iterable[str]) -> dict[str, dict[str, list[str]]]:
@@ -64,7 +64,7 @@ def unfold_paths(list_cmake: Sequence[str], summary: Iterable[str]) -> dict[str,
             for file in list_cmake if file in map_row}
 
 
-def judge_paths(list_file: Sequence[str], map_fact: dict[str, dict[str, list[str]]]) -> list[str]:
+def evaluate_paths(list_file: Sequence[str], map_fact: dict[str, dict[str, list[str]]]) -> list[str]:
     """저장소 파일 목록과 CMake 파일마다 적은 경로(`extractPaths`)로 대소문자만 다른 경로를 찾는다."""
     set_exact = set(list_file)
     for file in list_file:
@@ -95,10 +95,10 @@ def judge_paths(list_file: Sequence[str], map_fact: dict[str, dict[str, list[str
 def run_self_check() -> None:
     list_file = ["CMakeLists.txt", "cmake/Engine/BuildLayout.cmake", "Source/Engine/CMakeLists.txt", "Source/Engine/Audio/CMakeLists.txt"]
     text = 'include(${CMAKE_SOURCE_DIR}/cmake/engine/BuildLayout.cmake)\nadd_subdirectory(Audio)\nadd_subdirectory(audio)\nadd_subdirectory(${X})\n'
-    list_violation = judge_paths(list_file, {"Source/Engine/CMakeLists.txt": extract_paths(text)})
+    list_violation = evaluate_paths(list_file, {"Source/Engine/CMakeLists.txt": extract_paths(text)})
     assert list_violation == ["Source/Engine/CMakeLists.txt: 'cmake/engine/BuildLayout.cmake' → 실제 이름 'cmake/Engine/BuildLayout.cmake'",
                              "Source/Engine/CMakeLists.txt: 'audio' → 실제 이름 'Source/Engine/Audio'"], list_violation
-    assert judge_paths(list_file, {"CMakeLists.txt": extract_paths("add_subdirectory(Source/Engine)\n")}) == [], "맞는 대소문자는 통과한다"
+    assert evaluate_paths(list_file, {"CMakeLists.txt": extract_paths("add_subdirectory(Source/Engine)\n")}) == [], "맞는 대소문자는 통과한다"
     fact = extract_paths("add_subdirectory(b)\nadd_subdirectory(a)\nadd_subdirectory(b)\n")
     tokens = [json.dumps(["x/CMakeLists.txt", kind, index, written]) for kind in ("root", "call") for index, written in enumerate(fact[kind])]
     assert unfold_paths(["x/CMakeLists.txt"], reversed(tokens)) == {"x/CMakeLists.txt": fact}, "요약에서 차례 · 겹친 경로를 되돌린다"

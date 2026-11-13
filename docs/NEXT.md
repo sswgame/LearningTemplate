@@ -4,12 +4,12 @@
 > 독자: 이어서 일하는 세션(에이전트와 사람).
 > 결론: **남은 일**만 적는다. 끝난 일은 git 기록에, 규칙은 CLAUDE.md · AGENTS.md · `docs/agents/` · 스킬에 있다. 끝나면 줄을 지운다.
 
-절차의 정본은 스킬이다: 묶음 끝 검증 · push `bundle-verify`, Linux `linux-verify`, 시나리오 실패 `scenario-debug`. 시나리오 체계는 `Test/README.md`, 사람이 보는 실행은 `py -3 Scripts/dev/watch_scenarios.py`.
+절차의 정본은 스킬이다: 묶음 끝 검증 · push `preflight`, Linux `linux-verify`, 시나리오 실패 `scenario-debug`. 시나리오 체계는 `Test/README.md`, 사람이 보는 실행은 `py -3 Scripts/dev/watch_scenarios.py`.
 
 ## 0. 다음 순서
 
 1. **아직 합치지 않은 갈래**(합치기 전에 `git cherry main <갈래>` 로 이미 들어간 커밋을 거른다): `work-linux`(Linux 체인 · 빌드 결함), `work-econ`(탈퇴 계정 키트 정리 · 우편함), `work-plat`(K-5 시각 기준 · 장치 분실 재생성), `settings-json`(프로젝트 설정 창의 범용 JSON 페이지 — 남은 것: 표 페이지 Ctrl+Z(감사 E-13), 활성 게임이 아닌 `Config/Game/*.json` 이 범용 페이지로 열림), `integ2`(에셋 GUID 1단계 · 5-3 틱 const · W-R3 (a) 코덱 키 검사 · A1 포즈 노드 · R1 리다이렉트 표 팩 담기 · `setTransient`, 빌드 한 번도 안 함).
-   - integ2: main 을 다시 합친다(새 `extern template class … SharedAssetCache<…>;` 줄은 공유 캐시 선언 매크로로) → Debug 전체 프리셋 빌드(App 만 지으면 게임 모듈 헤더 불일치로 기동 실패) → 컴파일 오류는 `.inl` include · `extern template` 로(`-Werror=undefined-func-template` 를 끄지 않는다) → 단위 · 영향 시나리오 → VerifyBundle. 남은 작업자 몫: GameObjectManager.inl 머리말, `EditorTransaction` 을 연 채 CommandStack 을 읽는 자리. 그 뒤 에셋 GUID 2 · 3 단계(GUID 로 참조 해석 · 경로 참조 이전 — 감사 A-2 · "다음 할 일" 16).
+   - integ2: main 을 다시 합친다(새 `extern template class … SharedAssetCache<…>;` 줄은 공유 캐시 선언 매크로로) → Debug 전체 프리셋 빌드(App 만 지으면 게임 모듈 헤더 불일치로 기동 실패) → 컴파일 오류는 `.inl` include · `extern template` 로(`-Werror=undefined-func-template` 를 끄지 않는다) → 단위 · 영향 시나리오 → preflight. 남은 작업자 몫: GameObjectManager.inl 머리말, `EditorTransaction` 을 연 채 CommandStack 을 읽는 자리. 그 뒤 에셋 GUID 2 · 3 단계(GUID 로 참조 해석 · 경로 참조 이전 — 감사 A-2 · "다음 할 일" 16).
 2. **감사 다음 할 일:** [CommercialGapAudit](CommercialGapAudit.md) `## 다음 할 일` 14 번부터. 감사 남은 몫: P-10, P-11 포커스, C-2(다리 원뿔 먼저), G-3 상점 판매 개체. 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고치고, 끝난 항목은 감사 문서에서 지운다. 작업자에게는 감사 문서 · NEXT 를 고치지 말게 하고 통합이 지운다.
 
 ## 1. 통합 빌드에서 함께 볼 것 (빌드 없이 넘어온 묶음)
@@ -35,7 +35,7 @@
 
 - **에디터 첫 패널 약 1 초:** `-gv_editorPanelTimes` · `-gv_traceSlowTickMs` 로 동기 준비를 찾아 `IEditorPanel::onPanelOpened` 의 비동기 잡으로(`ModulesModel::ensureLoaded` 후보).
 - **시나리오 대기:** boat · clothshowcase(골든 앞 구간이 물리 이력), waterplay(강체 속도 · 잠듦 값으로 조건 대기).
-- **측정([DesignBacklog](DesignBacklog.md) S8 표):** Tracy `GT.Frame` 자식 합 90 % 이상, 배치 크기 12 · 24 · 48, `load/*` × 워커 1 · 2 · 4 · 8 과 구조 지표, W25 GPU 비교(c05a3ee251 대 지금 — 노이즈 안이면 되돌림), W-S4 `-ftime-trace`, W-R1 RT 프레임 힙 할당, W-R2 PSO 조회, 5-2 `RT.Bind.*`, DX12 기록 경로 락 제거 전후 `bench.json` p50, 에디터 MVVM(Hierarchy 큐브 8000 · 인스펙터 값 행), 골든 여유(`ScenarioCulprit --golden-margins`).
+- **측정([DesignBacklog](DesignBacklog.md) S8 표):** Tracy `GT.Frame` 자식 합 90 % 이상, 배치 크기 12 · 24 · 48, `load/*` × 워커 1 · 2 · 4 · 8 과 구조 지표, W25 GPU 비교(c05a3ee251 대 지금 — 노이즈 안이면 되돌림), W-S4 `-ftime-trace`, W-R1 RT 프레임 힙 할당, W-R2 PSO 조회, 5-2 `RT.Bind.*`, DX12 기록 경로 락 제거 전후 `bench.json` p50, 에디터 MVVM(Hierarchy 큐브 8000 · 인스펙터 값 행), 골든 여유(`scenario_bisect --golden-margins`).
 - **Shooter3D 소총 자세 클립:** 지금은 리그 IK 견착(`ubc_player_body.rig.xml` TwoHandHold). 상용(Lyra · ALS)처럼 쥔 자세 클립 + 왼손 IK 로 간다 — CC0 출처 poly.pizza "SWAT"(Quaternius, `https://static.poly.pizza/713f6535-f4f3-4367-a4c6-ced126ae0936.glb`, `Idle_Gun` · `Gun_Shoot` · `Run_Shoot` 등)을 `models_raw/quaternius` 에 넣고 UBC 로 리타깃해 상체 층(Aim)으로, IK 견착은 손 자리 보정으로.
 
 ## 5. 설계 남은 일

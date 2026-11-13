@@ -1,5 +1,5 @@
 {
-  "_comment": "도구 게이트 규칙(.claude/hooks/tool_policy.py). 각 줄: 이 도구 · 경로 · 셸 명령을 쓰기 전에 requiresAny 중 하나를 이 에이전트가 먼저 했어야 한다. 표지는 skill:<이름>(Skill 도구), graph(graphify query · path · explain 또는 mcp__graphify__), context7(이름에 context7 가 든 도구). windowMinutes 가 있으면 그 시간 안에 한 것만 센다.",
+  "_comment": "도구 정책 규칙(.claude/hooks/tool_policy.py). 각 줄: 이 도구 · 경로 · 셸 명령을 쓰기 전에 requiresAny 중 하나를 이 에이전트가 먼저 했어야 한다. 표지는 skill:<이름>(Skill 도구), graph(graphify query · path · explain 또는 mcp__graphify__), context7(이름에 context7 가 든 도구). windowMinutes 가 있으면 그 시간 안에 한 것만 센다.",
   "_rules": [
     {
       "name": "graph-before-reading-source",
@@ -106,16 +106,16 @@
       "hint": "Linux 빌드 · 시나리오 전에 `Skill` 로 linux-verify 를 부른다."
     },
     {
-      "name": "bundle-verify-before-push",
+      "name": "preflight-before-push",
       "tools": [
         "Bash",
         "PowerShell"
       ],
-      "shell": "\\bgit\\s+push\\b|VerifyBundle\\.sh",
+      "shell": "\\bgit\\s+push\\b|preflight\\.sh",
       "requiresAny": [
-        "skill:bundle-verify"
+        "skill:preflight"
       ],
-      "hint": "묶음 검증 · push 전에 `Skill` 로 bundle-verify 를 부른다."
+      "hint": "묶음 검증 · push 전에 `Skill` 로 preflight 를 부른다."
     },
     {
       "name": "review-before-integrating-worker",

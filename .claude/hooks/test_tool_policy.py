@@ -1,4 +1,4 @@
-"""ToolGate 판정 테스트: py -3 .claude/hooks/test_tool_policy.py"""
+"""ToolPolicy 판정 테스트: py -3 .claude/hooks/test_tool_policy.py"""
 import os
 import sys
 import tempfile
@@ -8,17 +8,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tool_policy  # noqa: E402
 
 
-class ToolGateTest(unittest.TestCase):
+class ToolPolicyTest(unittest.TestCase):
     def setUp(self):
         tool_policy.STATE_DIR = tempfile.mkdtemp()
 
     @staticmethod
     def pre(tool, tool_input):
-        return tool_policy.ToolGate({"hook_event_name": "PreToolUse", "session_id": "t", "tool_name": tool, "tool_input": tool_input}).on_pre_tool_use()
+        return tool_policy.ToolPolicy({"hook_event_name": "PreToolUse", "session_id": "t", "tool_name": tool, "tool_input": tool_input}).on_pre_tool_use()
 
     @staticmethod
     def post(tool, tool_input):
-        tool_policy.ToolGate({"hook_event_name": "PostToolUse", "session_id": "t", "tool_name": tool, "tool_input": tool_input}).on_post_tool_use()
+        tool_policy.ToolPolicy({"hook_event_name": "PostToolUse", "session_id": "t", "tool_name": tool, "tool_input": tool_input}).on_post_tool_use()
 
     def test_reading_source_needs_graph(self):
         self.assertIsNotNone(self.pre("Read", {"file_path": "D:\\P\\Source\\Engine\\A.h"}))
@@ -34,8 +34,9 @@ class ToolGateTest(unittest.TestCase):
         self.post("Skill", {"skill": "taste-skill"})
         self.assertIsNone(self.pre("Edit", target))
 
-    def test_push_needs_bundle_verify_and_other_commands_pass(self):
+    def test_push_needs_preflight_and_other_commands_pass(self):
         self.assertIsNotNone(self.pre("Bash", {"command": "git push origin abc:main"}))
+        self.assertIsNotNone(self.pre("Bash", {"command": "bash Scripts/dev/preflight.sh --dry-run"}))
         self.assertIsNone(self.pre("Bash", {"command": "git status"}))
         self.assertIsNone(self.pre("Edit", {"file_path": "D:/P/docs/NEXT.md"}))
 

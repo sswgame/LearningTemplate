@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from package.web_check import RunReport, judge_run, AUDIO_STARTED_LINE, PROBE_PATH, write_check_page  # noqa: E402
+from package.web_check import RunReport, evaluate_run, AUDIO_STARTED_LINE, PROBE_PATH, write_check_page  # noqa: E402
 from package.web_package import IsolatedRequestHandler, WebPackageError, INDEX_HTML, PACK_LOADER_NAME, make_web_package  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -56,17 +56,17 @@ class WebPackageTest(unittest.TestCase):
         self.assertIn('"abc123"', page)
         self.assertIn(PROBE_PATH, page)
 
-    def test_judge_counts_errors_and_missing_reports(self) -> None:
+    def test_evaluate_counts_errors_and_missing_reports(self) -> None:
         report = RunReport(list_line=["O booted", AUDIO_STARTED_LINE], gpu="yes")
         report.done.set()
-        self.assertEqual([], judge_run("run1", report))
+        self.assertEqual([], evaluate_run("run1", report))
         report.list_line.append("E WebGPU: device lost")
         report.exit = "abort oom"
-        self.assertEqual(2, len(judge_run("run1", report)))
-        self.assertEqual(3, len(judge_run("run2", RunReport())))  # 끝나지 않았다 + GPU 보고 없음 + 오디오 시작 줄 없음
+        self.assertEqual(2, len(evaluate_run("run1", report)))
+        self.assertEqual(3, len(evaluate_run("run2", RunReport())))  # 끝나지 않았다 + GPU 보고 없음 + 오디오 시작 줄 없음
         silent = RunReport(list_line=["O booted"], gpu="yes")
         silent.done.set()
-        self.assertEqual(1, len(judge_run("run3", silent)))  # 워클릿이 링을 당기지 않으면 진다
+        self.assertEqual(1, len(evaluate_run("run3", silent)))  # 워클릿이 링을 당기지 않으면 진다
 
 
 if __name__ == "__main__":

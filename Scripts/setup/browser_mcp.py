@@ -49,33 +49,33 @@ def find_browser() -> str | None:
 def install() -> int:
     npm = shutil.which("npm")
     if npm is None:
-        print("[BrowserMcp] npm 이 없다 — Node.js 를 깔아야 한다", file=sys.stderr)
+        print("[browser-mcp] npm 이 없다 — Node.js 를 깔아야 한다", file=sys.stderr)
         return 1
     install_dir = get_install_dir()
     install_dir.mkdir(parents=True, exist_ok=True)
     command = [npm, "install", "--prefix", str(install_dir), "--no-fund", "--no-audit", "--ignore-scripts", f"{PACKAGE}@{VERSION}"]
     if subprocess.run(command, check=False).returncode != 0:
-        print(f"[BrowserMcp] {PACKAGE}@{VERSION} 설치 실패", file=sys.stderr)
+        print(f"[browser-mcp] {PACKAGE}@{VERSION} 설치 실패", file=sys.stderr)
         return 1
     if get_entry_script().is_file() is False:
-        print(f"[BrowserMcp] 설치는 끝났지만 진입 스크립트가 없다: {get_entry_script()}", file=sys.stderr)
+        print(f"[browser-mcp] 설치는 끝났지만 진입 스크립트가 없다: {get_entry_script()}", file=sys.stderr)
         return 1
-    print(f"[BrowserMcp] {PACKAGE}@{VERSION} -> {install_dir}")
+    print(f"[browser-mcp] {PACKAGE}@{VERSION} -> {install_dir}")
     return 0
 
 
 def serve(list_argument: Sequence[str]) -> int:
     entry = get_entry_script()
     if entry.is_file() is False:
-        print(f"[BrowserMcp] 서버가 깔리지 않았다 — py -3 -m Scripts browser-mcp ({entry})", file=sys.stderr)
+        print(f"[browser-mcp] 서버가 깔리지 않았다 — py -3 -m Scripts browser-mcp ({entry})", file=sys.stderr)
         return 1
     browser = find_browser()
     if browser is None:
-        print("[BrowserMcp] Chrome · Edge 를 찾지 못했다", file=sys.stderr)
+        print("[browser-mcp] Chrome · Edge 를 찾지 못했다", file=sys.stderr)
         return 1
     node = shutil.which("node")
     if node is None:
-        print("[BrowserMcp] node 가 없다", file=sys.stderr)
+        print("[browser-mcp] node 가 없다", file=sys.stderr)
         return 1
     return subprocess.call([node, str(entry), "--executablePath", browser, "--isolated", *list_argument])
 

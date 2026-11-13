@@ -167,7 +167,7 @@ def run_browser(browser: str, profile_dir: Path, url: str, headed: bool, timeout
     return report
 
 
-def judge_run(name: str, report: RunReport) -> list[str]:
+def evaluate_run(name: str, report: RunReport) -> list[str]:
     """한 실행의 실패 까닭 목록입니다(비면 통과)."""
     list_failure: list[str] = []
     if report.done.is_set() is False:
@@ -231,7 +231,7 @@ def main(argv: list[str] | None = None) -> int:
 
     for name, report in (("run1", first), ("run2", second)):
         (out_dir / f"{name}.log").write_text("\n".join(report.list_line) + "\n", encoding="utf-8", newline="\n")
-        list_failure.extend(judge_run(name, report))
+        list_failure.extend(evaluate_run(name, report))
     if first.screen:
         (out_dir / "screen.png").write_bytes(first.screen)
     else:

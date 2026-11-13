@@ -9,7 +9,7 @@ Scripts/lint/optional_minus_one.py
 `optional<int32>` 의 값으로 합법이다 — 형식이 "없음" 을 뜻한 -1 과 값 -1 을 가르지 못한다(`SkillTreeState::findIndex` 가 -1 을 값으로 돌려줘 `_list[-1]`).
 없음은 `nullopt`(optional) · `unexpected(...)`(expected) 다. 값 -1 이 정말 맞는 자리(부호 있는 축의 값)는 이름 단 상수로 적는다.
 
-찾는 범위(글 연산의 한계): 선언은 같은 파일과 짝 파일(같은 이름의 `.h` · `.cpp`)에서 본다 — 파일마다의 선언 · 후보 자리는 내용 해시 색인(`FactCache`)에 둔다. 다른 파일에 선언된 함수의 인자 · 칸은 보지 못한다.
+찾는 범위(글 연산의 한계): 선언은 같은 파일과 짝 파일(같은 이름의 `.h` · `.cpp`)에서 본다 — 파일마다의 선언 · 후보 자리는 내용 해시 색인(`index_cache`)에 둔다. 다른 파일에 선언된 함수의 인자 · 칸은 보지 못한다.
 같은 이름이 짝 안에서 다른 형식으로도 선언됐으면 어느 것인지 몰라 넘긴다.
 
 `py -3 -m Scripts lint optional-minus-one [--self-check]`, 커밋 훅(`rules.py` 표)이 돌린다.
@@ -108,8 +108,8 @@ CALL_HEAD = re.compile(r"\b(\w+)\s*\(")
 
 def extract_facts(text: str) -> dict:
     """
-    파일 하나의 사실 — 짝(같은 이름의 .h · .cpp · .inl)의 판정은 이 사실의 합으로 낸다(`judge_stem`). 스테이지 파일 하나에 짝 파일을 다시 읽지 않게
-    내용 해시 색인(`FactCache`)에 둔다. 선언(optional 이름 · 매개변수 자리 · 다른 형식으로 선언된 이름)과, 짝의 선언에 따라 위반이 되는 자리 후보를 담는다.
+    파일 하나의 사실 — 짝(같은 이름의 .h · .cpp · .inl)의 판정은 이 사실의 합으로 낸다(`evaluate_stem`). 스테이지 파일 하나에 짝 파일을 다시 읽지 않게
+    내용 해시 색인(`index_cache`)에 둔다. 선언(optional 이름 · 매개변수 자리 · 다른 형식으로 선언된 이름)과, 짝의 선언에 따라 위반이 되는 자리 후보를 담는다.
     """
     code = blank_comments_and_strings(text)
     set_optional, map_param = collect_declarations(code)
@@ -146,7 +146,7 @@ def extract_facts(text: str) -> dict:
             "init": list_init, "assign": list_assign, "return": list_return, "call": list_call}
 
 
-def judge_stem(map_fact: dict[str, dict]) -> list[str]:
+def evaluate_stem(map_fact: dict[str, dict]) -> list[str]:
     """짝 하나(경로 → 사실)의 위반 — 선언은 짝 전체에서 모은다."""
     if not any(fact["minus"] for fact in map_fact.values()) or not any(fact["optional"] for fact in map_fact.values()):
         return []   # -1 이 없거나 optional · expected 가 없는 짝은 볼 것이 없다
@@ -172,21 +172,21 @@ def judge_stem(map_fact: dict[str, dict]) -> list[str]:
     return list_problem
 
 
-def judge_facts(map_fact: dict[str, dict]) -> list[str]:
+def evaluate_facts(map_fact: dict[str, dict]) -> list[str]:
     """경로 → 사실. 짝(확장자를 뺀 같은 경로)마다 판정하고 한 줄에 한 번만 낸다(초기화가 대입으로도 보인다)."""
     map_stem: dict[str, dict[str, dict]] = {}
     for path, fact in map_fact.items():
         map_stem.setdefault(path.rsplit(".", 1)[0], {})[path] = fact
     map_by_line: dict[str, str] = {}
     for map_pair in map_stem.values():
-        for problem in judge_stem(map_pair):
+        for problem in evaluate_stem(map_pair):
             map_by_line.setdefault(problem.split(": ", 1)[0], problem)
     return sorted(map_by_line.values())
 
 
 def find_problems(map_source: dict[str, str]) -> list[str]:
     """경로 → 글 — 자체 검사의 입구."""
-    return judge_facts({path: extract_facts(text) for path, text in map_source.items()})
+    return evaluate_facts({path: extract_facts(text) for path, text in map_source.items()})
 
 
 def check_optional_minus_one(project_root: Path, scope: LintScope) -> list[str]:
@@ -198,7 +198,7 @@ def check_optional_minus_one(project_root: Path, scope: LintScope) -> list[str]:
     list_path = [path for path in list_repo_files(project_root) if path.startswith("Source/") and path.endswith(suffixes)]
     map_fact = load_facts(project_root, "optional-minus-one", [__file__], list_path, lambda _, text: extract_facts(text),
                         want=[path for path in list_path if path.rsplit(".", 1)[0] in set_stem], shard_of=lambda path: path.rsplit(".", 1)[0])   # 한 짝은 한 조각
-    return judge_facts(map_fact)
+    return evaluate_facts(map_fact)
 
 
 def run_self_check() -> None:

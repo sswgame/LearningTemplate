@@ -10,7 +10,7 @@ Scripts/dev/api_diff.py
 2026-11-08). 그래서 기계는 새 이름만 빠짐없이 모으고, 판정(언리얼 · 유니티 · Godot 의 같은 일 이름과 대조)은 통합 담당이 한다. 바꾼 옛 이름은
 `Config/Rules/Lint/NamingWords.json` 의 `_bannedNames` 에 올려 다른 브랜치가 되살리지 못하게 한다.
 
-`py -3 -m Scripts new-names --base <묶음 시작 커밋> [브랜치 …]` — 브랜치가 없으면 지금 작업 트리를 본다. 묶음 시작 전에도 있던 이름은 뺀다.
+`py -3 -m Scripts api-diff --base <묶음 시작 커밋> [브랜치 …]` — 브랜치가 없으면 지금 작업 트리를 본다. 묶음 시작 전에도 있던 이름은 뺀다.
 """
 
 from __future__ import annotations
@@ -76,7 +76,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 list_row.append((ref or "(작업 트리)", where, name))
     for ref, where, name in sorted(set(list_row)):
         print(f"{ref}  {where}  {name}")
-    print(f"[NewNames] 새 함수 이름 {len({row[2] for row in list_row})}개 — 업계 이름과 대조해 검토한다")
+    print(f"[api-diff] 새 함수 이름 {len({row[2] for row in list_row})}개 — 업계 이름과 대조해 검토한다")
     return ExitCode.PASSED
 
 

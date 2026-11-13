@@ -41,27 +41,27 @@ MODULE_KINDS = {"Kit", "EditorExtension", "Game"}   # 모듈별 게이트를 받
 STUB_FOLDER_NAME = "gates"   # 빌드 루트 바로 밑 — 껍데기 경로가 키트 헤더의 깊은 경로를 그대로 이어 받아 워크트리에서 260 자를 넘었다
 WINDOWS_MAX_PATH = 260   # LongPathsEnabled 가 꺼진 Windows 의 컴파일러는 이보다 긴 include 후보를 못 열어 껍데기를 건너뛴다(게이트가 조용히 풀린다)
 QUOTED_INCLUDE = re.compile(r'^\s*#\s*include\s+"([^"]+)"', re.M)
-SERVER_GATE_NAME = "serverbuild"
-CLIENT_GATE_NAME = "clientbuild"
-UNBUILT_FOLDER_LINE = re.compile(r'list\(APPEND SW_UNBUILT_ENGINE_FOLDERS ([^)]*)\)')
+SERVER_GUARD_NAME = "serverbuild"
+CLIENT_GUARD_NAME = "clientbuild"
+EXCLUDED_FOLDER_LINE = re.compile(r'list\(APPEND SW_UNBUILT_ENGINE_FOLDERS ([^)]*)\)')
 
 
-def read_server_unbuilt_folders(project_root: Path) -> list[str]:
+def read_server_excluded_folders(project_root: Path) -> list[str]:
     """전용 서버가 짓지 않는 엔진 폴더(`Source/Engine/` 기준) — 정본은 `cmake/Engine/BuildLayout.cmake` 의 `SW_UNBUILT_ENGINE_FOLDERS` 한 곳이다."""
     text = (project_root / "cmake/Engine/BuildLayout.cmake").read_text(encoding="utf-8")
     list_folder: list[str] = []
-    for match in UNBUILT_FOLDER_LINE.finditer(text):
+    for match in EXCLUDED_FOLDER_LINE.finditer(text):
         list_folder.extend(name.strip('"') for name in match.group(1).split())
     if not list_folder:
         raise GeneratorError("cmake/Engine/BuildLayout.cmake: SW_UNBUILT_ENGINE_FOLDERS 를 읽지 못했다")
     return list_folder
 
 
-def check_server_gate_covers_unbuilt_folders(list_prefix: list[str], list_unbuilt_folder: list[str]) -> None:
+def check_server_guard_covers_excluded_folders(list_prefix: list[str], list_excluded_folder: list[str]) -> None:
     """서버 게이트가 서버가 짓지 않는 엔진 폴더를 모두 막는지 본다 — 빠지면 서버 구성이 짓지 않는 헤더를 읽어 링크에서야 드러난다."""
-    list_missing = [f"Engine/{folder}" for folder in list_unbuilt_folder if f"Engine/{folder}" not in list_prefix]
+    list_missing = [f"Engine/{folder}" for folder in list_excluded_folder if f"Engine/{folder}" not in list_prefix]
     if list_missing:
-        raise GeneratorError(f"[gate] {SERVER_GATE_NAME} 에 서버가 짓지 않는 엔진 폴더가 빠졌다: {', '.join(list_missing)} — {RULE_FILE.name} 에 더하세요(SW_UNBUILT_ENGINE_FOLDERS)")
+        raise GeneratorError(f"[gate] {SERVER_GUARD_NAME} 에 서버가 짓지 않는 엔진 폴더가 빠졌다: {', '.join(list_missing)} — {RULE_FILE.name} 에 더하세요(SW_UNBUILT_ENGINE_FOLDERS)")
 
 
 def is_under_folder_name(header: str, set_folder_name: set[str]) -> bool:
@@ -80,7 +80,7 @@ class ModuleInfo:
         self.list_dependency = list_dependency
 
 
-def make_game_gate_name(folder: str) -> str:
+def make_game_guard_name(folder: str) -> str:
     """게임 모듈의 게이트 이름 — `Games/<폴더>` 의 폴더 이름으로 가른다."""
     return f"SWGame_{folder.rsplit('/', 1)[-1]}"
 
@@ -96,7 +96,7 @@ def read_modules(source_dir: Path) -> list[ModuleInfo]:
         except (OSError, ValueError, KeyError, TypeError) as exception:
             raise GeneratorError(f"{path}: 매니페스트를 읽지 못했다 ({exception!r})") from exception
         folder = path.parent.relative_to(source_dir).as_posix()
-        gate_name = make_game_gate_name(folder) if kind == "Game" else name
+        gate_name = make_game_guard_name(folder) if kind == "Game" else name
         list_module.append(ModuleInfo(gate_name, name, kind, folder, list_dependency))
     return list_module
 
@@ -127,7 +127,7 @@ def find_owner(header: str, list_folder: list[str]) -> str | None:
     return None
 
 
-def write_gate_stubs(stub_dir: Path, gate_name: str, list_header: list[str], message: str) -> None:
+def write_guard_stubs(stub_dir: Path, gate_name: str, list_header: list[str], message: str) -> None:
     """게이트 하나의 껍데기를 맞춘다. 스탬프(문구 해시 + 지난 헤더 목록)와 대조해 **바뀐 껍데기만** 더하고 지운다.
 
     헤더 하나가 늘거나 옮겨질 때마다 그 폴더를 막는 게이트 전부가 폴더째 지우고 다시 쓰면(게이트 101 개 · 껍데기 5 만여 개) 재구성 46 초 중 31 초가
@@ -179,7 +179,7 @@ def check_allow_closure(source_dir: Path, gate_name: str, list_allowed: list[str
         raise GeneratorError(f"[allow] {gate_name}: 연 헤더가 막힌 헤더를 include 한다 — 그 헤더도 [allow] 에 더하거나 include 를 끊으세요: {'; '.join(list_problem)}")
 
 
-def collect_gates(source_dir: Path, map_rule: dict[str, list[str]], map_allow: dict[str, list[str]], map_folder: dict[str, list[str]]) -> dict[str, tuple[list[str], str]]:
+def collect_guards(source_dir: Path, map_rule: dict[str, list[str]], map_allow: dict[str, list[str]], map_folder: dict[str, list[str]]) -> dict[str, tuple[list[str], str]]:
     """게이트 이름 → (막는 헤더, 오류 문구). 파일을 쓰지 않는다 — 표를 코드와 대조하는 쪽도 이 함수를 쓴다."""
     list_header = sorted(path.relative_to(source_dir).as_posix() for path in list_files_under(source_dir) if path.suffix in HEADER_SUFFIX)
     list_stale = [prefix for list_prefix in map_rule.values() for prefix in list_prefix if not (source_dir / prefix).exists()]
@@ -206,9 +206,9 @@ def collect_gates(source_dir: Path, map_rule: dict[str, list[str]], map_allow: d
                       if (any(header.startswith(prefix + "/") for prefix in list_prefix) or is_under_folder_name(header, set_folder_name)) and header not in set_allowed]
         if set_allowed:
             check_allow_closure(source_dir, gate_name, sorted(set_allowed), set(list_denied))
-        if gate_name == SERVER_GATE_NAME:
+        if gate_name == SERVER_GUARD_NAME:
             message = f"Target gate '{gate_name}' forbids this header (Config/Rules/Layers/TargetLayers.toml): a dedicated server does not build client-only code (Engine Audio/Renderer/UI, Client/ folders). Call it through a seam (GameSound, IHUDViewModelBinder, IGameClientPart, IEngineRenderDriver ...) or move the caller into a Client/ folder."
-        elif gate_name == CLIENT_GATE_NAME:
+        elif gate_name == CLIENT_GUARD_NAME:
             message = f"Target gate '{gate_name}' forbids this header (Config/Rules/Layers/TargetLayers.toml): a client build does not build server-only code (Server/ folders). Call it through a seam (IOnlineLocalServerFactory ...), move a shared type out of the Server/ folder, or move the caller into a Server/ folder."
         else:
             message = f"Target gate '{gate_name}' forbids this header (Config/Rules/Layers/TargetLayers.toml): a lower target must not see an upper one. Move what you need down, or invert the dependency."
@@ -236,18 +236,18 @@ def generate_target_layers(output_path: Path) -> None:
         map_rule: dict[str, list[str]] = table["gate"]
         map_allow: dict[str, list[str]] = table["allow"]
         map_folder: dict[str, list[str]] = table["gatefolder"]
-        list_server_prefix = map_rule[SERVER_GATE_NAME]
-        if CLIENT_GATE_NAME not in map_rule:   # CMake(`sw_applyTargetLayerGate`)가 Client 구성에 거는 게이트
-            raise KeyError(CLIENT_GATE_NAME)
+        list_server_prefix = map_rule[SERVER_GUARD_NAME]
+        if CLIENT_GUARD_NAME not in map_rule:   # CMake(`sw_applyTargetLayerGate`)가 Client 구성에 거는 게이트
+            raise KeyError(CLIENT_GUARD_NAME)
     except (OSError, tomllib.TOMLDecodeError, KeyError) as exception:
-        raise GeneratorError(f"{RULE_FILE.name}: 읽지 못했다 ({exception!r}) — [gate] · [gatefolder] · [allow] 표와 [gate] {SERVER_GATE_NAME} · {CLIENT_GATE_NAME} 가 있어야 한다") from exception
+        raise GeneratorError(f"{RULE_FILE.name}: 읽지 못했다 ({exception!r}) — [gate] · [gatefolder] · [allow] 표와 [gate] {SERVER_GUARD_NAME} · {CLIENT_GUARD_NAME} 가 있어야 한다") from exception
     project_root = get_project_root()
-    check_server_gate_covers_unbuilt_folders(list_server_prefix, read_server_unbuilt_folders(project_root))
+    check_server_guard_covers_excluded_folders(list_server_prefix, read_server_excluded_folders(project_root))
     source_dir = project_root / "Source"
-    map_gate = collect_gates(source_dir, map_rule, map_allow, map_folder)
+    map_gate = collect_guards(source_dir, map_rule, map_allow, map_folder)
     stub_dir = output_path.parents[3] / STUB_FOLDER_NAME   # <빌드>/generated/sw/config/TargetLayers.cmake → <빌드>/gates
     for gate_name, (list_denied, message) in map_gate.items():
-        write_gate_stubs(stub_dir, gate_name, list_denied, message)
+        write_guard_stubs(stub_dir, gate_name, list_denied, message)
     list_line = [
         "# AUTO-GENERATED by Scripts/generate/target_layers.py — do not edit. 쓰는 곳: sw_applyTargetLayerGate(cmake/Engine/TargetCompileRules.cmake).",
         f'set(SW_TARGET_LAYER_STUB_DIR "{stub_dir.as_posix()}")',

@@ -20,7 +20,7 @@ CMake(`*.cmake` · `CMakeLists.txt`, ThirdParty 제외)도 같은 규칙이다 �
 사슬은 `else()` + `message(FATAL_ERROR …)` 로 끝나고, 부정(`NOT WIN32`)만으로 된 조건은 `return()` · `FATAL_ERROR` 만 거는 가드일 때만 쓴다.
 POSIX 계열은 `UNIX` · `CMAKE_HOST_UNIX` 로 이름을 적는다. 다른 변수가 섞인 조건(`WIN32 AND NOT SW_SHIPPING_BUILD`)은 기능 검사라 보지 않는다.
 
-스크립트(`Scripts/**.py` · `.claude/hooks/*.py`)는 git 을 `common/git.py` 입구로만, 셸(`Scripts/**.sh`)은 `common/Git.sh` 의 sw_git 으로만 띄운다(물려받은
+스크립트(`Scripts/**.py` · `.claude/hooks/*.py`)는 git 을 `common/git.py` 입구로만, 셸(`Scripts/**.sh`)은 `common/git.sh` 의 sw_git 으로만 띄운다(물려받은
 저장소 환경 변수를 뺀다). CMake 는 git 을 띄우지 않는다(`execute_process` · `find_package(Git)` — 파이썬 단계로).
 스크립트는 호스트 OS 를 `common/host_platform.py` 의 표에서만 읽는다 — `sys.platform` · `os.name` · `platform.system()` 을
 다른 곳에서 물으면 `else` 가 "Windows 아니면 Linux" 가 된다. 표는 모르는 호스트에서 들여올 때 멈춘다.
@@ -110,9 +110,9 @@ PYTHON_HOST_TABLE = "Scripts/common/host_platform.py"
 # git 을 자식 프로세스로 직접 띄우는 줄(리스트 인자 · 셸 글) — 입구 `common/git.py`(run_git · run_git_in_hook_repository · run_git_bytes)만 띄운다.
 PYTHON_DIRECT_GIT = re.compile(r"\b(?:subprocess\.(?:run|call|check_call|check_output|Popen)|Popen|shell)\s*\(\s*(?:\[\s*(?:[\"']git[\"']|gitExe\b|resolveGitExecutable\b)|f?[\"'][^\"']*\bgit\s)")
 PYTHON_GIT_ENTRANCE = "Scripts/common/git.py"
-# 셸: 명령 자리(줄 머리 · `;` `&` `|` `(` `$(` 뒤)의 `git` — 입구 `Scripts/common/Git.sh` 의 sw_git 만 부른다.
+# 셸: 명령 자리(줄 머리 · `;` `&` `|` `(` `$(` 뒤)의 `git` — 입구 `Scripts/common/git.sh` 의 sw_git 만 부른다.
 SHELL_DIRECT_GIT = re.compile(r"(?:^|[;&|(]|\$\()\s*(?:command\s+)?git\s")
-SHELL_GIT_ENTRANCE = "Scripts/common/Git.sh"
+SHELL_GIT_ENTRANCE = "Scripts/common/git.sh"
 # CMake: 구성 중 git 을 띄우는 자리(`execute_process` · `add_custom_command` · `add_custom_target` 의 git · GIT_EXECUTABLE, find_package(Git)).
 # 지금 CMake 는 git 을 띄우지 않는다 — 필요해지면 환경을 비우는 함수 하나를 cmake 쪽에 두고 이 예외에 그 파일을 적는다.
 CMAKE_DIRECT_GIT = re.compile(r"\b(?:execute_process|add_custom_command|add_custom_target)\s*\((?:[^()]|\([^()]*\))*?\b(?:git|GIT_EXECUTABLE)\b|\bfind_package\s*\(\s*Git\b", re.I | re.S)
@@ -189,7 +189,7 @@ def find_shell_problems_in_text(path: str, text: str) -> list[str]:
     """셸 스크립트 하나가 git 을 입구 밖에서 띄우는 줄."""
     if path == SHELL_GIT_ENTRANCE:
         return []
-    return [f"{path}:{line_number}: git 을 직접 띄운다 — `source Scripts/common/Git.sh` 뒤 sw_git 으로({GIT_HINT})"
+    return [f"{path}:{line_number}: git 을 직접 띄운다 — `source Scripts/common/git.sh` 뒤 sw_git 으로({GIT_HINT})"
             for line_number, line in enumerate(text.split("\n"), 1) if SHELL_DIRECT_GIT.search(line.split("#")[0])]
 
 
@@ -254,7 +254,7 @@ def run_self_check() -> None:
     assert find_build_problems([("Scripts/a.py", "runGit(['mv', a, b], cwd=root)\n")]) == [], "입구를 거친 git"
     assert len(find_build_problems([("Scripts/a.sh", "SHA=$(git rev-parse HEAD)\n")])) == 1, "셸 $( git"
     assert len(find_build_problems([("Scripts/a.sh", "cd x && git status\n")])) == 1, "셸 && git"
-    assert find_build_problems([("Scripts/a.sh", "source Scripts/common/Git.sh\nSHA=$(sw_git rev-parse HEAD)\n# git push\necho \"use .gitignore\"\n")]) == [], "셸 입구 · 주석 · 낱말 안 git"
+    assert find_build_problems([("Scripts/a.sh", "source Scripts/common/git.sh\nSHA=$(sw_git rev-parse HEAD)\n# git push\necho \"use .gitignore\"\n")]) == [], "셸 입구 · 주석 · 낱말 안 git"
     assert find_build_problems([(SHELL_GIT_ENTRANCE, "git \"$@\"\n")]) == [], "셸 입구 자체"
     assert len(find_build_problems([("cmake/a.cmake", "execute_process(\n\tCOMMAND ${GIT_EXECUTABLE} rev-parse HEAD\n\tOUTPUT_VARIABLE x)\n")])) == 1, "CMake execute_process git"
     assert len(find_build_problems([("cmake/a.cmake", "find_package(Git REQUIRED)\n")])) == 1, "CMake find_package(Git)"

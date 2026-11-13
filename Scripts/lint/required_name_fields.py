@@ -168,7 +168,7 @@ def extract_facts(path: str, text: str, config: dict) -> dict:
     return {"constructors": {class_name: initials for class_name, initials in map_constructor.items() if initials}}
 
 
-def judge_facts(map_fact: dict[str, dict], config: dict, whole_repo: bool = True) -> list[str]:
+def evaluate_facts(map_fact: dict[str, dict], config: dict, whole_repo: bool = True) -> list[str]:
     """map_fact: 경로 → `extract_facts`(경로 순). 헤더 칸의 생성자 초기값은 같은 폴더의 본문에서만 찾는다."""
     exceptions: dict[str, str] = config["_exceptions"]
     list_problem: list[str] = []
@@ -202,13 +202,13 @@ def judge_facts(map_fact: dict[str, dict], config: dict, whole_repo: bool = True
 def find_problems(map_header: dict[str, str], map_source: dict[str, str], config: dict, whole_repo: bool = True) -> list[str]:
     """map_header · mapSource: 경로 → 글(`.cpp` 는 헤더와 같은 폴더의 것만 본다) — 자체 검사의 입구."""
     map_text = {**map_header, **map_source}
-    return judge_facts({path: extract_facts(path, map_text[path], config) for path in sorted(map_text)}, config, whole_repo)
+    return evaluate_facts({path: extract_facts(path, map_text[path], config) for path in sorted(map_text)}, config, whole_repo)
 
 
 def check_required_name_fields(project_root: Path, scope: LintScope) -> list[str]:
     """
     scope 의 파일이 있던 폴더(지운 파일 포함 — .cpp 를 지우면 헤더 칸의 생성자 초기값이 사라진다)의 헤더 · 본문을 본다. 파일마다의 사실(칸 · 생성자 초기값)은
-    내용 해시 색인(`FactCache`)에 두어, 스테이지 파일 하나에 그 폴더를 다시 읽지 않는다.
+    내용 해시 색인(`index_cache`)에 두어, 스테이지 파일 하나에 그 폴더를 다시 읽지 않는다.
     """
     config = json.loads((project_root / CONFIG_PATH).read_text(encoding="utf-8"))
     set_folder = {path.rpartition("/")[0] for path in (*scope.list_file, *scope.list_removed) if is_target(path)}
@@ -218,7 +218,7 @@ def check_required_name_fields(project_root: Path, scope: LintScope) -> list[str
     map_fact = load_facts(project_root, "required-name-fields", [__file__, str(project_root / CONFIG_PATH)], list_path,
                         lambda path, text: extract_facts(path, text, config), errors="strict",
                         want=[path for path in list_path if path.rpartition("/")[0] in set_folder], shard_of=lambda path: path.rpartition("/")[0])   # 한 폴더는 한 조각
-    return judge_facts(map_fact, config, scope.whole_repo)
+    return evaluate_facts(map_fact, config, scope.whole_repo)
 
 
 def run_self_check() -> None:

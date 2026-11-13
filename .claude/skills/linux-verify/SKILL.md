@@ -9,12 +9,12 @@ description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에�
 
 ## 순서
 
-평소에는 `bundle-verify` 의 한 명령이 Windows 가 모두 통과한 뒤 Linux 를 돌린다. Windows 가 지면 Linux 를 돌리지 않는다. 아래는 Linux 결함만 따로 고칠 때다.
+평소에는 `preflight` 의 한 명령이 Windows 가 모두 통과한 뒤 Linux 를 돌린다. Windows 가 지면 Linux 를 돌리지 않는다. 아래는 Linux 결함만 따로 고칠 때다.
 
 1. 처음 한 번: `setup`(Xvfb · 글꼴을 sudo 없이 `~/lt-deps` 에 푼다). 클론과 `build/Linux-Debug`(컴파일러 캐시) · `build/Linux-Server` 구성은 아래 "클론 환경" 을 따른다.
 2. `all`: HEAD 로 Release 빌드 → (Release 단위 ‖ 서버 Debug 빌드 → 기동 → 단위 — 시간을 판정하지 않는 CPU 일끼리 겹친다) → 모든 체인(Release · Vulkan, 4 개씩 동시 — 체인은 혼자 돈다). 끝 줄 `LINUX_OK=<sha>`. 앞이 지면 긴 체인을 돌리지 않는다. 체인 · 골든의 정본은 Release 하나이고 Debug 클라이언트는 짓지 않는다 — Debug 단언은 Windows 의 Debug 체인(시나리오마다 백엔드 하나)과 `sanitize`(Debug)가 본다.
 3. 영향 범위만: `build` → `chain <이름…>`(또는 `stages`).
-4. 새니타이저(감사 P-8): 묶음마다 `sanitize`(ASan + UBSan, `Linux-Debug-ASan`) 한 번 — `VerifyBundle.sh` 가 `all` 뒤에 차례로 돌린다(체인과 CPU 를 다투지 않게, 지면 `SANITIZE_FAILED`, `--record` 실행은 기록 골든을 지우지 않게 건너뛴다). `sanitize thread`(TSan — `x64-linux-tsan` 트리플릿을 따로 깐다)는 손으로 돌린다: 묶음이 스레드 · 잠금 · 원자 값 · 작업 큐 · 스레드 사이에 넘기는 수명(렌더 · 오디오 · 네트 스레드, `TaskManager`, `mutex`)을 고쳤으면 push 전에 한 번. 끝 줄 `SANITIZE_OK=<종류>`. 누수는 기준선을 만들기 전까지 끈다(`detect_leaks=0`).
+4. 새니타이저(감사 P-8): 묶음마다 `sanitize`(ASan + UBSan, `Linux-Debug-ASan`) 한 번 — `preflight.sh` 가 `all` 뒤에 차례로 돌린다(체인과 CPU 를 다투지 않게, 지면 `SANITIZE_FAILED`, `--record` 실행은 기록 골든을 지우지 않게 건너뛴다). `sanitize thread`(TSan — `x64-linux-tsan` 트리플릿을 따로 깐다)는 손으로 돌린다: 묶음이 스레드 · 잠금 · 원자 값 · 작업 큐 · 스레드 사이에 넘기는 수명(렌더 · 오디오 · 네트 스레드, `TaskManager`, `mutex`)을 고쳤으면 push 전에 한 번. 끝 줄 `SANITIZE_OK=<종류>`. 누수는 기준선을 만들기 전까지 끈다(`detect_leaks=0`).
 5. 골든을 새로 뜰 때: `chain --record <이름…>` → `goldens`(메인 작업 폴더로 복사, 한 색 사진 경고) → 표본을 눈으로 본다 → 커밋 → `--record` 없이 다시 `chain`.
 
 ## 지킬 것

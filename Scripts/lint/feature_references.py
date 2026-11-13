@@ -93,7 +93,7 @@ def strip_registrations(text: str) -> str:
 
 
 def extract_facts(bucket: str, path: str, text: str) -> dict[str, list[str]]:
-    """파일 하나의 사실 — 정의(컴포넌트 · 감시 값 · 명령), 참조(컴포넌트 이름 · 글자 첫 낱말 · 시나리오 낱말), 등록 없는 명령 함수. 색인(`FactCache`)에 둔다."""
+    """파일 하나의 사실 — 정의(컴포넌트 · 감시 값 · 명령), 참조(컴포넌트 이름 · 글자 첫 낱말 · 시나리오 낱말), 등록 없는 명령 함수. 색인(`index_cache`)에 둔다."""
     facts: dict[str, list[str]] = {}
     if bucket == "dict_header":
         if path.endswith(".h"):
@@ -139,12 +139,12 @@ def fold_tokens(path: str, facts: dict[str, list[str]]) -> list[str]:
     return list_token
 
 
-def judge_facts(map_fact: dict[str, dict[str, list[str]]], exceptions: Exceptions) -> list[str]:
-    """저장소 전체 사실(경로 → 사실, 경로 순)로 참조 0 을 가린다 — 자체 검사의 입구. 커밋 훅은 접은 요약(`judge_summary`)을 쓴다."""
-    return judge_summary([token for path, facts in sorted(map_fact.items()) for token in fold_tokens(path, facts)], exceptions)
+def evaluate_facts(map_fact: dict[str, dict[str, list[str]]], exceptions: Exceptions) -> list[str]:
+    """저장소 전체 사실(경로 → 사실, 경로 순)로 참조 0 을 가린다 — 자체 검사의 입구. 커밋 훅은 접은 요약(`evaluate_summary`)을 쓴다."""
+    return evaluate_summary([token for path, facts in sorted(map_fact.items()) for token in fold_tokens(path, facts)], exceptions)
 
 
-def judge_summary(list_token: Iterable[str], exceptions: Exceptions) -> list[str]:
+def evaluate_summary(list_token: Iterable[str], exceptions: Exceptions) -> list[str]:
     """요약 토큰으로 참조 0 을 가린다 — 참조는 어느 파일에서 와도 되므로 판정은 늘 전체(의 요약)로 낸다."""
     map_define: dict[str, dict[str, str]] = {key: {} for key in DEFINE_KEYS}
     map_collect: dict[str, set[str]] = {key: set() for key in COLLECT_KEYS}
@@ -195,7 +195,7 @@ def judge_summary(list_token: Iterable[str], exceptions: Exceptions) -> list[str
 def find_problems(sources: Sources, exceptions: Exceptions) -> list[str]:
     map_fact = {path: extract_facts(bucket, path, text) for bucket in ("dict_header", "dict_test_code", "dict_content", "dict_script")
                for path, text in getattr(sources, bucket).items()}
-    return judge_facts(map_fact, exceptions)
+    return evaluate_facts(map_fact, exceptions)
 
 
 def read_exceptions(project_root: Path) -> Exceptions:
@@ -204,7 +204,7 @@ def read_exceptions(project_root: Path) -> Exceptions:
 
 
 def read_summary(project_root: Path) -> list[str]:
-    """저장소에 있는 파일만 본다(git 이 아는 파일 — 빌드 산출물 · 임포트 산출물을 줍지 않는다). 내용이 바뀐 파일만 다시 읽고(`FactCache`), 판정은 접은 토큰만 읽는다."""
+    """저장소에 있는 파일만 본다(git 이 아는 파일 — 빌드 산출물 · 임포트 산출물을 줍지 않는다). 내용이 바뀐 파일만 다시 읽고(`index_cache`), 판정은 접은 토큰만 읽는다."""
     list_path = [path for path in list_repo_files(project_root) if classify_path(path) is not None]
     return list(open_facts(project_root, "feature-refs", [__file__], list_path, lambda path, text: extract_facts(classify_path(path), path, text), errors="ignore",
                           contribute=fold_tokens).summary)
@@ -214,7 +214,7 @@ def check_feature_references(project_root: Path, scope: LintScope) -> list[str]:
     """커밋 훅은 훑는 파일이 바뀌었을 때만 돈다(지운 파일 포함 — 참조를 지우면 참조 0 이 생긴다)."""
     if not scope.whole_repo and not any(classify_path(path) for path in (*scope.list_file, *scope.list_removed)):
         return []
-    return judge_summary(read_summary(project_root), read_exceptions(project_root))
+    return evaluate_summary(read_summary(project_root), read_exceptions(project_root))
 
 
 def run_self_check() -> None:
