@@ -7,6 +7,7 @@
 #include "Core/Container/array.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
@@ -237,7 +238,7 @@ namespace sw::editor
         string                                                 _copiedComponentTypeName;
         mutex                                                  _pendingSceneMutex;
         array<CameraBookmark, 9>                               _arrCameraBookmark;
-        vector<uint64>                                         _listLockedObjectID; ///< 뷰포트 선택을 잠근 오브젝트 id
+        unordered_set<uint64>                                  _uniqueLockedObjectID; ///< 뷰포트 선택을 잠근 오브젝트 id. 계층 행 · 피킹 후보마다 묻는다 — 목록이면 오브젝트 수 × 잠근 수다
         int32                                                  _gizmoOperation;
         EditorPendingSceneAction                               _pendingSceneAction;
         uint32                                                 _sceneEditSerial; ///< `markSceneDirty` 횟수(`getSceneEditSerial`)

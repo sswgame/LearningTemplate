@@ -2,7 +2,6 @@
 
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/String/StringUtil.h"
 
@@ -47,7 +46,7 @@ namespace sw::editor
         , _copiedComponentTypeName{}
         , _pendingSceneMutex{}
         , _arrCameraBookmark{}
-        , _listLockedObjectID{}
+        , _uniqueLockedObjectID{}
         , _gizmoOperation{ 0 }
         , _pendingSceneAction{ EditorPendingSceneAction::None }
         , _sceneEditSerial{ 0 }
@@ -327,21 +326,15 @@ namespace sw::editor
 
     bool EditorWorkspace::isObjectLocked( uint64 objectID ) const
     {
-        return VectorUtil::contains( _listLockedObjectID, objectID );
+        return _uniqueLockedObjectID.contains( objectID );
     }
 
     void EditorWorkspace::setObjectLocked( uint64 objectID, bool bLocked )
     {
-        for ( size_t index = 0; index < _listLockedObjectID.size(); ++index )
-        {
-            if ( _listLockedObjectID[index] != objectID )
-                continue;
-            if ( bLocked == false )
-                _listLockedObjectID.erase( _listLockedObjectID.begin() + static_cast<ptrdiff_t>( index ) );
-            return;
-        }
         if ( bLocked )
-            _listLockedObjectID.push_back( objectID );
+            _uniqueLockedObjectID.insert( objectID );
+        else
+            _uniqueLockedObjectID.erase( objectID );
     }
 
     void EditorWorkspace::markSceneDirty()
