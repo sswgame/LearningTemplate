@@ -830,8 +830,9 @@ namespace sw
         const string profile = Internal::getTargetProfile( desc._stage, desc._targetFormat );
         // 캐시에 없어 실제로 컴파일하는 것만 알린다 — 빈 캐시의 첫 실행은 수 분 동안 이 줄만 나온다. 이 줄이 "멈춘 것이 아니라 일하는 중" 의 증거다
         // (백엔드마다 실행의 정지 감시가 자식 로그가 자라는지로 본다 — AutomationPerBackend). 캐시가 찬 실행은 한 줄도 내지 않는다(언리얼 셰이더 컴파일 진행 줄과 같은 자리).
-        const int64                 compileStartNanos = MonotonicClock::nowNanoseconds();
-        [[maybe_unused]] const auto reportCompiled    = [&desc, &profile, compileStartNanos]( const ShaderCompileResult& compiled )
+        const int64 compileStartNanos = MonotonicClock::nowNanoseconds();
+        // 기본 캡처: Shipping 은 로그 줄이 빠져 이름을 적은 캡처가 쓰이지 않는다는 경고(-Wunused-lambda-capture)가 난다
+        [[maybe_unused]] const auto reportCompiled = [&]( const ShaderCompileResult& compiled )
         {
             if ( compiled._bSuccess )
                 SW_LOG_INFO_ID( "ShaderCompiler.CompiledOnCacheMiss", "Compiled %# %# (%#) in %# ms", desc._source.c_str(), desc._entryPoint.c_str(), profile.c_str(),
