@@ -280,7 +280,7 @@ namespace sw
 
 /**
  * @brief 에셋 종류를 등록합니다(정의를 가진 기능의 .cpp, 파일 범위). @p id 는 정적 이름을 만드는 식별자이고, 나머지는 `AssetTypeDef` 값입니다(템플릿 인자의 쉼표가 들어가도 된다).
- * @details 모든 구성(Shipping 포함)에 남습니다 — Shipping 은 모듈을 통째로 링크합니다(`sw_linkWholeArchive`). 예:
+ * @details 모든 구성(Shipping 포함)에 남습니다 — Shipping 은 모듈을 통째로 링크합니다(`sw_link_whole_archive`). 예:
  * @code
  *     SW_ASSET_TYPE( Texture, Texture2D::kAssetType );
  *     SW_ASSET_TYPE( UIScale, AssetTypeDef::makeDataFile( "uiscale", AssetPathRule{ {}, {}, "uiscale.xml" }, AssetTypeLoader::of<UIScaleSettings>() ) );

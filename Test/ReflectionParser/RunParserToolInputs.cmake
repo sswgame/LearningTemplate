@@ -18,15 +18,15 @@ set(swAnnotationMeta "${ANNOTATION_META}")
 set(swTemplates "${TEMPLATES}")
 set(swConfig "${CONFIG}")
 
-# 빌드와 같은 대상 인자 — Test/CMakeLists.txt 가 '|' 로 이어 넘긴다(sw_collectReflectionTargetArgs).
+# 빌드와 같은 대상 인자 — Test/CMakeLists.txt 가 '|' 로 이어 넘긴다(sw_collect_reflection_target_args).
 string(REPLACE "|" ";" listTargetArgValue "${TARGET_ARGS}")
 set(listTargetArg "")
 foreach(swTargetArg IN LISTS listTargetArgValue)
 	list(APPEND listTargetArg --target-arg "${swTargetArg}")
 endforeach()
 
-# 빌드의 인자(`sw_makeReflectionParserArgs`)와 같은 모양이다(RunParserFixture.cmake 와 같다).
-macro(swRunParser outExitCode outText)
+# 빌드의 인자(`sw_make_reflection_parser_args`)와 같은 모양이다(RunParserFixture.cmake 와 같다).
+function(sw_run_parser outExitCode outText)
 	execute_process(
 		COMMAND "${PARSER}"
 			--input "${FIXTURE}"
@@ -42,16 +42,18 @@ macro(swRunParser outExitCode outText)
 			--include "${SOURCE_ROOT}/Source"
 			${listTargetArg}
 		WORKING_DIRECTORY "${WORK_DIR}"
-		RESULT_VARIABLE ${outExitCode}
-		OUTPUT_VARIABLE ${outText}
-		ERROR_VARIABLE ${outText})
-endmacro()
+		RESULT_VARIABLE result_code
+		OUTPUT_VARIABLE result_text
+		ERROR_VARIABLE result_text)
+	set(${outExitCode} "${result_code}" PARENT_SCOPE)
+	set(${outText} "${result_text}" PARENT_SCOPE)
+endfunction()
 
 get_filename_component(swFixtureName "${FIXTURE}" NAME_WE)
 set(swGenCpp "${WORK_DIR}/out/${swFixtureName}${GEN_CPP_SUFFIX}")
 
 if(MODE STREQUAL "determinism")
-	swRunParser(swExitCode swOutput)
+	sw_run_parser(swExitCode swOutput)
 	if(NOT swExitCode EQUAL 0)
 		message(FATAL_ERROR "first run exited ${swExitCode}\n${swOutput}")
 	endif()
@@ -63,15 +65,15 @@ if(MODE STREQUAL "determinism")
 	set(listHash "")
 	set(listTime "")
 	foreach(generated IN LISTS listGenerated)
-		file(SHA256 "${generated}" swHash)
-		file(TIMESTAMP "${generated}" swTime "%Y%m%d%H%M%S" UTC)
-		list(APPEND listHash "${swHash}")
-		list(APPEND listTime "${swTime}")
+		file(SHA256 "${generated}" swFirstHash)
+		file(TIMESTAMP "${generated}" swFirstTime "%Y%m%d%H%M%S" UTC)
+		list(APPEND listHash "${swFirstHash}")
+		list(APPEND listTime "${swFirstTime}")
 	endforeach()
 	# 시각은 초 단위로 읽는다 — 다시 썼다면 다른 초가 되도록 기다린다. 스탬프를 지워 증분 판정이 건너뛰지 못하게 한다.
 	execute_process(COMMAND "${CMAKE_COMMAND}" -E sleep 2)
 	file(REMOVE "${swGenCpp}.stamp")
-	swRunParser(swExitCode swOutput)
+	sw_run_parser(swExitCode swOutput)
 	if(NOT swExitCode EQUAL 0)
 		message(FATAL_ERROR "second run exited ${swExitCode}\n${swOutput}")
 	endif()
@@ -110,7 +112,7 @@ elseif(MODE STREQUAL "broken-spelling")
 else()
 	message(FATAL_ERROR "RunParserToolInputs: unknown MODE '${MODE}'")
 endif()
-swRunParser(swExitCode swOutput)
+sw_run_parser(swExitCode swOutput)
 if(swExitCode EQUAL 0)
 	message(FATAL_ERROR "${MODE}: the parser accepted a broken tool input\n${swOutput}")
 endif()

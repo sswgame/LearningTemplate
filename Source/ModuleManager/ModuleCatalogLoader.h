@@ -24,7 +24,7 @@ namespace sw
 
         /**
          * @brief 고른 게임이 닿지 않고 함께 지은 게임 팩만 닿는 키트, 그리고 그런 키트에 기대는 키트 · 에디터 확장을 @p inoutListManifest 에서 빼고 @p outListRemoved 에 적습니다.
-         * @details 쓰는 쪽 = 키트가 아닌 모듈(프로젝트 · 에디터 · RHI · GameFramework)과 고른 게임의 표가 켠 키트다(CMake `sw_collectUnusedKits` 와 같다).
+         * @details 쓰는 쪽 = 키트가 아닌 모듈(프로젝트 · 에디터 · RHI · GameFramework)과 고른 게임의 표가 켠 키트다(CMake `sw_collect_unused_kits` 와 같다).
          *          아무 게임도 닿지 않는 키트(`SW_BUILD_UNUSED_KITS=ON` 으로 지은 것)는 남긴다.
          */
         static void removeUnreachedGamePackKits( vector<ModuleManifest>& inoutListManifest, const vector<ModuleManifest>& listGamePackProject, const string& gameName,

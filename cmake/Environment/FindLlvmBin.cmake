@@ -9,7 +9,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/../Config/LoadConfigConstants.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/../Config/JsonValue.cmake")
 
 # ------------------------------------------------------------------------------
-# 1) sw_findLlvmBin — 저장소가 고른 LLVM 의 bin 폴더. 없으면 구성을 세운다.
+# 1) sw_find_llvm_bin — 저장소가 고른 LLVM 의 bin 폴더. 없으면 구성을 세운다.
 #
 # LLVM 을 **어디서 찾을지**(환경 변수 → PATH → search_paths → Tools/LLVM)는 `Scripts/setup/llvm.py` 한 곳이 정하고
 # 그 답을 `toolchain_config.json` 의 `llvm_path` 에 적는다. 예전에는 이 함수가 같은 탐색을 CMake 로 한 번 더 했다(후보 이름 · Program Files 경로 ·
@@ -19,10 +19,10 @@ include("${CMAKE_CURRENT_LIST_DIR}/../Config/JsonValue.cmake")
 # 이 파일이 사는 곳은 `<repo>/cmake/Environment` 다 — 저장소 루트는 두 단계 위다. `project()` 앞(vcpkg 오버레이 생성)에서도 불린다.
 # 포트 빌드는 이 함수를 부르지 않는다 — 생성한 포트 툴체인(`VcpkgTriplets.cmake`)이 여기서 푼 경로를 글로 싣는다.
 # ------------------------------------------------------------------------------
-function(sw_findLlvmBin OUT_VAR)
+function(sw_find_llvm_bin OUT_VAR)
 	get_filename_component(swRepoRoot "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../.." ABSOLUTE)
 	set(swConfigFile "${swRepoRoot}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG}")
-	sw_requireJSONValue(swLlvmPath "${swConfigFile}" "${SW_KEY_LLVM_PATH}")
+	sw_require_json_value(swLlvmPath "${swConfigFile}" "${SW_KEY_LLVM_PATH}")
 
 	if(swLlvmPath STREQUAL "" OR NOT IS_DIRECTORY "${swLlvmPath}/bin")
 		message(FATAL_ERROR

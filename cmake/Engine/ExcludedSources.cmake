@@ -8,8 +8,8 @@
 #
 # 그 게이트는 디스크의 소스와 compile_commands.json 을 맞춘다. 배포 구성은 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드를 **일부러**
 # 짓지 않는데, 게이트는 그것을 CMake 와 따로 몰라 Shipping 트리에서 늘 졌다("compile_commands 에 없음" 95 개 — 그래서 Shipping 은
-# `-L hostgpu` 만 돌려 왔다). 빼는 규칙은 여기 CMake 에 있으므로 빼는 자리가 직접 적고(`sw_declareExcludedSources` ·
-# `sw_removeExcludedSources`), 구성 끝에 `sw_writeExcludedSourceList` 가 빌드 트리에 목록을 쓴다 — 게이트는 그 목록만 읽는다.
+# `-L hostgpu` 만 돌려 왔다). 빼는 규칙은 여기 CMake 에 있으므로 빼는 자리가 직접 적고(`sw_declare_excluded_sources` ·
+# `sw_remove_excluded_sources`), 구성 끝에 `sw_write_excluded_source_list` 가 빌드 트리에 목록을 쓴다 — 게이트는 그 목록만 읽는다.
 # **다른 타겟으로 옮겨 짓는 것(키트 폴더 · RHI 모듈)은 적지 않는다** — 지어지지 않으면 게이트가 잡아야 한다.
 # ------------------------------------------------------------------------------
 # 게이트는 빌드 트리 기준 같은 상대 경로(`generated/sw/config/ExcludedSources.txt`)를 읽는다.
@@ -78,22 +78,22 @@ set(SW_CLIENT_ONLY_SOURCE_PATTERNS "/Client/")
 set(SW_SERVER_ONLY_SOURCE_PATTERNS "/Server/")
 
 # 이 구성이 짓지 않는 소스를 적는다(절대 경로). 헤더도 받아 두지만 목록에는 `.c` · `.cpp` 만 쓴다.
-function(sw_declareExcludedSources)
+function(sw_declare_excluded_sources)
 	set_property(GLOBAL APPEND PROPERTY SW_EXCLUDED_SOURCES ${ARGN})
 endfunction()
 
 # 폴더(ARGN, 절대 경로) 아래의 .c · .cpp 를 전부 "이 구성이 짓지 않는 소스" 로 적는다 — 통째로 빼는 폴더(고르지 않은 게임 팩 ·
 # 끈 GameFramework)에 쓴다.
-function(sw_declareExcludedDirectory)
+function(sw_declare_excluded_directory)
 	foreach(directory IN LISTS ARGN)
-		sw_globSourceTree(listSource RECURSE "${directory}/*.c" "${directory}/*.cpp")
-		sw_declareExcludedSources(${listSource})
+		sw_glob_source_tree(listSource RECURSE "${directory}/*.c" "${directory}/*.cpp")
+		sw_declare_excluded_sources(${listSource})
 	endforeach()
 endfunction()
 
 # 목록 변수 LIST_VAR 에서 정규식(ARGN)에 맞는 소스를 빼고, 뺀 것을 "이 구성이 짓지 않는 소스" 로 적는다.
 # 빼기와 적기가 한 호출이라 한쪽만 하는 일이 없다. 다른 타겟으로 옮겨 짓는 것에는 쓰지 않는다(그때는 `list(FILTER)`).
-function(sw_removeExcludedSources LIST_VAR)
+function(sw_remove_excluded_sources LIST_VAR)
 	set(listKept ${${LIST_VAR}})
 	foreach(pattern IN LISTS ARGN)
 		list(FILTER listKept EXCLUDE REGEX "${pattern}")
@@ -103,7 +103,7 @@ function(sw_removeExcludedSources LIST_VAR)
 	if(listKept)
 		list(REMOVE_ITEM listRemoved ${listKept})
 	endif()
-	sw_declareExcludedSources(${listRemoved})
+	sw_declare_excluded_sources(${listRemoved})
 
 	set(${LIST_VAR} "${listKept}" PARENT_SCOPE)
 endfunction()
@@ -111,7 +111,7 @@ endfunction()
 # 목록 LIST_VAR 에서 접두(ARGN, 예: `OnlineLoadBot/`)로 시작하는 헤더를 `#include "…"` 하는 소스를 빼고, 뺀 것을 "짓지 않는 소스" 로 적는다.
 # 파일 이름 정규식을 손으로 적는 대신 소스가 스스로 말하는 의존(include)을 읽는다 — 도구 타깃이 없는 구성에서 그 도구를 쓰는 테스트가 빠진다.
 # 한 단계만 본다(그 헤더를 간접으로 끄는 파일은 보지 않는다).
-function(sw_excludeSourcesIncludingPrefix LIST_VAR)
+function(sw_exclude_sources_including_prefix LIST_VAR)
 	set(listKept "")
 	set(listDropped "")
 	foreach(source IN LISTS ${LIST_VAR})
@@ -132,7 +132,7 @@ function(sw_excludeSourcesIncludingPrefix LIST_VAR)
 		endif()
 	endforeach()
 	if(listDropped)
-		sw_declareExcludedSources(${listDropped})
+		sw_declare_excluded_sources(${listDropped})
 	endif()
 	set(${LIST_VAR} ${listKept} PARENT_SCOPE)
 endfunction()
@@ -140,7 +140,7 @@ endfunction()
 # 플랫폼 폴더 규칙 — 저장소 기준 경로에 `Windows/` · `Linux/` · `Android/` · `Web/` 이 든 소스는 그 플랫폼에서만, `Posix/` 는 Windows 가 아닌 곳에서만 짓는다.
 # 고르지 않은 것은 목록에서 빼고 "이 구성이 짓지 않는 소스" 로 적는다. (경로를 저장소 기준으로 보는 이유: 저장소를 담은 상위 폴더 이름에 걸리지 않게.)
 # Core · Engine · DevTools 가 쓴다 — 플랫폼 폴더 .cpp 에 파일 전체 플랫폼 `#if` 를 두지 않는다.
-function(sw_filterPlatformSources LIST_VAR)
+function(sw_filter_platform_sources LIST_VAR)
 	set(listKept "")
 	set(listDropped "")
 	foreach(source IN LISTS ${LIST_VAR})
@@ -167,13 +167,13 @@ function(sw_filterPlatformSources LIST_VAR)
 		endif()
 	endforeach()
 	if(listDropped)
-		sw_declareExcludedSources(${listDropped})
+		sw_declare_excluded_sources(${listDropped})
 	endif()
 	set(${LIST_VAR} ${listKept} PARENT_SCOPE)
 endfunction()
 
 # 구성 끝(모든 소스 타겟을 만든 뒤)에 한 번 — 적어 둔 것을 빌드 트리에 쓴다. 내용이 같으면 파일을 다시 쓰지 않는다.
-function(sw_writeExcludedSourceList)
+function(sw_write_excluded_source_list)
 	get_property(listSource GLOBAL PROPERTY SW_EXCLUDED_SOURCES)
 	list(FILTER listSource INCLUDE REGEX "\\.(c|cpp)$")
 	set(listRelative "")

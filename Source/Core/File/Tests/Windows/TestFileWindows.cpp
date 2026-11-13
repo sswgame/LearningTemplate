@@ -10,7 +10,7 @@
 /**
  * @brief [FileTest] 이 프로세스의 ANSI 코드 페이지는 UTF-8 이다(실행 파일 매니페스트 activeCodePage).
  * @details 엔진의 좁은 문자 문자열은 UTF-8 이다. 매니페스트가 빠지면 fopen · std::filesystem · CreateFileA · argv 가 다시 CP949 로
- *          해석되고, 한글 경로가 조용히 깨진다. 매니페스트를 붙이는 CMake 함수(sw_embedProcessManifest)가 빠진 실행 파일을 여기서 잡는다.
+ *          해석되고, 한글 경로가 조용히 깨진다. 매니페스트를 붙이는 CMake 함수(sw_add_executable)가 빠진 실행 파일을 여기서 잡는다.
  */
 SW_TEST_CASE( FileTest, ProcessUsesUTF8AnsiCodePage )
 {

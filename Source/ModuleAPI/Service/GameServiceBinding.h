@@ -10,7 +10,7 @@
 
 /**
  * @brief 게임 서비스 함수의 내보내기 매크로입니다. 정의를 가진 이미지(GameFramework)는 빌드가 `SW_GAMESERVICE_EXPORTS` 를, 쓰는 쪽은 `SW_GAMESERVICE_IMPORTS` 를 받는다
- *        (`sw_configureDLLExports` 의 GF 줄) — 계약 층은 그 이미지의 이름을 모른다.
+ *        (`sw_configure_dll_exports` 의 GF 줄) — 계약 층은 그 이미지의 이름을 모른다.
  */
 #if defined( SW_PLATFORM_WINDOWS )
     #if defined( SW_GAMESERVICE_EXPORTS )

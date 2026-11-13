@@ -35,8 +35,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Lib$<0:>")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Lib$<0:>")
 # 링크 PDB 는 실행 파일 · DLL 옆에 두지 않는다. Shipping 은 배포 폴더(Bin) 밖 `Symbols/`(심볼 저장소에는 `py -3 -m Scripts symbols` 가 넣는다),
 # Dev(Release 포함)는 `Bin/Symbols/` 다 — 디버거는 이미지에 박힌 PDB 절대 경로로 찾고, 핫 리로드는 `ModuleLibraryUtil::findBuiltDebugSymbolPath` 로
-# 찾아 섀도 복사본 옆에 복사한다. 테스트 실행 파일은 TestBin 옆에 둔다(`sw_addTestExecutable` — 크래시 스택이 이름을 낸다).
-# 모듈 DLL(GF_* · RHI_* · EditorModule · SWGame)은 `Bin/Modules/`(`sw_setModuleBinOutput`), Engine · GameFramework · 서드파티 DLL 은 `Bin/` 이다.
+# 찾아 섀도 복사본 옆에 복사한다. 테스트 실행 파일은 TestBin 옆에 둔다(크래시 스택이 이름을 낸다).
+# 모듈 DLL(GF_* · RHI_* · EditorModule · SWGame)은 `Bin/Modules/`(`sw_set_module_bin_output`), Engine · GameFramework · 서드파티 DLL 은 `Bin/` 이다.
 if(SW_SHIPPING_BUILD)
 	set(CMAKE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Symbols")
 	set(CMAKE_PDB_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Symbols")
@@ -74,7 +74,7 @@ target_compile_definitions(sw_global_options INTERFACE "SW_TARGET_NAME=\"${SW_TA
 message(STATUS "[BuildConfig] Target type: ${SW_TARGET_TYPE}")
 
 # 이 타깃이 짓지 않는 Engine 폴더(`Source/Engine/` 기준) — 정본은 이 목록 하나다.
-# Engine 은 그 폴더의 소스 · 리플렉션 헤더를 뺀다(Source/Engine/CMakeLists.txt). 헤더도 읽지 못한다 — 타깃 게이트 `serverbuild`(`sw_applyTargetLayerGuard`)가 막는다.
+# Engine 은 그 폴더의 소스 · 리플렉션 헤더를 뺀다(Source/Engine/CMakeLists.txt). 헤더도 읽지 못한다 — 타깃 게이트 `serverbuild`(`sw_apply_target_layer_guard`)가 막는다.
 # 전용 서버는 렌더러를 짓지 않는다. 엔진 루프 · 호스트는 `IEngineRenderDriver`(Engine/Graphics/View)만 보고, 뷰 요청 값(`FrameViewports`)도 그 폴더에 있다.
 # 리눅스도 Windows 처럼 표시한 것(`SW_API` 등)만 공개한다. 켜 두지 않아 공개 매크로가 아무 일도 하지 않고 모든 모듈이 전부를 공개했다 - 확장 모듈의 링커가 자기 ImGui 사본 대신
 # 에디터 모듈의 심볼을 잡아, 확장의 결속기가 에디터의 할당자를 덮어쓰고 확장이 내려간 뒤 없는 코드로 뛰었다. 정적 라이브러리(vcpkg)는 숨김으로 짓지 않아 링크에서 따로 가린다.
@@ -107,7 +107,7 @@ else()
 endif()
 
 # Vulkan 검증 레이어를 켜는 구성의 정의는 여기 하나뿐이다. 세 곳이 이 정의만 읽는다.
-#   레이어 복사(sw_deployRuntimeDependencies) : 변수 sw_vulkan_validation
+#   레이어 복사(sw_deploy_runtime_dependencies) : 변수 sw_vulkan_validation
 #   켜기(VulkanRHIDevice 생성자) · 그것을 보는 테스트 : 매크로 SW_VULKAN_VALIDATION
 # 세 곳이 조건을 따로 적으면 한쪽만 바뀐다. 그러면 레이어가 없는 구성에서 테스트가 돌아 꺼진 레이어를 실패로 본다.
 # 출시 빌드는 빌드 형식이 Debug 여도 레이어를 싣지 않는다(배포물에 개발용 DLL 이 들어가지 않게).
@@ -140,7 +140,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/../Config/JsonValue.cmake")
 # 배포 빌드(`SW_SHIPPING_BUILD`)만이다 — 개발 Release 에 걸면 엔진 .cpp 하나를 고쳐도 Engine.dll 링크가 코드 생성을 다시 해 75 초였다(Debug 4.7 초).
 # 언리얼도 LTO 는 Shipping 만 한다(Development 는 끈다). 개발 Release 의 성능은 LTO 없는 값이다 — 배포 성능은 Ninja-Shipping 으로 잰다.
 if(SW_ENABLE_LTO AND SW_SHIPPING_BUILD AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
-	sw_checkIpoSupport(sw_ipo_supported sw_ipo_error)
+	sw_check_ipo_support(sw_ipo_supported sw_ipo_error)
 
 	if(sw_ipo_supported)
 		set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
@@ -155,8 +155,8 @@ if(SW_ENABLE_LTO AND SW_SHIPPING_BUILD AND (CMAKE_BUILD_TYPE STREQUAL "Release" 
 			# 캐시 폴더 이름은 `BuildCaches.json` 이 정한다 — 콜드 측정 전에 지울 캐시 목록과 한 곳이다. 빌드 폴더 밖이면 구성을 세운다.
 			set(sw_build_caches_file "${CMAKE_CURRENT_LIST_DIR}/../Config/BuildCaches.json")
 			set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${sw_build_caches_file}")
-			sw_requireJSONValue(sw_lto_cache_base "${sw_build_caches_file}" cold_clear lto_link_cache base)
-			sw_requireJSONValue(sw_lto_cache_name "${sw_build_caches_file}" cold_clear lto_link_cache path)
+			sw_require_json_value(sw_lto_cache_base "${sw_build_caches_file}" cold_clear lto_link_cache base)
+			sw_require_json_value(sw_lto_cache_name "${sw_build_caches_file}" cold_clear lto_link_cache path)
 
 			if(NOT sw_lto_cache_base STREQUAL "build")
 				message(FATAL_ERROR "[BuildConfig] ${sw_build_caches_file}: cold_clear.lto_link_cache.base must be 'build' (got '${sw_lto_cache_base}')")
@@ -203,11 +203,11 @@ endif()
 
 
 # ------------------------------------------------------------------------------
-# 런타임 파일 복사 큐 — POST_BUILD는 sw_emitRuntimeCopies가 한 번에 방출
+# 런타임 파일 복사 큐 — POST_BUILD는 sw_emit_runtime_copies가 한 번에 방출
 # ------------------------------------------------------------------------------
-function(sw_queueRuntimeCopy TARGET_NAME SRC_FILE)
+function(sw_queue_runtime_copy TARGET_NAME SRC_FILE)
 	if(NOT TARGET ${TARGET_NAME})
-		message(FATAL_ERROR "sw_queueRuntimeCopy: target '${TARGET_NAME}' does not exist")
+		message(FATAL_ERROR "sw_queue_runtime_copy: target '${TARGET_NAME}' does not exist")
 	endif()
 
 	if(NOT SRC_FILE OR NOT EXISTS "${SRC_FILE}")
@@ -217,9 +217,9 @@ function(sw_queueRuntimeCopy TARGET_NAME SRC_FILE)
 	set_property(TARGET ${TARGET_NAME} APPEND PROPERTY SW_RUNTIME_COPY_FILES "${SRC_FILE}")
 endfunction()
 
-function(sw_emitRuntimeCopies TARGET_NAME)
+function(sw_emit_runtime_copies TARGET_NAME)
 	if(NOT TARGET ${TARGET_NAME})
-		message(FATAL_ERROR "sw_emitRuntimeCopies: target '${TARGET_NAME}' does not exist")
+		message(FATAL_ERROR "sw_emit_runtime_copies: target '${TARGET_NAME}' does not exist")
 	endif()
 
 	get_property(already TARGET ${TARGET_NAME} PROPERTY SW_RUNTIME_COPIES_EMITTED)
@@ -258,13 +258,13 @@ function(sw_emitRuntimeCopies TARGET_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_keepImportLibraryIfUnchanged — SHARED 타깃의 임포트 라이브러리(`Lib/<타깃>.lib`)를 내용이 바뀔 때만 갱신한다(Windows).
+# sw_keep_import_library_if_unchanged — SHARED 타깃의 임포트 라이브러리(`Lib/<타깃>.lib`)를 내용이 바뀔 때만 갱신한다(Windows).
 #   내보내기가 같아도 링크는 `.lib` 를 다시 써서 수정 시각이 바뀌고, 그것을 링크하는 DLL · 실행 파일이 전부 다시 링크된다
 #   (`Engine.cpp` 하나를 고쳐도 킷 · 게임 · 에디터 DLL 84 개). 링크가 임시 경로(`ImportLibraryStage/`)로 내보내게 하고 POST_BUILD 의
 #   `copy_if_different` 가 옮긴다. 링크 규칙의 `RESTAT` 이 안 바뀐 출력을 보고 아래쪽 링크를 건너뛴다.
 #   `/IMPLIB` 는 CMake 가 `/implib:` 를 쓴 뒤의 링크 옵션이라 뒤쪽 값이 이긴다. 내보내기가 없는 MODULE 은 `.lib` 가 없으므로 SHARED 만 부른다.
 # ------------------------------------------------------------------------------
-function(sw_keepImportLibraryIfUnchanged TARGET_NAME)
+function(sw_keep_import_library_if_unchanged TARGET_NAME)
 	if(NOT WIN32 OR NOT MSVC)
 		return()
 	endif()
@@ -287,26 +287,26 @@ endfunction()
 #   검증 레이어 : sw_vulkan_validation 인 구성만(위의 정의 하나를 VulkanRHIDevice 도 매크로로 읽는다. 딸려 오는 mimalloc 도 그 의존성일 뿐이다)
 #   Tracy      : 개발 빌드 · Windows · SW_ENABLE_TRACY (함수 안에서 거른다)
 #   Tint       : WebGPU 셰이더 대상(SPIR-V → WGSL)의 쿠킹 도구 — DXC 와 같은 이유로 실행 파일 옆에 둔다(ThirdParty/dawn, 웹 · Android · 서버는 함수 안에서 거른다)
-function(sw_deployRuntimeDependencies TARGET_NAME)
-	sw_copyDxcDlls(${TARGET_NAME})
-	sw_copyTintTool(${TARGET_NAME})
+function(sw_deploy_runtime_dependencies TARGET_NAME)
+	sw_copy_dxc_dlls(${TARGET_NAME})
+	sw_copy_tint_tool(${TARGET_NAME})
 	if(sw_vulkan_validation)
-		sw_copyVulkanValidationRuntime(${TARGET_NAME})
+		sw_copy_vulkan_validation_runtime(${TARGET_NAME})
 	endif()
-	sw_copyTracyRuntime(${TARGET_NAME})
-	sw_emitRuntimeCopies(${TARGET_NAME})
+	sw_copy_tracy_runtime(${TARGET_NAME})
+	sw_emit_runtime_copies(${TARGET_NAME})
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_removeStaleBinaryOutputs — Dev `Bin` 의 옛 산출물을 configure 때 지운다(ninja 는 지어 놓은 파일을 치우지 않는다).
+# sw_remove_stale_binary_outputs — Dev `Bin` 의 옛 산출물을 configure 때 지운다(ninja 는 지어 놓은 파일을 치우지 않는다).
 #   1) `Bin/Modules` 의 모듈 산출물(GF_* · RHI_* · EditorModule · SWGame*) 가운데 이 구성에서 꺼진 모듈의 것 — 켜진 모듈 것은 건드리지 않는다.
-#      서드파티 DLL · PDB(모듈 이름 꼴이 아닌 것 — 서드파티는 `Bin` 에 한 벌, `sw_stageModuleRuntimeDLLs`)와 남은 섀도 복사본(`<모듈>_temp_p<pid>_…`).
+#      서드파티 DLL · PDB(모듈 이름 꼴이 아닌 것 — 서드파티는 `Bin` 에 한 벌, `sw_stage_module_runtime_dlls`)와 남은 섀도 복사본(`<모듈>_temp_p<pid>_…`).
 #      살아 있는 App 이 쓰는 섀도 복사본은 잠겨 있어 지워지지 않는다 — 아래 경고로 남는다.
 #   2) `Bin` 바로 아래의 옛 자리 산출물 — 모듈 DLL · PDB · 매니페스트(지금은 `Bin/Modules`), 테스트 실행 파일(지금은 `TestBin`),
 #      `Bin/Symbols` 에 같은 이름이 생긴 PDB(옛 자리).
 #   실행 중인 App · 테스트가 DLL 을 쥐고 있으면 지우지 못한다 — 경고만 하고 넘어간다(다음 configure 가 다시 지운다).
 # ------------------------------------------------------------------------------
-function(sw_removeStaleBinaryOutputs ACTIVE_MODULES)
+function(sw_remove_stale_binary_outputs ACTIVE_MODULES)
 	set(swBinDir "${CMAKE_BINARY_DIR}/Bin")
 	set(swModulePattern "^(GF_.+|RHI_.+|EditorModule|SWGame.*)$")
 	set(swImageSuffixes ".dll;.pdb;.so;.exp;.lib;.ilk;.debug")

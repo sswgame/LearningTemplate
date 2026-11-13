@@ -156,7 +156,7 @@ SW_TEST_CASE( ModuleCatalogTest, BrokenManifestsNameTheProblem )
     Util::expectParseError( R"({ "_name": "M", "_kind": "Game", "_listModuleOverride": [ { "_name": "" } ], )" + common + " }", "module override" );
 }
 
-// 플랫폼은 "기본 전부 + 뺄 것" 이다. 에디터 종류는 적지 않아도 데스크톱 전용이다(CMake `sw_readManifestPlatforms` 와 같다).
+// 플랫폼은 "기본 전부 + 뺄 것" 이다. 에디터 종류는 적지 않아도 데스크톱 전용이다(CMake `sw_read_manifest_platforms` 와 같다).
 SW_TEST_CASE( ModuleCatalogTest, PlatformMaskIsEveryPlatformMinusExcluded )
 {
     const auto parseMask = []( const string& text )

@@ -39,8 +39,8 @@ endforeach()
 #    기동 뒤에 올리는 것과 같은 모양으로, 실행 파일이 엔진의 `ModuleTypes` 단계에서 `SW_LOADBOT_MODULES` 를 순서대로 올리고 진입점(`LoadBotModuleEntry.h`)을 부른다.
 #    모듈은 App 이 올리는 동적 모듈 레지스트리(`Bin/Modules`)에 넣지 않고 `Bin` 에 둔다(`findModuleLibraryPath` 가 Modules → Bin 으로 찾는다).
 # ------------------------------------------------------------------------------
-sw_globSourceTree(swLoadBotCoreSource "${CMAKE_CURRENT_SOURCE_DIR}/LoadBot*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/LoadBot*.h")
-# SHARED(진입점 하나만 내보냄): MODULE 종류는 App 이 올리는 동적 모듈 레지스트리에 들어야 한다(`sw_verifyDynamicModuleRegistry`) — 이 모듈은 봇 실행 파일만 올린다.
+sw_glob_source_tree(swLoadBotCoreSource "${CMAKE_CURRENT_SOURCE_DIR}/LoadBot*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/LoadBot*.h")
+# SHARED(진입점 하나만 내보냄): MODULE 종류는 App 이 올리는 동적 모듈 레지스트리에 들어야 한다(`sw_verify_dynamic_module_registry`) — 이 모듈은 봇 실행 파일만 올린다.
 add_library(OnlineLoadBotCore SHARED ${swLoadBotCoreSource})
 target_link_libraries(OnlineLoadBotCore
 	PRIVATE
@@ -51,8 +51,8 @@ target_link_libraries(OnlineLoadBotCore
 		sw_global_options
 )
 target_compile_definitions(OnlineLoadBotCore PRIVATE "SW_LOG_TAG=\"OnlineLoadBot\"" "SW_REGISTRAR_MODULE=\"OnlineLoadBotCore\"")
-sw_configureDLLExports(OnlineLoadBotCore SHARED MODULE_SHARED)
-sw_configurePCH(OnlineLoadBotCore "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+sw_configure_dll_exports(OnlineLoadBotCore SHARED MODULE_SHARED)
+sw_configure_pch(OnlineLoadBotCore "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 set_target_properties(OnlineLoadBotCore PROPERTIES
 	FOLDER "Source/Programs"
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Bin$<0:>"
@@ -64,10 +64,10 @@ set_property(GLOBAL PROPERTY SW_LOADBOT_KITS ${swLoadBotKit}) # 온라인 키트
 set(swLoadBotModuleList GameFramework ${swLoadBotKit} OnlineLoadBotCore)
 list(JOIN swLoadBotModuleList "\",\"" swLoadBotModuleText)
 
-sw_addExecutable(OnlineLoadBot Main.cpp)
+sw_add_executable(OnlineLoadBot Main.cpp)
 # ModuleManager: 호스트 범위의 모듈 라이브러리 창구(`ModuleLoaderSubsystem`) — 전용 서버(`ServerApp`)와 같은 모양으로 엔진(DedicatedServer)을 세운다.
 target_link_libraries(OnlineLoadBot PRIVATE ModuleManager Engine sw_public_source_includes sw_global_options)
 target_compile_definitions(OnlineLoadBot PRIVATE "SW_LOG_TAG=\"OnlineLoadBot\"" "SW_REGISTRAR_MODULE=\"OnlineLoadBot\"" "SW_LOADBOT_MODULES=\"${swLoadBotModuleText}\"")
 add_dependencies(OnlineLoadBot OnlineLoadBotCore) # 실행 파일을 지으면 올릴 모듈(과 그것이 링크하는 키트)도 선다
-sw_configurePCH(OnlineLoadBot "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+sw_configure_pch(OnlineLoadBot "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 set_target_properties(OnlineLoadBot PROPERTIES FOLDER "Source/Programs")

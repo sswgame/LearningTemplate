@@ -3,7 +3,7 @@
 # @brief Android 플랫폼 정의 — 매크로 · 이름, NDK 시스템 라이브러리(android · log · vulkan), NativeActivity 글루.
 # @note `SW_PLATFORM_LINUX` 를 켜지 않는다. 켜면 `__linux__` 검사를 통과해 X11 · ALSA · epoll 가지로 조용히 간다(언리얼 `PLATFORM_ANDROID` 도 Linux 와 따로다, 기억).
 #       구성: `cmake --preset Android-Shipping` — 프리셋이 `Tools/Android/ndk/<판>`(설치 `py -3 Scripts/setup/platform_sdk.py android`)을 가리킨다. 앱 실행 파일은 공유 라이브러리(libApp.so)로 짓고 NativeActivity 가 연다
-#       (sw_addExecutable). APK 는 빌드 뒤 `py -3 -m Scripts android-apk`(매니페스트 틀 cmake/Modules/Platform/AndroidManifest.xml — Gradle 없이 aapt2 · zipalign · apksigner).
+#       (sw_add_executable). APK 는 빌드 뒤 `py -3 -m Scripts android-apk`(매니페스트 틀 cmake/Modules/Platform/AndroidManifest.xml — Gradle 없이 aapt2 · zipalign · apksigner).
 # ==============================================================================
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Android")

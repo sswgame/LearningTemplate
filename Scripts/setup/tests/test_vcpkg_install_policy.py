@@ -22,7 +22,7 @@ def read_only_reason(source_dir: Path, installed_dir: str, user_install: str) ->
         script = Path(folder) / "Probe.cmake"
         script.write_text(
             f'include("{POLICY_FILE.as_posix()}")\n'
-            f'sw_vcpkgInstallReadOnlyReason("{source_dir.as_posix()}" "{installed_dir}" "{user_install}" reason)\n'
+            f'sw_vcpkg_install_read_only_reason("{source_dir.as_posix()}" "{installed_dir}" "{user_install}" reason)\n'
             'message(NOTICE "REASON=[${reason}]")\n',
             encoding="utf-8",
         )

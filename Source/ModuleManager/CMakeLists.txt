@@ -12,17 +12,17 @@
 # (언리얼 Core 의 ModuleManager 가 DLL 이고 Developer 모듈 HotReload 가 그 위에 서는 자리). 의존은 DevTools → ModuleManager 한 방향이다(TargetLayers).
 # 배포는 정적이다 — 모듈이 정적 링크라 갈아 끼울 것이 없고 DevTools 도 짓지 않는다. 개발 전용 폴더(`Dev/`)는 없다(테스트 `Tests/` 만 배포가 뺀다).
 # ------------------------------------------------------------------------------
-sw_globSourceTree(MODULE_HOST_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
+sw_glob_source_tree(MODULE_HOST_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 
 if(SW_SHIPPING_BUILD)
-	sw_removeExcludedSources(MODULE_HOST_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
+	sw_remove_excluded_sources(MODULE_HOST_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 	set(swModuleManagerLibType STATIC)
 else()
 	set(swModuleManagerLibType SHARED)
 endif()
 
 add_library(ModuleManager ${swModuleManagerLibType} ${MODULE_HOST_SOURCES})
-sw_applyTargetLayerGuard(ModuleManager modulemanager)
+sw_apply_target_layer_guard(ModuleManager modulemanager)
 set_target_properties(ModuleManager PROPERTIES FOLDER "Source/ModuleManager")
 target_link_libraries(ModuleManager
 	PUBLIC
@@ -32,5 +32,5 @@ target_link_libraries(ModuleManager
 		sw_global_options
 )
 target_compile_definitions(ModuleManager PRIVATE "SW_LOG_TAG=\"Engine\"" "SW_REGISTRAR_MODULE=\"ModuleManager\"" SW_APP_INTERNAL)
-sw_configureDLLExports(ModuleManager ${swModuleManagerLibType} MODULEMANAGER)
-sw_configurePCH(ModuleManager "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+sw_configure_dll_exports(ModuleManager ${swModuleManagerLibType} MODULEMANAGER)
+sw_configure_pch(ModuleManager "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")

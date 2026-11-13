@@ -26,7 +26,7 @@ endif()
 # 필수다 — 실패하면 아래가 낡은 toolchain_config.json 이나 빈 값으로 지나가 다른 컴파일러를 집는다.
 # 같은 프로세스가 아래 2) 의 ToolchainVars.cmake 도 쓴다(`--cmake-vars` — 파이썬을 한 번 덜 띄운다).
 set(SW_GENERATED_TOOLCHAIN_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ToolchainVars.cmake")
-sw_executePythonScript(
+sw_execute_python_script(
 	"${SW_SCRIPT_SETUP_ENVIRONMENT}"
 	ARGS --cmake-vars "${SW_GENERATED_TOOLCHAIN_VARS}"
 	REQUIRED
@@ -62,7 +62,7 @@ if(SW_TOOLCHAIN_CONFIG_FOUND)
 		set(ENV{LLVM_ROOT} "${SW_TOOLCHAIN_LLVM_PATH}")
 		set(ENV{LLVM_HOME} "${SW_TOOLCHAIN_LLVM_PATH}")
 
-		sw_prependEnvPath("${SW_TOOLCHAIN_LLVM_PATH}/bin")
+		sw_prepend_env_path("${SW_TOOLCHAIN_LLVM_PATH}/bin")
 
 		# project() 전이다 — 호스트 판정(CMAKE_HOST_WIN32)으로 고른다.
 		# 교차 빌드(웹 · Android)는 대상 툴체인(VCPKG_CHAINLOAD_TOOLCHAIN_FILE — emcc · NDK clang)이 컴파일러를 정한다. 여기서 호스트 clang-cl 을 강제로 묶으면
@@ -84,7 +84,7 @@ if(SW_TOOLCHAIN_CONFIG_FOUND)
 			# 정적 아카이브(lib.exe/llvm-lib.exe) 및 매니페스트 도구(mt.exe/llvm-mt.exe) 탐색
 			include("${CMAKE_CURRENT_LIST_DIR}/ToolchainBinaries.cmake")
 			include("${CMAKE_CURRENT_LIST_DIR}/FindWindowsTools.cmake")
-			sw_findWindowsArchiveAndMt(swAr swMt)
+			sw_find_windows_archive_and_mt(swAr swMt)
 
 			# 아카이버 · 매니페스트 도구가 없으면 정적 라이브러리 · 링크가 나중에 선다 — 지금 세운다.
 			if(NOT swAr)
@@ -117,7 +117,7 @@ if(SW_TOOLCHAIN_CONFIG_FOUND)
 		set(CMAKE_MAKE_PROGRAM "${SW_TOOLCHAIN_NINJA_PATH}" CACHE FILEPATH "Ninja" FORCE)
 		get_filename_component(swNinjaDir "${SW_TOOLCHAIN_NINJA_PATH}" DIRECTORY)
 
-		sw_prependEnvPath("${swNinjaDir}")
+		sw_prepend_env_path("${swNinjaDir}")
 
 		message(STATUS "[DetectToolchain] Using Ninja: ${SW_TOOLCHAIN_NINJA_PATH}")
 	endif()

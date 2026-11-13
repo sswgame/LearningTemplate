@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # 모듈 NAME 이 이 구성에서 켜져 있으면 OUT_VAR 를 ON 으로 둔다. 매니페스트가 없는 모듈은 구성을 세운다(모든 동적 모듈은 매니페스트를 갖는다).
-function(sw_isModuleActive NAME OUT_VAR)
+function(sw_is_module_active NAME OUT_VAR)
 	get_property(swNames GLOBAL PROPERTY SW_MODULE_NAMES)
 
 	if(NOT NAME IN_LIST swNames)
@@ -16,8 +16,8 @@ function(sw_isModuleActive NAME OUT_VAR)
 endfunction()
 
 # 꺼진 모듈 NAME 의 폴더를 "이 구성이 짓지 않는다" 로 적고 OUT_VAR 를 ON 으로 둔다(켜져 있으면 OFF). 모듈 타깃을 만드는 함수의 첫 줄에서 부른다.
-function(sw_skipInactiveModule NAME OUT_VAR)
-	sw_isModuleActive(${NAME} swActive)
+function(sw_skip_inactive_module NAME OUT_VAR)
+	sw_is_module_active(${NAME} swActive)
 
 	if(swActive)
 		set(${OUT_VAR} OFF PARENT_SCOPE)
@@ -26,7 +26,7 @@ function(sw_skipInactiveModule NAME OUT_VAR)
 
 	get_property(swReason GLOBAL PROPERTY SW_MODULE_${NAME}_REASON)
 	message(STATUS "[Module] ${NAME} is not built — ${swReason}")
-	sw_declareExcludedDirectory("${CMAKE_CURRENT_SOURCE_DIR}")
+	sw_declare_excluded_directory("${CMAKE_CURRENT_SOURCE_DIR}")
 	set(${OUT_VAR} ON PARENT_SCOPE)
 endfunction()
 

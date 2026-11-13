@@ -176,7 +176,7 @@ namespace sw
         }
 
         // 스탬프가 **없는** 모듈도 거절한다. 스탬프를 박지 않는 빌드 규칙으로 만든 모듈이 대조 없이 로드되지 않게 하기 위해서다(동적 모듈은 모두
-        // `sw_registerDynamicModule` 이 스탬프를 박는다).
+        // `sw_register_dynamic_module` 이 스탬프를 박는다).
         string     moduleStamp;
         const bool bEngineABIMismatch = ModuleLibraryPatch::findEngineABIStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineABIStamp();
         if ( bEngineABIMismatch )

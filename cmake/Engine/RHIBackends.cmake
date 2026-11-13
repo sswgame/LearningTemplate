@@ -13,30 +13,30 @@ if(NOT CMAKE_MINIMUM_REQUIRED_VERSION)
 endif()
 
 # 백엔드 NAME(RHIBackend 열거자 — DirectX12 …)의 장치 소스.
-function(sw_getRHIBackendSources NAME OUT_VAR)
-	sw_globSourceTree(listSource RECURSE
+function(sw_get_rhi_backend_sources NAME OUT_VAR)
+	sw_glob_source_tree(listSource RECURSE
 		"${CMAKE_SOURCE_DIR}/Source/Engine/Graphics/RHI/${SW_RHI_BACKEND_${NAME}_SOURCE_FOLDER}/*.cpp")
-	list(FILTER listSource EXCLUDE REGEX "/Module/") # 모듈 엔트리는 RHI_* MODULE 이 짓는다 — 배포 정적 링크는 `sw_getRHIBackendEntrySource` 로 따로 넣는다
+	list(FILTER listSource EXCLUDE REGEX "/Module/") # 모듈 엔트리는 RHI_* MODULE 이 짓는다 — 배포 정적 링크는 `sw_get_rhi_backend_entry_source` 로 따로 넣는다
 	set(${OUT_VAR} ${listSource} PARENT_SCOPE)
 endfunction()
 
 # 백엔드의 진입 파일(`Module/ModuleEntry.cpp`) — 배포 정적 링크에서는 같은 매크로가 정적 등록자가 된다(`SW_IMPLEMENT_RHI_MODULE`).
-function(sw_getRHIBackendEntrySource NAME OUT_VAR)
+function(sw_get_rhi_backend_entry_source NAME OUT_VAR)
 	set(${OUT_VAR} "${CMAKE_SOURCE_DIR}/Source/Engine/Graphics/RHI/${SW_RHI_BACKEND_${NAME}_SOURCE_FOLDER}/Module/ModuleEntry.cpp" PARENT_SCOPE)
 endfunction()
 
 # 모든 백엔드의 장치 소스(Engine GLOB 에서 뺀다 — 백엔드 소스는 모듈 · Shipping 갈래가 가져간다).
-function(sw_getAllRHIBackendSources OUT_VAR)
+function(sw_get_all_rhi_backend_sources OUT_VAR)
 	set(listAll "")
 	foreach(name IN LISTS SW_RHI_BACKEND_NAMES)
-		sw_getRHIBackendSources(${name} listSource)
+		sw_get_rhi_backend_sources(${name} listSource)
 		list(APPEND listAll ${listSource})
 	endforeach()
 	set(${OUT_VAR} ${listAll} PARENT_SCOPE)
 endfunction()
 
 # 쿠킹 표의 백엔드 이름(대소문자까지 그대로 — DirectX11 · DirectX12 · Vulkan · OpenGL)만 받는다. 명령줄 이름(dx12 · vk …)은 받지 않는다 — 모르는 값이면 구성을 세운다.
-function(sw_checkRHIBackendName TEXT)
+function(sw_check_rhi_backend_name TEXT)
 	if(NOT TEXT IN_LIST SW_RHI_BACKEND_NAMES)
 		string(REPLACE ";" ", " listName "${SW_RHI_BACKEND_NAMES}")
 		message(FATAL_ERROR "[RHI] unknown backend '${TEXT}' for SW_SHIPPING_RHI_BACKEND — valid names: ${listName} "
@@ -48,8 +48,8 @@ endfunction()
 # 배포 빌드가 Engine 에 넣을 백엔드 — 이름을 확인하고, 이 플랫폼(sw_platform_name)에 그 백엔드가 있는지 본다. 없으면 구성을 세운다.
 # 플랫폼은 그 백엔드 모듈의 매니페스트(_listExcludedPlatform)가 원본이다. 주의: 배포 구성에서는 모듈이 꺼져 있으므로(`_listConfiguration`) 활성 여부가
 # 아니라 플랫폼 칸을 본다 — 이 확인이 없으면 그 플랫폼에 없는 백엔드를 고른 Engine 이 백엔드 없이 링크된다.
-function(sw_resolveShippingRHIBackend TEXT OUT_VAR)
-	sw_checkRHIBackendName("${TEXT}")
+function(sw_resolve_shipping_rhi_backend TEXT OUT_VAR)
+	sw_check_rhi_backend_name("${TEXT}")
 	set(backendName ${TEXT})
 	set(moduleName ${SW_RHI_BACKEND_${backendName}_MODULE})
 	get_property(listPlatform GLOBAL PROPERTY SW_MODULE_${moduleName}_PLATFORMS)

@@ -50,7 +50,7 @@
 - 디렉터 컴포넌트의 카탈로그 읽기는 씬마다 다른 데이터라 게임 범위 `loadRequiredCatalog` 로 옮기지 않는다(실패는 ERROR). 파일 글 되돌리기 둘(프리팹 · 리그)은 뒤따르는 일이 달라 합치지 않는다.
 
 ### T8 구성 차이
-- 플랫폼 폴더는 CMake 가 고른다(`sw_filterPlatformSources`). 플랫폼 폴더 `.cpp` 에 파일 전체 `#if` 를 두지 않는다(언리얼 UBT 플랫폼 폴더 규칙).
+- 플랫폼 폴더는 CMake 가 고른다(`sw_filter_platform_sources`). 플랫폼 폴더 `.cpp` 에 파일 전체 `#if` 를 두지 않는다(언리얼 UBT 플랫폼 폴더 규칙).
 - 리플렉션 에디터 메타데이터는 `ReflectionEditorMetadata.h` 옆 표, 런타임 메타데이터는 포인터(`_pEditor`)로만 가리킨다 — 구조체 배치가 구성마다 같다. 값은 개발 전용 단위(`<이름>.gen.meta.cpp`)가 올리고 배포는 짓지 않는다(언리얼 `WITH_METADATA` 를 빌드 단위로). 새 표시 · 편집 필드는 `ReflectionEditorMetadata.h`, 런타임 필드는 `ReflectionMetadata.h`.
 - 전용 서버는 플랫폼 구현을 폴더째 고른다(`SW_EXCLUDED_ENGINE_FOLDERS`, 창 없는 대체는 `Window/Headless` · `Input/Headless`). 클라이언트 · 서버를 가르는 전처리 매크로는 없고 상수 `build::kWithClientCode` · `kWithServerCode` 만 있다(옛 이름은 `TargetMacroCheck.h` 가 독으로 막는다).
 - 남긴 구성 분기: `GameObjectManager::resolveComponent` 의 타입 확인(뜨거운 길, 언리얼 `DO_CHECK`), 스위치를 정의하는 자리(`ContentSource.h` · `AnimationRewind.h` · `ProfilerBackend.h` · `ModuleCatalog::getCurrentConfiguration`). 개발에서만 허용하는 동작(평문 포트 · 개발 인증서 · 가짜 제공자)은 구성 이름이 아니라 개발 대체물 등록으로 묻는다(`Core/Network/DevOnlineExtension.h`).

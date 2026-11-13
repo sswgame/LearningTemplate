@@ -9,7 +9,7 @@
 | Thing | Form |
 | --- | --- |
 | Feature options (`option()`) | `SW_*` (`SW_ENABLE_PCH`) |
-| Functions / macros | `sw_camelCase` (`sw_configurePCH` — acronyms stay capital) |
+| Functions / macros | `sw_camelCase` (`sw_configure_pch` — acronyms stay capital) |
 | Target properties, compile definitions | `SW_SCREAMING_CASE` |
 | Product targets | `PascalCase` |
 

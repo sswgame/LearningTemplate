@@ -25,7 +25,7 @@ set(coreExclude
 	"Physics/Jolt/[^/]+\\.cpp$"   # EngineJolt_objects 가 짓는다(아래 9))
 )
 
-sw_globSourceTree(ENGINE_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
+sw_glob_source_tree(ENGINE_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 
 foreach(exPattern IN LISTS coreExclude)
 	list(FILTER ENGINE_SOURCES EXCLUDE REGEX "${exPattern}")
@@ -34,10 +34,10 @@ endforeach()
 # 플랫폼 폴더(`Windows/` · `Linux/` · `Android/` · `Web/`)는 그 플랫폼에서만 짓는다(Core · DevTools 와 같은 규칙) — 파일 안 플랫폼 `#if` 로 빈 TU 를
 # 모든 플랫폼에서 컴파일하지 않는다(언리얼 UBT 가 `Windows/` · `Linux/` 폴더를 플랫폼마다 고르는 것과 같다). 전용 서버의 차이도 폴더가 맡는다 —
 # 서버가 짓지 않는 폴더(`SW_EXCLUDED_ENGINE_FOLDERS` — 창 · 입력의 `Linux/` 포함)와 서버만 짓는 `Headless/`(아래).
-sw_filterPlatformSources(ENGINE_SOURCES)
+sw_filter_platform_sources(ENGINE_SOURCES)
 
 # RHI 백엔드 장치 소스는 Engine 이 짓지 않는다 — Dev 는 RHI_* 모듈이, Shipping 은 아래 5) 가 고른 하나를 가져간다.
-sw_getAllRHIBackendSources(listRHIBackendSource)
+sw_get_all_rhi_backend_sources(listRHIBackendSource)
 list(REMOVE_ITEM ENGINE_SOURCES ${listRHIBackendSource})
 
 # 자동화 실행기(실행기 · 세션 · 판정 · 보고 · 시나리오 녹화)는 엔진에 없다 — 개발 도구 `DevTools/Client/Automation` 이 짓는다(배포 · 전용 서버는 짓지 않는다).
@@ -48,7 +48,7 @@ list(REMOVE_ITEM ENGINE_SOURCES ${listRHIBackendSource})
 # 그 폴더의 헤더는 타깃 게이트 `serverbuild` 가 막는다(서버는 `IEngineRenderDriver` 만 본다). 리플렉션 헤더도 아래 8) 에서 뺀다.
 set(swExcludedFolderRegex "")
 foreach(swExcludedFolder IN LISTS SW_EXCLUDED_ENGINE_FOLDERS)
-	sw_removeExcludedSources(ENGINE_SOURCES "/Source/Engine/${swExcludedFolder}/.*\\.(c|cpp)$")
+	sw_remove_excluded_sources(ENGINE_SOURCES "/Source/Engine/${swExcludedFolder}/.*\\.(c|cpp)$")
 	if(swExcludedFolderRegex)
 		string(APPEND swExcludedFolderRegex "|")
 	endif()
@@ -71,16 +71,16 @@ endif()
 # 창 없는 서버의 창 · 입력 · 클립보드(`Window/Headless` · `Input/Headless`)는 서버만 짓는다 — 클라이언트는 플랫폼 폴더(`Window/Linux` …)가 같은 함수를 정의한다.
 # 구성으로 파일 안을 가르지 않고(그런 매크로는 없다 — `BuildInfo.h`) 폴더째 고른다(언리얼 `UE_SERVER` 대신 모듈 · 폴더를 빼는 쪽과 같다).
 if(NOT SW_TARGET_TYPE STREQUAL "Server")
-	sw_removeExcludedSources(ENGINE_SOURCES "/Source/Engine/(Window|Input)/Headless/.*\\.(c|cpp)$")
+	sw_remove_excluded_sources(ENGINE_SOURCES "/Source/Engine/(Window|Input)/Headless/.*\\.(c|cpp)$")
 endif()
 # 서버 전용 소스(`Server` — 운영 HTTP 끝점 · 관리 채널 · 서버 서비스 레지스트리, `Config/Server` — 서버 비밀)는 클라이언트 구성이 짓지 않는다(`SW_SERVER_ONLY_SOURCE_PATTERNS`, 헤더는 게이트 `clientbuild`).
 if(SW_TARGET_TYPE STREQUAL "Client")
-	sw_removeExcludedSources(ENGINE_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS})
+	sw_remove_excluded_sources(ENGINE_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS})
 endif()
 
 # 개발 전용 소스(기능 폴더의 단위 테스트 · 개발 명령)는 배포 구성이 짓지 않는다.
 if(SW_SHIPPING_BUILD)
-	sw_removeExcludedSources(ENGINE_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
+	sw_remove_excluded_sources(ENGINE_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
 
 # 개발 · 배포 차이가 값뿐인 곳은 `build::kShipping`(Core/Foundation/BuildInfo.h)을 읽는다 — 규칙은 docs/agents/BuildConfigSwitch.md.
@@ -106,9 +106,9 @@ endforeach()
 list(REMOVE_ITEM ENGINE_SOURCES ${listEngineLayerSource})
 
 # ------------------------------------------------------------------------------
-# 2) 압축 코덱(zlib · LZ4 · Zstd) — Engine 에만 붙인다. 찾기 · 진단 · 링크 항목은 `sw_findEngineCompressionLibraries`(cmake/Engine/ThirdPartyLibs.cmake).
+# 2) 압축 코덱(zlib · LZ4 · Zstd) — Engine 에만 붙인다. 찾기 · 진단 · 링크 항목은 `sw_find_engine_compression_libraries`(cmake/Engine/ThirdPartyLibs.cmake).
 # ------------------------------------------------------------------------------
-sw_findEngineCompressionLibraries(listEngineCompressionLib)
+sw_find_engine_compression_libraries(listEngineCompressionLib)
 
 # ------------------------------------------------------------------------------
 # 3) Engine 타겟 — ABI 스탬프 · include 전파 · 정의 · PCH · Core OBJECT 재사용 · 내보내기
@@ -117,11 +117,11 @@ sw_findEngineCompressionLibraries(listEngineCompressionLib)
 # ReflectionParser는 Core STATIC만 링크해 Engine.dll 순환을 피함
 # ------------------------------------------------------------------------------
 add_library(Engine ${coreLibType} ${ENGINE_SOURCES})
-sw_applyTargetLayerGuard(Engine engine) # 타깃 경계 — Engine 은 GameFramework · Editor · 호스트를 보지 못한다. 층 부분 · Jolt 오브젝트는 이 include 자리를 복사한다
-sw_requireTemplateDefinitions(Engine) # `.inl` 누락을 링크가 아니라 컴파일에서 — 층 부분 · Jolt 오브젝트도 이 옵션을 복사한다
+sw_apply_target_layer_guard(Engine engine) # 타깃 경계 — Engine 은 GameFramework · Editor · 호스트를 보지 못한다. 층 부분 · Jolt 오브젝트는 이 include 자리를 복사한다
+sw_require_template_definitions(Engine) # `.inl` 누락을 링크가 아니라 컴파일에서 — 층 부분 · Jolt 오브젝트도 이 옵션을 복사한다
 
 # 핫 리로드 ABI 스탬프 — Engine 이 자기 헤더 지문을 박는다(`Engine/Module/EngineABIStamp.cpp`). 모듈도 같은 값을 박는다.
-sw_defineEngineABIStamp()
+sw_define_engine_abi_stamp()
 add_dependencies(Engine SwEngineABIStamp)
 target_include_directories(Engine PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
 set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Module/EngineABIStamp.cpp" PROPERTIES
@@ -129,7 +129,7 @@ set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Module/EngineABIStamp.c
 )
 
 # 쿠커 코드 지문 — 쿠킹 재사용 판단의 입력을 소스 내용에서 산출한다(`Engine/Content/CookCodeFingerprint.h`). 엔진 소스 어디가 바뀌어도 돌지만 결과가 같으면 파일을 다시 쓰지 않는다.
-sw_globSourceTree(swCookCodeInputs RECURSE
+sw_glob_source_tree(swCookCodeInputs RECURSE
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.h"
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.hpp"
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.cpp"
@@ -159,7 +159,7 @@ set_target_properties(SwCookCodeFingerprint PROPERTIES FOLDER "CMakePredefinedTa
 set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Content/CookCodeFingerprint.cpp" PROPERTIES OBJECT_DEPENDS "${swCookCodeHeader}")
 
 # `Source/Engine` 자체는 include 경로가 아니다 — `#include "pch.h"` 만 진입 헤더로 푼다(소비하는 타깃 모두가 받는다).
-sw_addPCHEntryDirectory(Engine PUBLIC engine "Engine/pch.h")
+sw_add_pch_entry_directory(Engine PUBLIC engine "Engine/pch.h")
 # 셰이더 바인딩 계약(binding_slots.hlsli)은 HLSL 과 C++ 가 같은 파일을 읽는다. ShaderBindingSlots.h 가 include 한다.
 target_include_directories(Engine PUBLIC "${CMAKE_SOURCE_DIR}/Content/engine/shaders")
 target_link_libraries(Engine
@@ -171,7 +171,7 @@ target_link_libraries(Engine
 )
 
 target_compile_definitions(Engine PRIVATE "SW_LOG_TAG=\"Engine\"" "SW_REGISTRAR_MODULE=\"Engine\"" SW_ENGINE_INTERNAL)
-sw_configurePCH(Engine "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
+sw_configure_pch(Engine "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
 
 target_sources(Engine PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/../sw.natvis"
@@ -187,8 +187,8 @@ foreach(coreObjects IN LISTS listCoreObjects)
 	add_dependencies(Engine ${coreObjects})
 endforeach()
 
-sw_configureDLLExports(Engine ${coreLibType} ENGINE)
-sw_keepImportLibraryIfUnchanged(Engine)
+sw_configure_dll_exports(Engine ${coreLibType} ENGINE)
+sw_keep_import_library_if_unchanged(Engine)
 set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")
 
 # ------------------------------------------------------------------------------
@@ -236,21 +236,21 @@ endif()
 # ------------------------------------------------------------------------------
 if(SW_SHIPPING_BUILD AND SW_TARGET_TYPE STREQUAL "Server")
 	message(STATUS "[Engine] Dedicated server: no RHI backend linked")
-	sw_declareExcludedSources(${listRHIBackendSource})
+	sw_declare_excluded_sources(${listRHIBackendSource})
 elseif(SW_SHIPPING_BUILD)
-	# 이름 · 별칭은 쿠킹 표(`Config/Engine/CookContract.json` `rhi_backends`)가 풀고, 이 플랫폼에 없는 백엔드면 구성을 세운다(sw_resolveShippingRHIBackend).
+	# 이름 · 별칭은 쿠킹 표(`Config/Engine/CookContract.json` `rhi_backends`)가 풀고, 이 플랫폼에 없는 백엔드면 구성을 세운다(sw_resolve_shipping_rhi_backend).
 	# 주의: 여기서 백엔드를 못 고른 채 지나가면 Engine 은 백엔드 없이 링크되고 실행에서야 "백엔드 없음" 으로 진다(실행하면 등록표가 "백엔드 없음 · 있는 것" 을 알린다).
-	sw_resolveShippingRHIBackend("${SW_SHIPPING_RHI_BACKEND}" swShippingBackend)
+	sw_resolve_shipping_rhi_backend("${SW_SHIPPING_RHI_BACKEND}" swShippingBackend)
 	# EngineConfig 가 다른 백엔드를 고르면 알린다 — 배포본은 링크한 하나만 띄운다.
 	# `_defaultRHI` 는 선택 키다 — 기본값과 다를 때만 적는다(정본은 쿠킹 표).
-	sw_readOptionalJSONValue(swEngineConfigRHI "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_ENGINE_CONFIG}" _window _defaultRHI)
+	sw_read_optional_json_value(swEngineConfigRHI "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_ENGINE_CONFIG}" _window _defaultRHI)
 	if(DEFINED swEngineConfigRHI AND NOT swEngineConfigRHI STREQUAL swShippingBackend)
 		message(WARNING "${SW_FILE_RUNTIME_ENGINE_CONFIG} picks _defaultRHI='${swEngineConfigRHI}' but Shipping links only '${swShippingBackend}'")
 	endif()
 
 	message(STATUS "[Engine] Shipping monolithic RHI backend: ${swShippingBackend}")
-	sw_getRHIBackendSources(${swShippingBackend} listShippingRHISource)
-	sw_getRHIBackendEntrySource(${swShippingBackend} swShippingRHIEntry)
+	sw_get_rhi_backend_sources(${swShippingBackend} listShippingRHISource)
+	sw_get_rhi_backend_entry_source(${swShippingBackend} swShippingRHIEntry)
 	target_sources(Engine PRIVATE ${listShippingRHISource} ${swShippingRHIEntry}) # 진입 파일이 백엔드를 등록표에 올린다(정적 등록자)
 	target_link_libraries(Engine PUBLIC ${SW_RHI_BACKEND_${swShippingBackend}_GRAPHICS_LIBS})
 	target_compile_definitions(Engine PUBLIC ${SW_RHI_BACKEND_${swShippingBackend}_SHIPPING_DEFINE})
@@ -258,7 +258,7 @@ elseif(SW_SHIPPING_BUILD)
 	# 고르지 않은 백엔드는 이 구성에서 아무도 짓지 않는다 — 소스 검사 게이트가 알도록 적는다.
 	set(listExcludedRHISource ${listRHIBackendSource})
 	list(REMOVE_ITEM listExcludedRHISource ${listShippingRHISource})
-	sw_declareExcludedSources(${listExcludedRHISource})
+	sw_declare_excluded_sources(${listExcludedRHISource})
 endif()
 
 # ------------------------------------------------------------------------------
@@ -292,14 +292,14 @@ endif()
 #
 # 다시 넣고 싶어지면 먼저 `SW_ENABLE_UNITY_BUILD` 를 켠 빌드로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.
 #
-# 매크로는 이름 규칙으로 못 막는다. X11 을 include 하는 .cpp(`Convex` · `None` … 매크로)는 리눅스에서 `sw_setUnityBuild` 가
+# 매크로는 이름 규칙으로 못 막는다. X11 을 include 하는 .cpp(`Convex` · `None` … 매크로)는 리눅스에서 `sw_set_unity_build` 가
 # include 줄을 보고 저절로 묶음에서 뺀다 — 이것도 목록이 아니다(`cmake/Modules/Options/UnityBuild.cmake`).
 # ------------------------------------------------------------------------------
-sw_setUnityBuild(Engine)
+sw_set_unity_build(Engine)
 
-# 파괴 · 파쇄는 씨앗과 사건만 보내고 받는 쪽이 같은 계산을 한다 — 구성마다 같은 비트여야 한다(`sw_markDeterministicSources`,
+# 파괴 · 파쇄는 씨앗과 사건만 보내고 받는 쪽이 같은 계산을 한다 — 구성마다 같은 비트여야 한다(`sw_mark_deterministic_sources`,
 # `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`). 화면용(컴포넌트 · 렌더 도우미)은 넣지 않는다.
-sw_markDeterministicSources(Engine
+sw_mark_deterministic_sources(Engine
 	Destruction/DestructionDamage.cpp
 	Destruction/DestructionProfile.cpp
 	Destruction/DestructionState.cpp
@@ -309,21 +309,21 @@ sw_markDeterministicSources(Engine
 )
 # 물리(Jolt · Box2D 감싸개, 강체 · 천 · 래그돌 컴포넌트)도 같다 — 시뮬레이션에 넣는 값이 구성마다 끝 비트가 달라지면 천 · 래그돌이 갈린다
 # (cloth 쇼케이스가 Debug 와 Release 에서 2 % 달랐다). Jolt 자체는 결정적 빌드다(`ThirdParty/joltphysics/vcpkg-port`). 폴더째라 새 파일도 든다.
-sw_globSourceTree(swDeterministicPhysicsSources RECURSE RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/Physics/*.cpp")
+sw_glob_source_tree(swDeterministicPhysicsSources RECURSE RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/Physics/*.cpp")
 list(FILTER swDeterministicPhysicsSources EXCLUDE REGEX "/Tests/")
 # 부력 부피(Environment/Water/BuoyancyVolumeComponent — 물 기능이 자기 컴포넌트를 들게 Physics 에서 옮겼다)도 물리에 넣는 값이라 같은 표시를 건다.
-sw_markDeterministicSources(Engine ${swDeterministicPhysicsSources} Environment/Water/BuoyancyVolumeComponent.cpp)
+sw_mark_deterministic_sources(Engine ${swDeterministicPhysicsSources} Environment/Water/BuoyancyVolumeComponent.cpp)
 
 # ------------------------------------------------------------------------------
 # 8) 리플렉션 코드젠 — ReflectionParser 필요 (루트가 Tools 이후 이 파일을 호출)
 # ------------------------------------------------------------------------------
 # 짓지 않는 폴더의 리플렉션 타입(렌더 패스 · 파이프라인 에셋)은 코드젠도 하지 않는다 — 그 구현이 빠졌다.
-sw_addReflectionStep(Engine
+sw_add_reflection_step(Engine
 	MODULE Engine
 	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 	EXCLUDE_REGEX "${swExcludedFolderRegex}"
 )
-sw_addReflectBuiltinsGen(Engine)
+sw_add_reflect_builtins_gen(Engine)
 
 # ------------------------------------------------------------------------------
 # 9) Jolt 백엔드 소스 — 자기 PCH 를 가진 OBJECT 라이브러리(목적 파일은 Core 티어 부분처럼 Engine 에 들어간다)
@@ -334,7 +334,7 @@ sw_addReflectBuiltinsGen(Engine)
 # 옵션만 더한다. 그래서 이 블록은 Engine 설정이 모두 끝난 뒤(파일 끝)에 둔다 — 이 뒤에 Engine 에 더한 설정은 Jolt 소스에 가지 않는다.
 # 유니티 묶음에는 넣지 않는다. 코드젠 산출물(`FlagOps.gen.h` 등)을 읽으므로 Engine 이 기다리는 대상을 같이 기다린다.
 # ------------------------------------------------------------------------------
-sw_globSourceTree(swJoltBackendSources "${CMAKE_CURRENT_SOURCE_DIR}/Physics/Jolt/*.cpp")
+sw_glob_source_tree(swJoltBackendSources "${CMAKE_CURRENT_SOURCE_DIR}/Physics/Jolt/*.cpp")
 add_library(EngineJolt_objects OBJECT ${swJoltBackendSources})
 set_target_properties(EngineJolt_objects PROPERTIES
 	POSITION_INDEPENDENT_CODE ON
@@ -366,23 +366,23 @@ target_sources(Engine PRIVATE $<TARGET_OBJECTS:EngineJolt_objects>)
 add_dependencies(Engine EngineJolt_objects)
 
 # ------------------------------------------------------------------------------
-# 10) 층 부분 — 층마다 OBJECT 라이브러리 `EngineLayer<N>`(오브젝트는 Engine 이미지 안, `sw_addModulePart`). 부분 N 은 N 보다 위 층의 헤더마다 같은 경로의
+# 10) 층 부분 — 층마다 OBJECT 라이브러리 `EngineLayer<N>`(오브젝트는 Engine 이미지 안, `sw_add_module_part`). 부분 N 은 N 보다 위 층의 헤더마다 같은 경로의
 #     `#error` 껍데기를 자기 include 자리 맨 앞에 둔다 — 아래 층이 위 층 헤더를 include 하면(전이 include 도) 컴파일이 멈춘다. 에디터 층과 같은 방식이다.
 #     Engine 설정이 모두 끝난 뒤(Jolt 블록과 같은 자리)에 둔다 — 부분은 Engine 의 정의 · 옵션 · include · 링크 목록을 구성 때 복사한다.
 # ------------------------------------------------------------------------------
-# 링크 목록은 부분을 만들기 전에 한 번 읽는다 — `sw_addModulePart` 가 부분을 Engine 에 링크하므로 뒤에 읽으면 앞 부분이 섞인다.
+# 링크 목록은 부분을 만들기 전에 한 번 읽는다 — `sw_add_module_part` 가 부분을 Engine 에 링크하므로 뒤에 읽으면 앞 부분이 섞인다.
 get_target_property(swEngineLinkLibraries Engine LINK_LIBRARIES)
 get_target_property(swEngineDependency Engine MANUALLY_ADDED_DEPENDENCIES)
 foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
 	if(NOT swEngineTierSource_${tier})
 		continue()   # 이 구성이 짓지 않는 층(전용 서버의 렌더러)
 	endif()
-	sw_addModulePart(EngineLayer${tier}
+	sw_add_module_part(EngineLayer${tier}
 		OWNER Engine
 		SOURCES ${swEngineTierSource_${tier}}
 		LINK ${swEngineLinkLibraries}
 	)
-	sw_addLayerStubs(EngineLayer${tier} ${tier} SW_ENGINE_TIER Engine)
+	sw_add_layer_stubs(EngineLayer${tier} ${tier} SW_ENGINE_TIER Engine)
 	target_include_directories(EngineLayer${tier} PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
 	add_dependencies(EngineLayer${tier} SwCookCodeFingerprint)
 	if(swEngineDependency)
@@ -398,7 +398,7 @@ endforeach()
 foreach(backendName IN LISTS SW_RHI_BACKEND_NAMES)
 	set(swBackendModuleDir "Graphics/RHI/${SW_RHI_BACKEND_${backendName}_SOURCE_FOLDER}/Module")
 	if(SW_SHIPPING_BUILD)
-		sw_declareExcludedDirectory("${CMAKE_CURRENT_SOURCE_DIR}/${swBackendModuleDir}")
+		sw_declare_excluded_directory("${CMAKE_CURRENT_SOURCE_DIR}/${swBackendModuleDir}")
 	else()
 		add_subdirectory(${swBackendModuleDir})
 	endif()

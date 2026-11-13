@@ -2,11 +2,10 @@
 # @file cmake/Config/BuildOptions.cmake
 # @brief SW Engine 전역 기능 빌드 옵션(SW_*) 및 워크스페이스 메타데이터 정의
 #
-# [CMake 네이밍 및 개발 규칙]:
-# - sw_camelCase      : CMake function() / macro() 헬퍼 함수 (예: sw_addModuleLibrary, sw_addGameModule)
-# - sw_snake_case     : 프로젝트 내부 변수 및 INTERFACE 타겟명 (예: sw_flag_libraries)
-# - SW_UPPER_SNAKE    : option() / CACHE 빌드 옵션 및 C++ 컴파일 매크로 (예: SW_ENABLE_PCH, SW_SHIPPING_BUILD)
-# - camelCase         : 함수/매크로 내부 로컬 변수
+# [CMake 이름 규칙] — 정본은 docs/agents/NamingScripts.md CMake 절:
+# - sw_snake_case     : 우리 function()(매크로는 쓰지 않는다) · 내부 INTERFACE 타깃 (예: sw_add_module_library, sw_global_options)
+# - SW_UPPER_SNAKE    : option() · 캐시 · 전역 변수 · C++ 컴파일 정의 (예: SW_ENABLE_PCH, SW_FLAG_LIBRARIES)
+# - snake_case        : 함수 지역 · 파일 임시 변수(sw 접두 없음), cmake_parse_arguments 접두는 ARG
 # 이 파일은 옵션(SW_*)과 메타데이터만 둔다 — 타깃 함수는 cmake/Engine/, 찾은 도구 경로 캐시는 찾는 파일이 둔다.
 # ==============================================================================
 
@@ -70,7 +69,7 @@ endif()
 # 기본은 표의 default_rhi_backend, Windows 밖은 Vulkan(project() 전이라 WIN32 대신 CMAKE_HOST_WIN32 — 교차 컴파일은 지원하지 않는다).
 # Dev 는 백엔드 넷을 모두 모듈로 짓고 이 값을 읽지 않는다. 이 플랫폼에 없는 백엔드면 구성이 선다(cmake/Engine/RHIBackends.cmake).
 include("${CMAKE_CURRENT_LIST_DIR}/JsonValue.cmake")
-sw_requireJSONValue(swContractDefaultRHI "${CMAKE_CURRENT_LIST_DIR}/../../Config/Engine/CookContract.json" default_rhi_backend)
+sw_require_json_value(swContractDefaultRHI "${CMAKE_CURRENT_LIST_DIR}/../../Config/Engine/CookContract.json" default_rhi_backend)
 
 if(CMAKE_HOST_WIN32)
 	set(SW_SHIPPING_RHI_BACKEND "${swContractDefaultRHI}" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")
@@ -102,7 +101,7 @@ set_property(CACHE SW_SANITIZER_KIND PROPERTY STRINGS address thread)
 option(SW_ENABLE_FUZZING "리눅스 clang + ASan 에서 엔진 커버리지 계측(libFuzzer)" OFF)
 
 # 유니티 빌드는 Release 프리셋만 켠다(사용자 2026-11-08) — 묶은 TU 는 앞 소스의 include 를 빌려 빠진 include · 헤더 의존 결함을 가린다.
-# Debug(묶음 끝 검증의 첫 단계)는 TU 하나씩 지어 그 결함을 잡는다. 켜면 라이브러리 · 모듈 타깃 모두를 같은 크기로 묶는다(`sw_setUnityBuild`).
+# Debug(묶음 끝 검증의 첫 단계)는 TU 하나씩 지어 그 결함을 잡는다. 켜면 라이브러리 · 모듈 타깃 모두를 같은 크기로 묶는다(`sw_set_unity_build`).
 option(SW_ENABLE_UNITY_BUILD "라이브러리 · 모듈 타깃에 CMake UNITY_BUILD(여러 소스를 합쳐 컴파일) 사용 — Release 프리셋이 켠다" OFF)
 set(SW_UNITY_BATCH_SIZE 12 CACHE STRING "유니티 파일 하나에 묶는 소스 수(모든 타깃 한 값)")
 option(SW_REQUIRE_REFLECTION "Engine/SWGame 등 리플렉션 타겟에 ReflectionParser 및 libclang 필수 요구" ON)
@@ -157,7 +156,7 @@ string(REPLACE ".json" "" swGameNames "${swGamePresetFiles}")
 set_property(CACHE SW_ACTIVE_GAME PROPERTY STRINGS ${swGameNames})
 
 # 활성 게임과 함께 지을 게임 팩(Dev 전용) — 비우면 활성 게임만, `ALL` 이면 Source/Games 전부, 아니면 이름 목록(`NileCity;Shooter3D`).
-# 함께 짓는 게임은 `SWGame_<게임>` 타깃으로 `Bin/Games/<게임>/SWGame` 에 나오고 엔진 · 프레임워크 · 키트는 한 번만 컴파일된다(`sw_addGameModule`).
+# 함께 짓는 게임은 `SWGame_<게임>` 타깃으로 `Bin/Games/<게임>/SWGame` 에 나오고 엔진 · 프레임워크 · 키트는 한 번만 컴파일된다(`sw_add_game_module`).
 # `SW_BUILD_UNUSED_KITS=OFF` 이면 고른 게임들이 의존으로 닿는 키트의 합집합만 짓는다. Shipping 은 활성 게임 하나를 정적으로 링크하므로 이 값을 보지 않는다.
 set(SW_GAMES "" CACHE STRING "활성 게임과 함께 지을 게임 팩(Dev 전용): 비움 | ALL | 이름 목록")
 

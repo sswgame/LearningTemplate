@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Environment/PythonUtils.cmake
-# @brief Scripts/*.py 서브프로세스 실행 유틸리티 헬퍼 (sw_executePythonScript) — 파이썬 인터프리터는 여기 한 곳에서 찾는다
+# @brief Scripts/*.py 서브프로세스 실행 유틸리티 헬퍼 (sw_execute_python_script) — 파이썬 인터프리터는 여기 한 곳에서 찾는다
 # ==============================================================================
 
 # 이 파일은 여러 곳에서 include 된다(상수 · vcpkg · 툴체인 · 에셋 타겟). 인터프리터는 한 번 찾으면 된다 — include 마다
@@ -14,11 +14,11 @@ endif()
 include("${CMAKE_CURRENT_LIST_DIR}/HostPath.cmake")
 
 # ------------------------------------------------------------------------------
-# 1) sw_executePythonScript — 프로젝트 안 Python 스크립트 실행
+# 1) sw_execute_python_script — 프로젝트 안 Python 스크립트 실행
 # ARGS / OUTPUT_VARIABLE / RESULT_VARIABLE / WORKING_DIRECTORY
 # WARN|REQUIRED|QUIET. SCRIPT_REL은 저장소 루트 기준
 # ------------------------------------------------------------------------------
-function(sw_executePythonScript SCRIPT_REL)
+function(sw_execute_python_script SCRIPT_REL)
 	set(options WARN REQUIRED QUIET)
 	set(oneValueArgs OUTPUT_VARIABLE RESULT_VARIABLE WORKING_DIRECTORY)
 	set(multiValueArgs ARGS)

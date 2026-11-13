@@ -27,7 +27,7 @@
 # 오는 라이브러리가 채우고, 같은 아카이브가 뒤에 한 번 더 나와도 이미 올라온 멤버는 다시 올리지
 # 않는다. STATIC 이 아닌 타겟(SHARED/MODULE/OBJECT)이나 없는 타겟은 조용히 건너뛴다 — 호출부가
 # 구성마다 다른 목록을 그대로 넘겨도 되게.
-function(sw_linkWholeArchive TARGET_NAME)
+function(sw_link_whole_archive TARGET_NAME)
 	foreach(reflLib IN LISTS ARGN)
 		if(NOT TARGET ${reflLib})
 			continue()
@@ -52,21 +52,21 @@ function(sw_linkWholeArchive TARGET_NAME)
 endfunction()
 
 # App의 런타임/플러그인/모듈 의존성을 구성합니다.
-function(sw_configureAppDependencies TARGET_NAME)
+function(sw_configure_app_dependencies TARGET_NAME)
 	if(NOT TARGET ${TARGET_NAME})
 		return()
 	endif()
 
 	# 1) 동적 모듈은 App 보다 먼저 빌드되어야 한다 — App 이 런타임에 로드하기 때문이다. 이름을 적지 않는다: 레지스트리가 답한다.
-	sw_addDynamicModuleDependencies(${TARGET_NAME})
-	sw_getDynamicModules(listDynamicModule)
+	sw_add_dynamic_module_dependencies(${TARGET_NAME})
+	sw_get_dynamic_modules(listDynamicModule)
 
 	# 2) Shipping 은 게임을 정적으로 링크하고, App 이 서면 에셋을 쿠킹한다.
 	#    (Dev 는 delay-load 라 링크하지 않는다 — 빌드 순서는 위 1) 이 이미 걸어 두었다.)
 	#    쿠킹이 App 뒤인 이유: 씬 쿠킹이 App --cook-scenes 라서다. 반대로 걸면 깨끗한 트리에서 App 이
 	#    없는 채로 쿠커가 돌아 죽는다(리눅스 CI). 기본 빌드(all)에 넣어 `cmake --build` 한 번이면 팩까지 선다.
 	if(SW_SHIPPING_BUILD)
-		get_property(swActiveGameTarget GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET) # SWGame_<활성 게임>(`sw_addGameModule`)
+		get_property(swActiveGameTarget GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET) # SWGame_<활성 게임>(`sw_add_game_module`)
 		if(swActiveGameTarget AND TARGET ${swActiveGameTarget})
 			target_link_libraries(${TARGET_NAME} PRIVATE ${swActiveGameTarget})
 		endif()
@@ -74,13 +74,13 @@ function(sw_configureAppDependencies TARGET_NAME)
 		# 3) 리플렉션을 담은 정적 라이브러리(Engine · GameFramework · 킷 · 게임)는 통째로 링크한다. 생성된 *.gen.cpp 의 등록기는 파일 범위
 		#    static 객체라(생성자가 전역 연결 리스트에 자신을 매단다) 밖에서 참조하는 심볼이 없고, 정적 링크에서 링커는 아무도 참조하지 않는
 		#    오브젝트 파일을 버린다 — 그 타입 · 열거형은 등록되지 않고 씬의 컴포넌트는 MissingComponent 가 된다. 목록은 모듈 레지스트리이므로
-		#    모든 모듈이 등록된 뒤인 여기서 읽는다. 플랫폼별 링커 플래그는 `sw_linkWholeArchive` 가 고른다.
+		#    모든 모듈이 등록된 뒤인 여기서 읽는다. 플랫폼별 링커 플래그는 `sw_link_whole_archive` 가 고른다.
 		if(TARGET GameFramework AND NOT GameFramework IN_LIST listDynamicModule)
-			message(FATAL_ERROR "[App] sw_configureAppDependencies ran before GameFramework registered itself — its reflection registrars would not be linked into ${TARGET_NAME}.")
+			message(FATAL_ERROR "[App] sw_configure_app_dependencies ran before GameFramework registered itself — its reflection registrars would not be linked into ${TARGET_NAME}.")
 		endif()
 		set(listReflectionStaticLib Engine ${listDynamicModule})
 		list(REMOVE_DUPLICATES listReflectionStaticLib)
-		sw_linkWholeArchive(${TARGET_NAME} ${listReflectionStaticLib})
+		sw_link_whole_archive(${TARGET_NAME} ${listReflectionStaticLib})
 
 		# 쿠킹은 쿠커 실행 파일(App, 서버 타깃은 Server — SW_COOK_HOST_TARGET) 뒤에만 건다.
 		if(TARGET CookAssets AND TARGET_NAME STREQUAL SW_COOK_HOST_TARGET)
@@ -91,12 +91,12 @@ function(sw_configureAppDependencies TARGET_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_addExecutable — 실행 파일 하나. 모든 실행 파일은 이것으로 만든다(`add_executable` 을 직접 부르지 않는다).
+# sw_add_executable — 실행 파일 하나. 모든 실행 파일은 이것으로 만든다(`add_executable` 을 직접 부르지 않는다).
 #   Windows 는 프로세스 설정 매니페스트(UTF-8 ANSI 코드 페이지 · 긴 경로; cmake/Modules/Platform/WindowsProcess.manifest 설명)를 박는다 —
 #   .manifest 를 소스로 주면 CMake 가 링크 단계에서 CMAKE_MT 로 합쳐 넣는다. 예전에는 실행 파일마다 따로 불러 부하 봇만 빠졌고,
 #   한국어 Windows 에서 봇 인자가 CP949 로 들어왔다 — 만드는 함수 하나가 매니페스트까지 붙이면 빠뜨릴 자리가 없다.
 # ------------------------------------------------------------------------------
-function(sw_addExecutable TARGET_NAME)
+function(sw_add_executable TARGET_NAME)
 	# Android 는 실행 파일이 없다 — NativeActivity 가 공유 라이브러리(lib<이름>.so)를 열고 android_main 을 부른다(App/Android/AndroidMain.cpp).
 	if(CMAKE_SYSTEM_NAME STREQUAL "Android")
 		add_library(${TARGET_NAME} SHARED ${ARGN})
@@ -109,10 +109,10 @@ function(sw_addExecutable TARGET_NAME)
 	endif()
 endfunction()
 
-# sw_splitShippingDebugInfo — 리눅스 · Android Shipping(웹은 -gseparate-dwarf): 디버그 정보를 `Symbols/<이름>.debug` 로 떼고 실행 파일에는 `.gnu_debuglink` 만 남긴다
+# sw_split_shipping_debug_info — 리눅스 · Android Shipping(웹은 -gseparate-dwarf): 디버그 정보를 `Symbols/<이름>.debug` 로 떼고 실행 파일에는 `.gnu_debuglink` 만 남긴다
 #   (배포물에 정보가 실리지 않는다). Windows 는 PDB 가 원래 따로다(`CMAKE_PDB_OUTPUT_DIRECTORY`).
 # ------------------------------------------------------------------------------
-function(sw_splitShippingDebugInfo TARGET_NAME)
+function(sw_split_shipping_debug_info TARGET_NAME)
 	if(NOT SW_SHIPPING_BUILD OR WIN32 OR SW_RELEASE_DEBUG_INFO STREQUAL "none")
 		return()
 	endif()
@@ -124,7 +124,7 @@ function(sw_splitShippingDebugInfo TARGET_NAME)
 		return()
 	endif()
 	if(NOT CMAKE_OBJCOPY)
-		message(FATAL_ERROR "sw_splitShippingDebugInfo(${TARGET_NAME}): CMAKE_OBJCOPY is not set - install llvm-objcopy or binutils")
+		message(FATAL_ERROR "sw_split_shipping_debug_info(${TARGET_NAME}): CMAKE_OBJCOPY is not set - install llvm-objcopy or binutils")
 	endif()
 	add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${symbolsDir}"

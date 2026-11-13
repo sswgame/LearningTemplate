@@ -58,6 +58,6 @@ namespace sw
 
 /**
  * @brief 화면 스위치를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자입니다.
- * @details Shipping 은 Engine 을 통째로 링크하므로(`sw_linkWholeArchive`) 등록자가 링크에서 빠지지 않는다.
+ * @details Shipping 은 Engine 을 통째로 링크하므로(`sw_link_whole_archive`) 등록자가 링크에서 빠지지 않는다.
  */
 #define SW_UI_SCREEN_SWITCH( id, pName, order, pFunction ) SW_STATIC_REGISTRATION( uiScreenSwitch, ::sw::UIScreenSwitchRegistration, ::sw::UIScreenSwitchRegistrar, id, pName, order, pFunction )

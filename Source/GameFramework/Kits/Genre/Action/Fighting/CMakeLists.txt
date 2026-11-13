@@ -3,10 +3,10 @@
 # @brief 철권 류 3D 격투 키트 — 캐릭터 데이터(커맨드 · 자세 · 조건 · 스트링) · 프레임 시뮬레이션(가드 높이 · 프레임 이득 · 저글 · 스크류 · 벽꽝 · 잡기 풀기 · 횡이동 · 레이지 · 히트) · 라운드 · 롤백 상태 저장
 # ==============================================================================
 
-sw_addGameFrameworkKit(GF_Fighting)
+sw_add_game_framework_kit(GF_Fighting)
 if(NOT TARGET GF_Fighting)
 	return()
 endif()
-# 대전은 롤백 넷코드로 입력만 주고받고 양쪽이 같은 프레임을 다시 돈다 — 구성마다 같은 비트여야 한다(`sw_markDeterministicSources`,
+# 대전은 롤백 넷코드로 입력만 주고받고 양쪽이 같은 프레임을 다시 돈다 — 구성마다 같은 비트여야 한다(`sw_mark_deterministic_sources`,
 # `FightingTest.RollbackHashMatchesTheRecordedValueOnEveryBuild`). 카탈로그 읽기는 계산이 아니라 넣지 않는다.
-sw_markDeterministicSources(GF_Fighting FightingMatch.cpp)
+sw_mark_deterministic_sources(GF_Fighting FightingMatch.cpp)

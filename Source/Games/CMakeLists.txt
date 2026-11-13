@@ -30,7 +30,7 @@ message(STATUS "[Games] SW_ACTIVE_GAME=${SW_ACTIVE_GAME} -> target SWGame_${SW_A
 add_subdirectory(${SW_ACTIVE_GAME})
 
 # ------------------------------------------------------------------------------
-# 2) 함께 짓는 게임 팩(`SW_GAMES`, Dev 전용) — 타깃 SWGame_<게임>, 산출물 Bin/Games/<게임>/SWGame(`sw_addGameModule`).
+# 2) 함께 짓는 게임 팩(`SW_GAMES`, Dev 전용) — 타깃 SWGame_<게임>, 산출물 Bin/Games/<게임>/SWGame(`sw_add_game_module`).
 # 고르지 않은 게임 팩은 짓지 않는다 — 소스 검사 게이트에 적는다.
 # ------------------------------------------------------------------------------
 get_property(_swListGamePack GLOBAL PROPERTY SW_GAME_PACKS)
@@ -52,10 +52,10 @@ foreach(_swGameName IN LISTS _swListGameFolder)
 	if(_swGameName IN_LIST _swListGamePack)
 		add_subdirectory(${_swGameName})
 	else()
-		sw_declareExcludedDirectory("${CMAKE_CURRENT_SOURCE_DIR}/${_swGameName}")
+		sw_declare_excluded_directory("${CMAKE_CURRENT_SOURCE_DIR}/${_swGameName}")
 	endif()
 endforeach()
 
-# 등록은 여기서 하지 않는다 — 타겟을 **만드는** `sw_addGameModule` 이 한다
+# 등록은 여기서 하지 않는다 — 타겟을 **만드는** `sw_add_game_module` 이 한다
 # (`cmake/Engine/ModuleRegistry.cmake` 의 "동적 모듈 레지스트리"). 호출부가 등록하면
 # 새 모듈이 조용히 빠진다.

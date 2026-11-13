@@ -38,7 +38,7 @@ namespace sw
 
         /**
          * @brief 개발 전용 단위(`<이름>.gen.meta.cpp`)의 내용 — 에디터 메타데이터(표시 · 편집 필드, 슬라이더 범위)를 채우는 함수와 정적 등록입니다.
-         * @details 배포 구성은 이 단위를 짓지 않는다(CMake `sw_addReflectionStep`) — 런타임 메타데이터 구조체의 배치가 구성마다 같다.
+         * @details 배포 구성은 이 단위를 짓지 않는다(CMake `sw_add_reflection_step`) — 런타임 메타데이터 구조체의 배치가 구성마다 같다.
          *          언리얼 `WITH_METADATA` 가 같은 칸을 `#if` 로 가르는 자리를 빌드 단위로 가른다. 적은 것이 없으면 한 줄 주석짜리 단위다(산출물 목록은 헤더마다 고정).
          */
         string makeEditorMetadataText() const;

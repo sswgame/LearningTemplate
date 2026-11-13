@@ -27,7 +27,7 @@ elseif(TARGET directx-dxc::directx-dxc)
 	)
 else()
 	add_library(dxc::dxc ALIAS dxc)
-	sw_linkVcpkgHeaderOnlyTarget(dxc)
+	sw_link_vcpkg_header_only_target(dxc)
 	if(APPLE)
 		message(STATUS "[dxc] directx-dxc is not available on macOS (headers-only / runtime optional)")
 	endif()
@@ -38,10 +38,10 @@ if(TARGET sw_third_party_includes)
 endif()
 
 # ------------------------------------------------------------------------------
-# 2) sw_ensureDxilLinuxSonameSymlink — libdxil.so → libdxildll.so
+# 2) sw_ensure_dxil_linux_soname_symlink — libdxil.so → libdxildll.so
 #    Linux SONAME 불일치. LIB_DIR
 # ------------------------------------------------------------------------------
-function(sw_ensureDxilLinuxSonameSymlink LIB_DIR)
+function(sw_ensure_dxil_linux_soname_symlink LIB_DIR)
 	if(NOT LIB_DIR OR NOT EXISTS "${LIB_DIR}/libdxil.so")
 		return()
 	endif()
@@ -81,15 +81,15 @@ if(UNIX AND NOT APPLE)
 	endif()
 	list(REMOVE_DUPLICATES dxilDirs)
 	foreach(dir IN LISTS dxilDirs)
-		sw_ensureDxilLinuxSonameSymlink("${dir}")
+		sw_ensure_dxil_linux_soname_symlink("${dir}")
 	endforeach()
 endif()
 
 # ------------------------------------------------------------------------------
-# 3) sw_findDxcRuntimeDlls — dxcompiler / dxil 런타임 경로
+# 3) sw_find_dxc_runtime_dlls — dxcompiler / dxil 런타임 경로
 #    OUT_DXC, OUT_DXIL. macOS는 공식 프리빌드 없음
 # ------------------------------------------------------------------------------
-function(sw_findDxcRuntimeDlls OUT_DXC OUT_DXIL)
+function(sw_find_dxc_runtime_dlls OUT_DXC OUT_DXIL)
 	set(dxc "")
 	set(dxil "")
 
@@ -104,7 +104,7 @@ function(sw_findDxcRuntimeDlls OUT_DXC OUT_DXIL)
 		set(dxilNames "libdxildll.so" "libdxil.so")
 	endif()
 
-	sw_getVcpkgPaths(incDirs binDirs)
+	sw_get_vcpkg_paths(incDirs binDirs)
 	set(searchDirs ${binDirs})
 	if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
 		list(APPEND searchDirs
@@ -155,14 +155,14 @@ function(sw_findDxcRuntimeDlls OUT_DXC OUT_DXIL)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 4) sw_copyDxcDlls — 런타임 복사 큐 등록 (실제 복사는 sw_emitRuntimeCopies)
+# 4) sw_copy_dxc_dlls — 런타임 복사 큐 등록 (실제 복사는 sw_emit_runtime_copies)
 # ------------------------------------------------------------------------------
-function(sw_copyDxcDlls TARGET_NAME)
-	sw_findDxcRuntimeDlls(dxcDll dxilDll)
+function(sw_copy_dxc_dlls TARGET_NAME)
+	sw_find_dxc_runtime_dlls(dxcDll dxilDll)
 	if(dxcDll)
-		sw_queueRuntimeCopy(${TARGET_NAME} "${dxcDll}")
+		sw_queue_runtime_copy(${TARGET_NAME} "${dxcDll}")
 	endif()
 	if(dxilDll)
-		sw_queueRuntimeCopy(${TARGET_NAME} "${dxilDll}")
+		sw_queue_runtime_copy(${TARGET_NAME} "${dxilDll}")
 	endif()
 endfunction()

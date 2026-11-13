@@ -268,7 +268,7 @@ namespace sw
         {
             _buildStampPath = FileUtil::joinPath( moduleDir, config::kFileModuleBuildStamp );
             if ( readBuildToken( _buildStampPath, _seenBuildToken ) == false )
-                SW_LOG_WARNING_ID( "LiveReloadManager.MissingOutsideBuildsNot", "%# is missing - outside builds are not reloaded until the build tree is configured (sw_addModuleBuildStamp)", _buildStampPath );
+                SW_LOG_WARNING_ID( "LiveReloadManager.MissingOutsideBuildsNot", "%# is missing - outside builds are not reloaded until the build tree is configured (sw_add_module_build_stamp)", _buildStampPath );
             if ( _fileWatcher->startWatching( moduleDir, false ) == false )
                 SW_LOG_ERROR_ID( "LiveReloadManager.FailedWatchModuleDirectory", "Failed to watch the module directory %# - outside builds are not reloaded", moduleDir );
         }

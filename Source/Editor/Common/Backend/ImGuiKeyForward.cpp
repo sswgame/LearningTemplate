@@ -1,4 +1,4 @@
-// 금지 헤더(EditorInputBan.h)를 받지 않는 두 파일 중 하나다 — ImGui 입력을 직접 읽는 유일한 자리(표시 SW_EDITOR_INPUT_ADAPTER=1 은 CMake `sw_applyEditorInputBan` 만 준다).
+// 금지 헤더(EditorInputBan.h)를 받지 않는 두 파일 중 하나다 — ImGui 입력을 직접 읽는 유일한 자리(표시 SW_EDITOR_INPUT_ADAPTER=1 은 CMake `sw_apply_editor_input_ban` 만 준다).
 #include "pch.h"
 
 #include "Editor/Common/Backend/ImGuiKeyForward.h"

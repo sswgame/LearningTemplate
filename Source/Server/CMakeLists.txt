@@ -3,20 +3,20 @@
 # @brief 전용 서버 실행 파일(Server) — 창 · GPU 없이 게임 모듈을 고정 틱으로 돌린다. Game · Server 타깃에서 짓는다(Client 타깃은 짓지 않는다).
 # ==============================================================================
 
-sw_globSourceTree(SERVER_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
+sw_glob_source_tree(SERVER_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 
 if(SW_TARGET_TYPE STREQUAL "Client")
-	sw_declareExcludedSources(${SERVER_SOURCES})
+	sw_declare_excluded_sources(${SERVER_SOURCES})
 	return()
 endif()
 
 # 개발 전용(`Tests/` · `Dev/`)은 배포가 짓지 않는다. 서버 개발 조종(`ModuleManager/Host/ServerDebugControl` — 구현은 DevTools 의 `Host/`)과 개발 계층은 `ServerApp` 이 `build::kShipping` 이 아닐 때만 만든다.
 if(SW_SHIPPING_BUILD)
-	sw_removeExcludedSources(SERVER_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
+	sw_remove_excluded_sources(SERVER_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
 
-sw_addExecutable(Server ${SERVER_SOURCES})
-sw_applyTargetLayerGuard(Server server)
+sw_add_executable(Server ${SERVER_SOURCES})
+sw_apply_target_layer_guard(Server server)
 set_target_properties(Server PROPERTIES FOLDER "Source/Server")
 
 target_link_libraries(Server
@@ -31,7 +31,7 @@ if(NOT SW_SHIPPING_BUILD)
 	target_link_libraries(Server PRIVATE DevTools)
 endif()
 target_compile_definitions(Server PRIVATE "SW_LOG_TAG=\"Server\"" "SW_REGISTRAR_MODULE=\"Server\"" SW_APP_INTERNAL)
-sw_configurePCH(Server "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+sw_configure_pch(Server "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
 # Windows 서비스 제어(SCM)는 advapi32. 콘솔 서브시스템이어야 콘솔 제어 처리기 · 표준 입력이 있다(WIN32 를 붙이지 않는다).
 if(WIN32)
@@ -39,5 +39,5 @@ if(WIN32)
 endif()
 
 # Tracy 클라이언트(개발 빌드 · Windows). Engine 이 지연 로드하므로 `-gv_tracy` 를 켜기 전에는 올라오지 않는다.
-sw_copyTracyRuntime(Server)
-sw_emitRuntimeCopies(Server)
+sw_copy_tracy_runtime(Server)
+sw_emit_runtime_copies(Server)

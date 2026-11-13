@@ -4,23 +4,23 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1) GameFramework — 모듈 라이브러리 기본값은 sw_addModuleLibrary(cmake/Engine/ModuleTargets.cmake). Kits/ 는 키트마다 따로 짓는다.
+# 1) GameFramework — 모듈 라이브러리 기본값은 sw_add_module_library(cmake/Engine/ModuleTargets.cmake). Kits/ 는 키트마다 따로 짓는다.
 # ------------------------------------------------------------------------------
-sw_skipInactiveModule(GameFramework swSkipGameFramework)
+sw_skip_inactive_module(GameFramework swSkipGameFramework)
 if(swSkipGameFramework)
 	return()
 endif()
 
-sw_globSourceTree(listGameFrameworkSource RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
+sw_glob_source_tree(listGameFrameworkSource RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 list(FILTER listGameFrameworkSource EXCLUDE REGEX "Kits/")
 # 에디터 확장(Plugin/Editor/)은 따로 짓는 모듈이다(GF_EditorPlugin_<이름>) - GameFramework DLL(배포본 포함)에 섞지 않는다.
 list(FILTER listGameFrameworkSource EXCLUDE REGEX "Plugin/")
 # 클라이언트 전용 소스(Client/ — HUD · 마커 · 로딩 화면)는 전용 서버가 짓지 않는다(cmake/Engine/ExcludedSources.cmake).
 # 서버 전용 소스(Server/ — 온라인 서버 조립, 서비스 호스트 · 메모리 저장소 · 캐시 · 버스 구현)는 클라이언트 구성이 짓지 않는다.
 if(SW_TARGET_TYPE STREQUAL "Server")
-	sw_removeExcludedSources(listGameFrameworkSource ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
+	sw_remove_excluded_sources(listGameFrameworkSource ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
 elseif(SW_TARGET_TYPE STREQUAL "Client")
-	sw_removeExcludedSources(listGameFrameworkSource ${SW_SERVER_ONLY_SOURCE_PATTERNS})
+	sw_remove_excluded_sources(listGameFrameworkSource ${SW_SERVER_ONLY_SOURCE_PATTERNS})
 endif()
 
 # 리플렉션 대상 헤더는 소스와 **같은 목록**에서 고른다. 주의: 폴더를 이름으로 적어 모으면 최상위 폴더를 하나 더 만들 때 그 안의 REFLECT() 타입이
@@ -44,9 +44,9 @@ foreach(tier IN LISTS SW_GAMEFRAMEWORK_TIER_LIST)
 		list(REMOVE_ITEM listTierSource ${listTierExcluded})
 	endif()
 	list(APPEND listGameFrameworkLayerSource ${listTierSource})
-	# 개발 전용 소스는 모듈 라이브러리(sw_addModuleLibrary)가 빼는 것과 같게 부분에서도 뺀다.
+	# 개발 전용 소스는 모듈 라이브러리(sw_add_module_library)가 빼는 것과 같게 부분에서도 뺀다.
 	if(SW_SHIPPING_BUILD)
-		sw_removeExcludedSources(listTierSource ${SW_DEV_ONLY_SOURCE_PATTERNS})
+		sw_remove_excluded_sources(listTierSource ${SW_DEV_ONLY_SOURCE_PATTERNS})
 	endif()
 	set(swGameFrameworkTierSource_${tier} ${listTierSource})
 endforeach()
@@ -55,7 +55,7 @@ if(listGameFrameworkLayerSource)
 	list(REMOVE_ITEM listGameFrameworkModuleSource ${listGameFrameworkLayerSource})
 endif()
 
-sw_addModuleLibrary(GameFramework
+sw_add_module_library(GameFramework
 	KIND gameframework
 	DEV_TYPE SHARED
 	EXPORTS GF
@@ -66,8 +66,8 @@ sw_addModuleLibrary(GameFramework
 	REFLECTION_HEADERS ${listGameFrameworkHeader}
 )
 # 결정적 시뮬레이션 키트(`GF_MechArena` 의 판 걸음)가 부르는 Runtime 의 줄 밖 실수 함수 — 부르는 TU 만 표시하면 여기 축약이 구성마다 비트를 바꾼다
-# (`sw_markDeterministicSources`). 격투(`GF_Fighting`)가 부르는 Runtime(FrameData · InputCommandBuffer · RoundSeries)는 실수 계산이 없어 넣지 않는다.
-sw_markDeterministicSources(GameFramework
+# (`sw_mark_deterministic_sources`). 격투(`GF_Fighting`)가 부르는 Runtime(FrameData · InputCommandBuffer · RoundSeries)는 실수 계산이 없어 넣지 않는다.
+sw_mark_deterministic_sources(GameFramework
 	Runtime/Character/Combat/Health/ResourceGauge.cpp
 	Runtime/Character/Combat/Health/HealthStateMachine.cpp
 	Runtime/Character/Combat/LockOnSelector.cpp
@@ -93,27 +93,27 @@ endif()
 target_link_libraries(GameFramework PRIVATE openssl)
 
 # ------------------------------------------------------------------------------
-# 2) 층 부분 — 층마다 OBJECT 라이브러리 `GameFrameworkLayer<N>`(오브젝트는 GameFramework 이미지 안, `sw_addModulePart`). 부분 N 은 N 보다 위 층의 헤더마다
-#    같은 경로의 `#error` 껍데기를 자기 include 자리 맨 앞에 둔다(`sw_addLayerStubs`) — 엔진 층과 같은 방식이다.
+# 2) 층 부분 — 층마다 OBJECT 라이브러리 `GameFrameworkLayer<N>`(오브젝트는 GameFramework 이미지 안, `sw_add_module_part`). 부분 N 은 N 보다 위 층의 헤더마다
+#    같은 경로의 `#error` 껍데기를 자기 include 자리 맨 앞에 둔다(`sw_add_layer_stubs`) — 엔진 층과 같은 방식이다.
 #    GameFramework 설정(정의 · 링크 · 결정성 표시)이 모두 끝난 뒤에 둔다 — 부분은 그 값을 구성 때 복사한다.
 # ------------------------------------------------------------------------------
-# 링크 목록은 부분을 만들기 전에 한 번 읽는다 — `sw_addModulePart` 가 부분을 GameFramework 에 링크하므로 뒤에 읽으면 앞 부분이 섞인다.
+# 링크 목록은 부분을 만들기 전에 한 번 읽는다 — `sw_add_module_part` 가 부분을 GameFramework 에 링크하므로 뒤에 읽으면 앞 부분이 섞인다.
 get_target_property(swGameFrameworkLinkLibraries GameFramework LINK_LIBRARIES)
 foreach(tier IN LISTS SW_GAMEFRAMEWORK_TIER_LIST)
 	if(NOT swGameFrameworkTierSource_${tier})
 		continue()   # 이 구성이 짓지 않는 층
 	endif()
-	sw_addModulePart(GameFrameworkLayer${tier}
+	sw_add_module_part(GameFrameworkLayer${tier}
 		OWNER GameFramework
 		SOURCES ${swGameFrameworkTierSource_${tier}}
 		LINK ${swGameFrameworkLinkLibraries}
 	)
-	sw_addLayerStubs(GameFrameworkLayer${tier} ${tier} SW_GAMEFRAMEWORK_TIER GameFramework)
+	sw_add_layer_stubs(GameFrameworkLayer${tier} ${tier} SW_GAMEFRAMEWORK_TIER GameFramework)
 endforeach()
 
 add_subdirectory(Kits)
 
-# 에디터 확장 - EditorModule 과 GameFramework(또는 키트)를 링크하는 Dev 전용 SHARED 모듈(`sw_addEditorExtension`, 매니페스트 GF_EditorPlugin_<이름>.module.json)
+# 에디터 확장 - EditorModule 과 GameFramework(또는 키트)를 링크하는 Dev 전용 SHARED 모듈(`sw_add_editor_extension`, 매니페스트 GF_EditorPlugin_<이름>.module.json)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Plugin/Editor/CMakeLists.txt")
 	add_subdirectory(Plugin/Editor)
 endif()

@@ -51,14 +51,14 @@ if(NOT listExpectError AND NOT listExpectGen AND NOT listExpectType)
 	message(FATAL_ERROR "${FIXTURE}: no expectation - a fixture must say what it checks")
 endif()
 
-# 빌드와 같은 대상 인자 — Test/CMakeLists.txt 가 '|' 로 이어 넘긴다(sw_collectReflectionTargetArgs).
+# 빌드와 같은 대상 인자 — Test/CMakeLists.txt 가 '|' 로 이어 넘긴다(sw_collect_reflection_target_args).
 string(REPLACE "|" ";" listTargetArgValue "${TARGET_ARGS}")
 set(listTargetArg "")
 foreach(swTargetArg IN LISTS listTargetArgValue)
 	list(APPEND listTargetArg --target-arg "${swTargetArg}")
 endforeach()
 
-# 빌드의 인자(`sw_makeReflectionParserArgs`)와 같은 모양이다. 파서 로그 파일이 소스 트리에 남지 않게 작업 폴더를 옮긴다.
+# 빌드의 인자(`sw_make_reflection_parser_args`)와 같은 모양이다. 파서 로그 파일이 소스 트리에 남지 않게 작업 폴더를 옮긴다.
 execute_process(
 	COMMAND "${PARSER}"
 		--input "${FIXTURE}"

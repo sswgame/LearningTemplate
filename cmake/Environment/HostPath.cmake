@@ -5,7 +5,7 @@
 include_guard(GLOBAL)
 
 # DIRECTORY 를 PATH 맨 앞에(이미 있으면 그대로). 구분자는 호스트 것(Windows `;` · 그 밖 `:`) — project() 전에도 부르므로 CMAKE_HOST_WIN32 를 본다.
-function(sw_prependEnvPath DIRECTORY)
+function(sw_prepend_env_path DIRECTORY)
 	if(CMAKE_HOST_WIN32)
 		set(separator ";")
 	elseif(CMAKE_HOST_UNIX)
@@ -28,7 +28,7 @@ if(CMAKE_HOST_WIN32)
 		"C:/Program Files (x86)/Git/cmd" "C:/Program Files (x86)/Git/bin"
 		"$ENV{LOCALAPPDATA}/Programs/Git/cmd" "$ENV{LOCALAPPDATA}/Programs/Git/bin")
 		if(EXISTS "${gitDirectory}/git.exe")
-			sw_prependEnvPath("${gitDirectory}")
+			sw_prepend_env_path("${gitDirectory}")
 			break()
 		endif()
 	endforeach()

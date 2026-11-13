@@ -4,4 +4,4 @@
 #        우선도 → 스피드 순 라운드 전투 · 피해 공식 · 상태이상 · 능력 변화 단계 · 포획 흔들림 · 파티 6 · 박스 · 야생 조우 · 트레이너 AI
 # ==============================================================================
 
-sw_addGameFrameworkKit(GF_MonsterCollector)
+sw_add_game_framework_kit(GF_MonsterCollector)

@@ -3,4 +3,4 @@
 # @brief RHI_Vulkan MODULE — Vulkan 백엔드
 # ==============================================================================
 
-sw_addRHIBackendModule(Vulkan)
+sw_add_rhi_backend_module(Vulkan)

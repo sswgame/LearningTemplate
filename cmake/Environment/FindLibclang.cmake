@@ -4,11 +4,11 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# sw_findLibclang — libclang 라이브러리 · 헤더 폴더 · (Windows) libclang.dll 을 찾아 OUT_LIB · OUT_INCLUDE_DIR · OUT_DLL 에 담는다.
+# sw_find_libclang — libclang 라이브러리 · 헤더 폴더 · (Windows) libclang.dll 을 찾아 OUT_LIB · OUT_INCLUDE_DIR · OUT_DLL 에 담는다.
 #   못 찾으면 OUT_LIB 이 빈다. SW_REQUIRE_REFLECTION 이면 구성을 세우고, 아니면 경고만 남긴다(부르는 쪽이 파서를 짓지 않고 돌아간다).
 #   캐시 항목 이름(LIBCLANG_LIB · LIBCLANG_INCLUDE_DIR · DETECTED_LIBCLANG_DLL)은 그대로 둔다 — 옛 빌드 폴더의 캐시가 이어진다.
 # ------------------------------------------------------------------------------
-function(sw_findLibclang OUT_LIB OUT_INCLUDE_DIR OUT_DLL)
+function(sw_find_libclang OUT_LIB OUT_INCLUDE_DIR OUT_DLL)
 	set(${OUT_LIB} "" PARENT_SCOPE)
 	set(${OUT_INCLUDE_DIR} "" PARENT_SCOPE)
 	set(${OUT_DLL} "" PARENT_SCOPE)

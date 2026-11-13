@@ -16,9 +16,9 @@ include("${CMAKE_CURRENT_LIST_DIR}/../../../Environment/FindLlvmBin.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/../../../Environment/WindowsToolSearch.cmake")
 
 # ------------------------------------------------------------------------------
-# 1) sw_vcpkgWriteIfChanged — 내용이 다를 때만 쓴다(줄 목록을 LF 로 잇는다)
+# 1) sw_vcpkg_write_if_changed — 내용이 다를 때만 쓴다(줄 목록을 LF 로 잇는다)
 # ------------------------------------------------------------------------------
-function(sw_vcpkgWriteIfChanged FILE_PATH)
+function(sw_vcpkg_write_if_changed FILE_PATH)
 	list(JOIN ARGN "\n" swContent)
 	string(APPEND swContent "\n")
 	if(EXISTS "${FILE_PATH}")
@@ -31,10 +31,10 @@ function(sw_vcpkgWriteIfChanged FILE_PATH)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 2) sw_vcpkgResolveWindowsPortTools — 포트 빌드 도구(고정 LLVM 키트 + Windows SDK mt.exe). 없으면 구성을 멈춘다(폴백 없음)
+# 2) sw_vcpkg_resolve_windows_port_tools — 포트 빌드 도구(고정 LLVM 키트 + Windows SDK mt.exe). 없으면 구성을 멈춘다(폴백 없음)
 # ------------------------------------------------------------------------------
-function(sw_vcpkgResolveWindowsPortTools OUT_PREFIX)
-	sw_findLlvmBin(swLlvmBin)
+function(sw_vcpkg_resolve_windows_port_tools OUT_PREFIX)
+	sw_find_llvm_bin(swLlvmBin)
 	foreach(swTool IN ITEMS clang-cl lld-link llvm-lib llvm-rc)
 		if(NOT EXISTS "${swLlvmBin}/${swTool}.exe")
 			message(FATAL_ERROR "[VcpkgTriplets] ${swLlvmBin}/${swTool}.exe is missing — the pinned LLVM kit builds the ports (py -3 Scripts/setup/llvm.py --install)")
@@ -43,9 +43,9 @@ function(sw_vcpkgResolveWindowsPortTools OUT_PREFIX)
 
 	get_filename_component(swRepoRoot "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../../../.." ABSOLUTE)
 	set(swConfigFile "${swRepoRoot}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG}")
-	sw_requireJSONValue(swSdkDir "${swConfigFile}" "${SW_KEY_WINDOWS_SDK_DIR}")
-	sw_requireJSONValue(swSdkVersion "${swConfigFile}" "${SW_KEY_WINDOWS_SDK_VERSION}")
-	sw_findWindowsSdkMt("${swSdkDir}" "${swSdkVersion}" swMt)
+	sw_require_json_value(swSdkDir "${swConfigFile}" "${SW_KEY_WINDOWS_SDK_DIR}")
+	sw_require_json_value(swSdkVersion "${swConfigFile}" "${SW_KEY_WINDOWS_SDK_VERSION}")
+	sw_find_windows_sdk_mt("${swSdkDir}" "${swSdkVersion}" swMt)
 	if(NOT swMt)
 		message(FATAL_ERROR "[VcpkgTriplets] mt.exe not found in Windows SDK ${swSdkVersion} (${swSdkDir}) — port links need the manifest tool")
 	endif()
@@ -55,9 +55,9 @@ function(sw_vcpkgResolveWindowsPortTools OUT_PREFIX)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 3) sw_vcpkgWriteOverlayTriplets — 오버레이 triplet 폴더를 만든다. OUT_DIR 에 그 폴더 경로
+# 3) sw_vcpkg_write_overlay_triplets — 오버레이 triplet 폴더를 만든다. OUT_DIR 에 그 폴더 경로
 # ------------------------------------------------------------------------------
-function(sw_vcpkgWriteOverlayTriplets OUT_DIR)
+function(sw_vcpkg_write_overlay_triplets OUT_DIR)
 	set(swDir "${CMAKE_BINARY_DIR}/vcpkg_triplets")
 	file(MAKE_DIRECTORY "${swDir}")
 
@@ -70,11 +70,11 @@ function(sw_vcpkgWriteOverlayTriplets OUT_DIR)
 		"set(GLAD_PROFILE core)"
 	)
 	# 리눅스 포트 컴파일러는 프리셋 환경의 CC · CXX(clang)가 정한다 — 설치 스탬프가 그 값을 센다(Vcpkg.cmake 1 절).
-	sw_vcpkgWriteIfChanged("${swDir}/x64-linux.cmake" ${swLinuxCommon})
+	sw_vcpkg_write_if_changed("${swDir}/x64-linux.cmake" ${swLinuxCommon})
 	# ThreadSanitizer 구성(SW_SANITIZER_KIND=thread): 원자 연산으로 스스로 동기화하는 포트만 계측한다(계측 없이 링크하면 그 동기화가 안 보여 거짓 경쟁이 난다).
 	# joltphysics — 잡 의존 · 장벽 · 잡 풀 · 임시 할당자, 접촉 콜백이 그 잡 스레드에서 불린다. box2d — 엔진 스레드끼리 월드를 만지는 경쟁이 라이브러리 안 접근이다.
 	# 나머지는 스레드를 만들지 않고, 셰이더 컴파일러 · 압축을 계측하면 TSan 감속이 테스트 시한에 닿는다. 새로 들인 포트가 원자 연산으로 동기화하면 목록에 더한다.
-	sw_vcpkgWriteIfChanged("${swDir}/x64-linux-tsan.cmake" ${swLinuxCommon}
+	sw_vcpkg_write_if_changed("${swDir}/x64-linux-tsan.cmake" ${swLinuxCommon}
 		"if(PORT MATCHES \"^(joltphysics|box2d)$\")"
 		"set(VCPKG_C_FLAGS \"-fsanitize=thread -fno-omit-frame-pointer\")"
 		"set(VCPKG_CXX_FLAGS \"-fsanitize=thread -fno-omit-frame-pointer\")"
@@ -83,9 +83,9 @@ function(sw_vcpkgWriteOverlayTriplets OUT_DIR)
 	)
 
 	if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
-		sw_vcpkgResolveWindowsPortTools(swTools)
+		sw_vcpkg_resolve_windows_port_tools(swTools)
 		# 포트를 clang-cl · lld-link · llvm-lib · llvm-rc 로 짓는다(본 프로젝트와 같은 키트 — ABI 를 맞춘다).
-		sw_vcpkgWriteIfChanged("${swDir}/x64-windows.cmake"
+		sw_vcpkg_write_if_changed("${swDir}/x64-windows.cmake"
 			"set(VCPKG_TARGET_ARCHITECTURE x64)"
 			"set(VCPKG_CRT_LINKAGE dynamic)"
 			"set(VCPKG_LIBRARY_LINKAGE dynamic)"
@@ -93,7 +93,7 @@ function(sw_vcpkgWriteOverlayTriplets OUT_DIR)
 			"set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE \"\${CMAKE_CURRENT_LIST_DIR}/x64-windows.toolchain.cmake\")"
 			"set(VCPKG_HASH_ADDITIONAL_FILES \"\${CMAKE_CURRENT_LIST_DIR}/x64-windows.rules.cmake\")"
 		)
-		sw_vcpkgWriteIfChanged("${swDir}/x64-windows.toolchain.cmake"
+		sw_vcpkg_write_if_changed("${swDir}/x64-windows.toolchain.cmake"
 			"set(CMAKE_C_COMPILER \"${swTools_LLVM_BIN}/clang-cl.exe\" CACHE STRING \"\" FORCE)"
 			"set(CMAKE_CXX_COMPILER \"${swTools_LLVM_BIN}/clang-cl.exe\" CACHE STRING \"\" FORCE)"
 			"set(CMAKE_LINKER \"${swTools_LLVM_BIN}/lld-link.exe\" CACHE STRING \"\" FORCE)"
@@ -106,7 +106,7 @@ function(sw_vcpkgWriteOverlayTriplets OUT_DIR)
 		)
 		# clang-cl 은 CMAKE_<LANG>_FLAGS 를 타깃 COMPILE_OPTIONS 앞에 두어 포트의 -Werror 가 -Wno-error 를 이긴다 — <FLAGS> 뒤(명령줄 끝)에 붙인다.
 		# clang-cl 은 /EHsc 가 없으면 예외가 꺼진다(spirv-cross 가 throw 를 쓴다).
-		sw_vcpkgWriteIfChanged("${swDir}/x64-windows.rules.cmake"
+		sw_vcpkg_write_if_changed("${swDir}/x64-windows.rules.cmake"
 			"foreach(swLang IN ITEMS C CXX)"
 			"if(DEFINED CMAKE_\${swLang}_COMPILE_OBJECT AND NOT CMAKE_\${swLang}_COMPILE_OBJECT MATCHES \"-Wno-error\")"
 			"string(REPLACE \"<FLAGS>\" \"<FLAGS> -Wno-error\" CMAKE_\${swLang}_COMPILE_OBJECT \"\${CMAKE_\${swLang}_COMPILE_OBJECT}\")"
@@ -120,7 +120,7 @@ function(sw_vcpkgWriteOverlayTriplets OUT_DIR)
 
 	# 웹: 엔진은 pthread(공유 메모리)로 짓는다(Platform/Web.cmake) — 포트도 -pthread(atomics · bulk-memory)여야 링크된다. 기본 triplet 을 읽고 플래그만 더해
 	# 도구 사슬 · 연결 방식은 vcpkg 기본을 따른다.
-	sw_vcpkgWriteIfChanged("${swDir}/wasm32-emscripten-pthread.cmake"
+	sw_vcpkg_write_if_changed("${swDir}/wasm32-emscripten-pthread.cmake"
 		"include(\"\${VCPKG_ROOT_DIR}/triplets/community/wasm32-emscripten.cmake\")"
 		"set(VCPKG_C_FLAGS \"-pthread\")"
 		"set(VCPKG_CXX_FLAGS \"-pthread\")"

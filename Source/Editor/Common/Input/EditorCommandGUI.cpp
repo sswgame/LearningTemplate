@@ -145,7 +145,7 @@ namespace sw::editor
             {
                 IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>(); // 선택: Shipping 에는 모듈 컴파일러가 없다(GameModuleManager 가 SW_SHIPPING 에서 만들지 않는다)
                 if ( pCompiler != nullptr )
-                    pCompiler->compileModule( "EditorAll" ); // EditorModule 과 확장 모듈을 함께 컴파일한다(sw_addEditorExtension 이 의존성을 추가한다)
+                    pCompiler->compileModule( "EditorAll" ); // EditorModule 과 확장 모듈을 함께 컴파일한다(sw_add_editor_extension 이 의존성을 추가한다)
             }
 
             static void commandCompileAll()

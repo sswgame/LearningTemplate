@@ -25,7 +25,7 @@ target_link_libraries(ReflectionSchema INTERFACE sw_public_source_includes)
 # 1) libclang — 못 찾으면 파서를 짓지 않는다(SW_REQUIRE_REFLECTION 이면 구성이 선다). 찾는 순서는 cmake/Environment/FindLibclang.cmake.
 # ------------------------------------------------------------------------------
 include("${CMAKE_SOURCE_DIR}/cmake/Environment/FindLibclang.cmake")
-sw_findLibclang(swLibclangLib swLibclangIncludeDir swLibclangDLL)
+sw_find_libclang(swLibclangLib swLibclangIncludeDir swLibclangDLL)
 if(NOT swLibclangLib)
 	return()
 endif()
@@ -33,14 +33,14 @@ endif()
 # ------------------------------------------------------------------------------
 # 2) ReflectionParser 실행 파일 — Engine.dll 과 순환하지 않게 Core 만 링크한다
 # ------------------------------------------------------------------------------
-sw_globSourceTree(PARSER_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
+sw_glob_source_tree(PARSER_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 
-sw_addExecutable(ReflectionParser ${PARSER_SOURCES})
+sw_add_executable(ReflectionParser ${PARSER_SOURCES})
 
-# 헤더는 같은 폴더면 짧은 이름, 아니면 `Source/` 기준 전체 경로다 — 이 폴더를 include 경로에 두지 않는다(`sw_verifySourceIncludeRoots`).
+# 헤더는 같은 폴더면 짧은 이름, 아니면 `Source/` 기준 전체 경로다 — 이 폴더를 include 경로에 두지 않는다(`sw_verify_source_include_roots`).
 target_link_libraries(ReflectionParser PRIVATE ReflectionSchema)
-sw_applyTargetLayerGuard(ReflectionParser reflectionparser) # 목록(ReflectionSchema) 밖 Engine · 위 타깃 헤더를 막는다
-sw_addPCHEntryDirectory(ReflectionParser PRIVATE core "Core/pch.h")
+sw_apply_target_layer_guard(ReflectionParser reflectionparser) # 목록(ReflectionSchema) 밖 Engine · 위 타깃 헤더를 막는다
+sw_add_pch_entry_directory(ReflectionParser PRIVATE core "Core/pch.h")
 # 외부 헤더는 SYSTEM 으로 — 우리 경고 규칙(-Werror=covered-switch-default 등)이 그 안에 걸리지 않는다.
 target_include_directories(ReflectionParser SYSTEM PRIVATE "${swLibclangIncludeDir}" "${CMAKE_SOURCE_DIR}/ThirdParty/nlohmann-json")
 target_include_directories(ReflectionParser PRIVATE "${CMAKE_BINARY_DIR}/generated")
@@ -56,10 +56,10 @@ target_compile_definitions(ReflectionParser PRIVATE "SW_LOG_TAG=\"Tool\"" SW_TOO
 if(WIN32)
 	target_compile_definitions(ReflectionParser PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
-sw_configurePCH(ReflectionParser "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")
+sw_configure_pch(ReflectionParser "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")
 
 set_property(TARGET ReflectionParser PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
-sw_setUnityBuild(ReflectionParser OFF)
+sw_set_unity_build(ReflectionParser OFF)
 
 # 빌드 타임 전용 도구다. 런타임 산출물(Bin)과 섞이면 배포물에 파서 실행 파일과
 # libclang.dll(수십 MB)이 그대로 따라 들어가므로 별도 디렉터리로 내보낸다(`$<0:>` 는 구성 이름 하위 폴더를 막는다 — BuildLayout 과 같다).

@@ -5,9 +5,9 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1) sw_setUnityBuild — 타겟 UNITY_BUILD ON/OFF (크기는 SW_UNITY_BATCH_SIZE 한 값, OFF 는 묶을 수 없는 타깃)
+# 1) sw_set_unity_build — 타겟 UNITY_BUILD ON/OFF (크기는 SW_UNITY_BATCH_SIZE 한 값, OFF 는 묶을 수 없는 타깃)
 # ------------------------------------------------------------------------------
-function(sw_setUnityBuild TARGET_NAME)
+function(sw_set_unity_build TARGET_NAME)
 	if(NOT TARGET ${TARGET_NAME})
 		return()
 	endif()
@@ -28,18 +28,18 @@ function(sw_setUnityBuild TARGET_NAME)
 		UNITY_BUILD_BATCH_SIZE ${SW_UNITY_BATCH_SIZE}
 	)
 
-	sw_skipUnityForX11Sources(${TARGET_NAME})
-	sw_skipUnityForTestSources(${TARGET_NAME})
+	sw_skip_unity_for_x11_sources(${TARGET_NAME})
+	sw_skip_unity_for_test_sources(${TARGET_NAME})
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 1-0) sw_skipUnityForTestSources — 테스트 .cpp(`/Tests/` 아래)를 Unity 배치에서 뺀다
+# 1-0) sw_skip_unity_for_test_sources — 테스트 .cpp(`/Tests/` 아래)를 Unity 배치에서 뺀다
 #
 # 테스트 파일은 파일마다 익명 이름공간에 짧은 이름(`kNowMs` · `Util` · 가짜 서비스)을 둔다 — 한 묶음에 들면 서로 부딪힌다.
 # 묶음 크기 · 파일 추가로 묶음 경계가 바뀔 때마다 다른 쌍이 깨지므로 이름을 고치지 않고 묶음에서 뺀다(엔진 소스만 묶는다 —
 # 언리얼도 테스트 모듈을 따로 짓는다).
 # ------------------------------------------------------------------------------
-function(sw_skipUnityForTestSources TARGET_NAME)
+function(sw_skip_unity_for_test_sources TARGET_NAME)
 	get_target_property(listSource ${TARGET_NAME} SOURCES)
 	get_target_property(sourceDir ${TARGET_NAME} SOURCE_DIR)
 	foreach(src IN LISTS listSource)
@@ -56,13 +56,13 @@ function(sw_skipUnityForTestSources TARGET_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 1-1) sw_skipUnityForX11Sources — X11 헤더를 include 하는 .cpp 를 Unity 배치에서 뺀다(리눅스만)
+# 1-1) sw_skip_unity_for_x11_sources — X11 헤더를 include 하는 .cpp 를 Unity 배치에서 뺀다(리눅스만)
 #
 # X11 은 `Convex` · `None` · `KeyPress` 같은 흔한 단어를 매크로로 정의한다. 그 TU 가 묶음에 들어가면 매크로가 같은 묶음의
 # 뒤 TU(서드파티 헤더 포함)로 샌다. 목록이 아니라 **소스의 include 줄**로 고른다 — X11 헤더는 .cpp 에서만 include 한다는
 # 규칙이므로 .cpp 의 직접 include 만 보면 된다.
 # ------------------------------------------------------------------------------
-function(sw_skipUnityForX11Sources TARGET_NAME)
+function(sw_skip_unity_for_x11_sources TARGET_NAME)
 	if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
 		return()
 	endif()

@@ -4,14 +4,14 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1) 소스 — 폴더의 .cpp 전부. 플랫폼 폴더(Windows/ · Linux/ · Posix/)는 그 플랫폼에서만(`sw_filterPlatformSources` — 고르지 않은 것은
+# 1) 소스 — 폴더의 .cpp 전부. 플랫폼 폴더(Windows/ · Linux/ · Posix/)는 그 플랫폼에서만(`sw_filter_platform_sources` — 고르지 않은 것은
 #    소스 검사 게이트에 "이 구성이 짓지 않는다" 로 적힌다). 목록을 손으로 들지 않는다 — 빠지면 ReflectionParser(Core 를 링크한다) 링크에서야 깨지던 자리다.
 # ------------------------------------------------------------------------------
-sw_globSourceTree(listCoreSource RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
-sw_filterPlatformSources(listCoreSource)
+sw_glob_source_tree(listCoreSource RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
+sw_filter_platform_sources(listCoreSource)
 # 단위 테스트(틀 `Testing/` 과 기능 폴더의 `Tests/`)는 배포 구성이 짓지 않는다 — 배포본에 테스트 코드가 없다(구성마다 다른 케이스 수가 아니라 0).
 if(SW_SHIPPING_BUILD)
-	sw_removeExcludedSources(listCoreSource "/Source/Core/Testing/" ${SW_DEV_ONLY_SOURCE_PATTERNS})
+	sw_remove_excluded_sources(listCoreSource "/Source/Core/Testing/" ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
 
 # ------------------------------------------------------------------------------
@@ -29,8 +29,8 @@ if(NOT DEFINED swCoreTier_Log)
 	message(FATAL_ERROR "[Core] ${swCoreTierTable} 의 [tier] 에서 Log 의 티어를 읽지 못했다 — 로그가 있는 티어를 가를 수 없다")
 endif()
 
-# sw_getCoreTier: `Source/Core` 기준 파일 경로의 티어(가장 긴 표 키). 바로 아래 파일이거나 표에 없는 폴더면 빈 값이다.
-function(sw_getCoreTier RELATIVE_PATH OUT_VAR)
+# sw_get_core_tier: `Source/Core` 기준 파일 경로의 티어(가장 긴 표 키). 바로 아래 파일이거나 표에 없는 폴더면 빈 값이다.
+function(sw_get_core_tier RELATIVE_PATH OUT_VAR)
 	get_filename_component(folder "${RELATIVE_PATH}" DIRECTORY)
 	set(result "")
 	while(folder)
@@ -55,7 +55,7 @@ foreach(source IN LISTS listCoreSource)
 		list(APPEND listCoreTopSource "${source}")
 		continue()
 	endif()
-	sw_getCoreTier("${relativeSource}" sourceTier)
+	sw_get_core_tier("${relativeSource}" sourceTier)
 	if(sourceTier STREQUAL "")
 		message(FATAL_ERROR "[Core] ${relativeSource} 의 폴더가 티어 표(Config/Rules/Layers/CoreLayers.toml 의 [tier])에 없다 — 티어를 정해 넣는다")
 	endif()
@@ -68,14 +68,14 @@ list(GET listCoreTier -1 swCoreTopTier)
 list(APPEND swCoreTierSource_${swCoreTopTier} ${listCoreTopSource})
 
 # 헤더마다 티어 — 껍데기(아래 4)와 티어별 pch(아래 5)가 읽는다. 바로 아래 헤더(pch · CoreMinimal 진입 헤더)는 티어가 없다.
-sw_globSourceTree(listCoreHeader RECURSE RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+sw_glob_source_tree(listCoreHeader RECURSE RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
 	"${CMAKE_CURRENT_SOURCE_DIR}/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.inl")
 set(listCoreTieredHeader "")
 foreach(header IN LISTS listCoreHeader)
 	if(NOT header MATCHES "/")
 		continue()
 	endif()
-	sw_getCoreTier("${header}" headerTier)
+	sw_get_core_tier("${header}" headerTier)
 	if(headerTier STREQUAL "")
 		message(FATAL_ERROR "[Core] ${header} 의 폴더가 티어 표(Config/Rules/Layers/CoreLayers.toml 의 [tier])에 없다 — 티어를 정해 넣는다")
 	endif()
@@ -88,7 +88,7 @@ endforeach()
 #    include 하면(헤더를 거친 전이 include 도) 컴파일이 멈춘다. 예전에는 Log 아래 · 위 두 부분만 짓고 나머지 티어는 린트(`CoreTiers.py`)가 직접 include 를 봤다.
 #    헤더는 그 헤더를 include 하는 같은 · 아래 티어 .cpp 와 부분의 pch 를 컴파일할 때 걸린다(Engine 층 부분과 같은 틈 — 아무도 include 하지 않는 헤더는 보지 않는다).
 # ------------------------------------------------------------------------------
-function(sw_writeCoreTierStubs PART TIER)
+function(sw_write_core_tier_stubs PART TIER)
 	set(stubRoot "${CMAKE_BINARY_DIR}/generated/sw/CoreLayerStubs/tier${TIER}")
 	set(listStub "")
 	foreach(header IN LISTS listCoreTieredHeader)
@@ -159,8 +159,8 @@ foreach(tier IN LISTS listCoreTier)
 		FOLDER "Source/Core"
 	)
 	target_include_directories(${partName} PRIVATE "${pchEntryDir}") # `Source/Core` 자체는 include 경로가 아니다 — `#include "pch.h"` 만 이 생성 헤더로 푼다
-	sw_applyTargetLayerGuard(${partName} core) # 타깃 경계 — Core 는 Engine 과 그 위를 보지 못한다
-	sw_writeCoreTierStubs(${partName} ${tier})
+	sw_apply_target_layer_guard(${partName} core) # 타깃 경계 — Core 는 Engine 과 그 위를 보지 못한다
+	sw_write_core_tier_stubs(${partName} ${tier})
 	target_link_libraries(${partName} PUBLIC sw_public_source_includes)
 	target_link_libraries(${partName} PUBLIC sw_third_party_includes)
 	if(NOT SW_SHIPPING_BUILD)
@@ -177,22 +177,22 @@ foreach(tier IN LISTS listCoreTier)
 			target_compile_definitions(${partName} PRIVATE SW_ENFORCE_LEAF_LOCK_LOG)
 		endif()
 	endif()
-	sw_configurePCH(${partName} "${pchEntryDir}/pch.h")
-	sw_setUnityBuild(${partName})
+	sw_configure_pch(${partName} "${pchEntryDir}/pch.h")
+	sw_set_unity_build(${partName})
 	target_link_libraries(${partName} PRIVATE sw_global_options)
 	list(APPEND listCoreObjects ${partName})
 endforeach()
 
-# 벡터 거리 · 길이(`float3::getDistance` 등)는 파괴 · 파쇄가 쓰는 줄 밖 함수다 — 구성마다 같은 비트여야 한다(`sw_markDeterministicSources`).
+# 벡터 거리 · 길이(`float3::getDistance` 등)는 파괴 · 파쇄가 쓰는 줄 밖 함수다 — 구성마다 같은 비트여야 한다(`sw_mark_deterministic_sources`).
 # 여기서 축약을 끄는 비용은 이 함수들의 FMA 하나씩이다(인라인이 아니라 호출 비용이 이미 더 크다). 결정적 삼각함수(`DeterministicMathUtil`)는 롤백 시뮬레이션이
 # libm 대신 부르는 줄 밖 함수라 같은 표시를 건다. 파쇄 다각형 삼각 분할(`Spatial/PolygonTriangulation`)도 파괴 사건 해시가 구성마다 같아야 해 같은 표시를 건다.
 # 광선 ↔ 도형 판정 · 방향 판정(`Math/Ray` · `Math/OrientationUtil`)은 결정적 시뮬레이션 키트(MechArena)가 부르는 줄 밖 실수 함수라 같은 표시를 건다.
 foreach(swDeterministicSource IN ITEMS Math/VectorMath.cpp Math/DeterministicMathUtil.cpp Math/Ray.cpp Math/OrientationUtil.cpp Spatial/PolygonTriangulation.cpp)
-	sw_getCoreTier("${swDeterministicSource}" deterministicTier)
+	sw_get_core_tier("${swDeterministicSource}" deterministicTier)
 	if(NOT "${CMAKE_CURRENT_SOURCE_DIR}/${swDeterministicSource}" IN_LIST swCoreTierSource_${deterministicTier})
-		message(FATAL_ERROR "[Core] ${swDeterministicSource} 가 티어 ${deterministicTier} 부분 소스에 없다 — 결정성 표시(sw_markDeterministicSources)가 걸릴 타깃을 다시 정한다")
+		message(FATAL_ERROR "[Core] ${swDeterministicSource} 가 티어 ${deterministicTier} 부분 소스에 없다 — 결정성 표시(sw_mark_deterministic_sources)가 걸릴 타깃을 다시 정한다")
 	endif()
-	sw_markDeterministicSources(Core_tier${deterministicTier}_objects ${swDeterministicSource})
+	sw_mark_deterministic_sources(Core_tier${deterministicTier}_objects ${swDeterministicSource})
 endforeach()
 
 # ------------------------------------------------------------------------------

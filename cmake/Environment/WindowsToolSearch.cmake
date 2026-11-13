@@ -8,10 +8,10 @@
 include_guard(GLOBAL)
 
 # ------------------------------------------------------------------------------
-# 1) sw_findMsvcLibExe — MSVC 도구 폴더 안의 lib.exe (호스트 x64 → x86, 대상 x64 → x86 순)
+# 1) sw_find_msvc_lib_exe — MSVC 도구 폴더 안의 lib.exe (호스트 x64 → x86, 대상 x64 → x86 순)
 # 없으면 OUT_VAR 는 빈 문자열
 # ------------------------------------------------------------------------------
-function(sw_findMsvcLibExe MSVC_TOOLS_DIR OUT_VAR)
+function(sw_find_msvc_lib_exe MSVC_TOOLS_DIR OUT_VAR)
 	set(libExe "")
 
 	if(MSVC_TOOLS_DIR AND NOT MSVC_TOOLS_DIR STREQUAL "")
@@ -35,11 +35,11 @@ function(sw_findMsvcLibExe MSVC_TOOLS_DIR OUT_VAR)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 2) sw_findWindowsSdkMt — Windows SDK 의 mt.exe
+# 2) sw_find_windows_sdk_mt — Windows SDK 의 mt.exe
 # 주어진 SDK 폴더 · 버전을 먼저 보고, 없으면 설치된 Windows Kits 10 에서 가장 높은 버전을 찾는다(x64 → x86 순)
 # 없으면 OUT_VAR 는 빈 문자열
 # ------------------------------------------------------------------------------
-function(sw_findWindowsSdkMt SDK_DIR SDK_VERSION OUT_VAR)
+function(sw_find_windows_sdk_mt SDK_DIR SDK_VERSION OUT_VAR)
 	set(mtExe "")
 
 	if(SDK_DIR AND SDK_VERSION AND NOT SDK_DIR STREQUAL "" AND NOT SDK_VERSION STREQUAL "")

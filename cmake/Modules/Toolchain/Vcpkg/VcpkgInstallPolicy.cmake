@@ -11,7 +11,7 @@
 include_guard(GLOBAL)
 
 # SOURCE_DIR: 구성하는 소스 트리. INSTALLED_DIR: VCPKG_INSTALLED_DIR. USER_INSTALL: 사용자가 준 VCPKG_MANIFEST_INSTALL(없으면 빈 값).
-function(sw_vcpkgInstallReadOnlyReason SOURCE_DIR INSTALLED_DIR USER_INSTALL OUT_REASON)
+function(sw_vcpkg_install_read_only_reason SOURCE_DIR INSTALLED_DIR USER_INSTALL OUT_REASON)
 	set(swReason "")
 
 	if(NOT USER_INSTALL STREQUAL "" AND NOT USER_INSTALL)

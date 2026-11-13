@@ -14,11 +14,11 @@
 # ------------------------------------------------------------------------------
 set(SW_ENGINE_ABI_STAMP_HEADER "${CMAKE_BINARY_DIR}/generated/engineabi/EngineABIStamp.gen.h")
 
-function(sw_defineEngineABIStamp)
+function(sw_define_engine_abi_stamp)
 	if(TARGET SwEngineABIStamp)
 		return()
 	endif()
-	sw_globSourceTree(swEngineABIHeaders RECURSE
+	sw_glob_source_tree(swEngineABIHeaders RECURSE
 		"${CMAKE_SOURCE_DIR}/Source/Core/*.h"
 		"${CMAKE_SOURCE_DIR}/Source/Core/*.hpp"
 		"${CMAKE_SOURCE_DIR}/Source/Core/*.inl"
@@ -54,7 +54,7 @@ endfunction()
 #     모듈마다 고유하게 두고, `dlsym( 모듈, "sw_moduleEngineABIStamp_<의존>" )` 이 돌려주는 주소로 가린다 — dlsym 은
 #     그 모듈의 검색 범위(자기 + 자기 의존)에서 찾으므로 그 주소가 곧 모듈이 실제로 묶인 의존 이미지의 것이다.
 #   MODULE_NAME 은 심볼 이름에 붙는 모듈 이름이다(기본 타깃 이름) — 타깃 이름과 산출물 이름이 다른 게임 팩 사본(`SWGame_<게임>` → `SWGame`)이 준다.
-function(sw_addModuleEngineStamp TARGET_NAME)
+function(sw_add_module_engine_stamp TARGET_NAME)
 	cmake_parse_arguments(ARG "" "MODULE_NAME" "" ${ARGN})
 	set(swStampModuleName "${TARGET_NAME}")
 	if(ARG_MODULE_NAME)
@@ -69,12 +69,12 @@ function(sw_addModuleEngineStamp TARGET_NAME)
 		return()
 	endif()
 
-	sw_defineEngineABIStamp()
+	sw_define_engine_abi_stamp()
 	# 파일 이름에 타깃 이름을 넣지 않는다 — 빌드 폴더 밖 소스의 오브젝트 경로("<타깃 폴더>/<해시>/<파일 이름>.obj")가 긴 타깃 · 프리셋 이름에서
-	# CMAKE_OBJECT_PATH_MAX(250)를 넘는다(`sw_addServerOnlyMarker` 와 같다).
+	# CMAKE_OBJECT_PATH_MAX(250)를 넘는다(`sw_add_server_only_marker` 와 같다).
 	set(swStampSource "${CMAKE_BINARY_DIR}/generated/moduleidentity/${TARGET_NAME}/EngineStamp.cpp")
 	file(CONFIGURE OUTPUT "${swStampSource}" CONTENT
-"// 생성 파일 - sw_addModuleEngineStamp (cmake/Engine/EngineABIStamp.cmake). 고치지 마십시오.
+"// 생성 파일 - sw_add_module_engine_stamp (cmake/Engine/EngineABIStamp.cmake). 고치지 마십시오.
 // 이 모듈이 빌드된 Core · Engine 헤더의 지문입니다. 핫 리로드가 올리기 전에 돌고 있는 엔진의 것과 대조하고,
 // 리눅스에서는 이 상수의 주소로 의존 모듈이 어느 이미지에 묶였는지 가립니다.
 #include \"@SW_ENGINE_ABI_STAMP_HEADER@\"

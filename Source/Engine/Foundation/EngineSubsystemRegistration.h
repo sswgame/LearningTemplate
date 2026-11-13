@@ -264,7 +264,7 @@ namespace sw::engine
     /**
      * @class EngineRegistrationList
      * @brief 등록 목록입니다. 엔진은 이미지 하나의 전역 목록(`getGlobal`)만 쓰고, 테스트는 자기 목록에 자기 등록을 달아 같은 규칙을 시험한다.
-     * @details 엔진 이미지 안에서만 등록한다(개발은 DLL 이라 오브젝트가 모두 들어가고, 배포 정적 링크는 Engine 을 통째로 링크한다 — `sw_linkWholeArchive`).
+     * @details 엔진 이미지 안에서만 등록한다(개발은 DLL 이라 오브젝트가 모두 들어가고, 배포 정적 링크는 Engine 을 통째로 링크한다 — `sw_link_whole_archive`).
      */
     class SW_API EngineRegistrationList
     {

@@ -1,6 +1,6 @@
 /**
  * @file AutomationEnvironmentSteps.h
- * @brief 자동화 시나리오의 환경 단계(`DevCommand`, `ResizeWindow`)를 정의합니다. 단계는 이 .cpp 의 정적 등록자가 등록합니다(Shipping 은 Engine 을 통째로 링크한다 — `sw_linkWholeArchive`).
+ * @brief 자동화 시나리오의 환경 단계(`DevCommand`, `ResizeWindow`)를 정의합니다. 단계는 이 .cpp 의 정적 등록자가 등록합니다(Shipping 은 Engine 을 통째로 링크한다 — `sw_link_whole_archive`).
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

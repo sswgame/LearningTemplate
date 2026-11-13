@@ -2,11 +2,11 @@
  * @file EditorInputBan.h
  * @brief 에디터 코드 전체(에디터 모듈의 모든 부분 · 에디터 확장 모듈)에서 imgui.h 끝에 붙는 헤더입니다. ImGui 입력 · 팝업 · 끌어 놓기 함수, 노드 캔버스 지우기 구간, 이름표 받는 입력 위젯(아래 절)을 `[[deprecated]]` 로 다시 선언합니다.
  * @details CMake 가 ImGui 의 사용자 헤더 자리(`IMGUI_INCLUDE_IMGUI_USER_H` + `IMGUI_USER_H_FILENAME`)에 이 파일을 두고 사용 중단 경고를 오류로 올린다
- *          (`sw_applyEditorInputBan`, 옵션 `SW_EDITOR_INPUT_BAN` 기본 ON). imgui.h 가 선언을 다 마친 뒤에 붙으므로 이 파일은 imgui.h 를 include 하지 않는다.
+ *          (`sw_apply_editor_input_ban`, 옵션 `SW_EDITOR_INPUT_BAN` 기본 ON). imgui.h 가 선언을 다 마친 뒤에 붙으므로 이 파일은 imgui.h 를 include 하지 않는다.
  *          에디터 코드가 아래 함수를 부르면 컴파일이 멈춘다. 대신 쓸 곳: 단축키 · 단추 · 몸짓은 에디터 입력 맵(`EditorInputActions`, `editor.input.xml`),
  *          맥락 메뉴 · 끌어 놓기 · 포인터 · 글 칸의 편집 키는 `EditorInputGUI`(`Common/Input`).
  *          금지를 받지 않는 곳은 ImGui 를 직접 부르는 두 파일뿐이다 — 어댑터(`Common/Input/EditorInputGUI.cpp`)와 ImGui 키를 엔진 입력으로 옮기는
- *          `Common/Backend/ImGuiKeyForward.cpp`. 둘에만 CMake 가 소스 속성으로 `SW_EDITOR_INPUT_ADAPTER=1` 을 준다(`sw_applyEditorInputBan`, 유니티 묶음 · PCH 에서 빠진다).
+ *          `Common/Backend/ImGuiKeyForward.cpp`. 둘에만 CMake 가 소스 속성으로 `SW_EDITOR_INPUT_ADAPTER=1` 을 준다(`sw_apply_editor_input_ban`, 유니티 묶음 · PCH 에서 빠진다).
  *          나머지 파일은 강제 포함한 `EditorInputBanConfig.h` 가 0 으로 정해 두어, 소스 안에서 1 로 정의하면 다시 정의 오류(`-Werror=macro-redefined`)로 멈춘다.
  *          imgui_internal.h 의 다른 겹(키 주인 · 입력 플래그를 받는 것)과 그 밖의 여는 길(`OpenPopupEx` · `Shortcut` · `BeginDragDropTargetCustom` …)도 막는다.
  *          C++ 는 앞서 선언한 함수를 속성을 붙여 다시 선언하는 것을 허용한다(기본 인자는 다른 선언의 것을 쓰므로 여기서 적지 않는다).

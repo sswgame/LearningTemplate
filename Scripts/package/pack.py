@@ -53,7 +53,7 @@ MAP_TARGET_PRESET: dict[str, str] = {"Client": "Ninja-Shipping", "Server": "Ninj
 MAP_TARGET_EXECUTABLE: dict[str, str] = {"Client": executable_name("App"), "Server": executable_name("Server")}
 #: 실행 파일 옆에 두는 공유 라이브러리 확장자.
 LIST_LIBRARY_SUFFIX: tuple[str, ...] = (HOST.shared_library_suffix,)
-#: 쿠킹에만 쓰는 공유 라이브러리(파일 이름의 `lib` 를 뗀 줄기) — 셰이더 컴파일러(DXC). 빌드가 Bin 에 두는 것은 App 이 쿠커라서이고(`sw_deployRuntimeDependencies`),
+#: 쿠킹에만 쓰는 공유 라이브러리(파일 이름의 `lib` 를 뗀 줄기) — 셰이더 컴파일러(DXC). 빌드가 Bin 에 두는 것은 App 이 쿠커라서이고(`sw_deploy_runtime_dependencies`),
 #: 배포 App 은 미리 쿠킹한 셰이더만 읽어 패키지에는 넣지 않는다. 폴더로 가르지 않는 이유: dxcompiler 가 dxil 을 이름으로 다시 찾아 실행 파일 폴더 밖에 두면 서명하지 못한다.
 LIST_COOK_ONLY_LIBRARY_STEM: tuple[str, ...] = ("dxcompiler", "dxil", "dxildll")
 #: Bin 에서 베끼는 폴더 · 파일.

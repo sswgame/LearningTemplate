@@ -6,7 +6,7 @@
  * @details 사람의 마우스나 포그라운드와 무관하게 같은 창 처리기를 탄다(바깥 스크립트의 `SendInput` 은 포그라운드 창에만 간다). 포커스 메시지(`KillFocus` · `SetFocus`)는
  *          창의 `IWindow::sendFocusEvent` 로 보내 Windows 와 X11 에서 돈다. 나머지는 Windows 에만 구현이 있고, 구현이 없는 플랫폼(포커스도 Wayland 는 없다)에서는 같은 이름의 단계가
  *          시나리오를 건너뜀(13)으로 끝낸다. 이 기계에서 볼 수 없는 것을 초록으로 두지 않기 위해서다.
- *          등록은 이 .cpp 의 정적 등록자가 한다(Shipping 은 Engine 을 통째로 링크한다 — `sw_linkWholeArchive`).
+ *          등록은 이 .cpp 의 정적 등록자가 한다(Shipping 은 Engine 을 통째로 링크한다 — `sw_link_whole_archive`).
  */
 #include "pch.h"
 

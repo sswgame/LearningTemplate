@@ -490,7 +490,7 @@ namespace sw
 
             /**
              * @brief SPIR-V 를 Tint 로 WGSL 로 옮기고 둘을 한 꾸러미로 묶습니다(`WebGPUShaderContainer`). Tint 는 DXC 처럼 실행 파일 옆에 둔다(`tint` — Dawn 빌드가 낸다).
-             * @details Tint 를 라이브러리로 링크하지 않는다 — 쿠커는 `dawn[tint-tools]` 가 낸 실행 파일만 쓴다(빌드가 App 옆에 두는 `sw_copyTintTool`, docs/PlatformTargets.md 의존성 표). 실행 파일이 없으면 오류로 멈춘다(WGSL 없이 구울 수 없다).
+             * @details Tint 를 라이브러리로 링크하지 않는다 — 쿠커는 `dawn[tint-tools]` 가 낸 실행 파일만 쓴다(빌드가 App 옆에 두는 `sw_copy_tint_tool`, docs/PlatformTargets.md 의존성 표). 실행 파일이 없으면 오류로 멈춘다(WGSL 없이 구울 수 없다).
              *          임시 파일은 시스템 임시 폴더에 두고 부를 때마다 새 이름을 잡는다(`reserveUniquePath`) — 병렬 쿠킹이 같은 파일을 쓰거나 지우지 않는다.
              *          `--allow-non-uniform-derivatives`: WGSL 만 미분(textureSample)을 균일 제어 흐름으로 묶는다 — HLSL · SPIR-V 에는 그 규칙이 없어 같은 셰이더가
              *          다른 백엔드에서 이미 돈다. 모듈 머리에 `diagnostic(off, derivative_uniformity)` 를 넣는다(Dawn 이 받는 표준 지시문).

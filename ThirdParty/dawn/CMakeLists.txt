@@ -10,12 +10,12 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# sw_copyTintTool — 셰이더 쿠커(ShaderCompiler::convertSpirvToWgsl)가 실행 파일 옆에서 여는 `tint` 를 런타임 복사 큐에 넣는다.
+# sw_copy_tint_tool — 셰이더 쿠커(ShaderCompiler::convertSpirvToWgsl)가 실행 파일 옆에서 여는 `tint` 를 런타임 복사 큐에 넣는다.
 #   포트의 `tint-tools` 기능이 `tools/dawn/` 에 깐다(vcpkg_copy_tools). 웹 빌드는 쿠커가 아니라 쿠킹한 꾸러미를 읽으므로 넣지 않는다.
 #   함수는 아래 거르기보다 먼저 정의한다 — 서버 · Android 구성도 같은 이름을 부른다(아무 일도 하지 않는다).
 #   배포 패키지에는 들지 않는다 — DXC 처럼 쿠킹 전용 도구이고, 스테이징은 실행 파일 하나와 공유 라이브러리만 베낀다(Scripts/package/pack.py select_staged_entries).
 # ------------------------------------------------------------------------------
-function(sw_copyTintTool TARGET_NAME)
+function(sw_copy_tint_tool TARGET_NAME)
 	if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR SW_TARGET_TYPE STREQUAL "Server" OR CMAKE_SYSTEM_NAME STREQUAL "Android")
 		return()
 	endif()
@@ -24,7 +24,7 @@ function(sw_copyTintTool TARGET_NAME)
 	if(NOT EXISTS "${tintPath}")
 		message(FATAL_ERROR "[dawn] ${tintPath} not found - vcpkg.json must request dawn[tint-tools] for ${VCPKG_TARGET_TRIPLET} (the WGSL_WebGPU shader target needs it)")
 	endif()
-	sw_queueRuntimeCopy(${TARGET_NAME} "${tintPath}")
+	sw_queue_runtime_copy(${TARGET_NAME} "${tintPath}")
 endfunction()
 
 if(SW_TARGET_TYPE STREQUAL "Server" OR CMAKE_SYSTEM_NAME STREQUAL "Android")

@@ -50,7 +50,7 @@ SelfTest = 7
 
 # 패널 View(`Panels` 층의 `Model` 폴더 밖 파일 — MVVM 의 View)가 include 하지 못하는 모델 · 씬 헤더(Source 기준 경로의 정규식). docs/agents/EditorUI.md 'MVVM' 절.
 # Source/Editor/CMakeLists.txt 가 Panels View 를 따로 짓는 부분(`EditorPanelsView`)에 이 헤더마다 `#error` 껍데기를 놓는다 — 전이 include 도 멈춘다.
-# 같은 티어의 `AssetActions` 는 씬 헤더를 쓰므로 받지 않는다. 확장 모듈의 View 는 `sw_addEditorPanelView` 로 같은 껍데기를 받는다.
+# 같은 티어의 `AssetActions` 는 씬 헤더를 쓰므로 받지 않는다. 확장 모듈의 View 는 `sw_add_editor_extension` 의 PANEL_VIEW_SOURCES 로 같은 껍데기를 받는다.
 # 언리얼은 Slate 위젯이 모델을 보지만(규칙 없음), 유니티 UI Toolkit 의 바인딩처럼 View 는 ViewModel 값만 본다 — 형식(껍데기)으로 막는다.
 [panelViewBan]
 layer = "Panels"   # View 를 따로 짓는 층(그 층의 `Model` 폴더 밖 파일)

@@ -30,15 +30,15 @@ project(
 # ------------------------------------------------------------------------------
 include(cmake/Environment/ToolchainBinaries.cmake)
 include(cmake/Environment/FindWindowsTools.cmake)
-sw_bindClangClWindowsTools()
-sw_bindPinnedArchiver()
-sw_vcpkgWriteManifestStamp()
+sw_bind_clang_cl_windows_tools()
+sw_bind_pinned_archiver()
+sw_vcpkg_write_manifest_stamp()
 
 # ------------------------------------------------------------------------------
 # 3) 컴파일 플래그 · 모듈 빌드 규칙 · 런타임 DLL 복사 · 리플렉션 코드젠 · 에셋/도구 타겟
 # ------------------------------------------------------------------------------
 # BuildLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 타깃 규칙(ExcludedSources · ModuleTargets)보다 먼저다.
-# RuntimeDependencies 는 BuildLayout 의 sw_queueRuntimeCopy 를 쓴다. 나머지는 함수만 정의한다(파일마다 맡는 일은 cmake/README.md).
+# RuntimeDependencies 는 BuildLayout 의 sw_queue_runtime_copy 를 쓴다. 나머지는 함수만 정의한다(파일마다 맡는 일은 cmake/README.md).
 include(cmake/Engine/SourceTree.cmake) # `Source/` 를 한 번 훑은 목록 — 소스 목록은 모두 여기서 거른다(Web.cmake 가 먼저 쓴다)
 include(cmake/Modules/LoadCompileFlags.cmake)
 include(cmake/Engine/BuildLayout.cmake)
@@ -79,7 +79,7 @@ include(cmake/Engine/AssetAndToolTargets.cmake)
 # 4) 서브디렉터리 빌드 및 의존성 구성
 # ------------------------------------------------------------------------------
 # 모듈 매니페스트를 먼저 해석한다 — 모듈을 만드는 함수가 "켜져 있는가" 를 묻는다(`cmake/Engine/ModuleManifest.cmake`).
-sw_resolveModuleManifests()
+sw_resolve_module_manifests()
 
 # 순서: Core → ReflectionParser(Core 를 링크한다) → Engine(파서가 있어야 리플렉션 단계가 선다) → ModuleAPI → Editor → ModuleManager → App · Server → GameFramework/Games.
 add_subdirectory(Source/Core)
@@ -98,13 +98,13 @@ add_subdirectory(Source/Server)
 if(SW_BUILD_GAMEFRAMEWORK OR SW_BUILD_GAME)
 	add_subdirectory(Source/GameFramework)
 else()
-	sw_declareExcludedDirectory("${CMAKE_SOURCE_DIR}/Source/GameFramework")
+	sw_declare_excluded_directory("${CMAKE_SOURCE_DIR}/Source/GameFramework")
 endif()
 
 if(SW_BUILD_GAME)
 	add_subdirectory(Source/Games)
 else()
-	sw_declareExcludedDirectory("${CMAKE_SOURCE_DIR}/Source/Games")
+	sw_declare_excluded_directory("${CMAKE_SOURCE_DIR}/Source/Games")
 endif()
 
 # 온라인 부하 테스트 봇 — 개발 도구. 클라이언트 · 서버 키트가 함께 있는 개발 구성(Game 타깃)에서만 짓는다(배포물 · Client · Server 타깃에 없다).
@@ -120,22 +120,22 @@ endif()
 
 # 여기까지 오면 동적 모듈이 전부 만들어졌다 — 레지스트리에 빠진 것이 없는지 먼저 확인한다.
 # (빠지면 App 이 그 DLL 보다 먼저 빌드될 수 있고, 증상은 "가끔 실패" 로만 나타난다.)
-sw_verifyDynamicModuleRegistry()
+sw_verify_dynamic_module_registry()
 # 동적 모듈을 모두 링크한 뒤에만 다시 쓰는 스탬프 — 바깥 빌드의 핫 리로드 신호(`LiveReloadManager`).
-sw_addModuleBuildStamp()
+sw_add_module_build_stamp()
 # 리플렉션 단계가 모두 선 뒤 — 콘텐츠가 쓰는 타입의 모듈을 그 도메인이 가지는지 빌드 단계로 본다(대상마다 파서가 쓴 타입 목록을 읽는다).
-sw_addContentModuleCheck()
-sw_addAssetReferenceFieldList()
+sw_add_content_module_check()
+sw_add_asset_reference_field_list()
 
 # App · Server 타겟의 RHI 플러그인, 게임 모듈(SWGame), 에셋 쿠킹 빌드 순서 및 링크 의존성 자동 구성(없는 타깃은 건너뛴다)
-sw_configureAppDependencies(App)
-sw_configureAppDependencies(Server)
+sw_configure_app_dependencies(App)
+sw_configure_app_dependencies(Server)
 
 # 이 구성이 일부러 짓지 않는 소스(배포의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드 …)를 빌드 트리에 적는다 — 구성 끝에 목록 파일로 쓴다.
-sw_writeExcludedSourceList()
+sw_write_excluded_source_list()
 
 # 모든 타깃이 선 뒤 — `Source/` 아래 폴더를 include 경로로 준 타깃이 있으면 구성을 세운다(접두 없는 include 가 층 게이트를 비껴가는 길).
-sw_verifySourceIncludeRoots()
+sw_verify_source_include_roots()
 
-# 뿌리(`Source/` · `Test/` · 시나리오 폴더) 아래를 sw_globSourceTree 밖에서 빌드마다 훑는 글롭이 있으면 빌드가 멈춘다(생성된 VerifyGlobs.cmake 를 본다).
-sw_checkConfigureGlobs()
+# 뿌리(`Source/` · `Test/` · 시나리오 폴더) 아래를 sw_glob_source_tree 밖에서 빌드마다 훑는 글롭이 있으면 빌드가 멈춘다(생성된 VerifyGlobs.cmake 를 본다).
+sw_check_configure_globs()

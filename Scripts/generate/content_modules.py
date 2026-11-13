@@ -6,7 +6,7 @@ Scripts/generate/content_modules.py
 콘텐츠(씬 · 프리팹)가 쓰는 리플렉션 형식의 모듈을 그 도메인이 가질 수 있는지 빌드 단계(`ContentModuleCheck`)가 본다 — `game/<팩>` 은 그 게임
 매니페스트의 의존(따라 닿는 것 포함), `common/` 은 모든 게임이 가진 것, `editor/` 는 엔진 · EditorModule, `engine/` 은 엔진만.
 
-**왜 하는가.** 키트는 게임 매니페스트의 의존으로만 링크된다(`sw_addGameModule`). 의존에 없는 키트의 컴포넌트를 쓰는 씬은 그 게임의 어떤 실행 ·
+**왜 하는가.** 키트는 게임 매니페스트의 의존으로만 링크된다(`sw_add_game_module`). 의존에 없는 키트의 컴포넌트를 쓰는 씬은 그 게임의 어떤 실행 ·
 쿠킹 · 배포에서도 서지 못하는데, 예전에는 헤드리스 쿠킹이 "등록하는 모듈 없음" 으로 멈출 때야 드러났다(Empty 의 넷 씬 둘, 2026-10-31). 씬은 데이터라
 형식으로 막을 수 없어서 콘텐츠와 매니페스트를 맞댄다. 상용 엔진: 언리얼은 콘텐츠가 쓰는 플러그인을 `.uproject` 에 켜야 하고, 켜지 않으면 에셋 로드가 실패한다.
 
@@ -59,7 +59,7 @@ def collect_manifests(source_root: Path) -> dict[str, dict]:
 def read_type_owners(inputs_path: Path) -> dict[str, set[str | None]]:
     """리플렉션 형식의 짧은 이름(씬 요소 이름) → 주인 키 집합. 주인 None 은 늘 있는 것(엔진 · 실행 파일)이다.
 
-    `inputs_path` 의 줄은 `<주인>\t<ReflectedTypes.list>`(CMake `sw_addContentModuleCheck`), 목록의 줄은 `<FQN>\t<모듈>`(파서)이다.
+    `inputs_path` 의 줄은 `<주인>\t<ReflectedTypes.list>`(CMake `sw_add_content_module_check`), 목록의 줄은 `<FQN>\t<모듈>`(파서)이다.
     목록 파일이 없거나 줄 꼴이 틀리면 멈춘다 — 빠진 목록의 타입을 "엔진 것" 으로 보면 검사가 조용히 통과한다.
     """
     map_owner: dict[str, set[str | None]] = {}

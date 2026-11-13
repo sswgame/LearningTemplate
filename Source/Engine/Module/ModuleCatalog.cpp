@@ -34,7 +34,7 @@ namespace sw
 
             /**
              * @brief 모듈이 도는 플랫폼 비트입니다. 기본은 전부이고 `_listExcludedPlatform` 이 뺍니다(플랫폼 하나를 더할 때 매니페스트 87 개를 고치지 않는다).
-             * @details 에디터 · 에디터 확장은 종류가 데스크톱 전용이라 적지 않아도 Android · Web 에서 빠집니다. CMake `sw_readManifestPlatforms` 와 같은 규칙입니다.
+             * @details 에디터 · 에디터 확장은 종류가 데스크톱 전용이라 적지 않아도 Android · Web 에서 빠집니다. CMake `sw_read_manifest_platforms` 와 같은 규칙입니다.
              */
             static uint8 computePlatformMask( const ModuleManifestFile& file )
             {
@@ -166,7 +166,7 @@ namespace sw
                 return {};
             }
 
-            /** @brief 에디터 확장은 Dev 전용이고 EditorModule 에 의존한다(언리얼 Type "Editor" 모듈과 같다) — CMake `sw_readModuleManifest` 와 같은 검사. */
+            /** @brief 에디터 확장은 Dev 전용이고 EditorModule 에 의존한다(언리얼 Type "Editor" 모듈과 같다) — CMake `sw_read_module_manifest` 와 같은 검사. */
             [[nodiscard]] static expected<void> validateEditorExtension( const ModuleManifest& manifest, const string& errorContext )
             {
                 if ( manifest._kind != ModuleKind::EditorExtension )
@@ -233,7 +233,7 @@ namespace sw
                 }
             }
 
-            /** @brief 2-2) 에디터 확장은 의존(EditorModule · 키트)이 하나라도 꺼져 있으면 함께 꺼진다 — 오류가 아니다(그 확장만 없다). CMake 의 `sw_resolveModuleManifests` 와 같다. */
+            /** @brief 2-2) 에디터 확장은 의존(EditorModule · 키트)이 하나라도 꺼져 있으면 함께 꺼진다 — 오류가 아니다(그 확장만 없다). CMake 의 `sw_resolve_module_manifests` 와 같다. */
             static void deactivateEditorExtensions( const ModuleCatalog& catalog, vector<uint8>& inoutListActive, vector<string>& inoutListReason )
             {
                 // 확장이 확장에 의존할 수 있고 목록은 이름 순이다. 뒤의 확장이 꺼지면 앞의 확장도 꺼져야 하므로 바뀌는 것이 없을 때까지 돈다.

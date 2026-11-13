@@ -163,7 +163,7 @@ namespace sw
 
     /**
      * @brief 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자, @p pName 은 시나리오가 쓰는 이름입니다.
-     * @details Shipping 은 Engine · GameFramework · 키트 · 게임을 통째로 링크하므로(`sw_linkWholeArchive`) 어느 .cpp 에 두어도 등록자가 링크에서 빠지지 않는다.
+     * @details Shipping 은 Engine · GameFramework · 키트 · 게임을 통째로 링크하므로(`sw_link_whole_archive`) 어느 .cpp 에 두어도 등록자가 링크에서 빠지지 않는다.
      */
     #define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, pFunction, nullptr, false, false, false, nullptr )
 

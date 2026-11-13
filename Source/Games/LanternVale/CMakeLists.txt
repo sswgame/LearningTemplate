@@ -3,4 +3,4 @@
 # @brief 작은 액션 MMO 수직 슬라이스 — 서버 권위 골짜기(전투 · 채집 · 성장 · 파티), 반사 함수 호출 · MMO 복제 · 계정별 진행 저장
 # ==============================================================================
 
-sw_addGameModule(SWGame) # 링크하는 키트는 SWGame.module.json 의 의존
+sw_add_game_module(SWGame) # 링크하는 키트는 SWGame.module.json 의 의존

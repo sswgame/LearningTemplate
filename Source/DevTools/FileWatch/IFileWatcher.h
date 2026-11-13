@@ -1,7 +1,7 @@
 /**
  * @file IFileWatcher.h
  * @brief 디렉터리 변경 감시 인터페이스입니다. 구현은 플랫폼별 헤더(Windows · Linux)에 있습니다.
- * @details 이 플랫폼의 구현을 만드는 `createNative` 는 플랫폼 폴더의 .cpp 가 정의하고 CMake 가 고른다(`sw_filterPlatformSources` — `FileWatch/Windows` · `FileWatch/Linux`).
+ * @details 이 플랫폼의 구현을 만드는 `createNative` 는 플랫폼 폴더의 .cpp 가 정의하고 CMake 가 고른다(`sw_filter_platform_sources` — `FileWatch/Windows` · `FileWatch/Linux`).
  *          고르는 쪽에 플랫폼 `#if` 가 없고, 구현이 없는 플랫폼은 링크가 실패한다(mtime 폴링으로 대신하지 않는다).
  */
 #pragma once

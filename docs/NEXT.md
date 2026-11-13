@@ -44,7 +44,7 @@
 
 - **렌더링:** TransientLeasePool 을 뷰 풀에, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, 박막 · 털 · 스타킹 · 비단의 디퍼드(G버퍼 칸 부족 — 지금은 포워드 전용), 몸 머티리얼이 `_skinLayerSurfaceMap` 을 읽기, VFX · 프로브 디스패치 전이를 묶음 API 로.
 - **폴더 자리**(`Config/Rules/Layers/DevFolders.json`):
-  - Graphics/Material/Dev → `DevTools/Material/`: DevTools 에 `sw_addReflectionStep(DevTools MODULE …)`, 셰이더 쿠커의 `MaterialGraphGeneratedPaths::refreshAll` 호출을 엔진 창구(쿠킹 전 셰이더 소스 생성기, 정적 등록)로 뒤집고 `SW_API` → `SW_DEVTOOLS_API`. 막힘: `DataInheritance.h` 가 등록 모듈 "Engine" 을 단언 — "호스트 라이브러리" 로 넓힌다(`registerHostLibraryTypes`).
+  - Graphics/Material/Dev → `DevTools/Material/`: DevTools 에 `sw_add_reflection_step(DevTools MODULE …)`, 셰이더 쿠커의 `MaterialGraphGeneratedPaths::refreshAll` 호출을 엔진 창구(쿠킹 전 셰이더 소스 생성기, 정적 등록)로 뒤집고 `SW_API` → `SW_DEVTOOLS_API`. 막힘: `DataInheritance.h` 가 등록 모듈 "Engine" 을 단언 — "호스트 라이브러리" 로 넓힌다(`registerHostLibraryTypes`).
   - GF GameData/Dev → 개발 전용 공유 모듈 `GameFrameworkDev`(언리얼 `DeveloperTool` 모듈 자리): 매니페스트에 개발 전용 표시, 배포 CMake 는 짓지 않고, 개발 호스트가 GameFramework 다음에 `loadSharedModule`.
 - **RHI 5-2:** DX12 기록 경로 락(`resolveBufferAddress` · `resolveOfflineView` 의 `shared_mutex`, `_resourceStateMutex`)을 병렬 기록 구간 불변식(`setParallelRecording`)과 `RHIHandleTable` 텍스처 상태로. 측정 뒤에만: Vulkan 동적 오프셋 · 푸시 디스크립터, WebGPU 바인드 그룹 캐시 은퇴, RHI 스레드, 복사 큐, SM6.6 바인드리스, RT · 메시 셰이더, Vulkan 서브할당(감사 R-4).
 - **5-3 병렬 오브젝트**(완전 ECS 는 기각, 이득이 흔들림 안이면 되돌림): 틱 본문 45 곳의 `getOwner()->getManager()` 를 `context.getManager()`(읽기) · `context.deferPostTick`(쓰기)으로 옮긴 뒤 쓰기 길을 닫고 `onSubTick` 도 같은 컨텍스트로. 같은 단계 서비스 갱신 병렬화(게임 스레드 전용 API 를 서명으로 먼저 가림). 캐릭터 컨트롤러 3D · 2D 입력을 `ComponentDataStore` 페이지로. 근접 기믹 · 감지 · 넷 관심 격자를 `SceneSpatialGrid` 로 옮길지 측정 뒤.

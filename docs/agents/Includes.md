@@ -24,7 +24,7 @@ Core folders are tiers (`Config/Rules/Layers/CoreLayers.toml`, sub-folder tiers 
 
 ### Target gates
 
-`Source/` is the include root of every target, so include direction across targets is enforced by `#error` stubs first on the include path (`Config/Rules/Layers/TargetLayers.toml`, `sw_applyTargetLayerGuard`). Fix a gate error by changing the dependency, not by adding an exception.
+`Source/` is the include root of every target, so include direction across targets is enforced by `#error` stubs first on the include path (`Config/Rules/Layers/TargetLayers.toml`, `sw_apply_target_layer_guard`). Fix a gate error by changing the dependency, not by adding an exception.
 
 - Core sees nothing above it; Engine sees no GameFramework · Editor · host; GameFramework base sees no kit; the reflection parser sees only the Engine headers in `[allow] reflectionparser`.
 - A kit, editor extension or game sees another module's headers only if that module is in its manifest's `_listDependency` closure. Files with no owning module (`Kits/Feature/Network/NetKitMessageRange.h`) are shared.

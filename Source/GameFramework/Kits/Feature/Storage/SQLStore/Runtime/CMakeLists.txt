@@ -3,7 +3,7 @@
 # @brief SQL 저장 키트(공유) — SQL 드라이버 계약 · 연결 풀 · 드라이버 레지스트리 · 마이그레이션 실행기 · SQLite 드라이버
 # ==============================================================================
 
-sw_addGameFrameworkKit(GF_SQLStore)
+sw_add_game_framework_kit(GF_SQLStore)
 if(NOT TARGET GF_SQLStore)
 	return()
 endif()

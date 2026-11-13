@@ -159,7 +159,7 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 
 - **키트는 데이터와 반응만 갖는다.** `IProjectileWorld` 로 맞을 대상을 답하고 `ProjectileEvent` 를 받아 반응한다. 반응 수치는 탄에 베끼지 않고 가리킨다.
 - **2D 는 평면 제약 3D 다**(언리얼 ProjectileMovement 의 평면 제약). 차원마다 관통 · 튕김 · 유도를 두 벌 쓰지 않는다.
-- **결정성:** `ProjectileDef.cpp` · `ProjectileSimulation.cpp` 는 `sw_markDeterministicSources` 에 있고 삼각함수는 `DeterministicMathUtil` 이다. 중력은 값으로 받는다. 상태 바이트는 `ProjectileSimulation::writeState` 한 벌. 걸음 안에서 세계를 바꾸지 않는다(사건은 걸음 뒤).
+- **결정성:** `ProjectileDef.cpp` · `ProjectileSimulation.cpp` 는 `sw_mark_deterministic_sources` 에 있고 삼각함수는 `DeterministicMathUtil` 이다. 중력은 값으로 받는다. 상태 바이트는 `ProjectileSimulation::writeState` 한 벌. 걸음 안에서 세계를 바꾸지 않는다(사건은 걸음 뒤).
 - **키트 탄 표:** 키트는 자기 카탈로그를 받는 길로 탄 카탈로그를 받는다(게임 서비스 또는 생성 인자 — 판이 서비스를 찾지 않아 테스트 · 리플레이 · 서버가 같은 판을 연다). 벽 없는 판은 수명 · 사거리 없는 탄을 받지 않는다.
 - **어빌리티 탄:** 탄은 시뮬레이션이 돌리고 이펙트 스펙은 탄 id 로 찾는 짐(`ProjectileCargo`)이다 — 런타임 값이라 상태 바이트에 넣지 않는다. 복제가 생기면 시뮬레이션은 서버 권위, 짐은 서버에 둔다(GAS 투사체와 같은 길).
 - 확인: `ProjectileTest`, `ActionRoomTest.ShotsResolveFromTheProjectileCatalog` · `KartRaceTest.ItemsFlyByTheirProjectile` · `MechArenaRulesTest`, 시나리오 `game.shooter3d.projectilecombo` · `game.abilityarena.control`.

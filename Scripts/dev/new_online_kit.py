@@ -62,7 +62,7 @@ def make_files(name: str) -> dict[str, str]:
 # @brief {name} 키트(공유) — 메서드 · 요청/응답 형식 · 클라이언트
 # ==============================================================================
 
-sw_addGameFrameworkKit(GF_{name})
+sw_add_game_framework_kit(GF_{name})
 '''
     files[f"Runtime/{name}Protocol.h"] = f'''/**
  * @file {name}Protocol.h
@@ -211,12 +211,12 @@ namespace sw
 # @brief {name} 키트(서버) — 서비스 · 서버 조립
 # ==============================================================================
 
-sw_addGameFrameworkKit(GF_Server_{name})
+sw_add_game_framework_kit(GF_Server_{name})
 if(NOT TARGET GF_Server_{name})
 	return()
 endif()
-sw_linkRuntimeKit(GF_Server_{name} GF_{name})
-sw_linkRuntimeKit(GF_Server_{name} GF_Server_OnlineCore)
+sw_link_runtime_kit(GF_Server_{name} GF_{name})
+sw_link_runtime_kit(GF_Server_{name} GF_Server_OnlineCore)
 '''
     files[f"Server/{name}Service.h"] = f'''/**
  * @file {name}Service.h

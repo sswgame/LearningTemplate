@@ -6,7 +6,7 @@
 # ------------------------------------------------------------------------------
 # ThirdParty 래퍼 — SYSTEM include
 # ------------------------------------------------------------------------------
-function(sw_thirdPartySystemIncludes TARGET_NAME)
+function(sw_third_party_system_includes TARGET_NAME)
 	cmake_parse_arguments(ARG "" "" "INTERFACE;PUBLIC;PRIVATE" ${ARGN})
 
 	if(NOT TARGET ${TARGET_NAME})
@@ -27,14 +27,14 @@ function(sw_thirdPartySystemIncludes TARGET_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_addVcpkgPackage — CMake 설정 파일이 있는 vcpkg 패키지를 NAME 이라는 INTERFACE 타깃으로 감싼다.
+# sw_add_vcpkg_package — CMake 설정 파일이 있는 vcpkg 패키지를 NAME 이라는 INTERFACE 타깃으로 감싼다.
 #   못 찾으면 **구성을 세운다**(find_package REQUIRED) — 빈 타깃으로 대신하면 링크(또는 실행)에서야 드러난다.
 #   NAME · PACKAGE(기본 NAME) · CONFIG_TARGET(기본 NAME::NAME — 여러 개면 먼저 있는 것을 쓴다) · ATTACH_GLOBAL(sw_third_party_includes 에도 건다)
 # ------------------------------------------------------------------------------
-function(sw_addVcpkgPackage)
+function(sw_add_vcpkg_package)
 	cmake_parse_arguments(ARG "ATTACH_GLOBAL" "NAME;PACKAGE" "CONFIG_TARGET" ${ARGN})
 	if(NOT ARG_NAME)
-		message(FATAL_ERROR "sw_addVcpkgPackage: NAME is required")
+		message(FATAL_ERROR "sw_add_vcpkg_package: NAME is required")
 	endif()
 	if(NOT ARG_PACKAGE)
 		set(ARG_PACKAGE ${ARG_NAME})
@@ -64,15 +64,15 @@ function(sw_addVcpkgPackage)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_addVcpkgHeaderOnly — CMake 설정 파일이 없는 헤더 전용 vcpkg 포트(acl · cgltf). vcpkg include 폴더를 SYSTEM 으로 건다.
+# sw_add_vcpkg_header_only — CMake 설정 파일이 없는 헤더 전용 vcpkg 포트(acl · cgltf). vcpkg include 폴더를 SYSTEM 으로 건다.
 #   PROBE(예: cgltf.h)가 그 폴더에 없으면 구성을 세운다.
 # ------------------------------------------------------------------------------
-function(sw_addVcpkgHeaderOnly)
+function(sw_add_vcpkg_header_only)
 	cmake_parse_arguments(ARG "" "NAME;PROBE" "" ${ARGN})
 	if(NOT ARG_NAME OR NOT ARG_PROBE)
-		message(FATAL_ERROR "sw_addVcpkgHeaderOnly: NAME and PROBE are required")
+		message(FATAL_ERROR "sw_add_vcpkg_header_only: NAME and PROBE are required")
 	endif()
-	sw_getVcpkgPaths(listIncludeDir listBinDir)
+	sw_get_vcpkg_paths(listIncludeDir listBinDir)
 	set(isFound OFF)
 	foreach(includeDir IN LISTS listIncludeDir)
 		if(EXISTS "${includeDir}/${ARG_PROBE}")
@@ -83,11 +83,11 @@ function(sw_addVcpkgHeaderOnly)
 		message(FATAL_ERROR "[ThirdParty] ${ARG_NAME}: ${ARG_PROBE} is not in the vcpkg include folders (${listIncludeDir}) — check vcpkg.json and run vcpkg install")
 	endif()
 	add_library(${ARG_NAME} INTERFACE)
-	sw_linkVcpkgHeaderOnlyTarget(${ARG_NAME})
+	sw_link_vcpkg_header_only_target(${ARG_NAME})
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_findEngineCompressionLibraries — Engine 이 링크할 압축 코덱(zlib · LZ4 · Zstd)의 링크 항목을 OUT_VAR 에 담는다(순서 그대로 링크한다).
+# sw_find_engine_compression_libraries — Engine 이 링크할 압축 코덱(zlib · LZ4 · Zstd)의 링크 항목을 OUT_VAR 에 담는다(순서 그대로 링크한다).
 #   Engine 의 CMakeLists 가 부른다 — 임포트 타깃은 부른 디렉터리에 생긴다(ThirdParty/zlib 의 ZLIB::ZLIB 은 그 폴더에서만 보인다).
 #   Core 는 압축 라이브러리에 의존하지 않고(ICompressionCodec), ReflectionParser 가 끌고 가지 않게 Engine 에만 붙인다.
 #
@@ -99,7 +99,7 @@ endfunction()
 #   - LZ4 · Zstd: CompressionCodecRegistry 에 Engine 이 등록하는 코덱. zstd 는 vcpkg 구성(정적/공유)에 따라 타깃 이름이 달라
 #     하나만 적으면 다른 구성에서 configure 가 조용히 지나가고 링크에서 터진다 — 셋 중 있는 것을 고른다.
 # ------------------------------------------------------------------------------
-function(sw_findEngineCompressionLibraries OUT_VAR)
+function(sw_find_engine_compression_libraries OUT_VAR)
 	find_package(ZLIB REQUIRED)
 	find_package(lz4 CONFIG REQUIRED)
 	find_package(zstd CONFIG REQUIRED)

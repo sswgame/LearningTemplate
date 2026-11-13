@@ -75,7 +75,7 @@
 |---|---|---|---|
 | Emscripten SDK(emsdk) | 웹 빌드 도구 사슬 — `Tools/emsdk`(`platform_sdk.py web`) | `search_paths.defaults.json` 의 `emsdk_version` | MIT / University of Illinois NCSA(emscripten) |
 | Dawn | vcpkg `dawn`(`ThirdParty/dawn`) — 데스크톱은 네이티브 구현(`dawn::webgpu_dawn`, Windows `vulkan,d3d12`, Linux `vulkan,x11`), 웹은 같은 판의 emdawnwebgpu 포트 파일(`webgpu/webgpu.h`) | `vcpkg.json` `builtin-baseline` 의 판 | BSD-3-Clause |
-| Tint 실행 파일 | 셰이더 쿠커의 SPIR-V → WGSL 단계 — `dawn[tint-tools]` 가 깔고 빌드가 App 옆에 둔다(`sw_copyTintTool`) | Dawn 과 같은 판 | BSD-3-Clause |
+| Tint 실행 파일 | 셰이더 쿠커의 SPIR-V → WGSL 단계 — `dawn[tint-tools]` 가 깔고 빌드가 App 옆에 둔다(`sw_copy_tint_tool`) | Dawn 과 같은 판 | BSD-3-Clause |
 | Android NDK | `libvulkan.so` · `libandroid.so` · `liblog.so`, `android_native_app_glue`(NDK 소스) — `Tools/Android/ndk/<판>`(`platform_sdk.py android`) | `android_ndk_version` | Apache-2.0(NDK), 앱 글루 Apache-2.0 |
 | Android SDK build-tools · 플랫폼 | APK 패키징(aapt2 · zipalign · apksigner, android.jar) — `Tools/Android`(`platform_sdk.py android`) | `android_build_tools` · `android_platform` | Apache-2.0 |
 

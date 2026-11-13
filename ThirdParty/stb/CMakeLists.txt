@@ -5,4 +5,4 @@
 #        끌어오는 데 기대면, 그 타깃이 없는 구성(게임을 빼고 짓는 CI · DX12 Shipping · 전용 서버)에서만 `stb_image.h` 를 못 찾는다.
 # ==============================================================================
 
-sw_addVcpkgHeaderOnly(NAME stb PROBE stb_image.h)
+sw_add_vcpkg_header_only(NAME stb PROBE stb_image.h)

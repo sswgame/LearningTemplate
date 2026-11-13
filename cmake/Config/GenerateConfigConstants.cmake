@@ -16,7 +16,7 @@ include_guard(GLOBAL)
 #    팩 레이아웃은 생성하지 않는다 — 원본은 손으로 쓴 C++ 헤더(Source/Engine/Content/Pack/PackTypes.h)다(StructureSimplification PK1).
 # ------------------------------------------------------------------------------
 include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
-sw_executePythonScript("Scripts/generate/configure_files.py"
+sw_execute_python_script("Scripts/generate/configure_files.py"
 	ARGS "${CMAKE_BINARY_DIR}/generated/sw/config" --game "${SW_ACTIVE_GAME}"
 	REQUIRED
 )

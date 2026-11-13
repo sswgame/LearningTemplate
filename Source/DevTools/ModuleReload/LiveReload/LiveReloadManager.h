@@ -114,7 +114,7 @@ namespace sw
          * @details 연쇄 빌드는 모듈 DLL 을 하나씩 다시 쓴다. mtime 이 디바운스 시간만큼 멈췄다고 적용하면, 의존하는 모듈의 링크가 아직 끝나지 않은
          *          반쯤 완성된 집합이 로드된다(헤더가 어긋나면 ABI 스탬프가 막지만, 같은 헤더의 반쯤 완성된 집합은 막지 못한다). 언리얼 Live Coding 도 빌드가
          *          끝난 뒤에 패치한다. 바깥에서 돌린 빌드(터미널, IDE)는 빌드 성공 스탬프(`config::kFileModuleBuildStamp`)가 바뀔 때만 올린다 — 빌드가 동적
-         *          모듈을 모두 링크한 뒤에만 쓰는 파일이다(`sw_addModuleBuildStamp`). 모듈 DLL 의 쓰기 자체는 리로드를 부르지 않는다.
+         *          모듈을 모두 링크한 뒤에만 쓰는 파일이다(`sw_add_module_build_stamp`). 모듈 DLL 의 쓰기 자체는 리로드를 부르지 않는다.
          */
         void notifyBuildStarted();
         /**
@@ -180,7 +180,7 @@ namespace sw
          *          라이브러리에 바인딩된다. 어긋나면 한 프로세스에서 같은 모듈이 두 벌 돌고(정적 상태와 타입 등록이 갈린다), 옛 라이브러리를 언로드하는 순간
          *          거기로 점프하는 코드가 죽는다. 등록과 연쇄 리로드 끝에 호출하고, 어긋나면 그래프를 막는다. 섞인 채 조용히 도는 것보다 낫기 때문이다.
          *          Windows 는 import 테이블 첫 항목이 가리키는 라이브러리로, 리눅스는 모듈마다 박힌 스탬프 상수(`sw_moduleEngineABIStamp_<이름>`,
-         *          `sw_registerDynamicModule` 이 넣는다)의 주소로 판단한다.
+         *          `sw_register_dynamic_module` 이 넣는다)의 주소로 판단한다.
          */
         bool verifyModuleBindings() const;
 

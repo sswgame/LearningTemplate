@@ -8,7 +8,7 @@ if(NOT SW_ENABLE_COMPLEX_TEXT)
 	return()
 endif()
 
-sw_addVcpkgPackage(
+sw_add_vcpkg_package(
 	NAME sheenbidi
 	PACKAGE SheenBidi
 	CONFIG_TARGET SheenBidi::SheenBidi sheenbidi::sheenbidi
