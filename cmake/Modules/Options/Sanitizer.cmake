@@ -9,6 +9,12 @@ endif()
 
 add_library(sw_sanitizer INTERFACE)
 
+# 리눅스 Clang 은 새니타이저 런타임을 공유 라이브러리로 링크한다(GCC 는 원래 그렇다). 기본(정적)이면 런타임이 App 에 들어가는데, 리눅스 심볼 숨김의
+# `--exclude-libs,ALL`(cmake/Engine/BuildLayout.cmake)이 그 심볼까지 가려 모듈 .so 가 __asan_* · __tsan_* 을 찾지 못하고 링크에서 진다.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+	target_link_options(sw_sanitizer INTERFACE -shared-libsan -frtlib-add-rpath)
+endif()
+
 # ------------------------------------------------------------------------------
 # 0) ThreadSanitizer — 데이터 경쟁 탐지(태스크 후속 목록 · 렌더 스레드 깨움 · 게임/렌더 스레드 맵 경쟁 같은 동시성 결함이
 #    이것 하나로 잡힌다). GNU/Clang 전용이고 ASan 과 함께 켤 수 없다.
