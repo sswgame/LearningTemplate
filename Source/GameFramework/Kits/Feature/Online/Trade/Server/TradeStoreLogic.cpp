@@ -476,6 +476,12 @@ namespace sw
                                       nowMs );
             return TradeResult::Ok;
         }
+        if ( staged == LedgerResult::AccountDeleted )
+        {
+            inoutTransaction.clear(); // 상대가 탈퇴로 지워졌다 — 원장 부분은 붙지 않았으므로 거래만 실패로 닫는다(다시 해도 갈 곳이 없다)
+            TradeStateMachine::close( inoutNext, TradeState::Failed, TradeCloseReason::PartyLeft, nowMs );
+            return TradeResult::Ok;
+        }
         if ( staged != LedgerResult::Ok )
             return staged == LedgerResult::Unavailable ? TradeServiceResult::fail( OnlineError::kUnavailable ) : TradeServiceResult::fail( OnlineError::kInvalidRequest );
         outStage._bStaged = outLedger._bReplayed == SW_FALSE;

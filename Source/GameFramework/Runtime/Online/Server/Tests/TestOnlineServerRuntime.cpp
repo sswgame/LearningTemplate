@@ -71,8 +71,9 @@ namespace
             addKitEvent( kName, context._pRouter != nullptr ? "start" : "start-without-router" );
             return {};
         }
-        void stop() override { addKitEvent( kName, "stop" ); }
-        void shutdown() override { addKitEvent( kName, "shutdown" ); }
+        const sw::IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; } // 테스트 키트는 표가 없다
+        void                           stop() override { addKitEvent( kName, "stop" ); }
+        void                           shutdown() override { addKitEvent( kName, "shutdown" ); }
 
     private:
         TestDirectory _directory;
@@ -108,8 +109,9 @@ namespace
             addKitEvent( kName, context._kits.get<IAccountDirectory>().isAccountOnline( 7 ) ? "start" : "start-without-directory" );
             return {};
         }
-        void stop() override { addKitEvent( kName, isStarted() ? "stop" : "stop-unstarted" ); }
-        void shutdown() override { addKitEvent( kName, "shutdown" ); }
+        const sw::IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; } // 테스트 키트는 표가 없다
+        void                           stop() override { addKitEvent( kName, isStarted() ? "stop" : "stop-unstarted" ); }
+        void                           shutdown() override { addKitEvent( kName, "shutdown" ); }
 
         span<const utf8* const> getRequiredKits() const override
         {

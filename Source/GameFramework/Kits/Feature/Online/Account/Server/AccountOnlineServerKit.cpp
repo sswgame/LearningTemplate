@@ -97,8 +97,8 @@ namespace sw
 
             expected<void> start( OnlineServerKitContext& context ) override
             {
-                // 바인딩이 첫 틱에 호스트의 캐시 · 버스를 잇는다(접속 상태 · account.revoke). 여기서 할 일은 없다.
-                (void)context;
+                // 바인딩이 첫 틱에 호스트의 캐시 · 버스를 잇는다(접속 상태 · account.revoke). 탈퇴 정리에는 모든 키트의 훅을 넘긴다 — 모든 키트의 initialize 뒤다.
+                _loginService.setAfterDeleteAccount( context._listAfterDeleteAccount );
                 return {};
             }
 
@@ -114,6 +114,9 @@ namespace sw
                 SW_LOG_INFO_ID( "AccountOnlineServerKit.SeededTestAccountDevelopment", "Seeded %# test account(s) (development setting _listSeedTestAccount)", static_cast<uint32>( _listSeedAccount.size() ) );
                 _listSeedAccount.clear();
             }
+
+            /** @brief 계정 키트의 표는 탈퇴 정리(`LoginStoreLogic::purgeAccount`)가 계정과 한 트랜잭션에 지운다 — 따로 훅이 없다. */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 맡긴 로그인 · 가입 · 티켓 요청(외부 확인 대기 포함). */
             int32 getOpenJobCount() const override { return _loginService.getPendingCount(); }

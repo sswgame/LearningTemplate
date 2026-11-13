@@ -9,6 +9,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
+#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
@@ -79,6 +80,12 @@ namespace sw
             static const hashed_string& getAccountExternalTable()
             {
                 static const hashed_string s_table{ "login_account_external" };
+                return s_table;
+            }
+
+            static const hashed_string& getAfterDeleteTable()
+            {
+                static const hashed_string s_table{ "account_after_delete" };
                 return s_table;
             }
 
@@ -530,6 +537,7 @@ namespace sw
             ServiceTransaction transaction;
             transaction.put( Internal::getAccountTable(), nameKey, Internal::encodeAccount( account ), ServiceRecord::kAbsentVersion );
             transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( account._accountID ), Internal::encodeProfile( profile ), ServiceRecord::kAbsentVersion );
+            Ledger::requireNoTombstone( account._accountID, transaction ); // 지운 계정의 id 는 다시 쓰지 않는다 — 겹치면 아래 Conflict 로 새 id 를 뽑는다
             ServiceCommitInfo        info;
             const ServiceStoreResult result = _connection.commit( transaction, &info );
             if ( result == ServiceStoreResult::Conflict && info._conflictIndex == 0 )
@@ -659,6 +667,7 @@ namespace sw
                 profile._bGuest         = SW_TRUE;
                 transaction.put( Internal::getGuestTable(), digestHex, ServiceKeyUtil::encodeVarID( accountID ), ServiceRecord::kAbsentVersion );
                 transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( accountID ), Internal::encodeProfile( profile ), ServiceRecord::kAbsentVersion );
+                Ledger::requireNoTombstone( accountID, transaction ); // 지운 계정의 id 는 다시 쓰지 않는다
             }
             else
             {
@@ -723,6 +732,7 @@ namespace sw
                 transaction.put( Internal::getAccountExternalTable(), Internal::makeAccountExternalKey( accountID, provider ), vector<uint8>( reinterpret_cast<const uint8*>( digestHex.data() ), reinterpret_cast<const uint8*>( digestHex.data() ) + digestHex.size() ),
                                  ServiceRecord::kAbsentVersion );
                 transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( accountID ), Internal::encodeProfile( profile ), ServiceRecord::kAbsentVersion );
+                Ledger::requireNoTombstone( accountID, transaction ); // 지운 계정의 id 는 다시 쓰지 않는다
             }
             else
             {
@@ -1187,7 +1197,7 @@ namespace sw
         return LoginServiceResult::fail( OnlineError::kUnavailable );
     }
 
-    int32 LoginStoreLogic::purgeDueDeletions( int64 nowMs, int32 maxCount )
+    int32 LoginStoreLogic::purgeDueDeletions( int64 nowMs, int32 maxCount, const vector<const IAfterDeleteAccount*>& listAfterDeleteAccount )
     {
         using Internal = LoginStoreLogicInternal;
         if ( maxCount <= 0 )
@@ -1215,10 +1225,42 @@ namespace sw
                 break;
             purgedCount += purged == LoginResult::Ok ? 1 : 0;
         }
+        runAfterDeleteAccount( nowMs, maxCount, listAfterDeleteAccount );
         // 지운 계정의 잔액을 소각한다. 이번 회차에 지운 계정과 지난 회차에 다 태우지 못한 계정을 함께 본다
         int32 burnedCount = 0;
         (void)Ledger::burnDeletedAccounts( _connection, nowMs, maxCount, burnedCount ); // 저장소 문제면 소각 대기에 남아 다음 회차에 다시 본다
         return purgedCount;
+    }
+
+    void LoginStoreLogic::runAfterDeleteAccount( int64 nowMs, int32 maxCount, const vector<const IAfterDeleteAccount*>& listAfterDeleteAccount )
+    {
+        using Internal = LoginStoreLogicInternal;
+        vector<ServiceRecord> listQueued;
+        if ( _connection.listRecords( Internal::getAfterDeleteTable(), "", "", maxCount, false, listQueued ) != ServiceStoreResult::Ok )
+            return;
+        for ( const ServiceRecord& queued : listQueued )
+        {
+            uint64 accountID = 0;
+            if ( ServiceKeyUtil::parseHex64( queued._key, accountID ) == false || accountID == 0 )
+            {
+                SW_LOG_WARNING_ID( "LoginStoreLogic.AfterDeleteKeyMalformed", "account after-delete key '%#' is malformed", queued._key.c_str() );
+                continue;
+            }
+            bool bDone = true;
+            for ( const IAfterDeleteAccount* pHook : listAfterDeleteAccount )
+            {
+                const ServiceStoreResult result = pHook->afterDeleteAccount( _connection, accountID, nowMs );
+                if ( result == ServiceStoreResult::Unavailable )
+                    return; // 저장소가 아프다 — 다음 회차에 처음부터 다시 본다(훅은 멱등)
+                bDone = bDone && result == ServiceStoreResult::Ok;
+            }
+            if ( bDone == false )
+                continue;
+            ServiceTransaction done;
+            done.erase( Internal::getAfterDeleteTable(), queued._key, queued._version );
+            if ( _connection.commit( done ) == ServiceStoreResult::Unavailable )
+                return;
+        }
     }
 
     LoginServiceResult LoginStoreLogic::purgeAccount( uint64 accountID, string_view deletionKey, int64 nowMs )
@@ -1268,6 +1310,7 @@ namespace sw
         }
         // 원장 묘비와 소각 대기를 계정 지우기와 한 트랜잭션에 넣는다 — 탈퇴가 그사이 취소돼 이 커밋이 지면 잔액도 그대로다(Nakama DeleteAccount 의 지갑 · user_tombstone)
         Ledger::stageAccountDeletion( accountID, nowMs, transaction );
+        transaction.put( Internal::getAfterDeleteTable(), accountKey, vector<uint8>{} ); // 키트 훅은 커밋 뒤 대기열로 돈다(`runAfterDeleteAccount`)
         ServiceAuditEntry audit = Internal::makeAuditEntry( accountID, "account.delete", nowMs );
         audit._actor            = ServiceAuditLog::kSystemActor;
         ServiceAuditLog::stageEntry( transaction, audit, accountID, static_cast<uint64>( profile._deletionDueMs ) );

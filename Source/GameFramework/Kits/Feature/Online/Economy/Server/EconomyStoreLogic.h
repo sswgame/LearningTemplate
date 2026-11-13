@@ -129,7 +129,12 @@ namespace sw
         static EconomyServiceResult withdrawPurchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const EconomyWithdrawInput& input,
                                                       EconomyWithdrawReply& outReply );
         static EconomyServiceResult readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyWalletReply& outReply );
-        static EconomyServiceResult readHistory( IServiceStoreConnection& connection, uint64 accountID, const EconomyHistoryRequest& request, EconomyHistoryReply& outReply );
+        /**
+         * @brief 탈퇴한 계정의 경제 키트 레코드를 지웁니다(`IAfterDeleteAccount`). 구매 수(`econ_purchase`)를 지운다.
+         * @details 잔액은 탈퇴 정리가 원장에서 소각하고(`Ledger::burnDeletedAccounts`), 쓴 영수증(`econ_receipt`)은 처음부터 계정을 담지 않는다.
+         */
+        [[nodiscard]] static ServiceStoreResult eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs );
+        static EconomyServiceResult             readHistory( IServiceStoreConnection& connection, uint64 accountID, const EconomyHistoryRequest& request, EconomyHistoryReply& outReply );
         /** @brief 이동 결과에서 @p accountID 의 잔액만 골라냅니다. */
         static void collectAccountBalances( const LedgerTransferResult& serviceResult, uint64 accountID, vector<LedgerBalance>& outListBalance );
     };

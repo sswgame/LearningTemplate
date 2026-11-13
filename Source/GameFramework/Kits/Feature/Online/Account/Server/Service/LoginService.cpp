@@ -64,10 +64,11 @@ namespace sw
     /** @brief 끊김, 세션 다시 읽기, 탈퇴 정리의 입력입니다. 완료가 없고 부작용만 있습니다. */
     struct LoginMaintenanceInput
     {
-        vector<LoginSessionRef> _listOnline{};
-        uint64                  _disconnectedSessionID{ 0 };
-        UnixMilliseconds        _nowMs{ 0 };
-        int32                   _purgeCount{ 0 };
+        vector<LoginSessionRef>            _listOnline{};
+        uint64                             _disconnectedSessionID{ 0 };
+        UnixMilliseconds                   _nowMs{ 0 };
+        int32                              _purgeCount{ 0 };
+        vector<const IAfterDeleteAccount*> _listAfterDeleteAccount{}; ///< 탈퇴 정리가 부를 키트 훅(정리 일에만 싣는다)
     };
 
     namespace
@@ -196,7 +197,7 @@ namespace sw
                 if ( input._listOnline.empty() == false )
                     logic.refreshSessions( input._listOnline, input._nowMs.count() );
                 if ( input._purgeCount > 0 )
-                    (void)logic.purgeDueDeletions( input._nowMs.count(), input._purgeCount );
+                    (void)logic.purgeDueDeletions( input._nowMs.count(), input._purgeCount, input._listAfterDeleteAccount );
                 return serviceResult;
             }
         };
@@ -226,6 +227,7 @@ namespace sw
         , _refreshCursor{ 0 }
         , _revocationScanJob{}
         , _store{}
+        , _listAfterDeleteAccount{}
     {
     }
 
@@ -523,8 +525,9 @@ namespace sw
         if ( maxCount <= 0 )
             return;
         LoginMaintenanceInput input;
-        input._nowMs      = nowMs;
-        input._purgeCount = maxCount;
+        input._nowMs                  = nowMs;
+        input._purgeCount             = maxCount;
+        input._listAfterDeleteAccount = _listAfterDeleteAccount;
         submitMaintenance( std::move( input ) );
     }
 

@@ -113,6 +113,8 @@ namespace sw
 
         static string makeDeviceKey( AccountID accountID, string_view providerID, string_view token );
         static string makeAccountPrefix( AccountID accountID );
+        /** @brief 탈퇴한 계정의 기기 목록(`liveops_device`, 푸시 토큰)을 지웁니다(`IAfterDeleteAccount`). 저장소 스레드에서 부릅니다. */
+        [[nodiscard]] static ServiceStoreResult eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs );
         /**
          * @brief 토픽 알림 표(`liveops_push`)의 TTL 규칙입니다. 창 끝에서 @p expireAfterMs 가 지나면 지웁니다. 키트 조립이 `IOnlineServerKit::addTTLRule` 로 올립니다.
          * @details 표는 이벤트 창마다 지역 수만큼이라 작다. TTL 색인 없이 키의 창 끝을 읽는 커서 훑기로 둔다 — 색인 줄이 표 수와 같아 얻는 것이 없다.

@@ -16,6 +16,7 @@
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
@@ -719,6 +720,7 @@ namespace sw
 {
     LeaderboardService::LeaderboardService()
         : _mapBoard{}
+        , _pastScoreRetentionMs{ 0 }
         , _mapRankKeyToWaitingRead{}
         , _mapRankKeyToLateWrite{}
         , _mapReadyRequestToRead{}
@@ -818,6 +820,74 @@ namespace sw
     {
         const auto boardIt = _mapBoard.find( string( boardID ) );
         return boardIt != _mapBoard.end() ? &boardIt->second : nullptr;
+    }
+
+    ServiceStoreResult LeaderboardService::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs ) const
+    {
+        using Internal          = LeaderboardServiceInternal;
+        const string accountHex = ServiceKeyUtil::makeHex64( accountID );
+        if ( const ServiceStoreResult stats = ServiceStoreUtil::erasePrefix( connection, Internal::getStatTable(), accountHex + "/" ); stats != ServiceStoreResult::Ok )
+            return stats;
+        if ( const ServiceStoreResult achievements = ServiceStoreUtil::erasePrefix( connection, Internal::getAchievementTable(), accountHex + "/" ); achievements != ServiceStoreResult::Ok )
+            return achievements;
+        // 점수 · 시즌 결과는 키가 보드 · 기간 앞이라 접두어로 찾지 못한다. 남아 있을 수 있는 기간마다 키를 만들어 지운다(없는 키 지우기는 할 일이 없다).
+        ServiceTransaction transaction;
+        auto               flush = [&connection, &transaction]() -> ServiceStoreResult
+        {
+            if ( transaction.getWrites().size() + 2 <= static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
+                return ServiceStoreResult::Ok;
+            const ServiceStoreResult committed = connection.commit( transaction );
+            transaction                        = ServiceTransaction{};
+            return committed;
+        };
+        auto eraseScore = [&]( const LeaderboardDef& board, uint64 periodID ) -> ServiceStoreResult
+        {
+            const string key = Internal::makeScorePrefix( board._boardID, periodID ) + accountHex;
+            transaction.erase( Internal::getScoreTable(), key );
+            if ( const int64 expiryBaseMs = Internal::computeScoreExpiryBaseMs( board, periodID ); expiryBaseMs > 0 )
+                transaction.erase( Internal::getScoreExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiryBaseMs, key ) );
+            return flush();
+        };
+        for ( const auto& [boardID, board] : _mapBoard )
+        {
+            ServiceStoreResult erased = ServiceStoreResult::Ok;
+            switch ( board._reset )
+            {
+                case LeaderboardReset::Daily:
+                case LeaderboardReset::Weekly:
+                {
+                    // 기간 끝 + 보존 기간이 지나지 않은 기간을 지금부터 거꾸로 걷는다(기간 시작은 초기화 시각마다다)
+                    const int64 periodMs = board._reset == LeaderboardReset::Daily ? Internal::kDayMs : Internal::kWeekMs;
+                    for ( int64 periodStartMs = static_cast<int64>( computePeriodID( board, UnixMilliseconds{ nowMs } ) );
+                          periodStartMs > 0 && periodStartMs + periodMs + _pastScoreRetentionMs >= nowMs && erased == ServiceStoreResult::Ok; periodStartMs -= periodMs )
+                    {
+                        erased = eraseScore( board, static_cast<uint64>( periodStartMs ) );
+                    }
+                    break;
+                }
+                case LeaderboardReset::Season:
+                {
+                    for ( const LeaderboardSeason& season : board._listSeason )
+                    {
+                        if ( erased = eraseScore( board, season._seasonID ); erased != ServiceStoreResult::Ok )
+                            break;
+                        const string resultKey = Internal::makeSeasonResultKey( board._boardID, season._seasonID, accountID );
+                        transaction.erase( Internal::getSeasonResultTable(), resultKey );
+                        transaction.erase( Internal::getSeasonResultExpiryTable(), ServiceTTLRule::makeTTLIndexKey( season._endMs + Internal::kSettlementWindowMs, resultKey ) );
+                        erased = flush();
+                    }
+                    break;
+                }
+                default:
+                {
+                    erased = eraseScore( board, 0 ); // 초기화 없는 보드는 기간 id 가 0 하나다
+                    break;
+                }
+            }
+            if ( erased != ServiceStoreResult::Ok )
+                return erased;
+        }
+        return transaction.getWrites().empty() ? ServiceStoreResult::Ok : connection.commit( transaction );
     }
 
     uint64 LeaderboardService::computePeriodID( const LeaderboardDef& definition, UnixMilliseconds nowMs ) const

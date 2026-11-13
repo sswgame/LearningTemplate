@@ -99,6 +99,9 @@ namespace sw
                 SW_LOG_INFO_ID( "MatchmakingOnlineServerKit.MatchmakingKitShutdownDrain", "Matchmaking kit: shutdown drain starts with %# open job(s), grace %# s", getOpenJobCount(), notice._graceSeconds );
             }
 
+            /** @brief 매칭 대기열은 캐시 층에만 있고 영속 표가 없다 — 지운 계정은 세션이 끊겨 대기열에서 빠진다. */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; }
+
             void stop() override
             {
                 if ( isStarted() == false )

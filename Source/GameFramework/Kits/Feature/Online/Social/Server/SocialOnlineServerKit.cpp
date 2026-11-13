@@ -36,6 +36,19 @@ namespace sw
             const SocialService* _pService;
         };
 
+        /** @brief 친구 키트의 탈퇴 정리입니다 — 관계(`SocialService::eraseAccount`) 뒤 길드(`GuildService::eraseAccount`)를 지웁니다. */
+        class SocialAfterDeleteAccount final : public IAfterDeleteAccount
+        {
+        public:
+            SocialAfterDeleteAccount() = default;
+
+            [[nodiscard]] ServiceStoreResult afterDeleteAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs ) const override
+            {
+                const ServiceStoreResult links = SocialService::eraseAccount( connection, accountID, nowMs );
+                return links == ServiceStoreResult::Ok ? GuildService::eraseAccount( connection, accountID, nowMs ) : links;
+            }
+        };
+
         /**
          * @class SocialOnlineServerKit
          * @brief 친구 키트의 서버 조립입니다.
@@ -48,6 +61,7 @@ namespace sw
                 , _guildService{}
                 , _socialServer{}
                 , _blockList{ &_socialService }
+                , _afterDeleteAccount{}
                 , _pGroupChannels{ nullptr }
             {
             }
@@ -91,6 +105,9 @@ namespace sw
                 return {};
             }
 
+            /** @brief 탈퇴한 계정의 관계 · 길드 레코드를 지운다(`SocialAfterDeleteAccount`). */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return &_afterDeleteAccount; }
+
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 친구 · 길드 요청. */
             int32 getOpenJobCount() const override { return _socialService.getPendingCount() + _guildService.getPendingCount(); }
 
@@ -133,6 +150,7 @@ namespace sw
             GuildService             _guildService;
             SocialServer             _socialServer;
             SocialBlockList          _blockList;
+            SocialAfterDeleteAccount _afterDeleteAccount;
             IGroupChannelMembership* _pGroupChannels;         ///< 채팅 키트가 없으면 null 이고 길드 이벤트를 받지 않는다
             Subscription             _guildEventSubscription; ///< 길드 이벤트 칸 구독(`start` 가 걸고 `shutdown` 이 놓는다)
         };

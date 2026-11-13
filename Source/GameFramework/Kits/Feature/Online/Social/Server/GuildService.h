@@ -193,6 +193,13 @@ namespace sw
         static ServiceTTLRule makeInviteTTLRule( int64 expireAfterMs );
         /** @brief 만료된 가입 신청의 TTL 규칙입니다(TTL 색인 규칙). 해산한 길드 · 다시 오지 않는 신청자의 신청이 남지 않게 한다. */
         static ServiceTTLRule makeApplicationTTLRule( int64 expireAfterMs );
+        /**
+         * @brief 탈퇴한 계정의 길드 레코드를 지웁니다(친구 키트의 `IAfterDeleteAccount` 몫). 저장소 스레드에서 부릅니다.
+         * @details 받은 초대와 그 만료 색인, 낸 신청(역색인 `social_account_application`), 멤버십이다. 멤버십은 맡긴 몫을 소각하고(돌려줄 계정이 없다) 그가 주거나 받은 허용을 지운다.
+         *          길드장이면 남은 멤버 중 가장 높은 역할 · 먼저 들어온 사람에게 넘기고, 혼자면 공용 창고를 소각하고 길드를 해산한다. 단계마다 커밋하고 멱등이다.
+         *          Nakama 의 DeleteAccount 가 그룹 소유권을 넘기고 멤버십을 지우는 것과 같은 자리다.
+         */
+        [[nodiscard]] static ServiceStoreResult eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs );
 
     private:
         /** @brief 저장소 일의 완료입니다. */

@@ -125,7 +125,11 @@ namespace sw
             {
                 const expected<void> result = _kit->initialize( _context, _entry );
                 if ( result.has_value() )
+                {
+                    if ( const IAfterDeleteAccount* pHook = _kit->getAfterDeleteAccount(); pHook != nullptr )
+                        _context._listAfterDeleteAccount.push_back( pHook );
                     return SubsystemInitResult::Succeeded;
+                }
                 _startupError = OnlineServerRuntimeInternal::makeKitError( result.error(), _entry._name, "initialize" );
                 return SubsystemInitResult::Failed;
             }

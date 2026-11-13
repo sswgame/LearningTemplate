@@ -4,6 +4,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxService.h"
+#include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Mail/ServiceMailCampaign.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
@@ -25,6 +26,7 @@ namespace sw
             MailboxOnlineServerKit()
                 : _service{}
                 , _settings{}
+                , _afterDeleteAccount{}
             {
             }
 
@@ -55,6 +57,9 @@ namespace sw
                 return {};
             }
 
+            /** @brief 탈퇴한 계정의 받은 우편 · 보낸 기록 · 캠페인 수령을 지운다(`MailboxStoreLogic::eraseAccount`). */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return &_afterDeleteAccount; }
+
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 끝나지 않은 우편 호출. */
             int32 getOpenJobCount() const override { return _service.getOpenJobCount(); }
 
@@ -72,8 +77,9 @@ namespace sw
             }
 
         private:
-            MailboxService       _service;
-            MailboxServiceConfig _settings;
+            MailboxService                                               _service;
+            MailboxServiceConfig                                         _settings;
+            AfterDeleteAccountFunction<&MailboxStoreLogic::eraseAccount> _afterDeleteAccount;
         };
     } // namespace
 } // namespace sw

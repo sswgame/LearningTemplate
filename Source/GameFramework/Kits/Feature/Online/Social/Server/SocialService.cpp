@@ -39,6 +39,20 @@ namespace sw
                 return s_table;
             }
 
+            /** @brief 막음의 역색인 `<막힌 사람>/<막은 사람>`(값 없음)입니다. 막힌 쪽 줄은 없으므로 탈퇴 정리가 "나를 막은 사람" 을 여기서 찾는다. */
+            static const hashed_string& getBlockedByTable()
+            {
+                static const hashed_string s_table{ "social_blocked_by" };
+                return s_table;
+            }
+
+            /** @brief 줄 키 `<주인>/<상대>` 의 역색인 키 `<상대>/<주인>` 입니다. */
+            static string makeReverseKey( const string& key )
+            {
+                const size_t width = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                return key.substr( width + 1 ) + "/" + key.substr( 0, width );
+            }
+
             static string makeLinkKey( AccountID ownerID, AccountID otherID )
             {
                 string key = ServiceKeyUtil::makeHex64( ownerID );
@@ -113,6 +127,15 @@ namespace sw
             static void stageLink( ServiceTransaction& inoutTransaction, const string& key, const ServiceRecord& record, SocialLinkState oldState, SocialLinkState newState,
                                    UnixMilliseconds nowMs )
             {
+                const bool bWasBlocked = oldState == SocialLinkState::Blocked;
+                const bool bBlocked    = newState == SocialLinkState::Blocked;
+                if ( bWasBlocked != bBlocked ) // 막음이 서거나 풀릴 때 역색인을 같은 트랜잭션에서 맞춘다
+                {
+                    if ( bBlocked )
+                        inoutTransaction.put( getBlockedByTable(), makeReverseKey( key ), vector<uint8>{} );
+                    else
+                        inoutTransaction.erase( getBlockedByTable(), makeReverseKey( key ) );
+                }
                 if ( newState == SocialLinkState::None )
                 {
                     if ( record._version != ServiceRecord::kAbsentVersion )
@@ -133,6 +156,58 @@ namespace sw
                 }
                 addCounts( counts, delta );
                 inoutTransaction.put( getCountTable(), key, encodeCounts( counts ), record._version );
+            }
+        };
+
+        /** @brief 탈퇴 정리의 저장 부분입니다. */
+        struct SocialDeleteAccountInternal
+        {
+            /** @brief 상대 @p otherID 의 상태가 나를 향해 @p otherState 일 때 상대 개수의 변화입니다. */
+            static SocialCounts makeOtherDelta( SocialLinkState otherState )
+            {
+                SocialCounts delta;
+                delta._friendCount   = otherState == SocialLinkState::Friend ? -1 : 0;
+                delta._outgoingCount = otherState == SocialLinkState::Outgoing ? -1 : 0;
+                delta._incomingCount = otherState == SocialLinkState::Incoming ? -1 : 0;
+                delta._blockedCount  = otherState == SocialLinkState::Blocked ? -1 : 0;
+                return delta;
+            }
+
+            /**
+             * @brief 지운 계정 @p selfID 와 @p otherID 사이의 줄을 지웁니다. 내 줄 @p pSelfLink(없으면 nullptr)와 상대 줄 `<상대>/<나>` 를 지우고 상대 개수를 고치며 역색인을 맞춥니다.
+             */
+            static ServiceStoreResult erasePair( IServiceStoreConnection& connection, AccountID selfID, AccountID otherID, const ServiceRecord* pSelfLink )
+            {
+                using Internal         = SocialServiceInternal;
+                const string  selfKey  = Internal::makeLinkKey( selfID, otherID );
+                const string  otherKey = Internal::makeLinkKey( otherID, selfID );
+                const string  countKey = ServiceKeyUtil::makeHex64( otherID );
+                ServiceRecord otherLink;
+                ServiceRecord otherCount;
+                if ( Internal::readOrAbsent( connection, Internal::getLinkTable(), otherKey, otherLink ) == false ||
+                     Internal::readOrAbsent( connection, Internal::getCountTable(), countKey, otherCount ) == false )
+                    return ServiceStoreResult::Unavailable;
+                SocialLinkState selfState  = SocialLinkState::None;
+                SocialLinkState otherState = SocialLinkState::None;
+                int64           sinceMs    = 0;
+                if ( pSelfLink != nullptr && Internal::decodeLink( pSelfLink->_bytes, selfState, sinceMs ) == false )
+                    selfState = SocialLinkState::None;
+                if ( otherLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( otherLink._bytes, otherState, sinceMs ) == false )
+                    otherState = SocialLinkState::None;
+                SocialCounts counts;
+                if ( otherCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( otherCount._bytes, counts ) == false )
+                    counts = SocialCounts{};
+                ServiceTransaction transaction;
+                if ( pSelfLink != nullptr )
+                    transaction.erase( Internal::getLinkTable(), selfKey, pSelfLink->_version );
+                if ( otherLink._version != ServiceRecord::kAbsentVersion )
+                    transaction.erase( Internal::getLinkTable(), otherKey, otherLink._version );
+                Internal::stageCounts( transaction, countKey, otherCount, counts, makeOtherDelta( otherState ) );
+                if ( selfState == SocialLinkState::Blocked )
+                    transaction.erase( Internal::getBlockedByTable(), Internal::makeReverseKey( selfKey ) );
+                if ( otherState == SocialLinkState::Blocked || pSelfLink == nullptr )
+                    transaction.erase( Internal::getBlockedByTable(), Internal::makeReverseKey( otherKey ) );
+                return connection.commit( transaction );
             }
         };
 
@@ -334,6 +409,64 @@ namespace sw
             if ( writePresenceRecord( SocialPresence{ local._activity, accountID, local._status } ) == false )
                 SW_LOG_WARNING_ID( "SocialService.SocialServicePresenceAccountNot", "SocialService: presence of account %# was not refreshed - it expires from the cache", accountID );
         }
+    }
+
+    ServiceStoreResult SocialService::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 /*nowMs*/ )
+    {
+        using Internal         = SocialServiceInternal;
+        const string    prefix = ServiceKeyUtil::makeHex64( accountID ) + "/";
+        constexpr int32 kPage  = 64;
+        // 내 줄과 상대 쪽 짝 줄
+        while ( true )
+        {
+            vector<ServiceRecord>    listLink;
+            const ServiceStoreResult listed = connection.listRecords( Internal::getLinkTable(), prefix, "", kPage, false, listLink );
+            if ( listed != ServiceStoreResult::Ok )
+                return listed;
+            if ( listLink.empty() )
+                break;
+            for ( const ServiceRecord& link : listLink )
+            {
+                AccountID otherID = kInvalidAccountID;
+                if ( ServiceKeyUtil::parseHex64( string_view( link._key ).substr( prefix.size() ), otherID ) == false )
+                {
+                    ServiceTransaction broken; // 지운 계정의 깨진 줄이다 — 지우기만 한다
+                    broken.erase( Internal::getLinkTable(), link._key, link._version );
+                    if ( const ServiceStoreResult committed = connection.commit( broken ); committed != ServiceStoreResult::Ok )
+                        return committed;
+                    continue;
+                }
+                if ( const ServiceStoreResult erased = SocialDeleteAccountInternal::erasePair( connection, accountID, otherID, &link ); erased != ServiceStoreResult::Ok )
+                    return erased;
+            }
+        }
+        // 나를 막은 사람 — 내 쪽 줄이 없어 역색인으로 찾는다
+        while ( true )
+        {
+            vector<ServiceRecord>    listBlocker;
+            const ServiceStoreResult listed = connection.listRecords( Internal::getBlockedByTable(), prefix, "", kPage, false, listBlocker );
+            if ( listed != ServiceStoreResult::Ok )
+                return listed;
+            if ( listBlocker.empty() )
+                break;
+            for ( const ServiceRecord& blocker : listBlocker )
+            {
+                AccountID blockerID = kInvalidAccountID;
+                if ( ServiceKeyUtil::parseHex64( string_view( blocker._key ).substr( prefix.size() ), blockerID ) == false )
+                {
+                    ServiceTransaction broken;
+                    broken.erase( Internal::getBlockedByTable(), blocker._key, blocker._version );
+                    if ( const ServiceStoreResult committed = connection.commit( broken ); committed != ServiceStoreResult::Ok )
+                        return committed;
+                    continue;
+                }
+                if ( const ServiceStoreResult erased = SocialDeleteAccountInternal::erasePair( connection, accountID, blockerID, nullptr ); erased != ServiceStoreResult::Ok )
+                    return erased;
+            }
+        }
+        ServiceTransaction counts;
+        counts.erase( Internal::getCountTable(), ServiceKeyUtil::makeHex64( accountID ) );
+        return connection.commit( counts );
     }
 
     void SocialService::changeLink( SocialLinkOperation operation, AccountID accountID, AccountID otherID, UnixMilliseconds nowMs, uint64 requestTag )

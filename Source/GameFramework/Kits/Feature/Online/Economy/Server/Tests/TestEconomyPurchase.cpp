@@ -120,3 +120,13 @@ SW_TEST_CASE( EconomyPurchaseTest, RefusalsChangeNothing )
     SW_EXPECT_TRUE( buy( fixture.database, fixture.currencies, fixture.offers, "no_such_offer", 5 ) == EconomyResult::UnknownOffer );
     SW_EXPECT_EQUAL( fixture.database.computeContentHash(), hashBefore );
 }
+
+/** @brief [EconomyPurchaseTest] 계정 삭제 → 경제 키트에 그 계정의 구매 수 레코드 0(`econ_purchase`). 잔액은 탈퇴 정리가 원장에서 소각한다(감사 P0-7) */
+SW_TEST_CASE( EconomyPurchaseTest, AccountDeletionErasesPurchaseCounts )
+{
+    Fixture fixture;
+    SW_REQUIRE_TRUE( buy( fixture.database, fixture.currencies, fixture.offers, "starter_pack", 1 ) == EconomyResult::Ok );
+    SW_REQUIRE_EQUAL( 1, fixture.database.countRecords( EconomyStoreLogic::getPurchaseCountTable() ) );
+    SW_REQUIRE_TRUE( EconomyStoreLogic::eraseAccount( fixture.database, kBuyer, 0 ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, fixture.database.countRecords( EconomyStoreLogic::getPurchaseCountTable() ) );
+}

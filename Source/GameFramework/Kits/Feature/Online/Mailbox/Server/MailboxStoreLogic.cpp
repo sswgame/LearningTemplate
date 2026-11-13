@@ -6,6 +6,7 @@
 
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -199,11 +200,57 @@ namespace sw
                     request._listPosting.push_back( LedgerPosting{ escrow, target, attachment._assetID, attachment._amount } );
                 }
                 LedgerTransferResult serviceResult;
-                if ( Ledger::stageTransfer( connection, request, inoutTransaction, serviceResult ) != LedgerResult::Ok || serviceResult._bReplayed == SW_TRUE )
+                LedgerResult         staged = Ledger::stageTransfer( connection, request, inoutTransaction, serviceResult );
+                if ( staged == LedgerResult::AccountDeleted && outbReturned )
+                {
+                    // 보낸 계정이 탈퇴로 지워졌다 — 돌려줄 곳이 없으므로 버리는 만료와 같이 소각한다(같은 분개 키)
+                    outbReturned    = false;
+                    outbDiscarded   = true;
+                    request._reason = "mail.expire";
+                    for ( LedgerPosting& posting : request._listPosting )
+                    {
+                        posting._to = LedgerHolder::makeSink();
+                    }
+                    staged = Ledger::stageTransfer( connection, request, inoutTransaction, serviceResult );
+                }
+                if ( staged != LedgerResult::Ok || serviceResult._bReplayed == SW_TRUE )
                     return false;
                 if ( outbReturned )
                     collectAccountChanges( serviceResult, outListChange );
                 return true;
+            }
+
+            static constexpr int32 kErasePageSize = 32; ///< 탈퇴 정리가 한 번에 읽는 레코드 수
+
+            /** @brief 지운 계정의 받은 우편 하나를 지우는 쓰기를 붙입니다. 받지 않은 맡긴 첨부는 소각합니다. 읽지 못하는 우편도 지웁니다(지운 계정의 것이다). */
+            [[nodiscard]] static bool stageEraseMail( IServiceStoreConnection& connection, const ServiceRecord& record, int64 nowMs, ServiceTransaction& inoutTransaction )
+            {
+                inoutTransaction.erase( ServiceMail::getMailTable(), record._key, record._version );
+                ServiceMailRecord mail;
+                if ( ServiceMail::decodeRecord( record._bytes, mail ) == false )
+                {
+                    SW_LOG_WARNING_ID( "MailboxStoreLogic.ErasedMailUnreadable", "The mail '%#' of a deleted account is unreadable - it is erased without its indexes", record._key.c_str() );
+                    return true;
+                }
+                if ( mail._message._expiresMs > 0 )
+                    inoutTransaction.erase( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( mail._message._expiresMs, record._key ) );
+                inoutTransaction.erase( ServiceMail::getNoticeTable(), ServiceMail::makeExpiryKey( mail._message._createdMs, record._key ) ); // 알림 키는 만든 시각 + 우편 키다
+                const bool bEscrowed = mail._state != ServiceMailState::Claimed && mail._message._fundingHolder._kind != LedgerHolderKind::Mint && mail._message._listAttachment.empty() == false;
+                if ( bEscrowed == false )
+                    return true;
+                const LedgerHolder    escrow = ServiceMail::makeEscrowHolder( record._key );
+                LedgerTransferRequest request;
+                if ( LedgerJournalKey::makeFromToken( "mail.expire", escrow._escrowToken, request._journalKey ) == false )
+                    return false;
+                request._reason    = "mail.expire";
+                request._timeMs    = nowMs;
+                request._actorKind = LedgerActorKind::System;
+                for ( const ServiceMailAttachment& attachment : mail._message._listAttachment )
+                {
+                    request._listPosting.push_back( LedgerPosting{ escrow, LedgerHolder::makeSink(), attachment._assetID, attachment._amount } );
+                }
+                LedgerTransferResult serviceResult;
+                return Ledger::stageTransfer( connection, request, inoutTransaction, serviceResult ) == LedgerResult::Ok;
             }
         };
     } // namespace
@@ -423,6 +470,46 @@ namespace sw
         if ( committed == ServiceStoreResult::Conflict )
             return MailboxServiceResult::fail( OnlineError::kBusy );
         return committed == ServiceStoreResult::Ok ? MailboxServiceResult{ MailboxResult::Ok } : MailboxServiceResult::fail( OnlineError::kUnavailable );
+    }
+
+    ServiceStoreResult MailboxStoreLogic::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs )
+    {
+        using Internal      = MailboxStoreLogicInternal;
+        const string prefix = ServiceKeyUtil::makeHex64( accountID ) + "/";
+        while ( true )
+        {
+            vector<ServiceRecord>    listMail;
+            const ServiceStoreResult listed = connection.listRecords( ServiceMail::getMailTable(), prefix, "", Internal::kErasePageSize, false, listMail );
+            if ( listed != ServiceStoreResult::Ok )
+                return listed;
+            if ( listMail.empty() )
+                break;
+            for ( const ServiceRecord& record : listMail )
+            {
+                ServiceTransaction transaction;
+                if ( Internal::stageEraseMail( connection, record, nowMs, transaction ) == false )
+                    return ServiceStoreResult::Conflict; // 맡김 이동을 짜지 못했다 — 다음 회차가 다시 읽는다
+                const ServiceStoreResult committed = connection.commit( transaction );
+                if ( committed != ServiceStoreResult::Ok )
+                    return committed;
+            }
+        }
+        if ( const ServiceStoreResult sent = ServiceStoreUtil::erasePrefix( connection, ServiceMail::getSentTable(), prefix ); sent != ServiceStoreResult::Ok )
+            return sent;
+        vector<ServiceMailCampaign> listCampaign;
+        if ( const ServiceStoreResult read = ServiceMailCampaign::listCampaigns( connection, listCampaign ); read != ServiceStoreResult::Ok )
+            return read;
+        ServiceTransaction claims;
+        for ( const ServiceMailCampaign& campaign : listCampaign )
+        {
+            claims.erase( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( campaign._campaignID, accountID ) );
+            if ( claims.getWrites().size() < static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
+                continue;
+            if ( const ServiceStoreResult committed = connection.commit( claims ); committed != ServiceStoreResult::Ok )
+                return committed;
+            claims = ServiceTransaction{};
+        }
+        return claims.getWrites().empty() ? ServiceStoreResult::Ok : connection.commit( claims );
     }
 
     void MailboxStoreLogic::sweepExpired( IServiceStoreConnection& connection, int64 nowMs, int32 maxCount, MailboxSweepStats& outStats )

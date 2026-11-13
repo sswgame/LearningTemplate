@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
 
@@ -441,4 +442,36 @@ SW_TEST_CASE( SocialServiceTest, RetryableReplyReachesTheServiceAgain )
     finished._result = SocialResult::Ok;
     rig.expectFailureReachesService( SocialMethod::RequestFriend::kID, OnlineError::kUnavailable, finished );
     rig.expectFailureReachesService( SocialMethod::RequestFriend::kID, OnlineError::kBusy, finished );
+}
+
+/**
+ * @brief [SocialServiceTest] 계정 삭제 → 친구 키트의 관계 표에 그 계정의 레코드 0: 친구 · 보낸 신청 · 나를 막은 사람(내 쪽 줄이 없다)까지 지워지고 상대 목록이 비며 개수가 돌아온다(감사 P0-7)
+ * @details 변이: 역색인(`social_blocked_by`)을 빼면 나를 막은 사람의 줄이 남아 진다.
+ */
+SW_TEST_CASE( SocialServiceTest, AccountDeletionErasesLinks )
+{
+    constexpr AccountID kBlocker = 15;
+    SocialWorld         world;
+    SocialFixture&      rig = world._rig;
+    SW_REQUIRE_TRUE( rig.change( SocialLinkOperation::Request, kAlice, kBob ) == SocialResult::Ok );
+    SW_REQUIRE_TRUE( rig.change( SocialLinkOperation::Accept, kBob, kAlice ) == SocialResult::Ok );
+    SW_REQUIRE_TRUE( rig.change( SocialLinkOperation::Request, kAlice, kCarol ) == SocialResult::Ok );
+    SW_REQUIRE_TRUE( rig.change( SocialLinkOperation::Block, kBlocker, kAlice ) == SocialResult::Ok );
+    (void)rig.takeNotifications();
+
+    SW_REQUIRE_TRUE( SocialService::eraseAccount( world._database, kAlice, kNowMs ) == ServiceStoreResult::Ok );
+    const string aliceHex = ServiceKeyUtil::makeHex64( kAlice );
+    for ( const utf8* pTable : { "social_link", "social_count", "social_blocked_by" } )
+    {
+        vector<ServiceRecord> listRecord;
+        SW_REQUIRE_TRUE( world._database.listRecords( hashed_string( pTable ), "", "", 100, false, listRecord ) == ServiceStoreResult::Ok );
+        for ( const ServiceRecord& record : listRecord )
+        {
+            SW_EXPECT_TRUE( record._key.find( aliceHex ) == string::npos );
+        }
+    }
+    SW_EXPECT_TRUE( rig.links( kBob ).empty() );
+    SW_EXPECT_TRUE( rig.links( kCarol ).empty() );
+    SW_EXPECT_TRUE( rig.links( kBlocker ).empty() );
+    SW_EXPECT_TRUE( SocialService::eraseAccount( world._database, kAlice, kNowMs ) == ServiceStoreResult::Ok ); // 멱등
 }

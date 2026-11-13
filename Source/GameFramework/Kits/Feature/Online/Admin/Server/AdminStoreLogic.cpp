@@ -399,6 +399,13 @@ namespace sw
 
 namespace sw
 {
+    ServiceStoreResult AdminStoreLogic::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 /*nowMs*/ )
+    {
+        ServiceTransaction transaction;
+        transaction.erase( getRoleTable(), ServiceKeyUtil::makeHex64( accountID ) );
+        return connection.commit( transaction );
+    }
+
     const hashed_string& AdminStoreLogic::getRoleTable()
     {
         static const hashed_string s_table{ "admin_role" };
