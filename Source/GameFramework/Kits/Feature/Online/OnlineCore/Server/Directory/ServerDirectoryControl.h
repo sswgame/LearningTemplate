@@ -76,7 +76,7 @@ namespace sw
 
         virtual void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) = 0;
         virtual void clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )                            = 0;
-        virtual void postNotice( const ServerDirectoryAnnouncementChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )                      = 0;
+        virtual void postAnnouncement( const ServerDirectoryAnnouncementChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )                = 0;
         virtual void removeAnnouncement( uint64 announcementID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )                                        = 0;
         /** @brief 끝난 변경을 @p outListCompletion 뒤에 붙입니다. */
         virtual void takeControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) = 0;

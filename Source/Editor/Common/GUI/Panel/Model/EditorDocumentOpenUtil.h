@@ -54,9 +54,9 @@ namespace sw::editor
         static void restoreFocusAfterCancel( EditorWorkspace& workspace, const string& loaded );
 
         /**
-         * @brief 에셋 옮김 @p notice 로 연 문서 경로 @p inoutLoaded 와 최근 목록 @p inoutListRecent 를 새 id 로 고칩니다(감사 P0-4).
+         * @brief 에셋 옮김 @p event 로 연 문서 경로 @p inoutLoaded 와 최근 목록 @p inoutListRecent 를 새 id 로 고칩니다(감사 P0-4).
          * @return 고친 뒤의 연 문서가 글을 고친 참조 파일이면 true 입니다 — 패널은 깨끗하면 디스크에서 다시 읽는다(미저장 참조자는 계획이 거절했다, `findDirtyReferrerDocument`).
          */
-        [[nodiscard]] static bool applyAssetMove( const EditorAssetMoveEvent& notice, string& inoutLoaded, vector<string>& inoutListRecent );
+        [[nodiscard]] static bool applyAssetMove( const EditorAssetMoveEvent& event, string& inoutLoaded, vector<string>& inoutListRecent );
     };
 } // namespace sw::editor

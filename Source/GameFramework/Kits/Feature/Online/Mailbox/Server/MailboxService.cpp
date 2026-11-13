@@ -191,19 +191,19 @@ namespace sw
         _calls.publishPendingCount();
     }
 
-    void MailboxService::completeNotifications( ServiceStoreResult result, vector<ServiceMailNotification>& inoutListNotice )
+    void MailboxService::completeNotifications( ServiceStoreResult result, vector<ServiceMailNotification>& inoutListNotification )
     {
         _notificationJob.finish();
         if ( result == ServiceStoreResult::Invalid )
             SW_LOG_ERROR_ID( "MailboxService.MailboxServiceNewMailNotice", "MailboxService: a new-mail notice record is corrupt - notices stop until it is fixed" );
         if ( result != ServiceStoreResult::Ok || _pHost == nullptr )
             return; // Conflict 는 다른 서버가 가져갔다. 그 밖은 다음 주기에 다시 한다
-        if ( static_cast<int32>( inoutListNotice.size() ) == _settings._notificationBatchCount )
+        if ( static_cast<int32>( inoutListNotification.size() ) == _settings._notificationBatchCount )
             _notificationJob.request(); // 더 있을 수 있으므로 다음 틱에 바로 다시 가져간다
-        for ( ServiceMailNotification& notice : inoutListNotice )
+        for ( ServiceMailNotification& notification : inoutListNotification )
         {
-            const AccountID accountID = notice._recipientAccountID;
-            MailboxNewMail  newMail{ std::move( notice._mailKey ), std::move( notice._titleKey ) };
+            const AccountID accountID = notification._recipientAccountID;
+            MailboxNewMail  newMail{ std::move( notification._mailKey ), std::move( notification._titleKey ) };
             BitWriter       body;
             const bool      bWritten = MailboxProtocol::MessageTypes::write( body, newMail );
             if ( bWritten && _pHost->sendPush( accountID, MailboxMethod::NewMail::kKind, body ) )

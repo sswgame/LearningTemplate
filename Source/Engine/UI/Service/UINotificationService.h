@@ -83,7 +83,7 @@ namespace sw
         /** @brief 알림을 올립니다(보일 자리가 있으면 다음 `update` 에 보이고, 없으면 기다립니다). */
         void post( const UINotificationDef& desc );
         /** @brief 게임 코드의 알림을 올립니다(`IPlayerNotificationSink`). 힌트는 종류 Hint · 우선순위 1 로 쌓인 알림보다 먼저 보인다. */
-        void postNotice( const string& text, float32 durationSeconds, PlayerNotificationKind kind );
+        void postNotification( const string& text, float32 durationSeconds, PlayerNotificationKind kind );
         /** @brief 게임 코드의 알림을 받는 자리(`IPlayerNotificationSink`)입니다. 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). */
         IPlayerNotificationSink& getPlayerNotificationSink() { return _notificationSink; }
         /** @brief 보이는 알림의 시간을 재고, 끝난 것을 내리고, 기다리는 것을 올립니다(UI 갱신의 화면 틱 뒤 칸이 부른다). */
@@ -138,7 +138,7 @@ namespace sw
         void removeEntryWidget( WidgetID widget );
 
     private:
-        /** @class NotificationSink @brief `postNotice` 로 넘기는 `IPlayerNotificationSink` 입니다. 서비스가 그 인터페이스를 상속하지 않고 이 멤버를 건다(수명은 서비스와 같다). */
+        /** @class NotificationSink @brief `postNotification` 로 넘기는 `IPlayerNotificationSink` 입니다. 서비스가 그 인터페이스를 상속하지 않고 이 멤버를 건다(수명은 서비스와 같다). */
         class NotificationSink final : public IPlayerNotificationSink
         {
         public:
@@ -147,7 +147,7 @@ namespace sw
             {
             }
 
-            void postNotice( const string& text, float32 durationSeconds, PlayerNotificationKind kind ) override { _owner.postNotice( text, durationSeconds, kind ); }
+            void postNotification( const string& text, float32 durationSeconds, PlayerNotificationKind kind ) override { _owner.postNotification( text, durationSeconds, kind ); }
 
         private:
             UINotificationService& _owner;

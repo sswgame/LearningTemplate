@@ -108,17 +108,17 @@ namespace sw::editor
              * @brief 데이터 명령이 오브젝트에 한 일을 에디터 상태에 맞춥니다. 없앨 오브젝트는 선택에서 빼고(파괴는 지연이라 남겨 두면 인스펙터 · 기즈모가
              *        계속 잡는다), 복원한 오브젝트는 선택하고, 씬을 dirty 로 표시합니다.
              */
-            static void onObjectEdit( const CommandStack::ObjectEditEvent& notice )
+            static void onObjectEdit( const CommandStack::ObjectEditEvent& event )
             {
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                GameObject*    pTarget  = editor::findGameObject( GameObjectHandle::make( notice._objectID ) );
+                GameObject*    pTarget  = editor::findGameObject( GameObjectHandle::make( event._objectID ) );
                 if ( pContext != nullptr && pTarget != nullptr )
                 {
                     // 이 처리기는 전역 스택에만 걸린다 — 전역 스택은 메인 씬 오브젝트만 받는다(미리보기 씬 것은 창의 스택, `findPreviewScopeOf`).
                     EditorSelection& selection = editor::getMainSceneSelection();
-                    if ( notice._kind == ObjectEditKind::Destroyed && selection.hasObject( pTarget ) )
+                    if ( event._kind == ObjectEditKind::Destroyed && selection.hasObject( pTarget ) )
                         selection.selectObject( pTarget, SelectionMode::Remove );
-                    else if ( notice._kind == ObjectEditKind::Recreated )
+                    else if ( event._kind == ObjectEditKind::Recreated )
                         selection.selectObject( pTarget, SelectionMode::Replace );
                 }
                 EditorTransaction::markActiveSceneDirty();

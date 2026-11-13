@@ -72,7 +72,7 @@ namespace sw
         uint32 _deepMinDistance{ 0 };      ///< 이 거리 이상이면 "깊은 화소" — 덩어리(좁고 깊은 차이)를 이 화소로 센다
     };
 
-    /** @struct AutomationImageDifference @brief 골든 비교 결과입니다. 판정은 `AutomationGoldenUtil::judge` 한 곳이 한다. */
+    /** @struct AutomationImageDifference @brief 골든 비교 결과입니다. 판정은 `AutomationGoldenUtil::evaluate` 한 곳이 한다. */
     struct AutomationImageDifference
     {
         float64 _differingFraction{ 0.0 };     ///< 색 거리가 `_differingMinDistance` 이상인 화소의 비율(0..1)

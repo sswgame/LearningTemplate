@@ -705,11 +705,11 @@ namespace sw::editor
         if ( pWorkspace != nullptr )
         {
             // 열린 문서 · 씬 · 포커스 · 선택이 새 id 를 따르고, 깨끗한 참조 문서는 고친 글을 다시 읽는다. 리다이렉트 표(`referrerRewriteCount` 뒤)는 문서가 아니다.
-            EditorAssetMoveEvent notice{ outPlan._listOldID, outPlan._listNewID, {} };
-            notice._listRewrittenID.reserve( referrerRewriteCount );
+            EditorAssetMoveEvent event{ outPlan._listOldID, outPlan._listNewID, {} };
+            event._listRewrittenID.reserve( referrerRewriteCount );
             for ( size_t index = 0; index < referrerRewriteCount; ++index )
-                notice._listRewrittenID.push_back( listRewrite[index]._referrerID );
-            pWorkspace->notifyAssetsMoved( notice );
+                event._listRewrittenID.push_back( listRewrite[index]._referrerID );
+            pWorkspace->notifyAssetsMoved( event );
         }
         if ( outPlan._listMove.size() == 1 )
             SW_LOG_INFO_ID( "Asset.Moved", "Moved '%#' to '%#' and fixed %# referencing file(s)", outPlan._listOldID.front(), outPlan._listNewID.front(), outPlan._fixedFileCount );

@@ -85,7 +85,7 @@ SW_TEST_CASE( NetMessageRouterTest, MessageRouterDispatchesByRangeAndKeepsUnhand
     }
     pair.run( 0.2 );
     vector<NetReceivedMessage> listUnhandled;
-    SW_EXPECT_EQUAL( 7, router.pump( pair.getServer(), &listUnhandled ) );
+    SW_EXPECT_EQUAL( 7, router.poll( pair.getServer(), &listUnhandled ) );
     SW_EXPECT_EQUAL( 1, lockstep.getHandledCount() );
     SW_EXPECT_EQUAL( 1, gameFirst.getHandledCount() );
     SW_EXPECT_EQUAL( 2, gameSecond.getHandledCount() );
@@ -196,7 +196,7 @@ SW_TEST_CASE( NetMessageRouterTest, MalformedMessageIsCountedNotForwarded )
     SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
     pair.run( 0.2 );
     vector<NetReceivedMessage> listUnhandled;
-    SW_EXPECT_EQUAL( 2, router.pump( pair.getServer(), &listUnhandled ) );
+    SW_EXPECT_EQUAL( 2, router.poll( pair.getServer(), &listUnhandled ) );
     SW_EXPECT_EQUAL( 1, handler.getHandledCount() );
     SW_EXPECT_EQUAL( uint64{ 1 }, router.getMalformedCount() );
     SW_EXPECT_TRUE( listUnhandled.empty() );
@@ -248,10 +248,10 @@ SW_TEST_CASE( NetMessageRouterTest, RouterTellsHandlersAboutConnectionsBeforeThe
     messageWriter.begin( 0x80 ).writeVarUint( 1 );
     SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
     pair.run( 0.2 );
-    (void)router.pump( pair.getServer() );
+    (void)router.poll( pair.getServer() );
     pair.getClient( 0 ).disconnect( 0 );
     pair.run( 0.2 );
-    (void)router.pump( pair.getServer() );
+    (void)router.poll( pair.getServer() );
     SW_EXPECT_TRUE( tracker._log == "OMC" );
 }
 

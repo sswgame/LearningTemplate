@@ -24,16 +24,16 @@ namespace sw::editor
 
         // 콘텐츠 브라우저가 호출하는 순수 함수 모음입니다. 언리얼 Content Browser 의 브레드크럼에 해당합니다.
         /** @brief 즐겨찾기에서 들어간 폴더의 브레드크럼을 만듭니다. `{ "Favorites", "" }, { @p label, @p absolutePath }` 입니다. */
-        static void makeFavoriteTrail( string_view label, string_view absolutePath, vector<ContentBrowserBreadcrumb>& outListCrumb );
+        static void makeFavoriteTrail( string_view label, string_view absolutePath, vector<ContentBrowserBreadcrumb>& outListBreadcrumb );
 
         /**
          * @brief 루트 아래 폴더의 브레드크럼을 만듭니다. 루트 조각과, 루트에서 @p folderAbs 까지의 폴더마다 한 조각을 둡니다.
          * @details @p folderAbs 가 루트 아래가 아니면 루트 조각 없이 그 폴더 한 조각만 둔다.
          */
-        static void makeFolderTrail( string_view rootLabel, string_view rootAbs, string_view folderAbs, vector<ContentBrowserBreadcrumb>& outListCrumb );
+        static void makeFolderTrail( string_view rootLabel, string_view rootAbs, string_view folderAbs, vector<ContentBrowserBreadcrumb>& outListBreadcrumb );
 
         /** @brief 현재 브레드크럼 끝에 하위 폴더 조각 하나를 추가합니다. 이름은 폴더 이름입니다. */
-        static void appendChildBreadcrumb( string_view childAbs, vector<ContentBrowserBreadcrumb>& inoutListCrumb );
+        static void appendChildBreadcrumb( string_view childAbs, vector<ContentBrowserBreadcrumb>& inoutListBreadcrumb );
     };
 } // namespace sw::editor
 
@@ -76,7 +76,7 @@ namespace sw::editor
     struct ContentBrowserHistoryEntry
     {
         string                           _folderPathAbs;
-        vector<ContentBrowserBreadcrumb> _listCrumb;
+        vector<ContentBrowserBreadcrumb> _listBreadcrumb;
     };
 } // namespace sw::editor
 
@@ -102,7 +102,7 @@ namespace sw::editor
          * @brief 새로 연 폴더를 적습니다. 지금 위치 뒤의 앞으로 가기 이력은 버립니다.
          * @param folderAbs 구분자를 `/` 로 맞춘 절대 경로입니다. 지금 폴더와 같으면(대소문자 · 구분자 무시) 적지 않습니다.
          */
-        void record( string_view folderAbs, const vector<ContentBrowserBreadcrumb>& listCrumb );
+        void record( string_view folderAbs, const vector<ContentBrowserBreadcrumb>& listBreadcrumb );
         /** @brief 이전 폴더로 돌아갈 수 있으면 true 입니다. */
         bool canNavigateBack() const { return _currentIndex > 0; }
         /** @brief 다음 폴더로 나아갈 수 있으면 true 입니다. */

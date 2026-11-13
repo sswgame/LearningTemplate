@@ -449,18 +449,18 @@ namespace sw
     NetHandleResult RemoteCallClient::receive( NetRemoteCallMessage::Rejected, const NetMessageContext& context, BitReader& body )
     {
         (void)context;
-        RemoteCallRejectNotification notice;
-        notice._sequence       = body.readVarUint32();
+        RemoteCallRejectNotification notification;
+        notification._sequence = body.readVarUint32();
         const uint32 errorByte = body.readBits( 8 );
         if ( body.hasOverflowed() || errorByte > static_cast<uint32>( RemoteCallError::ArgumentMismatch ) )
             return NetHandleResult::Malformed;
-        notice._error = static_cast<RemoteCallError>( errorByte );
-        _rejections.push( notice );
+        notification._error = static_cast<RemoteCallError>( errorByte );
+        _rejections.push( notification );
         return NetHandleResult::Handled;
     }
 
-    void RemoteCallClient::pollRejections( vector<RemoteCallRejectNotification>& outListNotice )
+    void RemoteCallClient::pollRejections( vector<RemoteCallRejectNotification>& outListNotification )
     {
-        _rejections.moveAllTo( outListNotice );
+        _rejections.moveAllTo( outListNotification );
     }
 } // namespace sw

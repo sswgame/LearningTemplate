@@ -161,7 +161,7 @@ namespace sw
         /** @brief 받는 종류가 없으므로 라우터는 부르지 않는다. 직접 전달하면 NotMine 이다. */
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         /** @brief 갱신 하나(값 = 그 틱)의 판정을 그 관찰자의 판정 테이블에 적습니다. 다음 `update` 가 전송 중인 갱신을 판정할 때 읽는다. */
-        void onDeliveryNotification( const NetDeliveryNotification& notice ) override;
+        void onDeliveryNotification( const NetDeliveryNotification& notification ) override;
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
         /**

@@ -79,7 +79,7 @@ namespace
         vector<ServerDirectoryControlCompletion> _listCompletion{};
         vector<uint64>                           _listTag{};
         ServerDirectoryMaintenanceChange         _maintenance{};
-        ServerDirectoryAnnouncementChange        _notice{};
+        ServerDirectoryAnnouncementChange        _announcement{};
         string                                   _clearedScope{};
         uint64                                   _removedAnnouncementID{ 0 };
 
@@ -95,9 +95,9 @@ namespace
             _listTag.push_back( requestTag );
         }
 
-        void postNotice( const ServerDirectoryAnnouncementChange& change, AccountID /*actorID*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
+        void postAnnouncement( const ServerDirectoryAnnouncementChange& change, AccountID /*actorID*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
         {
-            _notice = change;
+            _announcement = change;
             _listTag.push_back( requestTag );
         }
 
@@ -387,20 +387,20 @@ SW_TEST_CASE( AdminServiceTest, DirectoryCommandsForwardAndFinishOnCompletion )
     rig.tick();
     SW_EXPECT_TRUE( rig.take()._serviceResult == AdminResult::Ok );
 
-    AdminRequest notice    = makeRequest();
-    notice._announcementID = 5;
-    notice._body           = "hello";
-    notice._priority       = 3;
-    notice._bLiteralText   = SW_TRUE;
-    rig.send( kOperator, AdminMethod::PostAnnouncement::kID, notice );
-    SW_EXPECT_EQUAL( string( "hello" ), rig._directoryControl._notice._text );
-    SW_EXPECT_EQUAL( 3, rig._directoryControl._notice._priority );
-    SW_EXPECT_EQUAL( SW_TRUE, rig._directoryControl._notice._bLiteralText );
+    AdminRequest announcement    = makeRequest();
+    announcement._announcementID = 5;
+    announcement._body           = "hello";
+    announcement._priority       = 3;
+    announcement._bLiteralText   = SW_TRUE;
+    rig.send( kOperator, AdminMethod::PostAnnouncement::kID, announcement );
+    SW_EXPECT_EQUAL( string( "hello" ), rig._directoryControl._announcement._text );
+    SW_EXPECT_EQUAL( 3, rig._directoryControl._announcement._priority );
+    SW_EXPECT_EQUAL( SW_TRUE, rig._directoryControl._announcement._bLiteralText );
     rig._directoryControl.finishLast( ServerDirectoryControlResult::Invalid );
     rig.tick();
     SW_EXPECT_TRUE( rig.take()._serviceResult.hasError( OnlineError::kInvalidRequest ) );
 
-    rig.send( kOperator, AdminMethod::RemoveAnnouncement::kID, notice );
+    rig.send( kOperator, AdminMethod::RemoveAnnouncement::kID, announcement );
     SW_EXPECT_EQUAL( uint64( 5 ), rig._directoryControl._removedAnnouncementID );
     rig._directoryControl.finishLast( ServerDirectoryControlResult::NotFound );
     rig.tick();

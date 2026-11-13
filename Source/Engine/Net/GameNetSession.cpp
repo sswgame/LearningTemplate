@@ -609,7 +609,7 @@ namespace sw
             return;
         reportConnectResult();
         _listEventScratch.clear();
-        (void)_router.pump( _peers, nullptr, &_listEventScratch ); // 처리기가 없는 메시지는 버린다(맡은 키트가 없다)
+        (void)_router.poll( _peers, nullptr, &_listEventScratch ); // 처리기가 없는 메시지는 버린다(맡은 키트가 없다)
         logEvents( EventPhase::Running );
         updateResourceDigest();
     }
@@ -668,22 +668,22 @@ namespace sw
         (void)_tickWriter.broadcast( _peers, NetChannelType::UnreliableSequenced ); // 잃어도 다음 틱이 더 새 번호를 싣는다
     }
 
-    void GameNetSession::sendShutdownNotice( const GameShutdownNotice& notice )
+    void GameNetSession::sendShutdownNotice( const GameShutdownNotice& notification )
     {
         if ( _role != GameNetRole::Server )
             return;
         BitWriter& writer = _tickWriter.begin( GameNetSessionMessage::kShutdownNotice );
-        writer.writeBits( static_cast<uint32>( notice._reason ), 8 );
-        writer.writeVarUint( notice._graceSeconds );
+        writer.writeBits( static_cast<uint32>( notification._reason ), 8 );
+        writer.writeVarUint( notification._graceSeconds );
         const int32 sentCount = _tickWriter.broadcast( _peers, NetChannelType::ReliableOrdered ); // 끊기 전에 사유가 닿아야 한다
-        SW_LOG_INFO_ID( "GameNetSession.NetSessionToldClients", "Net session told %# clients the server is shutting down (reason %#, grace %# s)", sentCount, static_cast<uint32>( notice._reason ), notice._graceSeconds );
+        SW_LOG_INFO_ID( "GameNetSession.NetSessionToldClients", "Net session told %# clients the server is shutting down (reason %#, grace %# s)", sentCount, static_cast<uint32>( notification._reason ), notification._graceSeconds );
     }
 
-    bool GameNetSession::tryGetShutdownNotice( GameShutdownNotice& outNotice ) const
+    bool GameNetSession::tryGetShutdownNotice( GameShutdownNotice& outNotification ) const
     {
         if ( _role != GameNetRole::Client || _bShutdownNoticeKnown == SW_FALSE )
             return false;
-        outNotice = _shutdownNotice;
+        outNotification = _shutdownNotice;
         return true;
     }
 

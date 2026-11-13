@@ -94,17 +94,17 @@ SW_TEST_CASE( LightProbeGridTest, TruncationForgedCountsAndNonFiniteAreRefused )
     }
 
     // 바이트 자리: 매직(0) · 버전(4) · 원점(8) · 간격(20) · 축마다 수(32 · 36 · 40) · 계수(44).
-    const auto refused = []( sw::vector<uint8> forged )
+    const auto refused = []( sw::vector<uint8> crafted )
     {
         sw::LightProbeGrid loaded{};
-        SW_EXPECT_FALSE( loaded.readFromBytes( forged.data(), forged.size() ) );
+        SW_EXPECT_FALSE( loaded.readFromBytes( crafted.data(), crafted.size() ) );
         SW_EXPECT_TRUE( loaded._listProbe.empty() );
     };
     const auto patched = [&]( size_t offset, uint32 value )
     {
-        sw::vector<uint8> forged = bytes;
-        sw::Memory::copy( forged.data() + offset, &value, sizeof( value ) );
-        return forged;
+        sw::vector<uint8> crafted = bytes;
+        sw::Memory::copy( crafted.data() + offset, &value, sizeof( value ) );
+        return crafted;
     };
     // 2^31 × 2^31 × 4 = 2^64 → 그대로 곱하면 0 이라 머리만 있는 파일이 통과한다.
     sw::vector<uint8> wrapped( bytes.begin(), bytes.begin() + 44 );

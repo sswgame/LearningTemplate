@@ -93,10 +93,10 @@ namespace sw
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 큐에 선 이 서버의 티켓과 파티 · 로비 갱신. */
             int32 getOpenJobCount() const override { return _queue.getLocalTicketCount() + _partyLobby.getPendingCount(); }
 
-            void beginShutdown( const ServerShutdownNotice& notice ) override
+            void beginShutdown( const ServerShutdownNotice& notification ) override
             {
                 // 새 일을 막는 길은 없고(클라이언트는 `kShutdownNotice` 로 먼저 사유를 받는다) 드레인이 끝나기를 기다리는 일의 수만 남긴다 — 운영자가 왜 오래 걸리는지 로그로 본다.
-                SW_LOG_INFO_ID( "MatchmakingOnlineServerKit.MatchmakingKitShutdownDrain", "Matchmaking kit: shutdown drain starts with %# open job(s), grace %# s", getOpenJobCount(), notice._graceSeconds );
+                SW_LOG_INFO_ID( "MatchmakingOnlineServerKit.MatchmakingKitShutdownDrain", "Matchmaking kit: shutdown drain starts with %# open job(s), grace %# s", getOpenJobCount(), notification._graceSeconds );
             }
 
             /** @brief 매칭 대기열은 캐시 층에만 있고 영속 표가 없다 — 지운 계정은 세션이 끊겨 대기열에서 빠진다. */

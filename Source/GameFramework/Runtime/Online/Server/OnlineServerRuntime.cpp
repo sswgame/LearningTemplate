@@ -148,7 +148,7 @@ namespace sw
             }
             void          update( UnixMilliseconds nowMs ) { _kit->update( nowMs ); }
             int32         getOpenJobCount() const { return _kit->getOpenJobCount(); }
-            void          beginShutdown( const ServerShutdownNotice& notice ) { _kit->beginShutdown( notice ); }
+            void          beginShutdown( const ServerShutdownNotice& notification ) { _kit->beginShutdown( notification ); }
             const string& getKitName() const { return _entry._name; }
 
             /**
@@ -711,13 +711,13 @@ namespace sw
         return count;
     }
 
-    void OnlineServerRuntime::beginShutdown( const ServerShutdownNotice& notice )
+    void OnlineServerRuntime::beginShutdown( const ServerShutdownNotice& notification )
     {
         if ( _bInitialized == SW_FALSE )
             return;
         for ( OnlineServerKitNode* pKit : _parts->_listKit )
         {
-            pKit->beginShutdown( notice );
+            pKit->beginShutdown( notification );
         }
     }
 

@@ -10,36 +10,36 @@ using namespace sw::editor;
 
 SW_TEST_CASE( EditorSettleJudgeTest, ReadyWhenScreenAndJobsSettled )
 {
-    EditorStabilityState judge;
-    SW_EXPECT_TRUE( judge.advance( true, true ) == EditorStabilityResult::Ready );
+    EditorStabilityState stability;
+    SW_EXPECT_TRUE( stability.advance( true, true ) == EditorStabilityResult::Ready );
 }
 
 /** @brief 일이 남은 동안은 몇 프레임이든 기다린다 — 시한이 없다(Debug 의 느린 PNG 쓰기). */
 SW_TEST_CASE( EditorSettleJudgeTest, PendingJobsWaitWithoutLimit )
 {
-    EditorStabilityState judge;
+    EditorStabilityState stability;
     for ( uint32 frame = 0; frame < EditorStabilityState::kMaxIdleMovingFrames * 10; ++frame )
-        SW_REQUIRE_TRUE( judge.advance( false, false ) == EditorStabilityResult::Waiting );
-    SW_EXPECT_TRUE( judge.advance( true, true ) == EditorStabilityResult::Ready );
+        SW_REQUIRE_TRUE( stability.advance( false, false ) == EditorStabilityResult::Waiting );
+    SW_EXPECT_TRUE( stability.advance( true, true ) == EditorStabilityResult::Ready );
 }
 
 /** @brief 할 일이 없는데 화면이 이어서 움직이면 한도를 넘는 프레임에서 진동으로 놓는다. */
 SW_TEST_CASE( EditorSettleJudgeTest, IdleMovementBeyondLimitOscillates )
 {
-    EditorStabilityState judge;
+    EditorStabilityState stability;
     for ( uint32 frame = 0; frame < EditorStabilityState::kMaxIdleMovingFrames; ++frame )
-        SW_REQUIRE_TRUE( judge.advance( false, true ) == EditorStabilityResult::Waiting );
-    SW_EXPECT_TRUE( judge.advance( false, true ) == EditorStabilityResult::Oscillating );
+        SW_REQUIRE_TRUE( stability.advance( false, true ) == EditorStabilityResult::Waiting );
+    SW_EXPECT_TRUE( stability.advance( false, true ) == EditorStabilityResult::Oscillating );
 }
 
 /** @brief 일이 끼어든 프레임은 셈을 0 으로 되돌린다 — 그 움직임은 그 일 때문일 수 있다. */
 SW_TEST_CASE( EditorSettleJudgeTest, PendingJobsResetIdleMovement )
 {
-    EditorStabilityState judge;
+    EditorStabilityState stability;
     for ( uint32 frame = 0; frame < EditorStabilityState::kMaxIdleMovingFrames; ++frame )
-        SW_REQUIRE_TRUE( judge.advance( false, true ) == EditorStabilityResult::Waiting );
-    SW_REQUIRE_TRUE( judge.advance( false, false ) == EditorStabilityResult::Waiting );
+        SW_REQUIRE_TRUE( stability.advance( false, true ) == EditorStabilityResult::Waiting );
+    SW_REQUIRE_TRUE( stability.advance( false, false ) == EditorStabilityResult::Waiting );
     for ( uint32 frame = 0; frame < EditorStabilityState::kMaxIdleMovingFrames; ++frame )
-        SW_REQUIRE_TRUE( judge.advance( false, true ) == EditorStabilityResult::Waiting );
-    SW_EXPECT_TRUE( judge.advance( false, true ) == EditorStabilityResult::Oscillating );
+        SW_REQUIRE_TRUE( stability.advance( false, true ) == EditorStabilityResult::Waiting );
+    SW_EXPECT_TRUE( stability.advance( false, true ) == EditorStabilityResult::Oscillating );
 }

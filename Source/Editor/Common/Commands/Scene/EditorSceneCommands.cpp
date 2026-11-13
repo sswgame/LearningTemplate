@@ -50,11 +50,11 @@ namespace sw::editor
             }
 
             /** @brief 지울 오브젝트를 그 씬의 선택에서 한 번에 뺍니다. 미리보기 창의 오브젝트면 창의 선택에서 뺍니다(`findSelectionOf`). */
-            static void removeFromSelection( GameObjectManager& manager, const vector<GameObject*>& listDoomed )
+            static void removeFromSelection( GameObjectManager& manager, const vector<GameObject*>& listPendingDestroy )
             {
                 EditorSelection* pSelection = editor::findSelectionOf( manager );
                 if ( pSelection != nullptr )
-                    pSelection->selectObjects( listDoomed, SelectionMode::Remove );
+                    pSelection->selectObjects( listPendingDestroy, SelectionMode::Remove );
             }
 
             /**
@@ -62,15 +62,15 @@ namespace sw::editor
              * @details 삭제는 자식까지 지운다(`destroyGameObject` 기본). 그래서 기록도 서브트리 전체를 남긴다. 루트 하나의 스냅샷만 남기면 되돌릴 때 부모만
              *          돌아오고 자식은 영영 사라진다. **자식부터** 기록하므로 배치의 되돌리기(역순)는 부모를 원래 id 로 먼저 복원하고 자식이 그 id 로 다시 붙는다.
              */
-            static void recordAndDestroySubtree( EditorTransaction& transaction, GameObjectManager& manager, const vector<GameObject*>& listDoomed, size_t first, size_t last )
+            static void recordAndDestroySubtree( EditorTransaction& transaction, GameObjectManager& manager, const vector<GameObject*>& listPendingDestroy, size_t first, size_t last )
             {
                 EditorTransaction::beginTransaction( "Destroy GameObject" );
                 for ( size_t index = first; index < last; ++index )
                 {
-                    transaction.recordDestruction( listDoomed[index], "Destroy GameObject" );
+                    transaction.recordDestruction( listPendingDestroy[index], "Destroy GameObject" );
                 }
                 EditorTransaction::endTransaction();
-                manager.destroyGameObject( listDoomed[last - 1] );
+                manager.destroyGameObject( listPendingDestroy[last - 1] );
             }
         };
     } // namespace
@@ -223,21 +223,21 @@ namespace sw::editor
             return 0;
 
         // 모든 서브트리를 한 목록에 모아 선택에서 한 번에 뺀다 — 루트마다 빼면 루트 수 × 선택 수다.
-        vector<GameObject*> listDoomed;
+        vector<GameObject*> listPendingDestroy;
         vector<size_t>      listSubtreeEnd;
         listSubtreeEnd.reserve( listRoot.size() );
         for ( GameObject* pObj : listRoot )
         {
-            EditorSceneCommandsInternal::collectSubtreeChildFirst( pObj, listDoomed );
-            listSubtreeEnd.push_back( listDoomed.size() );
+            EditorSceneCommandsInternal::collectSubtreeChildFirst( pObj, listPendingDestroy );
+            listSubtreeEnd.push_back( listPendingDestroy.size() );
         }
-        EditorSceneCommandsInternal::removeFromSelection( *pManager, listDoomed );
+        EditorSceneCommandsInternal::removeFromSelection( *pManager, listPendingDestroy );
 
         EditorTransaction::beginTransaction( listRoot.size() == 1 ? string( "Destroy GameObject" ) : "Destroy " + to_string( listRoot.size() ) + " GameObjects" );
         size_t first = 0;
         for ( const size_t last : listSubtreeEnd )
         {
-            EditorSceneCommandsInternal::recordAndDestroySubtree( transaction, *pManager, listDoomed, first, last );
+            EditorSceneCommandsInternal::recordAndDestroySubtree( transaction, *pManager, listPendingDestroy, first, last );
             first = last;
         }
         EditorTransaction::endTransaction();

@@ -353,10 +353,10 @@ namespace
             _endpoint.shutdown();
         }
 
-        void pump()
+        void poll()
         {
             (void)_transport->pollIO( 0 );
-            (void)_endpoint.pump( *this );
+            (void)_endpoint.poll( *this );
         }
 
         void send( uint16 method, const BitWriter& body ) { sendBytes( method, body.getBytes().data(), body.getByteCount() ); }
@@ -373,9 +373,9 @@ namespace
         {
             for ( int32 index = 0; index < 6 && _bAnswered == false; ++index )
             {
-                pump();
+                poll();
                 rig.step( 1 );
-                pump();
+                poll();
             }
         }
 
@@ -455,10 +455,10 @@ namespace
             _endpoint.shutdown();
         }
 
-        void pump()
+        void poll()
         {
             (void)_transport->pollIO( 0 );
-            (void)_endpoint.pump( *this );
+            (void)_endpoint.poll( *this );
             _requestClient.update();
         }
 
@@ -522,7 +522,7 @@ SW_TEST_CASE( OnlineServiceHostTest, RequestsBeforeHelloAreRefusedAndSchemaHashI
     RawClientSide raw( rig._network, rig.getPort() );
     for ( int32 index = 0; index < 4; ++index )
     {
-        raw.pump();
+        raw.poll();
         rig.step( 1 );
     }
     BitWriter echo;
@@ -545,7 +545,7 @@ SW_TEST_CASE( OnlineServiceHostTest, RequestsBeforeHelloAreRefusedAndSchemaHashI
     SW_EXPECT_EQUAL( schemaHash, LittleEndianUtil::readUint64( raw._lastBodyBytes.data() + 2 ) );
     for ( int32 index = 0; index < 6; ++index )
     {
-        raw.pump();
+        raw.poll();
         rig.step( 1 );
     }
     SW_EXPECT_EQUAL( 0, rig._host.getConnectionCount() ); // 거절한 연결은 서버가 닫았다
@@ -564,9 +564,9 @@ SW_TEST_CASE( OnlineServiceHostTest, HelloRefusalsReadOnlyTheFixedHashFieldFirst
     RawClientSide sameHashBrokenRest( rig._network, rig.getPort() );
     for ( int32 index = 0; index < 4; ++index ) // 세 연결이 열릴 때까지
     {
-        shortHello.pump();
-        wrongHashBrokenRest.pump();
-        sameHashBrokenRest.pump();
+        shortHello.poll();
+        wrongHashBrokenRest.poll();
+        sameHashBrokenRest.poll();
         rig.step( 1 );
     }
 
@@ -597,9 +597,9 @@ SW_TEST_CASE( OnlineServiceHostTest, HelloRefusalsReadOnlyTheFixedHashFieldFirst
 
     for ( int32 index = 0; index < 6; ++index )
     {
-        shortHello.pump();
-        wrongHashBrokenRest.pump();
-        sameHashBrokenRest.pump();
+        shortHello.poll();
+        wrongHashBrokenRest.poll();
+        sameHashBrokenRest.poll();
         rig.step( 1 );
     }
     SW_EXPECT_EQUAL( 0, rig._host.getConnectionCount() ); // 세 연결 모두 서버가 닫았다
@@ -760,13 +760,13 @@ SW_TEST_CASE( OnlineServiceHostTest, SilentAndExcessConnectionsAreClosed )
         RawClientSide silent( rig._network, rig.getPort() ); // 연결만 열고 Hello 를 보내지 않는다
         for ( int32 index = 0; index < 4; ++index )
         {
-            silent.pump();
+            silent.poll();
             rig.step( 1 );
         }
         SW_EXPECT_EQUAL( 1, rig._host.getConnectionCount() );
         for ( int32 index = 0; index < 60 && rig._host.getConnectionCount() > 0; ++index )
         {
-            silent.pump();
+            silent.poll();
             rig.step( 1 ); // 10 ms 씩 — 기한(200 ms)과 검사 간격(250 ms)을 넘긴다
         }
         SW_EXPECT_EQUAL( 0, rig._host.getConnectionCount() );
@@ -777,9 +777,9 @@ SW_TEST_CASE( OnlineServiceHostTest, SilentAndExcessConnectionsAreClosed )
     RawClientSide third( rig._network, rig.getPort() ); // 모두 127.0.0.1 — 셋째는 상한(2)을 넘는다
     for ( int32 index = 0; index < 6; ++index )
     {
-        first.pump();
-        second.pump();
-        third.pump();
+        first.poll();
+        second.poll();
+        third.poll();
         rig.step( 1 );
     }
     SW_EXPECT_EQUAL( 2, rig._host.getConnectionCount() );
@@ -1023,7 +1023,7 @@ SW_TEST_CASE( OnlineServiceHostTest, SharedEndpointClientsEachHelloAndGetTheirOw
     SharedEndpointBots bots( rig._network, rig.getPort() );
     for ( int32 index = 0; index < 10; ++index )
     {
-        bots.pump();
+        bots.poll();
         rig.step( 1 );
     }
     SW_REQUIRE_TRUE( bots._arrClient[0].isReady() && bots._arrClient[1].isReady() );
@@ -1037,7 +1037,7 @@ SW_TEST_CASE( OnlineServiceHostTest, SharedEndpointClientsEachHelloAndGetTheirOw
     }
     for ( int32 index = 0; index < 10; ++index )
     {
-        bots.pump();
+        bots.poll();
         rig.step( 1 );
     }
     SW_EXPECT_TRUE( arrRecord[0]._status == NetRequestStatus::Ok && arrRecord[1]._status == NetRequestStatus::Ok );
@@ -1045,7 +1045,7 @@ SW_TEST_CASE( OnlineServiceHostTest, SharedEndpointClientsEachHelloAndGetTheirOw
     for ( int32 index = 0; index < 4; ++index )
     {
         rig.step( 1 );
-        bots.pump();
+        bots.poll();
     }
     SW_EXPECT_TRUE( bots._arrService[0]._listPushKind.empty() );
     SW_EXPECT_EQUAL( size_t( 1 ), bots._arrService[1]._listPushKind.size() );

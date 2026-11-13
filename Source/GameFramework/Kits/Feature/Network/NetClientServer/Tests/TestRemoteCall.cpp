@@ -165,13 +165,13 @@ SW_TEST_CASE( RemoteCallTest, UnknownTargetAndBadArgumentsAreRejected )
     SW_EXPECT_TRUE( rig.forgeCall( kAvatarID, "noSuchFunction", {}, NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
     rig.pollUntilDelivered();
 
-    vector<RemoteCallRejectNotification> listNotice;
-    rig._client.pollRejections( listNotice );
-    SW_REQUIRE_EQUAL( size_t{ 3 }, listNotice.size() );
-    SW_EXPECT_EQUAL( sequence, listNotice[0]._sequence );
-    SW_EXPECT_TRUE( listNotice[0]._error == RemoteCallError::UnknownTarget );
-    SW_EXPECT_TRUE( listNotice[1]._error == RemoteCallError::ArgumentMismatch );
-    SW_EXPECT_TRUE( listNotice[2]._error == RemoteCallError::UnknownFunction );
+    vector<RemoteCallRejectNotification> listNotification;
+    rig._client.pollRejections( listNotification );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listNotification.size() );
+    SW_EXPECT_EQUAL( sequence, listNotification[0]._sequence );
+    SW_EXPECT_TRUE( listNotification[0]._error == RemoteCallError::UnknownTarget );
+    SW_EXPECT_TRUE( listNotification[1]._error == RemoteCallError::ArgumentMismatch );
+    SW_EXPECT_TRUE( listNotification[2]._error == RemoteCallError::UnknownFunction );
     SW_EXPECT_EQUAL( uint64{ 0 }, rig._server.getStats()._violationCount );
     SW_EXPECT_EQUAL( uint64{ 3 }, rig._server.getStats()._rejectedCount );
 }

@@ -260,9 +260,9 @@ namespace sw
         RHITransferSubmit submit{};
         if ( bBlocking )
         {
-            const bool bSettled = RHITransferUtil::submitWhileBusy( [&]()
+            const bool bCompleted = RHITransferUtil::submitWhileBusy( [&]()
             { return factory.submitTextureUpload( handle, upload ); }, submit );
-            if ( bSettled == false )
+            if ( bCompleted == false )
             {
                 factory.destroyTexture( handle );
                 return Texture2DUploadStep::Failed;

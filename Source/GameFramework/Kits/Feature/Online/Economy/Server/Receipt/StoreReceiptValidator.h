@@ -164,7 +164,7 @@ namespace sw
         /** @brief HTTP 클라이언트를 돌리고, 주기가 되면 환불을 조회하고, 끝난 응답을 처리합니다. */
         void               update( UnixMilliseconds now ) final;
         void               pollCompletions( vector<ReceiptValidationResult>& outListResult ) final;
-        void               pollRefunds( vector<ReceiptRefundNotification>& outListNotice ) final;
+        void               pollRefunds( vector<ReceiptRefundNotification>& outListNotification ) final;
         void               removeRefund( string_view transactionID ) final;
         bool               usesRefundCursor() const final { return true; }
         void               restoreRefundCursor( int64 lastReadMs ) final;

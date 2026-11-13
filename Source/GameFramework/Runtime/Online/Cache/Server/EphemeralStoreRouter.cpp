@@ -58,7 +58,7 @@ namespace sw
         }
     }
 
-    int32 EphemeralStoreRouter::pump()
+    int32 EphemeralStoreRouter::poll()
     {
         if ( _pStore == nullptr )
             return 0;
@@ -100,7 +100,7 @@ namespace sw
     {
         if ( _pStore == nullptr )
             ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
-        (void)_pStore->submit( request ); // 답은 pump 가 주인 없는 id 로 보고 버린다
+        (void)_pStore->submit( request ); // 답은 poll 가 주인 없는 id 로 보고 버린다
     }
 
     uint64 EphemeralStoreRouter::submit( const EphemeralRequest& request, ReplyDelegate onReply, const Subscription& owner )
@@ -114,7 +114,7 @@ namespace sw
             return 0;
         }
         const uint64 requestID = _pStore->submit( request );
-        // 메모리 앞은 맡기는 시점에 답을 큐에 넣지만 꺼내는 것은 다음 pump 다 — 등록이 늦지 않다.
+        // 메모리 앞은 맡기는 시점에 답을 큐에 넣지만 꺼내는 것은 다음 poll 다 — 등록이 늦지 않다.
         _mapRequestToReply.emplace( requestID, PendingReply{ onReply, ownerID } );
         return requestID;
     }

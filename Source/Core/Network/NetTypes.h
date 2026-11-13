@@ -250,7 +250,7 @@ namespace sw
 {
     /**
      * @class NetMessageKindStatsTable
-     * @brief 메시지 종류(첫 바이트) 256 개의 누적 셈 표입니다. 받은 쪽(`NetMessageRouter::pump`)과 보낸 쪽(`NetEndpoint::sendMessage`)이 같은 표를 써서
+     * @brief 메시지 종류(첫 바이트) 256 개의 누적 셈 표입니다. 받은 쪽(`NetMessageRouter::poll`)과 보낸 쪽(`NetEndpoint::sendMessage`)이 같은 표를 써서
      *        `NetStatsReport` 가 두 방향을 같은 규칙으로 싣습니다. 스레드 보호는 들고 있는 쪽이 합니다.
      */
     class NetMessageKindStatsTable

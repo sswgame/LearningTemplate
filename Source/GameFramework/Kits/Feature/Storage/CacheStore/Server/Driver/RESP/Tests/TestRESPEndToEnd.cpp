@@ -223,7 +223,7 @@ SW_TEST_CASE( RESPEndToEndTest, ConfigSelectsRESPAndReachesTheEndpoint )
         const auto result = rig.fromConfig( RESPEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseTTL( RESPEndToEndTestUtil::kOnlineJSON ), kNowMs );
         SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
     }
-    const auto pump = [&rig]()
+    const auto poll = [&rig]()
     {
         rig.updateAll( kNowMs, 1 );
     };
@@ -245,14 +245,14 @@ SW_TEST_CASE( RESPEndToEndTest, ConfigSelectsRESPAndReachesTheEndpoint )
 
     (void)router.submit( EphemeralRequest::makeSet( "e2e:key", StringUtil::toBytes( "value" ), 0 ), EphemeralStoreRouter::ReplyDelegate::create( onReply ), owner );
     (void)router.submit( EphemeralRequest::makeGet( "e2e:key" ), EphemeralStoreRouter::ReplyDelegate::create( onReply ), owner );
-    SW_REQUIRE_TRUE( test::pollUntil( pump, [&repliedCount]()
+    SW_REQUIRE_TRUE( test::pollUntil( poll, [&repliedCount]()
     { return repliedCount == 2; } ) );
     SW_EXPECT_EQUAL( string( "value" ), readBack );
     SW_EXPECT_EQUAL( string( "value" ), server.findValue( "g:e2e:key" ) );
     SW_EXPECT_TRUE( server.getAuthCount() >= 2 ); // 명령 연결과 구독 연결이 각각 AUTH 한다
 
     router.submit( EphemeralRequest::makePublish( "e2e.topic", StringUtil::toBytes( "hello" ) ) );
-    SW_REQUIRE_TRUE( test::pollUntil( pump, [&message]()
+    SW_REQUIRE_TRUE( test::pollUntil( poll, [&message]()
     { return message.empty() == false; } ) );
     SW_EXPECT_EQUAL( string( "hello" ), message );
     SW_EXPECT_TRUE( server.takeUnknownCommands().empty() );

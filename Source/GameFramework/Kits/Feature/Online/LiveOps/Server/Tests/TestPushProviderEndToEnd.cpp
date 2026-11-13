@@ -329,7 +329,7 @@ namespace
 
         static UnixMilliseconds getNow() { return WallClock::nowUnixMilliseconds(); }
 
-        void pump()
+        void poll()
         {
             while ( _store.pollCompletions() > 0 )
             {
@@ -348,7 +348,7 @@ namespace
             registration._registeredMs = getNow().count();
             _dispatcher.registerDevice( kAccount, registration, 0 );
             SW_EXPECT_TRUE( test::pollUntil( [this]()
-            { pump(); }, [this]()
+            { poll(); }, [this]()
             { return _dispatcher.getPendingJobCount() == 0; } ) );
         }
 
@@ -361,7 +361,7 @@ namespace
             message._deepLink = "mailbox";
             SW_EXPECT_TRUE( _dispatcher.notifyAccount( kAccount, message, getNow() ) );
             SW_EXPECT_TRUE( test::pollUntil( [this]()
-            { pump(); }, [this]()
+            { poll(); }, [this]()
             { return _dispatcher.getPendingJobCount() == 0 && _dispatcher.getInFlightCount() == 0; } ) );
         }
     };

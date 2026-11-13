@@ -439,9 +439,9 @@ namespace sw
         }
         _listRejectScratch.clear();
         _remoteCalls.pollRejections( _listRejectScratch );
-        for ( const RemoteCallRejectNotification& notice : _listRejectScratch )
+        for ( const RemoteCallRejectNotification& notification : _listRejectScratch )
         {
-            SW_LOG_WARNING_ID( "LanternVale.CallRejected", "[LanternVale] the server did not take call %# (%#)", notice._sequence, static_cast<int32>( notice._error ) );
+            SW_LOG_WARNING_ID( "LanternVale.CallRejected", "[LanternVale] the server did not take call %# (%#)", notification._sequence, static_cast<int32>( notification._error ) );
         }
         vector<MMOClientEvent> listEvent;
         _view.pollEvents( listEvent ); // 보이는 목록은 `getView` 가 읽는다 — 알림은 쌓이지 않게 비운다

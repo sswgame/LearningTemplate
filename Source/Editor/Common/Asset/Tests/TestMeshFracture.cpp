@@ -474,20 +474,20 @@ SW_TEST_CASE( FractureAssetTest, ForgedCountsAndNonFiniteValuesAreRefused )
     // 바이트 자리: 매직(0) · 버전(4) · 잎 · 노드 · 자식 · 연결 · 정점 · 껍질(8 ~ 28) · 씨앗(32) · 경계(40 ~ 64) · 노드.
     for ( size_t offset = 8; offset <= 28; offset += sizeof( uint32 ) )
     {
-        vector<uint8>    forged = bytes;
-        constexpr uint32 kHuge  = 0xFFFFFFFFu;
-        Memory::copy( forged.data() + offset, &kHuge, sizeof( kHuge ) );
+        vector<uint8>    crafted = bytes;
+        constexpr uint32 kHuge   = 0xFFFFFFFFu;
+        Memory::copy( crafted.data() + offset, &kHuge, sizeof( kHuge ) );
         FractureAsset asset;
-        SW_EXPECT_FALSE( asset.readFromBytes( forged.data(), forged.size() ) );
+        SW_EXPECT_FALSE( asset.readFromBytes( crafted.data(), crafted.size() ) );
         SW_EXPECT_EQUAL( asset.getPieceCount(), 0u );
     }
     const uint32 nanBits = 0x7FC00000u;
     for ( const size_t offset : { size_t{ 40 }, size_t{ 64 } } )
     {
-        vector<uint8> forged = bytes;
-        Memory::copy( forged.data() + offset, &nanBits, sizeof( nanBits ) );
+        vector<uint8> crafted = bytes;
+        Memory::copy( crafted.data() + offset, &nanBits, sizeof( nanBits ) );
         FractureAsset asset;
-        SW_EXPECT_FALSE( asset.readFromBytes( forged.data(), forged.size() ) );
+        SW_EXPECT_FALSE( asset.readFromBytes( crafted.data(), crafted.size() ) );
     }
 }
 

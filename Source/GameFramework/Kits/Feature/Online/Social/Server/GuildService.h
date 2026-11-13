@@ -60,7 +60,7 @@ namespace sw
         Leave,
         Kick,
         SetRole,
-        SetNotice,
+        SetAnnouncement,
         Get,
         Attach,           ///< 로그인한 계정의 길드를 찾는다. 완료는 없고 이벤트만 발생한다
         Deposit,          ///< 내 계정에서 길드 창고로 옮긴다

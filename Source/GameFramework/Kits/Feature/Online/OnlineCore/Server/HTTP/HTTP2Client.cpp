@@ -384,7 +384,7 @@ namespace sw
                         break;
                     }
                     if ( bWaiting == false && session->_connection != nullptr )
-                        session->_connection->cancel( requestID, "timed out", session->_outBytes ); // 응답으로 모이고 아래 pump 가 회수한다(시한도 거기서 지운다)
+                        session->_connection->cancel( requestID, "timed out", session->_outBytes ); // 응답으로 모이고 아래 poll 가 회수한다(시한도 거기서 지운다)
                     else if ( bWaiting == false )
                         session->_mapDeadline.erase( requestID );
                 }

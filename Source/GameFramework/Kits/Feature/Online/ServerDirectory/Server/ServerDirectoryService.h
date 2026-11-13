@@ -129,21 +129,21 @@ namespace sw
         // 변경 함수들이며 비동기이다. 완료는 takeCompletions 로 받는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.
         void setMaintenance( const MaintenanceWindow& window, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag );
         void clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
-        void postNotice( const ServiceAnnouncement& notice, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag );
+        void postAnnouncement( const ServiceAnnouncement& announcement, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag );
         void removeAnnouncement( uint64 announcementID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override;
 
         void takeCompletions( vector<ServerDirectoryCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
 
         // IServerDirectoryControl — GM 키트가 서버 조립 문맥으로 부른다
         void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
-        void postNotice( const ServerDirectoryAnnouncementChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override;
+        void postAnnouncement( const ServerDirectoryAnnouncementChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override;
         void takeControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) override;
 
         uint64 getStatusRevision() const { return _statusRevision; }
         int32  getPendingCount() const { return _store.getOpenCount(); }
 
         /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
-        void applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceAnnouncement>&& listNotice, bool bReadOk, UnixMilliseconds nowMs );
+        void applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceAnnouncement>&& listAnnouncement, bool bReadOk, UnixMilliseconds nowMs );
         void applyWrite( uint64 requestTag, ServerDirectoryServiceResult result );
 
     private:
@@ -158,7 +158,7 @@ namespace sw
     private:
         vector<unique_ptr<ServerRegistryReader>> _listReader;
         vector<MaintenanceWindow>                _listMaintenance;
-        vector<ServiceAnnouncement>              _listNotice; ///< 우선순위 내림차순이다
+        vector<ServiceAnnouncement>              _listAnnouncement; ///< 우선순위 내림차순이다
         EventBuffer<ServerDirectoryCompletion>   _completionBuffer;
         ServerDirectoryServiceConfig             _settings;
         ServerDirectoryDependencies              _dependencies;

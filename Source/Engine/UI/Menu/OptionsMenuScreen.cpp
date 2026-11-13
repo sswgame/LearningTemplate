@@ -251,11 +251,11 @@ namespace sw
             _promptScreen = SettingsConfirmScreen::open( *pUI, *_pSettings, pUI->getEngineDocuments()._settingsConfirm );
         if ( result._bNeedsRestart && pUI != nullptr )
         {
-            UINotificationDef notice{};
-            notice._text            = SW_LOCTEXT( "Notification", "RestartRequired", "Some changes take effect after a restart." );
-            notice._durationSeconds = 6.0f;
-            notice._kind            = UINotificationKind::Warning;
-            engine::getSubsystem<UINotificationService>().post( notice );
+            UINotificationDef notification{};
+            notification._text            = SW_LOCTEXT( "Notification", "RestartRequired", "Some changes take effect after a restart." );
+            notification._durationSeconds = 6.0f;
+            notification._kind            = UINotificationKind::Warning;
+            engine::getSubsystem<UINotificationService>().post( notification );
         }
         refreshRestartNotification();
     }
@@ -401,9 +401,9 @@ namespace sw
 
     void OptionsMenuScreen::refreshRestartNotification()
     {
-        Widget* pNotice = getTree().findWidgetByName( OptionsMenuScreenInternal::kRestartNotificationName );
-        if ( pNotice != nullptr && _pSettings != nullptr )
-            pNotice->setVisibility( _pSettings->isRestartRequired() ? WidgetVisibility::Visible : WidgetVisibility::Collapsed );
+        Widget* pNotification = getTree().findWidgetByName( OptionsMenuScreenInternal::kRestartNotificationName );
+        if ( pNotification != nullptr && _pSettings != nullptr )
+            pNotification->setVisibility( _pSettings->isRestartRequired() ? WidgetVisibility::Visible : WidgetVisibility::Collapsed );
     }
 
     void OptionsMenuScreen::openUnsavedPrompt()

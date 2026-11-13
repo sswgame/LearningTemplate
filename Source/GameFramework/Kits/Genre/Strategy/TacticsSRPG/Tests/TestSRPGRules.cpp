@@ -86,7 +86,7 @@ namespace
         sw::SRPGUnit& unit( int32 index ) { return *_field.findUnit( index ); }
 
         /** @brief 유닛 하나를 손으로 쓴 상태를 읽습니다(1x1 전장). 형식이 맞으면 결과는 값의 범위만 가른다. */
-        bool readForged( int32 hp, int32 en, int32 morale, int32 dodge, int32 rosterIndex, uint8 team, const sw::int2& cell )
+        bool readFixture( int32 hp, int32 en, int32 morale, int32 dodge, int32 rosterIndex, uint8 team, const sw::int2& cell )
         {
             sw::TurnOrder  order;
             sw::GameRandom random;
@@ -919,16 +919,16 @@ SW_TEST_CASE_F( SRPGRulesTest, ReadStateRefusesBrokenUnit )
 {
     open( 1, 1 );
     const sw::int2 cell{ 0, 0 };
-    SW_REQUIRE_TRUE( readForged( 500, 10, 100, 0, -1, 0, cell ) ); // 형식은 맞다
+    SW_REQUIRE_TRUE( readFixture( 500, 10, 100, 0, -1, 0, cell ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 500, unit( 0 )._hp );
 
-    SW_EXPECT_FALSE( readForged( -1, 10, 100, 0, -1, 0, cell ) );
-    SW_EXPECT_FALSE( readForged( 500, -1, 100, 0, -1, 0, cell ) );
-    SW_EXPECT_FALSE( readForged( 500, 10, -1, 0, -1, 0, cell ) );
-    SW_EXPECT_FALSE( readForged( 500, 10, 100, -1, -1, 0, cell ) );
-    SW_EXPECT_FALSE( readForged( 500, 10, 100, 0, -2, 0, cell ) );
-    SW_EXPECT_FALSE( readForged( 500, 10, 100, 0, -1, 3, cell ) );
-    SW_EXPECT_FALSE( readForged( 500, 10, 100, 0, -1, 0, sw::int2{ 1, 0 } ) );
+    SW_EXPECT_FALSE( readFixture( -1, 10, 100, 0, -1, 0, cell ) );
+    SW_EXPECT_FALSE( readFixture( 500, -1, 100, 0, -1, 0, cell ) );
+    SW_EXPECT_FALSE( readFixture( 500, 10, -1, 0, -1, 0, cell ) );
+    SW_EXPECT_FALSE( readFixture( 500, 10, 100, -1, -1, 0, cell ) );
+    SW_EXPECT_FALSE( readFixture( 500, 10, 100, 0, -2, 0, cell ) );
+    SW_EXPECT_FALSE( readFixture( 500, 10, 100, 0, -1, 3, cell ) );
+    SW_EXPECT_FALSE( readFixture( 500, 10, 100, 0, -1, 0, sw::int2{ 1, 0 } ) );
     SW_EXPECT_EQUAL( 500, unit( 0 )._hp );
 }
 
@@ -1220,30 +1220,30 @@ SW_TEST_CASE( SRPGRunMapTest, ReadStateChecksCells )
     map.collectChoices( listChoice );
     SW_EXPECT_EQUAL( listChoice.size(), listRestored.size() );
 
-    const auto readForged = [&restored]( int32 floor, int32 column, int32 cell, int32 current )
+    const auto readFixture = [&restored]( int32 floor, int32 column, int32 cell, int32 current )
     {
-        sw::Archive forged;
-        forged << static_cast<uint32>( 1 );
-        sw::StateIO::writeName( forged, "Battle" );
-        forged << floor;
-        forged << column;
-        forged << static_cast<uint32>( 0 );
-        forged << static_cast<uint32>( 1 ); // 칸 하나
-        forged << cell;
-        forged << static_cast<int32>( 1 );
-        forged << static_cast<int32>( 1 );
-        forged << current;
-        sw::Archive readingFixture( forged.getData(), forged.getSize() );
+        sw::Archive fixture;
+        fixture << static_cast<uint32>( 1 );
+        sw::StateIO::writeName( fixture, "Battle" );
+        fixture << floor;
+        fixture << column;
+        fixture << static_cast<uint32>( 0 );
+        fixture << static_cast<uint32>( 1 ); // 칸 하나
+        fixture << cell;
+        fixture << static_cast<int32>( 1 );
+        fixture << static_cast<int32>( 1 );
+        fixture << current;
+        sw::Archive readingFixture( fixture.getData(), fixture.getSize() );
         return restored.readState( readingFixture );
     };
-    SW_EXPECT_FALSE( readForged( 0, 0, 5, sw::RunMap::kStart ) );
-    SW_EXPECT_FALSE( readForged( 0, 0, -2, sw::RunMap::kStart ) );
-    SW_EXPECT_FALSE( readForged( 9, 0, 0, sw::RunMap::kStart ) );
-    SW_EXPECT_FALSE( readForged( 0, -1, 0, sw::RunMap::kStart ) );
-    SW_EXPECT_FALSE( readForged( 0, 0, 0, 7 ) );
+    SW_EXPECT_FALSE( readFixture( 0, 0, 5, sw::RunMap::kStart ) );
+    SW_EXPECT_FALSE( readFixture( 0, 0, -2, sw::RunMap::kStart ) );
+    SW_EXPECT_FALSE( readFixture( 9, 0, 0, sw::RunMap::kStart ) );
+    SW_EXPECT_FALSE( readFixture( 0, -1, 0, sw::RunMap::kStart ) );
+    SW_EXPECT_FALSE( readFixture( 0, 0, 0, 7 ) );
     SW_EXPECT_EQUAL( map.getFloorCount(), restored.getFloorCount() ); // 거절은 상태를 두었다
 
-    SW_EXPECT_TRUE( readForged( 0, 0, 0, sw::RunMap::kStart ) ); // 형식은 맞다
+    SW_EXPECT_TRUE( readFixture( 0, 0, 0, sw::RunMap::kStart ) ); // 형식은 맞다
     restored.collectChoices( listRestored );
     SW_REQUIRE_EQUAL( size_t( 1 ), listRestored.size() );
     SW_EXPECT_TRUE( restored.moveTo( 0 ) );
@@ -1381,21 +1381,21 @@ SW_TEST_CASE_F( SRPGRulesTest, CampaignState )
     SW_REQUIRE_EQUAL( size_t( 1 ), restored.getRoster().size() );
     SW_EXPECT_EQUAL( 2, restored.getRoster()[0]._pilotLevel.getLevel() );
 
-    const auto readForged = [&restored, &campaign]( uint8 bInMission, uint8 bFailed )
+    const auto readFixture = [&restored, &campaign]( uint8 bInMission, uint8 bFailed )
     {
-        sw::Archive forged;
-        campaign.getRunMap().writeState( forged );
-        forged << static_cast<uint32>( 0 );
-        forged << static_cast<uint32>( 5 );
-        forged << bInMission;
-        forged << bFailed;
-        sw::Archive readingFixture( forged.getData(), forged.getSize() );
+        sw::Archive fixture;
+        campaign.getRunMap().writeState( fixture );
+        fixture << static_cast<uint32>( 0 );
+        fixture << static_cast<uint32>( 5 );
+        fixture << bInMission;
+        fixture << bFailed;
+        sw::Archive readingFixture( fixture.getData(), fixture.getSize() );
         return restored.readState( readingFixture );
     };
-    SW_EXPECT_FALSE( readForged( 2, 0 ) );
-    SW_EXPECT_FALSE( readForged( 0, 2 ) );
+    SW_EXPECT_FALSE( readFixture( 2, 0 ) );
+    SW_EXPECT_FALSE( readFixture( 0, 2 ) );
     SW_EXPECT_EQUAL( size_t( 1 ), restored.getRoster().size() );
-    SW_EXPECT_TRUE( readForged( 0, 1 ) ); // 형식은 맞다
+    SW_EXPECT_TRUE( readFixture( 0, 1 ) ); // 형식은 맞다
     SW_EXPECT_TRUE( restored.isFailed() );
 }
 

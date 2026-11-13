@@ -98,7 +98,7 @@ namespace
             outResponse._bodyBytes.assign( _tokenBody.begin(), _tokenBody.end() );
         }
 
-        void pump( int64 nowMs = kNowMs )
+        void poll( int64 nowMs = kNowMs )
         {
             for ( int32 round = 0; round < 40; ++round )
             {
@@ -115,7 +115,7 @@ namespace
             HTTPClientRequest request;
             request._url = "http://127.0.0.1:" + to_string( static_cast<int32>( _login.getRedirectPort() ) ) + "/callback?" + string( query );
             (void)_redirectSender.submitRequest( request );
-            pump();
+            poll();
         }
 
         string getAuthorizationState() const { return PkceTestUtil::find( PkceTestUtil::readQuery( _browser._listURL.back() ), "state" ); }
@@ -225,7 +225,7 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, ForgedStateIsIgnoredAndDenialCancels 
     HTTPClientRequest other;
     other._url = "http://127.0.0.1:" + to_string( static_cast<int32>( rig._login.getRedirectPort() ) ) + "/favicon.ico";
     (void)rig._redirectSender.submitRequest( other );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 2 ), rig._listRedirectResponse.size() );
     SW_EXPECT_EQUAL( HTTPConstant::kStatusNotFound, rig._listRedirectResponse[1]._statusCode );
 
@@ -256,9 +256,9 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, FailuresEndTheLoginOnce )
     {
         PkceFixture rig;
         (void)rig._login.beginLogin( "google", MonotonicMilliseconds{ kNowMs } );
-        rig.pump( kNowMs + 4999 );
+        rig.poll( kNowMs + 4999 );
         SW_EXPECT_TRUE( rig.takeResults().empty() );
-        rig.pump( kNowMs + 5000 );
+        rig.poll( kNowMs + 5000 );
         const vector<PlatformLoginClientResult> listResult = rig.takeResults();
         SW_REQUIRE_EQUAL( size_t( 1 ), listResult.size() );
         SW_EXPECT_TRUE( listResult[0]._bCancelled == SW_TRUE );

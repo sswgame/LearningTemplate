@@ -209,7 +209,7 @@ namespace
             return def;
         }
 
-        static bool readForged( PartyItemSpawner& spawner, const utf8* pItemID, float32 age, int32 serial, int32 nextSerial, uint32 count = 1 )
+        static bool readFixture( PartyItemSpawner& spawner, const utf8* pItemID, float32 age, int32 serial, int32 nextSerial, uint32 count = 1 )
         {
             GameRandom random;
             random.setSeed( 3 );
@@ -858,14 +858,14 @@ SW_TEST_CASE( PartyArenaTest, SpawnerRefusesForgedState )
     SW_REQUIRE_TRUE( spawner.initialize( PartyArenaTestUtil::makeSettings(), 7u ) );
     spawner.addItem( PartyArenaTestUtil::makeItem( "a", 1.0f ) );
     using Util = PartyArenaTestUtil;
-    SW_EXPECT_FALSE( Util::readForged( spawner, "ghost", 0.0f, 1, 2 ) );
-    SW_EXPECT_FALSE( Util::readForged( spawner, "a", -1.0f, 1, 2 ) );
-    SW_EXPECT_FALSE( Util::readForged( spawner, "a", 0.0f, 0, 2 ) );
-    SW_EXPECT_FALSE( Util::readForged( spawner, "a", 0.0f, 2, 2 ) ); // 다음 번호와 같다
-    SW_EXPECT_FALSE( Util::readForged( spawner, "a", 0.0f, 1, 0 ) );
-    SW_EXPECT_FALSE( Util::readForged( spawner, "a", 0.0f, 1, 9, 3 ) ); // 상한은 둘이다
+    SW_EXPECT_FALSE( Util::readFixture( spawner, "ghost", 0.0f, 1, 2 ) );
+    SW_EXPECT_FALSE( Util::readFixture( spawner, "a", -1.0f, 1, 2 ) );
+    SW_EXPECT_FALSE( Util::readFixture( spawner, "a", 0.0f, 0, 2 ) );
+    SW_EXPECT_FALSE( Util::readFixture( spawner, "a", 0.0f, 2, 2 ) ); // 다음 번호와 같다
+    SW_EXPECT_FALSE( Util::readFixture( spawner, "a", 0.0f, 1, 0 ) );
+    SW_EXPECT_FALSE( Util::readFixture( spawner, "a", 0.0f, 1, 9, 3 ) ); // 상한은 둘이다
     SW_EXPECT_TRUE( spawner.getInstances().empty() );
-    SW_EXPECT_TRUE( Util::readForged( spawner, "a", 0.0f, 1, 3, 2 ) );
+    SW_EXPECT_TRUE( Util::readFixture( spawner, "a", 0.0f, 1, 3, 2 ) );
     SW_EXPECT_EQUAL( size_t( 2 ), spawner.getInstances().size() );
 
     Archive written;

@@ -163,8 +163,8 @@ namespace sw
         }
         for ( Group& group : _listGroup )
         {
-            const bool bSettled = group._bBuilt || group._bFailed || areLayersActive( group._listLayer ) == false;
-            if ( bSettled )
+            const bool bStable = group._bBuilt || group._bFailed || areLayersActive( group._listLayer ) == false;
+            if ( bStable )
                 continue;
             group._listObjectID.clear();
             if ( _pScene->instantiateLayerNodes( group._listNode, group._listObjectID ) )

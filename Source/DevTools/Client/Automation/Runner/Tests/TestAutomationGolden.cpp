@@ -34,7 +34,7 @@ namespace
         {
             const expected<AutomationImageDifference> difference = AutomationImage::compare( actual, golden, kMeasure );
             SW_EXPECT_TRUE( difference.has_value() );
-            return difference.has_value() ? AutomationGoldenUtil::judge( *difference, kLimits, kNearLimitRatio ) : GoldenResult::Fail;
+            return difference.has_value() ? AutomationGoldenUtil::evaluate( *difference, kLimits, kNearLimitRatio ) : GoldenResult::Fail;
         }
     };
     using Util = AutomationGoldenTestUtil;
@@ -67,23 +67,23 @@ SW_TEST_CASE( AutomationGoldenTest, WideShallowPassesNarrowDeepFails )
     SW_REQUIRE_TRUE( blobDifference.has_value() );
     SW_EXPECT_TRUE( blobDifference->_differingFraction <= Util::kLimits._maxDifferingFraction ); // 옛 한 식은 지나갔다
     SW_EXPECT_EQUAL( 25u, blobDifference->_largestDeepRegionPixels );
-    SW_EXPECT_TRUE( AutomationGoldenUtil::judge( *blobDifference, Util::kLimits, Util::kNearLimitRatio ) == GoldenResult::Fail );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::evaluate( *blobDifference, Util::kLimits, Util::kNearLimitRatio ) == GoldenResult::Fail );
 }
 
 /** @brief [AutomationGoldenTest] 판정은 한 식이다 — 한 축이라도 상한을 넘으면 Fail, 한 축이라도 상한의 절반을 넘으면 PassNearLimit, 아니면 Pass */
 SW_TEST_CASE( AutomationGoldenTest, ResultPerAxis )
 {
-    const auto judge = []( float64 fraction, float64 mean, uint32 region )
-    { return AutomationGoldenUtil::judge( AutomationImageDifference{ fraction, mean, region }, Util::kLimits, Util::kNearLimitRatio ); };
-    SW_EXPECT_TRUE( judge( 0.0, 0.0, 0 ) == GoldenResult::Pass );
-    SW_EXPECT_TRUE( judge( 0.005, 0.0025, 8 ) == GoldenResult::Pass );        // 절반 그대로는 근접이 아니다
-    SW_EXPECT_TRUE( judge( 0.0099, 0.0, 0 ) == GoldenResult::PassNearLimit ); // 오늘의 0.99 %
-    SW_EXPECT_TRUE( judge( 0.0, 0.004, 0 ) == GoldenResult::PassNearLimit );
-    SW_EXPECT_TRUE( judge( 0.0, 0.0, 9 ) == GoldenResult::PassNearLimit );
-    SW_EXPECT_TRUE( judge( 0.01, 0.005, 16 ) == GoldenResult::PassNearLimit ); // 상한 그대로는 통과
-    SW_EXPECT_TRUE( judge( 0.0102, 0.0, 0 ) == GoldenResult::Fail );           // 다음 실행의 1.02 %
-    SW_EXPECT_TRUE( judge( 0.0, 0.0051, 0 ) == GoldenResult::Fail );
-    SW_EXPECT_TRUE( judge( 0.0, 0.0, 17 ) == GoldenResult::Fail );
+    const auto evaluate = []( float64 fraction, float64 mean, uint32 region )
+    { return AutomationGoldenUtil::evaluate( AutomationImageDifference{ fraction, mean, region }, Util::kLimits, Util::kNearLimitRatio ); };
+    SW_EXPECT_TRUE( evaluate( 0.0, 0.0, 0 ) == GoldenResult::Pass );
+    SW_EXPECT_TRUE( evaluate( 0.005, 0.0025, 8 ) == GoldenResult::Pass );        // 절반 그대로는 근접이 아니다
+    SW_EXPECT_TRUE( evaluate( 0.0099, 0.0, 0 ) == GoldenResult::PassNearLimit ); // 오늘의 0.99 %
+    SW_EXPECT_TRUE( evaluate( 0.0, 0.004, 0 ) == GoldenResult::PassNearLimit );
+    SW_EXPECT_TRUE( evaluate( 0.0, 0.0, 9 ) == GoldenResult::PassNearLimit );
+    SW_EXPECT_TRUE( evaluate( 0.01, 0.005, 16 ) == GoldenResult::PassNearLimit ); // 상한 그대로는 통과
+    SW_EXPECT_TRUE( evaluate( 0.0102, 0.0, 0 ) == GoldenResult::Fail );           // 다음 실행의 1.02 %
+    SW_EXPECT_TRUE( evaluate( 0.0, 0.0051, 0 ) == GoldenResult::Fail );
+    SW_EXPECT_TRUE( evaluate( 0.0, 0.0, 17 ) == GoldenResult::Fail );
 }
 
 /** @brief [AutomationGoldenTest] 기록 모드는 근접 · 실패 · 없는 · 크기가 다른 골든을 다시 쓰고 통과는 둔다. 일반 실행은 근접을 알리기만 하고 진 것만 실패다 */

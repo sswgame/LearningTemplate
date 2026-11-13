@@ -466,35 +466,35 @@ namespace sw
         static bool runExpect( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runExpect( runner, step );
+            runner._evaluator.runExpect( runner, step );
             return true;
         }
 
         static bool runExpectVisited( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runExpectVisited( runner, step );
+            runner._evaluator.runExpectVisited( runner, step );
             return true;
         }
 
         static bool runRecord( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runRecord( runner, step );
+            runner._evaluator.runRecord( runner, step );
             return true;
         }
 
         static bool runRemember( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runRemember( runner, step );
+            runner._evaluator.runRemember( runner, step );
             return true;
         }
 
         static bool runExpectLog( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runExpectLog( runner, step );
+            runner._evaluator.runExpectLog( runner, step );
             return true;
         }
 
@@ -513,13 +513,13 @@ namespace sw
         static bool runExpectImage( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.deferExpectImage( runner, step );
+            runner._evaluator.deferExpectImage( runner, step );
             return true;
         }
 
         static bool runExpectImagesDiffer( AutomationStepContext& context, const AutomationStep& step )
         {
-            asRunner( context )._judge.deferExpectImagesDiffer( step );
+            asRunner( context )._evaluator.deferExpectImagesDiffer( step );
             return true;
         }
 
@@ -551,7 +551,7 @@ namespace sw
         static bool runPass( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.evaluateDeferred( runner ); // 스크린샷 · 끝 차단 조건의 뒤의 일은 `holdPass` 가 다 끝난 뒤에 놓는다
+            runner._evaluator.evaluateDeferred( runner ); // 스크린샷 · 끝 차단 조건의 뒤의 일은 `holdPass` 가 다 끝난 뒤에 놓는다
             (void)step;
             runner.finish( AutomationResult::Passed, "<Pass/>" );
             return true;
@@ -597,7 +597,7 @@ namespace sw
             AutomationRunner&    runner = asRunner( context );
             AutomationWatchValue value{};
             string               message;
-            if ( runner._judge.readWatchValue( context, step, value, message ) == false || value._bText )
+            if ( runner._evaluator.readWatchValue( context, step, value, message ) == false || value._bText )
             {
                 const string reason = "<SkipUnless> could not read a number: " + message;
                 runner.recordFailure( step, reason );
@@ -633,13 +633,13 @@ namespace sw
             AutomationRunner& runner = asRunner( context );
             if ( AutomationRunnerStepsInternal::shouldCaptureWithoutStabilizing( step ) )
                 return AutomationStepHold::Run;
-            const bool bSettled                = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
-            runner._run._assetStableFrameCount = bSettled ? runner._run._assetStableFrameCount + 1 : 0;
+            const bool bStable                 = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
+            runner._run._assetStableFrameCount = bStable ? runner._run._assetStableFrameCount + 1 : 0;
             const bool               bReady    = runner._run._assetStableFrameCount > AutomationRunnerStepsInternal::kAssetStabilityTrailFrames;
             const utf8* const        pCover    = AutomationStepRegistry::findCaptureBlocker();
             const AutomationStepHold hold      = runner.holdUntilReady( step, input, bReady, AutomationTimeLimits::kMaxAssetStabilityFrames,
                                                                         string( "the screen to settle before the screenshot (" ) +
-                                                                            ( pCover != nullptr ? string( "covered by " ) + pCover : string( bSettled ? "trailing frames" : "assets pending" ) ) +
+                                                                            ( pCover != nullptr ? string( "covered by " ) + pCover : string( bStable ? "trailing frames" : "assets pending" ) ) +
                                                                             ")" );
             if ( hold == AutomationStepHold::Run )
             {

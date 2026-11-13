@@ -111,14 +111,14 @@ namespace
         void tick( int64 nowMs )
         {
             _queue.update( UnixMilliseconds{ nowMs } );
-            pump( nowMs );
+            poll( nowMs );
         }
 
-        void pump( int64 nowMs )
+        void poll( int64 nowMs )
         {
             for ( int32 round = 0; round < 8; ++round )
             {
-                int32 job = _router.pump();
+                int32 job = _router.poll();
                 if ( _transport != nullptr )
                 {
                     vector<MatchQueueTopicChange> listChange;
@@ -209,7 +209,7 @@ namespace
         {
             _server.start( listMode );
             _game.start( _server._router, kNowMs );
-            _server.pump( kNowMs );
+            _server.poll( kNowMs );
             _server.tick( kNowMs ); // 첫 읽기를 맡긴다
             _server.tick( kNowMs ); // 답을 스냅숏에 넣는다
         }
@@ -383,7 +383,7 @@ SW_TEST_CASE( MatchQueueServiceTest, RatingComesFromStatSource )
     mode._baseRatingWindow              = 100;
     SW_REQUIRE_TRUE( world._server._queue.initialize( dependencies, vector<MatchModeDef>{ mode } ) );
     world._game.start( world._server._router, kNowMs );
-    world._server.pump( kNowMs );
+    world._server.poll( kNowMs );
     world._server.tick( kNowMs );
     world._server.tick( kNowMs );
 
@@ -415,8 +415,8 @@ SW_TEST_CASE( MatchQueueServiceTest, AuthorityRunsMatchesAcrossServers )
 
     SW_EXPECT_TRUE( world._serverA.join( kAlice )._result == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( world._serverB.join( kBob )._result == MatchmakingResult::Ok );
-    world._serverB.pump( kNowMs );
-    world._serverA.pump( kNowMs );
+    world._serverB.poll( kNowMs );
+    world._serverA.poll( kNowMs );
     SW_EXPECT_EQUAL( 2, world._serverA._queue.getQueuedTicketCount( "duel" ) );
     SW_EXPECT_EQUAL( 0, world._serverB._queue.getQueuedTicketCount( "duel" ) );
 
@@ -441,11 +441,11 @@ SW_TEST_CASE( MatchQueueServiceTest, CancelReachesAuthorityOverBus )
     PairWorld world;
     world.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     SW_EXPECT_TRUE( world._serverB.join( kBob )._result == MatchmakingResult::Ok );
-    world._serverA.pump( kNowMs );
+    world._serverA.poll( kNowMs );
     SW_EXPECT_EQUAL( 1, world._serverA._queue.getQueuedTicketCount( "duel" ) );
 
     world._serverB._queue.leaveQueue( kBob, 8 );
-    world._serverA.pump( kNowMs );
+    world._serverA.poll( kNowMs );
     SW_EXPECT_EQUAL( 0, world._serverA._queue.getQueuedTicketCount( "duel" ) );
     SW_EXPECT_EQUAL( 0, world._serverB._queue.getLocalTicketCount() );
 }
@@ -456,7 +456,7 @@ SW_TEST_CASE( MatchQueueServiceTest, AuthorityFailsOverAndLostTicketsTimeOut )
     PairWorld world;
     world.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     SW_EXPECT_TRUE( world._serverB.join( kBob )._result == MatchmakingResult::Ok );
-    world._serverA.pump( kNowMs );
+    world._serverA.poll( kNowMs );
     SW_EXPECT_EQUAL( 1, world._serverA._queue.getQueuedTicketCount( "duel" ) );
 
     world._clock.advanceMilliseconds( MatchQueueLimit::kLeaseTTLMs + 1 );
@@ -534,7 +534,7 @@ SW_TEST_CASE( MatchQueueServiceTest, LobbyPlacementKeepsTeams )
     SW_EXPECT_TRUE( listResult[0]._assignment._result == MatchQueueResult::NoServer );
 
     world._game.start( world._server._router, kNowMs, "eu" ); // 로비는 다른 지역도 받는다
-    world._server.pump( kNowMs );
+    world._server.poll( kNowMs );
     world._server.tick( kNowMs + 2001 );
     world._server.tick( kNowMs + 2001 );
     world._server._queue.placeLobby( lobby, UnixMilliseconds{ kNowMs + 2001 } );
@@ -573,21 +573,21 @@ namespace
 
         ~PartyQueueWorld() { _party.shutdown(); }
 
-        void pump() { _world._server.pump( kNowMs ); }
+        void poll() { _world._server.poll( kNowMs ); }
 
         /** @brief 파티 하나를 만듭니다. 파티 id 입니다. */
         uint64 makeParty( AccountID leaderID, AccountID memberID )
         {
             _party.createParty( leaderID, 1 );
-            pump();
+            poll();
             vector<PartyLobbyCompletion> listCompletion;
             _party.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
             const uint64 partyID = listCompletion.empty() ? 0 : listCompletion[0]._party._partyID;
             _party.inviteToParty( leaderID, memberID, 2 );
-            pump();
+            poll();
             _party.acceptPartyInvite( memberID, partyID, 3 );
-            pump();
+            poll();
             listCompletion.clear();
             _party.takeCompletions( listCompletion );
             for ( const PartyLobbyCompletion& completion : listCompletion )
@@ -600,7 +600,7 @@ namespace
         MatchQueueCompletion joinAndWait( AccountID accountID )
         {
             _world._server._queue.joinQueue( accountID, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
-            pump();
+            poll();
             return _world._server.takeCompletion();
         }
     };
@@ -624,7 +624,7 @@ SW_TEST_CASE( MatchQueueServiceTest, PartyLeaderQueuesWholeParty )
     SW_REQUIRE_EQUAL( size_t( 2 ), listCancelled.size() );
     SW_EXPECT_TRUE( listCancelled[0]._assignment._result == MatchQueueResult::Cancelled );
     SW_EXPECT_EQUAL( 0, party._world._server._queue.getLocalTicketCount() );
-    party.pump();
+    party.poll();
     SW_EXPECT_TRUE( party.joinAndWait( kAlice )._result == MatchmakingResult::Ok ); // 파티 기록의 티켓도 지워졌다
 }
 
@@ -646,7 +646,7 @@ SW_TEST_CASE( MatchQueueServiceTest, LeavingDuringPartyLookupLeavesNoTicket )
     queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
     queue.removeAccount( kAlice ); // 파티 답이 오기 전
     SW_EXPECT_TRUE( party._world._server.takeCompletion()._result == MatchmakingResult::NotQueued );
-    party.pump();
+    party.poll();
     SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() );
 
     queue.joinQueue( kBob, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
@@ -658,11 +658,11 @@ SW_TEST_CASE( MatchQueueServiceTest, LeavingDuringPartyLookupLeavesNoTicket )
     SW_EXPECT_EQUAL( uint64( 7 ), listCompletion[0]._requestTag );
     SW_EXPECT_TRUE( listCompletion[1]._result == MatchmakingResult::Ok );
     SW_EXPECT_EQUAL( uint64( 8 ), listCompletion[1]._requestTag );
-    party.pump();
+    party.poll();
     SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() );
 
     queue.joinQueue( kCarol, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 ); // 평소의 길은 그대로다
-    party.pump();
+    party.poll();
     SW_EXPECT_TRUE( party._world._server.takeCompletion()._result == MatchmakingResult::Ok );
     SW_EXPECT_EQUAL( 1, queue.getLocalTicketCount() );
 }

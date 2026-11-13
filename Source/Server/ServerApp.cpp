@@ -465,14 +465,14 @@ namespace sw
         const int64 waitMs = bWait ? static_cast<int64>( _pServerConfig->_drainWaitSeconds ) * constant::time::kMillisecondsPerSecond : 0;
         _drainDeadlineMs   = monotonicMs + waitMs;
         // 키트에 종료를 알리고(진행 중인 일 마무리) 게임 접속자에게 끊김 사유를 보낸다. 기다리지 않는 종료(콘솔 · Ctrl+C)는 사유 패킷이 나가기 전에 내려갈 수 있어 최선만 다한다.
-        ServerShutdownNotice notice;
-        notice._cause        = cause;
-        notice._graceSeconds = static_cast<uint32>( waitMs / constant::time::kMillisecondsPerSecond );
+        ServerShutdownNotice notification;
+        notification._cause        = cause;
+        notification._graceSeconds = static_cast<uint32>( waitMs / constant::time::kMillisecondsPerSecond );
         if ( _serverServices != nullptr )
-            _serverServices->beginShutdown( notice );
+            _serverServices->beginShutdown( notification );
         GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
         if ( pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server )
-            pNetSession->sendShutdownNotice( GameShutdownNotice{ bWait ? GameShutdownReason::ServerRestart : GameShutdownReason::ServerStopped, notice._graceSeconds } );
+            pNetSession->sendShutdownNotice( GameShutdownNotice{ bWait ? GameShutdownReason::ServerRestart : GameShutdownReason::ServerStopped, notification._graceSeconds } );
         if ( waitMs > 0 )
             SW_LOG_INFO_ID( "Server.DrainingWaitingUpConnections", "Draining: waiting up to %# s for %# connections / open jobs to finish (%#)", _pServerConfig->_drainWaitSeconds, countDrainBlockers(),
                             ShutdownSignal::getCauseName( cause ) );
@@ -508,8 +508,8 @@ namespace sw
             if ( _console.poll( SW_DELEGATE_METHOD( StandardInputCommandDelegate, &ServerApp::executeCommand, this ) ) )
                 ShutdownSignal::request( ShutdownCause::ConsoleCommand );
             if ( _pDebugControl != nullptr )
-                _pDebugControl->pump(); // 일시정지 중에도 돈다 - 멈춘 상태의 값을 읽는 것이 쓰임이다
-            _adminChannel.pump();
+                _pDebugControl->poll(); // 일시정지 중에도 돈다 - 멈춘 상태의 값을 읽는 것이 쓰임이다
+            _adminChannel.poll();
 
             const ShutdownCause cause = ShutdownSignal::getRequestedCause();
             if ( cause != ShutdownCause::None || _launch.getEngine().isQuitRequested() )

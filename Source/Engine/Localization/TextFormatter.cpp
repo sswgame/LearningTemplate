@@ -61,7 +61,7 @@ namespace sw
             void bindMap( TextLiteralMapFunc pfnMap ) { _pfnMap = pfnMap; }
 
             /** @brief 최상위 메시지를 훑습니다. 구문 오류가 없으면 true 입니다(인자 오류는 `_error` 에만 남긴다). */
-            bool walk( string& outText )
+            bool visit( string& outText )
             {
                 const bool bParsed = parseMessage( 0, false, true, outText );
                 if ( bParsed && _position < _pattern.size() )
@@ -622,39 +622,39 @@ namespace sw
     expected<void> TextFormatter::format( string_view pattern, const TextArgumentList& arguments, const CultureInfo& culture, string& outText )
     {
         outText.clear();
-        TextFormatParser walker( pattern, TextParseMode::Format );
-        walker.bindFormat( &arguments, &culture );
-        const bool bParsed = walker.walk( outText );
+        TextFormatParser traversal( pattern, TextParseMode::Format );
+        traversal.bindFormat( &arguments, &culture );
+        const bool bParsed = traversal.visit( outText );
         if ( bParsed == false )
             outText = string( pattern ); // 구문이 틀린 번역은 원문 그대로 쓴다. 반쯤 해석된 텍스트보다 낫다
-        if ( bParsed && walker.getError().empty() )
+        if ( bParsed && traversal.getError().empty() )
             return {};
-        return unexpected( Error{ ErrorKind::InvalidArgument, "the text pattern cannot be formatted", walker.getError() } );
+        return unexpected( Error{ ErrorKind::InvalidArgument, "the text pattern cannot be formatted", traversal.getError() } );
     }
 
     expected<void> TextFormatter::validatePattern( string_view pattern )
     {
         string           ignored;
-        TextFormatParser walker( pattern, TextParseMode::Validate );
-        if ( walker.walk( ignored ) )
+        TextFormatParser traversal( pattern, TextParseMode::Validate );
+        if ( traversal.visit( ignored ) )
             return {};
-        return unexpected( Error{ ErrorKind::InvalidArgument, "the text pattern is not valid", walker.getError() } );
+        return unexpected( Error{ ErrorKind::InvalidArgument, "the text pattern is not valid", traversal.getError() } );
     }
 
     void TextFormatter::collectArgumentNames( string_view pattern, vector<string>& outListName )
     {
         string           ignored;
-        TextFormatParser walker( pattern, TextParseMode::Validate );
-        (void)walker.walk( ignored );
-        outListName.assign( walker.getNames().begin(), walker.getNames().end() );
+        TextFormatParser traversal( pattern, TextParseMode::Validate );
+        (void)traversal.visit( ignored );
+        outListName.assign( traversal.getNames().begin(), traversal.getNames().end() );
     }
 
     string TextFormatter::mapLiteralText( string_view pattern, TextLiteralMapFunc pfnMap )
     {
         string           rebuilt;
-        TextFormatParser walker( pattern, TextParseMode::Rebuild );
-        walker.bindMap( pfnMap );
-        if ( walker.walk( rebuilt ) == false )
+        TextFormatParser traversal( pattern, TextParseMode::Rebuild );
+        traversal.bindMap( pfnMap );
+        if ( traversal.visit( rebuilt ) == false )
             rebuilt = string( pattern );
         return rebuilt;
     }

@@ -1326,68 +1326,68 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, ReadRefusesForgedBytes )
     SW_REQUIRE_TRUE( _match.addGate( float3{} ) == 0 );
     _match.start();
 
-    const AsymmetricFixtureBytes forged( _match );
-    const size_t                 size = forged.getSize();
-    const size_t                 base = forged._stageBase;
+    const AsymmetricFixtureBytes fixture( _match );
+    const size_t                 size = fixture.getSize();
+    const size_t                 base = fixture._stageBase;
 
     // 자리가 맞는지 정상 값으로 본다.
-    SW_REQUIRE_EQUAL( 0, forged.readAt<int32>( base ) );
-    SW_REQUIRE_EQUAL( 1u, forged.readAt<uint32>( base + 25 ) );                // 갈고리 수
-    SW_REQUIRE_EQUAL( 1u, forged.readAt<uint32>( base + 41 ) );                // 판자 수
-    SW_REQUIRE_EQUAL( 1u, forged.readAt<uint32>( base + 58 ) );                // 사물함 수
-    SW_REQUIRE_EQUAL( -1, forged.readAt<int32>( base + 74 ) );                 // 사물함에 든 사람
-    SW_REQUIRE_EQUAL( 1u, forged.readAt<uint32>( base + 78 ) );                // 창틀 수
-    SW_REQUIRE_EQUAL( 1u, forged.readAt<uint32>( base + 102 ) );               // 발전기 수
-    SW_REQUIRE_EQUAL( -1, forged.readAt<int32>( size - 13 ) );                 // 든 사람
-    SW_REQUIRE_EQUAL( -1, forged.readAt<int32>( size - 9 ) );                  // 부수는 판자
-    SW_REQUIRE_EQUAL( 2, forged.readAt<int32>( size - 5 ) );                   // 살인마 참가자
-    SW_REQUIRE_EQUAL( 1, forged.readAt<int32>( forged.lastSurvivor( 9 ) ) );   // 생존자 참가자
-    SW_REQUIRE_EQUAL( -1, forged.readAt<int32>( forged.lastSurvivor( 13 ) ) ); // 생존자 하던 일의 대상
-    SW_REQUIRE_EQUAL( 0, forged.readAt<int32>( forged.lastSurvivor( 17 ) ) );  // 갈고리 단계
-    SW_EXPECT_TRUE( forged.readPatched<int32>( _catalog, base, 0 ) );          // 형식은 맞다
+    SW_REQUIRE_EQUAL( 0, fixture.readAt<int32>( base ) );
+    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( base + 25 ) );                 // 갈고리 수
+    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( base + 41 ) );                 // 판자 수
+    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( base + 58 ) );                 // 사물함 수
+    SW_REQUIRE_EQUAL( -1, fixture.readAt<int32>( base + 74 ) );                  // 사물함에 든 사람
+    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( base + 78 ) );                 // 창틀 수
+    SW_REQUIRE_EQUAL( 1u, fixture.readAt<uint32>( base + 102 ) );                // 발전기 수
+    SW_REQUIRE_EQUAL( -1, fixture.readAt<int32>( size - 13 ) );                  // 든 사람
+    SW_REQUIRE_EQUAL( -1, fixture.readAt<int32>( size - 9 ) );                   // 부수는 판자
+    SW_REQUIRE_EQUAL( 2, fixture.readAt<int32>( size - 5 ) );                    // 살인마 참가자
+    SW_REQUIRE_EQUAL( 1, fixture.readAt<int32>( fixture.lastSurvivor( 9 ) ) );   // 생존자 참가자
+    SW_REQUIRE_EQUAL( -1, fixture.readAt<int32>( fixture.lastSurvivor( 13 ) ) ); // 생존자 하던 일의 대상
+    SW_REQUIRE_EQUAL( 0, fixture.readAt<int32>( fixture.lastSurvivor( 17 ) ) );  // 갈고리 단계
+    SW_EXPECT_TRUE( fixture.readPatched<int32>( _catalog, base, 0 ) );           // 형식은 맞다
 
     // 머리와 판.
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, base, 1 ) ); // 완료 수가 끝난 발전기 수와 다르다
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, base, -1 ) );
-    SW_EXPECT_FALSE( forged.readPatched<uint8>( _catalog, base + 4, 2 ) );       // 전원 깃발
-    SW_EXPECT_FALSE( forged.readPatched<uint8>( _catalog, base + 6, SW_TRUE ) ); // 놓지 않은 해치가 열렸다
-    SW_EXPECT_FALSE( forged.readPatched<float32>( _catalog, base + 9, 5.0f ) );  // 시작하지 않은 붕괴가 돈다
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, base, 1 ) ); // 완료 수가 끝난 발전기 수와 다르다
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, base, -1 ) );
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, base + 4, 2 ) );       // 전원 깃발
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, base + 6, SW_TRUE ) ); // 놓지 않은 해치가 열렸다
+    SW_EXPECT_FALSE( fixture.readPatched<float32>( _catalog, base + 9, 5.0f ) );  // 시작하지 않은 붕괴가 돈다
 
     // 무대.
-    SW_EXPECT_FALSE( forged.readPatched<uint8>( _catalog, base + 57, 7 ) ); // 판자 상태
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, base + 74, 5 ) ); // 없는 사람이 사물함에 있다
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, base + 74, 0 ) ); // 숨지 않은 사람이 사물함에 있다
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, base + 74, -2 ) );
-    SW_EXPECT_FALSE( forged.readPatched<float32>( _catalog, base + 94, -1.0f ) ); // 막힌 시간
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, base + 98, -1 ) );      // 추격 넘기 수
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, base + 98, 2 ) );       // 막힘 수에 닿으면 0 으로 돌아간다
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, base + 57, 7 ) ); // 판자 상태
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, base + 74, 5 ) ); // 없는 사람이 사물함에 있다
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, base + 74, 0 ) ); // 숨지 않은 사람이 사물함에 있다
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, base + 74, -2 ) );
+    SW_EXPECT_FALSE( fixture.readPatched<float32>( _catalog, base + 94, -1.0f ) ); // 막힌 시간
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, base + 98, -1 ) );      // 추격 넘기 수
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, base + 98, 2 ) );       // 막힘 수에 닿으면 0 으로 돌아간다
 
     // 생존자(뒤에서부터 플래그 셋, 하던 일, 상태, 참가자, 대상, 갈고리 단계).
-    SW_EXPECT_FALSE( forged.readPatched<uint8>( _catalog, forged.lastSurvivor( 1 ), 2 ) );
-    SW_EXPECT_FALSE( forged.readPatched<uint8>( _catalog, forged.lastSurvivor( 4 ), 1 ) ); // 대상 없이 수리한다
-    SW_EXPECT_FALSE( forged.readPatched<uint8>( _catalog, forged.lastSurvivor( 4 ), 5 ) ); // 대상 없이 숨었다
-    SW_EXPECT_FALSE( forged.readPatched<uint8>( _catalog, forged.lastSurvivor( 4 ), 9 ) );
-    SW_EXPECT_FALSE( forged.readPatched<uint8>( _catalog, forged.lastSurvivor( 5 ), 9 ) );
-    SW_EXPECT_FALSE( forged.readPatched<uint8>( _catalog, forged.lastSurvivor( 5 ), static_cast<uint8>( SurvivorState::Injured ) ) ); // 체력이 가득한데 부상이다
-    SW_EXPECT_FALSE( forged.readPatched<uint8>( _catalog, forged.lastSurvivor( 5 ), static_cast<uint8>( SurvivorState::Dying ) ) );   // 쓰러지지 않았다
-    SW_EXPECT_FALSE( forged.readPatched<uint8>( _catalog, forged.lastSurvivor( 5 ), static_cast<uint8>( SurvivorState::Carried ) ) ); // 살인마가 들지 않았다
-    SW_EXPECT_FALSE( forged.readPatched<uint8>( _catalog, forged.lastSurvivor( 5 ), static_cast<uint8>( SurvivorState::Hooked ) ) );
-    SW_EXPECT_FALSE( forged.readPatched<uint8>( _catalog, forged.lastSurvivor( 5 ), static_cast<uint8>( SurvivorState::Sacrificed ) ) ); // 살아 있다
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, forged.lastSurvivor( 9 ), 99 ) );                                              // 없는 참가자
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, forged.lastSurvivor( 9 ), 2 ) );                                               // 살인마 팀의 참가자
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, forged.lastSurvivor( 13 ), 5 ) );                                              // 하는 일이 없는데 대상이 있다
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, forged.lastSurvivor( 17 ), -1 ) );                                             // 갈고리 단계
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, forged.lastSurvivor( 17 ), 4 ) );
-    SW_EXPECT_FALSE( forged.readPatched<float32>( _catalog, forged.lastSurvivor( 45 ), 2.0f ) );  // 몸부림 진행
-    SW_EXPECT_FALSE( forged.readPatched<float32>( _catalog, forged.lastSurvivor( 37 ), -1.0f ) ); // 소음 반경
-    SW_EXPECT_FALSE( forged.readPatched<float32>( _catalog, forged.lastSurvivor( 53 ), -1.0f ) ); // 갈고리 시간
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, fixture.lastSurvivor( 1 ), 2 ) );
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, fixture.lastSurvivor( 4 ), 1 ) ); // 대상 없이 수리한다
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, fixture.lastSurvivor( 4 ), 5 ) ); // 대상 없이 숨었다
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, fixture.lastSurvivor( 4 ), 9 ) );
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, fixture.lastSurvivor( 5 ), 9 ) );
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, fixture.lastSurvivor( 5 ), static_cast<uint8>( SurvivorState::Injured ) ) ); // 체력이 가득한데 부상이다
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, fixture.lastSurvivor( 5 ), static_cast<uint8>( SurvivorState::Dying ) ) );   // 쓰러지지 않았다
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, fixture.lastSurvivor( 5 ), static_cast<uint8>( SurvivorState::Carried ) ) ); // 살인마가 들지 않았다
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, fixture.lastSurvivor( 5 ), static_cast<uint8>( SurvivorState::Hooked ) ) );
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, fixture.lastSurvivor( 5 ), static_cast<uint8>( SurvivorState::Sacrificed ) ) ); // 살아 있다
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, fixture.lastSurvivor( 9 ), 99 ) );                                              // 없는 참가자
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, fixture.lastSurvivor( 9 ), 2 ) );                                               // 살인마 팀의 참가자
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, fixture.lastSurvivor( 13 ), 5 ) );                                              // 하는 일이 없는데 대상이 있다
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, fixture.lastSurvivor( 17 ), -1 ) );                                             // 갈고리 단계
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, fixture.lastSurvivor( 17 ), 4 ) );
+    SW_EXPECT_FALSE( fixture.readPatched<float32>( _catalog, fixture.lastSurvivor( 45 ), 2.0f ) );  // 몸부림 진행
+    SW_EXPECT_FALSE( fixture.readPatched<float32>( _catalog, fixture.lastSurvivor( 37 ), -1.0f ) ); // 소음 반경
+    SW_EXPECT_FALSE( fixture.readPatched<float32>( _catalog, fixture.lastSurvivor( 53 ), -1.0f ) ); // 갈고리 시간
 
     // 살인마.
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, size - 13, 1 ) ); // 들린 상태가 아닌 사람을 든다
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, size - 13, 9 ) );
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, size - 9, 0 ) ); // 서 있는 판자를 부순다
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, size - 9, 9 ) );
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, size - 5, 0 ) ); // 생존자 팀의 참가자
-    SW_EXPECT_FALSE( forged.readPatched<int32>( _catalog, size - 5, 99 ) );
-    SW_EXPECT_FALSE( forged.readPatched<uint8>( _catalog, size - 1, 2 ) );
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, size - 13, 1 ) ); // 들린 상태가 아닌 사람을 든다
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, size - 13, 9 ) );
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, size - 9, 0 ) ); // 서 있는 판자를 부순다
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, size - 9, 9 ) );
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, size - 5, 0 ) ); // 생존자 팀의 참가자
+    SW_EXPECT_FALSE( fixture.readPatched<int32>( _catalog, size - 5, 99 ) );
+    SW_EXPECT_FALSE( fixture.readPatched<uint8>( _catalog, size - 1, 2 ) );
 }

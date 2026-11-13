@@ -579,20 +579,20 @@ namespace
  */
 SW_TEST_CASE( LocalizationKeyIndexTest, SameHashDifferentKeyIsAnError )
 {
-    sw::LocalizationKeyIndex forged{ &forgeSameKeyHash };
-    SW_REQUIRE_TRUE( forged.add( "Menu.Start" ) );
-    SW_EXPECT_TRUE( forged.add( "Menu.Start" ) );
-    SW_EXPECT_TRUE( forged.add( "menu.start" ) );
+    sw::LocalizationKeyIndex crafted{ &forgeSameKeyHash };
+    SW_REQUIRE_TRUE( crafted.add( "Menu.Start" ) );
+    SW_EXPECT_TRUE( crafted.add( "Menu.Start" ) );
+    SW_EXPECT_TRUE( crafted.add( "menu.start" ) );
 
-    const sw::expected<uint64> collided = forged.add( "Menu.Quit" );
+    const sw::expected<uint64> collided = crafted.add( "Menu.Quit" );
     SW_REQUIRE_FALSE( collided );
     SW_EXPECT_TRUE( collided.error().kind() == sw::ErrorKind::AlreadyExists );
     SW_EXPECT_TRUE( collided.error().detail().find( "Menu.Start" ) != sw::string_view::npos );
     SW_EXPECT_TRUE( collided.error().detail().find( "Menu.Quit" ) != sw::string_view::npos );
     // 진 뒤에도 먼저 든 키가 그대로라 같은 해시의 다른 키는 계속 진다.
-    SW_EXPECT_FALSE( forged.add( "Menu.Quit" ) );
-    forged.clear();
-    SW_EXPECT_TRUE( forged.add( "Menu.Quit" ) );
+    SW_EXPECT_FALSE( crafted.add( "Menu.Quit" ) );
+    crafted.clear();
+    SW_EXPECT_TRUE( crafted.add( "Menu.Quit" ) );
 
     sw::LocalizationKeyIndex   real;
     const sw::expected<uint64> added = real.add( "Menu.Quit" );

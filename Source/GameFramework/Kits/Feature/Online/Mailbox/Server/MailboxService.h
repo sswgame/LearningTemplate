@@ -100,7 +100,7 @@ namespace sw
         /** @brief 만료 정리의 완료입니다. 지표 `mailbox_expired_total{action}` 을 갱신하며 `_bMore` 이면 다음 틱에 바로 다시 정리합니다. */
         void completeSweep( const MailboxSweepStats& stats, ServiceStoreCompletion completion );
         /** @brief 새 우편 알림의 완료입니다. 이 서버의 계정에는 알림을, 다른 서버의 계정에는 중계를, 접속하지 않은 계정에는 기기 푸시를 보냅니다. */
-        void completeNotifications( ServiceStoreResult result, vector<ServiceMailNotification>& inoutListNotice );
+        void completeNotifications( ServiceStoreResult result, vector<ServiceMailNotification>& inoutListNotification );
         /** @brief 캠페인 다시 읽기의 완료입니다. 활성 캠페인과 곧 열릴 캠페인만 남겨 캐시를 바꿉니다. */
         void completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign, ServiceStoreCompletion completion );
         /** @brief 요청 하나의 저장소 작업을 맡깁니다. 내려가는 중이면 일시 장애로 답합니다. */

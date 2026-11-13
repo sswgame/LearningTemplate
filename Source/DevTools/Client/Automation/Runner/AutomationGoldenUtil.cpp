@@ -80,7 +80,7 @@ namespace sw
         return parsePolicy( text, path );
     }
 
-    GoldenResult AutomationGoldenUtil::judge( const AutomationImageDifference& difference, const AutomationGoldenLimits& limits, float64 nearLimitRatio )
+    GoldenResult AutomationGoldenUtil::evaluate( const AutomationImageDifference& difference, const AutomationGoldenLimits& limits, float64 nearLimitRatio )
     {
         const float64 region    = static_cast<float64>( difference._largestDeepRegionPixels );
         const float64 maxRegion = static_cast<float64>( limits._maxDeepRegionPixels );

@@ -396,18 +396,18 @@ SW_TEST_CASE( EphemeralStoreTest, RouterDispatchesRepliesToLiveOwnersOnly )
         listGotValue = reply._value;
     }, owner );
     SW_EXPECT_EQUAL( 2, router.getPendingCount() );
-    SW_EXPECT_EQUAL( 2, router.pump() );
+    SW_EXPECT_EQUAL( 2, router.poll() );
     SW_EXPECT_EQUAL( 2, callCount );
     SW_EXPECT_TRUE( listGotValue == makeBytes( "v" ) );
     SW_EXPECT_EQUAL( 0, router.getPendingCount() );
-    SW_EXPECT_EQUAL( 0, router.pump() ); // 같은 답이 두 번 오지 않는다
+    SW_EXPECT_EQUAL( 0, router.poll() ); // 같은 답이 두 번 오지 않는다
 
     // 주인이 몫을 놓으면 맡긴 답은 버린다(요청 자체는 이미 실행됐다)
     (void)router.submit( sw::EphemeralRequest::makeSet( "k", makeBytes( "w" ), 0 ), [&callCount]( const sw::EphemeralReply& )
     { ++callCount; }, owner );
     owner.reset();
     SW_EXPECT_EQUAL( 0, router.getPendingCount() );
-    SW_EXPECT_EQUAL( 0, router.pump() );
+    SW_EXPECT_EQUAL( 0, router.poll() );
     SW_EXPECT_EQUAL( 2, callCount );
     SW_EXPECT_TRUE( rig.run( sw::EphemeralRequest::makeGet( "k" ) )._value == makeBytes( "w" ) );
 }
@@ -464,19 +464,19 @@ SW_TEST_CASE( EphemeralStoreTest, RouterSharesChannelUntilLastSubscriberLeaves )
     };
 
     SW_EXPECT_EQUAL( int64( 1 ), publishCount() ); // 앞에는 한 번만 구독했다
-    SW_EXPECT_EQUAL( 2, router.pump() );
+    SW_EXPECT_EQUAL( 2, router.poll() );
     SW_EXPECT_EQUAL( 1, firstCount );
     SW_EXPECT_EQUAL( 1, secondCount );
 
     first.reset();
     SW_EXPECT_EQUAL( int64( 1 ), publishCount() ); // 남은 구독자가 있어 앞의 구독은 그대로다
-    SW_EXPECT_EQUAL( 1, router.pump() );
+    SW_EXPECT_EQUAL( 1, router.poll() );
     SW_EXPECT_EQUAL( 1, firstCount );
     SW_EXPECT_EQUAL( 2, secondCount );
 
     second.reset();
     SW_EXPECT_EQUAL( int64( 0 ), publishCount() ); // 마지막 구독자가 나가 앞의 구독을 닫았다
-    SW_EXPECT_EQUAL( 0, router.pump() );
+    SW_EXPECT_EQUAL( 0, router.poll() );
 }
 
 /**
@@ -510,6 +510,6 @@ SW_TEST_CASE( EphemeralStoreTest, RouterShutdownAnswersPendingExactlyOnce )
     SW_EXPECT_NULL( router.getStore() );
     SW_EXPECT_FALSE( channel.isActive() );
     SW_EXPECT_FALSE( owner.isActive() );
-    SW_EXPECT_EQUAL( 0, router.pump() );
+    SW_EXPECT_EQUAL( 0, router.poll() );
     channel.reset(); // 무효가 된 구독을 풀어도 내린 앞을 부르지 않는다
 }

@@ -252,9 +252,9 @@ SW_TEST_CASE( FakeAdminProviderTest, AuditRecordsChangesNewestFirst )
 SW_TEST_CASE( FakeAdminProviderTest, CommandsThatNeedTheServerAreUnavailable )
 {
     FakeAdminProvider provider{ kNowMs };
-    AdminRequest      notice;
-    notice._memo = "ticket";
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::PostAnnouncement::kID, notice ).hasError( OnlineError::kUnavailable ) );
+    AdminRequest      announcement;
+    announcement._memo = "ticket";
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::PostAnnouncement::kID, announcement ).hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::ListLiveEvents::kID, AdminRequest{} ).hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( 0, provider.getRecordedKeyCount() );
 }

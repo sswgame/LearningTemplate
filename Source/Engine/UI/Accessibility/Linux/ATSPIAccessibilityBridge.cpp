@@ -239,7 +239,7 @@ namespace sw
             void onUIUpdated() override
             {
                 _bSnapshotValid = SW_FALSE;
-                pump();
+                poll();
             }
 
             void notifyFocusChanged( uint32 screen, WidgetID widget ) override
@@ -372,7 +372,7 @@ namespace sw
             }
 
             /** @brief 쌓인 D-Bus 메시지를 한 번 처리합니다(막지 않는다). 접근성 버스의 요청은 `onMessage` 로, 세션 버스의 신호는 `onSessionSignal` 로 간다. */
-            void pump()
+            void poll()
             {
                 if ( _pBus != nullptr )
                 {

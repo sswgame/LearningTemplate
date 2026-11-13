@@ -66,7 +66,7 @@ namespace
         {
             for ( int32 round = 0; round < 8; ++round )
             {
-                if ( _router.pump() == 0 && _store.getPendingCount() == 0 )
+                if ( _router.poll() == 0 && _store.getPendingCount() == 0 )
                     return;
             }
         }

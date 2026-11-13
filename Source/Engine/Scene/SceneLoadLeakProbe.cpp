@@ -76,7 +76,7 @@ namespace sw
         _listPoint.clear();
         _result = LeakCurveResult{};
         SW_LOG_INFO_ID( "SceneLoadLeakProbe.SceneLeakProbeControl", "Scene leak probe: '%#', 1 control round + %# warmup + %# measured rounds", _scenePath, LeakCurveCriteria::kDefaultWarmupRounds, measuredRounds );
-        _phase           = Phase::Settling; // `update` 의 첫 호출이 대조 회차를 연다
+        _phase           = Phase::Stabilizing; // `update` 의 첫 호출이 대조 회차를 연다
         _stabilityFrames = SceneLoadLeakProbeInternal::kStabilityFrames;
         return true;
     }
@@ -102,10 +102,10 @@ namespace sw
                 }
                 manager.createEmptyActiveScene( SceneLoadLeakProbeInternal::kEmptySceneName );
                 _stabilityFrames = 0;
-                _phase           = Phase::Settling;
+                _phase           = Phase::Stabilizing;
                 break;
             }
-            case Phase::Settling:
+            case Phase::Stabilizing:
             {
                 if ( ++_stabilityFrames < SceneLoadLeakProbeInternal::kStabilityFrames )
                     break;
@@ -134,7 +134,7 @@ namespace sw
         {
             // 대조 회차: 로드 없이 빈 씬만 만든다. 이 양이 로드 회차마다 들어 있는 빈 씬 몫이다.
             manager.createEmptyActiveScene( SceneLoadLeakProbeInternal::kEmptySceneName );
-            _phase = Phase::Settling;
+            _phase = Phase::Stabilizing;
             return;
         }
         _loadFuture = manager.requestLoadFuture( _scenePath, SceneLoadKind::Tool );
@@ -178,7 +178,7 @@ namespace sw
         }
         ++_round;
         _stabilityFrames = SceneLoadLeakProbeInternal::kStabilityFrames; // 다음 프레임에 `update` 가 회차를 연다(열린 창이 없으니 `beginRound` 로 간다)
-        _phase           = Phase::Settling;
+        _phase           = Phase::Stabilizing;
     }
 
     void SceneLoadLeakProbe::finish()
@@ -193,7 +193,7 @@ namespace sw
             }
             pProfiler->getLeakWindow().open( LeakWindowDetail::TagTotals ); // 종료 보고가 창을 기대한다
         }
-        _result = LeakCurveCriteria{}.judge( _listPoint );
+        _result = LeakCurveCriteria{}.evaluate( _listPoint );
         if ( _result._bValid == false )
             SW_LOG_ERROR_ID( "SceneLoadLeakProbe.SceneLeakProbeToo", "Scene leak probe: too few rounds finished for a verdict (%# points)", _listPoint.size() );
         else if ( _result._bFlat )

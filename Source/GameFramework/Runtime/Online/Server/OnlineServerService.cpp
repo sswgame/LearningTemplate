@@ -32,7 +32,7 @@ namespace sw
             void                         update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
             int32                        getConnectionCount() const override { return _runtime.getConnectionCount(); }
             int32                        getOpenJobCount() const override { return _runtime.getOpenJobCount(); }
-            void                         beginShutdown( const ServerShutdownNotice& notice ) override { _runtime.beginShutdown( notice ); }
+            void                         beginShutdown( const ServerShutdownNotice& notification ) override { _runtime.beginShutdown( notification ); }
 
         private:
             SystemMonotonicClock _clock; ///< 런타임이 빌린다(메모리 캐시 만료 · 외부 HTTP 시한). 런타임보다 먼저 선언한다

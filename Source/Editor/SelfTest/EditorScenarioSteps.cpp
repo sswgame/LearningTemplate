@@ -134,7 +134,7 @@ namespace sw::editor
             static constexpr uint32 kStabilityWaitFrames = 60;
 
             /** @brief 레이블 @p pMark 가 그려졌는지 · 자리 잡았는지 봅니다. 잘려 있으면 그 창을 스크롤해 보이게 하고 자리 잡지 않은 것으로 센다. nullptr(적지 않은 칸)는 둘 다 참입니다. */
-            static void checkMark( const string* pMark, bool& inoutDrawn, bool& inoutSettled )
+            static void checkMark( const string* pMark, bool& inoutDrawn, bool& inoutStable )
             {
                 if ( pMark == nullptr )
                     return;
@@ -142,8 +142,8 @@ namespace sw::editor
                 const bool         bDrawn = EditorSelfTestMarks::find( *pMark, found );
                 if ( bDrawn && found._bClipped )
                     EditorSelfTestMarks::requestScrollIntoView( *pMark );
-                inoutDrawn   = inoutDrawn && bDrawn;
-                inoutSettled = inoutSettled && bDrawn && found.isSettled() && found._bClipped == false;
+                inoutDrawn  = inoutDrawn && bDrawn;
+                inoutStable = inoutStable && bDrawn && found.isStable() && found._bClipped == false;
             }
 
             /** @brief 누른 채 둔 버튼 · 키를 놓는 단계(`state="Up"`)나 호버를 푸는 단계(`release`)면 true 입니다 — 기다리면 누른 시간이 길어진다(뷰포트 비행이 더 간다). */
@@ -167,11 +167,11 @@ namespace sw::editor
                 const string* pMark = step.findAttribute( "mark" );
                 if ( pMark == nullptr || isRelease( step ) )
                     return AutomationStepHold::Run; // 호버 풀기 · 누른 것 놓기 — 누를 곳이 없다
-                bool bDrawn   = true;
-                bool bSettled = true;
-                checkMark( pMark, bDrawn, bSettled );
-                checkMark( step.findAttribute( "toMark" ), bDrawn, bSettled );
-                const bool               bReady = bSettled && EditorSelfTestInput::hasPendingEvents() == false;
+                bool bDrawn  = true;
+                bool bStable = true;
+                checkMark( pMark, bDrawn, bStable );
+                checkMark( step.findAttribute( "toMark" ), bDrawn, bStable );
+                const bool               bReady = bStable && EditorSelfTestInput::hasPendingEvents() == false;
                 const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kStabilityWaitFrames,
                                                                          "editor widget '" + *pMark + ( bDrawn ? "' to settle (same rect two frames in a row, no pending input)" : "' to be drawn" ) );
                 if ( hold == AutomationStepHold::Run && bReady == false && bDrawn )
@@ -198,16 +198,16 @@ namespace sw::editor
                     return holdUntilMarkStable( runner, step, input );
                 if ( EditorSelfTestMarks::setEnabled( true ) == false )
                     return AutomationStepHold::Run; // 에디터 컨텍스트가 없다 — 단계가 돌며 실패를 적는다
-                const TParams params   = step.readValidatedProperties<TParams>();
-                bool          bDrawn   = true;
-                bool          bSettled = true;
-                checkMark( &params._mark, bDrawn, bSettled );
-                checkMark( step.findAttribute( "toMark" ), bDrawn, bSettled );
+                const TParams params  = step.readValidatedProperties<TParams>();
+                bool          bDrawn  = true;
+                bool          bStable = true;
+                checkMark( &params._mark, bDrawn, bStable );
+                checkMark( step.findAttribute( "toMark" ), bDrawn, bStable );
                 const bool bInputFlushed = EditorSelfTestInput::hasPendingEvents() == false;
                 // 플랫폼이 다음 프레임에 실제 커서를 다시 넣으므로 옮기기 한 번으로는 머물지 않는다 - 입구가 프레임마다 붙잡는다. 단계가 놓는다.
                 string                   coverName;
                 const EditorMarkHit      hit    = EditorSelfTestInput::hoverMark( params._mark, params._anchor, coverName );
-                const bool               bReady = bSettled && bInputFlushed && hit != EditorMarkHit::Pending && hit != EditorMarkHit::Missing;
+                const bool               bReady = bStable && bInputFlushed && hit != EditorMarkHit::Pending && hit != EditorMarkHit::Missing;
                 const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kStabilityWaitFrames,
                                                                          "the pointer to reach editor widget '" + params._mark + ( bDrawn ? "' and it to settle" : "' (not drawn yet)" ) );
                 if ( hold == AutomationStepHold::Run && bReady == false && bDrawn )

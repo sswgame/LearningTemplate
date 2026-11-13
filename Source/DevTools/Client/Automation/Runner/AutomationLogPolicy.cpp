@@ -68,7 +68,7 @@ namespace sw
         return VectorUtil::contains( _listAllowedID, string( id ) ) ? AutomationLogResult::Allowed : AutomationLogResult::NotAllowed;
     }
 
-    void AutomationLogPolicy::judge( LogLevel level, string_view id, string_view message, AutomationLogCheckResult& inoutResult ) const
+    void AutomationLogPolicy::evaluate( LogLevel level, string_view id, string_view message, AutomationLogCheckResult& inoutResult ) const
     {
         const AutomationLogResult result = classify( level, id, message );
         if ( result == AutomationLogResult::Allowed )

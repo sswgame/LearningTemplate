@@ -419,11 +419,11 @@ namespace sw
         _intervalTimer = 0.0f;
         SW_LOG_INFO_ID( "Autosave.Autosaved", "Autosaved (%#%#%#) to %#", getEnumName( info._trigger ), info._label.empty() ? "" : " ", info._label.c_str(), info._slotName.c_str() );
         // 플레이어에게 알린다(UI 가 없는 서버 · 테스트는 건너뛴다) — 같은 알림이 떠 있으면 센다.
-        if ( IPlayerNotificationSink* const pNotices = game::findSubsystem<IPlayerNotificationSink>() )
+        if ( IPlayerNotificationSink* const pNotifications = game::findSubsystem<IPlayerNotificationSink>() )
         {
             string text;
             text = SW_LOCTEXT( "Notification", "GameSaved", "Game saved" );
-            pNotices->postNotice( text, 3.0f, PlayerNotificationKind::Info );
+            pNotifications->postNotification( text, 3.0f, PlayerNotificationKind::Info );
         }
     }
 

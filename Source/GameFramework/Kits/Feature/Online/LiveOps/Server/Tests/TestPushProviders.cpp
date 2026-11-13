@@ -101,7 +101,7 @@ namespace
             outResponse._bodyBytes.assign( body.begin(), body.end() );
         }
 
-        void pump()
+        void poll()
         {
             for ( int32 round = 0; round < 40; ++round )
             {
@@ -119,7 +119,7 @@ namespace
 
         PushDeliveryResult take()
         {
-            pump();
+            poll();
             vector<PushDeliveryResult> listResult;
             (void)_pProvider->pollResults( listResult );
             SW_EXPECT_EQUAL( size_t( 1 ), listResult.size() );

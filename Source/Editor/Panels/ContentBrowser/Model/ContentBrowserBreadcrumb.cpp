@@ -23,26 +23,26 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void ContentBrowserBreadcrumb::makeFavoriteTrail( string_view label, string_view absolutePath, vector<ContentBrowserBreadcrumb>& outListCrumb )
+    void ContentBrowserBreadcrumb::makeFavoriteTrail( string_view label, string_view absolutePath, vector<ContentBrowserBreadcrumb>& outListBreadcrumb )
     {
-        outListCrumb.clear();
-        outListCrumb.push_back( ContentBrowserBreadcrumb{ string{ ContentBrowserLogicInternal::kFavoritesLabel }, string{} } );
-        outListCrumb.push_back( ContentBrowserBreadcrumb{ string{ label }, ContentBrowserLogicInternal::makeFolderPath( absolutePath ) } );
+        outListBreadcrumb.clear();
+        outListBreadcrumb.push_back( ContentBrowserBreadcrumb{ string{ ContentBrowserLogicInternal::kFavoritesLabel }, string{} } );
+        outListBreadcrumb.push_back( ContentBrowserBreadcrumb{ string{ label }, ContentBrowserLogicInternal::makeFolderPath( absolutePath ) } );
     }
 
-    void ContentBrowserBreadcrumb::makeFolderTrail( string_view rootLabel, string_view rootAbs, string_view folderAbs, vector<ContentBrowserBreadcrumb>& outListCrumb )
+    void ContentBrowserBreadcrumb::makeFolderTrail( string_view rootLabel, string_view rootAbs, string_view folderAbs, vector<ContentBrowserBreadcrumb>& outListBreadcrumb )
     {
-        outListCrumb.clear();
+        outListBreadcrumb.clear();
         const string root       = ContentBrowserLogicInternal::makeFolderPath( rootAbs );
         const string folder     = ContentBrowserLogicInternal::makeFolderPath( folderAbs );
         const bool   bUnderRoot = root.empty() == false && FileUtil::isPathAtOrUnderRoot( root, folder );
         if ( bUnderRoot == false )
         {
-            outListCrumb.push_back( ContentBrowserBreadcrumb{ FileUtil::getFileNamePart( folder ), folder } );
+            outListBreadcrumb.push_back( ContentBrowserBreadcrumb{ FileUtil::getFileNamePart( folder ), folder } );
             return;
         }
 
-        outListCrumb.push_back( ContentBrowserBreadcrumb{ string{ rootLabel }, root } );
+        outListBreadcrumb.push_back( ContentBrowserBreadcrumb{ string{ rootLabel }, root } );
         // 루트 뒤의 폴더마다 한 조각 — 조각의 경로는 원래 경로의 그 위치까지다(대소문자 · 구분자 그대로).
         const string_view folderView{ folder };
         size_t            start = root.size() + 1;
@@ -51,15 +51,15 @@ namespace sw::editor
             size_t slash = folderView.find( '/', start );
             if ( slash == string_view::npos )
                 slash = folderView.size();
-            outListCrumb.push_back( ContentBrowserBreadcrumb{ string{ folderView.substr( start, slash - start ) }, string{ folderView.substr( 0, slash ) } } );
+            outListBreadcrumb.push_back( ContentBrowserBreadcrumb{ string{ folderView.substr( start, slash - start ) }, string{ folderView.substr( 0, slash ) } } );
             start = slash + 1;
         }
     }
 
-    void ContentBrowserBreadcrumb::appendChildBreadcrumb( string_view childAbs, vector<ContentBrowserBreadcrumb>& inoutListCrumb )
+    void ContentBrowserBreadcrumb::appendChildBreadcrumb( string_view childAbs, vector<ContentBrowserBreadcrumb>& inoutListBreadcrumb )
     {
         const string child = ContentBrowserLogicInternal::makeFolderPath( childAbs );
-        inoutListCrumb.push_back( ContentBrowserBreadcrumb{ FileUtil::getFileNamePart( child ), child } );
+        inoutListBreadcrumb.push_back( ContentBrowserBreadcrumb{ FileUtil::getFileNamePart( child ), child } );
     }
 } // namespace sw::editor
 
@@ -96,7 +96,7 @@ namespace sw::editor
     {
     }
 
-    void ContentBrowserHistory::record( string_view folderAbs, const vector<ContentBrowserBreadcrumb>& listCrumb )
+    void ContentBrowserHistory::record( string_view folderAbs, const vector<ContentBrowserBreadcrumb>& listBreadcrumb )
     {
         const bool bSameAsCurrent = 0 <= _currentIndex && _currentIndex < static_cast<int32>( _listEntry.size() ) &&
                                     FileUtil::isSameDiskPath( _listEntry[static_cast<size_t>( _currentIndex )]._folderPathAbs, folderAbs );
@@ -106,8 +106,8 @@ namespace sw::editor
         if ( canNavigateForward() )
             _listEntry.erase( _listEntry.begin() + ( _currentIndex + 1 ), _listEntry.end() );
         ContentBrowserHistoryEntry newEntry;
-        newEntry._folderPathAbs = string{ folderAbs };
-        newEntry._listCrumb     = listCrumb;
+        newEntry._folderPathAbs  = string{ folderAbs };
+        newEntry._listBreadcrumb = listBreadcrumb;
         _listEntry.push_back( std::move( newEntry ) );
 
         if ( _listEntry.size() > kMaxEntryCount )

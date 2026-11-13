@@ -216,7 +216,7 @@ namespace sw::test
         void update( int64 nowMs )
         {
             (void)_transport->pollIO( 0 );
-            (void)_endpoint.pump( *this );
+            (void)_endpoint.poll( *this );
             _requestClient.update();
             for ( unique_ptr<OnlineServiceClient>& client : _listClient )
             {

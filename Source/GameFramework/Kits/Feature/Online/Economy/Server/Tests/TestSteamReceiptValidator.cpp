@@ -82,7 +82,7 @@ namespace
         }
 
         /** @brief 요청 → 응답 한 왕복에 넉넉한 수만큼 돌립니다. 처음 부를 때는 보고서 조회도 나간다. */
-        void pump()
+        void poll()
         {
             for ( int32 round = 0; round < 8; ++round )
             {
@@ -105,7 +105,7 @@ namespace
         ReceiptValidationResult validate( string_view payload = kOrder )
         {
             submit( payload );
-            pump();
+            poll();
             vector<ReceiptValidationResult> listResult;
             _pValidator->pollCompletions( listResult );
             SW_EXPECT_EQUAL( size_t( 1 ), listResult.size() );
@@ -114,9 +114,9 @@ namespace
 
         vector<ReceiptRefundNotification> takeRefunds()
         {
-            vector<ReceiptRefundNotification> listNotice;
-            _pValidator->pollRefunds( listNotice );
-            return listNotice;
+            vector<ReceiptRefundNotification> listNotification;
+            _pValidator->pollRefunds( listNotification );
+            return listNotification;
         }
     };
 
@@ -445,17 +445,17 @@ SW_TEST_CASE( SteamReceiptValidatorTest, RefundReportFiltersAndDeduplicates )
         7,
         []
     ]}}})";
-    rig.pump();
-    const vector<ReceiptRefundNotification> listNotice = rig.takeRefunds();
-    SW_REQUIRE_EQUAL( size_t( 2 ), listNotice.size() );
-    SW_EXPECT_EQUAL( string( "steam" ), listNotice[0]._storeName );
-    SW_EXPECT_EQUAL( string( "1" ), listNotice[0]._transactionID );
-    SW_EXPECT_EQUAL( kNowMs, listNotice[0]._refundedMs );
-    SW_EXPECT_EQUAL( string( "3" ), listNotice[1]._transactionID );
-    SW_EXPECT_EQUAL( kNowMs, listNotice[1]._refundedMs );
+    rig.poll();
+    const vector<ReceiptRefundNotification> listNotification = rig.takeRefunds();
+    SW_REQUIRE_EQUAL( size_t( 2 ), listNotification.size() );
+    SW_EXPECT_EQUAL( string( "steam" ), listNotification[0]._storeName );
+    SW_EXPECT_EQUAL( string( "1" ), listNotification[0]._transactionID );
+    SW_EXPECT_EQUAL( kNowMs, listNotification[0]._refundedMs );
+    SW_EXPECT_EQUAL( string( "3" ), listNotification[1]._transactionID );
+    SW_EXPECT_EQUAL( kNowMs, listNotification[1]._refundedMs );
 
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 2 ), rig._listReportTime.size() );
     SW_EXPECT_TRUE( rig.takeRefunds().empty() );
 }
@@ -465,11 +465,11 @@ SW_TEST_CASE( SteamReceiptValidatorTest, RefundReportShapeIsChecked )
 {
     SteamFixture rig;
     rig._reportBody = R"({"response":{"result":"OK","params":{"orders":{"orderid":"1","status":"Refunded"}}}})";
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.takeRefunds().empty() );
     rig._reportBody = R"({"response":{"result":"OK"}})";
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.takeRefunds().empty() );
     SW_EXPECT_EQUAL( size_t( 2 ), rig._listReportTime.size() );
 }
@@ -480,7 +480,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, FailedReportKeepsTheWindow )
     SW_EXPECT_LOG( "StoreReceiptValidator.RefundQueryFailed" );
     SW_EXPECT_LOG( "SteamReceiptValidator.SteamRefundReportNotOk" );
     SteamFixture rig;
-    rig.pump(); // 첫 조회는 지금에서 겹침만큼 앞이다
+    rig.poll(); // 첫 조회는 지금에서 겹침만큼 앞이다
     const int64 firstMs = kNowMs;
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._listReportTime.size() );
     SW_EXPECT_EQUAL( SteamReceiptValidator::formatTime( firstMs - kLookbackMs ), rig._listReportTime[0] );
@@ -488,17 +488,17 @@ SW_TEST_CASE( SteamReceiptValidatorTest, FailedReportKeepsTheWindow )
     // 실패 셋 — 다음 조회의 시작점이 그대로다.
     rig._reportBody = kFailureReport;
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     rig._reportBody = R"({"response":{"result":"OK")";
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     rig._reportBody   = kEmptyReport;
     rig._reportStatus = 500;
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     rig._reportStatus = HTTPConstant::kStatusOk;
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 5 ), rig._listReportTime.size() );
     for ( size_t index = 1; index < rig._listReportTime.size(); ++index )
     {
@@ -508,7 +508,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, FailedReportKeepsTheWindow )
     // 다섯째의 성공이 시작점을 옮긴다.
     const int64 succeededMs = rig._nowMs;
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 6 ), rig._listReportTime.size() );
     SW_EXPECT_EQUAL( SteamReceiptValidator::formatTime( succeededMs - kLookbackMs ), rig._listReportTime[5] );
 }
@@ -517,9 +517,9 @@ SW_TEST_CASE( SteamReceiptValidatorTest, FailedReportKeepsTheWindow )
 SW_TEST_CASE( SteamReceiptValidatorTest, ReportPollIntervalAndNoOverlap )
 {
     SteamFixture rig;
-    rig.pump();
+    rig.poll();
     rig._nowMs += kPollMs - 1;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._listReportTime.size() );
 
     // 답을 돌리지 않고(서버 멈춤) 주기를 두 번 넘긴다 — 날아가는 요청은 하나다.
@@ -536,11 +536,11 @@ SW_TEST_CASE( SteamReceiptValidatorTest, FullReportWithoutTimesKeepsTheWindow )
     SW_EXPECT_LOG( "StoreReceiptValidator.RefundQueryTruncated" );
     SteamFixture rig;
     rig._reportBody = SteamBodyTestUtil::makeFullReport( "" );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( static_cast<size_t>( SteamReceiptValidator::kReportMaxResults ), rig.takeRefunds().size() );
 
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 2 ), rig._listReportTime.size() );
     SW_EXPECT_EQUAL( rig._listReportTime[0], rig._listReportTime[1] );
 }
@@ -565,7 +565,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, FullReportContinuesFromTheLastTime )
     SW_EXPECT_EQUAL( SteamReceiptValidator::formatTime( kNowMs ), rig._listReportTime[1] ); // 겹침 없이 그 시각부터
 
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 3 ), rig._listReportTime.size() );
     SW_EXPECT_EQUAL( SteamReceiptValidator::formatTime( kNowMs - kLookbackMs ), rig._listReportTime[2] ); // 구간의 기준은 첫 조회의 시작 시각이다
 }
@@ -575,15 +575,15 @@ SW_TEST_CASE( SteamReceiptValidatorTest, ForgottenRefundIsReportedAgain )
 {
     SteamFixture rig;
     rig._reportBody = R"({"response":{"result":"OK","params":{"orders":[{"orderid":"1","status":"Refunded"}]}}})";
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), rig.takeRefunds().size() );
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.takeRefunds().empty() );
 
     rig._pValidator->removeRefund( "1" );
     rig._nowMs += kPollMs;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), rig.takeRefunds().size() );
 }
 
@@ -609,10 +609,10 @@ SW_TEST_CASE( SteamReceiptValidatorTest, ShutdownFinishesInFlightAsRetry )
 {
     SteamFixture rig;
     rig._queryBody = SteamBodyTestUtil::makeOrder( kOrder, "Succeeded" );
-    rig.pump();
+    rig.poll();
     rig.submit( kOrder );
     rig._pValidator->shutdown();
-    rig.pump();
+    rig.poll();
     vector<ReceiptValidationResult> listResult;
     rig._pValidator->pollCompletions( listResult );
     SW_REQUIRE_EQUAL( size_t( 1 ), listResult.size() );
@@ -621,6 +621,6 @@ SW_TEST_CASE( SteamReceiptValidatorTest, ShutdownFinishesInFlightAsRetry )
 
     const size_t reportCount = rig._listReportTime.size();
     rig._nowMs += kPollMs * 2;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( reportCount, rig._listReportTime.size() );
 }

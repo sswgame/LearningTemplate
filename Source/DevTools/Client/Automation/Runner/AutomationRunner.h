@@ -162,7 +162,7 @@ namespace sw
         /** @brief 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수입니다(Engine 가 `onFrameEnd` 전에 넘긴다). `<ExpectImage>` 는 이것이 오를 때까지 기다린다. */
         void setCompletedScreenshotCount( uint32 completedCount ) { _run._screenshotCompletedCount = completedCount; }
         /** @brief 지표 값 줄들입니다(`darkFraction(0,0,1,0.12) park.ppm = 0.034`). 보고에 적습니다. */
-        const vector<string>& getMetricLines() const { return _judge.getMetricLines(); }
+        const vector<string>& getMetricLines() const { return _evaluator.getMetricLines(); }
 
         // --- 단계 문맥(`AutomationStepContext`): 단계 함수가 쓰는 좁은 면입니다 ---
 
@@ -195,7 +195,7 @@ namespace sw
         /** @brief 워커가 낼 값의 상한 판정을 `<Pass/>` 로 미룹니다(`AutomationEvaluator::deferExpectAtMost`). */
         void deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue ) override
         {
-            _judge.deferExpectAtMost( step, std::move( description ), limit, std::move( pValue ) );
+            _evaluator.deferExpectAtMost( step, std::move( description ), limit, std::move( pValue ) );
         }
         void                        rememberText( string_view name, string text ) override;
         [[nodiscard]] const string* findRememberedText( string_view name ) const override;
@@ -233,20 +233,20 @@ namespace sw
         bool                      hasEnded() const { return _bEnded == SW_TRUE; }
         AutomationResult          getResult() const { return _result; }
         const AutomationScenario& getScenario() const { return _scenario; }
-        const vector<string>&     getFailures() const { return _judge.getFailures(); }
+        const vector<string>&     getFailures() const { return _evaluator.getFailures(); }
         /** @brief `-scenario-update-golden` 으로 이 실행이 쓴 골든(리소스 id)입니다. */
-        const vector<string>& getUpdatedGoldens() const { return _judge.getUpdatedGoldens(); }
+        const vector<string>& getUpdatedGoldens() const { return _evaluator.getUpdatedGoldens(); }
         /** @brief 로그 게이트가 처리하지 않았다고 본 줄입니다. 비어 있지 않으면 실패가 없어도 결과는 `UnhandledLog` 입니다. */
-        const vector<string>& getUnhandledLogs() const { return _judge.getUnhandledLogs(); }
+        const vector<string>& getUnhandledLogs() const { return _evaluator.getUnhandledLogs(); }
         /** @brief 지금까지 모은 Warning · Error 줄 수입니다(허용 판정 전 — 진행 표시용, 판정은 끝의 로그 게이트). */
-        uint32        getCapturedWarningErrorCount() const { return _judge.getCapturedWarningErrorCount(); }
+        uint32        getCapturedWarningErrorCount() const { return _evaluator.getCapturedWarningErrorCount(); }
         const string& getFinishReason() const { return _finishReason; }
         /** @brief 활성 씬 대신 @p pManager 를 봅니다(테스트와 도구용이며, 씬 없이 매니저를 손으로 돌릴 때 씁니다). nullptr 이면 활성 씬입니다. */
         void setObjectManager( GameObjectManager* pManager ) { _pObjectManagerOverride = pManager; }
 
         /** @brief 감시 값 값 한 줄을 보고의 `records` 에 남깁니다(`<Record>`). 백엔드끼리 같아야 하는 값이다(AppScenarioTest 가 비교한다). */
-        void                  addRecordLine( string line ) { _judge.addRecordLine( std::move( line ) ); }
-        const vector<string>& getRecordLines() const { return _judge.getRecordLines(); }
+        void                  addRecordLine( string line ) { _evaluator.addRecordLine( std::move( line ) ); }
+        const vector<string>& getRecordLines() const { return _evaluator.getRecordLines(); }
 
     private:
         /** @brief 엔진 단계(`AutomationRunnerSteps.cpp`, 레지스트리에 등록)는 가상 입력 원천 · 판정 · 진행 상태(스크린샷 대기열 · 종료 시한)를 직접 만진다. */
@@ -317,7 +317,7 @@ namespace sw
     private:
         AutomationScenario       _scenario;
         VirtualInputScript       _inputScript;
-        AutomationEvaluator      _judge;        ///< 판정 상태 · 비교(실패 · 미확정 · 로그 게이트 · 감시 값 이력). 시간 · 입력은 모른다
+        AutomationEvaluator      _evaluator;    ///< 판정 상태 · 비교(실패 · 미확정 · 로그 게이트 · 감시 값 이력). 시간 · 입력은 모른다
         AutomationStepTimeline   _run;          ///< 진행 상태(프레임 · 단계 순번 · 대기 · 시한 · 스크린샷 대기열). 판정은 읽지 않는다
         AutomationReportWriter   _reportWriter; ///< 보고 경로 · JSON 보고 쓰기
         AutomationTimeline       _wallProfile;  ///< 벽시계가 프레임 종류(고정 대기 · 조건 대기 · 단계 …)별로 어디에 쓰였는지(보고의 `timeline`)

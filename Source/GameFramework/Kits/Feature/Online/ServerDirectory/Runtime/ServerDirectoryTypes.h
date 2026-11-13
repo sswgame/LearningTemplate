@@ -139,7 +139,7 @@ namespace sw
         PROPERTY( MaxCount = ServerDirectoryLimit::kMaxWindowCount )
         vector<MaintenanceView> _listMaintenance{}; ///< 상한은 `ServerDirectoryLimit::kMaxWindowCount` 와 같다
         PROPERTY( MaxCount = ServerDirectoryLimit::kMaxAnnouncementCount )
-        vector<ServiceAnnouncement> _listNotice{}; ///< 상한은 `ServerDirectoryLimit::kMaxAnnouncementCount` 와 같다
+        vector<ServiceAnnouncement> _listAnnouncement{}; ///< 상한은 `ServerDirectoryLimit::kMaxAnnouncementCount` 와 같다
     };
 } // namespace sw
 

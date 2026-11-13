@@ -129,7 +129,7 @@ namespace
             _directory._listOnline = vector<AccountID>{ kAlice, kBob, kCarol };
         }
 
-        void pump( int64 nowMs = kNowMs )
+        void poll( int64 nowMs = kNowMs )
         {
             while ( true )
             {
@@ -162,12 +162,12 @@ namespace
         void flush( int64 nowMs = kNowMs )
         {
             _service.update( UnixMilliseconds{ nowMs } );
-            pump();
+            poll();
         }
 
         ChatCompletion take( uint64 tag )
         {
-            pump();
+            poll();
             vector<ChatCompletion> listCompletion;
             _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
@@ -220,7 +220,7 @@ namespace
 
         vector<ChatDelivery> takeDeliveries()
         {
-            pump();
+            poll();
             vector<ChatDelivery> listDelivery;
             _service.pollDeliveries( listDelivery );
             return listDelivery;
@@ -383,7 +383,7 @@ SW_TEST_CASE( ChatServiceTest, PendingSendsAreBoundedAndFinished )
     SW_EXPECT_EQUAL( uint64( 3 ), listCompletion[0]._requestTag );
     SW_EXPECT_TRUE( listCompletion[0]._result == ChatResult::RateLimited );
     SW_EXPECT_EQUAL( settings._pendingSendRetryAfterMs, listCompletion[0]._retryAfterMs );
-    rig.pump();
+    rig.poll();
     listCompletion.clear();
     rig._service.takeCompletions( listCompletion );
     SW_EXPECT_EQUAL( size_t( 2 ), listCompletion.size() );
@@ -535,11 +535,11 @@ SW_TEST_CASE( ChatServiceTest, ChannelMessagesCrossServers )
     ChatFixture           rigB( database, &hub, kServerB, ChatTestUtil::makeOpenSettings() );
     SW_EXPECT_TRUE( rigA.join( kAlice ) == ChatResult::Ok );
     SW_EXPECT_TRUE( rigB.join( kBob ) == ChatResult::Ok );
-    rigA.pump();
-    rigB.pump();
+    rigA.poll();
+    rigB.poll();
 
     SW_EXPECT_TRUE( rigA.send( kAlice, "hello" )._result == ChatResult::Ok );
-    rigA.pump();
+    rigA.poll();
     const vector<ChatDelivery> listA = rigA.takeDeliveries();
     const vector<ChatDelivery> listB = rigB.takeDeliveries();
     SW_REQUIRE_EQUAL( size_t( 1 ), listA.size() ); // 자기 서버의 것을 두 번 받지 않는다
@@ -548,9 +548,9 @@ SW_TEST_CASE( ChatServiceTest, ChannelMessagesCrossServers )
     SW_EXPECT_EQUAL( string( "hello" ), listB[0]._message._text );
 
     rigB._service.removeAccount( kBob );
-    rigB.pump();
+    rigB.poll();
     SW_EXPECT_TRUE( rigA.send( kAlice, "again" )._result == ChatResult::Ok );
-    rigA.pump();
+    rigA.poll();
     SW_EXPECT_TRUE( rigB.takeDeliveries().empty() );
 }
 
@@ -563,11 +563,11 @@ SW_TEST_CASE( ChatServiceTest, WhisperCrossesServers )
     ChatFixture           rigB( database, &hub, kServerB, ChatTestUtil::makeOpenSettings() );
     rigA._directory._listOnline = vector<AccountID>{ kAlice };
     rigB._directory._listOnline = vector<AccountID>{ kBob };
-    rigA.pump();
-    rigB.pump();
+    rigA.poll();
+    rigB.poll();
 
     rigA._service.sendWhisper( kAlice, kBob, "psst", UnixMilliseconds{ kNowMs }, 1 );
-    rigA.pump();
+    rigA.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), rigA._presence._listFind.size() );
     SW_EXPECT_EQUAL( 1, rigA._service.getPendingCount() );
     rigA._presence.answer( kServerB );
@@ -577,17 +577,17 @@ SW_TEST_CASE( ChatServiceTest, WhisperCrossesServers )
     SW_EXPECT_EQUAL( kBob, listB[0]._recipientID );
 
     rigA._service.sendWhisper( kAlice, kBob, "gone", UnixMilliseconds{ kNowMs }, 2 );
-    rigA.pump();
+    rigA.poll();
     rigA._presence.answer( 0 );
     SW_EXPECT_TRUE( rigA.take( 2 )._result == ChatResult::TargetOffline );
     rigA._service.sendWhisper( kAlice, kBob, "self", UnixMilliseconds{ kNowMs }, 3 );
-    rigA.pump();
+    rigA.poll();
     rigA._presence.answer( kServerA );
     SW_EXPECT_TRUE( rigA.take( 3 )._result == ChatResult::TargetOffline );
 
     rigB._policy._listBlocked.push_back( make_pair( kBob, kAlice ) );
     rigA._service.sendWhisper( kAlice, kBob, "blocked", UnixMilliseconds{ kNowMs }, 4 );
-    rigA.pump();
+    rigA.poll();
     rigA._presence.answer( kServerB );
     SW_EXPECT_TRUE( rigA.take( 4 )._result == ChatResult::Ok );
     SW_EXPECT_TRUE( rigB.takeDeliveries().empty() );
@@ -608,7 +608,7 @@ SW_TEST_CASE( ChatServiceTest, SanctionChangeOverBusRefreshes )
     ServiceSanctionChanged changed;
     changed._accountID = kAlice;
     SW_REQUIRE_TRUE( ServiceSanctionBus::kChangedTopic.publish( gmBus, changed ) );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.send( kAlice, "after" )._result == ChatResult::Muted );
 }
 

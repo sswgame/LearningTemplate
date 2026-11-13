@@ -171,22 +171,22 @@ namespace sw
         return NetHandleResult::NotMine;
     }
 
-    void MMOReplicator::onDeliveryNotification( const NetDeliveryNotification& notice )
+    void MMOReplicator::onDeliveryNotification( const NetDeliveryNotification& notification )
     {
         // 메시지 펌프(게임 스레드)에서 불린다. 같은 스레드에서 차례로 실행되므로 `update` 의 병렬 본문과 겹치지 않는다.
-        const bool bUnknownConnection = notice._connectionID < 0 || notice._connectionID >= static_cast<int32>( _listObserver.size() );
+        const bool bUnknownConnection = notification._connectionID < 0 || notification._connectionID >= static_cast<int32>( _listObserver.size() );
         if ( bUnknownConnection )
             return;
-        Observer& observer = _listObserver[static_cast<size_t>( notice._connectionID )];
+        Observer& observer = _listObserver[static_cast<size_t>( notification._connectionID )];
         if ( observer._bActive == SW_FALSE )
             return;
         // 테이블 크기 이상 오래된 틱은 적지 않는다. 적으면 링 버퍼에서 새 틱의 슬롯을 덮어쓰게 된다(그 갱신은 `resolveInFlightUpdates` 가 이미 잃은 것으로 정리했다).
-        const uint32 tick     = notice._tag;
+        const uint32 tick     = notification._tag;
         const bool   bTooOld  = _tick - tick >= NetMMOMessage::kMaxUnconfirmedTicks;
         const bool   bFromNow = tick > _tick; // 이 복제기가 단 값이 아니다(재초기화 전의 통지)
         if ( bTooOld || bFromNow )
             return;
-        observer._updateResult.acquire( tick ) = notice._result == NetDeliveryResult::Delivered ? SW_TRUE : SW_FALSE;
+        observer._updateResult.acquire( tick ) = notification._result == NetDeliveryResult::Delivered ? SW_TRUE : SW_FALSE;
     }
 
     void MMOReplicator::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )

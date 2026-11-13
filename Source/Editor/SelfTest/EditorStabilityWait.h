@@ -40,7 +40,7 @@ namespace sw::editor
 
     private:
         uint32               _waitSerial;
-        EditorStabilityState _judge;
+        EditorStabilityState _stability;
         string               _waitingFor;
     };
 } // namespace sw::editor

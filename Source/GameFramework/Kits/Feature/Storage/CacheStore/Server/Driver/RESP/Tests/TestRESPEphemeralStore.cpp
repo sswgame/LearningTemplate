@@ -131,7 +131,7 @@ namespace
         }
 
         /** @brief 양쪽을 충분히 돌리고 나온 답을 모읍니다. */
-        vector<EphemeralReply> pump()
+        vector<EphemeralReply> poll()
         {
             vector<EphemeralReply> listReply;
             for ( int32 round = 0; round < 16; ++round )
@@ -157,7 +157,7 @@ namespace
         EphemeralReply run( const EphemeralRequest& request )
         {
             (void)_store.submit( request );
-            vector<EphemeralReply> listReply = pump();
+            vector<EphemeralReply> listReply = poll();
             SW_EXPECT_EQUAL( listReply.size(), size_t{ 1 } );
             return listReply.empty() ? EphemeralReply{} : listReply.back();
         }
@@ -256,13 +256,13 @@ SW_TEST_CASE_F( RESPStoreTest, RequestsWaitBehindACompare )
     start();
     const uint64 compareID = _store.submit( EphemeralRequest::makeCompareAndSet( "k", bytes( "a" ), bytes( "b" ), 0 ) );
     const uint64 getID     = _store.submit( EphemeralRequest::makeGet( "later" ) );
-    SW_EXPECT_TRUE( pump().empty() );
+    SW_EXPECT_TRUE( poll().empty() );
     SW_EXPECT_EQUAL( takeCommands(), string( "WATCH g:k | GET g:k" ) );
 
     // 서버가 앞의 두 답을 이제 준다 - 뒤 명령의 답도 맡겨 둔다.
     _server.pushAll( { "+OK\r\n", "+QUEUED\r\n", "*1\r\n+OK\r\n", "$1\r\nv\r\n" } );
     _server.send( _server._lastHandle, "+OK\r\n$1\r\na\r\n" );
-    const vector<EphemeralReply> listReply = pump();
+    const vector<EphemeralReply> listReply = poll();
     SW_EXPECT_EQUAL( takeCommands(), string( "MULTI | SET g:k b | EXEC | GET g:later" ) );
     SW_REQUIRE_EQUAL( listReply.size(), size_t{ 2 } );
     SW_EXPECT_EQUAL( listReply[0]._requestID, compareID );
@@ -348,9 +348,9 @@ SW_TEST_CASE_F( RESPStoreTest, TimeoutFailsWaitingRequestsAndReconnects )
     SW_EXPECT_LOG( "RespConnection.RESPConnectionAborted" );
     (void)_store.submit( EphemeralRequest::makeGet( "a" ) );
     (void)_store.submit( EphemeralRequest::makeGet( "b" ) );
-    SW_EXPECT_TRUE( pump().empty() );
+    SW_EXPECT_TRUE( poll().empty() );
     _clock.advanceMilliseconds( 2001 );
-    const vector<EphemeralReply> listReply = pump();
+    const vector<EphemeralReply> listReply = poll();
     SW_REQUIRE_EQUAL( listReply.size(), size_t{ 2 } );
     SW_EXPECT_TRUE( listReply[0]._result == EphemeralResult::Unavailable );
     SW_EXPECT_TRUE( listReply[1]._result == EphemeralResult::Unavailable );
@@ -368,9 +368,9 @@ SW_TEST_CASE_F( RESPStoreTest, ServerCloseFailsWaitingRequests )
     start();
     SW_EXPECT_LOG( "RespConnection.RESPConnectionClosed" );
     (void)_store.submit( EphemeralRequest::makeGet( "a" ) );
-    SW_EXPECT_TRUE( pump().empty() );
+    SW_EXPECT_TRUE( poll().empty() );
     _server._transport->close( _server._lastHandle, StreamCloseMode::Abort );
-    const vector<EphemeralReply> listReply = pump();
+    const vector<EphemeralReply> listReply = poll();
     SW_REQUIRE_EQUAL( listReply.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listReply[0]._result == EphemeralResult::Unavailable );
 }
@@ -401,7 +401,7 @@ SW_TEST_CASE_F( RESPStoreTest, RejectedAuthBacksOffBeforeReconnecting )
     {
         _server._listReply.emplace_back( "-WRONGPASS\r\n" );
     }
-    pump(); // 명령 연결도 시작 때 열려 있다 - 거절된다
+    poll(); // 명령 연결도 시작 때 열려 있다 - 거절된다
     const int32 openedAfterCommand = _server._openedCount;
 
     _store.subscribe( "chan" );
@@ -474,7 +474,7 @@ SW_TEST_CASE_F( RESPStoreTest, ShutdownFailsEverything )
 {
     start();
     (void)_store.submit( EphemeralRequest::makeGet( "a" ) );
-    SW_EXPECT_TRUE( pump().empty() );
+    SW_EXPECT_TRUE( poll().empty() );
     _store.shutdown();
     _store.shutdown();
 

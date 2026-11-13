@@ -46,7 +46,7 @@ namespace sw
         /** @brief 돌고 있는 서비스의 진행 중인 일 수 합입니다(`IServerService::getOpenJobCount`). */
         int32 getOpenJobCount() const;
         /** @brief 돌고 있는 서비스마다 종료 드레인 시작을 알립니다(시작 순서). */
-        void beginShutdown( const ServerShutdownNotice& notice );
+        void beginShutdown( const ServerShutdownNotice& notification );
 
     private:
         struct RunningService

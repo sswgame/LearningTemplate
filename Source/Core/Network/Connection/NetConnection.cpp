@@ -221,9 +221,9 @@ namespace sw
         return true;
     }
 
-    void NetConnection::pollDeliveryNotifications( vector<NetDeliveryNotification>& inoutListNotice )
+    void NetConnection::pollDeliveryNotifications( vector<NetDeliveryNotification>& inoutListNotification )
     {
-        inoutListNotice.insert( inoutListNotice.end(), _listDeliveryNotification.begin(), _listDeliveryNotification.end() );
+        inoutListNotification.insert( inoutListNotification.end(), _listDeliveryNotification.begin(), _listDeliveryNotification.end() );
         _listDeliveryNotification.clear();
     }
 

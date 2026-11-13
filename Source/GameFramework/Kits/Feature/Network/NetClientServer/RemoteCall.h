@@ -196,7 +196,7 @@ namespace sw
      * @code
      *     client.initialize( &peers );
      *     const uint32 sequence = client.callServer( avatarID, *ValeAvatar::StaticType(), "attackCreature", { ReflectedValue::make( creatureID ) } );
-     *     client.pollRejections( listNotice ); // sequence 가 있으면 서버가 받지 않았다
+     *     client.pollRejections( listNotification ); // sequence 가 있으면 서버가 받지 않았다
      * @endcode
      */
     class SW_KIT_API RemoteCallClient : public NetTableHandler<RemoteCallClient, NetRemoteCallMessage::Table, NetRemoteCallMessage::Call, NetRemoteCallMessage::Rejected>
@@ -217,8 +217,8 @@ namespace sw
         NetHandleResult receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body );
         NetHandleResult receive( NetRemoteCallMessage::Rejected, const NetMessageContext& context, BitReader& body );
 
-        /** @brief 쌓인 거절 알림을 @p outListNotice 뒤에 옮깁니다. */
-        void   pollRejections( vector<RemoteCallRejectNotification>& outListNotice );
+        /** @brief 쌓인 거절 알림을 @p outListNotification 뒤에 옮깁니다. */
+        void   pollRejections( vector<RemoteCallRejectNotification>& outListNotification );
         uint64 getInvokedCount() const { return _invokedCount; }
 
     private:

@@ -149,7 +149,7 @@ namespace sw
     {
         GuildRequest guildRequest;
         guildRequest._text = request._text;
-        submitGuild( call._callID, context, GuildOperation::SetNotice, guildRequest );
+        submitGuild( call._callID, context, GuildOperation::SetAnnouncement, guildRequest );
     }
 
     void SocialServer::handleCall( OnlineServerCall<SocialMethod::GuildGet> call, const OnlineCallContext& context, const OnlineNoBody& request )

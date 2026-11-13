@@ -212,7 +212,7 @@ namespace sw
                 change._endMs          = request._endMs;
                 change._priority       = request._priority;
                 change._bLiteralText   = request._bLiteralText;
-                pControl->postNotice( change, pending._adminID, pending._nowMs, callID );
+                pControl->postAnnouncement( change, pending._adminID, pending._nowMs, callID );
                 return true;
             }
             case AdminMethod::RemoveAnnouncement::kID:

@@ -480,10 +480,10 @@ namespace sw::editor
                     return false;
                 }
                 (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) );                                  // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
-                const EditorInspectorCommands::AttachResult adopted = EditorInspectorCommands::attachChildPrefabInstances( pObject ); // 옮긴 수는 로그가 알린다
-                if ( adopted.isRejected() )
+                const EditorInspectorCommands::AttachResult applied = EditorInspectorCommands::attachChildPrefabInstances( pObject ); // 옮긴 수는 로그가 알린다
+                if ( applied.isRejected() )
                 {
-                    outReply = adopted._rejectReason;
+                    outReply = applied._rejectReason;
                     return false;
                 }
                 PrefabAsset asset;

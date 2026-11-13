@@ -114,8 +114,8 @@ namespace sw
          * @details 메시지는 1 바이트 이상(첫 바이트가 종류)이고 `kMaxSingleMessageSize` 이하여야 합니다. 어기면 오류 로그와 함께 false 이고 통지도 나지 않습니다.
          */
         [[nodiscard]] bool sendNotifiedMessage( const uint8* pData, int32 size, uint32 tag );
-        /** @brief 판정이 난 전달 통지를 @p inoutListNotice 뒤에 옮깁니다. 연결 ID 는 -1 로 둡니다(엔드포인트가 채운다). */
-        void pollDeliveryNotifications( vector<NetDeliveryNotification>& inoutListNotice );
+        /** @brief 판정이 난 전달 통지를 @p inoutListNotification 뒤에 옮깁니다. 연결 ID 는 -1 로 둡니다(엔드포인트가 채운다). */
+        void pollDeliveryNotifications( vector<NetDeliveryNotification>& inoutListNotification );
         /** @brief 채널 하나의 메시지 상한입니다. 신뢰 순서는 `kMaxReliableMessageSize`, 나머지는 `kMaxSingleMessageSize` 입니다. */
         static int32 getMaxMessageSize( NetChannelType channel );
         /** @brief 받은 메시지 하나를 꺼냅니다. 없으면 false 를 반환합니다. @p outBuffer 의 옛 용량은 연결이 받아 다시 쓴다(같은 버퍼로 계속 받으면 할당이 없다). */

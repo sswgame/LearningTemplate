@@ -1139,13 +1139,13 @@ namespace sw
         batch._listPostLoad.insert( batch._listPostLoad.end(), _listDeferredPostLoad.begin(), _listDeferredPostLoad.end() );
         _listDeferredRegister.clear();
         _listDeferredPostLoad.clear();
-        if ( batch.pump( *this, maxCount ) )
+        if ( batch.poll( *this, maxCount ) )
             return true;
         _pollBatch = std::move( batch );
         return false;
     }
 
-    bool GameObjectManager::DeferredRegistrationBatch::pump( GameObjectManager& manager, uint32 maxCount )
+    bool GameObjectManager::DeferredRegistrationBatch::poll( GameObjectManager& manager, uint32 maxCount )
     {
         // 등록을 모두 끝낸 뒤 로드 뒤 처리를 부른다 — 바로 붙이던 때와 같이 `onPostLoad` 가 같은 배치의 다른 컴포넌트가 등록된 뒤를 본다.
         uint32 calledCount = 0;

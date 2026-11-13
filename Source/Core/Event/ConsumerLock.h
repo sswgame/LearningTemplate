@@ -27,11 +27,11 @@ namespace sw
 
         /** @brief 쥔 권한을 놓습니다. 쥔 것이 없으면 아무것도 하지 않습니다. */
         void release();
-        bool isHeld() const { return _pGate != nullptr; }
+        bool isHeld() const { return _pConsumerLock != nullptr; }
 
     private:
         friend class ConsumerLock;
-        ConsumerLock* _pGate{ nullptr };
+        ConsumerLock* _pConsumerLock{ nullptr };
     };
 } // namespace sw
 
@@ -48,7 +48,7 @@ namespace sw
         ~ConsumerLock()
         {
             if ( _pHolder != nullptr )
-                _pHolder->_pGate = nullptr;
+                _pHolder->_pConsumerLock = nullptr;
         }
         ConsumerLock( const ConsumerLock& )            = delete;
         ConsumerLock& operator=( const ConsumerLock& ) = delete;
@@ -67,8 +67,8 @@ namespace sw
                 return false;
             }
             lease.release();
-            _pHolder     = &lease;
-            lease._pGate = this;
+            _pHolder             = &lease;
+            lease._pConsumerLock = this;
             return true;
         }
         /** @brief @p lease 가 이 게이트의 권한을 쥐고 있는지입니다. */
@@ -83,9 +83,9 @@ namespace sw
 
     inline void ConsumerLease::release()
     {
-        if ( _pGate == nullptr )
+        if ( _pConsumerLock == nullptr )
             return;
-        _pGate->_pHolder = nullptr;
-        _pGate           = nullptr;
+        _pConsumerLock->_pHolder = nullptr;
+        _pConsumerLock           = nullptr;
     }
 } // namespace sw

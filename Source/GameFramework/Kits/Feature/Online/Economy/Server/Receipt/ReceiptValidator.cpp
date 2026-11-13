@@ -106,19 +106,19 @@ namespace sw
         }
     }
 
-    void ReceiptValidatorRegistry::pollRefunds( vector<ReceiptRefundNotification>& outListNotice )
+    void ReceiptValidatorRegistry::pollRefunds( vector<ReceiptRefundNotification>& outListNotification )
     {
         for ( IReceiptValidator* pValidator : _listValidator )
         {
-            pValidator->pollRefunds( outListNotice );
+            pValidator->pollRefunds( outListNotification );
         }
     }
 
-    void ReceiptValidatorRegistry::removeRefund( const ReceiptRefundNotification& notice )
+    void ReceiptValidatorRegistry::removeRefund( const ReceiptRefundNotification& notification )
     {
-        IReceiptValidator* pValidator = findValidator( notice._storeName );
+        IReceiptValidator* pValidator = findValidator( notification._storeName );
         if ( pValidator != nullptr )
-            pValidator->removeRefund( notice._transactionID );
+            pValidator->removeRefund( notification._transactionID );
     }
 
     bool ReceiptValidatorRegistry::usesDeliveryConfirmation() const

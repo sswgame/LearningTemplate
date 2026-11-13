@@ -598,7 +598,7 @@ SW_TEST_CASE( MemoryProfilerTest, JudgeLeakCurveSeparatesFlatFromGrowing )
     {
         listFlat.push_back( LeakCurvePoint{ 1000, 4 } );
     }
-    const LeakCurveResult flat = criteria.judge( listFlat );
+    const LeakCurveResult flat = criteria.evaluate( listFlat );
     SW_REQUIRE_TRUE( flat._bValid );
     SW_EXPECT_EQUAL( 8u, flat._sampleCount );
     SW_EXPECT_NEAR( 0.0, flat._slopeBytesPerRound, 1.0e-6 );
@@ -612,7 +612,7 @@ SW_TEST_CASE( MemoryProfilerTest, JudgeLeakCurveSeparatesFlatFromGrowing )
     {
         listGrowing.push_back( LeakCurvePoint{ 1000 + uint64{ 4096 } * round, 4 + uint64{ 1 } * round } );
     }
-    const LeakCurveResult growing = criteria.judge( listGrowing );
+    const LeakCurveResult growing = criteria.evaluate( listGrowing );
     SW_REQUIRE_TRUE( growing._bValid );
     SW_EXPECT_NEAR( 4096.0, growing._slopeBytesPerRound, 1.0e-6 );
     SW_EXPECT_NEAR( 1.0, growing._slopeBlocksPerRound, 1.0e-6 );
@@ -627,23 +627,23 @@ SW_TEST_CASE( MemoryProfilerTest, JudgeLeakCurveSeparatesFlatFromGrowing )
         {1080, 4},
         {1000, 4}
     };
-    SW_EXPECT_TRUE( criteria.judge( listNoisy )._bFlat );
+    SW_EXPECT_TRUE( criteria.evaluate( listNoisy )._bFlat );
     const vector<LeakCurvePoint> listShrinking{
         {5000, 9},
         {4000, 8},
         {3000, 7},
         {2000, 6}
     };
-    SW_EXPECT_TRUE( criteria.judge( listShrinking )._bFlat );
+    SW_EXPECT_TRUE( criteria.evaluate( listShrinking )._bFlat );
 
     // 점이 모자라면 판정할 수 없다 — 평평하다고 말하지 않는다.
-    const LeakCurveResult tooShort = criteria.judge( vector<LeakCurvePoint>{
+    const LeakCurveResult tooShort = criteria.evaluate( vector<LeakCurvePoint>{
         {1, 1},
         {2, 1}
     } );
     SW_EXPECT_FALSE( tooShort._bValid );
     SW_EXPECT_FALSE( tooShort._bFlat );
-    SW_EXPECT_FALSE( criteria.judge( vector<LeakCurvePoint>{} )._bFlat );
+    SW_EXPECT_FALSE( criteria.evaluate( vector<LeakCurvePoint>{} )._bFlat );
 }
 
 /**

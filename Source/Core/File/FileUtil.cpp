@@ -773,9 +773,9 @@ namespace sw
         FileUtilInternal::s_writeCounters._removalEpoch.fetch_add( 1, std::memory_order_release );
     }
 
-    void FileUtil::setWriteFilter( WriteFilter gate )
+    void FileUtil::setWriteFilter( WriteFilter filter )
     {
-        FileUtilInternal::s_writeCounters._writeFilter.store( gate, std::memory_order_release );
+        FileUtilInternal::s_writeCounters._writeFilter.store( filter, std::memory_order_release );
     }
 
     void FileUtil::setCreateRule( WriteFilter rule )
@@ -785,9 +785,9 @@ namespace sw
 
     bool FileUtil::isWriteAllowed( string_view path )
     {
-        if ( const WriteFilter gate = FileUtilInternal::s_writeCounters._writeFilter.load( std::memory_order_acquire ); gate != nullptr )
+        if ( const WriteFilter filter = FileUtilInternal::s_writeCounters._writeFilter.load( std::memory_order_acquire ); filter != nullptr )
         {
-            const expected<void> evaluation = gate( path );
+            const expected<void> evaluation = filter( path );
             if ( evaluation.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %# (%#)", path, evaluation.error().message(), evaluation.error().detail() );

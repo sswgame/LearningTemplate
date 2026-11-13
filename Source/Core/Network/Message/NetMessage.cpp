@@ -135,17 +135,17 @@ namespace sw
         }
     }
 
-    void NetMessageRouter::dispatchNotification( const NetDeliveryNotification& notice )
+    void NetMessageRouter::dispatchNotification( const NetDeliveryNotification& notification )
     {
-        INetMessageHandler* pHandler = _arrNotificationHandler[notice._kind];
+        INetMessageHandler* pHandler = _arrNotificationHandler[notification._kind];
         if ( pHandler != nullptr )
         {
-            pHandler->onDeliveryNotification( notice );
+            pHandler->onDeliveryNotification( notification );
             return;
         }
         if ( _unclaimedNotificationCount == 0 )
             SW_LOG_ERROR_ID( "Net.RouterUnclaimedNotice", "NetMessageRouter: a delivery notice of message kind 0x%02x has no handler - the sender did not register (getNotifiedKindMask); further ones are only counted",
-                             static_cast<int32>( notice._kind ) );
+                             static_cast<int32>( notification._kind ) );
         ++_unclaimedNotificationCount;
     }
 
@@ -174,7 +174,7 @@ namespace sw
         }
     }
 
-    int32 NetMessageRouter::pump( INetPeers& peers, vector<NetReceivedMessage>* pOutUnhandled, vector<NetEndpointEvent>* pOutListEvent )
+    int32 NetMessageRouter::poll( INetPeers& peers, vector<NetReceivedMessage>* pOutUnhandled, vector<NetEndpointEvent>* pOutListEvent )
     {
         peers.pollInbound( _inbound );
         for ( const NetEndpointEvent& event : _inbound._listEvent )
@@ -183,9 +183,9 @@ namespace sw
         }
         if ( pOutListEvent != nullptr )
             pOutListEvent->insert( pOutListEvent->end(), _inbound._listEvent.begin(), _inbound._listEvent.end() );
-        for ( const NetDeliveryNotification& notice : _inbound._listDeliveryNotification )
+        for ( const NetDeliveryNotification& notification : _inbound._listDeliveryNotification )
         {
-            dispatchNotification( notice );
+            dispatchNotification( notification );
         }
         for ( const NetInboundMessage& message : _inbound._listMessage )
         {

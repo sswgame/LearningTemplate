@@ -211,7 +211,7 @@ namespace sw
         PROPERTY( MaxCount = GuildLimit::kMaxNameSize )
         string _name{}; ///< 상한은 `GuildLimit::kMaxNameSize` 와 같다
         PROPERTY( MaxCount = GuildLimit::kMaxAnnouncementSize )
-        string _notice{}; ///< 상한은 `GuildLimit::kMaxAnnouncementSize` 와 같다
+        string _announcement{}; ///< 상한은 `GuildLimit::kMaxAnnouncementSize` 와 같다
         PROPERTY()
         uint64 _guildID{ 0 };
         PROPERTY()

@@ -242,7 +242,7 @@ namespace
             return {};
         }
 
-        void pump()
+        void poll()
         {
             _registry.update( UnixMilliseconds{ ReceiptEndpointTestUtil::getNowMs() } );
             _endpoint._server.update();
@@ -254,7 +254,7 @@ namespace
             SW_EXPECT_TRUE( ticket != 0 );
             vector<ReceiptValidationResult> listResult;
             const bool                      bDone = test::pollUntil( [this]()
-            { pump(); }, [this, &listResult]()
+            { poll(); }, [this, &listResult]()
             {
                 _registry.pollCompletions( listResult );
                 return listResult.empty() == false;
@@ -301,7 +301,7 @@ SW_TEST_CASE_F( ReceiptEndToEndTest, GoogleReachesTheEndpoint )
     SW_REQUIRE_TRUE( _registry.confirmDelivery( task, UnixMilliseconds{ ReceiptEndpointTestUtil::getNowMs() } ) );
     vector<ReceiptDeliveryResult> listServiceResult;
     SW_REQUIRE_TRUE( test::pollUntil( [this]()
-    { pump(); }, [this, &listServiceResult]()
+    { poll(); }, [this, &listServiceResult]()
     {
         _registry.pollDeliveryResults( listServiceResult );
         return listServiceResult.empty() == false;

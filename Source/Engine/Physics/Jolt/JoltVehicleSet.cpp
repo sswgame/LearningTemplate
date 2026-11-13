@@ -167,19 +167,19 @@ namespace sw
 
     void JoltVehicleSet::destroyAttachedTo( span<const PhysicsBodyHandle> listBody )
     {
-        vector<PhysicsVehicleHandle> listDoomed;
+        vector<PhysicsVehicleHandle> listPendingDestroy;
         _vehicles.forEachHandle( [&]( SlotHandle slot, const Record& record )
         {
             for ( const PhysicsBodyHandle& body : listBody )
             {
                 if ( record._chassis == body )
                 {
-                    listDoomed.push_back( PhysicsVehicleHandle::fromSlot( slot ) );
+                    listPendingDestroy.push_back( PhysicsVehicleHandle::fromSlot( slot ) );
                     return;
                 }
             }
         } );
-        for ( const PhysicsVehicleHandle& vehicle : listDoomed )
+        for ( const PhysicsVehicleHandle& vehicle : listPendingDestroy )
         {
             (void)destroy( vehicle ); // 차체도 지워지므로 깨우지 않는다
         }

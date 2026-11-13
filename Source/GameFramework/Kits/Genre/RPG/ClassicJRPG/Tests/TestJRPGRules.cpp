@@ -220,10 +220,10 @@ namespace
             return listDamage;
         }
 
-        bool readForged( const JRPGFixtureBattle& forged )
+        bool readFixture( const JRPGFixtureBattle& fixture )
         {
             sw::Archive written;
-            forged.write( written );
+            fixture.write( written );
             sw::Archive reading( written.getData(), written.getSize() );
             return _battle.readState( reading );
         }
@@ -1005,66 +1005,66 @@ SW_TEST_CASE_F( JRPGRulesTest, BattleStateRefusals )
 
     const auto refuses = [this]( auto mutate )
     {
-        JRPGFixtureBattle forged;
-        mutate( forged );
-        return readForged( forged ) == false && _battle.getEnemies()[0]._hp == 1000;
+        JRPGFixtureBattle fixture;
+        mutate( fixture );
+        return readFixture( fixture ) == false && _battle.getEnemies()[0]._hp == 1000;
     };
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._hp = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._hp = 1001; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._enemyID = "nope"; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._castTurnsLeft = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._turnsTaken = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._lockTotal = -1; } ) ); // 0 으로 나누는 값
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._lockTotal = 1; } ) ); // 슬라임은 잠금이 없다
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._hp = -1; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._hp = 1001; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._enemyID = "nope"; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._castTurnsLeft = -1; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._turnsTaken = -1; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._lockTotal = -1; } ) ); // 0 으로 나누는 값
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._lockTotal = 1; } ) ); // 슬라임은 잠금이 없다
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
     {
-        forged._enemyID       = "wyrd";
-        forged._castTurnsLeft = 3; // 이 적의 시전은 2 차례다
-        forged._lockTotal     = 2;
+        fixture._enemyID       = "wyrd";
+        fixture._castTurnsLeft = 3; // 이 적의 시전은 2 차례다
+        fixture._lockTotal     = 2;
     } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
     {
-        forged._enemyID   = "wyrd";
-        forged._lockCount = 2; // 시전 중이 아닌데 잠금이 남았다
-        forged._lockTotal = 2;
+        fixture._enemyID   = "wyrd";
+        fixture._lockCount = 2; // 시전 중이 아닌데 잠금이 남았다
+        fixture._lockTotal = 2;
     } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._commandCount = 2; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._commandKind = 9; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._defending = 2; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._commandCount = 2; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._commandKind = 9; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._defending = 2; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
     {
-        forged._commandKind = static_cast<uint8>( sw::JRPGCommandKind::Spell );
-        forged._commandID   = "nope";
+        fixture._commandKind = static_cast<uint8>( sw::JRPGCommandKind::Spell );
+        fixture._commandID   = "nope";
     } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
     {
-        forged._commandKind = static_cast<uint8>( sw::JRPGCommandKind::Combo );
-        forged._commandID   = "nope";
+        fixture._commandKind = static_cast<uint8>( sw::JRPGCommandKind::Combo );
+        fixture._commandID   = "nope";
     } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._comboPoints = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._comboPoints = 10; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._round = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._fleeAttempts = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._rewardExp = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._rewardGold = -1; } ) );
-    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& forged )
-    { forged._result = 9; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._comboPoints = -1; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._comboPoints = 10; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._round = -1; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._fleeAttempts = -1; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._rewardExp = -1; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._rewardGold = -1; } ) );
+    SW_EXPECT_TRUE( refuses( []( JRPGFixtureBattle& fixture )
+    { fixture._result = 9; } ) );
 
     // 맞는 시전 상태는 읽히고, 다음 라운드에 터진다.
     JRPGFixtureBattle casting;
@@ -1072,7 +1072,7 @@ SW_TEST_CASE_F( JRPGRulesTest, BattleStateRefusals )
     casting._lockCount     = 1;
     casting._lockTotal     = 2;
     casting._castTurnsLeft = 1;
-    SW_REQUIRE_TRUE( readForged( casting ) );
+    SW_REQUIRE_TRUE( readFixture( casting ) );
     SW_EXPECT_EQUAL( 500, _battle.getEnemies()[0]._hp );
     _battle.resolveRound(); // 읽은 턴 순서가 비어 있어 syncActors 가 배우를 다시 넣는다
     SW_EXPECT_EQUAL( 1, countBattleEvents( sw::JRPGBattleEvent::Kind::CastReleased ) );
@@ -1136,11 +1136,11 @@ SW_TEST_CASE_F( JRPGRulesTest, StepEncounterState )
     random.setSeed( 3 );
     const auto refuses = [&]( int32 stepsSince, int32 total )
     {
-        sw::Archive forged;
-        sw::StateIO::writeRandom( forged, random );
-        forged << stepsSince;
-        forged << total;
-        sw::Archive readingFixture( forged.getData(), forged.getSize() );
+        sw::Archive fixture;
+        sw::StateIO::writeRandom( fixture, random );
+        fixture << stepsSince;
+        fixture << total;
+        sw::Archive readingFixture( fixture.getData(), fixture.getSize() );
         return restored.readState( readingFixture ) == false;
     };
     SW_EXPECT_TRUE( refuses( -1, 0 ) );

@@ -68,7 +68,7 @@ namespace sw
         ScopedLock<mutex>        lock{ _mutex };
         for ( const AutomationLogLine& line : _listLogLine )
         {
-            policy.judge( line._level, line._id, line._message, result );
+            policy.evaluate( line._level, line._id, line._message, result );
         }
         return result;
     }

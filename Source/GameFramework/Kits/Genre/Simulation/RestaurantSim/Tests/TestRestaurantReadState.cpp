@@ -192,10 +192,10 @@ namespace
             _simulation.initialize( &_catalog, nullptr, nullptr, nullptr, nullptr, sw::SessionStateRefs{}, _pantry, sw::RestaurantSettings{} );
         }
 
-        bool read( const RestaurantFixture& forged )
+        bool read( const RestaurantFixture& fixture )
         {
             sw::Archive written;
-            forged.write( written, _simulation.getMarket() );
+            fixture.write( written, _simulation.getMarket() );
             sw::Archive reading( written.getData(), written.getSize() );
             return _simulation.readState( reading );
         }
@@ -455,7 +455,7 @@ SW_TEST_CASE_F( RestaurantReadStateTest, RefusesBrokenBatches )
  */
 SW_TEST_CASE( RestaurantReadStateTestShop, ShopStateRefusesNegativePrices )
 {
-    const auto readForged = []( float32 sellFactor, float32 buyModifier, float32 sellModifier, int32 daysSinceRestock )
+    const auto readFixture = []( float32 sellFactor, float32 buyModifier, float32 sellModifier, int32 daysSinceRestock )
     {
         sw::Archive written;
         sw::StateIO::writeHeader( written, sw::ShopManager::kStateTag, sw::ShopManager::kStateVersion );
@@ -475,9 +475,9 @@ SW_TEST_CASE( RestaurantReadStateTestShop, ShopStateRefusesNegativePrices )
         sw::Archive reading( written.getData(), written.getSize() );
         return state.readState( reading );
     };
-    SW_EXPECT_TRUE( readForged( 1.0f, 1.0f, 1.0f, 0 ) ); // 형식은 맞다(모르는 가게는 버린다)
-    SW_EXPECT_FALSE( readForged( -1.0f, 1.0f, 1.0f, 0 ) );
-    SW_EXPECT_FALSE( readForged( 1.0f, -1.0f, 1.0f, 0 ) );
-    SW_EXPECT_FALSE( readForged( 1.0f, 1.0f, -1.0f, 0 ) );
-    SW_EXPECT_FALSE( readForged( 1.0f, 1.0f, 1.0f, -1 ) );
+    SW_EXPECT_TRUE( readFixture( 1.0f, 1.0f, 1.0f, 0 ) ); // 형식은 맞다(모르는 가게는 버린다)
+    SW_EXPECT_FALSE( readFixture( -1.0f, 1.0f, 1.0f, 0 ) );
+    SW_EXPECT_FALSE( readFixture( 1.0f, -1.0f, 1.0f, 0 ) );
+    SW_EXPECT_FALSE( readFixture( 1.0f, 1.0f, -1.0f, 0 ) );
+    SW_EXPECT_FALSE( readFixture( 1.0f, 1.0f, 1.0f, -1 ) );
 }

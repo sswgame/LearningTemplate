@@ -84,18 +84,18 @@ namespace sw
     {
         assertNoHeldReadbackBeforeSubmit();
         RHITransferSubmit submit{};
-        const bool        bSettled = submitWhileBusy( [&]()
+        const bool        bCompleted = submitWhileBusy( [&]()
         { return factory.submitTextureUpload( texture, desc ); }, submit );
-        return bSettled && submit.isAccepted() && waitForTransfer( factory, submit._ticket );
+        return bCompleted && submit.isAccepted() && waitForTransfer( factory, submit._ticket );
     }
 
     bool RHITransferUtil::uploadTexture2DRegionAndWait( IRHIResourceFactory& factory, RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         assertNoHeldReadbackBeforeSubmit();
         RHITransferSubmit submit{};
-        const bool        bSettled = submitWhileBusy( [&]()
+        const bool        bCompleted = submitWhileBusy( [&]()
         { return factory.submitTextureRegionUpload( texture, desc ); }, submit );
-        return bSettled && submit.isAccepted() && waitForTransfer( factory, submit._ticket );
+        return bCompleted && submit.isAccepted() && waitForTransfer( factory, submit._ticket );
     }
 
     bool RHITransferUtil::readbackTexture2DAndWait( IRHIResourceFactory& factory, RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes,
@@ -103,9 +103,9 @@ namespace sw
     {
         assertNoHeldReadbackBeforeSubmit();
         RHITransferSubmit submit{};
-        const bool        bSettled = submitWhileBusy( [&]()
+        const bool        bCompleted = submitWhileBusy( [&]()
         { return factory.submitTextureReadback( texture, mip, arraySlice, outLayout ); }, submit );
-        if ( bSettled == false || submit.isAccepted() == false )
+        if ( bCompleted == false || submit.isAccepted() == false )
             return false;
 
         // 여기부터 티켓은 소유자가 쥔다. 기다림이 실패하거나 시간이 다 되어 돌아가면 소멸자가 결과를 버린다.

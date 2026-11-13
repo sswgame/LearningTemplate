@@ -141,7 +141,7 @@ namespace sw::editor
         const vector<ContentBrowserRoot>&       getRoots() const { return _listRoot; }
         const vector<AssetEntry>&               getEntries() const { return _listEntry; }
         const string&                           getSelectedFolderPath() const { return _selectedFolderAbs; }
-        const vector<ContentBrowserBreadcrumb>& getBreadcrumbs() const { return _listCrumb; }
+        const vector<ContentBrowserBreadcrumb>& getBreadcrumbs() const { return _listBreadcrumb; }
         /** @brief 폴더 트리의 하위 폴더입니다. 처음 볼 때 한 번 디스크에서 읽는다. 참조는 재귀 중에도 유효하다. */
         const vector<string>& getOrScanChildFolders( string_view folderAbs ) { return _folderCache.getOrScanChildFolders( folderAbs ); }
         /** @brief 폴더 트리 캐시를 비웁니다. 다음 그리기에서 디스크를 다시 읽는다. */
@@ -153,12 +153,12 @@ namespace sw::editor
 
         /** @brief 폴더로 이동합니다. 그 폴더가 속한 콘텐츠 루트에서 브레드크럼 경로도 함께 만듭니다. */
         void openFolder( string_view absolutePath );
-        /** @brief 폴더를 고르고 목록을 다시 읽게 합니다. @p listCrumb 는 그 폴더의 브레드크럼 경로입니다. */
-        void selectFolder( string_view absolutePath, const vector<ContentBrowserBreadcrumb>& listCrumb, bool bRecordHistory = true );
+        /** @brief 폴더를 고르고 목록을 다시 읽게 합니다. @p listBreadcrumb 는 그 폴더의 브레드크럼 경로입니다. */
+        void selectFolder( string_view absolutePath, const vector<ContentBrowserBreadcrumb>& listBreadcrumb, bool bRecordHistory = true );
         /** @brief 지금 브레드크럼 경로의 @p breadcrumbIndex 번째 조각까지로 이동합니다. */
         void selectBreadcrumb( size_t breadcrumbIndex );
         /** @brief 폴더가 속한 콘텐츠 루트에서 그 폴더까지의 브레드크럼 경로를 만듭니다. */
-        void makeTrailForFolder( string_view folderAbs, vector<ContentBrowserBreadcrumb>& outListCrumb ) const;
+        void makeTrailForFolder( string_view folderAbs, vector<ContentBrowserBreadcrumb>& outListBreadcrumb ) const;
         bool canNavigateBack() const { return _history.canNavigateBack(); }
         bool canNavigateForward() const { return _history.canNavigateForward(); }
         void navigateBack();
@@ -282,7 +282,7 @@ namespace sw::editor
         vector<ContentBrowserRoot>       _listRoot;
         vector<AssetEntry>               _listEntry;
         string                           _selectedFolderAbs;
-        vector<ContentBrowserBreadcrumb> _listCrumb; /**< 지금 폴더의 브레드크럼 경로. 예: "Favorites / Shaders / bin" */
+        vector<ContentBrowserBreadcrumb> _listBreadcrumb; /**< 지금 폴더의 브레드크럼 경로. 예: "Favorites / Shaders / bin" */
         string                           _selectedAssetAbs;
         string                           _importFolderAbs;      /**< 임포트 대화상자를 연 때의 폴더 */
         ContentBrowserHistory            _history;              /**< 뒤로 가기 · 앞으로 가기 이력 */

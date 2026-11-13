@@ -20,7 +20,7 @@
  */
 SW_TEST_CASE( StateIOTest, StepTimerRefusesAccumulatorPastOneFrame )
 {
-    const auto readForged = []( float32 accumulator, sw::FixedStepTimer& inoutTimer )
+    const auto readCrafted = []( float32 accumulator, sw::FixedStepTimer& inoutTimer )
     {
         sw::Archive written;
         written << accumulator;
@@ -28,19 +28,19 @@ SW_TEST_CASE( StateIOTest, StepTimerRefusesAccumulatorPastOneFrame )
         return sw::StateIO::readStepTimer( reading, inoutTimer );
     };
     sw::FixedStepTimer timer( 0.05f, 0.25f );
-    SW_REQUIRE_TRUE( readForged( 0.03f, timer ) );
+    SW_REQUIRE_TRUE( readCrafted( 0.03f, timer ) );
     SW_EXPECT_NEAR( 0.03f, timer._accumulator, 1.0e-6f );
-    SW_EXPECT_TRUE( readForged( 0.2f, timer ) ); // 걸음을 줄인 핫 리로드는 그대로 읽힌다
-    SW_EXPECT_TRUE( readForged( 0.03f, timer ) );
+    SW_EXPECT_TRUE( readCrafted( 0.2f, timer ) ); // 걸음을 줄인 핫 리로드는 그대로 읽힌다
+    SW_EXPECT_TRUE( readCrafted( 0.03f, timer ) );
 
-    SW_EXPECT_FALSE( readForged( -0.1f, timer ) );
-    SW_EXPECT_FALSE( readForged( 0.26f, timer ) );
-    SW_EXPECT_FALSE( readForged( 1.0e30f, timer ) );
+    SW_EXPECT_FALSE( readCrafted( -0.1f, timer ) );
+    SW_EXPECT_FALSE( readCrafted( 0.26f, timer ) );
+    SW_EXPECT_FALSE( readCrafted( 1.0e30f, timer ) );
     SW_EXPECT_NEAR( 0.03f, timer._accumulator, 1.0e-6f );
 
     sw::FixedStepTimer longStep( 2.0f, 0.25f ); // 걸음이 한 프레임 상한보다 길면 걸음까지 찬다
-    SW_EXPECT_TRUE( readForged( 1.5f, longStep ) );
-    SW_EXPECT_FALSE( readForged( 2.5f, longStep ) );
+    SW_EXPECT_TRUE( readCrafted( 1.5f, longStep ) );
+    SW_EXPECT_FALSE( readCrafted( 2.5f, longStep ) );
 }
 
 /**
@@ -48,7 +48,7 @@ SW_TEST_CASE( StateIOTest, StepTimerRefusesAccumulatorPastOneFrame )
  */
 SW_TEST_CASE( StateIOTest, RateAccumulatorRefusesWholeAmounts )
 {
-    const auto readForged = []( float32 fraction, sw::RateAccumulator& inoutAccumulator )
+    const auto readCrafted = []( float32 fraction, sw::RateAccumulator& inoutAccumulator )
     {
         sw::Archive written;
         written << fraction;
@@ -56,12 +56,12 @@ SW_TEST_CASE( StateIOTest, RateAccumulatorRefusesWholeAmounts )
         return sw::StateIO::readRateAccumulator( reading, inoutAccumulator );
     };
     sw::RateAccumulator accumulator;
-    SW_REQUIRE_TRUE( readForged( 0.5f, accumulator ) );
+    SW_REQUIRE_TRUE( readCrafted( 0.5f, accumulator ) );
     SW_EXPECT_NEAR( 0.5f, accumulator.getFraction(), 1.0e-6f );
 
-    SW_EXPECT_FALSE( readForged( -0.1f, accumulator ) );
-    SW_EXPECT_FALSE( readForged( 1.0f, accumulator ) );
-    SW_EXPECT_FALSE( readForged( 1.0e30f, accumulator ) );
+    SW_EXPECT_FALSE( readCrafted( -0.1f, accumulator ) );
+    SW_EXPECT_FALSE( readCrafted( 1.0f, accumulator ) );
+    SW_EXPECT_FALSE( readCrafted( 1.0e30f, accumulator ) );
     SW_EXPECT_NEAR( 0.5f, accumulator.getFraction(), 1.0e-6f );
 }
 
@@ -199,26 +199,26 @@ SW_TEST_CASE( StateIOTest, WritesPropertiesInOrderAndRoundTrips )
  */
 SW_TEST_CASE( StateIOTest, RejectedReadLeavesStateUntouched )
 {
-    const auto readForged = []( int32 level, uint8 bActive, uint8 kind, StateIOTestState& inoutState )
+    const auto readCrafted = []( int32 level, uint8 bActive, uint8 kind, StateIOTestState& inoutState )
     {
-        sw::Archive forged;
-        sw::StateIO::writeName( forged, sw::hashed_string( "forged" ) );
-        forged << static_cast<uint32>( 0 );
-        forged << level;
-        forged << bActive;
-        forged << kind;
-        sw::Archive reading( forged.getData(), forged.getSize() );
+        sw::Archive crafted;
+        sw::StateIO::writeName( crafted, sw::hashed_string( "forged" ) );
+        crafted << static_cast<uint32>( 0 );
+        crafted << level;
+        crafted << bActive;
+        crafted << kind;
+        sw::Archive reading( crafted.getData(), crafted.getSize() );
         return inoutState.readState( reading );
     };
     StateIOTestState state;
     state._name  = sw::hashed_string( "kept" );
     state._level = 5;
-    SW_EXPECT_FALSE( readForged( 0, SW_TRUE, 1, state ) ); // 범위 검사
-    SW_EXPECT_FALSE( readForged( 2, 2, 1, state ) );       // 깃발
-    SW_EXPECT_FALSE( readForged( 2, SW_TRUE, 2, state ) ); // 열거
+    SW_EXPECT_FALSE( readCrafted( 0, SW_TRUE, 1, state ) ); // 범위 검사
+    SW_EXPECT_FALSE( readCrafted( 2, 2, 1, state ) );       // 깃발
+    SW_EXPECT_FALSE( readCrafted( 2, SW_TRUE, 2, state ) ); // 열거
     SW_EXPECT_TRUE( state._name == sw::hashed_string( "kept" ) );
     SW_EXPECT_EQUAL( 5, state._level );
-    SW_EXPECT_TRUE( readForged( 2, SW_TRUE, 1, state ) );
+    SW_EXPECT_TRUE( readCrafted( 2, SW_TRUE, 1, state ) );
     SW_EXPECT_EQUAL( 2, state._level );
 }
 
@@ -361,10 +361,10 @@ SW_TEST_CASE( StateIOTest, HeaderRefusesVersionWithoutChain )
 {
     const auto readVersion = []( uint32 version, sw::StateUpgradeTestState& inoutState )
     {
-        sw::Archive forged;
-        sw::StateIO::writeHeader( forged, sw::StateUpgradeTestState::kStateTag, version );
-        forged << int32{ 3 } << 2.0f;
-        sw::Archive reading( forged.getData(), forged.getSize() );
+        sw::Archive crafted;
+        sw::StateIO::writeHeader( crafted, sw::StateUpgradeTestState::kStateTag, version );
+        crafted << int32{ 3 } << 2.0f;
+        sw::Archive reading( crafted.getData(), crafted.getSize() );
         return inoutState.readState( reading );
     };
     sw::StateUpgradeTestState state;
@@ -409,9 +409,9 @@ SW_TEST_CASE( StateIOTest, SectionUpgradesOldVersionThroughTheChain )
 SW_TEST_CASE( StateIOTest, HeaderTagMismatchSaysTheVersionIsUnknown )
 {
     SW_EXPECT_LOG( "StateIO.HeaderTagMismatch" );
-    sw::Archive forged;
-    forged << int16{ 7 } << int16{ 0 } << int32{ 3 } << 1.5f; // 머리표 없는 칸 — 표 자리에 체력이 놓였다
-    sw::Archive               reading( forged.getData(), forged.getSize() );
+    sw::Archive crafted;
+    crafted << int16{ 7 } << int16{ 0 } << int32{ 3 } << 1.5f; // 머리표 없는 칸 — 표 자리에 체력이 놓였다
+    sw::Archive               reading( crafted.getData(), crafted.getSize() );
     sw::StateUpgradeTestState state;
     state._health = 11;
     SW_EXPECT_FALSE( state.readState( reading ) );

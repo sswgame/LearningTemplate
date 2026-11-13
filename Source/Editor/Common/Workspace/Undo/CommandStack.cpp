@@ -270,10 +270,10 @@ namespace sw
         _bIsExecuting = SW_FALSE;
     }
 
-    void CommandStack::notifyObjectEdit( const ObjectEditEvent& notice ) const
+    void CommandStack::notifyObjectEdit( const ObjectEditEvent& event ) const
     {
         if ( _objectEditListener.isBound() )
-            _objectEditListener.get()( notice );
+            _objectEditListener.get()( event );
     }
 
     uint32 CommandStack::removeOwnedBy( uint64 ownerID )
@@ -389,9 +389,9 @@ namespace sw
         _bHistorySuspended = SW_FALSE;
         uint32 version{ 0 };
         archive >> version;
-        bool       bParked{ false };
+        bool       bSuspended{ false };
         const bool bLoaded = archive.isOk() && version == CommandStackInternal::kSaveVersion && CommandStackInternal::readList( archive, _listCommand, _index ) &&
-                             ( archive >> bParked ).isOk() && CommandStackInternal::readList( archive, _listSuspendedCommand, _suspendedIndex );
+                             ( archive >> bSuspended ).isOk() && CommandStackInternal::readList( archive, _listSuspendedCommand, _suspendedIndex );
         if ( bLoaded == false )
         {
             clear();
@@ -399,7 +399,7 @@ namespace sw
             _suspendedIndex = 0;
             return false;
         }
-        _bHistorySuspended = bParked;
+        _bHistorySuspended = bSuspended;
         return true;
     }
 

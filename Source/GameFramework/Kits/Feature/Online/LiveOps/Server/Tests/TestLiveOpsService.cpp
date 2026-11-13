@@ -39,7 +39,7 @@ namespace
             _service.initialize( dependencies );
         }
 
-        void pump()
+        void poll()
         {
             while ( _store.pollCompletions() > 0 )
             {
@@ -50,13 +50,13 @@ namespace
         void tick( int64 nowMs )
         {
             _service.update( UnixMilliseconds{ nowMs } );
-            pump();
+            poll();
         }
 
         LiveOpsServiceResult put( const LiveEventDef& definition, int64 nowMs = kStartMs )
         {
             _service.putEvent( definition, kGM, "memo", UnixMilliseconds{ nowMs }, 5 );
-            pump();
+            poll();
             return takeResult();
         }
 
@@ -100,7 +100,7 @@ namespace
             audit._subject = "config";
             audit._timeMs  = ++_auditTime; // 감사 키가 시각으로 갈린다
             _config.submitSet( _store, key, value, audit );
-            pump();
+            poll();
         }
     };
 
@@ -143,12 +143,12 @@ SW_TEST_CASE( LiveOpsServiceTest, PutReloadRemove )
     SW_EXPECT_EQUAL( hashBefore, rig._database.computeContentHash() );
 
     rig._service.removeEvent( "none", kGM, "m", UnixMilliseconds{ kStartMs }, 6 );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.takeResult() == LiveOpsResult::NotFound );
     rig._service.removeEvent( "Bad Id", kGM, "m", UnixMilliseconds{ kStartMs }, 6 );
     SW_EXPECT_TRUE( rig.takeResult().hasError( OnlineError::kInvalidRequest ) );
     rig._service.removeEvent( "spring.sale", kGM, "m", UnixMilliseconds{ kStartMs }, 6 );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.takeResult() == LiveOpsResult::Ok );
     rig.tick( kStartMs );
     SW_EXPECT_TRUE( rig.active( "kr", kStartMs ).empty() );
@@ -292,7 +292,7 @@ SW_TEST_CASE( LiveOpsServiceTest, JSONRoundTrip )
     SW_REQUIRE_EQUAL( size_t( 1 ), listJSON.size() );
 
     rig._service.putEventJSON( listJSON[0], kGM, "m", UnixMilliseconds{ kStartMs }, 6 );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.takeResult() == LiveOpsResult::Ok );
 
     rig._service.putEventJSON( "{ not json", kGM, "m", UnixMilliseconds{ kStartMs }, 7 );

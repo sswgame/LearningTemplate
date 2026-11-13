@@ -95,11 +95,11 @@ namespace
             if ( bEndpoint == false || bClient == false )
                 return false;
             (void)_clientTransport->connect( NetAddress::makeLoopback( _endpoint.getListenPort() ) );
-            pump( 20 );
+            poll( 20 );
             return _probe._bOpened.load( std::memory_order_acquire );
         }
 
-        void pump( int32 roundCount )
+        void poll( int32 roundCount )
         {
             for ( int32 round = 0; round < roundCount; ++round )
             {
@@ -191,10 +191,10 @@ SW_TEST_CASE( OpsHTTPEndpointTest, ServesMetricsOverLoopbackAndCloses )
     SW_REQUIRE_TRUE( rig.start() );
     rig._metrics.registerCounter( "loop_total", "Loop" )->add( 5 );
     rig.send( "GET /metr" ); // 머리가 조각나 와도 빈 줄까지 모은다
-    rig.pump( 5 );
+    rig.poll( 5 );
     SW_EXPECT_TRUE( rig._probe.getReceived().empty() );
     rig.send( "ics HTTP/1.1\r\nHost: localhost\r\n\r\n" );
-    rig.pump( 50 );
+    rig.poll( 50 );
     const string received = rig._probe.getReceived();
     SW_EXPECT_TRUE_MSG( StringUtil::startsWith( received, "HTTP/1.1 200 OK\r\n" ), received.c_str() );
     SW_EXPECT_TRUE( received.find( "loop_total 5\n" ) != string::npos );
@@ -207,7 +207,7 @@ SW_TEST_CASE( OpsHTTPEndpointTest, OversizedHeadIsRefusedWith431 )
     SW_REQUIRE_TRUE( rig.start() );
     const string junk( 9000, 'a' ); // 빈 줄 없이 8 KB 를 넘는다
     rig.send( junk );
-    rig.pump( 50 );
+    rig.poll( 50 );
     const string received = rig._probe.getReceived();
     SW_EXPECT_TRUE_MSG( StringUtil::startsWith( received, "HTTP/1.1 431 " ), received.c_str() );
     SW_EXPECT_TRUE( rig._probe._bClosed.load( std::memory_order_acquire ) );

@@ -67,8 +67,8 @@ namespace sw
 
             static bool isEvaluatedPerBackend( const AutomationStep& step )
             {
-                return std::any_of( std::begin( kArrBackendEvaluationStep ), std::end( kArrBackendEvaluationStep ), [&step]( const BackendEvaluationStep& judging )
-                { return step._kind == judging._kind && ( judging._attribute.empty() || step.findAttribute( judging._attribute ) != nullptr ); } );
+                return std::any_of( std::begin( kArrBackendEvaluationStep ), std::end( kArrBackendEvaluationStep ), [&step]( const BackendEvaluationStep& evaluation )
+                { return step._kind == evaluation._kind && ( evaluation._attribute.empty() || step.findAttribute( evaluation._attribute ) != nullptr ); } );
             }
 
             /** @brief 자식 하나의 상태입니다. 출력 파이프는 스레드 하나가 끝까지 비운다 — 비우지 않으면 파이프가 찬 자식이 멈춘다. */

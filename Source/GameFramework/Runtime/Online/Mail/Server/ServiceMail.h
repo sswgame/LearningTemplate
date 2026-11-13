@@ -91,8 +91,8 @@ namespace sw
         static const hashed_string& getMailTable();
         static const hashed_string& getSentTable();
         static const hashed_string& getExpiryTable();
-        static const hashed_string& getNoticeTable();     ///< "mail_notice"
-        static const hashed_string& getSentExpiryTable(); ///< "mail_sent_expiry" — 보낸 기록의 TTL 색인(`<만든 시각>/<보낸 키>`)
+        static const hashed_string& getNotificationTable(); ///< "mail_notice"
+        static const hashed_string& getSentExpiryTable();   ///< "mail_sent_expiry" — 보낸 기록의 TTL 색인(`<만든 시각>/<보낸 키>`)
         /** @brief 보낸 기록의 TTL 규칙입니다(TTL 색인 + 색인 없는 옛 기록의 백필). 기간은 운영 설정 `_mailSentTTL` 이 정한다. */
         static ServiceTTLRule makeSentTTLRule( int64 expireAfterMs );
 
@@ -106,9 +106,9 @@ namespace sw
 
         /**
          * @brief 오래된 새 우편 알림을 @p maxCount 개까지 가져가며 지웁니다. 지우기를 한 트랜잭션으로 커밋한 쪽만 알림을 받으므로 서버가 여럿이어도 한 번만 보냅니다.
-         * @return 그사이 다른 서버가 가져갔으면 Conflict 이고 @p outListNotice 는 비어 있습니다. 손상된 알림은 건너뛰지 않고 Invalid 입니다.
+         * @return 그사이 다른 서버가 가져갔으면 Conflict 이고 @p outListNotification 는 비어 있습니다. 손상된 알림은 건너뛰지 않고 Invalid 입니다.
          */
-        [[nodiscard]] static ServiceStoreResult claimNotifications( IServiceStoreConnection& connection, int32 maxCount, vector<ServiceMailNotification>& outListNotice );
+        [[nodiscard]] static ServiceStoreResult claimNotifications( IServiceStoreConnection& connection, int32 maxCount, vector<ServiceMailNotification>& outListNotification );
         /** @brief 재원에 맞는 기본 만료 처리를 반환합니다. 계정이 낸 첨부(플레이어 우편)는 반환하고, 그 밖(운영, 보상, 거래 반환)은 버립니다. */
         static ServiceMailExpiryAction getDefaultExpiryAction( const LedgerHolder& fundingHolder );
         /** @brief 우편의 맡김 보유자 `esc/mail/<토큰>` 을 반환합니다. 토큰은 우편 키의 `/` 를 `.` 로 바꾼 값입니다. */

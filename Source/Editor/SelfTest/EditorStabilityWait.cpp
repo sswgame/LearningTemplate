@@ -16,7 +16,7 @@ namespace sw::editor
 {
     EditorStabilityWait::EditorStabilityWait()
         : _waitSerial{ 0 }
-        , _judge{}
+        , _stability{}
         , _waitingFor{}
     {
     }
@@ -27,7 +27,7 @@ namespace sw::editor
         if ( _waitSerial == 0 || _waitSerial > EditorSelfTestInput::getStabilityWaitSerial() )
         {
             _waitSerial = EditorSelfTestInput::beginStabilityWait();
-            _judge      = EditorStabilityState{};
+            _stability  = EditorStabilityState{};
         }
         const EditorDockLayout* pDockLayout   = editor::findSubsystem<EditorDockLayout>();
         const bool              bScreenStable = AutomationEnvironmentSteps::isWindowResizeApplied() && pDockLayout != nullptr && pDockLayout->isApplyPending() == false &&
@@ -40,13 +40,13 @@ namespace sw::editor
                                         bScreenStable ? "settled" : ( "moving: " + EditorSelfTestInput::describeLastLayoutChange() ).c_str(),
                                         bSceneStable ? "settled" : "transitioning", bAssetsStable ? "settled" : "pending", pPendingJob != nullptr ? pPendingJob : "none" );
         _waitingFor = string( waitingForBuilder.view() );
-        return _judge.advance( bScreenStable, bSceneStable && bAssetsStable && pPendingJob == nullptr );
+        return _stability.advance( bScreenStable, bSceneStable && bAssetsStable && pPendingJob == nullptr );
     }
 
     string EditorStabilityWait::describeOscillation() const
     {
         StringBuilder<constant::buffer::kMax256> resultBuilder;
-        resultBuilder.appendFormat( "the editor screen kept moving for %# frame(s) with no pending work (%#) - a layout that never settles", _judge._idleMovingFrames,
+        resultBuilder.appendFormat( "the editor screen kept moving for %# frame(s) with no pending work (%#) - a layout that never settles", _stability._idleMovingFrames,
                                     EditorSelfTestInput::describeLastLayoutChange().c_str() );
         return string( resultBuilder.view() );
     }

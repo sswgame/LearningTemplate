@@ -111,7 +111,7 @@ namespace sw::editor
          * @details 포커스 경로 · 메인 선택과 미리보기 선택의 에셋 · 활성 씬의 소스 경로를 고치고, 구독한 쪽(열린 문서 패널 — 경로를 고치고 깨끗한 참조 문서는 다시 읽는다)에 알린다(감사 P0-4).
          *          예전에는 디스크 파일과 참조 글만 고쳐 열린 문서 · 씬이 옛 id 로 남았다 — 다음 저장이 옛 자리에 파일을 다시 만들고 옮긴 파일은 편집을 받지 못했다.
          */
-        void notifyAssetsMoved( const EditorAssetMoveEvent& notice );
+        void notifyAssetsMoved( const EditorAssetMoveEvent& event );
         /** @brief 에셋 옮김 알림입니다. */
         MulticastDelegate<void( const EditorAssetMoveEvent& )>& onAssetsMoved() { return _assetsMoved; }
 

@@ -119,7 +119,7 @@ namespace sw
         /** @brief 알림 처리기가 걸려 있으면 true 입니다(모듈 언로드 훑기가 비웠으면 false — 새 모듈이 다시 건다). */
         bool hasObjectEditListener() const { return _objectEditListener.isBound(); }
         /** @brief 데이터 명령이 오브젝트에 한 일을 처리기에 알립니다. 처리기가 없으면 아무것도 하지 않습니다. */
-        void notifyObjectEdit( const ObjectEditEvent& notice ) const;
+        void notifyObjectEdit( const ObjectEditEvent& event ) const;
 
         /**
          * @brief 주인이 @p ownerID 인 코드 단계를 가진 명령을 빼고 뺀 수를 반환합니다. 트랜잭션 묶음은 안쪽에 하나라도 있으면 **통째로** 뺀다.

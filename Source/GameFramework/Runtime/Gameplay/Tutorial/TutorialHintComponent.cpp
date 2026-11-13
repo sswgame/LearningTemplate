@@ -45,10 +45,10 @@ namespace sw
             if ( showTutorialsKey.has_value() == false || pSettings->getBoolValue( *showTutorialsKey ) == false )
                 return false;
         }
-        IPlayerNotificationSink* pNotices = _pNotificationSink != nullptr ? _pNotificationSink : game::findSubsystem<IPlayerNotificationSink>();
-        if ( pNotices == nullptr )
+        IPlayerNotificationSink* pNotifications = _pNotificationSink != nullptr ? _pNotificationSink : game::findSubsystem<IPlayerNotificationSink>();
+        if ( pNotifications == nullptr )
             return false; // 서버처럼 알림 화면이 없다
-        pNotices->postNotice( _text, _durationSeconds, PlayerNotificationKind::Hint );
+        pNotifications->postNotification( _text, _durationSeconds, PlayerNotificationKind::Hint );
         return true;
     }
 } // namespace sw

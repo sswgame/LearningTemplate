@@ -58,7 +58,7 @@ namespace
             SW_EXPECT_TRUE( _second.registerJob( definition, ScheduledJobFunction::create<&RunSink::onRun>( &_secondSink ) ) );
         }
 
-        void pump()
+        void poll()
         {
             while ( _store.pollCompletions() > 0 )
             {
@@ -69,7 +69,7 @@ namespace
         {
             _first.update( UnixMilliseconds{ nowMs } );
             _second.update( UnixMilliseconds{ nowMs } );
-            pump();
+            poll();
         }
     };
 
@@ -221,7 +221,7 @@ SW_TEST_CASE( ServiceSchedulerTest, ExactlyOneServerRunsAnOccurrence )
     SW_EXPECT_EQUAL( kDayStart, run._occurrenceMs.count() );
 
     rig._first.completeRun( run, true );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( 0, rig._first.getPendingJobCount() );
 
     const int64 afterLease = kNowMs + ScheduleDef{}._leaseMs + 1;
@@ -242,20 +242,20 @@ SW_TEST_CASE( ServiceSchedulerTest, ExpiredLeaseIsTakenOver )
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
 
     rig._second.update( UnixMilliseconds{ kNowMs + 1000 } ); // 아직 임대 안이다
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._secondSink._listRun.empty() );
 
     const int64 afterLease = kNowMs + ScheduleDef{}._leaseMs;
     rig._second.update( UnixMilliseconds{ afterLease } );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._secondSink._listRun.size() );
     const ScheduledRun taken = rig._secondSink._listRun[0];
     SW_EXPECT_EQUAL( kDayStart, taken._occurrenceMs.count() );
 
     rig._first.completeRun( rig._firstSink._listRun[0], true ); // 옛 서버가 뒤늦게 끝을 적는다
-    rig.pump();
+    rig.poll();
     rig._second.completeRun( taken, true );
-    rig.pump();
+    rig.poll();
 }
 
 /** @brief [ServiceSchedulerTest] 꺼져 있어 지나친 회차는 가장 최근 하나만 돈다 */
@@ -263,11 +263,11 @@ SW_TEST_CASE( ServiceSchedulerTest, MissedOccurrencesRunOnce )
 {
     SchedulerFixture rig;
     rig._first.update( UnixMilliseconds{ kNowMs + 5 * kDayMs } );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
     SW_EXPECT_EQUAL( kDayStart + 5 * kDayMs, rig._firstSink._listRun[0]._occurrenceMs.count() );
     rig._first.update( UnixMilliseconds{ kNowMs + 5 * kDayMs + 1 } );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
 }
 
@@ -277,14 +277,14 @@ SW_TEST_CASE( ServiceSchedulerTest, StoreFailureRetriesLater )
     SchedulerFixture rig;
     rig._database.armFault( ServiceStoreFault::RejectCommit );
     rig._first.update( UnixMilliseconds{ kNowMs } );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._firstSink._listRun.empty() );
 
     rig._first.update( UnixMilliseconds{ kNowMs + 4999 } );
     SW_EXPECT_EQUAL( 0, rig._first.getPendingJobCount() );
 
     rig._first.update( UnixMilliseconds{ kNowMs + 5000 } );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
 }
 
@@ -293,12 +293,12 @@ SW_TEST_CASE( ServiceSchedulerTest, FailedRunIsFinished )
 {
     SchedulerFixture rig;
     rig._first.update( UnixMilliseconds{ kNowMs } );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
     rig._first.completeRun( rig._firstSink._listRun[0], false );
-    rig.pump();
+    rig.poll();
     rig._second.update( UnixMilliseconds{ kNowMs + 1 } );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._secondSink._listRun.empty() );
 }
 
@@ -313,7 +313,7 @@ SW_TEST_CASE( ServiceSchedulerTest, RunRecordsExpireAndLongWindowsAreRefused )
     const ScheduledRun run    = rig._firstSink._listRun.empty() ? rig._secondSink._listRun[0] : rig._firstSink._listRun[0];
     winner.update( UnixMilliseconds{ kNowMs + 10 } );
     winner.completeRun( run, true );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( 1, rig._database.countRecords( ServiceScheduler::getTable() ) );
 
     ServiceTTLRule        rule = ServiceScheduler::makeRunTTLRule( 1000 );

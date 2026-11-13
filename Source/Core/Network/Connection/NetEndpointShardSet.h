@@ -7,7 +7,7 @@
  *          두 샤드의 ID 가 겹치지 않는다. 샤드 하나(클라이언트 · 샤딩하지 않는 서버)면 ID 가 엔드포인트의 것과 같다.
  *
  *          스레드: 샤드 목록은 `initialize` 뒤 바뀌지 않으므로, 보내기 · 묻기는 어느 스레드에서나 부를 수 있다(각 엔드포인트가 잠금으로 지킨다).
- *          `pollInbound` 는 스크래치 버퍼를 다시 쓰므로 한 스레드(라우터를 pump 하는 게임 스레드)만 부른다.
+ *          `pollInbound` 는 스크래치 버퍼를 다시 쓰므로 한 스레드(라우터를 poll 하는 게임 스레드)만 부른다.
  *          언리얼 `UNetDriver` 가 연결 목록 하나를 키트(리플리케이션 그래프)에 주는 자리와 같다.
  */
 #pragma once
@@ -25,7 +25,7 @@ namespace sw
      * @code
      *     vector<NetEndpoint*> listShard = { &first, &second };
      *     if ( shardSet.initialize( listShard, settings._maxConnections ) == false ) return false;
-     *     router.pump( shardSet );                          // 두 샤드의 사건 · 메시지 — 연결 ID 는 접어 넣은 값
+     *     router.poll( shardSet );                          // 두 샤드의 사건 · 메시지 — 연결 ID 는 접어 넣은 값
      *     (void)shardSet.sendMessage( connectionID, ... ); // ID 가 샤드를 고른다
      * @endcode
      */

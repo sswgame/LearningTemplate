@@ -201,7 +201,7 @@ namespace
         }
 
         /** @brief 전투의 상태 바이트를 손으로 씁니다. 차례는 @p order 를 그대로 싣습니다. */
-        static bool readForged( SurvivalHorrorEncounter& inoutEncounter, const hashed_string& monsterID, const SurvivalHorrorInvestigator& investigator, const TurnOrder& order, int32 toughness, SurvivalHorrorEncounterState state )
+        static bool readFixture( SurvivalHorrorEncounter& inoutEncounter, const hashed_string& monsterID, const SurvivalHorrorInvestigator& investigator, const TurnOrder& order, int32 toughness, SurvivalHorrorEncounterState state )
         {
             Archive written;
             StateIO::writeName( written, monsterID );
@@ -975,80 +975,80 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionReadRefusesForgedBytes )
     SW_REQUIRE_TRUE( good.read( _session ) ); // 형식은 맞다
     SW_EXPECT_NEAR( 50.0f, _session.getHealth(), kHorrorTolerance );
 
-    SurvivalFixtureSession forged = good;
-    forged._health                = 101.0f;
-    SW_EXPECT_FALSE( forged.read( _session ) );
-    forged._health = -1.0f;
-    SW_EXPECT_FALSE( forged.read( _session ) );
+    SurvivalFixtureSession fixture = good;
+    fixture._health                = 101.0f;
+    SW_EXPECT_FALSE( fixture.read( _session ) );
+    fixture._health = -1.0f;
+    SW_EXPECT_FALSE( fixture.read( _session ) );
 
-    forged            = good;
-    forged._saveCount = -1;
-    SW_EXPECT_FALSE( forged.read( _session ) );
-    forged             = good;
-    forged._wrongCount = -1;
-    SW_EXPECT_FALSE( forged.read( _session ) );
-    forged             = good;
-    forged._flashlight = 2;
-    SW_EXPECT_FALSE( forged.read( _session ) );
+    fixture            = good;
+    fixture._saveCount = -1;
+    SW_EXPECT_FALSE( fixture.read( _session ) );
+    fixture             = good;
+    fixture._wrongCount = -1;
+    SW_EXPECT_FALSE( fixture.read( _session ) );
+    fixture             = good;
+    fixture._flashlight = 2;
+    SW_EXPECT_FALSE( fixture.read( _session ) );
 
-    forged              = good;
-    forged._listMonster = { "nothing" };
-    SW_EXPECT_FALSE( forged.read( _session ) );
-    forged               = good;
-    forged._listDocument = { "nothing" };
-    SW_EXPECT_FALSE( forged.read( _session ) );
-    forged             = good;
-    forged._listSolved = { "nothing" };
-    SW_EXPECT_FALSE( forged.read( _session ) );
-    forged              = good;
-    forged._listMonster = { "zombie", "zombie" }; // 집합에 겹침이 없다
-    SW_EXPECT_FALSE( forged.read( _session ) );
+    fixture              = good;
+    fixture._listMonster = { "nothing" };
+    SW_EXPECT_FALSE( fixture.read( _session ) );
+    fixture               = good;
+    fixture._listDocument = { "nothing" };
+    SW_EXPECT_FALSE( fixture.read( _session ) );
+    fixture             = good;
+    fixture._listSolved = { "nothing" };
+    SW_EXPECT_FALSE( fixture.read( _session ) );
+    fixture              = good;
+    fixture._listMonster = { "zombie", "zombie" }; // 집합에 겹침이 없다
+    SW_EXPECT_FALSE( fixture.read( _session ) );
 
-    forged           = good;
-    forged._listDial = {
+    fixture           = good;
+    fixture._listDial = {
         { "nothing", 1 }
     };
-    SW_EXPECT_FALSE( forged.read( _session ) );
-    forged._listDial = {
+    SW_EXPECT_FALSE( fixture.read( _session ) );
+    fixture._listDial = {
         { "safe", -1 }
     };
-    SW_EXPECT_FALSE( forged.read( _session ) );
-    forged._listDial = {
+    SW_EXPECT_FALSE( fixture.read( _session ) );
+    fixture._listDial = {
         { "safe", 3 }
     }; // 상한 2 를 넘는다
-    SW_EXPECT_FALSE( forged.read( _session ) );
-    forged._listDial = {
+    SW_EXPECT_FALSE( fixture.read( _session ) );
+    fixture._listDial = {
         { "free", 99 }
     }; // 상한이 없는 자물쇠는 받는다
-    SW_EXPECT_TRUE( forged.read( _session ) );
+    SW_EXPECT_TRUE( fixture.read( _session ) );
 
-    forged               = good;
-    forged._listSequence = {
+    fixture               = good;
+    fixture._listSequence = {
         { "nothing", 1 }
     };
-    SW_EXPECT_FALSE( forged.read( _session ) );
-    forged._listSequence = {
+    SW_EXPECT_FALSE( fixture.read( _session ) );
+    fixture._listSequence = {
         { "bells", 2 }
     }; // 걸음 수를 넘는 index 이다
-    SW_EXPECT_FALSE( forged.read( _session ) );
-    forged._listSequence = {
+    SW_EXPECT_FALSE( fixture.read( _session ) );
+    fixture._listSequence = {
         { "bells", -1 }
     };
-    SW_EXPECT_FALSE( forged.read( _session ) );
+    SW_EXPECT_FALSE( fixture.read( _session ) );
 
-    forged = good;
-    forged._listLink.push_back( SurvivalHorrorClueLink{ "gloves", "knife" } ); // 겹친다
-    SW_EXPECT_FALSE( forged.read( _session ) );
-    forged = good;
-    forged._listLink.push_back( SurvivalHorrorClueLink{ "knife", "knife" } );
-    SW_EXPECT_FALSE( forged.read( _session ) );
-    forged = good;
-    forged._listLink.push_back( SurvivalHorrorClueLink{ "knife", "pantry" } ); // 가지지 않았다
-    SW_EXPECT_FALSE( forged.read( _session ) );
+    fixture = good;
+    fixture._listLink.push_back( SurvivalHorrorClueLink{ "gloves", "knife" } ); // 겹친다
+    SW_EXPECT_FALSE( fixture.read( _session ) );
+    fixture = good;
+    fixture._listLink.push_back( SurvivalHorrorClueLink{ "knife", "knife" } );
+    SW_EXPECT_FALSE( fixture.read( _session ) );
+    fixture = good;
+    fixture._listLink.push_back( SurvivalHorrorClueLink{ "knife", "pantry" } ); // 가지지 않았다
+    SW_EXPECT_FALSE( fixture.read( _session ) );
 
-    forged       = good;
-    forged._area = "nowhere";
-    SW_EXPECT_FALSE( forged.read( _session ) );
+    fixture       = good;
+    fixture._area = "nowhere";
+    SW_EXPECT_FALSE( fixture.read( _session ) );
 
     SW_REQUIRE_TRUE( good.read( _session ) );
     SW_EXPECT_NEAR( 50.0f, _session.getHealth(), kHorrorTolerance );
@@ -1064,11 +1064,11 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionReadRefusesSavesOverLimit )
         rules._saveMode = SurvivalHorrorSaveMode::Limited;
         rules._maxSaves = 2;
     } ) );
-    SurvivalFixtureSession forged;
-    forged._saveCount = 2;
-    SW_EXPECT_TRUE( forged.read( _session ) );
-    forged._saveCount = 3;
-    SW_EXPECT_FALSE( forged.read( _session ) );
+    SurvivalFixtureSession fixture;
+    fixture._saveCount = 2;
+    SW_EXPECT_TRUE( fixture.read( _session ) );
+    fixture._saveCount = 3;
+    SW_EXPECT_FALSE( fixture.read( _session ) );
 }
 
 /**
@@ -1288,55 +1288,55 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterReadRefusesForgedBytes )
     SW_REQUIRE_TRUE( encounter.initialize( _monster, { makeInvestigator( 1 ) }, 7u ) );
     const SurvivalHorrorInvestigator good  = makeInvestigator( 1 );
     const TurnOrder                  order = makeOrder( 1 );
-    SW_REQUIRE_TRUE( readForged( encounter, "ghoul", good, order, 3, SurvivalHorrorEncounterState::Ongoing ) ); // 형식은 맞다
+    SW_REQUIRE_TRUE( readFixture( encounter, "ghoul", good, order, 3, SurvivalHorrorEncounterState::Ongoing ) ); // 형식은 맞다
 
-    SW_EXPECT_FALSE( readForged( encounter, "other", good, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, 4, SurvivalHorrorEncounterState::Ongoing ) );
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, -1, SurvivalHorrorEncounterState::Ongoing ) );
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, 3, SurvivalHorrorEncounterState::Victory ) );
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, 0, SurvivalHorrorEncounterState::Ongoing ) );
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, order, 3, SurvivalHorrorEncounterState::Defeat ) );
-    SW_EXPECT_TRUE( readForged( encounter, "ghoul", good, order, 0, SurvivalHorrorEncounterState::Victory ) );
+    SW_EXPECT_FALSE( readFixture( encounter, "other", good, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", good, order, 4, SurvivalHorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", good, order, -1, SurvivalHorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", good, order, 3, SurvivalHorrorEncounterState::Victory ) );
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", good, order, 0, SurvivalHorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", good, order, 3, SurvivalHorrorEncounterState::Defeat ) );
+    SW_EXPECT_TRUE( readFixture( encounter, "ghoul", good, order, 0, SurvivalHorrorEncounterState::Victory ) );
 
-    SurvivalHorrorInvestigator forged = good;
-    forged._health                    = -1;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
-    forged         = good;
-    forged._sanity = -1;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
-    forged       = good;
-    forged._will = -1;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
-    forged           = good;
-    forged._strength = -1;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
-    forged        = good;
-    forged._speed = 0.0f;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
-    forged            = good;
-    forged._bDefeated = 2;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
-    forged            = good;
-    forged._bDefeated = SW_TRUE; // 체력이 남았는데 빠졌다
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Defeat ) );
-    forged         = good;
-    forged._health = 0; // 체력이 없는데 남았다
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
-    forged          = good;
-    forged._actorID = SurvivalHorrorEncounter::kMonsterActorID;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, makeOrder( forged._actorID ), 3, SurvivalHorrorEncounterState::Ongoing ) );
-    forged          = good;
-    forged._actorID = -1;
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", forged, makeOrder( -1 ), 3, SurvivalHorrorEncounterState::Ongoing ) );
+    SurvivalHorrorInvestigator fixture = good;
+    fixture._health                    = -1;
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", fixture, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
+    fixture         = good;
+    fixture._sanity = -1;
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", fixture, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
+    fixture       = good;
+    fixture._will = -1;
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", fixture, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
+    fixture           = good;
+    fixture._strength = -1;
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", fixture, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
+    fixture        = good;
+    fixture._speed = 0.0f;
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", fixture, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
+    fixture            = good;
+    fixture._bDefeated = 2;
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", fixture, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
+    fixture            = good;
+    fixture._bDefeated = SW_TRUE; // 체력이 남았는데 빠졌다
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", fixture, order, 3, SurvivalHorrorEncounterState::Defeat ) );
+    fixture         = good;
+    fixture._health = 0; // 체력이 없는데 남았다
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", fixture, order, 3, SurvivalHorrorEncounterState::Ongoing ) );
+    fixture          = good;
+    fixture._actorID = SurvivalHorrorEncounter::kMonsterActorID;
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", fixture, makeOrder( fixture._actorID ), 3, SurvivalHorrorEncounterState::Ongoing ) );
+    fixture          = good;
+    fixture._actorID = -1;
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", fixture, makeOrder( -1 ), 3, SurvivalHorrorEncounterState::Ongoing ) );
 
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, makeOrder( 2 ), 3, SurvivalHorrorEncounterState::Ongoing ) ); // 차례의 사람이 다르다
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", good, makeOrder( 2 ), 3, SurvivalHorrorEncounterState::Ongoing ) ); // 차례의 사람이 다르다
     TurnOrder noMonster;
     noMonster.initialize( TurnOrderMode::Rounds, 7u );
     noMonster.addActor( 1, 2.0f );
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, noMonster, 3, SurvivalHorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", good, noMonster, 3, SurvivalHorrorEncounterState::Ongoing ) );
     TurnOrder extra = order;
     extra.addActor( 2, 1.0f );
-    SW_EXPECT_FALSE( readForged( encounter, "ghoul", good, extra, 3, SurvivalHorrorEncounterState::Ongoing ) );
+    SW_EXPECT_FALSE( readFixture( encounter, "ghoul", good, extra, 3, SurvivalHorrorEncounterState::Ongoing ) );
 }
 
 /**
@@ -1380,12 +1380,12 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnOrderReadRefusesForgedBytes )
     SW_EXPECT_FALSE( read( { actor, actor }, {}, 1 ) );
     SW_EXPECT_FALSE( read( { actor }, { 2 }, 1 ) );
     SW_EXPECT_FALSE( read( { actor }, {}, -1 ) );
-    FixtureActor forged = actor;
-    forged._speed       = 0.0f;
-    SW_EXPECT_FALSE( read( { forged }, {}, 1 ) );
-    forged        = actor;
-    forged._gauge = -1.0f;
-    SW_EXPECT_FALSE( read( { forged }, {}, 1 ) );
+    FixtureActor fixture = actor;
+    fixture._speed       = 0.0f;
+    SW_EXPECT_FALSE( read( { fixture }, {}, 1 ) );
+    fixture        = actor;
+    fixture._gauge = -1.0f;
+    SW_EXPECT_FALSE( read( { fixture }, {}, 1 ) );
 
     TurnOrder order;
     order.initialize( TurnOrderMode::Rounds, 7u );

@@ -40,7 +40,7 @@ namespace
         }
 
         /** @brief 망을 한 걸음 돌리고 받은 메시지를 양쪽에 넘깁니다. */
-        void pump()
+        void poll()
         {
             _cluster.step();
             vector<uint8>  buffer;
@@ -61,7 +61,7 @@ namespace
         {
             for ( int32 step = 0; step < 8; ++step )
             {
-                pump();
+                poll();
             }
         }
 

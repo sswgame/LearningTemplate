@@ -68,14 +68,14 @@ namespace
 
         ~LeaderboardFixture()
         {
-            pump();
+            poll();
             _service.shutdown();
             _router.shutdown();
         }
 
-        void pump()
+        void poll()
         {
-            while ( _store.pollCompletions() + _router.pump() > 0 )
+            while ( _store.pollCompletions() + _router.poll() > 0 )
             {
             }
         }
@@ -83,7 +83,7 @@ namespace
         /** @brief 태그 하나의 완료를 꺼냅니다. 없으면 실패이며 빈 완료를 돌려줍니다. */
         LeaderboardCompletion take( uint64 tag )
         {
-            pump();
+            poll();
             vector<LeaderboardCompletion> listCompletion;
             _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
@@ -140,7 +140,7 @@ namespace
         {
             SettlementSink sink;
             _service.settleSeason( boardID, seasonID, UnixMilliseconds{ kSeasonEndMs }, SettlementDelegate::create<&SettlementSink::onDone>( &sink ) );
-            pump();
+            poll();
             return sink;
         }
 
@@ -417,7 +417,7 @@ SW_TEST_CASE( LeaderboardServiceTest, InvalidSubmitsAreRefused )
     SW_EXPECT_EQUAL( commitsBefore, world._database.getCommitCount() );
 
     rig._service.submitScore( "nope", 1, "", 1, NetIdempotencyKey::makeRandom(), UnixMilliseconds{ kNowMs }, 0 );
-    rig.pump();
+    rig.poll();
     vector<LeaderboardCompletion> listCompletion;
     rig._service.takeCompletions( listCompletion );
     SW_EXPECT_TRUE( listCompletion.empty() );
@@ -539,10 +539,10 @@ SW_TEST_CASE( LeaderboardServiceTest, RebuildsRanksAfterCacheLoss )
     restarted.addBoard( "fastest", LeaderboardOrder::Ascending );
     restarted._service.submitScore( "fastest", 3, "late", 20, NetIdempotencyKey::makeRandom(), UnixMilliseconds{ kNowMs }, 0 ); // 완료는 다시 채우는 동안 온다
     restarted._service.readTop( "fastest", 0, 10, UnixMilliseconds{ kNowMs }, 1 );
-    restarted._router.pump();                                                     // 준비 표시가 없어 다시 채우기를 맡긴다
+    restarted._router.poll();                                                     // 준비 표시가 없어 다시 채우기를 맡긴다
     restarted._service.readTop( "fastest", 0, 1, UnixMilliseconds{ kNowMs }, 2 ); // 그동안 온 읽기는 기다린다
     SW_EXPECT_EQUAL( 2, restarted._service.getPendingCount() );                   // 쓰기 하나 + 다시 채우기 하나
-    restarted.pump();
+    restarted.poll();
 
     vector<LeaderboardCompletion> listCompletion;
     restarted._service.takeCompletions( listCompletion );
@@ -659,7 +659,7 @@ SW_TEST_CASE( LeaderboardServiceTest, AccountStatCacheFollowsConnection )
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::NotLoaded );
     rig._service.retainStats( 1 );
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::NotLoaded ); // 완료 전
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::Found );
     SW_EXPECT_EQUAL( int64( 1500 ), value );
     SW_EXPECT_TRUE( rig._service.findStat( 1, "other", value ) == AccountStatLookup::Missing );
@@ -676,10 +676,10 @@ SW_TEST_CASE( LeaderboardServiceTest, AccountStatCacheFollowsConnection )
 
     world._database.armFault( ServiceStoreFault::RejectRead );
     rig._service.retainStats( 1 );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::NotLoaded );
     rig._service.retainStats( 1 ); // 실패한 읽기를 다시 한다
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::Found );
     rig._service.releaseStats( 1 );
     rig._service.releaseStats( 1 );
@@ -889,23 +889,23 @@ SW_TEST_CASE( LeaderboardServiceTest, SchedulerSettlesEndedSeasonOnce )
     (void)rig.submit( "season", 1, 10, kInSeasonMs );
 
     scheduler.update( UnixMilliseconds{ kInSeasonMs } ); // 시즌 안 — 돌지 않는다
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.seasonResult( "season", 1, 1 )._result == LeaderboardResult::NotRanked );
 
     scheduler.update( UnixMilliseconds{ kSeasonEndMs + 1 } );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.seasonResult( "season", 1, 1 )._result == LeaderboardResult::Ok );
     SW_EXPECT_EQUAL( 1, world.countMail() );
 
     const uint64 hashBefore = world._database.computeContentHash();
     scheduler.update( UnixMilliseconds{ kSeasonEndMs + 2 } );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( hashBefore, world._database.computeContentHash() );
 
     ScheduledRun brokenRun;
     brokenRun._jobID = "lb.settle.nope.00000001"; // 없는 보드는 정산하지 않고 회차를 실패로 돌려준다
     rig._service.onScheduledRun( brokenRun );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( 0, rig._service.getPendingCount() );
 
     rig._service.setScheduler( nullptr );

@@ -120,7 +120,7 @@ namespace sw
          *          지급 분개가 보존 정리로 지워졌으면 지급 내용을 모르므로 회수하지 않고 상태만 바꾸며 오류 로그를 남긴다.
          *          받은 계정이 탈퇴로 지워졌으면(`LedgerResult::AccountDeleted` — 잔액은 탈퇴 때 소각됐다) 회수하지 않고 상태만 바꾼다.
          */
-        static EconomyServiceResult revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotification& notice,
+        static EconomyServiceResult revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotification& notification,
                                                   EconomyRefundRecoveryMode recovery, int64 nowMs, vector<EconomyBalanceChange>& outListChange );
         /**
          * @brief 유상 구매를 청약철회합니다. 지급한 계정만, 기한 안에, 아직 쓰지 않은 만큼만 회수하며 빚은 만들지 않습니다. 회수한 양은 `_listWithdrawn` 입니다.

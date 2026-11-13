@@ -185,7 +185,7 @@ namespace sw
         {
             if ( _settings._transportSettings._ioThreadCount == 0 )
                 (void)_pTransport->pollIO( 0 );
-            (void)_pEndpoint->pump( *this );
+            (void)_pEndpoint->poll( *this );
             _pRequestClient->update();
             if ( _state == OnlineClientState::Disconnected && nowMs >= _nextConnectMs )
                 beginConnect();

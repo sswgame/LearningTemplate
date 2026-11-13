@@ -59,7 +59,7 @@ SW_TEST_CASE( AutomationLogPolicyTest, NextStageAndEndedJudgeDropDeclarations )
     SW_EXPECT_TRUE( Util::isDeclared( *pLog, "Test.Second" ) );
 
     {
-        AutomationEvaluator judge{ pLog };
+        AutomationEvaluator evaluator{ pLog };
         SW_EXPECT_TRUE( Util::isDeclared( *pLog, "Test.Second" ) );
     }
     SW_EXPECT_FALSE( Util::isDeclared( *pLog, "Test.Second" ) );

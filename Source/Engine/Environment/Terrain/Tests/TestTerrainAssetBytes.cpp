@@ -37,10 +37,10 @@ SW_TEST_CASE( TerrainAssetBytesTest, HeightfieldRefusesTruncationAndForgedResolu
         SW_EXPECT_TRUE( asset._listHeight.empty() );
     }
 
-    vector<uint8>    forged = bytes;
-    constexpr uint32 kHuge  = 0xFFFFFFFFu;
-    Memory::copy( forged.data() + 8, &kHuge, sizeof( kHuge ) );
-    SW_EXPECT_FALSE( read.loadFromMemory( forged, "forged" ) );
+    vector<uint8>    crafted = bytes;
+    constexpr uint32 kHuge   = 0xFFFFFFFFu;
+    Memory::copy( crafted.data() + 8, &kHuge, sizeof( kHuge ) );
+    SW_EXPECT_FALSE( read.loadFromMemory( crafted, "forged" ) );
 
     vector<uint8> longer = bytes;
     longer.push_back( 0 );
@@ -73,10 +73,10 @@ SW_TEST_CASE( TerrainAssetBytesTest, LayerWeightsRefuseTruncationAndForgedSize )
         SW_EXPECT_TRUE( asset._bytes.empty() );
     }
 
-    vector<uint8>    forged = bytes;
-    constexpr uint32 kHuge  = 0xFFFFFFFFu;
-    Memory::copy( forged.data() + 8, &kHuge, sizeof( kHuge ) );
-    SW_EXPECT_FALSE( read.loadFromMemory( forged, "forged" ) );
+    vector<uint8>    crafted = bytes;
+    constexpr uint32 kHuge   = 0xFFFFFFFFu;
+    Memory::copy( crafted.data() + 8, &kHuge, sizeof( kHuge ) );
+    SW_EXPECT_FALSE( read.loadFromMemory( crafted, "forged" ) );
 }
 
 /**

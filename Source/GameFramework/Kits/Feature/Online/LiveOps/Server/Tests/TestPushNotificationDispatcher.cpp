@@ -37,7 +37,7 @@ namespace
             SW_EXPECT_TRUE( _dispatcher.registerProvider( &_provider ) );
         }
 
-        void pump()
+        void poll()
         {
             for ( int32 round = 0; round < 3; ++round )
             {
@@ -59,7 +59,7 @@ namespace
             registration._locale       = "ko-KR";
             registration._registeredMs = registeredMs;
             _dispatcher.registerDevice( accountID, registration, 0 );
-            pump();
+            poll();
         }
 
         void notify()
@@ -67,7 +67,7 @@ namespace
             PushNotificationMessage message;
             message._titleKey = "title.key";
             SW_EXPECT_TRUE( _dispatcher.notifyAccount( kAccount, message, UnixMilliseconds{ _nowMs } ) );
-            pump();
+            poll();
         }
 
         LiveOpsServiceResult takeCompletion()
@@ -124,16 +124,16 @@ SW_TEST_CASE( PushDispatcherTest, TransientRetriesWithBackoffThenDrops )
     for ( int64 backoffMs : { 1000ll, 2000ll, 4000ll, 8000ll } )
     {
         rig._nowMs += backoffMs - 1;
-        rig.pump();
+        rig.poll();
         SW_EXPECT_EQUAL( expectedSent, rig._provider.getSent().size() ); // 백오프 전이다
         rig._nowMs += 1;
-        rig.pump();
+        rig.poll();
         ++expectedSent;
         SW_EXPECT_EQUAL( expectedSent, rig._provider.getSent().size() );
         timeSinceLastMs += backoffMs;
     }
     SW_EXPECT_EQUAL( int64( 15000 ), timeSinceLastMs );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( uint64( 1 ), rig._dispatcher.getStats()._droppedCount );
     SW_EXPECT_EQUAL( 0, rig._dispatcher.getInFlightCount() );
 
@@ -150,10 +150,10 @@ SW_TEST_CASE( PushDispatcherTest, RateLimitedHonorsTheProviderDelay )
     rig._provider.scriptResult( "a", PushDeliveryStatus::RateLimited, 1, 60000 );
     rig.notify();
     rig._nowMs += 59999;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._provider.getSent().size() );
     rig._nowMs += 1;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 2 ), rig._provider.getSent().size() );
     SW_EXPECT_EQUAL( uint64( 1 ), rig._dispatcher.getStats()._deliveredCount );
     SW_EXPECT_EQUAL( 0, rig._dispatcher.getInFlightCount() );
@@ -168,7 +168,7 @@ SW_TEST_CASE( PushDispatcherTest, RejectedIsDroppedOnce )
     rig._provider.scriptResult( "a", PushDeliveryStatus::Rejected );
     rig.notify();
     rig._nowMs += 100000;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._provider.getSent().size() );
     SW_EXPECT_EQUAL( uint64( 1 ), rig._dispatcher.getStats()._droppedCount );
     rig.notify();
@@ -187,7 +187,7 @@ SW_TEST_CASE( PushDispatcherTest, AccountBurstIsLimited )
     SW_EXPECT_TRUE( rig._dispatcher.notifyAccount( kAccount, message, UnixMilliseconds{ rig._nowMs } ) );
     SW_EXPECT_FALSE( rig._dispatcher.notifyAccount( kAccount, message, UnixMilliseconds{ rig._nowMs } ) );
     SW_EXPECT_TRUE( rig._dispatcher.notifyAccount( kAccount + 1, message, UnixMilliseconds{ rig._nowMs } ) ); // 다른 계정은 따로 센다
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( uint64( 1 ), rig._dispatcher.getStats()._rateLimitedCount );
     SW_EXPECT_EQUAL( size_t( 2 ), rig._provider.getSent().size() );
 }
@@ -219,7 +219,7 @@ SW_TEST_CASE( PushDispatcherTest, RegistrationCompletions )
     registration._providerID = "fake";
     registration._token      = "a";
     rig._dispatcher.registerDevice( kAccount, registration, 1 );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.takeCompletion() == LiveOpsResult::Ok );
 
     PushDeviceRegistration noToken = registration;
@@ -234,10 +234,10 @@ SW_TEST_CASE( PushDispatcherTest, RegistrationCompletions )
     SW_EXPECT_TRUE( rig.takeCompletion().hasError( OnlineError::kInvalidRequest ) );
 
     rig._dispatcher.unregisterDevice( kAccount, "fake", "none", 5 );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.takeCompletion() == LiveOpsResult::NotFound );
     rig._dispatcher.unregisterDevice( kAccount, "fake", "a", 6 );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.takeCompletion() == LiveOpsResult::Ok );
 
     rig.notify();
@@ -265,7 +265,7 @@ SW_TEST_CASE( PushDispatcherTest, TopicClaimSendsOnce )
     rig._dispatcher.notifyTopicOnce( "event.1", "news", message, UnixMilliseconds{ rig._nowMs } );
     rig._dispatcher.notifyTopicOnce( "event.1", "news", message, UnixMilliseconds{ rig._nowMs } );
     rig._dispatcher.notifyTopicOnce( "BAD KEY", "news", message, UnixMilliseconds{ rig._nowMs } );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._provider.getSent().size() );
     SW_EXPECT_EQUAL( string( "news" ), rig._provider.getSent()[0]._topic );
     SW_EXPECT_EQUAL( uint64( 1 ), rig._dispatcher.getStats()._topicClaimedCount );
@@ -273,9 +273,9 @@ SW_TEST_CASE( PushDispatcherTest, TopicClaimSendsOnce )
 
     rig._provider.scriptResult( "again", PushDeliveryStatus::Transient );
     SW_EXPECT_EQUAL( 1, rig._dispatcher.notifyTopic( "again", message, UnixMilliseconds{ rig._nowMs } ) );
-    rig.pump();
+    rig.poll();
     rig._nowMs += 1000;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 3 ), rig._provider.getSent().size() );
     SW_EXPECT_EQUAL( 0, rig._dispatcher.getInFlightCount() );
 }
@@ -288,7 +288,7 @@ SW_TEST_CASE( PushDispatcherTest, TopicClaimsExpireAfterWindow )
     const string                  claimKey = "event.1/" + ServiceKeyUtil::makeHex64( static_cast<uint64>( kNowMs ) ) + "/" + ServiceKeyUtil::makeHex64( 7 );
     rig._dispatcher.notifyTopicOnce( claimKey, "news", message, UnixMilliseconds{ rig._nowMs } );
     rig._dispatcher.notifyTopicOnce( "event.2", "news", message, UnixMilliseconds{ rig._nowMs } );
-    rig.pump();
+    rig.poll();
     const hashed_string claimTable{ "liveops_push" };
     SW_REQUIRE_EQUAL( 2, rig._database.countRecords( claimTable ) );
 

@@ -84,13 +84,13 @@ namespace
 
         ~LoginFixture()
         {
-            pump();
+            poll();
             _store.shutdown();
             (void)_store.pollCompletions();
             _service.shutdown();
         }
 
-        void pump()
+        void poll()
         {
             for ( int32 round = 0; round < 4; ++round )
             {
@@ -103,7 +103,7 @@ namespace
 
         LoginCompletion take( uint64 tag )
         {
-            pump();
+            poll();
             vector<LoginCompletion> listCompletion;
             _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
@@ -136,7 +136,7 @@ namespace
 
         vector<LoginEvent> takeEvents()
         {
-            pump();
+            poll();
             vector<LoginEvent> listEvent;
             _service.pollEvents( listEvent );
             return listEvent;
@@ -211,7 +211,7 @@ SW_TEST_CASE( LoginServiceTest, ClientBuildIsChecked )
         audit._subject = "config";
         audit._timeMs  = version;
         config.submitSet( rig._store, key, value, audit );
-        rig.pump();
+        rig.poll();
     };
     setText( "account.minimum_build.windows", "1.2.0", 1 );
     setText( "account.recommended_build.windows", "1.4.0", 2 );
@@ -362,7 +362,7 @@ SW_TEST_CASE( LoginServiceTest, RefreshFindsMissedRevocation )
     SW_EXPECT_TRUE( rigA._service.isAccountOnline( accountID ) );
 
     rigA._service.refreshOnlineSessions( UnixMilliseconds{ kNowMs }, 10 );
-    rigA.pump();
+    rigA.poll();
     SW_EXPECT_FALSE( rigA._service.isAccountOnline( accountID ) );
     SW_EXPECT_TRUE( rigB._service.isAccountOnline( accountID ) );
 }

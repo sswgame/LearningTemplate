@@ -170,17 +170,17 @@ namespace
                 _account.setToken( *pToken );
                 _service._bHold = SW_TRUE;
             }
-            pump();
+            poll();
             SW_EXPECT_TRUE( getClient().isReady() );
         }
 
         OnlineServiceClient& getClient() { return _rig._clients.getClient( _clientIndex ); }
 
-        void pump() { test::updateAll( { &_rig._server }, _rig._clients, kNowMs ); }
+        void poll() { test::updateAll( { &_rig._server }, _rig._clients, kNowMs ); }
 
         vector<AccountClientReply> takeAll()
         {
-            pump();
+            poll();
             vector<AccountClientReply> listReply;
             (void)_account.pollReplies( listReply );
             return listReply;
@@ -412,7 +412,7 @@ SW_TEST_CASE( AccountClientTest, AutoResumeHoldsSessionRequestsUntilItSucceeds )
 
     const uint64 listRequestID = rig._account.listLinks();
     rig._rig._clients.login( rig._clientIndex, kAccountID ); // 다른 영역(테스트 로그인) — 문 앞에서 기다린다
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._service._listMethod.size() );
 
     rig._service.setBody( AccountMethod::Resume::kID, AccountClientTestUtil::makeGrantBody( LoginResult::Ok, 9 ) );
@@ -536,7 +536,7 @@ SW_TEST_CASE( AccountClientTest, RevokedPush )
     AccountClientFixture rig;
     rig.logIn();
     rig._rig._clients.login( rig._clientIndex, kAccountID );
-    rig.pump();
+    rig.poll();
     OnlineServiceHost& host = rig._rig._server._host;
 
     const BitWriter junk = AccountClientTestUtil::toWriter( vector<uint8>( 8, uint8( 0xFF ) ) );
@@ -548,14 +548,14 @@ SW_TEST_CASE( AccountClientTest, RevokedPush )
     BitWriter body;
     SW_REQUIRE_TRUE( AccountProtocol::MessageTypes::write( body, push ) );
     SW_EXPECT_TRUE( host.sendPush( kAccountID, static_cast<uint16>( AccountMethod::Revoked::kKind + 1 ), body ) );
-    rig.pump();
+    rig.poll();
     vector<AccountClientEvent> listEvent;
     SW_EXPECT_EQUAL( 0, rig._account.pollEvents( listEvent ) );
     SW_EXPECT_TRUE( rig._account.isLoggedIn() );
     SW_EXPECT_FALSE( rig._account.getToken().isEmpty() );
 
     SW_EXPECT_TRUE( host.sendPush( kAccountID, AccountMethod::Revoked::kKind, body ) );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( 1, rig._account.pollEvents( listEvent ) );
     SW_EXPECT_EQUAL( string( "ban.spam" ), listEvent[0]._reasonCode );
     SW_EXPECT_TRUE( listEvent[0]._reason == LoginRevokeReason::Sanctioned );

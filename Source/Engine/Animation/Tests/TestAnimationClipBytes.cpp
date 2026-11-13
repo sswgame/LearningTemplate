@@ -134,15 +134,15 @@ SW_TEST_CASE( AnimationClipBytesTest, ForgedCountsAndNonFiniteValuesAreRefused )
 
     for ( const size_t offset : { offsets._trackCount, offsets._firstTrackNameLength, offsets._codecByteSize, offsets._notifyCount, offsets._curveCount, offsets._keyCount } )
     {
-        vector<uint8> forged = bytes;
-        XTestUtil::patch( forged, offset, 0xFFFFFFFFu );
-        XTestUtil::expectClipRefused( forged );
+        vector<uint8> crafted = bytes;
+        XTestUtil::patch( crafted, offset, 0xFFFFFFFFu );
+        XTestUtil::expectClipRefused( crafted );
     }
     for ( const size_t offset : { offsets._duration, offsets._keyValue } )
     {
-        vector<uint8> forged = bytes;
-        XTestUtil::patch( forged, offset, 0x7FC00000u );
-        XTestUtil::expectClipRefused( forged );
+        vector<uint8> crafted = bytes;
+        XTestUtil::patch( crafted, offset, 0x7FC00000u );
+        XTestUtil::expectClipRefused( crafted );
     }
     vector<uint8> longer = bytes;
     longer.push_back( 0 );

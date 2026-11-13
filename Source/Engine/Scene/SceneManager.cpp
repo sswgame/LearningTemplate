@@ -614,13 +614,13 @@ namespace sw
             _pRenderBinding->flushRenderThread();
 
         // 활성 교체 · 이전 씬 언로드 · 에셋 정리는 `applyScene` 이 한다. 약속은 교체가 끝난 뒤에 채운다.
-        Scene* const pAdopted = applyScene( std::move( pendingScene ), SceneRole::Active );
-        SW_LOG_INFO_ID( "SceneManager.ActiveSceneSwapped", "Active scene swapped to '%#'", pAdopted->getName() );
+        Scene* const pActivated = applyScene( std::move( pendingScene ), SceneRole::Active );
+        SW_LOG_INFO_ID( "SceneManager.ActiveSceneSwapped", "Active scene swapped to '%#'", pActivated->getName() );
         if ( _asyncLoad != nullptr )
-            _asyncLoad->_promise.setValue( pAdopted );
+            _asyncLoad->_promise.setValue( pActivated );
         // 대기열이 같은 경로를 가리키고 있었으면 그 요청자도 이 씬이 답이다.
         if ( bQueuedSatisfiedByThisLoad )
-            _queuedPromise.setValue( pAdopted );
+            _queuedPromise.setValue( pActivated );
     }
 
     bool SceneManager::processPendingSceneRegistration()

@@ -477,7 +477,7 @@ namespace sw
         { return AutomationImage::compare( reduced, goldenImage, policy._measure ); } );
         const bool                      bCompared  = compared.has_value();
         const AutomationImageDifference difference = bCompared ? *compared : AutomationImageDifference{};
-        const GoldenResult              evaluation = bCompared ? AutomationGoldenUtil::judge( difference, limits, policy._nearLimitRatio ) : GoldenResult::Fail;
+        const GoldenResult              evaluation = bCompared ? AutomationGoldenUtil::evaluate( difference, limits, policy._nearLimitRatio ) : GoldenResult::Fail;
         string                          line;
         if ( bCompared )
         {

@@ -429,11 +429,11 @@ SW_TEST_CASE( GuildServiceTest, NoticeIsValidatedAndShared )
 {
     GuildFixture rig;
     (void)rig.makeGuild();
-    SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kMember, kInvalidAccountID, "hi" )._result == SocialResult::NotAllowed );
-    SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kOfficer, kInvalidAccountID, "hello\nworld" )._result == SocialResult::Ok );
-    SW_EXPECT_EQUAL( string( "hello\nworld" ), rig.run( GuildOperation::Get, kMember )._info._notice );
-    SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kOfficer, kInvalidAccountID, string( static_cast<size_t>( GuildLimit::kMaxAnnouncementSize ) + 1, 'x' ) )._result.hasError( OnlineError::kInvalidRequest ) );
-    SW_EXPECT_EQUAL( string( "hello\nworld" ), rig.run( GuildOperation::Get, kMember )._info._notice );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::SetAnnouncement, kMember, kInvalidAccountID, "hi" )._result == SocialResult::NotAllowed );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::SetAnnouncement, kOfficer, kInvalidAccountID, "hello\nworld" )._result == SocialResult::Ok );
+    SW_EXPECT_EQUAL( string( "hello\nworld" ), rig.run( GuildOperation::Get, kMember )._info._announcement );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::SetAnnouncement, kOfficer, kInvalidAccountID, string( static_cast<size_t>( GuildLimit::kMaxAnnouncementSize ) + 1, 'x' ) )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_EQUAL( string( "hello\nworld" ), rig.run( GuildOperation::Get, kMember )._info._announcement );
 }
 
 /** @brief [GuildServiceTest] 창고: 맡기기는 누구나, 꺼내기는 임원 이상. 잔액이 모자라면 InsufficientFunds, 분개 키가 없으면 Invalid, 같은 키로 다시 와도 한 번만 움직인다 */

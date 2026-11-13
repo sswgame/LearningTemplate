@@ -68,15 +68,15 @@ SW_TEST_CASE( EditorAutosaveSessionTest, DeadSessionIsAdoptedAndRemovedWithAdopt
     SW_REQUIRE_TRUE( deadSession.open( root, listRecoveredFolder ) );
     const sw::string deadCopy = Internal::writeCopy( root, deadSession );
 
-    const Session adopter{ Internal::kOtherEditorPID, 4 };
-    SW_REQUIRE_TRUE( adopter.open( root, listRecoveredFolder ) );
+    const Session recoveringSession{ Internal::kOtherEditorPID, 4 };
+    SW_REQUIRE_TRUE( recoveringSession.open( root, listRecoveredFolder ) );
     SW_REQUIRE_TRUE( listRecoveredFolder.size() == 1 );
     SW_EXPECT_TRUE( sw::FileUtil::isSameDiskPath( listRecoveredFolder[0], deadSession.makeFolder( root ) ) );
     Session owner{};
     SW_REQUIRE_TRUE( Session::readLock( listRecoveredFolder[0], owner ) );
-    SW_EXPECT_TRUE( owner._processID == adopter._processID && owner._startTicks == adopter._startTicks );
+    SW_EXPECT_TRUE( owner._processID == recoveringSession._processID && owner._startTicks == recoveringSession._startTicks );
     SW_EXPECT_TRUE( sw::FileUtil::exists( deadCopy ) ); // 넘겨받기는 사본을 지우지 않는다 — 복구 후보다
 
-    Session::removeOwned( root, adopter._processID );
+    Session::removeOwned( root, recoveringSession._processID );
     SW_EXPECT_FALSE( sw::FileUtil::exists( deadCopy ) );
 }

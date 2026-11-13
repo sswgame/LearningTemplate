@@ -864,19 +864,19 @@ namespace sw
 
     void JoltPhysicsScene::destroyJoints( span<const PhysicsBodyHandle> listBody )
     {
-        vector<PhysicsJointHandle> listDoomed;
+        vector<PhysicsJointHandle> listPendingDestroy;
         _joints.forEachHandle( [&]( SlotHandle slot, const JointRecord& joint )
         {
             for ( const PhysicsBodyHandle& body : listBody )
             {
                 if ( joint._bodyA == body || joint._bodyB == body )
                 {
-                    listDoomed.push_back( PhysicsJointHandle::fromSlot( slot ) );
+                    listPendingDestroy.push_back( PhysicsJointHandle::fromSlot( slot ) );
                     return;
                 }
             }
         } );
-        for ( const PhysicsJointHandle& joint : listDoomed )
+        for ( const PhysicsJointHandle& joint : listPendingDestroy )
         {
             destroyJoint( joint );
         }

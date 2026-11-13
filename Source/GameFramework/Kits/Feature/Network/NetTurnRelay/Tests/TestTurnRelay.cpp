@@ -87,7 +87,7 @@ namespace
         }
 
         /** @brief 쌓인 메시지를 오갈 것이 없을 때까지 나릅니다. */
-        void pump()
+        void poll()
         {
             bool bMoved = true;
             while ( bMoved )
@@ -118,7 +118,7 @@ namespace
         {
             addClient()._relay.join( roomID );
             addClient()._relay.join( roomID );
-            pump();
+            poll();
         }
 
         [[nodiscard]] TurnRelayClient& relay( int32 index ) { return _listClient[static_cast<size_t>( index )]->_relay; }
@@ -142,7 +142,7 @@ namespace
         {
             _server.onConnectionClosed( index, NetDisconnectReason::Remote );
             relay( index ).join( 7 );
-            pump();
+            poll();
         }
 
         static vector<uint8> makeAction( uint8 value ) { return vector<uint8>{ value }; }
@@ -169,14 +169,14 @@ namespace
 SW_TEST_CASE_F( TurnRelayTest, RoomStartsWhenFull )
 {
     addClient()._relay.join( 7 );
-    pump();
+    poll();
     SW_EXPECT_EQUAL( relay( 0 ).getSeat(), 0 );
     SW_EXPECT_FALSE( relay( 0 ).isStarted() );
     SW_REQUIRE_NOT_NULL( _server.findRoom( 7 ) );
     SW_EXPECT_TRUE( _server.findRoom( 7 )->_bStarted == SW_FALSE );
 
     addClient()._relay.join( 7 );
-    pump();
+    poll();
     SW_EXPECT_EQUAL( relay( 1 ).getSeat(), 1 );
     SW_EXPECT_TRUE( relay( 0 ).isStarted() );
     SW_EXPECT_TRUE( relay( 1 ).isStarted() );
@@ -199,7 +199,7 @@ SW_TEST_CASE_F( TurnRelayTest, SeatChoiceAndFullRoom )
     addClient()._relay.join( 7, 1 );
     addClient()._relay.join( 7, 1 );
     addClient()._relay.join( 7 );
-    pump();
+    poll();
     SW_EXPECT_EQUAL( relay( 0 ).getSeat(), 1 );
     SW_EXPECT_EQUAL( relay( 1 ).getSeat(), 0 );
     SW_EXPECT_EQUAL( relay( 2 ).getSeat(), -1 );
@@ -215,13 +215,13 @@ SW_TEST_CASE_F( TurnRelayTest, ConnectionHoldsOneSeat )
     startRoom();
     const uint32 token = relay( 0 ).getToken();
     relay( 0 ).join( 7 );
-    pump();
+    poll();
     SW_EXPECT_EQUAL( relay( 0 ).getSeat(), 0 );
     SW_EXPECT_EQUAL( relay( 0 ).getToken(), token );
 
     (void)pollAll( relay( 0 ) );
     relay( 0 ).join( 99 );
-    pump();
+    poll();
     const vector<TurnRelayEvent> listEvent = pollAll( relay( 0 ) );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._reason == TurnRejectReason::AlreadySeated );
@@ -248,7 +248,7 @@ SW_TEST_CASE_F( TurnRelayTest, ActionsReachEveryoneInOrder )
     (void)pollAll( relay( 1 ) );
 
     const int32 rejected = relay( 1 ).submitAction( makeAction( 9 ) );
-    pump();
+    poll();
     vector<TurnRelayEvent> listEvent = pollAll( relay( 1 ) );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._kind == TurnRelayEvent::Kind::ActionRejected );
@@ -256,9 +256,9 @@ SW_TEST_CASE_F( TurnRelayTest, ActionsReachEveryoneInOrder )
     SW_EXPECT_EQUAL( listEvent[0]._index, rejected );
 
     (void)relay( 0 ).submitAction( makeAction( 1 ) );
-    pump();
+    poll();
     (void)relay( 1 ).submitAction( makeAction( 2 ) );
-    pump();
+    poll();
 
     for ( const int32 index : { 0, 1 } )
     {
@@ -276,17 +276,17 @@ SW_TEST_CASE_F( TurnRelayTest, ActionsReachEveryoneInOrder )
 SW_TEST_CASE_F( TurnRelayTest, ActionsBeforeStartOrOutsideAreRejected )
 {
     addClient()._relay.join( 7 );
-    pump();
+    poll();
     (void)pollAll( relay( 0 ) );
     (void)relay( 0 ).submitAction( makeAction( 1 ) );
-    pump();
+    poll();
     vector<TurnRelayEvent> listEvent = pollAll( relay( 0 ) );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._reason == TurnRejectReason::NotStarted );
 
     Client& stranger = addClient();
     (void)stranger._relay.submitAction( makeAction( 1 ) ); // 방 0 은 없다
-    pump();
+    poll();
     listEvent = pollAll( stranger._relay );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._reason == TurnRejectReason::UnknownRoom );
@@ -304,13 +304,13 @@ SW_TEST_CASE( TurnRelayPolicyTest, PolicyDecidesAndCanChangeDirection )
     (void)TurnRelayTest::pollAll( rig.relay( 0 ) );
 
     (void)rig.relay( 0 ).submitAction( TurnRelayTest::makeAction( 3 ) );
-    rig.pump();
+    rig.poll();
     const vector<TurnRelayEvent> listEvent = TurnRelayTest::pollAll( rig.relay( 0 ) );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._reason == TurnRejectReason::InvalidAction );
 
     (void)rig.relay( 0 ).submitAction( TurnRelayTest::makeAction( 4 ) );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( rig._server.findRoom( 7 )->_direction, -1 );
     SW_EXPECT_EQUAL( rig._server.findRoom( 7 )->_currentSeat, 0 );
 }
@@ -336,7 +336,7 @@ SW_TEST_CASE_F( TurnRelayTest, ReturningSeatReceivesMissedActions )
 {
     startRoom();
     (void)relay( 0 ).submitAction( makeAction( 1 ) );
-    pump();
+    poll();
     _server.onConnectionClosed( 1, NetDisconnectReason::Remote );
     (void)drainServer();
 
@@ -344,7 +344,7 @@ SW_TEST_CASE_F( TurnRelayTest, ReturningSeatReceivesMissedActions )
     SW_EXPECT_TRUE( _server.findRoom( 7 )->_listSeat[1]._bTaken == SW_TRUE );
 
     relay( 1 ).join( 7 );
-    pump();
+    poll();
     SW_EXPECT_EQUAL( relay( 1 ).getSeat(), 1 );
     SW_EXPECT_EQUAL( relay( 1 ).getActions().size(), size_t{ 1 } );
     const vector<TurnRelayEvent> listServerEvent = drainServer();
@@ -353,7 +353,7 @@ SW_TEST_CASE_F( TurnRelayTest, ReturningSeatReceivesMissedActions )
 
     // 차례가 넘어가 다음 행동을 낸다 - 돌아온 클라이언트가 이어 받는다.
     (void)relay( 1 ).submitAction( makeAction( 2 ) );
-    pump();
+    poll();
     SW_EXPECT_EQUAL( relay( 0 ).getActions().size(), size_t{ 2 } );
     SW_EXPECT_EQUAL( relay( 1 ).getActions().size(), size_t{ 2 } );
 }
@@ -365,7 +365,7 @@ SW_TEST_CASE_F( TurnRelayTest, SeatsCannotBeStolen )
     _server.onConnectionClosed( 1, NetDisconnectReason::Remote );
     Client& newcomer = addClient();
     newcomer._relay.join( 7, 1 );
-    pump();
+    poll();
     SW_EXPECT_EQUAL( newcomer._relay.getSeat(), -1 );
     vector<TurnRelayEvent> listEvent = pollAll( newcomer._relay );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
@@ -374,7 +374,7 @@ SW_TEST_CASE_F( TurnRelayTest, SeatsCannotBeStolen )
     // 서버가 아직 끊김을 모르는 동안 같은 토큰으로 돌아오면 SeatInUse 다. 기록의 토큰을 다른 연결이 내는 모양으로 흉내 낸다.
     Client& thief = addClient();
     thief._relay.join( 7 ); // 받는 쪽이 방 7 의 메시지를 보도록 - 이 입장은 RoomFull 로 끝난다
-    pump();
+    poll();
     (void)pollAll( thief._relay );
     BitWriter writer;
     writer.writeBits( NetTurnRelayMessage::kJoin, 8 );
@@ -383,7 +383,7 @@ SW_TEST_CASE_F( TurnRelayTest, SeatsCannotBeStolen )
     writer.writeUint32( relay( 0 ).getToken() );
     writer.writeVarUint( 0 );
     SW_EXPECT_TRUE( _server.handleMessage( 3, writer.getBytes().data(), writer.getByteCount(), NetChannelType::ReliableOrdered ) == NetHandleResult::Handled );
-    pump();
+    poll();
     listEvent = pollAll( thief._relay );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._reason == TurnRejectReason::SeatInUse );
@@ -396,15 +396,15 @@ SW_TEST_CASE_F( TurnRelayTest, FullWindowResumesInUpdate )
     startRoom();
     _serverPeers._bWindowFull = SW_TRUE;
     (void)relay( 0 ).submitAction( makeAction( 1 ) );
-    pump();
+    poll();
     (void)relay( 1 ).submitAction( makeAction( 2 ) );
-    pump();
+    poll();
     SW_EXPECT_TRUE( relay( 0 ).getActions().empty() );
     SW_EXPECT_EQUAL( _server.findRoom( 7 )->_listAction.size(), size_t{ 2 } );
 
     _serverPeers._bWindowFull = SW_FALSE;
     _server.update();
-    pump();
+    poll();
     SW_EXPECT_EQUAL( relay( 0 ).getActions().size(), size_t{ 2 } );
     SW_EXPECT_EQUAL( relay( 1 ).getActions().size(), size_t{ 2 } );
     SW_EXPECT_EQUAL( relay( 1 ).getActions()[1]._buffer[0], static_cast<uint8>( 2 ) );
@@ -417,7 +417,7 @@ SW_TEST_CASE_F( TurnRelayTest, ActionsWaitBehindQueuedNotices )
     addClient()._relay.join( 7 );
     _serverPeers._bWindowFull = SW_TRUE; // 시작 알림이 줄에 쌓인다
     {
-        pump();
+        poll();
     }
     SW_REQUIRE_TRUE( _serverPeers._listSent.empty() );
     SW_REQUIRE_NOT_NULL( _server.findRoom( 7 ) );
@@ -455,7 +455,7 @@ SW_TEST_CASE_F( TurnRelayTest, ConnectionThatNeverDrainsIsDropped )
     {
         relay( 0 ).join( 99 ); // 거절 알림이 쌓인다
     }
-    pump();
+    poll();
     SW_REQUIRE_EQUAL( _serverPeers._listDisconnected.size(), size_t{ 1 } );
     SW_EXPECT_EQUAL( _serverPeers._listDisconnected[0], 0 );
 
@@ -496,7 +496,7 @@ SW_TEST_CASE( TurnRelayPolicyTest, RoomAndHistoryLimitsRefuseMore )
     rig.addClient()._relay.join( 1 );
     rig.addClient()._relay.join( 2 );
     rig.addClient()._relay.join( 3 );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._server.findRoom( 3 ) == nullptr );
     const vector<TurnRelayEvent> listDenied = TurnRelayTest::pollAll( rig.relay( 2 ) );
     SW_REQUIRE_EQUAL( listDenied.size(), size_t{ 1 } );
@@ -507,7 +507,7 @@ SW_TEST_CASE( TurnRelayPolicyTest, RoomAndHistoryLimitsRefuseMore )
     {
         (void)rig.relay( 0 ).submitAction( TurnRelayTest::makeAction( value ) );
     }
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( rig._server.findRoom( 1 )->_listAction.size(), size_t{ 2 } );
     vector<TurnRelayEvent> listEvent    = TurnRelayTest::pollAll( rig.relay( 0 ) );
     bool                   bHistoryFull = false;

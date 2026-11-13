@@ -24,14 +24,14 @@ namespace sw
         return ServiceRecordUtil::readDurable( key, bytes, kServerDirectoryRecordVersion, outWindow );
     }
 
-    bool ServerDirectoryProtocol::encodeAnnouncement( const ServiceAnnouncement& notice, vector<uint8>& outBytes )
+    bool ServerDirectoryProtocol::encodeAnnouncement( const ServiceAnnouncement& announcement, vector<uint8>& outBytes )
     {
-        return ServiceRecordUtil::encode( kServerDirectoryRecordVersion, notice, outBytes );
+        return ServiceRecordUtil::encode( kServerDirectoryRecordVersion, announcement, outBytes );
     }
 
-    bool ServerDirectoryProtocol::decodeAnnouncement( const string_view key, const vector<uint8>& bytes, ServiceAnnouncement& outNotice )
+    bool ServerDirectoryProtocol::decodeAnnouncement( const string_view key, const vector<uint8>& bytes, ServiceAnnouncement& outAnnouncement )
     {
-        return ServiceRecordUtil::readDurable( key, bytes, kServerDirectoryRecordVersion, outNotice );
+        return ServiceRecordUtil::readDurable( key, bytes, kServerDirectoryRecordVersion, outAnnouncement );
     }
 } // namespace sw
 
