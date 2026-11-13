@@ -8,7 +8,7 @@
 <Scenario name="game.empty.savetravel" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
 	<Wait frames="2"/>
-	<Remember watch="Scene.ObjectCount" as="savedCount"/>
+	<Store watch="Scene.ObjectCount" as="savedCount"/>
 	<DevCommand line="game.save savetravel/a"/>
 	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
 
@@ -21,7 +21,7 @@
 	<WaitUntil watch="Save.Blocked" equals="0" timeoutWallSeconds="30"/>
 
 	<!-- 교체에서 진 복원: 일부만 선 씬을 쓰지 않는다(막기) → 씬을 다시 열면 풀린다 -->
-	<Remember watch="Save.Written" as="writtenBeforeBroken"/>
+	<Store watch="Save.Written" as="writtenBeforeBroken"/>
 	<Variable name="gv_saveRestoreBreakReplace" value="true"/>
 	<DevCommand line="game.load savetravel/a"/>
 	<!-- 막힘은 깨진 씬을 다시 열 때까지만이라 그 창 안에 저장을 넣는 단계는 다시 열기 속도와 경쟁한다(Release vk · gl 에서 졌다) — 막힘이 걸린 것은 이 대기가, 막힌 저장 거절은 captureSnapshot 의 한 갈래가 본다. -->

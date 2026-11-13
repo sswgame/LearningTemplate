@@ -47,7 +47,7 @@
 	<Expect watch="Editor.NetSimObjectX" target="0" key="Avatar1" atMost="7"/>
 	<Expect watch="Editor.NetSimObjectX" target="0" key="Avatar2" near="-1" tolerance="0.01"/>
 	<Expect watch="Editor.NetSimObjectZ" target="0" key="Avatar1" near="0" tolerance="0.01"/>
-	<Remember watch="Editor.NetSimObjectX" target="0" key="Avatar1" as="avatar1X"/>
+	<Store watch="Editor.NetSimObjectX" target="0" key="Avatar1" as="avatar1X"/>
 	<Expect watch="Editor.NetSimObjectX" target="1" key="Avatar1" sameAs="avatar1X"/>
 	<Expect watch="Editor.NetSimObjectX" target="2" key="Avatar1" sameAs="avatar1X"/>
 	<Expect watch="Editor.NetSimObjectX" target="1" key="Avatar2" near="-1" tolerance="0.01"/>
@@ -63,7 +63,7 @@
 	<WaitUntil watch="Editor.NetSimObjectZ" target="0" key="Avatar2" atLeast="1" timeoutFrames="60"/>
 	<Expect watch="Editor.NetSimObjectZ" target="0" key="Avatar1" near="0" tolerance="0.01"/>
 	<Expect watch="Editor.NetSimObjectX" target="0" key="Avatar1" sameAs="avatar1X"/>
-	<Remember watch="Editor.NetSimObjectZ" target="0" key="Avatar2" as="avatar2Z"/>
+	<Store watch="Editor.NetSimObjectZ" target="0" key="Avatar2" as="avatar2Z"/>
 	<Expect watch="Editor.NetSimObjectZ" target="1" key="Avatar2" sameAs="avatar2Z"/>
 	<Expect watch="Editor.NetSimObjectZ" target="2" key="Avatar2" sameAs="avatar2Z"/>
 	<CaptureEditorUI file="netsim/focus2.png"/>

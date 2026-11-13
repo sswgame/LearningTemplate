@@ -48,8 +48,8 @@ namespace sw
         }
 
         // `Variable` · `ExpectVariable` 의 검사 함수가 `name` 을 전역 변수 관리자에 묻는다. 엔진 서비스가 묶이지 않았으면 묻지 못하므로 모르는 것으로 센다.
-        const bool    bAsksVariable = step._kind == "Variable" || step._kind == "ExpectVariable";
-        const string* pVariable     = bAsksVariable ? step.findAttribute( "name" ) : nullptr;
+        const bool    bNeedsVariable = step._kind == "Variable" || step._kind == "ExpectVariable";
+        const string* pVariable      = bNeedsVariable ? step.findAttribute( "name" ) : nullptr;
         const bool    bUnknownVariable =
             pVariable != nullptr && ( engine::areEngineServicesBound() == false || engine::getSubsystem<GlobalVariableManager>().findVariable( *pVariable ) == nullptr );
         if ( bUnknownVariable )

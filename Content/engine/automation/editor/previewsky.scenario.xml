@@ -52,7 +52,7 @@
 	<EditorWaitSettled/>
 	<DevCommand line="panel.focus material"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
+	<Store watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/>
 	<EditorWaitSettled/>

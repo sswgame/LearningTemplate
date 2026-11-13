@@ -61,7 +61,7 @@ namespace sw
         , _listMetricLine{}
         , _listRecordLine{}
         , _listWatch{}
-        , _listRemembered{}
+        , _listStored{}
     {
         SW_ASSERT( _pLogPolicy != nullptr );
     }
@@ -132,21 +132,21 @@ namespace sw
         if ( pSameAs != nullptr || pDiffersFrom != nullptr )
         {
             // 기억한 값과는 글 그대로 비교한다 — 64 비트 해시 같은 값이 수 비교(float32)에서 뭉개지지 않는다.
-            const string& name        = pSameAs != nullptr ? *pSameAs : *pDiffersFrom;
-            const string* pRemembered = nullptr;
-            for ( const RememberedValue& remembered : _listRemembered )
+            const string& name    = pSameAs != nullptr ? *pSameAs : *pDiffersFrom;
+            const string* pStored = nullptr;
+            for ( const StoredValue& stored : _listStored )
             {
-                if ( remembered._name == name )
-                    pRemembered = &remembered._text;
+                if ( stored._name == name )
+                    pStored = &stored._text;
             }
-            if ( pRemembered == nullptr )
+            if ( pStored == nullptr )
             {
-                outMessage = subject + ": nothing was remembered as '" + name + "' (add <Remember as=\"" + name + "\"> before this step)";
+                outMessage = subject + ": nothing was stored as '" + name + "' (add <Store as=\"" + name + "\"> before this step)";
                 return false;
             }
-            bOk        = pSameAs != nullptr ? valueText == *pRemembered : valueText != *pRemembered;
+            bOk        = pSameAs != nullptr ? valueText == *pStored : valueText != *pStored;
             outMatched = bOk;
-            outMessage = subject + ( pSameAs != nullptr ? " same as " : " differs from " ) + name + " ('" + *pRemembered + "'), got " + valueText;
+            outMessage = subject + ( pSameAs != nullptr ? " same as " : " differs from " ) + name + " ('" + *pStored + "'), got " + valueText;
             return true;
         }
         if ( step.findAttribute( "is" ) != nullptr )
@@ -290,27 +290,27 @@ namespace sw
         addRecordLine( "frame " + to_string( context.getFrameIndex() ) + " " + message + " = " + AutomationStepArgsUtil::makeValueText( value ) );
     }
 
-    void AutomationEvaluator::runRemember( AutomationStepContext& context, const AutomationStep& step )
+    void AutomationEvaluator::runStore( AutomationStepContext& context, const AutomationStep& step )
     {
         AutomationWatchValue value{};
         string               message;
         if ( readWatchValue( context, step, value, message ) == false )
         {
-            context.recordFailure( step, "Remember " + message );
+            context.recordFailure( step, "Store " + message );
             return;
         }
-        const string name = step.readValidatedProperties<AutomationRememberParams>()._as;
+        const string name = step.readValidatedProperties<AutomationStoreParams>()._as;
         string       text = AutomationStepArgsUtil::makeValueText( value );
-        SW_LOG_INFO_ID( "Automation.FrameRemember", "[Scenario] frame %# remember %# = %# (%#)", context.getFrameIndex(), name.c_str(), text.c_str(), message.c_str() );
-        for ( RememberedValue& remembered : _listRemembered )
+        SW_LOG_INFO_ID( "Automation.FrameStore", "[Scenario] frame %# store %# = %# (%#)", context.getFrameIndex(), name.c_str(), text.c_str(), message.c_str() );
+        for ( StoredValue& stored : _listStored )
         {
-            if ( remembered._name == name )
+            if ( stored._name == name )
             {
-                remembered._text = std::move( text );
+                stored._text = std::move( text );
                 return;
             }
         }
-        _listRemembered.push_back( RememberedValue{ name, std::move( text ) } );
+        _listStored.push_back( StoredValue{ name, std::move( text ) } );
     }
 
     void AutomationEvaluator::runExpectLog( AutomationStepContext& context, const AutomationStep& step )
@@ -613,7 +613,7 @@ namespace sw
     {
         _pLogPolicy->prepare( scenario );
         prepareWatches( scenario );
-        _listRemembered.clear();
+        _listStored.clear();
         _listUpdatedGolden.clear();
         _listNearLimitGolden.clear();
         _listGoldenSample.clear();

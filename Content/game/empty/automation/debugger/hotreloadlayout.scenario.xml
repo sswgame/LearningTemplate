@@ -8,7 +8,7 @@
 	<Wait frames="10"/>
 	<Expect watch="HotReload.ProbeKept" equals="42"/>
 	<Expect watch="HotReload.ProbeAdded" equals="0"/>
-	<Remember watch="HotReload.ProbeVersion" as="before"/>
+	<Store watch="HotReload.ProbeVersion" as="before"/>
 	<Wait frames="1"/>
 	<DevCommand line="module.reload SWGame"/>
 	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="600"/>

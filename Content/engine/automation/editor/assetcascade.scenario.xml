@@ -15,8 +15,8 @@
 	<DevCommand line="panel.focus content_browser"/>
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
-	<Remember watch="Editor.AssetCascadeReloadCount" as="beforeEdit"/>
-	<Remember watch="RHI.GPUIdleWaits" as="idleBeforeEdit"/>
+	<Store watch="Editor.AssetCascadeReloadCount" as="beforeEdit"/>
+	<Store watch="RHI.GPUIdleWaits" as="idleBeforeEdit"/>
 	<DevCommand line="asset.overwriteScratch scratch/assetcascade/grand_edited.material scratch/assetcascade/grand.material"/>
 	<!-- 연쇄 둘(parent · child)은 감시 사건 하나를 처리하는 같은 프레임에 돈다 — 값이 바뀌었으면 둘 다 끝났다 -->
 	<WaitUntil watch="Editor.AssetCascadeReloadCount" differsFrom="beforeEdit" timeoutWallSeconds="30"/>

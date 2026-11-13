@@ -119,7 +119,7 @@ namespace sw
         float32 getArenaHalfSize() const { return _arenaHalfSize; }
         uint32  getWave() const { return _wave; }
         /** @brief 쓰러진 뒤 정리하기까지의 시간(s)입니다. 그동안 유닛 뷰가 납작해집니다. */
-        float32 getDeathLinger() const { return _deathLinger; }
+        float32 getDeathLifeSpan() const { return _deathLifeSpan; }
         uint32  getKillCount() const { return _killCount; }
         /** @brief 이 판에서 플레이어 편이 쏜 투사체 수입니다(시나리오 프로브). */
         uint32 getPlayerShotCount() const { return _playerShotCount; }
@@ -244,7 +244,7 @@ namespace sw
         PROPERTY( Category = "Arena", DisplayName = "Waves Per Level", Tooltip = "Enemy level rises by one every this many waves", Min = 1 )
         uint32 _wavesPerLevel;
         PROPERTY( Category = "Arena", DisplayName = "Death Linger", Tooltip = "Seconds a fallen unit stays (squashing) before it is removed", Min = 0.01, Units = s )
-        float32 _deathLinger;
+        float32 _deathLifeSpan;
         PROPERTY( Category = "Arena", DisplayName = "Player Respawn Delay", Tooltip = "Seconds before a fallen player stands up again", Min = 0.0, Units = s )
         float32 _playerRespawnDelay;
         PROPERTY( Category = "Look", DisplayName = "Player Tint", Meta = "Color", Tooltip = "Multiplies the palette texture of the player model" )

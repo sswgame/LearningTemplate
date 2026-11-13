@@ -21,7 +21,7 @@
 	<Expect watch="Interaction.HeldMaxDistance" target="EntryChild" equals="3"/>
 	<Expect watch="Interaction.HeldMaxDistance" target="EntryFixed" equals="2"/>
 	<Expect watch="Interaction.HeldMaxDistance" target="FileBase" equals="3"/>
-	<Remember watch="Editor.AssetCascadeReloadCount" as="beforeEdit"/>
+	<Store watch="Editor.AssetCascadeReloadCount" as="beforeEdit"/>
 	<DevCommand line="asset.overwriteScratch scratch/catalogcascade/parent_edited.interactions.xml scratch/catalogcascade/parent.interactions.xml"/>
 	<WaitUntil watch="Editor.AssetCascadeReloadCount" differsFrom="beforeEdit" timeoutWallSeconds="30"/>
 	<EditorWaitSettled/>

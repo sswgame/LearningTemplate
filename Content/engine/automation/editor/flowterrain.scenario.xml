@@ -52,7 +52,7 @@
 	<WaitUntil watch="Editor.TerrainBrushStrokeCount" equals="1" timeoutFrames="150"/>
 	<Expect watch="Terrain.WrittenEditCount" equals="1"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
-	<Remember watch="Editor.UndoState" as="editedUndo"/>
+	<Store watch="Editor.UndoState" as="editedUndo"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="flowterrain_edited.ppm"/>
 	<EditorWaitSettled/>

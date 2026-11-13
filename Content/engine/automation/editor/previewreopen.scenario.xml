@@ -26,7 +26,7 @@
 	<EditorWaitSettled/>
 	<DevCommand line="panel.close prefab_editor"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="baseline"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="baseline"/>
 	<!-- ① 머티리얼 창: 문서를 열어 구 미리보기가 그려지게 한다 -->
 	<EditorWaitSettled/>
 	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
@@ -47,8 +47,8 @@
 	<EditorWaitSettled/>
 	<Expect watch="Editor.ToolFocusIsMain" equals="0"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<Expect watch="Editor.ScenePreviewRenderers" differsFrom="baseline"/>
 	<DevCommand line="panel.close material"/>
 	<EditorWaitSettled/>
@@ -64,8 +64,8 @@
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
 	<!-- 머티리얼 창 2/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<DevCommand line="panel.close material"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
@@ -79,8 +79,8 @@
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
 	<!-- 머티리얼 창 3/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<DevCommand line="panel.close material"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
@@ -94,8 +94,8 @@
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
 	<!-- 머티리얼 창 4/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<DevCommand line="panel.close material"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
@@ -109,8 +109,8 @@
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
 	<!-- 머티리얼 창 5/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<DevCommand line="panel.close material"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
@@ -124,8 +124,8 @@
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
 	<!-- 머티리얼 창 6/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<DevCommand line="panel.close material"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
@@ -139,8 +139,8 @@
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
 	<!-- 머티리얼 창 7/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<DevCommand line="panel.close material"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
@@ -154,8 +154,8 @@
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
 	<!-- 머티리얼 창 8/8: 닫기 → 닫아 둔 채 20 프레임 → 열기 → 프레임이 다시 오름 → 30 프레임 그린 뒤 다음 닫기 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<DevCommand line="panel.close material"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
@@ -188,7 +188,7 @@
 	<Expect watch="Editor.PanelDirty" equals="0"/>
 	<!-- 프리팹 창 1/8: 깨끗한 창이라 확인 없이 닫힌다 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<Expect watch="Editor.ScenePreviewRenderers" differsFrom="baseline"/>
 	<DevCommand line="panel.close prefab_window"/>
 	<EditorWaitSettled/>
@@ -203,7 +203,7 @@
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
 	<!-- 프리팹 창 2/8: 깨끗한 창이라 확인 없이 닫힌다 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<DevCommand line="panel.close prefab_window"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
@@ -217,7 +217,7 @@
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
 	<!-- 프리팹 창 3/8: 깨끗한 창이라 확인 없이 닫힌다 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<DevCommand line="panel.close prefab_window"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
@@ -231,7 +231,7 @@
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
 	<!-- 프리팹 창 4/8: 깨끗한 창이라 확인 없이 닫힌다 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<DevCommand line="panel.close prefab_window"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
@@ -245,7 +245,7 @@
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
 	<!-- 프리팹 창 5/8: 깨끗한 창이라 확인 없이 닫힌다 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<DevCommand line="panel.close prefab_window"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
@@ -259,7 +259,7 @@
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
 	<!-- 프리팹 창 6/8: 깨끗한 창이라 확인 없이 닫힌다 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<DevCommand line="panel.close prefab_window"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
@@ -273,7 +273,7 @@
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
 	<!-- 프리팹 창 7/8: 깨끗한 창이라 확인 없이 닫힌다 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<DevCommand line="panel.close prefab_window"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
@@ -287,7 +287,7 @@
 	<WaitUntil watch="Editor.ScenePreviewRenderers" sameAs="renderers" timeoutFrames="60"/>
 	<!-- 프리팹 창 8/8: 깨끗한 창이라 확인 없이 닫힌다 -->
 	<EditorWaitSettled/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<DevCommand line="panel.close prefab_window"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>

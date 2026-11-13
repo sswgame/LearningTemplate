@@ -21,7 +21,7 @@
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.CatalogRowCount" atLeast="1" timeoutFrames="300"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.CatalogTextBytes" as="openedBytes"/>
+	<Store watch="Editor.CatalogTextBytes" as="openedBytes"/>
 	<EditorClick mark="catalog.children.open.variant"/>
 	<EditorWaitSettled/>
 	<!-- 첫 칸은 물려받은 Stats 의 armor 다(helmet_knight_merged). 다른 값을 적으면 원문이 늘어난다 -->

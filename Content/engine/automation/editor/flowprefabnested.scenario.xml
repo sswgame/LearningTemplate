@@ -33,7 +33,7 @@
 	<DevCommand line="prefab.create {out}/lamp.prefab.xml"/>
 	<EditorWaitSettled/>
 	<EditorExpectObject name="Lamp" component="PointLightComponent" selected="1"/>
-	<Remember watch="Object.Property" target="Lamp" key="PointLightComponent._radius" as="templateRadius"/>
+	<Store watch="Object.Property" target="Lamp" key="PointLightComponent._radius" as="templateRadius"/>
 	<!-- ② 바깥 프리팹 post — Lamp 를 자식으로 둔다 -->
 	<EditorClick mark="hierarchy.create"/>
 	<EditorWaitSettled/>
@@ -75,7 +75,7 @@
 	<Expect watch="Editor.SelectedNames" is="LampTop"/>
 	<Expect watch="Object.Property" target="LampTop" key="PointLightComponent._radius" equals="7"/>
 	<Expect watch="Object.Property" target="Lamp" key="PointLightComponent._radius" sameAs="templateRadius"/>
-	<Remember watch="Editor.UndoIndex" as="beforeApply"/>
+	<Store watch="Editor.UndoIndex" as="beforeApply"/>
 	<DevCommand line="editor prefab.applyOverrides"/>
 	<!-- ④ 부품에 퍼짐 · 되돌리기 -->
 	<WaitUntil watch="Object.Property" target="Lamp" key="PointLightComponent._radius" equals="7" timeoutFrames="60"/>

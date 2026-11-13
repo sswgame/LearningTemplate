@@ -16,7 +16,7 @@
 	<WaitUntil watch="Editor.DataTableRecordCount" atLeast="1" timeoutWallSeconds="60"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelDirty" equals="0"/>
-	<Remember watch="Editor.DataTableRecordCount" as="records"/>
+	<Store watch="Editor.DataTableRecordCount" as="records"/>
 	<!-- 새 키 — 행이 하나 는다 -->
 	<EditorClick mark="dataTable.newKey"/>
 	<EditorWaitSettled/>

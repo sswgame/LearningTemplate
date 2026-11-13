@@ -50,7 +50,7 @@
 	<EditorWaitSettled/>
 	<CaptureEditorUI file="socketgizmo/before.png" maxMagentaFraction="0"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.CharacterEditorSelectedSocketX" as="socketX"/>
+	<Store watch="Editor.CharacterEditorSelectedSocketX" as="socketX"/>
 	<EditorDrag mark="charactereditor.gizmoCenter" dx="60" dy="0"/>
 	<WaitUntil watch="Editor.CharacterEditorSelectedSocketX" differsFrom="socketX" timeoutFrames="60"/>
 	<EditorWaitSettled/>

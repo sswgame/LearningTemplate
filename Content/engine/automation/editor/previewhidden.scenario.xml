@@ -39,8 +39,8 @@
 	<DevCommand line="panel.focus scene_view"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
-	<Remember watch="Editor.PreviewTickCount" as="hiddenTicks"/>
-	<Remember watch="Editor.MaterialPreviewSceneFrames" as="hiddenFrames"/>
+	<Store watch="Editor.PreviewTickCount" as="hiddenTicks"/>
+	<Store watch="Editor.MaterialPreviewSceneFrames" as="hiddenFrames"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.PreviewTickCount" sameAs="hiddenTicks"/>
 	<Expect watch="Editor.MaterialPreviewSceneFrames" sameAs="hiddenFrames"/>

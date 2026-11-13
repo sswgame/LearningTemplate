@@ -35,7 +35,7 @@
 	<EditorWaitSettled/>
 	<Expect watch="Editor.SelectedNames" is="Prober"/>
 	<Expect watch="Editor.SelectedHandle" is="(none)"/>
-	<Remember watch="Editor.UndoIndex" as="undoBefore"/>
+	<Store watch="Editor.UndoIndex" as="undoBefore"/>
 	<CaptureEditorUI file="inspectorhandle/inspector.png"/>
 	<!-- ② 콤보로 고른다 -->
 	<EditorClick mark="inspector.property.TypedHandleTestComponent._target"/>

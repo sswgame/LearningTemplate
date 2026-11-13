@@ -17,7 +17,7 @@
 	<Expect watch="Editor.UndoCount" equals="0"/>
 	<EditorWaitSettled/>
 	<!-- 구조가 그대로면 행 모델을 다시 짓지 않는다 -->
-	<Remember watch="Editor.HierarchyRowRebuildCount" as="rows"/>
+	<Store watch="Editor.HierarchyRowRebuildCount" as="rows"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.HierarchyRowRebuildCount" sameAs="rows"/>
 	<EditorWaitSettled/>

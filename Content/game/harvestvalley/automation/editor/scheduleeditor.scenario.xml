@@ -26,7 +26,7 @@
 	<!-- ③ pierre 고르기 — 타임라인 · 설명. EditorClick 은 레이블이 그려질 때까지 스스로 기다린다. -->
 	<EditorClick mark="schedule.npc.pierre"/>
 	<WaitUntil watch="Editor.ScheduleTimelineRowCount" atLeast="3" timeoutFrames="60"/>
-	<Remember watch="Editor.ScheduleTimelineRowCount" as="pierreRows"/>
+	<Store watch="Editor.ScheduleTimelineRowCount" as="pierreRows"/>
 	<CaptureEditorUI file="scheduleeditor/npc_schedule.png"/>
 
 	<!-- ④ 시계를 감아도 같은 날의 계획 -->

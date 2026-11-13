@@ -16,7 +16,7 @@
 	<DevCommand line="layout.reset"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.SelectedNames" is="(none)"/>
-	<Remember watch="Editor.SceneHash" as="opened"/>
+	<Store watch="Editor.SceneHash" as="opened"/>
 	<!-- ① Hierarchy 선택 → 씬 뷰 외곽선 · 인스펙터 -->
 	<EditorClick mark="hierarchy.row.TestMesh"/>
 	<EditorWaitSettled/>
@@ -40,7 +40,7 @@
 	<EditorWaitSettled/>
 	<Expect watch="Editor.SelectedNames" is="Renamed"/>
 	<Expect watch="Editor.UndoState" is="1/1:Rename GameObject"/>
-	<Remember watch="Editor.SceneHash" as="renamed"/>
+	<Store watch="Editor.SceneHash" as="renamed"/>
 	<EditorWaitSettled/>
 	<DevCommand line="panel.focus content_browser"/>
 	<EditorWaitSettled/>

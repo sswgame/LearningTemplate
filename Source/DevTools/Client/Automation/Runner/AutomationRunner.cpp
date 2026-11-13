@@ -334,25 +334,25 @@ namespace sw
         return true;
     }
 
-    void AutomationRunner::rememberText( string_view name, string text )
+    void AutomationRunner::storeText( string_view name, string text )
     {
-        for ( RememberedText& remembered : _listRememberedText )
+        for ( StoredText& stored : _listStoredText )
         {
-            if ( string_view{ remembered._name } == name )
+            if ( string_view{ stored._name } == name )
             {
-                remembered._text = std::move( text );
+                stored._text = std::move( text );
                 return;
             }
         }
-        _listRememberedText.push_back( RememberedText{ string( name ), std::move( text ) } );
+        _listStoredText.push_back( StoredText{ string( name ), std::move( text ) } );
     }
 
-    const string* AutomationRunner::findRememberedText( string_view name ) const
+    const string* AutomationRunner::findStoredText( string_view name ) const
     {
-        for ( const RememberedText& remembered : _listRememberedText )
+        for ( const StoredText& stored : _listStoredText )
         {
-            if ( string_view{ remembered._name } == name )
-                return &remembered._text;
+            if ( string_view{ stored._name } == name )
+                return &stored._text;
         }
         return nullptr;
     }

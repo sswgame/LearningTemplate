@@ -7,7 +7,7 @@
 <Scenario name="game.empty.noidlewait" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
 	<Wait frames="2"/>
-	<Remember watch="RHI.GPUIdleWaits" as="beforeLoad"/>
+	<Store watch="RHI.GPUIdleWaits" as="beforeLoad"/>
 	<LoadScene path="game/empty/maps/fogshowcase.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>

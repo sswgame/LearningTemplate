@@ -574,11 +574,11 @@ namespace sw
             RoleState& role = _listRole[roleIndex];
             if ( role._stage != PairedAnimationRoleStage::Waiting && role._stage != PairedAnimationRoleStage::Playing )
                 continue;
-            const SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
-            float32                          clipTime  = 0.0f;
-            const bool                       bMissing  = pAnimator == nullptr;
-            const bool                       bHijacked = bMissing == false && role._stage == PairedAnimationRoleStage::Playing && tryGetClipTime( *pAnimator, role, clipTime ) == false;
-            if ( bMissing == false && bHijacked == false )
+            const SkeletalAnimatorComponent* pAnimator        = resolveAnimator( manager, role );
+            float32                          clipTime         = 0.0f;
+            const bool                       bMissing         = pAnimator == nullptr;
+            const bool                       bClipInterrupted = bMissing == false && role._stage == PairedAnimationRoleStage::Playing && tryGetClipTime( *pAnimator, role, clipTime ) == false;
+            if ( bMissing == false && bClipInterrupted == false )
                 continue;
             if ( loseRole( manager, static_cast<uint32>( roleIndex ), bMissing ? "is gone" : "stopped playing its clip" ) )
                 return true;

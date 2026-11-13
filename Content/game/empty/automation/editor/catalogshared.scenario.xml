@@ -17,7 +17,7 @@
 	<!-- 같은 경로를 쥔 둘은 같은 정의 객체를 읽는다(사본이면 주소가 다르다) -->
 	<Expect watch="Interaction.HeldMaxDistance" target="Left" equals="3"/>
 	<Expect watch="Interaction.HeldMaxDistance" target="Right" equals="3"/>
-	<Remember watch="Interaction.HeldDefinition" target="Left" as="leftBefore"/>
+	<Store watch="Interaction.HeldDefinition" target="Left" as="leftBefore"/>
 	<Expect watch="Interaction.HeldDefinition" target="Right" sameAs="leftBefore"/>
 	<DevCommand line="asset.overwriteScratch scratch/catalogshared/table_edited.interactions.xml scratch/catalogshared/table.interactions.xml"/>
 	<!-- 파일 감시는 바깥 일이라 벽시계로 기다린다 -->
@@ -25,7 +25,7 @@
 	<EditorWaitSettled/>
 	<Expect watch="Interaction.HeldMaxDistance" target="Right" equals="7"/>
 	<Expect watch="Interaction.HeldDefinition" target="Left" differsFrom="leftBefore"/>
-	<Remember watch="Interaction.HeldDefinition" target="Left" as="leftAfter"/>
+	<Store watch="Interaction.HeldDefinition" target="Left" as="leftAfter"/>
 	<Expect watch="Interaction.HeldDefinition" target="Right" sameAs="leftAfter"/>
 	<DevCommand line="stop"/>
 	<EditorWaitSettled/>

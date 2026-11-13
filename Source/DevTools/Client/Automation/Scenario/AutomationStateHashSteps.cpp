@@ -38,7 +38,7 @@ namespace sw
                 SceneObjectHash::collectObjects( DevSceneIterationAccess::getKey(), *pManager, listObject );
                 string report;
                 SceneObjectHash::writeObjectReport( listObject, report );
-                context.rememberText( params._key, std::move( report ) );
+                context.storeText( params._key, std::move( report ) );
                 return true;
             }
 
@@ -46,7 +46,7 @@ namespace sw
             {
                 const AutomationStateHashStepParams params   = step.readValidatedProperties<AutomationStateHashStepParams>();
                 const GameObjectManager*            pManager = context.findActiveObjectManager();
-                const string*                       pReport  = context.findRememberedText( params._key );
+                const string*                       pReport  = context.findStoredText( params._key );
                 if ( pReport == nullptr )
                 {
                     context.recordFailure( step, "no state hash was recorded under key '" + params._key + "' - put <RecordStateHash key=\"" + params._key + "\"/> before it" );

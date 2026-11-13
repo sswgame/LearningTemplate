@@ -23,8 +23,8 @@
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
 	<Expect watch="Editor.SceneViewRequested" equals="1"/>
 	<Expect watch="Editor.GameViewRequested" equals="0"/>
-	<Remember watch="Editor.GameViewCameraX" as="gameCameraX"/>
-	<Remember watch="Editor.GameViewCameraY" as="gameCameraY"/>
+	<Store watch="Editor.GameViewCameraX" as="gameCameraX"/>
+	<Store watch="Editor.GameViewCameraY" as="gameCameraY"/>
 	<Wait frames="1"/>
 	<!-- ② 에디터 카메라를 옆으로 3 m 남짓 옮긴다(오른쪽 단추 + D) -->
 	<EditorClick mark="sceneView.canvas" button="1" state="Down"/>

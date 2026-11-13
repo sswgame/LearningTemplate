@@ -69,7 +69,7 @@ namespace sw
         void runExpect( AutomationStepContext& context, const AutomationStep& step );
         void runExpectVisited( AutomationStepContext& context, const AutomationStep& step );
         void runRecord( AutomationStepContext& context, const AutomationStep& step );
-        void runRemember( AutomationStepContext& context, const AutomationStep& step );
+        void runStore( AutomationStepContext& context, const AutomationStep& step );
         void runExpectLog( AutomationStepContext& context, const AutomationStep& step );
         /**
          * @brief `<ExpectImage>` 를 미뤄 둡니다 - 인자와 그때의 백엔드(골든이 백엔드마다 따로다)만 지금 읽고, 비교는 시나리오 끝(`judgeDeferredImages`)에서 한다.
@@ -129,11 +129,11 @@ namespace sw
         };
 
         /**
-         * @struct RememberedValue
-         * @brief `<Remember as="이름">` 이 남긴 감시 값 값(끝의 0 을 정리한 글)입니다. 경계(플레이 · 백엔드 교체 · 모듈 리로드)를 넘긴 뒤 `sameAs` · `differsFrom` 이 비교합니다.
+         * @struct StoredValue
+         * @brief `<Store as="이름">` 이 남긴 감시 값 값(끝의 0 을 정리한 글)입니다. 경계(플레이 · 백엔드 교체 · 모듈 리로드)를 넘긴 뒤 `sameAs` · `differsFrom` 이 비교합니다.
          * @details 판정은 엔진 쪽이라 모듈 리로드와 백엔드 교체를 넘어 남는다. 시나리오가 시작할 때 비운다.
          */
-        struct RememberedValue
+        struct StoredValue
         {
             string _name{};
             string _text{};
@@ -185,6 +185,6 @@ namespace sw
         vector<string>                   _listMetricLine;           ///< 보고에 적는 지표 값
         vector<string>                   _listRecordLine;           ///< 보고에 적는 기록 값(결정성 대조)
         vector<WatchHistory>             _listWatch;                ///< `<ExpectVisited>` 가 보는 감시 값 이력
-        vector<RememberedValue>          _listRemembered;           ///< `<Remember>` 가 남긴 값
+        vector<StoredValue>              _listStored;               ///< `<Store>` 가 남긴 값
     };
 } // namespace sw

@@ -23,7 +23,7 @@
 	<EditorWaitSettled/>
 	<Expect watch="Editor.AudioEventSelected" equals="1"/>
 	<!-- ② Post Event — 오디오 스레드가 받는다 -->
-	<Remember watch="Editor.AudioEventsPlayed" as="played"/>
+	<Store watch="Editor.AudioEventsPlayed" as="played"/>
 	<EditorClick mark="audioevents.postEvent"/>
 	<WaitUntil watch="Editor.AudioEventsPlayed" differsFrom="played" timeoutWallSeconds="10"/>
 	<EditorWaitSettled/>

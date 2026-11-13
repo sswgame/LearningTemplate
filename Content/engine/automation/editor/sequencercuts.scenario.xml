@@ -28,7 +28,7 @@
 	<!-- 되돌리기 감시 값은 포커스 창의 스택이다 — 계층을 누른 뒤라 시퀀서에 포커스를 돌려 그 문서의 스택에서 앞 값을 읽는다 -->
 	<DevCommand line="panel.focus sequencer"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.UndoIndex" as="undoBefore"/>
+	<Store watch="Editor.UndoIndex" as="undoBefore"/>
 	<EditorClick mark="sequencer.addBindingFromSelection"/>
 	<WaitUntil watch="Editor.SequencerBindingCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.SequencerUnboundCount" equals="0"/>
@@ -66,7 +66,7 @@
 	<WaitUntil watch="Editor.SequencerCutCount" equals="3" timeoutFrames="60"/>
 	<EditorClick mark="sequencer.binding.1"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.UndoIndex" as="undoBeforeCamera"/>
+	<Store watch="Editor.UndoIndex" as="undoBeforeCamera"/>
 	<EditorClick mark="sequencer.cutCamera"/>
 	<WaitUntil watch="Editor.UndoIndex" differsFrom="undoBeforeCamera" timeoutFrames="60"/>
 	<EditorClick mark="sequencer.deleteCut"/>

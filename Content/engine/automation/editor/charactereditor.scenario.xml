@@ -95,7 +95,7 @@
 	<EditorWaitSettled/>
 	<EditorHover mark="charactereditor.previewScene" anchor="0.5,0.5"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.PreviewViewportOrbitDistance" as="previewDistance"/>
+	<Store watch="Editor.PreviewViewportOrbitDistance" as="previewDistance"/>
 	<EditorWaitSettled/>
 	<EditorWheel dy="2"/>
 	<WaitUntil watch="Editor.PreviewViewportOrbitDistance" differsFrom="previewDistance" timeoutFrames="60"/>

@@ -236,10 +236,10 @@ namespace sw
                 { return validateWatchReference( step ); } );
             }
 
-            /** @brief `Remember` 입니다. 감시 값 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 비교한다). */
-            static expected<void> validateRemember( const AutomationStep& step )
+            /** @brief `Store` 입니다. 감시 값 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 비교한다). */
+            static expected<void> validateStore( const AutomationStep& step )
             {
-                AutomationRememberParams params;
+                AutomationStoreParams params;
                 return step.readProperties( params ).and_then( [&]()
                 { return validateWatchReference( step ); } );
             }
@@ -484,10 +484,10 @@ namespace sw
             return true;
         }
 
-        static bool runRemember( AutomationStepContext& context, const AutomationStep& step )
+        static bool runStore( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._evaluator.runRemember( runner, step );
+            runner._evaluator.runStore( runner, step );
             return true;
         }
 
@@ -673,7 +673,7 @@ namespace sw
     SW_AUTOMATION_STEP( runnerWaitUntil, "WaitUntil", nullptr, &AutomationRunnerStepsInternal::validateWaitUntil, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareWaitUntil ).withHold( &AutomationRunnerEngineSteps::holdWaitUntil ) );
     SW_AUTOMATION_STEP( runnerExpectVisited, "ExpectVisited", &AutomationRunnerEngineSteps::runExpectVisited, &AutomationRunnerStepsInternal::validateExpectVisited, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerRecord, "Record", &AutomationRunnerEngineSteps::runRecord, &AutomationRunnerStepsInternal::validateRecord, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerRemember, "Remember", &AutomationRunnerEngineSteps::runRemember, &AutomationRunnerStepsInternal::validateRemember, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( runnerStore, "Store", &AutomationRunnerEngineSteps::runStore, &AutomationRunnerStepsInternal::validateStore, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerExpectLog, "ExpectLog", &AutomationRunnerEngineSteps::runExpectLog, &AutomationRunnerStepsInternal::validateExpectLog, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationStep::validateProperties<AutomationScreenshotParams>, AutomationStepOptions{}.withHold( &AutomationRunnerEngineSteps::holdScreenshot ) );
     SW_AUTOMATION_STEP( runnerExpectImage, "ExpectImage", &AutomationRunnerEngineSteps::runExpectImage, &AutomationRunnerStepsInternal::validateExpectImage, AutomationStepOptions{} );

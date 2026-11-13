@@ -32,7 +32,7 @@
 	<DevCommand line="select.type SceneComponent"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.SelectionCount" atLeast="2"/>
-	<Remember watch="Editor.SceneHash" as="start"/>
+	<Store watch="Editor.SceneHash" as="start"/>
 	<DevCommand line="editor.undoCoverage prefab.applyOverrides play.keepChanges"/>
 	<EditorWaitSettled/>
 	<ExpectLog id="Editor.UndoCoverageResult" count="1"/>

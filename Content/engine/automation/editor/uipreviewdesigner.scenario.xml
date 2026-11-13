@@ -32,7 +32,7 @@
 	<DevCommand line="panel.focus ui_preview"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
-	<Remember watch="Editor.UIPreviewSlotEditCount" as="slotEdits"/>
+	<Store watch="Editor.UIPreviewSlotEditCount" as="slotEdits"/>
 	<EditorWaitSettled/>
 	<EditorDrag mark="uipreview.handle.move" dx="40" dy="0"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOffsetMinX" atLeast="20" timeoutFrames="90"/>

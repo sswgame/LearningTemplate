@@ -568,7 +568,7 @@ namespace sw
 namespace
 {
     /** @brief 모든 키를 같은 해시로 보내는 위조 해시입니다(충돌을 일부러 만든다). */
-    uint64 forgeSameKeyHash( sw::string_view )
+    uint64 craftSameKeyHash( sw::string_view )
     {
         return 0x1234u;
     }
@@ -579,7 +579,7 @@ namespace
  */
 SW_TEST_CASE( LocalizationKeyIndexTest, SameHashDifferentKeyIsAnError )
 {
-    sw::LocalizationKeyIndex crafted{ &forgeSameKeyHash };
+    sw::LocalizationKeyIndex crafted{ &craftSameKeyHash };
     SW_REQUIRE_TRUE( crafted.add( "Menu.Start" ) );
     SW_EXPECT_TRUE( crafted.add( "Menu.Start" ) );
     SW_EXPECT_TRUE( crafted.add( "menu.start" ) );
@@ -612,7 +612,7 @@ SW_TEST_CASE( LocalizationKeyIndexTest, ManagerRefusesCollidingKeys )
     LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
 
     sw::LocalizationManager manager;
-    sw::LocalizationManagerTestAccess::setCheckKeyHash( manager, &forgeSameKeyHash );
+    sw::LocalizationManagerTestAccess::setCheckKeyHash( manager, &craftSameKeyHash );
     SW_EXPECT_LOG( "LocalizationManager.KeyHashCollision" );
     SW_EXPECT_FALSE( manager.mountProject( sw::test::ScopedScratchDomain::toID( project ), sw::LocalizationScope::Game ) );
     SW_EXPECT_TRUE( manager.getMountedProjectNames().empty() );

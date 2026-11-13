@@ -16,7 +16,7 @@
 	<Expect watch="Editor.UndoCount" equals="0"/>
 	<EditorWaitSettled/>
 	<!-- 같은 선택을 그리는 동안 배치 묶음을 다시 짓지 않는다 -->
-	<Remember watch="Editor.InspectorLayoutRebuildCount" as="layout"/>
+	<Store watch="Editor.InspectorLayoutRebuildCount" as="layout"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.InspectorLayoutRebuildCount" sameAs="layout"/>
 	<EditorWaitSettled/>

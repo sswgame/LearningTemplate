@@ -39,8 +39,8 @@
 	<WaitUntil watch="Editor.CharacterEditorPreviewAssembleCount" atLeast="1" timeoutFrames="177"/>
 	<WaitUntil watch="Editor.CharacterEditorPreviewPickVertices" atLeast="1" timeoutFrames="120"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.CharacterEditorPreviewAssembleCount" as="dressedAssembles"/>
-	<Remember watch="Editor.CharacterEditorPreviewPickVertices" as="dressedVertices"/>
+	<Store watch="Editor.CharacterEditorPreviewAssembleCount" as="dressedAssembles"/>
+	<Store watch="Editor.CharacterEditorPreviewPickVertices" as="dressedVertices"/>
 	<CaptureEditorUI file="charactereditor/bodyedit_dressed.png"/>
 
 	<!-- ② 몸 탭에서 입은 칸을 숨기면 다시 조립되어 메시가 바뀐다 -->

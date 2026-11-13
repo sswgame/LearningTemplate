@@ -47,7 +47,7 @@
 	<!-- (3) 끌기 한 번 = 이 창의 스택에 한 단계 — 감시 값은 포커스 창의 스택이라 머티리얼 창에 포커스를 둔다 -->
 	<DevCommand line="panel.focus material"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.UndoIndex" as="undoBeforeDrag"/>
+	<Store watch="Editor.UndoIndex" as="undoBeforeDrag"/>
 	<EditorDrag mark="material.property._roughness" dx="60" dy="0"/>
 	<WaitUntil watch="Editor.MaterialModifiedPropertyCount" equals="1" timeoutFrames="60"/>
 	<WaitUntil watch="Editor.UndoIndex" differsFrom="undoBeforeDrag" timeoutFrames="60"/>

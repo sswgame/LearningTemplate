@@ -43,7 +43,7 @@
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<ExpectLog id="Renderer.OffscreenStarted" atLeast="1"/>
 	<ExpectLog id="PreviewViewport.Screenshot" atLeast="1"/>
-	<Remember watch="Editor.ScenePreviewRenderers" as="renderers"/>
+	<Store watch="Editor.ScenePreviewRenderers" as="renderers"/>
 	<!-- ② 창이 열린 채 다른 백엔드로 건넌다 -->
 	<EditorWaitSettled/>
 	<SwapBackend backend="other"/>
@@ -65,7 +65,7 @@
 	<EditorWaitSettled/>
 	<DevCommand line="panel.focus material"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
+	<Store watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/>
 	<EditorWaitSettled/>
@@ -96,7 +96,7 @@
 	<EditorWaitSettled/>
 	<DevCommand line="panel.focus material"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
+	<Store watch="Editor.MaterialPreviewSceneFrames" as="frames"/>
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/>
 	<EditorWaitSettled/>

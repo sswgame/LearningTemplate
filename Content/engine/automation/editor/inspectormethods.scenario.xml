@@ -31,7 +31,7 @@
 	<Expect watch="Editor.InspectorFilledRows" atLeast="1"/>
 	<CaptureEditorUI file="inspectormethods/default.png" maxMagentaFraction="0"/>
 	<!-- ② CallInEditor 호출은 되돌리기 한 단계 -->
-	<Remember watch="Editor.UndoIndex" as="undoBefore"/>
+	<Store watch="Editor.UndoIndex" as="undoBefore"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="inspector.method.arg.assignTarget.0"/>
 	<EditorWaitSettled/>
@@ -58,7 +58,7 @@
 	<EditorClick mark="inspector.method.invoke.assignTarget"/>
 	<WaitUntil watch="Editor.SelectedHandle" is="TestMesh / MeshComponent#0" timeoutFrames="75"/>
 	<CaptureEditorUI file="inspectormethods/diagnostic.png" maxMagentaFraction="0"/>
-	<Remember watch="Editor.UndoIndex" as="undoAssigned"/>
+	<Store watch="Editor.UndoIndex" as="undoAssigned"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="inspector.method.invoke.clearTarget"/>
 	<WaitUntil watch="Editor.SelectedHandle" is="(none)" timeoutFrames="75"/>

@@ -16,7 +16,7 @@
 	<DevCommand line="asset.openScratch scratch/saveroundtripcatalog/default.surfacekinds.xml"/>
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.CatalogRowCount" atLeast="1" timeoutFrames="120"/>
-	<Remember watch="Editor.CatalogRowCount" as="rows"/>
+	<Store watch="Editor.CatalogRowCount" as="rows"/>
 	<DevCommand line="panel.saveDocument catalog_editor"/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtripcatalog/default.surfacekinds.xml"/>
 	<DevCommand line="panel.reloadDocument catalog_editor"/>

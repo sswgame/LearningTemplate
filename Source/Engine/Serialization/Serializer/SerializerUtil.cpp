@@ -183,13 +183,13 @@ namespace sw
                 const int64           unnamedBits = enumInfo.collectFlagNames( value, listName );
                 vector<uint32>        listNameHash;
                 listNameHash.reserve( listName.size() );
-                bool bHashless = false;
+                bool bUnhashed = false;
                 for ( const hashed_string& name : listName )
                 {
                     listNameHash.push_back( name.getHash() );
-                    bHashless = bHashless || name.getHash() == 0;
+                    bUnhashed = bUnhashed || name.getHash() == 0;
                 }
-                if ( bHashless )
+                if ( bUnhashed )
                 {
                     LittleEndianUtil::appendUint32( buffer, 1 );
                     appendEnumEntry( buffer, 0, value );

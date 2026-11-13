@@ -72,9 +72,9 @@
 	<EditorWaitSettled/>
 	<DevCommand line="scene.saveAs {out}/flowedit.scene.xml"/>
 	<WaitUntil watch="Editor.SceneDirty" equals="0" timeoutFrames="60"/>
-	<Remember watch="Editor.SceneHash" as="saved"/>
-	<Remember watch="Editor.UndoState" as="savedUndo"/>
-	<Remember watch="Editor.StateHash" as="savedState"/>
+	<Store watch="Editor.SceneHash" as="saved"/>
+	<Store watch="Editor.UndoState" as="savedUndo"/>
+	<Store watch="Editor.StateHash" as="savedState"/>
 	<!-- ⑤ 플레이 인 → 플레이 아웃 -->
 	<EditorWaitSettled/>
 	<DevCommand line="play"/>

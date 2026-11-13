@@ -52,7 +52,7 @@
 	<Expect watch="Editor.PlacementY" atLeast="0"/>
 	<Expect watch="Editor.SelectedYaw" equals="90"/>
 	<WaitUntil watch="Editor.PlacementYaw" equals="0" timeoutFrames="30"/>
-	<Remember watch="Editor.SceneHash" as="placed"/>
+	<Store watch="Editor.SceneHash" as="placed"/>
 	<!-- ② 되돌리기 · 다시 실행은 같은 자리 -->
 	<EditorWaitSettled/>
 	<DevCommand line="editor edit.undo"/>

@@ -322,8 +322,8 @@ namespace sw
         room._bStarted        = SW_TRUE;
         for ( const TurnSeat& other : room._listSeat )
         {
-            const bool bTold = other._connectionID >= 0 && ( bStartsNow || other._connectionID == connectionID );
-            if ( bTold == false )
+            const bool bNotified = other._connectionID >= 0 && ( bStartsNow || other._connectionID == connectionID );
+            if ( bNotified == false )
                 continue;
             BitWriter& writer = _messageWriter.begin( NetTurnRelayMessage::kStarted );
             writer.writeVarUint( room._roomID );

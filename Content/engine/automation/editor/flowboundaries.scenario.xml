@@ -34,9 +34,9 @@
 	<Expect watch="Editor.SelectedNames" is="BoundaryProbe"/>
 	<Expect watch="Editor.UndoIndex" equals="3"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
-	<Remember watch="Editor.StateHash" as="edited"/>
-	<Remember watch="Editor.SceneHash" as="editedScene"/>
-	<Remember watch="Editor.UndoState" as="editedUndo"/>
+	<Store watch="Editor.StateHash" as="edited"/>
+	<Store watch="Editor.SceneHash" as="editedScene"/>
+	<Store watch="Editor.UndoState" as="editedUndo"/>
 	<!-- ① 플레이 인 → 플레이 아웃 -->
 	<EditorWaitSettled/>
 	<DevCommand line="play"/>

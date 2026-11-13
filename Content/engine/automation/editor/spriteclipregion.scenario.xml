@@ -31,7 +31,7 @@
 	<CaptureEditorUI file="spriteregion/region.png" maxMagentaFraction="0"/>
 	<EditorWaitSettled/>
 	<!-- 오른쪽 가장자리를 20 px 끈다 -->
-	<Remember watch="Editor.SpriteClipSelectedFrameWidthPx" as="regionWidth"/>
+	<Store watch="Editor.SpriteClipSelectedFrameWidthPx" as="regionWidth"/>
 	<EditorDrag mark="spriteClip.frameEdge.right" dx="20" dy="0"/>
 	<WaitUntil watch="Editor.SpriteClipSelectedFrameWidthPx" differsFrom="regionWidth" timeoutFrames="60"/>
 	<Expect watch="Editor.SpriteClipSelectedFrameWidthPx" atLeast="54"/>
@@ -39,7 +39,7 @@
 	<EditorWaitSettled/>
 	<CaptureEditorUI file="spriteregion/edge.png" maxMagentaFraction="0"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.SpriteClipSelectedFrameWidthPx" as="edgeWidth"/>
+	<Store watch="Editor.SpriteClipSelectedFrameWidthPx" as="edgeWidth"/>
 	<EditorClick mark="spriteClip.save"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
 	<EditorWaitSettled/>

@@ -141,9 +141,9 @@ namespace sw::editor
                                                                      bool bContinuous )
     {
         // `PairedAnimationDef::computeAlignTarget` 의 역 — 앵커 요를 되돌려 앵커 기준 자리로 만든다.
-        const quaternion unturn = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, -anchorYaw );
-        const float3     offset = float3::transform( rolePosition - anchorPosition, unturn );
-        const float32    yaw    = MathUtil::wrapAngle( roleYaw - anchorYaw );
+        const quaternion unrotate = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, -anchorYaw );
+        const float3     offset   = float3::transform( rolePosition - anchorPosition, unrotate );
+        const float32    yaw      = MathUtil::wrapAngle( roleYaw - anchorYaw );
         return setRoleOffset( roleIndex, offset, yaw * MathUtil::kRadianToDegree, bContinuous );
     }
 

@@ -18,7 +18,7 @@
 	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewOrthographic" equals="0"/>
 	<Expect watch="Editor.SceneViewOrbitDistance" near="8" tolerance="0.01"/>
-	<Remember watch="Editor.SceneViewCameraX" as="xStart"/>
+	<Store watch="Editor.SceneViewCameraX" as="xStart"/>
 	<!-- ① 휠 세 눈금: 8 * 0.85^3 = 약 4.9 -->
 	<EditorWaitSettled/>
 	<EditorWheel dy="3"/>
@@ -35,7 +35,7 @@
 	<EditorWaitSettled/>
 	<EditorHover mark="sceneView.canvas" anchor="0.5,0.5"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.SceneViewCameraX" as="xBeforeFly"/>
+	<Store watch="Editor.SceneViewCameraX" as="xBeforeFly"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="sceneView.canvas" button="1" anchor="0.5,0.5" state="Down"/>
 	<EditorWaitSettled/>
@@ -46,8 +46,8 @@
 	<EditorClick mark="sceneView.canvas" button="1" state="Up"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewCameraX" differsFrom="xBeforeFly"/>
-	<Remember watch="Editor.SceneViewCameraX" as="xFlown"/>
-	<Remember watch="Editor.SceneViewOrbitDistance" as="distFlown"/>
+	<Store watch="Editor.SceneViewCameraX" as="xFlown"/>
+	<Store watch="Editor.SceneViewOrbitDistance" as="distFlown"/>
 	<EditorWaitSettled/>
 	<EditorHover mark="sceneView.canvas" anchor="0.5,0.5"/>
 	<EditorWaitSettled/>
@@ -63,7 +63,7 @@
 	<EditorWaitSettled/>
 	<EditorKey key="Keypad7"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.SceneViewCameraX" as="xOrtho"/>
+	<Store watch="Editor.SceneViewCameraX" as="xOrtho"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Alt" state="Down"/>
 	<Wait frames="8"/>
@@ -82,7 +82,7 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="sceneView.canvas" button="1" anchor="0.5,0.5" state="Down"/>
 	<Wait frames="10"/>
-	<Remember watch="Editor.SceneViewOrbitDistance" as="distBeforeFlyWheel"/>
+	<Store watch="Editor.SceneViewOrbitDistance" as="distBeforeFlyWheel"/>
 	<EditorWaitSettled/>
 	<EditorWheel dy="3"/>
 	<Wait frames="15"/>

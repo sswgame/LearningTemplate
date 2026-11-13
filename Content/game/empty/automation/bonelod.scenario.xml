@@ -18,7 +18,7 @@
 	<Variable name="gv_animationBoneLOD" value="0"/>
 	<Wait frames="48"/>
 	<Expect watch="Animation.PoseEvaluatedSkeletalMeshes" atLeast="1"/>
-	<Remember watch="Animation.EvaluatedBones" as="full"/>
+	<Store watch="Animation.EvaluatedBones" as="full"/>
 	<Screenshot file="bonelod_full.ppm"/>
 	<Variable name="gv_animationBoneLOD" value="1"/>
 	<Wait frames="48"/>

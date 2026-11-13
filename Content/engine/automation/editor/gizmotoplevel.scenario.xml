@@ -35,10 +35,10 @@
 	<EditorClick mark="hierarchy.row.TestParent" mods="ctrl"/>
 	<WaitUntil watch="Editor.SelectedNames" is="TestKeyLight,TestParent" timeoutFrames="60"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.ObjectPositionX" as="childLocalX"/>
+	<Store watch="Editor.ObjectPositionX" as="childLocalX"/>
 	<Variable name="gv_editorWatchObject" value="TestParent"/>
-	<Remember watch="Editor.ObjectPositionX" as="parentX"/>
-	<Remember watch="Editor.UndoIndex" as="undoBeforeDrag"/>
+	<Store watch="Editor.ObjectPositionX" as="parentX"/>
+	<Store watch="Editor.UndoIndex" as="undoBeforeDrag"/>
 	<EditorDrag mark="sceneView.gizmoCenter" dx="60" dy="0"/>
 	<EditorWaitSettled/>
 	<!-- 효과: 부모가 움직였고 끌기 하나가 되돌리기 하나다 -->

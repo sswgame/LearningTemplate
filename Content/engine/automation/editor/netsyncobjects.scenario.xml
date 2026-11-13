@@ -22,7 +22,7 @@
 	<Expect watch="Editor.NetPlaySyncDifferingObjects" equals="0"/>
 	<!-- 클라이언트 답은 다른 프로세스에서 비동기로 온다. 첫 부름은 서버 틱의 답을 묻고(세션이 그보다 이른 답 — 멈춘 서버를 아직 따라오는 중 — 은 거르고 다시 묻는다),
 	     받은 답 수가 바뀔 때까지 벽시계로 기다린 뒤 다시 불러 비교한다. 예전에는 첫 답을 그대로 받아 부하 걸린 기계에서 틱이 57 대 61 로 달라 비교가 거절됐다 -->
-	<Remember watch="Editor.NetPlayObjectHashReports" as="objectReports"/>
+	<Store watch="Editor.NetPlayObjectHashReports" as="objectReports"/>
 	<DevCommand line="netplay.sync objects client"/>
 	<ExpectLog id="DevCommand.Reply" contains="for its object hashes at tick" atLeast="1"/>
 	<WaitUntil watch="Editor.NetPlayObjectHashReports" differsFrom="objectReports" timeoutWallSeconds="20"/>

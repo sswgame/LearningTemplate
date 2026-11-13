@@ -25,20 +25,20 @@
 	<ExpectLog id="ParkLayoutPanel.ParkLayoutReloadedRequest" count="1"/>
 	<Expect watch="Editor.ParkLayoutRideCount" equals="6"/>
 	<!-- ③ 더블클릭 — 씬 뷰 카메라가 놀이기구로 -->
-	<Remember watch="Editor.SceneViewCameraX" as="startX"/>
+	<Store watch="Editor.SceneViewCameraX" as="startX"/>
 	<EditorClick mark="themepark.layout.ride.1"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="themepark.layout.ride.1"/>
 	<WaitUntil watch="Editor.SceneViewCameraX" differsFrom="startX" timeoutFrames="60"/>
 	<EditorWaitSettled/>
-	<Remember watch="Editor.SceneViewCameraX" as="cupsX"/>
+	<Store watch="Editor.SceneViewCameraX" as="cupsX"/>
 	<EditorClick mark="themepark.layout.ride.2"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="themepark.layout.ride.2"/>
 	<WaitUntil watch="Editor.SceneViewCameraX" differsFrom="cupsX" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<!-- ④ 정문 보기 — Sky Drop(x -28) 에서 정문(x 20)으로 -->
-	<Remember watch="Editor.SceneViewCameraX" as="dropX"/>
+	<Store watch="Editor.SceneViewCameraX" as="dropX"/>
 	<EditorClick mark="themepark.layout.gate"/>
 	<WaitUntil watch="Editor.SceneViewCameraX" differsFrom="dropX" timeoutFrames="60"/>
 	<EditorWaitSettled/>

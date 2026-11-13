@@ -21,7 +21,7 @@
 	<EditorWaitSettled/>
 	<Expect watch="Editor.MapCheckIssueCount" equals="1"/>
 	<WaitUntil watch="Editor.MapCheckFixableRows" equals="1" timeoutFrames="60"/>
-	<Remember watch="Editor.UndoIndex" as="undoBefore"/>
+	<Store watch="Editor.UndoIndex" as="undoBefore"/>
 	<CaptureEditorUI file="mapcheckfix/before.png" maxMagentaFraction="0"/>
 	<!-- ① 줄 고침 -->
 	<EditorClick mark="mapCheck.fix.0" state="Down"/>

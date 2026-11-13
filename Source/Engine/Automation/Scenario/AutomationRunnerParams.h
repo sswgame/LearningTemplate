@@ -188,9 +188,9 @@ namespace sw
         string _key{};
     };
 
-    /** @brief `Remember` 의 인자입니다. */
+    /** @brief `Store` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationRememberParams : public AutomationRecordParams
+    struct SW_API AutomationStoreParams : public AutomationRecordParams
     {
         REFLECT_BODY();
 
