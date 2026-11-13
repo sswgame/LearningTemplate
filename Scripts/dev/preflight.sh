@@ -172,6 +172,11 @@ if [ $STAGE -le 1 ]; then
   build_preset Ninja-Release
   build_preset Ninja-Debug-Server
   wait_jobs
+else
+  # --from 으로 build 를 건너뛰어도 뒤 단계가 돌릴 프리셋은 증분 빌드한다 — 짓지 않으면 고친 커밋 대신 옛 바이너리가 돌아 고친 테스트가 다시 진다
+  # (2026-11-13 --from cpu 의 Release 단위). 바뀐 것이 없으면 몇 초다. 배포 프리셋은 --from cpu 의 shipping-check 가 직접 짓는다.
+  [ $STAGE -eq 2 ] && { build_preset Ninja-Debug; build_preset Ninja-Debug-Server; }
+  [ $STAGE -le 3 ] && build_preset Ninja-Release
 fi
 
 if [ $STAGE -le 2 ]; then
