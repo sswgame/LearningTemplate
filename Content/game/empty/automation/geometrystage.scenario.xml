@@ -8,6 +8,7 @@
 	<Launch variable="gv_renderPipeline" value="game/empty/pipeline/geometrystagepipeline.xml"/>
 	<Launch variable="gv_renderScale" value="1"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<SkipUnless watch="RHI.GeometryStage" reason="this device has no geometry stage (Vulkan without geometryShader; WebGPU) - the pipeline PSO is refused (VulkanRHIResourceFactory.CreatePipelineStateOptionalStageFailed)"/>
 	<Wait frames="40"/>
 	<Screenshot file="geometrystage.ppm"/>
 	<Wait frames="5"/>

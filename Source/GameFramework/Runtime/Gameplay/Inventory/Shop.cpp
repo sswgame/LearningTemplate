@@ -248,7 +248,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Shop.ShopStateRefusedPriceModifiers", "ShopManager: refused price modifiers %# / %# for %# - neither may be negative", buyModifier, sellModifier, shopID.c_str() );
             return false;
         }
-        ShopState* pRuntime = findRuntime( shopID );
+        ShopState* pRuntime = findRuntimeMutable( shopID );
         if ( pRuntime == nullptr )
             return false;
         pRuntime->_buyModifier  = buyModifier;
@@ -258,7 +258,7 @@ namespace sw
 
     void ShopManager::refuseCategory( const hashed_string& shopID, const hashed_string& category )
     {
-        ShopState* pRuntime            = findRuntime( shopID );
+        ShopState* pRuntime            = findRuntimeMutable( shopID );
         const bool bAddRefusedCategory = pRuntime != nullptr && category.empty() == false && VectorUtil::contains( pRuntime->_listExtraRefused, category ) == false;
         if ( bAddRefusedCategory )
             pRuntime->_listExtraRefused.push_back( category );
@@ -298,7 +298,7 @@ namespace sw
         if ( result != ShopResult::Ok )
             return result;
         const ShopDef* pShop      = _pShopCatalog->find( shopID );
-        ShopState*     pRuntime   = findRuntime( shopID );
+        ShopState*     pRuntime   = findRuntimeMutable( shopID );
         const int32    stockIndex = findStockIndex( *pShop, itemID ).value(); // evaluateBuy 가 진열을 확인했다
         const int64    total      = static_cast<int64>( computeBuyPrice( shopID, itemID ) ) * count;
         if ( wallet.trySpend( pShop->_currency, total ) == false )
@@ -367,7 +367,7 @@ namespace sw
                                   int64* pOutReceived )
     {
         const ShopDef* pShop    = _pShopCatalog->find( shopID );
-        ShopState*     pRuntime = findRuntime( shopID );
+        ShopState*     pRuntime = findRuntimeMutable( shopID );
         wallet.add( pShop->_currency, total );
         if ( pShop->_buybackLimit > 0 )
         {
@@ -396,7 +396,7 @@ namespace sw
     ShopResult ShopManager::buyBack( const hashed_string& shopID, int32 buybackIndex, Wallet& wallet, Inventory& inventory, int64* pOutPaid )
     {
         const ShopDef* pShop    = _pShopCatalog != nullptr ? _pShopCatalog->find( shopID ) : nullptr;
-        ShopState*     pRuntime = findRuntime( shopID );
+        ShopState*     pRuntime = findRuntimeMutable( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
             return ShopResult::UnknownShop;
         if ( buybackIndex < 0 || buybackIndex >= static_cast<int32>( pRuntime->_listBuyback.size() ) )
@@ -534,7 +534,7 @@ namespace sw
         return VectorUtil::findBy<&ShopState::_shopID>( _listRuntime, shopID );
     }
 
-    ShopState* ShopManager::findRuntime( const hashed_string& shopID )
+    ShopState* ShopManager::findRuntimeMutable( const hashed_string& shopID )
     {
         return const_cast<ShopState*>( static_cast<const ShopManager*>( this )->findRuntime( shopID ) );
     }

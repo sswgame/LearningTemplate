@@ -122,6 +122,12 @@ namespace sw
         (void)FileUtil::removeDirectory( instanceDir ); // 못 지우면 FileUtil 이 경고를 남긴다 — 남은 상태로 시작한다
     }
 
+    bool AutomationScratchWorkspace::discard( const AutomationScratchFolder& folder )
+    {
+        const string scratchDir = FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getRootFolderPath(), folder._scratchID );
+        return FileUtil::removeDirectory( scratchDir ); // 못 지우면 FileUtil 이 경로와 이유를 경고한다
+    }
+
     expected<void> AutomationScratchWorkspace::prepare( const AutomationScratchFolder& folder )
     {
         if ( expected<void> valid = AutomationScratch::isValidFolder( folder ); valid.has_value() == false )

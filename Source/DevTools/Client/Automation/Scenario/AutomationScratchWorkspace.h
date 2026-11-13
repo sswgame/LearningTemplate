@@ -49,6 +49,12 @@ namespace sw
          */
         [[nodiscard]] static expected<void> prepare( const AutomationScratchFolder& folder );
         /**
+         * @brief 끝난 시나리오의 사본 폴더를 지웁니다(체인의 다음 단계 앞 — `AutomationSession::startStage`).
+         * @details 같은 프로세스의 사본은 색인 · Quick Open 에 보인다(`AutomationScratch::removeOtherProcessInstances` 는 다른 프로세스 것만 뺀다). 남기면 뒤 단계가 원본과 같은 파일 이름의
+         *          사본을 집었다(editor.sequencerkeys 가 saveroundtripsequencer 의 사본을 열었다). 언리얼 자동화 테스트도 픽스처를 테스트 끝에 거둔다. 못 지우면 경고가 남고 false 다.
+         */
+        static bool discard( const AutomationScratchFolder& folder );
+        /**
          * @brief 사본 폴더를 끝까지 만든 횟수입니다(`prepare` 성공마다 하나 오른다). 사본을 만든 뒤 OS 파일 감시가 그 쓰기를 알려야 한다 — 에디터가 이 번호가 바뀌면
          *        감시 울타리를 다시 세운다(`AssetHotReload` 의 시작 차단 조건).
          */
