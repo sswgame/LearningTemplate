@@ -7,7 +7,7 @@
   실행: App -scenario=game/shooter3d/automation/desktop/devicerecreate.scenario.xml -unattended (ctest -R Scenario.shooter3d.desktop.devicerecreate)
 -->
 <Scenario name="game.shooter3d.devicerecreate" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Launch variable="gv_rhiBackend" value="1"/>
+	<Launch variable="gv_rhiBackend" value="DirectX12"/>
 	<Launch variable="gv_deviceLostPolicy" value="2"/>
 	<AllowLog id="D3D12.RemovingD3D12DeviceRequest" reason="rhi.removeDevice 가 일부러 장치를 제거한다"/>
 	<AllowLog id="D3D12.D3D12DeviceLostWhile" reason="제거된 장치의 다음 GPU 호출이 손실을 본다"/>

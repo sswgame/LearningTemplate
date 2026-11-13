@@ -15,6 +15,7 @@
 
 #include "Engine/Animation/Component/SpriteAnimatorComponent.h"
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -231,4 +232,25 @@ namespace sw::editor
         if ( pSprite != nullptr && assetPath.empty() == false )
             pSprite->setMaterialPath( assetPath );
     }
+
+    namespace
+    {
+        /**
+         * @brief 체인의 다음 단계 앞에서 미리보기가 쥔 머티리얼 참조를 놓습니다. 편집기 상태는 단계를 넘어 남아, 앞 단계(assetmove)가 마지막에 본
+         *        scratch 머티리얼이 캐시에 남았고 그 사본 폴더를 거둔 뒤 장치 재생성이 그 파일을 다시 읽다 졌다(flowterrain · flowboundaries).
+         */
+        void releasePreviewMaterialForNextStage()
+        {
+            EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>(); // 선택: 에디터 없이 도는 체인에는 없다
+            if ( pStore == nullptr )
+                return;
+            EditorViewportPreviewInternal::PreviewMaterialState& heldMaterial = pStore->get<EditorViewportPreviewInternal::PreviewMaterialState>();
+            if ( heldMaterial._acquiredPath.empty() )
+                return;
+            editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( heldMaterial._acquiredPath );
+            heldMaterial._acquiredPath.clear();
+        }
+    } // namespace
+
+    SW_AUTOMATION_STAGE_RESET( editorViewportPreviewMaterial, "viewport preview material reference", &releasePreviewMaterialForNextStage );
 } // namespace sw::editor

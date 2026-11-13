@@ -14,7 +14,7 @@
  *   SW_GPU_ASSERT( level < levelCount, SW_GPU_ASSERT_ID_CULL_LOD_LEVEL, level );                 // 틀리면 적는다(값 하나)
  *   SW_GPU_ASSERT_ARGS( i < count, SW_GPU_ASSERT_ID_X, i, count, base, 0 );                      // 틀리면 문맥 인자 넷과 함께 적는다
  *   SW_GPU_CHECK( i < count, SW_GPU_ASSERT_ID_X, i );     // 틀리면 이 호출에서 처음 틀린 것만 기억한다(적지 않는다) — 읽기 도우미 · 루프 안처럼 펼쳐지는 자리
- *   SW_GPU_FLUSH_CHECKS();                                // 기억한 첫 실패를 한 번 적는다 — SW_GPU_CHECK 를 쓴 진입점 끝에 한 번
+ *   SW_GPU_FLUSH_CHECKS;                                  // 기억한 첫 실패를 한 번 적는다 — SW_GPU_CHECK 를 쓴 진입점 끝에 한 번
  *
  * SW_GPU_ASSERT 는 자리마다 원자 증가 + 기록 쓰기를 펼친다. 인라인되는 읽기 도우미에 두면 부르는 자리 수만큼 셰이더가 커져 드라이버 컴파일이 멎는다
  * (dzn: mesh_modifier 의 원소 읽기 assert 23 자리가 메시지 변형 컴파일을 몇 분 넘게 붙잡았다). 검사는 SW_GPU_CHECK 로 모으고 쓰기는 진입점 한 곳에서 한다 —
@@ -176,7 +176,7 @@ static bool GPUMessage::isFinite( float4 value )
         {                                                 \
             GPUMessage::noteCheck( conditionID, value );  \
         }
-    #define SW_GPU_FLUSH_CHECKS() GPUMessage::flushChecks()
+    #define SW_GPU_FLUSH_CHECKS GPUMessage::flushChecks() // 객체형: fxc(DXBC) 전처리기는 빈 인자 목록 `()` 의 함수형 매크로를 읽지 못한다
 
 #else // !SW_GPU_MESSAGES_ENABLED
 
@@ -187,7 +187,7 @@ static bool GPUMessage::isFinite( float4 value )
     #define SW_GPU_ASSERT_ARGS( condition, conditionID, a0, a1, a2, a3 )
     #define SW_GPU_ASSERT( condition, conditionID, value )
     #define SW_GPU_CHECK( condition, conditionID, value )
-    #define SW_GPU_FLUSH_CHECKS()
+    #define SW_GPU_FLUSH_CHECKS
 
 #endif // SW_GPU_MESSAGES_ENABLED
 

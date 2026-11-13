@@ -90,7 +90,7 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
         position = restPosition;
         normal   = restNormalElement.xyz;
         MeshDeform::applyProgram( (uint)programStart, vertexIndex - (uint)g_DeformPrograms[slot].y, position, normal );
-        SW_GPU_FLUSH_CHECKS(); // mesh_modifier 의 범위 검사(SW_GPU_CHECK)가 기억한 첫 실패를 여기서 한 번 적는다
+        SW_GPU_FLUSH_CHECKS; // mesh_modifier 의 범위 검사(SW_GPU_CHECK)가 기억한 첫 실패를 여기서 한 번 적는다
     }
 
     // 탄젠트 — 변형은 노멀만 바꾸므로 레스트 탄젠트를 새 노멀에 다시 직교화한다. w(바이탄젠트 부호)는 레스트 그대로라 싣지 않는다.

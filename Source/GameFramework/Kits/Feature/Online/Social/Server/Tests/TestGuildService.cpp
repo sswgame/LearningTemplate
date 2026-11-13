@@ -847,7 +847,7 @@ SW_TEST_CASE( GuildServiceTest, AccountDeletionErasesInvitesAndApplications )
 
     SW_REQUIRE_TRUE( GuildService::eraseAccount( rig._database, kOutside, kNowMs ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_guild_invite", kOutside, 0 ) );
-    SW_EXPECT_EQUAL( 0, rig._database.countRecords( hashed_string( "social_guild_invite_expiry" ) ) );
+    SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_guild_invite_expiry", kOutside, 1 ) ); // 색인 키 `<시각>/<나>/<길드>` — 수락한 초대의 줄은 TTL 쓸기가 지운다
     SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_guild_application", kOutside, 1 ) );
     SW_EXPECT_EQUAL( 0, countAccountField( rig._database, "social_account_application", kOutside, 0 ) );
 }

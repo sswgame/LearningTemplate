@@ -933,7 +933,13 @@ namespace
         int32        count      = 0;
         for ( const ServiceRecord& record : listRecord )
         {
-            count += record._key.find( accountHex ) != string::npos ? 1 : 0;
+            // 계정은 키의 첫 칸(통계 · 업적)이거나 끝 칸(점수 · 결과 · 색인)이다 — 가운데 칸의 시즌 id 1 이 계정 1 과 같은 16 진이라 부분 찾기는 셌다
+            const string_view key        = record._key;
+            const size_t      firstSlash = key.find( '/' );
+            const size_t      lastSlash  = key.rfind( '/' );
+            const bool        bFirst     = firstSlash != string_view::npos && key.substr( 0, firstSlash ) == accountHex;
+            const bool        bLast      = lastSlash != string_view::npos && key.substr( lastSlash + 1 ) == accountHex;
+            count += bFirst || bLast ? 1 : 0;
         }
         return count;
     }
