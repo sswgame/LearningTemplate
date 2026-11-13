@@ -11,30 +11,30 @@
 	<ResizeWindow width="1900" height="1300"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_editorWatchPanel" value="charactereditor.retarget"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<EditorKey key="Ctrl+Shift+P"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="Retarget Profile"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<!-- 팔레트가 연 것을 본다 - panel.focus 는 닫힌 패널도 열어 팔레트 글자를 잃어도 통과한다 -->
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus charactereditor.retarget"/>
 	<!-- 새 프로필: 없는 경로 → 빈 문서 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="retarget.newPath"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="scratch/import/scenario_new.retarget.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="retarget.new"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.RetargetChainCount" equals="0"/>
 	<CaptureEditorUI file="retarget/new.png"/>
 	<!-- 기존 프로필 열기 -->
 	<EditorClick mark="retarget.open"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="retarget.open.knight_to_minion.retarget.xml"/>
 	<WaitUntil watch="Editor.RetargetChainCount" atLeast="6" timeoutFrames="195"/>
 	<Expect watch="Editor.RetargetPoseCount" equals="0"/>
@@ -42,29 +42,29 @@
 	<CaptureEditorUI file="retarget/opened.png"/>
 	<!-- 리타깃 포즈 줄 더하기: 대상 스켈레톤에 있는 본만 받는다 -->
 	<!-- 미리보기와 사슬 목록이 길어 아래 칸이 창의 보이는 영역 밖으로 밀린다 — 미리보기만 남기고 위 구역을 접어 닿게 한다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="retarget.section.Skeletons"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="retarget.section.Root and pelvis"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="retarget.section.Options"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="retarget.section.Chains"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="retarget.targetPose.newBone"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="upperarm.l"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="retarget.targetPose.add"/>
 	<WaitUntil watch="Editor.RetargetPoseCount" equals="1" timeoutFrames="75"/>
 	<Expect watch="Editor.RetargetPreviewSegments" atLeast="20"/>
 	<!-- 돌림을 끌면 값이 프로필에 들어간다(사본만 고치면 다음 프레임에 사라졌다) -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorDrag mark="retarget.targetPose.rotation" dx="60" dy="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.RetargetPoseTurnDegrees" atLeast="1"/>
 	<CaptureEditorUI file="retarget/targetpose.png"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

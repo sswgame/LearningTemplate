@@ -47,7 +47,7 @@ SW_TEST_CASE( AutomationLogPolicyTest, ExpectLogDeclaresButZeroCountAndAllowDoNo
 }
 
 // 단계가 바뀌면(다음 시나리오의 `prepare`) 앞 단계의 선언은 거짓이다. 단계의 판정이 사라져도 선언은 지워진다 — 세션이 든 한 벌을 판정이 빌린다.
-SW_TEST_CASE( AutomationLogPolicyTest, NextStageAndEndedJudgeDropDeclarations )
+SW_TEST_CASE( AutomationLogPolicyTest, NextStageAndEndedEvaluationDropDeclarations )
 {
     using Util                                 = AutomationLogPolicyTestUtil;
     const shared_ptr<AutomationLogPolicy> pLog = make_shared<AutomationLogPolicy>();

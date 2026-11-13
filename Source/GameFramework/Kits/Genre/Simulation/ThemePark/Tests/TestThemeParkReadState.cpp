@@ -125,7 +125,7 @@ namespace
 /**
  * @brief [ThemeParkReadStateTest] 돌아간 실제 공원은 왕복하고, 형식에 맞게 꾸민 공원도 읽힌다
  */
-SW_TEST_CASE_F( ThemeParkReadStateTest, RealAndForgedStatesRead )
+SW_TEST_CASE_F( ThemeParkReadStateTest, RealAndCraftedStatesRead )
 {
     sw::ParkRide ride;
     ride._id        = "wheel";

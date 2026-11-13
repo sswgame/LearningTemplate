@@ -21,7 +21,7 @@
 						<_slot _sizeRule="Fill" />
 						<BoxPanel _name="Rows" _spacing="6" _orientation="Vertical" />
 					</ScrollPanel>
-					<TextWidget _name="RestartNotice" _styleClass="notice" _visibility="Collapsed" _text="Some changes take effect after a restart." />
+					<TextWidget _name="RestartNotification" _styleClass="notice" _visibility="Collapsed" _text="Some changes take effect after a restart." />
 					<BoxPanel _name="Buttons" _spacing="8">
 						<ButtonWidget _name="Apply" _styleClass="primary" _command="Apply">
 							<TextWidget _text="Apply" />

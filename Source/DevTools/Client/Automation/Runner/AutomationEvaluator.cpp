@@ -605,7 +605,7 @@ namespace sw
     void AutomationEvaluator::addFailure( const AutomationStep& step, string_view message )
     {
         string line = step.describe() + ": " + string( message );
-        SW_LOG_WARNING_ID( "Automation.JudgeWarning", "[Scenario] %#", line.c_str() );
+        SW_LOG_WARNING_ID( "Automation.EvaluationWarning", "[Scenario] %#", line.c_str() );
         _listFailure.push_back( std::move( line ) );
     }
 

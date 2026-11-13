@@ -9,43 +9,43 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open game/empty/maps/gimmickshowcase.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.ObjectCount" atLeast="5" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="select.type GimmickCircuitComponent"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus gimmick_graph"/>
 	<WaitUntil watch="Editor.GraphNodeCount" atLeast="1" timeoutFrames="120"/>
 	<!-- 노드 둘 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="gimmick.addnode"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="gimmick.kind.Signal"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="GimmickGraph.Edited" contains="Add Gimmick Node" count="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="gimmick.addnode"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="gimmick.kind.Not"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="GimmickGraph.Edited" contains="Add Gimmick Node" count="2"/>
 	<!-- 배선: 폼의 From · To 를 고르고 Connect -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="gimmick.wire.from"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="gimmick.wire.from.signal_1.Active"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="gimmick.wire.to"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="gimmick.wire.to.not_1.In"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="gimmick.wire.connect"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="GimmickGraph.Edited" contains="Add Gimmick Wire" count="1"/>
 	<Expect watch="Editor.UndoCount" atLeast="3"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

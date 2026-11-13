@@ -92,7 +92,7 @@ namespace
 /**
  * @brief [RhythmPlayStateTest] 실제 판은 왕복한다(롱노트를 누른 채로 이어진다). 형식에 맞게 꾸민 판도 읽힌다
  */
-SW_TEST_CASE_F( RhythmPlayStateTest, RealAndForgedStatesRead )
+SW_TEST_CASE_F( RhythmPlayStateTest, RealAndCraftedStatesRead )
 {
     _session.press( 0, 2.0f );
     SW_REQUIRE_TRUE( _session.isHolding( 0 ) );

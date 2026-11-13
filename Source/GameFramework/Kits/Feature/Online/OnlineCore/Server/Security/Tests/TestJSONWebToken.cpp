@@ -86,7 +86,7 @@ SW_TEST_CASE( JSONWebTokenTest, AcceptsAValidToken )
 /**
  * @brief [JSONWebTokenTest] 다른 키 · 바꾼 본문 · 다른 발급자 · 다른 대상 · 지난 토큰은 모두 거절한다
  */
-SW_TEST_CASE( JSONWebTokenTest, RejectsForgedOrStaleTokens )
+SW_TEST_CASE( JSONWebTokenTest, RejectsCraftedOrStaleTokens )
 {
     sw::INetSecurityProvider& provider = sw::game::getSubsystem<sw::INetSecurityProvider>(); // 키트는 공급자 구현을 모른다 — 게임 범위의 공급자      provider = sw::game::getSubsystem<sw::INetSecurityProvider>(); // 키트는 공급자 구현을 모른다 — 게임 범위의 공급자를 쓴다
     const SigningKey          key      = makeKey( provider );

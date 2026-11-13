@@ -17,7 +17,7 @@
 	<ResizeWindow width="1440" height="810"/>
 	<ResizeWindow width="1600" height="900"/>
 	<!-- ① 기본은 씬 뷰만 보인다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 무인 실행: 사람의 마우스 · 키보드는 창 메시지 단계에서 버린다 — 커서가 창 위 · 밖 어디 있든 비행 결과가 같다 -->
 	<Expect watch="Input.OSDeviceInputBlocked" equals="1"/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
@@ -32,28 +32,28 @@
 	<Wait frames="42"/>
 	<EditorKey key="D" state="Up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewCameraX" atLeast="3"/>
 	<!-- 게임 카메라는 씬 뷰 비행을 따르지 않는다 -->
 	<Expect watch="Editor.GameViewCameraX" sameAs="gameCameraX"/>
 	<Expect watch="Editor.GameViewCameraY" sameAs="gameCameraY"/>
 	<Screenshot file="sceneview.ppm"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus game_view"/>
 	<WaitUntil watch="Editor.GameViewRequested" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.SceneViewRequested" equals="0"/>
 	<Screenshot file="gameview.ppm"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectImage file="gameview.ppm" golden="gameview"/>
 	<!-- ③ Play — 게임 뷰는 게임 카메라, 씬 뷰는 에디터 카메라 그대로 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="toolbar.play"/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="120"/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>
 	<Expect watch="Editor.SceneViewCameraX" atLeast="3"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus scene_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewRequested" equals="1"/>
 	<Expect watch="Editor.GameViewRequested" equals="0"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="Down"/>
@@ -61,7 +61,7 @@
 	<Wait frames="42"/>
 	<EditorKey key="D" state="Up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PlayState" equals="1"/>
 	<Expect watch="Editor.SceneViewCameraX" atLeast="6"/>
 	<!-- ④ Stop — 정지로 돌아오고 씬 뷰는 계속 씬 뷰다 -->
@@ -69,16 +69,16 @@
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="90"/>
 	<Expect watch="Editor.SceneViewRequested" equals="1"/>
 	<!-- ⑤ 게임 뷰를 닫아도 요청은 0, 다시 열면 1 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close game_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.GameViewRequested" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus game_view"/>
 	<WaitUntil watch="Editor.GameViewRequested" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus scene_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

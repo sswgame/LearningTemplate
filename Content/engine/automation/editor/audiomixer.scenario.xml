@@ -8,35 +8,35 @@
 <Scenario name="editor.audiomixer" fixedDelta="0.0166667" timeoutFrames="700" startAfter="Immediately" input="exclusive">
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+Shift+P"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="Audio Mixer"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus audiomixer"/>
 	<WaitUntil watch="Editor.AudioMixerBusCount" atLeast="7" timeoutFrames="135"/>
 	<Expect watch="Editor.AudioMixerMutedCount" equals="0"/>
 	<Expect watch="Editor.AudioMixerSoloCount" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="audiomixer.mute.sfx"/>
 	<WaitUntil watch="Editor.AudioMixerMutedCount" equals="1" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="audiomixer.mute.sfx"/>
 	<WaitUntil watch="Editor.AudioMixerMutedCount" equals="0" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="audiomixer.solo.sfx"/>
 	<WaitUntil watch="Editor.AudioMixerSoloCount" equals="1" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="audiomixer.solo.sfx"/>
 	<WaitUntil watch="Editor.AudioMixerSoloCount" equals="0" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorWatchBus" value="sfx"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="audiomixer.volume.sfx"/>
 	<WaitUntil watch="Editor.AudioMixerBusVolume" near="0.5" tolerance="0.15" timeoutFrames="105"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

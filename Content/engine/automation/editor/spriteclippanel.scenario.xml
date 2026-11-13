@@ -10,52 +10,52 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.open {out}/temp.sprite.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus sprite_clip"/>
 	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="1" timeoutFrames="120"/>
 	<Expect watch="Editor.SpriteClipAnimationCount" equals="0"/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
 	<Expect watch="Editor.TempAssetExists" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="spriteClip.addFrame"/>
 	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="spriteClip.addFrame"/>
 	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="3" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="spriteClip.addAnimation"/>
 	<WaitUntil watch="Editor.SpriteClipAnimationCount" equals="1" timeoutFrames="60"/>
 	<!-- 저장 — 파일이 생기고 더러움이 걷힌다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="spriteClip.save"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.TempAssetExists" equals="1"/>
 	<!-- 프레임 하나를 골라 지운 뒤 다시 읽으면 저장한 문서로 돌아온다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="spriteClip.frame.1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="spriteClip.removeFrame"/>
 	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="spriteClip.load"/>
 	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="3" timeoutFrames="60"/>
 	<Expect watch="Editor.SpriteClipAnimationCount" equals="1"/>
 	<!-- 복제는 프레임을 늘리고, 다시 읽으면 저장한 문서로 돌아온다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="spriteClip.duplicateFrame"/>
 	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="4" timeoutFrames="60"/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="spriteClip.load"/>
 	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="3" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.removeTemp {out}/temp.sprite.xml"/>
 	<WaitUntil watch="Editor.TempAssetExists" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

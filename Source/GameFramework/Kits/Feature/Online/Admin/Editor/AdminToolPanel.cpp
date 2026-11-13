@@ -376,7 +376,7 @@ namespace sw::editor
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
-        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "MaintenanceNotice" ) );
+        EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "MaintenanceAnnouncement" ) );
 
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "ScopeAllOrServerKind" ), "Scope (all or server kind)" ), _scopeText, 160.0f * EditorThemeUtil::getDPIScale() );
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "MessageKey" ), "Message key" ), _maintenanceKeyText, 200.0f * EditorThemeUtil::getDPIScale() );
@@ -392,16 +392,16 @@ namespace sw::editor
             session.requestClearMaintenance( _scopeText, _memoText );
         ImGui::EndDisabled();
 
-        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "NoticeId" ) );
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "AnnouncementId" ) );
         EditorChrome::setNextItemWidthColumns( 16.0f );
         EditorWidgets::inputScalar( SW_WIDGET_ID( "##Noticeid" ), ImGuiDataType_S64, &_announcementID );
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "Priority" ) );
         EditorChrome::setNextItemWidthColumns( 16.0f );
         EditorWidgets::inputInt( SW_WIDGET_ID( "##Priority" ), &_announcementPriority );
-        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "NoticeSeconds0UntilRemoved" ) );
+        EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "AnnouncementSeconds0UntilRemoved" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         EditorWidgets::inputScalar( SW_WIDGET_ID( "##Noticeseconds0untilremoved" ), ImGuiDataType_S64, &_announcementSeconds );
-        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "NoticeText" ), "Notice text" ), _announcementText, 360.0f * EditorThemeUtil::getDPIScale() );
+        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "AnnouncementText" ), "Notice text" ), _announcementText, 360.0f * EditorThemeUtil::getDPIScale() );
         const bool bAnnouncementReady = _memoText.empty() == false && _announcementID > 0;
         ImGui::BeginDisabled( bAnnouncementReady == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "PostAnnouncement" ) ) )

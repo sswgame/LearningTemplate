@@ -10,37 +10,37 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus input_map"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inputMap.filter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 칸이 글자를 받아 거르는지 본다 - 고를 줄은 거르지 않아도 보여 클릭만으로는 글자를 잃어도 통과한다 -->
 	<EditorText value="zzz"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="1"/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="Confirm"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="0"/>
 	<Expect watch="Editor.InputMapConflicts" equals="0"/>
 	<EditorClick mark="inputMap.action.Confirm"/>
 	<WaitUntil watch="Editor.InputMapBindingCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.InputMapSelectedTrigger" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inputMap.binding.0.trigger"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inputMap.trigger.4"/>
 	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="4" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inputMap.reload"/>
 	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inputMap.tab.debug" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="inputMap.tab.debug" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

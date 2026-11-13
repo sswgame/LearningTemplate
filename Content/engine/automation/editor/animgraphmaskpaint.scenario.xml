@@ -9,58 +9,58 @@
 -->
 <Scenario name="editor.animgraphmaskpaint" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/animgraphmaskpaint" as="scratch/animgraphmaskpaint"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus animation_graph"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/animgraphmaskpaint/maskpaint.animgraph.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.AnimationGraphBoneMaskCount" equals="1" timeoutFrames="90"/>
 	<Expect watch="Editor.AnimationGraphMaskEntryCount" equals="2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.tab.layers" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="animationGraph.tab.layers" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.mask.0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.AnimationGraphMaskBoneRowCount" equals="0"/>
 	<EditorClick mark="animationGraph.mask.skeleton"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="scratch/animgraphmaskpaint/maskpaint.skeleton.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.AnimationGraphMaskBoneRowCount" equals="5" timeoutFrames="120"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="maskpaint/hierarchy.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- arm(줄 2)을 고르고 이 본만 칠한다 — "bones" 항목이 하나 는다 -->
 	<EditorClick mark="animationGraph.mask.bone.2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.mask.paintBone"/>
 	<WaitUntil watch="Editor.AnimationGraphMaskEntryCount" equals="3" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="maskpaint/painted.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.mask.resetBone"/>
 	<WaitUntil watch="Editor.AnimationGraphMaskEntryCount" equals="2" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- head(줄 4)에 자손까지 칠하고 저장 — 다시 읽어도 항목 셋 -->
 	<EditorClick mark="animationGraph.mask.bone.4"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.mask.paintSubtree"/>
 	<WaitUntil watch="Editor.AnimationGraphMaskEntryCount" equals="3" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.save"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.load"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.AnimationGraphMaskEntryCount" equals="3" timeoutFrames="75"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

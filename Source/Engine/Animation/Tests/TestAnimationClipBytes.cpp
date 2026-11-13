@@ -126,7 +126,7 @@ SW_TEST_CASE( AnimationClipBytesTest, EveryTruncatedLengthIsRefused )
 }
 
 /** @brief [AnimationClipBytesTest] 꾸민 개수 · 길이는 할당 전에, NaN 은 칸에서 거절한다. 남는 바이트도 틀린 파일이다 */
-SW_TEST_CASE( AnimationClipBytesTest, ForgedCountsAndNonFiniteValuesAreRefused )
+SW_TEST_CASE( AnimationClipBytesTest, CraftedCountsAndNonFiniteValuesAreRefused )
 {
     SW_EXPECT_LOG( "AnimationClip.AnimationClipMalformed" );
     XTestUtil::ClipOffsets offsets{};

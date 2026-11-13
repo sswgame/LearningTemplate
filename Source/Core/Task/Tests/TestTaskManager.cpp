@@ -1007,7 +1007,7 @@ SW_TEST_CASE( TaskManagerTest, ParallelBodyWaitsForPrerequisiteAndHonoursCancel 
         sw::ThreadUtil::sleepForMilliseconds( 30 );
         bPrerequisiteDone.store( true, std::memory_order_release );
     } ) );
-    sw::TaskHandle group        = manager.emplaceParallel( "GatedGroup", 256, SW_DELEGATE_LAMBDA( sw::ParallelTaskDelegate, [&bPrerequisiteDone, &earlyChunkCount, &chunkCount]( uint32 )
+    sw::TaskHandle group        = manager.emplaceParallel( "LatchedGroup", 256, SW_DELEGATE_LAMBDA( sw::ParallelTaskDelegate, [&bPrerequisiteDone, &earlyChunkCount, &chunkCount]( uint32 )
            {
         if ( bPrerequisiteDone.load( std::memory_order_acquire ) == false )
             earlyChunkCount.fetch_add( 1 );

@@ -14,7 +14,7 @@ using namespace sw;
 /**
  * @brief [DeferredRegistrationTest] 나눠 부르면 한도만큼만 붙은 순서로 등록되고, 끝나면 미루기가 풀려 다음 컴포넌트는 바로 등록된다. 남은 것은 `endDeferredRegistration` 이 끝낼 수도 있다
  */
-SW_TEST_CASE( DeferredRegistrationTest, PumpRegistersUpToTheBudgetInOrder )
+SW_TEST_CASE( DeferredRegistrationTest, PollRegistersUpToTheBudgetInOrder )
 {
     GameObjectManager manager;
     manager.beginDeferredRegistration();

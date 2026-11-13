@@ -135,7 +135,7 @@ namespace sw
                 ServiceAnnouncement announcement;
                 const bool          bDecoded = ServerDirectoryProtocol::decodeAnnouncement( record._key, record._bytes, announcement );
                 if ( bDecoded && Internal::isValidAnnouncement( announcement ) == false )
-                    SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryNoticeRecord", "Server directory notice record '%#' breaks the write rules", record._key );
+                    SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryAnnouncementRecord", "Server directory notice record '%#' breaks the write rules", record._key );
                 if ( bDecoded == false || Internal::isValidAnnouncement( announcement ) == false )
                 {
                     read._result = ServiceStoreResult::Invalid;

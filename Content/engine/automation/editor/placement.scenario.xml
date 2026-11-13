@@ -13,22 +13,22 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.resetOptional"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.UndoCount" equals="0" timeoutFrames="600"/>
 	<DevCommand line="panel.focus content_browser"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="content.open game/empty/models"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.search"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="crate_medium.mesh"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- ① 누른 채 옮겨 고스트를 본 뒤 뗀다 -->
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Down"/>
 	<Wait frames="3"/>
@@ -54,16 +54,16 @@
 	<WaitUntil watch="Editor.PlacementYaw" equals="0" timeoutFrames="30"/>
 	<Store watch="Editor.SceneHash" as="placed"/>
 	<!-- ② 되돌리기 · 다시 실행은 같은 자리 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneHash" differsFrom="placed"/>
 	<DevCommand line="editor edit.redo"/>
 	<WaitUntil watch="Editor.SceneHash" sameAs="placed" timeoutFrames="60"/>
 	<!-- ③ 하늘을 보면 표면이 없다 — 놓지 않는다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="camera.set 0 5 -10 -60 0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Down"/>
 	<Wait frames="3"/>
 	<EditorHover mark="sceneView.canvas" anchor="0.45,0.5"/>
@@ -78,14 +78,14 @@
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<ExpectLog id="EditorViewportAssetPlacement.NoSurface" atLeast="1"/>
 	<!-- ④ 놓을 수 없는 종류는 연다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="content.open game/empty/materials/matgraph"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.search"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
 	<EditorText value="layered_stone_clean"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.asset.layered_stone_clean.material" state="Down"/>
 	<Wait frames="3"/>
 	<EditorHover mark="sceneView.canvas" anchor="0.45,0.5"/>
@@ -98,9 +98,9 @@
 	<Expect watch="Editor.PlacedCount" equals="1"/>
 	<!-- 연 머티리얼 문서 패널이 포커스를 가져 Editor.UndoCount 가 그 패널 스택(빈 것)을 본다(E-3) — 씬 스택이 그대로인지는 씬 뷰로 돌아와 본다 -->
 	<DevCommand line="panel.focus scene_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

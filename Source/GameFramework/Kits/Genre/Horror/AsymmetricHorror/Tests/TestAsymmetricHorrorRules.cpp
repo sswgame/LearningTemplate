@@ -1314,7 +1314,7 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, ReadRefusesWrongHost )
 /**
  * @brief [AsymmetricHorrorRulesTest] 결함: 칸마다 범위만 보거나 아예 보지 않아, 맞지 않는 짝을 받았다. 들린 상태인데 살인마가 들지 않으면 내려오지 못하고, 없는 참가자는 판 결과에서 빠지며, 완료 수가 틀리면 전원이 어긋난다 — 모두 거절한다
  */
-SW_TEST_CASE_F( AsymmetricHorrorRulesTest, ReadRefusesForgedBytes )
+SW_TEST_CASE_F( AsymmetricHorrorRulesTest, ReadRefusesCraftedBytes )
 {
     SW_REQUIRE_TRUE( _match.addSurvivor( AsymmetricHorrorTestUtil::at( 90.0f, 0.0f ) ) == 0 );
     SW_REQUIRE_TRUE( _match.addSurvivor( AsymmetricHorrorTestUtil::at( 90.0f, 0.0f ) ) == 1 );

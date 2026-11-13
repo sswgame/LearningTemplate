@@ -434,7 +434,7 @@ SW_TEST_CASE( TradeServerTest, AnonymousConnectionIsRefused )
 }
 
 /** @brief [TradeServerTest] 위조: 없는 거래는 NotFound, 남의 거래는 NotParty 이고, 음수 · 0 · 범위 밖 수량은 Invalid, 항목이 너무 많으면 TooManyLegs 다. 어느 것도 거래를 바꾸지 않는다 */
-SW_TEST_CASE( TradeServerTest, ForgedValuesAreRefused )
+SW_TEST_CASE( TradeServerTest, CraftedValuesAreRefused )
 {
     TradeServerFixture rig;
     rig.grant( kAlice, "cur.gold", 100 );

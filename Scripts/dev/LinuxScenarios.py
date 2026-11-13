@@ -243,7 +243,7 @@ def report_file(path):
     failed = 0
     reasons = []
     for line in open(path, errors='replace'):
-        if 'Automation.JudgeWarning' in line:
+        if 'Automation.EvaluationWarning' in line:
             reasons.append(line[line.find('[Scenario]') + 11:].strip()[:190])
         elif 'AutomationSession.ChainStage' in line:
             stage = re.search(r'chain stage (\d+)/(\d+) (\w+) \(([\w.]+)\)', line)

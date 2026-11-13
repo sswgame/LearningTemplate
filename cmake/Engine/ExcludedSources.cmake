@@ -13,7 +13,7 @@
 # **다른 타겟으로 옮겨 짓는 것(키트 폴더 · RHI 모듈)은 적지 않는다** — 지어지지 않으면 게이트가 잡아야 한다.
 # ------------------------------------------------------------------------------
 # 게이트는 빌드 트리 기준 같은 상대 경로(`generated/sw/config/ExcludedSources.txt`)를 읽는다.
-set(SW_UNBUILT_SOURCE_LIST "${CMAKE_BINARY_DIR}/generated/sw/config/ExcludedSources.txt")
+set(SW_EXCLUDED_SOURCE_LIST "${CMAKE_BINARY_DIR}/generated/sw/config/ExcludedSources.txt")
 
 # 배포 구성이 짓지 않는 개발 전용 소스 — 기능 폴더의 단위 테스트(`Tests/`)와 개발 전용 단위 폴더(`Dev/` — 호스트의 개발 계층 · 서버 개발 조종 · 에디터 모듈 개발 경로).
 # 파일 이름 꼬리로 빼지 않는다: 개발 명령 · 캐시 리로드 · 온라인 개발 대체물은 기능 파일에 두고 등록 매크로가 배포에서 등록하지 않는다(`docs/agents/BuildConfigSwitch.md`).
@@ -79,7 +79,7 @@ set(SW_SERVER_ONLY_SOURCE_PATTERNS "/Server/")
 
 # 이 구성이 짓지 않는 소스를 적는다(절대 경로). 헤더도 받아 두지만 목록에는 `.c` · `.cpp` 만 쓴다.
 function(sw_declareExcludedSources)
-	set_property(GLOBAL APPEND PROPERTY SW_UNBUILT_SOURCES ${ARGN})
+	set_property(GLOBAL APPEND PROPERTY SW_EXCLUDED_SOURCES ${ARGN})
 endfunction()
 
 # 폴더(ARGN, 절대 경로) 아래의 .c · .cpp 를 전부 "이 구성이 짓지 않는 소스" 로 적는다 — 통째로 빼는 폴더(고르지 않은 게임 팩 ·
@@ -174,7 +174,7 @@ endfunction()
 
 # 구성 끝(모든 소스 타겟을 만든 뒤)에 한 번 — 적어 둔 것을 빌드 트리에 쓴다. 내용이 같으면 파일을 다시 쓰지 않는다.
 function(sw_writeExcludedSourceList)
-	get_property(listSource GLOBAL PROPERTY SW_UNBUILT_SOURCES)
+	get_property(listSource GLOBAL PROPERTY SW_EXCLUDED_SOURCES)
 	list(FILTER listSource INCLUDE REGEX "\\.(c|cpp)$")
 	set(listRelative "")
 	foreach(source IN LISTS listSource)
@@ -187,7 +187,7 @@ function(sw_writeExcludedSourceList)
 	endif()
 
 	string(JOIN "\n" content ${listRelative})
-	file(CONFIGURE OUTPUT "${SW_UNBUILT_SOURCE_LIST}" CONTENT "${content}\n" @ONLY)
-	list(LENGTH listRelative unbuiltCount)
-	message(STATUS "[Build] Sources this configuration does not build: ${unbuiltCount} (${SW_UNBUILT_SOURCE_LIST})")
+	file(CONFIGURE OUTPUT "${SW_EXCLUDED_SOURCE_LIST}" CONTENT "${content}\n" @ONLY)
+	list(LENGTH listRelative excludedCount)
+	message(STATUS "[Build] Sources this configuration does not build: ${excludedCount} (${SW_EXCLUDED_SOURCE_LIST})")
 endfunction()

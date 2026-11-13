@@ -957,7 +957,7 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, ResetSequenceWritesSameBytesAsUntouched
 /**
  * @brief [SurvivalHorrorRulesTest] 결함: 체력, 없는 괴물 · 문서 · 퍼즐 id, 다이얼 시도의 범위, 가지지 않은 단서의 연결, 없는 방을 받았다 — 모두 거절하고 상태는 그대로이다
  */
-SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionReadRefusesForgedBytes )
+SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionReadRefusesCraftedBytes )
 {
     SurvivalFixtureSession good;
     good._listMonster  = { "zombie" };
@@ -1282,7 +1282,7 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterStateRoundTrip )
 /**
  * @brief [SurvivalHorrorTest] 결함: 음수 체력 · 주사위, 범위 밖 강인함, 체력과 맞지 않는 빠짐, 명단과 맞지 않는 차례, 강인함 · 남은 수와 맞지 않는 결과를 받았다. 명단에 없는 차례는 그 차례를 헛돌고, 남은 조사자가 차례에 없으면 영영 움직이지 못한다 — 거절한다
  */
-SW_TEST_CASE_F( SurvivalHorrorTest, EncounterReadRefusesForgedBytes )
+SW_TEST_CASE_F( SurvivalHorrorTest, EncounterReadRefusesCraftedBytes )
 {
     SurvivalHorrorEncounter encounter;
     SW_REQUIRE_TRUE( encounter.initialize( _monster, { makeInvestigator( 1 ) }, 7u ) );
@@ -1342,7 +1342,7 @@ SW_TEST_CASE_F( SurvivalHorrorTest, EncounterReadRefusesForgedBytes )
 /**
  * @brief [SurvivalHorrorTest] 결함: 기반 `TurnOrder::readState` 가 겹친 번호, 대기열의 없는 번호, 0 이하 속도(타임라인이 나눈다), 음수 라운드를 받았다 — 거절한다
  */
-SW_TEST_CASE( SurvivalHorrorTest, TurnOrderReadRefusesForgedBytes )
+SW_TEST_CASE( SurvivalHorrorTest, TurnOrderReadRefusesCraftedBytes )
 {
     struct FixtureActor
     {

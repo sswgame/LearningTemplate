@@ -82,7 +82,7 @@ SW_TEST_CASE( ContentBrowserMoveQueueTest, RenameIsSingleAndDiscardable )
     SW_EXPECT_TRUE( queue.isEmpty() );
 }
 
-SW_TEST_CASE( ContentBrowserLogicTest, FolderTrailHasOneCrumbPerFolderBelowTheRoot )
+SW_TEST_CASE( ContentBrowserLogicTest, FolderTrailHasOneBreadcrumbPerFolderBelowTheRoot )
 {
     vector<ContentBrowserBreadcrumb> listBreadcrumb;
     ContentBrowserBreadcrumb::makeFolderTrail( "Content", "D:/Project/Content/", "D:\\Project\\Content\\game\\maps", listBreadcrumb );
@@ -95,7 +95,7 @@ SW_TEST_CASE( ContentBrowserLogicTest, FolderTrailHasOneCrumbPerFolderBelowTheRo
     SW_EXPECT_TRUE( listBreadcrumb[2]._absolutePath == "D:/Project/Content/game/maps" );
 }
 
-SW_TEST_CASE( ContentBrowserLogicTest, TheRootItselfIsOneCrumb )
+SW_TEST_CASE( ContentBrowserLogicTest, TheRootItselfIsOneBreadcrumb )
 {
     vector<ContentBrowserBreadcrumb> listBreadcrumb;
     ContentBrowserBreadcrumb::makeFolderTrail( "Content", "D:/Project/Content", "D:/Project/Content/", listBreadcrumb );
@@ -104,7 +104,7 @@ SW_TEST_CASE( ContentBrowserLogicTest, TheRootItselfIsOneCrumb )
 }
 
 // 이름 앞부분만 같은 형제 폴더는 루트 아래가 아니다.
-SW_TEST_CASE( ContentBrowserLogicTest, FolderOutsideTheRootIsASingleCrumb )
+SW_TEST_CASE( ContentBrowserLogicTest, FolderOutsideTheRootIsASingleBreadcrumb )
 {
     vector<ContentBrowserBreadcrumb> listBreadcrumb;
     ContentBrowserBreadcrumb::makeFolderTrail( "Content", "D:/Project/Content", "D:/Project/Content2/x", listBreadcrumb );
@@ -158,7 +158,7 @@ SW_TEST_CASE( ContentBrowserFolderCacheTest, ScansOncePerFolderAndSortsChildren 
     SW_EXPECT_TRUE( noScan.getOrScanChildFolders( "D:/a" ).empty() );
 }
 
-SW_TEST_CASE( ContentBrowserHistoryTest, BackAndForwardWalkTheVisits )
+SW_TEST_CASE( ContentBrowserHistoryTest, BackAndForwardTraverseTheVisits )
 {
     ContentBrowserHistory history;
     SW_EXPECT_FALSE( history.canNavigateBack() );

@@ -7,22 +7,22 @@
 -->
 <Scenario name="editor.saveroundtripspriteclip" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/spriteclipregion" as="scratch/saveroundtripspriteclip"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus sprite_clip"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/saveroundtripspriteclip/hero.sprite.xml"/>
 	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="2" timeoutFrames="120"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.saveDocument sprite_clip"/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtripspriteclip/hero.sprite.xml"/>
 	<DevCommand line="panel.reloadDocument sprite_clip"/>
 	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="2" timeoutFrames="120"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.saveDocument sprite_clip"/>
 	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripspriteclip/hero.sprite.xml"/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

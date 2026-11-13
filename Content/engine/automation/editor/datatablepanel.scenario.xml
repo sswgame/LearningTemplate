@@ -11,37 +11,37 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_editorWatchPanel" value="data_table"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus data_table"/>
 	<WaitUntil watch="Editor.DataTableRecordCount" atLeast="1" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PanelDirty" equals="0"/>
 	<Store watch="Editor.DataTableRecordCount" as="records"/>
 	<!-- 새 키 — 행이 하나 는다 -->
 	<EditorClick mark="dataTable.newKey"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="zz.scenario.datatablepanel"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="dataTable.addKey"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.DataTableRecordCount" differsFrom="records"/>
 	<Expect watch="Editor.PanelDirty" equals="1"/>
 	<!-- 검색 — 더한 키 하나만 보인다 -->
 	<EditorClick mark="dataTable.search"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="zz.scenario.datatablepanel"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.DataTableVisibleRecordCount" equals="1"/>
 	<!-- 지우기 — 레코드 수가 처음과 같다 -->
 	<EditorClick mark="dataTable.delete.zz.scenario.datatablepanel"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.DataTableRecordCount" sameAs="records"/>
 	<Expect watch="Editor.DataTableVisibleRecordCount" equals="0"/>
 	<!-- 다시 읽기 — 고친 것을 버린다 -->
 	<EditorClick mark="dataTable.reload"/>
 	<WaitUntil watch="Editor.PanelDirty" equals="0" timeoutFrames="10"/>
 	<WaitUntil watch="Editor.DataTableRecordCount" atLeast="1" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.DataTableRecordCount" sameAs="records"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

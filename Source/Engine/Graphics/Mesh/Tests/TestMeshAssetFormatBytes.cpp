@@ -175,7 +175,7 @@ SW_TEST_CASE( MeshAssetFormatBytesTest, EveryTruncatedLengthIsRefused )
 }
 
 /** @brief [MeshAssetFormatBytesTest] 머리와 덩어리의 꾸민 개수는 할당 전에 거절한다(잡으면 이 테스트가 메모리에서 멈춘다) */
-SW_TEST_CASE( MeshAssetFormatBytesTest, ForgedCountsAreRefused )
+SW_TEST_CASE( MeshAssetFormatBytesTest, CraftedCountsAreRefused )
 {
     SW_EXPECT_LOG( "MeshAssetFormat.MeshAssetDeclaresVertices" );
     SW_EXPECT_LOG( "MeshAssetFormat.MeshAssetMalformedSection" );

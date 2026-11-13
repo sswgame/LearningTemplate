@@ -8,23 +8,23 @@
 -->
 <Scenario name="editor.saveroundtripcatalog" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/environment" as="scratch/saveroundtripcatalog"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus catalog_editor"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/saveroundtripcatalog/default.surfacekinds.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.CatalogRowCount" atLeast="1" timeoutFrames="120"/>
 	<Store watch="Editor.CatalogRowCount" as="rows"/>
 	<DevCommand line="panel.saveDocument catalog_editor"/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtripcatalog/default.surfacekinds.xml"/>
 	<DevCommand line="panel.reloadDocument catalog_editor"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.CatalogRowCount" sameAs="rows"/>
 	<DevCommand line="panel.saveDocument catalog_editor"/>
 	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripcatalog/default.surfacekinds.xml"/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

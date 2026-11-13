@@ -12,35 +12,35 @@
 -->
 <Scenario name="editor.resourcesave" fixedDelta="0.0166667" timeoutFrames="1100" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/resourcesave" as="scratch/resourcesave"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="settings.apply graphics.quality=high"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus animation_graph"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/resourcesave/resourcesave.animgraph.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.AnimationGraphLinkCount" equals="2" timeoutFrames="90"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="2" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.save"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="settings.apply graphics.quality=low"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.load"/>
 	<WaitUntil watch="Editor.AnimationGraphLinkCount" equals="1" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.save"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="settings.apply graphics.quality=high"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.load"/>
 	<WaitUntil watch="Editor.AnimationGraphLinkCount" equals="2" timeoutFrames="90"/>
 	<Expect watch="Editor.GraphNodeCount" equals="2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

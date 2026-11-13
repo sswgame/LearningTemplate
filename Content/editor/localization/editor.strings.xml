@@ -2269,7 +2269,7 @@
 				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdFormat.StateBuiltBodiesSettled"
+		<entry key="EdFormat.StateBuiltBodiesAsleep"
 		       source="State {state}  Built bodies {bodyCount}  Settled {settled, select, yes {yes} other {no}}">
 			<origins>
 				<item>Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp</item>

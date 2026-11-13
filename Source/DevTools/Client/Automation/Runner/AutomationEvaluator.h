@@ -72,7 +72,7 @@ namespace sw
         void runStore( AutomationStepContext& context, const AutomationStep& step );
         void runExpectLog( AutomationStepContext& context, const AutomationStep& step );
         /**
-         * @brief `<ExpectImage>` 를 미뤄 둡니다 - 인자와 그때의 백엔드(골든이 백엔드마다 따로다)만 지금 읽고, 비교는 시나리오 끝(`judgeDeferredImages`)에서 한다.
+         * @brief `<ExpectImage>` 를 미뤄 둡니다 - 인자와 그때의 백엔드(골든이 백엔드마다 따로다)만 지금 읽고, 비교는 시나리오 끝(`evaluateDeferredImages`)에서 한다.
          * @details 판정은 다음 단계 진행에 쓰이지 않는다(실패를 적을 뿐). 예전에는 단계마다 스크린샷 쓰기를 기다려 프레임을 붙잡았다. 같은 파일을 두 번 찍는 시나리오는
          *          읽을 때 거절한다(`AutomationStepValidation::validateScreenshotFiles`) - 미룬 비교가 덮어쓴 그림을 보지 않게.
          */

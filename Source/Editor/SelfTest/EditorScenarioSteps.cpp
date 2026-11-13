@@ -219,7 +219,7 @@ namespace sw::editor
                 return hold;
             }
 
-            /** @brief `EditorWaitSettled` 가 붙잡은 동안의 상태입니다(`EditorStabilityWait` — 자체 테스트의 정지 대기와 같은 재료 · 판정). */
+            /** @brief `EditorWaitStable` 가 붙잡은 동안의 상태입니다(`EditorStabilityWait` — 자체 테스트의 정지 대기와 같은 재료 · 판정). */
             struct StabilityWaitState final : IAutomationStepState
             {
                 EditorStabilityWait _wait;
@@ -694,7 +694,7 @@ namespace sw::editor
     SW_AUTOMATION_STEP( editorKey, EditorScenarioStepValidation::kKeyKind, &EditorScenarioStepsInternal::runKey, &EditorScenarioStepValidation::validateKey, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareKey ).withHold( &EditorScenarioStepsInternal::holdUntilKeyboardStable ) );
     SW_AUTOMATION_STEP( editorExpectObject, EditorScenarioStepValidation::kExpectObjectKind, &EditorScenarioStepsInternal::runExpectObject, &AutomationStep::validateProperties<EditorExpectObjectParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareExpectObject ) );
     SW_AUTOMATION_STEP( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, &EditorScenarioStepsInternal::runDockLayout, &AutomationStep::validateProperties<EditorDockLayoutParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ) );
-    SW_AUTOMATION_STEP( editorWaitSettled, EditorScenarioStepValidation::kWaitStableKind, nullptr, &AutomationStep::validateProperties<EditorNoParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilScreenStable ) );
+    SW_AUTOMATION_STEP( editorWaitStable, EditorScenarioStepValidation::kWaitStableKind, nullptr, &AutomationStep::validateProperties<EditorNoParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilScreenStable ) );
     SW_AUTOMATION_STEP( editorSelfTest, EditorScenarioStepValidation::kSelfTestKind, &EditorScenarioStepsInternal::runSelfTest, &AutomationStep::validateProperties<EditorSelfTestParams>, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilSelfTestsEnd ) );
 
 } // namespace sw::editor

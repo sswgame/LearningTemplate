@@ -309,7 +309,7 @@ namespace sw
         }
         if ( surfaceFormat.format != requestedFormat )
         {
-            SW_LOG_INFO_ID( "Vulkan.SwapChainAdoptedDifferent", "The swap chain adopted a different format than requested (requested VkFormat %#, adopted %#) - back buffer PSOs are built with getBackBufferFormat().",
+            SW_LOG_INFO_ID( "Vulkan.SwapChainFormatDiffers", "The swap chain adopted a different format than requested (requested VkFormat %#, adopted %#) - back buffer PSOs are built with getBackBufferFormat().",
                             static_cast<uint32>( requestedFormat ), static_cast<uint32>( surfaceFormat.format ) );
         }
 

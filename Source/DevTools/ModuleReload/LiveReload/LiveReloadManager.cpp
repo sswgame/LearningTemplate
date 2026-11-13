@@ -98,7 +98,7 @@ namespace sw
         , _buildStampPath{}
         , _seenBuildToken{}
         , _buildMutex{}
-        , _buildNotice{}
+        , _buildEvent{}
         , _onBeforeCommitBatch{}
         , _reloadHolds{}
         , _flushWorkers{}
@@ -321,16 +321,16 @@ namespace sw
     void LiveReloadManager::notifyBuildStarted()
     {
         ScopedLock<mutex> lock{ _buildMutex };
-        _buildNotice._bInProgress = true;
+        _buildEvent._bInProgress = true;
     }
 
     void LiveReloadManager::notifyBuildFinished( bool bSucceeded, string_view targetName )
     {
         ScopedLock<mutex> lock{ _buildMutex };
-        _buildNotice._bInProgress      = false;
-        _buildNotice._bFinishedPending = true;
-        _buildNotice._bSucceeded       = bSucceeded;
-        _buildNotice._targetName       = string( targetName );
+        _buildEvent._bInProgress      = false;
+        _buildEvent._bFinishedPending = true;
+        _buildEvent._bSucceeded       = bSucceeded;
+        _buildEvent._targetName       = string( targetName );
     }
 
     bool LiveReloadManager::consumeBuildEvent()
@@ -338,8 +338,8 @@ namespace sw
         BuildEvent event;
         {
             ScopedLock<mutex> lock{ _buildMutex };
-            event                          = _buildNotice;
-            _buildNotice._bFinishedPending = false;
+            event                         = _buildEvent;
+            _buildEvent._bFinishedPending = false;
         }
         if ( event._bFinishedPending )
         {
@@ -432,7 +432,7 @@ namespace sw
             const bool bForce         = context._bForceReload.exchange( false );
             if ( bForce || sourceStamp != context._loadedSourceStamp )
             {
-                SW_LOG_TRACE_ID( "LiveReloadManager.FileWatcherSettledQueuingReload", "FileWatcher settled — queuing reload for %#", context._moduleName );
+                SW_LOG_TRACE_ID( "LiveReloadManager.FileWatcherStableQueuingReload", "FileWatcher settled — queuing reload for %#", context._moduleName );
                 context._bPendingReload = true;
             }
         }

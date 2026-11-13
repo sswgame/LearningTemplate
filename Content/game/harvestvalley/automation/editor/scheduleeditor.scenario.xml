@@ -11,11 +11,11 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_farmAutoPlay" value="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
 
 	<!-- ① 플레이 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="play"/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
 
@@ -30,7 +30,7 @@
 	<CaptureEditorUI file="scheduleeditor/npc_schedule.png"/>
 
 	<!-- ④ 시계를 감아도 같은 날의 계획 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<AdvanceGameTime toHour="10"/>
 	<WaitUntil watch="Schedule.Activity" target="pierre" is="WorkAt" timeoutFrames="60"/>
 	<Expect watch="Editor.ScheduleTimelineRowCount" sameAs="pierreRows"/>

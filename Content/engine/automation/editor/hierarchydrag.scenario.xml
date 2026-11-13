@@ -9,20 +9,20 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<Variable name="gv_editorWatchObject" value="TestKeyLight"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.ObjectDepth" equals="0"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorDrag mark="hierarchy.row.TestKeyLight" toMark="hierarchy.row.TestParent"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.ObjectDepth" equals="1" timeoutFrames="180"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.ObjectDepth" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

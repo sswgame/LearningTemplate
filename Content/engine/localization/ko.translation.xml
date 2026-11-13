@@ -412,8 +412,8 @@
 		<entry key="EdPluginField.MaintenanceSeconds0UntilCleared"
 		       text="점검 초(0 = 풀 때까지)"
 		       sourceHash="14988336ae4ff447" />
-		<entry key="EdPluginField.NoticeId" text="공지 id" sourceHash="346e643ae672864e" />
-		<entry key="EdPluginField.NoticeSeconds0UntilRemoved"
+		<entry key="EdPluginField.AnnouncementId" text="공지 id" sourceHash="346e643ae672864e" />
+		<entry key="EdPluginField.AnnouncementSeconds0UntilRemoved"
 		       text="공지 초(0 = 지울 때까지)"
 		       sourceHash="5ca50ca62e3f11de" />
 		<entry key="EdPluginField.OffsetM" text="오프셋(m)" sourceHash="5ec26a29745a2dfc" />
@@ -577,10 +577,10 @@
 		<entry key="EdPluginWidget.Kind" text="종류" sourceHash="70af97de3ad8fb23" />
 		<entry key="EdPluginWidget.LiveEvents" text="라이브 이벤트" sourceHash="b5622b26740874ec" />
 		<entry key="EdPluginWidget.Loop" text="반복" sourceHash="4efee5b48a4593cb" />
-		<entry key="EdPluginWidget.MaintenanceNotice" text="점검 / 공지" sourceHash="85b0db04bdd7964f" />
+		<entry key="EdPluginWidget.MaintenanceAnnouncement" text="점검 / 공지" sourceHash="85b0db04bdd7964f" />
 		<entry key="EdPluginWidget.MemoTicket" text="메모(티켓)" sourceHash="fdcbf34ceeb42ab6" />
 		<entry key="EdPluginWidget.MessageKey" text="메시지 키" sourceHash="a982200e6ce2d4db" />
-		<entry key="EdPluginWidget.NoticeText" text="공지 글" sourceHash="30c28e16a2b1dc84" />
+		<entry key="EdPluginWidget.AnnouncementText" text="공지 글" sourceHash="30c28e16a2b1dc84" />
 		<entry key="EdPluginWidget.Options" text="옵션" sourceHash="463b8c4e92751ba5" />
 		<entry key="EdPluginWidget.Play" text="재생" sourceHash="cd105819b5a10243" />
 		<entry key="EdPluginWidget.Preview" text="미리보기" sourceHash="417b90913e05bc17" />

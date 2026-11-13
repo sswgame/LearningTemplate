@@ -175,21 +175,21 @@ SW_TEST_CASE( AccountConnectAuthenticatorTest, TamperedOrMisSizedTokenIsRejected
 }
 
 /** @brief [AccountConnectAuthenticatorTest] 티켓이 맞아도 받아들이기 정책 밖 계정(매칭 배정 밖)은 거절하고, 배정된 계정은 받는다 */
-SW_TEST_CASE( AccountConnectAuthenticatorTest, AdmissionPolicyGatesValidTickets )
+SW_TEST_CASE( AccountConnectAuthenticatorTest, AdmissionPolicyAcceptsValidTickets )
 {
     TicketFixture rig;
     SW_REQUIRE_TRUE( rig.issue( "game-1" ) );
     NetSessionSecret secret;
     uint64           principalID = 0;
 
-    const AllowOneAccount       admitOther( kAccount + 1 );
-    AccountConnectAuthenticator closed( &rig._authority, hashed_string( "game-1" ), admitOther );
+    const AllowOneAccount       acceptOther( kAccount + 1 );
+    AccountConnectAuthenticator closed( &rig._authority, hashed_string( "game-1" ), acceptOther );
     closed.setNowMs( UnixMilliseconds{ kNowMs } );
     SW_EXPECT_FALSE( closed.findSessionSecret( rig._ticket._arrToken, NetGameTicket::kTokenSize, secret, principalID ) );
     SW_EXPECT_EQUAL( uint64( 0 ), principalID );
 
-    const AllowOneAccount       admitThis( kAccount );
-    AccountConnectAuthenticator open( &rig._authority, hashed_string( "game-1" ), admitThis );
+    const AllowOneAccount       acceptThis( kAccount );
+    AccountConnectAuthenticator open( &rig._authority, hashed_string( "game-1" ), acceptThis );
     open.setNowMs( UnixMilliseconds{ kNowMs } );
     SW_EXPECT_TRUE( open.findSessionSecret( rig._ticket._arrToken, NetGameTicket::kTokenSize, secret, principalID ) );
     SW_EXPECT_EQUAL( kAccount, principalID );

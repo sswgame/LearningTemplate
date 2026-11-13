@@ -6,9 +6,9 @@
 -->
 <Scenario name="editor.gamemodulereload" fixedDelta="0.0166667" timeoutFrames="9000" startAfter="Immediately" input="exclusive">
 	<DevCommand line="module.reload SWGame"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="300"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Editor.ObjectCount" atLeast="1"/>

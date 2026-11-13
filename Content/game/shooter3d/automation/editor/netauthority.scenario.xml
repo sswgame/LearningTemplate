@@ -14,9 +14,9 @@
 	<Variable name="gv_shooterAutoPlay" value="1"/>
 	<Variable name="gv_shooterAutoMelee" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus multiplayer"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="multiplayer.tab.inprocess" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="multiplayer.tab.inprocess" state="Up"/>

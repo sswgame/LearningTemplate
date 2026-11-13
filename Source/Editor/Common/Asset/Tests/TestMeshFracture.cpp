@@ -462,7 +462,7 @@ SW_TEST_CASE( FractureAssetTest, EveryTruncatedLengthIsRefused )
 }
 
 /** @brief [FractureAssetTest] 꾸민 개수는 할당 전에, NaN 은 칸에서 거절한다 */
-SW_TEST_CASE( FractureAssetTest, ForgedCountsAndNonFiniteValuesAreRefused )
+SW_TEST_CASE( FractureAssetTest, CraftedCountsAndNonFiniteValuesAreRefused )
 {
     SW_EXPECT_LOG( "FractureAsset.FractureAssetTruncated" );
     SW_EXPECT_LOG( "FractureAsset.FractureAssetMalformed" );

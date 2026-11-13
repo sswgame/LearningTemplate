@@ -10,15 +10,15 @@
 <Scenario name="game.abilityarena.scenesave" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="scene.open game/abilityarena/maps/arena.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.saveAs {out}/scenesave_1.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.saveAs {out}/scenesave_2.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.saveAs {out}/scenesave_3.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="GameTimer.Ms" contains="'Scene.save.serialize'" count="3"/>
 	<ExpectLog id="GameTimer.Ms" contains="'Scene.save.write'" count="3"/>
 	<Pass/>

@@ -56,7 +56,7 @@ SW_TEST_CASE( FramePacerTest, FullSpeedRequestPinsTheState )
 }
 
 // 조용한 프레임이 이어져야 잔다 — 마지막 변화가 화면에 닿을 몫을 남긴다. 시나리오는 `WindowState` 로 자동화 중에도 이 상태를 본다.
-SW_TEST_CASE( FramePacerTest, EditorIdleNeedsSettledQuietFrames )
+SW_TEST_CASE( FramePacerTest, EditorIdleNeedsStableQuietFrames )
 {
     const FramePacingInputs focused = makeInputs( false, false, false, true );
     SW_EXPECT_TRUE( FramePacer::resolve( focused, FramePacingRequest::Auto, FramePacer::kEditorIdleStabilityFrames - 1 ) == FramePacingState::Foreground );

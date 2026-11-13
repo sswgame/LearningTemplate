@@ -11,18 +11,18 @@
 	<WaitUntil watch="Editor.NetPlayProcessCount" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.NetPlayProfilerSamples" equals="0"/>
 	<DevCommand line="netplay.start dedicated 1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="netplay.wait 1 120"/>
 	<WaitUntil watch="Editor.NetPlayConnectedClients" equals="1" timeoutFrames="60"/>
 	<DevCommand line="netplay.command clients net.traffic 100 1000"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="netplay.profile 3"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="DevCommand.Reply" contains="net traffic queued 100 reliable message(s) to 1 connection(s)" atLeast="1"/>
 	<ExpectLog id="DevCommand.Reply" contains="netplay profile has" atLeast="1"/>
 	<Expect watch="Editor.NetPlayProfilerSamples" atLeast="4"/>
 	<Expect watch="Editor.NetPlayProfilerPeakSentBytesPerSecond" atLeast="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="netplay.stop"/>
 	<WaitUntil watch="Editor.NetPlayStopping" equals="0" timeoutWallSeconds="20"/>
 	<Expect watch="Editor.NetPlayProcessCount" equals="0"/>

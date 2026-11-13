@@ -205,7 +205,7 @@ namespace
 /**
  * @brief [RestaurantReadStateTest] 실제 식당은 왕복하고, 형식에 맞게 꾸민 식당도 읽힌다
  */
-SW_TEST_CASE_F( RestaurantReadStateTest, RealAndForgedStatesRead )
+SW_TEST_CASE_F( RestaurantReadStateTest, RealAndCraftedStatesRead )
 {
     (void)_simulation.hireStaff( "cook", sw::StaffRole::Cook, 10 );
     _simulation.setStationCount( "stove", 2 );

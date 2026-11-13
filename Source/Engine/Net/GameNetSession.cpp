@@ -676,7 +676,7 @@ namespace sw
         writer.writeBits( static_cast<uint32>( notification._reason ), 8 );
         writer.writeVarUint( notification._graceSeconds );
         const int32 sentCount = _tickWriter.broadcast( _peers, NetChannelType::ReliableOrdered ); // 끊기 전에 사유가 닿아야 한다
-        SW_LOG_INFO_ID( "GameNetSession.NetSessionToldClients", "Net session told %# clients the server is shutting down (reason %#, grace %# s)", sentCount, static_cast<uint32>( notification._reason ), notification._graceSeconds );
+        SW_LOG_INFO_ID( "GameNetSession.NetSessionNotifiedClients", "Net session told %# clients the server is shutting down (reason %#, grace %# s)", sentCount, static_cast<uint32>( notification._reason ), notification._graceSeconds );
     }
 
     bool GameNetSession::tryGetShutdownNotice( GameShutdownNotice& outNotification ) const
@@ -829,7 +829,7 @@ namespace sw
         _shutdownNotice._reason       = static_cast<GameShutdownReason>( reasonValue );
         _shutdownNotice._graceSeconds = graceSeconds;
         _bShutdownNoticeKnown         = SW_TRUE;
-        SW_LOG_INFO_ID( "GameNetSession.NetSessionClientTold", "Net session client was told the server is shutting down (reason %#, grace %# s)", reasonValue, graceSeconds );
+        SW_LOG_INFO_ID( "GameNetSession.NetSessionClientNotified", "Net session client was told the server is shutting down (reason %#, grace %# s)", reasonValue, graceSeconds );
         return NetHandleResult::Handled;
     }
 

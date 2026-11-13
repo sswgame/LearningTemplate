@@ -114,8 +114,8 @@ namespace sw
         , _listInbox{}
         , _inboxBytes{}
         , _pollThread{}
-        , _listPumping{}
-        , _pumpingBytes{}
+        , _listPolling{}
+        , _pollingBytes{}
         , _mapLastPingTime{}
         , _settings{}
         , _pTransport{}
@@ -474,13 +474,13 @@ namespace sw
         _pollThread.assumeHeld(); // 받은 것을 꺼내 알리는 스레드는 하나다(엔드포인트 계약) — 꺼낸 목록은 그 스레드 것이다
         {
             ScopedLock<mutex> lock{ _inboxMutex };
-            _listPumping.clear();
-            _pumpingBytes.clear();
-            _listPumping.swap( _listInbox );
-            _pumpingBytes.swap( _inboxBytes );
+            _listPolling.clear();
+            _pollingBytes.clear();
+            _listPolling.swap( _listInbox );
+            _pollingBytes.swap( _inboxBytes );
         }
         int32 frameCount = 0;
-        for ( const Event& event : _listPumping )
+        for ( const Event& event : _listPolling )
         {
             switch ( event._kind )
             {
@@ -493,7 +493,7 @@ namespace sw
                 case EndpointEventKind::Frame:
                 {
                     ++frameCount;
-                    listener.onEndpointFrame( event._handle, event._frameKind, _pumpingBytes.data() + event._offset, event._size );
+                    listener.onEndpointFrame( event._handle, event._frameKind, _pollingBytes.data() + event._offset, event._size );
                     const shared_ptr<Connection> connection = findConnection( event._handle );
                     if ( connection != nullptr )
                     {

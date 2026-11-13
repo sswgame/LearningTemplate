@@ -134,7 +134,7 @@ namespace
 /**
  * @brief [CreatureTownReadStateTest] 서식지 · 생물 · 집이 있는 실제 마을은 왕복하고, 형식에 맞게 꾸민 마을도 읽힌다
  */
-SW_TEST_CASE_F( CreatureTownReadStateTest, RealAndForgedStatesRead )
+SW_TEST_CASE_F( CreatureTownReadStateTest, RealAndCraftedStatesRead )
 {
     SW_REQUIRE_TRUE( _town.setObject( 0, 0, "tree" ) );
     SW_REQUIRE_EQUAL( 1, _town.attractVisitorsAt( 0, 8, sw::DayPhase::Day, "sunny" ) );

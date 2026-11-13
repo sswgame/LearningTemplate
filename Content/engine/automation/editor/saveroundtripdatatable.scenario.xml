@@ -8,23 +8,23 @@
 -->
 <Scenario name="editor.saveroundtripdatatable" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/environment" as="scratch/saveroundtripdatatable"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus data_table"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/saveroundtripdatatable/default.surfacekinds.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.DataTableGameDataRowCount" atLeast="1" timeoutWallSeconds="10"/>
 	<Store watch="Editor.DataTableGameDataRowCount" as="rows"/>
 	<DevCommand line="panel.saveDocument data_table"/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtripdatatable/default.surfacekinds.xml"/>
 	<DevCommand line="panel.reloadDocument data_table"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.DataTableGameDataRowCount" sameAs="rows"/>
 	<DevCommand line="panel.saveDocument data_table"/>
 	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripdatatable/default.surfacekinds.xml"/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

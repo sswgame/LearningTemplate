@@ -10,24 +10,24 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.resetOptional"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close prefab_editor"/>
 	<Variable name="gv_editorWatchPanel" value="prefab_window"/>
 	<!-- ① 메인 씬: 메시를 놓아 고른다 -->
 	<DevCommand line="panel.focus content_browser"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="content.open game/empty/models"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.search"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="crate_medium.mesh"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Down"/>
 	<Wait frames="3"/>
 	<EditorHover mark="sceneView.canvas" anchor="0.45,0.5"/>
@@ -38,32 +38,32 @@
 	<WaitUntil watch="Editor.PlacedCount" equals="1" timeoutFrames="90"/>
 	<Expect watch="Editor.SelectionCount" equals="1"/>
 	<WaitUntil watch="Editor.SelectionSyncMainHasAsset" equals="1" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorHover mark="contentBrowser.synced"/>
 	<CaptureEditorUI file="selectionsync/main.png" maxMagentaFraction="0"/>
 	<EditorClick mark="contentBrowser.findSelected"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Store watch="Editor.SelectionSyncMainSequence" as="mainSequence"/>
 	<!-- 미리보기 칸 번호는 프리팹 창을 열기 전에 적는다 — 창은 열며 루트를 고른다(유니티 프리팹 모드와 같다). 연 뒤에 적으면 같은 부품을 다시 눌러도 번호가 그대로다. -->
 	<Store watch="Editor.SelectionSyncPreviewSequence" as="previewSequence"/>
 	<!-- ② 미리보기 창: 프리팹 창의 부품을 골라도 메인 씬 칸 · 메인 선택은 그대로다 -->
 	<DevCommand line="content.open game/empty/prefabs"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.search"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
 	<EditorText value="testprop"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="300"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="prefabwindow.child.TestProp"/>
 	<WaitUntil watch="Editor.SelectionSyncPreviewSequence" differsFrom="previewSequence" timeoutFrames="60"/>
 	<Expect watch="Editor.SelectionSyncMainSequence" sameAs="mainSequence"/>
 	<Expect watch="Editor.SelectionCount" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="selectionsync/preview.png" maxMagentaFraction="0"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

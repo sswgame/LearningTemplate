@@ -2266,7 +2266,7 @@ msgid "Sprite frame: {spriteFrame}"
 msgstr "스프라이트 프레임: {spriteFrame}"
 
 #: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
-msgctxt "EdFormat.StateBuiltBodiesSettled"
+msgctxt "EdFormat.StateBuiltBodiesAsleep"
 msgid "State {state}  Built bodies {bodyCount}  Settled {settled, select, yes {yes} other {no}}"
 msgstr "상태 {state}  만든 바디 {bodyCount}  안정 {settled, select, yes {예} other {아니오}}"
 

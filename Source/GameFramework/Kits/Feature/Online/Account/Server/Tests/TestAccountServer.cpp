@@ -420,7 +420,7 @@ SW_TEST_CASE( AccountServerTest, DisconnectThenResumeOnANewConnection )
 }
 
 /** @brief [AccountServerTest] 위조 토큰: 비밀이 다르거나 없는 세션이면 InvalidToken 이고 연결을 묶지 않으며, 진짜 세션을 건드리지 않는다 */
-SW_TEST_CASE( AccountServerTest, ForgedResumeTokenIsRefused )
+SW_TEST_CASE( AccountServerTest, CraftedResumeTokenIsRefused )
 {
     AccountServerFixture rig;
     const int32          owner     = rig.addClient();
@@ -465,7 +465,7 @@ SW_TEST_CASE( AccountServerTest, AdministrativeRevokeCarriesTheReasonCode )
 }
 
 /** @brief [AccountServerTest] 다른 서버의 끊기 알림(버스): 그 세션이 이 서버에 있을 때만 끊고 사유 코드를 싣는다. 옛 세션 알림 · 자기가 낸 알림은 무시한다 */
-SW_TEST_CASE( AccountServerTest, RevokeNoticeFromAnotherServer )
+SW_TEST_CASE( AccountServerTest, RevokeNotificationFromAnotherServer )
 {
     AccountServerFixture rig;
     const int32          client    = rig.addClient();

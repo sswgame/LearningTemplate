@@ -10,34 +10,34 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="App.AssertDialogInstalled" equals="0"/>
 	<Expect watch="Editor.AssertDialogShown" equals="1"/>
 	<Expect watch="Editor.AssertIgnoreRemembered" equals="1"/>
 	<Expect watch="Editor.AssertIgnoredSites" equals="0"/>
 	<!-- 환경설정 창에서 끈다 -->
 	<DevCommand line="panel.focus preferences"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="preferences.search"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="assert"/>
 	<WaitUntil watch="Editor.PreferencesVisibleSections" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.property.EditorDiagnosticsPreferences._bShowAssertDialog"/>
 	<WaitUntil watch="Editor.AssertDialogShown" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.property.EditorDiagnosticsPreferences._bRememberIgnoredAsserts"/>
 	<WaitUntil watch="Editor.AssertIgnoreRemembered" equals="0" timeoutFrames="60"/>
 	<CaptureEditorUI file="assertdialog/preferences.png" maxMagentaFraction="0"/>
 	<!-- 되돌린다(환경설정 파일은 빈 에디터 상태 폴더라 다음 실행에 남지 않는다) -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.property.EditorDiagnosticsPreferences._bShowAssertDialog"/>
 	<WaitUntil watch="Editor.AssertDialogShown" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.property.EditorDiagnosticsPreferences._bRememberIgnoredAsserts"/>
 	<WaitUntil watch="Editor.AssertIgnoreRemembered" equals="1" timeoutFrames="60"/>
 	<DevCommand line="assert.clearIgnored"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.AssertIgnoredSites" equals="0"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

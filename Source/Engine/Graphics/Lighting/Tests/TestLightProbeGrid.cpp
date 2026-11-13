@@ -80,7 +80,7 @@ SW_TEST_CASE( LightProbeGridTest, RejectsBrokenFiles )
 /**
  * @brief [LightProbeGridTest] 어느 길이로 잘려도 거절하고, 곱이 64 비트로 넘치는 격자 · NaN 도 거절한다(`.probes` 는 신뢰 경계다)
  */
-SW_TEST_CASE( LightProbeGridTest, TruncationForgedCountsAndNonFiniteAreRefused )
+SW_TEST_CASE( LightProbeGridTest, TruncationCraftedCountsAndNonFiniteAreRefused )
 {
     const sw::LightProbeGrid source = sw::makeLightProbeGridForTest();
     sw::vector<uint8>        bytes;

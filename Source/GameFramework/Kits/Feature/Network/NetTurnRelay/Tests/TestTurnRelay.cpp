@@ -411,7 +411,7 @@ SW_TEST_CASE_F( TurnRelayTest, FullWindowResumesInUpdate )
 }
 
 // 결함: 창이 찬 동안 쌓인 "입장 · 시작" 보다 행동이 먼저 나갈 수 있었다 - 알림이 줄 서 있으면 행동도 기다린다.
-SW_TEST_CASE_F( TurnRelayTest, ActionsWaitBehindQueuedNotices )
+SW_TEST_CASE_F( TurnRelayTest, ActionsWaitBehindQueuedNotifications )
 {
     addClient()._relay.join( 7 );
     addClient()._relay.join( 7 );

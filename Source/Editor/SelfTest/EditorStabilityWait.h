@@ -1,6 +1,6 @@
 /**
  * @file EditorStabilityWait.h
- * @brief 에디터가 멈출 때까지(정지 상태) 기다리는 한 번의 대기입니다 — 시나리오 단계(`<EditorWaitSettled/>`)와 에디터 자체 테스트(`EditorSelfTestStep::WaitStable`)가 함께 씁니다.
+ * @brief 에디터가 멈출 때까지(정지 상태) 기다리는 한 번의 대기입니다 — 시나리오 단계(`<EditorWaitStable/>`)와 에디터 자체 테스트(`EditorSelfTestStep::WaitStable`)가 함께 씁니다.
  * @details 정지는 넷이다: 화면(창 크기 요청 반영 · 도크 배치 적용 끝 · 밀린 흉내 입력 없음 · 기다림을 시작한 뒤에 그린 화면이 두 번 연속 같은 배치), 씬(전환 없음),
  *          에셋(씬이 기다리는 로드 · 업로드 · PSO 없음 — `CaptureReadiness::countPendingJobs`), 뒤에 끝날 일(끝 차단 `SW_AUTOMATION_FINISH_BLOCKER`).
  *          재료를 모으는 곳이 한 곳이라 두 길이 다른 정지를 보지 않는다. 판정은 `EditorStabilityState` 가 한다.

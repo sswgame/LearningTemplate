@@ -29,7 +29,7 @@ namespace sw
         {
             static constexpr utf8 kTabsName[]                = "Tabs";
             static constexpr utf8 kRowsName[]                = "Rows";
-            static constexpr utf8 kRestartNotificationName[] = "RestartNotice";
+            static constexpr utf8 kRestartNotificationName[] = "RestartNotification";
             static constexpr utf8 kValueName[]               = "Value";
             static constexpr utf8 kValueTextName[]           = "ValueText";
             static constexpr utf8 kLabelName[]               = "Label";

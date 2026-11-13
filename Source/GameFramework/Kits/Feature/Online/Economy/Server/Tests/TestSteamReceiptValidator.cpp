@@ -325,7 +325,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, OrderStatusDecidesTheResult )
 }
 
 /** @brief [SteamReceiptValidatorTest] 위조 · 깨진 답은 지급하지 않는다: 다른 주문의 답, 주문 번호 없음, 항목 없음 · 비었음 · 모양이 틀림, 결과가 OK 아님, 뿌리 모양이 틀림 */
-SW_TEST_CASE( SteamReceiptValidatorTest, ForgedAnswersGrantNothing )
+SW_TEST_CASE( SteamReceiptValidatorTest, CraftedAnswersGrantNothing )
 {
     SteamFixture rig;
     for ( const utf8* pBody : {

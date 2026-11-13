@@ -198,7 +198,7 @@ SW_TEST_CASE( SlotHandleTableTest, StressGenerationRolloverAndRandomChurn )
  *          돌아간다. 합치는 대가로 세대가 31비트가 되었으므로, 최상위 비트를 켠 세대를 들고 온
  *          핸들이 **점유 비트를 세대로 오해받아 통과하지 않는지**를 여기서 못박는다.
  */
-SW_TEST_CASE( SlotHandleTableTest, ForgedGenerationDoesNotAliasTheOccupiedBit )
+SW_TEST_CASE( SlotHandleTableTest, CraftedGenerationDoesNotAliasTheOccupiedBit )
 {
     SlotHandleTable<int32> table;
     const SlotHandle       handle = table.insert( 77 );

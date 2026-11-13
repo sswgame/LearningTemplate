@@ -11,36 +11,36 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor scene.new"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="prefab.spawn scratch/saveroundtriprig/knight.prefab.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="TestKnight" component="PoseModifierComponent" selected="1"/>
 	<DevCommand line="panel.focus rig_debug"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 새 씬은 저장하지 않았다 — 툴바 Play 가 묻고 Play Anyway 로 띄운다(rigdebugpanel 과 같다) -->
 	<EditorClick mark="toolbar.play"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="toolbar.playAnyway"/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.RigDebugNodeCount" equals="2" timeoutFrames="120"/>
 	<Expect watch="Editor.RigDebugWeightSum" near="1.5" tolerance="0.001"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="rigdebug.save"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtriprig/knight.rig.xml"/>
 	<WaitUntil watch="Editor.RigDebugNodeCount" equals="2" timeoutFrames="120"/>
 	<Expect watch="Editor.RigDebugWeightSum" near="1.5" tolerance="0.001"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="rigdebug.save"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtriprig/knight.rig.xml"/>
 	<ExpectLog id="RigDebugPanel.RigSettingsSaved" count="2"/>
 	<EditorClick mark="toolbar.stop"/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

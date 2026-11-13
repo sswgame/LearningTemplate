@@ -11,57 +11,57 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
 	<DevCommand line="asset.makeTempFolder {out}/editor.tilemapdatalayers"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus tile_map"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.TileMapDataLayers" equals="0"/>
 	<Expect watch="Editor.TileMapDataCells" equals="0"/>
 	<!-- 레이어 더하기 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileMap.dataLayer.name"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="Cost"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileMap.dataLayer.add"/>
 	<WaitUntil watch="Editor.TileMapDataLayers" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.TileMapDataCells" equals="0"/>
 	<!-- 값 7 로 왼쪽 위 칸 하나 칠하기 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileMap.dataLayer.value"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="7"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileMap.tool.brush"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileMap.canvas" anchor="0.02,0.02"/>
 	<WaitUntil watch="Editor.TileMapDataCells" equals="1" timeoutFrames="60"/>
 	<!-- 저장 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileMap.path"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="{out}/temp.tilemap.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileMap.save"/>
 	<!-- 메모리에서만 지우기 → 다시 읽기 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileMap.erase"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileMap.canvas" anchor="0.02,0.02"/>
 	<WaitUntil watch="Editor.TileMapDataCells" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileMap.erase"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileMap.load"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.TileMapDataLayers" equals="1"/>
 	<Expect watch="Editor.TileMapDataCells" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.removeTemp {out}/temp.tilemap.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

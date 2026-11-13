@@ -212,7 +212,7 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, AccessTokenModeUsesTheAccessToken )
 }
 
 /** @brief [LoopbackPkceLoginClientTest] 모르는 state 는 400 이고 어떤 로그인도 바꾸지 않으며, 다른 경로는 404 다. 사용자가 거절하면(access_denied) 취소다 */
-SW_TEST_CASE( LoopbackPkceLoginClientTest, ForgedStateIsIgnoredAndDenialCancels )
+SW_TEST_CASE( LoopbackPkceLoginClientTest, CraftedStateIsIgnoredAndDenialCancels )
 {
     PkceFixture rig;
     (void)rig._login.beginLogin( "google", MonotonicMilliseconds{ kNowMs } );

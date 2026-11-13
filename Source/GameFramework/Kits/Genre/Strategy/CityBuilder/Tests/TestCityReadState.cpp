@@ -166,7 +166,7 @@ namespace
 /**
  * @brief [CityReadStateTest] 돌아간 실제 도시는 왕복하고, 형식에 맞게 꾸민 도시도 읽힌다
  */
-SW_TEST_CASE_F( CityReadStateTest, RealAndForgedStatesRead )
+SW_TEST_CASE_F( CityReadStateTest, RealAndCraftedStatesRead )
 {
     SW_REQUIRE_TRUE( _city.placeRoad( 0, 0 ) == sw::CityPlaceResult::Ok );
     SW_REQUIRE_TRUE( _city.placeRoad( 1, 0 ) == sw::CityPlaceResult::Ok );

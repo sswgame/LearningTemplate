@@ -675,7 +675,7 @@ SW_TEST_CASE_F( GhostHuntTest, EncounterStateRoundTrip )
 /**
  * @brief [GhostHuntTest] 결함: 체력 · 번호 · 게이지 · 강화 단계의 범위와 흡입 짝을 보지 않았다. 흡입 대상 없이 흡입 중인 유령은 `update` 가 건너뛰어 영영 멈추고, 겹친 번호나 다음 번호 이하의 번호는 새 유령과 겹친다 — 거절한다
  */
-SW_TEST_CASE_F( GhostHuntTest, EncounterReadRefusesForgedBytes )
+SW_TEST_CASE_F( GhostHuntTest, EncounterReadRefusesCraftedBytes )
 {
     GhostFixtureEncounter good;
     SW_REQUIRE_TRUE( good.read( _encounter ) ); // 형식은 맞다
@@ -1007,7 +1007,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, MansionStateRoundTrip )
 /**
  * @brief [GhostHuntRulesTest] 결함: 부의 체력과 방 · 가구 이름, 지금 방을 보지 않았다 — 음수나 최대 초과 체력, 없는 방과 가구를 거절한다. 수가 다른 부와 가구, 깨진 뒤짐 표시도 거절하고 상태는 그대로이다
  */
-SW_TEST_CASE_F( GhostHuntRulesTest, MansionReadRefusesForgedBytes )
+SW_TEST_CASE_F( GhostHuntRulesTest, MansionReadRefusesCraftedBytes )
 {
     const GhostFixtureBoo good;
     SW_REQUIRE_TRUE( readFixture( good, "foyer" ) ); // 형식은 맞다

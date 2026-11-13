@@ -7,49 +7,49 @@
 <Scenario name="editor.shortcuts" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus shortcuts"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="shortcuts.set.edit.undo"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+U"/>
 	<WaitUntil watch="Editor.ShortcutOverrideCount" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus hierarchy"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.create"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+U"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus shortcuts"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="shortcuts.set.edit.redo"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+U"/>
 	<WaitUntil watch="Editor.ShortcutConflictCount" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="shortcuts.cancel"/>
 	<WaitUntil watch="Editor.ShortcutConflictCount" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.ShortcutOverrideCount" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="shortcuts.resetAll"/>
 	<WaitUntil watch="Editor.ShortcutOverrideCount" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 받는 중에 창을 닫아도 명령 실행이 멈춘 채 남지 않는다(예전에는 에디터 단축키가 모두 죽었다). -->
 	<EditorClick mark="shortcuts.set.edit.redo"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.close shortcuts"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus hierarchy"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.create"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

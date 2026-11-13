@@ -138,7 +138,7 @@ namespace sw
             if ( pFrameEndStep != nullptr && pFrameEndStep->_frameIndex != step._frameIndex )
                 pFrameEndStep = nullptr;
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
-            // 모르는 단계 · 실행 없이 기다리기만 하는 단계(`WaitUntil` · `EditorWaitSettled` — 제 프레임을 혼자 갖는다)는 건너뛴다.
+            // 모르는 단계 · 실행 없이 기다리기만 하는 단계(`WaitUntil` · `EditorWaitStable` — 제 프레임을 혼자 갖는다)는 건너뛴다.
             if ( pRegistration == nullptr || pRegistration->isWaitOnly() )
                 continue;
             const bool bRunsAtFrameStart = pRegistration->_pRun == nullptr || pRegistration->_bBeforeInput;

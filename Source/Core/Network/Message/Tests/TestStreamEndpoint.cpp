@@ -85,7 +85,7 @@ SW_TEST_CASE( StreamEndpointTest, MalformedFrameClosesWithProtocolError )
 /**
  * @brief [StreamEndpointTest] 받은 줄이 상한을 넘으면 읽기를 멈춘다 — poll 하지 않는 동안 보낸 쪽 줄이 쌓이고, poll 하면 다시 흐른다
  */
-SW_TEST_CASE( StreamEndpointTest, PendingReceiveCapPausesTransportUntilPumped )
+SW_TEST_CASE( StreamEndpointTest, PendingReceiveCapPausesTransportUntilPolled )
 {
     StreamEndpointConfig settings;
     settings._maxPendingReceiveBytes = 4096;

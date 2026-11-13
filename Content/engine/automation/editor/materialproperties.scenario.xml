@@ -12,58 +12,58 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+P"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="previewred.material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.MaterialModifiedPropertyCount" equals="0"/>
 	<EditorClick mark="material.propertyFilter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="zzz"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="1"/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="rough"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="0"/>
 	<EditorClick mark="material.property._roughness" mods="ctrl"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="0.9"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.MaterialModifiedPropertyCount" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="material.reset._roughness"/>
 	<WaitUntil watch="Editor.MaterialModifiedPropertyCount" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- (3) 끌기 한 번 = 이 창의 스택에 한 단계 — 감시 값은 포커스 창의 스택이라 머티리얼 창에 포커스를 둔다 -->
 	<DevCommand line="panel.focus material"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Store watch="Editor.UndoIndex" as="undoBeforeDrag"/>
 	<EditorDrag mark="material.property._roughness" dx="60" dy="0"/>
 	<WaitUntil watch="Editor.MaterialModifiedPropertyCount" equals="1" timeoutFrames="60"/>
 	<WaitUntil watch="Editor.UndoIndex" differsFrom="undoBeforeDrag" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UndoIndex" sameAs="undoBeforeDrag" timeoutFrames="60"/>
 	<Expect watch="Editor.MaterialModifiedPropertyCount" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="material.propertyFilter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Backspace"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="material.reload"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

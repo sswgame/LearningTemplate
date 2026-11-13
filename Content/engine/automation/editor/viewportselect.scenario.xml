@@ -13,31 +13,31 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SelectionCount" equals="0"/>
 	<EditorClick mark="sceneView.canvas" anchor="0.475,0.75" mods="ctrl"/>
 	<WaitUntil watch="Editor.SelectedNames" is="TestMesh" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="sceneView.canvas" anchor="0.02,0.4" mods="ctrl"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SelectedNames" is="TestMesh"/>
 	<EditorClick mark="sceneView.canvas" anchor="0.02,0.4"/>
 	<WaitUntil watch="Editor.SelectionCount" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorDrag mark="sceneView.canvas" anchor="0.02,0.4" dx="900" dy="330"/>
 	<WaitUntil watch="Editor.SelectionCount" atLeast="3" timeoutFrames="60"/>
 	<Expect watch="Editor.SelectedIsEditorCamera" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.ScaleSnapStep" equals="0"/>
 	<EditorClick mark="viewport.scaleSnap"/>
 	<WaitUntil watch="Editor.ScaleSnapStep" atLeast="0.05" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.scaleSnap"/>
 	<WaitUntil watch="Editor.ScaleSnapStep" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorDrag mark="sceneView.canvas" anchor="0.02,0.4" dx="900" dy="330" mods="ctrl"/>
 	<WaitUntil watch="Editor.SelectionCount" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

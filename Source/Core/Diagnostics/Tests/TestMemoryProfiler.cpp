@@ -586,7 +586,7 @@ SW_TEST_CASE( MemoryProfilerTest, LeakWindowMisuseIsAnError )
 /**
  * @brief 곡선 판정 — 워밍업 뒤가 평평하면 통과하고, 회차마다 느는 곡선 · 점이 모자란 곡선은 통과하지 못한다
  */
-SW_TEST_CASE( MemoryProfilerTest, JudgeLeakCurveSeparatesFlatFromGrowing )
+SW_TEST_CASE( MemoryProfilerTest, EvaluateLeakCurveSeparatesFlatFromGrowing )
 {
     const LeakCurveCriteria criteria;
 

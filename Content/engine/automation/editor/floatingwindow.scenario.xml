@@ -8,15 +8,15 @@
 -->
 <Scenario name="editor.floatingwindow" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive" present="true">
 	<ResizeWindow width="1280" height="720"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PlatformWindows" equals="0" timeoutFrames="60"/>
 	<DevCommand line="panel.focus inspector"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.float inspector"/>
 	<WaitUntil watch="Editor.PlatformWindows" atLeast="1" timeoutFrames="120"/>
 	<WaitUntil watch="Editor.PlatformWindowFrames" atLeast="60" timeoutFrames="300"/>
 	<DevCommand line="panel.close inspector"/>
 	<WaitUntil watch="Editor.PlatformWindows" equals="0" timeoutFrames="120"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

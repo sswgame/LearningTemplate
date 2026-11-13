@@ -425,7 +425,7 @@ SW_TEST_CASE( GuildServiceTest, RoleChangesAndMasterTransfer )
 }
 
 /** @brief [GuildServiceTest] 공지: 임원 이상이 바꾸고 멤버가 읽는다. 상한을 넘으면 저장하지 않는다(깨진 UTF-8 은 요청 코덱이 막는다) */
-SW_TEST_CASE( GuildServiceTest, NoticeIsValidatedAndShared )
+SW_TEST_CASE( GuildServiceTest, AnnouncementIsValidatedAndShared )
 {
     GuildFixture rig;
     (void)rig.makeGuild();

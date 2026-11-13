@@ -195,7 +195,7 @@ namespace sw
     {
         _notificationJob.finish();
         if ( result == ServiceStoreResult::Invalid )
-            SW_LOG_ERROR_ID( "MailboxService.MailboxServiceNewMailNotice", "MailboxService: a new-mail notice record is corrupt - notices stop until it is fixed" );
+            SW_LOG_ERROR_ID( "MailboxService.MailboxServiceNewMailNotification", "MailboxService: a new-mail notice record is corrupt - notices stop until it is fixed" );
         if ( result != ServiceStoreResult::Ok || _pHost == nullptr )
             return; // Conflict 는 다른 서버가 가져갔다. 그 밖은 다음 주기에 다시 한다
         if ( static_cast<int32>( inoutListNotification.size() ) == _settings._notificationBatchCount )

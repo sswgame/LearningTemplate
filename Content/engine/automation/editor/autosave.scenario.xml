@@ -13,71 +13,71 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.AutosaveRecoverableCount" equals="0"/>
 	<!-- ① 고치고 사본 하나 -->
 	<EditorClick mark="hierarchy.create"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.name"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="AutosaveProbe"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
 	<DevCommand line="autosave.now"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.AutosaveSnapshotCount" equals="1"/>
 	<ExpectLog id="EditorAutosaveCommands.Written" contains="game/empty/maps/editortest.scene.xml" count="1"/>
 	<!-- ② 후보로 읽기 -->
 	<DevCommand line="autosave.rescan"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.AutosaveRecoverableCount" equals="1"/>
 	<DevCommand line="panel.focus recovered_work"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="autosave/recovered.png" maxMagentaFraction="0"/>
 	<!-- ③ 원본은 그대로, 복원은 사본을 dirty 로 연다 -->
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="AutosaveProbe" count="0"/>
 	<DevCommand line="panel.focus recovered_work"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="recoveredWork.restore.0" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="recoveredWork.restore.0" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Editor.AutosaveRestoredCount" equals="1" timeoutFrames="120"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="AutosaveProbe"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
 	<Expect watch="Editor.AutosaveRecoverableCount" equals="0"/>
 	<ExpectLog id="EditorAutosaveCommands.Restored" contains="game/empty/maps/editortest.scene.xml" count="1"/>
 	<!-- ④ 폐기 -->
 	<DevCommand line="autosave.now"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.AutosaveSnapshotCount" equals="2"/>
 	<DevCommand line="autosave.rescan"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.AutosaveRecoverableCount" equals="1"/>
 	<DevCommand line="panel.focus recovered_work"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="recoveredWork.discard.0" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="recoveredWork.discard.0" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.AutosaveRecoverableCount" equals="0"/>
 	<!-- 고친 씬을 열어 둔 채 끝내지 않는다 -->
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

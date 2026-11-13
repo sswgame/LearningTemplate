@@ -8,48 +8,48 @@
 <Scenario name="editor.previewbar" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus animation_clip_preview"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+P"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="cheer_"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="clip.bodyField"/>
 	<EditorText value="common/prefabs/kaykit/knight_merged.prefab.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="clip.spawn"/>
 	<WaitUntil watch="Editor.ClipPreviewDuration" near="1.6667" tolerance="0.05" timeoutFrames="600"/>
 	<WaitUntil watch="Editor.ClipPreviewSceneFrames" atLeast="60" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PreviewTimeScale" equals="1"/>
 	<Expect watch="Editor.PreviewFloorShown" equals="1"/>
 	<Expect watch="Editor.PreviewAxesShown" equals="1"/>
 	<EditorClick mark="AnimationClip.preview.pause"/>
 	<WaitUntil watch="Editor.PreviewTimeScale" equals="0" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="AnimationClip.preview.step"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorDrag mark="AnimationClip.preview.scrub" dx="60" dy="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.PreviewTimeScale" equals="0"/>
 	<EditorClick mark="AnimationClip.preview.pause"/>
 	<WaitUntil watch="Editor.PreviewTimeScale" equals="1" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="AnimationClip.preview.floor"/>
 	<WaitUntil watch="Editor.PreviewFloorShown" equals="0" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="AnimationClip.preview.axes"/>
 	<WaitUntil watch="Editor.PreviewAxesShown" equals="0" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="AnimationClip.preview.axes"/>
 	<WaitUntil watch="Editor.PreviewAxesShown" equals="1" timeoutFrames="30"/>
 	<EditorClick mark="AnimationClip.preview.frame"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="previewbar.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

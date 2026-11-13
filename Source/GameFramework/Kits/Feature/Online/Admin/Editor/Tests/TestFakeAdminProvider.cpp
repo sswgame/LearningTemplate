@@ -95,7 +95,7 @@ SW_TEST_CASE( FakeAdminProviderTest, LookupFindsByIDOrNameAndReportsUnknown )
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::LookupAccount::kID, AdminRequest{} ) == AdminResult::UnknownAccount );
 }
 
-SW_TEST_CASE( FakeAdminProviderTest, RolesGateCommands )
+SW_TEST_CASE( FakeAdminProviderTest, RolesRestrictCommands )
 {
     FakeAdminProvider provider{ kNowMs };
     AdminRequest      lookup;

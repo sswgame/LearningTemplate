@@ -3,7 +3,7 @@
  * @brief 쿠킹된 산출물이 최신인지 판정합니다. **파일 시간이 아니라 내용 해시**로, **셰이더마다 실제로 연 헤더만** 보고 판단합니다.
  * @details 이 저장소는 쿠킹된 바이너리까지 커밋하므로 `git pull` 이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다.
  *          주의: `산출물 mtime >= 소스 mtime` 으로 판정하면 그때 "이미 최신" 이라 답해 낡은 바이너리가 커밋된 채 돌고,
- *          한 백엔드만 다른 이미지를 내면 백엔드 버그로 오인하게 된다. 그 판정이 이 파일 하나에 모여 있다(`ShaderCookStampTest.FreshnessIsJudgedByContentNotFileTime` 이 고정한다).
+ *          한 백엔드만 다른 이미지를 내면 백엔드 버그로 오인하게 된다. 그 판정이 이 파일 하나에 모여 있다(`ShaderCookStampTest.FreshnessIsDecidedByContentNotFileTime` 이 고정한다).
  *
  *          **헤더는 소스마다 컴파일러가 실제로 연 것만 적는다.** 예전에는 모든 `.hlsli` 의 해시 하나를 섞어 헤더 하나를 고치면 모든 셰이더가 다시 쿠킹됐다.
  *          어느 헤더를 열었는지는 바이트코드(리플렉션은 바인딩 정보다)가 아니라 컴파일러가 소스를 읽는 순간 include 처리기가 안다 — 그 목록(`ShaderCompileResult::_listIncludedFile`)을

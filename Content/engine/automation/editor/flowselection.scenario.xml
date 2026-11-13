@@ -8,68 +8,68 @@
 -->
 <Scenario name="editor.flowselection" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SelectedNames" is="(none)"/>
 	<Store watch="Editor.SceneHash" as="opened"/>
 	<!-- ① Hierarchy 선택 → 씬 뷰 외곽선 · 인스펙터 -->
 	<EditorClick mark="hierarchy.row.TestMesh"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SelectedNames" is="TestMesh"/>
 	<Expect watch="Editor.SelectionOutlineBoxes" atLeast="1"/>
 	<Expect watch="Editor.SelectedComponentCount" atLeast="1"/>
 	<EditorClick mark="hierarchy.row.GameCamera" mods="ctrl"/>
 	<WaitUntil watch="Editor.SelectedNames" is="GameCamera,TestMesh" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.row.TestMesh"/>
 	<WaitUntil watch="Editor.SelectedNames" is="TestMesh" timeoutFrames="60"/>
 	<!-- ② 인스펙터로 이름 → 다른 창에 포커스를 두고 되돌리기 · 다시 실행 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="inspector.name"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="Renamed"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SelectedNames" is="Renamed"/>
 	<Expect watch="Editor.UndoState" is="1/1:Rename GameObject"/>
 	<Store watch="Editor.SceneHash" as="renamed"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus content_browser"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.SelectedNames" is="TestMesh"/>
 	<Expect watch="Editor.SceneHash" sameAs="opened"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus scene_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+Y"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.SelectedNames" is="Renamed"/>
 	<Expect watch="Editor.SceneHash" sameAs="renamed"/>
 	<!-- ③ 지우기 → 되돌리기: 같은 오브젝트가 돌아와 골라진다 -->
 	<EditorClick mark="hierarchy.row.Renamed"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Delete"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="Renamed" count="0"/>
 	<Expect watch="Editor.SelectedNames" is="(none)"/>
 	<Expect watch="Editor.UndoIndex" equals="2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+Z"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="Renamed" selected="1"/>
 	<Expect watch="Editor.SceneHash" sameAs="renamed"/>
 	<Expect watch="Editor.UndoIndex" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

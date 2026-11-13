@@ -57,7 +57,7 @@ SW_TEST_CASE( ByteStreamTest, CountChecksDoNotOverflow )
 /**
  * @brief [ByteStreamTest] 목록 읽기는 위조된 개수를 할당 전에 거르고, 잘리거나 원소가 거절되면 빈 목록과 실패를 남긴다
  */
-SW_TEST_CASE( ByteStreamTest, ListReadsRefuseForgedCountsAndTruncation )
+SW_TEST_CASE( ByteStreamTest, ListReadsRefuseCraftedCountsAndTruncation )
 {
     vector<uint8> bytes;
     ByteWriter    writer{ bytes };

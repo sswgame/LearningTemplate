@@ -572,7 +572,7 @@ namespace sw
         BitWriter body;
         if ( EconomyProtocol::MessageTypes::write( body, changed ) == false )
         {
-            SW_LOG_WARNING_ID( "EconomyService.EconomyServiceBalanceNoticeAccount", "EconomyService: a balance notice for account %# is too large to send", accountID );
+            SW_LOG_WARNING_ID( "EconomyService.EconomyServiceBalanceNotificationAccount", "EconomyService: a balance notice for account %# is too large to send", accountID );
             return;
         }
         if ( _pHost->sendPush( accountID, EconomyMethod::BalanceChanged::kKind, body ) )

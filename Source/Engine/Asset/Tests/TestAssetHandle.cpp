@@ -247,7 +247,7 @@ SW_TEST_CASE( AssetHandleTest, AsyncStartRunsTheLoadOnce )
 }
 
 /** @brief [AssetHandleTest] 완료 단계가 있으면 로드 뒤에도 Loading 이고, 펌프가 한 번 실행하면 Ready 다. 두 번째 펌프는 할 일이 없다 */
-SW_TEST_CASE( AssetHandleTest, CompletionRunsOnThePump )
+SW_TEST_CASE( AssetHandleTest, CompletionRunsInThePoll )
 {
     shared_ptr<FakeAssetLoadOperation> pOperation = Util::makeOperation();
     pOperation->_bHasCompletion                   = SW_TRUE;

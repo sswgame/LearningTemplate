@@ -10,17 +10,17 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_editorWatchAsset" value="scratch/vfxautoreload/autoreload.vfx.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus vfx_preview"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/vfxautoreload/autoreload.vfx.xml"/>
 	<WaitUntil watch="Editor.VFXPreviewDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="VFXPreview.Playing" contains="'scratch/vfxautoreload/autoreload.vfx.xml' (2 emitters)" count="1"/>
 	<Expect watch="Editor.VFXPreviewAutoReloadCount" equals="0"/>
 	<DevCommand line="asset.overwriteScratch scratch/vfxautoreload/autoreload_edited.vfx.xml scratch/vfxautoreload/autoreload.vfx.xml"/>
 	<WaitUntil watch="Editor.VFXPreviewAutoReloadCount" equals="1" timeoutWallSeconds="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="VFXPreview.Playing" contains="'scratch/vfxautoreload/autoreload.vfx.xml' (1 emitters)" count="1"/>
 	<CaptureEditorUI file="vfxautoreload/panel.png"/>
 	<Variable name="gv_editorUiScale" value="0"/>

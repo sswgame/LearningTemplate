@@ -9,22 +9,22 @@
 <Scenario name="editor.saveroundtripaudiograph" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/audiograph" as="scratch/saveroundtripaudiograph"/>
 	<Variable name="gv_editorWatchPanel" value="audiograph"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus audiograph"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutSeconds="10"/>
 	<DevCommand line="asset.openScratch scratch/saveroundtripaudiograph/tone.audiograph.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.saveDocument audiograph"/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtripaudiograph/tone.audiograph.xml"/>
 	<DevCommand line="panel.reloadDocument audiograph"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.saveDocument audiograph"/>
 	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripaudiograph/tone.audiograph.xml"/>
 	<Expect watch="Editor.PanelDirty" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

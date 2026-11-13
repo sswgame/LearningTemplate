@@ -13,7 +13,7 @@ add_library(sw_platform_linux INTERFACE)
 target_compile_definitions(sw_platform_linux INTERFACE SW_PLATFORM_LINUX SW_PLATFORM_POSIX SW_PLATFORM_NAME="Linux")  # 이름은 sw::build::kPlatformName
 
 # 전용 서버(SW_TARGET_TYPE=Server)는 창이 없다 — X11 · xcb 를 찾지도 링크하지도 않는다. 서버 기계에는 X 가 없고, 링크해 두면 동적 링커가
-# main 전에 libX11.so 를 찾다 실패한다. X11 을 쓰는 .cpp(Window · Input 의 Linux 폴더)는 서버가 폴더째 짓지 않는다(`SW_UNBUILT_ENGINE_FOLDERS`).
+# main 전에 libX11.so 를 찾다 실패한다. X11 을 쓰는 .cpp(Window · Input 의 Linux 폴더)는 서버가 폴더째 짓지 않는다(`SW_EXCLUDED_ENGINE_FOLDERS`).
 if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	# ------------------------------------------------------------------------------
 	# 1) X11 / xcb — 윈도잉 + Vulkan WSI (XGetXCBConnection / VK_KHR_xcb_surface)

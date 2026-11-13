@@ -146,8 +146,8 @@ namespace sw
         vector<Event> _listInbox                                     SW_GUARDED_BY( _inboxMutex ); ///< I/O 스레드가 쌓는다.
         vector<uint8> _inboxBytes                                    SW_GUARDED_BY( _inboxMutex ); ///< 프레임 본문을 담는 아레나.
         ThreadRole                                                   _pollThread;                  ///< `poll` 를 도는 스레드 역할 — 아래 둘은 그 스레드만 잠금 밖에서 읽는다(잠금이 아니라 분석용 능력)
-        vector<Event> _listPumping                                   SW_GUARDED_BY( _pollThread ); ///< poll 스레드 전용. 맞바꿔서 꺼낸다.
-        vector<uint8> _pumpingBytes                                  SW_GUARDED_BY( _pollThread );
+        vector<Event> _listPolling                                   SW_GUARDED_BY( _pollThread ); ///< poll 스레드 전용. 맞바꿔서 꺼낸다.
+        vector<uint8> _pollingBytes                                  SW_GUARDED_BY( _pollThread );
         unordered_map<uint64, int64>                                 _mapLastPingTime; ///< poll 스레드 전용. 열린 연결의 마지막 핑 시각(나노초).
         OnceInit<StreamEndpointConfig>                               _settings;
         OnceInit<IStreamTransport*>                                  _pTransport;

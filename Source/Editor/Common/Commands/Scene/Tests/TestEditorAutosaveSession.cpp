@@ -57,7 +57,7 @@ SW_TEST_CASE( EditorAutosaveSessionTest, OtherSessionEndKeepsLiveSessionCopies )
 /**
  * @brief [EditorAutosaveSessionTest] pid 가 죽은 세션만 넘겨받는다 — 잠금을 새 세션으로 고쳐 쓰고, 새 세션이 끝날 때 함께 지운다
  */
-SW_TEST_CASE( EditorAutosaveSessionTest, DeadSessionIsAdoptedAndRemovedWithAdopter )
+SW_TEST_CASE( EditorAutosaveSessionTest, DeadSessionIsRecoveredAndRemovedWithRecoveringSession )
 {
     using Session         = sw::editor::EditorAutosaveSession;
     using Internal        = EditorAutosaveSessionTestInternal;

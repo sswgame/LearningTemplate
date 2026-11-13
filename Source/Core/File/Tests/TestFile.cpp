@@ -168,7 +168,7 @@ SW_TEST_CASE( FileTest, DirectoryThatCannotBeCreatedSaysSo )
  *          없는 파일 · 폴더는 스탬프가 없다(false). 같은 크기의 재쓰기는 쓰기 시각에 달렸는데 그 시각의 눈금은 시스템 시계(~1 ~ 16 ms)라
  *          여기서는 크기가 다른 재쓰기로 본다.
  */
-SW_TEST_CASE( FileTest, FileStampReportsSizeAndNoticesChanges )
+SW_TEST_CASE( FileTest, FileStampReportsSizeAndDetectsChanges )
 {
     const sw::string dir = sw::test::makeScratchPath( "SwFileStampTestDir" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( dir ) );
@@ -677,9 +677,9 @@ SW_TEST_CASE( FileTest, AppendTextFileAddsToTheEnd )
  * @details 파일을 바꾸는 입구가 모두 `isWriteAllowed` 를 지나는지 본다. 휴지통은 거절하는 쪽만 본다(통과하면 실제로 휴지통에 간다).
  *          게이트는 프로세스 전역이라 단언이 중간에 끝내지 않도록 결과를 모은 뒤 걷고 판정한다.
  */
-SW_TEST_CASE( FileTest, WriteGateRefusesEveryMutatingEntry )
+SW_TEST_CASE( FileTest, WriteFilterRefusesEveryMutatingEntry )
 {
-    const sw::string root = sw::test::makeScratchPath( "SwWriteGateRoot" );
+    const sw::string root = sw::test::makeScratchPath( "SwWriteFilterRoot" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root ) );
     const sw::string path = root + "/Guarded.txt";
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "keep" ) );

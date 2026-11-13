@@ -116,7 +116,7 @@ namespace sw
         }
 
         /**
-         * @brief 실행 없이 시계만 붙잡는 단계(`WaitUntil` · `EditorWaitSettled`)면 true 입니다.
+         * @brief 실행 없이 시계만 붙잡는 단계(`WaitUntil` · `EditorWaitStable`)면 true 입니다.
          * @details 이런 단계는 제 프레임을 혼자 갖는다 — 붙잡힌 프레임에 같이 적힌 다른 단계(입력 · 입력 전 단계)가 다시 돌지 않게(`AutomationScenario` 의 프레임 배정),
          *          그리고 같은 프레임의 단계 순서 검사(`validateStepPhaseOrder`)에서 빠진다. 이름이 아니라 등록 모양으로 가린다 — 기다리는 단계를 더해도 규칙이 따라온다.
          */

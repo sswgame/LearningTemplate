@@ -9,17 +9,17 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Store watch="Editor.HierarchyVisibleRoots" as="allRoots"/>
 	<EditorClick mark="hierarchy.typeFilter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.typeFilter.DirectionalLightComponent"/>
 	<WaitUntil watch="Editor.HierarchyVisibleRoots" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.typeFilter"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.typeFilter.all"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.HierarchyVisibleRoots" sameAs="allRoots"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

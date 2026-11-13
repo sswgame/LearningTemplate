@@ -7,22 +7,22 @@
 -->
 <Scenario name="editor.saveroundtripsequencer" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/sequencerkeys" as="scratch/saveroundtripsequencer"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus sequencer"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/saveroundtripsequencer/sequencerkeys.seq.xml"/>
 	<WaitUntil watch="Editor.SequencerBindingCount" equals="1" timeoutFrames="120"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.saveDocument sequencer"/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtripsequencer/sequencerkeys.seq.xml"/>
 	<DevCommand line="panel.reloadDocument sequencer"/>
 	<WaitUntil watch="Editor.SequencerBindingCount" equals="1" timeoutFrames="120"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.saveDocument sequencer"/>
 	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripsequencer/sequencerkeys.seq.xml"/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

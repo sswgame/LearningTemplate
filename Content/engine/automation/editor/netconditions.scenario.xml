@@ -11,14 +11,14 @@
 	<AllowLog id="Server.ServerBehindDroppedTicks" reason="전용 서버는 백엔드 넷 · 클라이언트와 함께 같은 기계에서 돌아 부하가 걸린 틱이 늦을 수 있다 — 중계가 자식 경고를 경고 그대로 옮기므로(예전에는 Info 로 숨겼다) 나와도 된다고 적는다"/>
 	<WaitUntil watch="Editor.NetPlayProcessCount" equals="0" timeoutFrames="60"/>
 	<DevCommand line="netplay.start dedicated 1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="netplay.wait 1 120"/>
 	<WaitUntil watch="Editor.NetPlayConnectedClients" equals="1" timeoutFrames="60"/>
 	<DevCommand line="netplay.command clients net.emulation both lossPercent=30"/>
 	<DevCommand line="netplay.command clients net.traffic 100 1000"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="netplay.waitResent 1 30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="DevCommand.Reply" contains="net emulation up [latencyMs=0 jitterMs=0 lossPercent=30" atLeast="1"/>
 	<ExpectLog id="DevCommand.Reply" contains="net traffic queued 100 reliable message(s) to 1 connection(s)" atLeast="1"/>
 	<ExpectLog id="DevCommand.Reply" contains="netplay stats from 2 of 2 process(es)" atLeast="1"/>
@@ -30,7 +30,7 @@
 	<DevCommand line="netplay.server state.hashnames"/>
 	<DevCommand line="netplay.stats 5"/>
 	<ExpectLog id="DevCommand.Reply" contains="process(es)" atLeast="2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="netplay.stop"/>
 	<WaitUntil watch="Editor.NetPlayStopping" equals="0" timeoutWallSeconds="20"/>
 	<Expect watch="Editor.NetPlayProcessCount" equals="0"/>

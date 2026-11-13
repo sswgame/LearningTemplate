@@ -1,6 +1,6 @@
 /**
  * @file EditorStabilityState.h
- * @brief `EditorWaitSettled` 의 판정입니다 — 정지했나, 아직 일이 남았나, 할 일 없이 화면이 계속 움직이나(진동).
+ * @brief `EditorWaitStable` 의 판정입니다 — 정지했나, 아직 일이 남았나, 할 일 없이 화면이 계속 움직이나(진동).
  * @details 단계(`EditorScenarioSteps.cpp`)가 프레임마다 재료(화면이 자리 잡았나 · 할 일이 끝났나)를 넘기고 이 판정을 따른다. 테스트가 갈래를 직접 본다.
  */
 #pragma once

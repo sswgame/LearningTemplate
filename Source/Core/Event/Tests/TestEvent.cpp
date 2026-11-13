@@ -310,7 +310,7 @@ SW_TEST_CASE( EventTest, DestructorDestroysQueuedEvents )
  *          스레드가 프레임마다 `processEvents` 로 빼서 방송한다(`Engine::update`).
  *          버스 쪽(subscribe/publish)은 퍼내는 스레드 전용이며 Debug 에서 확인한다.
  */
-SW_TEST_CASE( EventTest, PushFromWorkerThreadsReachesPumpingThread )
+SW_TEST_CASE( EventTest, PushFromWorkerThreadsReachesPollingThread )
 {
     sw::EventDispatcher dispatcher;
 

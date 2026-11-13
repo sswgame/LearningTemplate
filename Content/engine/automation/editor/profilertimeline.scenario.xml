@@ -9,55 +9,55 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/profilertimeline.scenario.xml -unattended
 -->
 <Scenario name="editor.profilertimeline" fixedDelta="0.0166667" timeoutFrames="700" startAfter="Immediately" input="exclusive">
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="profile.trace on"/>
 	<DevCommand line="profile.trace off"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
 	<ResizeWindow width="1600" height="900"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus profiler"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.ProfilerTimelineThreadCount" equals="0"/>
 	<EditorClick mark="profiler.timeline.tab" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="profiler.timeline.tab" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="profiler.timeline.record"/>
 	<WaitUntil watch="Editor.ProfilerTimelineThreadCount" atLeast="2" timeoutFrames="180"/>
 	<!-- 눈 확인용(GPU 검증): 녹화 중 타임라인 — GPU 타임스탬프 칸(64)을 실제로 얼마나 쓰는지 렌더 스레드 줄에서 본다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="profilertimeline/recording.png"/>
 	<!-- 다시 누르면 녹화가 멈춘다 — 남은 사건은 그대로 보인다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="profiler.timeline.record"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.ProfilerTimelineThreadCount" atLeast="2"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="profiler.timeline.saveTrace"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Profiler.TimelineTrace" contains="saved" atLeast="1"/>
 	<!-- 저장한 트레이스를 불러와 살아 있는 기록 아래에 겹친다 · 구간 이름으로 찾는다 · 지운다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="profiler.timeline.loadTrace"/>
 	<WaitUntil watch="Editor.ProfilerLoadedTraceThreads" atLeast="2" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="profiler.timeline.traceSearch"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="GT.Frame"/>
 	<WaitUntil watch="Editor.ProfilerTraceSearchMatches" atLeast="2" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+A"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="zzNoSuchScope"/>
 	<WaitUntil watch="Editor.ProfilerTraceSearchMatches" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="profiler.timeline.unloadTrace"/>
 	<WaitUntil watch="Editor.ProfilerLoadedTraceThreads" equals="0" timeoutFrames="60"/>
 	<!-- 긴 캡처는 정한 시간이 지나면 저절로 끝난다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="profile.trace record 0.25 {out}/record.trace.json"/>
 	<WaitUntil watch="Profiler.TraceRecording" equals="1" timeoutFrames="10"/>
 	<WaitUntil watch="Profiler.TraceRecording" equals="0" timeoutWallSeconds="30"/>

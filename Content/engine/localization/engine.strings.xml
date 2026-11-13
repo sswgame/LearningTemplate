@@ -1542,12 +1542,12 @@
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginField.NoticeId" source="Notice id">
+		<entry key="EdPluginField.AnnouncementId" source="Notice id">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginField.NoticeSeconds0UntilRemoved" source="Notice seconds (0 = until removed)">
+		<entry key="EdPluginField.AnnouncementSeconds0UntilRemoved" source="Notice seconds (0 = until removed)">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
@@ -2027,7 +2027,7 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginWidget.MaintenanceNotice" source="Maintenance / Notice">
+		<entry key="EdPluginWidget.MaintenanceAnnouncement" source="Maintenance / Notice">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
@@ -2042,7 +2042,7 @@
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginWidget.NoticeText" source="Notice text">
+		<entry key="EdPluginWidget.AnnouncementText" source="Notice text">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>

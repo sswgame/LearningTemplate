@@ -9,23 +9,23 @@
 <Scenario name="editor.saveroundtripabilitycatalog" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/abilitycatalog" as="scratch/saveroundtripabilitycatalog"/>
 	<AllowLog id="XMLCatalog.UnknownReference" reason="원본 abilities.xml 에 패널의 문제 칸을 보이려 일부러 둔 풀리지 않은 참조(GA_Missing) — 저장 뒤 파일 감시의 런타임 다시 읽기가 낸다(횟수는 감시 타이밍에 따른다)"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus ability_catalog"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/saveroundtripabilitycatalog/abilities.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.AbilityCatalogEntryCount" equals="6" timeoutFrames="120"/>
 	<DevCommand line="panel.saveDocument ability_catalog"/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtripabilitycatalog/abilities.xml"/>
 	<DevCommand line="panel.reloadDocument ability_catalog"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.AbilityCatalogEntryCount" equals="6"/>
 	<Expect watch="Editor.AbilityCatalogIssueCount" equals="1"/>
 	<DevCommand line="panel.saveDocument ability_catalog"/>
 	<DevCommand line="asset.expectScratchUnchanged scratch/saveroundtripabilitycatalog/abilities.xml"/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

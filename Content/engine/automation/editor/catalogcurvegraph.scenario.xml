@@ -9,30 +9,30 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus catalog_editor"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.CatalogFileCount" atLeast="1" timeoutFrames="800"/>
 	<EditorClick mark="catalog.filter"/>
 	<EditorText value="sparks"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="catalog.file.first"/>
 	<WaitUntil watch="Editor.CatalogRowCount" atLeast="1" timeoutFrames="300"/>
 	<ExpectLog id="Catalog.Opened" contains="sparks" count="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="catalog.curves.open"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="catalog.curves.preview"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="catalogcurvegraph/graph.png" maxMagentaFraction="0"/>
 	<EditorDrag mark="catalog.curves.graph.key.0" dy="-40"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Catalog.TableEdited" contains="Edited the keys of" count="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="catalog.curves.close"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="catalog.revert"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="Catalog.Reverted" count="1"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

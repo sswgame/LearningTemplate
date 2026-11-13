@@ -1,7 +1,7 @@
 /**
  * @file AutomationCaptureUtil.h
  * @brief 주 화면 캡처가 자리 잡은 그림을 찍을 수 있는지 묻는 곳입니다 — 남은 일의 셈(`CaptureReadiness`)에 자동화 층의 화면 덮개(로딩 화면 · 페이드)를 더한다.
- * @details 시나리오 `<Screenshot>` 의 기다림과 시작 인자 캡처(`-gv_screenshotSettledFrames`, 골든 이미지)가 같은 판정을 씁니다.
+ * @details 시나리오 `<Screenshot>` 의 기다림과 시작 인자 캡처(`-gv_screenshotStableFrames`, 골든 이미지)가 같은 판정을 씁니다.
  *          언리얼 자동화 스크린샷이 레벨 로드 · 스트리밍 · 셰이더 컴파일이 끝나기를 기다린 뒤 찍는 것과 같은 자리입니다.
  */
 #pragma once

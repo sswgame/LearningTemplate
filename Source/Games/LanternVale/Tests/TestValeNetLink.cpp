@@ -212,7 +212,7 @@ SW_TEST_CASE( ValeNetLinkTest, PartyIsServerAuthoritative )
 }
 
 /** @brief [ValeNetLinkTest] 검증 짝이 지어낸 번호 · 자기 초대를 거르면 서버가 그 연결을 끊는다 — 몸(골짜기 규칙)은 돌지 않는다. */
-SW_TEST_CASE( ValeNetLinkTest, ForgedTargetsAreDisconnected )
+SW_TEST_CASE( ValeNetLinkTest, CraftedTargetsAreDisconnected )
 {
     ValeLinkTestRig rig( 1 );
     SW_REQUIRE_TRUE( rig.startServer( rig._server ) );

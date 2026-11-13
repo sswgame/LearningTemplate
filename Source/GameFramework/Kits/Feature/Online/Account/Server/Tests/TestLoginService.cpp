@@ -325,7 +325,7 @@ SW_TEST_CASE( LoginServiceTest, DisconnectThenResume )
 }
 
 /** @brief [LoginServiceTest] 서버 둘: 다른 서버의 로그인이 민 세션은 버스 알림(또는 주기 읽기)으로 알아채 접속 테이블에서 뺀다. 지난 세션의 늦은 알림은 새 세션을 건드리지 않는다 */
-SW_TEST_CASE( LoginServiceTest, RevocationOnAnotherServerIsNoticed )
+SW_TEST_CASE( LoginServiceTest, RevocationOnAnotherServerIsNotified )
 {
     MemoryServiceDatabase database;
     LoginFixture          rigA( database );

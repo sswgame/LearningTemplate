@@ -37,8 +37,8 @@ namespace sw::test
      * @brief @p isDone 이 참이 될 때까지 @p poll 를 돌립니다. 실제 소켓의 답은 시간이 들어 라운드 수로 셀 수 없습니다.
      * @return 시한 안에 끝났으면 true 입니다.
      */
-    template <typename TPump, typename TDone>
-    [[nodiscard]] bool pollUntil( TPump&& poll, TDone&& isDone )
+    template <typename TPoll, typename TDone>
+    [[nodiscard]] bool pollUntil( TPoll&& poll, TDone&& isDone )
     {
         const Deadline deadline = Deadline::afterMilliseconds( kEndpointTimeoutMs );
         while ( isDone() == false )

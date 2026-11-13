@@ -677,7 +677,7 @@ SW_TEST_CASE_F( PartyArenaRulesTest, StateRoundTripContinuesIdentically )
 /**
  * @brief [PartyArenaRulesTest] 꾸민 바이트: 콤보 · 때린 사람 · 상태 · 깃발 · 배율 · 시각이 범위 밖이거나 NaN 이면 거절한다. 결함: 최대를 넘는 콤보 · 음수 배율 · 음수 시각을 받았다
  */
-SW_TEST_CASE_F( PartyArenaRulesTest, ForgedBytesAreRefused )
+SW_TEST_CASE_F( PartyArenaRulesTest, CraftedBytesAreRefused )
 {
     SW_REQUIRE_TRUE( open() );
     SW_REQUIRE_TRUE( readInFreshArena( writeBytes( _arena ) ) );
@@ -699,7 +699,7 @@ SW_TEST_CASE_F( PartyArenaRulesTest, ForgedBytesAreRefused )
 /**
  * @brief [PartyArenaRulesTest] 진행 중에 몸은 탈락인데 경기는 살아 있으면 거절한다. 결함: 받으면 그 몸은 오지 않을 부활을 기다렸다
  */
-SW_TEST_CASE_F( PartyArenaRulesTest, ForgedRespawnStateMustMatchTheMatch )
+SW_TEST_CASE_F( PartyArenaRulesTest, CraftedRespawnStateMustMatchTheMatch )
 {
     SW_REQUIRE_TRUE( open() );
     SW_EXPECT_FALSE( readPatched<uint8>( kPartyFirstPlayer + kPartyFieldState, static_cast<uint8>( TrampolinePlayerState::Respawning ) ) );
@@ -852,7 +852,7 @@ SW_TEST_CASE( PartyArenaTest, SpawnerStateRoundTrips )
 /**
  * @brief [PartyArenaTest] 꾸민 스포너 바이트: 모르는 id, 음수 나이, 범위 밖 번호, 상한을 넘는 수, 잘린 바이트는 거절하고 상태를 바꾸지 않는다. 결함: id 만 보고 나머지를 받았다
  */
-SW_TEST_CASE( PartyArenaTest, SpawnerRefusesForgedState )
+SW_TEST_CASE( PartyArenaTest, SpawnerRefusesCraftedState )
 {
     PartyItemSpawner spawner;
     SW_REQUIRE_TRUE( spawner.initialize( PartyArenaTestUtil::makeSettings(), 7u ) );

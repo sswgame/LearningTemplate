@@ -10,13 +10,13 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="debug.target clear"/>
 	<DevCommand line="panel.focus scene_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.hud"/>
 	<WaitUntil watch="Editor.SceneViewHUDSections" atLeast="1" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- ① 선택 없음 -->
 	<DevCommand line="select.tag Automation.NoSuchTag"/>
 	<ExpectLog id="DevCommand.Reply" contains="selected 0" atLeast="1"/>
@@ -37,12 +37,12 @@
 	<Wait frames="20"/>
 	<DevCommand line="select.type MeshComponent"/>
 	<WaitUntil watch="Editor.DebugTargetFollowsSelection" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 되돌리기 -->
 	<EditorClick mark="viewport.hud"/>
 	<WaitUntil watch="Editor.SceneViewHUDSections" equals="0" timeoutFrames="60"/>
 	<DevCommand line="debug.target clear"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

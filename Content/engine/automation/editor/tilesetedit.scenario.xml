@@ -9,57 +9,57 @@
 -->
 <Scenario name="editor.tilesetedit" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/tilesetedit" as="scratch/tilesetedit"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus tileset_editor"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/tilesetedit/town.tileset.xml"/>
 	<WaitUntil watch="Editor.TileSetBrushCount" equals="3" timeoutFrames="120"/>
 	<Expect watch="Editor.TileSetIssueCount" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileSet.brush.1"/>
 	<WaitUntil watch="Editor.TileSetRuleCount" equals="8" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileSet.rule.0"/>
 	<WaitUntil watch="Editor.TileSetFirstCell" equals="4" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="tileset/rule.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 셀 31 = 열 4 · 행 1 — 칸 가운데를 누른다(27 열 · 65 행) -->
 	<EditorClick mark="tileSet.atlas" anchor="0.1667,0.0231"/>
 	<WaitUntil watch="Editor.TileSetFirstCell" equals="31" timeoutFrames="60"/>
 	<Expect watch="Editor.TileSetFrameCount" equals="1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileSet.neighbor.0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" atLeast="1" timeoutFrames="60"/>
 	<EditorClick mark="tileSet.addTile"/>
 	<WaitUntil watch="Editor.TileSetBrushCount" equals="4" timeoutFrames="60"/>
 	<Expect watch="Editor.TileSetIssueCount" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="tileset/edited.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileSet.save"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileSet.reload"/>
 	<WaitUntil watch="Editor.TileSetBrushCount" equals="4" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileSet.brush.1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="tileSet.rule.0"/>
 	<WaitUntil watch="Editor.TileSetFirstCell" equals="31" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 저장한 타일셋을 쓰는 맵을 타일맵 도구로 연다 — 길의 왼쪽 위 모서리 칸이 새 셀로 그려진다(눈으로 본다) -->
 	<DevCommand line="panel.focus tile_map"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/tilesetedit/town.tilemap.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="tileset/map.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

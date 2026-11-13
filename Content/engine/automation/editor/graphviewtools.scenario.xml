@@ -9,72 +9,72 @@
 -->
 <Scenario name="editor.graphviewtools" fixedDelta="0.0166667" timeoutFrames="1400" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/animgraphedit" as="scratch/graphviewtools"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus animation_graph"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/graphviewtools/animgraphedit.animgraph.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.AnimationGraphLinkCount" equals="2"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="2" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 미니맵: 처음엔 보이고, 단추로 감추고 다시 보인다 -->
 	<Expect watch="Editor.GraphMinimapShown" equals="1"/>
 	<EditorClick mark="animGraph.view.minimap"/>
 	<WaitUntil watch="Editor.GraphMinimapShown" equals="0" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animGraph.view.minimap"/>
 	<WaitUntil watch="Editor.GraphMinimapShown" equals="1" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 정렬: 노드 둘을 고르고 위 맞춤 -->
 	<EditorClick mark="animationGraph.node.Idle"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.node.Walk" mods="ctrl"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animGraph.view.align"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animGraph.view.align.top"/>
 	<WaitUntil watch="Editor.GraphAlignedNodeCount" equals="2" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 핀 끌어 노드 만들기: Walk 의 출력 핀(노드 2 → 핀 22)을 아래 빈 곳에 놓고 Attack 을 고른다 -->
 	<EditorDrag mark="animGraph.pin.22" dx="0" dy="220"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorText value="att"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="3" timeoutFrames="60"/>
 	<WaitUntil watch="Editor.GraphAutoLinkCount" atLeast="1" timeoutFrames="60"/>
 	<WaitUntil watch="Editor.AnimationGraphLinkCount" equals="3" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 복제 · 복사 · 붙여 넣기 -->
 	<EditorClick mark="animationGraph.node.Idle"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+D"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="4" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+C"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorKey key="Ctrl+V"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="5" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 주석 상자: 고른 노드를 감싼다 -->
 	<EditorClick mark="animGraph.view.comment"/>
 	<WaitUntil watch="Editor.GraphCommentCount" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 저장 → 다시 읽기: 노드 · 주석이 파일에 남았다 -->
 	<EditorClick mark="animationGraph.save"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.load"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="5" timeoutFrames="90"/>
 	<WaitUntil watch="Editor.GraphCommentCount" equals="1" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="graphviewtools.png" maxMagentaFraction="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

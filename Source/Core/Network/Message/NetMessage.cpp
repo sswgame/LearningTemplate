@@ -88,7 +88,7 @@ namespace sw
             const bool bNotificationClaimed = ( ( notifiedMask >> offset ) & 1u ) != 0 && kind < kKindCount && _arrNotificationHandler[kind] != nullptr;
             if ( bNotificationClaimed )
             {
-                SW_LOG_ERROR_ID( "Net.RouterNoticeKindClaimed", "NetMessageRouter: delivery notices of message kind 0x%02x are already claimed - the new handler is refused", kind );
+                SW_LOG_ERROR_ID( "Net.RouterNotificationKindClaimed", "NetMessageRouter: delivery notices of message kind 0x%02x are already claimed - the new handler is refused", kind );
                 return Subscription{};
             }
         }
@@ -144,7 +144,7 @@ namespace sw
             return;
         }
         if ( _unclaimedNotificationCount == 0 )
-            SW_LOG_ERROR_ID( "Net.RouterUnclaimedNotice", "NetMessageRouter: a delivery notice of message kind 0x%02x has no handler - the sender did not register (getNotifiedKindMask); further ones are only counted",
+            SW_LOG_ERROR_ID( "Net.RouterUnclaimedNotification", "NetMessageRouter: a delivery notice of message kind 0x%02x has no handler - the sender did not register (getNotifiedKindMask); further ones are only counted",
                              static_cast<int32>( notification._kind ) );
         ++_unclaimedNotificationCount;
     }

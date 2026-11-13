@@ -48,9 +48,9 @@ function(sw_scanReflectionHeaders OUT_HEADERS OUT_OTHERS TARGET_NAME EXCLUDE_REG
 
 	# 이 구성이 짓지 않는다고 적은 소스(`sw_removeExcludedSources` · `sw_declareExcludedSources` — 헤더도 적힌다)는 코드젠하지 않는다.
 	# 훑기는 타깃 소스 목록과 따로 glob 하므로, 빼는 규칙마다 여기에 같은 정규식을 다시 적으면 하나를 빠뜨린다(전용 서버의 게임 `Client/` 가 그랬다).
-	get_property(listUnbuilt GLOBAL PROPERTY SW_UNBUILT_SOURCES)
-	if(listUnbuilt)
-		list(REMOVE_ITEM listCandidateHeader ${listUnbuilt})
+	get_property(listExcluded GLOBAL PROPERTY SW_EXCLUDED_SOURCES)
+	if(listExcluded)
+		list(REMOVE_ITEM listCandidateHeader ${listExcluded})
 	endif()
 
 	set(listHeader "")

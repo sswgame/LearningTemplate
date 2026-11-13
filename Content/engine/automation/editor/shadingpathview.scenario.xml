@@ -11,30 +11,30 @@
 	<Variable name="gv_editorUiScale" value="1.5"/>
 	<ResizeWindow width="1600" height="900"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus scene_view"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
 	<Expect watch="Editor.SceneViewMode" equals="0"/>
 	<Screenshot file="shadingpath_lit.ppm"/>
 	<EditorClick mark="viewport.viewMode"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.unlit"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="1" timeoutFrames="90"/>
 	<Screenshot file="shadingpath_unlit.ppm"/>
 	<EditorClick mark="viewport.viewMode"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.shadingpath"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="15" timeoutFrames="90"/>
 	<Screenshot file="shadingpath.ppm"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectImagesDiffer first="shadingpath_lit.ppm" second="shadingpath.ppm" region="0.1,0.1,0.9,0.9" minDiffering="0.05"/>
 	<ExpectImagesDiffer first="shadingpath_unlit.ppm" second="shadingpath.ppm" region="0.1,0.1,0.9,0.9" minDiffering="0.05"/>
 	<EditorClick mark="viewport.viewMode"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.lit"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="0" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

@@ -9,48 +9,48 @@
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="editor scene.new"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- History 는 포커스를 받아도 겨눈 스택을 바꾸지 않는다 — 계층(메인 스택)에 포커스를 둔 뒤 연다 -->
 	<DevCommand line="panel.focus hierarchy"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.create"/>
 	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.create"/>
 	<WaitUntil watch="Editor.UndoCount" equals="2" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="hierarchy.create"/>
 	<WaitUntil watch="Editor.UndoCount" equals="3" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus history"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- #1 줄 — 첫 만들기 뒤로 간다 -->
 	<EditorClick mark="history.step.1"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="3"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<!-- 처음 상태 — 만든 것이 모두 사라진다 -->
 	<EditorClick mark="history.step.0"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorExpectObject name="GameObject" count="0"/>
 	<!-- 다시 실행 단추 · 끝 줄 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="history.redo"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="history.step.3"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="3" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="history.undo"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="2" timeoutFrames="60"/>
 	<!-- 지우기 — 기록이 빈다 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="history.clear"/>
 	<WaitUntil watch="Editor.UndoCount" equals="0" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

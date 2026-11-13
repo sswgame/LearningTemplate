@@ -7,7 +7,7 @@
 <Scenario name="editor.viewportgrid" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<!-- 위치로 누르는 시나리오 — 앞 시나리오 · 사용자 배치가 패널을 좁혀 두었을 수 있다 -->
 	<DevCommand line="layout.reset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.GridStep" near="1" tolerance="0.001"/>
 	<Expect watch="Editor.GridMajorLines" atLeast="4"/>
 	<Expect watch="Editor.GridMisplacedMajorLines" equals="0"/>
@@ -17,7 +17,7 @@
 	<Wait frames="42"/>
 	<EditorKey key="D" state="Up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewCameraX" atLeast="3"/>
 	<Expect watch="Editor.GridStep" near="1" tolerance="0.001"/>
 	<Expect watch="Editor.GridMisplacedMajorLines" equals="0"/>
@@ -31,10 +31,10 @@
 	<EditorKey key="Shift+E" state="Up"/>
 	<EditorWheel dy="-4"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewCameraY" atLeast="100"/>
 	<Expect watch="Editor.GridStep" near="10" tolerance="0.001"/>
 	<Expect watch="Editor.GridMisplacedMajorLines" equals="0"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

@@ -344,7 +344,7 @@ namespace sw::editor
         }
         result._attachedCount = static_cast<uint32>( listAttach.size() );
         if ( result._attachedCount > 0 )
-            SW_LOG_INFO_ID( "Prefab.NestedAdopted", "'%#' took %# child prefab instance(s) as nested prefabs", pRoot->getName().c_str(), result._attachedCount );
+            SW_LOG_INFO_ID( "Prefab.NestedAttached", "'%#' took %# child prefab instance(s) as nested prefabs", pRoot->getName().c_str(), result._attachedCount );
         return result;
     }
 } // namespace sw::editor

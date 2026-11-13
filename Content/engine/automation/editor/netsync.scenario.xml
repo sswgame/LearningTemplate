@@ -9,14 +9,14 @@
 	<AllowLog id="Server.ServerBehindDroppedTicks" reason="전용 서버는 백엔드 넷 · 클라이언트와 함께 같은 기계에서 돌아 부하가 걸린 틱이 늦을 수 있다 — 중계가 자식 경고를 경고 그대로 옮기므로(예전에는 Info 로 숨겼다) 나와도 된다고 적는다"/>
 	<WaitUntil watch="Editor.NetPlaySyncCommonTicks" equals="0" timeoutFrames="60"/>
 	<DevCommand line="netplay.start dedicated 1"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="netplay.wait 1 120"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="netplay.sync save {out}/netsync.txt"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="DevCommand.Reply" contains="netplay sync saved" atLeast="1"/>
 	<DevCommand line="netplay.sync compare {out}/netsync.txt"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<ExpectLog id="DevCommand.Reply" contains="netplay sync no divergence over" atLeast="1"/>
 	<Expect watch="Editor.NetPlaySyncCommonTicks" atLeast="1"/>
 	<Expect watch="Editor.NetPlaySyncDiverged" equals="0"/>

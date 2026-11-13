@@ -7,11 +7,11 @@
 -->
 <Scenario name="editor.matparamreload" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
 	<Scratch from="game/empty/automation/editor/matparamreload" as="scratch/matparamreload"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="scene.open scratch/matparamreload/matparamreload.scene.xml"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<WaitUntil watch="Material.CollectionValue" target="scratch/matparamreload/world.matparams.xml" key="WorldTint.z" equals="0.1" timeoutFrames="120"/>
 	<DevCommand line="asset.overwriteScratch scratch/matparamreload/world_edited.matparams.xml scratch/matparamreload/world.matparams.xml"/>
 	<WaitUntil watch="Material.CollectionValue" target="scratch/matparamreload/world.matparams.xml" key="WorldTint.z" equals="0.8" timeoutWallSeconds="30"/>

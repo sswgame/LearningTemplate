@@ -12,33 +12,33 @@
 	<ResizeWindow width="1900" height="1200"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_editorWatchPanel" value="charactereditor.main"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="panel.focus charactereditor.main"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="60"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 
 	<!-- ① 입힌 몸을 조립한다 -->
 	<EditorClick mark="charactereditor.tab.appearance" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.appearance" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.loadData"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.basePreset"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.basePreset.first"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.equipSet"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.equipSet.first"/>
 	<WaitUntil watch="Editor.CharacterEditorEquippedSlotCount" atLeast="1" timeoutFrames="90"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.tab.preview" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.preview" state="Up"/>
 	<WaitUntil watch="Editor.CharacterEditorPreviewAssembleCount" atLeast="1" timeoutFrames="177"/>
 	<WaitUntil watch="Editor.CharacterEditorPreviewPickVertices" atLeast="1" timeoutFrames="120"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Store watch="Editor.CharacterEditorPreviewAssembleCount" as="dressedAssembles"/>
 	<Store watch="Editor.CharacterEditorPreviewPickVertices" as="dressedVertices"/>
 	<CaptureEditorUI file="charactereditor/bodyedit_dressed.png"/>
@@ -47,17 +47,17 @@
 	<EditorClick mark="charactereditor.tab.body" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.body" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.CharacterEditorBodyHiddenSlots" equals="0"/>
 	<EditorClick mark="charactereditor.body.slot.equipped"/>
 	<WaitUntil watch="Editor.CharacterEditorBodyHiddenSlots" equals="1" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.tab.preview" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.preview" state="Up"/>
 	<WaitUntil watch="Editor.CharacterEditorPreviewAssembleCount" differsFrom="dressedAssembles" timeoutFrames="177"/>
 	<WaitUntil watch="Editor.CharacterEditorPreviewPickVertices" differsFrom="dressedVertices" timeoutFrames="120"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="charactereditor/bodyedit_hidden.png"/>
 
 	<!-- ③ 표면 집기 — 몸 탭에서 피부 층(문신)을 하나 더해 배치 집기를 켜고, 미리보기 뷰포트 가운데(몸통)를 누른다.
@@ -65,32 +65,32 @@
 	<EditorClick mark="charactereditor.tab.body" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.body" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.body.addLayer"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.body.addLayer.placeable"/>
 	<WaitUntil watch="Editor.CharacterEditorBodyLayerCount" equals="1" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.body.placeLayer"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.tab.preview" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.preview" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.CharacterEditorBodyPickCount" equals="0"/>
 	<EditorClick mark="charactereditor.previewScene" anchor="0.5,0.5"/>
 	<WaitUntil watch="Editor.CharacterEditorBodyPickCount" atLeast="1" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<CaptureEditorUI file="charactereditor/bodyedit_pick.png"/>
 
 	<!-- ④ 숨김을 되돌린다 — 데이터 파일은 그대로다 -->
 	<EditorClick mark="charactereditor.tab.body" state="Down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.body" state="Up"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.body.slot.equipped"/>
 	<WaitUntil watch="Editor.CharacterEditorBodyHiddenSlots" equals="0" timeoutFrames="30"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Expect watch="Editor.CharacterEditorStatusSet" equals="0"/>
 	<Expect watch="Editor.CharacterEditorBodyDataDirty" equals="0"/>
 	<Variable name="gv_editorUiScale" value="0"/>
