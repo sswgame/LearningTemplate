@@ -31,7 +31,7 @@
 
 namespace
 {
-    // LogCapture 는 **모든 빌드**에서 쓴다 — 로그가 Debug 전용이 아니게 됐으므로 검증도 그래야 한다.
+    // LogCapture 는 **모든 빌드**에서 쓴다 — 로그가 검사 구성 전용이 아니게 됐으므로 검증도 그래야 한다.
     /** @brief 로그 매크로가 실제로 기록한 내용을 확인할 때 붙이는 메시지 접두사입니다. */
     constexpr const utf8* kCapturePrefix = "[TestLog] ";
 
@@ -874,9 +874,9 @@ SW_TEST_CASE( LogTest, LineWithoutASinkReachesStandardError, ._tags = "slow", ._
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "SW_NOSINK_PROBE error line" ), child.getOutputTail() );
 }
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
 /**
- * @brief [LogTest] 실패한 `SW_LOG_ASSERT` 는 식 · 메시지 · 자리를 stderr 에 먼저 남긴다(멈추는 단언은 Debug 에만 있다)
+ * @brief [LogTest] 실패한 `SW_LOG_ASSERT` 는 식 · 메시지 · 자리를 stderr 에 먼저 남긴다(멈추는 단언은 검사 구성(SW_DO_CHECKS)에만 있다)
  */
 SW_TEST_CASE( LogTest, FailedLogAssertWritesStandardErrorBeforeStopping, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {

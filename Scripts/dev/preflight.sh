@@ -2,14 +2,14 @@
 # 묶음 끝 전체 검증: Windows(린트, Debug · Release · 서버 · 배포 빌드, 단위 · ctest)가 모두 통과한 뒤에만 Linux 를 돌린다.
 # 인자는 Linux 로 넘긴다(--record). --no-linux 면 Windows 까지만 돈다(Linux 골든이 곧 바뀌는 묶음 사이). 로그는 build/<프리셋>/Testing/Logs/verify.* · build/verify.*.log. 끝 줄 VERIFIED=<sha> 가 나와야 push 한다.
 # --show 는 게임 · 에디터 테스트 창을 화면에 띄우고 테스트를 하나씩 돌린다(사람이 지켜볼 때). --dry-run 은 돌릴 명령만 차례대로 찍는다(스크립트를 고친 뒤 확인).
-# --from build|cpu|gpu-release|gpu-debug|linux 는 앞 단계를 건너뛴다(linux 는 Windows 가 이미 통과했고 그 뒤 고친 것이 Linux 쪽 스크립트 · 환경뿐일 때). 앞 단계가 통과한 뒤
+# --from build|cpu|gpu-release|linux 는 앞 단계를 건너뛴다(linux 는 Windows 가 이미 통과했고 그 뒤 고친 것이 Linux 쪽 스크립트 · 환경뿐일 때). 앞 단계가 통과한 뒤
 # 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
 #
 # 단계(시간 판정이 CPU 경합에 흔들리는 일과 그렇지 않은 일을 가른다 — 시나리오는 벽시계 시한 · 프레임에 걸린 그림을 판정하므로 GPU 단계는 혼자 돈다):
 #   build       lint --all(뒤에서) ‖ Debug 빌드 → 임포트 → (Release → 서버 빌드 ‖ 배포 프리셋 셋 빌드 · 쿠킹). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
 #   cpu         Debug ctest -L nogpu(단위 · 셰이더 다시 굽기 · 파서 …) ‖ 서버 단위 → launch-args → shipping-check --skip-build(기동만). 시간을 판정하지 않는 CPU 일만 겹친다.
 #   gpu-release Release ctest 전체 — 시나리오 그림 · 골든 · 기록 대조의 정본(모든 게임 · 네 백엔드).
-#   gpu-debug   Debug ctest -LE nogpu — 체인은 시나리오마다 백엔드 하나(-scenario-backend-split=all)로 Debug 단언만 지난다(Test/Scenario/CMakeLists.txt).
+#   (없앤 gpu-debug: Debug 로 같은 체인을 한 번 더 돌던 단계 14.6 분 — 단언 · 검사가 SW_DO_CHECKS 로 Release 에도 들어 Release 체인이 지난다. Core/Foundation/Macros.h 4-1)
 # 예전(2026-11-13 측정 53 분)은 단계가 모두 차례였고, 같은 체인을 두 구성에서 네 백엔드로 다 돌았고, 셰이더 다시 굽기가 두 구성에서 혼자(RUN_SERIAL) 돌았고, Debug 단위를 ctest 밖에서 한 번 더 돌았다.
 cd "$(dirname "$0")/../.." || exit 2
 source Scripts/common/git.sh
@@ -21,13 +21,11 @@ RECORD=()
 # ctest 슬롯 수는 설정 값이다(Config/Dev/Verify.json — 없으면 멈춘다).
 CTEST_JOBS=$(py -3 -c "import json,sys; print(json.load(open('Config/Dev/Verify.json', encoding='utf-8'))['_ctestJobs'])") || { echo "Config/Dev/Verify.json 의 _ctestJobs 를 읽지 못했다"; exit 2; }
 CTEST_JOBS=${CTEST_JOBS//$'\r'/}
-CTEST_JOBS_GPU_DEBUG=$(py -3 -c "import json,sys; print(json.load(open('Config/Dev/Verify.json', encoding='utf-8'))['_ctestJobsGpuDebug'])") || { echo "Config/Dev/Verify.json 의 _ctestJobsGpuDebug 를 읽지 못했다"; exit 2; }
-CTEST_JOBS_GPU_DEBUG=${CTEST_JOBS_GPU_DEBUG//$'\r'/}
 while true; do
   case "$1" in
     --from) FROM=$2; shift 2 ;;
     # --show: 무인 실행의 창 숨김만 끈다(App 이 SW_SHOW_WINDOWS=1 을 본다 — 판정 · 골든은 같다). 보는 사람을 위해 테스트를 하나씩 돌린다.
-    --show) export SW_SHOW_WINDOWS=1; CTEST_JOBS=1; CTEST_JOBS_GPU_DEBUG=1; shift ;;
+    --show) export SW_SHOW_WINDOWS=1; CTEST_JOBS=1; shift ;;
     --dry-run) DRY=1; shift ;;
     --no-linux) NO_LINUX=1; shift ;;
     --record) RECORD=(--record); shift ;;
@@ -40,9 +38,8 @@ case "$FROM" in
   build) STAGE=1 ;;
   cpu) STAGE=2 ;;
   gpu-release) STAGE=3 ;;
-  gpu-debug) STAGE=4 ;;
   linux) STAGE=5 ;;
-  *) echo "--from 은 build · cpu · gpu-release · gpu-debug · linux 중 하나다: $FROM"; exit 2 ;;
+  *) echo "--from 은 build · cpu · gpu-release · linux 중 하나다: $FROM"; exit 2 ;;
 esac
 
 windows_failed() {
@@ -186,11 +183,6 @@ fi
 
 if [ $STAGE -le 3 ]; then
   run_ctest Ninja-Release all || windows_failed "Ninja-Release ctest"
-fi
-
-if [ $STAGE -le 4 ]; then
-  # 단언만 보는 단계라 슬롯을 따로 둔다(_ctestJobsGpuDebug) — 그림 · 골든은 Release 가 판정한다.
-  CTEST_JOBS=$CTEST_JOBS_GPU_DEBUG run_ctest Ninja-Debug gpu -LE nogpu || windows_failed "Ninja-Debug ctest gpu"
 fi
 
 if [ $NO_LINUX -eq 1 ]; then

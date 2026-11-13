@@ -342,7 +342,7 @@ SW_TEST_CASE( MutexTest, HeldLockDepthFollowsEveryKindOfLock )
 {
     mutex        plain;
     shared_mutex shared;
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
     constexpr uint32 kOne = 1;
 #else
     constexpr uint32 kOne = 0;

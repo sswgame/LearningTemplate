@@ -162,13 +162,13 @@ namespace sw
             return false;
         }
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         const auto compression = static_cast<PackCompressionType>( _header._compressionType ); // 헤더는 잠금 안에서 복사한다
         const auto encryption  = static_cast<PackEncryptionType>( _header._encryptionType );
         const auto fileCount   = static_cast<uint32>( _header._fileCount );
 #endif
         lock.unlock(); // 잠금은 잎이다 — 안내 로그는 놓은 뒤에 쓴다
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         if ( engine::areEngineServicesBound() )
         {
             const utf8* pCompressionName = engine::getSubsystem<TypeRegistry>().enumToString( compression );

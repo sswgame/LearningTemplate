@@ -558,7 +558,7 @@ namespace sw
         {
             if ( pObj == nullptr )
                 continue;
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             // 순회가 컴포넌트 표시만 보는 근거(`GameObject::isPendingDestroy` 의 불변식)를 파괴 직전에 확인한다. 깨졌으면 그 프레임 동안 순회가
             // 삭제 예정 오브젝트의 컴포넌트를 방문했다.
             for ( const Component* pComp : pObj->getComponents() )

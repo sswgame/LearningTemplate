@@ -1,5 +1,4 @@
 {
-    "_comment": "묶음 검증(Scripts/dev/preflight.sh)의 동시 실행 값. ctest -j 의 슬롯 수다 — 시나리오 체인은 백엔드 수만큼 슬롯을 차지하므로(PROCESSORS, Test/Scenario/CMakeLists.txt) GPU 자식 수의 상한도 이 값이다. --show 는 둘 다 1 로 덮는다. _ctestJobs 는 그림 · 골든을 판정하는 단계(Release), _ctestJobsGpuDebug 는 단언만 보는 Debug GPU 단계다 — 체인 하나가 4 슬롯이라 6 이면 체인이 하나씩만 돌아 그 단계가 직렬이었다(2026-11-13: 테스트 합 977 초 · 벽시계 876 초).",
-    "_ctestJobs": 6,
-    "_ctestJobsGpuDebug": 10
+    "_comment": "묶음 검증(Scripts/dev/preflight.sh)의 동시 실행 값. ctest -j 의 슬롯 수다 — 시나리오 체인은 백엔드 수만큼 슬롯을 차지하므로(PROCESSORS, Test/Scenario/CMakeLists.txt) GPU 자식 수의 상한도 이 값이다. --show 는 1 로 덮는다.",
+    "_ctestJobs": 6
 }

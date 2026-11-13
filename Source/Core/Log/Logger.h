@@ -268,13 +268,13 @@ namespace sw
 #endif
 
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_TRACE )
-    /** @brief Trace 수준으로 포맷해 남깁니다. Debug 에만 컴파일됩니다. */
+    /** @brief Trace 수준으로 포맷해 남깁니다. 검사 구성(SW_DO_CHECKS)에만 컴파일됩니다. */
     #define SW_LOG_TRACE_ID( id, ... ) SW_LOG_WRITE( sw::LogLevel::Trace, "" id, __VA_ARGS__ )
 #else
     #define SW_LOG_TRACE_ID( id, ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
 #endif
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
 
     /**
      * @brief 조건이 거짓이면 메시지 · 식 · 파일 · 함수 · 줄을 Error 로 남기고 디버거에서 멈춥니다.
@@ -305,7 +305,7 @@ namespace sw
         } while ( false )
 #else
     /**
-     * @brief Debug 가 아니면 **멈추지 않고 Error 로그만** 남깁니다.
+     * @brief 배포(Shipping)에서는 **멈추지 않고 Error 로그만** 남깁니다.
      * @details no-op 으로 두지 않습니다 — 배포본에서 계약이 깨진 순간을 놓치게 됩니다.
      */
     #define SW_LOG_ASSERT( expr, ... )                                                       \
