@@ -3,6 +3,7 @@
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
@@ -253,20 +254,18 @@ namespace sw
 
     bool DataCatalogReferenceRules::validateUnique( const XMLNode& root, const DataCatalogReferenceRule& rule, string_view sourceName )
     {
-        vector<string_view> listSeen;
-        bool                bValid    = true;
-        const auto          checkNode = [&]( const XMLNode& owner )
+        unordered_set<string_view> uniqueSeen; // 줄마다 본 값 목록을 훑지 않는다(카탈로그 줄 수의 제곱). 값은 문서가 든 글이다
+        bool                       bValid    = true;
+        const auto                 checkNode = [&]( const XMLNode& owner )
         {
             const string_view value = owner.getAttributeText( rule._attribute.c_str() );
             if ( value.empty() )
                 return; // 빈 값은 그 원소의 읽기가 오류로 알린다
-            if ( VectorUtil::contains( listSeen, value ) )
+            if ( uniqueSeen.insert( value ).second == false )
             {
                 SW_LOG_ERROR_ID( "XMLCatalog.DuplicateID", "%#: <%#> %#=\"%#\" is written twice in one file - the catalog does not load", sourceName, owner.getName(), rule._attribute.c_str(), value );
                 bValid = false;
-                return;
             }
-            listSeen.push_back( value );
         };
         for ( XMLNode entry = root.findChild( rule._listOwnerPath[0].c_str() ); entry.isValid(); entry = entry.findNextSibling( rule._listOwnerPath[0].c_str() ) )
         {
