@@ -58,20 +58,23 @@ PATH_LINUX = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'  # W
 
 
 GIT_SOURCE_ENV = 'LT_LINUX_GIT_SOURCE'  # 클론이 받아 올 git 폴더(WSL 경로) — Windows 에서 띄울 때 run_in_wsl 이 적는다
+HEAD_ENV = 'LT_LINUX_HEAD'  # 부른 작업 폴더의 HEAD — 워크트리의 .git 은 WSL 의 git 이 열지 못해 Windows 쪽이 적는다
+BUILT_COMMIT = f'{RELEASE}/built-commit.txt'  # Release 를 끝까지 지은 커밋(build 가 쓴다) — 모듈 빌드 스탬프(ModuleBuild.stamp)는 시각만 담아 커밋을 모른다
 
 
 def run_in_wsl(argv):
     """Windows 쪽: HEAD 를 refs/linux-verify 에 적고 같은 명령을 WSL 에서 띄운다."""
     command = argv[2:] if argv[:1] == ['--gpu'] else argv  # `--gpu <드라이버> all` 도 HEAD 를 옮긴다
+    head = run_git_or_raise(['rev-parse', 'HEAD'], cwd=REPO).strip()
     if command and command[0] in ('build', 'all', 'sanitize'):  # sanitize 도 클론을 되돌린다 — 옮기지 않으면 따로 돌린 sanitize 가 옛 커밋을 짓는다
-        head = run_git_or_raise(['rev-parse', 'HEAD'], cwd=REPO).strip()
         run_git_or_raise(['update-ref', 'refs/linux-verify', head], cwd=REPO)
     env = dict(os.environ, MSYS_NO_PATHCONV='1', MSYS2_ARG_CONV_EXCL='*')
+    env[HEAD_ENV] = head
     wsl_repo = to_wsl_path(REPO, env)
     # 클론은 refs/linux-verify 를 공통 git 폴더에서 받는다 — 워크트리의 .git 은 Windows 경로를 적은 파일이라 WSL 의 git 이 열지 못한다.
     common_dir = pathlib.Path(run_git_or_raise(['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd=REPO).strip())
     env[GIT_SOURCE_ENV] = to_wsl_path(common_dir, env)
-    env['WSLENV'] = ':'.join(filter(None, (os.environ.get('WSLENV'), GIT_SOURCE_ENV)))
+    env['WSLENV'] = ':'.join(filter(None, (os.environ.get('WSLENV'), GIT_SOURCE_ENV, HEAD_ENV)))
     return subprocess.call(['wsl.exe', '-d', DISTRO, '--', 'python3', f'{wsl_repo}/Scripts/dev/linux_scenarios.py'] + argv, env=env)
 
 
@@ -179,6 +182,19 @@ def sync_clone():
     print('클론:', run_git_or_raise(['log', '-1', '--format=%h'], cwd=clone).strip())
 
 
+def require_current_build():
+    """
+    chain · stages · bisect 앞: Release 바이너리가 지금 커밋으로 지어졌는지 본다. 아니면 돌리지 않고 멈춘다 — 옛 바이너리가 돌면 고친 테스트가 다시 진다
+    (preflight.sh --from 과 같은 틈). 어긋나는 경우: 커밋한 뒤 build 없이 chain, sanitize 가 클론만 새 커밋으로 옮김, 지다 만 build(ninja -k 0 이 일부만 다시 지음).
+    스스로 다시 짓지는 않는다 — build 는 클론을 clean 해 옮기지 않은 기록 골든을 지운다.
+    """
+    built = pathlib.Path(BUILT_COMMIT).read_text().strip() if os.path.exists(BUILT_COMMIT) else '없음'
+    clone_head = run_git_or_raise(['rev-parse', 'HEAD'], cwd=pathlib.Path(CLONE)).strip()
+    head = os.environ.get(HEAD_ENV) or run_git_or_raise(['rev-parse', 'HEAD'], cwd=pathlib.Path(WSL_REPO)).strip()
+    if built != clone_head or built != head:
+        sys.exit(f'Release 바이너리가 지금 커밋이 아니다 (지은 커밋 {built[:10]} · 클론 {clone_head[:10]} · HEAD {head[:10]}) - build 를 먼저 돌린다(기록한 골든은 그 전에 goldens 로 옮긴다)')
+
+
 def ensure_vcpkg_manifest(installed_dir):
     """
     공유 설치본(Linux-Debug 의 vcpkg_installed)이 지금 매니페스트로 깔렸는지 본다. 매니페스트(vcpkg.json)가 바뀌었으면 Linux-Debug 를
@@ -214,6 +230,7 @@ def build():
     if shell(f'{configure} > {RELEASE}.configure.log 2>&1').returncode != 0:
         print(f'구성 실패 - {RELEASE}.configure.log')
         return 1
+    pathlib.Path(BUILT_COMMIT).unlink(missing_ok=True)  # 지다 만 빌드는 어느 커밋의 바이너리도 아니다
     built = shell(f'ninja -C {RELEASE} -k 0 > {RELEASE}.build.log 2>&1').returncode
     log = pathlib.Path(f'{RELEASE}.build.log').read_text(errors='replace').splitlines()
     for line in [l for l in log if 'error:' in l or 'FAILED:' in l][:40]:
@@ -221,6 +238,7 @@ def build():
     print('경고', sum('warning:' in l for l in log), '빌드', built)
     if built != 0:
         return built
+    pathlib.Path(BUILT_COMMIT).write_text(run_git_or_raise(['rev-parse', 'HEAD'], cwd=pathlib.Path(CLONE)).strip() + '\n')
     # Windows 에서 이미 임포트한 결과를 옮긴다 - 스탬프가 바이트 해시라 다시 임포트하지 않는다(Linux 임포트는 느리다).
     copy = (f"cd {WSL_REPO}/Content && find . -type f \\( -path '*/textures/*' -o -path '*/models/*' -o -path '*/heightfields/*' -o -name import.stamp \\) "
             f"-not -path '*/textures_raw/*.png' -not -path '*/models_raw/*' -printf '%P\\n' > /tmp/lcopy.list && rsync -a --files-from=/tmp/lcopy.list . {CLONE}/Content/")
@@ -291,6 +309,7 @@ def chain(arguments):
     names = [a for a in arguments if a != '--record']
     if not names:
         sys.exit('체인 이름을 적는다 (예: chain editor shooter3d)')
+    require_current_build()
     code = 0
     # 표시 번호를 한 줄에 하나씩 받아 Xvfb 가 겹치지 않는다. 표시 번호 = 99 + 작업 순번
     with concurrent.futures.ThreadPoolExecutor(PARALLEL_CHAINS) as pool:
@@ -314,6 +333,7 @@ def run_stage_set(names, env, log_name, record=False):
 def stages(arguments):
     record = '--record' in arguments  # 체인 전체가 못 도는 구간(앞 단계가 멈춤)의 골든을 기록할 때
     arguments = [a for a in arguments if a != '--record']
+    require_current_build()
     code = 0
     with Xvfb():
         env = scenario_env(99)
@@ -328,6 +348,7 @@ def bisect(arguments):
     """이분 탐색은 scenario_bisect.find_first_bad_step(Windows 와 같은 함수) — 여기는 Xvfb · 드라이버(scenario_env) 실행기와 ctest 목록만 댄다."""
     target = arguments[0]
     pack = arguments[1] if len(arguments) > 1 else 'editor'
+    require_current_build()
     with Xvfb():
         env = scenario_env(99)
         command = app_arguments.find_chain_command(pathlib.Path(RELEASE), pack, env)

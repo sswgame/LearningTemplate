@@ -29,6 +29,17 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 
 
 
+def build_preset_or_exit(preset: str) -> None:
+    """
+    시나리오를 돌리기 전에 @p preset 을 증분 빌드한다(바뀐 것이 없으면 몇 초). 짓지 않으면 고친 코드 대신 옛 바이너리가 돌아 고친 단계가 다시 지거나,
+    고치기 전 결함을 다시 찾는다(preflight.sh --from 과 같은 틈). 지면 멈춘다 — 반쯤 지은 바이너리로 돌리지 않는다.
+    """
+    print(f'{preset} 증분 빌드', flush=True)
+    result = subprocess.run(['cmake', '--build', '--preset', preset], cwd=REPO, capture_output=True, text=True, encoding='utf-8', errors='replace')
+    if result.returncode != 0:
+        sys.exit('\n'.join([line for line in result.stdout.splitlines() if 'error' in line or 'FAILED' in line][:30] + [f'{preset} 빌드 실패 — 고친 뒤 다시 돌린다']))
+
+
 def resolve_target(names: dict[int, str], target: str) -> tuple[int, str]:
     """@p target 은 전체 이름(`game.empty.surfacefootprint`)이나 끝 조각(`surfacefootprint`)."""
     matches = sorted({(index, name) for index, name in names.items() if name == target or name.endswith('.' + target)})
@@ -280,6 +291,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not options.chain or not options.stage:
         parser.error('체인과 단계를 적는다 (예: empty surfacefootprint)')
 
+    build_preset_or_exit(options.preset)
     build_dir = REPO / 'build' / options.preset
     log_dir = build_dir / 'Testing' / 'Logs'
     command = app_arguments.find_chain_command(build_dir, options.chain)
