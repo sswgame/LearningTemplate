@@ -8,7 +8,7 @@
 
 ## 0. 다음 순서
 
-1. **합칠 갈래 둘**(2026-11-13 작업자에게 맡김, 빌드 한 번도 안 함): `nxm-survey`(저장소 전체 N×M — 루프 안 선형 찾기, 에디터 패널 · 런타임), `tool-gaps`(개명 도구가 리플렉션 프로퍼티의 XML 속성 이름도 바꾸기 · Linux `chain` 등 단계 건너뛰는 실행의 옛 바이너리 틈 · libFuzzer 와 `--exclude-libs,ALL`). 합친 뒤 빌드 · 진 테스트 · preflight.
+1. **N×M 조사 남은 범위:** `Source/Core` · `Source/Server` · `Source/DevTools` 와 GameFramework 의 `VectorUtil::findBy<>` 이름표 조회(에디터 패널 · 런타임 6 자리는 2026-11-13 에 고쳤다). 개명 도구는 리플렉션 프로퍼티의 직렬화 이름까지 바꾼다 — 같은 꼴로 남은 것: 타입 이름에서 파생되는 XML 요소 이름, 열거자 이름의 직렬화 글.
 2. **아직 합치지 않은 갈래**(합치기 전에 `git cherry main <갈래>` 로 이미 들어간 커밋을 거른다): 남은 것 — settings-json 의 표 페이지: 손으로 맞춘 한 줄 객체 파일(약 25 개)은 쓰기가 모양을 되살리지 못해 읽기 전용(`LayoutNotPreserved`)으로 열린다. VS Code settings.json 편집(jsonc-parser modify)처럼 바뀐 글 범위만 고치는 쓰기로 바꿔 모두 고칠 수 있게. 표 페이지 Ctrl+Z(감사 E-13), 활성 게임이 아닌 `Config/Game/*.json` 이 범용 페이지로 열림. `integ2`(에셋 GUID 1단계 · 5-3 틱 const · W-R3 (a) 코덱 키 검사 · A1 포즈 노드 · R1 리다이렉트 표 팩 담기 · `setTransient`, 빌드 한 번도 안 함).
    - integ2: main 을 다시 합친다(새 `extern template class … SharedAssetCache<…>;` 줄은 공유 캐시 선언 매크로로) → Debug 전체 프리셋 빌드(App 만 지으면 게임 모듈 헤더 불일치로 기동 실패) → 컴파일 오류는 `.inl` include · `extern template` 로(`-Werror=undefined-func-template` 를 끄지 않는다) → 단위 · 영향 시나리오 → preflight. 남은 작업자 몫: GameObjectManager.inl 머리말, `EditorTransaction` 을 연 채 CommandStack 을 읽는 자리. 그 뒤 에셋 GUID 2 · 3 단계(GUID 로 참조 해석 · 경로 참조 이전 — 감사 A-2 · "다음 할 일" 16).
 3. **감사 다음 할 일:** [CommercialGapAudit](CommercialGapAudit.md) `## 다음 할 일` 14 번부터. 감사 남은 몫: P-10, P-11 포커스, C-2(다리 원뿔 먼저), G-3 상점 판매 개체. 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고치고, 끝난 항목은 감사 문서에서 지운다. 작업자에게는 감사 문서 · NEXT 를 고치지 말게 하고 통합이 지운다.
@@ -36,6 +36,8 @@
 
 - **에디터 첫 패널 약 1 초:** `-gv_editorPanelTimes` · `-gv_traceSlowTickMs` 로 동기 준비를 찾아 `IEditorPanel::onPanelOpened` 의 비동기 잡으로(`ModulesModel::ensureLoaded` 후보).
 - **검증 시간(지금 약 40 분, 11-12 의 53 분에서):** 벽시계를 정하는 셋 — shipping-check 9 분(CPU 단계 11.5 분 중, 배포 프리셋 빌드를 증분 · 앞 단계와 겹치기), Debug 에디터 체인 385 초(조각으로 나눠 `-j` 를 채운다), Release `Scenario.shooter3d` 381 초(고정 대기를 조건 대기로). 체인 하나를 진 단계부터 다시 도는 입구(지금은 이분 탐색 도구를 손으로).
+- **N×M 측정 후보**(N 이 데이터를 따르지만 목록이 작으면 해시가 손해이거나 순서를 지켜야 한다 — 재고 나서): `DataInheritance.cpp` `findEntry`(열쇠 목록 합치기, 가장 큰 후보), `ComponentRegistry.cpp:60,75`, `PrefabPool.cpp:80,92`, `ShooterNetPawnComponent.cpp:535,571`(틱마다 적 수²), `MaterialCache.cpp:350`, `DestructionState.cpp:779,855`, `ContentBrowserCollectionStore.cpp:108`, `EditorAssetFileCommands.cpp:154,199,569`, `EditorNodeGraph.cpp:333,543,696`(프레임마다 노드 × 고른 노드), `ModResolver.cpp:161`, `ProjectSettingsDocument.cpp:45,62`, `ComponentStateStore.cpp:82`.
+- **퍼징:** `SW_ENABLE_FUZZING=ON` 구성은 어느 프리셋에도 없어 지어 본 적이 없다. 퍼저 실행 파일(`-fsanitize=fuzzer`)을 더하면 `--exclude-libs,ALL` 이 정적 libFuzzer 콜백을 가려 엔진 .so 의 커버리지가 닿지 않는다(`cmake/Toolchain/Options/Fuzzing.cmake` 주석).
 - **시나리오 대기:** boat · clothshowcase(골든 앞 구간이 물리 이력), waterplay(강체 속도 · 잠듦 값으로 조건 대기).
 - **측정([DesignBacklog](DesignBacklog.md) S8 표):** Tracy `GT.Frame` 자식 합 90 % 이상, 배치 크기 12 · 24 · 48, `load/*` × 워커 1 · 2 · 4 · 8 과 구조 지표, W25 GPU 비교(c05a3ee251 대 지금 — 노이즈 안이면 되돌림), W-S4 `-ftime-trace`, W-R1 RT 프레임 힙 할당, W-R2 PSO 조회, 5-2 `RT.Bind.*`, DX12 기록 경로 락 제거 전후 `bench.json` p50, 에디터 MVVM(Hierarchy 큐브 8000 · 인스펙터 값 행), 골든 여유(`scenario_bisect --golden-margins`).
 - **Shooter3D 소총 자세 클립:** 지금은 리그 IK 견착(`ubc_player_body.rig.xml` TwoHandHold). 상용(Lyra · ALS)처럼 쥔 자세 클립 + 왼손 IK 로 간다 — CC0 출처 poly.pizza "SWAT"(Quaternius, `https://static.poly.pizza/713f6535-f4f3-4367-a4c6-ced126ae0936.glb`, `Idle_Gun` · `Gun_Shoot` · `Run_Shoot` 등)을 `models_raw/quaternius` 에 넣고 UBC 로 리타깃해 상체 층(Aim)으로, IK 견착은 손 자리 보정으로.
