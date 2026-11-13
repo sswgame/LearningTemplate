@@ -35,7 +35,7 @@
 ## 4. 실행 · 측정이 필요한 일
 
 - **에디터 첫 패널 약 1 초:** `-gv_editorPanelTimes` · `-gv_traceSlowTickMs` 로 동기 준비를 찾아 `IEditorPanel::onPanelOpened` 의 비동기 잡으로(`ModulesModel::ensureLoaded` 후보).
-- **검증 시간(지금 약 40 분, 11-12 의 53 분에서):** 벽시계를 정하는 셋 — shipping-check 9 분(CPU 단계 11.5 분 중, 배포 프리셋 빌드를 증분 · 앞 단계와 겹치기), Debug 에디터 체인 385 초(조각으로 나눠 `-j` 를 채운다), Release `Scenario.shooter3d` 381 초(고정 대기를 조건 대기로). 체인 하나를 진 단계부터 다시 도는 입구(지금은 이분 탐색 도구를 손으로).
+- **검증 시간(Windows 19 분 — 2026-11-13 증분 실측, 11-12 의 53 분에서):** build 5 분(배포 프리셋 셋이 4 분 — Release · 서버 빌드와 겹친다) · cpu 2.7 분 · Release ctest 전체 11.3 분. Debug GPU 단계는 없앴다(검사는 `SW_DO_CHECKS` 로 Release 에 든다). 공통 헤더(`Macros.h`)나 CMake 폴더를 고친 묶음은 전체 재빌드라 50 분대다. 남은 것: Release `Scenario.shooter3d`(고정 대기를 조건 대기로), 체인 하나를 진 단계부터 다시 도는 입구(지금은 이분 탐색 도구를 손으로). Linux `all` 21 분(shooter3d 체인 872 초) + sanitize 3 분.
 - **N×M 측정 후보**(N 이 데이터를 따르지만 목록이 작으면 해시가 손해이거나 순서를 지켜야 한다 — 재고 나서): `DataInheritance.cpp` `findEntry`(열쇠 목록 합치기, 가장 큰 후보), `ComponentRegistry.cpp:60,75`, `PrefabPool.cpp:80,92`, `ShooterNetPawnComponent.cpp:535,571`(틱마다 적 수²), `MaterialCache.cpp:350`, `DestructionState.cpp:779,855`, `ContentBrowserCollectionStore.cpp:108`, `EditorAssetFileCommands.cpp:154,199,569`, `EditorNodeGraph.cpp:333,543,696`(프레임마다 노드 × 고른 노드), `ModResolver.cpp:161`, `ProjectSettingsDocument.cpp:45,62`, `ComponentStateStore.cpp:82`.
 - **퍼징:** `SW_ENABLE_FUZZING=ON` 구성은 어느 프리셋에도 없어 지어 본 적이 없다. 퍼저 실행 파일(`-fsanitize=fuzzer`)을 더하면 `--exclude-libs,ALL` 이 정적 libFuzzer 콜백을 가려 엔진 .so 의 커버리지가 닿지 않는다(`cmake/Toolchain/Options/Fuzzing.cmake` 주석).
 - **시나리오 대기:** boat · clothshowcase(골든 앞 구간이 물리 이력), waterplay(강체 속도 · 잠듦 값으로 조건 대기).
