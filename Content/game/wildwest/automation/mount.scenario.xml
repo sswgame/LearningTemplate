@@ -30,7 +30,7 @@
 	<Expect watch="Object.Z" target="Bessie" atLeast="6"/>
 	<Expect watch="Object.Z" target="Player" atLeast="6"/>
 	<Expect watch="Pawn.Seat" target="Player" is="Bessie"/>
-	<Screenshot file="wildwest/mount_gallop.ppm" waitForSettle="false"/>
+	<Screenshot file="wildwest/mount_gallop.ppm" waitForStability="false"/>
 	<Wait frames="1"/>
 	<Release slot="Key.W"/>
 	<Release slot="Key.LeftShift"/>

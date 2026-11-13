@@ -258,7 +258,7 @@ namespace sw
             }
 
             /**
-             * @brief `<Screenshot waitForSettle="false">` 면 true 입니다 — 그 프레임을 바로 찍는다.
+             * @brief `<Screenshot waitForStability="false">` 면 true 입니다 — 그 프레임을 바로 찍는다.
              * @details 찍는 프레임이 정해져야 하는 시나리오(디더 등장의 중간 단계, 프레임마다 움직이는 카메라)가 쓴다. 자리 잡기를 기다리면 등장이 끝나거나 카메라가 멈춘 뒤를 찍는다.
              *          그런 시나리오는 앞에서 `<WaitUntil watch="Assets.Pending" equals="0">` 로 로드를 끝내 둔다.
              */

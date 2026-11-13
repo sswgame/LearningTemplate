@@ -21,11 +21,11 @@
 	<Wait frames="10"/>
 	<Variable name="gv_renderScale" value="0.5"/>
 	<Wait frames="30"/>
-	<Screenshot file="scale.ppm" waitForSettle="false"/>
+	<Screenshot file="scale.ppm" waitForStability="false"/>
 	<!-- 같은 배율을 FSR 1(EASU + RCAS)로 키운다 — RCAS 가 대상 픽셀을 정점 UV 로 구한다(GL 기본 프레임버퍼는 조각 좌표 원점이 달라 SV_Position 을 쓰지 않는다) -->
 	<Variable name="gv_upscaler" value="1"/>
 	<Wait frames="30"/>
-	<Screenshot file="scale_fsr.ppm" waitForSettle="false"/>
+	<Screenshot file="scale_fsr.ppm" waitForStability="false"/>
 	<Variable name="gv_upscaler" value="0"/>
 	<Wait frames="5"/>
 	<Variable name="gv_renderScale" value="1"/>
@@ -34,7 +34,7 @@
 	<Wait frames="5"/>
 	<Variable name="gv_viewDistanceScale" value="0.05"/>
 	<Wait frames="30"/>
-	<Screenshot file="distance.ppm" waitForSettle="false"/>
+	<Screenshot file="distance.ppm" waitForStability="false"/>
 	<Wait frames="5"/>
 	<Variable name="gv_viewDistanceScale" value="1"/>
 
@@ -42,7 +42,7 @@
 	<Wait frames="5"/>
 	<Variable name="gv_postQuality" value="0"/>
 	<Wait frames="30"/>
-	<Screenshot file="postlow.ppm" waitForSettle="false"/>
+	<Screenshot file="postlow.ppm" waitForStability="false"/>
 	<Wait frames="5"/>
 	<Variable name="gv_postQuality" value="3"/>
 
@@ -50,7 +50,7 @@
 	<Wait frames="5"/>
 	<Variable name="gv_colorVisionMode" value="1"/>
 	<Wait frames="30"/>
-	<Screenshot file="colorvision.ppm" waitForSettle="false"/>
+	<Screenshot file="colorvision.ppm" waitForStability="false"/>
 	<Wait frames="5"/>
 	<Variable name="gv_colorVisionMode" value="0"/>
 

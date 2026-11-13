@@ -35,7 +35,7 @@
 	<WaitUntil watch="Vehicle.RideAcceleration" target="LeanKart" atMost="-20" timeoutFrames="30"/>
 	<Expect watch="Vehicle.RiderLean" target="LeanKart" atLeast="0.25"/>
 	<!-- 탑승자를 태우고 눈 비탈을 내려가는 썰매 -->
-	<Screenshot file="inertia_sled.ppm" waitForSettle="false"/>
+	<Screenshot file="inertia_sled.ppm" waitForStability="false"/>
 	<ExpectImage file="inertia_sled.ppm" golden="inertia_sled"/>
 	<Wait frames="1"/>
 	<!-- ② 내리막 가속 — 빙판 썰매가 6 m/s 에 닿을 때 눈 썰매는 더 느리다 -->
