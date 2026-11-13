@@ -473,8 +473,11 @@ namespace sw
                 const string          prefix = guildKey + "/";
                 if ( connection.listRecords( Internal::getApplicationTable(), prefix, "", GuildLimit::kMaxApplication, false, listRecord ) != ServiceStoreResult::Ok )
                     return ServiceStoreResult::Unavailable;
-                const string       selfKey   = Internal::makePairKey( _request._guildID, _request._accountID );
-                int32              liveCount = 0;
+                // 한 번에 지우는 죽은 신청 수 — 역색인까지 두 쓰기라 트랜잭션 상한에 맞춘다. 남은 것은 TTL 쓸기와 다음 신청이 지운다
+                constexpr int32    kMaxDeadErase = ( ServiceTransaction::kMaxWriteCount - 4 ) / 2;
+                const string       selfKey       = Internal::makePairKey( _request._guildID, _request._accountID );
+                int32              liveCount     = 0;
+                int32              deadCount     = 0;
                 ServiceTransaction transaction;
                 for ( const ServiceRecord& record : listRecord )
                 {
@@ -485,16 +488,17 @@ namespace sw
                     const bool bLive     = Internal::decodeApplication( record._bytes, appliedMs, expiresMs ) && _request._nowMs.count() < expiresMs;
                     if ( bLive )
                         ++liveCount;
-                    else
+                    else if ( deadCount < kMaxDeadErase )
                     {
+                        ++deadCount;
                         transaction.erase( Internal::getApplicationTable(), record._key, record._version ); // 죽었거나 읽을 수 없는 신청이다
                         transaction.erase( Internal::getAccountApplicationTable(), Internal::makeApplicationReverseKey( record._key ) );
                     }
                 }
                 if ( liveCount >= GuildLimit::kMaxApplication )
                     return fail( SocialResult::PendingLimit );
-                // 쓰기: 죽은 신청과 그 역색인 지우기(최대 2 × kMaxApplication) + 신청 + 역색인 + TTL 색인 줄 + 길드 버전 조건
-                static_assert( GuildLimit::kMaxApplication * 2 + 4 <= ServiceTransaction::kMaxWriteCount, "runApply 의 트랜잭션이 쓰기 상한을 넘을 수 있다" );
+                // 쓰기: 죽은 신청과 그 역색인 지우기(최대 2 × kMaxDeadErase) + 신청 + 역색인 + TTL 색인 줄 + 길드 버전 조건
+                static_assert( kMaxDeadErase * 2 + 4 <= ServiceTransaction::kMaxWriteCount, "runApply 의 트랜잭션이 쓰기 상한을 넘을 수 있다" );
                 const int64 expiresMs = _request._nowMs.count() + GuildLimit::kApplicationLifetimeMs;
                 transaction.put( Internal::getApplicationTable(), selfKey, Internal::encodeApplication( _request._nowMs.count(), expiresMs ) );
                 // 해산한 길드 · 다시 오지 않는 신청자의 신청은 이 함수가 다시 돌지 않아 남는다 - TTL 색인 줄이 기간 뒤에 지운다. 다시 낸 신청은 새 줄이 맡는다

@@ -126,6 +126,9 @@ namespace sw
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 채팅 기록 · 접속 상태 조회. */
+            /** @brief 채팅은 계정 키 표가 없다 — 기록(`chat_history`)은 채널 키이고 TTL 쓸기가 기간 뒤에 지운다(Discord 도 탈퇴 사용자의 메시지를 지우지 않고 남긴다). */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; }
+
             int32 getOpenJobCount() const override { return _service.getPendingCount(); }
 
             void stop() override

@@ -332,13 +332,13 @@ namespace sw
         /** @brief 새 ObjectID 를 발급합니다(번호 공간 `ObjectIDAllocator` — 씬을 넘어 옮긴 오브젝트가 같은 id 를 유지하도록 엔진의 매니저들이 한 공간을 나눈다). */
         uint64 allocateID();
         /** @brief `_mutex` 를 쥔 채 @p objectID 로 오브젝트를 만들어 이름 맵, id 테이블, 병합 대기 목록에 올립니다. */
-        GameObject* createGameObjectUnlocked( hashed_string name, uint64 objectID );
+        GameObject* createGameObjectUnlocked( hashed_string name, uint64 objectID ) SW_REQUIRES_LOCK( _mutex );
         /**
          * @brief 잠금 없이 고유 이름을 만듭니다. 번호를 붙였으면 그 밑 이름과 번호를 @p outEntry 에 적습니다(`_pObject` 는 건드리지 않습니다).
          * @details 번호는 밑 이름마다 **지운 것부터 재사용한다**(`NameSuffixState`). 그래서 intern 되는 이름 수는 같은 이름으로 동시에 살아 있던
          *          오브젝트 수의 최댓값으로 제한된다.
          */
-        hashed_string makeUniqueNameUnlocked( hashed_string requested, NameEntry& outEntry );
+        hashed_string makeUniqueNameUnlocked( hashed_string requested, NameEntry& outEntry ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 잠금 없이, 지울 이름 테이블 항목이 번호를 붙여 만든 이름이면 그 번호를 밑 이름의 빈 번호로 반납합니다. 항목은 부르는 쪽이 지웁니다. */
         void releaseNameSuffixUnlocked( const NameEntry& nameEntry ) SW_REQUIRES_LOCK( _mutex );
         /**
@@ -352,7 +352,7 @@ namespace sw
          *          것으로 본다. 모듈 리로드나 RHI 교체 때 새 인스턴스가 옛 오브젝트가 아직 사라지기 전에 같은 이름을 만들기
          *          때문이다. 대신 파괴 쪽은 맵 항목이 **자기 것**일 때만 지운다.
          */
-        bool isNameTakenUnlocked( hashed_string name ) const;
+        bool isNameTakenUnlocked( hashed_string name ) const SW_REQUIRES_LOCK( _mutex );
         /** @brief 잠금 안에서 @p pObj 를 이름 @p name 의 밑 이름 색인에 올립니다. */
         void addBaseNameUnlocked( hashed_string name, GameObject* pObj ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 잠금 안에서 @p pObj 를 이름 @p name 의 밑 이름 색인에서 뺍니다. 없으면 할 일이 없습니다. */
