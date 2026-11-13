@@ -27,7 +27,7 @@ namespace sw::editor
             static constexpr uint32 kMinLines          = 2;
             static constexpr uint32 kMaxLines          = 6;
 
-            static string makeChildPath( const string& path, const string& part ) { return path.empty() ? part : path + "." + part; }
+            static string makeChildPath( const string& path, const string& part ) { return path.empty() ? part : string( path + "." + part ); }
         };
     } // namespace
 } // namespace sw::editor
@@ -125,7 +125,7 @@ namespace sw::editor
             // 맵 키는 칸에 치고 Enter 로 더한다(프로퍼티 그리드의 맵 더하기 행과 같다). 값은 빈 글이다 — 형식이 다르면 파일을 고친 뒤 되돌리기로 다시 읽는다.
             fixed_string<constant::buffer::kMax256>& newKey = _mapNewKeyText[node];
             ImGui::SetNextItemWidth( -FLT_MIN );
-            if ( ImGui::InputTextWithHint( "##addkey", "New key, then Enter", newKey.data(), newKey.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) && newKey.empty() == false )
+            if ( EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##addkey" ), "New key, then Enter", newKey.data(), newKey.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) && newKey.empty() == false )
             {
                 _pendingEdit = PendingEdit::AddMember;
                 _pendingNode = node;
@@ -139,7 +139,7 @@ namespace sw::editor
             const uint32                   child      = value._listChild[index];
             const ProjectSettingsJSONNode& childValue = document.getNode( child );
             const string                   childPart  = value._type == JSONType::Array ? to_string( static_cast<uint64>( index ) ) : childValue._key;
-            const string                   childLabel = value._type == JSONType::Array ? "[" + childPart + "]" : childPart;
+            const string                   childLabel = value._type == JSONType::Array ? string( "[" + childPart + "]" ) : childPart;
             drawNode( document, child, childLabel, Internal::makeChildPath( path, childPart ), node, index );
         }
         ImGui::TreePop();

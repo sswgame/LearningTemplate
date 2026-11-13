@@ -275,8 +275,12 @@ namespace sw::editor
                 break;
             case JSONType::Bool:
             case JSONType::Number:
-                _listNode[node]._text = value.dump();
+            {
+                const expected<string> text = value.dump(); // dump 는 글의 UTF-8 만 검사해 지므로 수 · 참거짓은 지지 않는다
+                SW_ASSERT( text.has_value() );
+                _listNode[node]._text = text.has_value() ? *text : string{};
                 break;
+            }
             case JSONType::String:
                 _listNode[node]._text = value.asString();
                 break;
