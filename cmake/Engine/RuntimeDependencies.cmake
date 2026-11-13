@@ -9,27 +9,27 @@
 # vcpkg 를 쓰지 않는 구성(SW_USE_VCPKG=OFF)이면 둘 다 빈 목록이다 — 그래서 아래 함수들은 늘 정의돼 있다.
 # ------------------------------------------------------------------------------
 function(sw_get_vcpkg_paths OUT_INC_DIRS OUT_BIN_DIRS)
-	set(listIncludeDir "")
-	set(listBinDir "")
+	set(list_include_dir "")
+	set(list_bin_dir "")
 	if(SW_USE_VCPKG AND VCPKG_TARGET_TRIPLET)
-		foreach(installedRoot "${VCPKG_INSTALLED_DIR}" "${sw_vcpkg_root}/installed")
-			if(installedRoot AND NOT installedRoot STREQUAL "/installed")
-				list(APPEND listIncludeDir "${installedRoot}/${VCPKG_TARGET_TRIPLET}/include")
-				list(APPEND listBinDir "${installedRoot}/${VCPKG_TARGET_TRIPLET}/bin" "${installedRoot}/${VCPKG_TARGET_TRIPLET}/lib")
+		foreach(installed_root "${VCPKG_INSTALLED_DIR}" "${SW_VCPKG_ROOT}/installed")
+			if(installed_root AND NOT installed_root STREQUAL "/installed")
+				list(APPEND list_include_dir "${installed_root}/${VCPKG_TARGET_TRIPLET}/include")
+				list(APPEND list_bin_dir "${installed_root}/${VCPKG_TARGET_TRIPLET}/bin" "${installed_root}/${VCPKG_TARGET_TRIPLET}/lib")
 			endif()
 		endforeach()
 	endif()
-	set(${OUT_INC_DIRS} ${listIncludeDir} PARENT_SCOPE)
-	set(${OUT_BIN_DIRS} ${listBinDir} PARENT_SCOPE)
+	set(${OUT_INC_DIRS} ${list_include_dir} PARENT_SCOPE)
+	set(${OUT_BIN_DIRS} ${list_bin_dir} PARENT_SCOPE)
 endfunction()
 
 # ------------------------------------------------------------------------------
 # 2) sw_link_vcpkg_header_only_target — vcpkg include를 SYSTEM INTERFACE로
 # ------------------------------------------------------------------------------
 function(sw_link_vcpkg_header_only_target TARGET_NAME)
-	sw_get_vcpkg_paths(incDirs binDirs)
+	sw_get_vcpkg_paths(inc_dirs bin_dirs)
 
-	foreach(dir IN LISTS incDirs)
+	foreach(dir IN LISTS inc_dirs)
 		if(EXISTS "${dir}")
 			target_include_directories(${TARGET_NAME} SYSTEM INTERFACE "${dir}")
 		endif()
@@ -45,26 +45,26 @@ endfunction()
 # ------------------------------------------------------------------------------
 # vcpkg bin의 지정 파일을 런타임 복사 큐에 넣습니다.
 function(sw_copy_vcpkg_file TARGET_NAME FILE_NAME)
-	sw_get_vcpkg_paths(incDirs binDirs)
-	set(foundFile "")
+	sw_get_vcpkg_paths(inc_dirs bin_dirs)
+	set(found_file "")
 
-	foreach(dir IN LISTS binDirs)
+	foreach(dir IN LISTS bin_dirs)
 		if(EXISTS "${dir}/${FILE_NAME}")
-			set(foundFile "${dir}/${FILE_NAME}")
+			set(found_file "${dir}/${FILE_NAME}")
 			break()
 		endif()
 	endforeach()
 
-	if(foundFile)
-		sw_queue_runtime_copy(${TARGET_NAME} "${foundFile}")
+	if(found_file)
+		sw_queue_runtime_copy(${TARGET_NAME} "${found_file}")
 	endif()
 endfunction()
 
 # 플랫폼 접두사/접미사를 붙여 sw_copy_vcpkg_file에 위임합니다.
 function(sw_copy_vcpkg_shared_lib TARGET_NAME LIB_BASE_NAME)
-	set(libName "${CMAKE_SHARED_LIBRARY_PREFIX}${LIB_BASE_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+	set(lib_name "${CMAKE_SHARED_LIBRARY_PREFIX}${LIB_BASE_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
-	sw_copy_vcpkg_file(${TARGET_NAME} "${libName}")
+	sw_copy_vcpkg_file(${TARGET_NAME} "${lib_name}")
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -92,12 +92,12 @@ function(sw_copy_tracy_runtime TARGET_NAME)
 	endif()
 
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-		get_target_property(tracyDLL Tracy::TracyClient IMPORTED_LOCATION_DEBUG)
+		get_target_property(tracy_dll Tracy::TracyClient IMPORTED_LOCATION_DEBUG)
 	else()
-		get_target_property(tracyDLL Tracy::TracyClient IMPORTED_LOCATION_RELEASE)
+		get_target_property(tracy_dll Tracy::TracyClient IMPORTED_LOCATION_RELEASE)
 	endif()
 
-	if(tracyDLL)
-		sw_queue_runtime_copy(${TARGET_NAME} "${tracyDLL}")
+	if(tracy_dll)
+		sw_queue_runtime_copy(${TARGET_NAME} "${tracy_dll}")
 	endif()
 endfunction()

@@ -7,4 +7,4 @@
 
 add_library(sw_build_debug INTERFACE)
 target_compile_definitions(sw_build_debug INTERFACE $<$<CONFIG:Debug>:SW_DEBUG>)
-list(APPEND sw_flag_libraries sw_build_debug)
+list(APPEND SW_FLAG_LIBRARIES sw_build_debug)

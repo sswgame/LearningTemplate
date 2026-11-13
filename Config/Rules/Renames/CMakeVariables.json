@@ -1,0 +1,5488 @@
+[
+  {
+    "old": "_swBuiltGame",
+    "new": "built_game",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "_swGameName",
+    "new": "game_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "_swListAvailableGame",
+    "new": "list_available_game",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "_swListBuiltGame",
+    "new": "list_built_game",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "_swListGameCandidate",
+    "new": "list_game_candidate",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "_swListGameFolder",
+    "new": "list_game_folder",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "_swListGamePack",
+    "new": "list_game_pack",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "adapterMark",
+    "new": "adapter_mark",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "assetField",
+    "new": "asset_field",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "assetFieldsText",
+    "new": "asset_fields_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "audioBackendCount",
+    "new": "audio_backend_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "automationDir",
+    "new": "automation_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "bActiveGame",
+    "new": "active_game",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "bAfterBuiltin",
+    "new": "after_builtin",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "bAllowed",
+    "new": "allowed",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "bDrop",
+    "new": "drop",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "bFractureMarked",
+    "new": "fracture_marked",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "bPartPic",
+    "new": "part_pic",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "bReflected",
+    "new": "reflected",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "bScanned",
+    "new": "scanned",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "bShareGamePCH",
+    "new": "share_game_pch",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "bSkipPCH",
+    "new": "skip_pch",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "bStageRuntimeDLLs",
+    "new": "stage_runtime_dlls",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "backendName",
+    "new": "backend_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "binDirs",
+    "new": "bin_dirs",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "binderSource",
+    "new": "binder_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "bundleCount",
+    "new": "bundle_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "bundleFile",
+    "new": "bundle_file",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "bundleText",
+    "new": "bundle_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "chainTimeout",
+    "new": "chain_timeout",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "configTarget",
+    "new": "config_target",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "contractOff",
+    "new": "contract_off",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "coreExclude",
+    "new": "core_exclude",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "coreLibType",
+    "new": "core_lib_type",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "coreObjectCount",
+    "new": "core_object_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "coreObjects",
+    "new": "core_objects",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "cpuCount",
+    "new": "cpu_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "currentDir",
+    "new": "current_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "dependencyActive",
+    "new": "dependency_active",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "dependencyKind",
+    "new": "dependency_kind",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "dependencyReason",
+    "new": "dependency_reason",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "desktopName",
+    "new": "desktop_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "desktopPath",
+    "new": "desktop_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "desktopTestName",
+    "new": "desktop_test_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "deterministicTier",
+    "new": "deterministic_tier",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "devOnlyPattern",
+    "new": "dev_only_pattern",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "directoryRegex",
+    "new": "directory_regex",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "dxcDll",
+    "new": "dxc_dll",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "dxcNames",
+    "new": "dxc_names",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "dxilDirs",
+    "new": "dxil_dirs",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "dxilDll",
+    "new": "dxil_dll",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "dxilNames",
+    "new": "dxil_names",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "editorCoreReflectRegex",
+    "new": "editor_core_reflect_regex",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "editorCoreRegex",
+    "new": "editor_core_regex",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "editorModelImGuiBlock",
+    "new": "editor_model_imgui_block",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "editorViewModelRegex",
+    "new": "editor_view_model_regex",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "entryDir",
+    "new": "entry_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "entryParts",
+    "new": "entry_parts",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "exPattern",
+    "new": "ex_pattern",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "excludedCount",
+    "new": "excluded_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "existingIndex",
+    "new": "existing_index",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "exitCode",
+    "new": "exit_code",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "fieldList",
+    "new": "field_list",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "fileCount",
+    "new": "file_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "fileIndex",
+    "new": "file_index",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "firstPath",
+    "new": "first_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "foundFile",
+    "new": "found_file",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "gameArgument",
+    "new": "game_argument",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "gameGuard",
+    "new": "game_guard",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "gameName",
+    "new": "game_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "gamePackRoot",
+    "new": "game_pack_root",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "genFile",
+    "new": "gen_file",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "genHeader",
+    "new": "gen_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "genMeta",
+    "new": "gen_meta",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "genText",
+    "new": "gen_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "generatedCppFiles",
+    "new": "generated_cpp_files",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "generatedFiles",
+    "new": "generated_files",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "generatedMetaFiles",
+    "new": "generated_meta_files",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "gitDirectory",
+    "new": "git_directory",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "globMode",
+    "new": "glob_mode",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "guardHeader",
+    "new": "guard_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "hOverlay",
+    "new": "overlay",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "hTriplet",
+    "new": "triplet",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "headerCount",
+    "new": "header_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "headerPath",
+    "new": "header_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "headerTier",
+    "new": "header_tier",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "hostArch",
+    "new": "host_arch",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "incDirs",
+    "new": "inc_dirs",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "includeDir",
+    "new": "include_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "includeLine",
+    "new": "include_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "includeLines",
+    "new": "include_lines",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "includePrefix",
+    "new": "include_prefix",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "includedTier",
+    "new": "included_tier",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "insidePosition",
+    "new": "inside_position",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "installedRoot",
+    "new": "installed_root",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "isBuilt",
+    "new": "is_built",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "isFound",
+    "new": "is_found",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "kitDirectory",
+    "new": "kit_directory",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "kitFolder",
+    "new": "kit_folder",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "kitFolderName",
+    "new": "kit_folder_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "kitRelative",
+    "new": "kit_relative",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "kitRelativeDirectory",
+    "new": "kit_relative_directory",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "kitsRoot",
+    "new": "kits_root",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "launchLine",
+    "new": "launch_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "layerHeader",
+    "new": "layer_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "layerKey",
+    "new": "layer_key",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "layerModelRegex",
+    "new": "layer_model_regex",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "layerModelSource",
+    "new": "layer_model_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "layerPrefix",
+    "new": "layer_prefix",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "layerSource",
+    "new": "layer_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "layerViewSource",
+    "new": "layer_view_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "libCandidate",
+    "new": "lib_candidate",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "libExe",
+    "new": "lib_exe",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "libName",
+    "new": "lib_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "libType",
+    "new": "lib_type",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "libclangName",
+    "new": "libclang_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "libclangNames",
+    "new": "libclang_names",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "libclangPath",
+    "new": "libclang_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "libclangVersioned",
+    "new": "libclang_versioned",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "linkJobs",
+    "new": "link_jobs",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "linkResult",
+    "new": "link_result",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listAfter",
+    "new": "list_after",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listAll",
+    "new": "list_all",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listArg",
+    "new": "list_arg",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listArgument",
+    "new": "list_argument",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listAudioBackendSource",
+    "new": "list_audio_backend_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listBadArgument",
+    "new": "list_bad_argument",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listBefore",
+    "new": "list_before",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listBinDir",
+    "new": "list_bin_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listBuiltGame",
+    "new": "list_built_game",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listBundle",
+    "new": "list_bundle",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listCandidateHeader",
+    "new": "list_candidate_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listChainGlob",
+    "new": "list_chain_glob",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listCoBuiltGame",
+    "new": "list_co_built_game",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listCore",
+    "new": "list_core",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listCoreHeader",
+    "new": "list_core_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listCoreMinimalLine",
+    "new": "list_core_minimal_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listCoreObjectFile",
+    "new": "list_core_object_file",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listCoreObjects",
+    "new": "list_core_objects",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listCoreSource",
+    "new": "list_core_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listCoreTier",
+    "new": "list_core_tier",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listCoreTierLine",
+    "new": "list_core_tier_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listCoreTieredHeader",
+    "new": "list_core_tiered_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listCoreTopSource",
+    "new": "list_core_top_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listCpp",
+    "new": "list_cpp",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listCppBundle",
+    "new": "list_cpp_bundle",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listDef",
+    "new": "list_def",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listDependency",
+    "new": "list_dependency",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listDesktopLaunch",
+    "new": "list_desktop_launch",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listDesktopScenario",
+    "new": "list_desktop_scenario",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listDeviceSource",
+    "new": "list_device_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listDirectory",
+    "new": "list_directory",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listDropped",
+    "new": "list_dropped",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listDynamicModule",
+    "new": "list_dynamic_module",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorAllSource",
+    "new": "list_editor_all_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorArgument",
+    "new": "list_editor_argument",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorCoreRegex",
+    "new": "list_editor_core_regex",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorCoreTarget",
+    "new": "list_editor_core_target",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorModelLayer",
+    "new": "list_editor_model_layer",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorPart",
+    "new": "list_editor_part",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorPartSource",
+    "new": "list_editor_part_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorReflectCore",
+    "new": "list_editor_reflect_core",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorReflectModule",
+    "new": "list_editor_reflect_module",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorRootSource",
+    "new": "list_editor_root_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorScenario",
+    "new": "list_editor_scenario",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorSource",
+    "new": "list_editor_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorUITestSource",
+    "new": "list_editor_ui_test_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorUnassignedSource",
+    "new": "list_editor_unassigned_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorViewLink",
+    "new": "list_editor_view_link",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEditorViewModelRegex",
+    "new": "list_editor_view_model_regex",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEngineCompressionLib",
+    "new": "list_engine_compression_lib",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEngineLayerSource",
+    "new": "list_engine_layer_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEngineLoadScenario",
+    "new": "list_engine_load_scenario",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listEntry",
+    "new": "list_entry",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listExcluded",
+    "new": "list_excluded",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listExcludedRHISource",
+    "new": "list_excluded_rhi_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listExpectAssetField",
+    "new": "list_expect_asset_field",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listExpectError",
+    "new": "list_expect_error",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listExpectGen",
+    "new": "list_expect_gen",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listExpectLine",
+    "new": "list_expect_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listExpectMeta",
+    "new": "list_expect_meta",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listExpectNotGen",
+    "new": "list_expect_not_gen",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listExpectType",
+    "new": "list_expect_type",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listExtensionSource",
+    "new": "list_extension_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listFieldList",
+    "new": "list_field_list",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listFile",
+    "new": "list_file",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGameDependency",
+    "new": "list_game_dependency",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGameEditorScenario",
+    "new": "list_game_editor_scenario",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGameFrameworkHeader",
+    "new": "list_game_framework_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGameFrameworkLayerSource",
+    "new": "list_game_framework_layer_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGameFrameworkModuleSource",
+    "new": "list_game_framework_module_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGameFrameworkSource",
+    "new": "list_game_framework_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGameKit",
+    "new": "list_game_kit",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGameLoadScenario",
+    "new": "list_game_load_scenario",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGameOverride",
+    "new": "list_game_override",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGamePackTarget",
+    "new": "list_game_pack_target",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGameSource",
+    "new": "list_game_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGameTest",
+    "new": "list_game_test",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGate",
+    "new": "list_gate",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGenTarget",
+    "new": "list_gen_target",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listGenerated",
+    "new": "list_generated",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listHash",
+    "new": "list_hash",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listHeader",
+    "new": "list_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listIdentityDefinition",
+    "new": "list_identity_definition",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listInclude",
+    "new": "list_include",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listIncludeDir",
+    "new": "list_include_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listInputLine",
+    "new": "list_input_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listKept",
+    "new": "list_kept",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listKit",
+    "new": "list_kit",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listKitDirectory",
+    "new": "list_kit_directory",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listKitSource",
+    "new": "list_kit_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listKitTest",
+    "new": "list_kit_test",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listLaunchArgument",
+    "new": "list_launch_argument",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listLaunchLine",
+    "new": "list_launch_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listLine",
+    "new": "list_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listLinkedModule",
+    "new": "list_linked_module",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listLoadBotKit",
+    "new": "list_load_bot_kit",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listLoadLaunch",
+    "new": "list_load_launch",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listLoadLine",
+    "new": "list_load_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listMarked",
+    "new": "list_marked",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listMatch",
+    "new": "list_match",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listMember",
+    "new": "list_member",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listMeta",
+    "new": "list_meta",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listMetaBundle",
+    "new": "list_meta_bundle",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listMissing",
+    "new": "list_missing",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listModule",
+    "new": "list_module",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listModuleName",
+    "new": "list_module_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listName",
+    "new": "list_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listNewStub",
+    "new": "list_new_stub",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listNewlyReflected",
+    "new": "list_newly_reflected",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listNonReflectHeader",
+    "new": "list_non_reflect_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listOfKind",
+    "new": "list_of_kind",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listOldStub",
+    "new": "list_old_stub",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listOnlineKitTest",
+    "new": "list_online_kit_test",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listOnlineKitTestFolder",
+    "new": "list_online_kit_test_folder",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listOther",
+    "new": "list_other",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listOwnerValue",
+    "new": "list_owner_value",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listPCHDefinition",
+    "new": "list_pch_definition",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listPanelViewBanCandidate",
+    "new": "list_panel_view_ban_candidate",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listPanelViewBanGlob",
+    "new": "list_panel_view_ban_glob",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listPanelViewSource",
+    "new": "list_panel_view_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listPanelViewStub",
+    "new": "list_panel_view_stub",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listParserFixture",
+    "new": "list_parser_fixture",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listParserTestTargetArg",
+    "new": "list_parser_test_target_arg",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listPartSource",
+    "new": "list_part_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listPlatform",
+    "new": "list_platform",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listQueryArg",
+    "new": "list_query_arg",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listRHIBackendSource",
+    "new": "list_rhi_backend_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listReflectLine",
+    "new": "list_reflect_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listReflectionOption",
+    "new": "list_reflection_option",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listReflectionSchemaHeader",
+    "new": "list_reflection_schema_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listReflectionStaticLib",
+    "new": "list_reflection_static_lib",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listRegistered",
+    "new": "list_registered",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listRegistryOption",
+    "new": "list_registry_option",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listRelative",
+    "new": "list_relative",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listReloadScenario",
+    "new": "list_reload_scenario",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listRemoved",
+    "new": "list_removed",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listResult",
+    "new": "list_result",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listRollbackHeader",
+    "new": "list_rollback_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listRoot",
+    "new": "list_root",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listSaveStateLine",
+    "new": "list_save_state_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listScenario",
+    "new": "list_scenario",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listSequenceFirst",
+    "new": "list_sequence_first",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listShippingRHISource",
+    "new": "list_shipping_rhi_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listShowcaseScenario",
+    "new": "list_showcase_scenario",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listSlotArgument",
+    "new": "list_slot_argument",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listSource",
+    "new": "list_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listSplitArgument",
+    "new": "list_split_argument",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listStateDirFirst",
+    "new": "list_state_dir_first",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listStray",
+    "new": "list_stray",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listStub",
+    "new": "list_stub",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listSubDir",
+    "new": "list_sub_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listSubdirectory",
+    "new": "list_subdirectory",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listTarget",
+    "new": "list_target",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listTargetArg",
+    "new": "list_target_arg",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listTargetArgValue",
+    "new": "list_target_arg_value",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listTargetDefsOption",
+    "new": "list_target_defs_option",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listTemplate",
+    "new": "list_template",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listTestFolder",
+    "new": "list_test_folder",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listThirdPartyDirectory",
+    "new": "list_third_party_directory",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listTierExcluded",
+    "new": "list_tier_excluded",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listTierSource",
+    "new": "list_tier_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listTime",
+    "new": "list_time",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listTypeList",
+    "new": "list_type_list",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listValue",
+    "new": "list_value",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listViolation",
+    "new": "list_violation",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "listX11Include",
+    "new": "list_x11_include",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "llvmCandidate",
+    "new": "llvm_candidate",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "llvmCandidates",
+    "new": "llvm_candidates",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "llvmInstallPrefix",
+    "new": "llvm_install_prefix",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "loadName",
+    "new": "load_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "loadPath",
+    "new": "load_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "loadTestName",
+    "new": "load_test_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "loadTimeout",
+    "new": "load_timeout",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "manifestContent",
+    "new": "manifest_content",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "manifestPath",
+    "new": "manifest_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "memberCount",
+    "new": "member_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "metaText",
+    "new": "meta_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "moduleName",
+    "new": "module_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "mtCandidate",
+    "new": "mt_candidate",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "mtExe",
+    "new": "mt_exe",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "multiValueArgs",
+    "new": "multi_value_args",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "nameGlob",
+    "new": "name_glob",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "nameRegex",
+    "new": "name_regex",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "oldContent",
+    "new": "old_content",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "oldStub",
+    "new": "old_stub",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "oldStubPath",
+    "new": "old_stub_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "oneValueArgs",
+    "new": "one_value_args",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "outDir",
+    "new": "out_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "outExitCode",
+    "new": "out_exit_code",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "outText",
+    "new": "out_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "outputDir",
+    "new": "output_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "outputText",
+    "new": "output_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "outsidePosition",
+    "new": "outside_position",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "overlayFile",
+    "new": "overlay_file",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "overlayPort",
+    "new": "overlay_port",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "overlayTriplet",
+    "new": "overlay_triplet",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "ownerBinaryDir",
+    "new": "owner_binary_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "ownerFolder",
+    "new": "owner_folder",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "ownerSource",
+    "new": "owner_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "ownerType",
+    "new": "owner_type",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "pairName",
+    "new": "pair_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "pairPath",
+    "new": "pair_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "panelViewStubRoot",
+    "new": "panel_view_stub_root",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "parserArgs",
+    "new": "parser_args",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "partName",
+    "new": "part_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "pchContent",
+    "new": "pch_content",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "pchDir",
+    "new": "pch_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "pchEntryDir",
+    "new": "pch_entry_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "pchHeader",
+    "new": "pch_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "previousEntry",
+    "new": "previous_entry",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "probeOutput",
+    "new": "probe_output",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "probeResult",
+    "new": "probe_result",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "reflLib",
+    "new": "refl_lib",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "reflLibType",
+    "new": "refl_lib_type",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "relativeOut",
+    "new": "relative_out",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "relativePath",
+    "new": "relative_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "relativeRegex",
+    "new": "relative_regex",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "relativeSource",
+    "new": "relative_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "rootPosition",
+    "new": "root_position",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "rootText",
+    "new": "root_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "scenarioList",
+    "new": "scenario_list",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "scenarioPath",
+    "new": "scenario_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "sdkVerDirs",
+    "new": "sdk_ver_dirs",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "searchDirs",
+    "new": "search_dirs",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "sequenceStateDir",
+    "new": "sequence_state_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "sequenceTestName",
+    "new": "sequence_test_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "shardIndex",
+    "new": "shard_index",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "siteLine",
+    "new": "site_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "siteText",
+    "new": "site_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "slotCount",
+    "new": "slot_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "sourceDir",
+    "new": "source_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "sourcePrefix",
+    "new": "source_prefix",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "sourcePrefixLength",
+    "new": "source_prefix_length",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "sourceTier",
+    "new": "source_tier",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "srcPath",
+    "new": "src_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "stageCount",
+    "new": "stage_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "stageLibrary",
+    "new": "stage_library",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "stageSeconds",
+    "new": "stage_seconds",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "stemOwner",
+    "new": "stem_owner",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "stemOwnerHeader",
+    "new": "stem_owner_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "stemOwnerParts",
+    "new": "stem_owner_parts",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "stemOwnerTarget",
+    "new": "stem_owner_target",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "stubContent",
+    "new": "stub_content",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "stubPath",
+    "new": "stub_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "stubRoot",
+    "new": "stub_root",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swActive",
+    "new": "active",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swActiveCount",
+    "new": "active_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swActiveGameTarget",
+    "new": "active_game_target",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swAllScenarioTest",
+    "new": "all_scenario_test",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swAllTest",
+    "new": "all_test",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swAnnotationMeta",
+    "new": "annotation_meta",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swAppDir",
+    "new": "app_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swAppGlueDir",
+    "new": "app_glue_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swAr",
+    "new": "ar",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swArName",
+    "new": "ar_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swArTool",
+    "new": "ar_tool",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swArchitectureCount",
+    "new": "architecture_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swArchitectureID",
+    "new": "architecture_id",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swArgs",
+    "new": "args",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swArgument",
+    "new": "argument",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swAssetFieldLine",
+    "new": "asset_field_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swAssetFieldsList",
+    "new": "asset_fields_list",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swAttempt",
+    "new": "attempt",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swAvailable",
+    "new": "available",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swBackendModuleDir",
+    "new": "backend_module_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swBadArgument",
+    "new": "bad_argument",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swBadArgumentName",
+    "new": "bad_argument_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swBinDir",
+    "new": "bin_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swBinFiles",
+    "new": "bin_files",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swBinHash",
+    "new": "bin_hash",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swBuild",
+    "new": "build",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swBuildTargets",
+    "new": "build_targets",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swBuiltinStamp",
+    "new": "builtin_stamp",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swBuiltinTpls",
+    "new": "builtin_tpls",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCacheName",
+    "new": "cache_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCacheNames",
+    "new": "cache_names",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCacheValue",
+    "new": "cache_value",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCached",
+    "new": "cached",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCandidate",
+    "new": "candidate",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCandidateDir",
+    "new": "candidate_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCandidateDirs",
+    "new": "candidate_dirs",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCanonicalVcpkg",
+    "new": "canonical_vcpkg",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCatalogDirectory",
+    "new": "catalog_directory",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swChainSlot",
+    "new": "chain_slot",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swChanged",
+    "new": "changed",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swClangDir",
+    "new": "clang_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swClangRealDir",
+    "new": "clang_real_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swClangRealPath",
+    "new": "clang_real_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swClearedCount",
+    "new": "cleared_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCompilerDir",
+    "new": "compiler_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCompilerRealDir",
+    "new": "compiler_real_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCompilerRealPath",
+    "new": "compiler_real_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swConfig",
+    "new": "config",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swConfigFile",
+    "new": "config_file",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swConfigurations",
+    "new": "configurations",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swContent",
+    "new": "content",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swContractDefaultRHI",
+    "new": "contract_default_rhi",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCookArgs",
+    "new": "cook_args",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCookCodeHeader",
+    "new": "cook_code_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCookCodeInputs",
+    "new": "cook_code_inputs",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCookVcpkgStatus",
+    "new": "cook_vcpkg_status",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCopyResult",
+    "new": "copy_result",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCoreHeaderTier_",
+    "new": "core_header_tier_",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCoreTierSource_",
+    "new": "core_tier_source_",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCoreTierTable",
+    "new": "core_tier_table",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCoreTier_",
+    "new": "core_tier_",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCoreTier_Log",
+    "new": "core_tier_Log",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCoreTopTier",
+    "new": "core_top_tier",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCount",
+    "new": "count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCpuHeavyTest",
+    "new": "SW_CPU_HEAVY_TEST",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "swCrossBackendFlag",
+    "new": "cross_backend_flag",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swCrossEnv",
+    "new": "cross_env",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDefault",
+    "new": "default",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDependencies",
+    "new": "dependencies",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDependency",
+    "new": "dependency",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDependencyActive",
+    "new": "dependency_active",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDependencyIndex",
+    "new": "dependency_index",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDependencyMinVersions",
+    "new": "dependency_min_versions",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDependencyNames",
+    "new": "dependency_names",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDependencyReason",
+    "new": "dependency_reason",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDependencyVersion",
+    "new": "dependency_version",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDeterministicPhysicsSources",
+    "new": "deterministic_physics_sources",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDeterministicSource",
+    "new": "deterministic_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDevFolderCount",
+    "new": "dev_folder_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDevFolderError",
+    "new": "dev_folder_error",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDevFolderIndex",
+    "new": "dev_folder_index",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDevFolderJson",
+    "new": "dev_folder_json",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDevFolderLast",
+    "new": "dev_folder_last",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDevFolderPattern",
+    "new": "dev_folder_pattern",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDevFolderPatterns",
+    "new": "dev_folder_patterns",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDevFolderPrefix",
+    "new": "dev_folder_prefix",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDevFolderTable",
+    "new": "dev_folder_table",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDir",
+    "new": "dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDirectories",
+    "new": "directories",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swDirectory",
+    "new": "directory",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEditorFractureSource",
+    "new": "editor_fracture_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEditorLayer_",
+    "new": "editor_layer_",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEditorPanelViewSource",
+    "new": "editor_panel_view_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEditorPanelViewStubRoot",
+    "new": "editor_panel_view_stub_root",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEditorPanelViewTier",
+    "new": "editor_panel_view_tier",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEditorTierModelSource_",
+    "new": "editor_tier_model_source_",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEditorTierViewSource_",
+    "new": "editor_tier_view_source_",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEmitTemplatesDir",
+    "new": "emit_templates_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEmitTpls",
+    "new": "emit_tpls",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEnabled",
+    "new": "enabled",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEnabledNames",
+    "new": "enabled_names",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEngineABIHeaders",
+    "new": "engine_abi_headers",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEngineConfigRHI",
+    "new": "engine_config_rhi",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEngineDependency",
+    "new": "engine_dependency",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEngineLinkLibraries",
+    "new": "engine_link_libraries",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEngineTierSource_",
+    "new": "engine_tier_source_",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swEngineValue",
+    "new": "engine_value",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swError",
+    "new": "error",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swExcluded",
+    "new": "excluded",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swExcludedFolder",
+    "new": "excluded_folder",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swExcludedFolderRegex",
+    "new": "excluded_folder_regex",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swExisting",
+    "new": "existing",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swExistingFile",
+    "new": "existing_file",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swExistingList",
+    "new": "existing_list",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swExistingName",
+    "new": "existing_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swExitCode",
+    "new": "exit_code",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swFile",
+    "new": "file",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swFileName",
+    "new": "file_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swFindVcpkgArgs",
+    "new": "find_vcpkg_args",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swFirstHash",
+    "new": "first_hash",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swFirstKey",
+    "new": "first_key",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swFirstTime",
+    "new": "first_time",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swFixtureName",
+    "new": "fixture_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swFlagLib",
+    "new": "flag_lib",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swFlagOpsHeader",
+    "new": "flag_ops_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swFound",
+    "new": "found",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swFoundAr",
+    "new": "found_ar",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swFoundMt",
+    "new": "found_mt",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swFreetypeTarget",
+    "new": "freetype_target",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swGame",
+    "new": "game",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swGameFrameworkLinkLibraries",
+    "new": "game_framework_link_libraries",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swGameFrameworkTierSource_",
+    "new": "game_framework_tier_source_",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swGameNames",
+    "new": "game_names",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swGamePacks",
+    "new": "game_packs",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swGamePresetFiles",
+    "new": "game_preset_files",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swGamesDirectory",
+    "new": "games_directory",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swGenCpp",
+    "new": "gen_cpp",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swGeneratedTripletDir",
+    "new": "generated_triplet_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swHash",
+    "new": "hash",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swHashAgain",
+    "new": "hash_again",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swHeaderText",
+    "new": "header_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swHostCookApp",
+    "new": "host_cook_app",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swHostCookAppName",
+    "new": "host_cook_app_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swHostExeSuffix",
+    "new": "host_exe_suffix",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swHostInstalledDir",
+    "new": "host_installed_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swHostInstalledLine",
+    "new": "host_installed_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swHostReflectionParser",
+    "new": "host_reflection_parser",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swIgnoredMinVersions",
+    "new": "ignored_min_versions",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swImageSuffixes",
+    "new": "image_suffixes",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swImportKind",
+    "new": "import_kind",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swIndex",
+    "new": "index",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swInputText",
+    "new": "input_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swInputs",
+    "new": "inputs",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swInside",
+    "new": "inside",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swInstalled",
+    "new": "installed",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swIpoErr",
+    "new": "ipo_err",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swIpoOk",
+    "new": "ipo_ok",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swIsReady",
+    "new": "is_ready",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swJSONText",
+    "new": "json_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swJoltBackendSources",
+    "new": "jolt_backend_sources",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swKeptManifests",
+    "new": "kept_manifests",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swKey",
+    "new": "key",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swKeyCount",
+    "new": "key_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swKeyIndex",
+    "new": "key_index",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swKeyPath",
+    "new": "key_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swKeys",
+    "new": "keys",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swKind",
+    "new": "kind",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swKit",
+    "new": "kit",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swKitFolder",
+    "new": "kit_folder",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swKitRelative",
+    "new": "kit_relative",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swKnown",
+    "new": "known",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLang",
+    "new": "lang",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLast",
+    "new": "last",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLastKey",
+    "new": "last_key",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLastShard",
+    "new": "last_shard",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLegacyHash",
+    "new": "legacy_hash",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLibclangDLL",
+    "new": "libclang_dll",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLibclangIncludeDir",
+    "new": "libclang_include_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLibclangLib",
+    "new": "libclang_lib",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLine",
+    "new": "line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLines",
+    "new": "lines",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLinuxCommon",
+    "new": "linux_common",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swListCandidate",
+    "new": "list_candidate",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swListManifest",
+    "new": "list_manifest",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLlvmBin",
+    "new": "llvm_bin",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLlvmPath",
+    "new": "llvm_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLoadBotCoreSource",
+    "new": "load_bot_core_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLoadBotDir",
+    "new": "load_bot_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLoadBotKit",
+    "new": "load_bot_kit",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLoadBotModuleList",
+    "new": "load_bot_module_list",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swLoadBotModuleText",
+    "new": "load_bot_module_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swManifest",
+    "new": "manifest",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swManifestCount",
+    "new": "manifest_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swManifestFile",
+    "new": "manifest_file",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swManifestHash",
+    "new": "manifest_hash",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swMarkerSource",
+    "new": "marker_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swMatch",
+    "new": "match",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swMatched",
+    "new": "matched",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swMetaText",
+    "new": "meta_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swMinVersion",
+    "new": "min_version",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swMinVersions",
+    "new": "min_versions",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swMode",
+    "new": "mode",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swModule",
+    "new": "module",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swModuleActive",
+    "new": "module_active",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swModuleFolderFiles",
+    "new": "module_folder_files",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swModuleManagerLibType",
+    "new": "module_manager_lib_type",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swModuleName",
+    "new": "module_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swModulePattern",
+    "new": "module_pattern",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swModuleTargets",
+    "new": "module_targets",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swModulesRoot",
+    "new": "modules_root",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swMsvcTools",
+    "new": "msvc_tools",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swMt",
+    "new": "mt",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swName",
+    "new": "name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swNames",
+    "new": "names",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swNewlyReflectedText",
+    "new": "newly_reflected_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swNinjaDir",
+    "new": "ninja_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swNow",
+    "new": "now",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOfKind",
+    "new": "of_kind",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOld",
+    "new": "old",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOldTreeAt",
+    "new": "old_tree_at",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOnlineKitTestSource",
+    "new": "online_kit_test_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOpenSslTarget",
+    "new": "open_ssl_target",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOrder",
+    "new": "order",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOrderText",
+    "new": "order_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOtherPath",
+    "new": "other_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOutput",
+    "new": "output",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOverlayPortFiles",
+    "new": "overlay_port_files",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOverlayTripletFiles",
+    "new": "overlay_triplet_files",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOverrideIndex",
+    "new": "override_index",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOverrideName",
+    "new": "override_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOverrideNames",
+    "new": "override_names",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOverrideValue",
+    "new": "override_value",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOverrideValues",
+    "new": "override_values",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swOverride_",
+    "new": "override_",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPackDependencies",
+    "new": "pack_dependencies",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPackOutputDir",
+    "new": "pack_output_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPackOverrides",
+    "new": "pack_overrides",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPacks",
+    "new": "packs",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swParserConfigs",
+    "new": "parser_configs",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swParserFixture",
+    "new": "parser_fixture",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swParserFixtureName",
+    "new": "parser_fixture_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swParserTestTargetArgs",
+    "new": "parser_test_target_args",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swParserToolMode",
+    "new": "parser_tool_mode",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPath",
+    "new": "path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPending",
+    "new": "pending",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPicked",
+    "new": "picked",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPinnedAr",
+    "new": "pinned_ar",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPlanBuild",
+    "new": "plan_build",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPlanRemove",
+    "new": "plan_remove",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPlanStatus",
+    "new": "plan_status",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPlatforms",
+    "new": "platforms",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPosixAr",
+    "new": "posix_ar",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPosixArDir",
+    "new": "posix_ar_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPosixLang",
+    "new": "posix_lang",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPosixRanlib",
+    "new": "posix_ranlib",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swPreviousImportTest",
+    "new": "previous_import_test",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swProbeAr",
+    "new": "probe_ar",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swProperty",
+    "new": "property",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swProtocolHeader",
+    "new": "protocol_header",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swProtocolName",
+    "new": "protocol_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swProtocolRelXML",
+    "new": "protocol_rel_xml",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swProtocolSource",
+    "new": "protocol_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swProtocolXML",
+    "new": "protocol_xml",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReDetect",
+    "new": "re_detect",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReached",
+    "new": "reached",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReadOnlyReason",
+    "new": "read_only_reason",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReady",
+    "new": "ready",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReason",
+    "new": "reason",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReflectBuiltins",
+    "new": "reflect_builtins",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReflectCandidateList",
+    "new": "reflect_candidate_list",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReflectCandidateText",
+    "new": "reflect_candidate_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReflectDepfile",
+    "new": "reflect_depfile",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReflectInputList",
+    "new": "reflect_input_list",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReflectInputText",
+    "new": "reflect_input_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReflectResponseArgs",
+    "new": "reflect_response_args",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReflectResponseFile",
+    "new": "reflect_response_file",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReflectResponseText",
+    "new": "reflect_response_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReflectScanStamp",
+    "new": "reflect_scan_stamp",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swReflectedTypesList",
+    "new": "reflected_types_list",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swRelativePath",
+    "new": "relative_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swRemaining",
+    "new": "remaining",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swRemove",
+    "new": "remove",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swRemovedCount",
+    "new": "removed_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swRepoRoot",
+    "new": "repo_root",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swRequested",
+    "new": "requested",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swRequired",
+    "new": "required",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swResolvedVcpkg",
+    "new": "resolved_vcpkg",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swResult",
+    "new": "result",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swScenarioBackendCount",
+    "new": "scenario_backend_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swScenarioRoot",
+    "new": "scenario_root",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSdkDir",
+    "new": "sdk_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSdkVer",
+    "new": "sdk_ver",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSdkVersion",
+    "new": "sdk_version",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSection",
+    "new": "section",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSeed",
+    "new": "seed",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSequentialScenarioPacks",
+    "new": "sequential_scenario_packs",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swShippingBackend",
+    "new": "shipping_backend",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swShippingRHIEntry",
+    "new": "shipping_rhi_entry",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSkip",
+    "new": "skip",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSkipCoreReflect",
+    "new": "skip_core_reflect",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSkipEditor",
+    "new": "skip_editor",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSkipGameFramework",
+    "new": "skip_game_framework",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSource",
+    "new": "source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSourceFile",
+    "new": "source_file",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSourceFiles",
+    "new": "source_files",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSrcDir",
+    "new": "src_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStageArgument_",
+    "new": "stage_argument_",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStageArgument_cook",
+    "new": "stage_argument_cook",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStageArgument_verify",
+    "new": "stage_argument_verify",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStagedFiles",
+    "new": "staged_files",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStagedHash",
+    "new": "staged_hash",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStale",
+    "new": "stale",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStamp",
+    "new": "stamp",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStampContent",
+    "new": "stamp_content",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStampHeld",
+    "new": "stamp_held",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStampMatch",
+    "new": "stamp_match",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStampModuleName",
+    "new": "stamp_module_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStampPath",
+    "new": "stamp_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStampSource",
+    "new": "stamp_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStem",
+    "new": "stem",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStemNoPrefix",
+    "new": "stem_no_prefix",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStrayDevFolders",
+    "new": "stray_dev_folders",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swStrayFolder",
+    "new": "stray_folder",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swSuffix",
+    "new": "suffix",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTarget",
+    "new": "target",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTargetArg",
+    "new": "target_arg",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTargetHit",
+    "new": "target_hit",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTargetType",
+    "new": "target_type",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTargets",
+    "new": "targets",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTemplateCount",
+    "new": "template_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTemplates",
+    "new": "templates",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTestSource",
+    "new": "test_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swText",
+    "new": "text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swThirdPartyNotices",
+    "new": "third_party_notices",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTimeAgain",
+    "new": "time_again",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTool",
+    "new": "tool",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swToolchain",
+    "new": "toolchain",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swToolchainFile",
+    "new": "toolchain_file",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTools",
+    "new": "tools",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTools_LLVM_BIN",
+    "new": "tools_LLVM_BIN",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTools_MT",
+    "new": "tools_MT",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTracyBackendSources",
+    "new": "tracy_backend_sources",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTracyDefault",
+    "new": "tracy_default",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTracyIncludeDir",
+    "new": "tracy_include_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTracyIncludeOption",
+    "new": "tracy_include_option",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swTreeReady",
+    "new": "tree_ready",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swType",
+    "new": "type",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swUnused",
+    "new": "unused",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swUnusedKits",
+    "new": "unused_kits",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swValue",
+    "new": "value",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swValues",
+    "new": "values",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swVcpkgExe",
+    "new": "vcpkg_exe",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swVcpkgOverlayPorts",
+    "new": "vcpkg_overlay_ports",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swVcpkgSharedPorts",
+    "new": "vcpkg_shared_ports",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swVcpkgTree",
+    "new": "vcpkg_tree",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swVcpkgTreeNow",
+    "new": "vcpkg_tree_now",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swVcpkgTreeOld",
+    "new": "vcpkg_tree_old",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swVendoredLicenses",
+    "new": "vendored_licenses",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swVersion",
+    "new": "version",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swWarningBase",
+    "new": "warning_base",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swWaylandGenDir",
+    "new": "wayland_gen_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swWaylandGenFiles",
+    "new": "wayland_gen_files",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swWaylandProtocolXMLs",
+    "new": "wayland_protocol_xmls",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swWebJSLibraries",
+    "new": "web_js_libraries",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swWebJSLibrary",
+    "new": "web_js_library",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swZlibImportedConfig",
+    "new": "zlib_imported_config",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swZlibLocationDebug",
+    "new": "zlib_location_debug",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swZlibLocationNoConfig",
+    "new": "zlib_location_no_config",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swZlibLocationRelease",
+    "new": "zlib_location_release",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swZlibType",
+    "new": "zlib_type",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "swZstdTarget",
+    "new": "zstd_target",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "sw_asan_dep_dll",
+    "new": "SW_ASAN_DEP_DLL",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_asan_dep_dll_count",
+    "new": "SW_ASAN_DEP_DLL_COUNT",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_asan_dest",
+    "new": "SW_ASAN_DEST",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_build_caches_file",
+    "new": "SW_BUILD_CACHES_FILE",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_clang_asan_dir",
+    "new": "SW_CLANG_ASAN_DIR",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_clang_resource_dir",
+    "new": "SW_CLANG_RESOURCE_DIR",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_configuration_name",
+    "new": "SW_CONFIGURATION_NAME",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_detected_vcpkg_root",
+    "new": "SW_DETECTED_VCPKG_ROOT",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_find_vcpkg_result",
+    "new": "SW_FIND_VCPKG_RESULT",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_flag_libraries",
+    "new": "SW_FLAG_LIBRARIES",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_ipo_error",
+    "new": "SW_IPO_ERROR",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_ipo_supported",
+    "new": "SW_IPO_SUPPORTED",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_is_clang_cl",
+    "new": "SW_IS_CLANG_CL",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_lto_cache_base",
+    "new": "SW_LTO_CACHE_BASE",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_lto_cache_dir",
+    "new": "SW_LTO_CACHE_DIR",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_lto_cache_name",
+    "new": "SW_LTO_CACHE_NAME",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_lto_cache_policy",
+    "new": "SW_LTO_CACHE_POLICY",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_lto_jobs",
+    "new": "SW_LTO_JOBS",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_lto_jobs_option",
+    "new": "SW_LTO_JOBS_OPTION",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_platform_name",
+    "new": "SW_PLATFORM_NAME",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례) — 같은 이름의 컴파일 정의와 같은 값을 뜻한다",
+    "allowExisting": true
+  },
+  {
+    "old": "sw_project_version",
+    "new": "SW_PROJECT_VERSION",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_target_architecture",
+    "new": "SW_TARGET_ARCHITECTURE",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_vcpkg_arch",
+    "new": "SW_VCPKG_ARCH",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_vcpkg_processor",
+    "new": "SW_VCPKG_PROCESSOR",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_vcpkg_root",
+    "new": "SW_VCPKG_ROOT",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_vcpkg_target_system",
+    "new": "SW_VCPKG_TARGET_SYSTEM",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_vcpkg_triplet",
+    "new": "SW_VCPKG_TRIPLET",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "sw_vulkan_validation",
+    "new": "SW_VULKAN_VALIDATION",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례) — 같은 이름의 컴파일 정의와 같은 값을 뜻한다",
+    "allowExisting": true
+  },
+  {
+    "old": "sw_workspace_name",
+    "new": "SW_WORKSPACE_NAME",
+    "why": "CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)"
+  },
+  {
+    "old": "symbolDir",
+    "new": "symbol_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "symbolsDir",
+    "new": "symbols_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "targetArch",
+    "new": "target_arch",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "targetArg",
+    "new": "target_arg",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "targetName",
+    "new": "target_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "targetType",
+    "new": "target_type",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "testName",
+    "new": "test_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "thirdPartyDirectory",
+    "new": "third_party_directory",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "tierLine",
+    "new": "tier_line",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "tintName",
+    "new": "tint_name",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "tintPath",
+    "new": "tint_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "toolDir",
+    "new": "tool_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "tracyDLL",
+    "new": "tracy_dll",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "tripletFile",
+    "new": "triplet_file",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "typeFqn",
+    "new": "type_fqn",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "typeList",
+    "new": "type_list",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "typesText",
+    "new": "types_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "upperTier",
+    "new": "upper_tier",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "verDir",
+    "new": "ver_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "verifyGlobs",
+    "new": "verify_globs",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "viewPath",
+    "new": "view_path",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "viewSource",
+    "new": "view_source",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "violationText",
+    "new": "violation_text",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "waveCount",
+    "new": "wave_count",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "workDir",
+    "new": "work_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  },
+  {
+    "old": "workingDir",
+    "new": "working_dir",
+    "why": "CMake 변수: 캐시 · 전역은 SW_SCREAMING_CASE, 지역은 소문자 snake_case(CMake 자체 모듈 관례)",
+    "scope": "cmake",
+    "ban": false
+  }
+]

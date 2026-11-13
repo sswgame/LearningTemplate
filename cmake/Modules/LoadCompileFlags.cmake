@@ -35,4 +35,4 @@ include("${CMAKE_CURRENT_LIST_DIR}/Options/Sanitizer.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Options/Fuzzing.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Options/UnityBuild.cmake")
 
-unset(swModulesRoot)
+unset(modules_root)

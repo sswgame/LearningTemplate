@@ -12,13 +12,13 @@ endif()
 # 손으로 돌리지 않으면 테스트가 낡은 산출물을 거절하며 돈다(2026-11-02 — `.mesh` 5 판에서 모델이 모두 빠진 채 시나리오가 돌았다). 그래서 ctest 가 먼저
 # 낡은 것만 임포트한다(스탬프가 맞으면 곧바로 끝난다). 모든 테스트가 이 고정 단계를 요구한다(`ImportedAssets` — 이 파일과 Scenario 의 맨 아래).
 # 라벨로 거른 실행(`-L hostgpu`)도 ctest 가 고정 단계를 함께 넣는다.
-set(swPreviousImportTest "")
-foreach(swImportKind IN ITEMS heightfields textures models)
-	add_test(NAME Import.${swImportKind}
-		COMMAND $<TARGET_FILE:App> --import-${swImportKind} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Import.${swImportKind}.log
+set(previous_import_test "")
+foreach(import_kind IN ITEMS heightfields textures models)
+	add_test(NAME Import.${import_kind}
+		COMMAND $<TARGET_FILE:App> --import-${import_kind} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Import.${import_kind}.log
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-	set_tests_properties(Import.${swImportKind} PROPERTIES LABELS import TIMEOUT 3600 RUN_SERIAL TRUE FIXTURES_SETUP ImportedAssets DEPENDS "${swPreviousImportTest}")
-	set(swPreviousImportTest Import.${swImportKind})
+	set_tests_properties(Import.${import_kind} PROPERTIES LABELS import TIMEOUT 3600 RUN_SERIAL TRUE FIXTURES_SETUP ImportedAssets DEPENDS "${previous_import_test}")
+	set(previous_import_test Import.${import_kind})
 endforeach()
 
 # 단위 테스트 — 헤드리스(창 · GPU 없음)라 nogpu. 순서는 매번 섞이고 씨앗을 찍는다. JSON 보고(판 번호 `TestRunner::kReportSchemaVersion` · 케이스 이름 · 파일 · 줄 · 결과 · 시간 · 실패 위치)는
@@ -51,71 +51,71 @@ if(SW_UNIT_TEST_SHARDS LESS_EQUAL 1)
 
 	# 틀린 명령줄은 기동을 멈춘다(값을 0 · false 로 바꿔 계속하던 폴백을 없앴다) — 모르는 인자 · 정수 아닌 정수 · 빈 경로.
 	# Windows 의 드라이브 상대(`C:foo`) · 루트 상대(`\foo`) 경로는 절대도 상대도 아니라 디스크 경로 인자가 거절한다(`AbsolutePath::tryResolve`). POSIX 에서 `\foo` 는 이름일 뿐이다.
-	set(listBadArgument "--no-such-argument" "-W=abc" "-log-file=")
+	set(list_bad_argument "--no-such-argument" "-W=abc" "-log-file=")
 	if(WIN32)
-		list(APPEND listBadArgument "--test-report=C:foo.json" "--test-report=\\foo.json")
+		list(APPEND list_bad_argument "--test-report=C:foo.json" "--test-report=\\foo.json")
 	endif()
-	foreach(swBadArgument IN LISTS listBadArgument)
-		string(MAKE_C_IDENTIFIER "${swBadArgument}" swBadArgumentName)
-		add_test(NAME CommandLine.Rejects${swBadArgumentName}
-			COMMAND $<TARGET_FILE:App> --test -unattended ${swBadArgument}
+	foreach(bad_argument IN LISTS list_bad_argument)
+		string(MAKE_C_IDENTIFIER "${bad_argument}" bad_argument_name)
+		add_test(NAME CommandLine.Rejects${bad_argument_name}
+			COMMAND $<TARGET_FILE:App> --test -unattended ${bad_argument}
 			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-		set_tests_properties(CommandLine.Rejects${swBadArgumentName} PROPERTIES LABELS nogpu TIMEOUT 120 WILL_FAIL TRUE)
+		set_tests_properties(CommandLine.Rejects${bad_argument_name} PROPERTIES LABELS nogpu TIMEOUT 120 WILL_FAIL TRUE)
 	endforeach()
 else()
-	math(EXPR swLastShard "${SW_UNIT_TEST_SHARDS} - 1")
-	foreach(shardIndex RANGE ${swLastShard})
-		add_test(NAME UnitTests.${shardIndex}
-			COMMAND $<TARGET_FILE:App> --test -unattended --test-shard=${shardIndex}/${SW_UNIT_TEST_SHARDS}
-				-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/UnitTests.${shardIndex}.log
-				--test-report=${CMAKE_BINARY_DIR}/Testing/Reports/UnitTests.${shardIndex}.json
+	math(EXPR last_shard "${SW_UNIT_TEST_SHARDS} - 1")
+	foreach(shard_index RANGE ${last_shard})
+		add_test(NAME UnitTests.${shard_index}
+			COMMAND $<TARGET_FILE:App> --test -unattended --test-shard=${shard_index}/${SW_UNIT_TEST_SHARDS}
+				-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/UnitTests.${shard_index}.log
+				--test-report=${CMAKE_BINARY_DIR}/Testing/Reports/UnitTests.${shard_index}.json
 			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-		set_tests_properties(UnitTests.${shardIndex} PROPERTIES LABELS nogpu TIMEOUT 600)
+		set_tests_properties(UnitTests.${shard_index} PROPERTIES LABELS nogpu TIMEOUT 600)
 	endforeach()
 endif()
 
 # 키트 · 게임 단위 테스트 — 키트 `Tests/` 의 케이스는 그 키트를 싣는 게임으로 돌 때만 등록된다(활성 게임으로 도는 `UnitTests` 에는 없다).
 # 함께 짓는 게임마다 그 게임으로 떠서 그 게임이 싣는 키트 · 게임 폴더의 케이스만 돈다(`--test-source`). 테스트 폴더가 하나도 없는 게임은 항목이 없다(빈 실행은 실패다).
-get_property(swActiveGameTarget GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET)
-get_property(listCoBuiltGame GLOBAL PROPERTY SW_GAME_PACKS)
-if(swActiveGameTarget)
-	foreach(game IN LISTS listCoBuiltGame)
-		get_property(listGameDependency GLOBAL PROPERTY SW_GAME_PACK_${game}_DEPENDENCIES)
-		set(listTestFolder "")
+get_property(active_game_target GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET)
+get_property(list_co_built_game GLOBAL PROPERTY SW_GAME_PACKS)
+if(active_game_target)
+	foreach(game IN LISTS list_co_built_game)
+		get_property(list_game_dependency GLOBAL PROPERTY SW_GAME_PACK_${game}_DEPENDENCIES)
+		set(list_test_folder "")
 		# 공유 키트의 서버 짝(`GF_Server_<X>`)도 그 게임으로 뜰 때 올라온다(`sw_collect_unused_kits`) — 테스트 폴더를 함께 넘긴다.
-		set(listGameKit ${listGameDependency})
-		foreach(dependency IN LISTS listGameDependency)
+		set(list_game_kit ${list_game_dependency})
+		foreach(dependency IN LISTS list_game_dependency)
 			if(dependency MATCHES "^GF_(.+)$" AND TARGET GF_Server_${CMAKE_MATCH_1})
-				list(APPEND listGameKit GF_Server_${CMAKE_MATCH_1})
+				list(APPEND list_game_kit GF_Server_${CMAKE_MATCH_1})
 			endif()
 		endforeach()
 		# 게임이 켠 모듈(서버 저장 드라이버 — `_listModuleOverride`)도 그 게임으로 뜰 때 올라온다.
-		get_property(listGameOverride GLOBAL PROPERTY SW_GAME_PACK_${game}_ENABLED_OVERRIDES)
-		list(APPEND listGameKit ${listGameOverride})
-		list(REMOVE_DUPLICATES listGameKit)
-		foreach(dependency IN LISTS listGameKit)
-			get_property(dependencyKind GLOBAL PROPERTY SW_MODULE_${dependency}_KIND)
-			if(NOT dependencyKind STREQUAL "Kit" OR NOT TARGET ${dependency})
+		get_property(list_game_override GLOBAL PROPERTY SW_GAME_PACK_${game}_ENABLED_OVERRIDES)
+		list(APPEND list_game_kit ${list_game_override})
+		list(REMOVE_DUPLICATES list_game_kit)
+		foreach(dependency IN LISTS list_game_kit)
+			get_property(dependency_kind GLOBAL PROPERTY SW_MODULE_${dependency}_KIND)
+			if(NOT dependency_kind STREQUAL "Kit" OR NOT TARGET ${dependency})
 				continue()
 			endif()
-			get_target_property(kitFolder ${dependency} SOURCE_DIR)
-			sw_glob_tests_under(listKitTest "${kitFolder}")
-			list(FILTER listKitTest EXCLUDE REGEX "/Editor/") # 키트 폴더 아래의 에디터 확장 케이스는 `editor.unitTests` 가 돌린다 — 이 실행에는 등록되지 않는다
-			if(listKitTest)
-				file(RELATIVE_PATH kitRelative "${CMAKE_SOURCE_DIR}" "${kitFolder}")
-				list(APPEND listTestFolder "${kitRelative}/")
+			get_target_property(kit_folder ${dependency} SOURCE_DIR)
+			sw_glob_tests_under(list_kit_test "${kit_folder}")
+			list(FILTER list_kit_test EXCLUDE REGEX "/Editor/") # 키트 폴더 아래의 에디터 확장 케이스는 `editor.unitTests` 가 돌린다 — 이 실행에는 등록되지 않는다
+			if(list_kit_test)
+				file(RELATIVE_PATH kit_relative "${CMAKE_SOURCE_DIR}" "${kit_folder}")
+				list(APPEND list_test_folder "${kit_relative}/")
 			endif()
 		endforeach()
-		sw_glob_tests_under(listGameTest "${CMAKE_SOURCE_DIR}/Source/Games/${game}")
-		if(listGameTest)
-			list(APPEND listTestFolder "Source/Games/${game}/")
+		sw_glob_tests_under(list_game_test "${CMAKE_SOURCE_DIR}/Source/Games/${game}")
+		if(list_game_test)
+			list(APPEND list_test_folder "Source/Games/${game}/")
 		endif()
-		if(NOT listTestFolder)
+		if(NOT list_test_folder)
 			continue()
 		endif()
-		list(JOIN listTestFolder "," swTestSource)
+		list(JOIN list_test_folder "," test_source)
 		add_test(NAME UnitTests.${game}
-			COMMAND $<TARGET_FILE:App> --test -unattended -game=${game} --test-source=${swTestSource} -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/UnitTests.${game}.log
+			COMMAND $<TARGET_FILE:App> --test -unattended -game=${game} --test-source=${test_source} -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/UnitTests.${game}.log
 				--test-report=${CMAKE_BINARY_DIR}/Testing/Reports/UnitTests.${game}.json
 			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 		set_tests_properties(UnitTests.${game} PROPERTIES LABELS nogpu TIMEOUT 600)
@@ -186,14 +186,14 @@ set_tests_properties(Scripts.VcpkgInstallPolicy PROPERTIES LABELS nogpu TIMEOUT 
 # 온라인 부하 봇의 짧은 시나리오 — 같은 프로세스 서버(`--local-server=0`, OS 가 고른 포트라 나란히 돌아도 다투지 않는다)에 봇 여덟이 붙어
 # 로그인 · 채팅 · 순위를 한 번씩 돈다. 오류율 · 보고서 쓰기 실패가 종료 코드다(엔진 · 모듈이 서지 못하면 3). 봇 로그는 `-log-file` 로 같은 폴더에 남는다.
 if(TARGET OnlineLoadBot)
-	set(swLoadBotDir "${CMAKE_SOURCE_DIR}/Source/Programs/OnlineLoadBot")
+	set(load_bot_dir "${CMAKE_SOURCE_DIR}/Source/Programs/OnlineLoadBot")
 	file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/Testing/Logs")
 	add_test(NAME OnlineLoadBot.localServer
 		COMMAND $<TARGET_FILE:OnlineLoadBot>
-			--scenario=${swLoadBotDir}/Scenarios/smoke.json
-			--load=${swLoadBotDir}/Scenarios/smoke.load.xml
+			--scenario=${load_bot_dir}/Scenarios/smoke.json
+			--load=${load_bot_dir}/Scenarios/smoke.load.xml
 			--local-server=0
-			--online-config=${swLoadBotDir}/LoadBot.online.json
+			--online-config=${load_bot_dir}/LoadBot.online.json
 			--light-hash
 			--report=${CMAKE_BINARY_DIR}/Testing/Logs/OnlineLoadBot.localServer.json
 			-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/OnlineLoadBot.localServer.log
@@ -202,21 +202,21 @@ if(TARGET OnlineLoadBot)
 
 	# 온라인 키트(클라이언트 · 서버 쌍)의 단위 테스트 — 그 키트를 싣는 게임이 없어 `UnitTests.<게임>` 에 들지 않는다. 봇이 키트를 모두 싣으므로 엔진 인자(대시 하나)로
 	# 테스트만 돌린다(`OnlineLoadBot` 의 `runBot` 이 헤드리스 결과로 끝낸다). `Tests/` 가 있는 키트 폴더만 넘긴다(빈 실행은 실패다).
-	get_property(listLoadBotKit GLOBAL PROPERTY SW_LOADBOT_KITS)
-	set(listOnlineKitTestFolder "")
-	foreach(swKit IN LISTS listLoadBotKit)
-		get_target_property(swKitFolder ${swKit} SOURCE_DIR)
-		sw_glob_tests_under(listOnlineKitTest "${swKitFolder}")
-		list(FILTER listOnlineKitTest EXCLUDE REGEX "/Editor/")
-		if(listOnlineKitTest)
-			file(RELATIVE_PATH swKitRelative "${CMAKE_SOURCE_DIR}" "${swKitFolder}")
-			list(APPEND listOnlineKitTestFolder "${swKitRelative}/")
+	get_property(list_load_bot_kit GLOBAL PROPERTY SW_LOADBOT_KITS)
+	set(list_online_kit_test_folder "")
+	foreach(kit IN LISTS list_load_bot_kit)
+		get_target_property(kit_folder ${kit} SOURCE_DIR)
+		sw_glob_tests_under(list_online_kit_test "${kit_folder}")
+		list(FILTER list_online_kit_test EXCLUDE REGEX "/Editor/")
+		if(list_online_kit_test)
+			file(RELATIVE_PATH kit_relative "${CMAKE_SOURCE_DIR}" "${kit_folder}")
+			list(APPEND list_online_kit_test_folder "${kit_relative}/")
 		endif()
 	endforeach()
-	if(listOnlineKitTestFolder)
-		list(JOIN listOnlineKitTestFolder "," swOnlineKitTestSource)
+	if(list_online_kit_test_folder)
+		list(JOIN list_online_kit_test_folder "," online_kit_test_source)
 		add_test(NAME UnitTests.OnlineKits
-			COMMAND $<TARGET_FILE:OnlineLoadBot> -test -unattended -test-source=${swOnlineKitTestSource}
+			COMMAND $<TARGET_FILE:OnlineLoadBot> -test -unattended -test-source=${online_kit_test_source}
 				-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/UnitTests.OnlineKits.log
 			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 		set_tests_properties(UnitTests.OnlineKits PROPERTIES LABELS nogpu TIMEOUT 300)
@@ -227,8 +227,8 @@ endif()
 # 지우면 뒤에 도는 시나리오 체인이 모두 빈 캐시로 돌아 백엔드마다 실행 시한에 걸렸다.
 # Debug 에만 둔다: 보는 것은 빈 캐시에서 다시 만드는 길(구성과 무관한 로직)이고 쿠커의 단언은 Debug 에만 있다. 최적화 빌드의 쿠킹은 shipping-check(배포 구성 빌드의 CookAssets)가 본다.
 # 두 구성에서 돌면 묶음 검증마다 Debug 503 초 + Release 361 초를 차례로 썼다(2026-11-13).
-# CPU 를 다 쓰는 굽기라 시간 판정이 있는 항목(hostgpu · load)은 이것 뒤에 돈다(`swCpuHeavyTest` → DEPENDS, 아래 · Scenario/) — 다른 nogpu 항목과는 함께 돈다(예전 RUN_SERIAL 은 그것까지 막았다).
-set(swCpuHeavyTest "")
+# CPU 를 다 쓰는 굽기라 시간 판정이 있는 항목(hostgpu · load)은 이것 뒤에 돈다(`SW_CPU_HEAVY_TEST` → DEPENDS, 아래 · Scenario/) — 다른 nogpu 항목과는 함께 돈다(예전 RUN_SERIAL 은 그것까지 막았다).
+set(SW_CPU_HEAVY_TEST "")
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_test(NAME ShaderCache.RebuildFromEmpty
 		COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DDDC_DIR=${CMAKE_BINARY_DIR}/Testing/ShaderCache/DDC"
@@ -236,25 +236,25 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 			-P "${CMAKE_CURRENT_SOURCE_DIR}/Shader/RunShaderCacheRebuild.cmake"
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(ShaderCache.RebuildFromEmpty PROPERTIES LABELS nogpu TIMEOUT 3600)
-	set(swCpuHeavyTest ShaderCache.RebuildFromEmpty)
+	set(SW_CPU_HEAVY_TEST ShaderCache.RebuildFromEmpty)
 endif()
 
 # 리플렉션 파서 — Engine 을 링크하지 못해 단위 테스트 틀에 들어가지 못한다. 사례 헤더 하나마다 실제 실행 파일을 돌려 산출물 · 오류를 대조한다(`ReflectionParser/RunParserFixture.cmake`, 왜 이 모양인지 거기 적었다).
 if(TARGET ReflectionParser)
 	# 빌드와 같은 대상 인자(`--target-arg`)를 넘긴다 — 파서는 대상 매크로를 추측하지 않는다(교차 빌드). 목록 구분자 ';' 는 -D 에서 갈라지므로 '|' 로 잇는다.
-	sw_collect_reflection_target_args(listParserTestTargetArg)
-	if(NOT listParserTestTargetArg)
-		message(FATAL_ERROR "[ReflectionParser tests] no target macros found on sw_global_options / sw_flag_libraries")
+	sw_collect_reflection_target_args(list_parser_test_target_arg)
+	if(NOT list_parser_test_target_arg)
+		message(FATAL_ERROR "[ReflectionParser tests] no target macros found on sw_global_options / SW_FLAG_LIBRARIES")
 	endif()
-	string(JOIN "|" swParserTestTargetArgs ${listParserTestTargetArg})
-	sw_glob_source_tree(listParserFixture "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/*.h")
-	foreach(swParserFixture IN LISTS listParserFixture)
-		get_filename_component(swParserFixtureName "${swParserFixture}" NAME_WE)
-		add_test(NAME ReflectionParser.${swParserFixtureName}
+	string(JOIN "|" parser_test_target_args ${list_parser_test_target_arg})
+	sw_glob_source_tree(list_parser_fixture "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/*.h")
+	foreach(parser_fixture IN LISTS list_parser_fixture)
+		get_filename_component(parser_fixture_name "${parser_fixture}" NAME_WE)
+		add_test(NAME ReflectionParser.${parser_fixture_name}
 			COMMAND ${CMAKE_COMMAND}
 				"-DPARSER=$<TARGET_FILE:ReflectionParser>"
-				"-DFIXTURE=${swParserFixture}"
-				"-DWORK_DIR=${CMAKE_BINARY_DIR}/Testing/ReflectionParser/${swParserFixtureName}"
+				"-DFIXTURE=${parser_fixture}"
+				"-DWORK_DIR=${CMAKE_BINARY_DIR}/Testing/ReflectionParser/${parser_fixture_name}"
 				"-DSOURCE_ROOT=${CMAKE_SOURCE_DIR}"
 				"-DGENERATED_DIR=${CMAKE_BINARY_DIR}/generated"
 				"-DBUILTINS=${CMAKE_SOURCE_DIR}/${SW_FILE_REFLECT_BUILTINS}"
@@ -265,18 +265,18 @@ if(TARGET ReflectionParser)
 				"-DASSET_FIELDS_LIST_NAME=${SW_FILE_ASSET_REFERENCE_FIELDS_LIST}"
 				"-DGEN_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_CPP}"
 				"-DGEN_META_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_META_CPP}"
-				"-DTARGET_ARGS=${swParserTestTargetArgs}"
+				"-DTARGET_ARGS=${parser_test_target_args}"
 				-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunParserFixture.cmake")
-		set_tests_properties(ReflectionParser.${swParserFixtureName} PROPERTIES LABELS nogpu TIMEOUT 120)
+		set_tests_properties(ReflectionParser.${parser_fixture_name} PROPERTIES LABELS nogpu TIMEOUT 120)
 	endforeach()
 	# 도구 입력 — 같은 입력 두 번이면 같은 바이트 · 시각 그대로, 설정 · 템플릿 · 철자 표가 깨지면 0 이 아닌 종료(`ReflectionParser/RunParserToolInputs.cmake`).
-	foreach(swParserToolMode IN ITEMS determinism broken-config broken-templates broken-spelling)
-		add_test(NAME ReflectionParser.ToolInputs.${swParserToolMode}
+	foreach(parser_tool_mode IN ITEMS determinism broken-config broken-templates broken-spelling)
+		add_test(NAME ReflectionParser.ToolInputs.${parser_tool_mode}
 			COMMAND ${CMAKE_COMMAND}
-				"-DMODE=${swParserToolMode}"
+				"-DMODE=${parser_tool_mode}"
 				"-DPARSER=$<TARGET_FILE:ReflectionParser>"
 				"-DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/ValidTypes.h"
-				"-DWORK_DIR=${CMAKE_BINARY_DIR}/Testing/ReflectionParser/ToolInputs.${swParserToolMode}"
+				"-DWORK_DIR=${CMAKE_BINARY_DIR}/Testing/ReflectionParser/ToolInputs.${parser_tool_mode}"
 				"-DSOURCE_ROOT=${CMAKE_SOURCE_DIR}"
 				"-DGENERATED_DIR=${CMAKE_BINARY_DIR}/generated"
 				"-DBUILTINS=${CMAKE_SOURCE_DIR}/${SW_FILE_REFLECT_BUILTINS}"
@@ -284,9 +284,9 @@ if(TARGET ReflectionParser)
 				"-DTEMPLATES=${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}"
 				"-DCONFIG=${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_DEFAULTS}"
 				"-DGEN_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_CPP}"
-				"-DTARGET_ARGS=${swParserTestTargetArgs}"
+				"-DTARGET_ARGS=${parser_test_target_args}"
 				-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunParserToolInputs.cmake")
-		set_tests_properties(ReflectionParser.ToolInputs.${swParserToolMode} PROPERTIES LABELS nogpu TIMEOUT 120)
+		set_tests_properties(ReflectionParser.ToolInputs.${parser_tool_mode} PROPERTIES LABELS nogpu TIMEOUT 120)
 	endforeach()
 	# 틀린 명령줄은 파서를 멈춘다 — 모르는 인자 · 필수 인자 빠짐. 입력을 읽기 전이라 사례 헤더가 필요 없다.
 	add_test(NAME ReflectionParser.RejectsUnknownArgument COMMAND $<TARGET_FILE:ReflectionParser> --no-such-argument)
@@ -295,11 +295,11 @@ if(TARGET ReflectionParser)
 endif()
 
 # 임포트 밖의 모든 테스트가 임포트한 산출물을 요구한다(맨 위 `Import.*`).
-get_property(swAllTest DIRECTORY PROPERTY TESTS)
-list(FILTER swAllTest EXCLUDE REGEX "^Import\.")
-set_tests_properties(${swAllTest} PROPERTIES FIXTURES_REQUIRED ImportedAssets)
-if(swCpuHeavyTest AND TARGET EditorModule)
-	set_tests_properties(Bake.Portraits.DirectX11 Bake.Portraits.DirectX12 Bake.Portraits.Vulkan Bake.Portraits.OpenGL PROPERTIES DEPENDS ${swCpuHeavyTest})
+get_property(all_test DIRECTORY PROPERTY TESTS)
+list(FILTER all_test EXCLUDE REGEX "^Import\.")
+set_tests_properties(${all_test} PROPERTIES FIXTURES_REQUIRED ImportedAssets)
+if(SW_CPU_HEAVY_TEST AND TARGET EditorModule)
+	set_tests_properties(Bake.Portraits.DirectX11 Bake.Portraits.DirectX12 Bake.Portraits.Vulkan Bake.Portraits.OpenGL PROPERTIES DEPENDS ${SW_CPU_HEAVY_TEST})
 endif()
 
 add_subdirectory(Scenario)

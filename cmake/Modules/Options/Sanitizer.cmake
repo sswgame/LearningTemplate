@@ -26,7 +26,7 @@ if(SW_SANITIZER_KIND STREQUAL "thread")
 	target_compile_options(sw_sanitizer INTERFACE -fsanitize=thread -fno-omit-frame-pointer)
 	target_link_options(sw_sanitizer INTERFACE -fsanitize=thread)
 	message(STATUS "[Sanitizer] ThreadSanitizer (GNU/Clang)")
-	list(APPEND sw_flag_libraries sw_sanitizer)
+	list(APPEND SW_FLAG_LIBRARIES sw_sanitizer)
 	return()
 elseif(NOT SW_SANITIZER_KIND STREQUAL "address")
 	message(FATAL_ERROR "[Sanitizer] SW_SANITIZER_KIND 는 address 또는 thread 입니다(받은 값: ${SW_SANITIZER_KIND})")
@@ -41,15 +41,15 @@ target_compile_definitions(sw_sanitizer INTERFACE SW_SANITIZER_ADDRESS=1)
 # 1) 프론트엔드별 sanitizer 플래그
 # clang-cl: Clang ID + MSVC 프론트엔드 → /fsanitize=address (GNU -fsanitize 아님)
 # ------------------------------------------------------------------------------
-set(sw_is_clang_cl FALSE)
+set(SW_IS_CLANG_CL FALSE)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-	set(sw_is_clang_cl TRUE)
+	set(SW_IS_CLANG_CL TRUE)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
-	set(sw_is_clang_cl TRUE)
+	set(SW_IS_CLANG_CL TRUE)
 endif()
 
-if(MSVC OR sw_is_clang_cl)
+if(MSVC OR SW_IS_CLANG_CL)
 	# clang-cl 의 ASan 은 디버그 CRT 를 지원하지 않는다("AddressSanitizer doesn't support linking
 	# with debug runtime libraries yet"). 그래서 Debug 구성이어도 릴리스 CRT(/MD)를 써야 한다.
 	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" CACHE STRING "MSVC runtime library" FORCE)
@@ -71,12 +71,12 @@ if(MSVC OR sw_is_clang_cl)
 	set(VCPKG_APPLOCAL_DEPS OFF CACHE BOOL "ASan: 릴리스 DLL 을 직접 staging 한다" FORCE)
 
 	if(DEFINED _VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
-		file(GLOB sw_asan_dep_dll "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/*.dll")
-		if(sw_asan_dep_dll)
+		file(GLOB SW_ASAN_DEP_DLL "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/*.dll")
+		if(SW_ASAN_DEP_DLL)
 			file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-			file(COPY ${sw_asan_dep_dll} DESTINATION "${CMAKE_BINARY_DIR}/Bin")
-			list(LENGTH sw_asan_dep_dll sw_asan_dep_dll_count)
-			message(STATUS "[Sanitizer] vcpkg 릴리스 DLL ${sw_asan_dep_dll_count}개를 Bin 으로 복사했다")
+			file(COPY ${SW_ASAN_DEP_DLL} DESTINATION "${CMAKE_BINARY_DIR}/Bin")
+			list(LENGTH SW_ASAN_DEP_DLL SW_ASAN_DEP_DLL_COUNT)
+			message(STATUS "[Sanitizer] vcpkg 릴리스 DLL ${SW_ASAN_DEP_DLL_COUNT}개를 Bin 으로 복사했다")
 		endif()
 	endif()
 
@@ -91,18 +91,18 @@ if(MSVC OR sw_is_clang_cl)
 	# 잃는 것은 STL 컨테이너 오버플로 탐지뿐이고, 힙·스택·use-after-free 검사는 그대로다.
 	target_compile_definitions(sw_sanitizer INTERFACE _DISABLE_STL_ANNOTATION)
 
-	if(sw_is_clang_cl)
+	if(SW_IS_CLANG_CL)
 		execute_process(
 			COMMAND "${CMAKE_CXX_COMPILER}" -print-resource-dir
-			OUTPUT_VARIABLE sw_clang_resource_dir
+			OUTPUT_VARIABLE SW_CLANG_RESOURCE_DIR
 			OUTPUT_STRIP_TRAILING_WHITESPACE
 		)
-		set(sw_clang_asan_dir "${sw_clang_resource_dir}/lib/windows")
+		set(SW_CLANG_ASAN_DIR "${SW_CLANG_RESOURCE_DIR}/lib/windows")
 
-		if(EXISTS "${sw_clang_asan_dir}/clang_rt.asan_dynamic-x86_64.lib")
+		if(EXISTS "${SW_CLANG_ASAN_DIR}/clang_rt.asan_dynamic-x86_64.lib")
 			target_link_libraries(sw_sanitizer INTERFACE
-				"${sw_clang_asan_dir}/clang_rt.asan_dynamic-x86_64.lib"
-				"${sw_clang_asan_dir}/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib"
+				"${SW_CLANG_ASAN_DIR}/clang_rt.asan_dynamic-x86_64.lib"
+				"${SW_CLANG_ASAN_DIR}/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib"
 			)
 			# ASan 런타임은 **실행 파일 옆**에 있어야 한다. 실행 파일이 나가는 곳이 두 군데다:
 			#   Bin/        — App/테스트
@@ -110,10 +110,10 @@ if(MSVC OR sw_is_clang_cl)
 			# BuildTools 를 빼먹으면 ASan 빌드가 **빌드 도중에** 죽는다. 코드젠이 빌드 단계에서
 			# ReflectionParser 를 실행하는데, 그게 DLL 을 못 찾아 0xc0000135 로 뜨지 못한다.
 			# Linux ASan 만 돌려 이 경로를 아무도 밟지 않았다.
-			foreach(sw_asan_dest "Bin" "BuildTools")
-				file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/${sw_asan_dest}")
-				file(COPY "${sw_clang_asan_dir}/clang_rt.asan_dynamic-x86_64.dll"
-					DESTINATION "${CMAKE_BINARY_DIR}/${sw_asan_dest}")
+			foreach(SW_ASAN_DEST "Bin" "BuildTools")
+				file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/${SW_ASAN_DEST}")
+				file(COPY "${SW_CLANG_ASAN_DIR}/clang_rt.asan_dynamic-x86_64.dll"
+					DESTINATION "${CMAKE_BINARY_DIR}/${SW_ASAN_DEST}")
 			endforeach()
 		endif()
 	endif()
@@ -131,4 +131,4 @@ else()
 	message(STATUS "[Sanitizer] Address+UBSanitizer (GNU/Clang)")
 endif()
 
-list(APPEND sw_flag_libraries sw_sanitizer)
+list(APPEND SW_FLAG_LIBRARIES sw_sanitizer)

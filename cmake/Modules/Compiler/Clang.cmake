@@ -32,16 +32,16 @@ endif()
 # clang-cl 은 GNU 철자 `-Wall` 을 `-Weverything` 으로 받는다(`clang-cl -### -Wall` 의 출력, LLVM 20.1.8 에서 확인). 두 플랫폼이 같은
 # 경고 집합(`-Wall -Wextra`, GCC.cmake 와 같다)을 쓰도록 clang-cl 에는 `-clang:` 으로 clang 드라이버의 철자를 그대로 넘긴다.
 if(MSVC)
-	set(swWarningBase -clang:-Wall -clang:-Wextra -clang:-Werror=undef)
+	set(warning_base -clang:-Wall -clang:-Wextra -clang:-Werror=undef)
 else()
-	set(swWarningBase -Wall -Wextra -Werror=undef)
+	set(warning_base -Wall -Wextra -Werror=undef)
 endif()
 # -Werror=undef — 정의되지 않은 매크로를 #if 에서 읽으면 조용히 0 이 된다(include 를 빠뜨리면 기능이 꺼진 채 컴파일된다 — profile.trace 명령이 통째로 빠졌다). 경고는 로그에 묻히므로 빌드를 세운다. 켜는 매크로는 늘 정의된 값(0 · 1)으로 쓴다.
 # 서드파티는 이 범위 밖이다 — ThirdParty · vcpkg 헤더는 아래 /external:I(clang-cl) · SYSTEM include 로 들어와 시스템 헤더로 보므로 경고가 나지 않는다.
 
 target_compile_options(sw_compiler_clang INTERFACE
 	# 경고 활성화
-	${swWarningBase}
+	${warning_base}
 	# 실패를 알리는 결과([[nodiscard]])를 버리면 빌드가 선다. 실패할 수 있는 동사(load · save · parse · apply …)는 선언에 [[nodiscard]] 를
 	# 붙이고, 일부러 버릴 때는 `(void)` 와 이유를 쓴다. 경고로 두면 빌드 로그에 한 번 보이고 사라진다.
 	-Werror=unused-result
@@ -86,7 +86,7 @@ if(MSVC)
 		/GR- # RTTI 비활성화로 바이너리 크기 및 vtable 오버헤드 축소
 		/Gw # 전체 프로그램 데이터/가상함수 최적화 지원
 		/Zc:inline # 미사용 인라인 함수 제거로 컴파일 및 링크 가속
-		# 템플릿 지연 파싱을 끈다 — clang-cl 은 MSVC 호환으로 기본이 켜짐이라, 정의 시점에 보이지 않는 이름 · 불완전 형식을 부르는 템플릿이 Windows 에서는 지나가고 Linux clang 에서야 섰다(ReflectValue.h 의 typeFqn, 2026-11-09 ComponentStateStore · OnlineServerKit).
+		# 템플릿 지연 파싱을 끈다 — clang-cl 은 MSVC 호환으로 기본이 켜짐이라, 정의 시점에 보이지 않는 이름 · 불완전 형식을 부르는 템플릿이 Windows 에서는 지나가고 Linux clang 에서야 섰다(ReflectValue.h 의 type_fqn, 2026-11-09 ComponentStateStore · OnlineServerKit).
 		-clang:-fno-delayed-template-parsing
 		-clang:-fmerge-all-constants # 중복된 상수 문자열 및 데이터 병합
 		-clang:-fno-spell-checking # 오타 교정 기능 비활성화로 컴파일 속도 향상
@@ -145,10 +145,10 @@ endif()
 # LLD 는 지금 쓰는 컴파일러와 같은 LLVM 에서 찾는다(링크면 가리키는 실제 폴더도). 없으면 구성을 세운다 — 예전에는 못 찾아도
 # 지나가서 링크 단계에서야 "ld.lld 없음" 으로 섰다.
 # ------------------------------------------------------------------------------
-get_filename_component(swClangDir "${CMAKE_CXX_COMPILER}" DIRECTORY)
-get_filename_component(swClangRealPath "${CMAKE_CXX_COMPILER}" REALPATH)
-get_filename_component(swClangRealDir "${swClangRealPath}" DIRECTORY)
-find_program(SW_LLD_LINK_EXE NAMES lld-link ld.lld HINTS "${swClangDir}" "${swClangRealDir}" REQUIRED)
+get_filename_component(clang_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+get_filename_component(clang_real_path "${CMAKE_CXX_COMPILER}" REALPATH)
+get_filename_component(clang_real_dir "${clang_real_path}" DIRECTORY)
+find_program(SW_LLD_LINK_EXE NAMES lld-link ld.lld HINTS "${clang_dir}" "${clang_real_dir}" REQUIRED)
 message(STATUS "[Clang.cmake] LLD linker: ${SW_LLD_LINK_EXE}")
 
 if(MSVC)
@@ -169,4 +169,4 @@ endif()
 
 target_compile_definitions(sw_compiler_clang INTERFACE SW_COMPILER_CLANG)
 
-list(APPEND sw_flag_libraries sw_compiler_clang)
+list(APPEND SW_FLAG_LIBRARIES sw_compiler_clang)

@@ -18,14 +18,14 @@
 # `BuildTargetImageTest` 가 바이트로 확인한다. 정적 초기화 객체가 글을 읽어(volatile) 링커가 Shipping 정적 링크 · 섹션 GC 에서 버리지 못한다
 # (Shipping 은 모듈을 통째로 링크한다 — `sw_link_whole_archive`). 서버 실행 파일 자신의 표식은 `Source/Server/ServerApp.cpp` 에 있다.
 function(sw_add_server_only_marker TARGET_NAME MODULE_NAME)
-	get_property(swTargets GLOBAL PROPERTY SW_MODULE_${MODULE_NAME}_TARGETS)
-	if(NOT swTargets STREQUAL "Server")
+	get_property(targets GLOBAL PROPERTY SW_MODULE_${MODULE_NAME}_TARGETS)
+	if(NOT targets STREQUAL "Server")
 		return()
 	endif()
 	# 파일 이름에 타깃 이름을 넣지 않는다 — 빌드 폴더 밖 소스의 오브젝트 경로는 "<타깃 폴더>/<해시>/<파일 이름>.obj" 라
 	# 긴 타깃(`GF_Server_ServerDirectory`)과 긴 프리셋 이름이 CMAKE_OBJECT_PATH_MAX(250)를 넘겼다.
-	set(swMarkerSource "${CMAKE_BINARY_DIR}/generated/moduletarget/${TARGET_NAME}/ServerOnlyMarker.cpp")
-	file(CONFIGURE OUTPUT "${swMarkerSource}" CONTENT
+	set(marker_source "${CMAKE_BINARY_DIR}/generated/moduletarget/${TARGET_NAME}/ServerOnlyMarker.cpp")
+	file(CONFIGURE OUTPUT "${marker_source}" CONTENT
 "// 생성 파일 - sw_add_server_only_marker (cmake/Engine/ModuleRegistry.cmake). 고치지 마십시오.
 // 서버 전용 모듈의 표식입니다. 클라이언트 산출물에 이 글이 있으면 서버 코드가 새어 든 것입니다(BuildTargetImageTest).
 namespace
@@ -42,26 +42,26 @@ namespace
     const ServerOnlyMarker_@TARGET_NAME@ s_serverOnlyMarker_@TARGET_NAME@{};
 }
 " @ONLY)
-	target_sources(${TARGET_NAME} PRIVATE "${swMarkerSource}")
-	set_source_files_properties("${swMarkerSource}" PROPERTIES SKIP_PRECOMPILE_HEADERS ON SKIP_UNITY_BUILD_INCLUSION ON)
+	target_sources(${TARGET_NAME} PRIVATE "${marker_source}")
+	set_source_files_properties("${marker_source}" PROPERTIES SKIP_PRECOMPILE_HEADERS ON SKIP_UNITY_BUILD_INCLUSION ON)
 endfunction()
 
 # MODULE_NAME 은 매니페스트 · ABI 스탬프의 모듈 이름이다(기본 타깃 이름 — 게임은 타깃 `SWGame_<게임>`, 모듈 `SWGame`). 레지스트리에는 타깃 이름이 든다.
 function(sw_register_dynamic_module TARGET_NAME KIND)
 	cmake_parse_arguments(ARG "" "MODULE_NAME" "" ${ARGN})
-	set(swModuleName ${TARGET_NAME})
+	set(module_name ${TARGET_NAME})
 	if(ARG_MODULE_NAME)
-		set(swModuleName ${ARG_MODULE_NAME})
+		set(module_name ${ARG_MODULE_NAME})
 	endif()
 	# 모든 동적 모듈은 매니페스트를 갖는다(없으면 여기서 구성이 선다) — App 이 그것으로 적재 순서를 정한다.
-	sw_is_module_active(${swModuleName} swModuleActive)
-	if(NOT swModuleActive)
+	sw_is_module_active(${module_name} module_active)
+	if(NOT module_active)
 		message(FATAL_ERROR "[Module] ${TARGET_NAME} is registered but its manifest says it is off — the creating function must skip it (sw_skip_inactive_module)")
 	endif()
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES ${TARGET_NAME})
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES_${KIND} ${TARGET_NAME})
-	sw_add_module_engine_stamp(${TARGET_NAME} MODULE_NAME ${swModuleName})
-	sw_add_server_only_marker(${TARGET_NAME} ${swModuleName})
+	sw_add_module_engine_stamp(${TARGET_NAME} MODULE_NAME ${module_name})
+	sw_add_server_only_marker(${TARGET_NAME} ${module_name})
 endfunction()
 
 # 등록된 동적 모듈 중 **실제로 타겟이 있는 것**을 OUT_VAR 에 담습니다.
@@ -72,35 +72,35 @@ function(sw_get_dynamic_modules OUT_VAR)
 	cmake_parse_arguments(ARG "" "" "KINDS" ${ARGN})
 
 	if(ARG_KINDS)
-		set(listRegistered "")
+		set(list_registered "")
 		foreach(kind IN LISTS ARG_KINDS)
-			get_property(listOfKind GLOBAL PROPERTY SW_DYNAMIC_MODULES_${kind})
-			list(APPEND listRegistered ${listOfKind})
+			get_property(list_of_kind GLOBAL PROPERTY SW_DYNAMIC_MODULES_${kind})
+			list(APPEND list_registered ${list_of_kind})
 		endforeach()
 	else()
-		get_property(listRegistered GLOBAL PROPERTY SW_DYNAMIC_MODULES)
+		get_property(list_registered GLOBAL PROPERTY SW_DYNAMIC_MODULES)
 	endif()
 
-	set(listModule "")
-	foreach(mod IN LISTS listRegistered)
+	set(list_module "")
+	foreach(mod IN LISTS list_registered)
 		if(TARGET ${mod})
-			list(APPEND listModule ${mod})
+			list(APPEND list_module ${mod})
 		endif()
 	endforeach()
 
-	if(listModule)
-		list(REMOVE_DUPLICATES listModule)
+	if(list_module)
+		list(REMOVE_DUPLICATES list_module)
 	endif()
 
-	set(${OUT_VAR} "${listModule}" PARENT_SCOPE)
+	set(${OUT_VAR} "${list_module}" PARENT_SCOPE)
 endfunction()
 
 # 레지스트리의 동적 모듈(KINDS 로 고른 것, 생략하면 전부)이 TARGET_NAME 보다 먼저 지어지게 한다 — 런타임에 올리는 것은 링크로 이어지지 않는다.
 function(sw_add_dynamic_module_dependencies TARGET_NAME)
 	cmake_parse_arguments(ARG "" "" "KINDS" ${ARGN})
-	sw_get_dynamic_modules(listModule KINDS ${ARG_KINDS})
-	if(listModule)
-		add_dependencies(${TARGET_NAME} ${listModule})
+	sw_get_dynamic_modules(list_module KINDS ${ARG_KINDS})
+	if(list_module)
+		add_dependencies(${TARGET_NAME} ${list_module})
 	endif()
 endfunction()
 
@@ -113,18 +113,18 @@ endfunction()
 # 리로드 쪽은 스탬프가 바뀌면 모듈마다 mtime 을 견줘 바뀐 것만 올린다.
 # 배포 빌드는 모듈을 정적으로 링크해 동적 모듈 타깃이 없으므로 만들지 않는다.
 function(sw_add_module_build_stamp)
-	sw_get_dynamic_modules(listModule)
-	if(NOT listModule)
+	sw_get_dynamic_modules(list_module)
+	if(NOT list_module)
 		return()
 	endif()
-	set(swStampPath "${CMAKE_BINARY_DIR}/Bin/Modules/${SW_FILE_MODULE_BUILD_STAMP}")
-	add_custom_command(OUTPUT "${swStampPath}"
-		COMMAND "${CMAKE_COMMAND}" "-DSTAMP_PATH=${swStampPath}" -P "${CMAKE_SOURCE_DIR}/cmake/Engine/WriteModuleBuildStamp.cmake"
-		DEPENDS ${listModule}
+	set(stamp_path "${CMAKE_BINARY_DIR}/Bin/Modules/${SW_FILE_MODULE_BUILD_STAMP}")
+	add_custom_command(OUTPUT "${stamp_path}"
+		COMMAND "${CMAKE_COMMAND}" "-DSTAMP_PATH=${stamp_path}" -P "${CMAKE_SOURCE_DIR}/cmake/Engine/WriteModuleBuildStamp.cmake"
+		DEPENDS ${list_module}
 		COMMENT "Module build stamp (live reload signal)"
 		VERBATIM
 	)
-	add_custom_target(ModuleBuildStamp ALL DEPENDS "${swStampPath}")
+	add_custom_target(ModuleBuildStamp ALL DEPENDS "${stamp_path}")
 	set_target_properties(ModuleBuildStamp PROPERTIES FOLDER "Engine/Modules")
 endfunction()
 
@@ -137,39 +137,39 @@ endfunction()
 #
 # 빠진 것이 있으면 **구성이 선다.** 조용히 빠지는 것보다 낫다.
 function(sw_verify_dynamic_module_registry)
-	get_property(listRegistered GLOBAL PROPERTY SW_DYNAMIC_MODULES)
+	get_property(list_registered GLOBAL PROPERTY SW_DYNAMIC_MODULES)
 	# 함께 짓는 게임 팩(`sw_add_game_module`, 활성 게임이 아닌 것)은 App 이 `Bin/Modules` 에서 올리지 않으므로 레지스트리 밖이다.
-	get_property(listGamePackTarget GLOBAL PROPERTY SW_GAME_PACK_TARGETS)
-	list(APPEND listRegistered ${listGamePackTarget})
+	get_property(list_game_pack_target GLOBAL PROPERTY SW_GAME_PACK_TARGETS)
+	list(APPEND list_registered ${list_game_pack_target})
 
 	# 루트부터 훑는다. `Source/` 에서 시작하면 안 된다 — `Source/Editor` · `Source/Engine` 등은
 	# `Source/CMakeLists.txt` 가 아니라 **루트가** 직접 add_subdirectory 하므로 `Source/` 의
 	# SUBDIRECTORIES 에 없다. (처음에 그렇게 짰다가 EditorModule 을 못 잡는 것을 확인했다.)
-	set(listDirectory "${CMAKE_SOURCE_DIR}")
-	set(listMissing "")
+	set(list_directory "${CMAKE_SOURCE_DIR}")
+	set(list_missing "")
 
-	while(listDirectory)
-		list(POP_FRONT listDirectory currentDir)
+	while(list_directory)
+		list(POP_FRONT list_directory current_dir)
 
-		get_property(listSubDir DIRECTORY "${currentDir}" PROPERTY SUBDIRECTORIES)
-		list(APPEND listDirectory ${listSubDir})
+		get_property(list_sub_dir DIRECTORY "${current_dir}" PROPERTY SUBDIRECTORIES)
+		list(APPEND list_directory ${list_sub_dir})
 
-		get_property(listTarget DIRECTORY "${currentDir}" PROPERTY BUILDSYSTEM_TARGETS)
-		foreach(targetName IN LISTS listTarget)
-			get_target_property(targetType ${targetName} TYPE)
-			if(NOT targetType STREQUAL "MODULE_LIBRARY")
+		get_property(list_target DIRECTORY "${current_dir}" PROPERTY BUILDSYSTEM_TARGETS)
+		foreach(target_name IN LISTS list_target)
+			get_target_property(target_type ${target_name} TYPE)
+			if(NOT target_type STREQUAL "MODULE_LIBRARY")
 				continue()
 			endif()
 
-			if(NOT targetName IN_LIST listRegistered)
-				list(APPEND listMissing ${targetName})
+			if(NOT target_name IN_LIST list_registered)
+				list(APPEND list_missing ${target_name})
 			endif()
 		endforeach()
 	endwhile()
 
-	if(listMissing)
+	if(list_missing)
 		message(FATAL_ERROR
-			"동적 모듈이 레지스트리에 없습니다: ${listMissing}
+			"동적 모듈이 레지스트리에 없습니다: ${list_missing}
 "
 			"  타겟을 만드는 자리에서 sw_register_dynamic_module(<타겟> <종류>) 를 부르세요.
 "

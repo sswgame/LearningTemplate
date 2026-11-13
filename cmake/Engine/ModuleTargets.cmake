@@ -26,13 +26,13 @@ function(sw_stage_module_runtime_dlls TARGET_NAME)
 endfunction()
 
 function(sw_set_module_bin_output TARGET_NAME KIND)
-	set(outputDir "${CMAKE_BINARY_DIR}/Bin/Modules")
+	set(output_dir "${CMAKE_BINARY_DIR}/Bin/Modules")
 	if(KIND STREQUAL "gameframework")
-		set(outputDir "${CMAKE_BINARY_DIR}/Bin")
+		set(output_dir "${CMAKE_BINARY_DIR}/Bin")
 	endif()
 	set_target_properties(${TARGET_NAME} PROPERTIES
-		RUNTIME_OUTPUT_DIRECTORY "${outputDir}$<0:>"
-		LIBRARY_OUTPUT_DIRECTORY "${outputDir}$<0:>"
+		RUNTIME_OUTPUT_DIRECTORY "${output_dir}$<0:>"
+		LIBRARY_OUTPUT_DIRECTORY "${output_dir}$<0:>"
 	)
 endfunction()
 
@@ -43,26 +43,26 @@ function(sw_configure_kit_module_compile TARGET_NAME LIB_TYPE LOG_TAG MODULE_NAM
 	if(DEFINITIONS)
 		target_compile_definitions(${TARGET_NAME} PRIVATE ${DEFINITIONS})
 	endif()
-	set(listTargetDefsOption LOG_TAG "${LOG_TAG}" REGISTRAR_MODULE "${MODULE_NAME}")
-	set(listPCHDefinition "")
+	set(list_target_defs_option LOG_TAG "${LOG_TAG}" REGISTRAR_MODULE "${MODULE_NAME}")
+	set(list_pch_definition "")
 	if(LIB_TYPE STREQUAL "SHARED")
 		# 키트 TU 는 `SW_GF_EXPORTS` 를 주지 않는다 — 주면 include 한 Base 선언까지 dllexport 로 풀린다(C-3).
 		# 서버 키트(`GF_Server_<X>`)는 `SW_KIT_SERVER_EXPORTS`, 클라이언트 키트(`GF_Client_<X>`)는 `SW_KIT_CLIENT_EXPORTS`, 그 밖은 `SW_KIT_EXPORTS` 만 내보낸다 — 서버 · 클라이언트 키트가 include 한 런타임 키트 헤더(`SW_KIT_API`)는
 		# dllimport 로 남아 런타임 키트 클래스를 다시 내보내지 않는다. `SW_KIT_IMPORTS` 는 모든 키트 TU 가 가진다(자기 내보내기 매크로가 먼저 읽힌다) —
 		# 키트 PCH 하나를 나눠 쓰려면 명령줄 정의가 같아야 한다.
 		if(TARGET_NAME MATCHES "^GF_Server_")
-			list(APPEND listTargetDefsOption KIT_SERVER_EXPORTS)
+			list(APPEND list_target_defs_option KIT_SERVER_EXPORTS)
 		elseif(TARGET_NAME MATCHES "^GF_Client_")
-			list(APPEND listTargetDefsOption KIT_CLIENT_EXPORTS)
+			list(APPEND list_target_defs_option KIT_CLIENT_EXPORTS)
 		else()
-			list(APPEND listTargetDefsOption KIT_EXPORTS)
+			list(APPEND list_target_defs_option KIT_EXPORTS)
 		endif()
 		target_compile_definitions(${TARGET_NAME} PUBLIC SW_KIT_IMPORTS)
-		set(listPCHDefinition DEFINITIONS SW_KIT_IMPORTS)
+		set(list_pch_definition DEFINITIONS SW_KIT_IMPORTS)
 	endif()
-	sw_set_target_defs_header(${TARGET_NAME} ${listTargetDefsOption})
+	sw_set_target_defs_header(${TARGET_NAME} ${list_target_defs_option})
 	sw_add_shared_pch_owner(sw_kit_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
-		LINK GameFramework Engine sw_public_source_includes sw_global_options ${listPCHDefinition})
+		LINK GameFramework Engine sw_public_source_includes sw_global_options ${list_pch_definition})
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -94,9 +94,9 @@ function(sw_add_module_library TARGET_NAME)
 		message(FATAL_ERROR "sw_add_module_library(${TARGET_NAME}): DEV_TYPE 는 SHARED | MODULE 이다 (받은 값: ${ARG_DEV_TYPE})")
 	endif()
 	if(SW_SHIPPING_BUILD)
-		set(libType STATIC)
+		set(lib_type STATIC)
 	else()
-		set(libType ${ARG_DEV_TYPE})
+		set(lib_type ${ARG_DEV_TYPE})
 	endif()
 	if(NOT ARG_MODULE_NAME)
 		set(ARG_MODULE_NAME ${TARGET_NAME})
@@ -105,25 +105,25 @@ function(sw_add_module_library TARGET_NAME)
 		set(ARG_CONTENT_OWNER ${ARG_MODULE_NAME})
 	endif()
 	# 게임 팩끼리 PCH 하나(`sw_game_pch`)를 나눠 쓴다 — 명령줄 정의가 같아야 하므로 Dev · clang-cl · PCH 켬일 때만(키트의 `sw_kit_pch` 와 같은 장치).
-	set(bShareGamePCH OFF)
-	if(ARG_KIND STREQUAL "game" AND SW_ENABLE_PCH AND MSVC AND NOT libType STREQUAL "STATIC")
-		set(bShareGamePCH ON)
+	set(share_game_pch OFF)
+	if(ARG_KIND STREQUAL "game" AND SW_ENABLE_PCH AND MSVC AND NOT lib_type STREQUAL "STATIC")
+		set(share_game_pch ON)
 	endif()
 
 	# `Bin/Modules` 에 가는 모듈은 vcpkg applocal 을 끄고(이 함수 범위만) 서드파티 DLL 을 `Bin` 으로 모은다(`sw_stage_module_runtime_dlls`).
-	set(bStageRuntimeDLLs OFF)
-	if(VCPKG_APPLOCAL_DEPS AND NOT libType STREQUAL "STATIC" AND NOT ARG_KIND STREQUAL "gameframework")
+	set(stage_runtime_dlls OFF)
+	if(VCPKG_APPLOCAL_DEPS AND NOT lib_type STREQUAL "STATIC" AND NOT ARG_KIND STREQUAL "gameframework")
 		set(VCPKG_APPLOCAL_DEPS OFF)
-		set(bStageRuntimeDLLs ON)
+		set(stage_runtime_dlls ON)
 	endif()
 	# 개발 전용 소스(단위 테스트 · 개발 명령)는 배포 구성이 짓지 않는다(GameFramework · 키트 · 게임 · 에디터 확장 모두).
 	if(SW_SHIPPING_BUILD)
 		sw_remove_excluded_sources(ARG_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 	endif()
-	add_library(${TARGET_NAME} ${libType} ${ARG_SOURCES})
+	add_library(${TARGET_NAME} ${lib_type} ${ARG_SOURCES})
 	sw_require_deterministic_mark_for_rollback(${TARGET_NAME} ${ARG_SOURCES})
 	sw_keep_import_library_if_unchanged(${TARGET_NAME})
-	if(bStageRuntimeDLLs)
+	if(stage_runtime_dlls)
 		sw_stage_module_runtime_dlls(${TARGET_NAME})
 	endif()
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "${ARG_FOLDER}")
@@ -139,27 +139,27 @@ function(sw_add_module_library TARGET_NAME)
 		target_link_libraries(${TARGET_NAME} PUBLIC ${ARG_LINK_PUBLIC})
 	endif()
 	target_link_libraries(${TARGET_NAME} PRIVATE ${ARG_LINK_PRIVATE} sw_global_options)
-	set(listIdentityDefinition "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" "SW_REGISTRAR_MODULE=\"${ARG_MODULE_NAME}\"")
+	set(list_identity_definition "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" "SW_REGISTRAR_MODULE=\"${ARG_MODULE_NAME}\"")
 	if(ARG_KIND STREQUAL "kit")
-		sw_configure_kit_module_compile(${TARGET_NAME} ${libType} "${ARG_LOG_TAG}" ${ARG_MODULE_NAME} "${ARG_DEFINITIONS}")
-	elseif(bShareGamePCH)
+		sw_configure_kit_module_compile(${TARGET_NAME} ${lib_type} "${ARG_LOG_TAG}" ${ARG_MODULE_NAME} "${ARG_DEFINITIONS}")
+	elseif(share_game_pch)
 		# 자동 정의 `<타깃>_EXPORTS`(`SWGame_<게임>_EXPORTS`)는 게임마다 달라 PCH 를 나눌 수 없고 아무도 쓰지 않는다.
 		set_target_properties(${TARGET_NAME} PROPERTIES DEFINE_SYMBOL "")
 		# 키트를 링크하는 게임 모듈은 키트 타깃의 PUBLIC `SW_KIT_IMPORTS` 를 물려받는다. 게임 PCH 와 게임 TU 의 명령줄 정의가 같아야
 		# 하므로 모든 게임이 이 정의를 직접 가지고 PCH 소유자도 같게 가진다(키트가 없는 게임에도 해롭지 않다. 키트 헤더만 읽는다).
 		# 게임 모듈 이름은 모두 SWGame 이라 등록자 이름(`SW_REGISTRAR_MODULE`)도 PCH 소유자와 같다.
-		target_compile_definitions(${TARGET_NAME} PRIVATE ${listIdentityDefinition} SW_KIT_IMPORTS ${ARG_DEFINITIONS})
-		sw_configure_dll_exports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
+		target_compile_definitions(${TARGET_NAME} PRIVATE ${list_identity_definition} SW_KIT_IMPORTS ${ARG_DEFINITIONS})
+		sw_configure_dll_exports(${TARGET_NAME} ${lib_type} ${ARG_EXPORTS})
 		sw_add_shared_pch_owner(sw_game_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
 			LINK Engine ModuleAPI GameFramework sw_global_options
-			DEFINITIONS ${listIdentityDefinition} SW_MODULE_EXPORTS SW_KIT_IMPORTS ${ARG_DEFINITIONS})
+			DEFINITIONS ${list_identity_definition} SW_MODULE_EXPORTS SW_KIT_IMPORTS ${ARG_DEFINITIONS})
 	else()
-		target_compile_definitions(${TARGET_NAME} PRIVATE ${listIdentityDefinition} ${ARG_DEFINITIONS})
+		target_compile_definitions(${TARGET_NAME} PRIVATE ${list_identity_definition} ${ARG_DEFINITIONS})
 		sw_configure_pch(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
-		sw_configure_dll_exports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
+		sw_configure_dll_exports(${TARGET_NAME} ${lib_type} ${ARG_EXPORTS})
 	endif()
 
-	if(NOT libType STREQUAL "STATIC")
+	if(NOT lib_type STREQUAL "STATIC")
 		sw_set_module_bin_output(${TARGET_NAME} ${ARG_KIND})
 	endif()
 
@@ -171,11 +171,11 @@ function(sw_add_module_library TARGET_NAME)
 
 	if(NOT ARG_NO_REFLECTION)
 		# 게임 모듈의 타입은 다른 모듈이 링크하지 않는다. 타입을 내보내는 매크로도 없다(`GameModuleExports.h` 는 C-ABI 진입점만 만든다).
-		set(listReflectionOption "")
+		set(list_reflection_option "")
 		if(ARG_KIND STREQUAL "game")
-			set(listReflectionOption MODULE_LOCAL)
+			set(list_reflection_option MODULE_LOCAL)
 		endif()
-		sw_add_reflection_step(${TARGET_NAME} ${listReflectionOption}
+		sw_add_reflection_step(${TARGET_NAME} ${list_reflection_option}
 			MODULE ${ARG_MODULE_NAME}
 			CONTENT_OWNER ${ARG_CONTENT_OWNER}
 			HEADERS ${ARG_REFLECTION_HEADERS}
@@ -186,7 +186,7 @@ function(sw_add_module_library TARGET_NAME)
 
 	if(ARG_KIND STREQUAL "kit")
 		sw_use_shared_pch(${TARGET_NAME} sw_kit_pch)   # 소스(리플렉션 산출물 포함)가 다 붙은 뒤
-	elseif(bShareGamePCH)
+	elseif(share_game_pch)
 		sw_use_shared_pch(${TARGET_NAME} sw_game_pch)
 	endif()
 endfunction()
@@ -213,24 +213,24 @@ function(sw_add_module_part PART_NAME)
 		message(FATAL_ERROR "sw_add_module_part(${PART_NAME}): SOURCES is empty")
 	endif()
 	add_library(${PART_NAME} OBJECT ${ARG_SOURCES})
-	get_target_property(ownerFolder ${ARG_OWNER} FOLDER)
+	get_target_property(owner_folder ${ARG_OWNER} FOLDER)
 	# 부분의 오브젝트는 모듈 라이브러리에 들어가므로 이미지와 같은 코드 모델로 짓는다. CMake 는 SHARED · MODULE 자신에게만 PIC 를 붙이고
 	# 거기 넣는 OBJECT 라이브러리에는 붙이지 않는다 — 빠지면 ELF 링크가 `R_X86_64_PC32 ... recompile with -fPIC` 로 멈춘다(COFF 인 Windows 는 무관).
-	get_target_property(ownerType ${ARG_OWNER} TYPE)
+	get_target_property(owner_type ${ARG_OWNER} TYPE)
 	# 플랫폼이 전체를 PIC 로 짓게 했으면(Android — 앱이 공유 라이브러리) 정적 모듈의 부분도 따른다.
-	if(ownerType MATCHES "^(SHARED|MODULE)_LIBRARY$" OR CMAKE_POSITION_INDEPENDENT_CODE)
-		set(bPartPic ON)
+	if(owner_type MATCHES "^(SHARED|MODULE)_LIBRARY$" OR CMAKE_POSITION_INDEPENDENT_CODE)
+		set(part_pic ON)
 	else()
-		set(bPartPic OFF)
+		set(part_pic OFF)
 	endif()
-	set_target_properties(${PART_NAME} PROPERTIES FOLDER "${ownerFolder}" POSITION_INDEPENDENT_CODE ${bPartPic})
+	set_target_properties(${PART_NAME} PROPERTIES FOLDER "${owner_folder}" POSITION_INDEPENDENT_CODE ${part_pic})
 	target_link_libraries(${PART_NAME} PRIVATE ${ARG_LINK} sw_global_options)
 	# 생성식(`$<TARGET_PROPERTY:…>`)으로 받으면 모듈이 링크한 라이브러리의 사용 요구까지 따라와(imgui include 자리) 경계가 사라진다.
 	# 구성 때 모듈 자신의 값만 읽는다.
 	foreach(property COMPILE_DEFINITIONS COMPILE_OPTIONS INCLUDE_DIRECTORIES)
-		get_target_property(listOwnerValue ${ARG_OWNER} ${property})
-		if(listOwnerValue)
-			set_property(TARGET ${PART_NAME} APPEND PROPERTY ${property} ${listOwnerValue})
+		get_target_property(list_owner_value ${ARG_OWNER} ${property})
+		if(list_owner_value)
+			set_property(TARGET ${PART_NAME} APPEND PROPERTY ${property} ${list_owner_value})
 		endif()
 	endforeach()
 	if(TARGET ${ARG_OWNER}_ReflectionGen)
@@ -245,21 +245,21 @@ endfunction()
 # RHI 그래픽스 백엔드 MODULE — 표(CookContract.json rhi_backends)의 이름 하나를 받는다. Dev 만 짓는다(배포는 Source/Engine/CMakeLists.txt 가
 # 백엔드 하나를 Engine 에 넣는다).
 function(sw_add_rhi_backend_module BACKEND_NAME)
-	set(moduleName ${SW_RHI_BACKEND_${BACKEND_NAME}_MODULE})
-	sw_get_rhi_backend_sources(${BACKEND_NAME} listDeviceSource)
-	sw_skip_inactive_module(${moduleName} swSkip)
-	if(swSkip)
+	set(module_name ${SW_RHI_BACKEND_${BACKEND_NAME}_MODULE})
+	sw_get_rhi_backend_sources(${BACKEND_NAME} list_device_source)
+	sw_skip_inactive_module(${module_name} skip)
+	if(skip)
 		# 장치 소스는 모듈 폴더 밖(Graphics/RHI/<폴더>)에 있다 — 그것도 이 구성이 짓지 않는다.
-		sw_declare_excluded_sources(${listDeviceSource})
+		sw_declare_excluded_sources(${list_device_source})
 		return()
 	endif()
-	sw_add_module_library(${moduleName}
+	sw_add_module_library(${module_name}
 		KIND rhi
 		DEV_TYPE MODULE
 		EXPORTS MODULE
 		LOG_TAG "RHI"
 		FOLDER "Source/Engine/Graphics/RHI"
-		SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/ModuleEntry.cpp" ${listDeviceSource}
+		SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/ModuleEntry.cpp" ${list_device_source}
 		LINK_PRIVATE Engine ${SW_RHI_BACKEND_${BACKEND_NAME}_GRAPHICS_LIBS} sw_third_party_includes
 		DEFINITIONS SW_ENGINE_INTERNAL
 		NO_REFLECTION
@@ -269,20 +269,20 @@ endfunction()
 # GameFramework 장르 키트 — 폴더의 소스 전부. 리플렉션 헤더는 폴더를 재귀로 훑는다(키트 루트의 *.h 만 모으면 하위 폴더의 REFLECT() 가 조용히 빠진다).
 function(sw_add_game_framework_kit KIT_NAME)
 	# 꺼진 키트(프로젝트가 껐거나 이 플랫폼 · 구성에 없는 것)는 짓지 않는다 — 매니페스트(`<키트>.module.json`)가 정한다.
-	sw_skip_inactive_module(${KIT_NAME} swSkip)
-	if(swSkip)
+	sw_skip_inactive_module(${KIT_NAME} skip)
+	if(skip)
 		return()
 	endif()
-	sw_glob_source_tree(listKitSource RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
+	sw_glob_source_tree(list_kit_source RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 	# 키트의 에디터 확장은 Plugin/Editor/<이름>/ 의 별도 모듈이다(GF_EditorPlugin_<이름>) — 키트 DLL(배포본 포함)에 섞지 않는다. 게임의 Editor/ 도 같다.
-	list(FILTER listKitSource EXCLUDE REGEX "/Editor/")
+	list(FILTER list_kit_source EXCLUDE REGEX "/Editor/")
 	sw_add_module_library(${KIT_NAME}
 		KIND kit
 		DEV_TYPE SHARED
 		EXPORTS GF
 		LOG_TAG "${KIT_NAME}"
 		FOLDER "Source/GameFramework/Kits"
-		SOURCES ${listKitSource}
+		SOURCES ${list_kit_source}
 		LINK_PUBLIC GameFramework Engine sw_public_source_includes
 		REFLECTION_EXCLUDE "/Editor/"
 	)
@@ -291,8 +291,8 @@ function(sw_add_game_framework_kit KIT_NAME)
 	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor/CMakeLists.txt")
 		add_subdirectory(Editor)
 	else()
-		get_filename_component(kitFolderName "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
-		if(kitFolderName STREQUAL "Runtime" AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../Editor/CMakeLists.txt")
+		get_filename_component(kit_folder_name "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
+		if(kit_folder_name STREQUAL "Runtime" AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../Editor/CMakeLists.txt")
 			add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../Editor" "${CMAKE_CURRENT_BINARY_DIR}/Editor")
 		endif()
 	endif()
@@ -303,8 +303,8 @@ endfunction()
 # (`ModuleShadowCopy::writeShadowCopy`). 그래서 의존은 매니페스트에 있어야 한다(없으면 로드가 거절된다).
 function(sw_link_runtime_kit KIT_NAME RUNTIME_KIT_NAME)
 	# 링크는 매니페스트 의존이어야 한다 — 키트 폴더를 의존 순서로 들어가므로(Kits/CMakeLists.txt) 그래야 런타임 키트 타깃이 먼저 선다.
-	get_property(listDependency GLOBAL PROPERTY SW_MODULE_${KIT_NAME}_DEPENDENCIES)
-	if(NOT RUNTIME_KIT_NAME IN_LIST listDependency)
+	get_property(list_dependency GLOBAL PROPERTY SW_MODULE_${KIT_NAME}_DEPENDENCIES)
+	if(NOT RUNTIME_KIT_NAME IN_LIST list_dependency)
 		message(FATAL_ERROR "sw_link_runtime_kit: ${KIT_NAME}.module.json must list ${RUNTIME_KIT_NAME} in _listDependency")
 	endif()
 	if(NOT TARGET ${KIT_NAME} OR NOT TARGET ${RUNTIME_KIT_NAME})
@@ -326,81 +326,81 @@ endfunction()
 # 엔진 · GameFramework · 키트는 모든 게임이 같은 타깃을 링크하므로 한 번만 컴파일되고, 게임끼리 PCH 하나(`sw_game_pch`)를 나눠 쓴다.
 # ------------------------------------------------------------------------------
 function(sw_add_game_module MODULE_NAME)
-	get_filename_component(gameName "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
-	set(targetName "${MODULE_NAME}_${gameName}")
-	set(bActiveGame OFF)
-	if(gameName STREQUAL SW_ACTIVE_GAME)
-		set(bActiveGame ON)
+	get_filename_component(game_name "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
+	set(target_name "${MODULE_NAME}_${game_name}")
+	set(active_game OFF)
+	if(game_name STREQUAL SW_ACTIVE_GAME)
+		set(active_game ON)
 	endif()
 
-	if(bActiveGame)
-		sw_get_module_dependencies_of_kind(${MODULE_NAME} Kit listKit)
-		set(listRegistryOption "")
+	if(active_game)
+		sw_get_module_dependencies_of_kind(${MODULE_NAME} Kit list_kit)
+		set(list_registry_option "")
 	else()
-		get_property(listDependency GLOBAL PROPERTY SW_GAME_PACK_${gameName}_DEPENDENCIES)
-		get_property(listModuleName GLOBAL PROPERTY SW_MODULE_NAMES)
-		set(listKit "")
-		foreach(dependency IN LISTS listDependency)
-			if(NOT dependency IN_LIST listModuleName)
-				message(FATAL_ERROR "[Games] ${gameName}: ${MODULE_NAME}.module.json depends on '${dependency}', which has no manifest (missing module)")
+		get_property(list_dependency GLOBAL PROPERTY SW_GAME_PACK_${game_name}_DEPENDENCIES)
+		get_property(list_module_name GLOBAL PROPERTY SW_MODULE_NAMES)
+		set(list_kit "")
+		foreach(dependency IN LISTS list_dependency)
+			if(NOT dependency IN_LIST list_module_name)
+				message(FATAL_ERROR "[Games] ${game_name}: ${MODULE_NAME}.module.json depends on '${dependency}', which has no manifest (missing module)")
 			endif()
-			get_property(dependencyKind GLOBAL PROPERTY SW_MODULE_${dependency}_KIND)
-			get_property(dependencyActive GLOBAL PROPERTY SW_MODULE_${dependency}_ACTIVE)
-			if(NOT dependencyActive)
-				get_property(dependencyReason GLOBAL PROPERTY SW_MODULE_${dependency}_REASON)
-				message(FATAL_ERROR "[Games] ${gameName}: ${MODULE_NAME}.module.json depends on '${dependency}', which is ${dependencyReason}")
+			get_property(dependency_kind GLOBAL PROPERTY SW_MODULE_${dependency}_KIND)
+			get_property(dependency_active GLOBAL PROPERTY SW_MODULE_${dependency}_ACTIVE)
+			if(NOT dependency_active)
+				get_property(dependency_reason GLOBAL PROPERTY SW_MODULE_${dependency}_REASON)
+				message(FATAL_ERROR "[Games] ${game_name}: ${MODULE_NAME}.module.json depends on '${dependency}', which is ${dependency_reason}")
 			endif()
-			if(dependencyKind STREQUAL "Kit")
-				list(APPEND listKit ${dependency})
+			if(dependency_kind STREQUAL "Kit")
+				list(APPEND list_kit ${dependency})
 			endif()
 		endforeach()
-		set(listRegistryOption NO_REGISTRY)
+		set(list_registry_option NO_REGISTRY)
 	endif()
 
-	sw_glob_source_tree(listGameSource RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
+	sw_glob_source_tree(list_game_source RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 	# 게임의 에디터 확장(Editor/)은 따로 짓는 모듈이다(SWGameEditor).
-	list(FILTER listGameSource EXCLUDE REGEX "/Editor/")
+	list(FILTER list_game_source EXCLUDE REGEX "/Editor/")
 	# 게임의 클라이언트 전용 소스(Client/ — 그리는 벤치 · UI 시연)는 전용 서버가 짓지 않는다(cmake/Engine/ExcludedSources.cmake).
 	# 게임의 서버 전용 소스(Server/)는 클라이언트 구성이 짓지 않는다.
 	if(SW_TARGET_TYPE STREQUAL "Server")
-		sw_remove_excluded_sources(listGameSource ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
+		sw_remove_excluded_sources(list_game_source ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
 	elseif(SW_TARGET_TYPE STREQUAL "Client")
-		sw_remove_excluded_sources(listGameSource ${SW_SERVER_ONLY_SOURCE_PATTERNS})
+		sw_remove_excluded_sources(list_game_source ${SW_SERVER_ONLY_SOURCE_PATTERNS})
 	endif()
-	sw_add_module_library(${targetName}
+	sw_add_module_library(${target_name}
 		KIND game
 		DEV_TYPE MODULE
 		EXPORTS MODULE
 		LOG_TAG "Game"
 		FOLDER "Source/Games"
-		SOURCES ${listGameSource}
-		LINK_PRIVATE Engine ModuleAPI GameFramework ${listKit}
+		SOURCES ${list_game_source}
+		LINK_PRIVATE Engine ModuleAPI GameFramework ${list_kit}
 		REFLECTION_EXCLUDE "/Editor/"
 		MODULE_NAME ${MODULE_NAME}
-		CONTENT_OWNER "game:${gameName}"
-		${listRegistryOption}
+		CONTENT_OWNER "game:${game_name}"
+		${list_registry_option}
 	)
 
-	if(bActiveGame)
-		set_property(GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET ${targetName})
+	if(active_game)
+		set_property(GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET ${target_name})
 		if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor/CMakeLists.txt")
 			add_subdirectory(Editor)
 		endif()
 		return()
 	endif()
 
-	set(outputDir "${CMAKE_BINARY_DIR}/Bin/${SW_DIR_BIN_GAMES}/${gameName}")
-	set(symbolDir "${CMAKE_BINARY_DIR}/Bin/Symbols/${SW_DIR_BIN_GAMES}/${gameName}")
-	configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${MODULE_NAME}.module.json" "${outputDir}/${MODULE_NAME}.module.json" COPYONLY)
-	set_target_properties(${targetName} PROPERTIES
-		RUNTIME_OUTPUT_DIRECTORY "${outputDir}$<0:>"
-		LIBRARY_OUTPUT_DIRECTORY "${outputDir}$<0:>"
-		PDB_OUTPUT_DIRECTORY "${symbolDir}"
-		PDB_OUTPUT_DIRECTORY_DEBUG "${symbolDir}"
-		PDB_OUTPUT_DIRECTORY_RELEASE "${symbolDir}"
+	set(output_dir "${CMAKE_BINARY_DIR}/Bin/${SW_DIR_BIN_GAMES}/${game_name}")
+	set(symbol_dir "${CMAKE_BINARY_DIR}/Bin/Symbols/${SW_DIR_BIN_GAMES}/${game_name}")
+	configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${MODULE_NAME}.module.json" "${output_dir}/${MODULE_NAME}.module.json" COPYONLY)
+	set_target_properties(${target_name} PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY "${output_dir}$<0:>"
+		LIBRARY_OUTPUT_DIRECTORY "${output_dir}$<0:>"
+		PDB_OUTPUT_DIRECTORY "${symbol_dir}"
+		PDB_OUTPUT_DIRECTORY_DEBUG "${symbol_dir}"
+		PDB_OUTPUT_DIRECTORY_RELEASE "${symbol_dir}"
 	)
-	sw_add_module_engine_stamp(${targetName} MODULE_NAME ${MODULE_NAME})
-	set_property(GLOBAL APPEND PROPERTY SW_GAME_PACK_TARGETS ${targetName})
+	sw_add_module_engine_stamp(${target_name} MODULE_NAME ${MODULE_NAME})
+	set_property(GLOBAL APPEND PROPERTY SW_GAME_PACK_TARGETS ${target_name})
 	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor")
 		sw_declare_excluded_directory("${CMAKE_CURRENT_SOURCE_DIR}/Editor")
 	endif()
@@ -416,39 +416,39 @@ endfunction()
 # ------------------------------------------------------------------------------
 function(sw_add_editor_extension TARGET_NAME)
 	cmake_parse_arguments(ARG "" "" "PANEL_VIEW_SOURCES" ${ARGN})
-	sw_glob_source_tree(listExtensionSource RECURSE "*.cpp" "*.h")
-	set(listPanelViewSource "")
-	foreach(viewSource IN LISTS ARG_PANEL_VIEW_SOURCES)
-		set(viewPath "${CMAKE_CURRENT_SOURCE_DIR}/${viewSource}")
-		if(NOT viewPath IN_LIST listExtensionSource)
-			message(FATAL_ERROR "sw_add_editor_extension(${TARGET_NAME}): PANEL_VIEW_SOURCES '${viewSource}' is not a source in ${CMAKE_CURRENT_SOURCE_DIR}")
+	sw_glob_source_tree(list_extension_source RECURSE "*.cpp" "*.h")
+	set(list_panel_view_source "")
+	foreach(view_source IN LISTS ARG_PANEL_VIEW_SOURCES)
+		set(view_path "${CMAKE_CURRENT_SOURCE_DIR}/${view_source}")
+		if(NOT view_path IN_LIST list_extension_source)
+			message(FATAL_ERROR "sw_add_editor_extension(${TARGET_NAME}): PANEL_VIEW_SOURCES '${view_source}' is not a source in ${CMAKE_CURRENT_SOURCE_DIR}")
 		endif()
-		list(APPEND listPanelViewSource "${viewPath}")
+		list(APPEND list_panel_view_source "${view_path}")
 	endforeach()
 	if(SW_SHIPPING_BUILD)
-		sw_declare_excluded_sources(${listExtensionSource})
+		sw_declare_excluded_sources(${list_extension_source})
 		return()
 	endif()
-	sw_skip_inactive_module(${TARGET_NAME} swSkip)
-	if(swSkip)
+	sw_skip_inactive_module(${TARGET_NAME} skip)
+	if(skip)
 		return()
 	endif()
 
 	set(SW_EDITOR_EXTENSION_NAME ${TARGET_NAME})
-	set(binderSource "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}UIBinder.cpp")
-	configure_file("${CMAKE_SOURCE_DIR}/cmake/Engine/EditorExtensionUIBinder.cpp.in" "${binderSource}" @ONLY)
+	set(binder_source "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}UIBinder.cpp")
+	configure_file("${CMAKE_SOURCE_DIR}/cmake/Engine/EditorExtensionUIBinder.cpp.in" "${binder_source}" @ONLY)
 
-	set(listLinkedModule "")
-	get_property(listDependency GLOBAL PROPERTY SW_MODULE_${TARGET_NAME}_DEPENDENCIES)
-	foreach(dependency IN LISTS listDependency)
-		get_property(dependencyKind GLOBAL PROPERTY SW_MODULE_${dependency}_KIND)
-		if(dependencyKind STREQUAL "Kit" OR dependencyKind STREQUAL "GameFramework")
-			list(APPEND listLinkedModule ${dependency})
+	set(list_linked_module "")
+	get_property(list_dependency GLOBAL PROPERTY SW_MODULE_${TARGET_NAME}_DEPENDENCIES)
+	foreach(dependency IN LISTS list_dependency)
+		get_property(dependency_kind GLOBAL PROPERTY SW_MODULE_${dependency}_KIND)
+		if(dependency_kind STREQUAL "Kit" OR dependency_kind STREQUAL "GameFramework")
+			list(APPEND list_linked_module ${dependency})
 		endif()
 	endforeach()
 
-	if(listPanelViewSource)
-		list(REMOVE_ITEM listExtensionSource ${listPanelViewSource}) # View 는 껍데기를 받는 부분이 짓는다(아래)
+	if(list_panel_view_source)
+		list(REMOVE_ITEM list_extension_source ${list_panel_view_source}) # View 는 껍데기를 받는 부분이 짓는다(아래)
 	endif()
 	sw_add_module_library(${TARGET_NAME}
 		KIND editorextension
@@ -456,21 +456,21 @@ function(sw_add_editor_extension TARGET_NAME)
 		EXPORTS MODULE_SHARED
 		LOG_TAG "${TARGET_NAME}"
 		FOLDER "Source/EditorExtensions"
-		SOURCES ${listExtensionSource} "${binderSource}"
-		LINK_PRIVATE EditorModule Engine ModuleAPI ${listLinkedModule} imgui implot imgui_nodeeditor
+		SOURCES ${list_extension_source} "${binder_source}"
+		LINK_PRIVATE EditorModule Engine ModuleAPI ${list_linked_module} imgui implot imgui_nodeeditor
 	)
 	sw_apply_editor_input_ban(${TARGET_NAME}) # 확장 패널도 에디터 코드다 — ImGui 입력은 입력 맵 · EditorInputGUI 로
-	if(listPanelViewSource)
-		get_property(panelViewStubRoot GLOBAL PROPERTY SW_EDITOR_PANEL_VIEW_STUB_ROOT)
-		if(NOT panelViewStubRoot)
+	if(list_panel_view_source)
+		get_property(panel_view_stub_root GLOBAL PROPERTY SW_EDITOR_PANEL_VIEW_STUB_ROOT)
+		if(NOT panel_view_stub_root)
 			message(FATAL_ERROR "sw_add_editor_extension(${TARGET_NAME}): SW_EDITOR_PANEL_VIEW_STUB_ROOT is not set - Source/Editor must be configured first")
 		endif()
 		sw_add_module_part(${TARGET_NAME}PanelView
 			OWNER ${TARGET_NAME}
-			SOURCES ${listPanelViewSource}
-			LINK EditorModule Engine ModuleAPI ${listLinkedModule} imgui implot imgui_nodeeditor
+			SOURCES ${list_panel_view_source}
+			LINK EditorModule Engine ModuleAPI ${list_linked_module} imgui implot imgui_nodeeditor
 		)
-		target_include_directories(${TARGET_NAME}PanelView BEFORE PRIVATE "${panelViewStubRoot}")
+		target_include_directories(${TARGET_NAME}PanelView BEFORE PRIVATE "${panel_view_stub_root}")
 		sw_apply_editor_input_ban(${TARGET_NAME}PanelView)
 	endif()
 	add_dependencies(EditorAll ${TARGET_NAME})
@@ -496,24 +496,24 @@ function(sw_apply_editor_input_ban TARGET_NAME)
 	else()
 		target_compile_options(${TARGET_NAME} PRIVATE -Werror=deprecated-declarations -Werror=macro-redefined)
 	endif()
-	set(guardHeader "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorInputBanConfig.h")
+	set(guard_header "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorInputBanConfig.h")
 	if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-		target_compile_options(${TARGET_NAME} PRIVATE "/FI${guardHeader}")
+		target_compile_options(${TARGET_NAME} PRIVATE "/FI${guard_header}")
 	else()
-		target_compile_options(${TARGET_NAME} PRIVATE "SHELL:-include ${guardHeader}")
+		target_compile_options(${TARGET_NAME} PRIVATE "SHELL:-include ${guard_header}")
 	endif()
-	get_target_property(listSource ${TARGET_NAME} SOURCES)
-	foreach(source IN LISTS listSource)
-		set(adapterMark "")
+	get_target_property(list_source ${TARGET_NAME} SOURCES)
+	foreach(source IN LISTS list_source)
+		set(adapter_mark "")
 		if(source MATCHES "Common/Input/EditorInputGUI\\.cpp$|Common/Backend/ImGuiKeyForward\\.cpp$")
-			set(adapterMark "SW_EDITOR_INPUT_ADAPTER=1")
+			set(adapter_mark "SW_EDITOR_INPUT_ADAPTER=1")
 		elseif(source MATCHES "Common/Widgets/EditorNodeGraph\\.cpp$")
-			set(adapterMark "SW_EDITOR_NODE_GRAPH_ADAPTER=1")
+			set(adapter_mark "SW_EDITOR_NODE_GRAPH_ADAPTER=1")
 		elseif(source MATCHES "Common/Widgets/EditorWidgets\.cpp$")
-			set(adapterMark "SW_EDITOR_WIDGET_ADAPTER=1")
+			set(adapter_mark "SW_EDITOR_WIDGET_ADAPTER=1")
 		endif()
-		if(adapterMark)
-			set_property(SOURCE ${source} TARGET_DIRECTORY ${TARGET_NAME} APPEND PROPERTY COMPILE_DEFINITIONS "${adapterMark}")
+		if(adapter_mark)
+			set_property(SOURCE ${source} TARGET_DIRECTORY ${TARGET_NAME} APPEND PROPERTY COMPILE_DEFINITIONS "${adapter_mark}")
 			set_source_files_properties(${source} TARGET_DIRECTORY ${TARGET_NAME} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON SKIP_PRECOMPILE_HEADERS ON)
 		endif()
 	endforeach()

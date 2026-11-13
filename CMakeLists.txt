@@ -20,8 +20,8 @@ if(SW_USE_VCPKG)
 endif()
 
 project(
-	${sw_workspace_name}
-	VERSION ${sw_project_version}
+	${SW_WORKSPACE_NAME}
+	VERSION ${SW_PROJECT_VERSION}
 	LANGUAGES C CXX
 )
 

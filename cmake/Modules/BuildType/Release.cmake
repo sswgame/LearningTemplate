@@ -8,7 +8,7 @@ target_compile_definitions(sw_build_release INTERFACE
 	$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>,$<CONFIG:MinSizeRel>>:SW_RELEASE>
 )
 
-list(APPEND sw_flag_libraries sw_build_release)
+list(APPEND SW_FLAG_LIBRARIES sw_build_release)
 
 # LTO(IPO)는 **여기서 켜지 않는다.** Shipping 도 CMAKE_BUILD_TYPE 이 Release 라
 # `cmake/Engine/BuildLayout.cmake` 의 IPO 블록이 같은 판정을 하고 켠다 — 두 곳이 각자 `check_ipo_supported` 를

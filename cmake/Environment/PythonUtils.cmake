@@ -20,21 +20,21 @@ include("${CMAKE_CURRENT_LIST_DIR}/HostPath.cmake")
 # ------------------------------------------------------------------------------
 function(sw_execute_python_script SCRIPT_REL)
 	set(options WARN REQUIRED QUIET)
-	set(oneValueArgs OUTPUT_VARIABLE RESULT_VARIABLE WORKING_DIRECTORY)
-	set(multiValueArgs ARGS)
-	cmake_parse_arguments(SW_PY "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+	set(one_value_args OUTPUT_VARIABLE RESULT_VARIABLE WORKING_DIRECTORY)
+	set(multi_value_args ARGS)
+	cmake_parse_arguments(ARG "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
 	if(NOT Python3_Interpreter_FOUND)
-		if(SW_PY_REQUIRED)
+		if(ARG_REQUIRED)
 			message(FATAL_ERROR "[Python] Python3 interpreter required for ${SCRIPT_REL}")
 		endif()
 
-		if(NOT SW_PY_QUIET)
+		if(NOT ARG_QUIET)
 			message(WARNING "[Python] Python3 not found; skipping ${SCRIPT_REL}")
 		endif()
 
-		if(SW_PY_RESULT_VARIABLE)
-			set(${SW_PY_RESULT_VARIABLE} 127 PARENT_SCOPE)
+		if(ARG_RESULT_VARIABLE)
+			set(${ARG_RESULT_VARIABLE} 127 PARENT_SCOPE)
 		endif()
 		return()
 	endif()
@@ -44,31 +44,31 @@ function(sw_execute_python_script SCRIPT_REL)
 	set(script "${SW_ROOT_DIR}/${SCRIPT_REL}")
 
 	if(NOT EXISTS "${script}")
-		if(SW_PY_REQUIRED)
+		if(ARG_REQUIRED)
 			message(FATAL_ERROR "[Python] Script not found: ${script}")
 		endif()
 
-		if(NOT SW_PY_QUIET)
+		if(NOT ARG_QUIET)
 			message(WARNING "[Python] Script not found: ${script}")
 		endif()
 
-		if(SW_PY_RESULT_VARIABLE)
-			set(${SW_PY_RESULT_VARIABLE} 127 PARENT_SCOPE)
+		if(ARG_RESULT_VARIABLE)
+			set(${ARG_RESULT_VARIABLE} 127 PARENT_SCOPE)
 		endif()
 		return()
 	endif()
 
-	set(workDir "${SW_ROOT_DIR}")
+	set(work_dir "${SW_ROOT_DIR}")
 
-	if(SW_PY_WORKING_DIRECTORY)
-		set(workDir "${SW_PY_WORKING_DIRECTORY}")
+	if(ARG_WORKING_DIRECTORY)
+		set(work_dir "${ARG_WORKING_DIRECTORY}")
 	endif()
 
 	# 출력은 UTF-8 로 쓰고(파이썬 UTF-8 모드) UTF-8 로 읽는다 — Windows 의 execute_process 는 기본이 ANSI 코드 페이지(cp949)라 생성기의 한글 오류가 깨져 찍혔다.
-	set(cmd "${Python3_EXECUTABLE}" -X utf8 "${script}" ${SW_PY_ARGS})
+	set(cmd "${Python3_EXECUTABLE}" -X utf8 "${script}" ${ARG_ARGS})
 	execute_process(
 		COMMAND ${cmd}
-		WORKING_DIRECTORY "${workDir}"
+		WORKING_DIRECTORY "${work_dir}"
 		ENCODING UTF-8
 		RESULT_VARIABLE res
 		OUTPUT_VARIABLE out
@@ -77,20 +77,20 @@ function(sw_execute_python_script SCRIPT_REL)
 		ERROR_STRIP_TRAILING_WHITESPACE
 	)
 
-	if(SW_PY_OUTPUT_VARIABLE)
-		set(${SW_PY_OUTPUT_VARIABLE} "${out}" PARENT_SCOPE)
+	if(ARG_OUTPUT_VARIABLE)
+		set(${ARG_OUTPUT_VARIABLE} "${out}" PARENT_SCOPE)
 	endif()
 
-	if(SW_PY_RESULT_VARIABLE)
-		set(${SW_PY_RESULT_VARIABLE} ${res} PARENT_SCOPE)
+	if(ARG_RESULT_VARIABLE)
+		set(${ARG_RESULT_VARIABLE} ${res} PARENT_SCOPE)
 	endif()
 
 	if(NOT res EQUAL 0)
-		if(SW_PY_REQUIRED)
+		if(ARG_REQUIRED)
 			message(FATAL_ERROR "[Python] ${SCRIPT_REL} failed (${res}):\n${out}\n${err}")
-		elseif(SW_PY_WARN)
+		elseif(ARG_WARN)
 			message(WARNING "[Python] ${SCRIPT_REL} exited with ${res}:\n${out}\n${err}")
-		elseif(NOT SW_PY_QUIET)
+		elseif(NOT ARG_QUIET)
 			message(STATUS "[Python] ${SCRIPT_REL} (${res}): ${err}")
 		endif()
 	endif()

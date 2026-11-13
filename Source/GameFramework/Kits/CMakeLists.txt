@@ -7,8 +7,8 @@
 
 # 들어가는 순서는 매니페스트 의존 순서(동점은 이름 순)다 — 서버 키트가 `sw_link_runtime_kit` 으로 런타임 키트 타깃을 링크하므로 런타임 키트가 먼저다
 # (`PythonTest_TestKitBuildOrder` 가 지킨다).
-sw_get_module_directories_of_kind(Kit listKitDirectory)
-foreach(kitDirectory IN LISTS listKitDirectory)
-	file(RELATIVE_PATH kitRelativeDirectory "${CMAKE_CURRENT_SOURCE_DIR}" "${kitDirectory}")
-	add_subdirectory(${kitRelativeDirectory})
+sw_get_module_directories_of_kind(Kit list_kit_directory)
+foreach(kit_directory IN LISTS list_kit_directory)
+	file(RELATIVE_PATH kit_relative_directory "${CMAKE_CURRENT_SOURCE_DIR}" "${kit_directory}")
+	add_subdirectory(${kit_relative_directory})
 endforeach()

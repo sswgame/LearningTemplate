@@ -14,10 +14,10 @@ endif()
 
 # 백엔드 NAME(RHIBackend 열거자 — DirectX12 …)의 장치 소스.
 function(sw_get_rhi_backend_sources NAME OUT_VAR)
-	sw_glob_source_tree(listSource RECURSE
+	sw_glob_source_tree(list_source RECURSE
 		"${CMAKE_SOURCE_DIR}/Source/Engine/Graphics/RHI/${SW_RHI_BACKEND_${NAME}_SOURCE_FOLDER}/*.cpp")
-	list(FILTER listSource EXCLUDE REGEX "/Module/") # 모듈 엔트리는 RHI_* MODULE 이 짓는다 — 배포 정적 링크는 `sw_get_rhi_backend_entry_source` 로 따로 넣는다
-	set(${OUT_VAR} ${listSource} PARENT_SCOPE)
+	list(FILTER list_source EXCLUDE REGEX "/Module/") # 모듈 엔트리는 RHI_* MODULE 이 짓는다 — 배포 정적 링크는 `sw_get_rhi_backend_entry_source` 로 따로 넣는다
+	set(${OUT_VAR} ${list_source} PARENT_SCOPE)
 endfunction()
 
 # 백엔드의 진입 파일(`Module/ModuleEntry.cpp`) — 배포 정적 링크에서는 같은 매크로가 정적 등록자가 된다(`SW_IMPLEMENT_RHI_MODULE`).
@@ -27,35 +27,35 @@ endfunction()
 
 # 모든 백엔드의 장치 소스(Engine GLOB 에서 뺀다 — 백엔드 소스는 모듈 · Shipping 갈래가 가져간다).
 function(sw_get_all_rhi_backend_sources OUT_VAR)
-	set(listAll "")
+	set(list_all "")
 	foreach(name IN LISTS SW_RHI_BACKEND_NAMES)
-		sw_get_rhi_backend_sources(${name} listSource)
-		list(APPEND listAll ${listSource})
+		sw_get_rhi_backend_sources(${name} list_source)
+		list(APPEND list_all ${list_source})
 	endforeach()
-	set(${OUT_VAR} ${listAll} PARENT_SCOPE)
+	set(${OUT_VAR} ${list_all} PARENT_SCOPE)
 endfunction()
 
 # 쿠킹 표의 백엔드 이름(대소문자까지 그대로 — DirectX11 · DirectX12 · Vulkan · OpenGL)만 받는다. 명령줄 이름(dx12 · vk …)은 받지 않는다 — 모르는 값이면 구성을 세운다.
 function(sw_check_rhi_backend_name TEXT)
 	if(NOT TEXT IN_LIST SW_RHI_BACKEND_NAMES)
-		string(REPLACE ";" ", " listName "${SW_RHI_BACKEND_NAMES}")
-		message(FATAL_ERROR "[RHI] unknown backend '${TEXT}' for SW_SHIPPING_RHI_BACKEND — valid names: ${listName} "
+		string(REPLACE ";" ", " list_name "${SW_RHI_BACKEND_NAMES}")
+		message(FATAL_ERROR "[RHI] unknown backend '${TEXT}' for SW_SHIPPING_RHI_BACKEND — valid names: ${list_name} "
 			"(Config/Engine/CookContract.json rhi_backends). An existing build folder keeps the old cache value: "
 			"re-configure with -DSW_SHIPPING_RHI_BACKEND=<name> or edit it in CMakeCache.txt")
 	endif()
 endfunction()
 
-# 배포 빌드가 Engine 에 넣을 백엔드 — 이름을 확인하고, 이 플랫폼(sw_platform_name)에 그 백엔드가 있는지 본다. 없으면 구성을 세운다.
+# 배포 빌드가 Engine 에 넣을 백엔드 — 이름을 확인하고, 이 플랫폼(SW_PLATFORM_NAME)에 그 백엔드가 있는지 본다. 없으면 구성을 세운다.
 # 플랫폼은 그 백엔드 모듈의 매니페스트(_listExcludedPlatform)가 원본이다. 주의: 배포 구성에서는 모듈이 꺼져 있으므로(`_listConfiguration`) 활성 여부가
 # 아니라 플랫폼 칸을 본다 — 이 확인이 없으면 그 플랫폼에 없는 백엔드를 고른 Engine 이 백엔드 없이 링크된다.
 function(sw_resolve_shipping_rhi_backend TEXT OUT_VAR)
 	sw_check_rhi_backend_name("${TEXT}")
-	set(backendName ${TEXT})
-	set(moduleName ${SW_RHI_BACKEND_${backendName}_MODULE})
-	get_property(listPlatform GLOBAL PROPERTY SW_MODULE_${moduleName}_PLATFORMS)
-	if(NOT sw_platform_name IN_LIST listPlatform)
-		message(FATAL_ERROR "[RHI] SW_SHIPPING_RHI_BACKEND=${TEXT}: ${backendName} is not available on ${sw_platform_name} "
-			"(${moduleName}.module.json _listExcludedPlatform leaves: ${listPlatform})")
+	set(backend_name ${TEXT})
+	set(module_name ${SW_RHI_BACKEND_${backend_name}_MODULE})
+	get_property(list_platform GLOBAL PROPERTY SW_MODULE_${module_name}_PLATFORMS)
+	if(NOT SW_PLATFORM_NAME IN_LIST list_platform)
+		message(FATAL_ERROR "[RHI] SW_SHIPPING_RHI_BACKEND=${TEXT}: ${backend_name} is not available on ${SW_PLATFORM_NAME} "
+			"(${module_name}.module.json _listExcludedPlatform leaves: ${list_platform})")
 	endif()
-	set(${OUT_VAR} ${backendName} PARENT_SCOPE)
+	set(${OUT_VAR} ${backend_name} PARENT_SCOPE)
 endfunction()

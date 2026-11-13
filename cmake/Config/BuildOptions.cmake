@@ -12,8 +12,8 @@
 # ------------------------------------------------------------------------------
 # 1) 워크스페이스 메타데이터 · C++ 표준
 # ------------------------------------------------------------------------------
-set(sw_workspace_name "Workspace")
-set(sw_project_version "1.0.0")
+set(SW_WORKSPACE_NAME "Workspace")
+set(SW_PROJECT_VERSION "1.0.0")
 
 # 최소 C++17 표준 요구. 필요 시 -DSW_CPP_STANDARD=20 (또는 23).
 set(SW_CPP_STANDARD 17 CACHE STRING "C++ 표준(17 이상 — 20 · 23)")
@@ -69,10 +69,10 @@ endif()
 # 기본은 표의 default_rhi_backend, Windows 밖은 Vulkan(project() 전이라 WIN32 대신 CMAKE_HOST_WIN32 — 교차 컴파일은 지원하지 않는다).
 # Dev 는 백엔드 넷을 모두 모듈로 짓고 이 값을 읽지 않는다. 이 플랫폼에 없는 백엔드면 구성이 선다(cmake/Engine/RHIBackends.cmake).
 include("${CMAKE_CURRENT_LIST_DIR}/JsonValue.cmake")
-sw_require_json_value(swContractDefaultRHI "${CMAKE_CURRENT_LIST_DIR}/../../Config/Engine/CookContract.json" default_rhi_backend)
+sw_require_json_value(contract_default_rhi "${CMAKE_CURRENT_LIST_DIR}/../../Config/Engine/CookContract.json" default_rhi_backend)
 
 if(CMAKE_HOST_WIN32)
-	set(SW_SHIPPING_RHI_BACKEND "${swContractDefaultRHI}" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")
+	set(SW_SHIPPING_RHI_BACKEND "${contract_default_rhi}" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")
 elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
 	set(SW_SHIPPING_RHI_BACKEND "Vulkan" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")
 else()
@@ -133,12 +133,12 @@ endif()
 # Windows 는 TracyClient.dll 을 지연 로드한다 — `-gv_tracy` 로 켜기 전에는 DLL 도, 수집 스레드도 없다.
 # 리눅스(vcpkg 정적 라이브러리)는 지연 로드가 없어 링크하면 기동부터 수집 스레드 · 리슨 소켓이 선다 — 그래서 기본 꺼짐이다.
 if(CMAKE_HOST_WIN32 AND NOT SW_SHIPPING_BUILD) # project() 앞이라 WIN32 는 아직 없다
-	set(swTracyDefault ON)
+	set(tracy_default ON)
 else()
-	set(swTracyDefault OFF)
+	set(tracy_default OFF)
 endif()
 
-option(SW_ENABLE_TRACY "Tracy 프로파일러 클라이언트 링크(개발 빌드, Shipping 은 무시)" ${swTracyDefault})
+option(SW_ENABLE_TRACY "Tracy 프로파일러 클라이언트 링크(개발 빌드, Shipping 은 무시)" ${tracy_default})
 
 # 복합 문자 셰이핑 — HarfBuzz(셰이퍼, MIT) + SheenBidi(전체 UAX #9 수준, Apache 2.0). 엔진 인터페이스(ITextShaper · TextBidi) 뒤에 있고
 # 헤더는 Source/Engine/Text/HarfBuzz · Text/SheenBidi 에서만 include 한다. 켜면 두 패키지가 필수다(못 찾으면 구성이 선다).
@@ -151,9 +151,9 @@ endif()
 
 # 활성화할 대상 게임 팩 선택 (Source/Games/ 하위 디렉터리 이름)
 set(SW_ACTIVE_GAME "Empty" CACHE STRING "활성 게임(Source/Games 폴더 이름) — Bin/Modules/SWGame · Shipping 이 굽는 게임. Dev 는 실행할 때 -game=<게임> 으로 다른 게임도 고른다")
-file(GLOB swGamePresetFiles RELATIVE "${CMAKE_SOURCE_DIR}/Config/Game" "${CMAKE_SOURCE_DIR}/Config/Game/*.json")
-string(REPLACE ".json" "" swGameNames "${swGamePresetFiles}")
-set_property(CACHE SW_ACTIVE_GAME PROPERTY STRINGS ${swGameNames})
+file(GLOB game_preset_files RELATIVE "${CMAKE_SOURCE_DIR}/Config/Game" "${CMAKE_SOURCE_DIR}/Config/Game/*.json")
+string(REPLACE ".json" "" game_names "${game_preset_files}")
+set_property(CACHE SW_ACTIVE_GAME PROPERTY STRINGS ${game_names})
 
 # 활성 게임과 함께 지을 게임 팩(Dev 전용) — 비우면 활성 게임만, `ALL` 이면 Source/Games 전부, 아니면 이름 목록(`NileCity;Shooter3D`).
 # 함께 짓는 게임은 `SWGame_<게임>` 타깃으로 `Bin/Games/<게임>/SWGame` 에 나오고 엔진 · 프레임워크 · 키트는 한 번만 컴파일된다(`sw_add_game_module`).
@@ -167,28 +167,28 @@ set(CMAKE_COMPILE_PDB_NAME "compile")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 unset(CMAKE_BUILD_PARALLEL_LEVEL CACHE)
-set(sw_flag_libraries "")
+set(SW_FLAG_LIBRARIES "")
 
 # ------------------------------------------------------------------------------
 # 5) Ninja 빌드 작업 풀(Job Pools) — 컴파일(CPU 풀가동) vs 링크(메모리/디스크 제한) 분리
 # ------------------------------------------------------------------------------
 if(CMAKE_GENERATOR MATCHES "Ninja")
-	cmake_host_system_information(RESULT cpuCount QUERY NUMBER_OF_LOGICAL_CORES)
+	cmake_host_system_information(RESULT cpu_count QUERY NUMBER_OF_LOGICAL_CORES)
 
-	if(NOT cpuCount OR cpuCount LESS 2)
-		set(cpuCount 4)
+	if(NOT cpu_count OR cpu_count LESS 2)
+		set(cpu_count 4)
 	endif()
 
 	# 링크 동시 실행 개수는 코어 수의 1/4 (최소 2, 최대 4)로 제한하여 RAM 부족/페이징 스래싱 방지
-	math(EXPR linkJobs "${cpuCount} / 4")
+	math(EXPR link_jobs "${cpu_count} / 4")
 
-	if(linkJobs LESS 2)
-		set(linkJobs 2)
-	elseif(linkJobs GREATER 4)
-		set(linkJobs 4)
+	if(link_jobs LESS 2)
+		set(link_jobs 2)
+	elseif(link_jobs GREATER 4)
+		set(link_jobs 4)
 	endif()
 
-	set_property(GLOBAL PROPERTY JOB_POOLS compile_job_pool=${cpuCount} link_job_pool=${linkJobs})
+	set_property(GLOBAL PROPERTY JOB_POOLS compile_job_pool=${cpu_count} link_job_pool=${link_jobs})
 	set(CMAKE_JOB_POOL_COMPILE compile_job_pool)
 	set(CMAKE_JOB_POOL_LINK link_job_pool)
 endif()

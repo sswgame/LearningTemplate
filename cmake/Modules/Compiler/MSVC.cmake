@@ -62,4 +62,4 @@ set_property(TARGET sw_compiler_msvc PROPERTY
 
 target_compile_definitions(sw_compiler_msvc INTERFACE SW_COMPILER_MSVC)
 
-list(APPEND sw_flag_libraries sw_compiler_msvc)
+list(APPEND SW_FLAG_LIBRARIES sw_compiler_msvc)

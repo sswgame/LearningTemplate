@@ -12,12 +12,12 @@
 if(NOT SW_TARGET_LAYER_ALLOW_reflectionparser)
 	message(FATAL_ERROR "SW_TARGET_LAYER_ALLOW_reflectionparser is empty - Config/Rules/Layers/TargetLayers.toml needs an [allow] reflectionparser list")
 endif()
-list(TRANSFORM SW_TARGET_LAYER_ALLOW_reflectionparser PREPEND "${CMAKE_SOURCE_DIR}/Source/" OUTPUT_VARIABLE listReflectionSchemaHeader)
+list(TRANSFORM SW_TARGET_LAYER_ALLOW_reflectionparser PREPEND "${CMAKE_SOURCE_DIR}/Source/" OUTPUT_VARIABLE list_reflection_schema_header)
 add_library(ReflectionSchema INTERFACE)
 target_sources(ReflectionSchema INTERFACE
 	FILE_SET HEADERS
 	BASE_DIRS "${CMAKE_SOURCE_DIR}/Source"
-	FILES ${listReflectionSchemaHeader}
+	FILES ${list_reflection_schema_header}
 )
 target_link_libraries(ReflectionSchema INTERFACE sw_public_source_includes)
 
@@ -25,8 +25,8 @@ target_link_libraries(ReflectionSchema INTERFACE sw_public_source_includes)
 # 1) libclang — 못 찾으면 파서를 짓지 않는다(SW_REQUIRE_REFLECTION 이면 구성이 선다). 찾는 순서는 cmake/Environment/FindLibclang.cmake.
 # ------------------------------------------------------------------------------
 include("${CMAKE_SOURCE_DIR}/cmake/Environment/FindLibclang.cmake")
-sw_find_libclang(swLibclangLib swLibclangIncludeDir swLibclangDLL)
-if(NOT swLibclangLib)
+sw_find_libclang(libclang_lib libclang_include_dir libclang_dll)
+if(NOT libclang_lib)
 	return()
 endif()
 
@@ -42,13 +42,13 @@ target_link_libraries(ReflectionParser PRIVATE ReflectionSchema)
 sw_apply_target_layer_guard(ReflectionParser reflectionparser) # 목록(ReflectionSchema) 밖 Engine · 위 타깃 헤더를 막는다
 sw_add_pch_entry_directory(ReflectionParser PRIVATE core "Core/pch.h")
 # 외부 헤더는 SYSTEM 으로 — 우리 경고 규칙(-Werror=covered-switch-default 등)이 그 안에 걸리지 않는다.
-target_include_directories(ReflectionParser SYSTEM PRIVATE "${swLibclangIncludeDir}" "${CMAKE_SOURCE_DIR}/ThirdParty/nlohmann-json")
+target_include_directories(ReflectionParser SYSTEM PRIVATE "${libclang_include_dir}" "${CMAKE_SOURCE_DIR}/ThirdParty/nlohmann-json")
 target_include_directories(ReflectionParser PRIVATE "${CMAKE_BINARY_DIR}/generated")
 
 target_link_libraries(ReflectionParser
 	PRIVATE
 	Core
-	"${swLibclangLib}"
+	"${libclang_lib}"
 	sw_global_options
 )
 
@@ -75,11 +75,11 @@ target_sources(ReflectionParser PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/PredefinedR
 # ------------------------------------------------------------------------------
 # 3) libclang.dll — ReflectionParser 옆(BuildTools)으로 복사
 # ------------------------------------------------------------------------------
-if(swLibclangDLL)
+if(libclang_dll)
 	add_custom_command(
 		TARGET ReflectionParser POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		"${swLibclangDLL}"
+		"${libclang_dll}"
 		"$<TARGET_FILE_DIR:ReflectionParser>"
 		COMMENT "[ReflectionParser] Copying libclang.dll..."
 		VERBATIM

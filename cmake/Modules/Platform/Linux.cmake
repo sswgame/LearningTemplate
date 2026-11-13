@@ -73,7 +73,7 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 
 		# 프로토콜 XML 목록(wayland-protocols pkgdatadir 아래 상대 경로). 헤더 이름은 XML 파일 이름에서 정해진다(`<이름>-client-protocol.h`).
 		# fractional-scale · cursor-shape 는 staging 이라 wayland-protocols 1.32 이상이 있어야 한다 — 없으면 아래 검사가 구성을 세운다.
-		set(swWaylandProtocolXMLs
+		set(wayland_protocol_xmls
 			"stable/xdg-shell/xdg-shell.xml"
 			"staging/fractional-scale/fractional-scale-v1.xml" # 소수 배율(`wp_fractional_scale_v1`)
 			"staging/cursor-shape/cursor-shape-v1.xml" # 커서 모양(`wp_cursor_shape_manager_v1`)
@@ -83,31 +83,31 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 			"unstable/relative-pointer/relative-pointer-unstable-v1.xml" # 잠긴 동안의 상대 이동
 			"unstable/text-input/text-input-unstable-v3.xml" # 입력기(`zwp_text_input_v3`)
 		)
-		set(swWaylandGenDir "${CMAKE_BINARY_DIR}/generated/wayland")
-		file(MAKE_DIRECTORY "${swWaylandGenDir}")
-		set(swWaylandGenFiles "")
-		foreach(swProtocolRelXML IN LISTS swWaylandProtocolXMLs)
-			set(swProtocolXML "${SW_WAYLAND_PROTOCOLS_DIR}/${swProtocolRelXML}")
-			if(NOT EXISTS "${swProtocolXML}")
-				message(FATAL_ERROR "SW_ENABLE_WAYLAND: protocol XML not found: ${swProtocolXML} (wayland-protocols 1.32 or newer is required)")
+		set(wayland_gen_dir "${CMAKE_BINARY_DIR}/generated/wayland")
+		file(MAKE_DIRECTORY "${wayland_gen_dir}")
+		set(wayland_gen_files "")
+		foreach(protocol_rel_xml IN LISTS wayland_protocol_xmls)
+			set(protocol_xml "${SW_WAYLAND_PROTOCOLS_DIR}/${protocol_rel_xml}")
+			if(NOT EXISTS "${protocol_xml}")
+				message(FATAL_ERROR "SW_ENABLE_WAYLAND: protocol XML not found: ${protocol_xml} (wayland-protocols 1.32 or newer is required)")
 			endif()
-			get_filename_component(swProtocolName "${swProtocolXML}" NAME_WE)
-			set(swProtocolHeader "${swWaylandGenDir}/${swProtocolName}-client-protocol.h")
-			set(swProtocolSource "${swWaylandGenDir}/${swProtocolName}-protocol.c")
+			get_filename_component(protocol_name "${protocol_xml}" NAME_WE)
+			set(protocol_header "${wayland_gen_dir}/${protocol_name}-client-protocol.h")
+			set(protocol_source "${wayland_gen_dir}/${protocol_name}-protocol.c")
 			add_custom_command(
-				OUTPUT "${swProtocolHeader}" "${swProtocolSource}"
-				COMMAND "${SW_WAYLAND_SCANNER}" client-header "${swProtocolXML}" "${swProtocolHeader}"
-				COMMAND "${SW_WAYLAND_SCANNER}" private-code "${swProtocolXML}" "${swProtocolSource}"
-				DEPENDS "${swProtocolXML}"
-				COMMENT "wayland-scanner: ${swProtocolName}"
+				OUTPUT "${protocol_header}" "${protocol_source}"
+				COMMAND "${SW_WAYLAND_SCANNER}" client-header "${protocol_xml}" "${protocol_header}"
+				COMMAND "${SW_WAYLAND_SCANNER}" private-code "${protocol_xml}" "${protocol_source}"
+				DEPENDS "${protocol_xml}"
+				COMMENT "wayland-scanner: ${protocol_name}"
 				VERBATIM
 			)
-			list(APPEND swWaylandGenFiles "${swProtocolHeader}" "${swProtocolSource}")
+			list(APPEND wayland_gen_files "${protocol_header}" "${protocol_source}")
 		endforeach()
 		# 생성 코드는 C 다. Engine(공유 라이브러리)에 들어가므로 위치 독립 코드로 짓는다.
-		add_library(sw_wayland_protocols STATIC ${swWaylandGenFiles})
+		add_library(sw_wayland_protocols STATIC ${wayland_gen_files})
 		set_target_properties(sw_wayland_protocols PROPERTIES POSITION_INDEPENDENT_CODE ON LINKER_LANGUAGE C)
-		target_include_directories(sw_wayland_protocols PUBLIC "${swWaylandGenDir}")
+		target_include_directories(sw_wayland_protocols PUBLIC "${wayland_gen_dir}")
 		target_link_libraries(sw_wayland_protocols PUBLIC PkgConfig::SW_WAYLAND)
 		target_link_libraries(sw_platform_linux INTERFACE sw_wayland_protocols)
 		target_compile_definitions(sw_platform_linux INTERFACE SW_WITH_WAYLAND)
@@ -170,4 +170,4 @@ if(NOT TARGET sw_graphics_libs)
 	)
 endif()
 
-list(APPEND sw_flag_libraries sw_platform_linux)
+list(APPEND SW_FLAG_LIBRARIES sw_platform_linux)

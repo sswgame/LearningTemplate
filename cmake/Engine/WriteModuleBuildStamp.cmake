@@ -7,5 +7,5 @@
 if(NOT STAMP_PATH)
 	message(FATAL_ERROR "[ModuleBuildStamp] STAMP_PATH is required")
 endif()
-string(TIMESTAMP swNow "%Y-%m-%dT%H:%M:%S.%fZ" UTC)
-file(WRITE "${STAMP_PATH}" "${swNow}\n")
+string(TIMESTAMP now "%Y-%m-%dT%H:%M:%S.%fZ" UTC)
+file(WRITE "${STAMP_PATH}" "${now}\n")

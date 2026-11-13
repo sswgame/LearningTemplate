@@ -10,58 +10,58 @@
 # ==============================================================================
 cmake_minimum_required(VERSION 3.21)
 
-foreach(swArgument MODULE_FILE STAGE_DIR BIN_DIR VCPKG_EXECUTABLE INSTALLED_BIN_DIR)
-	if(NOT DEFINED ${swArgument} OR "${${swArgument}}" STREQUAL "")
-		message(FATAL_ERROR "[StageModuleRuntimeDLLs] ${swArgument} is required")
+foreach(argument MODULE_FILE STAGE_DIR BIN_DIR VCPKG_EXECUTABLE INSTALLED_BIN_DIR)
+	if(NOT DEFINED ${argument} OR "${${argument}}" STREQUAL "")
+		message(FATAL_ERROR "[StageModuleRuntimeDLLs] ${argument} is required")
 	endif()
 endforeach()
 
-get_filename_component(swModuleName "${MODULE_FILE}" NAME)
+get_filename_component(module_name "${MODULE_FILE}" NAME)
 file(REMOVE_RECURSE "${STAGE_DIR}")
 file(MAKE_DIRECTORY "${STAGE_DIR}")
 # 모듈을 복사하지 않고 하드 링크로 둔다(Debug 모듈은 수십 MB). 다른 볼륨이면 복사로 넘어간다.
-file(CREATE_LINK "${MODULE_FILE}" "${STAGE_DIR}/${swModuleName}" COPY_ON_ERROR)
+file(CREATE_LINK "${MODULE_FILE}" "${STAGE_DIR}/${module_name}" COPY_ON_ERROR)
 
 # 병렬 링크가 같은 `vcpkg.exe` 를 동시에 띄우면 백신 검사 · 다른 링크가 잡은 순간에 실행이 "resource busy or locked" 로 실패한다
 # (CI Windows STL 잡). 잠깐 쉬고 다시 띄운다 — 스테이지 폴더는 매번 비우고 시작하므로 반복해도 결과가 같다.
-set(swAttempt 0)
+set(attempt 0)
 while(TRUE)
-	math(EXPR swAttempt "${swAttempt} + 1")
+	math(EXPR attempt "${attempt} + 1")
 	execute_process(
-		COMMAND "${VCPKG_EXECUTABLE}" z-applocal "--target-binary=${STAGE_DIR}/${swModuleName}" "--installed-bin-dir=${INSTALLED_BIN_DIR}"
-		RESULT_VARIABLE swResult
-		OUTPUT_VARIABLE swOutput
-		ERROR_VARIABLE swOutput
+		COMMAND "${VCPKG_EXECUTABLE}" z-applocal "--target-binary=${STAGE_DIR}/${module_name}" "--installed-bin-dir=${INSTALLED_BIN_DIR}"
+		RESULT_VARIABLE result
+		OUTPUT_VARIABLE output
+		ERROR_VARIABLE output
 	)
-	if(swResult EQUAL 0 OR swAttempt GREATER_EQUAL 5)
+	if(result EQUAL 0 OR attempt GREATER_EQUAL 5)
 		break()
 	endif()
-	message(STATUS "[StageModuleRuntimeDLLs] z-applocal attempt ${swAttempt} failed for ${swModuleName} (${swResult}), retrying")
+	message(STATUS "[StageModuleRuntimeDLLs] z-applocal attempt ${attempt} failed for ${module_name} (${result}), retrying")
 	execute_process(COMMAND "${CMAKE_COMMAND}" -E sleep 2)
 	file(REMOVE_RECURSE "${STAGE_DIR}")
 	file(MAKE_DIRECTORY "${STAGE_DIR}")
-	file(CREATE_LINK "${MODULE_FILE}" "${STAGE_DIR}/${swModuleName}" COPY_ON_ERROR)
+	file(CREATE_LINK "${MODULE_FILE}" "${STAGE_DIR}/${module_name}" COPY_ON_ERROR)
 endwhile()
-if(NOT swResult EQUAL 0)
-	message(FATAL_ERROR "[StageModuleRuntimeDLLs] vcpkg z-applocal failed for ${swModuleName} (${swResult}):\n${swOutput}")
+if(NOT result EQUAL 0)
+	message(FATAL_ERROR "[StageModuleRuntimeDLLs] vcpkg z-applocal failed for ${module_name} (${result}):\n${output}")
 endif()
 
-file(GLOB swStagedFiles LIST_DIRECTORIES false "${STAGE_DIR}/*")
-foreach(swPath IN LISTS swStagedFiles)
-	get_filename_component(swFileName "${swPath}" NAME)
-	if(swFileName STREQUAL swModuleName)
+file(GLOB staged_files LIST_DIRECTORIES false "${STAGE_DIR}/*")
+foreach(path IN LISTS staged_files)
+	get_filename_component(file_name "${path}" NAME)
+	if(file_name STREQUAL module_name)
 		continue()
 	endif()
 	# 다른 모듈의 링크가 같은 DLL 을 같은 때 옮길 수 있다 — 복사가 실패해도 결과가 같은 바이트면 받아들인다.
-	file(COPY_FILE "${swPath}" "${BIN_DIR}/${swFileName}" ONLY_IF_DIFFERENT RESULT swCopyResult)
-	if(NOT swCopyResult EQUAL 0)
-		file(SHA256 "${swPath}" swStagedHash)
-		set(swBinHash "")
-		if(EXISTS "${BIN_DIR}/${swFileName}")
-			file(SHA256 "${BIN_DIR}/${swFileName}" swBinHash)
+	file(COPY_FILE "${path}" "${BIN_DIR}/${file_name}" ONLY_IF_DIFFERENT RESULT copy_result)
+	if(NOT copy_result EQUAL 0)
+		file(SHA256 "${path}" staged_hash)
+		set(bin_hash "")
+		if(EXISTS "${BIN_DIR}/${file_name}")
+			file(SHA256 "${BIN_DIR}/${file_name}" bin_hash)
 		endif()
-		if(NOT swStagedHash STREQUAL swBinHash)
-			message(FATAL_ERROR "[StageModuleRuntimeDLLs] Cannot copy ${swFileName} into ${BIN_DIR} (in use by a running process?): ${swCopyResult}")
+		if(NOT staged_hash STREQUAL bin_hash)
+			message(FATAL_ERROR "[StageModuleRuntimeDLLs] Cannot copy ${file_name} into ${BIN_DIR} (in use by a running process?): ${copy_result}")
 		endif()
 	endif()
 endforeach()

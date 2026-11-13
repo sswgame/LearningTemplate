@@ -36,4 +36,4 @@ target_compile_definitions(sw_compiler_gcc INTERFACE SW_COMPILER_GCC)
 
 message(STATUS "[Compiler] GCC Compiler Options Configured.")
 
-list(APPEND sw_flag_libraries sw_compiler_gcc)
+list(APPEND SW_FLAG_LIBRARIES sw_compiler_gcc)

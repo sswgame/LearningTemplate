@@ -10,9 +10,9 @@
 set(SW_HOST_BUILD_DIR "${CMAKE_SOURCE_DIR}/build/Ninja-Release" CACHE PATH "Host preset build folder whose ReflectionParser and vcpkg record cross builds use")
 
 if(CMAKE_HOST_WIN32)
-	set(swHostExeSuffix ".exe")
+	set(host_exe_suffix ".exe")
 elseif(CMAKE_HOST_UNIX)
-	set(swHostExeSuffix "")
+	set(host_exe_suffix "")
 else()
 	message(FATAL_ERROR "[HostTools] unsupported host (Windows or Unix)")
 endif()
@@ -22,26 +22,26 @@ if(NOT EXISTS "${SW_HOST_BUILD_DIR}/CMakeCache.txt")
 		"  Configure it first: cmake --preset Ninja-Release   (or set SW_HOST_BUILD_DIR to another host build folder)")
 endif()
 
-set(swHostReflectionParser "${SW_HOST_BUILD_DIR}/BuildTools/ReflectionParser${swHostExeSuffix}")
+set(host_reflection_parser "${SW_HOST_BUILD_DIR}/BuildTools/ReflectionParser${host_exe_suffix}")
 add_custom_target(SwHostReflectionParser
 	COMMAND "${CMAKE_COMMAND}" --build "${SW_HOST_BUILD_DIR}" --target ReflectionParser
-	BYPRODUCTS "${swHostReflectionParser}"
+	BYPRODUCTS "${host_reflection_parser}"
 	COMMENT "[HostTools] Building the host ReflectionParser (${SW_HOST_BUILD_DIR})"
 	USES_TERMINAL
 	VERBATIM)
 add_executable(ReflectionParser IMPORTED GLOBAL)
-set_target_properties(ReflectionParser PROPERTIES IMPORTED_LOCATION "${swHostReflectionParser}")
+set_target_properties(ReflectionParser PROPERTIES IMPORTED_LOCATION "${host_reflection_parser}")
 
 # 쿠커 도구 판(셰이더 컴파일러)은 쿠킹하는 호스트의 vcpkg 기록이 답이다 — 대상(arm64-android · wasm32)에는 dxc 가 없다.
-file(STRINGS "${SW_HOST_BUILD_DIR}/CMakeCache.txt" swHostInstalledLine REGEX "^VCPKG_INSTALLED_DIR:")
-string(REGEX REPLACE "^VCPKG_INSTALLED_DIR:[A-Z]+=" "" swHostInstalledDir "${swHostInstalledLine}")
-if(NOT swHostInstalledDir OR NOT EXISTS "${swHostInstalledDir}/vcpkg/status")
-	message(FATAL_ERROR "[HostTools] host build '${SW_HOST_BUILD_DIR}' has no vcpkg install record (VCPKG_INSTALLED_DIR='${swHostInstalledDir}')")
+file(STRINGS "${SW_HOST_BUILD_DIR}/CMakeCache.txt" host_installed_line REGEX "^VCPKG_INSTALLED_DIR:")
+string(REGEX REPLACE "^VCPKG_INSTALLED_DIR:[A-Z]+=" "" host_installed_dir "${host_installed_line}")
+if(NOT host_installed_dir OR NOT EXISTS "${host_installed_dir}/vcpkg/status")
+	message(FATAL_ERROR "[HostTools] host build '${SW_HOST_BUILD_DIR}' has no vcpkg install record (VCPKG_INSTALLED_DIR='${host_installed_dir}')")
 endif()
-set(SW_HOST_VCPKG_STATUS "${swHostInstalledDir}/vcpkg/status" CACHE INTERNAL "Host vcpkg install record (cook tool versions)")
+set(SW_HOST_VCPKG_STATUS "${host_installed_dir}/vcpkg/status" CACHE INTERNAL "Host vcpkg install record (cook tool versions)")
 
-message(STATUS "[HostTools] ReflectionParser: ${swHostReflectionParser} (rebuilt by SwHostReflectionParser)")
-unset(swHostReflectionParser)
-unset(swHostExeSuffix)
-unset(swHostInstalledLine)
-unset(swHostInstalledDir)
+message(STATUS "[HostTools] ReflectionParser: ${host_reflection_parser} (rebuilt by SwHostReflectionParser)")
+unset(host_reflection_parser)
+unset(host_exe_suffix)
+unset(host_installed_line)
+unset(host_installed_dir)

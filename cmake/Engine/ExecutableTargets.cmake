@@ -28,25 +28,25 @@
 # 않는다. STATIC 이 아닌 타겟(SHARED/MODULE/OBJECT)이나 없는 타겟은 조용히 건너뛴다 — 호출부가
 # 구성마다 다른 목록을 그대로 넘겨도 되게.
 function(sw_link_whole_archive TARGET_NAME)
-	foreach(reflLib IN LISTS ARGN)
-		if(NOT TARGET ${reflLib})
+	foreach(refl_lib IN LISTS ARGN)
+		if(NOT TARGET ${refl_lib})
 			continue()
 		endif()
 
-		get_target_property(reflLibType ${reflLib} TYPE)
+		get_target_property(refl_lib_type ${refl_lib} TYPE)
 
-		if(NOT reflLibType STREQUAL "STATIC_LIBRARY")
+		if(NOT refl_lib_type STREQUAL "STATIC_LIBRARY")
 			continue()
 		endif()
 
 		# 링크 옵션만 걸면 그 라이브러리의 링크 의존(키트가 PRIVATE 로 링크한 서드파티 — GF_SQLStore 의 sqlite3 · GF_Server_SQLStore 의
 		# libpq)이 따라오지 않는다. 타깃으로도 링크해 전이 의존을 링크 줄에 올린다(같은 아카이브가 한 번 더 나와도 이미 올라온 멤버는 다시 올리지 않는다).
-		target_link_libraries(${TARGET_NAME} PRIVATE ${reflLib})
+		target_link_libraries(${TARGET_NAME} PRIVATE ${refl_lib})
 		if(MSVC)
-			target_link_options(${TARGET_NAME} PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:${reflLib}>")
+			target_link_options(${TARGET_NAME} PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:${refl_lib}>")
 		else()
 			target_link_options(${TARGET_NAME} PRIVATE
-				"LINKER:--whole-archive,$<TARGET_FILE:${reflLib}>,--no-whole-archive")
+				"LINKER:--whole-archive,$<TARGET_FILE:${refl_lib}>,--no-whole-archive")
 		endif()
 	endforeach()
 endfunction()
@@ -59,28 +59,28 @@ function(sw_configure_app_dependencies TARGET_NAME)
 
 	# 1) 동적 모듈은 App 보다 먼저 빌드되어야 한다 — App 이 런타임에 로드하기 때문이다. 이름을 적지 않는다: 레지스트리가 답한다.
 	sw_add_dynamic_module_dependencies(${TARGET_NAME})
-	sw_get_dynamic_modules(listDynamicModule)
+	sw_get_dynamic_modules(list_dynamic_module)
 
 	# 2) Shipping 은 게임을 정적으로 링크하고, App 이 서면 에셋을 쿠킹한다.
 	#    (Dev 는 delay-load 라 링크하지 않는다 — 빌드 순서는 위 1) 이 이미 걸어 두었다.)
 	#    쿠킹이 App 뒤인 이유: 씬 쿠킹이 App --cook-scenes 라서다. 반대로 걸면 깨끗한 트리에서 App 이
 	#    없는 채로 쿠커가 돌아 죽는다(리눅스 CI). 기본 빌드(all)에 넣어 `cmake --build` 한 번이면 팩까지 선다.
 	if(SW_SHIPPING_BUILD)
-		get_property(swActiveGameTarget GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET) # SWGame_<활성 게임>(`sw_add_game_module`)
-		if(swActiveGameTarget AND TARGET ${swActiveGameTarget})
-			target_link_libraries(${TARGET_NAME} PRIVATE ${swActiveGameTarget})
+		get_property(active_game_target GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET) # SWGame_<활성 게임>(`sw_add_game_module`)
+		if(active_game_target AND TARGET ${active_game_target})
+			target_link_libraries(${TARGET_NAME} PRIVATE ${active_game_target})
 		endif()
 
 		# 3) 리플렉션을 담은 정적 라이브러리(Engine · GameFramework · 킷 · 게임)는 통째로 링크한다. 생성된 *.gen.cpp 의 등록기는 파일 범위
 		#    static 객체라(생성자가 전역 연결 리스트에 자신을 매단다) 밖에서 참조하는 심볼이 없고, 정적 링크에서 링커는 아무도 참조하지 않는
 		#    오브젝트 파일을 버린다 — 그 타입 · 열거형은 등록되지 않고 씬의 컴포넌트는 MissingComponent 가 된다. 목록은 모듈 레지스트리이므로
 		#    모든 모듈이 등록된 뒤인 여기서 읽는다. 플랫폼별 링커 플래그는 `sw_link_whole_archive` 가 고른다.
-		if(TARGET GameFramework AND NOT GameFramework IN_LIST listDynamicModule)
+		if(TARGET GameFramework AND NOT GameFramework IN_LIST list_dynamic_module)
 			message(FATAL_ERROR "[App] sw_configure_app_dependencies ran before GameFramework registered itself — its reflection registrars would not be linked into ${TARGET_NAME}.")
 		endif()
-		set(listReflectionStaticLib Engine ${listDynamicModule})
-		list(REMOVE_DUPLICATES listReflectionStaticLib)
-		sw_link_whole_archive(${TARGET_NAME} ${listReflectionStaticLib})
+		set(list_reflection_static_lib Engine ${list_dynamic_module})
+		list(REMOVE_DUPLICATES list_reflection_static_lib)
+		sw_link_whole_archive(${TARGET_NAME} ${list_reflection_static_lib})
 
 		# 쿠킹은 쿠커 실행 파일(App, 서버 타깃은 Server — SW_COOK_HOST_TARGET) 뒤에만 건다.
 		if(TARGET CookAssets AND TARGET_NAME STREQUAL SW_COOK_HOST_TARGET)
@@ -116,20 +116,20 @@ function(sw_split_shipping_debug_info TARGET_NAME)
 	if(NOT SW_SHIPPING_BUILD OR WIN32 OR SW_RELEASE_DEBUG_INFO STREQUAL "none")
 		return()
 	endif()
-	set(symbolsDir "${CMAKE_BINARY_DIR}/Symbols")
+	set(symbols_dir "${CMAKE_BINARY_DIR}/Symbols")
 	if(EMSCRIPTEN)
 		# wasm 에는 objcopy 가 없다 — Emscripten 링커가 DWARF 를 따로 쓴다(-gseparate-dwarf). 배포 .wasm 에는 그 파일 이름만 남는다.
-		file(MAKE_DIRECTORY "${symbolsDir}")
-		target_link_options(${TARGET_NAME} PRIVATE "-g" "-gseparate-dwarf=${symbolsDir}/${TARGET_NAME}.debug.wasm")
+		file(MAKE_DIRECTORY "${symbols_dir}")
+		target_link_options(${TARGET_NAME} PRIVATE "-g" "-gseparate-dwarf=${symbols_dir}/${TARGET_NAME}.debug.wasm")
 		return()
 	endif()
 	if(NOT CMAKE_OBJCOPY)
 		message(FATAL_ERROR "sw_split_shipping_debug_info(${TARGET_NAME}): CMAKE_OBJCOPY is not set - install llvm-objcopy or binutils")
 	endif()
 	add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E make_directory "${symbolsDir}"
-		COMMAND ${CMAKE_OBJCOPY} --only-keep-debug "$<TARGET_FILE:${TARGET_NAME}>" "${symbolsDir}/$<TARGET_FILE_NAME:${TARGET_NAME}>.debug"
-		COMMAND ${CMAKE_OBJCOPY} --strip-debug "--add-gnu-debuglink=${symbolsDir}/$<TARGET_FILE_NAME:${TARGET_NAME}>.debug" "$<TARGET_FILE:${TARGET_NAME}>"
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${symbols_dir}"
+		COMMAND ${CMAKE_OBJCOPY} --only-keep-debug "$<TARGET_FILE:${TARGET_NAME}>" "${symbols_dir}/$<TARGET_FILE_NAME:${TARGET_NAME}>.debug"
+		COMMAND ${CMAKE_OBJCOPY} --strip-debug "--add-gnu-debuglink=${symbols_dir}/$<TARGET_FILE_NAME:${TARGET_NAME}>.debug" "$<TARGET_FILE:${TARGET_NAME}>"
 		COMMENT "Splitting debug info of ${TARGET_NAME} into Symbols/"
 		VERBATIM)
 endfunction()

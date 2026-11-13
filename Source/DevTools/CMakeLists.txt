@@ -46,25 +46,25 @@ sw_configure_pch(DevTools "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 # 임포트 타깃의 정의(TRACY_ENABLE · TRACY_IMPORTS …) · include 경로는 Tracy 구현 소스에만 붙인다(엔진의 Jolt 와 같은 방식). 배포 호스트는 DevTools 를 짓지 않는다.
 # Windows 는 링크하지 않는다 — `-gv_tracy` 로 켤 때 TracyClient.dll 을 올려 C API 함수 표를 채운다(`TracyProfilerBackend::loadClient`). 리눅스는 링크한다.
 if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
-	if(sw_platform_name STREQUAL "Windows")
+	if(SW_PLATFORM_NAME STREQUAL "Windows")
 		# 링크하지 않는다(위 — 지연 로드).
-	elseif(sw_platform_name STREQUAL "Linux")
+	elseif(SW_PLATFORM_NAME STREQUAL "Linux")
 		target_link_libraries(DevTools PRIVATE $<LINK_ONLY:tracy>)
 	else()
-		message(FATAL_ERROR "[DevTools] Tracy link mode for platform '${sw_platform_name}' is not decided - name it here (SW_ENABLE_TRACY=OFF meanwhile)")
+		message(FATAL_ERROR "[DevTools] Tracy link mode for platform '${SW_PLATFORM_NAME}' is not decided - name it here (SW_ENABLE_TRACY=OFF meanwhile)")
 	endif()
 	target_compile_definitions(DevTools PRIVATE SW_PROFILER_TRACY)
-	sw_glob_source_tree(swTracyBackendSources "${CMAKE_CURRENT_SOURCE_DIR}/Profiling/Tracy/*.cpp")
+	sw_glob_source_tree(tracy_backend_sources "${CMAKE_CURRENT_SOURCE_DIR}/Profiling/Tracy/*.cpp")
 	# include 경로는 시스템 경로로 준다 — Tracy C API 의 `___tracy_*` 이름이 -Wreserved-identifier 경고를 낸다.
-	get_target_property(swTracyIncludeDir Tracy::TracyClient INTERFACE_INCLUDE_DIRECTORIES)
+	get_target_property(tracy_include_dir Tracy::TracyClient INTERFACE_INCLUDE_DIRECTORIES)
 	if(MSVC)
-		set(swTracyIncludeOption "/external:I${swTracyIncludeDir}")
+		set(tracy_include_option "/external:I${tracy_include_dir}")
 	else()
-		set(swTracyIncludeOption "-isystem${swTracyIncludeDir}")
+		set(tracy_include_option "-isystem${tracy_include_dir}")
 	endif()
-	set_source_files_properties(${swTracyBackendSources} PROPERTIES
+	set_source_files_properties(${tracy_backend_sources} PROPERTIES
 		COMPILE_DEFINITIONS "$<TARGET_PROPERTY:Tracy::TracyClient,INTERFACE_COMPILE_DEFINITIONS>"
-		COMPILE_OPTIONS "${swTracyIncludeOption}"
+		COMPILE_OPTIONS "${tracy_include_option}"
 		SKIP_PRECOMPILE_HEADERS ON
 	)
 	message(STATUS "[DevTools] Tracy profiler client enabled (loaded on demand on Windows)")

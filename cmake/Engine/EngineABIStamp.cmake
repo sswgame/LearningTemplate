@@ -18,7 +18,7 @@ function(sw_define_engine_abi_stamp)
 	if(TARGET SwEngineABIStamp)
 		return()
 	endif()
-	sw_glob_source_tree(swEngineABIHeaders RECURSE
+	sw_glob_source_tree(engine_abi_headers RECURSE
 		"${CMAKE_SOURCE_DIR}/Source/Core/*.h"
 		"${CMAKE_SOURCE_DIR}/Source/Core/*.hpp"
 		"${CMAKE_SOURCE_DIR}/Source/Core/*.inl"
@@ -38,7 +38,7 @@ function(sw_define_engine_abi_stamp)
 		COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/engine_abi_stamp.py"
 			--root "${CMAKE_SOURCE_DIR}" --out "${SW_ENGINE_ABI_STAMP_HEADER}"
 			--cache "${CMAKE_BINARY_DIR}/generated/engineabi/EngineABIStamp.cache.json" # 파일 지문 캐시 — 바뀐 헤더만 다시 읽는다
-		DEPENDS ${swEngineABIHeaders} "${CMAKE_SOURCE_DIR}/Scripts/generate/engine_abi_stamp.py"
+		DEPENDS ${engine_abi_headers} "${CMAKE_SOURCE_DIR}/Scripts/generate/engine_abi_stamp.py"
 		COMMENT "Fingerprinting Core/Engine headers for the hot reload ABI stamp"
 		VERBATIM
 	)
@@ -56,24 +56,24 @@ endfunction()
 #   MODULE_NAME 은 심볼 이름에 붙는 모듈 이름이다(기본 타깃 이름) — 타깃 이름과 산출물 이름이 다른 게임 팩 사본(`SWGame_<게임>` → `SWGame`)이 준다.
 function(sw_add_module_engine_stamp TARGET_NAME)
 	cmake_parse_arguments(ARG "" "MODULE_NAME" "" ${ARGN})
-	set(swStampModuleName "${TARGET_NAME}")
+	set(stamp_module_name "${TARGET_NAME}")
 	if(ARG_MODULE_NAME)
-		set(swStampModuleName "${ARG_MODULE_NAME}")
+		set(stamp_module_name "${ARG_MODULE_NAME}")
 	endif()
 	if(SW_SHIPPING_BUILD OR NOT TARGET ${TARGET_NAME})
 		return()
 	endif()
 
-	get_target_property(swTargetType ${TARGET_NAME} TYPE)
-	if(NOT swTargetType STREQUAL "SHARED_LIBRARY" AND NOT swTargetType STREQUAL "MODULE_LIBRARY")
+	get_target_property(target_type ${TARGET_NAME} TYPE)
+	if(NOT target_type STREQUAL "SHARED_LIBRARY" AND NOT target_type STREQUAL "MODULE_LIBRARY")
 		return()
 	endif()
 
 	sw_define_engine_abi_stamp()
 	# 파일 이름에 타깃 이름을 넣지 않는다 — 빌드 폴더 밖 소스의 오브젝트 경로("<타깃 폴더>/<해시>/<파일 이름>.obj")가 긴 타깃 · 프리셋 이름에서
 	# CMAKE_OBJECT_PATH_MAX(250)를 넘는다(`sw_add_server_only_marker` 와 같다).
-	set(swStampSource "${CMAKE_BINARY_DIR}/generated/moduleidentity/${TARGET_NAME}/EngineStamp.cpp")
-	file(CONFIGURE OUTPUT "${swStampSource}" CONTENT
+	set(stamp_source "${CMAKE_BINARY_DIR}/generated/moduleidentity/${TARGET_NAME}/EngineStamp.cpp")
+	file(CONFIGURE OUTPUT "${stamp_source}" CONTENT
 "// 생성 파일 - sw_add_module_engine_stamp (cmake/Engine/EngineABIStamp.cmake). 고치지 마십시오.
 // 이 모듈이 빌드된 Core · Engine 헤더의 지문입니다. 핫 리로드가 올리기 전에 돌고 있는 엔진의 것과 대조하고,
 // 리눅스에서는 이 상수의 주소로 의존 모듈이 어느 이미지에 묶였는지 가립니다.
@@ -88,12 +88,12 @@ function(sw_add_module_engine_stamp TARGET_NAME)
     #error \"Unsupported platform\"
 #endif
 
-extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineABIStamp_@swStampModuleName@[];
-extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineABIStamp_@swStampModuleName@[] = SW_ENGINE_ABI_STAMP_MARKER SW_ENGINE_ABI_STAMP_DIGEST;
+extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineABIStamp_@stamp_module_name@[];
+extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineABIStamp_@stamp_module_name@[] = SW_ENGINE_ABI_STAMP_MARKER SW_ENGINE_ABI_STAMP_DIGEST;
 " @ONLY)
 
-	target_sources(${TARGET_NAME} PRIVATE "${swStampSource}")
-	set_source_files_properties("${swStampSource}" PROPERTIES
+	target_sources(${TARGET_NAME} PRIVATE "${stamp_source}")
+	set_source_files_properties("${stamp_source}" PROPERTIES
 		SKIP_PRECOMPILE_HEADERS ON
 		SKIP_UNITY_BUILD_INCLUSION ON
 		OBJECT_DEPENDS "${SW_ENGINE_ABI_STAMP_HEADER}"

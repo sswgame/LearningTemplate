@@ -30,14 +30,14 @@ target_link_options(sw_platform_web INTERFACE
 )
 # 브라우저 쪽 JS 는 C++ 소스(EM_JS · EM_ASM)가 아니라 기능 옆의 `Web/*.js` Emscripten 라이브러리(addToLibrary)에 둔다 — C++ 포맷터가 매크로 본문의
 # `=>` · `!==` 를 띄워 브라우저 JS 가 문법 오류로 멈췄다(clang-format 의 WhitespaceSensitiveMacros 는 이 모양을 지키지 못한다). 모두 링크에 넘기고 바뀌면 다시 링크한다.
-sw_glob_source_tree(swWebJSLibraries RECURSE "${CMAKE_SOURCE_DIR}/Source/*.js")
-list(FILTER swWebJSLibraries INCLUDE REGEX "/Web/[^/]+\\.js$")
-foreach(swWebJSLibrary IN LISTS swWebJSLibraries)
-	target_link_options(sw_platform_web INTERFACE "--js-library=${swWebJSLibrary}")
+sw_glob_source_tree(web_js_libraries RECURSE "${CMAKE_SOURCE_DIR}/Source/*.js")
+list(FILTER web_js_libraries INCLUDE REGEX "/Web/[^/]+\\.js$")
+foreach(web_js_library IN LISTS web_js_libraries)
+	target_link_options(sw_platform_web INTERFACE "--js-library=${web_js_library}")
 endforeach()
-set_property(TARGET sw_platform_web APPEND PROPERTY INTERFACE_LINK_DEPENDS ${swWebJSLibraries})
-unset(swWebJSLibraries)
-list(APPEND sw_flag_libraries sw_platform_web)
+set_property(TARGET sw_platform_web APPEND PROPERTY INTERFACE_LINK_DEPENDS ${web_js_libraries})
+unset(web_js_libraries)
+list(APPEND SW_FLAG_LIBRARIES sw_platform_web)
 
 # WebGPU 라이브러리(`sw_graphics_webgpu_libs` — RHI 표의 graphics_libs 이름)는 ThirdParty/dawn 이 만든다: vcpkg dawn 포트가 깐 emdawnwebgpu 포트 파일
 # (`--use-port=<vcpkg>/share/dawn/emdawnwebgpu.port.py`)이라 데스크톱 Dawn 과 같은 판의 webgpu.h 다. 이름은 링크 때 풀린다(이 파일이 먼저 읽힌다).

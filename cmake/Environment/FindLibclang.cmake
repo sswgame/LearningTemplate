@@ -29,12 +29,12 @@ function(sw_find_libclang OUT_LIB OUT_INCLUDE_DIR OUT_DLL)
 	# 환경 변수 · toolchain 에 없으면 배포판 패키지 경로를 찾는다(Ubuntu 의 /usr/lib/llvm-N). 버전 목록을 손으로 들고
 	# 있으면 목록보다 새 LLVM 이 깔린 호스트에서 조용히 빠지므로, 설치된 것 중 가장 높은 메이저 버전을 고른다.
 	if(NOT DETECTED_LLVM_DIR)
-		file(GLOB llvmCandidates LIST_DIRECTORIES true "/usr/lib/llvm-*")
-		list(SORT llvmCandidates COMPARE NATURAL ORDER DESCENDING)
+		file(GLOB llvm_candidates LIST_DIRECTORIES true "/usr/lib/llvm-*")
+		list(SORT llvm_candidates COMPARE NATURAL ORDER DESCENDING)
 
-		foreach(llvmCandidate IN LISTS llvmCandidates)
-			if(EXISTS "${llvmCandidate}/include/clang-c/Index.h")
-				set(DETECTED_LLVM_DIR "${llvmCandidate}")
+		foreach(llvm_candidate IN LISTS llvm_candidates)
+			if(EXISTS "${llvm_candidate}/include/clang-c/Index.h")
+				set(DETECTED_LLVM_DIR "${llvm_candidate}")
 				message(STATUS "[ReflectionParser] Using distro LLVM: ${DETECTED_LLVM_DIR}")
 				break()
 			endif()
@@ -47,28 +47,28 @@ function(sw_find_libclang OUT_LIB OUT_INCLUDE_DIR OUT_DLL)
 		return()
 	endif()
 
-	set(llvmInstallPrefix "${DETECTED_LLVM_DIR}")
+	set(llvm_install_prefix "${DETECTED_LLVM_DIR}")
 
 	# 배포판 패키지에는 libclang-N.so 처럼 버전이 붙은 이름만 있을 수 있다. 여기도 목록 대신 glob 으로 모은다.
-	file(GLOB libclangVersioned "${llvmInstallPrefix}/lib/libclang-*.so")
-	set(libclangNames libclang clang)
+	file(GLOB libclang_versioned "${llvm_install_prefix}/lib/libclang-*.so")
+	set(libclang_names libclang clang)
 
-	foreach(libclangPath IN LISTS libclangVersioned)
-		get_filename_component(libclangName "${libclangPath}" NAME_WE)
-		string(REGEX REPLACE "^lib" "" libclangName "${libclangName}")
-		list(APPEND libclangNames "${libclangName}")
+	foreach(libclang_path IN LISTS libclang_versioned)
+		get_filename_component(libclang_name "${libclang_path}" NAME_WE)
+		string(REGEX REPLACE "^lib" "" libclang_name "${libclang_name}")
+		list(APPEND libclang_names "${libclang_name}")
 	endforeach()
 
 	find_library(LIBCLANG_LIB
-		NAMES ${libclangNames}
-		PATHS "${llvmInstallPrefix}/lib" "${llvmInstallPrefix}/bin" "${llvmInstallPrefix}"
+		NAMES ${libclang_names}
+		PATHS "${llvm_install_prefix}/lib" "${llvm_install_prefix}/bin" "${llvm_install_prefix}"
 		NO_DEFAULT_PATH
 	)
 
 	find_path(LIBCLANG_INCLUDE_DIR
 		NAMES clang-c/Index.h
 		PATHS
-		"${llvmInstallPrefix}/include"
+		"${llvm_install_prefix}/include"
 		/usr/include
 		NO_DEFAULT_PATH
 	)
@@ -76,14 +76,14 @@ function(sw_find_libclang OUT_LIB OUT_INCLUDE_DIR OUT_DLL)
 	if(NOT LIBCLANG_LIB OR NOT LIBCLANG_INCLUDE_DIR)
 		if(SW_REQUIRE_REFLECTION)
 			message(FATAL_ERROR
-				"[ReflectionParser] '${llvmInstallPrefix}' 경로에서 libclang을 찾을 수 없습니다.\n"
+				"[ReflectionParser] '${llvm_install_prefix}' 경로에서 libclang을 찾을 수 없습니다.\n"
 				"  LLVM을 설치하거나 Config/Environment/toolchain_config.json 의 llvm_path 를 설정하세요.\n"
 				"  도구만 빌드하려면 -DSW_REQUIRE_REFLECTION=OFF 를 사용하세요."
 			)
 		endif()
 
 		message(WARNING
-			"[ReflectionParser] '${llvmInstallPrefix}' 경로에서 libclang을 찾을 수 없습니다.\n"
+			"[ReflectionParser] '${llvm_install_prefix}' 경로에서 libclang을 찾을 수 없습니다.\n"
 			"  ReflectionParser 빌드가 건너뛰어집니다."
 		)
 		return()
@@ -94,7 +94,7 @@ function(sw_find_libclang OUT_LIB OUT_INCLUDE_DIR OUT_DLL)
 		find_file(
 			DETECTED_LIBCLANG_DLL
 			NAMES libclang.dll
-			HINTS "${llvmInstallPrefix}/bin" "${llvmInstallPrefix}/lib"
+			HINTS "${llvm_install_prefix}/bin" "${llvm_install_prefix}/lib"
 		)
 	endif()
 

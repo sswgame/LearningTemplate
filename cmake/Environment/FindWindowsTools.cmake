@@ -15,53 +15,53 @@ function(sw_find_windows_archive_and_mt OUT_AR OUT_MT)
 	# 캐시된 아카이버가 llvm-lib 이 아닌데 고정 툴체인에는 있다면 **다시 찾는다.**
 	# 안 그러면 이미 만들어 둔 빌드 트리는 영원히 MSVC lib.exe 를 쥐고 있고, LTO 는 계속 꺼진 채로
 	# 남는다 — 새로 클론한 사람만 고쳐진 상태가 된다.
-	set(swReDetect FALSE)
+	set(re_detect FALSE)
 
 	if(DEFINED CACHE{SW_CACHED_WIN_AR} AND NOT "$CACHE{SW_CACHED_WIN_AR}" MATCHES "llvm-lib")
-		sw_pinned_archiver_path(swProbeAr "llvm-lib.exe")
+		sw_pinned_archiver_path(probe_ar "llvm-lib.exe")
 
-		if(swProbeAr)
-			set(swReDetect TRUE)
+		if(probe_ar)
+			set(re_detect TRUE)
 		endif()
 	endif()
 
-	if(DEFINED CACHE{SW_CACHED_WIN_AR} AND DEFINED CACHE{SW_CACHED_WIN_MT} AND NOT swReDetect)
+	if(DEFINED CACHE{SW_CACHED_WIN_AR} AND DEFINED CACHE{SW_CACHED_WIN_MT} AND NOT re_detect)
 		set(${OUT_AR} "$CACHE{SW_CACHED_WIN_AR}" PARENT_SCOPE)
 		set(${OUT_MT} "$CACHE{SW_CACHED_WIN_MT}" PARENT_SCOPE)
 		return()
 	endif()
 
-	set(swAr "")
-	set(swMt "")
+	set(ar "")
+	set(mt "")
 
 	# SDK/MSVC 경로는 `DetectToolchain` 이 include 한 생성 파일(ToolchainVars.cmake)이 준다 —
 	# 여기서 toolchain_config.json 을 다시 읽지 않는다(키 철자가 갈라진다).
-	set(swSdkDir "${SW_TOOLCHAIN_WINDOWS_SDK_DIR}")
-	set(swSdkVer "${SW_TOOLCHAIN_WINDOWS_SDK_VERSION}")
-	set(swMsvcTools "${SW_TOOLCHAIN_MSVC_TOOLS_DIR}")
+	set(sdk_dir "${SW_TOOLCHAIN_WINDOWS_SDK_DIR}")
+	set(sdk_ver "${SW_TOOLCHAIN_WINDOWS_SDK_VERSION}")
+	set(msvc_tools "${SW_TOOLCHAIN_MSVC_TOOLS_DIR}")
 
 	# **고정 LLVM 의 llvm-lib 을 가장 먼저 본다** (왜 그래야 하는지는 ToolchainBinaries.cmake 머리 주석).
 	# 컴파일러가 Tools/LLVM 것이므로 MSVC lib.exe 는 고정 llvm-lib 이 없을 때의 폴백일 뿐이다.
-	sw_pinned_archiver_path(swPinnedAr "llvm-lib.exe")
+	sw_pinned_archiver_path(pinned_ar "llvm-lib.exe")
 
-	if(swPinnedAr)
-		set(swAr "${swPinnedAr}")
+	if(pinned_ar)
+		set(ar "${pinned_ar}")
 	else()
-		sw_find_msvc_lib_exe("${swMsvcTools}" swAr)
+		sw_find_msvc_lib_exe("${msvc_tools}" ar)
 	endif()
 
 	if(DEFINED ENV{LLVM_DIR} AND EXISTS "$ENV{LLVM_DIR}/bin/llvm-mt.exe")
-		set(swMt "$ENV{LLVM_DIR}/bin/llvm-mt.exe")
+		set(mt "$ENV{LLVM_DIR}/bin/llvm-mt.exe")
 	elseif(DEFINED ENV{LLVM_ROOT} AND EXISTS "$ENV{LLVM_ROOT}/bin/llvm-mt.exe")
-		set(swMt "$ENV{LLVM_ROOT}/bin/llvm-mt.exe")
+		set(mt "$ENV{LLVM_ROOT}/bin/llvm-mt.exe")
 	else()
-		sw_find_windows_sdk_mt("${swSdkDir}" "${swSdkVer}" swMt)
+		sw_find_windows_sdk_mt("${sdk_dir}" "${sdk_ver}" mt)
 	endif()
 
-	set(SW_CACHED_WIN_AR "${swAr}" CACHE INTERNAL "Cached Windows ar tool")
-	set(SW_CACHED_WIN_MT "${swMt}" CACHE INTERNAL "Cached Windows mt tool")
-	set(${OUT_AR} "${swAr}" PARENT_SCOPE)
-	set(${OUT_MT} "${swMt}" PARENT_SCOPE)
+	set(SW_CACHED_WIN_AR "${ar}" CACHE INTERNAL "Cached Windows ar tool")
+	set(SW_CACHED_WIN_MT "${mt}" CACHE INTERNAL "Cached Windows mt tool")
+	set(${OUT_AR} "${ar}" PARENT_SCOPE)
+	set(${OUT_MT} "${mt}" PARENT_SCOPE)
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -69,36 +69,36 @@ endfunction()
 # ------------------------------------------------------------------------------
 function(sw_bind_clang_cl_windows_tools)
 	if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-		set(swArTool "")
+		set(ar_tool "")
 
 		# **먼저 찾고, 있으면 그것을 쓴다.** 이미 설정된 `CMAKE_AR` 을 먼저 보면 안 된다 — 그 값은
 		# 바로 위 `project()` 가 다시 채워 넣은 MSVC lib.exe 다(DetectToolchain 이 llvm-lib 으로
 		# FORCE 해 두어도 덮인다). 그러면 "project() 뒤에 다시 묶는다" 는 이 함수가 무력해지고
 		# LTO 가 꺼진다. 탐색이 아무것도 못 찾을 때만 물려받는다.
-		sw_find_windows_archive_and_mt(swFoundAr swFoundMt)
+		sw_find_windows_archive_and_mt(found_ar found_mt)
 
-		if(swFoundAr)
-			set(swArTool "${swFoundAr}")
+		if(found_ar)
+			set(ar_tool "${found_ar}")
 		elseif(CMAKE_AR AND NOT CMAKE_AR MATCHES "NOTFOUND" AND EXISTS "${CMAKE_AR}")
-			set(swArTool "${CMAKE_AR}")
+			set(ar_tool "${CMAKE_AR}")
 		endif()
 
-		if(swFoundMt AND(NOT CMAKE_MT OR CMAKE_MT MATCHES "NOTFOUND"))
-			set(CMAKE_MT "${swFoundMt}" CACHE FILEPATH "매니페스트 도구" FORCE)
+		if(found_mt AND(NOT CMAKE_MT OR CMAKE_MT MATCHES "NOTFOUND"))
+			set(CMAKE_MT "${found_mt}" CACHE FILEPATH "매니페스트 도구" FORCE)
 		endif()
 
-		if(swArTool)
-			set(CMAKE_AR "${swArTool}" CACHE FILEPATH "정적 라이브러리 아카이버" FORCE)
-			set(CMAKE_C_COMPILER_AR "${swArTool}" CACHE FILEPATH "" FORCE)
-			set(CMAKE_CXX_COMPILER_AR "${swArTool}" CACHE FILEPATH "" FORCE)
+		if(ar_tool)
+			set(CMAKE_AR "${ar_tool}" CACHE FILEPATH "정적 라이브러리 아카이버" FORCE)
+			set(CMAKE_C_COMPILER_AR "${ar_tool}" CACHE FILEPATH "" FORCE)
+			set(CMAKE_CXX_COMPILER_AR "${ar_tool}" CACHE FILEPATH "" FORCE)
 
 			# **캐시만 고치면 안 된다.** `project()` 의 컴파일러 탐지가 같은 이름의 **일반 변수**를
 			# 최상위 스코프에 만들어 두고, 일반 변수는 캐시를 가린다. 그래서 캐시엔 llvm-lib 이
 			# 적혀 있는데 정작 읽는 쪽은 MSVC lib.exe 를 보는 상태가 된다.
 			# 부른 쪽(최상위) 스코프의 일반 변수를 PARENT_SCOPE 로 덮어야 그 그림자가 걷힌다.
-			set(CMAKE_AR "${swArTool}" PARENT_SCOPE)
-			set(CMAKE_C_COMPILER_AR "${swArTool}" PARENT_SCOPE)
-			set(CMAKE_CXX_COMPILER_AR "${swArTool}" PARENT_SCOPE)
+			set(CMAKE_AR "${ar_tool}" PARENT_SCOPE)
+			set(CMAKE_C_COMPILER_AR "${ar_tool}" PARENT_SCOPE)
+			set(CMAKE_CXX_COMPILER_AR "${ar_tool}" PARENT_SCOPE)
 
 			set(CMAKE_C_CREATE_STATIC_LIBRARY "<CMAKE_AR> /nologo <LINK_FLAGS> /out:<TARGET> <OBJECTS>" PARENT_SCOPE)
 			set(CMAKE_CXX_CREATE_STATIC_LIBRARY "<CMAKE_AR> /nologo <LINK_FLAGS> /out:<TARGET> <OBJECTS>" PARENT_SCOPE)
@@ -109,7 +109,7 @@ function(sw_bind_clang_cl_windows_tools)
 			set(CMAKE_C_ARCHIVE_FINISH "" PARENT_SCOPE)
 			set(CMAKE_CXX_ARCHIVE_FINISH "" PARENT_SCOPE)
 
-			message(STATUS "[FindWindowsTools] archive tool=${swArTool}")
+			message(STATUS "[FindWindowsTools] archive tool=${ar_tool}")
 		else()
 			message(FATAL_ERROR "[FindWindowsTools] llvm-lib / lib.exe not found — static libraries cannot be archived")
 		endif()

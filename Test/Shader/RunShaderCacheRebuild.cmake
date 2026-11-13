@@ -8,19 +8,19 @@
 # 모든 요청의 컴파일은 배포 쿠킹(CookAssets — 팩마다 굽고 판정한다, shipping-check)이 본다.
 # 입력: APP · DDC_DIR · COOKED_DIR · LOG_DIR(모두 절대 경로).
 file(REMOVE_RECURSE "${DDC_DIR}" "${COOKED_DIR}")
-set(swStageArgument_cook -cook-shaders-sample)
-set(swStageArgument_verify "")
+set(stage_argument_cook -cook-shaders-sample)
+set(stage_argument_verify "")
 foreach(stage cook verify)
 	execute_process(
-		COMMAND "${APP}" --${stage}-shaders ${swStageArgument_${stage}} -dx12 "--cooked-dir=${COOKED_DIR}" "-shader-ddc-dir=${DDC_DIR}" -unattended "-log-file=${LOG_DIR}/ShaderCache.${stage}.log"
-		RESULT_VARIABLE exitCode)
-	if(NOT exitCode EQUAL 0)
-		message(FATAL_ERROR "--${stage}-shaders exited ${exitCode} after both shader caches were removed - see ${LOG_DIR}/ShaderCache.${stage}.log")
+		COMMAND "${APP}" --${stage}-shaders ${stage_argument_${stage}} -dx12 "--cooked-dir=${COOKED_DIR}" "-shader-ddc-dir=${DDC_DIR}" -unattended "-log-file=${LOG_DIR}/ShaderCache.${stage}.log"
+		RESULT_VARIABLE exit_code)
+	if(NOT exit_code EQUAL 0)
+		message(FATAL_ERROR "--${stage}-shaders exited ${exit_code} after both shader caches were removed - see ${LOG_DIR}/ShaderCache.${stage}.log")
 	endif()
 endforeach()
 foreach(folder "${DDC_DIR}" "${COOKED_DIR}")
-	file(GLOB_RECURSE listFile "${folder}/*")
-	if(NOT listFile)
+	file(GLOB_RECURSE list_file "${folder}/*")
+	if(NOT list_file)
 		message(FATAL_ERROR "the shader cache folder ${folder} is still empty after cooking")
 	endif()
 endforeach()

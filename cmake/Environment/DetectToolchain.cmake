@@ -50,7 +50,7 @@ endif()
 if(SW_TOOLCHAIN_CONFIG_FOUND)
 	# 1) vcpkg 툴체인 및 루트 주입
 	if(SW_TOOLCHAIN_VCPKG_ROOT AND EXISTS "${SW_TOOLCHAIN_VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
-		set(sw_vcpkg_root "${SW_TOOLCHAIN_VCPKG_ROOT}" CACHE PATH "vcpkg 루트 디렉터리" FORCE)
+		set(SW_VCPKG_ROOT "${SW_TOOLCHAIN_VCPKG_ROOT}" CACHE PATH "vcpkg 루트 디렉터리" FORCE)
 		set(CMAKE_TOOLCHAIN_FILE "${SW_TOOLCHAIN_VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "vcpkg 툴체인" FORCE)
 		set(ENV{VCPKG_ROOT} "${SW_TOOLCHAIN_VCPKG_ROOT}")
 		message(STATUS "[DetectToolchain] Using vcpkg: ${SW_TOOLCHAIN_VCPKG_ROOT}")
@@ -84,21 +84,21 @@ if(SW_TOOLCHAIN_CONFIG_FOUND)
 			# 정적 아카이브(lib.exe/llvm-lib.exe) 및 매니페스트 도구(mt.exe/llvm-mt.exe) 탐색
 			include("${CMAKE_CURRENT_LIST_DIR}/ToolchainBinaries.cmake")
 			include("${CMAKE_CURRENT_LIST_DIR}/FindWindowsTools.cmake")
-			sw_find_windows_archive_and_mt(swAr swMt)
+			sw_find_windows_archive_and_mt(ar mt)
 
 			# 아카이버 · 매니페스트 도구가 없으면 정적 라이브러리 · 링크가 나중에 선다 — 지금 세운다.
-			if(NOT swAr)
+			if(NOT ar)
 				message(FATAL_ERROR "[DetectToolchain] llvm-lib / lib.exe not found (LLVM ${SW_TOOLCHAIN_LLVM_PATH}, MSVC '${SW_TOOLCHAIN_MSVC_TOOLS_DIR}')")
 			endif()
 
-			if(NOT swMt)
+			if(NOT mt)
 				message(FATAL_ERROR "[DetectToolchain] llvm-mt / mt.exe not found (Windows SDK '${SW_TOOLCHAIN_WINDOWS_SDK_DIR}' ${SW_TOOLCHAIN_WINDOWS_SDK_VERSION})")
 			endif()
 
-			set(CMAKE_AR "${swAr}" CACHE FILEPATH "정적 라이브러리 아카이버" FORCE)
-			set(CMAKE_C_COMPILER_AR "${swAr}" CACHE FILEPATH "" FORCE)
-			set(CMAKE_CXX_COMPILER_AR "${swAr}" CACHE FILEPATH "" FORCE)
-			set(CMAKE_MT "${swMt}" CACHE FILEPATH "매니페스트 도구" FORCE)
+			set(CMAKE_AR "${ar}" CACHE FILEPATH "정적 라이브러리 아카이버" FORCE)
+			set(CMAKE_C_COMPILER_AR "${ar}" CACHE FILEPATH "" FORCE)
+			set(CMAKE_CXX_COMPILER_AR "${ar}" CACHE FILEPATH "" FORCE)
+			set(CMAKE_MT "${mt}" CACHE FILEPATH "매니페스트 도구" FORCE)
 			message(STATUS "[DetectToolchain] CMAKE_AR=${CMAKE_AR} CMAKE_MT=${CMAKE_MT}")
 
 			message(STATUS "[DetectToolchain] Using clang-cl from ${SW_TOOLCHAIN_LLVM_PATH}/bin")
@@ -115,9 +115,9 @@ if(SW_TOOLCHAIN_CONFIG_FOUND)
 
 	if(SW_TOOLCHAIN_NINJA_PATH AND EXISTS "${SW_TOOLCHAIN_NINJA_PATH}")
 		set(CMAKE_MAKE_PROGRAM "${SW_TOOLCHAIN_NINJA_PATH}" CACHE FILEPATH "Ninja" FORCE)
-		get_filename_component(swNinjaDir "${SW_TOOLCHAIN_NINJA_PATH}" DIRECTORY)
+		get_filename_component(ninja_dir "${SW_TOOLCHAIN_NINJA_PATH}" DIRECTORY)
 
-		sw_prepend_env_path("${swNinjaDir}")
+		sw_prepend_env_path("${ninja_dir}")
 
 		message(STATUS "[DetectToolchain] Using Ninja: ${SW_TOOLCHAIN_NINJA_PATH}")
 	endif()

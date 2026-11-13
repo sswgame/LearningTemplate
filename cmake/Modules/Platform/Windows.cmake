@@ -54,4 +54,4 @@ if(NOT TARGET sw_graphics_libs)
 	)
 endif()
 
-list(APPEND sw_flag_libraries sw_platform_windows)
+list(APPEND SW_FLAG_LIBRARIES sw_platform_windows)

@@ -8,21 +8,21 @@
 # ==============================================================================
 include("${CMAKE_CURRENT_LIST_DIR}/ReflectionMacroScan.cmake")
 
-file(STRINGS "${CANDIDATE_LIST}" listCandidateHeader)
-set(listNewlyReflected "")
-foreach(hdr IN LISTS listCandidateHeader)
+file(STRINGS "${CANDIDATE_LIST}" list_candidate_header)
+set(list_newly_reflected "")
+foreach(hdr IN LISTS list_candidate_header)
 	if(NOT EXISTS "${hdr}")
 		continue()
 	endif()
-	sw_has_reflection_macro(bReflected "${hdr}")
-	if(bReflected)
-		list(APPEND listNewlyReflected "${hdr}")
+	sw_has_reflection_macro(reflected "${hdr}")
+	if(reflected)
+		list(APPEND list_newly_reflected "${hdr}")
 	endif()
 endforeach()
-if(listNewlyReflected)
-	string(REPLACE ";" "\n  " swNewlyReflectedText "${listNewlyReflected}")
+if(list_newly_reflected)
+	string(REPLACE ";" "\n  " newly_reflected_text "${list_newly_reflected}")
 	message(FATAL_ERROR
-		"[Reflection] ${TARGET_NAME}: these headers gained REFLECT/ENUM after the last configure and have no generated code yet:\n  ${swNewlyReflectedText}\n"
+		"[Reflection] ${TARGET_NAME}: these headers gained REFLECT/ENUM after the last configure and have no generated code yet:\n  ${newly_reflected_text}\n"
 		"  Re-run the configure preset (cmake --preset <name>) so the reflection step picks them up.")
 endif()
 file(TOUCH "${STAMP}")

@@ -6,113 +6,113 @@
 #   MODE=broken-spelling    철자 표의 첫 줄이 [scope] 절 밖의 바인딩이다.
 #   깨진 입력은 0 이 아닌 종료여야 한다 — 기본값으로 이어 가면 빌드가 틀린 생성 코드로 지나간다(폴백 없음).
 # 입력: MODE · TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · ANNOTATION_META · TEMPLATES · CONFIG · GEN_CPP_SUFFIX
-foreach(swRequired MODE TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS ANNOTATION_META TEMPLATES CONFIG GEN_CPP_SUFFIX)
-	if(NOT DEFINED ${swRequired})
-		message(FATAL_ERROR "RunParserToolInputs: ${swRequired} is not given")
+foreach(required MODE TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS ANNOTATION_META TEMPLATES CONFIG GEN_CPP_SUFFIX)
+	if(NOT DEFINED ${required})
+		message(FATAL_ERROR "RunParserToolInputs: ${required} is not given")
 	endif()
 endforeach()
 
 file(REMOVE_RECURSE "${WORK_DIR}")
 file(MAKE_DIRECTORY "${WORK_DIR}/out")
-set(swAnnotationMeta "${ANNOTATION_META}")
-set(swTemplates "${TEMPLATES}")
-set(swConfig "${CONFIG}")
+set(annotation_meta "${ANNOTATION_META}")
+set(templates "${TEMPLATES}")
+set(config "${CONFIG}")
 
 # 빌드와 같은 대상 인자 — Test/CMakeLists.txt 가 '|' 로 이어 넘긴다(sw_collect_reflection_target_args).
-string(REPLACE "|" ";" listTargetArgValue "${TARGET_ARGS}")
-set(listTargetArg "")
-foreach(swTargetArg IN LISTS listTargetArgValue)
-	list(APPEND listTargetArg --target-arg "${swTargetArg}")
+string(REPLACE "|" ";" list_target_arg_value "${TARGET_ARGS}")
+set(list_target_arg "")
+foreach(target_arg IN LISTS list_target_arg_value)
+	list(APPEND list_target_arg --target-arg "${target_arg}")
 endforeach()
 
 # 빌드의 인자(`sw_make_reflection_parser_args`)와 같은 모양이다(RunParserFixture.cmake 와 같다).
-function(sw_run_parser outExitCode outText)
+function(sw_run_parser out_exit_code out_text)
 	execute_process(
 		COMMAND "${PARSER}"
 			--input "${FIXTURE}"
 			--output "${WORK_DIR}/out"
 			--builtins "${BUILTINS}"
-			--annotation-meta "${swAnnotationMeta}"
-			--emit-templates "${swTemplates}"
+			--annotation-meta "${annotation_meta}"
+			--emit-templates "${templates}"
 			--module "ParserFixture"
 			--module-local
-			--config "${swConfig}"
+			--config "${config}"
 			--include "${GENERATED_DIR}"
 			--include "${SOURCE_ROOT}/Content/engine/shaders"
 			--include "${SOURCE_ROOT}/Source"
-			${listTargetArg}
+			${list_target_arg}
 		WORKING_DIRECTORY "${WORK_DIR}"
 		RESULT_VARIABLE result_code
 		OUTPUT_VARIABLE result_text
 		ERROR_VARIABLE result_text)
-	set(${outExitCode} "${result_code}" PARENT_SCOPE)
-	set(${outText} "${result_text}" PARENT_SCOPE)
+	set(${out_exit_code} "${result_code}" PARENT_SCOPE)
+	set(${out_text} "${result_text}" PARENT_SCOPE)
 endfunction()
 
-get_filename_component(swFixtureName "${FIXTURE}" NAME_WE)
-set(swGenCpp "${WORK_DIR}/out/${swFixtureName}${GEN_CPP_SUFFIX}")
+get_filename_component(fixture_name "${FIXTURE}" NAME_WE)
+set(gen_cpp "${WORK_DIR}/out/${fixture_name}${GEN_CPP_SUFFIX}")
 
 if(MODE STREQUAL "determinism")
-	sw_run_parser(swExitCode swOutput)
-	if(NOT swExitCode EQUAL 0)
-		message(FATAL_ERROR "first run exited ${swExitCode}\n${swOutput}")
+	sw_run_parser(exit_code output)
+	if(NOT exit_code EQUAL 0)
+		message(FATAL_ERROR "first run exited ${exit_code}\n${output}")
 	endif()
-	file(GLOB listGenerated "${WORK_DIR}/out/${swFixtureName}.gen.*")
-	list(FILTER listGenerated EXCLUDE REGEX "\\.stamp$")
-	if(NOT listGenerated)
-		message(FATAL_ERROR "the first run wrote no ${swFixtureName}.gen.* file")
+	file(GLOB list_generated "${WORK_DIR}/out/${fixture_name}.gen.*")
+	list(FILTER list_generated EXCLUDE REGEX "\\.stamp$")
+	if(NOT list_generated)
+		message(FATAL_ERROR "the first run wrote no ${fixture_name}.gen.* file")
 	endif()
-	set(listHash "")
-	set(listTime "")
-	foreach(generated IN LISTS listGenerated)
-		file(SHA256 "${generated}" swFirstHash)
-		file(TIMESTAMP "${generated}" swFirstTime "%Y%m%d%H%M%S" UTC)
-		list(APPEND listHash "${swFirstHash}")
-		list(APPEND listTime "${swFirstTime}")
+	set(list_hash "")
+	set(list_time "")
+	foreach(generated IN LISTS list_generated)
+		file(SHA256 "${generated}" first_hash)
+		file(TIMESTAMP "${generated}" first_time "%Y%m%d%H%M%S" UTC)
+		list(APPEND list_hash "${first_hash}")
+		list(APPEND list_time "${first_time}")
 	endforeach()
 	# 시각은 초 단위로 읽는다 — 다시 썼다면 다른 초가 되도록 기다린다. 스탬프를 지워 증분 판정이 건너뛰지 못하게 한다.
 	execute_process(COMMAND "${CMAKE_COMMAND}" -E sleep 2)
-	file(REMOVE "${swGenCpp}.stamp")
-	sw_run_parser(swExitCode swOutput)
-	if(NOT swExitCode EQUAL 0)
-		message(FATAL_ERROR "second run exited ${swExitCode}\n${swOutput}")
+	file(REMOVE "${gen_cpp}.stamp")
+	sw_run_parser(exit_code output)
+	if(NOT exit_code EQUAL 0)
+		message(FATAL_ERROR "second run exited ${exit_code}\n${output}")
 	endif()
-	if(NOT EXISTS "${swGenCpp}.stamp")
+	if(NOT EXISTS "${gen_cpp}.stamp")
 		message(FATAL_ERROR "the second run did not parse again (no new stamp) - the check would prove nothing")
 	endif()
-	foreach(generated hash time IN ZIP_LISTS listGenerated listHash listTime)
-		file(SHA256 "${generated}" swHashAgain)
-		file(TIMESTAMP "${generated}" swTimeAgain "%Y%m%d%H%M%S" UTC)
-		if(NOT swHashAgain STREQUAL hash)
+	foreach(generated hash time IN ZIP_LISTS list_generated list_hash list_time)
+		file(SHA256 "${generated}" hash_again)
+		file(TIMESTAMP "${generated}" time_again "%Y%m%d%H%M%S" UTC)
+		if(NOT hash_again STREQUAL hash)
 			message(FATAL_ERROR "${generated}: the same input gave different bytes - the generator is not deterministic")
 		endif()
-		if(NOT swTimeAgain STREQUAL time)
-			message(FATAL_ERROR "${generated}: same bytes were written again (time ${time} -> ${swTimeAgain}) - every includer recompiles")
+		if(NOT time_again STREQUAL time)
+			message(FATAL_ERROR "${generated}: same bytes were written again (time ${time} -> ${time_again}) - every includer recompiles")
 		endif()
 	endforeach()
 	return()
 endif()
 
 if(MODE STREQUAL "broken-config")
-	set(swConfig "${WORK_DIR}/broken.json")
-	file(WRITE "${swConfig}" "{ \"tuning\": ")
+	set(config "${WORK_DIR}/broken.json")
+	file(WRITE "${config}" "{ \"tuning\": ")
 elseif(MODE STREQUAL "broken-templates")
-	set(swTemplates "${WORK_DIR}/templates")
-	file(GLOB listTemplate "${TEMPLATES}/*")
-	list(LENGTH listTemplate swTemplateCount)
-	if(swTemplateCount LESS 2)
+	set(templates "${WORK_DIR}/templates")
+	file(GLOB list_template "${TEMPLATES}/*")
+	list(LENGTH list_template template_count)
+	if(template_count LESS 2)
 		message(FATAL_ERROR "${TEMPLATES} has fewer than two templates - cannot drop one")
 	endif()
-	list(POP_FRONT listTemplate)
-	file(COPY ${listTemplate} DESTINATION "${swTemplates}")
+	list(POP_FRONT list_template)
+	file(COPY ${list_template} DESTINATION "${templates}")
 elseif(MODE STREQUAL "broken-spelling")
-	set(swAnnotationMeta "${WORK_DIR}/broken.annotation.txt")
-	file(READ "${ANNOTATION_META}" swMetaText)
-	file(WRITE "${swAnnotationMeta}" "flag.NotInAScope = NotInAScope\n${swMetaText}")
+	set(annotation_meta "${WORK_DIR}/broken.annotation.txt")
+	file(READ "${ANNOTATION_META}" meta_text)
+	file(WRITE "${annotation_meta}" "flag.NotInAScope = NotInAScope\n${meta_text}")
 else()
 	message(FATAL_ERROR "RunParserToolInputs: unknown MODE '${MODE}'")
 endif()
-sw_run_parser(swExitCode swOutput)
-if(swExitCode EQUAL 0)
-	message(FATAL_ERROR "${MODE}: the parser accepted a broken tool input\n${swOutput}")
+sw_run_parser(exit_code output)
+if(exit_code EQUAL 0)
+	message(FATAL_ERROR "${MODE}: the parser accepted a broken tool input\n${output}")
 endif()

@@ -13,8 +13,8 @@ function(sw_prepend_env_path DIRECTORY)
 	else()
 		message(FATAL_ERROR "[HostPath] unknown host '${CMAKE_HOST_SYSTEM_NAME}' - name its PATH separator here")
 	endif()
-	string(FIND "${separator}$ENV{PATH}${separator}" "${separator}${DIRECTORY}${separator}" existingIndex)
-	if(existingIndex EQUAL -1)
+	string(FIND "${separator}$ENV{PATH}${separator}" "${separator}${DIRECTORY}${separator}" existing_index)
+	if(existing_index EQUAL -1)
 		set(ENV{PATH} "${DIRECTORY}${separator}$ENV{PATH}")
 	endif()
 endfunction()
@@ -22,15 +22,15 @@ endfunction()
 # CMake Tools 등 얇은 PATH 에서도 Git for Windows 를 쓰도록 기본 설치 경로를 앞에 붙인다(첫 번째로 있는 것 하나).
 # 주의: ENV{ProgramFiles(x86)} 는 괄호 때문에 if(DEFINED ...) 파싱이 깨지므로 쓰지 않는다.
 if(CMAKE_HOST_WIN32)
-	foreach(gitDirectory
+	foreach(git_directory
 		"$ENV{ProgramFiles}/Git/cmd" "$ENV{ProgramFiles}/Git/bin"
 		"C:/Program Files/Git/cmd" "C:/Program Files/Git/bin"
 		"C:/Program Files (x86)/Git/cmd" "C:/Program Files (x86)/Git/bin"
 		"$ENV{LOCALAPPDATA}/Programs/Git/cmd" "$ENV{LOCALAPPDATA}/Programs/Git/bin")
-		if(EXISTS "${gitDirectory}/git.exe")
-			sw_prepend_env_path("${gitDirectory}")
+		if(EXISTS "${git_directory}/git.exe")
+			sw_prepend_env_path("${git_directory}")
 			break()
 		endif()
 	endforeach()
-	unset(gitDirectory)
+	unset(git_directory)
 endif()

@@ -11,7 +11,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
 # 파이썬은 PythonUtils.cmake(머리의 include)가 찾았다 — 없으면 GenerateConfigConstants 의 REQUIRED 호출에서 configure 가 그전에 섰다.
 # 팩은 실행 파일 옆(Bin/Packs)에 놓는다. App 이 exeDir/Packs 를 먼저 찾기 때문.
 # 주의: CMAKE_RUNTIME_OUTPUT_DIRECTORY 를 이어 붙이지 않는다 — 생성기 식(`$<0:>`)이 든 값이라 명령줄 경로가 되지 않는다.
-set(swPackOutputDir "${CMAKE_BINARY_DIR}/Bin/Packs")
+set(pack_output_dir "${CMAKE_BINARY_DIR}/Bin/Packs")
 
 # 배포 빌드는 런타임 셰이더 컴파일이 없다 — 쿠킹해 둔 바이너리가 소스와 어긋나 있으면 화면이
 # 통째로 비고, 그 사실이 실행해 보기 전까지 드러나지 않는다. 그래서 Shipping 쿠킹에서만
@@ -37,11 +37,11 @@ endif()
 # 셰이더도 같은 스테이징에 굽고(바뀐 것만) 소스와 맞는지 본 뒤 팩에 담는다(`cookShadersForPack`) — 따로 주는 인자가 없다.
 # 쿠킹 로그는 고정 자리(`<빌드>/Testing/Logs/Cook.log`)에 남긴다 — 빌드 출력에 섞이면 첫 굽기만 틀린 일(팩에 빠진 셰이더 바이너리)을 나중에 볼 수 없었다.
 # `Scripts/dev/shipping_check.py` 가 실패할 때 이 로그의 오류 · 경고를 함께 찍는다(같은 자리 이름 `COOK_LOG_NAME`).
-set(swCookArgs --cook-all "--cooked-dir=${CMAKE_BINARY_DIR}/Cooked" "--pack-dir=${swPackOutputDir}" "-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Cook.log")
+set(cook_args --cook-all "--cooked-dir=${CMAKE_BINARY_DIR}/Cooked" "--pack-dir=${pack_output_dir}" "-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Cook.log")
 # Shipping 은 활성 게임(SW_ACTIVE_GAME)의 팩만 굽는다 — 쓰지 않는 게임 팩에 쿠킹 시간을 들이지 않는다(`Pack` 도 그 게임의 팩만 고른다).
 # Dev 프리셋은 실행할 때 `-game=` 으로 게임을 고르므로 어느 팩이 필요할지 몰라 모두 굽는다.
 if(SW_SHIPPING_BUILD)
-	list(APPEND swCookArgs "--game=${SW_ACTIVE_GAME}" --pack-for-shipping) # 시나리오를 담지 않는다 — 교차 빌드는 실행기가 있는 호스트 개발 App 이 굽는다
+	list(APPEND cook_args "--game=${SW_ACTIVE_GAME}" --pack-for-shipping) # 시나리오를 담지 않는다 — 교차 빌드는 실행기가 있는 호스트 개발 App 이 굽는다
 endif()
 
 if(CMAKE_CROSSCOMPILING)
@@ -52,9 +52,9 @@ if(CMAKE_CROSSCOMPILING)
 	#     팩은 곁 파일 규칙으로 변형을 함께 담고, 실행이 플랫폼의 대상(_listPlatform)에서 장치가 지원하는 첫 묶음을 고른다.
 	# shortcut: 같은 작업 트리의 데스크톱 팩도 구워 둔 변형을 곁 파일로 담는다(배포 크기), 크기가 문제가 되면 PackCooker 가 굽는 대상의 묶음 변형만 담게 한다.
 	if(CMAKE_HOST_WIN32)
-		set(swHostCookAppName "App.exe")
+		set(host_cook_app_name "App.exe")
 	elseif(CMAKE_HOST_UNIX)
-		set(swHostCookAppName "App")
+		set(host_cook_app_name "App")
 	else()
 		message(FATAL_ERROR "[Cook] unsupported host (Windows or Unix)")
 	endif()
@@ -63,25 +63,25 @@ if(CMAKE_CROSSCOMPILING)
 	if(NOT SW_HOST_BUILD_DIR)
 		message(FATAL_ERROR "[Cook] SW_HOST_BUILD_DIR is empty - include cmake/Engine/HostTools.cmake before this file (CMakeLists.txt)")
 	endif()
-	set(swHostCookApp "${SW_HOST_BUILD_DIR}/Bin/${swHostCookAppName}")
-	unset(swHostCookAppName)
+	set(host_cook_app "${SW_HOST_BUILD_DIR}/Bin/${host_cook_app_name}")
+	unset(host_cook_app_name)
 	sw_check_rhi_backend_name("${SW_SHIPPING_RHI_BACKEND}")
-	set(swCrossBackendFlag "-${SW_RHI_BACKEND_${SW_SHIPPING_RHI_BACKEND}_COMMAND_LINE_NAME}")
+	set(cross_backend_flag "-${SW_RHI_BACKEND_${SW_SHIPPING_RHI_BACKEND}_COMMAND_LINE_NAME}")
 	add_custom_target(CookAssets
 		COMMAND "${CMAKE_COMMAND}" --build "${SW_HOST_BUILD_DIR}"
 		# 원본(`textures_raw/`)을 `textures/*.dds` 로 먼저 임포트한다(바뀐 것만 — 내용 해시). 임포트 산출물은 저장소에 없어(.gitignore) 깨끗한 트리에서는 팩이 참조를 못 찾고 멈춘다.
-		COMMAND "${swHostCookApp}" --import-textures
-		COMMAND "${swHostCookApp}" --cook-texture-variants
-		COMMAND "${swHostCookApp}" ${swCookArgs} ${swCrossBackendFlag}
+		COMMAND "${host_cook_app}" --import-textures
+		COMMAND "${host_cook_app}" --cook-texture-variants
+		COMMAND "${host_cook_app}" ${cook_args} ${cross_backend_flag}
 		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-		COMMENT "Cooking texture variants and Resource packs for ${SW_SHIPPING_RHI_BACKEND} with the host App (${swHostCookApp} --cook-all ${swCrossBackendFlag})..."
+		COMMENT "Cooking texture variants and Resource packs for ${SW_SHIPPING_RHI_BACKEND} with the host App (${host_cook_app} --cook-all ${cross_backend_flag})..."
 		VERBATIM
 	)
-	unset(swCrossBackendFlag)
-	unset(swHostCookApp)
+	unset(cross_backend_flag)
+	unset(host_cook_app)
 else()
 	add_custom_target(CookAssets
-		COMMAND "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>" ${swCookArgs}
+		COMMAND "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>" ${cook_args}
 		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 		COMMENT "Cooking scenes, prefabs (XML/JSON) and Resource packs to binary (${SW_COOK_HOST_TARGET} --cook-all)..."
 		VERBATIM
@@ -93,18 +93,18 @@ set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")
 # 끌어오는 포트만 모아 쓴다(소스 트리 밖 설치 트리를 읽기 전용으로 빌려 쓸 수 있어 트리 전체가 아니다 — VcpkgInstallPolicy.cmake). 포트가 바뀌면 status 가 바뀌어 다시 만든다.
 # 저장소에 원문 그대로 둔 코드(`ThirdParty/<이름>/LICENSE.md`)의 라이선스도 뒤에 붙인다.
 if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET AND EXISTS "${VCPKG_INSTALLED_DIR}/vcpkg/status")
-	set(swThirdPartyNotices "${CMAKE_BINARY_DIR}/Bin/THIRD_PARTY_NOTICES.txt")
-	file(GLOB swVendoredLicenses CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/ThirdParty/*/LICENSE.md")
+	set(third_party_notices "${CMAKE_BINARY_DIR}/Bin/THIRD_PARTY_NOTICES.txt")
+	file(GLOB vendored_licenses CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/ThirdParty/*/LICENSE.md")
 	add_custom_command(
-		OUTPUT "${swThirdPartyNotices}"
+		OUTPUT "${third_party_notices}"
 		COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/third_party_notices.py"
 			--manifest "${CMAKE_SOURCE_DIR}/vcpkg.json" --installed "${VCPKG_INSTALLED_DIR}"
-			--triplet "${VCPKG_TARGET_TRIPLET}" --out "${swThirdPartyNotices}" --vendored-root "${CMAKE_SOURCE_DIR}/ThirdParty"
+			--triplet "${VCPKG_TARGET_TRIPLET}" --out "${third_party_notices}" --vendored-root "${CMAKE_SOURCE_DIR}/ThirdParty"
 		DEPENDS "${CMAKE_SOURCE_DIR}/vcpkg.json" "${VCPKG_INSTALLED_DIR}/vcpkg/status"
-			"${CMAKE_SOURCE_DIR}/Scripts/generate/third_party_notices.py" ${swVendoredLicenses}
+			"${CMAKE_SOURCE_DIR}/Scripts/generate/third_party_notices.py" ${vendored_licenses}
 		COMMENT "Collecting third-party license notices..."
 		VERBATIM
 	)
-	add_custom_target(ThirdPartyNotices ALL DEPENDS "${swThirdPartyNotices}")
+	add_custom_target(ThirdPartyNotices ALL DEPENDS "${third_party_notices}")
 	set_target_properties(ThirdPartyNotices PROPERTIES FOLDER "Engine/Scripts")
 endif()

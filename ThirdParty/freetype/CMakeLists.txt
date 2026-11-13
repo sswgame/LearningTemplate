@@ -10,9 +10,9 @@ find_package(freetype CONFIG REQUIRED GLOBAL)
 # GLOBAL 로 찾아 임포트 타깃이 처음부터 전역이다 — Engine 이 링크한다(directxtex 와 같은 방식, CMake 3.24).
 # 만든 뒤 IMPORTED_GLOBAL 로 올리는 방식은 리눅스 CI 에서 "이 디렉터리에서 만든 타깃이 아니다" 로 거절됐다.
 # 뒤에 오는 imgui 의 설정 파일은 이미 있는 전역 타깃을 보고 다시 만들지 않는다.
-foreach(swFreetypeTarget IN ITEMS freetype Freetype::Freetype)
-	if(NOT TARGET ${swFreetypeTarget})
-		message(FATAL_ERROR "[ThirdParty] freetype config has no target ${swFreetypeTarget} — check build/vcpkg_installed/<triplet>/share/freetype")
+foreach(freetype_target IN ITEMS freetype Freetype::Freetype)
+	if(NOT TARGET ${freetype_target})
+		message(FATAL_ERROR "[ThirdParty] freetype config has no target ${freetype_target} — check build/vcpkg_installed/<triplet>/share/freetype")
 	endif()
 endforeach()
 message(STATUS "[ThirdParty] FreeType ${freetype_VERSION}")

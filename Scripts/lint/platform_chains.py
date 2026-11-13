@@ -16,7 +16,7 @@ Scripts/lint/platform_chains.py
 예외는 `Config/Rules/Lint/PlatformChains.json` 에 이유와 함께 적는다(데스크톱 전용 폴더 · 플랫폼 폴더 · 매크로 검사 파일).
 
 CMake(`*.cmake` · `CMakeLists.txt`, ThirdParty 제외)도 같은 규칙이다 — `if(WIN32) … else()` 의 `else()` 가 몸을 가지면 Android · Emscripten 이 Linux 가지를
-조용히 탄다. 플랫폼 검사(`WIN32` · `UNIX` · `CMAKE_SYSTEM_NAME STREQUAL` · `sw_platform_name STREQUAL` · 호스트 `CMAKE_HOST_*`)만으로 된 첫 조건의
+조용히 탄다. 플랫폼 검사(`WIN32` · `UNIX` · `CMAKE_SYSTEM_NAME STREQUAL` · `SW_PLATFORM_NAME STREQUAL` · 호스트 `CMAKE_HOST_*`)만으로 된 첫 조건의
 사슬은 `else()` + `message(FATAL_ERROR …)` 로 끝나고, 부정(`NOT WIN32`)만으로 된 조건은 `return()` · `FATAL_ERROR` 만 거는 가드일 때만 쓴다.
 POSIX 계열은 `UNIX` · `CMAKE_HOST_UNIX` 로 이름을 적는다. 다른 변수가 섞인 조건(`WIN32 AND NOT SW_SHIPPING_BUILD`)은 기능 검사라 보지 않는다.
 
@@ -102,7 +102,7 @@ def read_sources(project_root: Path, scope: LintScope) -> list[tuple[str, str]]:
 CMAKE_DIRECTIVE = re.compile(r"^\s*(if|elseif|else|endif)\s*\((?:(.*)\)\s*(?:#.*)?$|(.*)$)", re.I)
 CMAKE_PLATFORM_ATOM = re.compile(
     r'^(?:NOT\s+)?(?:WIN32|UNIX|APPLE|ANDROID|EMSCRIPTEN|CMAKE_HOST_WIN32|CMAKE_HOST_UNIX|CMAKE_HOST_APPLE'
-    r'|(?:CMAKE_SYSTEM_NAME|CMAKE_HOST_SYSTEM_NAME|sw_platform_name)\s+STREQUAL\s+"\w*")$')
+    r'|(?:CMAKE_SYSTEM_NAME|CMAKE_HOST_SYSTEM_NAME|SW_PLATFORM_NAME)\s+STREQUAL\s+"\w*")$')
 CMAKE_GUARD_BODY = re.compile(r"^\s*(?:return\(\)|message\(\s*FATAL_ERROR\b.*|#.*|)\s*$")
 CMAKE_FATAL = re.compile(r"^\s*message\(\s*FATAL_ERROR\b")
 PYTHON_HOST_QUERY = re.compile(r"\bsys\.platform\b|\bos\.name\b|\bplatform\.system\(\)")

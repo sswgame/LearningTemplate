@@ -12,26 +12,26 @@ include_guard(GLOBAL)
 # 없으면 OUT_VAR 는 빈 문자열
 # ------------------------------------------------------------------------------
 function(sw_find_msvc_lib_exe MSVC_TOOLS_DIR OUT_VAR)
-	set(libExe "")
+	set(lib_exe "")
 
 	if(MSVC_TOOLS_DIR AND NOT MSVC_TOOLS_DIR STREQUAL "")
-		foreach(hostArch IN ITEMS Hostx64 Hostx86)
-			foreach(targetArch IN ITEMS x64 x86)
-				set(libCandidate "${MSVC_TOOLS_DIR}/bin/${hostArch}/${targetArch}/lib.exe")
+		foreach(host_arch IN ITEMS Hostx64 Hostx86)
+			foreach(target_arch IN ITEMS x64 x86)
+				set(lib_candidate "${MSVC_TOOLS_DIR}/bin/${host_arch}/${target_arch}/lib.exe")
 
-				if(EXISTS "${libCandidate}")
-					set(libExe "${libCandidate}")
+				if(EXISTS "${lib_candidate}")
+					set(lib_exe "${lib_candidate}")
 					break()
 				endif()
 			endforeach()
 
-			if(libExe)
+			if(lib_exe)
 				break()
 			endif()
 		endforeach()
 	endif()
 
-	set(${OUT_VAR} "${libExe}" PARENT_SCOPE)
+	set(${OUT_VAR} "${lib_exe}" PARENT_SCOPE)
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -40,51 +40,51 @@ endfunction()
 # 없으면 OUT_VAR 는 빈 문자열
 # ------------------------------------------------------------------------------
 function(sw_find_windows_sdk_mt SDK_DIR SDK_VERSION OUT_VAR)
-	set(mtExe "")
+	set(mt_exe "")
 
 	if(SDK_DIR AND SDK_VERSION AND NOT SDK_DIR STREQUAL "" AND NOT SDK_VERSION STREQUAL "")
 		foreach(arch IN ITEMS x64 x86)
-			set(mtCandidate "${SDK_DIR}/bin/${SDK_VERSION}/${arch}/mt.exe")
+			set(mt_candidate "${SDK_DIR}/bin/${SDK_VERSION}/${arch}/mt.exe")
 
-			if(EXISTS "${mtCandidate}")
-				set(mtExe "${mtCandidate}")
+			if(EXISTS "${mt_candidate}")
+				set(mt_exe "${mt_candidate}")
 				break()
 			endif()
 		endforeach()
 	endif()
 
-	if(NOT mtExe)
-		foreach(kitsRoot IN ITEMS
+	if(NOT mt_exe)
+		foreach(kits_root IN ITEMS
 			"C:/Program Files (x86)/Windows Kits/10"
 			"C:/Program Files/Windows Kits/10"
 		)
-			if(NOT IS_DIRECTORY "${kitsRoot}/bin")
+			if(NOT IS_DIRECTORY "${kits_root}/bin")
 				continue()
 			endif()
 
-			file(GLOB sdkVerDirs LIST_DIRECTORIES true "${kitsRoot}/bin/10.*")
-			list(SORT sdkVerDirs COMPARE NATURAL ORDER DESCENDING)
+			file(GLOB sdk_ver_dirs LIST_DIRECTORIES true "${kits_root}/bin/10.*")
+			list(SORT sdk_ver_dirs COMPARE NATURAL ORDER DESCENDING)
 
-			foreach(verDir IN LISTS sdkVerDirs)
+			foreach(ver_dir IN LISTS sdk_ver_dirs)
 				foreach(arch IN ITEMS x64 x86)
-					set(mtCandidate "${verDir}/${arch}/mt.exe")
+					set(mt_candidate "${ver_dir}/${arch}/mt.exe")
 
-					if(EXISTS "${mtCandidate}")
-						set(mtExe "${mtCandidate}")
+					if(EXISTS "${mt_candidate}")
+						set(mt_exe "${mt_candidate}")
 						break()
 					endif()
 				endforeach()
 
-				if(mtExe)
+				if(mt_exe)
 					break()
 				endif()
 			endforeach()
 
-			if(mtExe)
+			if(mt_exe)
 				break()
 			endif()
 		endforeach()
 	endif()
 
-	set(${OUT_VAR} "${mtExe}" PARENT_SCOPE)
+	set(${OUT_VAR} "${mt_exe}" PARENT_SCOPE)
 endfunction()

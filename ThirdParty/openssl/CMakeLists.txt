@@ -8,9 +8,9 @@
 find_package(OpenSSL REQUIRED)
 
 # 임포트 타깃은 이 디렉터리에만 보인다 — Engine 이 링크하므로 전역으로 올린다(tracy 와 같은 방식).
-foreach(swOpenSslTarget IN ITEMS OpenSSL::SSL OpenSSL::Crypto)
-	if(TARGET ${swOpenSslTarget})
-		set_target_properties(${swOpenSslTarget} PROPERTIES IMPORTED_GLOBAL TRUE)
+foreach(open_ssl_target IN ITEMS OpenSSL::SSL OpenSSL::Crypto)
+	if(TARGET ${open_ssl_target})
+		set_target_properties(${open_ssl_target} PROPERTIES IMPORTED_GLOBAL TRUE)
 	endif()
 endforeach()
 

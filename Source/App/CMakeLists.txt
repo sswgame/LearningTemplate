@@ -13,7 +13,7 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 	return()
 endif()
 
-set(swAppDir "${CMAKE_CURRENT_SOURCE_DIR}")
+set(app_dir "${CMAKE_CURRENT_SOURCE_DIR}")
 # 개발 전용 소스(`Tests/` · `Dev/`)는 다른 타깃과 같은 규칙으로 뺀다(`SW_DEV_ONLY_SOURCE_PATTERNS`). 에디터 모듈의 개발 경로는 `EditorModuleManager.cpp` 안의 `#if` 구역이다.
 # 부르는 자리는 `build::kShipping` 으로 가르고 배포에서는 이유를 남기고 멈춘다.
 if(SW_SHIPPING_BUILD)

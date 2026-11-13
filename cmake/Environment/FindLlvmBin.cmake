@@ -20,16 +20,16 @@ include("${CMAKE_CURRENT_LIST_DIR}/../Config/JsonValue.cmake")
 # 포트 빌드는 이 함수를 부르지 않는다 — 생성한 포트 툴체인(`VcpkgTriplets.cmake`)이 여기서 푼 경로를 글로 싣는다.
 # ------------------------------------------------------------------------------
 function(sw_find_llvm_bin OUT_VAR)
-	get_filename_component(swRepoRoot "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../.." ABSOLUTE)
-	set(swConfigFile "${swRepoRoot}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG}")
-	sw_require_json_value(swLlvmPath "${swConfigFile}" "${SW_KEY_LLVM_PATH}")
+	get_filename_component(repo_root "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../.." ABSOLUTE)
+	set(config_file "${repo_root}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG}")
+	sw_require_json_value(llvm_path "${config_file}" "${SW_KEY_LLVM_PATH}")
 
-	if(swLlvmPath STREQUAL "" OR NOT IS_DIRECTORY "${swLlvmPath}/bin")
+	if(llvm_path STREQUAL "" OR NOT IS_DIRECTORY "${llvm_path}/bin")
 		message(FATAL_ERROR
-			"[FindLlvmBin] ${swConfigFile}: ${SW_KEY_LLVM_PATH}='${swLlvmPath}' has no bin folder.\n"
+			"[FindLlvmBin] ${config_file}: ${SW_KEY_LLVM_PATH}='${llvm_path}' has no bin folder.\n"
 			"  Run `py -3 Scripts/setup/environment.py` (or llvm.py --install) so it records a valid LLVM kit."
 		)
 	endif()
 
-	set(${OUT_VAR} "${swLlvmPath}/bin" PARENT_SCOPE)
+	set(${OUT_VAR} "${llvm_path}/bin" PARENT_SCOPE)
 endfunction()

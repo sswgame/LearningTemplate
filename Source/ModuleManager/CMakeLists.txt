@@ -16,12 +16,12 @@ sw_glob_source_tree(MODULE_HOST_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 
 if(SW_SHIPPING_BUILD)
 	sw_remove_excluded_sources(MODULE_HOST_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
-	set(swModuleManagerLibType STATIC)
+	set(module_manager_lib_type STATIC)
 else()
-	set(swModuleManagerLibType SHARED)
+	set(module_manager_lib_type SHARED)
 endif()
 
-add_library(ModuleManager ${swModuleManagerLibType} ${MODULE_HOST_SOURCES})
+add_library(ModuleManager ${module_manager_lib_type} ${MODULE_HOST_SOURCES})
 sw_apply_target_layer_guard(ModuleManager modulemanager)
 set_target_properties(ModuleManager PROPERTIES FOLDER "Source/ModuleManager")
 target_link_libraries(ModuleManager
@@ -32,5 +32,5 @@ target_link_libraries(ModuleManager
 		sw_global_options
 )
 target_compile_definitions(ModuleManager PRIVATE "SW_LOG_TAG=\"Engine\"" "SW_REGISTRAR_MODULE=\"ModuleManager\"" SW_APP_INTERNAL)
-sw_configure_dll_exports(ModuleManager ${swModuleManagerLibType} MODULEMANAGER)
+sw_configure_dll_exports(ModuleManager ${module_manager_lib_type} MODULEMANAGER)
 sw_configure_pch(ModuleManager "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")

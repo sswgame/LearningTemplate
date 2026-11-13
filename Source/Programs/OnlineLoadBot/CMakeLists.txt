@@ -6,7 +6,7 @@
 # ------------------------------------------------------------------------------
 # 1) 기대는 키트 — 온라인 클라이언트 키트 모두와 같은 기능의 서버 키트(한 프로세스 서버 조립 `LoadBotLocalServer`). 하나라도 꺼져 있으면 짓지 않는다.
 # ------------------------------------------------------------------------------
-set(swLoadBotKit
+set(load_bot_kit
 	# 서버 키트의 공통 기반(서버 전용 코어) — 모듈을 이 순서로 올리므로 서버 키트보다 앞이다
 	GF_Server_OnlineCore
 	GF_Account GF_Server_Account
@@ -25,9 +25,9 @@ set(swLoadBotKit
 	GF_SQLStore GF_Server_SQLStore
 	GF_Server_CacheStore
 )
-foreach(swKit IN LISTS swLoadBotKit)
-	if(NOT TARGET ${swKit})
-		message(STATUS "[OnlineLoadBot] ${swKit} is not built in this configuration - skipping the load bot.")
+foreach(kit IN LISTS load_bot_kit)
+	if(NOT TARGET ${kit})
+		message(STATUS "[OnlineLoadBot] ${kit} is not built in this configuration - skipping the load bot.")
 		return()
 	endif()
 endforeach()
@@ -39,15 +39,15 @@ endforeach()
 #    기동 뒤에 올리는 것과 같은 모양으로, 실행 파일이 엔진의 `ModuleTypes` 단계에서 `SW_LOADBOT_MODULES` 를 순서대로 올리고 진입점(`LoadBotModuleEntry.h`)을 부른다.
 #    모듈은 App 이 올리는 동적 모듈 레지스트리(`Bin/Modules`)에 넣지 않고 `Bin` 에 둔다(`findModuleLibraryPath` 가 Modules → Bin 으로 찾는다).
 # ------------------------------------------------------------------------------
-sw_glob_source_tree(swLoadBotCoreSource "${CMAKE_CURRENT_SOURCE_DIR}/LoadBot*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/LoadBot*.h")
+sw_glob_source_tree(load_bot_core_source "${CMAKE_CURRENT_SOURCE_DIR}/LoadBot*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/LoadBot*.h")
 # SHARED(진입점 하나만 내보냄): MODULE 종류는 App 이 올리는 동적 모듈 레지스트리에 들어야 한다(`sw_verify_dynamic_module_registry`) — 이 모듈은 봇 실행 파일만 올린다.
-add_library(OnlineLoadBotCore SHARED ${swLoadBotCoreSource})
+add_library(OnlineLoadBotCore SHARED ${load_bot_core_source})
 target_link_libraries(OnlineLoadBotCore
 	PRIVATE
 		sw_public_source_includes # "Programs/OnlineLoadBot/..." 는 Source/ 기준 전체 경로다
 		Engine
 		GameFramework
-		${swLoadBotKit}
+		${load_bot_kit}
 		sw_global_options
 )
 target_compile_definitions(OnlineLoadBotCore PRIVATE "SW_LOG_TAG=\"OnlineLoadBot\"" "SW_REGISTRAR_MODULE=\"OnlineLoadBotCore\"")
@@ -60,14 +60,14 @@ set_target_properties(OnlineLoadBotCore PROPERTIES
 )
 
 # 올리는 순서 = 의존 순서: GameFramework → 키트(런타임 키트 다음에 같은 기능의 서버 키트 — 위 목록 순서) → 봇 모듈.
-set_property(GLOBAL PROPERTY SW_LOADBOT_KITS ${swLoadBotKit}) # 온라인 키트 단위 테스트(`UnitTests.OnlineKits`, Test/CMakeLists.txt)가 이 키트들의 Tests/ 를 넘긴다
-set(swLoadBotModuleList GameFramework ${swLoadBotKit} OnlineLoadBotCore)
-list(JOIN swLoadBotModuleList "\",\"" swLoadBotModuleText)
+set_property(GLOBAL PROPERTY SW_LOADBOT_KITS ${load_bot_kit}) # 온라인 키트 단위 테스트(`UnitTests.OnlineKits`, Test/CMakeLists.txt)가 이 키트들의 Tests/ 를 넘긴다
+set(load_bot_module_list GameFramework ${load_bot_kit} OnlineLoadBotCore)
+list(JOIN load_bot_module_list "\",\"" load_bot_module_text)
 
 sw_add_executable(OnlineLoadBot Main.cpp)
 # ModuleManager: 호스트 범위의 모듈 라이브러리 창구(`ModuleLoaderSubsystem`) — 전용 서버(`ServerApp`)와 같은 모양으로 엔진(DedicatedServer)을 세운다.
 target_link_libraries(OnlineLoadBot PRIVATE ModuleManager Engine sw_public_source_includes sw_global_options)
-target_compile_definitions(OnlineLoadBot PRIVATE "SW_LOG_TAG=\"OnlineLoadBot\"" "SW_REGISTRAR_MODULE=\"OnlineLoadBot\"" "SW_LOADBOT_MODULES=\"${swLoadBotModuleText}\"")
+target_compile_definitions(OnlineLoadBot PRIVATE "SW_LOG_TAG=\"OnlineLoadBot\"" "SW_REGISTRAR_MODULE=\"OnlineLoadBot\"" "SW_LOADBOT_MODULES=\"${load_bot_module_text}\"")
 add_dependencies(OnlineLoadBot OnlineLoadBotCore) # 실행 파일을 지으면 올릴 모듈(과 그것이 링크하는 키트)도 선다
 sw_configure_pch(OnlineLoadBot "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 set_target_properties(OnlineLoadBot PROPERTIES FOLDER "Source/Programs")

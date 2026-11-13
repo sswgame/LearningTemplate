@@ -10,20 +10,20 @@
 # 플랫폼 · 구성 이름 — 매니페스트(_listExcludedPlatform · _listConfiguration) · 모듈 해석 · 배포 백엔드 확인이 같은 낱말을 쓴다(런타임 ModuleCatalog 와 같은 표).
 # ------------------------------------------------------------------------------
 if(WIN32)
-	set(sw_platform_name "Windows")
+	set(SW_PLATFORM_NAME "Windows")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	set(sw_platform_name "Linux")
+	set(SW_PLATFORM_NAME "Linux")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
-	set(sw_platform_name "Android")
+	set(SW_PLATFORM_NAME "Android")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
-	set(sw_platform_name "Web")
+	set(SW_PLATFORM_NAME "Web")
 else()
 	message(FATAL_ERROR "[Platform] unknown CMAKE_SYSTEM_NAME '${CMAKE_SYSTEM_NAME}' (one of Windows, Linux, Android, Emscripten)")
 endif()
 if(SW_SHIPPING_BUILD)
-	set(sw_configuration_name "Shipping")
+	set(SW_CONFIGURATION_NAME "Shipping")
 else()
-	set(sw_configuration_name "Dev")
+	set(SW_CONFIGURATION_NAME "Dev")
 endif()
 
 # ------------------------------------------------------------------------------
@@ -56,10 +56,10 @@ endif()
 add_library(sw_global_options INTERFACE)
 
 # 컴파일 플래그 모듈(Architecture/Platform/Compiler/BuildType/Options)이 만든 INTERFACE 타겟을
-# 여기서 한 번 흡수한다. sw_flag_libraries 는 비어 있을 수 있는 **리스트 변수**라 소비자마다 가드와 함께
+# 여기서 한 번 흡수한다. SW_FLAG_LIBRARIES 는 비어 있을 수 있는 **리스트 변수**라 소비자마다 가드와 함께
 # 다시 걸어야 하지만, 타겟 하나로 묶으면 sw_global_options 만 걸면 되고 새 플래그 모듈이 늘어도 소비자는 고칠 게 없다.
-if(sw_flag_libraries)
-	target_link_libraries(sw_global_options INTERFACE ${sw_flag_libraries})
+if(SW_FLAG_LIBRARIES)
+	target_link_libraries(sw_global_options INTERFACE ${SW_FLAG_LIBRARIES})
 endif()
 
 # 빌드 구성 이름(sw::build::kConfigName, Core/Foundation/BuildInfo.h) — Shipping 이면 "Shipping", 아니면 실제 구성 이름.
@@ -107,15 +107,15 @@ else()
 endif()
 
 # Vulkan 검증 레이어를 켜는 구성의 정의는 여기 하나뿐이다. 세 곳이 이 정의만 읽는다.
-#   레이어 복사(sw_deploy_runtime_dependencies) : 변수 sw_vulkan_validation
+#   레이어 복사(sw_deploy_runtime_dependencies) : 변수 SW_VULKAN_VALIDATION
 #   켜기(VulkanRHIDevice 생성자) · 그것을 보는 테스트 : 매크로 SW_VULKAN_VALIDATION
 # 세 곳이 조건을 따로 적으면 한쪽만 바뀐다. 그러면 레이어가 없는 구성에서 테스트가 돌아 꺼진 레이어를 실패로 본다.
 # 출시 빌드는 빌드 형식이 Debug 여도 레이어를 싣지 않는다(배포물에 개발용 DLL 이 들어가지 않게).
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT SW_SHIPPING_BUILD)
-	set(sw_vulkan_validation ON)
+	set(SW_VULKAN_VALIDATION ON)
 	target_compile_definitions(sw_global_options INTERFACE SW_VULKAN_VALIDATION)
 else()
-	set(sw_vulkan_validation OFF)
+	set(SW_VULKAN_VALIDATION OFF)
 endif()
 
 # 두 매크로 모두 헤더(Mutex.h)와 전역 연산자에 영향을 주므로 모든 타겟에 동일하게 적용해야 한다.
@@ -133,16 +133,16 @@ endif()
 # ------------------------------------------------------------------------------
 # IPO — 전역 CMAKE_INTERPROCEDURAL_OPTIMIZATION (Shipping 만)
 # ------------------------------------------------------------------------------
-set(sw_ipo_supported FALSE)
+set(SW_IPO_SUPPORTED FALSE)
 include("${CMAKE_CURRENT_LIST_DIR}/../Config/JsonValue.cmake")
 
 # `SW_ENABLE_LTO` 가 여기도 걸린다 — 이 전역 IPO 와 Shipping LTO 는 한 스위치다(빼면 OFF 를 줘도 LTO 로 간다).
 # 배포 빌드(`SW_SHIPPING_BUILD`)만이다 — 개발 Release 에 걸면 엔진 .cpp 하나를 고쳐도 Engine.dll 링크가 코드 생성을 다시 해 75 초였다(Debug 4.7 초).
 # 언리얼도 LTO 는 Shipping 만 한다(Development 는 끈다). 개발 Release 의 성능은 LTO 없는 값이다 — 배포 성능은 Ninja-Shipping 으로 잰다.
 if(SW_ENABLE_LTO AND SW_SHIPPING_BUILD AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
-	sw_check_ipo_support(sw_ipo_supported sw_ipo_error)
+	sw_check_ipo_support(SW_IPO_SUPPORTED SW_IPO_ERROR)
 
-	if(sw_ipo_supported)
+	if(SW_IPO_SUPPORTED)
 		set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 		message(STATUS "[BuildConfig] IPO enabled globally (opt-out for Tools/Tests/Editor)")
 
@@ -153,51 +153,51 @@ if(SW_ENABLE_LTO AND SW_SHIPPING_BUILD AND (CMAKE_BUILD_TYPE STREQUAL "Release" 
 		# clang 은 LLD 가 필수라(`Clang.cmake`) 이 옵션을 알아듣는다. 다른 컴파일러(IPO 가 되더라도)에는 주지 않는다.
 		if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 			# 캐시 폴더 이름은 `BuildCaches.json` 이 정한다 — 콜드 측정 전에 지울 캐시 목록과 한 곳이다. 빌드 폴더 밖이면 구성을 세운다.
-			set(sw_build_caches_file "${CMAKE_CURRENT_LIST_DIR}/../Config/BuildCaches.json")
-			set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${sw_build_caches_file}")
-			sw_require_json_value(sw_lto_cache_base "${sw_build_caches_file}" cold_clear lto_link_cache base)
-			sw_require_json_value(sw_lto_cache_name "${sw_build_caches_file}" cold_clear lto_link_cache path)
+			set(SW_BUILD_CACHES_FILE "${CMAKE_CURRENT_LIST_DIR}/../Config/BuildCaches.json")
+			set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${SW_BUILD_CACHES_FILE}")
+			sw_require_json_value(SW_LTO_CACHE_BASE "${SW_BUILD_CACHES_FILE}" cold_clear lto_link_cache base)
+			sw_require_json_value(SW_LTO_CACHE_NAME "${SW_BUILD_CACHES_FILE}" cold_clear lto_link_cache path)
 
-			if(NOT sw_lto_cache_base STREQUAL "build")
-				message(FATAL_ERROR "[BuildConfig] ${sw_build_caches_file}: cold_clear.lto_link_cache.base must be 'build' (got '${sw_lto_cache_base}')")
+			if(NOT SW_LTO_CACHE_BASE STREQUAL "build")
+				message(FATAL_ERROR "[BuildConfig] ${SW_BUILD_CACHES_FILE}: cold_clear.lto_link_cache.base must be 'build' (got '${SW_LTO_CACHE_BASE}')")
 			endif()
 
-			set(sw_lto_cache_dir "${CMAKE_BINARY_DIR}/${sw_lto_cache_name}")
-			set(sw_lto_cache_policy "cache_size_bytes=8g:prune_after=168h")
+			set(SW_LTO_CACHE_DIR "${CMAKE_BINARY_DIR}/${SW_LTO_CACHE_NAME}")
+			set(SW_LTO_CACHE_POLICY "cache_size_bytes=8g:prune_after=168h")
 
 			# 링크 풀(`BuildOptions.cmake` 5 — 코어 수 / 4, 2 ~ 4 개)이 동시에 여는 링크 수를 정한다. ThinLTO 백엔드는 링크마다 코어 수만큼 스레드를 띄우므로
 			# 풀이 가득 차면 코어 수 × 풀 크기 스레드가 동시에 코드 생성을 해 풀이 막으려던 메모리 압박이 그대로 온다. 링크 하나의 스레드를 코어 수 / 풀 크기로 나눠
 			# 합이 코어 수에 맞게 한다. 풀이 없는 생성기(Ninja 가 아님)는 상한을 두지 않는다(lld 기본).
-			set(sw_lto_jobs_option "")
+			set(SW_LTO_JOBS_OPTION "")
 
-			if(DEFINED cpuCount AND DEFINED linkJobs)
-				math(EXPR sw_lto_jobs "${cpuCount} / ${linkJobs}")
+			if(DEFINED cpu_count AND DEFINED link_jobs)
+				math(EXPR SW_LTO_JOBS "${cpu_count} / ${link_jobs}")
 
-				if(sw_lto_jobs LESS 2)
-					set(sw_lto_jobs 2)
+				if(SW_LTO_JOBS LESS 2)
+					set(SW_LTO_JOBS 2)
 				endif()
 
-				set(sw_lto_jobs_option "${sw_lto_jobs}")
+				set(SW_LTO_JOBS_OPTION "${SW_LTO_JOBS}")
 			endif()
 
 			if(MSVC)
-				target_link_options(sw_global_options INTERFACE "/lldltocache:${sw_lto_cache_dir}" "/lldltocachepolicy:${sw_lto_cache_policy}")
+				target_link_options(sw_global_options INTERFACE "/lldltocache:${SW_LTO_CACHE_DIR}" "/lldltocachepolicy:${SW_LTO_CACHE_POLICY}")
 
-				if(sw_lto_jobs_option)
-					target_link_options(sw_global_options INTERFACE "/opt:lldltojobs=${sw_lto_jobs_option}")
+				if(SW_LTO_JOBS_OPTION)
+					target_link_options(sw_global_options INTERFACE "/opt:lldltojobs=${SW_LTO_JOBS_OPTION}")
 				endif()
 			else()
-				target_link_options(sw_global_options INTERFACE "LINKER:--thinlto-cache-dir=${sw_lto_cache_dir}" "LINKER:--thinlto-cache-policy=${sw_lto_cache_policy}")
+				target_link_options(sw_global_options INTERFACE "LINKER:--thinlto-cache-dir=${SW_LTO_CACHE_DIR}" "LINKER:--thinlto-cache-policy=${SW_LTO_CACHE_POLICY}")
 
-				if(sw_lto_jobs_option)
-					target_link_options(sw_global_options INTERFACE "LINKER:--thinlto-jobs=${sw_lto_jobs_option}")
+				if(SW_LTO_JOBS_OPTION)
+					target_link_options(sw_global_options INTERFACE "LINKER:--thinlto-jobs=${SW_LTO_JOBS_OPTION}")
 				endif()
 			endif()
 
-			message(STATUS "[BuildConfig] ThinLTO link cache: ${sw_lto_cache_dir} (${sw_lto_cache_policy}, backend jobs per link: ${sw_lto_jobs_option})")
+			message(STATUS "[BuildConfig] ThinLTO link cache: ${SW_LTO_CACHE_DIR} (${SW_LTO_CACHE_POLICY}, backend jobs per link: ${SW_LTO_JOBS_OPTION})")
 		endif()
-	elseif(sw_ipo_error)
-		message(STATUS "[BuildConfig] IPO unsupported: ${sw_ipo_error}")
+	elseif(SW_IPO_ERROR)
+		message(STATUS "[BuildConfig] IPO unsupported: ${SW_IPO_ERROR}")
 	endif()
 endif()
 
@@ -268,15 +268,15 @@ function(sw_keep_import_library_if_unchanged TARGET_NAME)
 	if(NOT WIN32 OR NOT MSVC)
 		return()
 	endif()
-	get_target_property(targetType ${TARGET_NAME} TYPE)
-	if(NOT targetType STREQUAL "SHARED_LIBRARY")
+	get_target_property(target_type ${TARGET_NAME} TYPE)
+	if(NOT target_type STREQUAL "SHARED_LIBRARY")
 		return()
 	endif()
-	set(stageLibrary "${CMAKE_BINARY_DIR}/ImportLibraryStage/${TARGET_NAME}.lib")
+	set(stage_library "${CMAKE_BINARY_DIR}/ImportLibraryStage/${TARGET_NAME}.lib")
 	file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/ImportLibraryStage")
-	target_link_options(${TARGET_NAME} PRIVATE "/IMPLIB:${stageLibrary}")
+	target_link_options(${TARGET_NAME} PRIVATE "/IMPLIB:${stage_library}")
 	add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-		COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${stageLibrary}" "$<TARGET_LINKER_FILE:${TARGET_NAME}>"
+		COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${stage_library}" "$<TARGET_LINKER_FILE:${TARGET_NAME}>"
 		VERBATIM
 	)
 endfunction()
@@ -284,13 +284,13 @@ endfunction()
 # 실행 파일 옆에 놓을 런타임 DLL — 구성마다 실제로 쓰는 것만.
 #   DXC        : 모든 구성. 개발 빌드는 런타임 HLSL 컴파일 · DXIL 리플렉션에, 배포 빌드는 App 이 쿠커(`CookAssets` · `pack.py` 의 `--cook-all`)라 셰이더 쿠킹에 쓴다.
 #                배포 패키지에는 들지 않는다 — 스테이징(`Scripts/package/pack.py` 의 LIST_COOK_ONLY_LIBRARY_STEM)이 뺀다(언리얼도 셰이더 컴파일러는 쿠커 쪽에만 둔다).
-#   검증 레이어 : sw_vulkan_validation 인 구성만(위의 정의 하나를 VulkanRHIDevice 도 매크로로 읽는다. 딸려 오는 mimalloc 도 그 의존성일 뿐이다)
+#   검증 레이어 : SW_VULKAN_VALIDATION 인 구성만(위의 정의 하나를 VulkanRHIDevice 도 매크로로 읽는다. 딸려 오는 mimalloc 도 그 의존성일 뿐이다)
 #   Tracy      : 개발 빌드 · Windows · SW_ENABLE_TRACY (함수 안에서 거른다)
 #   Tint       : WebGPU 셰이더 대상(SPIR-V → WGSL)의 쿠킹 도구 — DXC 와 같은 이유로 실행 파일 옆에 둔다(ThirdParty/dawn, 웹 · Android · 서버는 함수 안에서 거른다)
 function(sw_deploy_runtime_dependencies TARGET_NAME)
 	sw_copy_dxc_dlls(${TARGET_NAME})
 	sw_copy_tint_tool(${TARGET_NAME})
-	if(sw_vulkan_validation)
+	if(SW_VULKAN_VALIDATION)
 		sw_copy_vulkan_validation_runtime(${TARGET_NAME})
 	endif()
 	sw_copy_tracy_runtime(${TARGET_NAME})
@@ -307,51 +307,51 @@ endfunction()
 #   실행 중인 App · 테스트가 DLL 을 쥐고 있으면 지우지 못한다 — 경고만 하고 넘어간다(다음 configure 가 다시 지운다).
 # ------------------------------------------------------------------------------
 function(sw_remove_stale_binary_outputs ACTIVE_MODULES)
-	set(swBinDir "${CMAKE_BINARY_DIR}/Bin")
-	set(swModulePattern "^(GF_.+|RHI_.+|EditorModule|SWGame.*)$")
-	set(swImageSuffixes ".dll;.pdb;.so;.exp;.lib;.ilk;.debug")
-	set(swStale "")
+	set(bin_dir "${CMAKE_BINARY_DIR}/Bin")
+	set(module_pattern "^(GF_.+|RHI_.+|EditorModule|SWGame.*)$")
+	set(image_suffixes ".dll;.pdb;.so;.exp;.lib;.ilk;.debug")
+	set(stale "")
 
-	file(GLOB swModuleFolderFiles LIST_DIRECTORIES false "${swBinDir}/Modules/*")
-	foreach(swPath IN LISTS swModuleFolderFiles)
-		get_filename_component(swStem "${swPath}" NAME_WE)
-		get_filename_component(swSuffix "${swPath}" LAST_EXT)
-		string(REGEX REPLACE "^lib" "" swStemNoPrefix "${swStem}")
-		get_filename_component(swFileName "${swPath}" NAME)
-		if(swFileName MATCHES "_temp_")
-			list(APPEND swStale "${swPath}")
-		elseif(swSuffix IN_LIST swImageSuffixes AND swStemNoPrefix MATCHES "${swModulePattern}" AND NOT swStemNoPrefix IN_LIST ACTIVE_MODULES)
-			list(APPEND swStale "${swPath}")
-		elseif((swSuffix STREQUAL ".dll" OR swSuffix STREQUAL ".pdb") AND NOT swStemNoPrefix MATCHES "${swModulePattern}")
-			list(APPEND swStale "${swPath}")
+	file(GLOB module_folder_files LIST_DIRECTORIES false "${bin_dir}/Modules/*")
+	foreach(path IN LISTS module_folder_files)
+		get_filename_component(stem "${path}" NAME_WE)
+		get_filename_component(suffix "${path}" LAST_EXT)
+		string(REGEX REPLACE "^lib" "" stem_no_prefix "${stem}")
+		get_filename_component(file_name "${path}" NAME)
+		if(file_name MATCHES "_temp_")
+			list(APPEND stale "${path}")
+		elseif(suffix IN_LIST image_suffixes AND stem_no_prefix MATCHES "${module_pattern}" AND NOT stem_no_prefix IN_LIST ACTIVE_MODULES)
+			list(APPEND stale "${path}")
+		elseif((suffix STREQUAL ".dll" OR suffix STREQUAL ".pdb") AND NOT stem_no_prefix MATCHES "${module_pattern}")
+			list(APPEND stale "${path}")
 		endif()
 	endforeach()
 
-	file(GLOB swBinFiles LIST_DIRECTORIES false "${swBinDir}/*")
-	foreach(swPath IN LISTS swBinFiles)
-		get_filename_component(swFileName "${swPath}" NAME)
-		get_filename_component(swStem "${swPath}" NAME_WE)
-		get_filename_component(swSuffix "${swPath}" LAST_EXT)
-		string(REGEX REPLACE "^lib" "" swStemNoPrefix "${swStem}")
-		if(swStemNoPrefix MATCHES "${swModulePattern}" AND (swSuffix IN_LIST swImageSuffixes OR swFileName MATCHES "\\.module\\.json$"))
-			list(APPEND swStale "${swPath}")
-		elseif(swStem MATCHES "Test$" AND (swSuffix STREQUAL ".exe" OR swSuffix STREQUAL ".pdb" OR swSuffix STREQUAL ""))
-			list(APPEND swStale "${swPath}")
-		elseif(swSuffix STREQUAL ".pdb" AND EXISTS "${swBinDir}/Symbols/${swFileName}")
-			list(APPEND swStale "${swPath}")
+	file(GLOB bin_files LIST_DIRECTORIES false "${bin_dir}/*")
+	foreach(path IN LISTS bin_files)
+		get_filename_component(file_name "${path}" NAME)
+		get_filename_component(stem "${path}" NAME_WE)
+		get_filename_component(suffix "${path}" LAST_EXT)
+		string(REGEX REPLACE "^lib" "" stem_no_prefix "${stem}")
+		if(stem_no_prefix MATCHES "${module_pattern}" AND (suffix IN_LIST image_suffixes OR file_name MATCHES "\\.module\\.json$"))
+			list(APPEND stale "${path}")
+		elseif(stem MATCHES "Test$" AND (suffix STREQUAL ".exe" OR suffix STREQUAL ".pdb" OR suffix STREQUAL ""))
+			list(APPEND stale "${path}")
+		elseif(suffix STREQUAL ".pdb" AND EXISTS "${bin_dir}/Symbols/${file_name}")
+			list(APPEND stale "${path}")
 		endif()
 	endforeach()
 
-	set(swRemovedCount 0)
-	foreach(swPath IN LISTS swStale)
-		execute_process(COMMAND "${CMAKE_COMMAND}" -E rm -f "${swPath}" RESULT_VARIABLE swResult OUTPUT_QUIET ERROR_QUIET)
-		if(swResult EQUAL 0 AND NOT EXISTS "${swPath}")
-			math(EXPR swRemovedCount "${swRemovedCount} + 1")
+	set(removed_count 0)
+	foreach(path IN LISTS stale)
+		execute_process(COMMAND "${CMAKE_COMMAND}" -E rm -f "${path}" RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
+		if(result EQUAL 0 AND NOT EXISTS "${path}")
+			math(EXPR removed_count "${removed_count} + 1")
 		else()
-			message(WARNING "[Module] Could not remove a stale output (in use?): ${swPath}")
+			message(WARNING "[Module] Could not remove a stale output (in use?): ${path}")
 		endif()
 	endforeach()
-	if(swRemovedCount GREATER 0)
-		message(STATUS "[Module] Removed ${swRemovedCount} stale output(s) from Bin (old layout or modules this configuration turns off)")
+	if(removed_count GREATER 0)
+		message(STATUS "[Module] Removed ${removed_count} stale output(s) from Bin (old layout or modules this configuration turns off)")
 	endif()
 endfunction()

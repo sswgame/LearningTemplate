@@ -24,26 +24,26 @@
 # ------------------------------------------------------------------------------
 function(sw_pinned_archiver_path OUT_VAR ARCHIVER_NAME)
 	set(${OUT_VAR} "" PARENT_SCOPE)
-	set(swArName "${ARCHIVER_NAME}")
+	set(ar_name "${ARCHIVER_NAME}")
 
-	set(swCandidateDirs "")
+	set(candidate_dirs "")
 
 	# (1) 지금 쓰는 컴파일러 옆(그리고 링크가 가리키는 실제 폴더).
 	if(CMAKE_CXX_COMPILER)
-		get_filename_component(swCompilerDir "${CMAKE_CXX_COMPILER}" DIRECTORY)
-		get_filename_component(swCompilerRealPath "${CMAKE_CXX_COMPILER}" REALPATH)
-		get_filename_component(swCompilerRealDir "${swCompilerRealPath}" DIRECTORY)
-		list(APPEND swCandidateDirs "${swCompilerDir}" "${swCompilerRealDir}")
+		get_filename_component(compiler_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+		get_filename_component(compiler_real_path "${CMAKE_CXX_COMPILER}" REALPATH)
+		get_filename_component(compiler_real_dir "${compiler_real_path}" DIRECTORY)
+		list(APPEND candidate_dirs "${compiler_dir}" "${compiler_real_dir}")
 	endif()
 
 	# (2) 저장소가 고정한 LLVM(Environment 가 적은 llvm_path). `project()` 이전처럼 컴파일러가 아직 없을 때 여기가 답한다.
 	if(SW_TOOLCHAIN_LLVM_PATH)
-		list(APPEND swCandidateDirs "${SW_TOOLCHAIN_LLVM_PATH}/bin")
+		list(APPEND candidate_dirs "${SW_TOOLCHAIN_LLVM_PATH}/bin")
 	endif()
 
-	foreach(swCandidateDir IN LISTS swCandidateDirs)
-		if(EXISTS "${swCandidateDir}/${swArName}")
-			set(${OUT_VAR} "${swCandidateDir}/${swArName}" PARENT_SCOPE)
+	foreach(candidate_dir IN LISTS candidate_dirs)
+		if(EXISTS "${candidate_dir}/${ar_name}")
+			set(${OUT_VAR} "${candidate_dir}/${ar_name}" PARENT_SCOPE)
 			return()
 		endif()
 	endforeach()
@@ -58,52 +58,52 @@ endfunction()
 function(sw_bind_pinned_archiver)
 	# 플랫폼이 아니라 컴파일러 앞단으로 고른다 — GNU 앞단 clang(Linux · Android NDK · Emscripten)은 llvm-ar, clang-cl 은 `sw_bind_clang_cl_windows_tools` 가 맡는다.
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
-		sw_pinned_archiver_path(swPosixAr "llvm-ar${CMAKE_HOST_EXECUTABLE_SUFFIX}")
-		set(swPosixRanlib "")
+		sw_pinned_archiver_path(posix_ar "llvm-ar${CMAKE_HOST_EXECUTABLE_SUFFIX}")
+		set(posix_ranlib "")
 
-		if(swPosixAr)
-			get_filename_component(swPosixArDir "${swPosixAr}" DIRECTORY)
+		if(posix_ar)
+			get_filename_component(posix_ar_dir "${posix_ar}" DIRECTORY)
 
-			if(EXISTS "${swPosixArDir}/llvm-ranlib${CMAKE_HOST_EXECUTABLE_SUFFIX}")
-				set(swPosixRanlib "${swPosixArDir}/llvm-ranlib${CMAKE_HOST_EXECUTABLE_SUFFIX}")
+			if(EXISTS "${posix_ar_dir}/llvm-ranlib${CMAKE_HOST_EXECUTABLE_SUFFIX}")
+				set(posix_ranlib "${posix_ar_dir}/llvm-ranlib${CMAKE_HOST_EXECUTABLE_SUFFIX}")
 			endif()
 
-			set(CMAKE_AR "${swPosixAr}" CACHE FILEPATH "정적 라이브러리 아카이버" FORCE)
-			set(CMAKE_C_COMPILER_AR "${swPosixAr}" CACHE FILEPATH "" FORCE)
-			set(CMAKE_CXX_COMPILER_AR "${swPosixAr}" CACHE FILEPATH "" FORCE)
+			set(CMAKE_AR "${posix_ar}" CACHE FILEPATH "정적 라이브러리 아카이버" FORCE)
+			set(CMAKE_C_COMPILER_AR "${posix_ar}" CACHE FILEPATH "" FORCE)
+			set(CMAKE_CXX_COMPILER_AR "${posix_ar}" CACHE FILEPATH "" FORCE)
 
 			# 캐시만으로는 부족하다 — `project()` 가 같은 이름의 **일반 변수**를 최상위 스코프에
 			# 만들어 두고, 일반 변수가 캐시를 가린다(그래서 부른 쪽 스코프에 PARENT_SCOPE 로). Windows 에서 이것 때문에 한참 헤맸다.
-			set(CMAKE_AR "${swPosixAr}" PARENT_SCOPE)
-			set(CMAKE_C_COMPILER_AR "${swPosixAr}" PARENT_SCOPE)
-			set(CMAKE_CXX_COMPILER_AR "${swPosixAr}" PARENT_SCOPE)
+			set(CMAKE_AR "${posix_ar}" PARENT_SCOPE)
+			set(CMAKE_C_COMPILER_AR "${posix_ar}" PARENT_SCOPE)
+			set(CMAKE_CXX_COMPILER_AR "${posix_ar}" PARENT_SCOPE)
 
-			if(swPosixRanlib)
-				foreach(swPosixLang IN ITEMS C CXX)
-					set(CMAKE_${swPosixLang}_COMPILER_RANLIB "${swPosixRanlib}" CACHE FILEPATH "" FORCE)
-					set(CMAKE_${swPosixLang}_COMPILER_RANLIB "${swPosixRanlib}" PARENT_SCOPE)
+			if(posix_ranlib)
+				foreach(posix_lang IN ITEMS C CXX)
+					set(CMAKE_${posix_lang}_COMPILER_RANLIB "${posix_ranlib}" CACHE FILEPATH "" FORCE)
+					set(CMAKE_${posix_lang}_COMPILER_RANLIB "${posix_ranlib}" PARENT_SCOPE)
 				endforeach()
 
-				set(CMAKE_RANLIB "${swPosixRanlib}" CACHE FILEPATH "정적 라이브러리 인덱서" FORCE)
-				set(CMAKE_RANLIB "${swPosixRanlib}" PARENT_SCOPE)
+				set(CMAKE_RANLIB "${posix_ranlib}" CACHE FILEPATH "정적 라이브러리 인덱서" FORCE)
+				set(CMAKE_RANLIB "${posix_ranlib}" PARENT_SCOPE)
 			endif()
 
 			# **변수만 고쳐서는 안 된다.** CMake 는 IPO 용 아카이브 명령을 `project()` 시점의
 			# `CMAKE_<LANG>_COMPILER_AR` 로 **문자열로 박아 둔다**(Modules/Compiler/Clang.cmake).
 			# 그때 NOTFOUND 였으면 나중에 변수를 고쳐도 규칙은 그대로
 			# `"CMAKE_CXX_COMPILER_AR-NOTFOUND" qc ...` 다 — 실측으로 확인했다.
-			foreach(swPosixLang IN ITEMS C CXX)
-				set(CMAKE_${swPosixLang}_ARCHIVE_CREATE_IPO "\"${swPosixAr}\" qc <TARGET> <LINK_FLAGS> <OBJECTS>" PARENT_SCOPE)
-				set(CMAKE_${swPosixLang}_ARCHIVE_APPEND_IPO "\"${swPosixAr}\" q <TARGET> <LINK_FLAGS> <OBJECTS>" PARENT_SCOPE)
+			foreach(posix_lang IN ITEMS C CXX)
+				set(CMAKE_${posix_lang}_ARCHIVE_CREATE_IPO "\"${posix_ar}\" qc <TARGET> <LINK_FLAGS> <OBJECTS>" PARENT_SCOPE)
+				set(CMAKE_${posix_lang}_ARCHIVE_APPEND_IPO "\"${posix_ar}\" q <TARGET> <LINK_FLAGS> <OBJECTS>" PARENT_SCOPE)
 
-				if(swPosixRanlib)
-					set(CMAKE_${swPosixLang}_ARCHIVE_FINISH_IPO "\"${swPosixRanlib}\" <TARGET>" PARENT_SCOPE)
+				if(posix_ranlib)
+					set(CMAKE_${posix_lang}_ARCHIVE_FINISH_IPO "\"${posix_ranlib}\" <TARGET>" PARENT_SCOPE)
 				else()
-					set(CMAKE_${swPosixLang}_ARCHIVE_FINISH_IPO "" PARENT_SCOPE)
+					set(CMAKE_${posix_lang}_ARCHIVE_FINISH_IPO "" PARENT_SCOPE)
 				endif()
 			endforeach()
 
-			message(STATUS "[ToolchainBinaries] CMAKE_AR=${swPosixAr}")
+			message(STATUS "[ToolchainBinaries] CMAKE_AR=${posix_ar}")
 		else()
 			# 치명적이지 않다 — 정적 라이브러리는 시스템 ar 로도 묶인다. LTO 만 안 켜진다.
 			message(STATUS "[ToolchainBinaries] llvm-ar not found — LTO stays off (system ar keeps working)")
@@ -130,7 +130,7 @@ function(sw_check_ipo_support OUT_SUPPORTED OUT_ERROR)
 	endif()
 
 	include(CheckIPOSupported)
-	check_ipo_supported(RESULT swIpoOk OUTPUT swIpoErr)
-	set(${OUT_SUPPORTED} ${swIpoOk} PARENT_SCOPE)
-	set(${OUT_ERROR} "${swIpoErr}" PARENT_SCOPE)
+	check_ipo_supported(RESULT ipo_ok OUTPUT ipo_err)
+	set(${OUT_SUPPORTED} ${ipo_ok} PARENT_SCOPE)
+	set(${OUT_ERROR} "${ipo_err}" PARENT_SCOPE)
 endfunction()

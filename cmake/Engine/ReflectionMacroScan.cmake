@@ -4,8 +4,8 @@
 # ==============================================================================
 
 function(sw_has_reflection_macro OUT_VAR HEADER)
-	file(STRINGS "${HEADER}" listReflectLine REGEX "^[ \t]*(REFLECT\\(|ENUM\\(|REFLECT_CONTAINER\\()")
-	if(listReflectLine)
+	file(STRINGS "${HEADER}" list_reflect_line REGEX "^[ \t]*(REFLECT\\(|ENUM\\(|REFLECT_CONTAINER\\()")
+	if(list_reflect_line)
 		set(${OUT_VAR} ON PARENT_SCOPE)
 	else()
 		set(${OUT_VAR} OFF PARENT_SCOPE)

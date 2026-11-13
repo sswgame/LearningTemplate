@@ -14,4 +14,4 @@ set(CMAKE_CXX_STANDARD ${SW_CPP_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-list(APPEND sw_flag_libraries sw_cpp_standard)
+list(APPEND SW_FLAG_LIBRARIES sw_cpp_standard)
