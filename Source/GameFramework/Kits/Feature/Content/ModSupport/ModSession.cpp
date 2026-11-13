@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -289,17 +290,20 @@ namespace sw
             _listMountedPackPath.push_back( listPackPath[orderIndex] );
         }
         vector<string> listLayerRoot = game::getSubsystem<ResourceComposition>().getLayers();
+        // 경로마다 모은 목록을 훑지 않는다(켠 모드들의 덮어쓰기 · 층 수의 제곱). 목록은 처음 나온 순서다.
+        unordered_set<string> uniqueOverridePath;
+        unordered_set<string> uniqueLayerPath;
         for ( const size_t manifestIndex : listOrder )
         {
             const ModManifest& manifest = listManifest[manifestIndex];
             for ( const string& path : manifest._listOverride )
             {
-                if ( VectorUtil::contains( _listOverridePath, path ) == false )
+                if ( uniqueOverridePath.insert( path ).second )
                     _listOverridePath.push_back( path );
             }
             for ( const string& path : manifest._listLayer )
             {
-                if ( VectorUtil::contains( _listLayerPath, path ) == false )
+                if ( uniqueLayerPath.insert( path ).second )
                     _listLayerPath.push_back( path );
             }
             if ( manifest._listLayer.empty() == false )
@@ -338,10 +342,15 @@ namespace sw
 
     vector<string> ModSession::makeChangedPaths() const
     {
-        vector<string> listPath = _listOverridePath;
+        vector<string>        listPath = _listOverridePath;
+        unordered_set<string> uniquePath; // 층마다 덮어쓰기 목록을 훑지 않는다(덮어쓰기 수 × 층 수)
+        for ( const string& path : _listOverridePath )
+        {
+            uniquePath.insert( path );
+        }
         for ( const string& path : _listLayerPath )
         {
-            if ( VectorUtil::contains( listPath, path ) == false )
+            if ( uniquePath.insert( path ).second )
                 listPath.push_back( path );
         }
         return listPath;
@@ -506,6 +515,17 @@ namespace sw
         reader.collectAllEntryPaths( listEntryPath );
         const string contentPrefix = ModManifest::makeContentPrefix( manifest._id );
         const string layerPrefix   = ModManifest::makeLayerRoot( manifest._id ) + "/";
+        // 팩 파일마다 밝힌 덮어쓰기 목록을, 밝힌 덮어쓰기 · 층마다 팩 파일 목록을 훑지 않는다(팩 파일 수 × 밝힌 수).
+        unordered_set<string> uniqueEntryPath;
+        for ( const string& entryPath : listEntryPath )
+        {
+            uniqueEntryPath.insert( entryPath );
+        }
+        unordered_set<string> uniqueOverride;
+        for ( const string& overridePath : manifest._listOverride )
+        {
+            uniqueOverride.insert( overridePath );
+        }
         for ( const string& entryPath : listEntryPath )
         {
             // 층 폴더의 파일은 엔진 층이 기본 리소스에 얹으므로 밝힌 층만 둔다(정책을 지나지 않은 차이를 막는다).
@@ -527,7 +547,7 @@ namespace sw
                 return false;
             }
             const bool bOwnContent = StringUtil::startsWith( entryPath, contentPrefix );
-            if ( bOwnContent == false && VectorUtil::contains( manifest._listOverride, entryPath ) == false )
+            if ( bOwnContent == false && uniqueOverride.contains( entryPath ) == false )
             {
                 SW_LOG_ERROR_ID( "ModSession.UndeclaredEntry", "Mod pack '%#': '%#' is neither under '%#' nor a declared <Override>", packPath, entryPath, contentPrefix );
                 return false;
@@ -535,7 +555,7 @@ namespace sw
         }
         for ( const string& overridePath : manifest._listOverride )
         {
-            if ( VectorUtil::contains( listEntryPath, overridePath ) == false )
+            if ( uniqueEntryPath.contains( overridePath ) == false )
             {
                 SW_LOG_ERROR_ID( "ModSession.OverrideNotInPack", "Mod '%#' declares override '%#' but its pack does not hold it", manifest._id, overridePath );
                 return false;
@@ -549,7 +569,7 @@ namespace sw
         }
         for ( const string& layerPath : manifest._listLayer )
         {
-            if ( VectorUtil::contains( listEntryPath, string( layerPrefix + layerPath ) ) == false )
+            if ( uniqueEntryPath.contains( string( layerPrefix + layerPath ) ) == false )
             {
                 SW_LOG_ERROR_ID( "ModSession.LayerNotInPack", "Mod '%#' declares layer '%#' but its pack does not hold '%#'", manifest._id, layerPath, layerPrefix + layerPath );
                 return false;
