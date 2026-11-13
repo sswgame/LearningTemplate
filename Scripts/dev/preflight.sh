@@ -6,8 +6,8 @@
 # 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
 #
 # 단계(시간 판정이 CPU 경합에 흔들리는 일과 그렇지 않은 일을 가른다 — 시나리오는 벽시계 시한 · 프레임에 걸린 그림을 판정하므로 GPU 단계는 혼자 돈다):
-#   build       lint --all(뒤에서) ‖ Debug → Release → 서버 빌드. 빌드는 한 번에 하나(ninja 가 코어를 다 쓴다)이고, 린트는 빌드와 겹친다.
-#   cpu         Debug ctest -L nogpu(단위 · 셰이더 다시 굽기 · 파서 …) ‖ 서버 단위 → launch-args → shipping-check(배포 빌드 · 기동). 시간을 판정하지 않는 CPU 일만 겹친다.
+#   build       lint --all(뒤에서) ‖ Debug 빌드 → 임포트 → (Release → 서버 빌드 ‖ 배포 프리셋 셋 빌드 · 쿠킹). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
+#   cpu         Debug ctest -L nogpu(단위 · 셰이더 다시 굽기 · 파서 …) ‖ 서버 단위 → launch-args → shipping-check --skip-build(기동만). 시간을 판정하지 않는 CPU 일만 겹친다.
 #   gpu-release Release ctest 전체 — 시나리오 그림 · 골든 · 기록 대조의 정본(모든 게임 · 네 백엔드).
 #   gpu-debug   Debug ctest -LE nogpu — 체인은 시나리오마다 백엔드 하나(-scenario-backend-split=all)로 Debug 단언만 지난다(Test/Scenario/CMakeLists.txt).
 # 예전(2026-11-13 측정 53 분)은 단계가 모두 차례였고, 같은 체인을 두 구성에서 네 백엔드로 다 돌았고, 셰이더 다시 굽기가 두 구성에서 혼자(RUN_SERIAL) 돌았고, Debug 단위를 ctest 밖에서 한 번 더 돌았다.
@@ -21,11 +21,13 @@ RECORD=()
 # ctest 슬롯 수는 설정 값이다(Config/Dev/Verify.json — 없으면 멈춘다).
 CTEST_JOBS=$(py -3 -c "import json,sys; print(json.load(open('Config/Dev/Verify.json', encoding='utf-8'))['_ctestJobs'])") || { echo "Config/Dev/Verify.json 의 _ctestJobs 를 읽지 못했다"; exit 2; }
 CTEST_JOBS=${CTEST_JOBS//$'\r'/}
+CTEST_JOBS_GPU_DEBUG=$(py -3 -c "import json,sys; print(json.load(open('Config/Dev/Verify.json', encoding='utf-8'))['_ctestJobsGpuDebug'])") || { echo "Config/Dev/Verify.json 의 _ctestJobsGpuDebug 를 읽지 못했다"; exit 2; }
+CTEST_JOBS_GPU_DEBUG=${CTEST_JOBS_GPU_DEBUG//$'\r'/}
 while true; do
   case "$1" in
     --from) FROM=$2; shift 2 ;;
     # --show: 무인 실행의 창 숨김만 끈다(App 이 SW_SHOW_WINDOWS=1 을 본다 — 판정 · 골든은 같다). 보는 사람을 위해 테스트를 하나씩 돌린다.
-    --show) export SW_SHOW_WINDOWS=1; CTEST_JOBS=1; shift ;;
+    --show) export SW_SHOW_WINDOWS=1; CTEST_JOBS=1; CTEST_JOBS_GPU_DEBUG=1; shift ;;
     --dry-run) DRY=1; shift ;;
     --no-linux) NO_LINUX=1; shift ;;
     --record) RECORD=(--record); shift ;;
@@ -128,6 +130,14 @@ job_debug_cpu() {
   return 0
 }
 
+# 배포 프리셋 셋(shipping-check 가 띄우는 것과 같은 목록)을 짓는다 — 쿠킹이 Content 를 읽으므로 임포트 뒤에 띄운다.
+job_shipping_build() {
+  local P
+  for P in Ninja-Shipping Ninja-Shipping-Client Ninja-Shipping-Server; do
+    build_preset $P || return 1
+  done
+}
+
 job_server_tools() {
   echo "== server unit $(date +%T)"
   run build/Ninja-Debug-Server/Testing/Logs/verify.unit.log build/Ninja-Debug-Server/Bin/Server.exe --test -unattended
@@ -144,9 +154,11 @@ job_server_tools() {
   [ $DRY -eq 1 ] || grep -E "^ℹ (pass|fail)" build/verify.launchargs.log
   [ $RC -eq 0 ] || { echo "launch-args tests exit=$RC"; return 1; }
 
-  # 배포 구성: 빌드(쿠킹 포함) · 기동 · 종료. 시간을 판정하지 않으므로 Debug nogpu 와 겹친다.
+  # 배포 구성: 기동 · 종료. 빌드(쿠킹 포함)는 build 단계의 job_shipping_build 가 지었다. --from cpu 로 시작하면 여기서 짓는다.
   echo "== shipping-check $(date +%T)"
-  run build/verify.shipping.log py -3 -m Scripts shipping-check
+  local SHIPPING_ARGS=()
+  [ $STAGE -le 1 ] && SHIPPING_ARGS=(--skip-build)
+  run build/verify.shipping.log py -3 -m Scripts shipping-check "${SHIPPING_ARGS[@]}"
   RC=$?
   [ $DRY -eq 1 ] || tail -n 8 build/verify.shipping.log
   echo "shipping-check exit=$RC"
@@ -157,14 +169,16 @@ mkdir -p build
 if [ $STAGE -le 1 ]; then
   start_job "lint --all" job_lint
   build_preset Ninja-Debug
+  # 임포트를 먼저 끝낸다 — 낡은 산출물을 Content 에 다시 쓰는 일이라 배포 빌드의 쿠킹이 그 파일을 읽는 동안 돌지 않게(ctest 의 고정 단계 ImportedAssets 는 아래에서 곧바로 끝난다).
+  run_ctest Ninja-Debug import -L import || windows_failed "Ninja-Debug import"
+  start_job "shipping build" job_shipping_build
   build_preset Ninja-Release
   build_preset Ninja-Debug-Server
   wait_jobs
 fi
 
 if [ $STAGE -le 2 ]; then
-  # 임포트를 먼저 끝낸다 — 낡은 산출물을 Content 에 다시 쓰는 일이라 배포 빌드의 쿠킹이 그 파일을 읽는 동안 돌지 않게(ctest 의 고정 단계 ImportedAssets 는 아래에서 곧바로 끝난다).
-  run_ctest Ninja-Debug import -L import || windows_failed "Ninja-Debug import"
+  [ $STAGE -eq 2 ] && { run_ctest Ninja-Debug import -L import || windows_failed "Ninja-Debug import"; }
   start_job "Debug nogpu" job_debug_cpu
   start_job "server · tools · shipping" job_server_tools
   wait_jobs
@@ -175,7 +189,8 @@ if [ $STAGE -le 3 ]; then
 fi
 
 if [ $STAGE -le 4 ]; then
-  run_ctest Ninja-Debug gpu -LE nogpu || windows_failed "Ninja-Debug ctest gpu"
+  # 단언만 보는 단계라 슬롯을 따로 둔다(_ctestJobsGpuDebug) — 그림 · 골든은 Release 가 판정한다.
+  CTEST_JOBS=$CTEST_JOBS_GPU_DEBUG run_ctest Ninja-Debug gpu -LE nogpu || windows_failed "Ninja-Debug ctest gpu"
 fi
 
 if [ $NO_LINUX -eq 1 ]; then
