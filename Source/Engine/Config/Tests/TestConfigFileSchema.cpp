@@ -134,6 +134,7 @@ namespace
             {                                     "Config/Editor/",                                             "editor types are not in the Engine image",                          nullptr},
             {                                        "Config/Dev/",          "DevTools types are not in the Engine image (DevTools reads them at startup)",                          nullptr},
             {                                      "Config/Rules/",      "code rule tables: the build (layers) and Scripts/lint read them, not the engine",                          nullptr},
+            {                                      "Config/Build/",         "build policy data: CMake and the sanitizer runtime read them, not the engine",                          nullptr},
         };
 
         static const ConfigKind* findKind( sw::string_view relativePath )
