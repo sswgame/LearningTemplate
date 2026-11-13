@@ -1,6 +1,6 @@
 > 질문: CMake · Python · HLSL · 리소스 에셋의 이름과 모양은?
 > 독자: CMake, 파이썬, 셰이더를 쓰거나 리소스 에셋을 더하는 사람.
-> 결론: CMake 옵션은 `SW_*`, 함수는 `sw_camelCase`. 파이썬은 PEP 8(모듈 · 함수 `snake_case`, 클래스 `PascalCase`, 상수 `UPPER_CASE`)에 타입 힌트 필수. HLSL 은 C++ 규칙을 따르되 공유 헤더 함수는 구조체 멤버. 리소스 이름은 소문자.
+> 결론: CMake 옵션 · 전역 변수는 `SW_*`, 함수는 `sw_snake_case`(매크로 대신 함수), 지역 변수는 소문자 snake_case. 파이썬은 PEP 8(모듈 · 함수 `snake_case`, 클래스 `PascalCase`, 상수 `UPPER_CASE`)에 타입 힌트 필수. HLSL 은 C++ 규칙을 따르되 공유 헤더 함수는 구조체 멤버. 리소스 이름은 소문자.
 
 ## Naming — CMake · Python · HLSL · Resource Assets
 
@@ -8,10 +8,18 @@
 
 | Thing | Form |
 | --- | --- |
-| Feature options (`option()`) | `SW_*` (`SW_ENABLE_PCH`) |
-| Functions / macros | `sw_camelCase` (`sw_configure_pch` — acronyms stay capital) |
+| Feature options (`option()`), cache and global variables | `SW_SCREAMING_CASE` (`SW_ENABLE_PCH`, `SW_VCPKG_ROOT`) |
+| Functions | `sw_snake_case` (`sw_configure_pch` — acronyms lowercase too); private helpers end in `_internal` (`sw_query_json_internal`) |
+| Function-local and file-temporary variables | lowercase `snake_case`, no `sw` prefix (`text`, `list_source`) |
+| `cmake_parse_arguments` prefix | `ARG` (`ARG_TARGETS`) |
 | Target properties, compile definitions | `SW_SCREAMING_CASE` |
-| Product targets | `PascalCase` |
+| Product targets | `PascalCase`; internal `INTERFACE` flag targets `sw_snake_case` (`sw_global_options`) |
+| File names | `PascalCase.cmake`; a `cmake -P` test driver next to its test is `Run<What>.cmake` |
+
+Why: CMake's own commands are lowercase `snake_case` and projects prefix theirs (Qt `qt_add_executable`, KDE ECM `ecm_add_test`, Abseil `absl_cc_library`) — `sw_` says "ours", the casing says "CMake". `naming-words` enforces the function form (also in `Source` · `Test` · `ThirdParty` wrapper CMake).
+
+- **No `macro()`.** A macro expands in the caller's scope and leaks every local. Write a `function()` and hand results back with `set(<name> … PARENT_SCOPE)` (`return(PROPAGATE)` needs 3.25; we require 3.24). Only a body that must run in the caller's scope may stay a macro, with a one-line reason on that line.
+- Renames go through a pair table and the tool, so a merged branch can be caught up: `py -3 Scripts/dev/rename_identifier.py Config/Rules/Renames/<table>.json --reapply` (`"scope": "cmake"` for locals, `"ban": false` to keep them off `_bannedNames`). Folder layout: [FolderLayout](FolderLayout.md) 3-2.
 
 ### Python
 

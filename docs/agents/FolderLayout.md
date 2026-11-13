@@ -71,6 +71,19 @@
 | `Character`(3) | 조종 · 이동 · AI · 전투 · 카메라 · 길찾기 |
 | `Gameplay`(4) | 어빌리티 · 외형 · 인벤토리 · 퀘스트 · 판 상태와 그것을 읽는 연출 · 기믹 · 존, 게임 인스턴스 조립(`GameInstance.cpp`) |
 
+### 3-2 CMake (`cmake/` — 폴더 하나에 파일 종류 하나)
+
+| 폴더 | 두는 것 | 두지 않는 것 |
+| --- | --- | --- |
+| `cmake/Modules/<영역>/` | `include()` 만 하는 모듈(함수 정의 · 구성 단계 논리). 영역: `Build`(타깃 · 모듈 · 리플렉션 · 산출 배치) · `Environment`(도구 찾기 · 호스트) · `Config`(옵션 · JSON 읽기 · 설정 상수) | `cmake -P` 스크립트 |
+| `cmake/Toolchain/` | 플래그 · 툴체인 프로필(`Architecture` · `BuildType` · `Compiler` · `Options` · `Platform` · `Vcpkg`, 모으는 `LoadCompileFlags.cmake`) | 함수 라이브러리 |
+| `cmake/Scripts/` | `cmake -P` 로만 도는 스크립트. 쓰는 함수는 모듈에 두고 include 한다 — 한 파일이 모듈이면서 스크립트이지 않다 | `include()` 대상 |
+| `cmake/Templates/` | `configure_file` · 소스 입력(`.in`, manifest, xml) | CMake 코드 |
+| `Config/Build/` | 빌드 정책 데이터(`BuildCaches.json` · `TsanSuppressions.txt`) — 정책 값은 Config | |
+| `Test/<영역>/Run*.cmake` | 테스트 전용 `cmake -P` 드라이버는 그 테스트 곁(CMake 자신의 Tests/RunCMake 와 같다) | |
+
+까닭: 예전 `cmake/Modules/` 는 플래그 프로필이었는데 CMake 의 "모듈"(`CMAKE_MODULE_PATH` 로 include 하는 파일) 뜻과 겹쳤고, 모듈 · `-P` 스크립트 · 템플릿 · 정책 데이터가 한 폴더에 섞여 파일을 열어 봐야 종류를 알았다(CMake 자신의 소스 트리도 `Modules/` · `Templates/` · `Tests/RunCMake/` 를 가른다). 이름 규칙은 [NamingScripts](NamingScripts.md) CMake 절. 옮기기는 `py -3 -m Scripts move-source --base . <옛>=<새>`.
+
 ### 4 그 밖의 규칙
 
 | 규칙 | 까닭 |

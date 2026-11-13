@@ -20,7 +20,9 @@ Scripts/lint/naming_words.py
   (`_words` 의 a 업계 · b 게임)에 있어야 한다. 앞 규칙들은 함수 첫 단어 · 형식 끝 단어만 허용 표로 봐서, 멤버 · 파일 이름 · 이름 가운데의 조어
   (`SceneWalkKey` · `aimAtMark` · `parkHistory`)가 들어왔다(2026-11-13). 문맥에 따라 맞기도 틀리기도 한 낱말은 `_scopedWords` 가 쓸 경로를 정한다
   (게임의 walk 는 맞고 엔진의 walk 는 순회다). 바깥 철자(`PFN_` · `VK_` · ImGui 깃발)는 `_externalPatterns`, 받아 온 스킬은 `_externalPaths` 가 뺀다.
-  파이썬 이름의 PEP 8 꼴(모듈 · 함수 snake_case, 클래스 PascalCase, 상수 UPPER_CASE — docs/agents/NamingScripts.md)도 여기서 막는다. 전수 집계는 `py -3 -m Scripts naming-census`.
+  파이썬 이름의 PEP 8 꼴(모듈 · 함수 snake_case, 클래스 PascalCase, 상수 UPPER_CASE — docs/agents/NamingScripts.md)도 여기서 막는다.
+  CMake 함수는 `sw_snake_case` 꼴만 받는다(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test). CMake 함수 꼴은 cmake 밖
+  (Source · Test · ThirdParty 감싸기 · 뿌리 CMakeLists, vcpkg 포트 제외)의 정의도 본다. 전수 집계는 `py -3 -m Scripts naming-census`.
 - 이름 하나씩의 예외는 `_keep`, 전수 개명한 옛 이름은 `_bannedNames`(C++ 는 주석 · 문자열 밖 코드, 스크립트는 선언 · 파일 · CLI 명령 이름을 본다).
 
 verb · term · predicate · lookup · word 는 기준선(`Config/Rules/Lint/NamingBaseline.json`)을 둔다 — 지금 있는 이름만 적혀 있고 **줄기만 한다**:
@@ -138,7 +140,7 @@ def collect_path_names(relative: str, root_depth: int = 1) -> list[tuple[str, st
 
 
 # 스크립트 · 빌드 이름 — Python(Scripts · 훅 · 스킬 스크립트) · 셸 · CMake. 파이썬은 PEP 8(docs/agents/NamingScripts.md: 모듈 · 함수 snake_case ·
-# 클래스 PascalCase · 상수 UPPER_CASE)의 꼴도 보고, CMake(sw_camelCase · SW_ 옵션)는 낱말만 본다. CLI 하위 명령(`Subcommand("…"`)과 린트 규칙 id(`Rule("…"`)도 이름이다.
+# 클래스 PascalCase · 상수 UPPER_CASE)의 꼴도 보고, CMake 는 함수 꼴(sw_snake_case)과 낱말을 본다(옵션 SW_ 는 낱말만). CLI 하위 명령(`Subcommand("…"`)과 린트 규칙 id(`Rule("…"`)도 이름이다.
 SCRIPT_ROOTS = ("Scripts", ".claude/hooks", ".claude/skills", "cmake")
 SCRIPT_EXTENSIONS = (".py", ".sh", ".cmake")
 PYTHON_FUNCTION = re.compile(r"^[ \t]*def[ \t]+([A-Za-z_]\w*)", re.M)
@@ -151,6 +153,9 @@ COMMAND_NAME = re.compile(r"\b(?:Subcommand|Rule)\(\s*\"([a-z][a-z0-9-]*)\"")
 SHELL_FUNCTION = re.compile(r"^[ \t]*(?:function[ \t]+)?([A-Za-z_]\w*)[ \t]*\(\)", re.M)
 CMAKE_FUNCTION = re.compile(r"\b(?:function|macro)\s*\(\s*([A-Za-z_]\w*)", re.I)
 CMAKE_OPTION = re.compile(r"\boption\s*\(\s*([A-Za-z_]\w*)", re.I)
+CMAKE_FUNCTION_SHAPE = re.compile(r"sw_[a-z0-9]+(?:_[a-z0-9]+)*")
+CMAKE_OUTSIDE_ROOTS = ("Source", "Test", "ThirdParty")   # cmake/ 밖의 CMake — 함수 꼴만 본다(파일 · 폴더 이름은 그 뿌리의 규칙이 본다)
+FOREIGN_CMAKE_PART = "vcpkg-port"                        # 받아 온 vcpkg 포트는 남의 코드다
 
 
 def collect_script_declarations(path: str, text: str) -> list[tuple[str, str]]:
@@ -161,6 +166,10 @@ def collect_script_declarations(path: str, text: str) -> list[tuple[str, str]]:
     if path.endswith(".sh"):
         return [("function", name) for name in SHELL_FUNCTION.findall(text)]
     return [("function", name) for name in CMAKE_FUNCTION.findall(text)] + [("macro", name) for name in CMAKE_OPTION.findall(text)]
+
+
+def is_cmake_path(path: str) -> bool:
+    return path.endswith((".cmake", "CMakeLists.txt"))
 
 
 def split_lower_words(name: str, kind: str) -> list[str]:
@@ -294,6 +303,9 @@ def collect_source_names(project_root: Path, scope: LintScope) -> list[tuple[str
         list_name.extend((kind, name, path) for kind, name in collect_script_declarations(path, text))
         depth = 2 if path.startswith(".claude/") else 1
         list_name.extend((kind, name, path) for kind, name in collect_path_names(path, depth) if name != "CMakeLists")
+    list_outside_cmake = [path for path in scope.select(CMAKE_OUTSIDE_ROOTS, skip_parts=(FOREIGN_CMAKE_PART,)) if is_cmake_path(path)] + scope.select(("CMakeLists.txt",))
+    for path, text in read_texts(project_root, list_outside_cmake):
+        list_name.extend(("function", name, path) for name in CMAKE_FUNCTION.findall(text))
     return list_name
 
 
@@ -333,6 +345,9 @@ def classify_words(list_name: Iterable[tuple[str, str, str]], table: dict) -> di
             continue
         if name in banned_names and not path.startswith("Source/"):   # C++ 의 옛 이름은 classify_names 가 코드 전체에서 본다
             found[name] = f"{path}: 옛 이름 '{name}' — {banned_names[name]}"
+            continue
+        if kind == "function" and is_cmake_path(path) and CMAKE_FUNCTION_SHAPE.fullmatch(name) is None:
+            found[name] = f"{path}: CMake 함수 '{name}' 는 sw_snake_case 여야 한다(docs/agents/NamingScripts.md — 내장 명령 꼴 + 우리 접두, 약어도 소문자)"
             continue
         shape = PYTHON_SHAPES.get(kind) if path.endswith(".py") else None
         if shape is not None and shape[0].fullmatch(name) is None:
@@ -412,6 +427,9 @@ def run_self_check() -> None:
     found = classify_words([("file", "scene_key", "Scripts/dev/scene_key.py"), ("command", "scene-key", "Scripts/__main__.py")],
                            table_words | {"_words": {"a": ["scene", "key"], "b": []}, "_bannedNames": {"scene_key": "key_scene", "scene-key": "key-scene"}})
     assert set(found) == {"scene_key", "scene-key"} and "key_scene" in found["scene_key"], found   # 스크립트의 옛 이름
+    found = classify_words([("function", "sw_scene_key", "cmake/a.cmake"), ("function", "sw_sceneKey", "cmake/a.cmake"), ("function", "scene_key", "Source/CMakeLists.txt")],
+                           table_words | {"_words": {"a": ["sw", "scene", "key"], "b": []}})
+    assert set(found) == {"sw_sceneKey", "scene_key"} and all("sw_snake_case" in hint for hint in found.values()), found   # CMake 함수 꼴
 
 
 def main(argv: Sequence[str] | None = None) -> int:
