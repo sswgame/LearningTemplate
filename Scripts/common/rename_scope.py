@@ -13,6 +13,7 @@ from typing import Callable
 KEEP_OLD_NAME_MARKER = "keep-old-name"
 NAMING_WORDS_PATH = "Config/Rules/Lint/NamingWords.json"     # `_bannedNames` 의 키가 옛 이름이다
 NAMING_BASELINE_PATH = "Config/Rules/Lint/NamingBaseline.json"   # 남은 위반 이름 — `--lower-baseline` 만 줄인다(새 이름이 또 위반이면 린트가 지게)
+RENAME_PAIRS_FOLDER = "Config/Rules/Renames/"   # 병합 뒤 다시 돌릴 쌍 표(`rename_identifier.py --reapply`) — 옛 이름이 열쇠다
 
 
 def dump_naming_table(data: dict) -> str:
@@ -24,7 +25,7 @@ def rewrite_rename_target(relative_path: str, text: str, rewrite: Callable[[str]
     이름 바꾸기 도구가 파일 하나(@p relative_path — 저장소 기준 posix)를 고친다. 두 도구(`rename-symbol` · `rename_identifier.py`)가 이 함수 하나를 쓴다 —
     한 도구는 린트 표를 통째로 건너뛰고 한 도구는 금지 이름 표의 키까지 바꿔, 개명마다 예외 표가 낡거나 금지 이름이 지워졌다.
     """
-    if relative_path == NAMING_BASELINE_PATH:
+    if relative_path == NAMING_BASELINE_PATH or relative_path.startswith(RENAME_PAIRS_FOLDER):
         return text
     if relative_path == NAMING_WORDS_PATH:
         data = json.loads(text)
@@ -52,4 +53,5 @@ def check_rewrite_unmarked_lines() -> None:
     table = dump_naming_table({"_bannedNames": {"OldName": "NewName — x"}, "_keep": {"OldName": "y"}})
     assert json.loads(rewrite_rename_target(NAMING_WORDS_PATH, table, rename)) == {"_bannedNames": {"OldName": "NewName — x"}, "_keep": {"NewName": "y"}}
     assert rewrite_rename_target(NAMING_BASELINE_PATH, "OldName", rename) == "OldName"
+    assert rewrite_rename_target(RENAME_PAIRS_FOLDER + "CMakeFunctions.json", "OldName", rename) == "OldName"
     assert rewrite_rename_target("Config/Rules/Lint/ThreadOwners.json", "OldName", rename) == "NewName"

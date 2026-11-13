@@ -2,9 +2,10 @@
 소스 파일 · 폴더를 옮기거나 C++ 이름을 바꾸고, 저장소의 참조를 한 번에 고친다 — 구조 개편 단계마다 같은 방법으로 옮기려고 둔다.
 
   py -3 -m Scripts move-source Engine/Object/SceneAnimation=Engine/Animation/Scene Engine/A/B.h=Engine/C/B.h [--dry-run]
+  py -3 -m Scripts move-source --base . cmake/Engine=cmake/Modules/Build
   py -3 -m Scripts rename-symbol getOrCreateEntry=getOrCreateEntry [--dry-run]
 
-move-source: 경로는 `Source/` 기준(폴더면 안의 파일 전부, 하위 폴더 포함). 하는 일:
+move-source: 경로는 `Source/` 기준(폴더면 안의 파일 전부, 하위 폴더 포함). `--base .` 이면 저장소 루트 기준(`cmake/` · `Config/` 처럼 Source 밖 파일). 하는 일:
   1. `git mv`
   2. 추적 중인 텍스트 파일(Source · Tools · cmake · Scripts · docs · 스킬 · 최상위 CMake)에서 옮긴 파일의 전체 경로(`Engine/X/Y.h`)와
      폴더 접두어(`Engine/X/` — CMake 정규식 · 주석)를 새 경로로
@@ -29,9 +30,12 @@ from common.git import run_git
 from common.paths import get_project_root
 from common.rename_scope import check_rewrite_unmarked_lines, rewrite_rename_target, rewrite_unmarked_lines
 
-TEXT_SUFFIX = {".h", ".hpp", ".inl", ".cpp", ".c", ".cmake", ".txt", ".md", ".json", ".in", ".py", ".toml", ".xxx", ".natvis", ".hlsl", ".hlsli", ".xml", ".po", ".tpl"}
+TEXT_SUFFIX = {".h", ".hpp", ".inl", ".cpp", ".c", ".cmake", ".txt", ".md", ".json", ".in", ".py", ".toml", ".xxx", ".natvis", ".hlsl", ".hlsli", ".xml", ".po", ".tpl",
+               ".manifest", ".sh"}
 CPP_SUFFIX = {".h", ".hpp", ".inl", ".cpp"}
-SCAN_ROOT = ["Source", "Content", "Source/Programs/ReflectionParser", "Source/Programs/OnlineLoadBot", "cmake", "Scripts", "docs", "Config", "CMakeLists.txt", "CMakePresets.json", "AGENTS.md", "CLAUDE.md", ".claude/skills"]
+SCAN_ROOT = ["Source", "Content", "Source/Programs/ReflectionParser", "Source/Programs/OnlineLoadBot", "cmake", "Scripts", "docs", "Config", "Test", "ThirdParty",
+             "CMakeLists.txt", "CMakePresets.json", "AGENTS.md", "CLAUDE.md", ".claude/skills", ".claude/hooks"]
+SKIP_SCAN_PART = "/vcpkg-port/"   # ThirdParty 는 우리 감싸기 CMake 만 — vcpkg 포트는 남의 코드다
 BARE_INCLUDE = re.compile(r'^(\s*#\s*include\s*")([^"/]+)(")', re.M)
 
 
@@ -116,7 +120,7 @@ def list_tracked_text(root: Path) -> list[Path]:
     if not result.succeeded:
         raise RuntimeError(f"git ls-files 실패: {result.stderr.strip()}")
     return [root / line for line in result.stdout.splitlines()
-            if Path(line).suffix.lower() in TEXT_SUFFIX and (root / line).is_file()]
+            if Path(line).suffix.lower() in TEXT_SUFFIX and SKIP_SCAN_PART not in line and (root / line).is_file()]
 
 
 def read_text(path: Path) -> str:
@@ -143,10 +147,10 @@ def expand_moves(source: Path, list_pair: list[str]) -> dict[str, str]:
                 relative = file.relative_to(old_path).as_posix()
                 map_file[f"{old}/{relative}"] = f"{new}/{relative}"
         else:
-            raise FileNotFoundError(f"Source/{old} 이 없다")
+            raise FileNotFoundError(f"{old_path} 이 없다")
     for new in map_file.values():
         if (source / new).exists():
-            raise FileExistsError(f"Source/{new} 이 이미 있다")
+            raise FileExistsError(f"{source / new} 이 이미 있다")
     return map_file
 
 
@@ -176,7 +180,7 @@ def rewrite_bare_includes(text: str, old_folder: str, new_folder: str, source: P
     return BARE_INCLUDE.sub(replace, text)
 
 
-def make_path_rule(map_file: dict[str, str], list_folder_prefix: list[tuple[str, str]]) -> tuple[re.Pattern[str], object]:
+def make_path_rule(map_file: dict[str, str], list_folder_prefix: list[tuple[str, str]], root_base: bool = False) -> tuple[re.Pattern[str], object]:
     """파일 경로 · 폴더 접두어를 **한 번 훑기** 규칙 하나로 묶는다(긴 것 먼저).
     차례로 적용하면 앞 규칙이 바꾼 글을 뒤 규칙이 다시 바꿨다 — 폴더를 자기 아래로 옮기면(`A=A/Server`) 파일 규칙이 만든 `A/Server/X.h` 를
     폴더 규칙 `A/` 가 다시 `A/Server/Server/X.h` 로 바꿨다. 정규식 하나의 sub 는 바꾼 자리를 다시 보지 않는다.
@@ -190,7 +194,10 @@ def make_path_rule(map_file: dict[str, str], list_folder_prefix: list[tuple[str,
         map_new[old] = new
         list_alternative.append((len(old), re.escape(old)))
     list_alternative.sort(key=lambda item: -item[0])
-    pattern = re.compile(r"(?<![\w.-])(?:" + "|".join(part for _, part in list_alternative) + ")")
+    # 루트 기준 경로(`cmake/Modules/…`)는 바깥 경로 가운데(`emscripten/cmake/Modules/Platform/`)와 겹친다 — `낱말/` 뒤는 받지 않고 `${ROOT}/` 뒤만 받는다.
+    # Source 기준은 `Source/Engine/…` 처럼 앞에 폴더가 붙는 것이 정상이라 그대로 둔다.
+    root_guard = r"(?<![\w.-]/)" if root_base else ""
+    pattern = re.compile(r"(?<![\w.-])" + root_guard + "(?:" + "|".join(part for _, part in list_alternative) + ")")
     return pattern, lambda match: map_new[match.group(0)]
 
 
@@ -200,16 +207,23 @@ def check_path_rule_single_pass() -> None:
     text = '#include "A/X.h"\n#include "A/Y.h"\nMyA/X.h'
     expected = '#include "A/Server/X.h"\n#include "A/Server/Y.h"\nMyA/X.h'
     assert pattern.sub(replacement, text) == expected, pattern.sub(replacement, text)
+    pattern, replacement = make_path_rule({}, [("cmake/Modules/", "cmake/Toolchain/")], root_base=True)
+    text = "${CMAKE_SOURCE_DIR}/cmake/Modules/X.cmake emsdk/cmake/Modules/Platform/E.cmake cmake/Modules/Y.cmake"
+    expected = "${CMAKE_SOURCE_DIR}/cmake/Toolchain/X.cmake emsdk/cmake/Modules/Platform/E.cmake cmake/Toolchain/Y.cmake"
+    assert pattern.sub(replacement, text) == expected, pattern.sub(replacement, text)
 
 
 def main_move(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts move-source", description="소스를 옮기고 참조를 고친다")
-    parser.add_argument("pair", nargs="+", help="Source 기준 old=new (파일 또는 폴더)")
+    parser.add_argument("pair", nargs="+", help="--base 기준 old=new (파일 또는 폴더)")
+    parser.add_argument("--base", default="Source", help="경로의 기준 폴더(저장소 루트 기준, 기본 Source — 루트는 `.`)")
     parser.add_argument("--dry-run", action="store_true", help="옮길 파일 목록만 찍는다")
     args = parser.parse_args(argv)
+    check_path_rule_single_pass()
 
     root = get_project_root()
-    source = root / "Source"
+    source = root / args.base   # pathlib 가 `.` 을 접는다
+    base_prefix = "" if source == root else source.relative_to(root).as_posix() + "/"
     map_file = expand_moves(source, args.pair)
     # 폴더 접두어는 옮기기 전에 잰다 — 옮긴 뒤에는 옛 폴더가 없어 규칙이 비고, 폴더 이동의 설정 · 문서 경로(`Source/X/Old/`)가 그대로 남았다.
     list_folder_prefix = folder_prefixes(args.pair, source)
@@ -239,7 +253,7 @@ def main_move(argv: list[str]) -> int:
     for old, new in map_file.items():
         (source / new).parent.mkdir(parents=True, exist_ok=True)
         for _ in range(20):  # IDE 의 git 이 잠깐 잡는 index.lock 은 기다리면 풀린다 — 반쯤 옮긴 채 멈추지 않게
-            result = run_git(["mv", f"Source/{old}", f"Source/{new}"], cwd=root)
+            result = run_git(["mv", f"{base_prefix}{old}", f"{base_prefix}{new}"], cwd=root)
             if result.succeeded or "index.lock" not in result.stderr:
                 break
             time.sleep(0.5)
@@ -255,7 +269,7 @@ def main_move(argv: list[str]) -> int:
             folder.rmdir()
             folder = folder.parent
 
-    list_rule = [make_path_rule(map_file, list_folder_prefix)]
+    list_rule = [make_path_rule(map_file, list_folder_prefix, root_base=base_prefix == "")]
     # `@file` 은 최상위 폴더 없이 적은 곳도 있다(`@file Utility/X.h`).
     list_rule += [(re.compile(r"(@file\s+)" + re.escape(old.partition("/")[2]) + r"\b"), lambda match, new=new: match.group(1) + new) for old, new in map_file.items() if "/" in old]
     changed_cpp_set = {source / new for new in map_moved_text} | set(list_neighbour_text)
