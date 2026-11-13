@@ -321,7 +321,7 @@ namespace sw
         static void formatstring( utf8* SW_RESTRICT pBuffer, uint32 capacity, string_view format, Args&&... args ) noexcept
         {
             SW_ASSERT( pBuffer != nullptr && capacity > 0 );
-            // **단언은 Debug 가 아니면 통째로 사라진다.** 그런데 `capacity` 는 곳곳에서 `capacity - 1` 로 쓰인다(`write` 의
+            // **단언은 배포(Shipping)에서는 통째로 사라진다.** 그런데 `capacity` 는 곳곳에서 `capacity - 1` 로 쓰인다(`write` 의
             // 남은 공간 계산, 아래 종료 문자 위치). 0 이면 그 뺄셈이 언더플로해 4,294,967,295 가 되고, 그러면 `write` 가 **길이
             // 제한 없이** 복사하며 종료 문자도 버퍼 밖에 쓴다. 지금 호출하는 곳은 0 을 넘기지 않지만(`StringBuilder` 는 2 미만이면
             // 버퍼를 늘리고 `CrashContext` 는 남은 공간을 먼저 확인한다) 이 함수는 공개 API 다.
@@ -336,7 +336,7 @@ namespace sw
             else
             {
                 // 인자가 없으니 플레이스홀더도 없어야 한다. 있으면 호출하는 쪽이 인자를 빠뜨린 것이다.
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
                 if ( findNextPlaceholder( format )._pos != string_view::npos )
                     reportArgumentMismatch( format, "placeholders but no arguments" );
 #endif
@@ -673,7 +673,7 @@ namespace sw
                 else
                 {
                     // 마지막 인자를 썼다. 나머지에 플레이스홀더가 남아 있으면 호출하는 쪽이 인자를 빠뜨린 것이다(리터럴 `%#` 가 남는다).
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
                     if ( findNextPlaceholder( nextFormat )._pos != string_view::npos )
                         reportArgumentMismatch( nextFormat, "more placeholders than arguments" );
 #endif
@@ -682,7 +682,7 @@ namespace sw
             }
 
             // 플레이스홀더는 없는데 인자가 남았다. 호출하는 쪽이 인자를 더 넘긴 것이다. Release 는 조용히 버린다.
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             reportArgumentMismatch( format, "more arguments than placeholders" );
 #endif
             return writeFormatPrefix( pBuffer, pos, capacity, format );

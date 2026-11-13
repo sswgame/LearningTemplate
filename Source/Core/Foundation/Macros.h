@@ -62,6 +62,17 @@
 #endif
 
 // ------------------------------------------------------------------------------
+// 4-1) 검사(SW_DO_CHECKS). 배포(Shipping)가 아니면 켜진다 — Debug 와 Release(개발 · 자동화 테스트 구성)에 단언 · 스레드 소유 · 경합 · 잠금 깊이 ·
+//      풀 이중 반납 · 서식 인자 수 같은 우리 불변식 검사를 둔다(언리얼 DO_CHECK 가 Shipping 에서만 꺼지는 것과 같다).
+//      그래픽 API 디버그 층 · CRT 디버그 힙 · 프로파일 카운터 · 로그 세부 단계는 비용이 커서 SW_DEBUG 에 남는다.
+//      Release 의 시나리오 체인이 단언을 지나므로 Debug 에서 같은 체인을 한 번 더 돌지 않는다(2026-11-13, 묶음 검증의 Debug GPU 단계 14.6 분).
+// ------------------------------------------------------------------------------
+#if !defined( SW_SHIPPING ) && !defined( SW_DO_CHECKS )
+    /** @brief 우리 불변식 검사(단언 · 스레드 · 경합 …)를 컴파일합니다. 배포에서만 빠집니다. */
+    #define SW_DO_CHECKS 1
+#endif
+
+// ------------------------------------------------------------------------------
 // 5) SW_ASSERT. 논리 불변식을 검사한다(메시지 없음, 자주 도는 경로용).
 //    메시지가 필요하면 Logger.h 의 SW_LOG_ASSERT 를 쓴다. 그쪽은 배포본에서도 로그를 남긴다.
 // ------------------------------------------------------------------------------
@@ -71,15 +82,15 @@
  *   SW_LOG_ASSERT(expr, …) — 실패 원인을 추적해야 하는 곳(로그 + 브레이크, 드물게 도는 경로)
  *
  * 둘은 배포본에서 다르게 동작합니다.
- *   - `SW_ASSERT`     : Debug 가 아니면 통째로 사라집니다. 식도 평가하지 않으므로, 부수 효과가 있는 식을 넣으면
+ *   - `SW_ASSERT`     : 배포(Shipping)에서는 통째로 사라집니다. 식도 평가하지 않으므로, 부수 효과가 있는 식을 넣으면
  *                       배포본에서는 그 효과가 없어집니다.
- *   - `SW_LOG_ASSERT` : Debug 에서만 멈추고, 그 밖의 빌드에서는 Error 로그를 남깁니다. 배포본에서도 계약이 깨진 순간을
+ *   - `SW_LOG_ASSERT` : 검사 구성(배포가 아닌 구성)에서만 멈추고, 그 밖의 빌드에서는 Error 로그를 남깁니다. 배포본에서도 계약이 깨진 순간을
  *                       놓치지 않습니다(Logger.h 의 비-Debug 분기 참고).
  *
  * 배포본에서도 반드시 막아야 하는 조건에는 둘 다 맞지 않습니다. 직접 if 로 검사하고 빠져나가거나, 이어 갈 수 없으면 `SW_FATAL`(Logger.h)로 멈추십시오.
  * 로그보다 아래 티어(메모리 · 수학 · 컨테이너 등)는 `SW_LOG_ASSERT` · `SW_LOG_*` 를 쓸 수 없으므로 아래 10) 의 `SW_LOW_LEVEL_ASSERT` · `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` 을 씁니다.
  */
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
 namespace sw::internal
 {
     /**
@@ -96,7 +107,7 @@ namespace sw::internal
 } // namespace sw::internal
 
     /**
-     * @brief 식이 거짓이면 그 식과 위치를 stderr 에 남기고 디버거에서 멈춥니다. Debug 가 아니면 식째 사라집니다.
+     * @brief 식이 거짓이면 그 식과 위치를 stderr 에 남기고 디버거에서 멈춥니다. 배포(Shipping)에서는 식째 사라집니다.
      * @note 테스트가 단언 가로채기(`test::ScopedAssertCapture`)를 걸어 두었으면 멈추지 않고 개수만 센다(`tryCaptureAssert`).
      *       대화형 에디터 실행이면 App 이 설치한 대화상자가 멈출지 묻는다(`shouldBreakOnAssert`). 선택지는 이번만 무시, 디버거 중단, 이 위치 항상 무시다.
      */
@@ -113,7 +124,7 @@ namespace sw::internal
         } while ( false )
 #else
     /**
-     * @brief Debug 가 아니면 어서션을 없앱니다(식도 평가하지 않습니다).
+     * @brief 배포(Shipping)에서는 어서션을 없앱니다(식도 평가하지 않습니다).
      * @details 식은 평가되지 않는 `sizeof` 안에 남긴다 — 단언에만 쓰는 지역 값이 배포 · Release 에서 "쓰지 않은 변수" 경고가 되지 않고, 식의 이름 오류도 모든 구성에서 잡힌다.
      */
     #define SW_ASSERT( expr )          \
@@ -180,8 +191,8 @@ namespace sw::internal
  */
 #define SW_ASSERT_LOG_ID "Core.Assert"
 
-#if defined( SW_DEBUG )
-// 멈추는 단언(`SW_ASSERT`, 멈추는 `SW_LOG_ASSERT`)은 Debug 에만 있으므로 가로채기도 Debug 에만 둔다. 배포본에는 테스트가 단언을 끄는 함수가 없다.
+#if defined( SW_DO_CHECKS )
+// 멈추는 단언(`SW_ASSERT`, 멈추는 `SW_LOG_ASSERT`)은 검사 구성(SW_DO_CHECKS)에만 있으므로 가로채기도 검사 구성에만 둔다. 배포본에는 테스트가 단언을 끄는 함수가 없다.
 namespace sw::internal
 {
     /** @brief 가로채기가 걸려 있으면 단언 하나를 세고 true 를 반환합니다. 부르는 쪽(`SW_ASSERT`, `SW_LOG_ASSERT`)은 멈추지 않습니다. */
@@ -227,14 +238,14 @@ namespace sw::internal
 } // namespace sw::internal
 #endif
 
-// 단언 대화상자의 사용자 설정. 대화상자는 Debug 에만 있지만 설정은 모든 구성에 둔다 — 에디터 환경설정이 구성마다 다른 길 없이 입히고 읽는다.
+// 단언 대화상자의 사용자 설정. 대화상자는 검사 구성(SW_DO_CHECKS)에만 있지만 설정은 모든 구성에 둔다 — 에디터 환경설정이 구성마다 다른 길 없이 입히고 읽는다.
 namespace sw::internal
 {
     /**
      * @brief 사용자 설정을 입힙니다(에디터 환경설정 Editor/Diagnostics). 설치와 따로다 — 설치는 App 이 실행 종류로 정하고, 이것은 설치된 대화상자를 띄울지만 정한다.
      * @param bShowDialog false 면 대화상자 없이 멈춘다(설치하지 않은 실행과 같다). 이미 "늘 무시" 로 고른 자리는 계속 넘긴다.
      * @param bRememberIgnoredSites false 면 "늘 무시" 를 이번만 넘기기로 다룬다(같은 자리에서 다시 묻는다).
-     * @details 설정을 읽기 전(초기화 구간)은 둘 다 true 다. Debug 가 아니면 단언이 멈추지 않으므로 값만 남는다.
+     * @details 설정을 읽기 전(초기화 구간)은 둘 다 true 다. 배포(Shipping)에서는 단언이 멈추지 않으므로 값만 남는다.
      */
     SW_API void setAssertDialogOptions( bool bShowDialog, bool bRememberIgnoredSites ) noexcept;
     /** @brief 설치된 대화상자를 띄우는 설정이면 true 입니다(`setAssertDialogOptions`). */
@@ -293,7 +304,7 @@ namespace sw::internal
      *        @p pLookup 은 어느 조회였는지 알리는 글입니다(대개 `SW_FUNCTION_SIGNATURE` 나 타입 이름).
      * @details `SW_ASSERT` 는 Release 에서 사라져 부른 쪽의 `*pFound` 가 조용한 널 역참조가 되고, `SW_LOG_ASSERT` 는 Release 에서 로그만 남기고 이어 가 같은 결과가 된다.
      *          필수 서비스의 부재는 호출 순서의 결함이라 폴백 없이 모든 구성에서 멈춘다(`SubsystemScope::get` · `engine::getSubsystem` · `game::getSubsystem` · `editor::getSubsystem` 이 모두 이것을 쓴다).
-     *          Debug 에서 테스트가 단언 가로채기(`test::ScopedAssertCapture`)를 걸었을 때만 멈추지 않고 개수를 세고 반환한다 — 가로채기는 Debug 에만 있으므로
+     *          검사 구성에서 테스트가 단언 가로채기(`test::ScopedAssertCapture`)를 걸었을 때만 멈추지 않고 개수를 세고 반환한다 — 가로채기는 검사 구성(SW_DO_CHECKS)에만 있으므로
      *          멈춤을 프로세스 안에서 확인하는 테스트는 `ScopedAssertCapture::kAssertsAreActive` 인 구성에서만 부른다. 반환 뒤의 결과는 읽지 않는다.
      */
     SW_API void reportMissingRequiredService( const utf8* pLookup ) noexcept;
@@ -341,7 +352,7 @@ namespace sw::internal
         ::sw::internal::reportFatal( __FILE__, static_cast<int32>( __LINE__ ), arrLowLevelMessage );                        \
     } while ( false )
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
     /**
      * @brief 로그보다 아래 티어의 `SW_LOG_ASSERT` 입니다. 거짓이면 stderr 에 먼저 쓰고 로그로도 남긴 뒤 Debug 에서는 멈춥니다(가로채기 · 대화상자는 `SW_ASSERT` 와 같다).
      *        메시지는 `printf` 문법의 서식입니다(512 자까지).
@@ -360,7 +371,7 @@ namespace sw::internal
             }                                                                                                                       \
         } while ( false )
 #else
-    /** @brief Debug 가 아니면 멈추지 않고 보고만 합니다(`SW_LOG_ASSERT` 와 같다 — 배포본에서도 계약이 깨진 순간을 남긴다). */
+    /** @brief 배포(Shipping)에서는 멈추지 않고 보고만 합니다(`SW_LOG_ASSERT` 와 같다 — 배포본에서도 계약이 깨진 순간을 남긴다). */
     #define SW_LOW_LEVEL_ASSERT( expr, ... )                                                                                        \
         do                                                                                                                          \
         {                                                                                                                           \

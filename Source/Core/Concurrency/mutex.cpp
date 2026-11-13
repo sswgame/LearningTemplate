@@ -10,7 +10,7 @@ namespace sw
     {
         /** @brief 걸린 잠금 관찰자(교착 검출기)입니다. 잠금마다 acquire 읽기 하나입니다. */
         atomic<ILockObserver*> s_pLockObserver{ nullptr };
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         /** @brief 이 스레드가 쥔 `mutex` · `shared_mutex` 수입니다(`mutex::getHeldLockDepth`). */
         thread_local uint32 t_heldLockDepth{ 0 };
         /** @brief 잎 잠금 규칙에서 뺀 범위의 깊이입니다(`ScopedLeafLockExemption`). 0 보다 크면 `getHeldLockDepth` 는 0 입니다. */
@@ -20,14 +20,14 @@ namespace sw
 
     ScopedLeafLockExemption::ScopedLeafLockExemption()
     {
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         ++t_leafLockExemptionDepth;
 #endif
     }
 
     ScopedLeafLockExemption::~ScopedLeafLockExemption()
     {
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         --t_leafLockExemptionDepth;
 #endif
     }
@@ -58,14 +58,14 @@ namespace sw
         if ( MutexReentryGuard::isInHook() )
             return 0;
 #endif
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         return t_leafLockExemptionDepth != 0 ? 0 : t_heldLockDepth;
 #else
         return 0;
 #endif
     }
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
     void mutex::changeHeldLockDepth( int32 delta )
     {
         t_heldLockDepth = static_cast<uint32>( static_cast<int32>( t_heldLockDepth ) + delta );

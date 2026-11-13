@@ -68,10 +68,10 @@ namespace sw::editor
             const std::thread::id scopeThreadID = s_editorScope._ownerThreadID.load( std::memory_order_relaxed );
             if ( scopeThreadID == std::thread::id{} || scopeThreadID == std::this_thread::get_id() )
                 return;
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             if ( sw::internal::tryCaptureAssert() )
             {
-                // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 Debug 에만 있다
+                // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 검사 구성에만 있다
                 SW_LOG_ERROR_ID( "EditorService.EditorStateReadOff", "Editor state is read off the editor thread - look the service up on the editor thread and pass it by value (see findEditorScope)" );
                 return;
             }

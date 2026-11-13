@@ -48,7 +48,7 @@ namespace sw
         {
             FreeNode* pNode = reinterpret_cast<FreeNode*>( pData + ( index * _blockSize ) );
             pNode->_pNext   = _pFreeList;
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             pNode->_freeMagic = kFreeBlockMagic;
 #endif
             _pFreeList = pNode;
@@ -71,7 +71,7 @@ namespace sw
 
         FreeNode* pNode = _pFreeList;
         _pFreeList      = pNode->_pNext;
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         // 내주는 순간 표시를 지운다. 남겨 두면 다음 반납이 "이미 자유 목록에 있다" 로 잘못 읽는다.
         pNode->_freeMagic = 0;
 #endif
@@ -88,7 +88,7 @@ namespace sw
         if ( _bThreadSafe )
             lock.lock();
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         bool         bValidChunk     = false;
         const size_t chunkHeaderSize = ( sizeof( Chunk ) + 15u ) & ~size_t{ 15 };
         const size_t chunkSize       = chunkHeaderSize + ( _blockSize * _blocksPerChunk );
@@ -118,7 +118,7 @@ namespace sw
 
         FreeNode* pNode = static_cast<FreeNode*>( pBlock );
         pNode->_pNext   = _pFreeList;
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         pNode->_freeMagic = kFreeBlockMagic;
 #endif
         _pFreeList = pNode;

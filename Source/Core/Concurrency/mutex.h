@@ -97,7 +97,7 @@ namespace sw
     private:
         friend class shared_mutex;
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         /** @brief 이 스레드가 쥔 잠금 수를 @p delta 만큼 바꿉니다. 수는 Engine 이미지의 TU 하나(`mutex.cpp`)에 있다 — 헤더에 두면 모듈마다 따로 센다. */
         static void changeHeldLockDepth( int32 delta );
 #else

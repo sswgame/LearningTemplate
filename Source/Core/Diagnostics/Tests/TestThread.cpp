@@ -162,7 +162,7 @@ SW_TEST_CASE( ThreadTest, JoinIsAWaitOnTheThreadsJoinKey )
     SW_EXPECT_EQUAL( 2u, workerEventCount );
 }
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
 /**
  * @brief 락을 쥔 채 그 락을 기다리는 스레드를 join 하면 교착 검출기가 순환으로 잡는다(오류 로그 + 단언 — 단언은 가로채기로 센다).
  * @details 락은 검출기에 직접 적은 가짜 키라 실제로는 막히지 않는다. 워커는 단언이 세어질 때까지 기다려, 합류하는 쪽의 시도가 순환을 닫는 순간 워커가 아직 기다리는 중이다.
@@ -262,7 +262,7 @@ SW_TEST_CASE( ThreadTest, MemberFunctionTakesTheStopTokenAsLastArgument )
     SW_EXPECT_TRUE( owner._loopCount.load() >= 1 );
 }
 
-#if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DEBUG )
+#if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DO_CHECKS )
 /**
  * @brief 로더 락을 쥔 채 join 하면 단언하고 스레드를 뗀다 — 기다리면 끝나는 스레드도 로더 락을 기다려 영원히 멈춘다.
  * @details DLL 을 내릴 때 모듈 정적 소멸자가 스레드를 join 하던 에디터 종료 교착과 같은 조건을 `LdrLockLoaderLock` 으로 만든다. 단언은 가로채기로 센다(Debug 만).
