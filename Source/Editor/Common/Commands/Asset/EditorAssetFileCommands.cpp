@@ -3,6 +3,7 @@
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
@@ -465,6 +466,9 @@ namespace sw::editor
             return false;
         }
         const AssetPaths& assetPaths = editor::getSubsystem<AssetPaths>();
+        // 옮기기마다 계획한 id 목록을 훑지 않는다(폴더를 옮기면 옮기는 에셋 수의 제곱). 계획 목록의 순서는 그대로다.
+        unordered_set<string> uniqueOldID;
+        unordered_set<string> uniqueNewID;
         for ( const EditorAssetMove& move : listMove )
         {
             EditorAssetMove normalized{ FileUtil::normalizeSeparators( move._sourceAbs ), FileUtil::normalizeSeparators( move._destinationAbs ) };
@@ -484,22 +488,19 @@ namespace sw::editor
                 outPlan._failure = string( failureBuilder.view() );
                 return false;
             }
-            if ( FileUtil::exists( normalized._destinationAbs ) || EditorAssetFileCommandsInternal::mapMovedID( outPlan, oldID ) != oldID )
+            if ( FileUtil::exists( normalized._destinationAbs ) || uniqueOldID.insert( oldID ).second == false )
             {
                 StringBuilder<constant::buffer::kMax256> failureBuilder;
                 failureBuilder.appendFormat( "'%#' already exists or is moved twice - nothing was moved", newID );
                 outPlan._failure = string( failureBuilder.view() );
                 return false;
             }
-            for ( const string& plannedNewID : outPlan._listNewID )
+            if ( uniqueNewID.insert( newID ).second == false )
             {
-                if ( plannedNewID == newID )
-                {
-                    StringBuilder<constant::buffer::kMax256> failureBuilder;
-                    failureBuilder.appendFormat( "two assets would move to '%#' - nothing was moved", newID );
-                    outPlan._failure = string( failureBuilder.view() );
-                    return false;
-                }
+                StringBuilder<constant::buffer::kMax256> failureBuilder;
+                failureBuilder.appendFormat( "two assets would move to '%#' - nothing was moved", newID );
+                outPlan._failure = string( failureBuilder.view() );
+                return false;
             }
             outPlan._listMove.push_back( std::move( normalized ) );
             outPlan._listOldID.push_back( oldID );
