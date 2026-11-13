@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.Git import runGitOrRaise  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from common.RenameScope import checkRewriteUnmarkedLines, rewriteUnmarkedLines  # noqa: E402
+from common.RenameScope import checkRewriteUnmarkedLines, rewriteRenameTarget  # noqa: E402
 
 kRoots = ("Source", "Content", "Config", "docs", "Scripts", "Test", ".claude/skills", "AGENTS.md", "CLAUDE.md")
 kTextSuffixes = {".h", ".cpp", ".inl", ".hlsl", ".hlsli", ".py", ".md", ".json", ".xml", ".txt", ".cmake", ".material", ".ini", ".toml", ".yaml", ".yml"}
@@ -78,8 +78,8 @@ def replaceWord(text: str, old: str, new: str) -> tuple[str, int]:
     return pattern.subn(new, text)
 
 
-def replaceWordOutsideMarkedLines(text: str, old: str, new: str) -> tuple[str, int]:
-    """`replaceWord` 와 같되 옛 이름을 일부러 적은 줄(`keep-old-name` 표지)은 남긴다."""
+def replaceWordOutsideMarkedLines(text: str, old: str, new: str, relativePath: str = "") -> tuple[str, int]:
+    """`replaceWord` 와 같되 옛 이름을 일부러 적은 줄(`keep-old-name` 표지) · 표(금지 이름 표의 키 · 이름 기준선)는 남긴다."""
     count = 0
 
     def rewrite(part: str) -> str:
@@ -88,7 +88,7 @@ def replaceWordOutsideMarkedLines(text: str, old: str, new: str) -> tuple[str, i
         count += partCount
         return changed
 
-    return rewriteUnmarkedLines(text, rewrite), count
+    return rewriteRenameTarget(relativePath, text, rewrite), count
 
 
 def findFilesNamed(root: Path, stem: str) -> list[Path]:
@@ -123,7 +123,7 @@ def renameAll(root: Path, listPair: Sequence[dict], bDryRun: bool) -> int:
         old, new = pair["old"], pair["new"]
         touched: list[tuple[str, int]] = []
         for path in listFile:
-            changed, count = replaceWordOutsideMarkedLines(texts[path], old, new)
+            changed, count = replaceWordOutsideMarkedLines(texts[path], old, new, path.relative_to(root).as_posix())
             if count:
                 texts[path] = changed
                 touched.append((path.relative_to(root).as_posix(), count))
