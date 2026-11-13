@@ -1,6 +1,6 @@
 > 질문: CMake · Python · HLSL · 리소스 에셋의 이름과 모양은?
 > 독자: CMake, 파이썬, 셰이더를 쓰거나 리소스 에셋을 더하는 사람.
-> 결론: CMake 옵션은 `SW_*`, 함수는 `sw_camelCase`. 파이썬은 `camelCase` 함수에 타입 힌트 필수. HLSL 은 C++ 규칙을 따르되 공유 헤더 함수는 구조체 멤버. 리소스 이름은 소문자.
+> 결론: CMake 옵션은 `SW_*`, 함수는 `sw_camelCase`. 파이썬은 PEP 8(모듈 · 함수 `snake_case`, 클래스 `PascalCase`, 상수 `UPPER_CASE`)에 타입 힌트 필수. HLSL 은 C++ 규칙을 따르되 공유 헤더 함수는 구조체 멤버. 리소스 이름은 소문자.
 
 ## Naming — CMake · Python · HLSL · Resource Assets
 
@@ -15,14 +15,22 @@
 
 ### Python
 
+PEP 8 — the same rule the Unreal Python API, Godot tooling and Blender add-ons follow (user decision 2026-11-13, "follow the industry standard"). Python names do not mirror C++ names; a JSON key or C++ name read as data stays a string.
+
 | Thing | Form |
 | --- | --- |
-| Public functions | `camelCase` — PEP 8 의 snake_case 가 아니다: C++ · Python · JSON 이 한 이름 체계를 나눈다(PEP 8 도 프로젝트 안 일관성을 앞세운다). 섞인 snake_case 는 `naming-words` 가 막는다(표준 라이브러리 덮어쓰기 `log_message` 는 `_keep`) |
-| Private helpers | `camelCaseInternal` |
-| Module constants | `kPascalCase` or `_kPascalCase` |
-| Module / file names | `PascalCase.py` |
+| Module / package (file and folder) names | `snake_case` (`naming_words.py`, `Scripts/package/tests/`); never a standard-library module name |
+| Functions, methods, variables, parameters, attributes | `snake_case` (`collect_declarations`, `list_problem`); a flag drops the C++ `b` prefix (`dry_run`, `is_folder`, like Unreal Python's `bHidden` → `hidden`) |
+| Private (module- or class-only) helpers | leading `_` (`_parse_rule`) — not an `Internal` suffix |
+| Classes, exceptions, `TypeVar`s | `PascalCase` (`LintScope`, `GeneratorError`, `TItem`) |
+| Module and class-level constants, enum members | `UPPER_CASE` (`CONFIG_PATH`, `_SUBCOMMAND`, `ExitCode.PASSED`); a function-local constant is an ordinary `snake_case` local |
+| Overrides of an outside API | the outside spelling (`setUp`, `do_POST`), listed in `NamingWords.json` `_keep` |
+| CLI subcommands (`py -3 -m Scripts <name>`) and lint rule ids | `kebab-case` (`api-diff`, `naming-words`) |
 | JSON keys of Python-owned contracts (`Config/Engine/CookContract.json`, hand-read import configs) | `snake_case` |
 | JSON keys read through reflection | the C++ member name (`_width`) |
+| Shell scripts | `snake_case.sh` (`Scripts/dev/preflight.sh`); shell functions `snake_case` |
+
+`naming-words` checks the PEP 8 shapes (functions, classes, module constants, module files and folders) with the word table; `ProjectConstants` constants become CMake variables as `SW_<NAME>`.
 
 Shape (examples in `docs/04_CodingGuidelines.md` 8). Code must run on Python 3.10.
 
