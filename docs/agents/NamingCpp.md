@@ -152,7 +152,7 @@ A reader who knows one of these names must be able to guess the rest. Use a bann
 
 폴더 · 형식 · 함수 이름의 낱말 뜻이다. 새 이름이 같은 낱말을 다른 뜻으로 쓰면 이름을 바꾼다. 새 낱말은 `Config/Rules/Lint/NamingWords.json` 에 먼저 올린다 — 함수 앞 단어(`_functionWords`) · 형식 끝 단어(`_typeSuffixes`)뿐 아니라 모든 이름(멤버 · 상수 · 매크로 · 열거자 · 스크립트)과 파일 · 폴더 이름의 **모든 낱말**이 `_words` 에 있어야 하고, 문맥마다 갈리는 낱말은 `_scopedWords`(린트 `naming-words`, 커밋 훅), 옛 이름은 그 `_bannedNames` 에 둔다.
 
-이름 · 경로는 도구로 바꾼다(`py -3 -m Scripts rename-symbol` · `move-source`, 여러 쌍은 `Scripts/dev/rename_identifier.py`) — 코드와 문서(`docs/agents` 포함)를 함께 고친다. 옛 이름을 일부러 적는 줄("쓰지 않는 것" 예, 이력)에는 표지 `keep-old-name` 를 단다(Markdown 은 `<!-- keep-old-name -->`, 규칙은 `Scripts/common/rename_scope.py`).
+이름 · 경로는 도구로 바꾼다(`py -3 -m Scripts rename-symbol` · `move-source`, 여러 쌍은 `Scripts/dev/rename_identifier.py`) — 코드와 문서(`docs/agents` 포함)를 함께 고치고, 리플렉션 프로퍼티는 데이터(XML · JSON)에 적힌 직렬화 이름(`_bFooBar` → `fooBar`)도 함께 바꾼다(같은 직렬화 이름을 다른 멤버도 쓰면 겹친 자리를 알리고 멈춘다). 옛 이름을 일부러 적는 줄("쓰지 않는 것" 예, 이력)에는 표지 `keep-old-name` 를 단다(Markdown 은 `<!-- keep-old-name -->`, 규칙은 `Scripts/common/rename_scope.py`).
 
 | 규칙 | 근거 |
 |---|---|

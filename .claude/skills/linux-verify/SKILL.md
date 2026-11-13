@@ -13,9 +13,9 @@ description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에�
 
 1. 처음 한 번: `setup`(Xvfb · 글꼴을 sudo 없이 `~/lt-deps` 에 푼다). 클론과 `build/Linux-Debug`(컴파일러 캐시) · `build/Linux-Server` 구성은 아래 "클론 환경" 을 따른다.
 2. `all`: HEAD 로 Release 빌드 → (Release 단위 ‖ 서버 Debug 빌드 → 기동 → 단위 — 시간을 판정하지 않는 CPU 일끼리 겹친다) → 모든 체인(Release · Vulkan, 4 개씩 동시 — 체인은 혼자 돈다). 끝 줄 `LINUX_OK=<sha>`. 앞이 지면 긴 체인을 돌리지 않는다. 체인 · 골든의 정본은 Release 하나이고 Debug 클라이언트는 짓지 않는다 — Debug 단언은 Windows 의 Debug 체인(시나리오마다 백엔드 하나)과 `sanitize`(Debug)가 본다.
-3. 영향 범위만: `build` → `chain <이름…>`(또는 `stages`).
+3. 영향 범위만: `build` → `chain <이름…>`(또는 `stages`). `chain` · `stages` · `bisect` 는 Release 를 지은 커밋(`build/Linux-Release/built-commit.txt`)이 클론 HEAD · 부른 작업 폴더의 HEAD 와 다르면 돌리지 않고 멈춘다 — 커밋한 뒤에는 `build` 를 다시 돌린다(증분).
 4. 새니타이저(감사 P-8): 묶음마다 `sanitize`(ASan + UBSan, `Linux-Debug-ASan`) 한 번 — `preflight.sh` 가 `all` 뒤에 차례로 돌린다(체인과 CPU 를 다투지 않게, 지면 `SANITIZE_FAILED`, `--record` 실행은 기록 골든을 지우지 않게 건너뛴다). `sanitize thread`(TSan — `x64-linux-tsan` 트리플릿을 따로 깐다)는 손으로 돌린다: 묶음이 스레드 · 잠금 · 원자 값 · 작업 큐 · 스레드 사이에 넘기는 수명(렌더 · 오디오 · 네트 스레드, `TaskManager`, `mutex`)을 고쳤으면 push 전에 한 번. 끝 줄 `SANITIZE_OK=<종류>`. 누수는 기준선을 만들기 전까지 끈다(`detect_leaks=0`).
-5. 골든을 새로 뜰 때: `chain --record <이름…>` → `goldens`(메인 작업 폴더로 복사, 한 색 사진 경고) → 표본을 눈으로 본다 → 커밋 → `--record` 없이 다시 `chain`.
+5. 골든을 새로 뜰 때: `chain --record <이름…>` → `goldens`(메인 작업 폴더로 복사, 한 색 사진 경고) → 표본을 눈으로 본다 → 커밋 → `build`(HEAD 가 옮겨졌다) → `--record` 없이 다시 `chain`.
 
 ## 지킬 것
 
@@ -23,6 +23,7 @@ description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에�
 - dzn 은 `vkCreateDevice` 에 `descriptorIndexing` 묶음 비트가 있어야 bindless 셰이더를 받는다(없으면 크기 없는 텍스처 배열 PSO 컴파일에서 죽는다). 드라이버 진단(`DZN_DEBUG=nir`)은 백엔드 자식 프로세스의 콘솔로 나와 체인 실행에서는 버려진다 — `Bin/App -EnableEditor -vk -scenario=…` 를 직접 띄워 본다.
 - 기록 실행은 그림이 틀려도 통과한다. 기록 통과는 그림의 증거가 아니다.
 - 이 명령은 클론당 하나만 돌린다(체인 병렬은 명령 안에서 한다).
+- `sanitize` 는 클론을 새 커밋으로 옮기지만 Release 는 짓지 않는다. 그 뒤의 `chain` 은 위 검사에 걸려 멈추니 `build` 를 먼저 돌린다.
 - 클론은 `build` · `all` · `sanitize` 때 `reset --hard` + `git clean -fd` 된다(무시 목록 밖의 추적 안 된 파일 — 커밋하지 않은 기록 골든도 — 이 지워진다). 기록한 골든은 다음 `build` 전에 `goldens` 로 옮긴다. 클론에서 고친 것은 사라진다 — 고칠 것은 메인 작업 폴더에서 고치고 커밋한다.
 - 멈출 때는 `stop` 을 쓴다. 게임 프로세스는 이름이 `GameThread` 로 바뀌어 `App` 으로 찾으면 놓치고, Xvfb 도 남는다.
 - 긴 체인은 백그라운드로 돌리고 알림을 기다린다. 결과를 짐작해 말하지 않는다.
