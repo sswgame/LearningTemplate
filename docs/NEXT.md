@@ -35,6 +35,7 @@
 ## 4. 실행 · 측정이 필요한 일
 
 - **에디터 첫 패널 약 1 초:** `-gv_editorPanelTimes` · `-gv_traceSlowTickMs` 로 동기 준비를 찾아 `IEditorPanel::onPanelOpened` 의 비동기 잡으로(`ModulesModel::ensureLoaded` 후보).
+- **검증 시간(지금 약 40 분, 11-12 의 53 분에서):** 벽시계를 정하는 셋 — shipping-check 9 분(CPU 단계 11.5 분 중, 배포 프리셋 빌드를 증분 · 앞 단계와 겹치기), Debug 에디터 체인 385 초(조각으로 나눠 `-j` 를 채운다), Release `Scenario.shooter3d` 381 초(고정 대기를 조건 대기로). 체인 하나를 진 단계부터 다시 도는 입구(지금은 이분 탐색 도구를 손으로).
 - **시나리오 대기:** boat · clothshowcase(골든 앞 구간이 물리 이력), waterplay(강체 속도 · 잠듦 값으로 조건 대기).
 - **측정([DesignBacklog](DesignBacklog.md) S8 표):** Tracy `GT.Frame` 자식 합 90 % 이상, 배치 크기 12 · 24 · 48, `load/*` × 워커 1 · 2 · 4 · 8 과 구조 지표, W25 GPU 비교(c05a3ee251 대 지금 — 노이즈 안이면 되돌림), W-S4 `-ftime-trace`, W-R1 RT 프레임 힙 할당, W-R2 PSO 조회, 5-2 `RT.Bind.*`, DX12 기록 경로 락 제거 전후 `bench.json` p50, 에디터 MVVM(Hierarchy 큐브 8000 · 인스펙터 값 행), 골든 여유(`ScenarioCulprit --golden-margins`).
 - **Shooter3D 소총 자세 클립:** 지금은 리그 IK 견착(`ubc_player_body.rig.xml` TwoHandHold). 상용(Lyra · ALS)처럼 쥔 자세 클립 + 왼손 IK 로 간다 — CC0 출처 poly.pizza "SWAT"(Quaternius, `https://static.poly.pizza/713f6535-f4f3-4367-a4c6-ced126ae0936.glb`, `Idle_Gun` · `Gun_Shoot` · `Run_Shoot` 등)을 `models_raw/quaternius` 에 넣고 UBC 로 리타깃해 상체 층(Aim)으로, IK 견착은 손 자리 보정으로.
