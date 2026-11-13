@@ -63,7 +63,7 @@ GIT_SOURCE_ENV = 'LT_LINUX_GIT_SOURCE'  # 클론이 받아 올 git 폴더(WSL �
 def run_in_wsl(argv):
     """Windows 쪽: HEAD 를 refs/linux-verify 에 적고 같은 명령을 WSL 에서 띄운다."""
     command = argv[2:] if argv[:1] == ['--gpu'] else argv  # `--gpu <드라이버> all` 도 HEAD 를 옮긴다
-    if command and command[0] in ('build', 'all'):
+    if command and command[0] in ('build', 'all', 'sanitize'):  # sanitize 도 클론을 되돌린다 — 옮기지 않으면 따로 돌린 sanitize 가 옛 커밋을 짓는다
         head = run_git_or_raise(['rev-parse', 'HEAD'], cwd=REPO).strip()
         run_git_or_raise(['update-ref', 'refs/linux-verify', head], cwd=REPO)
     env = dict(os.environ, MSYS_NO_PATHCONV='1', MSYS2_ARG_CONV_EXCL='*')

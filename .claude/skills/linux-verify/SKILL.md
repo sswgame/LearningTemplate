@@ -23,7 +23,7 @@ description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에�
 - dzn 은 `vkCreateDevice` 에 `descriptorIndexing` 묶음 비트가 있어야 bindless 셰이더를 받는다(없으면 크기 없는 텍스처 배열 PSO 컴파일에서 죽는다). 드라이버 진단(`DZN_DEBUG=nir`)은 백엔드 자식 프로세스의 콘솔로 나와 체인 실행에서는 버려진다 — `Bin/App -EnableEditor -vk -scenario=…` 를 직접 띄워 본다.
 - 기록 실행은 그림이 틀려도 통과한다. 기록 통과는 그림의 증거가 아니다.
 - 이 명령은 클론당 하나만 돌린다(체인 병렬은 명령 안에서 한다).
-- 클론은 `build` · `all` 때 `reset --hard` + `git clean -fd` 된다(무시 목록 밖의 추적 안 된 파일 — 커밋하지 않은 기록 골든도 — 이 지워진다). 기록한 골든은 다음 `build` 전에 `goldens` 로 옮긴다. 클론에서 고친 것은 사라진다 — 고칠 것은 메인 작업 폴더에서 고치고 커밋한다.
+- 클론은 `build` · `all` · `sanitize` 때 `reset --hard` + `git clean -fd` 된다(무시 목록 밖의 추적 안 된 파일 — 커밋하지 않은 기록 골든도 — 이 지워진다). 기록한 골든은 다음 `build` 전에 `goldens` 로 옮긴다. 클론에서 고친 것은 사라진다 — 고칠 것은 메인 작업 폴더에서 고치고 커밋한다.
 - 멈출 때는 `stop` 을 쓴다. 게임 프로세스는 이름이 `GameThread` 로 바뀌어 `App` 으로 찾으면 놓치고, Xvfb 도 남는다.
 - 긴 체인은 백그라운드로 돌리고 알림을 기다린다. 결과를 짐작해 말하지 않는다.
 - 로그: `~/LT-linux/build/Linux-Release/Testing/Logs/Scenario.<이름>.vk.log`. 판정 경고 밖의 Error · Warning 분류는 로그를 직접 읽는다.
