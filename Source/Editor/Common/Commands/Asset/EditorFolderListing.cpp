@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Asset/EditorContentScan.h"
@@ -85,12 +86,13 @@ namespace sw::editor
             if ( entry._bIsDirectory == false )
                 AssetCompanionRegistry::appendCompanionPaths( entry._relativePath, listCompanion );
         }
-        for ( string& companion : listCompanion )
+        unordered_set<string> uniqueCompanion; // 파일마다 곁 파일 목록을 훑지 않는다(폴더 파일 수 × 곁 파일 후보 수)
+        for ( const string& companion : listCompanion )
         {
-            companion = FileUtil::normalizePath( companion ).str();
+            uniqueCompanion.insert( FileUtil::normalizePath( companion ).str() );
         }
-        (void)VectorUtil::removeIf( outList, [&listCompanion]( const EditorFolderListingEntry& entry )
-        { return entry._bIsDirectory == false && VectorUtil::contains( listCompanion, FileUtil::normalizePath( entry._relativePath ).str() ); } );
+        (void)VectorUtil::removeIf( outList, [&uniqueCompanion]( const EditorFolderListingEntry& entry )
+        { return entry._bIsDirectory == false && uniqueCompanion.contains( FileUtil::normalizePath( entry._relativePath ).str() ); } );
     }
 
     void EditorFolderListing::collectChildFolders( string_view folderAbs, vector<string>& outList )
