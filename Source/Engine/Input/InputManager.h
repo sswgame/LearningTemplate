@@ -374,7 +374,7 @@ namespace sw
          * @details 끄기 전 상태는 이 관리자의 칸이다(`_arrSavedAccessibilityFlags`) — 언리얼 `FWindowsApplication` 이 시작 때의 StickyKeys 를 멤버로 들고 내릴 때 되돌리는 것과 같다.
          */
         void disableWindowsAccessibilityShortcuts();
-        /** @brief `disableWindowsAccessibilityShortcuts` 가 적어 둔 상태로 되돌립니다(`shutdown` 이 부른다). 끈 적이 없으면 아무것도 하지 않습니다. */
+        /** @brief `disableWindowsAccessibilityShortcuts` 가 적어 둔 상태로 되돌립니다(포커스를 잃을 때와 `shutdown` 이 부른다). 끈 적이 없으면 아무것도 하지 않습니다. */
         void restoreWindowsAccessibilityShortcuts();
 
     private:
