@@ -94,7 +94,7 @@
 
 ### 에디터
 
-- **E-1 복구가 미저장 · 플레이 확인을 건너뛰고 새 씬과 문서 패널은 자동 저장 대상이 아니다** (결함 + 구조 — 확인) — `EditorAutosaveCommands.cpp:400` `restore` 가 `loadScene` 을 바로 불러 지금 편집이 묻지 않고 사라진다. `:197` 저장한 적 없는 새 씬은 사본이 없고 대상은 활성 씬뿐이라 dirty 문서 패널(머티리얼 그래프 · 타일맵 · 시퀀서)은 잃는다. 쓰기는 UI 스레드 동기이고 끌기 중인지 보지 않는다. 상용: 언리얼은 Untitled 포함 dirty 패키지 전부, 상호작용 중이면 미룬다. 제안: 복구는 `tryOpenScene` 입구로, 대상은 "dirty 문서 목록", 새 씬은 임시 id, 상호작용 중이면 한 프레임 미룸. 확인: `autosave` 시나리오 "편집 → restore → 미저장 모달", "새 씬 편집 → `autosave.now` → 사본 1".
+- **E-1 (남은 몫) 문서 패널은 자동 저장되지 않는다** (구조 — 확인) — 복구 입구는 씬 열기(`tryOpenScene` — 미저장 · 플레이 확인) 하나로 모였고 새 씬도 `untitled-<세대>` 칸에 저장된다(5afcea310b). 남은 것: 머티리얼 그래프 · 타일맵 · 시퀀서 등 문서 패널 자동 저장(대상을 dirty 문서 목록으로), 끌기 중이면 한 프레임 미루기, 쓰기를 UI 스레드에서 떼기, Play 중 복원 거절 시나리오 단계, dirty 원본의 사본 복원에서 Save 를 고르면 로드 실패 로그가 나는 틈. 확인: `editor.autosave` 에 문서 패널 단계.
 - **E-2 History 패널의 되돌리기가 편집 잠금과 명령 큐를 우회한다** (결함 — 확인) — `HistoryViewModel.cpp:43-69` 가 그리기 도중 `pStack->undo()` 를 바로 부른다. `edit.undo` 는 `isBlockedByEditLock`(플레이 · 베이크 중 꺼짐) + 다음 프레임 실행인데 패널은 둘 다 건너뛴다. `CommandStack::undo` 는 진행 중 상호작용도 보지 않아 기즈모 끌기 중 Ctrl+Z 가 redo 를 자른다. 상용: 언리얼 `UTransBuffer::CanUndo` 는 열린 트랜잭션이면 거절. 제안: 되돌리기 입구 하나 — History 는 `edit.undo` · `edit.redo` · `edit.jumpTo` 를 큐에 넣기만, 스택에 상호작용 구간(`DocumentEditSpan` 과 같은 구간)이 열려 있으면 거절. 확인: `lightprobebake` "베이크 중 `history.step.0` → `Editor.UndoIndex` 그대로".
 - **E-6 형제 순서 한 줄을 옮기면 형제 전부가 스냅샷 · 기록 · 씬 파일 변경이 된다** (성능 + 팀 병합 — 확인) — `EditorSiblingOrder.cpp:40-52` `renumber` 가 형제마다 전체 XML 스냅샷 → `commitModify`. 루트 8000 이면 직렬화 16000 회가 한 단계에 들고 씬 파일 8000 줄이 바뀐다(`uint16`, `:22`). 상용: 유니티 2022.2 가 `m_RootOrder` 병합 충돌로 `SceneRoots` 목록 하나로 옮겼다. 제안: 순서를 "부모가 든 자식 id 목록 한 칸" 으로, 그때까지는 분수 색인으로 한 오브젝트만. 확인: `hierarchyorder` 8000 루트 `Editor.UndoCount` 1 · 프레임 시간 · 저장 diff 줄 수.
 - **E-7 인스펙터 편집 기록이 위젯을 누를 때마다 선택 전체를 직렬화하고 편집 없이 풀리면 스냅샷이 남는다** (성능 + 누수 — 확인) — `InspectorEditRecorder.cpp:61-66` `beginEdit` 이 선택 전부를 `captureSnapshot`, `InspectorPropertyUndo.cpp:23-27` 은 `IsItemDeactivatedAfterEdit` 에서만 지워 클릭만 하고 나오면 세션 끝까지 남는다. 상용: 언리얼 `Modify()`, 유니티 `Undo.RecordObject` 프로퍼티 diff. 제안: 기록 단위를 (오브젝트 id, 컴포넌트 안정 키, 프로퍼티 경로, 전 값, 후 값)으로. 그 전까지 `IsItemDeactivated()` 에서 pending 을 지우고 스냅샷은 첫 실제 쓰기 직전에. 확인: `InspectorEditRecorderTest.DeactivateWithoutEditDropsPending`, 8000 선택 칸 클릭 프레임.
@@ -202,7 +202,7 @@
 한 줄이 한 묶음(커밋 서넛)이다. "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고친다. 성능 묶음은 측정이 먼저다. 온라인 · 서버 · 보안 묶음은 `security-and-hardening`, 외부 API 묶음은 context7 로 그 판의 문서를 먼저 대조한다. 번호는 NEXT 가 가리키므로 끝난 줄은 지우고 번호는 다시 매기지 않는다.
 
 1. **에디터 되돌리기 입구** — History 우회 E-2, 편집 알림 직렬화 E-9, 바이트 한도 E-13. `editor/undocoverage` 에 문서 패널 전수 단계(E-16)를 먼저 더해 지는 것을 본다.
-2. **복구 입구** — 복구 입구 통일과 새 씬 · 문서 패널 자동 저장: E-1.
+2. **복구 입구** — 문서 패널 자동 저장: E-1 남은 몫.
 5. **읽은 것을 커밋 조건으로** — 일 안에서 읽은 것을 커밋 조건으로 붙이는 연결 포장과 Admin · Mailbox · Guild 저장 로직 점검(경제 키트는 영수증 레코드 하나로 묶였다 — O-1).
 14. **웹 · Android 개발 프리셋과 가짜 창 테스트** — P-9, 그 위에서 P-4 · P-5.
 16. **영속 정체성** — 컴포넌트 · 중첩 노드 고정 지역 id: A-2(에셋 GUID 2 단계와 같은 줄기, A-20).
