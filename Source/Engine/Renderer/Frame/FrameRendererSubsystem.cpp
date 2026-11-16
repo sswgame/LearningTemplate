@@ -27,7 +27,7 @@
 namespace sw
 {
     // 실행 중에 바꾸면 파이프라인을 다시 고르는 변수입니다(`FrameRenderer::selectPipeline` 의 입력, 정의는 FrameRenderer.cpp).
-    SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_renderPipeline );
+    SW_EXTERN_GLOBAL_VARIABLE( sw::GlobalString, gv_renderPipeline );
     SW_EXTERN_GLOBAL_VARIABLE( bool, gv_deferredShading );
 
     FrameRendererSubsystem::FrameRendererSubsystem( unique_ptr<FrameRenderer> frameRenderer, const RHISubsystem& rhiSubsystem )

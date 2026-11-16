@@ -124,11 +124,11 @@ namespace sw::editor
      *          그 패널만 열린다.
      *          id 는 패널의 `SW_EDITOR_PANEL` 이 정한 값이다(예: `render_targets`, `profiler`, `material`).
      */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorOpenPanel, "", "시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_editorOpenPanel, "", "시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함)" );
 
     bool EditorDockLayout::isPanelOverrideActive() const
     {
-        return gv_editorOpenPanel.empty() == false || _bPanelOverrideRequested == SW_TRUE;
+        return gv_editorOpenPanel.get().empty() == false || _bPanelOverrideRequested == SW_TRUE;
     }
 
     void EditorDockLayout::setPanelOverrideRequested( bool bRequested )
@@ -138,7 +138,7 @@ namespace sw::editor
 
     bool EditorDockLayout::isOpeningAllPanels()
     {
-        return StringUtil::equals( gv_editorOpenPanel, EditorDockLayoutInternal::kOpenAllPanels, true );
+        return StringUtil::equals( gv_editorOpenPanel.get(), EditorDockLayoutInternal::kOpenAllPanels, true );
     }
 
     EditorDockLayout::EditorDockLayout()
@@ -284,7 +284,7 @@ namespace sw::editor
         }
 
         // 에디터 자체 테스트는 사용자의 레이아웃과 무관한 상태에서 실행한다. 등록된 기본 가시성(코어는 열림, 도구는 닫힘)과 기본 도킹 배치를 쓴다.
-        if ( gv_editorOpenPanel.empty() && isPanelOverrideActive() )
+        if ( gv_editorOpenPanel.get().empty() && isPanelOverrideActive() )
         {
             SW_LOG_INFO_ID( "EditorDockLayout.EditorSelfTestDefault", "Editor self test: default panel visibility and dock layout (saved layout is neither read nor written)." );
             return;
@@ -298,14 +298,14 @@ namespace sw::editor
             {
                 if ( entry._pInstance == nullptr )
                     continue;
-                const bool bMatch = ( entry._id == gv_editorOpenPanel );
+                const bool bMatch = ( entry._id == gv_editorOpenPanel.get() );
                 entry._pInstance->setOpen( bMatch );
                 bFound = bFound || bMatch;
             }
             if ( bFound )
-                SW_LOG_INFO_ID( "EditorDockLayout.GvEditorOpenPanelOpenedOnly", "gv_editorOpenPanel: opened only the '%#' panel.", gv_editorOpenPanel.c_str() );
+                SW_LOG_INFO_ID( "EditorDockLayout.GvEditorOpenPanelOpenedOnly", "gv_editorOpenPanel: opened only the '%#' panel.", gv_editorOpenPanel.get().c_str() );
             else
-                SW_LOG_WARNING_ID( "EditorDockLayout.GvEditorOpenPanelNoPanel", "gv_editorOpenPanel: no panel named '%#' - everything starts closed.", gv_editorOpenPanel.c_str() );
+                SW_LOG_WARNING_ID( "EditorDockLayout.GvEditorOpenPanelNoPanel", "gv_editorOpenPanel: no panel named '%#' - everything starts closed.", gv_editorOpenPanel.get().c_str() );
             return;
         }
 

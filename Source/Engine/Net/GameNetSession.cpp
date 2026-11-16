@@ -229,7 +229,7 @@ namespace sw
      * @details 배포 클라이언트도 이것으로 서버에 붙으므로 Shipping 에도 등록한다(언리얼 실행 인자 URL 의 자리).
      * @note PowerShell 은 점이 든 인자를 쪼갠다 — 따옴표로 감쌀 것.
      */
-    SW_GLOBAL_VARIABLE( sw::string, gv_netConnectAddress, "", "클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기)" );
+    SW_GLOBAL_VARIABLE( sw::GlobalString, gv_netConnectAddress, "", "클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기)" );
 } // namespace sw
 
 namespace sw
@@ -289,7 +289,7 @@ namespace sw
     GameNetLaunch GameNetSession::makeLaunchParams( GameNetSessionParams& outParams )
     {
         outParams                      = GameNetSessionParams{};
-        const bool          bConnect   = gv_netConnectAddress.empty() == false;
+        const bool          bConnect   = gv_netConnectAddress.get().empty() == false;
         const GameNetLaunch overridden = _launchOverride.isBound() ? _launchOverride( outParams ) : GameNetLaunch::None;
         if ( overridden != GameNetLaunch::None )
         {
@@ -312,10 +312,10 @@ namespace sw
             return makeServerParams( *pServerConfig, outParams ) ? GameNetLaunch::Open : GameNetLaunch::Invalid;
         }
         // 기동 때 한 번 막고 푼다 — HTTP 클라이언트의 해석 스레드와 같은 해석기다(이름 · hosts 파일 · 점 넷 숫자).
-        const bool bResolved = PlatformSocketUtil::resolveAddress( gv_netConnectAddress, kDefaultPort, outParams._serverAddress );
+        const bool bResolved = PlatformSocketUtil::resolveAddress( gv_netConnectAddress.get(), kDefaultPort, outParams._serverAddress );
         if ( bResolved == false || outParams._serverAddress.isValid() == false )
         {
-            SW_LOG_ERROR_ID( "GameNetSession.GvNetConnectAddressDidNot", "gv_netConnectAddress '%#' did not resolve to an IPv4 address with a port", gv_netConnectAddress );
+            SW_LOG_ERROR_ID( "GameNetSession.GvNetConnectAddressDidNot", "gv_netConnectAddress '%#' did not resolve to an IPv4 address with a port", gv_netConnectAddress.get() );
             return GameNetLaunch::Invalid;
         }
         outParams._role = GameNetRole::Client;

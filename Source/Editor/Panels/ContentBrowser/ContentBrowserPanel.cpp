@@ -35,7 +35,7 @@
 
 namespace sw::editor
 {
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchAsset, "", "감시 값 Editor.ReferenceCount 가 볼 에셋의 리소스 id (시나리오용)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_editorWatchAsset, "", "감시 값 Editor.ReferenceCount 가 볼 에셋의 리소스 id (시나리오용)" );
 
     namespace
     {
@@ -171,7 +171,7 @@ namespace sw::editor
                 const ContentBrowserPanel* pPanel = findPanel();
                 if ( pPanel == nullptr || pPanel->isReferenceIndexCurrent() == false )
                     return false;
-                outValue = static_cast<float64>( pPanel->getReferenceIndex().countReferrerFiles( gv_editorWatchAsset ) );
+                outValue = static_cast<float64>( pPanel->getReferenceIndex().countReferrerFiles( gv_editorWatchAsset.get() ) );
                 return true;
             }
 

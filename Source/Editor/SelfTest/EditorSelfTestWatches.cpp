@@ -36,17 +36,18 @@ namespace sw::editor
             {
                 EditorContext* pContext           = editor::findSubsystem<EditorContext>();
                 TypeRegistry&  registry           = editor::getSubsystem<TypeRegistry>();
-                const size_t   dot                = gv_editorWatchProperty.find( '.' );
+                const string   watchedProperty    = gv_editorWatchProperty.get();
+                const size_t   dot                = watchedProperty.find( '.' );
                 const bool     bInvalidWatchSetup = pContext == nullptr || dot == string::npos;
                 if ( bInvalidWatchSetup )
                     return false;
                 GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
                 if ( pObject == nullptr )
                     return false;
-                Component* pComponent = pObject->findComponentByTypeName( hashed_string( gv_editorWatchProperty.substr( 0, dot ).c_str() ) );
+                Component* pComponent = pObject->findComponentByTypeName( hashed_string( watchedProperty.substr( 0, dot ).c_str() ) );
                 if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
                     return false;
-                const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( gv_editorWatchProperty.substr( dot + 1 ).c_str() ) );
+                const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( watchedProperty.substr( dot + 1 ).c_str() ) );
                 if ( pProperty == nullptr )
                     return false;
                 const EnumInfo* pEnum = registry.findEnum( pProperty->_typeName );
@@ -63,7 +64,7 @@ namespace sw::editor
             [[nodiscard]] static bool readObjectDepth( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const GameObjectManager* pManager = editor::getActiveObjectManager();
-                const GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorWatchObject.c_str() ) ) : nullptr;
+                const GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorWatchObject.get().c_str() ) ) : nullptr;
                 if ( pObject == nullptr )
                     return false;
                 uint32 depth = 0;
@@ -81,7 +82,7 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return false;
-                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel );
+                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
                 if ( pPanel == nullptr || pPanel->hasDrawnContent() == false )
                     return false;
                 outValue = static_cast<float64>( pPanel->getContentColumnCount() );
@@ -97,7 +98,7 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return false;
-                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel );
+                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
                 if ( pPanel == nullptr || pPanel->hasDrawnContent() == false )
                     return false;
                 outValue = static_cast<float64>( pPanel->getContentLineCount() );

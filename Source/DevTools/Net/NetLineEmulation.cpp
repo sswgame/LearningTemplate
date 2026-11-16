@@ -25,7 +25,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationDuplicatePercent, 0, "네트워크 흉내: 중복(%) — PktDup" );
     SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationReorderPercent, 0, "네트워크 흉내: 순서 뒤바뀜(%) — PktOrder" );
     SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationBandwidthKilobytesPerSecond, 0, "네트워크 흉내: 회선 속도(KB/s, 0=제한 없음)" );
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_netEmulationPreset, "", "네트워크 흉내: 회선 프리셋 이름(engine/settings/netemulation.presets.xml — 비면 gv_netEmulation* 낱값)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_netEmulationPreset, "", "네트워크 흉내: 회선 프리셋 이름(engine/settings/netemulation.presets.xml — 비면 gv_netEmulation* 낱값)" );
 
     namespace
     {
@@ -188,13 +188,13 @@ namespace sw
         if ( shardIndex < 0 || kMaxShardCount <= shardIndex )
             return nullptr;
         NetEmulationConditions conditions = NetLineEmulationInternal::makeConditionsFromGlobalVariables();
-        if ( gv_netEmulationPreset.empty() == false )
+        if ( gv_netEmulationPreset.get().empty() == false )
         {
             NetEmulationPresetTable presetTable;
             conditions = NetEmulationConditions{};
             if ( presetTable.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets.get() } ) &&
-                 presetTable.tryGetConditions( gv_netEmulationPreset, conditions ) == false )
-                SW_LOG_ERROR_ID( "NetLineEmulation.GvNetEmulationPresetNotPreset", "gv_netEmulationPreset '%#' is not a preset (%#) - no emulation", gv_netEmulationPreset.c_str(), presetTable.makePresetNames().c_str() );
+                 presetTable.tryGetConditions( gv_netEmulationPreset.get(), conditions ) == false )
+                SW_LOG_ERROR_ID( "NetLineEmulation.GvNetEmulationPresetNotPreset", "gv_netEmulationPreset '%#' is not a preset (%#) - no emulation", gv_netEmulationPreset.get().c_str(), presetTable.makePresetNames().c_str() );
         }
         unique_ptr<NetEmulationTransport> emulation = make_unique<NetEmulationTransport>( &inner );
         emulation->setDefaultConditions( conditions );

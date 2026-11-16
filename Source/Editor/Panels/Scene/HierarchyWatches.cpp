@@ -20,14 +20,14 @@
 namespace sw::editor
 {
     /** @brief 프로브 `Editor.HierarchyRowIndex` 가 볼 오브젝트 이름입니다. 시나리오가 `<Variable>` 로 정합니다. */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchHierarchyObject, "", "감시 값 Editor.HierarchyRowIndex 가 볼 오브젝트 이름 (시나리오용)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_editorWatchHierarchyObject, "", "감시 값 Editor.HierarchyRowIndex 가 볼 오브젝트 이름 (시나리오용)" );
 
     namespace
     {
         /** @brief `gv_editorWatchHierarchyObject` 오브젝트가 오브젝트 행 사이에서 몇 번째인지입니다(0 부터). 행에 없거나 없는 이름이면 -1 입니다. */
         [[nodiscard]] bool readHierarchyRowIndex( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const optional<uint32> rowIndex = HierarchyViewModel::get().findObjectRowIndexByName( gv_editorWatchHierarchyObject.c_str() );
+            const optional<uint32> rowIndex = HierarchyViewModel::get().findObjectRowIndexByName( gv_editorWatchHierarchyObject.get().c_str() );
             outValue                        = rowIndex.has_value() ? static_cast<float64>( *rowIndex ) : -1.0;
             return true;
         }

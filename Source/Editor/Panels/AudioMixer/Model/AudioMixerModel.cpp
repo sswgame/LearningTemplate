@@ -15,7 +15,7 @@
 namespace sw::editor
 {
     /** @brief 프로브 `Editor.AudioMixerBusVolume` 이 볼 버스 이름입니다. 시나리오가 `<Variable>` 로 정합니다. */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchBus, "master", "감시 값 Editor.AudioMixerBusVolume 이 볼 믹서 버스 이름 (시나리오용)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_editorWatchBus, "master", "감시 값 Editor.AudioMixerBusVolume 이 볼 믹서 버스 이름 (시나리오용)" );
 
     namespace
     {
@@ -66,7 +66,7 @@ namespace sw::editor
             _listHeldPeak[busIndex]      = MathUtil::max( status._peak, _listHeldPeak[busIndex] * AudioMixerModelInternal::kPeakDecayPerFrame );
             probe._mutedCount += status._bMuted ? 1u : 0u;
             probe._soloCount += status._bSolo ? 1u : 0u;
-            if ( status._name == hashed_string( gv_editorWatchBus.c_str() ) )
+            if ( status._name == hashed_string( gv_editorWatchBus.get().c_str() ) )
                 probe._probedBusVolume = status._userVolume;
         }
         return true;

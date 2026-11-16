@@ -109,7 +109,7 @@ namespace sw
     void UIThemeController::setCatalog( const UIThemeCatalog& catalog )
     {
         _catalog = catalog;
-        _setting = gv_uiTheme;
+        _setting = gv_uiTheme.get();
         // 사용자 설정(gv_uiTheme)의 테마가 목록에 있으면 그것을, 없으면 목록의 기본 테마를 쓴다. 테마를 두지 않은 게임 목록에서는 설정 값이 조용히 기본 테마가 된다.
         const hashed_string settingTheme = findSettingTheme();
         if ( settingTheme.empty() == false )
@@ -144,7 +144,7 @@ namespace sw
     void UIThemeController::syncSetting()
     {
         // 실행 중에 바꾼 값: 모르는 이름이면 setTheme 이 경고하고 지금 테마를 유지한다(게임 테마 목록에 그 이름이 없는 경우).
-        const string& setting = gv_uiTheme;
+        string setting = gv_uiTheme.get();
         if ( setting == _setting )
             return;
         _setting = setting;

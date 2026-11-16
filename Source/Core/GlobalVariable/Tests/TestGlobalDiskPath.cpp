@@ -18,9 +18,9 @@ SW_TEST_CASE( GlobalDiskPathTest, RelativeValueBecomesAbsolute )
     const optional<AbsolutePath> base = AbsolutePath::tryMake( FileUtil::getCurrentPath() );
     SW_REQUIRE_TRUE( base.has_value() );
     SW_REQUIRE_TRUE( manager.setValueFromString( "gv_testDiskPath", "out/dump.wav" ) );
-    SW_EXPECT_EQUAL( AbsolutePath::tryResolve( "out/dump.wav", *base )->str(), string( value ) );
+    SW_EXPECT_EQUAL( AbsolutePath::tryResolve( "out/dump.wav", *base )->str(), value.get() );
 
     SW_EXPECT_FALSE( manager.setValueFromString( "gv_testDiskPath", "C:dump.wav" ) ); // 드라이브 상대는 경로가 아니다
     SW_REQUIRE_TRUE( manager.setValueFromString( "gv_testDiskPath", "" ) );           // 빈 값은 "끔"
-    SW_EXPECT_TRUE( value.empty() );
+    SW_EXPECT_TRUE( value.get().empty() );
 }

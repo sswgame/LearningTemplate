@@ -56,7 +56,7 @@ namespace sw
 
     /** @brief `-gv_debugChannelPort=N`: 디버그 채널(개발 명령 원격 실행, 루프백 TCP)을 이 포트에 엽니다(0=끄기). 토큰(`gv_debugChannelToken`)이 있어야 열립니다. Shipping 에는 없습니다. */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_debugChannelPort, 0, "디버그 채널 포트 (0=끄기, 루프백 전용, 토큰 필요)" );
-    SW_TEST_GLOBAL_VARIABLE( string, gv_debugChannelToken, "", "디버그 채널 접속 토큰" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_debugChannelToken, "", "디버그 채널 접속 토큰" );
     /**
      * @brief `-gv_serverStartPaused=1`: 첫 틱을 돌기 전에 멈춘 채로 기동합니다(서버 디버깅 S7 되감기).
      * @details 명령(`intent.play` · `step N`)은 기동 뒤 표준 입력이나 디버그 채널로 오므로 그 사이 틱이 돌면 목표 틱에서 정확히 멈출 수 없다. 멈춘 채 뜨면 틱 0 에서
@@ -125,7 +125,7 @@ namespace sw
             return false;
         }
         // 토큰 변수 이름은 이 개발 파일만 안다 — 채널(관리 채널과 함께 쓰는 배포 코드)은 이름 없이 거절만 한다.
-        if ( gv_debugChannelToken.empty() )
+        if ( gv_debugChannelToken.get().empty() )
         {
             SW_LOG_ERROR_ID( "Server.DebugChannelNeedsTokenGv", "The debug channel was requested (-gv_debugChannelPort=%#) without -gv_debugChannelToken - not started", gv_debugChannelPort );
             return false;
@@ -135,7 +135,7 @@ namespace sw
         _pDev->_channel   = make_unique<DebugChannel>();
         DebugChannelConfig settings;
         settings._bindAddress = NetAddress::makeLoopback( port );
-        settings._token       = gv_debugChannelToken;
+        settings._token       = gv_debugChannelToken.get();
         StreamTransportConfig transportSettings;
         transportSettings._idleTimeoutSeconds = 0.0; // 에디터는 서버가 멈춰 있는 동안에도 붙어 있다
         const bool bStarted                   = _pDev->_channel->initialize( _pDev->_transport.get(), transportSettings, settings,

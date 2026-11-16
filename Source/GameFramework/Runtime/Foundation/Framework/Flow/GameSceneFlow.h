@@ -69,7 +69,7 @@ namespace sw
         void update();
 
         /** @brief 게임이 처음 여는 씬입니다 — `-gv_firstScene` > 타이틀 씬 > 시작 맵(gamesettings). 모두 비었으면 빈 문자열입니다. */
-        const string& getFirstScene() const;
+        string getFirstScene() const;
         /** @brief 타이틀 다음에 여는 씬입니다 — 입구 씬 > 시작 맵. */
         const string& getEntranceScene() const;
         /**

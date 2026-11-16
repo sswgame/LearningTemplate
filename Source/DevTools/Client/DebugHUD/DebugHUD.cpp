@@ -32,10 +32,10 @@
 #include "Engine/Window/MainWindowSubsystem.h"
 
 SW_GLOBAL_VARIABLE( bool, gv_debugHUD, false, "디버그 HUD 표시 — 개발 도구, 단축키 Ctrl+F3 · 명령 hud (사용자 설정 debug.hud)" );
-SW_GLOBAL_VARIABLE( sw::string, gv_debugHUDSections, "", "디버그 HUD 섹션 켬 · 끔 — 공백으로 나눈 '이름'(켬) · '-이름'(끔), 적지 않은 섹션은 기본 (사용자 설정 debug.hudSections)" );
+SW_GLOBAL_VARIABLE( sw::GlobalString, gv_debugHUDSections, "", "디버그 HUD 섹션 켬 · 끔 — 공백으로 나눈 '이름'(켬) · '-이름'(끔), 적지 않은 섹션은 기본 (사용자 설정 debug.hudSections)" );
 SW_GLOBAL_VARIABLE( int32, gv_debugHUDCorner, 0, "디버그 HUD 모서리 0 왼위 1 오위 2 왼아래 3 오아래 (사용자 설정 debug.hudCorner)" );
 SW_GLOBAL_VARIABLE( float32, gv_debugHUDOpacity, 0.85f, "디버그 HUD 불투명도 0.2~1 (사용자 설정 debug.hudOpacity)" );
-SW_TEST_GLOBAL_VARIABLE( sw::string, gv_debugHUDWatchSection, "", "자동화 감시 값 DebugHUD.SectionShown 이 볼 디버그 HUD 섹션 이름" );
+SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_debugHUDWatchSection, "", "자동화 감시 값 DebugHUD.SectionShown 이 볼 디버그 HUD 섹션 이름" );
 SW_TEST_GLOBAL_VARIABLE( bool, gv_debugHUDScenario, true, "창이 보이는 시나리오 실행에서 디버그 HUD 의 Scenario 섹션(이름 · 단계 · 판정 · 프레임)을 띄운다 — 사용자 설정에 쓰지 않는다" );
 
 namespace sw
@@ -261,7 +261,7 @@ namespace sw
             {
                 (void)pManager;
                 const DebugHUD* pHUD = DebugHUDInternal::findEngineHUD();
-                outValue             = pHUD != nullptr && pHUD->isSectionDrawn( gv_debugHUDWatchSection ) ? 1.0 : 0.0;
+                outValue             = pHUD != nullptr && pHUD->isSectionDrawn( gv_debugHUDWatchSection.get() ) ? 1.0 : 0.0;
                 return pHUD != nullptr;
             }
         };
@@ -379,12 +379,13 @@ namespace sw
                 _secondsSinceRefresh += deltaSeconds;
                 const DebugHUDRegistry& registry     = engine::getSubsystem<DebugHUDRegistry>();
                 const uint8             drawMode     = readDrawMode();
-                const bool              bListChanged = registry.getRevision() != _seenRevision || gv_debugHUDSections != _seenState || drawMode != _seenDrawMode;
+                string                  sectionState = gv_debugHUDSections.get();
+                const bool              bListChanged = registry.getRevision() != _seenRevision || sectionState != _seenState || drawMode != _seenDrawMode;
                 if ( bListChanged == false && _secondsSinceRefresh < DebugHUDInternal::kRefreshSeconds )
                     return;
                 _secondsSinceRefresh = 0.0f;
                 _seenRevision        = registry.getRevision();
-                _seenState           = gv_debugHUDSections;
+                _seenState           = std::move( sectionState );
                 _seenDrawMode        = drawMode;
                 refreshSections();
             }
@@ -778,7 +779,7 @@ namespace sw
 
     bool DebugHUD::isSectionShown( const DebugHUDSectionRegistration& registration )
     {
-        return DebugHUDSectionState::isSectionShown( gv_debugHUDSections, registration );
+        return DebugHUDSectionState::isSectionShown( gv_debugHUDSections.get(), registration );
     }
 
     bool DebugHUD::setSectionShown( string_view name, bool bShown )
@@ -787,7 +788,7 @@ namespace sw
         if ( pRegistration == nullptr || pRegistration->isUserSection() == false )
             return false;
         const bool   bDefaultShown = ( pRegistration->_flags & DebugHUDSectionFlag::kDefaultOn ) != 0;
-        const string stateText     = DebugHUDSectionState::makeStateText( gv_debugHUDSections, pRegistration->_pName, bShown, bDefaultShown );
+        const string stateText     = DebugHUDSectionState::makeStateText( gv_debugHUDSections.get(), pRegistration->_pName, bShown, bDefaultShown );
         writeSetting( DebugHUDInternal::getSectionsSettingID(), "gv_debugHUDSections", stateText );
         return true;
     }
@@ -931,9 +932,10 @@ namespace sw
         // 잠금 안에서 콜백을 부르는 순회는 섹션 쪽이 레지스트리를 다시 부르면 교착하므로 쓰지 않는다.
         if ( _screen != kInvalidUIScreenHandle )
         {
-            const DebugHUDRegistry& registry = engine::getSubsystem<DebugHUDRegistry>();
-            const uint64            revision = registry.getRevision();
-            if ( revision != _profilerSeenRevision || gv_debugHUDSections != _profilerSeenState )
+            const DebugHUDRegistry& registry     = engine::getSubsystem<DebugHUDRegistry>();
+            const uint64            revision     = registry.getRevision();
+            string                  sectionState = gv_debugHUDSections.get();
+            if ( revision != _profilerSeenRevision || sectionState != _profilerSeenState )
             {
                 bool bNeedsProfilerNow = false;
                 for ( const DebugHUDSectionRegistration* pRegistration : registry.getSections() )
@@ -943,7 +945,7 @@ namespace sw
                 }
                 _bSectionsNeedProfiler = bNeedsProfilerNow ? SW_TRUE : SW_FALSE;
                 _profilerSeenRevision  = revision;
-                _profilerSeenState     = gv_debugHUDSections;
+                _profilerSeenState     = std::move( sectionState );
             }
         }
         // 실행 상태만으로 띄운 화면(사용자 HUD 꺼짐)은 프로파일러를 켜지 않는다 — 보이는 실행과 숨김 실행의 프로파일러 상태가 같다.

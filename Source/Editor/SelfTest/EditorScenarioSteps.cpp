@@ -39,7 +39,7 @@ namespace sw::editor
      * @brief `-gv_editorSelfTestPattern=<패턴>`: 시나리오의 `<EditorSelfTest pattern>` 대신 이 패턴의 자체 테스트만 돈다(비면 시나리오 값).
      * @details 진 케이스 하나를 다시 볼 때 시나리오 사본을 만들지 않는다(언리얼 `-ExecCmds="Automation RunTests <필터>"`, 유니티 `-testFilter` 자리).
      */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorSelfTestPattern, "", "Run only editor self tests matching this pattern instead of the scenario's <EditorSelfTest pattern> (empty = scenario value)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_editorSelfTestPattern, "", "Run only editor self tests matching this pattern instead of the scenario's <EditorSelfTest pattern> (empty = scenario value)" );
 
     namespace
     {
@@ -645,7 +645,8 @@ namespace sw::editor
             /** @brief 이 단계가 돌릴 패턴 — 명령줄(`gv_editorSelfTestPattern`)이 있으면 그것, 없으면 시나리오 값. */
             static string readSelfTestPattern( const AutomationStep& step )
             {
-                return gv_editorSelfTestPattern.empty() ? step.readValidatedProperties<EditorSelfTestParams>()._pattern : gv_editorSelfTestPattern;
+                string pattern = gv_editorSelfTestPattern.get();
+                return pattern.empty() ? step.readValidatedProperties<EditorSelfTestParams>()._pattern : pattern;
             }
 
             static AutomationStepHold holdUntilSelfTestsEnd( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )

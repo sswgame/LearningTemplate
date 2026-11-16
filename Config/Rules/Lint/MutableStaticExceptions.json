@@ -259,12 +259,7 @@
         {
             "_path": "Source/Core/GlobalVariable/GlobalVariableManager.cpp",
             "_name": "s_pathBaseDirectory",
-            "_why": "전역 변수 바닥 — GlobalVariableManager 는 정적 등록 변수(SW_GLOBAL_VARIABLE)의 문맥 없는 읽기 · 쓰기 입구다. 글 변수 잠금과 경로 기준은 그 입구가 쓰는 프로세스 칸이다."
-        },
-        {
-            "_path": "Source/Core/GlobalVariable/GlobalVariableManager.cpp",
-            "_name": "s_stringVarMutex",
-            "_why": "전역 변수 바닥 — GlobalVariableManager 는 정적 등록 변수(SW_GLOBAL_VARIABLE)의 문맥 없는 읽기 · 쓰기 입구다. 글 변수 잠금과 경로 기준은 그 입구가 쓰는 프로세스 칸이다."
+            "_why": "전역 변수 바닥 — GlobalVariableManager 는 정적 등록 변수(SW_GLOBAL_VARIABLE)의 문맥 없는 읽기 · 쓰기 입구다. 경로 기준은 그 입구가 쓰는 프로세스 칸이다(글 변수 잠금은 변수가 가진다 — `GlobalString`)."
         },
         {
             "_path": "Source/Core/Log/LogOnce.cpp",

@@ -221,14 +221,14 @@ namespace sw::editor
     {
         dispatchWrites();
         ++_uiFrameCount;
-        if ( _uiFrameCount == 1u && gv_screenshotEditor.empty() == false )
+        if ( _uiFrameCount == 1u && gv_screenshotEditor.get().empty() == false )
             EditorUICaptureInternal::expectStartupCapture(); // 첫 사진(기본 60 프레임 뒤)보다 앞서 알린다
-        const bool bGlobalDue = gv_screenshotEditor.empty() == false && _bGlobalRequested == SW_FALSE &&
+        const bool bGlobalDue = gv_screenshotEditor.get().empty() == false && _bGlobalRequested == SW_FALSE &&
                                 _uiFrameCount >= static_cast<uint32>( gv_screenshotEditorFrame > 1 ? gv_screenshotEditorFrame : 1 );
         if ( bGlobalDue )
         {
             _bGlobalRequested = SW_TRUE;
-            (void)request( gv_screenshotEditor ); // 결과는 쓰기 워커(`runWriteJob`)가 로그로 남기고 우편함에 알린다
+            (void)request( gv_screenshotEditor.get() ); // 결과는 쓰기 워커(`runWriteJob`)가 로그로 남기고 우편함에 알린다
             _listQueued.back()._bFromStartupArgument = true;
         }
         if ( _listQueued.empty() )

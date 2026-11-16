@@ -3,6 +3,7 @@
  * @brief 인게임 치트 · 디버그 변수 · 환경 설정 같은 전역 변수를 관리합니다.
  */
 #pragma once
+#include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
@@ -85,9 +86,53 @@ namespace sw
         static constexpr uint32             kTypeSize = 4u;
     };
 
-    /** @brief sw::string 변수입니다. */
+    /**
+     * @brief 문자열 전역 변수의 C++ 형식입니다(`SW_GLOBAL_VARIABLE( GlobalString, gv_x, "", "…" )`). 값은 잠금 안에서 사본으로만 꺼낸다(`get`).
+     * @details 콘솔 · 에디터 · 명령줄이 다른 스레드에서 값을 바꾸면 버퍼가 다시 잡힌다. 예전에는 보통 `sw::string` 전역이라 쓰는 쪽만 잠갔고, 렌더 스레드가
+     *          `string_view` 로 쥔 값이 해제된 버퍼를 가리켰다(`gv_renderPipeline`). 그래서 참조 · 뷰를 내주는 길(암시 변환 · `c_str` · 비교 연산)을 두지 않아
+     *          직접 읽기가 컴파일되지 않는다. 자주 읽는 쪽은 일 하나(프레임 · 요청)마다 `get` 을 한 번 불러 그 사본을 쓴다 — 언리얼 `TAutoConsoleVariable` 이
+     *          렌더 스레드 값을 따로 두는 것과 같은 몫이다. 잠금은 변수마다 하나고 잎 잠금이다(안에서 아무것도 부르지 않는다).
+     */
+    class GlobalString
+    {
+    public:
+        /** @brief 빈 글입니다. */
+        GlobalString() = default;
+        /** @brief 정의 매크로의 기본값(`type name = ( "…" )`)을 받습니다. 매크로가 복사 초기화로 쓰므로 explicit 이 아니다. */
+        GlobalString( const utf8* pValue ) // NOLINT(google-explicit-constructor, hicpp-explicit-conversions)
+            : _value( pValue )
+        {
+        }
+        /** @brief 복사를 금지합니다(변수는 등록 주소로 찾는다). */
+        GlobalString( const GlobalString& ) = delete;
+        /** @brief 복사 대입을 금지합니다. 값은 `set` 으로 바꾼다. */
+        GlobalString& operator=( const GlobalString& ) = delete;
+
+        /** @brief 지금 값의 사본입니다. 다른 스레드가 값을 바꿔도 사본은 온전하다. */
+        [[nodiscard]] string get() const
+        {
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
+            return _value;
+        }
+
+        /** @brief 값을 바꿉니다. 변경 콜백은 부르지 않습니다(콜백이 필요하면 `GlobalVariableInfo::setValueAsString`). */
+        void set( string_view value )
+        {
+            string newValue{ value }; // 할당 · 옛 버퍼 해제는 잠금 밖에서 한다
+            {
+                UniqueLock<shared_mutex> lock{ _mutex };
+                _value.swap( newValue );
+            }
+        }
+
+    private:
+        mutable shared_mutex _mutex;
+        string _value        SW_GUARDED_BY( _mutex );
+    };
+
+    /** @brief 문자열 변수입니다. */
     template <>
-    struct GlobalVariableTraits<string>
+    struct GlobalVariableTraits<GlobalString>
     {
         using StorageType                             = string;
         static constexpr GlobalVariableType kType     = GlobalVariableType::String;
@@ -95,17 +140,18 @@ namespace sw
     };
 
     /**
-     * @brief 디스크 경로 전역 변수의 C++ 형식입니다(`SW_TEST_GLOBAL_VARIABLE( GlobalDiskPath, gv_x, "", "…" )`). 읽는 쪽은 `sw::string` 처럼 쓴다.
+     * @brief 디스크 경로 전역 변수의 C++ 형식입니다(`SW_TEST_GLOBAL_VARIABLE( GlobalDiskPath, gv_x, "", "…" )`). 읽기 · 쓰기는 `GlobalString` 과 같다(`get` · `set`).
      * @details 명령줄 · 콘솔 · 에디터 · 보류 값 모두 받을 때 `AbsolutePath::tryResolve` 로 기동 기준 폴더(`GlobalVariableManager::setPathBaseDirectory`)에서 절대화한다.
-     *          그래서 값은 늘 비었거나 절대 경로다 - 예전 `sw::string` 경로 변수는 쓰는 순간의 작업 폴더로 풀렸다. 멤버를 더하지 않는다(저장 칸이 `sw::string` 그대로다).
+     *          그래서 값은 늘 비었거나 절대 경로다 - 예전 `sw::string` 경로 변수는 쓰는 순간의 작업 폴더로 풀렸다. 멤버를 더하지 않는다(저장 칸이 `GlobalString` 그대로다).
      */
-    struct GlobalDiskPath : public string
+    class GlobalDiskPath : public GlobalString
     {
-        using string::string;
+    public:
+        using GlobalString::GlobalString;
         GlobalDiskPath() = default;
     };
 
-    /** @brief 디스크 경로 변수입니다. 저장은 `sw::string` 이다. */
+    /** @brief 디스크 경로 변수입니다. 저장은 `GlobalString` 이다. */
     template <>
     struct GlobalVariableTraits<GlobalDiskPath>
     {
@@ -368,11 +414,20 @@ namespace sw
          */
         template <typename T>
         GlobalVariableRegistrar( const utf8* pName, T& variable, const utf8* pTypeName, const utf8* pDescription, const utf8* pModuleName, bool bTestOnly )
-            : GlobalVariableRegistrar( pName, GlobalVariableTraits<T>::kType, &variable,
-                                       static_cast<typename GlobalVariableTraits<T>::StorageType>( variable ), pDescription,
+            : GlobalVariableRegistrar( pName, GlobalVariableTraits<T>::kType, &variable, readDefault( variable ), pDescription,
                                        GlobalVariableTraits<T>::kType == GlobalVariableType::Enum ? pTypeName : "", pModuleName,
                                        GlobalVariableTraits<T>::kTypeSize, bTestOnly )
         {
+        }
+
+        /** @brief 정의 매크로가 막 초기화한 @p variable 의 값을 기본값 저장 타입으로 읽습니다. 글 변수는 `get` 으로만 읽힌다. */
+        template <typename T>
+        static typename GlobalVariableTraits<T>::StorageType readDefault( const T& variable )
+        {
+            if constexpr ( std::is_base_of_v<GlobalString, T> )
+                return variable.get();
+            else
+                return static_cast<typename GlobalVariableTraits<T>::StorageType>( variable );
         }
 
         /** @brief 아직 아무도 가져가지 않은 등록자들의 리스트 헤드입니다(Engine.dll 이 가집니다). 가져가서 등록한 쪽이 nullptr 로 비웁니다. */
@@ -440,9 +495,10 @@ namespace sw
 //     SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "…" );
 //     SW_GLOBAL_VARIABLE( RHIBackend, gv_rhiBackend, RHIBackend::DirectX12, "…" );   // enum — `#type` 이 리플렉션 enum 이름이다
 //     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMeshes, 0, "…" );
+//     SW_GLOBAL_VARIABLE( GlobalString, gv_firstScene, "", "…" );                        // 읽기는 `gv_firstScene.get()`
 //     SW_EXTERN_GLOBAL_VARIABLE( int32, gv_viewMode );
 //
-// 타입은 `bool`, `int32`, `float32`, `sw::string`, enum 이다(`GlobalVariableTraits`). enum 은 리플렉션에 등록된 이름 그대로 적는다
+// 타입은 `bool`, `int32`, `float32`, `GlobalString`(글 — `get` 사본으로만 읽는다), `GlobalDiskPath`, enum 이다(`GlobalVariableTraits`). enum 은 리플렉션에 등록된 이름 그대로 적는다
 // (`#type` 이 그 문자열이 된다. `sw::RHIBackend` 처럼 한정하면 찾지 못한다). 기본값은 변수 초기화에만 쓰고, 등록자는 그 변수에서 읽는다.
 // 종류 · 모드를 고르는 설정은 숫자 코드(`int32` 0 · 1 · 2)로 두지 않고 enum 으로 둔다: 명령줄은 열거자 이름(`-gv_rhiBackend=Vulkan`)만 받고 숫자는 오류다.
 // 테스트용 변수는 바꿀 길이 없는 구성에서 `const` 상수다 — 등록만 빼고 보통 변수로 두면 그 변수를 읽는 개발 분기(프로파일 · 디버그 보기 · 흉내 · 스트레스 장면)가

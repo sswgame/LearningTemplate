@@ -39,14 +39,15 @@ namespace sw::editor
             EditorContext* pContext = getWatchContext( __func__ );
             if ( pContext == nullptr )
                 return false;
-            GameObject*  pObject = editor::getMainSceneSelection().getPrimaryObject();
-            const size_t dot     = gv_editorWatchProperty.find( '.' );
+            GameObject*  pObject         = editor::getMainSceneSelection().getPrimaryObject();
+            const string watchedProperty = gv_editorWatchProperty.get();
+            const size_t dot             = watchedProperty.find( '.' );
             if ( pObject == nullptr || dot == string::npos )
                 return false;
-            Component* pComponent = pObject->findComponentByTypeName( hashed_string( gv_editorWatchProperty.substr( 0, dot ).c_str() ) );
+            Component* pComponent = pObject->findComponentByTypeName( hashed_string( watchedProperty.substr( 0, dot ).c_str() ) );
             if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
                 return false;
-            const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( gv_editorWatchProperty.substr( dot + 1 ).c_str() ) );
+            const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( watchedProperty.substr( dot + 1 ).c_str() ) );
             if ( pProperty == nullptr )
                 return false;
             if ( pProperty->_typeName == hashed_string( "float32" ) )
@@ -63,14 +64,15 @@ namespace sw::editor
         /** @brief 선택한 오브젝트 모두의 `-gv_editorWatchProperty` 값의 합입니다. 다중 편집이 모든 오브젝트에 적용되었는지 확인하는 데 씁니다. 숫자 프로퍼티만 읽습니다. */
         [[nodiscard]] bool readSelectedPropertySum( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            EditorContext* pContext = getWatchContext( __func__ );
-            const size_t   dot      = gv_editorWatchProperty.find( '.' );
+            EditorContext* pContext        = getWatchContext( __func__ );
+            const string   watchedProperty = gv_editorWatchProperty.get();
+            const size_t   dot             = watchedProperty.find( '.' );
             if ( pContext == nullptr || dot == string::npos )
                 return false;
             vector<GameObject*> listSelected;
             editor::getMainSceneSelection().getSelectedObjects( listSelected );
-            const hashed_string typeName( gv_editorWatchProperty.substr( 0, dot ).c_str() );
-            const hashed_string propertyName( gv_editorWatchProperty.substr( dot + 1 ).c_str() );
+            const hashed_string typeName( watchedProperty.substr( 0, dot ).c_str() );
+            const hashed_string propertyName( watchedProperty.substr( dot + 1 ).c_str() );
             float64             sum{ 0.0 };
             for ( GameObject* pObject : listSelected )
             {
@@ -94,17 +96,18 @@ namespace sw::editor
         /** @brief 주 선택의 `-gv_editorWatchProperty` 커브(`FloatCurve`)의 키 수입니다. 커브가 아니면 값을 내지 않습니다. */
         [[nodiscard]] bool readSelectedCurveKeyCount( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            EditorContext* pContext = getWatchContext( __func__ );
-            const size_t   dot      = gv_editorWatchProperty.find( '.' );
+            EditorContext* pContext        = getWatchContext( __func__ );
+            const string   watchedProperty = gv_editorWatchProperty.get();
+            const size_t   dot             = watchedProperty.find( '.' );
             if ( pContext == nullptr || dot == string::npos )
                 return false;
             GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
             if ( pObject == nullptr )
                 return false;
-            Component* pComponent = pObject->findComponentByTypeName( hashed_string( gv_editorWatchProperty.substr( 0, dot ).c_str() ) );
+            Component* pComponent = pObject->findComponentByTypeName( hashed_string( watchedProperty.substr( 0, dot ).c_str() ) );
             if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
                 return false;
-            const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( gv_editorWatchProperty.substr( dot + 1 ).c_str() ) );
+            const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( watchedProperty.substr( dot + 1 ).c_str() ) );
             if ( pProperty == nullptr || pProperty->_typeName != hashed_string( "FloatCurve" ) )
                 return false;
             outValue = static_cast<float64>( pProperty->getValuePtr<FloatCurve>( pComponent )->_listKey.size() );
@@ -128,15 +131,16 @@ namespace sw::editor
          */
         [[nodiscard]] bool readSelectedHandle( const AutomationWatchQuery& /*query*/, AutomationWatchValue& outValue )
         {
-            GameObject*  pObject   = editor::getMainSceneSelection().getPrimaryObject();
-            const size_t dot       = gv_editorWatchProperty.find( '.' );
-            const bool   bNoObject = pObject == nullptr || pObject->getMutableManager() == nullptr;
+            GameObject*  pObject         = editor::getMainSceneSelection().getPrimaryObject();
+            const string watchedProperty = gv_editorWatchProperty.get();
+            const size_t dot             = watchedProperty.find( '.' );
+            const bool   bNoObject       = pObject == nullptr || pObject->getMutableManager() == nullptr;
             if ( bNoObject || dot == string::npos )
                 return false;
-            Component* pComponent = pObject->findComponentByTypeName( hashed_string( gv_editorWatchProperty.substr( 0, dot ).c_str() ) );
+            Component* pComponent = pObject->findComponentByTypeName( hashed_string( watchedProperty.substr( 0, dot ).c_str() ) );
             if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
                 return false;
-            const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( gv_editorWatchProperty.substr( dot + 1 ).c_str() ) );
+            const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( watchedProperty.substr( dot + 1 ).c_str() ) );
             if ( pProperty == nullptr || pProperty->_handleTargetTypeName.empty() )
                 return false;
             const ComponentHandle* pHandle = pProperty->getValuePtr<ComponentHandle>( pComponent );
@@ -154,14 +158,15 @@ namespace sw::editor
          */
         [[nodiscard]] bool readSelectedSceneReference( const AutomationWatchQuery& /*query*/, AutomationWatchValue& outValue )
         {
-            GameObject*  pObject = editor::getMainSceneSelection().getPrimaryObject();
-            const size_t dot     = gv_editorWatchProperty.find( '.' );
+            GameObject*  pObject         = editor::getMainSceneSelection().getPrimaryObject();
+            const string watchedProperty = gv_editorWatchProperty.get();
+            const size_t dot             = watchedProperty.find( '.' );
             if ( pObject == nullptr || dot == string::npos )
                 return false;
-            Component* pComponent = pObject->findComponentByTypeName( hashed_string( gv_editorWatchProperty.substr( 0, dot ).c_str() ) );
+            Component* pComponent = pObject->findComponentByTypeName( hashed_string( watchedProperty.substr( 0, dot ).c_str() ) );
             if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
                 return false;
-            const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( gv_editorWatchProperty.substr( dot + 1 ).c_str() ) );
+            const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( watchedProperty.substr( dot + 1 ).c_str() ) );
             if ( pProperty == nullptr || SceneObjectReference::isReferenceTypeName( pProperty->_typeName ) == false )
                 return false;
             const SceneObjectReference* pReference    = pProperty->getValuePtr<SceneObjectReference>( pComponent );

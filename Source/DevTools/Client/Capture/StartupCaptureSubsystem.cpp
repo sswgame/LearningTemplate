@@ -58,7 +58,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_screenshot, "", "화면에 나간 그림(Present 결과)을 덤프할 경로 (비면 사용 안 함)" );
 
     /** @brief `-gv_screenshotAttachment=<이름>` 입니다. Present 결과 대신 이 렌더 타깃(파이프라인 XML 의 첨부 이름, `RenderTargetRegistry`)을 씁니다. */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_screenshotAttachment, "", "Present 결과 대신 덤프할 렌더 타깃(첨부) 이름 (비면 Present 결과)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_screenshotAttachment, "", "Present 결과 대신 덤프할 렌더 타깃(첨부) 이름 (비면 Present 결과)" );
 
     /**
      * @brief `-gv_screenshotFrame=<N>` 입니다. 몇 번째 프레임에서 찍을지 정합니다(기본 10이고, 10보다 작으면 10으로 봅니다).
@@ -137,7 +137,7 @@ namespace sw
 
     void StartupCaptureSubsystem::updateGameView()
     {
-        if ( gv_screenshot.empty() || _bGameViewFinished == SW_TRUE )
+        if ( gv_screenshot.get().empty() || _bGameViewFinished == SW_TRUE )
             return;
         if ( _bGameViewStarted == SW_FALSE )
         {
@@ -168,7 +168,7 @@ namespace sw
             if ( MonotonicClock::nowMicroseconds() - _waitStartMicroseconds > StartupCaptureInternal::kStabilityTimeoutMicroseconds )
             {
                 SW_LOG_ERROR_ID( "StartupCapture.ScreenNotStable", "Screenshot was not taken: the screen did not settle within %# s (loading screen, screen fade or asset loads never finished) - %#",
-                                 StartupCaptureInternal::kStabilityTimeoutSeconds, gv_screenshot.c_str() );
+                                 StartupCaptureInternal::kStabilityTimeoutSeconds, gv_screenshot.get().c_str() );
                 _bGameViewFailed = SW_TRUE;
                 finishGameView();
             }
@@ -206,7 +206,7 @@ namespace sw
 
     void StartupCaptureSubsystem::requestNextShot( uint32 shotTotal )
     {
-        string path{ gv_screenshot };
+        string path{ gv_screenshot.get() };
         if ( shotTotal > 1u )
         {
             StringBuilder<constant::buffer::kMax16> suffix;
@@ -215,11 +215,11 @@ namespace sw
         }
         ++_shotCount;
         // 중간 단계를 보고 싶다고 첨부 이름을 지정했으면 그 렌더 타깃을, 아니면 화면에 나간 이미지를 읽는다.
-        const string_view attachment{ gv_screenshotAttachment };
-        RenderTargetInfo  target{};
+        const string     attachment = gv_screenshotAttachment.get();
+        RenderTargetInfo target{};
         if ( attachment.empty() == false && StartupCaptureInternal::findAttachment( attachment, target ) == false )
         {
-            SW_LOG_ERROR_ID( "StartupCapture.AttachmentNotFound", "Screenshot '%#' was not taken: render target '%#' is not in the published render target list", path.c_str(), string( attachment ).c_str() );
+            SW_LOG_ERROR_ID( "StartupCapture.AttachmentNotFound", "Screenshot '%#' was not taken: render target '%#' is not in the published render target list", path.c_str(), attachment.c_str() );
             _bGameViewFailed = SW_TRUE;
             return;
         }
